@@ -6,10 +6,10 @@
 
 ### 版本管理
 
-| 脚本 | 作用 |
-|------|------|
+| 脚本                | 作用                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `check-version.mjs` | 读取 `package.json`、`package-lock.json`、`Cargo.toml`、`Cargo.lock`、`tauri.conf.json` 五处版本号，验证它们完全一致；可附带 git tag 做额外校验。 |
-| `set-version.mjs` | 接受一个 semver 版本号，一次性同步更新上述所有文件，避免手动改漏。 |
+| `set-version.mjs`   | 接受一个 semver 版本号，一次性同步更新上述所有文件，避免手动改漏。                                                                                |
 
 ```bash
 node scripts/check-version.mjs              # 仅校验
@@ -19,10 +19,10 @@ node scripts/set-version.mjs 1.2.3         # 同步所有文件到新版本
 
 ### 发布打包
 
-| 脚本 | 作用 |
-|------|------|
-| `assemble-release.mjs` | 收拢多平台构建产物（`.exe`、`.msi`、`.dmg`、`.AppImage`、`.deb`）、展平目录层级、生成 `SHA256SUMS`，并从 `CHANGELOG.md` 提取当前版本内容写成 `RELEASE_NOTES.md`。 |
-| `verify-release-bundle.mjs` | 对 `assemble-release` 的输出做验收：逐文件重算 SHA256 并比对、确认所有平台安装包位于根层级、检查 `CHANGELOG.md`/`PLATFORM_SUPPORT.md`/`RELEASE_NOTES.md` 齐全。 |
+| 脚本                        | 作用                                                                                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `assemble-release.mjs`      | 收拢多平台构建产物（`.exe`、`.msi`、`.dmg`、`.AppImage`、`.deb`）、展平目录层级、生成 `SHA256SUMS`，并从 `CHANGELOG.md` 提取当前版本内容写成 `RELEASE_NOTES.md`。 |
+| `verify-release-bundle.mjs` | 对 `assemble-release` 的输出做验收：逐文件重算 SHA256 并比对、确认所有平台安装包位于根层级、检查 `CHANGELOG.md`/`PLATFORM_SUPPORT.md`/`RELEASE_NOTES.md` 齐全。   |
 
 ```bash
 node scripts/assemble-release.mjs <output-dir> <build-ref>
@@ -31,8 +31,8 @@ node scripts/verify-release-bundle.mjs <bundle-dir>
 
 ### 开发辅助
 
-| 脚本 | 作用 |
-|------|------|
+| 脚本                      | 作用                                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `serve-d04-prototype.mjs` | 为 `.scratch/prototypes/d04-ux/` 启动本地静态服务器（默认端口 `4173`，可通过 `AGENT_HUB_PROTOTYPE_PORT` 覆盖）。 |
 
 ```bash

@@ -13,13 +13,12 @@
 
 ```bash
 npm ci
-./start.sh
-./build.sh
-npm run lint
-npm run test
+./agent-hub.sh dev        # 启动开发模式
+./agent-hub.sh build      # 编译当前平台安装包
+./agent-hub.sh test       # 运行前端和 Rust 测试
+./agent-hub.sh lint       # ESLint + Cargo fmt + Clippy
+./agent-hub.sh release <output-dir> <git-ref>  # 打包发布产物
 npm run build
-npm run tauri -- dev
-npm run tauri -- build
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo fmt --all -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
@@ -42,6 +41,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
 跨平台检查、打包和发布流程见 [CI/CD 与跨平台发布](ci-cd.md)。
 发布前逐项执行 [V1 发布验收清单](release-checklist.md)，并把远程 run 结果回写 `.scratch/agent-hub-v1/issues/B14-release.md`。
+应用图标的母版参数、生成命令和验收方法见 [应用图标资源规范](icon-assets.md)。
 
 ## 日志规范
 

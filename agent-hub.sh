@@ -132,6 +132,7 @@ case "$cmd" in
       release) usage_release ;;
       test)    usage_test ;;
       lint)    usage_lint ;;
+      version) printf "用法: %s version\n\n显示应用版本号（从 package.json 读取）。\n" "$(basename "$0")" ;;
       "")      usage ;;
       *)
         echo "错误：未知命令 '$subcmd'" >&2

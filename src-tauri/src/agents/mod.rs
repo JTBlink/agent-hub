@@ -6,6 +6,7 @@ use serde_json::Value;
 use crate::{Agent, ConfigFormat, Scope};
 
 pub mod claude;
+pub mod standard;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScanContext {
@@ -21,6 +22,18 @@ impl ScanContext {
         }
     }
 
+    /// Builds a scan context from the runtime home and Claude's documented
+    /// configuration-root override. The environment is captured once so a
+    /// scan observes a stable path even if another component changes its
+    /// environment afterwards.
+    pub fn from_environment(home_directory: impl AsRef<Path>) -> Self {
+        let mut context = Self::new(home_directory);
+        context.claude_config_directory = std::env::var_os("CLAUDE_CONFIG_DIR")
+            .filter(|directory| !directory.is_empty())
+            .map(PathBuf::from);
+        context
+    }
+
     pub fn with_claude_config_dir(mut self, directory: impl AsRef<Path>) -> Self {
         self.claude_config_directory = Some(directory.as_ref().to_path_buf());
         self
@@ -29,8 +42,11 @@ impl ScanContext {
     pub(crate) fn claude_config_directory(&self) -> PathBuf {
         self.claude_config_directory
             .clone()
-            .or_else(|| std::env::var_os("CLAUDE_CONFIG_DIR").map(PathBuf::from))
             .unwrap_or_else(|| self.home_directory.join(".claude"))
+    }
+
+    pub(crate) fn home_directory(&self) -> &Path {
+        &self.home_directory
     }
 }
 
@@ -64,6 +80,8 @@ pub enum DiagnosticCode {
     FileMissing,
     PermissionDenied,
     JsonSyntax,
+    JsoncSyntax,
+    TomlSyntax,
     IoFailure,
 }
 

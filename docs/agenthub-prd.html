@@ -1,0 +1,2355 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="AgentHub V1 产品需求文档与页面效果图" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238ba3ff'/%3E%3Cpath d='m7 17 6 6L25 9' fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='4'/%3E%3C/svg%3E"
+    />
+    <title>AgentHub V1 · PRD & 页面效果图</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+      :root {
+        color-scheme: dark;
+        --bg: #0b1018;
+        --bg-raised: #111a28;
+        --panel: #151f30;
+        --panel-2: #1a2639;
+        --line: #2a3a52;
+        --text: #eef4ff;
+        --muted: #9aa9bf;
+        --subtle: #6e7e96;
+        --blue: #8ba3ff;
+        --blue-deep: #5169de;
+        --green: #6de2b2;
+        --green-bg: #15392f;
+        --amber: #ffc77d;
+        --amber-bg: #49351f;
+        --red: #ff9baa;
+        --red-bg: #482731;
+        --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+        --sans: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% -5%, #263b6b 0, transparent 31rem),
+          var(--bg);
+        font: 400 16px/1.55 var(--sans);
+      }
+      a {
+        color: inherit;
+      }
+      button,
+      select {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--green);
+        outline-offset: 3px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 250px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .side {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 27px 18px;
+        border-right: 1px solid #243149;
+        background: #0d1522e8;
+        backdrop-filter: blur(14px);
+      }
+      .brand {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 0 10px 29px;
+        border-bottom: 1px solid #213047;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        background: linear-gradient(145deg, var(--blue), var(--blue-deep));
+        box-shadow: 0 0 22px #738bff4d;
+      }
+      .brand-mark svg {
+        width: 19px;
+        height: 19px;
+      }
+      .brand strong {
+        letter-spacing: -0.04em;
+      }
+      .brand small {
+        display: block;
+        color: var(--subtle);
+        font: 11px var(--mono);
+      }
+      .side-label {
+        margin: 28px 10px 8px;
+        color: var(--subtle);
+        font: 10px var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .nav {
+        display: grid;
+        gap: 4px;
+      }
+      .nav a {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 11px;
+        border-radius: 9px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .nav a:hover,
+      .nav a[aria-current="page"] {
+        color: var(--text);
+        background: #1a2941;
+      }
+      .nav a[aria-current="page"] {
+        box-shadow: inset 3px 0 var(--green);
+      }
+      .nav svg {
+        width: 17px;
+        height: 17px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 1.6;
+      }
+      .side-foot {
+        position: absolute;
+        right: 18px;
+        bottom: 22px;
+        left: 18px;
+        display: grid;
+        gap: 10px;
+      }
+      .health {
+        padding: 12px;
+        border: 1px solid #24433c;
+        border-radius: 10px;
+        background: #12251f;
+        color: var(--green);
+        font-size: 12px;
+      }
+      .health span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+      }
+
+      .main {
+        max-width: 1420px;
+        width: 100%;
+        padding: 56px clamp(24px, 5vw, 78px) 100px;
+      }
+      .eyebrow {
+        margin: 0 0 9px;
+        color: var(--blue);
+        font: 600 11px var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+      h1 {
+        max-width: 800px;
+        margin-bottom: 17px;
+        font-size: clamp(2.1rem, 4.6vw, 4.3rem);
+        line-height: 1.02;
+        letter-spacing: -0.07em;
+      }
+      h2 {
+        margin-bottom: 16px;
+        font-size: 1.6rem;
+        letter-spacing: -0.04em;
+      }
+      h3 {
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+      .lede {
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 1.12rem;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 25px 0 48px;
+      }
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font: 12px var(--mono);
+      }
+      .tag.accent {
+        border-color: #336b59;
+        color: var(--green);
+        background: var(--green-bg);
+      }
+
+      .section {
+        margin-top: 74px;
+        scroll-margin-top: 24px;
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+      .section-head p {
+        max-width: 650px;
+        margin-bottom: 0;
+        color: var(--muted);
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 17px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 17px;
+      }
+      .card {
+        padding: 21px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #121c2bee;
+      }
+      .card p,
+      .card li {
+        color: var(--muted);
+      }
+      .card ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+      .callout {
+        padding: 17px 19px;
+        border-left: 3px solid var(--green);
+        background: #112b25;
+        color: #d7f8e8;
+      }
+      .callout.warn {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+        color: #ffe1b2;
+      }
+      .requirements {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #121c2bee;
+      }
+      .requirements th,
+      .requirements td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #26354b;
+        text-align: left;
+        vertical-align: top;
+      }
+      .requirements th {
+        color: var(--subtle);
+        font: 600 11px var(--mono);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .requirements td {
+        color: var(--muted);
+      }
+      .requirements td:first-child {
+        width: 108px;
+        color: var(--text);
+        font-weight: 600;
+      }
+      .priority {
+        display: inline-flex;
+        padding: 3px 7px;
+        border-radius: 5px;
+        color: var(--green);
+        background: var(--green-bg);
+        font: 11px var(--mono);
+      }
+      .priority.p1 {
+        color: var(--amber);
+        background: var(--amber-bg);
+      }
+      .rail {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0;
+        margin: 20px 0 4px;
+      }
+      .rail-step {
+        position: relative;
+        padding: 15px 8px 0;
+        border-top: 2px solid var(--line);
+        color: var(--subtle);
+        font-size: 12px;
+        text-align: center;
+      }
+      .rail-step::before {
+        content: "";
+        position: absolute;
+        top: -7px;
+        left: calc(50% - 6px);
+        width: 10px;
+        height: 10px;
+        border: 2px solid var(--bg);
+        border-radius: 50%;
+        background: var(--line);
+      }
+      .rail-step.active {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .rail-step.active::before {
+        background: var(--green);
+      }
+
+      .mockup-wrap {
+        padding: 23px;
+        border: 1px solid #354a69;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #111b2a, #0b121e);
+        box-shadow: 0 22px 80px #0005;
+      }
+      .mockup-caption {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        align-items: center;
+        margin: 0 0 15px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .mockup-caption a {
+        margin-left: 8px;
+        color: var(--blue);
+        font: 10px var(--mono);
+        text-decoration: none;
+      }
+      .mockup-caption a:hover {
+        text-decoration: underline;
+      }
+      .screen {
+        min-height: 410px;
+        overflow: hidden;
+        border: 1px solid #2c3d58;
+        border-radius: 12px;
+        background: #0e1724;
+        box-shadow: 0 12px 30px #0007;
+      }
+      .screen-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 46px;
+        padding: 0 17px;
+        border-bottom: 1px solid #25364e;
+        background: #131f30;
+      }
+      .screen-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .screen-brand i {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        background: linear-gradient(145deg, var(--blue), var(--blue-deep));
+      }
+      .screen-top small {
+        color: var(--subtle);
+        font: 10px var(--mono);
+      }
+      .screen-body {
+        display: grid;
+        grid-template-columns: 154px minmax(0, 1fr);
+        min-height: 364px;
+      }
+      .screen-side {
+        padding: 17px 10px;
+        border-right: 1px solid #25364e;
+        background: #101a29;
+      }
+      .screen-side .mini-label {
+        margin: 7px 7px 8px;
+        color: #60718b;
+        font: 9px var(--mono);
+        text-transform: uppercase;
+      }
+      .mini-nav {
+        display: grid;
+        gap: 4px;
+      }
+      .mini-nav span {
+        padding: 8px 8px;
+        border-radius: 6px;
+        color: #8596ae;
+        font-size: 10px;
+      }
+      .mini-nav span.on {
+        color: #edf4ff;
+        background: #1c2e4b;
+        box-shadow: inset 2px 0 var(--green);
+      }
+      .screen-content {
+        padding: 22px;
+      }
+      .screen-content h3 {
+        margin: 0 0 5px;
+        font-size: 16px;
+        letter-spacing: -0.03em;
+      }
+      .screen-content .sub {
+        margin-bottom: 17px;
+        color: #8292aa;
+        font-size: 10px;
+      }
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 9px;
+        margin-bottom: 13px;
+      }
+      .mini-stat {
+        padding: 12px;
+        border: 1px solid #2b3c56;
+        border-radius: 8px;
+        background: #152235;
+      }
+      .mini-stat b {
+        display: block;
+        font: 600 20px var(--mono);
+      }
+      .mini-stat small {
+        color: #7e90a9;
+        font-size: 9px;
+      }
+      .mini-panel {
+        padding: 13px;
+        border: 1px solid #2b3c56;
+        border-radius: 8px;
+        background: #152235;
+      }
+      .mini-panel + .mini-panel {
+        margin-top: 10px;
+      }
+      .mini-panel-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        color: #dbe6f6;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .mini-list {
+        display: grid;
+        gap: 6px;
+      }
+      .mini-list > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 7px 8px;
+        border-radius: 6px;
+        background: #192943;
+        color: #a7b6cb;
+        font-size: 10px;
+      }
+      .mini-list > div strong {
+        color: #e9f2ff;
+        font-weight: 500;
+      }
+      .mini-pill {
+        padding: 2px 5px;
+        border-radius: 4px;
+        color: #8de6bc;
+        background: #174536;
+        font: 9px var(--mono);
+      }
+      .mini-pill.warn {
+        color: #ffd290;
+        background: #4a341d;
+      }
+      .mini-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 27px;
+        padding: 0 9px;
+        border: 1px solid #3b5480;
+        border-radius: 6px;
+        color: #c7d4ee;
+        background: #1b2b46;
+        font-size: 10px;
+      }
+      .mini-button.primary {
+        border-color: #6d8aff;
+        color: #10182b;
+        background: #8096ff;
+        font-weight: 700;
+      }
+      .mini-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 11px;
+      }
+      .mini-code {
+        min-height: 105px;
+        padding: 11px;
+        border-radius: 6px;
+        color: #a9c0df;
+        background: #0a111c;
+        font: 9px/1.7 var(--mono);
+        white-space: pre;
+      }
+      .tree {
+        display: grid;
+        gap: 5px;
+        color: #8b9bb3;
+        font-size: 10px;
+      }
+      .tree .node {
+        padding: 7px 8px;
+        border-radius: 5px;
+        background: #17263c;
+      }
+      .tree .node.selected {
+        color: #ecf5ff;
+        background: #263b60;
+      }
+      .editor-grid {
+        display: grid;
+        grid-template-columns: 0.84fr 1.16fr;
+        gap: 10px;
+      }
+      .field {
+        display: grid;
+        gap: 4px;
+        margin-bottom: 9px;
+      }
+      .field label {
+        color: #8496af;
+        font-size: 9px;
+      }
+      .field div {
+        min-height: 28px;
+        padding: 7px 8px;
+        border: 1px solid #31445f;
+        border-radius: 5px;
+        color: #dce7f6;
+        background: #101c2c;
+        font-size: 10px;
+      }
+      .compat {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+
+      .page-index {
+        display: grid;
+        gap: 7px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: pages;
+      }
+      .page-index a {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        padding: 9px 11px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .page-index a:hover {
+        border-color: var(--line);
+        color: var(--text);
+        background: var(--bg-raised);
+      }
+      .page-index a::before {
+        counter-increment: pages;
+        content: counter(pages, decimal-leading-zero);
+        color: var(--blue);
+        font: 11px var(--mono);
+      }
+      .flow {
+        display: grid;
+        gap: 13px;
+      }
+      .flow-row {
+        display: grid;
+        grid-template-columns: 120px 1fr;
+        gap: 15px;
+        align-items: start;
+      }
+      .flow-row strong {
+        color: var(--text);
+      }
+      .flow-row p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .ux-fix {
+        display: grid;
+        grid-template-columns: 1fr 32px 1fr;
+        gap: 12px;
+        align-items: center;
+      }
+      .ux-fix + .ux-fix {
+        margin-top: 10px;
+      }
+      .ux-before,
+      .ux-after {
+        min-height: 86px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--bg-raised);
+      }
+      .ux-before {
+        border-left: 3px solid var(--red);
+      }
+      .ux-after {
+        border-left: 3px solid var(--green);
+      }
+      .ux-before b,
+      .ux-after b {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 12px;
+      }
+      .ux-before span,
+      .ux-after span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .ux-arrow {
+        color: var(--blue);
+        font: 700 18px var(--mono);
+        text-align: center;
+      }
+      .token-strip {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .swatch {
+        min-height: 92px;
+        padding: 10px;
+        border: 1px solid #ffffff18;
+        border-radius: 9px;
+        color: white;
+        font: 10px/1.45 var(--mono);
+      }
+      .swatch b {
+        display: block;
+        margin-top: 35px;
+        font-weight: 600;
+      }
+      .spec-list {
+        display: grid;
+        gap: 0;
+        margin: 0;
+      }
+      .spec-list > div {
+        display: grid;
+        grid-template-columns: 116px 1fr;
+        gap: 14px;
+        padding: 11px 0;
+        border-bottom: 1px solid #26364d;
+      }
+      .spec-list dt {
+        color: var(--subtle);
+        font: 10px var(--mono);
+        text-transform: uppercase;
+      }
+      .spec-list dd {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .code-contract {
+        overflow-x: auto;
+        margin: 12px 0 0;
+        padding: 15px;
+        border: 1px solid #26364d;
+        border-radius: 9px;
+        color: #b8c9e1;
+        background: #09111c;
+        font: 11px/1.7 var(--mono);
+        white-space: pre;
+      }
+      .diagram {
+        overflow-x: auto;
+        padding: 24px;
+        border: 1px solid #354a69;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #101a29, #0b121e);
+      }
+      .flow-line {
+        display: grid;
+        grid-template-columns: repeat(11, minmax(72px, 1fr));
+        align-items: center;
+        min-width: 900px;
+      }
+      .flow-node {
+        display: grid;
+        place-items: center;
+        min-height: 72px;
+        padding: 9px;
+        border: 1px solid #405574;
+        border-radius: 9px;
+        color: #dce8f8;
+        background: #17253a;
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+      }
+      .flow-node.start {
+        border-color: #5270db;
+        background: #20335a;
+      }
+      .flow-node.decision {
+        border-color: #9a6f35;
+        background: #3c2e1d;
+        color: #ffd79a;
+      }
+      .flow-node.success {
+        border-color: #3b846c;
+        background: #153b30;
+        color: #8de6bc;
+      }
+      .flow-node.stop {
+        border-color: #8e4956;
+        background: #3b222a;
+        color: #ffadba;
+      }
+      .flow-arrow {
+        color: #667d9e;
+        font: 700 16px var(--mono);
+        text-align: center;
+      }
+      .branch-label {
+        display: block;
+        margin-top: 5px;
+        color: var(--amber);
+        font: 9px var(--mono);
+      }
+      .diagram-branch {
+        display: grid;
+        grid-template-columns: 1fr 68px 1fr 68px 1fr;
+        align-items: center;
+        max-width: 650px;
+        margin: 18px auto 0;
+      }
+      .state-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 9px;
+      }
+      .state-card {
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #121e2e;
+      }
+      .state-card b {
+        display: block;
+        margin-bottom: 6px;
+        font: 11px var(--mono);
+      }
+      .state-card span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .implementation-map {
+        display: grid;
+        grid-template-columns: 150px 1fr 1fr;
+        gap: 1px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--line);
+      }
+      .implementation-map > div {
+        min-height: 52px;
+        padding: 11px 13px;
+        background: #121c2b;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .implementation-map > .map-head {
+        min-height: auto;
+        color: var(--subtle);
+        font: 10px var(--mono);
+        text-transform: uppercase;
+      }
+      .implementation-map > .map-page {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .checklist {
+        display: grid;
+        gap: 9px;
+        padding: 0;
+        list-style: none;
+      }
+      .checklist li {
+        position: relative;
+        padding-left: 27px;
+        color: var(--muted);
+      }
+      .checklist li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        top: 1px;
+        display: grid;
+        place-items: center;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        color: #0e241b;
+        background: var(--green);
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .footer {
+        margin-top: 90px;
+        padding-top: 20px;
+        border-top: 1px solid #26364d;
+        color: var(--subtle);
+        font-size: 12px;
+      }
+      .footer a {
+        color: var(--blue);
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          display: block;
+        }
+        .side {
+          position: relative;
+          height: auto;
+          padding: 16px;
+          border-right: 0;
+          border-bottom: 1px solid #243149;
+        }
+        .brand {
+          padding-bottom: 13px;
+        }
+        .side-label,
+        .side-foot {
+          display: none;
+        }
+        .nav {
+          display: flex;
+          flex-wrap: wrap;
+          margin-top: 12px;
+        }
+        .nav a {
+          min-height: 36px;
+        }
+        .main {
+          padding-top: 39px;
+        }
+      }
+      @media (max-width: 720px) {
+        .grid-2,
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+        .section-head {
+          display: block;
+        }
+        .screen-body {
+          grid-template-columns: 1fr;
+        }
+        .screen-side {
+          display: none;
+        }
+        .screen-content {
+          padding: 14px;
+        }
+        .stat-grid {
+          grid-template-columns: 1fr 1fr 1fr;
+        }
+        .editor-grid {
+          grid-template-columns: 1fr;
+        }
+        .mockup-wrap {
+          padding: 12px;
+        }
+        .requirements {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+        .ux-fix {
+          grid-template-columns: 1fr;
+        }
+        .ux-arrow {
+          transform: rotate(90deg);
+        }
+        .token-strip {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .state-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .implementation-map {
+          grid-template-columns: 115px minmax(160px, 1fr) minmax(180px, 1fr);
+          overflow-x: auto;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        * {
+          transition: none !important;
+        }
+      }
+      @media print {
+        body {
+          color: #182335;
+          background: #fff;
+        }
+        .layout {
+          display: block;
+        }
+        .side {
+          display: none;
+        }
+        .main {
+          max-width: none;
+          padding: 18mm;
+        }
+        .section {
+          break-inside: avoid;
+        }
+        .mockup-wrap {
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="side" aria-label="PRD 导航">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M5 12.5 10.5 18 19 6"
+                fill="none"
+                stroke="white"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+              />
+            </svg>
+          </span>
+          <div><strong>AgentHub</strong><small>V1 / PRD · 2026.08</small></div>
+        </div>
+        <p class="side-label">Document</p>
+        <nav class="nav">
+          <a href="#brief" aria-current="page"
+            ><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10" /></svg
+            >需求摘要</a
+          >
+          <a href="#architecture"
+            ><svg viewBox="0 0 24 24">
+              <rect x="4" y="4" width="6" height="6" rx="1" />
+              <rect x="14" y="4" width="6" height="6" rx="1" />
+              <rect x="4" y="14" width="6" height="6" rx="1" />
+              <rect x="14" y="14" width="6" height="6" rx="1" /></svg
+            >信息架构</a
+          >
+          <a href="#design-system"
+            ><svg viewBox="0 0 24 24">
+              <path d="M4 7h16M7 4v6M4 17h16M17 14v6" /></svg
+            >落地规范</a
+          >
+          <a href="#flows"
+            ><svg viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="2" />
+              <circle cx="19" cy="6" r="2" />
+              <circle cx="19" cy="18" r="2" />
+              <path d="M7 12h4c3 0 3-6 6-6M11 12c3 0 3 6 6 6" /></svg
+            >交互图</a
+          >
+          <a href="#screens"
+            ><svg viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M3 9h18M8 9v11" /></svg
+            >页面效果图</a
+          >
+          <a href="#requirements"
+            ><svg viewBox="0 0 24 24">
+              <path d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4" /></svg
+            >功能需求</a
+          >
+          <a href="#acceptance"
+            ><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg
+            >验收清单</a
+          >
+        </nav>
+        <div class="side-foot">
+          <div class="health">
+            本地优先 · 安全写入<span>所有变更必须经过计划确认</span>
+          </div>
+          <small style="color: var(--subtle)"
+            >单击页面编号可跳转；效果图为 HTML/CSS 静态稿。</small
+          >
+        </div>
+      </aside>
+
+      <main class="main">
+        <section id="brief">
+          <p class="eyebrow">Product Requirements Document</p>
+          <h1>
+            让 Agent 配置与 Skills，<br /><span style="color: var(--green)"
+              >看得见、改得安全。</span
+            >
+          </h1>
+          <p class="lede">
+            AgentHub 是一个本地优先的 AI Agent 工作空间管理器。它把 Claude
+            Code、Codex、OpenCode 的配置和 Skills
+            汇聚到同一个工作台，但不接管终端，也不在未确认时覆盖任何文件。
+          </p>
+          <div class="meta-row">
+            <span class="tag accent">V1 · 规划中</span
+            ><span class="tag">桌面端 / Tauri 2 + React</span
+            ><span class="tag">Owner · AgentHub team</span
+            ><span class="tag">Last updated · 2026-08-22</span>
+          </div>
+          <div class="grid-2">
+            <article class="card">
+              <p class="eyebrow">Problem</p>
+              <h3>用户正在失去什么</h3>
+              <ul>
+                <li>多个 Agent 的配置分散在隐藏路径，无法快速判断生效层级。</li>
+                <li>
+                  Skills 来源、版本和兼容性缺少统一视图，更新容易覆盖外部修改。
+                </li>
+                <li>配置修改缺乏 Diff、备份和回滚，错误成本高。</li>
+              </ul>
+            </article>
+            <article class="card">
+              <p class="eyebrow">Promise</p>
+              <h3>V1 要交付的确定感</h3>
+              <ul>
+                <li>一次扫描，知道每个 Agent 的配置健康度。</li>
+                <li>一次计划，看到目标、文件动作、权限、Diff 和回滚点。</li>
+                <li>一次确认，安全执行；任何失败都保留旧内容。</li>
+              </ul>
+            </article>
+          </div>
+          <div class="callout" style="margin-top: 17px">
+            <strong>北极星指标：</strong>用户能在 3 分钟内定位一个配置或 Skill
+            的“来源 → 生效范围 → 变更风险”，并能在不丢数据的前提下完成一次更新。
+          </div>
+          <article class="card" style="margin-top: 17px">
+            <p class="eyebrow">Usability corrections</p>
+            <h3>针对当前“看得到，但不容易完成任务”的优化</h3>
+            <div class="ux-fix">
+              <div class="ux-before">
+                <b>问题：主页以工程状态和模块卡片为主</b
+                ><span>用户看不到风险优先级，也不知道下一步处理什么。</span>
+              </div>
+              <div class="ux-arrow">→</div>
+              <div class="ux-after">
+                <b>优化：任务导向的工作台</b
+                ><span
+                  >首屏只突出待确认计划、诊断和可更新项，每个卡片给一个明确动作。</span
+                >
+              </div>
+            </div>
+            <div class="ux-fix">
+              <div class="ux-before">
+                <b>问题：配置元数据、源码和诊断堆在同一长页</b
+                ><span>内容密度失控，作用域与当前文件上下文容易丢失。</span>
+              </div>
+              <div class="ux-arrow">→</div>
+              <div class="ux-after">
+                <b>优化：列表 → 详情的渐进展开</b
+                ><span
+                  >上下文栏固定显示 Agent / scope / workspace，表单、源码和 Diff
+                  用同级视图切换。</span
+                >
+              </div>
+            </div>
+            <div class="ux-fix">
+              <div class="ux-before">
+                <b>问题：写入风险只在动作末端出现</b
+                ><span>外部修改、unknown 兼容性和目标冲突发现过晚。</span>
+              </div>
+              <div class="ux-arrow">→</div>
+              <div class="ux-after">
+                <b>优化：诊断前置 + 统一变更计划</b
+                ><span
+                  >列表即显示状态；高风险条目阻止进入批量计划，确认页集中呈现
+                  Diff 和恢复路径。</span
+                >
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section id="architecture" class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Information architecture</p>
+              <h2>工作台总览 → 专题页 → 变更计划</h2>
+            </div>
+            <p>
+              三层信息结构兼顾发现、深入和确认。写入动作不藏在列表按钮里，统一进入可审阅的变更计划。
+            </p>
+          </div>
+          <div class="grid-3">
+            <article class="card">
+              <p class="eyebrow">01 / Orient</p>
+              <h3>工作台总览</h3>
+              <p>
+                健康度、待确认计划、Skill 更新和最近活动。用户从这里决定下一步。
+              </p>
+            </article>
+            <article class="card">
+              <p class="eyebrow">02 / Inspect</p>
+              <h3>专题页</h3>
+              <p>
+                配置中心聚焦 Agent/作用域/文件；Skills
+                中心聚焦来源/兼容性/安装目标。
+              </p>
+            </article>
+            <article class="card">
+              <p class="eyebrow">03 / Commit</p>
+              <h3>变更计划</h3>
+              <p>统一展示 Diff、权限、备份和冲突诊断；确认后才执行原子替换。</p>
+            </article>
+          </div>
+          <div class="rail" aria-label="安全变更轨道">
+            <div class="rail-step active">扫描</div>
+            <div class="rail-step active">理解</div>
+            <div class="rail-step active">生成计划</div>
+            <div class="rail-step">确认执行</div>
+            <div class="rail-step">验证 / 恢复</div>
+          </div>
+        </section>
+
+        <section id="design-system" class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Implementation contract</p>
+              <h2>落地规范 · 先统一规则，再写页面</h2>
+            </div>
+            <p>
+              本节是 UI 实现的单一真相来源。组件只能使用语义
+              token，不在页面里写新的颜色、圆角或任意间距。
+            </p>
+          </div>
+          <div class="token-strip" aria-label="颜色 token">
+            <div class="swatch" style="background: #0b1018">
+              <b>--bg<br />#0B1018</b>
+            </div>
+            <div class="swatch" style="background: #151f30">
+              <b>--panel<br />#151F30</b>
+            </div>
+            <div class="swatch" style="background: #8ba3ff; color: #091022">
+              <b>--action<br />#8BA3FF</b>
+            </div>
+            <div class="swatch" style="background: #15392f">
+              <b>--success<br />#6DE2B2</b>
+            </div>
+            <div class="swatch" style="background: #49351f">
+              <b>--warning<br />#FFC77D</b>
+            </div>
+            <div class="swatch" style="background: #482731">
+              <b>--danger<br />#FF9BAA</b>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-top: 17px">
+            <article class="card">
+              <p class="eyebrow">Layout rules</p>
+              <dl class="spec-list">
+                <div>
+                  <dt>导航</dt>
+                  <dd>
+                    ≥1024px 固定 240–256px 左侧栏；768–1023px 收为 64px 图标栏 +
+                    tooltip；≤767px 使用顶部栏 + 可关闭抽屉。核心导航始终可达。
+                  </dd>
+                </div>
+                <div>
+                  <dt>内容</dt>
+                  <dd>
+                    桌面最大宽度 1,280px；页面内采用 8px spacing
+                    rhythm；卡片内边距 20–24px，列表行高 ≥44px。
+                  </dd>
+                </div>
+                <div>
+                  <dt>层级</dt>
+                  <dd>
+                    页面只保留一个主 CTA；次要动作降级为
+                    outline；危险动作与主操作至少间隔 8px，并使用文字说明。
+                  </dd>
+                </div>
+                <div>
+                  <dt>路径</dt>
+                  <dd>
+                    深层页面固定显示 Agent / scope / workspace
+                    面包屑；返回保留筛选、滚动位置和草稿。
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <article class="card">
+              <p class="eyebrow">Type & motion</p>
+              <dl class="spec-list">
+                <div>
+                  <dt>字体</dt>
+                  <dd>
+                    标题 JetBrains Mono 600；正文 IBM Plex Sans
+                    400/500；路径、checksum、版本使用等宽字体。
+                  </dd>
+                </div>
+                <div>
+                  <dt>字号</dt>
+                  <dd>
+                    12 / 14 / 16 / 18 / 24 / 32px；正文最小 16px，辅助信息不低于
+                    12px；正文行高 1.5–1.7。
+                  </dd>
+                </div>
+                <div>
+                  <dt>反馈</dt>
+                  <dd>
+                    点击 100ms 内给 pressed/loading；异步超过 1s 显示
+                    skeleton；成功 toast 3–5s，错误保留在问题附近并给恢复动作。
+                  </dd>
+                </div>
+                <div>
+                  <dt>动效</dt>
+                  <dd>
+                    只动 opacity/transform，300–400ms；尊重
+                    reduced-motion。不得用动效隐藏诊断、Diff 或确认按钮。
+                  </dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+          <article class="card" style="margin-top: 17px">
+            <p class="eyebrow">Component contract</p>
+            <pre class="code-contract">
+&lt;AppShell&gt;
+  &lt;PrimaryNav active="configurations" /&gt;   // 仅 5 个一级入口
+  &lt;ContextBar agent scope workspace /&gt;     // 页面上下文固定可见
+  &lt;PageHeader title primaryAction /&gt;        // 一屏一个主动作
+  &lt;StatusBanner severity recoveryAction /&gt;  // 状态不依赖颜色
+  &lt;DataView /&gt;                              // list / empty / loading / error
+  &lt;PlanDrawer&gt;                              // 所有写入先预览
+    &lt;DiffSummary /&gt; &lt;PermissionCheck /&gt; &lt;RollbackPoint /&gt;
+  &lt;/PlanDrawer&gt;
+&lt;/AppShell&gt;</pre>
+          </article>
+          <div class="implementation-map" style="margin-top: 17px">
+            <div class="map-head">页面</div>
+            <div class="map-head">React feature</div>
+            <div class="map-head">Rust / Tauri seam</div>
+            <div class="map-page">工作台总览</div>
+            <div>features/dashboard/OverviewPage.tsx</div>
+            <div>dashboard_summary · activity_list</div>
+            <div class="map-page">配置中心 / 详情</div>
+            <div>
+              features/configurations/ConfigListPage.tsx<br />ConfigDetailPage.tsx
+            </div>
+            <div>configuration.scan · read · validate · diff</div>
+            <div class="map-page">Skills 中心 / 来源</div>
+            <div>
+              features/skills/SkillListPage.tsx<br />SourceDetailPage.tsx
+            </div>
+            <div>skill.scan · compatibility · source_snapshot</div>
+            <div class="map-page">变更计划 / 历史</div>
+            <div>
+              shared/plan/PlanReview.tsx<br />features/history/HistoryPage.tsx
+            </div>
+            <div>plan.preview · plan.execute · backup · rollback</div>
+          </div>
+        </section>
+
+        <section id="flows" class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Interaction diagrams</p>
+              <h2>交互图 · 两条主流程 + 异常回路</h2>
+            </div>
+            <p>
+              箭头代表用户动作或系统转场；菱形节点代表必须明确呈现的决策点。实现时保持同样的顺序和可返回性。
+            </p>
+          </div>
+          <article class="card">
+            <p class="eyebrow">Flow A · Configuration edit</p>
+            <h3>配置编辑：从发现到可恢复写入</h3>
+            <div class="diagram" role="img" aria-label="配置编辑交互流程">
+              <div class="flow-line">
+                <div class="flow-node start">工作台<br />发现诊断</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">配置中心<br />筛 Agent / Scope</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">文件详情<br />表单 / 源码</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">生成计划<br />预览 Diff</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node decision">
+                  磁盘 revision<br />仍一致？<span class="branch-label"
+                    >Yes / No</span
+                  >
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node success">
+                  备份 → 原子写入<br />重新解析
+                </div>
+              </div>
+              <div class="diagram-branch">
+                <div class="flow-node stop">No：阻止覆盖<br />重新载入</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">用户查看<br />外部 Diff</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node success">回到计划<br />再次确认</div>
+              </div>
+            </div>
+            <div class="flow-row" style="margin-top: 17px">
+              <strong>交互规则</strong>
+              <p>
+                离开详情时若有草稿，先提示“保存草稿 / 放弃”；计划抽屉支持 Esc
+                关闭但不执行；执行中按钮禁用并显示进度；失败状态给出“查看错误 /
+                重试 / 创建回滚计划”。
+              </p>
+            </div>
+          </article>
+          <article class="card" style="margin-top: 17px">
+            <p class="eyebrow">Flow B · Skill install</p>
+            <h3>Skill 安装：来源、兼容性与目标逐步确认</h3>
+            <div class="diagram" role="img" aria-label="Skill 安装交互流程">
+              <div class="flow-line">
+                <div class="flow-node start">Skills 中心<br />搜索 / 筛选</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">来源详情<br />commit / 指纹</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">选择 Skill<br />查看兼容性</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node">选择目标<br />Agent + Scope</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node decision">
+                  冲突或 unknown？<span class="branch-label">诊断先行</span>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node success">
+                  InstallPlan<br />Diff → 执行
+                </div>
+              </div>
+              <div class="diagram-branch">
+                <div class="flow-node stop">
+                  incompatible：<br />仅浏览不可安装
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node decision">
+                  unknown：<br />显式勾选风险
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node success">目标无冲突<br />进入计划</div>
+              </div>
+            </div>
+            <div class="flow-row" style="margin-top: 17px">
+              <strong>交互规则</strong>
+              <p>
+                兼容性结论同时显示状态、原因和证据；目标目录已有非 AgentHub
+                文件时，默认阻止并要求查看文件级 Diff。批量选择只允许纳入
+                supported 条目，unknown 必须单独确认。
+              </p>
+            </div>
+          </article>
+          <article class="card" style="margin-top: 17px">
+            <p class="eyebrow">State model</p>
+            <h3>所有页面都必须实现的状态</h3>
+            <div class="state-grid">
+              <div class="state-card">
+                <b>Loading</b
+                ><span
+                  >保留页面骨架；扫描超过 1s 显示 skeleton 和取消入口。</span
+                >
+              </div>
+              <div class="state-card">
+                <b>Empty</b
+                ><span
+                  >解释为什么为空，并提供“扫描 Agent / 添加来源”主动作。</span
+                >
+              </div>
+              <div class="state-card">
+                <b>Blocked</b
+                ><span
+                  >说明阻止原因和下一步；不把按钮做成无响应的 disabled。</span
+                >
+              </div>
+              <div class="state-card">
+                <b>Success</b
+                ><span>显示完成对象、时间、备份引用和“查看历史”入口。</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section id="screens" class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Page previews</p>
+              <h2>页面效果图 · 8 个核心页面</h2>
+            </div>
+            <p>
+              以下是可直接在浏览器预览的高保真静态稿。每个屏幕对应一个页面目标、关键组件和状态要求。
+            </p>
+          </div>
+          <ol class="page-index">
+            <li><a href="#page-overview">工作台总览</a></li>
+            <li><a href="#page-config">配置中心</a></li>
+            <li><a href="#page-editor">配置详情与编辑</a></li>
+            <li><a href="#page-skills">Skills 中心</a></li>
+            <li><a href="#page-source">来源详情</a></li>
+            <li><a href="#page-plan">变更计划</a></li>
+            <li><a href="#page-workspace">工作空间</a></li>
+            <li><a href="#page-history">变更历史</a></li>
+          </ol>
+
+          <article id="page-overview" class="section" style="margin-top: 40px">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P01 · Dashboard</p>
+                <h2>工作台总览</h2>
+              </div>
+              <p>进入应用后的第一屏；把“哪里需要我处理”变成明确的下一步。</p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 默认状态（已完成首次扫描）<a
+                    href="assets/prd/01-overview.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag accent">Desktop 1440 × 900</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand">
+                    <i></i>AgentHub <small>WORKSPACE</small>
+                  </div>
+                  <small>● 已同步 · 2 分钟前</small>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Navigate</div>
+                    <div class="mini-nav">
+                      <span class="on">总览</span><span>配置中心</span
+                      ><span>Skills 中心</span><span>工作空间</span
+                      ><span>变更历史</span>
+                    </div>
+                    <div class="mini-label" style="margin-top: 26px">Scope</div>
+                    <div class="mini-nav">
+                      <span>全局</span><span>JTStudio / agent-hub</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>早上好，Zhoubin</h3>
+                    <div class="sub">你的本地 Agent 环境 · 最后扫描 09:41</div>
+                    <div class="stat-grid">
+                      <div class="mini-stat">
+                        <small>配置健康度</small
+                        ><b style="color: #7de5b8">92%</b>
+                      </div>
+                      <div class="mini-stat">
+                        <small>待确认计划</small><b>2</b>
+                      </div>
+                      <div class="mini-stat">
+                        <small>可更新 Skills</small
+                        ><b style="color: #ffd084">7</b>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>需要你确认</span
+                        ><span class="mini-pill warn">2 items</span>
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>更新 3 个 Skills → workspace</strong
+                          ><span class="mini-pill warn">Diff</span>
+                        </div>
+                        <div>
+                          <strong>Claude Code · settings.json</strong
+                          ><span class="mini-pill">安全</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>最近活动</span
+                        ><span style="color: #8496af; font-size: 9px"
+                          >查看全部 →</span
+                        >
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>扫描 agent-hub</strong
+                          ><span style="color: #8496af">09:41</span>
+                        </div>
+                        <div>
+                          <strong>回滚 Codex 配置</strong
+                          ><span style="color: #8496af">昨天</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-config" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P02 · Configuration</p>
+                <h2>配置中心</h2>
+              </div>
+              <p>
+                以 Agent +
+                作用域为第一层筛选；文件树永远显示实际路径和解析状态。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · Claude Code / workspace<a
+                    href="assets/prd/02-config.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag">Filter-first</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand"><i></i>配置中心</div>
+                  <div>
+                    <span class="mini-button">扫描全部</span>
+                    <span class="mini-button primary">+ 添加工作空间</span>
+                  </div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Agent</div>
+                    <div class="mini-nav">
+                      <span class="on">Claude Code <small>3</small></span
+                      ><span>Codex <small>2</small></span
+                      ><span>OpenCode <small>2</small></span>
+                    </div>
+                    <div class="mini-label" style="margin-top: 20px">Scope</div>
+                    <div class="mini-nav">
+                      <span class="on">工作空间</span><span>全局</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>Claude Code · 工作空间配置</h3>
+                    <div class="sub">
+                      JTStudio / agent-hub ·
+                      /Users/zhoubin/work/JTStudio/agent-hub
+                    </div>
+                    <div class="editor-grid">
+                      <div class="mini-panel">
+                        <div class="mini-panel-title">
+                          <span>配置文件（3）</span
+                          ><span style="color: #8496af; font-size: 9px"
+                            >按状态筛选</span
+                          >
+                        </div>
+                        <div class="tree">
+                          <div class="node selected">▾ .claude</div>
+                          <div class="node" style="padding-left: 20px">
+                            settings.json <span class="mini-pill">有效</span>
+                          </div>
+                          <div class="node" style="padding-left: 20px">
+                            CLAUDE.md <span class="mini-pill">有效</span>
+                          </div>
+                          <div class="node">▾ .agents</div>
+                          <div class="node" style="padding-left: 20px">
+                            rules.md
+                            <span class="mini-pill warn">外部修改</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mini-panel">
+                        <div class="mini-panel-title">
+                          <span>settings.json</span
+                          ><span class="mini-pill">JSONC · 有效</span>
+                        </div>
+                        <div class="mini-list">
+                          <div>
+                            <strong>模式</strong><span>表单 / 源码 / Diff</span>
+                          </div>
+                          <div>
+                            <strong>最近读取</strong
+                            ><span>09:41 · checksum 4d8a…</span>
+                          </div>
+                        </div>
+                        <div class="mini-actions">
+                          <span class="mini-button primary">打开详情</span
+                          ><span class="mini-button">查看 Diff</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-editor" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P03 · Edit safely</p>
+                <h2>配置详情与编辑</h2>
+              </div>
+              <p>
+                表单降低修改门槛，源码保留完整控制；诊断必须靠近问题，保存统一生成计划。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 表单视图 + 外部修改诊断<a
+                    href="assets/prd/03-editor.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag">No silent overwrite</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand"><i></i>settings.json</div>
+                  <div>
+                    <span class="mini-button">源码</span>
+                    <span class="mini-button">Diff</span>
+                    <span class="mini-button primary">生成变更计划</span>
+                  </div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Location</div>
+                    <div class="mini-nav">
+                      <span class="on">表单视图</span><span>源码视图</span
+                      ><span>变更 Diff</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>Claude Code · settings.json</h3>
+                    <div class="sub">
+                      workspace ·
+                      /Users/zhoubin/work/JTStudio/agent-hub/.claude/settings.json
+                    </div>
+                    <div
+                      class="callout warn"
+                      style="font-size: 10px; margin-bottom: 10px"
+                    >
+                      <strong>外部修改：</strong
+                      >磁盘内容在打开后发生变化。重新载入后才能继续保存。
+                    </div>
+                    <div class="editor-grid">
+                      <div>
+                        <div class="field">
+                          <label>默认模型</label>
+                          <div>claude-sonnet-4-20250514</div>
+                        </div>
+                        <div class="field">
+                          <label>确认策略</label>
+                          <div>每次写入前确认 ▾</div>
+                        </div>
+                        <div class="field">
+                          <label>工作目录继承</label>
+                          <div style="color: #8de6bc">已开启 · workspace</div>
+                        </div>
+                      </div>
+                      <div class="mini-code">
+                        { "model": "claude-sonnet-4-20250514", "permissionMode":
+                        "ask", "inheritWorkspace": true }
+                      </div>
+                    </div>
+                    <div class="mini-actions">
+                      <span class="mini-button">重新载入磁盘版本</span
+                      ><span class="mini-button primary" style="opacity: 0.45"
+                        >保存并生成计划</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-skills" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P04 · Skills</p>
+                <h2>Skills 中心</h2>
+              </div>
+              <p>
+                用“来源”和“目标”拆开复杂度：先找到可信的 Skill，再决定装到哪个
+                Agent 和作用域。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 全部 Skills / 更新可用<a
+                    href="assets/prd/04-skills.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag accent">7 updates</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand"><i></i>Skills 中心</div>
+                  <div>
+                    <span class="mini-button">筛选：更新可用</span>
+                    <span class="mini-button primary">+ 添加来源</span>
+                  </div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Inventory</div>
+                    <div class="mini-nav">
+                      <span class="on">全部 Skills <small>42</small></span
+                      ><span>已安装 <small>28</small></span
+                      ><span>更新可用 <small>7</small></span
+                      ><span>不兼容 <small>3</small></span>
+                    </div>
+                    <div class="mini-label" style="margin-top: 20px">
+                      Source
+                    </div>
+                    <div class="mini-nav">
+                      <span>预置仓库</span><span>Git / 本地</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>Skills inventory</h3>
+                    <div class="sub">按名称、来源、兼容性和目标快速定位</div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>7 个 Skill 可更新</span
+                        ><span style="color: #8496af; font-size: 9px"
+                          >批量操作 ▾</span
+                        >
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>code-review / mattpocock/skills</strong
+                          ><span class="mini-pill warn">v2 → v3</span>
+                        </div>
+                        <div>
+                          <strong>frontend-design / anthropics/skills</strong
+                          ><span class="mini-pill warn">更新</span>
+                        </div>
+                        <div>
+                          <strong>tdd / local-directory</strong
+                          ><span class="mini-pill">已同步</span>
+                        </div>
+                        <div>
+                          <strong>research / skills.sh</strong
+                          ><span class="mini-pill">Claude · Codex</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-actions">
+                      <span class="mini-button">查看不兼容项</span
+                      ><span class="mini-button primary">创建更新计划</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-source" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P05 · Source detail</p>
+                <h2>来源详情</h2>
+              </div>
+              <p>
+                来源是可追溯的容器，不等同于安装目标。展示
+                revision、扫描指纹与发现诊断。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 远程 Git 来源<a href="assets/prd/05-source.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag">Traceable snapshot</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand">
+                    <i></i>来源 · mattpocock/skills
+                  </div>
+                  <div>
+                    <span class="mini-button">重新扫描</span>
+                    <span class="mini-button primary">添加到计划</span>
+                  </div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Source</div>
+                    <div class="mini-nav">
+                      <span class="on">来源概览</span><span>发现的 Skills</span
+                      ><span>扫描诊断</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>mattpocock/skills</h3>
+                    <div class="sub">GitHub · branch main · 最近扫描 09:36</div>
+                    <div class="stat-grid">
+                      <div class="mini-stat">
+                        <small>发现 Skills</small><b>12</b>
+                      </div>
+                      <div class="mini-stat">
+                        <small>可兼容</small><b style="color: #7de5b8">10</b>
+                      </div>
+                      <div class="mini-stat">
+                        <small>Resolved commit</small
+                        ><b style="font-size: 12px">8a91f2…</b>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>来源信息</span><span class="mini-pill">Git</span>
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>规范化地址</strong
+                          ><span>github.com/mattpocock/skills</span>
+                        </div>
+                        <div>
+                          <strong>指纹</strong><span>sha256: 3fdc…9a0e</span>
+                        </div>
+                        <div>
+                          <strong>凭据</strong
+                          ><span style="color: #8de6bc">系统钥匙串引用</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>发现诊断</span
+                        ><span class="mini-pill warn">2 warnings</span>
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>legacy-setup</strong
+                          ><span style="color: #ffd290">缺少 frontmatter</span>
+                        </div>
+                        <div>
+                          <strong>browser-agent</strong
+                          ><span style="color: #ffd290">OpenCode unknown</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-plan" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P06 · Install plan</p>
+                <h2>变更计划 · 最后一道安全门</h2>
+              </div>
+              <p>
+                所有配置写入、Skill
+                安装、更新、启用、禁用和卸载，都在确认页一次审阅。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 更新 3 个 Skills 到 workspace<a
+                    href="assets/prd/06-plan.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag accent">Review required</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand"><i></i>变更计划 #IP-2048</div>
+                  <div>
+                    <span class="mini-button">取消</span>
+                    <span class="mini-button primary">确认并执行</span>
+                  </div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Plan</div>
+                    <div class="mini-nav">
+                      <span class="on">动作摘要</span><span>文件 Diff</span
+                      ><span>权限与冲突</span><span>回滚点</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>准备更新 3 个 Skill</h3>
+                    <div class="sub">
+                      目标：Claude Code · workspace · agent-hub
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>变更摘要</span
+                        ><span class="mini-pill">3 update</span>
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>frontend-design</strong
+                          ><span>6 files · +42 / −18</span>
+                        </div>
+                        <div>
+                          <strong>code-review</strong
+                          ><span>4 files · +12 / −6</span>
+                        </div>
+                        <div>
+                          <strong>tdd</strong><span>2 files · +8 / −0</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>风险检查</span
+                        ><span class="mini-pill warn">1 warning</span>
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>目标目录存在外部文件</strong
+                          ><span style="color: #ffd290">查看 Diff</span>
+                        </div>
+                        <div>
+                          <strong>写入前备份</strong
+                          ><span style="color: #8de6bc">自动创建</span>
+                        </div>
+                        <div>
+                          <strong>失败时行为</strong><span>保留旧安装</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-actions">
+                      <span class="mini-button">打开完整 Diff</span
+                      ><span class="mini-button primary">确认并执行</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-workspace" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P07 · Workspaces</p>
+                <h2>工作空间</h2>
+              </div>
+              <p>
+                注册、扫描和切换工作空间；保留输入路径、规范化路径与别名，不因符号链接重复登记。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 工作空间列表 / 扫描状态<a
+                    href="assets/prd/07-workspace.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag">Local-first</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand"><i></i>工作空间</div>
+                  <div>
+                    <span class="mini-button primary">+ 添加工作空间</span>
+                  </div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">Workspace</div>
+                    <div class="mini-nav">
+                      <span class="on">全部工作空间 <small>3</small></span
+                      ><span>最近使用</span><span>需要扫描</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>已登记的工作空间</h3>
+                    <div class="sub">
+                      工作空间 ID 以 canonical path + 文件系统身份为主
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-list">
+                        <div>
+                          <strong>JTStudio / agent-hub</strong
+                          ><span class="mini-pill">已扫描</span>
+                        </div>
+                        <div>
+                          <strong>acme / checkout</strong
+                          ><span class="mini-pill warn">需要扫描</span>
+                        </div>
+                        <div>
+                          <strong>lab / prompts</strong
+                          ><span class="mini-pill">别名 2</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>JTStudio / agent-hub</span
+                        ><span style="color: #8496af; font-size: 9px">•••</span>
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>规范化路径</strong
+                          ><span>/Users/zhoubin/work/JTStudio/agent-hub</span>
+                        </div>
+                        <div>
+                          <strong>最近扫描</strong
+                          ><span>今天 09:41 · 2 个诊断</span>
+                        </div>
+                      </div>
+                      <div class="mini-actions">
+                        <span class="mini-button">扫描配置</span
+                        ><span class="mini-button primary">进入工作台</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="page-history" class="section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">P08 · History</p>
+                <h2>变更历史</h2>
+              </div>
+              <p>
+                把每次写入、回滚和失败都变成可追踪的操作记录；回滚会创建新的操作，不删除历史。
+              </p>
+            </div>
+            <div class="mockup-wrap">
+              <div class="mockup-caption">
+                <span
+                  >效果图 · 操作时间线 / 回滚确认<a
+                    href="assets/prd/08-history.png"
+                    >打开 PNG ↗</a
+                  ></span
+                ><span class="tag">Audit trail</span>
+              </div>
+              <div class="screen">
+                <div class="screen-top">
+                  <div class="screen-brand"><i></i>变更历史</div>
+                  <div><span class="mini-button">筛选 ▾</span></div>
+                </div>
+                <div class="screen-body">
+                  <div class="screen-side">
+                    <div class="mini-label">History</div>
+                    <div class="mini-nav">
+                      <span class="on">全部操作</span><span>配置操作</span
+                      ><span>Skill 操作</span><span>失败 / 阻止</span>
+                    </div>
+                  </div>
+                  <div class="screen-content">
+                    <h3>最近 30 天</h3>
+                    <div class="sub">
+                      仅保存元数据与受限备份引用，不记录 Token 或完整配置正文
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-list">
+                        <div>
+                          <strong>更新 3 个 Skills</strong
+                          ><span class="mini-pill">成功 · 今天 09:42</span>
+                        </div>
+                        <div>
+                          <strong>保存 Claude settings.json</strong
+                          ><span class="mini-pill warn"
+                            >被阻止 · 昨天 18:12</span
+                          >
+                        </div>
+                        <div>
+                          <strong>回滚 Codex user.toml</strong
+                          ><span class="mini-pill">成功 · 08-20</span>
+                        </div>
+                        <div>
+                          <strong>扫描 workspace</strong
+                          ><span>完成 · 08-20</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mini-panel">
+                      <div class="mini-panel-title">
+                        <span>更新 3 个 Skills</span
+                        ><span style="color: #8496af; font-size: 9px"
+                          >#IP-2048</span
+                        >
+                      </div>
+                      <div class="mini-list">
+                        <div>
+                          <strong>备份</strong><span>backup/2026-08-22/…</span>
+                        </div>
+                        <div>
+                          <strong>可恢复到</strong
+                          ><span>执行前版本 · 3 个目标</span>
+                        </div>
+                      </div>
+                      <div class="mini-actions">
+                        <span class="mini-button">查看计划</span
+                        ><span class="mini-button">创建回滚计划</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section id="requirements" class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Functional requirements</p>
+              <h2>功能需求与边界</h2>
+            </div>
+            <p>
+              需求 ID 可直接映射到
+              `.scratch/agent-hub-v1/issues/`；实现时按优先级拆分提交。
+            </p>
+          </div>
+          <table class="requirements">
+            <thead>
+              <tr>
+                <th>ID / 优先级</th>
+                <th>需求</th>
+                <th>行为与验收口径</th>
+                <th>不做什么</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="priority p1">F-01 · P0</span></td>
+                <td>首次扫描</td>
+                <td>
+                  启动后发现 Claude Code、Codex、OpenCode
+                  的全局配置；用户可添加工作空间并重新扫描。扫描结果含实际路径、格式、checksum、parse
+                  status 和诊断。
+                </td>
+                <td>不自动创建配置目录；不执行 Skill 中脚本。</td>
+              </tr>
+              <tr>
+                <td><span class="priority p1">F-02 · P0</span></td>
+                <td>配置浏览与编辑</td>
+                <td>
+                  按 Agent / 作用域 / 文件类型筛选；详情支持表单、源码和
+                  Diff。解析失败仍可查看原文，但不可生成结构化写入计划。
+                </td>
+                <td>不把扩展名以外的格式猜成受支持格式。</td>
+              </tr>
+              <tr>
+                <td><span class="priority p1">F-03 · P0</span></td>
+                <td>安全变更计划</td>
+                <td>
+                  每次写入前重新读取并比对
+                  revision，展示文件动作、权限、冲突、备份与回滚点；用户确认后原子替换并重新解析验证。
+                </td>
+                <td>不在列表内直接覆盖文件；外部修改时阻止静默覆盖。</td>
+              </tr>
+              <tr>
+                <td><span class="priority">F-04 · P1</span></td>
+                <td>Skill 来源与发现</td>
+                <td>
+                  支持 preset、skills.sh、Marketplace、Git、本地目录；来源与
+                  Descriptor 分离，保留 requested/resolved
+                  ref、commit、内容指纹和诊断。
+                </td>
+                <td>不把同名不同来源 Skill 自动合并。</td>
+              </tr>
+              <tr>
+                <td><span class="priority">F-05 · P1</span></td>
+                <td>Skill 生命周期</td>
+                <td>
+                  浏览、安装、更新、启用、禁用、卸载均生成 InstallPlan；兼容性为
+                  incompatible 不进默认计划，unknown 必须显式确认风险。
+                </td>
+                <td>不执行来源仓库中的脚本、hooks 或模板。</td>
+              </tr>
+              <tr>
+                <td><span class="priority">F-06 · P1</span></td>
+                <td>历史与恢复</td>
+                <td>
+                  记录编辑、回滚、导入和 Skill 操作的状态、时间、checksum
+                  与备份引用；回滚是新操作，不删除历史。
+                </td>
+                <td>日志和 SQLite 不保存 token、password、完整配置正文。</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="grid-2" style="margin-top: 17px">
+            <article class="card">
+              <p class="eyebrow">Non-goals</p>
+              <h3>V1 明确不包含</h3>
+              <ul>
+                <li>云同步、账号计费、多人协作</li>
+                <li>远程 Agent 托管与内置对话终端</li>
+                <li>完整插件市场和自动化脚本执行</li>
+              </ul>
+            </article>
+            <article class="card">
+              <p class="eyebrow">Safety invariants</p>
+              <h3>不可破坏的约束</h3>
+              <ul>
+                <li>磁盘文件是唯一真实数据源</li>
+                <li>所有副作用经 Rust 业务模块</li>
+                <li>失败时保留旧文件和可恢复备份</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="acceptance" class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Acceptance</p>
+              <h2>验收清单</h2>
+            </div>
+            <p>完成定义同时覆盖业务正确性、风险提示和页面可用性。</p>
+          </div>
+          <div class="grid-2">
+            <article class="card">
+              <h3>核心流程</h3>
+              <ul class="checklist">
+                <li>新用户可以完成首次扫描并看到健康度。</li>
+                <li>用户能在 Agent/作用域筛选后打开一个配置文件。</li>
+                <li>表单编辑会生成包含 Diff 和备份的计划。</li>
+                <li>外部修改、解析失败、缺失和不可读均有可操作诊断。</li>
+                <li>Skill 可从至少一种 Git 来源安装到两个不同目标。</li>
+                <li>未知兼容性不能进入默认批量计划。</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>质量与工程</h3>
+              <ul class="checklist">
+                <li>页面在 375 / 768 / 1440 px 宽度无横向滚动。</li>
+                <li>可见焦点、顺序标题、按钮文本和状态不依赖颜色单独表达。</li>
+                <li>遵守 `prefers-reduced-motion`，不以动画隐藏关键信息。</li>
+                <li>
+                  运行 `npm run build`、`npm run test`、`npm run lint` 和 Rust
+                  检查。
+                </li>
+                <li>文档、实现与 `.scratch/` 状态保持同步。</li>
+              </ul>
+            </article>
+          </div>
+          <div class="callout" style="margin-top: 17px">
+            <strong>交付切片建议：</strong>B01/B02 打底 → B03/B04 配置安全闭环 →
+            B05/B06/B07 三 Agent → B08–B12 Skills 生命周期 → B13 诊断与历史 →
+            B14 发布。
+          </div>
+        </section>
+
+        <footer class="footer">
+          关联文档：<a href="product/overview.md">产品概述</a> ·
+          <a href="architecture/configuration-management.md">配置管理架构</a> ·
+          <a href="architecture/skill-domain-model.md">Skill 领域模型</a> ·
+          <a href="../.scratch/agent-hub-v1/issues/D04-ux-prototype.md"
+            >D04 交互原型结论</a
+          ><br />本文件是规划中的 V1 PRD，页面效果图为不连接真实数据的 HTML/CSS
+          静态稿。
+        </footer>
+      </main>
+    </div>
+    <script>
+      const links = [...document.querySelectorAll(".nav a")];
+      const sections = links.map((link) =>
+        document.querySelector(link.getAttribute("href")),
+      );
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const current = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (!current) return;
+          links.forEach((link) =>
+            link.toggleAttribute(
+              "aria-current",
+              link.getAttribute("href") === `#${current.target.id}`,
+            ),
+          );
+        },
+        { rootMargin: "-15% 0px -70% 0px", threshold: [0, 0.15, 0.4] },
+      );
+      sections.filter(Boolean).forEach((section) => observer.observe(section));
+    </script>
+  </body>
+</html>
