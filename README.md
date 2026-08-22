@@ -7,6 +7,7 @@ AgentHub —— AI Agent 工作空间管理器
 项目设计与开发文档见 [`docs/`](docs/README.md)。
 重大变更记录见 [`CHANGELOG.md`](CHANGELOG.md)。
 需求、任务依赖和开发状态见 [`.scratch/agent-hub-v1/`](.scratch/agent-hub-v1/README.md)。
+任务总状态索引见 [`.scratch/agent-hub-v1/status.md`](.scratch/agent-hub-v1/status.md)。
 
 ## 本地开发
 
