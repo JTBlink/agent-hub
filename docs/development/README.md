@@ -13,10 +13,13 @@
 
 ```bash
 npm ci
-npm run tauri dev
+./start.sh
+./build.sh
 npm run lint
 npm run test
 npm run build
+npm run tauri -- dev
+npm run tauri -- build
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo fmt --all -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
