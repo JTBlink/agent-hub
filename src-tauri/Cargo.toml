@@ -1,0 +1,25 @@
+[package]
+name = "agent-hub"
+version = "0.1.0"
+description = "AI Agent workspace configuration and Skills manager"
+authors = ["JTStudio"]
+edition = "2021"
+
+[lib]
+name = "agent_hub_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+rusqlite = { version = "0.32", features = ["bundled"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tauri = { version = "2", features = [] }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
