@@ -2,6 +2,8 @@
 
 本目录是 AgentHub V1 的正式仓库内 Issue tracker。需求规格见 [`spec.md`](spec.md)，每个任务在 `issues/` 中独立维护。GitHub 不保存需求状态，只用于 CI/CD 和发布。
 
+任务总览见 [`status.md`](status.md)；详细验收证据和讨论仍记录在对应的 `issues/*.md` 文件中。
+
 ## 状态规则
 
 - `Status: open`：尚未领取；所有 `Blocked by` 均为 `resolved` 时可开始。
