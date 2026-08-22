@@ -27,7 +27,7 @@ impl AgentConfigAdapter for ClaudeCodeAdapter {
                     }
                     _ => (ConfigStatus::Unreadable, DiagnosticCode::IoFailure),
                 };
-                return empty_document(
+                let document = empty_document(
                     path,
                     status,
                     Diagnostic {
@@ -37,6 +37,12 @@ impl AgentConfigAdapter for ClaudeCodeAdapter {
                         column: None,
                     },
                 );
+                crate::logging::config_scan_completed(
+                    document.agent,
+                    document.scope,
+                    document.status,
+                );
+                return document;
             }
         };
 
@@ -47,7 +53,7 @@ impl AgentConfigAdapter for ClaudeCodeAdapter {
             .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
             .map(|duration| duration.as_millis());
 
-        match serde_json::from_slice::<Value>(&bytes) {
+        let document = match serde_json::from_slice::<Value>(&bytes) {
             Ok(mut structured_view) => {
                 redact_sensitive_values(&mut structured_view);
                 let source_preview = redact_raw_preview(&String::from_utf8_lossy(&bytes));
@@ -81,7 +87,9 @@ impl AgentConfigAdapter for ClaudeCodeAdapter {
                     column: Some(error.column()),
                 }],
             },
-        }
+        };
+        crate::logging::config_scan_completed(document.agent, document.scope, document.status);
+        document
     }
 }
 

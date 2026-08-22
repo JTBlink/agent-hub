@@ -32,11 +32,18 @@ jobs:
     name: Validate release metadata
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    outputs:
+      resolved_sha: ${{ steps.resolve_ref.outputs.sha }}
     steps:
       - name: Check out requested revision
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+
+      - name: Resolve immutable build revision
+        id: resolve_ref
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -44,18 +51,15 @@ jobs:
           node-version: 22
 
       - name: Verify version consistency
-        env:
-          BUILD_REF: ${{ inputs.ref || github.ref_name }}
         run: |
-          VERSION_REF="${BUILD_REF#refs/tags/}"
-          if [[ "$VERSION_REF" == v* ]]; then
-            node scripts/check-version.mjs "$VERSION_REF"
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/tags/v* ]]; then
+            node scripts/check-version.mjs "$GITHUB_REF_NAME"
           else
             node scripts/check-version.mjs
           fi
 
-      - name: Validate optional signing configuration
-        if: startsWith(github.ref, 'refs/tags/v') && (vars.ENABLE_APPLE_SIGNING == 'true' || vars.ENABLE_WINDOWS_SIGNING == 'true')
+      - name: Validate Apple signing configuration
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.ENABLE_APPLE_SIGNING == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -63,36 +67,38 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::${name} is required when ENABLE_APPLE_SIGNING=true"
+              exit 1
+            fi
+          done
+
+      - name: Validate Windows signing configuration
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.ENABLE_WINDOWS_SIGNING == 'true'
+        env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
           WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
         run: |
-          if [[ "${{ vars.ENABLE_APPLE_SIGNING }}" == "true" ]]; then
-            for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
-              if [[ -z "${!name}" ]]; then
-                echo "::error::${name} is required when ENABLE_APPLE_SIGNING=true"
-                exit 1
-              fi
-            done
-          fi
-          if [[ "${{ vars.ENABLE_WINDOWS_SIGNING }}" == "true" ]]; then
-            for name in WINDOWS_CERTIFICATE WINDOWS_CERTIFICATE_PASSWORD WINDOWS_SIGNING_TIMESTAMP_URL; do
-              if [[ -z "${!name}" ]]; then
-                echo "::error::${name} is required when ENABLE_WINDOWS_SIGNING=true"
-                exit 1
-              fi
-            done
-          fi
+          for name in WINDOWS_CERTIFICATE WINDOWS_CERTIFICATE_PASSWORD WINDOWS_SIGNING_TIMESTAMP_URL; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::${name} is required when ENABLE_WINDOWS_SIGNING=true"
+              exit 1
+            fi
+          done
 
   quality:
     name: Verify release candidate
+    needs: preflight
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Check out requested revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ needs.preflight.outputs.resolved_sha }}
 
       - name: Install Linux build dependencies
         run: |
@@ -172,7 +178,7 @@ jobs:
       - name: Check out requested revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ needs.preflight.outputs.resolved_sha }}
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
@@ -210,7 +216,7 @@ jobs:
         run: npm run tauri build -- ${{ matrix.tauri_args }}
 
       - name: Build macOS release installers
-        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING == 'true'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -221,7 +227,7 @@ jobs:
         run: npm run tauri build -- ${{ matrix.tauri_args }}
 
       - name: Sign Windows installers
-        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows' && vars.ENABLE_WINDOWS_SIGNING == 'true'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows' && vars.ENABLE_WINDOWS_SIGNING == 'true'
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
@@ -239,7 +245,7 @@ jobs:
           Remove-Item $certificatePath -Force
 
       - name: Report unsigned macOS release
-        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING != 'true'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING != 'true'
         run: echo "ENABLE_APPLE_SIGNING is disabled; publishing an unsigned macOS installer."
 
       - name: Upload installers
@@ -252,7 +258,7 @@ jobs:
 
   package:
     name: Assemble installers and checksums
-    needs: build
+    needs: [preflight, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -260,7 +266,7 @@ jobs:
       - name: Check out requested revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ needs.preflight.outputs.resolved_sha }}
 
       - name: Download platform installers
         uses: actions/download-artifact@v4
@@ -279,6 +285,9 @@ jobs:
           BUILD_REF: ${{ inputs.ref || github.ref_name }}
         run: npm run release:assemble -- release-assets "$BUILD_REF"
 
+      - name: Verify release bundle
+        run: npm run release:verify -- release-assets
+
       - name: Upload combined installer bundle
         uses: actions/upload-artifact@v4
         with:
@@ -289,7 +298,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: package
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -307,11 +316,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-assets/**/*.exe
-            release-assets/**/*.msi
-            release-assets/**/*.dmg
-            release-assets/**/*.AppImage
-            release-assets/**/*.deb
+            release-assets/*.exe
+            release-assets/*.msi
+            release-assets/*.dmg
+            release-assets/*.AppImage
+            release-assets/*.deb
             release-assets/*.md
             release-assets/SHA256SUMS
           fail_on_unmatched_files: true

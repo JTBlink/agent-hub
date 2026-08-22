@@ -1,7 +1,8 @@
 use agent_hub_lib::persistence::{
     AppSetting, ConfigIndex, ConfigMetadataRepository, Database, NewConfigBackup,
     NewConfigOperation, NewSkillDescriptor, NewSkillInstallation, NewSkillSource, NewWorkspace,
-    PersistenceError, SettingKey, SettingsRepository, SkillRepository, Theme, WorkspaceRepository,
+    PersistenceError, SettingKey, SettingsRepository, SkillRepository,
+    StorageDiagnosticsRepository, StorageSummaryRepository, Theme, WorkspaceRepository,
 };
 use agent_hub_lib::{Agent, ConfigFormat, InstallationState, ParseStatus, Scope, SkillKind};
 use tempfile::tempdir;

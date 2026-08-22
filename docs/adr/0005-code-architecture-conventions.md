@@ -82,6 +82,10 @@ for migration in MIGRATIONS.iter().filter(|m| m.version > applied) {
 - 新增 agent adapter 时只扩展 `AgentKind` enum，不修改校验函数。
 - 迁移文件命名延续 `0001_initial.sql` 格式，版本号单调递增。
 
+## 落地状态
+
+截至 2026-08-22，B02 已完成本 ADR 的第一阶段整改：`persistence/` 已按职责拆分，领域有限值已使用 enum，migration 使用有序注册表，诊断仓储与 Tauri command 通过 trait seam 解耦。后续新增 adapter 和 command 必须继续遵守上述边界。
+
 ## 备选方案
 
 - 保留裸字符串 + 集中校验函数：短期成本低，但每次新增 agent 都要修改多处，且编译器无法拦截非法值。

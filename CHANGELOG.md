@@ -23,8 +23,25 @@
 
 - 确定第一版技术栈：Tauri 2、React、TypeScript、Rust 和 SQLite。
 - 增加产品、架构、数据模型、集成、ADR 和开发指南文档目录。
-- 规划 GitHub Actions 跨平台 CI/CD，目标平台为 Windows、macOS 和 Linux，并生成完整安装包。
-- 增加本地 `.scratch/` 任务草稿约定；正式需求计划迁移到 GitHub Issues。
+- 初始化可运行的 Tauri 2 + React 工程骨架，并加入前端到 Rust 的命令调用示例。
+- 增加 GitHub Actions 跨平台 CI/CD：支持手动构建 Actions artifacts，以及 `v*` tag 自动生成 Windows、macOS、Linux 安装包和 GitHub Release。
+- 增加 `npm run version:set` 和 `npm run version:check`，统一维护并校验发布版本号。
+- 手动和 tag 构建均生成包含全平台安装包、SHA-256 校验和、变更日志与平台支持矩阵的汇总产物。
+- 发布门禁同时校验 npm、Cargo 锁文件与应用 manifests 的版本一致性。
+- 增加 workflow contract 测试，锁定手动/tag 触发、三平台格式、汇总 artifact 和 Release 权限边界。
+- Apple 签名改为 `ENABLE_APPLE_SIGNING` 仓库变量显式开启，手动构建不会读取生产签名 Secrets。
+- 增加可选 Windows Authenticode 签名：`ENABLE_WINDOWS_SIGNING` 开启后由 tag workflow 使用 PFX Secrets 和 `signtool.exe` 签署 `.exe`/`.msi`。
+- 收紧发布事件边界：只有 `v*` tag push 可以读取签名 Secrets 和创建 Release，手动选择 tag 仍只生成无签名 artifact。
+- 手动构建先锁定不可变 commit SHA；汇总阶段扁平化安装包并生成可直接校验 Release 附件的 `SHA256SUMS`。
+- 增加 `release:verify` 自动验收命令；工作流发布前校验五种安装格式、发布元数据、路径安全和所有 SHA-256，篡改或缺失文件会阻止发布。
+- 落地 SQLite migration 0001、应用数据目录诊断、配置/Skill 元数据仓储和事务回滚测试；数据库不保存配置正文或凭据。
+- 增加统一结构化日志封装，输出到标准输出和平台应用日志目录；事件字段使用固定枚举，禁止记录配置正文、凭据和真实数据库路径。
+- 将领域有限值替换为 Rust `enum`，持久化拆为职责单一的子模块，migration 改为顺序注册表，并让 Tauri command 依赖 repository trait。
+- 确定 Skill 来源、Skill 快照、安装实例、Agent 兼容性和安装计划的领域模型，并记录 ADR-0002。
+- 确定配置文件格式感知最小 patch、checksum 乐观锁、原子替换、备份回滚和敏感数据策略，并记录 ADR-0003。
+- 确定 Agent 官方作用域优先级、canonical workspace 身份和 Skill 多来源冲突规则，并记录 ADR-0004。
+- 完成配置中心与 Skills 中心三变体交互原型，确定工作台入口和统一变更计划确认流。
+- 确定仓库内 `.scratch/` Markdown 文件为正式需求与开发状态系统；GitHub 仅用于 CI/CD、安装包和 Release。
 
 ## 版本约定
 

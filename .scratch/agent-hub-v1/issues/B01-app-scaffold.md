@@ -21,5 +21,6 @@ Blocked by: none
 - 初始化 Tauri 2、React、TypeScript 和 Rust 单 crate 工程。
 - 增加配置中心、Skills 中心、工作空间和历史入口骨架。
 - 增加 `app_info` Tauri command、TypeScript 调用层和 Rust 单元测试。
+- 增加统一结构化日志适配层，输出到标准输出和平台日志目录，并以固定事件、命令和错误码约束敏感字段。
 - 验证 `npm run build`、lint、前端测试、Rust fmt、Clippy 和 Rust 测试通过。
 - 本机成功生成 `AgentHub.app` 与 `AgentHub_0.1.0_x64.dmg`。

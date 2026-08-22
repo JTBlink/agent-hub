@@ -4,7 +4,7 @@
 
 第一版支持五类来源：
 
-- **skills.sh 生态**：通过 skills.sh 的搜索或官方 CLI 发现并安装 Skill。
+- **skills.sh 生态**：通过 skills.sh 目录或官方 CLI 发现并安装 Skill。skills.sh 是仓库发现/安装 CLI 与目录索引，不是替代 `SKILL.md` 的 Marketplace manifest 标准。
 - **标准 Marketplace**：解析 Marketplace manifest（例如 `marketplace.json`，包括 `.claude-plugin/marketplace.json` 这类仓库布局），展示目录中的 Skill、版本和安装来源。
 - **官方及预置 GitHub 仓库**：首版支持 Anthropic 官方 [`anthropics/skills`](https://github.com/anthropics/skills)，并预置 [`mattpocock/skills`](https://github.com/mattpocock/skills)、[`obra/superpowers`](https://github.com/obra/superpowers) 和 [`affaan-m/ECC`](https://github.com/affaan-m/ECC)，可浏览仓库内符合规范的 Skill 并选择安装。
 - **自定义 Git 仓库**：用户输入 Git 仓库 URL，可选分支、tag、commit 和仓库内子目录，浏览并选择符合规范的 Skill。
@@ -26,7 +26,7 @@
 
 ## 第一版边界
 
-第一版支持标准 Marketplace manifest、一个官方仓库、三个预置 Git 仓库、符合 Skill 目录规范的自定义 Git 仓库和本地仓库目录，但不承诺自动解析任意项目的复杂目录结构、私有仓库凭据托管、仓库依赖安装或自动发布能力。用户需明确选择 Marketplace 条目、仓库 ref、本地目录和 Skill 子目录；后续可在同一 adapter interface 上扩展更多来源。
+第一版支持标准 Claude Marketplace manifest、skills.sh 目录、一个官方仓库、三个预置 Git 仓库、符合 Skill 目录规范的自定义 Git 仓库和本地仓库目录，但不承诺自动解析任意项目的复杂目录结构、私有仓库凭据托管、仓库依赖安装或自动发布能力。用户需明确选择 Marketplace 条目、仓库 ref、本地目录和 Skill 子目录；后续可在同一 adapter interface 上扩展更多来源。
 
 ## 本地仓库目录
 

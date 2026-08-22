@@ -33,7 +33,12 @@ Blocked by: B13
 - 已验证 Tauri 遇到空 Apple 签名变量会失败；workflow 现仅在 tag macOS step 且 `ENABLE_APPLE_SIGNING=true` 时注入六项 Secrets，否则安全生成未签名包。
 - 发布支持矩阵已列出三平台应用数据目录、已知限制和升级数据保留要求。
 - tag workflow 支持通过 `ENABLE_WINDOWS_SIGNING` 和 PFX Secrets 可选签署 Windows `.exe`/`.msi`；preflight 会拒绝开启开关但凭据不完整的发布。
-- 已增加 `scripts/workflow-contract.test.mjs`（8 个 workflow 断言）和 [V1 发布验收清单](../../../docs/development/release-checklist.md)。
+- 已增加 `scripts/workflow-contract.test.mjs`（10 个 workflow 断言）和 [V1 发布验收清单](../../../docs/development/release-checklist.md)。
+- 已将生产签名和 Release 条件收紧为 `github.event_name == 'push'` 且 ref 为 `v*`；从 Actions 页面手动选择 tag 也只生成无签名 artifact，不会读取发布 Secrets 或创建 Release。
+- 手动输入的 branch/tag/commit 现由 preflight 一次解析为不可变 commit SHA，质量门禁、矩阵构建和汇总任务不再各自重新解析可变分支。
+- 汇总阶段会扁平化五种安装包并拒绝同名冲突，生成的 `SHA256SUMS` 可与 GitHub Release 扁平附件直接配合使用；Apple 与 Windows preflight 也已拆分为最小 Secrets 暴露范围。
+- 当前工作树已重新生成 `AgentHub.app` 和 `AgentHub_0.1.0_x64.dmg`；`hdiutil verify` 通过、应用版本为 `0.1.0`，未签名状态与默认发布配置一致。
+- 新增 `npm run release:verify -- <bundle-directory>`，package job 在上传汇总 artifact 前自动验证五种安装包、三份元数据、校验和及路径边界；完整前端/脚本测试现为 26 项。
 
 ## Current status
 
