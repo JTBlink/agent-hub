@@ -1,7 +1,7 @@
 # B12：完成 Skill 生命周期与多 Agent 安装
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: B09, B10, B11
 
 ## 交付

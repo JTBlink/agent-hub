@@ -1,6 +1,6 @@
 # AgentHub V1 总任务状态
 
-> 更新时间：2026-08-22  
+> 更新时间：2026-08-23<br>
 > 状态来源：本目录 `issues/*.md` 中每个任务的 `Status` 和 `Blocked by` 字段。
 
 ## 总览
@@ -8,8 +8,8 @@
 | 类别                | 已完成 | 进行中 | 待开始 | 总数 |
 | ------------------- | -----: | -----: | -----: | ---: |
 | 决策任务（D01–D05） |      5 |      0 |      0 |    5 |
-| 构建任务（B01–B14） |      2 |      2 |     10 |   14 |
-| 合计                |      7 |      2 |     10 |   19 |
+| 构建任务（B01–B14） |      3 |     11 |      0 |   14 |
+| 合计                |      8 |     11 |      0 |   19 |
 
 ## 决策任务
 
@@ -27,25 +27,25 @@
 | --- | ------------------------------ | ---------- | ----------------------- |
 | B01 | Tauri + React 工程骨架         | `resolved` | —                       |
 | B02 | SQLite 与应用状态基础          | `resolved` | B01                     |
-| B03 | Claude Code 全局配置纵向切片   | `claimed`  | D01、D03、B01、B02      |
-| B04 | 安全编辑、Diff、备份与回滚     | `open`     | D03、B03                |
-| B05 | 工作空间配置管理               | `open`     | D05、B04                |
-| B06 | Codex 配置适配                 | `open`     | D01、B04                |
-| B07 | OpenCode 配置适配              | `open`     | D01、B04                |
-| B08 | 已安装 Skills 可视化盘点       | `open`     | D01、D02、B02           |
-| B09 | 远程 Git 与本地仓库 Skill 来源 | `open`     | D02、B08                |
-| B10 | 标准 Marketplace 来源          | `open`     | D01、D02、B09           |
-| B11 | skills.sh 来源                 | `open`     | D01、D02、B08           |
-| B12 | Skill 生命周期与多 Agent 安装  | `open`     | B09、B10、B11           |
-| B13 | 统一诊断、冲突和恢复体验       | `open`     | D04、B05、B06、B07、B12 |
+| B03 | Claude Code 全局配置纵向切片   | `resolved` | D01、D03、B01、B02      |
+| B04 | 安全编辑、Diff、备份与回滚     | `claimed`  | D03、B03                |
+| B05 | 工作空间配置管理               | `claimed`  | D05、B04                |
+| B06 | Codex 配置适配                 | `claimed`  | D01、B04                |
+| B07 | OpenCode 配置适配              | `claimed`  | D01、B04                |
+| B08 | 已安装 Skills 可视化盘点       | `claimed`  | D01、D02、B02           |
+| B09 | 远程 Git 与本地仓库 Skill 来源 | `claimed`  | D02、B08                |
+| B10 | 标准 Marketplace 来源          | `claimed`  | D01、D02、B09           |
+| B11 | skills.sh 来源                 | `claimed`  | D01、D02、B08           |
+| B12 | Skill 生命周期与多 Agent 安装  | `claimed`  | B09、B10、B11           |
+| B13 | 统一诊断、冲突和恢复体验       | `claimed`  | D04、B05、B06、B07、B12 |
 | B14 | 跨平台验收与 V1 发布           | `claimed`  | B13                     |
 
 ## 当前推进顺序
 
-1. 收尾 B03：完成 Claude 配置扫描到 Tauri command 和 React 配置中心的闭环。
-2. B08 已满足依赖，可并行实现三 Agent 的只读 Skill 盘点。
-3. B04 建立通用安全编辑内核；完成后推进 B05、B06、B07。
-4. B09 → B10/B11 → B12 → B13，最后完成 B14 的真实三平台验收。
+1. 收尾 B04：补齐历史记录与回滚 UI，并用冲突夹具验证安全写入闭环。
+2. 收尾 B05–B08：配置中心加入工作空间作用域，把三 Agent 配置和 Skill 盘点形成完整 UI 闭环。
+3. 收尾 B09–B12：补网络失败/无效 ref 夹具、授权后的来源获取 command 和多 Agent 安装矩阵。
+4. 收尾 B13：实现修复确认与核心恢复 E2E；最后执行 B14 的 tag Release 和三平台安装验收。
 
 ## 状态维护规则
 

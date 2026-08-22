@@ -1,7 +1,7 @@
 # B09：支持远程 Git 与本地仓库 Skill 来源
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D02, B08
 
 ## 交付

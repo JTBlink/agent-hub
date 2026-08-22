@@ -1,7 +1,7 @@
 # B04：实现安全编辑、Diff、备份与回滚
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D03, B03
 
 ## 交付

@@ -47,17 +47,25 @@ impl WorkspaceRepository for Database {
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
+    fn remove_workspace(&self, workspace_id: i64) -> Result<bool, PersistenceError> {
+        let connection = self.lock_connection()?;
+        Ok(connection.execute("DELETE FROM workspaces WHERE id = ?1", [workspace_id])? > 0)
+    }
+
     fn replace_workspace_scan(
         &self,
         workspace: &NewWorkspace,
         configs: &[ConfigIndex],
     ) -> Result<i64, PersistenceError> {
         validate_workspace(workspace)?;
+        for config in configs {
+            validate_config_index(config)?;
+        }
         let mut connection = self.lock_connection()?;
         let transaction = connection.transaction()?;
         let workspace_id = transaction
             .query_row(
-                "INSERT INTO workspaces (display_name, entered_path, normalized_path, canonical_path, path_status, last_scanned_at) VALUES (?1, ?2, ?3, ?4, ?5, CURRENT_TIMESTAMP) RETURNING id",
+                "INSERT INTO workspaces (display_name, entered_path, normalized_path, canonical_path, path_status, last_scanned_at) VALUES (?1, ?2, ?3, ?4, ?5, CURRENT_TIMESTAMP) ON CONFLICT(normalized_path) DO UPDATE SET display_name = excluded.display_name, entered_path = excluded.entered_path, canonical_path = excluded.canonical_path, path_status = excluded.path_status, last_scanned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP RETURNING id",
                 params![
                     workspace.display_name,
                     workspace.entered_path,
@@ -79,8 +87,12 @@ impl WorkspaceRepository for Database {
                 other => other.into(),
             })?;
 
+        transaction.execute(
+            "DELETE FROM config_files WHERE workspace_id = ?1",
+            [workspace_id],
+        )?;
+
         for config in configs {
-            validate_config_index(config)?;
             transaction.execute(
                 "INSERT INTO config_files (workspace_id, agent, scope, normalized_path, format, checksum, parse_status) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![

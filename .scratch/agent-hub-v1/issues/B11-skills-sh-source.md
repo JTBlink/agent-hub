@@ -1,7 +1,7 @@
 # B11：支持 skills.sh 来源
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D01, D02, B08
 
 ## 交付

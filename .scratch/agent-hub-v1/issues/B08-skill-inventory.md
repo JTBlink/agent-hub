@@ -1,7 +1,7 @@
 # B08：可视化盘点已安装 Skills
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D01, D02, B02
 
 ## 交付

@@ -54,7 +54,8 @@ pub struct NewWorkspace {
     pub canonical_path: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceRecord {
     pub id: i64,
     pub display_name: String,
@@ -195,9 +196,10 @@ pub trait SkillRepository {
     ) -> Result<i64, PersistenceError>;
 }
 
-pub trait WorkspaceRepository {
+pub trait WorkspaceRepository: Send + Sync {
     fn add_workspace(&self, workspace: &NewWorkspace) -> Result<i64, PersistenceError>;
     fn list_workspaces(&self) -> Result<Vec<WorkspaceRecord>, PersistenceError>;
+    fn remove_workspace(&self, workspace_id: i64) -> Result<bool, PersistenceError>;
     fn replace_workspace_scan(
         &self,
         workspace: &NewWorkspace,

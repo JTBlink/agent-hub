@@ -6,6 +6,7 @@
 
 ## 文档导航
 
+- [V1 PRD 与页面效果图](agenthub-prd.html)：产品目标、功能需求、信息架构和 8 个核心页面的可视化静态稿。
 - [产品概述](product/overview.md)：目标用户、核心能力和第一版范围。
 - [系统架构](architecture/overview.md)：前后端分层、核心模块和依赖方向。
 - [目录结构](architecture/directory-structure.md)：建议的仓库与源码布局。

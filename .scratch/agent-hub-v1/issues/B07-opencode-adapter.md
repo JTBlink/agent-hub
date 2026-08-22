@@ -1,7 +1,7 @@
 # B07：添加 OpenCode 配置适配
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D01, B04
 
 ## 交付

@@ -39,7 +39,10 @@ Blocked by: B13
 - 汇总阶段会扁平化五种安装包并拒绝同名冲突，生成的 `SHA256SUMS` 可与 GitHub Release 扁平附件直接配合使用；Apple 与 Windows preflight 也已拆分为最小 Secrets 暴露范围。
 - 当前工作树已重新生成 `AgentHub.app` 和 `AgentHub_0.1.0_x64.dmg`；`hdiutil verify` 通过、应用版本为 `0.1.0`，未签名状态与默认发布配置一致。
 - 新增 `npm run release:verify -- <bundle-directory>`，package job 在上传汇总 artifact 前自动验证五种安装包、三份元数据、校验和及路径边界；完整前端/脚本测试现为 26 项。
+- 远程手动构建已完成：[`Build Installers #32581079170`](https://github.com/JTBlink/agent-hub/actions/runs/32581079170)（最新 `main` 提交 `a056117f4f99fd8493ebaf4be152a86ceadc43f3`，输入 `ref=main`）。`Validate release metadata`、`Verify release candidate`、Windows x86_64、Linux x86_64、macOS Universal 和 `Assemble installers and checksums` 均为 success；`Publish GitHub Release` 为 skipped，确认手动构建不发布。前一轮 [`#32580327269`](https://github.com/JTBlink/agent-hub/actions/runs/32580327269) 也通过。
+- 远程产物已核验：汇总 artifact `agent-hub-installers-32581079170`（artifact ID `9477871486`）包含 `AgentHub_0.1.0_x64-setup.exe`、`AgentHub_0.1.0_x64_en-US.msi`、`AgentHub_0.1.0_universal.dmg`、`AgentHub_0.1.0_amd64.AppImage`、`AgentHub_0.1.0_amd64.deb`、`CHANGELOG.md`、`PLATFORM_SUPPORT.md`、`RELEASE_NOTES.md` 和 `SHA256SUMS`。下载后压缩包完整性检查和 `shasum -a 256 -c SHA256SUMS` 全部通过，`hdiutil verify` 确认 Universal DMG 有效。
+- 最新 `main` 提交 `a056117f4f99fd8493ebaf4be152a86ceadc43f3` 的 [`CI #32580341632`](https://github.com/JTBlink/agent-hub/actions/runs/32580341632) 为 success；本地 workflow contract、release assembly/verification/version 脚本共 23 项定向测试通过，`actionlint v1.7.7` 退出码为 0。
 
 ## Current status
 
-CI/CD 自动化实现已完成，当前仍等待远程 GitHub Actions 首次手动运行，以验证 Windows、Linux 和 macOS Universal runner 的真实产物路径；B13 的应用级安装、启动、配置扫描和升级验收仍未完成，因此本任务暂不标记 `resolved`。
+CI/CD 自动化和一次远程手动三平台构建已验证；仍需执行 `v*` tag 流程以确认 GitHub Release 实际创建。B13 的应用级安装、启动、配置扫描和升级验收仍未完成，因此本任务暂不标记 `resolved`。

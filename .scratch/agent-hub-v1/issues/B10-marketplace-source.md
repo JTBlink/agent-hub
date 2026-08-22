@@ -1,7 +1,7 @@
 # B10：支持标准 Marketplace 来源
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D01, D02, B09
 
 ## 交付

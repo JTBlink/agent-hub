@@ -1,7 +1,7 @@
 # B05：支持工作空间配置管理
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D05, B04
 
 ## 交付
@@ -15,3 +15,9 @@ Blocked by: D05, B04
 - 展示全局/工作空间作用域，不伪造合并后的配置。
 - 复用 B04 的安全编辑和回滚能力。
 - 删除工作空间记录不会删除磁盘目录或配置文件。
+
+## Current status
+
+- 已实现 repository trait 驱动的添加、列出、移除和事务化重扫 command；路径 canonical 化并拒绝符号链接。
+- 已扫描三 Agent 工作空间配置、Skills 及 `AGENTS.md` / `CLAUDE.md` 指令文件，React 页面支持添加、重扫和移除记录。
+- 剩余：把工作空间扫描结果并入配置中心作用域切换，并补删除不触碰磁盘的 command 级集成测试。

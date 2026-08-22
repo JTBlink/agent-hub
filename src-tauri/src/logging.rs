@@ -26,6 +26,14 @@ pub fn app_started(version: &str) {
 pub enum Command {
     DatabaseOpen,
     StorageDiagnostics,
+    ScanClaudeGlobal,
+    ScanCodexGlobal,
+    ScanOpenCodeGlobal,
+    ScanSkills,
+    PreviewConfigEdit,
+    ReadConfigSource,
+    WriteConfig,
+    RollbackConfig,
 }
 
 impl Command {
@@ -33,6 +41,14 @@ impl Command {
         match self {
             Self::DatabaseOpen => "database_open",
             Self::StorageDiagnostics => "storage_diagnostics",
+            Self::ScanClaudeGlobal => "scan_claude_global",
+            Self::ScanCodexGlobal => "scan_codex_global",
+            Self::ScanOpenCodeGlobal => "scan_opencode_global",
+            Self::ScanSkills => "scan_skills",
+            Self::PreviewConfigEdit => "preview_config_edit",
+            Self::ReadConfigSource => "read_config_source",
+            Self::WriteConfig => "write_config",
+            Self::RollbackConfig => "rollback_config",
         }
     }
 }
@@ -40,12 +56,16 @@ impl Command {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FailureCode {
     Persistence,
+    Configuration,
+    Skills,
 }
 
 impl FailureCode {
     const fn as_str(self) -> &'static str {
         match self {
             Self::Persistence => "persistence_error",
+            Self::Configuration => "configuration_error",
+            Self::Skills => "skills_error",
         }
     }
 }

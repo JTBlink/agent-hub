@@ -1,7 +1,7 @@
 # B13：统一诊断、冲突和恢复体验
 
 Type: task
-Status: open
+Status: claimed
 Blocked by: D04, B05, B06, B07, B12
 
 ## 交付
@@ -15,3 +15,9 @@ Blocked by: D04, B05, B06, B07, B12
 - 危险修复必须预览并确认；安全修复可批量执行。
 - 提供数据库/缓存/扫描状态诊断，但不泄露敏感数据。
 - 核心恢复路径具有端到端测试。
+
+## Current status
+
+- 已实现统一诊断模型、Agent/作用域/严重程度过滤、配置/Skill/存储转换，以及 Tauri `collect_diagnostics` command。
+- React 诊断中心已展示严重程度、影响、资源路径、下一步与恢复入口，存储诊断不暴露数据库路径。
+- 剩余：安全批量修复、危险修复确认编排，以及覆盖外部修改与回滚的端到端恢复测试。
