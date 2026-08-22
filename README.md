@@ -12,8 +12,10 @@ AgentHub —— AI Agent 工作空间管理器
 
 ```bash
 npm ci
-npm run tauri dev
+./start.sh
 ```
+
+`./start.sh` 会启动 Tauri 开发模式；需要传递 Tauri 参数时直接追加，例如 `./start.sh --config src-tauri/tauri.conf.json`。生成当前平台安装包可运行 `./build.sh`，参数会原样传给 `tauri build`。两个入口都会读取 `package.json` 中的应用版本；运行 `./start.sh --version` 可仅查看版本号。
 
 提交前运行 `npm run format:check`、`npm run lint`、`npm run test` 和 Rust 检查，完整命令见 [`docs/development/`](docs/development/README.md)。
 
