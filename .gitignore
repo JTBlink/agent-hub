@@ -20,14 +20,13 @@ target
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Local planning and issue drafts; accepted work belongs in GitHub Issues.
-.scratch/
-
 # Node, Vite, Tauri, and frontend build output.
 node_modules/
 dist/
 coverage/
 .vite/
+.playwright-cli/
+src-tauri/gen/
 
 # Local application data and logs.
 *.log

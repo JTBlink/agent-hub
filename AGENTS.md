@@ -1,27 +1,27 @@
-# 仓库贡献指南
+# Repository Guidelines
+
+本指南（仓库贡献指南）适用于 AgentHub 的开发、文档和发布工作。
 
 ## 项目结构与模块组织
 
-本仓库目前是 AgentHub（AI Agent 工作空间管理器）的早期脚手架。根目录包含 `README.md`、`LICENSE` 和仓库配置，尚未提交应用 crate 或测试套件。根据面向 Rust 的 `.gitignore`，项目预计使用 Cargo。
+本仓库是 AgentHub（AI Agent 工作空间管理器）的 Tauri 2 + React 工程。`src/` 存放 React/TypeScript 前端，`src-tauri/` 存放 Rust 桌面端和 Tauri 配置，`docs/` 存放产品与架构文档，`.scratch/` 是仓库内需求 tracker。GitHub 仅用于 Actions 持续集成、跨平台安装包构建和发布产物，不作为需求或项目状态数据库。
 
-创建首个 crate 时，请采用标准 Rust 目录结构：
-
-- `src/`：存放生产代码；保持 `main.rs` 精简，将可复用逻辑放入职责明确的模块或 `lib.rs`。
-- `tests/`：存放跨模块集成测试。
-- `assets/`：仅存放运行时必需的静态资源。
-- `docs/`：存放不适合写入 README 的详细设计说明。
+- `src/app/`：页面壳和应用级 UI。
+- `src/lib/`：前端共享逻辑及 Tauri bindings。
+- `src-tauri/src/`：Rust 业务逻辑；保持 `main.rs` 精简。
+- `src-tauri/tests/`：跨模块集成测试（引入后）。
+- `docs/`：产品、架构、集成和开发说明。
+- `.scratch/<feature>/`：存放可提交的规格、任务、依赖和开发状态；它是本仓库的正式 Issue tracker。
 
 ## 构建、测试与开发命令
 
-仓库暂时没有 `Cargo.toml`，因此目前没有可用的构建或测试命令。初始化 Rust crate 后，应使用：
-
-- `cargo run`：构建并在本地运行应用。
-- `cargo build`：仅编译项目，不运行程序。
-- `cargo test`：运行单元测试、集成测试和文档测试。
-- `cargo fmt --all -- --check`：检查代码格式。
-- `cargo clippy --all-targets --all-features -- -D warnings`：执行严格的静态检查。
-
-引入工作空间、任务运行器或平台专用流程后，请同步更新本节。
+- `npm run tauri dev`：启动桌面应用开发环境。
+- `npm run build`：执行 TypeScript 检查并构建前端。
+- `npm run test`：运行前端测试。
+- `npm run lint`：执行 ESLint。
+- `cargo test --manifest-path src-tauri/Cargo.toml`：运行 Rust 测试。
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`：检查 Rust 格式。
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings`：执行严格的 Rust 静态检查。
 
 ## 编码风格与命名约定
 
@@ -31,6 +31,20 @@
 
 单元测试应与被测代码放在一起，并使用 `#[cfg(test)]`；公开行为和端到端流程放入 `tests/*.rs`。测试名称应描述具体行为，例如 `creates_workspace_with_default_settings`。每次修复缺陷都应添加回归测试。提交拉取请求前，请运行 `cargo test`、格式检查和 Clippy 检查。
 
-## 提交与拉取请求规范
+## 提交与变更审查规范
 
-当前历史记录仅有 `Initial commit`，尚未形成正式的提交规范。提交标题应简洁并采用祈使语气，例如 `Add workspace configuration loader`；每个提交只处理一个明确事项。拉取请求应说明问题与解决方案、列出验证步骤，并关联相关 Issue。涉及用户可见的变更时，请附上截图或终端输出；配置变更和后续事项也应明确说明。
+当前历史记录仅有 `Initial commit`，尚未形成正式的提交规范。提交标题应简洁并采用祈使语气，例如 `Add workspace configuration loader`；每个提交只处理一个明确事项。变更说明应链接对应的 `.scratch/<feature>/issues/<id>-<slug>.md`，并列出验证步骤。涉及用户可见的变更时，请附上截图或终端输出；配置变更和后续事项也应明确说明。代码审查可以使用任意协作入口，但需求状态必须回写 `.scratch/`。
+
+## Agent skills
+
+### Issue tracker
+
+需求和开发状态使用仓库内 `.scratch/<feature>/` 的 Markdown 文件管理，不依赖 GitHub Issues。参见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+使用仓库默认的 Agent 分诊状态词汇。参见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+仓库采用单上下文领域文档布局；工作前读取根目录 `CONTEXT.md`（如存在）和相关 ADR。参见 `docs/agents/domain.md`。
