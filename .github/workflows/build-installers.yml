@@ -1,0 +1,319 @@
+name: Build Installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to build (defaults to the selected ref)
+        required: false
+        type: string
+      artifact_retention_days:
+        description: Number of days to retain manually built artifacts
+        required: true
+        default: "14"
+        type: choice
+        options:
+          - "7"
+          - "14"
+          - "30"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installers-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Validate release metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out requested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify version consistency
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref_name }}
+        run: |
+          VERSION_REF="${BUILD_REF#refs/tags/}"
+          if [[ "$VERSION_REF" == v* ]]; then
+            node scripts/check-version.mjs "$VERSION_REF"
+          else
+            node scripts/check-version.mjs
+          fi
+
+      - name: Validate optional signing configuration
+        if: startsWith(github.ref, 'refs/tags/v') && (vars.ENABLE_APPLE_SIGNING == 'true' || vars.ENABLE_WINDOWS_SIGNING == 'true')
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
+        run: |
+          if [[ "${{ vars.ENABLE_APPLE_SIGNING }}" == "true" ]]; then
+            for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+              if [[ -z "${!name}" ]]; then
+                echo "::error::${name} is required when ENABLE_APPLE_SIGNING=true"
+                exit 1
+              fi
+            done
+          fi
+          if [[ "${{ vars.ENABLE_WINDOWS_SIGNING }}" == "true" ]]; then
+            for name in WINDOWS_CERTIFICATE WINDOWS_CERTIFICATE_PASSWORD WINDOWS_SIGNING_TIMESTAMP_URL; do
+              if [[ -z "${!name}" ]]; then
+                echo "::error::${name} is required when ENABLE_WINDOWS_SIGNING=true"
+                exit 1
+              fi
+            done
+          fi
+
+  quality:
+    name: Verify release candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out requested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Verify frontend
+        run: |
+          npm run format:check
+          npm run lint
+          npm run test
+          npm run build
+
+      - name: Verify Rust
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: [preflight, quality]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x86_64
+            os: windows-latest
+            artifact: windows-x86_64
+            rust_targets: ""
+            tauri_args: "--bundles nsis,msi"
+            bundle_paths: |
+              src-tauri/target/release/bundle/nsis/*.exe
+              src-tauri/target/release/bundle/msi/*.msi
+          - name: macOS Universal
+            os: macos-latest
+            artifact: macos-universal
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            tauri_args: "--target universal-apple-darwin --bundles app,dmg"
+            bundle_paths: |
+              src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          - name: Linux x86_64
+            os: ubuntu-24.04
+            artifact: linux-x86_64
+            rust_targets: ""
+            tauri_args: "--bundles appimage,deb"
+            bundle_paths: |
+              src-tauri/target/release/bundle/appimage/*.AppImage
+              src-tauri/target/release/bundle/deb/*.deb
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out requested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            libayatana-appindicator3-dev \
+            libfuse2t64 \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.artifact }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build unsigned or non-macOS installers
+        if: github.event_name == 'workflow_dispatch' || runner.os != 'macOS' || vars.ENABLE_APPLE_SIGNING != 'true'
+        run: npm run tauri build -- ${{ matrix.tauri_args }}
+
+      - name: Build macOS release installers
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run tauri build -- ${{ matrix.tauri_args }}
+
+      - name: Sign Windows installers
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows' && vars.ENABLE_WINDOWS_SIGNING == 'true'
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
+        shell: pwsh
+        run: |
+          $certificatePath = Join-Path $env:RUNNER_TEMP "agent-hub-signing.pfx"
+          [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signTool) { throw "signtool.exe was not found on the runner" }
+          Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe", "src-tauri\target\release\bundle\msi\*.msi" | ForEach-Object {
+            & $signTool.FullName sign /fd SHA256 /f $certificatePath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr $env:WINDOWS_SIGNING_TIMESTAMP_URL /td SHA256 $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($_.Name)" }
+          }
+          Remove-Item $certificatePath -Force
+
+      - name: Report unsigned macOS release
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING != 'true'
+        run: echo "ENABLE_APPLE_SIGNING is disabled; publishing an unsigned macOS installer."
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-hub-${{ matrix.artifact }}
+          path: ${{ matrix.bundle_paths }}
+          if-no-files-found: error
+          retention-days: ${{ inputs.artifact_retention_days || 14 }}
+
+  package:
+    name: Assemble installers and checksums
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out requested revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Download platform installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: agent-hub-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate and assemble release bundle
+        env:
+          BUILD_REF: ${{ inputs.ref || github.ref_name }}
+        run: npm run release:assemble -- release-assets "$BUILD_REF"
+
+      - name: Upload combined installer bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-hub-installers-${{ github.run_id }}
+          path: release-assets
+          if-no-files-found: error
+          retention-days: ${{ inputs.artifact_retention_days || 14 }}
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packaged release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: agent-hub-installers-${{ github.run_id }}
+          path: release-assets
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/**/*.exe
+            release-assets/**/*.msi
+            release-assets/**/*.dmg
+            release-assets/**/*.AppImage
+            release-assets/**/*.deb
+            release-assets/*.md
+            release-assets/SHA256SUMS
+          fail_on_unmatched_files: true
+          body_path: release-assets/RELEASE_NOTES.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
