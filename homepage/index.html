@@ -179,6 +179,45 @@
       display: block;
     }
 
+    .screenshot-gallery {
+      max-width: 1060px;
+      padding: 64px clamp(20px, 4vw, 48px) 0;
+    }
+
+    .screenshot-gallery h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 20px;
+    }
+
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .screenshot-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .screenshot-card img {
+      width: 100%;
+      display: block;
+    }
+
+    .screenshot-card figcaption {
+      padding: 10px 12px;
+      color: var(--body);
+      font-size: 12px;
+      border-top: 1px solid var(--line);
+    }
+
     /* PLATFORMS */
     .platforms {
       max-width: 980px;
@@ -401,6 +440,7 @@
       .platform-row { grid-template-columns: 1fr; }
       .platform-cell { border-right: none; border-bottom: 1px solid var(--line); }
       .platform-cell:last-child { border-bottom: none; }
+      .screenshot-grid { grid-template-columns: 1fr; }
       .about { grid-template-columns: 1fr; gap: 12px; }
       .changelog-section { grid-template-columns: 1fr; gap: 12px; }
       .footer { flex-direction: column; gap: 12px; }
@@ -453,6 +493,28 @@
       <img src="./assets/overview.png" alt="AgentHub 总览界面" />
     </div>
   </div>
+
+  <section class="screenshot-gallery" aria-labelledby="screenshots-title">
+    <h2 id="screenshots-title">产品界面</h2>
+    <div class="screenshot-grid">
+      <figure class="screenshot-card">
+        <img src="./assets/config-center.png" alt="AgentHub 配置中心" />
+        <figcaption>配置中心：按 Agent 和作用域查看实际配置</figcaption>
+      </figure>
+      <figure class="screenshot-card">
+        <img src="./assets/skills.png" alt="AgentHub Skills 管理" />
+        <figcaption>Skills：查看安装状态、来源和作用域</figcaption>
+      </figure>
+      <figure class="screenshot-card">
+        <img src="./assets/workspaces.png" alt="AgentHub 工作空间管理" />
+        <figcaption>工作空间：登记目录并扫描配置</figcaption>
+      </figure>
+      <figure class="screenshot-card">
+        <img src="./assets/diagnostics.png" alt="AgentHub 诊断中心" />
+        <figcaption>诊断中心：集中处理配置和 Skill 问题</figcaption>
+      </figure>
+    </div>
+  </section>
 
   <section class="platforms" id="platforms">
     <h2>下载安装</h2>

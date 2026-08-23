@@ -21,11 +21,22 @@ AgentHub 的目标是把这些信息和风险放到操作前面，而不是替�
 
 ## 实际界面
 
-以下截图来自当前开发版的总览页面。截图保留了本地服务未连接时的提示；连接本地服务后，面板会显示实际扫描到的 Agent、配置和 Skills 状态。
+以下截图来自当前开发版，使用脱敏演示数据展示已连接状态、配置、Skills、工作空间和诊断中心，不包含真实用户名或本机路径。
 
 <p align="center">
   <img src="docs/assets/screenshots/overview.png" alt="AgentHub 总览：Agent 连接拓扑和本地状态" width="100%" />
 </p>
+
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/config-center.png" alt="AgentHub 配置中心" /></td>
+    <td><img src="docs/assets/screenshots/skills.png" alt="AgentHub Skills 管理" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshots/workspaces.png" alt="AgentHub 工作空间管理" /></td>
+    <td><img src="docs/assets/screenshots/diagnostics.png" alt="AgentHub 诊断中心" /></td>
+  </tr>
+</table>
 
 ## 你可以用它做什么
 
