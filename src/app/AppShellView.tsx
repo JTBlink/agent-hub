@@ -144,7 +144,7 @@ const navigation: { id: Section; label: string; icon: IconName }[] = [
   { id: "overview", label: "总览", icon: "grid" },
   { id: "configs", label: "配置中心", icon: "sliders" },
   { id: "skills", label: "Skills", icon: "spark" },
-  { id: "workspaces", label: "项目管理", icon: "folder" },
+  { id: "workspaces", label: "工作空间", icon: "folder" },
   { id: "diagnostics", label: "诊断中心", icon: "warning" },
   { id: "history", label: "变更历史", icon: "history" },
 ];
@@ -157,6 +157,7 @@ const agentMeta: Record<string, { name: string; tone: string; mark: string }> =
   };
 
 const defaultAgentIds = Object.keys(agentMeta);
+const SELECTED_WORKSPACE_STORAGE_KEY = "agenthub.selected-workspace";
 
 function getAgentMeta(agent: string) {
   return (
@@ -364,28 +365,19 @@ function statusLabel(status: ConfigDocument["status"] | undefined) {
 }
 
 /**
- * A missing Codex project file is an intentional fallback: Codex continues
- * using its global configuration. Keep the global document's path and scope
- * so editing cannot accidentally target a non-existent project file.
+ * A missing workspace-level file falls back to the agent's ready global
+ * configuration. This mirrors each agent's effective configuration lookup and
+ * keeps the displayed path/scope pointed at the file that is actually used.
  */
 function getWorkspaceDisplayConfigs(
   globalConfigs: ConfigDocument[],
   workspaceConfigs: ConfigDocument[],
 ) {
-  const workspaceCodex = workspaceConfigs.find(
-    (config) => config.agent === "codex",
-  );
-  const globalCodex = globalConfigs.find((config) => config.agent === "codex");
-  if (
-    !workspaceCodex ||
-    workspaceCodex.status !== "missing" ||
-    !globalCodex
-  ) {
-    return workspaceConfigs;
-  }
   return workspaceConfigs.map((config) =>
-    config.agent === "codex"
-      ? { ...globalCodex, diagnostics: [] }
+    config.status === "missing"
+      ? globalConfigs.find(
+          (global) => global.agent === config.agent && global.status === "ready",
+        ) ?? config
       : config,
   );
 }
@@ -409,6 +401,23 @@ function errorMessage(error: unknown, fallback: string) {
   return typeof error === "string" && error.trim() ? error : fallback;
 }
 
+function readPersistedWorkspacePath() {
+  try {
+    return window.localStorage.getItem(SELECTED_WORKSPACE_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function persistWorkspacePath(path: string) {
+  try {
+    if (path) window.localStorage.setItem(SELECTED_WORKSPACE_STORAGE_KEY, path);
+    else window.localStorage.removeItem(SELECTED_WORKSPACE_STORAGE_KEY);
+  } catch {
+    // Storage may be unavailable in restricted or test environments.
+  }
+}
+
 export function App() {
   const [section, setSection] = useState<Section>("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -428,7 +437,9 @@ export function App() {
   const [skillDiagnosticFocus, setSkillDiagnosticFocus] =
     useState<UnifiedDiagnostic>();
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
-  const [selectedSkillWorkspace, setSelectedSkillWorkspace] = useState("");
+  const [selectedSkillWorkspace, setSelectedSkillWorkspace] = useState(
+    readPersistedWorkspacePath,
+  );
   const [selectedAgent, setSelectedAgent] =
     useState<ConfigDocument["agent"]>("claude-code");
   const [loading, setLoading] = useState(true);
@@ -443,6 +454,18 @@ export function App() {
   const [preview, setPreview] = useState<ConfigEditPreview>();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string>();
+
+  const loadWorkspaceConfig = useCallback((workspaceDirectory: string) => {
+    void scanWorkspace(workspaceDirectory)
+      .then((result) => {
+        setWorkspaceConfigs(result.configs);
+        setWorkspaceInstructions(result.instructions);
+        setSkills(result.skills);
+      })
+      .catch(() => {
+        setError("无法读取所选工作空间配置，请重新扫描后重试。");
+      });
+  }, []);
 
   const scan = useCallback(() => {
     setLoading(true);
@@ -477,24 +500,23 @@ export function App() {
     void listWorkspaces()
       .then((records) => {
         setWorkspaces(records);
-        setSelectedSkillWorkspace((current) => {
-          if (
-            !current ||
-            records.some((item) => item.normalizedPath === current)
-          ) {
-            return current;
-          }
-          void getSkillInventory()
-            .then(setSkills)
-            .catch(() => undefined);
-          return "";
-        });
+        const candidate = selectedSkillWorkspace || readPersistedWorkspacePath();
+        const next = records.some((item) => item.normalizedPath === candidate)
+          ? candidate
+          : records[0]?.normalizedPath ?? "";
+        persistWorkspacePath(next);
+        setSelectedSkillWorkspace(next);
+        if (next) loadWorkspaceConfig(next);
+        else {
+          setWorkspaceConfigs([]);
+          setWorkspaceInstructions([]);
+        }
       })
       .catch(() => undefined);
     void listConfigHistory()
       .then(setHistory)
       .catch(() => undefined);
-  }, [selectedSkillWorkspace]);
+  }, [loadWorkspaceConfig, selectedSkillWorkspace]);
   const refreshSkillInventory = (workspaceDirectory?: string) => {
     void getSkillInventory(
       workspaceDirectory || selectedSkillWorkspace || undefined,
@@ -504,6 +526,8 @@ export function App() {
   };
   const selectSkillWorkspace = (workspaceDirectory: string) => {
     setSelectedSkillWorkspace(workspaceDirectory);
+    persistWorkspacePath(workspaceDirectory);
+    loadWorkspaceConfig(workspaceDirectory);
   };
   useEffect(() => {
     scan();
@@ -830,11 +854,15 @@ export function App() {
           <WorkspacesPage
             workspaces={workspaces}
             selectedWorkspacePath={selectedSkillWorkspace}
-            onSelectWorkspace={selectSkillWorkspace}
+            onSelectWorkspace={(workspaceDirectory) => {
+              setSelectedSkillWorkspace(workspaceDirectory);
+              persistWorkspacePath(workspaceDirectory);
+            }}
             onChanged={scan}
             searchQuery={searchQuery}
             onScanned={(result, navigateToConfigs = true) => {
               setSelectedSkillWorkspace(result.workspace.normalizedPath);
+              persistWorkspacePath(result.workspace.normalizedPath);
               setSkills(result.skills);
               setWorkspaceConfigs(result.configs);
               setWorkspaceInstructions(result.instructions);
@@ -1825,12 +1853,11 @@ function ConfigCenter({
                 </div>
               </div>
               {selectedScope === "workspace" &&
-                selectedConfig.agent === "codex" &&
                 selectedConfig.scope === "global" && (
-                  <div className="inline-diagnostics" role="status">
-                    <Icon name="info" size={17} />
+                  <div className="config-effective-note" role="status">
+                    <span aria-hidden="true">i</span>
                     <span>
-                      工作空间未配置 Codex，当前展示全局配置；编辑将修改全局文件。
+                      当前工作空间未配置 {agentMeta[selectedConfig.agent].name}，实际生效的是全局配置。
                     </span>
                   </div>
                 )}
@@ -1957,7 +1984,7 @@ function InstructionFilesPanel({
       <div className="instruction-files-heading">
         <div>
           <p className="eyebrow">工作空间上下文</p>
-          <h3 id="instruction-files-title">指令文件</h3>
+          <h3 id="instruction-files-title">软链接提示</h3>
         </div>
         <span className="instruction-files-count">
           {searchQuery ? `${instructions.length} / ${total}` : total} 个
@@ -1972,18 +1999,26 @@ function InstructionFilesPanel({
               </div>
               <div className="instruction-file-copy">
                 <strong>{instructionFileName(instruction.path)}</strong>
-                <span>{instructionKindLabel(instruction.kind)} · 工作空间</span>
+                {instructionFileName(instruction.path) === "AGENTS.md" ? (
+                  <span>{instructionKindLabel(instruction.kind)} · 真实文件</span>
+                ) : (
+                  <span>{instructionKindLabel(instruction.kind)} · 建议软链接到 AGENTS.md</span>
+                )}
                 <code title={instruction.path}>{instruction.path}</code>
               </div>
-              <span className="instruction-readonly">只读发现</span>
+              <span className="instruction-readonly">
+                {instructionFileName(instruction.path) === "AGENTS.md"
+                  ? "真实文件"
+                  : "软链接提示"}
+              </span>
             </article>
           ))}
         </div>
       ) : (
         <p className="instruction-files-empty">
           {searchQuery
-            ? "没有匹配的指令文件。"
-            : "当前工作空间没有发现 AGENTS.md 或 CLAUDE.md。"}
+            ? "没有匹配的软链接提示。"
+            : "当前工作空间没有发现 AGENTS.md 或 CLAUDE.md，可通过软链接复用全局指令。"}
         </p>
       )}
     </section>
@@ -2103,8 +2138,8 @@ function SkillsCenter({
   }, [skills]);
   const filters = [
     ["all", "全部"],
-    ["global", "所有项目 Skill"],
-    ["workspace", "当前项目 Skill"],
+    ["global", "所有工作空间 Skill"],
+    ["workspace", "当前工作空间 Skill"],
     ["managed", "已纳入管理"],
     ["external", "未纳入管理"],
   ] as const;
@@ -2528,7 +2563,7 @@ function SkillsCenter({
                         )}
                       </div>
                       <span className={`scope-pill ${skill.scope}`}>
-                        {skill.scope === "global" ? "所有项目" : "当前项目"}
+                        {skill.scope === "global" ? "所有工作空间" : "当前工作空间"}
                       </span>
                       <span className="managed-pill">
                         {skill.sourceTracked ? "已纳入管理" : "未纳入管理"}
@@ -2671,7 +2706,7 @@ function SkillLocation({ skill }: { skill: InstalledSkill }) {
       <div>
         <strong>{getAgentMeta(skill.agent).name}</strong>
         <span>
-          {skill.scope === "global" ? "所有项目" : "当前项目"} ·{" "}
+          {skill.scope === "global" ? "所有工作空间" : "当前工作空间"} ·{" "}
           {skill.sourceTracked ? "已纳入管理" : "未纳入管理"}
           {isCodexLegacy ? " · Codex 兼容目录" : ""}
         </span>
@@ -3300,8 +3335,8 @@ function SkillSourcePanel({
                 }
               }}
             >
-              <option value="global">全局（所有项目可用）</option>
-              <option value="workspace">当前项目（仅所选项目可用）</option>
+              <option value="global">全局（所有工作空间可用）</option>
+              <option value="workspace">当前工作空间（仅所选工作空间可用）</option>
             </select>
           </label>
           {scope === "workspace" && (
@@ -3349,7 +3384,7 @@ function SkillSourcePanel({
               <dt>目标</dt>
               <dd>
                 {getAgentMeta(plan.plan.agent).name} ·{" "}
-                {plan.plan.scope === "global" ? "全局" : "当前项目"}
+                {plan.plan.scope === "global" ? "全局" : "当前工作空间"}
               </dd>
             </div>
             <div>
@@ -3464,11 +3499,11 @@ function WorkspacesPage({
     if (!workspace) return;
     const confirmed = await confirm({
       tone: "danger",
-      title: "清理项目路径？",
+      title: "清理工作空间路径？",
       description: (
         <p>
           将移除“{workspace.displayName}
-          ”的登记记录。磁盘上的项目文件不会被删除。
+          ”的登记记录。磁盘上的工作空间文件不会被删除。
         </p>
       ),
       confirmLabel: "确认清理",
@@ -3477,7 +3512,7 @@ function WorkspacesPage({
     if (!confirmed) return;
     try {
       await removeWorkspace(id);
-      setToast("项目路径已清理，磁盘目录没有被删除。");
+      setToast("工作空间路径已清理，磁盘目录没有被删除。");
       onChanged();
     } catch {
       setMessage("移除失败，请重新扫描后重试。");
@@ -3506,10 +3541,10 @@ function WorkspacesPage({
       <section className="workspace-add surface-card">
         <div>
           <p className="eyebrow">添加本地目录</p>
-          <h2>添加项目路径</h2>
+          <h2>添加工作空间路径</h2>
         </div>
         <div className="workspace-form">
-          <label htmlFor="workspace-path">项目路径</label>
+          <label htmlFor="workspace-path">工作空间路径</label>
           <div className="workspace-path-row">
             <input
               id="workspace-path"
@@ -3557,7 +3592,7 @@ function WorkspacesPage({
                 </div>
                 <div className="workspace-row-actions">
                   {selectedWorkspacePath === workspace.normalizedPath ? (
-                    <span className="workspace-current-pill">当前项目</span>
+                    <span className="workspace-current-pill">当前工作空间</span>
                   ) : (
                     <button
                       className="button button-secondary workspace-select-button"
@@ -3603,14 +3638,14 @@ function WorkspacesPage({
               <Icon name="search" size={23} />
             </div>
             <h3>没有匹配的工作空间</h3>
-            <p>试试项目名称或目录路径中的其他关键词。</p>
+            <p>试试工作空间名称或目录路径中的其他关键词。</p>
           </div>
         ) : (
           <div className="workspace-empty">
             <div className="empty-icon">
               <Icon name="folder" size={23} />
             </div>
-            <h3>从一个项目目录开始</h3>
+            <h3>从一个工作空间目录开始</h3>
             <p>
               配置与 Skills 会按全局 /
               工作空间作用域分开显示，不会伪造合并结果。
