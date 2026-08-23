@@ -29,13 +29,8 @@ export function SkillWorkspaceSwitcher({
 
   return (
     <div className="skill-workspace-switcher">
-      <div className="skill-workspace-switcher-heading">
-        <div>
-          <span className="skill-workspace-switcher-kicker">工作空间上下文</span>
-          <span className="skill-workspace-switcher-caption">
-            {value ? "正在查看当前工作空间 Skill" : "未选择工作空间，仅显示全局 Skill"}
-          </span>
-        </div>
+      <div className="skill-workspace-switcher-label-row">
+        <span className="skill-workspace-switcher-kicker">工作空间上下文</span>
         <button className="text-button" type="button" onClick={onManage}>
           管理工作空间
         </button>

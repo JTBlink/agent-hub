@@ -22,10 +22,7 @@ export function AgentSkillSwitcher({
 
   return (
     <div className="skill-agent-switcher">
-      <div className="skill-agent-switcher-heading">
-        <span className="skill-agent-switcher-kicker">Agent Skills</span>
-        <span className="skill-agent-switcher-caption">选择要查看的 Agent</span>
-      </div>
+      <span className="skill-agent-switcher-kicker">Agent Skills</span>
       <DropdownMenu
         className="agent-dropdown"
         options={options.map((option) => ({
@@ -42,7 +39,7 @@ export function AgentSkillSwitcher({
         value={selectedAgent}
         onChange={(value) => onChange(value as InstalledSkill["agent"])}
         ariaLabel="选择 Agent"
-        triggerCaption="当前视图"
+        triggerCaption="选择 Agent"
         menuHeading="切换 Agent"
         menuCount={`${options.length} 个可用`}
       />
