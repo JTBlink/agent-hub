@@ -44,6 +44,11 @@ import {
   type AgentFormSchema,
   type FieldDefinition,
 } from "../lib/config-schema";
+import {
+  diagnosticProblem,
+  diagnosticSubject,
+  matchingSkillsForDiagnostic,
+} from "../lib/diagnostic-presentation";
 import { createTopologyLayout } from "../lib/topology";
 import {
   buildSkillSourceRequest,
@@ -108,6 +113,14 @@ function getAgentMeta(agent: string) {
       mark: agent.slice(0, 1).toUpperCase() || "A",
     }
   );
+}
+
+function skillSourceLabel(kind: InstalledSkill["source"]["kind"]) {
+  if (kind === "skills-sh") return "skills.sh";
+  if (kind === "preset-git") return "预置 Git";
+  if (kind === "git") return "Git";
+  if (kind === "marketplace") return "Marketplace";
+  return "本地目录";
 }
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -272,6 +285,11 @@ function statusLabel(status: ConfigDocument["status"] | undefined) {
   return "扫描中";
 }
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  return typeof error === "string" && error.trim() ? error : fallback;
+}
+
 export function App() {
   const [section, setSection] = useState<Section>("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -285,6 +303,8 @@ export function App() {
   const [skills, setSkills] = useState<SkillInventory>();
   const [history, setHistory] = useState<ConfigHistoryRecord[]>([]);
   const [diagnostics, setDiagnostics] = useState<UnifiedDiagnostic[]>([]);
+  const [skillDiagnosticFocus, setSkillDiagnosticFocus] =
+    useState<UnifiedDiagnostic>();
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
   const [selectedAgent, setSelectedAgent] =
     useState<ConfigDocument["agent"]>("claude-code");
@@ -335,6 +355,11 @@ export function App() {
     void listConfigHistory()
       .then(setHistory)
       .catch(() => undefined);
+  };
+  const refreshSkillInventory = (workspaceDirectory?: string) => {
+    void getSkillInventory(workspaceDirectory)
+      .then(setSkills)
+      .catch(() => setError("Skill 安装成功，但清单刷新失败，请重新扫描。"));
   };
   useEffect(() => {
     scan();
@@ -624,6 +649,9 @@ export function App() {
             onScan={scan}
             onNavigate={setSection}
             workspaces={workspaces}
+            onInstalled={refreshSkillInventory}
+            diagnosticFocus={skillDiagnosticFocus}
+            onDismissDiagnostic={() => setSkillDiagnosticFocus(undefined)}
           />
         )}
         {section === "workspaces" && (
@@ -642,6 +670,11 @@ export function App() {
           <DiagnosticsPage
             diagnostics={diagnostics}
             onNavigate={setSection}
+            onViewSkillDetails={(item) => {
+              setSkillDiagnosticFocus(item);
+              setSearchQuery("");
+              setSection("skills");
+            }}
             onRepair={scan}
             searchQuery={searchQuery}
           />
@@ -1694,17 +1727,24 @@ function SkillsCenter({
   onScan,
   onNavigate,
   workspaces,
+  onInstalled,
+  diagnosticFocus,
+  onDismissDiagnostic,
 }: {
   skills?: SkillInventory;
   searchQuery: string;
   onScan: () => void;
   onNavigate: (section: Section) => void;
   workspaces: WorkspaceRecord[];
+  onInstalled: (workspaceDirectory?: string) => void;
+  diagnosticFocus?: UnifiedDiagnostic;
+  onDismissDiagnostic: () => void;
 }) {
   const [filter, setFilter] = useState<
     "all" | "global" | "workspace" | "managed" | "external"
   >("all");
   const [showSourceGuide, setShowSourceGuide] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredSkills = useMemo(
     () =>
@@ -1737,6 +1777,25 @@ function SkillsCenter({
     });
     return result;
   }, [filteredSkills]);
+  const focusedSkills = useMemo(
+    () =>
+      diagnosticFocus
+        ? matchingSkillsForDiagnostic(diagnosticFocus, skills?.skills ?? [])
+        : [],
+    [diagnosticFocus, skills],
+  );
+  useEffect(() => {
+    if (!diagnosticFocus) return;
+    const panel = document.getElementById("focused-skill-diagnostic");
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    panel?.scrollIntoView({
+      block: "start",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+    panel?.focus({ preventScroll: true });
+  }, [diagnosticFocus]);
   const filters = [
     ["all", "全部"],
     ["global", "全局"],
@@ -1783,7 +1842,7 @@ function SkillsCenter({
           id="source-guide"
           workspaces={workspaces}
           onNavigate={onNavigate}
-          onScan={onScan}
+          onInstalled={onInstalled}
         />
       )}
       {skills?.duplicateNames.length ? (
@@ -1793,7 +1852,133 @@ function SkillsCenter({
             发现同名 Skill：{skills.duplicateNames.join("、")}
             。请确认优先级后再启用。
           </span>
+          <button
+            type="button"
+            aria-expanded={showDuplicates}
+            aria-controls="duplicate-skill-details"
+            onClick={() => setShowDuplicates((visible) => !visible)}
+          >
+            {showDuplicates ? "收起重复项" : "查看重复项"}
+          </button>
         </div>
+      ) : null}
+      {showDuplicates && skills?.duplicateNames.length ? (
+        <section
+          className="skill-issue-panel duplicate-skill-panel"
+          id="duplicate-skill-details"
+          aria-labelledby="duplicate-skill-title"
+        >
+          <div className="skill-issue-heading">
+            <div>
+              <p className="eyebrow">重复安装</p>
+              <h2 id="duplicate-skill-title">选择需要保留的 Skill</h2>
+              <p>
+                同名 Skill 出现在多个位置时，Agent
+                的加载顺序可能不同。请比较路径和作用域，再停用不需要的副本。
+              </p>
+            </div>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="关闭重复 Skill 详情"
+              onClick={() => setShowDuplicates(false)}
+            >
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+          <div className="duplicate-skill-groups">
+            {skills.duplicateNames.map((name) => {
+              const matches = skills.skills.filter(
+                (skill) => skill.name === name || skill.displayName === name,
+              );
+              return (
+                <article key={name}>
+                  <strong>{name}</strong>
+                  <span>{matches.length} 个安装位置</span>
+                  <div>
+                    {matches.map((skill) => (
+                      <SkillLocation
+                        key={`${skill.agent}-${skill.scope}-${skill.path}`}
+                        skill={skill}
+                      />
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+      {diagnosticFocus ? (
+        <section
+          className={`skill-issue-panel ${diagnosticFocus.severity}`}
+          id="focused-skill-diagnostic"
+          aria-labelledby="focused-skill-diagnostic-title"
+          tabIndex={-1}
+        >
+          <div className="skill-issue-heading">
+            <div>
+              <p className="eyebrow">Skill 问题详情</p>
+              <h2 id="focused-skill-diagnostic-title">
+                {diagnosticSubject(diagnosticFocus)}
+              </h2>
+              <p>{diagnosticProblem(diagnosticFocus)}</p>
+            </div>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="关闭 Skill 问题详情"
+              onClick={onDismissDiagnostic}
+            >
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+          <dl className="skill-issue-facts">
+            <div>
+              <dt>可能影响</dt>
+              <dd>{diagnosticFocus.impact}</dd>
+            </div>
+            <div>
+              <dt>处理建议</dt>
+              <dd>{diagnosticFocus.nextAction}</dd>
+            </div>
+            <div>
+              <dt>诊断码</dt>
+              <dd className="mono">{diagnosticFocus.code}</dd>
+            </div>
+            {diagnosticFocus.resourcePath && (
+              <div>
+                <dt>问题位置</dt>
+                <dd className="mono">{diagnosticFocus.resourcePath}</dd>
+              </div>
+            )}
+          </dl>
+          {focusedSkills.length > 0 && (
+            <div className="skill-issue-locations">
+              <strong>
+                {focusedSkills.length > 1 ? "冲突安装位置" : "已识别的 Skill"}
+              </strong>
+              {focusedSkills.map((skill) => (
+                <SkillLocation
+                  key={`${skill.agent}-${skill.scope}-${skill.path}`}
+                  skill={skill}
+                />
+              ))}
+            </div>
+          )}
+          <div className="skill-issue-actions">
+            <button
+              className="button button-ghost"
+              onClick={onDismissDiagnostic}
+            >
+              关闭
+            </button>
+            <button className="button button-secondary" onClick={onScan}>
+              <Icon name="refresh" size={15} />
+              重新扫描
+            </button>
+          </div>
+        </section>
       ) : null}
       <div className="skill-grid">
         {skills && filteredSkills.length > 0 ? (
@@ -1820,7 +2005,16 @@ function SkillsCenter({
                   </div>
                   <div className="skill-copy">
                     <strong>{skill.displayName}</strong>
-                    <span>{skill.relativePath}</span>
+                    <span>
+                      {skill.relativePath} · {skill.compatibility ?? "通用兼容"}
+                    </span>
+                    <small>
+                      {skillSourceLabel(skill.source.kind)} ·{" "}
+                      {skill.enabled ? "已启用" : "已停用"}
+                    </small>
+                    <code className="skill-path" title={skill.path}>
+                      {skill.path}
+                    </code>
                   </div>
                   <span className={`scope-pill ${skill.scope}`}>
                     {skill.scope === "global" ? "全局" : "工作空间"}
@@ -1857,6 +2051,21 @@ function SkillsCenter({
   );
 }
 
+function SkillLocation({ skill }: { skill: InstalledSkill }) {
+  return (
+    <div className="skill-location">
+      <div>
+        <strong>{getAgentMeta(skill.agent).name}</strong>
+        <span>
+          {skill.scope === "global" ? "全局" : "工作空间"} ·{" "}
+          {skill.sourceTracked ? "AgentHub 管理" : "外部管理"}
+        </span>
+      </div>
+      <code>{skill.path}</code>
+    </div>
+  );
+}
+
 const presetSkillRepositories = [
   ["anthropics/skills", "Anthropic 官方"],
   ["mattpocock/skills", "Matt Pocock"],
@@ -1875,12 +2084,12 @@ function SkillSourcePanel({
   id,
   workspaces,
   onNavigate,
-  onScan,
+  onInstalled,
 }: {
   id: string;
   workspaces: WorkspaceRecord[];
   onNavigate: (section: Section) => void;
-  onScan: () => void;
+  onInstalled: (workspaceDirectory?: string) => void;
 }) {
   const [mode, setMode] = useState<SkillSourceMode>("skills-sh");
   const [locator, setLocator] = useState("anthropics/skills");
@@ -1941,11 +2150,7 @@ function SkillSourcePanel({
       }
     } catch (error) {
       setBrowseResult(undefined);
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "来源读取失败，请检查地址后重试。",
-      );
+      setMessage(errorMessage(error, "来源读取失败，请检查地址后重试。"));
     } finally {
       setBusy(false);
     }
@@ -1972,11 +2177,7 @@ function SkillSourcePanel({
         }),
       );
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "无法生成安装计划，请重新扫描来源。",
-      );
+      setMessage(errorMessage(error, "无法生成安装计划，请重新扫描来源。"));
     } finally {
       setBusy(false);
     }
@@ -1990,13 +2191,9 @@ function SkillSourcePanel({
       await applySkillInstall(plan.planId);
       setMessage("Skill 已安装，并已记录来源与版本。");
       setPlan(undefined);
-      onScan();
+      onInstalled(workspace?.normalizedPath);
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "安装未完成，磁盘状态未被静默覆盖。",
-      );
+      setMessage(errorMessage(error, "安装未完成，磁盘状态未被静默覆盖。"));
     } finally {
       setBusy(false);
     }
@@ -2102,7 +2299,7 @@ function SkillSourcePanel({
             </label>
           </>
         )}
-        {mode === "git" && (
+        {(mode === "git" || mode === "skills-sh") && (
           <label>
             预置仓库
             <select
@@ -2117,10 +2314,16 @@ function SkillSourcePanel({
               }
               onChange={(event) =>
                 event.target.value &&
-                setLocator(`https://github.com/${event.target.value}.git`)
+                setLocator(
+                  mode === "git"
+                    ? `https://github.com/${event.target.value}.git`
+                    : event.target.value,
+                )
               }
             >
-              <option value="">自定义 Git 地址</option>
+              <option value="">
+                {mode === "git" ? "自定义 Git 地址" : "自定义 skills.sh 来源"}
+              </option>
               {presetSkillRepositories.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}（{value}）
@@ -2204,15 +2407,13 @@ function SkillSourcePanel({
               {browseResult.skills.map((skill) => (
                 <button
                   key={skill.relativePath}
-                    className={
-                      selectedSkillKey === discoveredSkillKey(skill)
-                        ? "selected"
-                        : ""
-                    }
+                  className={
+                    selectedSkillKey === discoveredSkillKey(skill)
+                      ? "selected"
+                      : ""
+                  }
                   disabled={!skill.installable}
-                    onClick={() =>
-                      setSelectedSkillKey(discoveredSkillKey(skill))
-                    }
+                  onClick={() => setSelectedSkillKey(discoveredSkillKey(skill))}
                 >
                   <span>
                     <strong>{skill.displayName}</strong>
@@ -2246,7 +2447,17 @@ function SkillSourcePanel({
             作用域
             <select
               value={scope}
-              onChange={(event) => setScope(event.target.value as typeof scope)}
+              onChange={(event) => {
+                const nextScope = event.target.value as typeof scope;
+                setScope(nextScope);
+                if (
+                  nextScope === "workspace" &&
+                  workspaceId === "" &&
+                  workspaces[0]
+                ) {
+                  setWorkspaceId(workspaces[0].id);
+                }
+              }}
             >
               <option value="global">全局</option>
               <option value="workspace">工作空间</option>
@@ -2537,11 +2748,13 @@ function WorkspacesPage({
 function DiagnosticsPage({
   diagnostics,
   onNavigate,
+  onViewSkillDetails,
   onRepair,
   searchQuery,
 }: {
   diagnostics: UnifiedDiagnostic[];
   onNavigate: (section: Section) => void;
+  onViewSkillDetails: (item: UnifiedDiagnostic) => void;
   onRepair: () => void;
   searchQuery: string;
 }) {
@@ -2550,16 +2763,34 @@ function DiagnosticsPage({
   const [recoveryMessage, setRecoveryMessage] = useState<string>();
   const [recoveryBusy, setRecoveryBusy] = useState(false);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-  const actionable = diagnostics.filter((item) => {
-    if (item.severity === "info") return false;
-    return (
-      !normalizedQuery ||
-      [item.code, item.impact, item.nextAction, item.resourcePath ?? ""]
-        .join(" ")
-        .toLocaleLowerCase()
-        .includes(normalizedQuery)
-    );
-  });
+  const actionable = diagnostics
+    .filter((item) => {
+      if (item.severity === "info") return false;
+      return (
+        !normalizedQuery ||
+        [
+          item.code,
+          diagnosticSubject(item),
+          diagnosticProblem(item),
+          item.impact,
+          item.nextAction,
+          item.resourcePath ?? "",
+        ]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery)
+      );
+    })
+    .sort((left, right) => {
+      const severityRank = { error: 0, warning: 1, info: 2 };
+      const leftCodeRank = left.code === "skill:symlink-skipped" ? 2 : 0;
+      const rightCodeRank = right.code === "skill:symlink-skipped" ? 2 : 0;
+      return (
+        severityRank[left.severity] - severityRank[right.severity] ||
+        leftCodeRank - rightCodeRank ||
+        diagnosticSubject(left).localeCompare(diagnosticSubject(right), "zh-CN")
+      );
+    });
   async function previewRecovery(item: UnifiedDiagnostic) {
     setRecoveryBusy(true);
     setRecoveryMessage(undefined);
@@ -2624,13 +2855,15 @@ function DiagnosticsPage({
               </div>
               <div className="diagnostic-copy">
                 <div>
-                  <strong>{item.code}</strong>
+                  <strong>{diagnosticSubject(item)}</strong>
                   <span className="diagnostic-severity">
                     {item.severity === "error" ? "错误" : "警告"}
                   </span>
                 </div>
-                <p>{item.impact}</p>
-                <small>下一步：{item.nextAction}</small>
+                <p>{diagnosticProblem(item)}</p>
+                <small>影响：{item.impact}</small>
+                <small>建议：{item.nextAction}</small>
+                <code className="diagnostic-code">{item.code}</code>
                 {item.resourcePath && <code>{item.resourcePath}</code>}
               </div>
               <div className="diagnostic-actions">
@@ -2641,22 +2874,22 @@ function DiagnosticsPage({
                       disabled={recoveryBusy}
                       onClick={() => void previewRecovery(item)}
                     >
-                      预览修复
+                      查看处理方案
                     </button>
                   )}
                 <button
                   className="button button-ghost"
-                  onClick={() =>
-                    onNavigate(
-                      item.agent
-                        ? "configs"
-                        : item.code.startsWith("skill:")
-                          ? "skills"
-                          : "settings",
-                    )
-                  }
+                  onClick={() => {
+                    if (item.code.startsWith("skill:")) {
+                      onViewSkillDetails(item);
+                      return;
+                    }
+                    onNavigate(item.agent ? "configs" : "settings");
+                  }}
                 >
-                  查看详情
+                  {item.code.startsWith("skill:")
+                    ? "查看 Skill 详情"
+                    : "查看详情"}
                 </button>
               </div>
             </article>
@@ -2691,7 +2924,7 @@ function DiagnosticsPage({
         <section className="restore-panel" aria-labelledby="recovery-title">
           <div className="editor-header">
             <div>
-              <span className="eyebrow">恢复预览</span>
+              <span className="eyebrow">处理方案</span>
               <strong id="recovery-title">{recoveryPreview.summary}</strong>
             </div>
             <button
@@ -2704,8 +2937,8 @@ function DiagnosticsPage({
           </div>
           <p>
             {recoveryPreview.plan.confirmationRequired
-              ? "此操作需要明确确认。执行前请核对诊断范围和资源路径。"
-              : "这是安全操作；执行后 AgentHub 会立即重新扫描。"}
+              ? "这是一个可能改变配置或安装状态的操作。请先核对问题范围和资源路径。"
+              : "这是安全的重新扫描或刷新操作，不会直接修改源文件。"}
           </p>
           {recoveryPreview.plan.resourcePath && (
             <code className="recovery-path">
@@ -2727,8 +2960,8 @@ function DiagnosticsPage({
               {recoveryBusy
                 ? "执行中…"
                 : recoveryPreview.plan.confirmationRequired
-                  ? "确认并执行"
-                  : "执行安全修复"}
+                  ? "确认并处理"
+                  : "执行处理方案"}
             </button>
           </div>
         </section>

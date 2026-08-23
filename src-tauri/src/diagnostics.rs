@@ -333,16 +333,20 @@ pub fn from_skill(
     }
 }
 
-pub fn duplicate_skill(name: &str) -> UnifiedDiagnostic {
+pub fn duplicate_skill(
+    name: &str,
+    agent: Option<Agent>,
+    scope: Option<Scope>,
+) -> UnifiedDiagnostic {
     UnifiedDiagnostic {
         code: format!("skill:duplicate-name:{name}"),
         kind: DiagnosticKind::DuplicateSkill,
         severity: Severity::Warning,
-        agent: None,
-        scope: None,
+        agent,
+        scope,
         resource_path: None,
-        impact: format!("多个安装位置声明了同名 Skill `{name}`，Agent 的实际加载结果可能不确定"),
-        next_action: "比较各安装位置并停用或卸载不需要的副本".into(),
+        impact: format!("同一个 Agent 在多个目录发现了同名 Skill `{name}`，副本内容可能已经漂移"),
+        next_action: "保留 ~/.agents/skills 中的副本；旧的 ~/.codex/skills 副本建议先迁移或归档后再重新扫描".into(),
         fix_safety: FixSafety::RequiresConfirmation,
     }
 }
@@ -680,6 +684,9 @@ fn skill_kind(code: &str) -> DiagnosticKind {
 }
 
 fn skill_impact(code: &str) -> &'static str {
+    if code == "symlink-skipped" {
+        return "该入口没有被读取，因此对应 Skill 不会出现在可安装清单中";
+    }
     match skill_kind(code) {
         DiagnosticKind::DuplicateSkill => "同名 Skill 可能按非预期顺序被目标 Agent 加载",
         DiagnosticKind::VersionMismatch => "Skill 可能与目标 Agent 或来源版本不兼容",
@@ -688,6 +695,9 @@ fn skill_impact(code: &str) -> &'static str {
 }
 
 fn skill_next_action(code: &str) -> &'static str {
+    if code == "symlink-skipped" {
+        return "直接添加符号链接指向的真实来源目录，或将该入口替换为真实目录";
+    }
     match skill_kind(code) {
         DiagnosticKind::DuplicateSkill => "比较安装路径并确认需要保留的 Skill",
         DiagnosticKind::VersionMismatch => "核对来源版本与目标 Agent 兼容性声明",
@@ -696,6 +706,9 @@ fn skill_next_action(code: &str) -> &'static str {
 }
 
 fn skill_fix_safety(code: &str) -> FixSafety {
+    if code == "symlink-skipped" {
+        return FixSafety::Manual;
+    }
     match skill_kind(code) {
         DiagnosticKind::VersionMismatch => FixSafety::Manual,
         _ => FixSafety::RequiresConfirmation,
@@ -856,6 +869,10 @@ mod tests {
             duplicate_skill("review").fix_safety,
             FixSafety::RequiresConfirmation
         );
+        let symlink = from_skill(&source("symlink-skipped"), None, None);
+        assert_eq!(symlink.fix_safety, FixSafety::Manual);
+        assert!(symlink.impact.contains("不会出现在可安装清单"));
+        assert!(symlink.next_action.contains("真实来源目录"));
     }
 
     #[test]

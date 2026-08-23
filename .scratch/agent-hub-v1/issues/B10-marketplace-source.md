@@ -1,7 +1,7 @@
 # B10：支持标准 Marketplace 来源
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D01, D02, B09
 
 ## 交付
@@ -18,7 +18,7 @@ Blocked by: D01, D02, B09
 
 ## 当前状态
 
-`claimed`。manifest、远程 locator 解析与统一 `browse_skill_source` command 已完成；尚需将 Marketplace 浏览结果接入 Skills 页面。
+`resolved`。manifest、远程 locator 解析与统一 `browse_skill_source` command 已完成；Skills 页面已接入本地 manifest 浏览、目录条目展示与统一安装计划入口。
 
 ## Result
 

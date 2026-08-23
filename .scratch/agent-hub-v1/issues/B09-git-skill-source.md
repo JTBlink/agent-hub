@@ -1,7 +1,7 @@
 # B09：支持远程 Git 与本地仓库 Skill 来源
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D02, B08
 
 ## 交付
@@ -20,7 +20,7 @@ Blocked by: D02, B08
 
 ## 当前状态
 
-`claimed`。来源 adapter、安全 fetch、授权 service 与 `browse_skill_source` command 已完成；尚需接入 Skills 页面并补充用户可见的来源状态。
+`resolved`。来源 adapter、安全 fetch、授权 service 与 `browse_skill_source` command 已完成；Skills 页面已接入远程 Git、四个预置仓库和本地目录选择，并复用统一安装计划。
 
 ## Result
 

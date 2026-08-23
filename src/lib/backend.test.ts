@@ -97,6 +97,7 @@ describe("Claude Code backend binding", () => {
     const input = {
       request,
       skillPath: "review",
+      skillSourceLocator: "https://skills.sh/anthropics/skills",
       agent: "codex" as const,
       scope: "workspace" as const,
       workspaceDirectory: "/projects/demo",

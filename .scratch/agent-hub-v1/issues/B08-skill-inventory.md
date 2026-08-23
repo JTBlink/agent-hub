@@ -1,7 +1,7 @@
 # B08：可视化盘点已安装 Skills
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D01, D02, B02
 
 ## 交付
@@ -18,7 +18,7 @@ Blocked by: D01, D02, B02
 
 ## 当前状态
 
-`claimed`。Rust 盘点能力、`scan_skills` 命令与自动化测试已完成；Skills 页面仍需补充实际路径、兼容性、启用状态和来源详情展示后才能关闭。
+`resolved`。Rust 盘点能力、`scan_skills` 命令与自动化测试已完成；Skills 页面已展示实际路径、兼容性、启用状态、来源类型和管理归属。
 
 ## Result
 

@@ -8,8 +8,8 @@
 | 类别                | 已完成 | 进行中 | 待开始 | 总数 |
 | ------------------- | -----: | -----: | -----: | ---: |
 | 决策任务（D01–D05） |      5 |      0 |      0 |    5 |
-| 构建任务（B01–B14） |      7 |      7 |      0 |   14 |
-| 合计                |     12 |      7 |      0 |   19 |
+| 构建任务（B01–B14） |     12 |      2 |      0 |   14 |
+| 合计                |     17 |      2 |      0 |   19 |
 
 ## 决策任务
 
@@ -32,19 +32,18 @@
 | B05 | 工作空间配置管理               | `resolved` | D05、B04                |
 | B06 | Codex 配置适配                 | `resolved` | D01、B04                |
 | B07 | OpenCode 配置适配              | `resolved` | D01、B04                |
-| B08 | 已安装 Skills 可视化盘点       | `claimed`  | D01、D02、B02           |
-| B09 | 远程 Git 与本地仓库 Skill 来源 | `claimed`  | D02、B08                |
-| B10 | 标准 Marketplace 来源          | `claimed`  | D01、D02、B09           |
-| B11 | skills.sh 来源                 | `claimed`  | D01、D02、B08           |
-| B12 | Skill 生命周期与多 Agent 安装  | `claimed`  | B09、B10、B11           |
+| B08 | 已安装 Skills 可视化盘点       | `resolved` | D01、D02、B02           |
+| B09 | 远程 Git 与本地仓库 Skill 来源 | `resolved` | D02、B08                |
+| B10 | 标准 Marketplace 来源          | `resolved` | D01、D02、B09           |
+| B11 | skills.sh 来源                 | `resolved` | D01、D02、B08           |
+| B12 | Skill 生命周期与多 Agent 安装  | `resolved` | B09、B10、B11           |
 | B13 | 统一诊断、冲突和恢复体验       | `claimed`  | D04、B05、B06、B07、B12 |
 | B14 | 跨平台验收与 V1 发布           | `claimed`  | B13                     |
 
 ## 当前推进顺序
 
-1. 收尾 B08–B12：Rust 来源获取、命令契约和多 Agent 生命周期已完成，继续完成 Skills UI 闭环。
-2. 收尾 B13：完成统一诊断中心的修复执行与恢复 E2E。
-3. 执行 B14 的 tag Release、三平台安装验证和最终双轴审查。
+1. 收尾 B13：完成统一诊断中心的修复执行与恢复 E2E。
+2. 执行 B14 的 tag Release、三平台安装验证和最终双轴审查。
 
 ## 状态维护规则
 

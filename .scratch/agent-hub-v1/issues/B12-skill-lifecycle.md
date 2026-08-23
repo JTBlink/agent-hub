@@ -1,7 +1,7 @@
 # B12：完成 Skill 生命周期与多 Agent 安装
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: B09, B10, B11
 
 ## 交付
@@ -19,7 +19,7 @@ Blocked by: B09, B10, B11
 
 ## 当前状态
 
-`claimed`。Rust 生命周期 service、SQLite 一致性、计划/安装/启停/卸载 commands 与命令层安全测试已完成；尚需完成 UI 的计划确认流程。
+`resolved`。Rust 生命周期 service、SQLite 一致性、计划/安装/启停/卸载 commands 与命令层安全测试已完成；Skills 页面已接入发现、目标 Agent/作用域选择、安装计划文件清单和确认执行。
 
 ## Result
 

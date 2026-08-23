@@ -1,7 +1,7 @@
 # B11：支持 skills.sh 来源
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D01, D02, B08
 
 ## 交付
@@ -18,7 +18,7 @@ Blocked by: D01, D02, B08
 
 ## 当前状态
 
-`claimed`。D01 确认的稳定 direct-source 流程与统一 `browse_skill_source` command 已完成；尚需来源详情 UI。skills.sh 未提供稳定搜索 API，因此 V1 不抓取网页搜索结果。
+`resolved`。D01 确认的稳定 direct-source 流程与统一 `browse_skill_source` command 已完成；Skills 页面支持 owner/repository 输入、预置仓库选择、来源浏览和安装计划。skills.sh 未提供稳定搜索 API，因此 V1 不抓取网页搜索结果。
 
 ## Result
 
