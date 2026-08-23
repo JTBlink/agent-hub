@@ -166,7 +166,7 @@ function navigationLabel(id: Section, t: (key: TranslationKey) => string) {
     overview: "overview",
     configs: "configs",
     skills: "skills",
-    workspaces: "workspace",
+    workspaces: "workspaceNav",
     diagnostics: "diagnostics",
     history: "history",
     settings: "settings",
@@ -733,7 +733,7 @@ export function App() {
               )}
             </button>
           ))}
-          <p className="nav-label nav-label-lower">{t("settings")}</p>
+          <p className="nav-label nav-label-lower">{t("systemLabel")}</p>
           <button
             className={`nav-item ${section === "settings" ? "active" : ""}`}
             onClick={() => setSection("settings")}
