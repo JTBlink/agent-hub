@@ -57,6 +57,12 @@ pub(super) fn parse_setting(key: SettingKey, value: &str) -> Result<AppSetting, 
                     "invalid stored backup retention days: {value}"
                 ))
             }),
+        SettingKey::LastLocalSkillSource if !value.trim().is_empty() => {
+            Ok(AppSetting::LastLocalSkillSource(value.to_owned()))
+        }
+        SettingKey::LastLocalSkillSource => Err(PersistenceError::InvalidInput(
+            "stored last local Skill source cannot be empty".into(),
+        )),
     }
 }
 

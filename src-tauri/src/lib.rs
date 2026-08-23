@@ -16,7 +16,8 @@ use tauri_plugin_deep_link::DeepLinkExt;
 
 use agents::{claude::ClaudeCodeAdapter, AgentConfigAdapter, ConfigDocument, ScanContext};
 use persistence::{
-    ConfigMetadataRepository, SkillRepository, StorageDiagnosticsRepository, WorkspaceRepository,
+    AppSetting, ConfigMetadataRepository, SettingKey, SettingsRepository, SkillRepository,
+    StorageDiagnosticsRepository, WorkspaceRepository,
 };
 
 pub mod agents;
@@ -127,6 +128,36 @@ fn app_info() -> AppInfo {
     }
 }
 
+#[tauri::command]
+fn get_last_local_skill_source(
+    state: tauri::State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    match state
+        .settings_repository()?
+        .setting(SettingKey::LastLocalSkillSource)
+        .map_err(|error| error.to_string())?
+    {
+        Some(AppSetting::LastLocalSkillSource(path)) => Ok(Some(path)),
+        None => Ok(None),
+        Some(_) => Err("stored local Skill source setting has an invalid type".into()),
+    }
+}
+
+#[tauri::command]
+fn set_last_local_skill_source(
+    state: tauri::State<'_, AppState>,
+    path: String,
+) -> Result<(), String> {
+    let path = path.trim();
+    if path.is_empty() {
+        return Err("local Skill source directory cannot be empty".into());
+    }
+    state
+        .settings_repository()?
+        .set_setting(AppSetting::LastLocalSkillSource(path.to_owned()))
+        .map_err(|error| error.to_string())
+}
+
 struct AppState {
     workspaces: Arc<dyn WorkspaceRepository>,
     config_metadata: Arc<dyn ConfigMetadataRepository>,
@@ -137,6 +168,7 @@ struct AppState {
     backup_root: PathBuf,
     skill_repository: Option<Arc<dyn SkillRepository>>,
     skill_sources: Option<Arc<skills::SkillSourceManager>>,
+    settings_repository: Option<Arc<dyn SettingsRepository>>,
     pending_skill_plans: Mutex<HashMap<String, PendingSkillPlan>>,
 }
 
@@ -174,6 +206,7 @@ impl AppState {
             backup_root,
             skill_repository: None,
             skill_sources: None,
+            settings_repository: None,
             pending_skill_plans: Mutex::new(HashMap::new()),
         }
     }
@@ -182,9 +215,17 @@ impl AppState {
         &mut self,
         repository: Arc<dyn SkillRepository>,
         sources: Arc<skills::SkillSourceManager>,
+        settings: Arc<dyn SettingsRepository>,
     ) {
         self.skill_repository = Some(repository);
         self.skill_sources = Some(sources);
+        self.settings_repository = Some(settings);
+    }
+
+    fn settings_repository(&self) -> Result<&Arc<dyn SettingsRepository>, String> {
+        self.settings_repository
+            .as_ref()
+            .ok_or_else(|| "settings service is not configured".to_owned())
     }
 
     fn skill_repository(&self) -> Result<&Arc<dyn SkillRepository>, String> {
@@ -689,6 +730,17 @@ struct SkillInstallRequest {
     workspace_id: Option<i64>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SkillLinkRequest {
+    source_directory: String,
+    target_name: String,
+    agent: Agent,
+    scope: Scope,
+    #[serde(default)]
+    workspace_directory: Option<String>,
+}
+
 fn skill_target_context(
     home: impl AsRef<Path>,
     workspace_directory: Option<&str>,
@@ -866,6 +918,45 @@ fn apply_skill_install(
     })
 }
 
+#[tauri::command]
+fn link_skill_to_agent(app: tauri::AppHandle, input: SkillLinkRequest) -> Result<String, String> {
+    if input.scope != Scope::Global || input.workspace_directory.is_some() {
+        return Err("共享 Skill 软链接目前只支持全局作用域".into());
+    }
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    let context = skill_target_context(home, None)?;
+    skill_installation::link_shared_skill(
+        input.source_directory,
+        &input.target_name,
+        input.agent,
+        input.scope,
+        &context,
+    )
+    .map(|path| path.to_string_lossy().into_owned())
+    .map_err(|error| error.to_string())
+    .inspect_err(|_| {
+        logging::command_failed(
+            logging::Command::ApplySkillInstall,
+            logging::FailureCode::Skills,
+        );
+    })
+}
+
+#[tauri::command]
+fn unlink_skill(
+    app: tauri::AppHandle,
+    target_directory: String,
+    workspace_directory: Option<String>,
+) -> Result<(), String> {
+    if workspace_directory.is_some() {
+        return Err("共享 Skill 软链接目前只支持全局作用域".into());
+    }
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    let context = skill_target_context(home, None)?;
+    skill_installation::unlink_skill_link(target_directory, &context)
+        .map_err(|error| error.to_string())
+}
+
 fn apply_skill_install_for_state(
     state: &AppState,
     plan_id: &str,
@@ -956,6 +1047,38 @@ fn uninstall_skill(
             logging::FailureCode::Skills,
         );
     })
+}
+
+#[tauri::command]
+fn preview_uninstall_skill(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    target_directory: String,
+    workspace_directory: Option<String>,
+) -> Result<skill_installation::ManagedInstallation, String> {
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    preview_uninstall_skill_for_state(
+        home,
+        &state,
+        &target_directory,
+        workspace_directory.as_deref(),
+    )
+}
+
+fn preview_uninstall_skill_for_state(
+    home: impl AsRef<Path>,
+    state: &AppState,
+    target_directory: &str,
+    workspace_directory: Option<&str>,
+) -> Result<skill_installation::ManagedInstallation, String> {
+    let context = lifecycle_target_context(
+        state,
+        home,
+        Path::new(target_directory),
+        workspace_directory,
+    )?;
+    skill_installation::preview_removal_persisted(target_directory, &context)
+        .map_err(|error| error.to_string())
 }
 
 fn uninstall_skill_for_state(
@@ -1809,7 +1932,7 @@ pub fn run() {
             let workspace_repository: Arc<dyn WorkspaceRepository> = database.clone();
             let config_metadata_repository: Arc<dyn ConfigMetadataRepository> = database.clone();
             let skill_repository: Arc<dyn SkillRepository> = database.clone();
-            let storage_repository: Arc<dyn StorageDiagnosticsRepository> = database;
+            let storage_repository: Arc<dyn StorageDiagnosticsRepository> = database.clone();
             let mut state = AppState::new(
                 workspace_repository,
                 config_metadata_repository,
@@ -1821,6 +1944,7 @@ pub fn run() {
                 Arc::new(skills::SkillSourceManager::new(
                     app_paths.skill_sources.clone(),
                 )),
+                database.clone(),
             );
             app.manage(state);
             let handle = app.handle().clone();
@@ -1841,6 +1965,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            get_last_local_skill_source,
+            set_last_local_skill_source,
             user_data_paths,
             clear_user_data,
             storage_diagnostics,
@@ -1852,7 +1978,10 @@ pub fn run() {
             plan_skill_install,
             apply_skill_install,
             set_skill_enabled,
+            preview_uninstall_skill,
             uninstall_skill,
+            link_skill_to_agent,
+            unlink_skill,
             resolve_legacy_codex_skill,
             collect_diagnostics,
             preview_diagnostic_recovery,
@@ -1884,6 +2013,8 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
 
     fn test_state(root: &Path) -> AppState {
         let database = Arc::new(
@@ -1899,8 +2030,9 @@ mod tests {
             root.join("backups"),
         );
         state.configure_skill_services(
-            database,
+            database.clone(),
             Arc::new(skills::SkillSourceManager::new(root.join("skill-sources"))),
+            database,
         );
         state
     }
@@ -2534,9 +2666,18 @@ mod tests {
         assert!(enabled.enabled);
         assert!(target.join("SKILL.md").is_file());
 
+        #[cfg(unix)]
+        {
+            let link_root = root.path().join(".agents/skills");
+            std::fs::create_dir_all(&link_root).expect("shared skill root");
+            symlink(&target, link_root.join("review")).expect("related Skill symlink");
+        }
+
         uninstall_skill_for_state(root.path(), &state, &target.to_string_lossy(), None)
             .expect("uninstall installation");
         assert!(!target.exists());
+        #[cfg(unix)]
+        assert!(!root.path().join(".agents/skills/review").exists());
         assert_eq!(
             persisted
                 .query_row("SELECT COUNT(*) FROM skill_installations", [], |row| row

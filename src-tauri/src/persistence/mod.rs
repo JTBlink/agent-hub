@@ -185,15 +185,17 @@ pub enum Theme {
 pub enum SettingKey {
     Theme,
     BackupRetentionDays,
+    LastLocalSkillSource,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AppSetting {
     Theme(Theme),
     BackupRetentionDays(u16),
+    LastLocalSkillSource(String),
 }
 
-pub trait SettingsRepository {
+pub trait SettingsRepository: Send + Sync {
     fn set_setting(&self, setting: AppSetting) -> Result<(), PersistenceError>;
     fn setting(&self, key: SettingKey) -> Result<Option<AppSetting>, PersistenceError>;
 }

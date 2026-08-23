@@ -87,6 +87,10 @@ pub enum InstallationError {
     Persistence(String),
     #[error("workspace scope requires an authorized workspace directory")]
     WorkspaceRequired,
+    #[error("only Skills under ~/.agents/skills can be linked to another Agent")]
+    LinkSourceNotAllowed,
+    #[error("Skill link target is invalid")]
+    InvalidLinkTarget,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,6 +127,89 @@ impl SkillTargetContext {
             (Agent::OpenCode, Scope::Workspace) => base.join(".opencode/skills"),
         })
     }
+}
+
+/// Create a read-only link from the shared `~/.agents/skills` directory to
+/// another Agent's Skill root. Shared Skills are deliberately the only source
+/// that may be linked; all other installation flows continue to copy files.
+pub fn link_shared_skill(
+    source_directory: impl AsRef<Path>,
+    target_name: &str,
+    agent: Agent,
+    scope: Scope,
+    context: &SkillTargetContext,
+) -> Result<PathBuf, InstallationError> {
+    let source_directory = source_directory.as_ref().canonicalize()?;
+    let shared_root = context
+        .home_directory
+        .join(".agents/skills")
+        .canonicalize()?;
+    if agent == Agent::Codex
+        || source_directory.parent() != Some(shared_root.as_path())
+        || !source_directory.is_dir()
+        || !source_directory.join("SKILL.md").is_file()
+    {
+        return Err(InstallationError::LinkSourceNotAllowed);
+    }
+    if target_name.is_empty()
+        || target_name == "."
+        || target_name == ".."
+        || Path::new(target_name).components().count() != 1
+        || Path::new(target_name)
+            .components()
+            .any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        return Err(InstallationError::InvalidLinkTarget);
+    }
+    let target_root = context.target_root(agent, scope)?;
+    if target_root == shared_root {
+        return Err(InstallationError::LinkSourceNotAllowed);
+    }
+    ensure_no_symlink_components(&target_root)?;
+    fs::create_dir_all(&target_root)?;
+    let target = target_root.join(target_name);
+    if let Ok(metadata) = fs::symlink_metadata(&target) {
+        if !metadata.file_type().is_symlink() {
+            return Err(InstallationError::TargetExists);
+        }
+        if target.canonicalize().ok().as_deref() == Some(source_directory.as_path()) {
+            return Ok(target);
+        }
+        return Err(InstallationError::TargetExists);
+    }
+    symlink_directory(&source_directory, &target)?;
+    Ok(target)
+}
+
+pub fn unlink_skill_link(
+    target_directory: impl AsRef<Path>,
+    context: &SkillTargetContext,
+) -> Result<(), InstallationError> {
+    let target_directory = target_directory.as_ref();
+    let metadata = fs::symlink_metadata(target_directory)?;
+    if !metadata.file_type().is_symlink() {
+        return Err(InstallationError::InvalidLinkTarget);
+    }
+    let target = target_directory.canonicalize()?;
+    let shared_root = context
+        .home_directory
+        .join(".agents/skills")
+        .canonicalize()?;
+    if target.parent() != Some(shared_root.as_path()) {
+        return Err(InstallationError::LinkSourceNotAllowed);
+    }
+    fs::remove_file(target_directory)?;
+    Ok(())
+}
+
+#[cfg(unix)]
+fn symlink_directory(source: &Path, target: &Path) -> io::Result<()> {
+    std::os::unix::fs::symlink(source, target)
+}
+
+#[cfg(windows)]
+fn symlink_directory(source: &Path, target: &Path) -> io::Result<()> {
+    std::os::windows::fs::symlink_dir(source, target)
 }
 
 pub fn plan_install_for(
@@ -300,7 +387,8 @@ pub fn remove_installation_persisted(
     repository: &dyn SkillRepository,
 ) -> Result<ManagedInstallation, InstallationError> {
     authorize_managed_target(target_directory.as_ref(), context)?;
-    remove_installation_with(target_directory, |managed| {
+    let target_real = target_directory.as_ref().canonicalize().ok();
+    let removed = remove_installation_with(target_directory, |managed| {
         repository
             .remove_skill_installation(&managed.target_directory.to_string_lossy())
             .and_then(|removed| {
@@ -310,7 +398,47 @@ pub fn remove_installation_persisted(
                     )
                 })
             })
-    })
+    })?;
+    remove_related_skill_links(target_real.as_deref(), context);
+    Ok(removed)
+}
+
+/// Read and validate the files that would be removed without changing disk or
+/// the persisted installation record.
+pub fn preview_removal_persisted(
+    target_directory: impl AsRef<Path>,
+    context: &SkillTargetContext,
+) -> Result<ManagedInstallation, InstallationError> {
+    let target_directory = target_directory.as_ref();
+    let managed = authorize_managed_target(target_directory, context)?;
+    verify_managed_files(target_directory, &managed)?;
+    Ok(managed)
+}
+
+fn remove_related_skill_links(target: Option<&Path>, context: &SkillTargetContext) {
+    let Some(target) = target else { return };
+    let base = match context {
+        _ if context.workspace_directory.is_none() => &context.home_directory,
+        _ => context
+            .workspace_directory
+            .as_ref()
+            .unwrap_or(&context.home_directory),
+    };
+    let root = base.join(".agents/skills");
+    let Ok(entries) = fs::read_dir(root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(metadata) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if !metadata.file_type().is_symlink() || path.canonicalize().ok().as_deref() != Some(target)
+        {
+            continue;
+        }
+        let _ = fs::remove_file(&path).or_else(|_| fs::remove_dir(&path));
+    }
 }
 
 /// Apply a filesystem change and persist it as one logical operation.
@@ -606,6 +734,19 @@ fn verify_managed_files(
     directory: &Path,
     managed: &ManagedInstallation,
 ) -> Result<(), InstallationError> {
+    let mut actual_files = Vec::new();
+    collect_files(directory, directory, &mut actual_files)?;
+    for file in &mut actual_files {
+        if file == "SKILL.md.agent-hub-disabled" {
+            *file = "SKILL.md".into();
+        }
+    }
+    actual_files.sort();
+    let mut expected_files = managed.files.clone();
+    expected_files.sort();
+    if actual_files != expected_files {
+        return Err(InstallationError::ExternallyModified);
+    }
     if managed.installed_fingerprint.is_empty() {
         return Ok(());
     }
@@ -847,6 +988,21 @@ mod tests {
             remove_installation(&plan.target_directory),
             Err(InstallationError::ExternallyModified)
         ));
+    }
+
+    #[test]
+    fn extra_unmanaged_file_blocks_removal() {
+        let source = tempdir().expect("source");
+        let target = tempdir().expect("target");
+        let skill = fixture_skill(source.path());
+        let plan = plan_install(&skill, Agent::Codex, Scope::Global, target.path()).expect("plan");
+        apply_install(&plan).expect("install");
+        fs::write(plan.target_directory.join("user-notes.txt"), "keep").expect("external file");
+        assert!(matches!(
+            remove_installation(&plan.target_directory),
+            Err(InstallationError::ExternallyModified)
+        ));
+        assert!(plan.target_directory.join("user-notes.txt").exists());
     }
 
     #[test]

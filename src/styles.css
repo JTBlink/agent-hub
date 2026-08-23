@@ -2174,10 +2174,38 @@ textarea:focus-visible {
   align-items: center;
   gap: 8px;
 }
+.skill-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.skill-batch-actions span {
+  color: var(--quiet);
+  font-size: 10px;
+}
+.skill-batch-actions select {
+  min-height: 32px;
+  max-width: 110px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: #fff;
+  font-size: 10px;
+}
 .source-chips {
   display: flex;
-  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  flex-wrap: nowrap;
   gap: 7px;
+  padding: 2px 1px 6px;
+  scrollbar-width: thin;
+}
+.source-chips .chip {
+  flex: 0 0 auto;
 }
 .chip {
   display: inline-flex;
@@ -2240,6 +2268,11 @@ textarea:focus-visible {
   min-height: 58px;
   padding: 9px 7px;
   border-top: 1px solid #e9f1f0;
+}
+.skill-select-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--teal);
 }
 .skill-group .skill-row:first-of-type {
   border-top: 0;
@@ -2649,6 +2682,134 @@ textarea:focus-visible {
 .skill-install-target {
   padding-top: 15px;
   border-top: 1px solid var(--line);
+}
+.install-target-first {
+  margin-top: -4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-deep);
+}
+.agent-install-choice {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.agent-install-choice legend {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.agent-install-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  gap: 8px;
+}
+.agent-install-options label {
+  display: grid;
+  position: relative;
+  grid-template-columns: 28px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 9px 6px 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface-raised);
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+  transition:
+    border-color var(--motion-fast) ease,
+    background var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+.agent-install-options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.agent-install-options label:hover {
+  border-color: #3a5688;
+  background: #1b2d51;
+  transform: translateY(-1px);
+}
+.agent-install-options label.selected {
+  border-color: rgb(66 217 177 / 68%);
+  color: var(--ink);
+  background: linear-gradient(135deg, #173a45, #142c43);
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+.agent-install-options label:focus-within {
+  outline: 3px solid rgb(66 217 177 / 38%);
+  outline-offset: 2px;
+}
+.agent-install-mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #354d78;
+  border-radius: 6px;
+  color: var(--quiet);
+  background: #0c172d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.agent-install-options label.selected .agent-install-mark {
+  border-color: rgb(66 217 177 / 36%);
+  color: var(--teal);
+  background: #0d2d34;
+}
+.agent-install-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+.agent-install-check {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid #476087;
+  border-radius: 5px;
+  background: #0b162b;
+}
+.agent-install-options label.selected .agent-install-check {
+  border-color: var(--teal);
+  background: var(--teal);
+}
+.agent-install-options label.selected .agent-install-check::after {
+  width: 7px;
+  height: 4px;
+  border-bottom: 2px solid #08251f;
+  border-left: 2px solid #08251f;
+  content: "";
+  transform: translateY(-1px) rotate(-45deg);
+}
+.skill-install-summary {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--quiet);
+  background: var(--surface-deep);
+  font-size: 10px;
+}
+.skill-install-summary code {
+  color: var(--ink);
+  font-size: 11px;
 }
 .skill-install-plan {
   padding: 15px;
@@ -7224,7 +7385,7 @@ select:focus-visible {
 
 /* Skill viewer actions stay usable after the responsive card rules above. */
 .skill-row {
-  grid-template-columns: 32px minmax(0, 1fr) auto auto auto auto;
+  grid-template-columns: 24px 32px minmax(0, 1fr) auto auto auto auto;
 }
 
 .skill-view-button {
@@ -7257,7 +7418,7 @@ select:focus-visible {
 
 @media (max-width: 740px) {
   .skill-row {
-    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-template-columns: 20px 30px minmax(0, 1fr) auto;
   }
 
   .skill-row .skill-view-button,

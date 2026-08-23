@@ -17,6 +17,10 @@ const MIGRATIONS: &[Migration] = &[
         version: 2,
         sql: include_str!("../../migrations/0002_config_history_snapshot.sql"),
     },
+    Migration {
+        version: 3,
+        sql: include_str!("../../migrations/0003_local_skill_source_setting.sql"),
+    },
 ];
 
 pub(super) fn run_migrations(connection: &mut Connection) -> Result<(), PersistenceError> {

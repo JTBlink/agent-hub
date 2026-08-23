@@ -83,6 +83,7 @@ export interface InstalledSkill {
   installedFingerprint?: string | null;
   enabled: boolean;
   sourceTracked: boolean;
+  category: "user" | "system";
   diagnostics: {
     code: string;
     message: string;
@@ -323,6 +324,14 @@ export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
+export function getLastLocalSkillSource(): Promise<string | null> {
+  return invoke<string | null>("get_last_local_skill_source");
+}
+
+export function setLastLocalSkillSource(path: string): Promise<void> {
+  return invoke<void>("set_last_local_skill_source", { path });
+}
+
 export function getUserDataPaths(): Promise<UserDataPaths> {
   return invoke<UserDataPaths>("user_data_paths");
 }
@@ -392,6 +401,30 @@ export function uninstallSkill(input: {
   workspaceDirectory?: string;
 }): Promise<ManagedInstallation> {
   return invoke<ManagedInstallation>("uninstall_skill", input);
+}
+
+export function linkSkillToAgent(input: {
+  sourceDirectory: string;
+  targetName: string;
+  agent: Agent;
+  scope: ConfigScope;
+  workspaceDirectory?: string;
+}): Promise<string> {
+  return invoke<string>("link_skill_to_agent", { input });
+}
+
+export function unlinkSkill(input: {
+  targetDirectory: string;
+  workspaceDirectory?: string;
+}): Promise<void> {
+  return invoke<void>("unlink_skill", input);
+}
+
+export function previewUninstallSkill(input: {
+  targetDirectory: string;
+  workspaceDirectory?: string;
+}): Promise<ManagedInstallation> {
+  return invoke<ManagedInstallation>("preview_uninstall_skill", input);
 }
 
 export type LegacyCodexSkillAction = "migrate" | "archive";

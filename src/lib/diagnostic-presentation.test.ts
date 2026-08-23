@@ -46,6 +46,7 @@ function installedSkill(
     compatibility: null,
     enabled: true,
     sourceTracked: true,
+    category: "user",
     diagnostics: [],
     ...overrides,
   };
