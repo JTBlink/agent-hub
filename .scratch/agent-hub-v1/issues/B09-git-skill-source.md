@@ -20,7 +20,7 @@ Blocked by: D02, B08
 
 ## 当前状态
 
-`claimed`。来源 adapter、安全 fetch 和授权 service 已完成；尚需在 `lib.rs` 注册来源浏览 command，并接入 Skills 页面。
+`claimed`。来源 adapter、安全 fetch、授权 service 与 `browse_skill_source` command 已完成；尚需接入 Skills 页面并补充用户可见的来源状态。
 
 ## Result
 

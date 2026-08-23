@@ -1,8 +1,11 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    time::{SystemTime, UNIX_EPOCH},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use serde::{Deserialize, Serialize};
@@ -58,7 +61,11 @@ struct PendingSkillPlan {
     skill: skills::DiscoveredSkill,
     context: skill_installation::SkillTargetContext,
     workspace_id: Option<i64>,
+    created_at: SystemTime,
 }
+
+const MAX_PENDING_SKILL_PLANS: usize = 256;
+const PENDING_SKILL_PLAN_TTL: Duration = Duration::from_secs(30 * 60);
 
 #[derive(Debug, Clone, Copy)]
 struct AuthorizedConfig {
@@ -107,6 +114,40 @@ impl AppState {
             .ok_or_else(|| "Skill source manager is not configured".to_owned())
     }
 
+    fn store_pending_skill_plan(
+        &self,
+        plan_id: String,
+        pending: PendingSkillPlan,
+    ) -> Result<(), String> {
+        let mut plans = self
+            .pending_skill_plans
+            .lock()
+            .map_err(|_| "Skill install plan store is unavailable".to_owned())?;
+        prune_pending_skill_plans(&mut plans);
+        if plans.len() >= MAX_PENDING_SKILL_PLANS {
+            if let Some(oldest_id) = plans
+                .iter()
+                .min_by_key(|(_, value)| value.created_at)
+                .map(|(id, _)| id.clone())
+            {
+                plans.remove(&oldest_id);
+            }
+        }
+        plans.insert(plan_id, pending);
+        Ok(())
+    }
+
+    fn take_pending_skill_plan(&self, plan_id: &str) -> Result<PendingSkillPlan, String> {
+        let mut plans = self
+            .pending_skill_plans
+            .lock()
+            .map_err(|_| "Skill install plan store is unavailable".to_owned())?;
+        prune_pending_skill_plans(&mut plans);
+        plans
+            .remove(plan_id)
+            .ok_or_else(|| "Skill install plan has expired or was not confirmed".to_owned())
+    }
+
     fn authorize(&self, document: &ConfigDocument, id: i64) -> Result<(), String> {
         self.authorized_config_paths
             .lock()
@@ -139,6 +180,15 @@ impl AppState {
             .retain(|_, authorization| !ids.contains(&authorization.id));
         Ok(())
     }
+}
+
+fn prune_pending_skill_plans(plans: &mut HashMap<String, PendingSkillPlan>) {
+    let now = SystemTime::now();
+    plans.retain(|_, pending| {
+        now.duration_since(pending.created_at)
+            .map(|age| age < PENDING_SKILL_PLAN_TTL)
+            .unwrap_or(true)
+    });
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -584,11 +634,13 @@ fn select_discovered_skill(
 }
 
 fn plan_identifier() -> String {
+    static NEXT_PLAN_SEQUENCE: AtomicU64 = AtomicU64::new(1);
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos();
-    format!("plan-{timestamp}")
+    let sequence = NEXT_PLAN_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    format!("plan-{timestamp}-{sequence}")
 }
 
 #[tauri::command]
@@ -596,10 +648,13 @@ fn browse_skill_source(
     state: tauri::State<'_, AppState>,
     request: skills::SourceRequest,
 ) -> Result<skills::SourceBrowseResult, String> {
-    state
-        .skill_sources()?
-        .browse(request)
-        .map_err(|error| error.to_string())
+    state.skill_sources()?.browse(request).map_err(|error| {
+        logging::command_failed(
+            logging::Command::BrowseSkillSource,
+            logging::FailureCode::Skills,
+        );
+        error.to_string()
+    })
 }
 
 #[tauri::command]
@@ -608,8 +663,22 @@ fn plan_skill_install(
     state: tauri::State<'_, AppState>,
     input: SkillInstallRequest,
 ) -> Result<SkillInstallPlanPreview, String> {
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    create_skill_install_plan_for_state(home, &state, input).inspect_err(|_| {
+        logging::command_failed(
+            logging::Command::PlanSkillInstall,
+            logging::FailureCode::Skills,
+        );
+    })
+}
+
+fn create_skill_install_plan_for_state(
+    home: impl AsRef<Path>,
+    state: &AppState,
+    input: SkillInstallRequest,
+) -> Result<SkillInstallPlanPreview, String> {
     let (workspace_directory, workspace_id) = validated_skill_workspace(
-        &state,
+        state,
         input.scope,
         input.workspace_directory.as_deref(),
         input.workspace_id,
@@ -619,24 +688,20 @@ fn plan_skill_install(
         .browse(input.request)
         .map_err(|error| error.to_string())?;
     let skill = select_discovered_skill(&source, &input.skill_path)?;
-    let home = app.path().home_dir().map_err(|error| error.to_string())?;
     let context = skill_target_context(home, workspace_directory.as_deref())?;
     let plan = skill_installation::plan_install_for(&skill, input.agent, input.scope, &context)
         .map_err(|error| error.to_string())?;
     let plan_id = plan_identifier();
-    state
-        .pending_skill_plans
-        .lock()
-        .map_err(|_| "Skill install plan store is unavailable".to_owned())?
-        .insert(
-            plan_id.clone(),
-            PendingSkillPlan {
-                plan: plan.clone(),
-                skill: skill.clone(),
-                context,
-                workspace_id,
-            },
-        );
+    state.store_pending_skill_plan(
+        plan_id.clone(),
+        PendingSkillPlan {
+            plan: plan.clone(),
+            skill: skill.clone(),
+            context,
+            workspace_id,
+            created_at: SystemTime::now(),
+        },
+    )?;
     Ok(SkillInstallPlanPreview {
         plan_id,
         plan,
@@ -651,13 +716,19 @@ fn apply_skill_install(
     state: tauri::State<'_, AppState>,
     plan_id: String,
 ) -> Result<skill_installation::ManagedInstallation, String> {
-    let pending = state
-        .pending_skill_plans
-        .lock()
-        .map_err(|_| "Skill install plan store is unavailable".to_owned())?
-        .get(&plan_id)
-        .cloned()
-        .ok_or_else(|| "Skill install plan has expired or was not confirmed".to_owned())?;
+    apply_skill_install_for_state(&state, &plan_id).inspect_err(|_| {
+        logging::command_failed(
+            logging::Command::ApplySkillInstall,
+            logging::FailureCode::Skills,
+        );
+    })
+}
+
+fn apply_skill_install_for_state(
+    state: &AppState,
+    plan_id: &str,
+) -> Result<skill_installation::ManagedInstallation, String> {
+    let pending = state.take_pending_skill_plan(plan_id)?;
     let result = skill_installation::apply_install_persisted_authorized(
         state.skill_sources()?,
         &pending.plan,
@@ -665,14 +736,16 @@ fn apply_skill_install(
         pending.workspace_id,
         &pending.context,
         state.skill_repository()?.as_ref(),
-    )
-    .map_err(|error| error.to_string())?;
-    state
-        .pending_skill_plans
-        .lock()
-        .map_err(|_| "Skill install plan store is unavailable".to_owned())?
-        .remove(&plan_id);
-    Ok(result)
+    );
+    match result {
+        Ok(result) => Ok(result),
+        Err(error) => {
+            // Keep a failed plan available for an explicit retry (for example,
+            // after a transient SQLite lock), while the TTL still bounds memory.
+            let _ = state.store_pending_skill_plan(plan_id.to_owned(), pending);
+            Err(error.to_string())
+        }
+    }
 }
 
 #[tauri::command]
@@ -684,14 +757,36 @@ fn set_skill_enabled(
     workspace_directory: Option<String>,
 ) -> Result<skill_installation::ManagedInstallation, String> {
     let home = app.path().home_dir().map_err(|error| error.to_string())?;
-    let context = lifecycle_target_context(
-        &state,
+    set_skill_enabled_for_state(
         home,
-        Path::new(&target_directory),
+        &state,
+        &target_directory,
+        enabled,
         workspace_directory.as_deref(),
+    )
+    .inspect_err(|_| {
+        logging::command_failed(
+            logging::Command::SetSkillEnabled,
+            logging::FailureCode::Skills,
+        );
+    })
+}
+
+fn set_skill_enabled_for_state(
+    home: impl AsRef<Path>,
+    state: &AppState,
+    target_directory: &str,
+    enabled: bool,
+    workspace_directory: Option<&str>,
+) -> Result<skill_installation::ManagedInstallation, String> {
+    let context = lifecycle_target_context(
+        state,
+        home,
+        Path::new(target_directory),
+        workspace_directory,
     )?;
     skill_installation::set_enabled_persisted(
-        &target_directory,
+        target_directory,
         enabled,
         &context,
         state.skill_repository()?.as_ref(),
@@ -707,14 +802,34 @@ fn uninstall_skill(
     workspace_directory: Option<String>,
 ) -> Result<skill_installation::ManagedInstallation, String> {
     let home = app.path().home_dir().map_err(|error| error.to_string())?;
-    let context = lifecycle_target_context(
-        &state,
+    uninstall_skill_for_state(
         home,
-        Path::new(&target_directory),
+        &state,
+        &target_directory,
         workspace_directory.as_deref(),
+    )
+    .inspect_err(|_| {
+        logging::command_failed(
+            logging::Command::UninstallSkill,
+            logging::FailureCode::Skills,
+        );
+    })
+}
+
+fn uninstall_skill_for_state(
+    home: impl AsRef<Path>,
+    state: &AppState,
+    target_directory: &str,
+    workspace_directory: Option<&str>,
+) -> Result<skill_installation::ManagedInstallation, String> {
+    let context = lifecycle_target_context(
+        state,
+        home,
+        Path::new(target_directory),
+        workspace_directory,
     )?;
     skill_installation::remove_installation_persisted(
-        &target_directory,
+        target_directory,
         &context,
         state.skill_repository()?.as_ref(),
     )
@@ -861,6 +976,7 @@ struct DiagnosticRecoveryResult {
     resource_path: Option<PathBuf>,
     next_command: Option<String>,
     diagnostics: Vec<diagnostics::UnifiedDiagnostic>,
+    diagnostics_refreshed: bool,
     config_write: Option<configuration::ConfigWriteResult>,
 }
 
@@ -884,7 +1000,7 @@ fn preview_diagnostic_recovery(
     preview_diagnostic_recovery_for_state(&home_directory, &state, request).inspect_err(|_| {
         logging::command_failed(
             logging::Command::PreviewDiagnosticRecovery,
-            logging::FailureCode::Configuration,
+            logging::FailureCode::Diagnostics,
         );
     })
 }
@@ -931,6 +1047,13 @@ fn preview_diagnostic_recovery_for_state(
     } else {
         None
     };
+    if let Some(config_preview) = &config_preview {
+        state
+            .recovery_registry
+            .lock()
+            .map_err(|_| "diagnostic recovery registry is unavailable".to_owned())?
+            .bind_content_checksum(&preview.recovery_id, config_preview.after_checksum.clone());
+    }
     Ok(DiagnosticRecoveryPreview {
         recovery_id: preview.recovery_id,
         plan: preview.plan,
@@ -950,7 +1073,7 @@ fn execute_diagnostic_recovery(
     execute_diagnostic_recovery_for_state(&home_directory, &state, request).inspect_err(|_| {
         logging::command_failed(
             logging::Command::ExecuteDiagnosticRecovery,
-            logging::FailureCode::Configuration,
+            logging::FailureCode::Diagnostics,
         );
     })
 }
@@ -986,13 +1109,23 @@ fn execute_diagnostic_recovery_for_state(
     )
     .map_err(|error| error.to_string())?;
 
+    // Keep the approved content outside the lock, then consume the ticket
+    // immediately before the first side effect.
+    let approved_content_checksum = state
+        .recovery_registry
+        .lock()
+        .map_err(|_| "diagnostic recovery registry is unavailable".to_owned())?
+        .content_checksum(&recovery_id);
+
     let (outcome, config_write) = match plan.action {
         diagnostics::RecoveryAction::RescanResource
         | diagnostics::RecoveryAction::ReloadResource
         | diagnostics::RecoveryAction::RefreshSkillSource => {
+            consume_recovery_ticket(state, &recovery_id)?;
             (diagnostics::RecoveryOutcome::Refreshed, None)
         }
         diagnostics::RecoveryAction::EditConfig => {
+            consume_recovery_ticket(state, &recovery_id)?;
             let path = plan
                 .resource_path
                 .as_ref()
@@ -1005,6 +1138,9 @@ fn execute_diagnostic_recovery_for_state(
             let expected_checksum = request.expected_checksum.as_deref().ok_or_else(|| {
                 "expected_checksum is required for configuration recovery".to_owned()
             })?;
+            let approved_content_checksum = approved_content_checksum.ok_or_else(|| {
+                "configuration recovery preview did not include approved content".to_owned()
+            })?;
             let replacement = request
                 .replacement
                 .as_deref()
@@ -1015,6 +1151,9 @@ fn execute_diagnostic_recovery_for_state(
                 return Err(
                     "configuration changed after preview; reload before executing recovery".into(),
                 );
+            }
+            if preview.after_checksum != approved_content_checksum {
+                return Err("replacement does not match the approved recovery preview".into());
             }
             let result = write_config_for_state(
                 state,
@@ -1036,21 +1175,35 @@ fn execute_diagnostic_recovery_for_state(
             return Err("this recovery requires its dedicated review or restore command".into())
         }
     };
-    let diagnostics = collect_all_diagnostics(home_directory, state)?;
-    state
-        .recovery_registry
-        .lock()
-        .map_err(|_| "diagnostic recovery registry is unavailable".to_owned())?
-        .complete(&recovery_id);
+    let refreshed = collect_all_diagnostics(home_directory, state);
+    if refreshed.is_err() && config_write.is_none() {
+        return Err("recovery scan could not refresh diagnostics".into());
+    }
+    let diagnostics_refreshed = refreshed.is_ok();
+    let diagnostics = refreshed.unwrap_or_default();
     Ok(DiagnosticRecoveryResult {
         recovery_id,
         action: plan.action,
         outcome,
         resource_path: plan.resource_path,
-        next_command: diagnostics::recovery_next_command(plan.action).map(str::to_owned),
+        next_command: None,
         diagnostics,
+        diagnostics_refreshed,
         config_write,
     })
+}
+
+fn consume_recovery_ticket(state: &AppState, recovery_id: &str) -> Result<(), String> {
+    let consumed = state
+        .recovery_registry
+        .lock()
+        .map_err(|_| "diagnostic recovery registry is unavailable".to_owned())?
+        .complete(recovery_id);
+    if consumed {
+        Ok(())
+    } else {
+        Err("recovery preview is missing or already consumed".into())
+    }
 }
 
 #[tauri::command]
@@ -1416,6 +1569,26 @@ pub fn run() {
 mod tests {
     use super::*;
 
+    fn test_state(root: &Path) -> AppState {
+        let database = Arc::new(
+            persistence::Database::open(root.join("state/agent-hub.sqlite3")).expect("database"),
+        );
+        let workspace_repository: Arc<dyn WorkspaceRepository> = database.clone();
+        let config_repository: Arc<dyn ConfigMetadataRepository> = database.clone();
+        let storage_repository: Arc<dyn StorageDiagnosticsRepository> = database.clone();
+        let mut state = AppState::new(
+            workspace_repository,
+            config_repository,
+            storage_repository,
+            root.join("backups"),
+        );
+        state.configure_skill_services(
+            database,
+            Arc::new(skills::SkillSourceManager::new(root.join("skill-sources"))),
+        );
+        state
+    }
+
     #[test]
     fn exposes_application_metadata() {
         assert_eq!(
@@ -1478,6 +1651,217 @@ mod tests {
         assert!(limited.len() <= 2);
         let capped = discover_instruction_files_with_limits(root.path(), 16, 20_000, 0);
         assert!(capped.is_empty());
+    }
+
+    #[test]
+    fn diagnostic_recovery_commands_enforce_preview_confirmation_and_one_time_use() {
+        let root = tempfile::tempdir().expect("home");
+        let codex_directory = root.path().join(".codex");
+        std::fs::create_dir(&codex_directory).expect("Codex directory");
+        let path = codex_directory.join("config.toml");
+        std::fs::write(&path, "model = [\n").expect("invalid config");
+        let state = test_state(root.path());
+        let document = agents::standard::CodexAdapter.scan_global(&ScanContext::new(root.path()));
+        register_global_config(&state, &document).expect("configuration registered");
+        let replacement = "model = \"gpt-5\"\n";
+
+        let preview = preview_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "config:toml-syntax".into(),
+                resource_path: Some(path.to_string_lossy().into_owned()),
+                action: Some(diagnostics::RecoveryAction::EditConfig),
+                recovery_id: None,
+                format: Some(ConfigFormat::Toml),
+                replacement: Some(replacement.into()),
+                expected_checksum: None,
+                previewed: false,
+                confirmed: false,
+            },
+        )
+        .expect("recovery preview");
+        let config_preview = preview
+            .config_preview
+            .as_ref()
+            .expect("redacted config diff is returned");
+        assert!(config_preview.changed);
+        assert!(!config_preview.diff.is_empty());
+
+        let execute_request = |previewed, confirmed| DiagnosticRecoveryRequest {
+            diagnostic_code: "config:toml-syntax".into(),
+            resource_path: Some(path.to_string_lossy().into_owned()),
+            action: Some(diagnostics::RecoveryAction::EditConfig),
+            recovery_id: Some(preview.recovery_id.clone()),
+            format: Some(ConfigFormat::Toml),
+            replacement: Some(replacement.into()),
+            expected_checksum: Some(config_preview.before.checksum.clone()),
+            previewed,
+            confirmed,
+        };
+        assert!(execute_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            execute_request(false, false)
+        )
+        .unwrap_err()
+        .contains("previewed"));
+        assert!(execute_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            execute_request(true, false)
+        )
+        .unwrap_err()
+        .contains("confirmation"));
+
+        let mut changed_after_preview = execute_request(true, true);
+        changed_after_preview.replacement = Some("model = \"different\"\n".into());
+        assert!(
+            execute_diagnostic_recovery_for_state(root.path(), &state, changed_after_preview)
+                .unwrap_err()
+                .contains("approved recovery preview")
+        );
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "model = [\n");
+
+        let retry_preview = preview_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "config:toml-syntax".into(),
+                resource_path: Some(path.to_string_lossy().into_owned()),
+                action: Some(diagnostics::RecoveryAction::EditConfig),
+                recovery_id: None,
+                format: Some(ConfigFormat::Toml),
+                replacement: Some(replacement.into()),
+                expected_checksum: None,
+                previewed: false,
+                confirmed: false,
+            },
+        )
+        .expect("recovery can be previewed again after a rejected attempt");
+        let retry_checksum = retry_preview
+            .config_preview
+            .as_ref()
+            .unwrap()
+            .before
+            .checksum
+            .clone();
+        let result = execute_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "config:toml-syntax".into(),
+                resource_path: Some(path.to_string_lossy().into_owned()),
+                action: Some(diagnostics::RecoveryAction::EditConfig),
+                recovery_id: Some(retry_preview.recovery_id.clone()),
+                format: Some(ConfigFormat::Toml),
+                replacement: Some(replacement.into()),
+                expected_checksum: Some(retry_checksum.clone()),
+                previewed: true,
+                confirmed: true,
+            },
+        )
+        .expect("confirmed recovery executes");
+        assert_eq!(result.outcome, diagnostics::RecoveryOutcome::Applied);
+        assert!(result.diagnostics_refreshed);
+        assert!(result.config_write.is_some());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), replacement);
+        assert!(execute_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "config:toml-syntax".into(),
+                resource_path: Some(path.to_string_lossy().into_owned()),
+                action: Some(diagnostics::RecoveryAction::EditConfig),
+                recovery_id: Some(retry_preview.recovery_id),
+                format: Some(ConfigFormat::Toml),
+                replacement: Some(replacement.into()),
+                expected_checksum: Some(retry_checksum),
+                previewed: true,
+                confirmed: true,
+            }
+        )
+        .unwrap_err()
+        .contains("already consumed"));
+    }
+
+    #[test]
+    fn safe_recovery_rescans_without_confirmation_and_manual_recovery_is_rejected() {
+        let root = tempfile::tempdir().expect("home");
+        let opencode_directory = root.path().join(".config/opencode");
+        std::fs::create_dir_all(&opencode_directory).expect("OpenCode directory");
+        let path = opencode_directory.join("opencode.json");
+        std::fs::write(&path, r#"{"$schema":7}"#).expect("schema mismatch config");
+        let state = test_state(root.path());
+
+        let safe_preview = preview_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "scan:partial".into(),
+                resource_path: None,
+                action: Some(diagnostics::RecoveryAction::RescanResource),
+                recovery_id: None,
+                format: None,
+                replacement: None,
+                expected_checksum: None,
+                previewed: false,
+                confirmed: false,
+            },
+        )
+        .expect("safe scan preview");
+        let safe_result = execute_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "scan:partial".into(),
+                resource_path: None,
+                action: Some(diagnostics::RecoveryAction::RescanResource),
+                recovery_id: Some(safe_preview.recovery_id),
+                format: None,
+                replacement: None,
+                expected_checksum: None,
+                previewed: false,
+                confirmed: false,
+            },
+        )
+        .expect("safe rescan executes without confirmation");
+        assert_eq!(safe_result.outcome, diagnostics::RecoveryOutcome::Refreshed);
+        assert!(safe_result.diagnostics_refreshed);
+
+        let manual_preview = preview_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "config:schema-mismatch".into(),
+                resource_path: Some(path.to_string_lossy().into_owned()),
+                action: Some(diagnostics::RecoveryAction::ReviewVersionCompatibility),
+                recovery_id: None,
+                format: None,
+                replacement: None,
+                expected_checksum: None,
+                previewed: false,
+                confirmed: false,
+            },
+        )
+        .expect("manual recovery is explainable");
+        let error = execute_diagnostic_recovery_for_state(
+            root.path(),
+            &state,
+            DiagnosticRecoveryRequest {
+                diagnostic_code: "config:schema-mismatch".into(),
+                resource_path: Some(path.to_string_lossy().into_owned()),
+                action: Some(diagnostics::RecoveryAction::ReviewVersionCompatibility),
+                recovery_id: Some(manual_preview.recovery_id),
+                format: None,
+                replacement: None,
+                expected_checksum: None,
+                previewed: true,
+                confirmed: true,
+            },
+        )
+        .expect_err("manual recovery never auto-executes");
+        assert!(error.contains("manually"));
     }
 
     #[test]
@@ -1646,5 +2030,220 @@ mod tests {
             None,
         )
         .is_err());
+    }
+
+    #[test]
+    fn skill_workspace_install_requires_and_uses_registered_workspace() {
+        let root = tempfile::tempdir().expect("home");
+        let workspace = root.path().join("workspace");
+        let source = root.path().join("source/review");
+        std::fs::create_dir_all(&workspace).expect("workspace directory");
+        std::fs::create_dir_all(&source).expect("source directory");
+        std::fs::write(
+            source.join("SKILL.md"),
+            "---\nname: review\ndescription: Review changes\n---\n# Review\n",
+        )
+        .expect("skill entrypoint");
+        let state = test_state(root.path());
+        let workspace_input = workspace_input(&workspace.to_string_lossy()).expect("workspace");
+        let workspace_id = state
+            .workspaces
+            .add_workspace(&workspace_input)
+            .expect("workspace registration");
+        let preview = create_skill_install_plan_for_state(
+            root.path(),
+            &state,
+            SkillInstallRequest {
+                request: skills::SourceRequest::LocalDirectory {
+                    path: root.path().join("source"),
+                },
+                skill_path: "review".into(),
+                agent: Agent::OpenCode,
+                scope: Scope::Workspace,
+                workspace_directory: Some(workspace.to_string_lossy().into_owned()),
+                workspace_id: Some(workspace_id),
+            },
+        )
+        .expect("workspace installation plan");
+        assert_eq!(
+            preview.plan.target_directory,
+            workspace
+                .canonicalize()
+                .expect("canonical workspace")
+                .join(".opencode/skills/review")
+        );
+        let installed = apply_skill_install_for_state(&state, &preview.plan_id)
+            .expect("workspace installation");
+        assert_eq!(installed.scope, Scope::Workspace);
+        assert!(installed.target_directory.join("SKILL.md").is_file());
+    }
+
+    #[test]
+    fn pending_skill_plan_store_expires_and_bounds_unconfirmed_plans() {
+        let root = tempfile::tempdir().expect("home");
+        let source = root.path().join("source/review");
+        std::fs::create_dir_all(&source).expect("source directory");
+        std::fs::write(
+            source.join("SKILL.md"),
+            "---\nname: review\ndescription: Review changes\n---\n# Review\n",
+        )
+        .expect("skill entrypoint");
+        let state = test_state(root.path());
+        let preview = create_skill_install_plan_for_state(
+            root.path(),
+            &state,
+            SkillInstallRequest {
+                request: skills::SourceRequest::LocalDirectory {
+                    path: root.path().join("source"),
+                },
+                skill_path: "review".into(),
+                agent: Agent::Codex,
+                scope: Scope::Global,
+                workspace_directory: None,
+                workspace_id: None,
+            },
+        )
+        .expect("installation plan");
+        let pending = state
+            .pending_skill_plans
+            .lock()
+            .expect("pending plan store")
+            .get(&preview.plan_id)
+            .cloned()
+            .expect("pending plan");
+        for index in 0..=MAX_PENDING_SKILL_PLANS {
+            let mut candidate = pending.clone();
+            candidate.created_at = SystemTime::now() + Duration::from_secs(index as u64);
+            state
+                .store_pending_skill_plan(format!("capacity-{index}"), candidate)
+                .expect("plan stored");
+        }
+        assert_eq!(
+            state
+                .pending_skill_plans
+                .lock()
+                .expect("pending plan store")
+                .len(),
+            MAX_PENDING_SKILL_PLANS
+        );
+        assert!(state.take_pending_skill_plan("capacity-0").is_err());
+
+        let mut expired = pending;
+        expired.created_at = SystemTime::now()
+            .checked_sub(PENDING_SKILL_PLAN_TTL + Duration::from_secs(1))
+            .expect("past timestamp");
+        state
+            .store_pending_skill_plan("expired".into(), expired)
+            .expect("expired plan inserted");
+        assert!(state.take_pending_skill_plan("expired").is_err());
+    }
+
+    #[test]
+    fn skill_command_contract_completes_global_install_lifecycle_and_persists_state() {
+        let root = tempfile::tempdir().expect("home");
+        let source = root.path().join("source/review");
+        std::fs::create_dir_all(&source).expect("source directory");
+        std::fs::write(
+            source.join("SKILL.md"),
+            "---\nname: review\ndescription: Review changes\n---\n# Review\n",
+        )
+        .expect("skill entrypoint");
+        let state = test_state(root.path());
+        let preview = create_skill_install_plan_for_state(
+            root.path(),
+            &state,
+            SkillInstallRequest {
+                request: skills::SourceRequest::LocalDirectory {
+                    path: root.path().join("source"),
+                },
+                skill_path: "review".into(),
+                agent: Agent::ClaudeCode,
+                scope: Scope::Global,
+                workspace_directory: None,
+                workspace_id: None,
+            },
+        )
+        .expect("installation plan");
+        let target = preview.plan.target_directory.clone();
+        let installed =
+            apply_skill_install_for_state(&state, &preview.plan_id).expect("installation applies");
+        assert_eq!(installed.target_directory, target);
+        assert!(target.join("SKILL.md").is_file());
+
+        let persisted = rusqlite::Connection::open(root.path().join("state/agent-hub.sqlite3"))
+            .expect("database opens");
+        assert_eq!(
+            persisted
+                .query_row("SELECT COUNT(*) FROM skill_installations", [], |row| row
+                    .get::<_, i64>(0))
+                .expect("installation persisted"),
+            1
+        );
+        assert!(apply_skill_install_for_state(&state, &preview.plan_id).is_err());
+
+        let disabled = set_skill_enabled_for_state(
+            root.path(),
+            &state,
+            &target.to_string_lossy(),
+            false,
+            None,
+        )
+        .expect("disable installation");
+        assert!(!disabled.enabled);
+        assert!(target.join("SKILL.md.agent-hub-disabled").is_file());
+        let enabled =
+            set_skill_enabled_for_state(root.path(), &state, &target.to_string_lossy(), true, None)
+                .expect("enable installation");
+        assert!(enabled.enabled);
+        assert!(target.join("SKILL.md").is_file());
+
+        uninstall_skill_for_state(root.path(), &state, &target.to_string_lossy(), None)
+            .expect("uninstall installation");
+        assert!(!target.exists());
+        assert_eq!(
+            persisted
+                .query_row("SELECT COUNT(*) FROM skill_installations", [], |row| row
+                    .get::<_, i64>(0))
+                .expect("installation removed"),
+            0
+        );
+    }
+
+    #[test]
+    fn skill_apply_rejects_source_changes_after_preview() {
+        let root = tempfile::tempdir().expect("home");
+        let source = root.path().join("source/review");
+        std::fs::create_dir_all(&source).expect("source directory");
+        let entrypoint = source.join("SKILL.md");
+        std::fs::write(
+            &entrypoint,
+            "---\nname: review\ndescription: Review changes\n---\n# Review\n",
+        )
+        .expect("skill entrypoint");
+        let state = test_state(root.path());
+        let preview = create_skill_install_plan_for_state(
+            root.path(),
+            &state,
+            SkillInstallRequest {
+                request: skills::SourceRequest::LocalDirectory {
+                    path: root.path().join("source"),
+                },
+                skill_path: "review".into(),
+                agent: Agent::Codex,
+                scope: Scope::Global,
+                workspace_directory: None,
+                workspace_id: None,
+            },
+        )
+        .expect("installation plan");
+        std::fs::write(
+            &entrypoint,
+            "---\nname: review\ndescription: Review changes\n---\n# Changed\n",
+        )
+        .expect("source mutation");
+        let error = apply_skill_install_for_state(&state, &preview.plan_id)
+            .expect_err("changed source is rejected");
+        assert!(error.contains("changed"));
+        assert!(!preview.plan.target_directory.exists());
     }
 }

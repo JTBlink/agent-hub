@@ -18,7 +18,7 @@ Blocked by: D01, D02, B08
 
 ## 当前状态
 
-`claimed`。D01 确认的稳定 direct-source 流程已完成；尚需注册 command 和来源详情 UI。skills.sh 未提供稳定搜索 API，因此 V1 不抓取网页搜索结果。
+`claimed`。D01 确认的稳定 direct-source 流程与统一 `browse_skill_source` command 已完成；尚需来源详情 UI。skills.sh 未提供稳定搜索 API，因此 V1 不抓取网页搜索结果。
 
 ## Result
 

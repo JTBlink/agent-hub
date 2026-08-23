@@ -234,6 +234,58 @@ export interface UnifiedDiagnostic {
   fixSafety: "safe" | "requires_confirmation" | "manual";
 }
 
+export type RecoveryAction =
+  | "rescan_resource"
+  | "reload_resource"
+  | "create_config"
+  | "edit_config"
+  | "restore_backup"
+  | "resolve_duplicate_skill"
+  | "refresh_skill_source"
+  | "review_version_compatibility"
+  | "review_permissions"
+  | "repair_storage";
+
+export interface DiagnosticRecoveryRequest {
+  diagnosticCode: string;
+  resourcePath?: string;
+  action?: RecoveryAction;
+  recoveryId?: string;
+  format?: ConfigFormat;
+  replacement?: string;
+  expectedChecksum?: string;
+  previewed?: boolean;
+  confirmed?: boolean;
+}
+
+export interface DiagnosticRecoveryPlan {
+  diagnosticCode: string;
+  action: RecoveryAction;
+  resourcePath: string | null;
+  safety: "safe" | "requires_confirmation" | "manual";
+  previewRequired: boolean;
+  confirmationRequired: boolean;
+}
+
+export interface DiagnosticRecoveryPreview {
+  recoveryId: string;
+  plan: DiagnosticRecoveryPlan;
+  summary: string;
+  nextCommand: string | null;
+  configPreview: ConfigEditPreview | null;
+}
+
+export interface DiagnosticRecoveryResult {
+  recoveryId: string;
+  action: RecoveryAction;
+  outcome: "refreshed" | "applied";
+  resourcePath: string | null;
+  nextCommand: string | null;
+  diagnostics: UnifiedDiagnostic[];
+  diagnosticsRefreshed: boolean;
+  configWrite: ConfigWriteResult | null;
+}
+
 export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
@@ -274,10 +326,12 @@ export function planSkillInstall(input: {
   workspaceDirectory?: string;
   workspaceId?: number;
 }): Promise<SkillInstallPlanPreview> {
-  return invoke<SkillInstallPlanPreview>("plan_skill_install", input);
+  return invoke<SkillInstallPlanPreview>("plan_skill_install", { input });
 }
 
-export function applySkillInstall(planId: string): Promise<ManagedInstallation> {
+export function applySkillInstall(
+  planId: string,
+): Promise<ManagedInstallation> {
   return invoke<ManagedInstallation>("apply_skill_install", { planId });
 }
 
@@ -305,6 +359,22 @@ export function getDiagnostics(
   } = {},
 ): Promise<UnifiedDiagnostic[]> {
   return invoke<UnifiedDiagnostic[]>("collect_diagnostics", filters);
+}
+
+export function previewDiagnosticRecovery(
+  request: DiagnosticRecoveryRequest,
+): Promise<DiagnosticRecoveryPreview> {
+  return invoke<DiagnosticRecoveryPreview>("preview_diagnostic_recovery", {
+    request,
+  });
+}
+
+export function executeDiagnosticRecovery(
+  request: DiagnosticRecoveryRequest,
+): Promise<DiagnosticRecoveryResult> {
+  return invoke<DiagnosticRecoveryResult>("execute_diagnostic_recovery", {
+    request,
+  });
 }
 
 export function listWorkspaces(): Promise<WorkspaceRecord[]> {

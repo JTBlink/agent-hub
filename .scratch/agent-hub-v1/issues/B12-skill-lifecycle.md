@@ -19,7 +19,7 @@ Blocked by: B09, B10, B11
 
 ## 当前状态
 
-`claimed`。Rust 生命周期 service 与 SQLite 一致性已完成；尚需在 `lib.rs` 注册计划/安装/启停/卸载 commands，并完成 UI 的计划确认流程。
+`claimed`。Rust 生命周期 service、SQLite 一致性、计划/安装/启停/卸载 commands 与命令层安全测试已完成；尚需完成 UI 的计划确认流程。
 
 ## Result
 

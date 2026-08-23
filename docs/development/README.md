@@ -42,6 +42,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 跨平台检查、打包和发布流程见 [CI/CD 与跨平台发布](ci-cd.md)。
 发布前逐项执行 [V1 发布验收清单](release-checklist.md)，并把远程 run 结果回写 `.scratch/agent-hub-v1/issues/B14-release.md`。
 应用图标的母版参数、生成命令和验收方法见 [应用图标资源规范](icon-assets.md)。
+诊断中心接入恢复操作时遵循 [诊断恢复命令契约](diagnostic-recovery.md)，不得绕过一次性票据、预览、确认或 revision 校验。
 
 ## 日志规范
 

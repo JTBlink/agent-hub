@@ -18,7 +18,7 @@ Blocked by: D01, D02, B09
 
 ## 当前状态
 
-`claimed`。manifest 与远程 locator 解析已完成；尚需将 Marketplace 浏览/获取 command 接入 Skills 页面。
+`claimed`。manifest、远程 locator 解析与统一 `browse_skill_source` command 已完成；尚需将 Marketplace 浏览结果接入 Skills 页面。
 
 ## Result
 

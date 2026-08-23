@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   addWorkspace,
+  executeDiagnosticRecovery,
   getAppInfo,
   getClaudeGlobalConfig,
   getCodexGlobalConfig,
@@ -12,6 +13,7 @@ import {
   listWorkspaces,
   previewConfigEdit,
   previewConfigRestore,
+  previewDiagnosticRecovery,
   readConfigSource,
   removeWorkspace,
   scanWorkspace,
@@ -20,6 +22,7 @@ import {
   type ConfigDocument,
   type ConfigEditPreview,
   type ConfigHistoryRecord,
+  type DiagnosticRecoveryPreview,
   type InstalledSkill,
   type SkillInventory,
   type UnifiedDiagnostic,
@@ -208,18 +211,15 @@ function BrandGlyph({ size = 28 }: { size?: number }) {
           <stop offset="1" stopColor="#42d9b1" />
         </linearGradient>
       </defs>
-      <path
-        className="brand-glyph-rail"
-        d="M32 12v14M15 48l12-9M49 48l-12-9"
-      />
+      <path className="brand-glyph-rail" d="M32 12v14M15 48l12-9M49 48l-12-9" />
       <path
         className="brand-glyph-flow"
         d="M32 10v16M13 49l14-10M51 49 37 39"
         stroke={`url(#${gradientId})`}
       />
-      <circle className="brand-glyph-node" cx="32" cy="9" r="6" />
-      <circle className="brand-glyph-node" cx="12" cy="50" r="6" />
-      <circle className="brand-glyph-node" cx="52" cy="50" r="6" />
+      <circle className="brand-glyph-node top" cx="32" cy="9" r="6" />
+      <circle className="brand-glyph-node left" cx="12" cy="50" r="6" />
+      <circle className="brand-glyph-node right" cx="52" cy="50" r="6" />
       <circle className="brand-glyph-hub-ring" cx="32" cy="34" r="11" />
       <circle className="brand-glyph-hub" cx="32" cy="34" r="6" />
       <circle className="brand-glyph-core" cx="32" cy="34" r="2.3" />
@@ -612,57 +612,177 @@ function Overview({
   configs: ConfigDocument[];
   onNavigate: (section: Section) => void;
 }) {
+  const connectionState = (agent: ConfigDocument["agent"]) => {
+    const status = configs.find((config) => config.agent === agent)?.status;
+    if (status === "ready") return "ready";
+    if (status === "invalid" || status === "unreadable") return "warning";
+    return "idle";
+  };
+  const connected = readyCount === 3;
+  const hasAttention = diagnosticCount > 0 || readyCount < 3;
+  const healthLabel = connected && !diagnosticCount ? "运行良好" : "需要关注";
+  const healthTone = connected && !diagnosticCount ? "healthy" : "attention";
   return (
-    <div className="page">
-      <PageIntro
-        eyebrow="工作台 / 总览"
-        title="你的 Agent，都在这里。"
-        description="集中查看本地配置与 Skills，明确知道每一次变更发生了什么。"
-        action={
-          <button
-            className="button button-primary"
-            onClick={() => onNavigate("configs")}
+    <div className="page overview-page">
+      <section className="overview-hero" aria-labelledby="overview-title">
+        <div className="overview-hero-copy">
+          <div
+            className={`health-badge ${healthTone}`}
+            aria-label={`本机工作区：${healthLabel}`}
           >
-            <Icon name="edit" size={16} />
-            管理配置
-          </button>
-        }
-      />
+            <i aria-hidden="true" />
+            <span>{healthLabel}</span>
+            <small>本机工作区</small>
+          </div>
+          <p className="eyebrow">工作台 / 总览</p>
+          <h1 id="overview-title">让每个 Agent 都处在掌控中。</h1>
+          <p className="overview-hero-description">
+            这里汇总配置、Skills 与诊断状态。先看全局，再决定下一次安全写入。
+          </p>
+          <div className="overview-hero-actions">
+            <button
+              className="button button-primary"
+              onClick={() =>
+                onNavigate(hasAttention ? "diagnostics" : "configs")
+              }
+            >
+              <Icon name={hasAttention ? "warning" : "edit"} size={16} />
+              {hasAttention ? "处理待关注项" : "管理配置"}
+              <Icon name="arrow" size={15} />
+            </button>
+            <span className="local-badge">
+              <Icon name="shield" size={14} />
+              数据仅在本机
+            </span>
+          </div>
+        </div>
+        <div
+          className="overview-snapshot"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={`本机状态：${readyCount}/3 个 Agent 已连接，${skillCount} 个 Skills 已发现，${diagnosticCount} 项待处理诊断`}
+        >
+          <div className="snapshot-heading">
+            <span>本地状态</span>
+            <span className="snapshot-live">
+              <i />
+              当前结果
+            </span>
+          </div>
+          <div className="snapshot-score">
+            <strong>{readyCount}</strong>
+            <span>/ 3 Agent 已连接</span>
+          </div>
+          <div className="snapshot-meter" aria-hidden="true">
+            <i style={{ width: `${Math.round((readyCount / 3) * 100)}%` }} />
+          </div>
+          <div className="snapshot-footnote">
+            <span>{skillCount} 个 Skills 已发现</span>
+            <span className={diagnosticCount ? "has-attention" : ""}>
+              {diagnosticCount ? `${diagnosticCount} 项待处理` : "无待处理诊断"}
+            </span>
+          </div>
+        </div>
+      </section>
+
       <section className="topology-card" aria-labelledby="topology-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">连接拓扑</p>
-            <h2 id="topology-title">一个中心，三个入口</h2>
+            <p className="eyebrow">连接状态</p>
+            <h2 id="topology-title">Agent 连接拓扑</h2>
+            <p className="topology-subtitle">
+              蓝色轨道表示配置流，节点亮起代表当前扫描已同步。
+            </p>
           </div>
-          <span className="live-indicator">
-            <i />
-            本地扫描已开启
-          </span>
+          <div className="topology-meta">
+            <span className="topology-legend">
+              <i className="legend-flow" />
+              同步中
+            </span>
+            <span className="topology-legend">
+              <i className="legend-idle" />
+              未接入
+            </span>
+            <span className="live-indicator">
+              <i />
+              本地扫描
+            </span>
+          </div>
         </div>
         <div className="topology">
-          <div className="topology-lines">
-            <span />
-            <span />
-            <span />
-          </div>
-          <div className="hub-node">
-            <div className="hub-orbit">
-              <BrandGlyph size={46} />
-            </div>
-            <strong>AgentHub</strong>
-            <small>统一配置中枢</small>
-          </div>
+          <svg
+            className="topology-network"
+            viewBox="0 0 650 200"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="topology-teal" x1="0" x2="1">
+                <stop stopColor="#7D8CFF" />
+                <stop offset="1" stopColor="#2C9CFF" />
+              </linearGradient>
+              <linearGradient id="topology-violet" x1="0" x2="1">
+                <stop stopColor="#168BFF" />
+                <stop offset="1" stopColor="#7185FF" />
+              </linearGradient>
+              <linearGradient id="topology-amber" x1="0" x2="1">
+                <stop stopColor="#42D9B1" />
+                <stop offset="1" stopColor="#2C9CFF" />
+              </linearGradient>
+            </defs>
+            <path className="network-rail" d="M170 32 C270 32 330 72 450 72" />
+            <path className="network-rail" d="M170 100 H450" />
+            <path
+              className="network-rail"
+              d="M170 168 C270 168 330 128 450 128"
+            />
+            <path
+              className={`network-flow flow-top ${connectionState("claude-code")}`}
+              d="M170 32 C270 32 330 72 450 72"
+            />
+            <path
+              className={`network-flow flow-mid ${connectionState("codex")}`}
+              d="M170 100 H450"
+            />
+            <path
+              className={`network-flow flow-bottom ${connectionState("opencode")}`}
+              d="M170 168 C270 168 330 128 450 128"
+            />
+            <circle
+              className={`network-pulse pulse-top ${connectionState("claude-code")}`}
+              cx="450"
+              cy="72"
+              r="5"
+            />
+            <circle
+              className={`network-pulse pulse-mid ${connectionState("codex")}`}
+              cx="450"
+              cy="100"
+              r="5"
+            />
+            <circle
+              className={`network-pulse pulse-bottom ${connectionState("opencode")}`}
+              cx="450"
+              cy="128"
+              r="5"
+            />
+          </svg>
           <div className="agent-nodes">
             {(["claude-code", "codex", "opencode"] as const).map((agent) => {
               const config = configs.find((item) => item.agent === agent);
               const meta = agentMeta[agent];
+              const state = connectionState(agent);
               return (
-                <div className="agent-node" key={agent}>
+                <div
+                  className={`agent-node ${state === "ready" ? "connected" : state === "warning" ? "attention" : "scanning"}`}
+                  key={agent}
+                >
                   <div className={`agent-avatar ${meta.tone}`}>{meta.mark}</div>
                   <div>
                     <strong>{meta.name}</strong>
                     <span
-                      className={`status-text ${config?.status === "ready" ? "success" : "muted"}`}
+                      className={`status-text ${state === "ready" ? "success" : state === "warning" ? "attention" : "muted"}`}
                     >
                       <i />
                       {statusLabel(config?.status)}
@@ -672,138 +792,113 @@ function Overview({
               );
             })}
           </div>
+          <div className="hub-node">
+            <div className="hub-orbit">
+              <BrandGlyph size={46} />
+            </div>
+            <strong>AgentHub</strong>
+            <small>本地统一中枢</small>
+          </div>
+        </div>
+        <div className="topology-footer">
+          <span>
+            <i className="footer-signal" />
+            {readyCount}/3 个 Agent 正在为本地工作区提供配置
+          </span>
+          <button className="text-button" onClick={() => onNavigate("configs")}>
+            查看配置状态 <Icon name="arrow" size={15} />
+          </button>
         </div>
       </section>
-      <div className="metric-grid">
-        <Metric
-          icon="sliders"
-          label="配置已同步"
-          value={`${readyCount}/3`}
-          detail="Claude · Codex · OpenCode"
-          tone="teal"
-        />
-        <Metric
-          icon="spark"
-          label="已发现 Skills"
-          value={skillCount.toString()}
-          detail="来自全局与工作空间"
-          tone="violet"
-        />
-        <Metric
-          icon="warning"
-          label="待处理诊断"
-          value={diagnosticCount.toString()}
-          detail={diagnosticCount ? "建议尽快查看" : "当前没有异常"}
-          tone={diagnosticCount ? "amber" : "teal"}
-        />
-      </div>
-      <div className="overview-grid">
-        <section className="surface-card">
+      <section className="overview-health-grid" aria-label="工作区健康指标">
+        <article className="health-panel health-panel-primary">
           <div className="section-title-row">
             <div>
-              <p className="eyebrow">安全写入</p>
-              <h2>每一次修改都可回退</h2>
+              <p className="eyebrow">工作区健康</p>
+              <h2>现在可以安全工作吗？</h2>
             </div>
-            <Icon name="shield" size={24} />
+            <span className={`health-score ${healthTone}`}>{readyCount}/3</span>
           </div>
-          <ol className="safe-steps">
-            <li className="done">
-              <span>1</span>
-              <div>
-                <strong>扫描并遮罩</strong>
-                <small>敏感值默认不会出现在界面里</small>
-              </div>
-              <Icon name="check" size={16} />
-            </li>
-            <li className="done">
-              <span>2</span>
-              <div>
-                <strong>预览 Diff</strong>
-                <small>先看清楚改了什么，再决定写入</small>
-              </div>
-              <Icon name="check" size={16} />
-            </li>
-            <li>
-              <span>3</span>
-              <div>
-                <strong>确认并备份</strong>
-                <small>原文件会在写入前自动备份</small>
-              </div>
-            </li>
-          </ol>
-          <button className="text-button" onClick={() => onNavigate("configs")}>
-            打开配置中心 <Icon name="arrow" size={15} />
-          </button>
-        </section>
-        <section className="surface-card">
-          <div className="section-title-row">
-            <div>
-              <p className="eyebrow">快速入口</p>
-              <h2>接下来做什么？</h2>
-            </div>
-          </div>
-          <div className="quick-actions">
+          <p className="health-panel-copy">
+            {connected && !diagnosticCount
+              ? "三个 Agent 都已读取到有效配置，写入仍会经过 Diff 与备份。"
+              : "有配置或诊断需要确认，建议先处理后再进行批量写入。"}
+          </p>
+          <div className="health-list">
+            <button onClick={() => onNavigate("configs")}>
+              <span className="health-list-icon teal">
+                <Icon name="sliders" />
+              </span>
+              <span>
+                <strong>配置同步</strong>
+                <small>{readyCount}/3 个 Agent 已准备好</small>
+              </span>
+              <Icon name="arrow" size={15} />
+            </button>
             <button onClick={() => onNavigate("skills")}>
-              <span className="quick-icon violet">
+              <span className="health-list-icon violet">
                 <Icon name="spark" />
               </span>
               <span>
-                <strong>盘点 Skills</strong>
-                <small>查看来源和管理归属</small>
+                <strong>Skills 目录</strong>
+                <small>{skillCount} 个能力可供管理</small>
               </span>
-              <Icon name="arrow" size={16} />
+              <Icon name="arrow" size={15} />
             </button>
-            <button onClick={() => onNavigate("workspaces")}>
-              <span className="quick-icon teal">
-                <Icon name="folder" />
+            <button onClick={() => onNavigate("diagnostics")}>
+              <span
+                className={`health-list-icon ${diagnosticCount ? "amber" : "teal"}`}
+              >
+                <Icon name={diagnosticCount ? "warning" : "check"} />
               </span>
               <span>
-                <strong>添加工作空间</strong>
-                <small>接入一个本地项目目录</small>
+                <strong>诊断队列</strong>
+                <small>
+                  {diagnosticCount
+                    ? `${diagnosticCount} 项需要处理`
+                    : "当前没有异常"}
+                </small>
               </span>
-              <Icon name="arrow" size={16} />
-            </button>
-            <button onClick={() => onNavigate("history")}>
-              <span className="quick-icon amber">
-                <Icon name="history" />
-              </span>
-              <span>
-                <strong>查看变更历史</strong>
-                <small>回顾备份和写入记录</small>
-              </span>
-              <Icon name="arrow" size={16} />
+              <Icon name="arrow" size={15} />
             </button>
           </div>
-        </section>
-      </div>
+        </article>
+        <article className="next-panel">
+          <div>
+            <p className="eyebrow">安全写入</p>
+            <h2>每次修改都可回退</h2>
+            <p>扫描、Diff、确认、备份，四步完成一次可追溯的配置变更。</p>
+          </div>
+          <div className="write-flow" aria-label="安全写入流程">
+            <span className="write-flow-step done">
+              <i>1</i>
+              <b>扫描</b>
+            </span>
+            <span className="write-flow-line" />
+            <span className="write-flow-step done">
+              <i>2</i>
+              <b>Diff</b>
+            </span>
+            <span className="write-flow-line" />
+            <span className="write-flow-step">
+              <i>3</i>
+              <b>确认</b>
+            </span>
+            <span className="write-flow-line" />
+            <span className="write-flow-step">
+              <i>4</i>
+              <b>备份</b>
+            </span>
+          </div>
+          <button
+            className="button button-secondary"
+            onClick={() => onNavigate("configs")}
+          >
+            打开配置中心 <Icon name="arrow" size={15} />
+          </button>
+        </article>
+      </section>
     </div>
-  );
-}
-
-function Metric({
-  icon,
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  icon: IconName;
-  label: string;
-  value: string;
-  detail: string;
-  tone: string;
-}) {
-  return (
-    <article className="metric-card">
-      <div className={`metric-icon ${tone}`}>
-        <Icon name={icon} />
-      </div>
-      <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{detail}</small>
-      </div>
-    </article>
   );
 }
 
@@ -1490,6 +1585,10 @@ function DiagnosticsPage({
   onRepair: () => void;
   searchQuery: string;
 }) {
+  const [recoveryPreview, setRecoveryPreview] =
+    useState<DiagnosticRecoveryPreview>();
+  const [recoveryMessage, setRecoveryMessage] = useState<string>();
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const actionable = diagnostics.filter((item) => {
     if (item.severity === "info") return false;
@@ -1501,6 +1600,46 @@ function DiagnosticsPage({
         .includes(normalizedQuery)
     );
   });
+  async function previewRecovery(item: UnifiedDiagnostic) {
+    setRecoveryBusy(true);
+    setRecoveryMessage(undefined);
+    try {
+      const preview = await previewDiagnosticRecovery({
+        diagnosticCode: item.code,
+        resourcePath: item.resourcePath ?? undefined,
+      });
+      setRecoveryPreview(preview);
+    } catch {
+      setRecoveryMessage("该问题需要在对应功能中手动处理，请按建议打开详情。");
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+  async function executeRecovery() {
+    if (!recoveryPreview || recoveryBusy) return;
+    setRecoveryBusy(true);
+    try {
+      const result = await executeDiagnosticRecovery({
+        diagnosticCode: recoveryPreview.plan.diagnosticCode,
+        resourcePath: recoveryPreview.plan.resourcePath ?? undefined,
+        action: recoveryPreview.plan.action,
+        recoveryId: recoveryPreview.recoveryId,
+        previewed: true,
+        confirmed: recoveryPreview.plan.confirmationRequired,
+      });
+      setRecoveryMessage(
+        result.outcome === "applied"
+          ? "修复已应用，并已刷新诊断。"
+          : "安全恢复已执行，并已刷新诊断。",
+      );
+      setRecoveryPreview(undefined);
+      onRepair();
+    } catch {
+      setRecoveryMessage("恢复未执行：状态可能已变化，请重新扫描后预览。");
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
   return (
     <div className="page">
       <PageIntro
@@ -1514,6 +1653,12 @@ function DiagnosticsPage({
           </button>
         }
       />
+      {recoveryMessage && (
+        <div className="alert alert-warning" role="status" aria-live="polite">
+          <Icon name="warning" />
+          <span>{recoveryMessage}</span>
+        </div>
+      )}
       {actionable.length ? (
         <div className="diagnostic-list">
           {actionable.map((item) => (
@@ -1538,20 +1683,32 @@ function DiagnosticsPage({
                 <small>下一步：{item.nextAction}</small>
                 {item.resourcePath && <code>{item.resourcePath}</code>}
               </div>
-              <button
-                className="button button-ghost"
-                onClick={() =>
-                  onNavigate(
-                    item.agent
-                      ? "configs"
-                      : item.code.startsWith("skill:")
-                        ? "skills"
-                        : "settings",
-                  )
-                }
-              >
-                查看
-              </button>
+              <div className="diagnostic-actions">
+                {item.fixSafety !== "manual" &&
+                  !item.kind.includes("config") && (
+                    <button
+                      className="button button-secondary"
+                      disabled={recoveryBusy}
+                      onClick={() => void previewRecovery(item)}
+                    >
+                      预览修复
+                    </button>
+                  )}
+                <button
+                  className="button button-ghost"
+                  onClick={() =>
+                    onNavigate(
+                      item.agent
+                        ? "configs"
+                        : item.code.startsWith("skill:")
+                          ? "skills"
+                          : "settings",
+                    )
+                  }
+                >
+                  查看详情
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -1579,6 +1736,52 @@ function DiagnosticsPage({
             打开配置中心
           </button>
         </div>
+      )}
+      {recoveryPreview && (
+        <section className="restore-panel" aria-labelledby="recovery-title">
+          <div className="editor-header">
+            <div>
+              <span className="eyebrow">恢复预览</span>
+              <strong id="recovery-title">{recoveryPreview.summary}</strong>
+            </div>
+            <button
+              className="icon-button"
+              aria-label="关闭恢复预览"
+              onClick={() => setRecoveryPreview(undefined)}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          <p>
+            {recoveryPreview.plan.confirmationRequired
+              ? "此操作需要明确确认。执行前请核对诊断范围和资源路径。"
+              : "这是安全操作；执行后 AgentHub 会立即重新扫描。"}
+          </p>
+          {recoveryPreview.plan.resourcePath && (
+            <code className="recovery-path">
+              {recoveryPreview.plan.resourcePath}
+            </code>
+          )}
+          <div className="editor-footer">
+            <button
+              className="button button-ghost"
+              onClick={() => setRecoveryPreview(undefined)}
+            >
+              取消
+            </button>
+            <button
+              className="button button-primary"
+              disabled={recoveryBusy}
+              onClick={() => void executeRecovery()}
+            >
+              {recoveryBusy
+                ? "执行中…"
+                : recoveryPreview.plan.confirmationRequired
+                  ? "确认并执行"
+                  : "执行安全修复"}
+            </button>
+          </div>
+        </section>
       )}
     </div>
   );

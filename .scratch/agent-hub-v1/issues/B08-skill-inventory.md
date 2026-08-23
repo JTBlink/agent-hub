@@ -18,7 +18,7 @@ Blocked by: D01, D02, B02
 
 ## 当前状态
 
-`claimed`。Rust 盘点能力与自动化测试已完成；Skills 页面仍需补充实际路径、兼容性、启用状态和来源详情展示后才能关闭。
+`claimed`。Rust 盘点能力、`scan_skills` 命令与自动化测试已完成；Skills 页面仍需补充实际路径、兼容性、启用状态和来源详情展示后才能关闭。
 
 ## Result
 
