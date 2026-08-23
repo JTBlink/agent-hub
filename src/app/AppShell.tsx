@@ -1776,7 +1776,7 @@ function SkillsCenter({
 }) {
   const [view, setView] = useState<"installed" | "marketplace">("installed");
   const [filter, setFilter] = useState<
-    "all" | "global" | "workspace" | "managed" | "external" | "backup"
+    "all" | "global" | "workspace" | "managed" | "external" | "storage"
   >("all");
   const [showSourceGuide, setShowSourceGuide] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -1863,7 +1863,7 @@ function SkillsCenter({
     ["workspace", "工作空间"],
     ["managed", "AgentHub 管理"],
     ["external", "外部管理"],
-    ["backup", "备份参考"],
+    ["storage", "安装信息"],
   ] as const;
   if (view === "marketplace") {
     return (
@@ -1950,7 +1950,7 @@ function SkillsCenter({
           </button>
         </div>
       </div>
-      {filter === "backup" ? (
+      {filter === "storage" ? (
         <SkillStorageSummary roots={skills?.roots ?? []} />
       ) : (
         <>
@@ -2262,13 +2262,16 @@ function SkillStorageSummary({ roots }: { roots: SkillInventory["roots"] }) {
   return (
     <section className="skill-storage-summary" aria-labelledby="skill-storage-title">
       <div>
-        <p className="eyebrow">备份参考</p>
-        <h2 id="skill-storage-title">已安装 Skills 占用</h2>
-        <p>按实际 Skill 根目录统计文件大小，不包含符号链接。</p>
+        <p className="eyebrow">安装信息</p>
+        <h2 id="skill-storage-title">安装目录与占用</h2>
+        <p>按实际安装根目录统计 Skill 数量与磁盘占用，不包含符号链接。</p>
       </div>
-      <strong>
-        {formatBytes(roots.reduce((total, root) => total + root.bytes, 0))}
-      </strong>
+      <div className="skill-storage-total">
+        <span>总占用</span>
+        <strong>
+          {formatBytes(roots.reduce((total, root) => total + root.bytes, 0))}
+        </strong>
+      </div>
       <div className="skill-storage-roots">
         {roots.map((root) => (
           <div key={root.path}>
