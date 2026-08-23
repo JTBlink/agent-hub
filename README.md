@@ -24,17 +24,17 @@ AgentHub 的目标是把这些信息和风险放到操作前面，而不是替�
 以下截图来自当前开发版，使用脱敏演示数据展示已连接状态、配置、Skills、工作空间和诊断中心，不包含真实用户名或本机路径。
 
 <p align="center">
-  <img src="homepage/assets/overview.png" alt="AgentHub 总览：Agent 连接拓扑和本地状态" width="100%" />
+  <img src="assets/overview.png" alt="AgentHub 总览：Agent 连接拓扑和本地状态" width="100%" />
 </p>
 
 <table>
   <tr>
-    <td><img src="homepage/assets/config-center.png" alt="AgentHub 配置中心" /></td>
-    <td><img src="homepage/assets/skills.png" alt="AgentHub Skills 管理" /></td>
+    <td><img src="assets/config-center.png" alt="AgentHub 配置中心" /></td>
+    <td><img src="assets/skills.png" alt="AgentHub Skills 管理" /></td>
   </tr>
   <tr>
-    <td><img src="homepage/assets/workspaces.png" alt="AgentHub 工作空间管理" /></td>
-    <td><img src="homepage/assets/diagnostics.png" alt="AgentHub 诊断中心" /></td>
+    <td><img src="assets/workspaces.png" alt="AgentHub 工作空间管理" /></td>
+    <td><img src="assets/diagnostics.png" alt="AgentHub 诊断中心" /></td>
   </tr>
 </table>
 
