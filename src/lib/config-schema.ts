@@ -6,11 +6,7 @@ import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 // ---------------------------------------------------------------------------
 
 export type FieldType =
-  | "text"
-  | "boolean"
-  | "enum"
-  | "key-value-map"
-  | "nested-object";
+  "text" | "boolean" | "enum" | "key-value-map" | "nested-object";
 
 export interface FieldDefinition {
   key: string;

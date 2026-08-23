@@ -8,8 +8,7 @@ const agentNames: Record<string, string> = {
 
 const problemLabels: Record<string, string> = {
   "skill:symlink-skipped": "该 Skill 是符号链接，安全扫描已跳过。",
-  "skill:codex-legacy-location":
-    "该 Skill 仅安装在 Codex 旧版兼容目录中。",
+  "skill:codex-legacy-location": "该 Skill 仅安装在 Codex 旧版兼容目录中。",
   "skill:frontmatter-missing": "SKILL.md 缺少开头的 YAML 元数据。",
   "skill:frontmatter-invalid": "SKILL.md 开头的 YAML 元数据格式不正确。",
   "skill:name-invalid": "Skill 名称不符合小写字母、数字和连字符规范。",
@@ -32,7 +31,10 @@ const problemLabels: Record<string, string> = {
 };
 
 function pathSegments(path: string) {
-  return path.replace(/[\\/]+$/, "").split(/[\\/]/).filter(Boolean);
+  return path
+    .replace(/[\\/]+$/, "")
+    .split(/[\\/]/)
+    .filter(Boolean);
 }
 
 function skillNameFromPath(path: string | null) {
@@ -51,7 +53,7 @@ export function diagnosticSubject(item: UnifiedDiagnostic) {
     return skillNameFromPath(item.resourcePath) ?? "Skill 来源";
   }
   if (item.code.startsWith("config:")) {
-    const agent = item.agent ? agentNames[item.agent] ?? item.agent : "Agent";
+    const agent = item.agent ? (agentNames[item.agent] ?? item.agent) : "Agent";
     const scope = item.scope === "workspace" ? "工作空间" : "全局";
     return `${agent} ${scope}配置`;
   }
@@ -98,9 +100,9 @@ export function matchingSkillsForDiagnostic(
       skill.displayName === subject ||
       Boolean(
         resourcePath &&
-          (skillPath === resourcePath ||
-            resourcePath.startsWith(`${skillPath}/`) ||
-            skillPath.startsWith(`${resourcePath}/`)),
+        (skillPath === resourcePath ||
+          resourcePath.startsWith(`${skillPath}/`) ||
+          skillPath.startsWith(`${resourcePath}/`)),
       )
     );
   });

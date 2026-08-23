@@ -26,7 +26,8 @@ describe("GitHub Actions workflow contract", () => {
   it("supports manual and v-tag installer builds", () => {
     expect(installers).toContain("workflow_dispatch:");
     expect(installers).toMatch(/tags:\n\s+- "v\*"/);
-    expect(installers).toContain("inputs.ref || github.ref");
+    expect(installers).toContain("ref: ${{ github.ref }}");
+    expect(installers).not.toContain("inputs.ref");
     expect(installers).toContain(
       'if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/tags/v* ]]; then',
     );
@@ -89,20 +90,25 @@ describe("GitHub Actions workflow contract", () => {
     expect(installers).toContain(
       "name: agent-hub-installers-${{ github.run_id }}",
     );
-    expect(installers).toMatch(
-      /release:\n[\s\S]*if: github\.event_name == 'push' && startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs: package/,
+    expect(installers).toContain(
+      "if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))",
     );
+    expect(installers).toContain("needs: [preflight, package]");
     expect(installers).toContain("contents: write");
-    expect(installers).toContain("publish_release:");
-    expect(installers).toContain("release_tag:");
-    expect(installers).toContain("inputs.publish_release == true");
+    expect(installers).not.toContain("publish_release:");
+    expect(installers).not.toContain("inputs.release_tag");
     expect(installers).toContain(
-      "tag_name: ${{ inputs.release_tag || github.ref_name }}",
+      "tag_name: ${{ needs.preflight.outputs.release_tag }}",
     );
     expect(installers).toContain(
-      "name: AgentHub ${{ inputs.release_tag || github.ref_name }}",
+      "name: AgentHub ${{ needs.preflight.outputs.release_tag }}",
+    );
+    expect(installers).toContain(
+      "target_commitish: ${{ needs.preflight.outputs.resolved_sha }}",
     );
     expect(installers).toContain("generate_release_notes: false");
+    expect(installers).toContain("release-assets/CHANGELOG.md");
+    expect(installers).toContain("retention-days: 90");
     expect(installers).toContain("release-assets/SHA256SUMS");
     expect(installers).toContain("npm run release:verify -- release-assets");
     for (const extension of ["exe", "msi", "dmg", "AppImage", "deb"]) {

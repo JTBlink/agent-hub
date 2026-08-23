@@ -48,8 +48,8 @@ interface ConfirmModalProps {
   title: string;
   description: ReactNode;
   icon?: ReactNode;
-  confirmLabel?: string;   // 默认 "确认"
-  cancelLabel?: string;    // 默认 "取消"
+  confirmLabel?: string; // 默认 "确认"
+  cancelLabel?: string; // 默认 "取消"
 }
 ```
 
@@ -78,12 +78,12 @@ return <>{ConfirmPortal}</>;
 
 ## 色调变体
 
-| 色调 | 用途 | 边框 | 图标色 |
-|------|------|------|--------|
+| 色调      | 用途               | 边框          | 图标色        |
+| --------- | ------------------ | ------------- | ------------- |
 | `neutral` | 普通信息、通用确认 | `var(--line)` | `var(--blue)` |
-| `success` | 操作成功反馈 | `#2b6675` | `#77d2ae` |
-| `error` | 操作失败反馈 | `#8a4a52` | `#ff9da5` |
-| `danger` | 破坏性操作确认 | `#71404b` | `#ff9da5` |
+| `success` | 操作成功反馈       | `#2b6675`     | `#77d2ae`     |
+| `error`   | 操作失败反馈       | `#8a4a52`     | `#ff9da5`     |
+| `danger`  | 破坏性操作确认     | `#71404b`     | `#ff9da5`     |
 
 ## 行为规范
 
@@ -96,10 +96,10 @@ return <>{ConfirmPortal}</>;
 
 ## 文件位置
 
-| 文件 | 内容 |
-|------|------|
+| 文件                | 内容                            |
+| ------------------- | ------------------------------- |
 | `src/app/Modal.tsx` | Modal、ConfirmModal、useConfirm |
-| `src/styles.css` | `.modal-*` 系列样式 |
+| `src/styles.css`    | `.modal-*` 系列样式             |
 
 ## 使用示例
 
@@ -111,8 +111,14 @@ return <>{ConfirmPortal}</>;
   onClose={() => setFeedback(undefined)}
   tone={feedback?.tone === "error" ? "error" : "success"}
   title={feedback?.title ?? ""}
-  icon={<Icon name={feedback?.tone === "error" ? "warning" : "check"} size={20} />}
-  actions={<button className="button button-primary" onClick={dismiss}>关闭</button>}
+  icon={
+    <Icon name={feedback?.tone === "error" ? "warning" : "check"} size={20} />
+  }
+  actions={
+    <button className="button button-primary" onClick={dismiss}>
+      关闭
+    </button>
+  }
 >
   <p>{feedback?.summary}</p>
 </Modal>
@@ -139,7 +145,13 @@ const { confirm, ConfirmPortal } = useConfirm();
 
 const ok = await confirm({
   title: "确认迁移？",
-  description: <><div className="modal-paths"><code>原位置：...</code></div></>,
+  description: (
+    <>
+      <div className="modal-paths">
+        <code>原位置：...</code>
+      </div>
+    </>
+  ),
   confirmLabel: "确认迁移",
 });
 ```

@@ -1780,7 +1780,11 @@ function ConfigCenter({
     selectedConfig.status === "ready";
 
   async function toggleSensitivePreview() {
-    if (!selectedConfig || !canRevealSensitivePreview || loadingSensitivePreview)
+    if (
+      !selectedConfig ||
+      !canRevealSensitivePreview ||
+      loadingSensitivePreview
+    )
       return;
     if (showSensitivePreview) {
       setShowSensitivePreview(false);
@@ -2046,7 +2050,9 @@ function ConfigCenter({
                         aria-label={
                           showSensitivePreview ? "隐藏敏感值" : "显示敏感值"
                         }
-                        title={showSensitivePreview ? "隐藏敏感值" : "显示敏感值"}
+                        title={
+                          showSensitivePreview ? "隐藏敏感值" : "显示敏感值"
+                        }
                       >
                         <Icon
                           name={showSensitivePreview ? "eye-off" : "eye"}
@@ -2155,13 +2161,13 @@ function InstructionFilesPanel({
   async function createLink() {
     if (creatingLink || !hasAgentsFile || agent !== "claude-code") return;
     const confirmed = await confirm({
-        title: "创建 Claude Code 软链接？",
-        description: (
-          <p>
+      title: "创建 Claude Code 软链接？",
+      description: (
+        <p>
           将在当前项目根目录的 <code>CLAUDE.md</code> 创建软链接，指向
           <code>AGENTS.md</code>。如果目标已存在真实文件，AgentHub 不会覆盖它。
-          </p>
-        ),
+        </p>
+      ),
       confirmLabel: "确认创建",
       cancelLabel: "取消",
     });
@@ -2170,9 +2176,7 @@ function InstructionFilesPanel({
     setLinkMessage(undefined);
     try {
       const result = await onCreateLink();
-      setToast(
-        `软链接：${result.linkPath} → 真实文件：${result.targetPath}`,
-      );
+      setToast(`软链接：${result.linkPath} → 真实文件：${result.targetPath}`);
     } catch (error) {
       setLinkMessage(
         errorMessage(error, "软链接创建失败，请检查工作空间权限。"),
@@ -2190,7 +2194,7 @@ function InstructionFilesPanel({
         <div className="instruction-files-heading">
           <div>
             <p className="eyebrow">工作空间上下文</p>
-          <h3 id="instruction-files-title">指令文件</h3>
+            <h3 id="instruction-files-title">指令文件</h3>
           </div>
           <div className="instruction-files-heading-actions">
             <span className="instruction-files-count">
@@ -2199,7 +2203,9 @@ function InstructionFilesPanel({
             <button
               className="button button-secondary"
               type="button"
-              disabled={!hasAgentsFile || creatingLink || agent !== "claude-code"}
+              disabled={
+                !hasAgentsFile || creatingLink || agent !== "claude-code"
+              }
               onClick={() => void createLink()}
             >
               {creatingLink

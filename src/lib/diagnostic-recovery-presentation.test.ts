@@ -54,9 +54,13 @@ describe("diagnostic recovery presentation", () => {
   });
 
   it("derives a compact home path without embedding a real username", () => {
-    const machinePath = ["", "home", "test-account", ".agenthub", "backups"].join(
-      "/",
-    );
+    const machinePath = [
+      "",
+      "home",
+      "test-account",
+      ".agenthub",
+      "backups",
+    ].join("/");
 
     expect(compactUserPath(machinePath)).toBe("~/.agenthub/backups");
     expect(compactUserPath("/tmp/agenthub/backups")).toBe(

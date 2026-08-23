@@ -23,10 +23,8 @@ describe("legacy Codex Skill presentation", () => {
     const feedback = successfulLegacyActionFeedback({
       action: "archive",
       originalPath: "~/.codex/skills/review",
-      destinationPath:
-        "~/.agenthub/backups/legacy-codex-skills/123-review",
-      backupPath:
-        "~/.agenthub/backups/legacy-codex-skills/123-review",
+      destinationPath: "~/.agenthub/backups/legacy-codex-skills/123-review",
+      backupPath: "~/.agenthub/backups/legacy-codex-skills/123-review",
     });
 
     expect(feedback.destinationLabel).toBe("备份位置");
@@ -35,9 +33,8 @@ describe("legacy Codex Skill presentation", () => {
 
   it("shows string errors returned by Tauri", () => {
     expect(
-      failedLegacyActionFeedback(
-        "只允许处理 ~/.codex/skills 下的 Skill 目录",
-      ).summary,
+      failedLegacyActionFeedback("只允许处理 ~/.codex/skills 下的 Skill 目录")
+        .summary,
     ).toBe("只允许处理 ~/.codex/skills 下的 Skill 目录");
   });
 });

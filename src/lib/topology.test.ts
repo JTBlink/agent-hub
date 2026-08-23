@@ -11,9 +11,7 @@ describe("createTopologyLayout", () => {
     expect(layout.gap).toBe(14);
     expect(layout.connections).toHaveLength(3);
     expect(layout.connections.map((connection) => connection.startY)).toEqual([
-      35,
-      99,
-      163,
+      35, 99, 163,
     ]);
   });
 
