@@ -13,6 +13,10 @@ export type DuplicateSkillGroup = {
   matches: InstalledSkill[];
 };
 
+function isCodexSystemSkillPath(path: string) {
+  return /[\\/]\.codex[\\/]skills[\\/]\.system(?:[\\/]|$)/.test(path);
+}
+
 type DuplicateSkillsPageProps = {
   groups: DuplicateSkillGroup[];
   feedback?: ReactNode;
@@ -82,8 +86,10 @@ export function DuplicateSkillsPage({
           </div>
           <div className="duplicate-page-groups">
             {groups.map((group, groupIndex) => {
-              const legacyCopies = group.matches.filter((skill) =>
-                skill.path.includes("/.codex/skills/"),
+              const legacyCopies = group.matches.filter(
+                (skill) =>
+                  skill.path.includes("/.codex/skills/") &&
+                  !isCodexSystemSkillPath(skill.path),
               );
               const isCodexLegacy =
                 group.agent === "codex" &&

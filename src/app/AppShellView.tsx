@@ -93,6 +93,7 @@ import {
 import { DeepLinkInstallPanel } from "./DeepLinkInstallPanel";
 import { DiagnosticRecoveryPage } from "./DiagnosticRecoveryPage";
 import { ExternalSkillsPage } from "./ExternalSkillsPage";
+import { AgentSkillSwitcher } from "./AgentSkillSwitcher";
 import { PageNavigation } from "./PageNavigation";
 import { SubTabs } from "./SubTabs";
 import {
@@ -360,6 +361,10 @@ function instructionKindLabel(kind: InstructionFile["kind"]) {
 
 function instructionFileName(path: string) {
   return path.split(/[\\/]/).pop() || path;
+}
+
+function isCodexSystemSkillPath(path: string) {
+  return /[\\/]\.codex[\\/]skills[\\/]\.system(?:[\\/]|$)/.test(path);
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -1917,6 +1922,20 @@ function SkillsCenter({
   const [view, setView] = useState<"installed" | "marketplace">("installed");
   const [selectedAgent, setSelectedAgent] =
     useState<InstalledSkill["agent"]>("codex");
+  const agentOptions = useMemo(
+    () =>
+      defaultAgentIds.map((agentId) => {
+        const meta = getAgentMeta(agentId);
+        return {
+          id: agentId as InstalledSkill["agent"],
+          ...meta,
+          count: (skills?.skills ?? []).filter(
+            (skill) => skill.agent === agentId,
+          ).length,
+        };
+      }),
+    [skills],
+  );
   const [filter, setFilter] = useState<
     "all" | "global" | "workspace" | "managed" | "external" | "storage"
   >("all");
@@ -2228,28 +2247,14 @@ function SkillsCenter({
           )}
         </Modal>
       )}
-      <div className="skill-agent-switcher">
-        <label htmlFor="skill-agent-select">查看 Agent Skills</label>
-        <select
-          id="skill-agent-select"
-          value={selectedAgent}
-          onChange={(event) => {
-            setSelectedAgent(event.target.value as InstalledSkill["agent"]);
-            setUpdateTarget(undefined);
-          }}
-        >
-          {defaultAgentIds.map((agentId) => {
-            const count = (skills?.skills ?? []).filter(
-              (skill) => skill.agent === agentId,
-            ).length;
-            return (
-              <option key={agentId} value={agentId}>
-                {getAgentMeta(agentId).name}（{count}）
-              </option>
-            );
-          })}
-        </select>
-      </div>
+      <AgentSkillSwitcher
+        options={agentOptions}
+        selectedAgent={selectedAgent}
+        onChange={(agent) => {
+          setSelectedAgent(agent);
+          setUpdateTarget(undefined);
+        }}
+      />
       <div className="skill-toolbar">
         <div className="source-chips" role="group" aria-label="Skill 筛选">
           {filters.map(([value, label]) => (
@@ -3549,7 +3554,9 @@ function DiagnosticsPage({
     );
     const legacySkill = focusedSkills.find(
       (skill) =>
-        skill.agent === "codex" && skill.path.includes("/.codex/skills/"),
+        skill.agent === "codex" &&
+        skill.path.includes("/.codex/skills/") &&
+        !isCodexSystemSkillPath(skill.path),
     );
     const legacyAction = focusedSkills.some(
       (skill) =>

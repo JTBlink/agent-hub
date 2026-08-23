@@ -3276,6 +3276,261 @@ textarea:focus-visible {
     width: 100%;
   }
 }
+
+/* Shared Agent view picker: a compact command surface instead of a native select. */
+.skill-agent-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 22px 0 16px;
+  padding: 13px 14px 13px 17px;
+  border: 1px solid rgb(56 79 122 / 74%);
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgb(87 223 208 / 7%), transparent 36%),
+    rgb(14 25 48 / 80%);
+  box-shadow:
+    inset 3px 0 rgb(87 223 208 / 68%),
+    inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.skill-agent-switcher-heading {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.skill-agent-switcher-kicker {
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.skill-agent-switcher-caption {
+  color: var(--quiet);
+  font-size: 10px;
+}
+
+.agent-picker {
+  position: relative;
+  width: min(100%, 330px);
+  flex: none;
+}
+
+.agent-picker-trigger {
+  display: grid;
+  width: 100%;
+  min-height: 54px;
+  grid-template-columns: 34px minmax(0, 1fr) auto 15px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 9px;
+  border: 1px solid rgb(74 101 149 / 82%);
+  border-radius: 11px;
+  color: var(--ink);
+  background: linear-gradient(145deg, #182746, #101b34);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 7%),
+    0 8px 20px rgb(0 0 0 / 14%);
+  text-align: left;
+  transition:
+    border-color var(--motion-fast) ease,
+    background var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.agent-picker-trigger:hover,
+.agent-picker.is-open .agent-picker-trigger {
+  border-color: rgb(87 223 208 / 72%);
+  background: linear-gradient(145deg, #19314d, #10263a);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 9%),
+    0 10px 24px rgb(0 0 0 / 20%);
+}
+
+.agent-picker-current {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.agent-picker-current > span {
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.agent-picker-current strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-picker-count {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  padding-left: 12px;
+  border-left: 1px solid rgb(70 97 145 / 58%);
+  white-space: nowrap;
+}
+
+.agent-picker-count strong {
+  color: #8ef1e3;
+  font-size: 12px;
+}
+
+.agent-picker-count span {
+  color: var(--quiet);
+  font-size: 9px;
+}
+
+.agent-picker-chevron {
+  color: var(--quiet);
+  transition: transform var(--motion-fast) ease;
+}
+
+.agent-picker.is-open .agent-picker-chevron {
+  color: #8ef1e3;
+  transform: rotate(180deg);
+}
+
+.agent-picker-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid rgb(77 108 161 / 86%);
+  border-radius: 12px;
+  background: rgb(11 20 39 / 98%);
+  box-shadow:
+    0 22px 48px rgb(0 0 0 / 42%),
+    inset 0 1px rgb(255 255 255 / 7%);
+  backdrop-filter: blur(18px);
+  animation: agent-picker-enter 140ms ease-out;
+}
+
+.agent-picker-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgb(53 75 116 / 66%);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.agent-picker-menu-heading small {
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.agent-picker-options {
+  display: grid;
+  gap: 3px;
+  padding: 5px;
+}
+
+.agent-picker-option {
+  display: grid;
+  width: 100%;
+  min-height: 48px;
+  grid-template-columns: 34px minmax(0, 1fr) 22px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+}
+
+.agent-picker-option:hover,
+.agent-picker-option:focus-visible {
+  border-color: rgb(72 104 155 / 72%);
+  color: var(--ink);
+  background: rgb(25 42 76 / 88%);
+}
+
+.agent-picker-option.is-selected {
+  border-color: rgb(87 223 208 / 34%);
+  color: var(--ink);
+  background: linear-gradient(90deg, rgb(87 223 208 / 12%), rgb(31 48 84 / 72%));
+}
+
+.agent-picker-option-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.agent-picker-option-copy strong {
+  font-size: 11px;
+  font-weight: 730;
+}
+
+.agent-picker-option-copy small {
+  color: var(--quiet);
+  font-size: 9px;
+}
+
+.agent-picker-option-check {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #8ef1e3;
+  background: rgb(87 223 208 / 13%);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@keyframes agent-picker-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.985);
+  }
+}
+
+@media (max-width: 620px) {
+  .skill-agent-switcher {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .agent-picker {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-picker-menu {
+    animation: none;
+  }
+
+  .agent-picker-chevron {
+    transition: none;
+  }
+}
 .legacy-action-feedback {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -6157,29 +6412,30 @@ select:focus-visible {
 
 .skill-agent-switcher {
   margin: 22px 0 14px;
-  padding: 13px 15px;
-  border: 1px solid rgb(56 79 122 / 75%);
-  border-radius: 12px;
-  background: linear-gradient(105deg, rgb(19 31 58 / 84%), rgb(14 25 49 / 68%));
-  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .skill-agent-switcher label {
-  color: var(--muted);
+  color: var(--quiet);
   letter-spacing: 0.06em;
 }
 
 .skill-agent-switcher select {
-  border-color: rgb(94 125 181 / 75%);
+  border-color: rgb(70 97 145 / 78%);
   color: var(--ink);
-  background: #111e3a;
-  box-shadow: inset 0 1px rgb(255 255 255 / 6%);
+  background: #111c35;
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%);
 }
 
 .skill-agent-switcher select:hover,
 .skill-agent-switcher select:focus-visible {
-  border-color: var(--teal);
-  background: #172a4b;
+  border-color: rgb(87 223 208 / 72%);
+  color: #8ef1e3;
+  background: #123c46;
 }
 
 .chip {

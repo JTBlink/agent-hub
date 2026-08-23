@@ -27,8 +27,10 @@ pub struct LegacyCodexSkillResolution {
 
 #[derive(Debug, Error)]
 pub enum LegacyCodexSkillError {
-    #[error("只允许处理 ~/.codex/skills 下的直接 Skill 目录")]
+    #[error("只允许处理 ~/.codex/skills 下的 Skill 目录")]
     InvalidSource,
+    #[error("~/.codex/skills/.system 下的 Skill 由 Codex 管理，无需迁移")]
+    SystemSkill,
     #[error("Skill 目录包含符号链接，无法安全迁移或归档: {0}")]
     UnsafePath(PathBuf),
     #[error("~/.agents/skills 中已存在同名 Skill，请选择归档旧副本")]
@@ -45,32 +47,99 @@ pub fn resolve_legacy_codex_skill(
     source_path: impl AsRef<Path>,
     action: LegacyCodexSkillAction,
 ) -> Result<LegacyCodexSkillResolution, LegacyCodexSkillError> {
+    let action_label = action.as_str();
+    crate::logging::legacy_codex_action_started(action_label);
+    let result = resolve_legacy_codex_skill_inner(
+        home_directory,
+        backup_root,
+        source_path,
+        action,
+        action_label,
+    );
+    match &result {
+        Ok(_) => crate::logging::legacy_codex_action_completed(action_label),
+        Err(error) => crate::logging::legacy_codex_action_failed(action_label, error.code()),
+    }
+    result
+}
+
+impl LegacyCodexSkillAction {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Migrate => "migrate",
+            Self::Archive => "archive",
+        }
+    }
+}
+
+impl LegacyCodexSkillError {
+    fn code(&self) -> &'static str {
+        match self {
+            Self::InvalidSource => "invalid_source",
+            Self::SystemSkill => "system_skill",
+            Self::UnsafePath(_) => "unsafe_path",
+            Self::PreferredTargetExists => "preferred_target_exists",
+            Self::Io(_) => "io_error",
+        }
+    }
+}
+
+fn resolve_legacy_codex_skill_inner(
+    home_directory: impl AsRef<Path>,
+    backup_root: impl AsRef<Path>,
+    source_path: impl AsRef<Path>,
+    action: LegacyCodexSkillAction,
+    action_label: &str,
+) -> Result<LegacyCodexSkillResolution, LegacyCodexSkillError> {
     let home = home_directory.as_ref();
     let legacy_root = home.join(".codex/skills");
     let source_path = source_path.as_ref();
     let source_directory = skill_directory(source_path)?;
+    let relative_path = source_directory
+        .strip_prefix(&legacy_root)
+        .map_err(|_| LegacyCodexSkillError::InvalidSource)?;
+    if relative_path.as_os_str().is_empty()
+        || relative_path
+            .components()
+            .any(|component| !matches!(component, std::path::Component::Normal(_)))
+    {
+        return Err(LegacyCodexSkillError::InvalidSource);
+    }
+    if relative_path.components().next().is_some_and(|component| {
+        matches!(
+            component,
+            std::path::Component::Normal(name) if name == std::ffi::OsStr::new(".system")
+        )
+    }) {
+        return Err(LegacyCodexSkillError::SystemSkill);
+    }
     let skill_name = source_directory
         .file_name()
         .filter(|name| !name.is_empty())
         .ok_or(LegacyCodexSkillError::InvalidSource)?;
-    if source_directory.parent() != Some(legacy_root.as_path()) {
-        return Err(LegacyCodexSkillError::InvalidSource);
-    }
     reject_symlinks(source_directory)?;
     if !source_directory.join(SKILL_FILE).is_file() {
         return Err(LegacyCodexSkillError::InvalidSource);
     }
+    crate::logging::legacy_codex_phase(action_label, "validated");
 
     let backup_path = archive_target(backup_root.as_ref(), skill_name)?;
     let destination = match action {
         LegacyCodexSkillAction::Migrate => {
-            let target = migration_target(home, skill_name)?;
+            let target = migration_target(home, relative_path)?;
+            crate::logging::legacy_codex_phase(action_label, "target_checked");
+            crate::logging::legacy_codex_phase(action_label, "backup_started");
             copy_directory(source_directory, &backup_path)?;
+            crate::logging::legacy_codex_phase(action_label, "backup_completed");
+            crate::logging::legacy_codex_phase(action_label, "move_started");
             fs::rename(source_directory, &target)?;
+            crate::logging::legacy_codex_phase(action_label, "move_completed");
             target
         }
         LegacyCodexSkillAction::Archive => {
+            crate::logging::legacy_codex_phase(action_label, "archive_started");
             fs::rename(source_directory, &backup_path)?;
+            crate::logging::legacy_codex_phase(action_label, "archive_completed");
             backup_path.clone()
         }
     };
@@ -92,14 +161,14 @@ fn skill_directory(source_path: &Path) -> Result<&Path, LegacyCodexSkillError> {
     }
 }
 
-fn migration_target(
-    home: &Path,
-    skill_name: &std::ffi::OsStr,
-) -> Result<PathBuf, LegacyCodexSkillError> {
+fn migration_target(home: &Path, relative_path: &Path) -> Result<PathBuf, LegacyCodexSkillError> {
     let preferred_root = home.join(".agents/skills");
     ensure_real_directory(&preferred_root)?;
-    let target = preferred_root.join(skill_name);
-    if target.exists() {
+    let target = preferred_root.join(relative_path);
+    if let Some(parent) = target.parent() {
+        ensure_real_directory(parent)?;
+    }
+    if fs::symlink_metadata(&target).is_ok() {
         return Err(LegacyCodexSkillError::PreferredTargetExists);
     }
     Ok(target)

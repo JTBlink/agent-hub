@@ -364,6 +364,7 @@ pub fn scan_installed_skills(
             if skill.agent == crate::Agent::Codex
                 && skill.scope == crate::Scope::Global
                 && Path::new(&skill.path).starts_with(&legacy_root)
+                && !is_codex_system_skill(skill, &legacy_root)
                 && !preferred_names.contains(&name)
             {
                 Some(SourceDiagnostic::warning(
@@ -405,6 +406,19 @@ fn installed_skill_name(skill: &InstalledSkill) -> String {
         .name
         .clone()
         .unwrap_or_else(|| skill.display_name.clone())
+}
+
+fn is_codex_system_skill(skill: &InstalledSkill, legacy_root: &Path) -> bool {
+    Path::new(&skill.path)
+        .strip_prefix(legacy_root)
+        .ok()
+        .and_then(|relative| relative.components().next())
+        .is_some_and(|component| {
+            matches!(
+                component,
+                Component::Normal(name) if name == std::ffi::OsStr::new(".system")
+            )
+        })
 }
 
 fn storage_kind(entrypoint: &Path) -> SkillStorageKind {
