@@ -1,19 +1,11 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 
 import type { SkillRootUsage } from "../lib/backend";
-import {
-  MarketplaceBrowser,
-  type BrowserNavigationRequest,
-} from "./MarketplaceBrowser";
+import { type BrowserNavigationRequest } from "./EmbeddedBrowser";
+import { BrowserPage } from "./BrowserPage";
 
-type ExternalSkillIcon =
-  | "arrow"
-  | "close"
-  | "external"
-  | "file"
-  | "folder"
-  | "spark";
+type ExternalSkillIcon = "arrow" | "external" | "file" | "folder" | "spark";
 
 const webSources: Array<{
   name: string;
@@ -77,22 +69,10 @@ export function ExternalSkillsPage({
     setNavigation((current) => ({ id: current.id + 1, url: source.url }));
   }
 
-  function closeBrowser() {
+  const closeBrowser = useCallback(() => {
     setActiveSource(undefined);
     window.requestAnimationFrame(() => sourceTriggerRef.current?.focus());
-  }
-
-  useEffect(() => {
-    if (!activeSource) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeBrowser();
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [activeSource]);
+  }, []);
 
   function revealDirectory(path: string) {
     void revealItemInDir(path).catch(() => {
@@ -102,39 +82,11 @@ export function ExternalSkillsPage({
 
   if (activeSource) {
     return (
-      <div className="page marketplace-browser-page">
-        <header className="marketplace-browser-page-header">
-          <button
-            className="button button-ghost marketplace-browser-back"
-            type="button"
-            onClick={closeBrowser}
-            title="退出内嵌浏览器（Esc）"
-          >
-            {renderIcon("arrow", 15)}
-            退出浏览器
-          </button>
-          <div className="marketplace-browser-page-title">
-            <h1>{activeSource.name}</h1>
-            <p>在 AgentHub 内浏览 Skill 来源</p>
-          </div>
-          <div className="marketplace-browser-page-actions">
-            <span className="marketplace-browser-badge">
-              <i /> 内嵌浏览器
-            </span>
-            <button
-              className="button button-ghost marketplace-browser-close"
-              type="button"
-              onClick={closeBrowser}
-              aria-label="关闭内嵌浏览器"
-              title="关闭内嵌浏览器"
-            >
-              {renderIcon("close", 16)}
-              <span>关闭</span>
-            </button>
-          </div>
-        </header>
-        <MarketplaceBrowser request={navigation} />
-      </div>
+      <BrowserPage
+        request={navigation}
+        title={activeSource.name}
+        onClose={closeBrowser}
+      />
     );
   }
 
@@ -148,7 +100,7 @@ export function ExternalSkillsPage({
           <h2>浏览你常用的 Skill 站点</h2>
           <p>从快捷入口出发，直接在 AgentHub 里查看网页。</p>
         </div>
-        <span className="marketplace-browser-badge">
+        <span className="embedded-browser-badge">
           <i /> 内嵌浏览器
         </span>
       </header>
