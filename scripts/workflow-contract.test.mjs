@@ -10,8 +10,30 @@ const ci = readFileSync(
   new URL("../.github/workflows/ci.yml", import.meta.url),
   "utf8",
 );
+const pages = readFileSync(
+  new URL("../.github/workflows/deploy-pages.yml", import.meta.url),
+  "utf8",
+);
+const desktopIndex = readFileSync(
+  new URL("../index.html", import.meta.url),
+  "utf8",
+);
+const websiteIndex = readFileSync(
+  new URL("../homepage/index.html", import.meta.url),
+  "utf8",
+);
 
 describe("GitHub Actions workflow contract", () => {
+  it("keeps the desktop and GitHub Pages entrypoints separate", () => {
+    expect(desktopIndex).toContain('<div id="root"></div>');
+    expect(desktopIndex).toContain(
+      '<script type="module" src="/src/main.tsx"></script>',
+    );
+    expect(desktopIndex).not.toContain("Changelog / live feed");
+    expect(websiteIndex).toContain("Changelog / live feed");
+    expect(pages).toContain('cp homepage/index.html _site/index.html');
+  });
+
   it("uses official actions backed by the Node.js 24 runtime", () => {
     for (const workflow of [installers, ci]) {
       expect(workflow).not.toContain("actions/checkout@v4");
