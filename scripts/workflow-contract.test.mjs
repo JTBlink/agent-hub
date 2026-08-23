@@ -83,6 +83,7 @@ describe("GitHub Actions workflow contract", () => {
     );
     expect(installers).toContain("contents: write");
     expect(installers).toContain("release-assets/SHA256SUMS");
+    expect(installers).toContain("npm run release:verify -- release-assets");
     for (const extension of ["exe", "msi", "dmg", "AppImage", "deb"]) {
       expect(installers).toContain(`release-assets/*.${extension}`);
     }
@@ -100,6 +101,7 @@ describe("GitHub Actions workflow contract", () => {
     expect(ci).toContain("branches: [main]");
     expect(ci).toContain("pull_request:");
     expect(ci).toContain("workflow_dispatch:");
+    expect(ci).toContain("npm run tasks:check");
     for (const command of [
       "npm run format:check",
       "npm run lint",
@@ -111,5 +113,16 @@ describe("GitHub Actions workflow contract", () => {
     ]) {
       expect(ci).toContain(command);
     }
+  });
+
+  it("keeps production publishing behind immutable preflight output", () => {
+    expect(installers).toContain(
+      "resolved_sha: ${{ steps.resolve_ref.outputs.sha }}",
+    );
+    expect(installers).toContain(
+      "ref: ${{ needs.preflight.outputs.resolved_sha }}",
+    );
+    expect(installers).toContain("fail_on_unmatched_files: true");
+    expect(installers).toContain("contents: write");
   });
 });

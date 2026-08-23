@@ -16,3 +16,14 @@ Blocked by: B09, B10, B11
 - 同名、多版本和多来源冲突遵循 D05 规则。
 - 数据库与磁盘结果在成功后保持一致。
 - 覆盖 Claude Code、Codex、OpenCode 的安装矩阵测试。
+
+## 当前状态
+
+`claimed`。Rust 生命周期 service 与 SQLite 一致性已完成；尚需在 `lib.rs` 注册计划/安装/启停/卸载 commands，并完成 UI 的计划确认流程。
+
+## Result
+
+- `InstallPlan` 展示稳定 Skill key、来源类型/地址、resolved revision、文件清单、Agent、作用域和目标路径；target resolver 覆盖三 Agent × global/workspace 六种安装。
+- install/update 使用同目录 staging 与原子 rename；持久化失败恢复旧目录。enable/disable/remove 同样提供带 repository callback 的补偿回滚。
+- marker 保存来源、revision、内容指纹和受管文件；非受管同名目标、不同来源冲突、symlink、超量内容及外部修改均阻止覆盖/删除。
+- `save_skill_installation` 在单个 SQLite transaction 中 upsert source、descriptor、installation，目标冲突不静默覆盖；实测完整安装、禁用、卸载后磁盘与数据库一致。

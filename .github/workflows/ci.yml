@@ -53,6 +53,9 @@ jobs:
       - name: Check application version
         run: npm run version:check
 
+      - name: Check task status index
+        run: npm run tasks:check
+
       - name: Check formatting
         run: npm run format:check
 

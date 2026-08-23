@@ -25,14 +25,11 @@ pub struct OpenCodeAdapter;
 
 impl AgentConfigAdapter for CodexAdapter {
     fn scan_global(&self, context: &ScanContext) -> ConfigDocument {
-        let directory = std::env::var_os("CODEX_HOME")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| context.home_directory().join(".codex"));
         scan_file(
             Agent::Codex,
             Scope::Global,
             ConfigFormat::Toml,
-            directory.join("config.toml"),
+            context.codex_home_directory().join("config.toml"),
             parse_toml,
         )
     }
@@ -40,18 +37,11 @@ impl AgentConfigAdapter for CodexAdapter {
 
 impl AgentConfigAdapter for OpenCodeAdapter {
     fn scan_global(&self, context: &ScanContext) -> ConfigDocument {
-        let path = std::env::var_os("OPENCODE_CONFIG")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                context
-                    .home_directory()
-                    .join(".config/opencode/opencode.json")
-            });
         scan_file(
             Agent::OpenCode,
             Scope::Global,
             ConfigFormat::Jsonc,
-            path,
+            context.opencode_config_file(),
             parse_jsonc,
         )
     }
@@ -129,6 +119,48 @@ fn scan_file(
     let source_preview = crate::configuration::redact_source_for_display(&bytes);
     match parser(&source) {
         Ok(mut structured_view) => {
+            if !structured_view.is_object() {
+                return ConfigDocument {
+                    agent,
+                    scope,
+                    format,
+                    path,
+                    status: ConfigStatus::Invalid,
+                    checksum,
+                    modified_at_ms,
+                    structured_view: Value::Null,
+                    source_preview,
+                    diagnostics: vec![Diagnostic {
+                        code: DiagnosticCode::SchemaMismatch,
+                        message: "configuration root must be an object/table".into(),
+                        line: None,
+                        column: None,
+                    }],
+                };
+            }
+            if agent == Agent::OpenCode
+                && structured_view
+                    .get("$schema")
+                    .is_some_and(|schema| !schema.is_string())
+            {
+                return ConfigDocument {
+                    agent,
+                    scope,
+                    format,
+                    path,
+                    status: ConfigStatus::Invalid,
+                    checksum,
+                    modified_at_ms,
+                    structured_view: Value::Null,
+                    source_preview,
+                    diagnostics: vec![Diagnostic {
+                        code: DiagnosticCode::SchemaMismatch,
+                        message: "OpenCode $schema must be a string when present".into(),
+                        line: None,
+                        column: None,
+                    }],
+                };
+            }
             crate::configuration::redact_sensitive_values(&mut structured_view);
             ConfigDocument {
                 agent,

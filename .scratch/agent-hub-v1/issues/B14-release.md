@@ -33,7 +33,7 @@ Blocked by: B13
 - 已验证 Tauri 遇到空 Apple 签名变量会失败；workflow 现仅在 tag macOS step 且 `ENABLE_APPLE_SIGNING=true` 时注入六项 Secrets，否则安全生成未签名包。
 - 发布支持矩阵已列出三平台应用数据目录、已知限制和升级数据保留要求。
 - tag workflow 支持通过 `ENABLE_WINDOWS_SIGNING` 和 PFX Secrets 可选签署 Windows `.exe`/`.msi`；preflight 会拒绝开启开关但凭据不完整的发布。
-- 已增加 `scripts/workflow-contract.test.mjs`（10 个 workflow 断言）和 [V1 发布验收清单](../../../docs/development/release-checklist.md)。
+- 已增加 `scripts/workflow-contract.test.mjs`（11 个 workflow 断言）和 [V1 发布验收清单](../../../docs/development/release-checklist.md)。
 - 已将生产签名和 Release 条件收紧为 `github.event_name == 'push'` 且 ref 为 `v*`；从 Actions 页面手动选择 tag 也只生成无签名 artifact，不会读取发布 Secrets 或创建 Release。
 - 手动输入的 branch/tag/commit 现由 preflight 一次解析为不可变 commit SHA，质量门禁、矩阵构建和汇总任务不再各自重新解析可变分支。
 - 汇总阶段会扁平化五种安装包并拒绝同名冲突，生成的 `SHA256SUMS` 可与 GitHub Release 扁平附件直接配合使用；Apple 与 Windows preflight 也已拆分为最小 Secrets 暴露范围。
@@ -42,6 +42,8 @@ Blocked by: B13
 - 远程手动构建已完成：[`Build Installers #32581079170`](https://github.com/JTBlink/agent-hub/actions/runs/32581079170)（最新 `main` 提交 `a056117f4f99fd8493ebaf4be152a86ceadc43f3`，输入 `ref=main`）。`Validate release metadata`、`Verify release candidate`、Windows x86_64、Linux x86_64、macOS Universal 和 `Assemble installers and checksums` 均为 success；`Publish GitHub Release` 为 skipped，确认手动构建不发布。前一轮 [`#32580327269`](https://github.com/JTBlink/agent-hub/actions/runs/32580327269) 也通过。
 - 远程产物已核验：汇总 artifact `agent-hub-installers-32581079170`（artifact ID `9477871486`）包含 `AgentHub_0.1.0_x64-setup.exe`、`AgentHub_0.1.0_x64_en-US.msi`、`AgentHub_0.1.0_universal.dmg`、`AgentHub_0.1.0_amd64.AppImage`、`AgentHub_0.1.0_amd64.deb`、`CHANGELOG.md`、`PLATFORM_SUPPORT.md`、`RELEASE_NOTES.md` 和 `SHA256SUMS`。下载后压缩包完整性检查和 `shasum -a 256 -c SHA256SUMS` 全部通过，`hdiutil verify` 确认 Universal DMG 有效。
 - 最新 `main` 提交 `a056117f4f99fd8493ebaf4be152a86ceadc43f3` 的 [`CI #32580341632`](https://github.com/JTBlink/agent-hub/actions/runs/32580341632) 为 success；本地 workflow contract、release assembly/verification/version 脚本共 23 项定向测试通过，`actionlint v1.7.7` 退出码为 0。
+- 发布 bundle verifier 现要求每种安装格式恰好一个、所有根目录文件都列入 `SHA256SUMS`、拒绝符号链接/特殊文件、安装包文件名版本与 `package.json` 一致，并检查发布说明包含三平台、应用数据目录和已知限制；新增 4 项篡改、遗漏、重复格式、版本漂移和符号链接回归测试。
+- 当前发布 assembly/verifier/version/workflow 定向测试共 29 项通过，`actionlint v1.7.7` 再次验证工作流无语法或表达式错误；全量前端 37 项和 Rust 71 项测试通过。
 
 ## Current status
 

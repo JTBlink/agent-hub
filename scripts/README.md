@@ -34,6 +34,7 @@ node scripts/verify-release-bundle.mjs <bundle-dir>
 | 脚本                      | 作用                                                                                                             |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `serve-d04-prototype.mjs` | 为 `.scratch/prototypes/d04-ux/` 启动本地静态服务器（默认端口 `4173`，可通过 `AGENT_HUB_PROTOTYPE_PORT` 覆盖）。 |
+| `check-task-status.mjs`   | 校验 `.scratch/agent-hub-v1/status.md` 与 `issues/*.md` 的任务状态是否一致。                                     |
 
 ```bash
 node scripts/serve-d04-prototype.mjs

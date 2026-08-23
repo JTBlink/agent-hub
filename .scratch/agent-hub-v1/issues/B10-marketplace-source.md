@@ -15,3 +15,14 @@ Blocked by: D01, D02, B09
 - 不完整或未知条目可见但不可安装，并提供诊断。
 - manifest 不触发任意代码或安装脚本执行。
 - 使用官方示例及异常 manifest 夹具测试。
+
+## 当前状态
+
+`claimed`。manifest 与远程 locator 解析已完成；尚需将 Marketplace 浏览/获取 command 接入 Skills 页面。
+
+## Result
+
+- 解析 `.claude-plugin/marketplace.json` 的本地 string source 和标准 GitHub object source，保留名称、版本、描述、作者、homepage、兼容性及完整未知字段。
+- 本地条目复用只读目录扫描；GitHub object 转换为统一 `GitLocator`，由安全 Git fetch 获取内容。
+- 缺名称/来源、未知远程类型、越界路径和不可读目录保持可见但不可安装，并返回结构化诊断。
+- manifest 只通过 JSON 读取，从不执行 hooks、脚本或安装命令；正常与异常 fixture 已覆盖。

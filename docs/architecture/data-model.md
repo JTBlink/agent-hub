@@ -1,6 +1,6 @@
 # 数据模型
 
-> 状态：migration 0001 已落地；后续业务字段按 ADR 追加 migration。
+> 状态：migration 0001–0002 已落地；后续业务字段按 ADR 追加 migration。
 
 第一版使用 SQLite，并通过只增不改的 migration 文件管理结构版本。
 

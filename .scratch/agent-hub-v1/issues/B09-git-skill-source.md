@@ -17,3 +17,14 @@ Blocked by: D02, B08
 - 记录 URL、ref、实际 commit、相对路径和文件清单。
 - 使用安全临时目录，不执行仓库脚本或 hooks。
 - 无效 URL、ref、目录和网络失败有自动化测试。
+
+## 当前状态
+
+`claimed`。来源 adapter、安全 fetch 和授权 service 已完成；尚需在 `lib.rs` 注册来源浏览 command，并接入 Skills 页面。
+
+## Result
+
+- 支持四个预置仓库、自定义 HTTP(S)/SSH Git URL、ref、子目录及显式授权的本地 Git/普通目录。
+- Git clone 使用 AgentHub 控制的临时目录、隔离的 system/global Git 配置、空 hooks、禁用交互和 submodule；成功后原子移动，失败清理半成品。
+- 来源快照保留 URL、requested ref、resolved commit、Skill 相对路径；安装计划记录完整文件清单并执行复制而非 symlink。
+- 自动化覆盖无效 URL/ref/子目录、连接失败、未知 ref、安全清理及仓库 hook 不执行。

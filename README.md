@@ -8,6 +8,7 @@ AgentHub —— AI Agent 工作空间管理器
 重大变更记录见 [`CHANGELOG.md`](CHANGELOG.md)。
 需求、任务依赖和开发状态见 [`.scratch/agent-hub-v1/`](.scratch/agent-hub-v1/README.md)。
 任务总状态索引见 [`.scratch/agent-hub-v1/status.md`](.scratch/agent-hub-v1/status.md)。
+运行 `npm run tasks:check` 可校验索引与全部 Issue 文件的状态是否一致；CI 会阻止状态漂移。
 
 ## 本地开发
 

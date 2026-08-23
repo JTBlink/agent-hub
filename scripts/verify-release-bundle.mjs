@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { basename, isAbsolute, join, resolve, sep } from "node:path";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
+import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const REQUIRED_INSTALLERS = [".exe", ".msi", ".dmg", ".AppImage", ".deb"];
@@ -12,6 +12,58 @@ const REQUIRED_METADATA = [
 
 function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+function listBundleFiles(directory, root = directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isSymbolicLink()) {
+      throw new Error(
+        `Release bundle must not contain symbolic links: ${relative(root, path)}`,
+      );
+    }
+    if (entry.isDirectory()) {
+      return listBundleFiles(path, root);
+    }
+    if (!entry.isFile()) {
+      throw new Error(
+        `Release bundle contains an unsupported entry: ${relative(root, path)}`,
+      );
+    }
+    return [path];
+  });
+}
+
+function packageVersion(root) {
+  const path = resolve(root, "package.json");
+  if (!existsSync(path)) return undefined;
+  const manifest = JSON.parse(readFileSync(path, "utf8"));
+  return typeof manifest.version === "string" ? manifest.version : undefined;
+}
+
+function verifyReleaseMetadata(bundle) {
+  const platformSupport = readFileSync(
+    join(bundle, "PLATFORM_SUPPORT.md"),
+    "utf8",
+  );
+  const releaseNotes = readFileSync(join(bundle, "RELEASE_NOTES.md"), "utf8");
+  for (const platform of ["Windows", "macOS", "Linux"]) {
+    if (
+      !platformSupport.includes(platform) ||
+      !releaseNotes.includes(platform)
+    ) {
+      throw new Error(
+        `Release metadata is missing platform support: ${platform}`,
+      );
+    }
+  }
+  for (const section of ["应用数据目录", "已知限制"]) {
+    if (!platformSupport.includes(section) || !releaseNotes.includes(section)) {
+      throw new Error(
+        `Release metadata is missing required section: ${section}`,
+      );
+    }
+  }
 }
 
 function bundlePath(root, bundleDirectory, relativePath) {
@@ -27,12 +79,17 @@ function bundlePath(root, bundleDirectory, relativePath) {
 export function verifyReleaseBundle({
   root = process.cwd(),
   bundleDirectory,
+  expectedVersion = packageVersion(root),
 } = {}) {
   if (!bundleDirectory) {
     throw new Error("bundleDirectory is required");
   }
 
   const bundle = resolve(root, bundleDirectory);
+  if (!existsSync(bundle) || !lstatSync(bundle).isDirectory()) {
+    throw new Error("Release bundle directory does not exist");
+  }
+  const bundleFiles = listBundleFiles(bundle);
   const checksumPath = join(bundle, "SHA256SUMS");
   if (!existsSync(checksumPath)) {
     throw new Error("Missing SHA256SUMS");
@@ -64,7 +121,7 @@ export function verifyReleaseBundle({
       throw new Error(`Duplicate checksum path: ${listedPath}`);
     }
     const file = bundlePath(root, bundleDirectory, relativePath);
-    if (!existsSync(file) || !statSync(file).isFile()) {
+    if (!existsSync(file) || !lstatSync(file).isFile()) {
       throw new Error(`Missing checksum file: ${listedPath}`);
     }
     const actual = sha256(file);
@@ -74,21 +131,31 @@ export function verifyReleaseBundle({
     verified.add(relativePath);
   }
 
-  const missingInstallers = REQUIRED_INSTALLERS.filter(
-    (extension) =>
-      ![...verified].some((path) => basename(path).endsWith(extension)),
+  const unchecked = bundleFiles
+    .map((path) => relative(bundle, path).split(sep).join("/"))
+    .filter((path) => path !== "SHA256SUMS" && !verified.has(path));
+  if (unchecked.length > 0) {
+    throw new Error(`Files missing from SHA256SUMS: ${unchecked.join(", ")}`);
+  }
+
+  const installersByFormat = new Map(
+    REQUIRED_INSTALLERS.map((extension) => [
+      extension,
+      [...verified].filter((path) => basename(path).endsWith(extension)),
+    ]),
   );
-  if (missingInstallers.length > 0) {
+  const invalidInstallerCounts = [...installersByFormat].filter(
+    ([, paths]) => paths.length !== 1,
+  );
+  if (invalidInstallerCounts.length > 0) {
     throw new Error(
-      `Missing required installer formats: ${missingInstallers.join(", ")}`,
+      `Expected exactly one installer per format: ${invalidInstallerCounts
+        .map(([extension, paths]) => `${extension}=${paths.length}`)
+        .join(", ")}`,
     );
   }
-  const nestedInstallers = [...verified].filter(
-    (path) =>
-      REQUIRED_INSTALLERS.some((extension) =>
-        basename(path).endsWith(extension),
-      ) && path.includes("/"),
-  );
+  const installers = [...installersByFormat.values()].flat();
+  const nestedInstallers = installers.filter((path) => path.includes("/"));
   if (nestedInstallers.length > 0) {
     throw new Error(
       `Installers must be at bundle root: ${nestedInstallers.join(", ")}`,
@@ -100,10 +167,20 @@ export function verifyReleaseBundle({
   if (missingMetadata.length > 0) {
     throw new Error(`Missing required metadata: ${missingMetadata.join(", ")}`);
   }
+  if (
+    expectedVersion &&
+    installers.some((path) => !basename(path).includes(`_${expectedVersion}_`))
+  ) {
+    throw new Error(
+      `Installer filename version does not match ${expectedVersion}`,
+    );
+  }
+  verifyReleaseMetadata(bundle);
 
   return {
-    installers: REQUIRED_INSTALLERS.length,
+    installers: installers.length,
     verifiedFiles: lines.length,
+    version: expectedVersion,
   };
 }
 

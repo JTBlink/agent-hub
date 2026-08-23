@@ -210,19 +210,58 @@ pub fn rollback(
     backup_path: impl AsRef<Path>,
     backup_root: impl AsRef<Path>,
 ) -> Result<ConfigWriteResult, ConfigurationError> {
-    let backup_root = fs::canonicalize(backup_root.as_ref())?;
-    let backup_path = fs::canonicalize(backup_path.as_ref())?;
-    if !backup_path.starts_with(&backup_root) || !backup_path.is_file() {
-        return Err(ConfigurationError::UnsafeBackupPath);
-    }
+    let backup_root = backup_root.as_ref();
+    rollback_with_destination(
+        path,
+        format,
+        expected_current_checksum,
+        backup_path,
+        backup_root,
+        backup_root,
+    )
+}
+
+/// Restore an authorized backup while storing the new safety backup in a separate directory.
+pub fn rollback_with_destination(
+    path: impl AsRef<Path>,
+    format: ConfigFormat,
+    expected_current_checksum: &str,
+    backup_path: impl AsRef<Path>,
+    allowed_backup_root: impl AsRef<Path>,
+    destination_backup_root: impl AsRef<Path>,
+) -> Result<ConfigWriteResult, ConfigurationError> {
+    let (_, backup_path) = validated_backup_path(allowed_backup_root, backup_path)?;
     let replacement = fs::read(&backup_path)?;
     write_atomically(
         path,
         format,
         expected_current_checksum,
         &replacement,
-        &backup_root,
+        destination_backup_root,
     )
+}
+
+/// Build the redacted diff that must be confirmed before restoring a history entry.
+pub fn preview_rollback(
+    path: impl AsRef<Path>,
+    format: ConfigFormat,
+    backup_path: impl AsRef<Path>,
+    backup_root: impl AsRef<Path>,
+) -> Result<ConfigEditPreview, ConfigurationError> {
+    let (_, backup_path) = validated_backup_path(backup_root, backup_path)?;
+    preview(path, format, &fs::read(backup_path)?)
+}
+
+fn validated_backup_path(
+    backup_root: impl AsRef<Path>,
+    backup_path: impl AsRef<Path>,
+) -> Result<(PathBuf, PathBuf), ConfigurationError> {
+    let backup_root = fs::canonicalize(backup_root.as_ref())?;
+    let backup_path = fs::canonicalize(backup_path.as_ref())?;
+    if !backup_path.starts_with(&backup_root) || !backup_path.is_file() {
+        return Err(ConfigurationError::UnsafeBackupPath);
+    }
+    Ok((backup_root, backup_path))
 }
 
 fn checksum(bytes: &[u8]) -> String {
@@ -631,5 +670,118 @@ mod tests {
         )
         .expect("rollback");
         assert_eq!(fs::read(&path).expect("restored file"), b"before\n");
+    }
+
+    #[test]
+    fn invalid_edit_and_stale_rollback_leave_the_current_file_untouched() {
+        let directory = tempdir().expect("temp directory");
+        let path = directory.path().join("settings.json");
+        let backup_root = directory.path().join("backups");
+        fs::write(&path, br#"{"value":"before"}"#).expect("fixture");
+        let (_, original) = read_revision(&path).expect("revision");
+
+        assert!(write_atomically(
+            &path,
+            ConfigFormat::Json,
+            &original.checksum,
+            br#"{"value":}"#,
+            &backup_root,
+        )
+        .is_err());
+        assert_eq!(
+            fs::read(&path).expect("invalid edit did not write"),
+            br#"{"value":"before"}"#
+        );
+        assert!(!backup_root.exists());
+
+        let write = write_atomically(
+            &path,
+            ConfigFormat::Json,
+            &original.checksum,
+            br#"{"value":"after"}"#,
+            &backup_root,
+        )
+        .expect("write");
+        let stale_current = write.after.checksum;
+        fs::write(&path, br#"{"value":"external"}"#).expect("external edit");
+        let error = rollback(
+            &path,
+            ConfigFormat::Json,
+            &stale_current,
+            &write.backup_path,
+            &backup_root,
+        )
+        .expect_err("stale rollback is rejected");
+        assert!(matches!(error, ConfigurationError::ExternalModified { .. }));
+        assert_eq!(
+            fs::read(&path).expect("external edit remains"),
+            br#"{"value":"external"}"#
+        );
+    }
+
+    #[test]
+    fn restore_preview_is_redacted_and_rejects_paths_outside_backup_root() {
+        let directory = tempdir().expect("temp directory");
+        let path = directory.path().join("settings.json");
+        let backup_root = directory.path().join("backups");
+        fs::create_dir(&backup_root).expect("backup root");
+        fs::write(&path, br#"{"token":"current-secret"}"#).expect("fixture");
+        let valid_backup = backup_root.join("history-entry");
+        fs::write(&valid_backup, br#"{"token":"old-secret"}"#).expect("backup");
+
+        let preview = preview_rollback(&path, ConfigFormat::Json, &valid_backup, &backup_root)
+            .expect("preview");
+        assert!(preview.changed);
+        assert!(!preview.diff.contains("current-secret"));
+        assert!(!preview.diff.contains("old-secret"));
+
+        let outside = directory.path().join("outside");
+        fs::write(&outside, br#"{"safe":true}"#).expect("outside file");
+        assert!(matches!(
+            preview_rollback(&path, ConfigFormat::Json, &outside, &backup_root),
+            Err(ConfigurationError::UnsafeBackupPath)
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn atomic_write_preserves_unix_mode_and_backups_are_private() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempdir().expect("temp directory");
+        let path = directory.path().join("settings.json");
+        let backup_root = directory.path().join("backups");
+        fs::write(&path, br#"{"value":"before"}"#).expect("fixture");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).expect("mode");
+        let (_, revision) = read_revision(&path).expect("revision");
+        let result = write_atomically(
+            &path,
+            ConfigFormat::Json,
+            &revision.checksum,
+            br#"{"value":"after"}"#,
+            &backup_root,
+        )
+        .expect("write");
+
+        assert_eq!(
+            fs::metadata(&path).expect("metadata").permissions().mode() & 0o777,
+            0o640
+        );
+        assert_eq!(
+            fs::metadata(&backup_root)
+                .expect("backup metadata")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        assert_eq!(
+            fs::metadata(result.backup_path)
+                .expect("backup file metadata")
+                .permissions()
+                .mode()
+                & 0o777,
+            0o600
+        );
     }
 }
