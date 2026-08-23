@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ConfirmModal, Modal, useConfirm } from "./Modal";
 
 import {
@@ -451,7 +457,9 @@ export function App() {
           ) {
             return current;
           }
-          void getSkillInventory().then(setSkills).catch(() => undefined);
+          void getSkillInventory()
+            .then(setSkills)
+            .catch(() => undefined);
           return "";
         });
       })
@@ -490,7 +498,9 @@ export function App() {
   }, []);
 
   const visibleConfigs =
-    selectedScope === "global" ? configs : workspaceConfigs;
+    selectedScope === "global"
+      ? configs
+      : getWorkspaceDisplayConfigs(configs, workspaceConfigs);
   const selectedConfig = useMemo(() => {
     const config = visibleConfigs.find(
       (candidate) => candidate.agent === selectedAgent,
@@ -796,13 +806,15 @@ export function App() {
             onSelectWorkspace={selectSkillWorkspace}
             onChanged={scan}
             searchQuery={searchQuery}
-            onScanned={(result) => {
+            onScanned={(result, navigateToConfigs = true) => {
               setSelectedSkillWorkspace(result.workspace.normalizedPath);
               setSkills(result.skills);
               setWorkspaceConfigs(result.configs);
               setWorkspaceInstructions(result.instructions);
               setSelectedScope("workspace");
-              setSection("configs");
+              if (navigateToConfigs) {
+                setSection("configs");
+              }
             }}
           />
         )}
@@ -1562,7 +1574,9 @@ function ConfigCenter({
   searchQuery: string;
 }) {
   const visibleConfigs =
-    selectedScope === "global" ? configs : workspaceConfigs;
+    selectedScope === "global"
+      ? configs
+      : getWorkspaceDisplayConfigs(configs, workspaceConfigs);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredConfigs = normalizedQuery
     ? visibleConfigs.filter((config) => {
@@ -1742,10 +1756,6 @@ function ConfigCenter({
               工作空间
             </button>
           </div>
-          <div className="config-agent-switcher-heading">
-            <span>配置 Agent</span>
-            <small>选择要查看的宿主配置</small>
-          </div>
           <DropdownMenu
             className="config-agent-dropdown"
             options={configAgentOptions}
@@ -1787,6 +1797,16 @@ function ConfigCenter({
                   {statusLabel(selectedConfig.status)}
                 </div>
               </div>
+              {selectedScope === "workspace" &&
+                selectedConfig.agent === "codex" &&
+                selectedConfig.scope === "global" && (
+                  <div className="inline-diagnostics" role="status">
+                    <Icon name="info" size={17} />
+                    <span>
+                      工作空间未配置 Codex，当前展示全局配置；编辑将修改全局文件。
+                    </span>
+                  </div>
+                )}
               <div className="config-info-grid">
                 <div>
                   <span>文件格式</span>
@@ -1962,7 +1982,9 @@ function SkillsCenter({
   onWorkspaceChange: (workspacePath: string) => void;
   onInstalled: (workspaceDirectory?: string) => void;
 }) {
-  const [view, setView] = useState<"installed" | "marketplace">("installed");
+  const [view, setView] = useState<"installed" | "storage" | "marketplace">(
+    "installed",
+  );
   const [selectedAgent, setSelectedAgent] =
     useState<InstalledSkill["agent"]>("codex");
   const agentOptions = useMemo(
@@ -1980,7 +2002,7 @@ function SkillsCenter({
     [skills],
   );
   const [filter, setFilter] = useState<
-    "all" | "global" | "workspace" | "managed" | "external" | "storage"
+    "all" | "global" | "workspace" | "managed" | "external"
   >("all");
   const [showSourcePage, setShowSourcePage] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -2054,11 +2076,10 @@ function SkillsCenter({
   }, [skills]);
   const filters = [
     ["all", "全部"],
-    ["global", "全局 Skill"],
+    ["global", "所有项目 Skill"],
     ["workspace", "当前项目 Skill"],
-    ["managed", "AgentHub 管理"],
-    ["external", "外部管理"],
-    ["storage", "安装信息"],
+    ["managed", "已纳入管理"],
+    ["external", "未纳入管理"],
   ] as const;
   async function handleViewSkill(skill: InstalledSkill) {
     setSkillViewer({ skill, loading: true });
@@ -2359,52 +2380,56 @@ function SkillsCenter({
           )}
         </Modal>
       )}
-      <div className="skills-context-switchers">
-        <AgentSkillSwitcher
-          options={agentOptions}
-          selectedAgent={selectedAgent}
-          onChange={(agent) => {
-            setSelectedAgent(agent);
-            setUpdateTarget(undefined);
-          }}
-        />
-        <SkillWorkspaceSwitcher
-          workspaces={workspaces}
-          value={selectedWorkspacePath}
-          onChange={onWorkspaceChange}
-          onManage={() => onNavigate("workspaces")}
-        />
-      </div>
-      <div className="skill-toolbar">
-        <div className="source-chips" role="group" aria-label="Skill 筛选">
-          {filters.map(([value, label]) => (
-            <button
-              className={`chip ${filter === value ? "active" : ""}`}
-              key={value}
-              type="button"
-              aria-pressed={filter === value}
-              onClick={() => setFilter(value)}
-            >
-              {label}
-              {value === "all" && <b>{skills?.skills.length ?? 0}</b>}
-            </button>
-          ))}
-        </div>
-        <div className="skill-toolbar-actions">
-          <button
-            className="button button-secondary"
-            onClick={() => setShowSourcePage(true)}
-          >
-            <Icon name="plus" size={16} />
-            添加来源
-          </button>
-          <button className="button button-ghost" onClick={onScan}>
-            <Icon name="refresh" size={16} />
-            扫描 Skills
-          </button>
-        </div>
-      </div>
-      {filter === "storage" ? (
+      {view === "installed" && (
+        <>
+          <div className="skills-context-switchers">
+            <AgentSkillSwitcher
+              options={agentOptions}
+              selectedAgent={selectedAgent}
+              onChange={(agent) => {
+                setSelectedAgent(agent);
+                setUpdateTarget(undefined);
+              }}
+            />
+            <SkillWorkspaceSwitcher
+              workspaces={workspaces}
+              value={selectedWorkspacePath}
+              onChange={onWorkspaceChange}
+              onManage={() => onNavigate("workspaces")}
+            />
+          </div>
+          <div className="skill-toolbar">
+            <div className="source-chips" role="group" aria-label="Skill 筛选">
+              {filters.map(([value, label]) => (
+                <button
+                  className={`chip ${filter === value ? "active" : ""}`}
+                  key={value}
+                  type="button"
+                  aria-pressed={filter === value}
+                  onClick={() => setFilter(value)}
+                >
+                  {label}
+                  {value === "all" && <b>{skills?.skills.length ?? 0}</b>}
+                </button>
+              ))}
+            </div>
+            <div className="skill-toolbar-actions">
+              <button
+                className="button button-secondary"
+                onClick={() => setShowSourcePage(true)}
+              >
+                <Icon name="plus" size={16} />
+                添加来源
+              </button>
+              <button className="button button-ghost" onClick={onScan}>
+                <Icon name="refresh" size={16} />
+                扫描 Skills
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+      {view === "storage" ? (
         <SkillStorageSummary roots={skills?.roots ?? []} />
       ) : (
         <>
@@ -2457,7 +2482,7 @@ function SkillsCenter({
                         </code>
                         {isSystemSkill(skill) && (
                           <span className="skill-system-pill">
-                            系统 Skill · Codex 管理
+                            系统 Skill · Codex 提供
                           </span>
                         )}
                         {skill.storageKind === "symlink" && (
@@ -2476,10 +2501,10 @@ function SkillsCenter({
                         )}
                       </div>
                       <span className={`scope-pill ${skill.scope}`}>
-                        {skill.scope === "global" ? "全局" : "当前项目"}
+                        {skill.scope === "global" ? "所有项目" : "当前项目"}
                       </span>
                       <span className="managed-pill">
-                        {skill.sourceTracked ? "AgentHub 管理" : "外部管理"}
+                        {skill.sourceTracked ? "已纳入管理" : "未纳入管理"}
                       </span>
                       {isSkillUpdateSupported(skill) && (
                         <button
@@ -2589,9 +2614,9 @@ function SkillsViewTabs({
   installedCount,
   onChange,
 }: {
-  view: "installed" | "marketplace";
+  view: "installed" | "storage" | "marketplace";
   installedCount: number;
-  onChange: (view: "installed" | "marketplace") => void;
+  onChange: (view: "installed" | "storage" | "marketplace") => void;
 }) {
   return (
     <SubTabs
@@ -2604,6 +2629,7 @@ function SkillsViewTabs({
           label: "已安装",
           badge: <span>{installedCount}</span>,
         },
+        { value: "storage", label: "安装信息" },
         { value: "marketplace", label: "Marketplace" },
       ]}
     />
@@ -2618,8 +2644,8 @@ function SkillLocation({ skill }: { skill: InstalledSkill }) {
       <div>
         <strong>{getAgentMeta(skill.agent).name}</strong>
         <span>
-          {skill.scope === "global" ? "全局" : "当前项目"} ·{" "}
-          {skill.sourceTracked ? "AgentHub 管理" : "外部管理"}
+          {skill.scope === "global" ? "所有项目" : "当前项目"} ·{" "}
+          {skill.sourceTracked ? "已纳入管理" : "未纳入管理"}
           {isCodexLegacy ? " · Codex 兼容目录" : ""}
         </span>
         {skill.storageKind === "symlink" && (
@@ -3356,13 +3382,20 @@ function WorkspacesPage({
   selectedWorkspacePath: string;
   onSelectWorkspace: (workspacePath: string) => void;
   onChanged: () => void;
-  onScanned: (result: WorkspaceScanResult) => void;
+  onScanned: (result: WorkspaceScanResult, navigateToConfigs?: boolean) => void;
   searchQuery: string;
 }) {
   const [path, setPath] = useState("");
   const [message, setMessage] = useState<string>();
+  const [toast, setToast] = useState<string>();
   const [busy, setBusy] = useState(false);
-  const [choosing, setChoosing] = useState(false);
+  const [selectingWorkspace, setSelectingWorkspace] = useState(false);
+  const { confirm, ConfirmPortal } = useConfirm();
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(undefined), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const visibleWorkspaces = normalizedQuery
     ? workspaces.filter((workspace) =>
@@ -3373,11 +3406,18 @@ function WorkspacesPage({
       )
     : workspaces;
   async function addAndScan() {
-    if (!path.trim() || busy) return;
+    if (busy) return;
     setBusy(true);
     try {
-      await addWorkspace(path.trim());
-      const result = await scanWorkspace(path.trim());
+      let targetPath = path.trim();
+      if (!targetPath) {
+        const selection = await selectWorkspaceDirectory();
+        if (!selection) return;
+        targetPath = selection;
+        setPath(selection);
+      }
+      await addWorkspace(targetPath);
+      const result = await scanWorkspace(targetPath);
       setMessage("工作空间已添加并完成扫描。");
       setPath("");
       onChanged();
@@ -3392,32 +3432,45 @@ function WorkspacesPage({
       setBusy(false);
     }
   }
-  async function chooseDirectory() {
-    if (busy || choosing) return;
-    setChoosing(true);
-    setMessage(undefined);
-    try {
-      const selection = await selectWorkspaceDirectory();
-      if (selection) {
-        setPath(selection);
-      }
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "无法打开目录选择器，请直接输入目录路径。",
-      );
-    } finally {
-      setChoosing(false);
-    }
-  }
   async function remove(id: number) {
+    const workspace = workspaces.find((item) => item.id === id);
+    if (!workspace) return;
+    const confirmed = await confirm({
+      tone: "danger",
+      title: "清理项目路径？",
+      description: (
+        <p>
+          将移除“{workspace.displayName}
+          ”的登记记录。磁盘上的项目文件不会被删除。
+        </p>
+      ),
+      confirmLabel: "确认清理",
+      cancelLabel: "保留",
+    });
+    if (!confirmed) return;
     try {
       await removeWorkspace(id);
-      setMessage("已移除记录，磁盘目录没有被删除。");
+      setToast("项目路径已清理，磁盘目录没有被删除。");
       onChanged();
     } catch {
       setMessage("移除失败，请重新扫描后重试。");
+    }
+  }
+  async function selectWorkspace(workspacePath: string) {
+    if (busy || selectingWorkspace || workspacePath === selectedWorkspacePath) {
+      return;
+    }
+    setSelectingWorkspace(true);
+    setMessage(undefined);
+    onSelectWorkspace(workspacePath);
+    try {
+      const result = await scanWorkspace(workspacePath);
+      onChanged();
+      onScanned(result, false);
+    } catch {
+      setMessage("切换工作空间失败，请重新扫描后重试。");
+    } finally {
+      setSelectingWorkspace(false);
     }
   }
   return (
@@ -3426,10 +3479,10 @@ function WorkspacesPage({
       <section className="workspace-add surface-card">
         <div>
           <p className="eyebrow">添加本地目录</p>
-          <h2>接入一个工作空间</h2>
+          <h2>添加项目路径</h2>
         </div>
         <div className="workspace-form">
-          <label htmlFor="workspace-path">目录路径</label>
+          <label htmlFor="workspace-path">项目路径</label>
           <div className="workspace-path-row">
             <input
               id="workspace-path"
@@ -3438,18 +3491,9 @@ function WorkspacesPage({
               placeholder="例如 ~/projects/demo"
             />
             <button
-              className="button button-secondary"
-              type="button"
-              disabled={busy || choosing}
-              onClick={() => void chooseDirectory()}
-            >
-              <Icon name="folder" size={16} />
-              {choosing ? "选择中…" : "选择文件夹"}
-            </button>
-            <button
               className="button button-primary"
               type="button"
-              disabled={!path.trim() || busy}
+              disabled={busy}
               onClick={addAndScan}
             >
               <Icon name="plus" size={16} />
@@ -3465,15 +3509,13 @@ function WorkspacesPage({
         )}
       </section>
       <section className="workspace-list surface-card">
-        <div className="section-title-row">
-          <div>
-            <p className="eyebrow">已登记目录</p>
-            <h2>
-              {workspaces.length
-                ? `${workspaces.length} 个工作空间`
-                : "还没有工作空间"}
-            </h2>
-          </div>
+        <div className="section-title-row workspace-list-heading">
+          <p className="eyebrow">已登记目录</p>
+          <h2>
+            {workspaces.length
+              ? `${workspaces.length} 个工作空间`
+              : "还没有工作空间"}
+          </h2>
         </div>
         {visibleWorkspaces.length ? (
           <div className="workspace-rows">
@@ -3486,40 +3528,45 @@ function WorkspacesPage({
                   <strong>{workspace.displayName}</strong>
                   <span>{workspace.normalizedPath}</span>
                 </div>
-                {selectedWorkspacePath === workspace.normalizedPath ? (
-                  <span className="workspace-current-pill">当前项目</span>
-                ) : (
+                <div className="workspace-row-actions">
+                  {selectedWorkspacePath === workspace.normalizedPath ? (
+                    <span className="workspace-current-pill">当前项目</span>
+                  ) : (
+                    <button
+                      className="button button-secondary workspace-select-button"
+                      type="button"
+                      disabled={selectingWorkspace}
+                      onClick={() =>
+                        void selectWorkspace(workspace.normalizedPath)
+                      }
+                    >
+                      设为当前
+                    </button>
+                  )}
                   <button
-                    className="button button-secondary workspace-select-button"
-                    type="button"
-                    onClick={() => onSelectWorkspace(workspace.normalizedPath)}
+                    className="button button-ghost"
+                    onClick={() =>
+                      void scanWorkspace(workspace.normalizedPath)
+                        .then((result) => {
+                          onChanged();
+                          onScanned(result, false);
+                        })
+                        .catch(() =>
+                          setMessage("重新扫描失败，请确认目录仍然存在。"),
+                        )
+                    }
                   >
-                    设为当前
+                    <Icon name="refresh" size={15} />
+                    重扫
                   </button>
-                )}
-                <button
-                  className="button button-ghost"
-                  onClick={() =>
-                    void scanWorkspace(workspace.normalizedPath)
-                      .then((result) => {
-                        onChanged();
-                        onScanned(result);
-                      })
-                      .catch(() =>
-                        setMessage("重新扫描失败，请确认目录仍然存在。"),
-                      )
-                  }
-                >
-                  <Icon name="refresh" size={15} />
-                  重扫
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label={`移除 ${workspace.displayName}`}
-                  onClick={() => void remove(workspace.id)}
-                >
-                  <Icon name="close" size={16} />
-                </button>
+                  <button
+                    className="icon-button"
+                    aria-label={`移除 ${workspace.displayName}`}
+                    onClick={() => void remove(workspace.id)}
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -3544,6 +3591,13 @@ function WorkspacesPage({
           </div>
         )}
       </section>
+      {toast && (
+        <div className="workspace-toast" role="status" aria-live="polite">
+          <Icon name="check" size={16} />
+          <span>{toast}</span>
+        </div>
+      )}
+      {ConfirmPortal}
     </div>
   );
 }
@@ -4276,12 +4330,12 @@ function SettingsPage() {
   function openDataPath(path: string) {
     setPathError(undefined);
     void openDirectoryInEditor(path)
-      .then((opened) => (opened ? undefined : revealItemInDir(path)))
-      .catch(() =>
-        revealItemInDir(path).catch(() => {
+      .then((opened) => {
+        if (!opened) {
           setPathError("无法用 VS Code 或文件管理器打开该目录。");
-        }),
-      );
+        }
+      })
+      .catch(() => setPathError("无法用 VS Code 或文件管理器打开该目录。"));
   }
   const dataLocations = dataPaths
     ? ([
