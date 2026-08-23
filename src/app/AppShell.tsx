@@ -1865,6 +1865,83 @@ function LegacyActionFeedbackModal({
   );
 }
 
+function ClearUserDataConfirmModal({
+  kind,
+  label,
+  onCancel,
+  onConfirm,
+}: {
+  kind: "backups" | "logs" | "skillSources";
+  label: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const cancelRef = useRef(onCancel);
+  useEffect(() => {
+    cancelRef.current = onCancel;
+  }, [onCancel]);
+  useEffect(() => {
+    titleRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      cancelRef.current();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+  return createPortal(
+    <div
+      className="action-feedback-backdrop"
+      role="presentation"
+      onPointerDown={() => cancelRef.current()}
+    >
+      <section
+        className="data-clear-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="data-clear-confirm-title"
+        aria-describedby="data-clear-confirm-description"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <div className="data-clear-confirm-icon" aria-hidden="true">
+          <Icon name="warning" size={20} />
+        </div>
+        <div>
+          <p className="eyebrow">清理用户数据</p>
+          <h2 id="data-clear-confirm-title" ref={titleRef} tabIndex={-1}>
+            确定清理{label}？
+          </h2>
+          <p id="data-clear-confirm-description">
+            这会删除该目录中的文件，操作完成后无法从 AgentHub 恢复。
+            {kind === "backups"
+              ? "数据库、日志和 Skill 来源缓存不会受到影响。"
+              : "数据库和备份不会受到影响。"}
+          </p>
+          <div className="data-clear-confirm-actions">
+            <button
+              className="button button-ghost"
+              type="button"
+              onClick={onCancel}
+            >
+              取消
+            </button>
+            <button
+              className="button button-danger"
+              type="button"
+              onClick={onConfirm}
+            >
+              确认清理
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 function SkillsCenter({
   skills,
   searchQuery,
@@ -3823,7 +3900,13 @@ function SettingsPage() {
   const [dataPaths, setDataPaths] =
     useState<Awaited<ReturnType<typeof getUserDataPaths>>>();
   const [pathError, setPathError] = useState<string>();
-  const [clearingKind, setClearingKind] = useState<"logs" | "skillSources">();
+  const [clearingKind, setClearingKind] = useState<
+    "backups" | "logs" | "skillSources"
+  >();
+  const [pendingClear, setPendingClear] = useState<{
+    kind: "backups" | "logs" | "skillSources";
+    label: string;
+  }>();
   useEffect(() => {
     void getUserDataPaths()
       .then(setDataPaths)
@@ -3840,18 +3923,18 @@ function SettingsPage() {
     ? ([
         ["AgentHub 数据目录", dataPaths.root, undefined],
         ["数据库", dataPaths.database, undefined],
-        ["备份", dataPaths.backups, undefined],
+        ["备份", dataPaths.backups, "backups"],
         ["Skill 来源缓存", dataPaths.skillSources, "skillSources"],
         ["日志", dataPaths.logs, "logs"],
       ] as const)
     : [];
-  function clearPath(kind: "logs" | "skillSources", label: string) {
-    if (
-      !window.confirm(
-        `确定清理${label}吗？此操作会删除其中的文件，且无法从 AgentHub 恢复。`,
-      )
-    )
-      return;
+  function clearPath(kind: "backups" | "logs" | "skillSources", label: string) {
+    setPendingClear({ kind, label });
+  }
+  function confirmClear() {
+    if (!pendingClear) return;
+    const { kind, label } = pendingClear;
+    setPendingClear(undefined);
     setClearingKind(kind);
     setPathError(undefined);
     void clearUserData(kind)
@@ -3995,6 +4078,14 @@ function SettingsPage() {
               </p>
             )}
           </section>
+        )}
+        {pendingClear && (
+          <ClearUserDataConfirmModal
+            kind={pendingClear.kind}
+            label={pendingClear.label}
+            onCancel={() => setPendingClear(undefined)}
+            onConfirm={confirmClear}
+          />
         )}
       </div>
     </div>

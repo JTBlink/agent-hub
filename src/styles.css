@@ -3174,8 +3174,75 @@ textarea:focus-visible {
 }
 .action-feedback-modal-close {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
+  border-color: transparent;
+  background: transparent;
+}
+.action-feedback-modal-close:hover {
+  border-color: #36517b;
+}
+.data-clear-confirm {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  width: min(540px, 100%);
+  padding: 26px;
+  border: 1px solid #71404b;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 0 0, rgb(255 124 130 / 10%), transparent 12rem),
+    linear-gradient(145deg, #38253a, #211d34);
+  box-shadow:
+    0 24px 70px rgb(0 0 0 / 50%),
+    0 0 0 1px rgb(255 255 255 / 3%),
+    inset 0 1px rgb(255 255 255 / 8%);
+  animation: action-feedback-panel-in 190ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.data-clear-confirm-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  margin-top: 4px;
+  place-items: center;
+  border-radius: 11px;
+  color: #ff9da5;
+  background: #4b252e;
+}
+.data-clear-confirm h2 {
+  margin: 5px 0 8px;
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 20px;
+  letter-spacing: -0.025em;
+}
+.data-clear-confirm h2:focus {
+  outline: 0;
+}
+.data-clear-confirm > div:last-child > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.data-clear-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+.data-clear-confirm-actions .button {
+  min-height: 44px;
+}
+.button-danger {
+  border-color: #a65361;
+  color: #fff;
+  background: #8b3d4d;
+}
+.button-danger:hover {
+  border-color: #c26370;
+  background: #a34d5c;
 }
 @media (max-width: 560px) {
   .action-feedback-backdrop {
@@ -3184,7 +3251,44 @@ textarea:focus-visible {
   }
   .action-feedback-modal {
     width: 100%;
-    padding: 20px 17px;
+    padding: 22px 18px 18px;
+    border-radius: 16px;
+  }
+  .data-clear-confirm {
+    width: 100%;
+    padding: 22px 18px 18px;
+    border-radius: 16px;
+  }
+  .data-clear-confirm-actions {
+    justify-content: stretch;
+  }
+  .data-clear-confirm-actions .button {
+    flex: 1;
+  }
+}
+@keyframes action-feedback-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes action-feedback-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-feedback-backdrop,
+  .action-feedback-modal,
+  .data-clear-confirm {
+    animation: none;
   }
 }
 .diagnostic-detail-page {
