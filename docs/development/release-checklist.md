@@ -21,7 +21,7 @@ go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml
 
 ## 手动候选包
 
-工作流提交到远程并完成 `gh auth login` 后运行：
+工作流提交到远程后，推送 `main` 会自动运行预编译；也可以手动运行：
 
 ```bash
 gh workflow run "Build Installers" \
@@ -45,6 +45,6 @@ gh run download <run-id> --name "agent-hub-installers-<run-id>"
 
 ## 完成判定
 
-- 手动构建和 tag 构建都会创建 Release；两条触发路径分别留存 run URL 和结论。
+- 手动构建只生成候选 artifact；只有 tag 构建会创建 Release，两条触发路径分别留存 run URL 和结论。
 - 任一安装格式缺失、checksum 不匹配、版本不一致或矩阵 job 失败，均不得发布。
 - B14 只有在三平台安装/启动、配置扫描、安全写入、SQLite 新装和 migration 升级均通过后才能标记 `resolved`。

@@ -25,6 +25,7 @@ describe("GitHub Actions workflow contract", () => {
 
   it("supports manual and v-tag installer builds", () => {
     expect(installers).toContain("workflow_dispatch:");
+    expect(installers).toMatch(/branches:\n\s+- main/);
     expect(installers).toMatch(/tags:\n\s+- "v\*"/);
     expect(installers).toContain("ref: ${{ github.ref }}");
     expect(installers).not.toContain("inputs.ref");
@@ -91,7 +92,7 @@ describe("GitHub Actions workflow contract", () => {
       "name: agent-hub-installers-${{ github.run_id }}",
     );
     expect(installers).toContain(
-      "if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))",
+      "if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')",
     );
     expect(installers).toContain("needs: [preflight, package]");
     expect(installers).toContain("contents: write");
