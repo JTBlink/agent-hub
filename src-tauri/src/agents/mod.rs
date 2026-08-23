@@ -12,6 +12,8 @@ pub mod standard;
 pub struct ScanContext {
     home_directory: PathBuf,
     claude_config_directory: Option<PathBuf>,
+    codex_home_directory: Option<PathBuf>,
+    opencode_config_file: Option<PathBuf>,
 }
 
 impl ScanContext {
@@ -19,6 +21,8 @@ impl ScanContext {
         Self {
             home_directory: home_directory.as_ref().to_path_buf(),
             claude_config_directory: None,
+            codex_home_directory: None,
+            opencode_config_file: None,
         }
     }
 
@@ -31,11 +35,27 @@ impl ScanContext {
         context.claude_config_directory = std::env::var_os("CLAUDE_CONFIG_DIR")
             .filter(|directory| !directory.is_empty())
             .map(PathBuf::from);
+        context.codex_home_directory = std::env::var_os("CODEX_HOME")
+            .filter(|directory| !directory.is_empty())
+            .map(PathBuf::from);
+        context.opencode_config_file = std::env::var_os("OPENCODE_CONFIG")
+            .filter(|path| !path.is_empty())
+            .map(PathBuf::from);
         context
     }
 
     pub fn with_claude_config_dir(mut self, directory: impl AsRef<Path>) -> Self {
         self.claude_config_directory = Some(directory.as_ref().to_path_buf());
+        self
+    }
+
+    pub fn with_codex_home(mut self, directory: impl AsRef<Path>) -> Self {
+        self.codex_home_directory = Some(directory.as_ref().to_path_buf());
+        self
+    }
+
+    pub fn with_opencode_config_file(mut self, path: impl AsRef<Path>) -> Self {
+        self.opencode_config_file = Some(path.as_ref().to_path_buf());
         self
     }
 
@@ -45,8 +65,16 @@ impl ScanContext {
             .unwrap_or_else(|| self.home_directory.join(".claude"))
     }
 
-    pub(crate) fn home_directory(&self) -> &Path {
-        &self.home_directory
+    pub(crate) fn codex_home_directory(&self) -> PathBuf {
+        self.codex_home_directory
+            .clone()
+            .unwrap_or_else(|| self.home_directory.join(".codex"))
+    }
+
+    pub(crate) fn opencode_config_file(&self) -> PathBuf {
+        self.opencode_config_file
+            .clone()
+            .unwrap_or_else(|| self.home_directory.join(".config/opencode/opencode.json"))
     }
 }
 
@@ -82,6 +110,7 @@ pub enum DiagnosticCode {
     JsonSyntax,
     JsoncSyntax,
     TomlSyntax,
+    SchemaMismatch,
     IoFailure,
 }
 

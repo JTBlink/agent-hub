@@ -99,9 +99,28 @@ pub struct NewConfigOperation {
     pub diagnostic_code: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigHistoryRecord {
+    pub id: i64,
+    pub config_file_id: Option<i64>,
+    pub agent: Agent,
+    pub scope: Scope,
+    pub path: String,
+    pub format: ConfigFormat,
+    pub operation_type: String,
+    pub before_checksum: Option<String>,
+    pub after_checksum: Option<String>,
+    pub backup_id: i64,
+    pub backup_path: String,
+    pub result: String,
+    pub diagnostic_code: Option<String>,
+    pub created_at: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewSkillSource {
-    pub source_type: String,
+    pub source_type: crate::skills::SourceKind,
     pub canonical_locator: String,
     pub manifest_path: Option<String>,
     pub requested_ref: Option<String>,
@@ -135,6 +154,13 @@ pub struct NewSkillInstallation {
     pub enabled: bool,
     pub state: InstallationState,
     pub managed_files_json: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PersistedSkillInstallation {
+    pub source_id: i64,
+    pub skill_id: i64,
+    pub installation_id: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -172,11 +198,29 @@ pub trait SettingsRepository {
     fn setting(&self, key: SettingKey) -> Result<Option<AppSetting>, PersistenceError>;
 }
 
-pub trait ConfigMetadataRepository {
+pub trait ConfigMetadataRepository: Send + Sync {
+    fn upsert_config_index(
+        &self,
+        workspace_id: Option<i64>,
+        config: &ConfigIndex,
+    ) -> Result<i64, PersistenceError>;
     fn config_indexes(&self, workspace_id: i64)
         -> Result<Vec<ConfigIndexRecord>, PersistenceError>;
     fn record_backup(&self, backup: &NewConfigBackup) -> Result<i64, PersistenceError>;
     fn record_operation(&self, operation: &NewConfigOperation) -> Result<i64, PersistenceError>;
+    fn record_config_change(
+        &self,
+        backup: &NewConfigBackup,
+        operation: &NewConfigOperation,
+    ) -> Result<i64, PersistenceError>;
+    fn config_history(
+        &self,
+        normalized_path: Option<&str>,
+    ) -> Result<Vec<ConfigHistoryRecord>, PersistenceError>;
+    fn config_history_entry(
+        &self,
+        operation_id: i64,
+    ) -> Result<Option<ConfigHistoryRecord>, PersistenceError>;
 }
 
 pub trait StorageDiagnosticsRepository: Send + Sync {
@@ -187,13 +231,27 @@ pub trait StorageSummaryRepository {
     fn storage_summary(&self) -> Result<StorageSummary, PersistenceError>;
 }
 
-pub trait SkillRepository {
+pub trait SkillRepository: Send + Sync {
     fn add_skill_source(&self, source: &NewSkillSource) -> Result<i64, PersistenceError>;
     fn add_skill_descriptor(&self, skill: &NewSkillDescriptor) -> Result<i64, PersistenceError>;
     fn record_skill_installation(
         &self,
         installation: &NewSkillInstallation,
     ) -> Result<i64, PersistenceError>;
+    /// Upsert source, descriptor, and installation in one SQLite transaction.
+    /// The ID placeholders in `skill` and `installation` are ignored.
+    fn save_skill_installation(
+        &self,
+        source: &NewSkillSource,
+        skill: &NewSkillDescriptor,
+        installation: &NewSkillInstallation,
+    ) -> Result<PersistedSkillInstallation, PersistenceError>;
+    fn set_skill_installation_enabled(
+        &self,
+        target_path: &str,
+        enabled: bool,
+    ) -> Result<bool, PersistenceError>;
+    fn remove_skill_installation(&self, target_path: &str) -> Result<bool, PersistenceError>;
 }
 
 pub trait WorkspaceRepository: Send + Sync {

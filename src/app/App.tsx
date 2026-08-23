@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   addWorkspace,
@@ -8,18 +8,23 @@ import {
   getDiagnostics,
   getOpenCodeGlobalConfig,
   getSkillInventory,
+  listConfigHistory,
   listWorkspaces,
   previewConfigEdit,
+  previewConfigRestore,
   readConfigSource,
   removeWorkspace,
   scanWorkspace,
+  restoreConfigHistory,
   writeConfig,
   type ConfigDocument,
   type ConfigEditPreview,
+  type ConfigHistoryRecord,
   type InstalledSkill,
   type SkillInventory,
   type UnifiedDiagnostic,
   type WorkspaceRecord,
+  type WorkspaceScanResult,
 } from "../lib/backend";
 import { APP_NAME } from "../lib/app-meta";
 
@@ -185,6 +190,43 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   );
 }
 
+function BrandGlyph({ size = 28 }: { size?: number }) {
+  const gradientId = useId();
+
+  return (
+    <svg
+      className="brand-glyph"
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="10" y1="8" x2="55" y2="57">
+          <stop offset="0" stopColor="#168bff" />
+          <stop offset="0.52" stopColor="#4f8dff" />
+          <stop offset="1" stopColor="#42d9b1" />
+        </linearGradient>
+      </defs>
+      <path
+        className="brand-glyph-rail"
+        d="M32 12v14M15 48l12-9M49 48l-12-9"
+      />
+      <path
+        className="brand-glyph-flow"
+        d="M32 10v16M13 49l14-10M51 49 37 39"
+        stroke={`url(#${gradientId})`}
+      />
+      <circle className="brand-glyph-node" cx="32" cy="9" r="6" />
+      <circle className="brand-glyph-node" cx="12" cy="50" r="6" />
+      <circle className="brand-glyph-node" cx="52" cy="50" r="6" />
+      <circle className="brand-glyph-hub-ring" cx="32" cy="34" r="11" />
+      <circle className="brand-glyph-hub" cx="32" cy="34" r="6" />
+      <circle className="brand-glyph-core" cx="32" cy="34" r="2.3" />
+    </svg>
+  );
+}
+
 function statusLabel(status: ConfigDocument["status"] | undefined) {
   if (status === "ready") return "已同步";
   if (status === "missing") return "未找到";
@@ -195,9 +237,16 @@ function statusLabel(status: ConfigDocument["status"] | undefined) {
 
 export function App() {
   const [section, setSection] = useState<Section>("overview");
+  const [searchQuery, setSearchQuery] = useState("");
   const [runtimeVersion, setRuntimeVersion] = useState<string>();
   const [configs, setConfigs] = useState<ConfigDocument[]>([]);
+  const [workspaceConfigs, setWorkspaceConfigs] = useState<ConfigDocument[]>(
+    [],
+  );
+  const [selectedScope, setSelectedScope] =
+    useState<ConfigDocument["scope"]>("global");
   const [skills, setSkills] = useState<SkillInventory>();
+  const [history, setHistory] = useState<ConfigHistoryRecord[]>([]);
   const [diagnostics, setDiagnostics] = useState<UnifiedDiagnostic[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
   const [selectedAgent, setSelectedAgent] =
@@ -244,15 +293,31 @@ export function App() {
     void listWorkspaces()
       .then(setWorkspaces)
       .catch(() => undefined);
+    void listConfigHistory()
+      .then(setHistory)
+      .catch(() => undefined);
   };
   useEffect(() => {
     scan();
   }, []);
 
-  const selectedConfig = useMemo(
-    () => configs.find((config) => config.agent === selectedAgent),
-    [configs, selectedAgent],
-  );
+  const visibleConfigs =
+    selectedScope === "global" ? configs : workspaceConfigs;
+  const selectedConfig = useMemo(() => {
+    const config = visibleConfigs.find(
+      (candidate) => candidate.agent === selectedAgent,
+    );
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    if (!config || !normalizedQuery) return config;
+    const haystack = [
+      agentMeta[config.agent].name,
+      config.path,
+      statusLabel(config.status),
+    ]
+      .join(" ")
+      .toLocaleLowerCase();
+    return haystack.includes(normalizedQuery) ? config : undefined;
+  }, [visibleConfigs, selectedAgent, searchQuery]);
   const readyCount = configs.filter(
     (config) => config.status === "ready",
   ).length;
@@ -314,16 +379,24 @@ export function App() {
     <div className="app-shell">
       <aside className="sidebar" aria-label="主导航">
         <div className="brand-lockup">
-          <div className="brand-mark">A</div>
+          <div className="brand-mark">
+            <BrandGlyph />
+          </div>
           <div>
             <strong>{APP_NAME}</strong>
             <span>本地 Agent 工作空间</span>
           </div>
         </div>
-        <div className="workspace-switcher">
+        <div
+          className="workspace-switcher"
+          role="status"
+          aria-label="当前工作空间：个人工作区"
+        >
           <span className="workspace-dot" />
-          个人工作区
-          <Icon name="arrow" size={14} />
+          <span>
+            <strong>个人工作区</strong>
+            <small>全局配置上下文</small>
+          </span>
         </div>
         <nav className="main-nav">
           <p className="nav-label">工作台</p>
@@ -362,7 +435,12 @@ export function App() {
           <span className="version">v{runtimeVersion ?? "0.1.0"}</span>
         </div>
       </aside>
-      <main className="main-content" id="main-content" tabIndex={-1}>
+      <main
+        className="main-content"
+        id="main-content"
+        tabIndex={-1}
+        aria-busy={loading}
+      >
         <header className="topbar">
           <div className="breadcrumb">
             <span>AgentHub</span>
@@ -374,19 +452,42 @@ export function App() {
           <div className="topbar-actions">
             <label className="search-field">
               <Icon name="search" size={16} />
-              <span className="sr-only">搜索</span>
-              <input placeholder="搜索配置、Skill…" />
+              <span className="sr-only">搜索配置、Skill 和工作空间</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="搜索配置、Skill…"
+                aria-label="搜索配置、Skill 和工作空间"
+              />
+              {searchQuery && (
+                <button
+                  className="search-clear"
+                  type="button"
+                  aria-label="清除搜索"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              )}
             </label>
             <button
               className="button button-ghost"
               onClick={scan}
               disabled={loading}
+              aria-label={loading ? "扫描中" : "重新扫描"}
             >
               <Icon name="refresh" size={16} />
-              {loading ? "扫描中" : "重新扫描"}
+              <span>{loading ? "扫描中" : "重新扫描"}</span>
             </button>
           </div>
         </header>
+        {loading && (
+          <div className="loading-banner" role="status" aria-live="polite">
+            <span className="loading-spinner" aria-hidden="true" />
+            正在扫描本机 Agent 配置与 Skills…
+          </div>
+        )}
         {error && (
           <div className="alert alert-error" role="alert">
             <Icon name="warning" />
@@ -406,6 +507,12 @@ export function App() {
         {section === "configs" && (
           <ConfigCenter
             configs={configs}
+            workspaceConfigs={workspaceConfigs}
+            selectedScope={selectedScope}
+            setSelectedScope={(scope) => {
+              setSelectedScope(scope);
+              setEditing(false);
+            }}
             selectedAgent={selectedAgent}
             setSelectedAgent={setSelectedAgent}
             selectedConfig={selectedConfig}
@@ -424,22 +531,43 @@ export function App() {
             onPreview={showPreview}
             onSave={saveChanges}
             saving={saving}
+            searchQuery={searchQuery}
           />
         )}
-        {section === "skills" && <SkillsCenter skills={skills} />}
+        {section === "skills" && (
+          <SkillsCenter
+            skills={skills}
+            searchQuery={searchQuery}
+            onScan={scan}
+            onNavigate={setSection}
+          />
+        )}
         {section === "workspaces" && (
-          <WorkspacesPage workspaces={workspaces} onChanged={scan} />
+          <WorkspacesPage
+            workspaces={workspaces}
+            onChanged={scan}
+            searchQuery={searchQuery}
+            onScanned={(result) => {
+              setWorkspaceConfigs(result.configs);
+              setSelectedScope("workspace");
+              setSection("configs");
+            }}
+          />
         )}
         {section === "diagnostics" && (
-          <DiagnosticsPage diagnostics={diagnostics} onNavigate={setSection} />
+          <DiagnosticsPage
+            diagnostics={diagnostics}
+            onNavigate={setSection}
+            onRepair={scan}
+            searchQuery={searchQuery}
+          />
         )}
         {section === "history" && (
-          <EmptyPage
-            icon="history"
-            title="还没有变更记录"
-            description="你确认写入的配置会在这里留下时间、范围和备份位置，随时可以回滚。"
-            action="查看配置中心"
-            onAction={() => setSection("configs")}
+          <HistoryPage
+            history={history}
+            onNavigate={setSection}
+            onChanged={scan}
+            searchQuery={searchQuery}
           />
         )}
         {section === "settings" && <SettingsPage />}
@@ -518,7 +646,9 @@ function Overview({
             <span />
           </div>
           <div className="hub-node">
-            <div className="hub-orbit">A</div>
+            <div className="hub-orbit">
+              <BrandGlyph size={46} />
+            </div>
             <strong>AgentHub</strong>
             <small>统一配置中枢</small>
           </div>
@@ -679,6 +809,9 @@ function Metric({
 
 function ConfigCenter({
   configs,
+  workspaceConfigs,
+  selectedScope,
+  setSelectedScope,
   selectedAgent,
   setSelectedAgent,
   selectedConfig,
@@ -693,8 +826,12 @@ function ConfigCenter({
   onPreview,
   onSave,
   saving,
+  searchQuery,
 }: {
   configs: ConfigDocument[];
+  workspaceConfigs: ConfigDocument[];
+  selectedScope: ConfigDocument["scope"];
+  setSelectedScope: (scope: ConfigDocument["scope"]) => void;
   selectedAgent: ConfigDocument["agent"];
   setSelectedAgent: (agent: ConfigDocument["agent"]) => void;
   selectedConfig?: ConfigDocument;
@@ -709,7 +846,20 @@ function ConfigCenter({
   onPreview: () => void;
   onSave: () => void;
   saving: boolean;
+  searchQuery: string;
 }) {
+  const visibleConfigs =
+    selectedScope === "global" ? configs : workspaceConfigs;
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredConfigs = normalizedQuery
+    ? visibleConfigs.filter((config) => {
+        const agentName = agentMeta[config.agent].name.toLocaleLowerCase();
+        return [agentName, config.path, statusLabel(config.status)]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery);
+      })
+    : visibleConfigs;
   return (
     <div className="page">
       <PageIntro
@@ -727,15 +877,38 @@ function ConfigCenter({
         <aside className="config-sidebar">
           <div className="config-side-heading">
             <strong>Agent 配置</strong>
-            <span>3 个入口</span>
+            <span>{selectedScope === "global" ? "全局" : "工作空间"}</span>
+          </div>
+          <div className="scope-switch" role="group" aria-label="配置作用域">
+            <button
+              className={selectedScope === "global" ? "selected" : ""}
+              aria-pressed={selectedScope === "global"}
+              onClick={() => setSelectedScope("global")}
+            >
+              全局
+            </button>
+            <button
+              className={selectedScope === "workspace" ? "selected" : ""}
+              aria-pressed={selectedScope === "workspace"}
+              disabled={!workspaceConfigs.length}
+              onClick={() => setSelectedScope("workspace")}
+            >
+              工作空间
+            </button>
           </div>
           {(["claude-code", "codex", "opencode"] as const).map((agent) => {
-            const config = configs.find((item) => item.agent === agent);
+            const config = visibleConfigs.find((item) => item.agent === agent);
             const meta = agentMeta[agent];
+            if (
+              normalizedQuery &&
+              !filteredConfigs.some((item) => item.agent === agent)
+            )
+              return null;
             return (
               <button
                 key={agent}
                 className={`config-agent ${selectedAgent === agent ? "selected" : ""}`}
+                aria-pressed={selectedAgent === agent}
                 onClick={() => {
                   setSelectedAgent(agent);
                   onCancel();
@@ -760,7 +933,11 @@ function ConfigCenter({
             <Icon name="file" size={16} />
             <span>
               <strong>当前作用域</strong>
-              <small>全局配置 · 只影响你的用户账户</small>
+              <small>
+                {selectedScope === "global"
+                  ? "全局配置 · 只影响你的用户账户"
+                  : "工作空间配置 · 只影响当前项目"}
+              </small>
             </span>
           </div>
         </aside>
@@ -775,7 +952,11 @@ function ConfigCenter({
                     {agentMeta[selectedConfig.agent].mark}
                   </div>
                   <div>
-                    <h2>{agentMeta[selectedConfig.agent].name} 全局配置</h2>
+                    <h2>
+                      {agentMeta[selectedConfig.agent].name}{" "}
+                      {selectedConfig.scope === "global" ? "全局" : "工作空间"}
+                      配置
+                    </h2>
                     <p>{selectedConfig.path}</p>
                   </div>
                 </div>
@@ -917,6 +1098,14 @@ function ConfigCenter({
                 </div>
               )}
             </>
+          ) : normalizedQuery ? (
+            <div className="empty-state large">
+              <div className="empty-icon">
+                <Icon name="search" size={24} />
+              </div>
+              <h2>没有匹配的配置</h2>
+              <p>试试搜索 Agent 名称、文件路径或状态，例如“Codex”。</p>
+            </div>
           ) : (
             <div className="empty-state large">
               <div className="empty-icon">
@@ -932,15 +1121,60 @@ function ConfigCenter({
   );
 }
 
-function SkillsCenter({ skills }: { skills?: SkillInventory }) {
+function SkillsCenter({
+  skills,
+  searchQuery,
+  onScan,
+  onNavigate,
+}: {
+  skills?: SkillInventory;
+  searchQuery: string;
+  onScan: () => void;
+  onNavigate: (section: Section) => void;
+}) {
+  const [filter, setFilter] = useState<
+    "all" | "global" | "workspace" | "managed" | "external"
+  >("all");
+  const [showSourceGuide, setShowSourceGuide] = useState(false);
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const filteredSkills = useMemo(
+    () =>
+      (skills?.skills ?? []).filter((skill) => {
+        const matchesFilter =
+          filter === "all" ||
+          (filter === "managed" && skill.sourceTracked) ||
+          (filter === "external" && !skill.sourceTracked) ||
+          skill.scope === filter;
+        const haystack = [
+          skill.displayName,
+          skill.relativePath,
+          skill.path,
+          skill.agent,
+        ]
+          .join(" ")
+          .toLocaleLowerCase();
+        return (
+          matchesFilter &&
+          (!normalizedQuery || haystack.includes(normalizedQuery))
+        );
+      }),
+    [filter, normalizedQuery, skills],
+  );
   const groups = useMemo(() => {
     const result = new Map<string, InstalledSkill[]>();
-    skills?.skills.forEach((skill) => {
+    filteredSkills.forEach((skill) => {
       const key = skill.agent;
       result.set(key, [...(result.get(key) ?? []), skill]);
     });
     return result;
-  }, [skills]);
+  }, [filteredSkills]);
+  const filters = [
+    ["all", "全部"],
+    ["global", "全局"],
+    ["workspace", "工作空间"],
+    ["managed", "AgentHub 管理"],
+    ["external", "外部管理"],
+  ] as const;
   return (
     <div className="page">
       <PageIntro
@@ -948,23 +1182,65 @@ function SkillsCenter({ skills }: { skills?: SkillInventory }) {
         title="Skills，从哪里来一目了然。"
         description="统一盘点全局与工作空间里的 Skill，区分来源、作用域和管理归属。"
         action={
-          <button className="button button-primary">
+          <button
+            className="button button-primary"
+            aria-expanded={showSourceGuide}
+            aria-controls="source-guide"
+            onClick={() => setShowSourceGuide((visible) => !visible)}
+          >
             <Icon name="plus" size={16} />
             添加来源
           </button>
         }
       />
+      {showSourceGuide && (
+        <section
+          className="source-guide"
+          id="source-guide"
+          aria-labelledby="source-guide-title"
+        >
+          <div>
+            <p className="eyebrow">添加来源</p>
+            <h2 id="source-guide-title">先从本地工作空间开始</h2>
+            <p>
+              登记项目目录后会自动发现其中的
+              Skills。Git、自定义仓库、Marketplace 与 skills.sh
+              来源将在来源管理流程中统一安装和更新。
+            </p>
+          </div>
+          <div className="source-guide-actions">
+            <button
+              className="button button-primary"
+              onClick={() => onNavigate("workspaces")}
+            >
+              <Icon name="folder" size={16} />
+              添加本地目录
+            </button>
+            <button
+              className="button button-ghost"
+              onClick={() => setShowSourceGuide(false)}
+            >
+              稍后处理
+            </button>
+          </div>
+        </section>
+      )}
       <div className="skill-toolbar">
-        <div className="source-chips">
-          <span className="chip active">
-            全部 <b>{skills?.skills.length ?? 0}</b>
-          </span>
-          <span className="chip">本地目录</span>
-          <span className="chip">Git 仓库</span>
-          <span className="chip">Marketplace</span>
-          <span className="chip">skills.sh</span>
+        <div className="source-chips" role="group" aria-label="Skill 筛选">
+          {filters.map(([value, label]) => (
+            <button
+              className={`chip ${filter === value ? "active" : ""}`}
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+            >
+              {label}
+              {value === "all" && <b>{skills?.skills.length ?? 0}</b>}
+            </button>
+          ))}
         </div>
-        <button className="button button-ghost">
+        <button className="button button-ghost" onClick={onScan}>
           <Icon name="refresh" size={16} />
           扫描 Skills
         </button>
@@ -979,7 +1255,7 @@ function SkillsCenter({ skills }: { skills?: SkillInventory }) {
         </div>
       ) : null}
       <div className="skill-grid">
-        {skills && skills.skills.length > 0 ? (
+        {skills && filteredSkills.length > 0 ? (
           Array.from(groups.entries()).map(([agent, items]) => (
             <section className="skill-group" key={agent}>
               <div className="group-heading">
@@ -1021,8 +1297,15 @@ function SkillsCenter({ skills }: { skills?: SkillInventory }) {
               <Icon name="spark" size={24} />
             </div>
             <h2>还没有发现 Skill</h2>
-            <p>添加本地目录、Git 仓库或标准 Marketplace 后，在这里统一查看。</p>
-            <button className="button button-primary">
+            <p>
+              {normalizedQuery || filter !== "all"
+                ? "没有符合当前搜索或筛选条件的 Skill。"
+                : "添加本地目录、Git 仓库或标准 Marketplace 后，在这里统一查看。"}
+            </p>
+            <button
+              className="button button-primary"
+              onClick={() => setShowSourceGuide(true)}
+            >
               <Icon name="plus" size={16} />
               添加第一个来源
             </button>
@@ -1036,22 +1319,36 @@ function SkillsCenter({ skills }: { skills?: SkillInventory }) {
 function WorkspacesPage({
   workspaces,
   onChanged,
+  onScanned,
+  searchQuery,
 }: {
   workspaces: WorkspaceRecord[];
   onChanged: () => void;
+  onScanned: (result: WorkspaceScanResult) => void;
+  searchQuery: string;
 }) {
   const [path, setPath] = useState("");
   const [message, setMessage] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const visibleWorkspaces = normalizedQuery
+    ? workspaces.filter((workspace) =>
+        [workspace.displayName, workspace.normalizedPath]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery),
+      )
+    : workspaces;
   async function addAndScan() {
     if (!path.trim() || busy) return;
     setBusy(true);
     try {
       await addWorkspace(path.trim());
-      await scanWorkspace(path.trim());
+      const result = await scanWorkspace(path.trim());
       setMessage("工作空间已添加并完成扫描。");
       setPath("");
       onChanged();
+      onScanned(result);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -1104,7 +1401,7 @@ function WorkspacesPage({
           <small>路径会先规范化并拒绝符号链接，避免重复登记和越权扫描。</small>
         </div>
         {message && (
-          <p className="inline-message" role="status">
+          <p className="inline-message" role="status" aria-live="polite">
             {message}
           </p>
         )}
@@ -1120,9 +1417,9 @@ function WorkspacesPage({
             </h2>
           </div>
         </div>
-        {workspaces.length ? (
+        {visibleWorkspaces.length ? (
           <div className="workspace-rows">
-            {workspaces.map((workspace) => (
+            {visibleWorkspaces.map((workspace) => (
               <article className="workspace-row" key={workspace.id}>
                 <div className="quick-icon teal">
                   <Icon name="folder" size={17} />
@@ -1135,7 +1432,10 @@ function WorkspacesPage({
                   className="button button-ghost"
                   onClick={() =>
                     void scanWorkspace(workspace.normalizedPath)
-                      .then(onChanged)
+                      .then((result) => {
+                        onChanged();
+                        onScanned(result);
+                      })
                       .catch(() =>
                         setMessage("重新扫描失败，请确认目录仍然存在。"),
                       )
@@ -1153,6 +1453,14 @@ function WorkspacesPage({
                 </button>
               </article>
             ))}
+          </div>
+        ) : normalizedQuery ? (
+          <div className="workspace-empty">
+            <div className="empty-icon">
+              <Icon name="search" size={23} />
+            </div>
+            <h3>没有匹配的工作空间</h3>
+            <p>试试项目名称或目录路径中的其他关键词。</p>
           </div>
         ) : (
           <div className="workspace-empty">
@@ -1174,11 +1482,25 @@ function WorkspacesPage({
 function DiagnosticsPage({
   diagnostics,
   onNavigate,
+  onRepair,
+  searchQuery,
 }: {
   diagnostics: UnifiedDiagnostic[];
   onNavigate: (section: Section) => void;
+  onRepair: () => void;
+  searchQuery: string;
 }) {
-  const actionable = diagnostics.filter((item) => item.severity !== "info");
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const actionable = diagnostics.filter((item) => {
+    if (item.severity === "info") return false;
+    return (
+      !normalizedQuery ||
+      [item.code, item.impact, item.nextAction, item.resourcePath ?? ""]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(normalizedQuery)
+    );
+  });
   return (
     <div className="page">
       <PageIntro
@@ -1186,10 +1508,10 @@ function DiagnosticsPage({
         title="问题要有下一步。"
         description="统一查看配置、来源和本地存储状态；每条诊断都附带影响范围与恢复建议。"
         action={
-          <span className="privacy-inline">
-            <Icon name="shield" size={15} />
-            路径已做安全处理
-          </span>
+          <button className="button button-ghost" onClick={onRepair}>
+            <Icon name="refresh" size={15} />
+            执行安全重扫
+          </button>
         }
       />
       {actionable.length ? (
@@ -1218,12 +1540,28 @@ function DiagnosticsPage({
               </div>
               <button
                 className="button button-ghost"
-                onClick={() => onNavigate(item.agent ? "configs" : "settings")}
+                onClick={() =>
+                  onNavigate(
+                    item.agent
+                      ? "configs"
+                      : item.code.startsWith("skill:")
+                        ? "skills"
+                        : "settings",
+                  )
+                }
               >
                 查看
               </button>
             </article>
           ))}
+        </div>
+      ) : normalizedQuery ? (
+        <div className="empty-page compact">
+          <div className="empty-icon">
+            <Icon name="search" size={27} />
+          </div>
+          <h2>没有匹配的诊断</h2>
+          <p>清除搜索或换一个诊断码、文件路径关键词。</p>
         </div>
       ) : (
         <div className="empty-page">
@@ -1246,34 +1584,179 @@ function DiagnosticsPage({
   );
 }
 
-function EmptyPage({
-  icon,
-  title,
-  description,
-  action,
-  onAction,
+function HistoryPage({
+  history,
+  onNavigate,
+  onChanged,
+  searchQuery,
 }: {
-  icon: IconName;
-  title: string;
-  description: string;
-  action: string;
-  onAction?: () => void;
+  history: ConfigHistoryRecord[];
+  onNavigate: (section: Section) => void;
+  onChanged: () => void;
+  searchQuery: string;
 }) {
+  const [selected, setSelected] = useState<ConfigHistoryRecord>();
+  const [restorePreview, setRestorePreview] = useState<ConfigEditPreview>();
+  const [message, setMessage] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const visibleHistory = normalizedQuery
+    ? history.filter((entry) =>
+        [
+          agentMeta[entry.agent].name,
+          entry.path,
+          entry.operationType,
+          entry.scope,
+          entry.result,
+        ]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery),
+      )
+    : history;
+  async function previewRestore(entry: ConfigHistoryRecord) {
+    setBusy(true);
+    setMessage(undefined);
+    try {
+      setSelected(entry);
+      setRestorePreview(await previewConfigRestore(entry.id));
+    } catch {
+      setMessage("无法生成恢复 Diff。请先重新扫描对应配置。");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function confirmRestore() {
+    if (!selected || !restorePreview || busy) return;
+    setBusy(true);
+    try {
+      await restoreConfigHistory(selected.id, restorePreview.before.checksum);
+      setMessage("配置已从历史备份恢复，并为恢复前内容创建了新备份。");
+      setSelected(undefined);
+      setRestorePreview(undefined);
+      onChanged();
+    } catch {
+      setMessage("恢复失败：配置可能已被外部修改。重新扫描并检查最新 Diff。");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <div className="page">
-      <PageIntro eyebrow="工作台" title={title} description={description} />
-      <div className="empty-page">
-        <div className="empty-icon">
-          <Icon name={icon} size={28} />
+      <PageIntro
+        eyebrow="工作台 / 变更历史"
+        title="每一次写入，都留有退路。"
+        description="这里只保存非敏感元数据和备份位置；恢复前仍会生成遮罩 Diff 并要求明确确认。"
+      />
+      {message && (
+        <div className="alert alert-warning" role="status">
+          <Icon name="warning" />
+          <span>{message}</span>
         </div>
-        <h2>{title}</h2>
-        <p>{description}</p>
-        <button className="button button-primary" onClick={onAction}>
-          <Icon name="plus" size={16} />
-          {action}
-        </button>
-        <small>这是本地操作，不会依赖 GitHub Issues 或第三方数据库。</small>
-      </div>
+      )}
+      {visibleHistory.length ? (
+        <div className="history-list">
+          {visibleHistory.map((entry) => (
+            <article className="history-row" key={entry.id}>
+              <div
+                className={`agent-avatar small ${agentMeta[entry.agent].tone}`}
+              >
+                {agentMeta[entry.agent].mark}
+              </div>
+              <div className="history-copy">
+                <div>
+                  <strong>
+                    {entry.operationType === "rollback"
+                      ? "恢复配置"
+                      : "编辑配置"}
+                  </strong>
+                  <span className={`scope-pill ${entry.scope}`}>
+                    {entry.scope === "global" ? "全局" : "工作空间"}
+                  </span>
+                </div>
+                <span>{entry.path}</span>
+                <small>
+                  {new Date(
+                    `${entry.createdAt.replace(" ", "T")}Z`,
+                  ).toLocaleString("zh-CN")}{" "}
+                  · {entry.result === "succeeded" ? "成功" : "失败"}
+                </small>
+              </div>
+              <button
+                className="button button-ghost"
+                disabled={busy || entry.result !== "succeeded"}
+                onClick={() => void previewRestore(entry)}
+              >
+                预览恢复
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : normalizedQuery ? (
+        <div className="empty-page compact">
+          <div className="empty-icon">
+            <Icon name="search" size={27} />
+          </div>
+          <h2>没有匹配的变更记录</h2>
+          <p>可以按 Agent 名称、配置路径或操作类型搜索。</p>
+        </div>
+      ) : (
+        <div className="empty-page">
+          <div className="empty-icon">
+            <Icon name="history" size={27} />
+          </div>
+          <h2>还没有变更记录</h2>
+          <p>完成第一次配置写入后，备份和恢复入口会显示在这里。</p>
+          <button
+            className="button button-primary"
+            onClick={() => onNavigate("configs")}
+          >
+            打开配置中心
+          </button>
+        </div>
+      )}
+      {selected && restorePreview && (
+        <section className="restore-panel" aria-labelledby="restore-title">
+          <div className="editor-header">
+            <div>
+              <span className="eyebrow">恢复确认</span>
+              <strong id="restore-title">
+                恢复 {agentMeta[selected.agent].name} 配置
+              </strong>
+            </div>
+            <button
+              className="icon-button"
+              aria-label="关闭恢复预览"
+              onClick={() => {
+                setSelected(undefined);
+                setRestorePreview(undefined);
+              }}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          <p>确认后会把当前文件再次备份，再原子替换为所选历史版本。</p>
+          <pre>{restorePreview.diff || "所选备份与当前内容一致。"}</pre>
+          <div className="editor-footer">
+            <button
+              className="button button-ghost"
+              onClick={() => {
+                setSelected(undefined);
+                setRestorePreview(undefined);
+              }}
+            >
+              取消
+            </button>
+            <button
+              className="button button-primary"
+              disabled={!restorePreview.changed || busy}
+              onClick={() => void confirmRestore()}
+            >
+              {busy ? "恢复中…" : "确认恢复并备份"}
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -1300,18 +1783,14 @@ function SettingsPage() {
               <strong>敏感值遮罩</strong>
               <span>Token、密钥和密码在预览与诊断中自动隐藏</span>
             </div>
-            <span className="toggle on" aria-label="敏感值遮罩已开启">
-              <i />
-            </span>
+            <span className="setting-value">强制开启</span>
           </div>
           <div className="setting-row">
             <div>
               <strong>写入前备份</strong>
               <span>每次确认写入都会保留可回滚副本</span>
             </div>
-            <span className="toggle on" aria-label="写入前备份已开启">
-              <i />
-            </span>
+            <span className="setting-value">强制开启</span>
           </div>
         </section>
         <section className="surface-card">
@@ -1327,9 +1806,7 @@ function SettingsPage() {
               <strong>启动时扫描</strong>
               <span>打开应用后读取三种 Agent 的全局配置</span>
             </div>
-            <span className="toggle on" aria-label="启动时扫描已开启">
-              <i />
-            </span>
+            <span className="setting-value">默认开启</span>
           </div>
           <div className="setting-row">
             <div>

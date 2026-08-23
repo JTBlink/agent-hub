@@ -8,10 +8,16 @@ struct Migration {
     sql: &'static str,
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    sql: include_str!("../../migrations/0001_initial.sql"),
-}];
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        sql: include_str!("../../migrations/0001_initial.sql"),
+    },
+    Migration {
+        version: 2,
+        sql: include_str!("../../migrations/0002_config_history_snapshot.sql"),
+    },
+];
 
 pub(super) fn run_migrations(connection: &mut Connection) -> Result<(), PersistenceError> {
     apply_migrations(connection, MIGRATIONS)

@@ -1,8 +1,8 @@
 use std::fs;
 
 use agent_hub_lib::skills::{
-    preset_git_sources, GitLocator, GitSourceAdapter, LocalSourceAdapter, MarketplaceSourceAdapter,
-    SkillSourceAdapter, SkillsShSourceAdapter, SourceError, SourceKind,
+    preset_git_sources, scan_installed_skills, GitLocator, GitSourceAdapter, LocalSourceAdapter,
+    MarketplaceSourceAdapter, SkillSourceAdapter, SkillsShSourceAdapter, SourceError, SourceKind,
 };
 use tempfile::tempdir;
 
@@ -71,4 +71,32 @@ fn remote_sources_require_a_caller_provided_checkout() {
     assert!(preset_git_sources()
         .iter()
         .all(|source| source.metadata().kind == SourceKind::PresetGit));
+}
+
+#[test]
+fn inventory_reports_scope_path_external_management_and_duplicates_without_mutation() {
+    let home = tempdir().expect("home");
+    let workspace = tempdir().expect("workspace");
+    write_skill(&home.path().join(".claude/skills"), "review");
+    write_skill(&home.path().join(".agents/skills"), "review");
+    fs::create_dir_all(home.path().join(".codex/skills/review")).expect("legacy root");
+    fs::write(
+        home.path().join(".codex/skills/review/SKILL.md"),
+        "---\nname: review\ndescription: legacy\n---\n",
+    )
+    .expect("legacy Skill");
+    let before = fs::read_dir(home.path()).expect("home lists").count();
+    let inventory = scan_installed_skills(home.path(), Some(workspace.path()));
+    let after = fs::read_dir(home.path()).expect("home lists").count();
+    assert_eq!(before, after);
+    assert!(inventory.skills.iter().any(|skill| {
+        skill.agent == agent_hub_lib::Agent::ClaudeCode
+            && skill.scope == agent_hub_lib::Scope::Global
+            && skill.path.ends_with(".claude/skills/review/SKILL.md")
+            && !skill.source_tracked
+    }));
+    assert!(inventory
+        .duplicate_names
+        .iter()
+        .any(|name| name == "review"));
 }

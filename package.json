@@ -15,6 +15,7 @@
     "prototype:d04": "node scripts/serve-d04-prototype.mjs",
     "version:check": "node scripts/check-version.mjs",
     "version:set": "node scripts/set-version.mjs",
+    "tasks:check": "node scripts/check-task-status.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

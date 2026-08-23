@@ -1,33 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="brand" x1="182" y1="172" x2="842" y2="850" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#A7B8FF" />
-      <stop offset="0.52" stop-color="#8096FF" />
-      <stop offset="1" stop-color="#59D8B1" />
+    <linearGradient id="flow-top" x1="470" y1="180" x2="550" y2="390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AAB5FF" />
+      <stop offset="0.48" stop-color="#7D8CFF" />
+      <stop offset="1" stop-color="#2C9CFF" />
+    </linearGradient>
+    <linearGradient id="flow-left" x1="205" y1="825" x2="470" y2="545" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#168BFF" />
+      <stop offset="1" stop-color="#7185FF" />
+    </linearGradient>
+    <linearGradient id="flow-right" x1="805" y1="825" x2="555" y2="535" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42D9B1" />
+      <stop offset="0.5" stop-color="#25C8C8" />
+      <stop offset="1" stop-color="#2C9CFF" />
+    </linearGradient>
+    <linearGradient id="hub" x1="375" y1="365" x2="660" y2="655" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8A8DFF" />
+      <stop offset="0.48" stop-color="#168BFF" />
+      <stop offset="1" stop-color="#42D9B1" />
+    </linearGradient>
+    <linearGradient id="core" x1="474" y1="470" x2="552" y2="552" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AAB5FF" />
+      <stop offset="0.5" stop-color="#6E89FF" />
+      <stop offset="1" stop-color="#42D9B1" />
     </linearGradient>
   </defs>
 
   <!--
     Master icon contract: 1024 × 1024 RGBA canvas.
-    Opaque card: x/y 68, size 888, radius 192, border 8.
+    Opaque card: x/y 97, size 830, radius 192.
+    Inner border: x/y 105, size 814, radius 184, stroke 6.
     Only the rounded-corner outside remains transparent.
   -->
-  <rect x="68" y="68" width="888" height="888" rx="192" fill="#0F172A" />
-  <rect x="72" y="72" width="880" height="880" rx="188" fill="none" stroke="#2A3F63" stroke-width="8" />
+  <rect x="97" y="97" width="830" height="830" rx="192" fill="#0F1835" />
+  <rect x="105" y="105" width="814" height="814" rx="184" fill="none" stroke="#263B67" stroke-width="6" />
 
-  <!-- Three agent nodes connected to one local workspace hub. All fills are opaque. -->
-  <line x1="512" y1="508" x2="512" y2="288" stroke="#8096FF" stroke-width="12" stroke-linecap="round" />
-  <line x1="512" y1="508" x2="321" y2="620" stroke="#8096FF" stroke-width="12" stroke-linecap="round" />
-  <line x1="512" y1="508" x2="703" y2="620" stroke="#59D8B1" stroke-width="12" stroke-linecap="round" />
+  <!-- Opaque rails add depth without relying on shadows or transparency. -->
+  <path d="M512 246 C512 318 512 357 512 410" fill="none" stroke="#1A294D" stroke-width="52" stroke-linecap="round" />
+  <path d="M261 771 C337 692 400 620 450 566" fill="none" stroke="#1A294D" stroke-width="52" stroke-linecap="round" />
+  <path d="M763 771 C687 692 624 620 574 566" fill="none" stroke="#163B4C" stroke-width="52" stroke-linecap="round" />
 
-  <circle cx="512" cy="288" r="62" fill="#243766" stroke="#A7B8FF" stroke-width="8" />
-  <circle cx="321" cy="620" r="62" fill="#243766" stroke="#8096FF" stroke-width="8" />
-  <circle cx="703" cy="620" r="62" fill="#1D4A47" stroke="#59D8B1" stroke-width="8" />
-  <circle cx="512" cy="288" r="18" fill="#F3F6FF" />
-  <circle cx="321" cy="620" r="18" fill="#F3F6FF" />
-  <circle cx="703" cy="620" r="18" fill="#E4FFF5" />
+  <!-- Edge-inspired flowing energy bands, retaining AgentHub's three-node topology. -->
+  <path d="M512 246 C512 318 512 357 512 410" fill="none" stroke="url(#flow-top)" stroke-width="34" stroke-linecap="round" />
+  <path d="M261 771 C337 692 400 620 450 566" fill="none" stroke="url(#flow-left)" stroke-width="34" stroke-linecap="round" />
+  <path d="M763 771 C687 692 624 620 574 566" fill="none" stroke="url(#flow-right)" stroke-width="34" stroke-linecap="round" />
 
-  <circle cx="512" cy="508" r="142" fill="#1B2C50" stroke="#8096FF" stroke-width="8" />
-  <circle cx="512" cy="508" r="94" fill="#0F172A" stroke="#59D8B1" stroke-width="8" />
-  <circle cx="512" cy="508" r="36" fill="url(#brand)" />
+  <!-- Three Agent endpoints. -->
+  <circle cx="512" cy="246" r="66" fill="url(#flow-top)" />
+  <circle cx="261" cy="771" r="66" fill="url(#flow-left)" />
+  <circle cx="763" cy="771" r="66" fill="url(#flow-right)" />
+  <circle cx="512" cy="246" r="43" fill="#182748" />
+  <circle cx="261" cy="771" r="43" fill="#182748" />
+  <circle cx="763" cy="771" r="43" fill="#123746" />
+  <circle cx="512" cy="246" r="17" fill="#F4F7FF" />
+  <circle cx="261" cy="771" r="17" fill="#F4F7FF" />
+  <circle cx="763" cy="771" r="17" fill="#E8FFF8" />
+
+  <!-- One local Hub receives all three flows. -->
+  <circle cx="512" cy="510" r="154" fill="url(#hub)" />
+  <circle cx="512" cy="510" r="112" fill="#101B39" />
+  <circle cx="512" cy="510" r="51" fill="url(#core)" />
+  <circle cx="512" cy="510" r="19" fill="#F4F7FF" />
 </svg>
