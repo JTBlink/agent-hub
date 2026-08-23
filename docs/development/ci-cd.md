@@ -41,10 +41,10 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 版本唯一维护在仓库根目录的 `VERSION` 文件。直接修改它后运行 `npm run version:sync`，即可同步生成 `package.json`、lockfile、Cargo 和 Tauri 版本号；也可以用 `npm run version:set -- <version>` 一步完成修改与同步。完成后提交版本变更并推送同名 tag：
 
 ```bash
-npm run version:set -- 0.1.0
-npm run version:check -- v0.1.0
-git tag v0.1.0
-git push origin v0.1.0
+npm run version:set -- 0.1.1
+npm run version:check -- v0.1.1
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 推送 `v*` tag 会先重新执行格式、lint、前端/Rust 测试和版本一致性校验，再触发全部平台构建。只有事件类型为 tag push 且所有质量门禁及矩阵任务成功后，工作流才读取生产签名 Secrets（若已显式开启）并创建 GitHub Release；任一环节失败都不会发布不完整的正式版本。

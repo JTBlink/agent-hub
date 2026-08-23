@@ -1,7 +1,7 @@
 {
   "name": "agent-hub",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "release:assemble": "node scripts/assemble-release.mjs",
     "release:verify": "node scripts/verify-release-bundle.mjs",
     "prototype:d04": "node scripts/serve-d04-prototype.mjs",
+    "homepage:build": "node scripts/build-homepage.mjs",
     "version:check": "node scripts/check-version.mjs",
     "version:set": "node scripts/set-version.mjs",
     "version:sync": "node scripts/set-version.mjs",

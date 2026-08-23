@@ -10,7 +10,7 @@ npm run format:check
 npm run lint
 npm run test
 npm run build
-npm run version:check -- v0.1.0
+npm run version:check -- v0.1.1
 cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml

@@ -1,6 +1,6 @@
 [package]
 name = "agent-hub"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI Agent workspace configuration and Skills manager"
 authors = ["JTStudio"]
 edition = "2021"

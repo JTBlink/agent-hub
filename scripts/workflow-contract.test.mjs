@@ -31,7 +31,7 @@ describe("GitHub Actions workflow contract", () => {
     );
     expect(desktopIndex).not.toContain("Changelog / live feed");
     expect(websiteIndex).toContain("Changelog / live feed");
-    expect(pages).toContain('cp homepage/index.html _site/index.html');
+    expect(pages).toContain("npm run homepage:build -- _site/index.html");
   });
 
   it("uses official actions backed by the Node.js 24 runtime", () => {
