@@ -1369,6 +1369,34 @@ fn read_config_source(state: tauri::State<'_, AppState>, path: String) -> Result
 }
 
 #[tauri::command]
+fn read_skill_source(app: tauri::AppHandle, path: String) -> Result<String, String> {
+    let entrypoint = PathBuf::from(&path);
+    if entrypoint.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
+        return Err("只允许查看 Skill 的 SKILL.md 入口文件".into());
+    }
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    let canonical_entrypoint = entrypoint
+        .canonicalize()
+        .map_err(|_| "Skill 入口文件不存在或无法读取".to_owned())?;
+    let allowed_roots = [
+        home.join(".agents/skills"),
+        home.join(".codex/skills"),
+        home.join(".claude/skills"),
+        home.join(".config/opencode/skills"),
+    ];
+    let allowed = allowed_roots.iter().any(|root| {
+        root.canonicalize()
+            .map(|canonical_root| canonical_entrypoint.starts_with(canonical_root))
+            .unwrap_or(false)
+    });
+    if !allowed {
+        return Err("Skill 入口文件不在受支持的 Skill 目录中".into());
+    }
+    std::fs::read_to_string(canonical_entrypoint)
+        .map_err(|_| "AgentHub 无法读取该 Skill 的 SKILL.md".into())
+}
+
+#[tauri::command]
 fn write_config(
     state: tauri::State<'_, AppState>,
     path: String,
@@ -1725,6 +1753,7 @@ pub fn run() {
             remove_workspace,
             scan_workspace,
             read_config_source,
+            read_skill_source,
             preview_config_edit,
             write_config,
             rollback_config,

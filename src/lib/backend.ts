@@ -470,6 +470,10 @@ export function readConfigSource(path: string): Promise<string> {
   return invoke<string>("read_config_source", { path });
 }
 
+export function readSkillSource(path: string): Promise<string> {
+  return invoke<string>("read_skill_source", { path });
+}
+
 export function writeConfig(
   path: string,
   format: ConfigFormat,
