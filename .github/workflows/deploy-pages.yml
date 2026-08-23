@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "index.html"
-      - "homepage/**"
+      - "assets/**"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -36,7 +36,7 @@ jobs:
         run: |
           mkdir -p _site/assets
           cp index.html _site/index.html
-          cp homepage/assets/* _site/assets/
+          cp assets/* _site/assets/
 
       - name: Upload homepage artifact
         uses: actions/upload-pages-artifact@v3
