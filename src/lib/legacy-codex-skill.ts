@@ -103,6 +103,8 @@ export function failedLegacyActionFeedback(
     summary:
       error instanceof Error
         ? error.message
+        : typeof error === "string" && error.trim()
+          ? error
         : "目录状态可能已经变化，请重新扫描后再试。",
   };
 }

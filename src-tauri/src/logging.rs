@@ -112,6 +112,40 @@ pub fn config_scan_completed(agent: Agent, scope: Scope, status: ConfigStatus) {
     );
 }
 
+pub fn legacy_codex_action_started(action: &str) {
+    info!(
+        target: TARGET,
+        "event=legacy_codex_action_started action={}",
+        safe_label(action)
+    );
+}
+
+pub fn legacy_codex_phase(action: &str, phase: &str) {
+    info!(
+        target: TARGET,
+        "event=legacy_codex_action_phase action={} phase={}",
+        safe_label(action),
+        safe_label(phase)
+    );
+}
+
+pub fn legacy_codex_action_completed(action: &str) {
+    info!(
+        target: TARGET,
+        "event=legacy_codex_action_completed action={}",
+        safe_label(action)
+    );
+}
+
+pub fn legacy_codex_action_failed(action: &str, code: &str) {
+    error!(
+        target: TARGET,
+        "event=legacy_codex_action_failed action={} code={}",
+        safe_label(action),
+        safe_label(code)
+    );
+}
+
 fn safe_label(value: &str) -> String {
     value
         .chars()

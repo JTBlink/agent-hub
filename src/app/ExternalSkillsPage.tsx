@@ -1,5 +1,6 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { type ReactNode, useCallback, useRef, useState } from "react";
+import { Modal } from "./Modal";
 
 import type { SkillRootUsage } from "../lib/backend";
 import { type BrowserNavigationRequest } from "./EmbeddedBrowser";
@@ -74,9 +75,11 @@ export function ExternalSkillsPage({
     window.requestAnimationFrame(() => sourceTriggerRef.current?.focus());
   }, []);
 
+  const [revealError, setRevealError] = useState(false);
+
   function revealDirectory(path: string) {
     void revealItemInDir(path).catch(() => {
-      window.alert("无法在文件管理器中显示该目录，请确认目录仍然存在。");
+      setRevealError(true);
     });
   }
 
@@ -159,6 +162,23 @@ export function ExternalSkillsPage({
           </div>
         </section>
       )}
+      <Modal
+        open={revealError}
+        onClose={() => setRevealError(false)}
+        tone="error"
+        title="无法打开目录"
+        actions={
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={() => setRevealError(false)}
+          >
+            知道了
+          </button>
+        }
+      >
+        <p>无法在文件管理器中显示该目录，请确认目录仍然存在。</p>
+      </Modal>
     </div>
   );
 }

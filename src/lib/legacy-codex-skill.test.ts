@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  failedLegacyActionFeedback,
   legacyActionConfirmation,
   preferredCodexSkillDirectory,
   successfulLegacyActionFeedback,
@@ -30,5 +31,13 @@ describe("legacy Codex Skill presentation", () => {
 
     expect(feedback.destinationLabel).toBe("备份位置");
     expect(feedback.destinationPath).toContain("backups/legacy-codex-skills");
+  });
+
+  it("shows string errors returned by Tauri", () => {
+    expect(
+      failedLegacyActionFeedback(
+        "只允许处理 ~/.codex/skills 下的 Skill 目录",
+      ).summary,
+    ).toBe("只允许处理 ~/.codex/skills 下的 Skill 目录");
   });
 });

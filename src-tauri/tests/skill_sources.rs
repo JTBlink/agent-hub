@@ -109,6 +109,22 @@ fn inventory_reports_scope_path_external_management_and_duplicates_without_mutat
 }
 
 #[test]
+fn codex_system_skills_are_visible_but_not_flagged_for_legacy_migration() {
+    let home = tempdir().expect("home");
+    write_skill(&home.path().join(".codex/skills/.system"), "plugin-creator");
+
+    let inventory = scan_installed_skills(home.path(), None::<&std::path::Path>);
+
+    assert!(inventory.skills.iter().any(|skill| skill
+        .path
+        .ends_with(".codex/skills/.system/plugin-creator/SKILL.md")));
+    assert!(!inventory
+        .diagnostics
+        .iter()
+        .any(|item| item.code == "codex-legacy-location"));
+}
+
+#[test]
 fn legacy_codex_skill_is_migrated_to_the_preferred_global_root() {
     let home = tempdir().expect("home");
     let backups = tempdir().expect("backups");
@@ -138,6 +154,29 @@ fn legacy_codex_skill_is_migrated_to_the_preferred_global_root() {
     assert!(!legacy_root.join("review").exists());
     assert!(home.path().join(".agents/skills/review/SKILL.md").is_file());
     assert!(result.backup_path.join("SKILL.md").is_file());
+}
+
+#[test]
+fn codex_system_skill_is_not_migrated_as_a_user_skill() {
+    let home = tempdir().expect("home");
+    let backups = tempdir().expect("backups");
+    let legacy_root = home.path().join(".codex/skills");
+    write_skill(&legacy_root.join(".system"), "imagegen");
+
+    let error = resolve_legacy_codex_skill(
+        home.path(),
+        backups.path(),
+        legacy_root.join(".system/imagegen/SKILL.md"),
+        LegacyCodexSkillAction::Migrate,
+    )
+    .expect_err("system Skill must stay managed by Codex");
+
+    assert!(matches!(
+        error,
+        agent_hub_lib::skills::LegacyCodexSkillError::SystemSkill
+    ));
+    assert!(legacy_root.join(".system/imagegen/SKILL.md").is_file());
+    assert!(!home.path().join(".agents/skills/.system/imagegen").exists());
 }
 
 #[test]
