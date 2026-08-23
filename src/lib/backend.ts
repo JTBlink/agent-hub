@@ -321,7 +321,7 @@ export function getUserDataPaths(): Promise<UserDataPaths> {
 }
 
 export function clearUserData(
-  kind: "logs" | "skillSources",
+  kind: "backups" | "logs" | "skillSources",
 ): Promise<UserDataPaths> {
   return invoke<UserDataPaths>("clear_user_data", { kind });
 }

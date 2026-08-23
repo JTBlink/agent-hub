@@ -76,7 +76,8 @@ fn clear_user_data(kind: String, state: State<'_, AppState>) -> Result<UserDataP
     let target = match kind.as_str() {
         "logs" => root.join("logs"),
         "skillSources" => root.join("skill-sources"),
-        _ => return Err("only logs and skill source cache can be cleared".to_owned()),
+        "backups" => root.join("backups"),
+        _ => return Err("only backups, logs, and skill source cache can be cleared".to_owned()),
     };
     if target.exists() {
         fs::remove_dir_all(&target).map_err(|error| error.to_string())?;
