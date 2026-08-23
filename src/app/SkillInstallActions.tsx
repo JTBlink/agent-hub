@@ -4,6 +4,7 @@ import type {
   SkillInstallPlanPreview,
   WorkspaceRecord,
 } from "../lib/backend";
+import { useLanguage } from "../lib/i18n";
 
 type AgentOption = {
   id: InstalledSkill["agent"];
@@ -32,10 +33,11 @@ export function SkillInstallTargetSelector({
   workspaces: WorkspaceRecord[];
   lockedAgents?: Set<InstalledSkill["agent"]>;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="skill-install-target install-target-first">
       <fieldset className="agent-install-choice">
-        <legend>Which agents do you want to install to?</legend>
+        <legend>{t("agentsToInstall")}</legend>
         <div className="agent-install-options">
           {agents.map((agent) => (
             <label
@@ -60,7 +62,7 @@ export function SkillInstallTargetSelector({
               </span>
               <span className="agent-install-name">
                 {agent.name}
-                {lockedAgents.has(agent.id) && <small>必选</small>}
+                {lockedAgents.has(agent.id) && <small>{t("required")}</small>}
               </span>
               <span className="agent-install-check" aria-hidden="true" />
             </label>
@@ -68,13 +70,13 @@ export function SkillInstallTargetSelector({
         </div>
       </fieldset>
       <label>
-        Installation scope / 安装作用域
+        {t("installationScope")}
         <select
           value={scope}
           onChange={(event) => onScopeChange(event.target.value as ConfigScope)}
         >
-          <option value="global">Global · 全局</option>
-          <option value="workspace">Workspace · 当前工作空间</option>
+          <option value="global">{t("global")}</option>
+          <option value="workspace">{t("workspace")}</option>
         </select>
       </label>
       {scope === "workspace" && (
@@ -88,7 +90,7 @@ export function SkillInstallTargetSelector({
               )
             }
           >
-            <option value="">请选择已登记工作空间</option>
+            <option value="">{t("workspaceSelect")}</option>
             {workspaces.map((workspace) => (
               <option key={workspace.id} value={workspace.id}>
                 {workspace.displayName}
@@ -112,22 +114,29 @@ export function SkillInstallationSummary({
   overwriteAgents: string[];
   linkedAgents?: InstalledSkill["agent"][];
 }) {
+  const { t } = useLanguage();
   const first = plans[0];
   if (!first) return null;
   return (
     <div className="skill-install-summary">
       <code>{first.plan.targetDirectory}</code>
       <span>
-        universal: {plans.map((item) => agentName(item.plan.agent)).join(", ")}
+        {t("universal")}:{" "}
+        {plans.map((item) => agentName(item.plan.agent)).join(", ")}
       </span>
       <span>
-        scope: {first.plan.scope === "global" ? "global" : "workspace"}
+        {t("scope")}:{" "}
+        {first.plan.scope === "global" ? t("global") : t("workspace")}
       </span>
       {first.plan.scope === "global" && linkedAgents.length > 0 && (
-        <span>symlink → {linkedAgents.map(agentName).join(", ")}</span>
+        <span>
+          {t("symlink")} {linkedAgents.map(agentName).join(", ")}
+        </span>
       )}
       {overwriteAgents.length > 0 && (
-        <span>overwrites: {overwriteAgents.join(", ")}</span>
+        <span>
+          {t("overwrites")}: {overwriteAgents.join(", ")}
+        </span>
       )}
     </div>
   );

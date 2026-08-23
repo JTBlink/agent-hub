@@ -504,7 +504,7 @@ fn version_one_database_upgrades_and_backfills_history_snapshots() {
 
     assert_eq!(
         database.diagnostics().expect("diagnostics").schema_version,
-        2
+        3
     );
     let entry = database
         .config_history_entry(1)

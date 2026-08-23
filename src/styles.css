@@ -4512,6 +4512,16 @@ textarea:focus-visible {
   background: #edf3f2;
   font-size: 11px;
 }
+.setting-language-select {
+  min-height: 32px;
+  max-width: 180px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--surface-raised);
+  font-size: 11px;
+}
 
 /* Edge-inspired AgentHub visual system: dark layered surfaces and energy flow. */
 ::selection {
