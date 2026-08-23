@@ -291,6 +291,7 @@ struct InstructionFile {
     path: String,
     kind: String,
     scope: Scope,
+    is_symlink: bool,
 }
 
 fn discover_instruction_files(root: &Path) -> Vec<InstructionFile> {
@@ -351,10 +352,11 @@ fn discover_instruction_files_with_limits(
             let Ok(file_type) = entry.file_type() else {
                 continue;
             };
-            if file_type.is_symlink() {
-                continue;
-            }
+            let is_symlink = file_type.is_symlink();
             if file_type.is_dir() {
+                if is_symlink {
+                    continue;
+                }
                 if !ignored_directory(&path) {
                     visit(
                         &path,
@@ -379,6 +381,7 @@ fn discover_instruction_files_with_limits(
                 path: path.to_string_lossy().into_owned(),
                 kind: kind.to_owned(),
                 scope: Scope::Workspace,
+                is_symlink,
             });
         }
     }
@@ -546,6 +549,51 @@ fn scan_workspace(
         configs,
         skills: inventory,
         instructions: discover_instruction_files(&root),
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InstructionSymlinkResult {
+    link_path: String,
+    target_path: String,
+}
+
+#[tauri::command]
+fn create_claude_instruction_symlink(
+    workspace_path: String,
+) -> Result<InstructionSymlinkResult, String> {
+    let workspace = workspace_input(&workspace_path)?;
+    let root = PathBuf::from(&workspace.normalized_path);
+    let source = root.join("AGENTS.md");
+    let destination = root.join("CLAUDE.md");
+    let source_metadata = fs::symlink_metadata(&source)
+        .map_err(|_| "工作空间根目录没有找到 AGENTS.md，无法创建软链接。".to_owned())?;
+    if source_metadata.file_type().is_symlink() || !source_metadata.is_file() {
+        return Err("AGENTS.md 必须是真实文件，不能是软链接。".to_owned());
+    }
+    if let Ok(metadata) = fs::symlink_metadata(&destination) {
+        if !metadata.file_type().is_symlink() {
+            return Err("CLAUDE.md 已存在真实文件，为避免覆盖未创建软链接。".to_owned());
+        }
+        let target = fs::read_link(&destination).map_err(|error| error.to_string())?;
+        if target == source || target == PathBuf::from("../AGENTS.md") {
+            return Ok(InstructionSymlinkResult {
+                link_path: destination.to_string_lossy().into_owned(),
+                target_path: source.to_string_lossy().into_owned(),
+            });
+        }
+        return Err("CLAUDE.md 已指向其他目标，未修改。".to_owned());
+    }
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("AGENTS.md", &destination)
+        .map_err(|error| error.to_string())?;
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_file("AGENTS.md", &destination)
+        .map_err(|error| error.to_string())?;
+    Ok(InstructionSymlinkResult {
+        link_path: destination.to_string_lossy().into_owned(),
+        target_path: source.to_string_lossy().into_owned(),
     })
 }
 
@@ -1814,6 +1862,7 @@ pub fn run() {
             add_workspace,
             remove_workspace,
             scan_workspace,
+            create_claude_instruction_symlink,
             read_config_source,
             read_skill_source,
             open_directory_in_editor,

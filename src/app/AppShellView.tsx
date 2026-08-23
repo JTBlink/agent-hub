@@ -13,6 +13,7 @@ import {
   applySkillInstall,
   browseSkillSource,
   clearUserData,
+  createClaudeInstructionSymlink,
   executeDiagnosticRecovery,
   getAppInfo,
   getClaudeGlobalConfig,
@@ -138,7 +139,9 @@ type IconName =
   | "search"
   | "plus"
   | "close"
-  | "link";
+  | "link"
+  | "eye"
+  | "eye-off";
 
 const navigation: { id: Section; label: string; icon: IconName }[] = [
   { id: "overview", label: "总览", icon: "grid" },
@@ -195,7 +198,15 @@ function openExternalSource(url: string) {
   });
 }
 
-function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+function Icon({
+  name,
+  size = 18,
+  className,
+}: {
+  name: IconName;
+  size?: number;
+  className?: string;
+}) {
   const paths: Record<IconName, React.ReactNode> = {
     grid: (
       <>
@@ -303,10 +314,23 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
         <path d="m16.5 6.5 1.5-1.5a3 3 0 0 1 4 4l-3 3a3 3 0 0 1-4 0" />
       </>
     ),
+    eye: (
+      <>
+        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    "eye-off": (
+      <>
+        <path d="m3 3 18 18" />
+        <path d="M10.6 6.2A10.7 10.7 0 0 1 12 6c6 0 9.5 6 9.5 6a16.8 16.8 0 0 1-3.1 3.8M6.2 6.8C3.9 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1 0 1.9-.2 2.7-.5" />
+        <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      </>
+    ),
   };
   return (
     <svg
-      className="icon"
+      className={className ? `icon ${className}` : "icon"}
       width={size}
       height={size}
       viewBox="0 0 24 24"
@@ -375,9 +399,10 @@ function getWorkspaceDisplayConfigs(
 ) {
   return workspaceConfigs.map((config) =>
     config.status === "missing"
-      ? globalConfigs.find(
-          (global) => global.agent === config.agent && global.status === "ready",
-        ) ?? config
+      ? (globalConfigs.find(
+          (global) =>
+            global.agent === config.agent && global.status === "ready",
+        ) ?? config)
       : config,
   );
 }
@@ -500,10 +525,11 @@ export function App() {
     void listWorkspaces()
       .then((records) => {
         setWorkspaces(records);
-        const candidate = selectedSkillWorkspace || readPersistedWorkspacePath();
+        const candidate =
+          selectedSkillWorkspace || readPersistedWorkspacePath();
         const next = records.some((item) => item.normalizedPath === candidate)
           ? candidate
-          : records[0]?.normalizedPath ?? "";
+          : (records[0]?.normalizedPath ?? "");
         persistWorkspacePath(next);
         setSelectedSkillWorkspace(next);
         if (next) loadWorkspaceConfig(next);
@@ -553,20 +579,34 @@ export function App() {
       ? configs
       : getWorkspaceDisplayConfigs(configs, workspaceConfigs);
   const selectedConfig = useMemo(() => {
-    const config = visibleConfigs.find(
-      (candidate) => candidate.agent === selectedAgent,
-    );
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-    if (!config || !normalizedQuery) return config;
-    const haystack = [
-      agentMeta[config.agent].name,
-      config.path,
-      statusLabel(config.status),
-    ]
-      .join(" ")
-      .toLocaleLowerCase();
-    return haystack.includes(normalizedQuery) ? config : undefined;
-  }, [visibleConfigs, selectedAgent, searchQuery]);
+    const matches = (config: ConfigDocument) => {
+      if (!normalizedQuery) return true;
+      return [
+        agentMeta[config.agent].name,
+        config.path,
+        statusLabel(config.status),
+        JSON.stringify(config.structuredView),
+        selectedSkillWorkspace,
+      ]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(normalizedQuery);
+    };
+    return (
+      visibleConfigs.find(
+        (candidate) => candidate.agent === selectedAgent && matches(candidate),
+      ) ?? (normalizedQuery ? visibleConfigs.find(matches) : undefined)
+    );
+  }, [visibleConfigs, selectedAgent, searchQuery, selectedSkillWorkspace]);
+  useEffect(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+    if (!normalizedQuery || !selectedConfig) return;
+    if (selectedConfig.agent !== selectedAgent) {
+      setSelectedAgent(selectedConfig.agent);
+      setEditing(false);
+    }
+  }, [searchQuery, selectedConfig, selectedAgent]);
   const readyCount = configs.filter(
     (config) => config.status === "ready",
   ).length;
@@ -765,6 +805,14 @@ export function App() {
             configs={configs}
             workspaceConfigs={workspaceConfigs}
             workspaceInstructions={workspaceInstructions}
+            workspacePath={selectedSkillWorkspace}
+            onCreateInstructionLink={async () => {
+              const result = await createClaudeInstructionSymlink(
+                selectedSkillWorkspace,
+              );
+              loadWorkspaceConfig(selectedSkillWorkspace);
+              return result;
+            }}
             selectedScope={selectedScope}
             setSelectedScope={(scope) => {
               setSelectedScope(scope);
@@ -1581,6 +1629,8 @@ function ConfigCenter({
   configs,
   workspaceConfigs,
   workspaceInstructions,
+  workspacePath,
+  onCreateInstructionLink,
   selectedScope,
   setSelectedScope,
   selectedAgent,
@@ -1606,6 +1656,11 @@ function ConfigCenter({
   configs: ConfigDocument[];
   workspaceConfigs: ConfigDocument[];
   workspaceInstructions: InstructionFile[];
+  workspacePath: string;
+  onCreateInstructionLink: () => Promise<{
+    linkPath: string;
+    targetPath: string;
+  }>;
   selectedScope: ConfigDocument["scope"];
   setSelectedScope: (scope: ConfigDocument["scope"]) => void;
   selectedAgent: ConfigDocument["agent"];
@@ -1628,6 +1683,16 @@ function ConfigCenter({
   saving: boolean;
   searchQuery: string;
 }) {
+  const [showSensitivePreview, setShowSensitivePreview] = useState(false);
+  const [sensitivePreview, setSensitivePreview] = useState<string>();
+  const [loadingSensitivePreview, setLoadingSensitivePreview] = useState(false);
+
+  useEffect(() => {
+    setShowSensitivePreview(false);
+    setSensitivePreview(undefined);
+    setLoadingSensitivePreview(false);
+  }, [selectedConfig?.path]);
+
   const visibleConfigs =
     selectedScope === "global"
       ? configs
@@ -1636,7 +1701,13 @@ function ConfigCenter({
   const filteredConfigs = normalizedQuery
     ? visibleConfigs.filter((config) => {
         const agentName = agentMeta[config.agent].name.toLocaleLowerCase();
-        return [agentName, config.path, statusLabel(config.status)]
+        return [
+          agentName,
+          config.path,
+          statusLabel(config.status),
+          JSON.stringify(config.structuredView),
+          workspacePath,
+        ]
           .join(" ")
           .toLocaleLowerCase()
           .includes(normalizedQuery);
@@ -1656,16 +1727,40 @@ function ConfigCenter({
             .includes(normalizedQuery);
         })
       : [];
-
   const configAgentOptions = (["claude-code", "codex", "opencode"] as const)
     .map((agent) => {
       const config = visibleConfigs.find((item) => item.agent === agent);
+      const workspaceConfig = workspaceConfigs.find(
+        (item) => item.agent === agent,
+      );
+      const hasAgentsFile = workspaceInstructions.some(
+        (instruction) => instructionFileName(instruction.path) === "AGENTS.md",
+      );
+      const hasClaudeInstruction = workspaceInstructions.some(
+        (instruction) =>
+          instructionFileName(instruction.path) === "CLAUDE.md" ||
+          instructionFileName(instruction.path) === "CLAUDE.local.md",
+      );
+      const needsAttention =
+        selectedScope === "workspace" &&
+        agent === "claude-code" &&
+        hasAgentsFile &&
+        !hasClaudeInstruction;
       const meta = agentMeta[agent];
       return {
         value: agent,
         label: meta.name,
         description: config ? statusLabel(config.status) : "等待扫描",
-        meta: config ? statusLabel(config.status) : "等待扫描",
+        meta: (
+          <span className="config-agent-option-meta">
+            {config ? statusLabel(config.status) : "等待扫描"}
+            {needsAttention && (
+              <span title="工作空间配置未就绪">
+                <Icon name="warning" size={13} aria-hidden="true" />
+              </span>
+            )}
+          </span>
+        ),
         leading: (
           <span className={`agent-avatar small ${meta.tone}`}>{meta.mark}</span>
         ),
@@ -1677,6 +1772,36 @@ function ConfigCenter({
         filteredConfigs.some((config) => config.agent === option.value),
     );
 
+  const inheritedGlobalConfig =
+    selectedScope === "workspace" && selectedConfig?.scope === "global";
+  const displayedScopeLabel =
+    selectedScope === "workspace" ? "工作空间" : "全局";
+
+  const canRevealSensitivePreview =
+    selectedConfig?.agent === "claude-code" &&
+    selectedConfig.scope === "global" &&
+    selectedConfig.status === "ready";
+
+  async function toggleSensitivePreview() {
+    if (!selectedConfig || !canRevealSensitivePreview || loadingSensitivePreview)
+      return;
+    if (showSensitivePreview) {
+      setShowSensitivePreview(false);
+      setSensitivePreview(undefined);
+      return;
+    }
+    setLoadingSensitivePreview(true);
+    try {
+      const raw = await readConfigSource(selectedConfig.path);
+      setSensitivePreview(raw);
+      setShowSensitivePreview(true);
+    } catch {
+      setShowSensitivePreview(false);
+    } finally {
+      setLoadingSensitivePreview(false);
+    }
+  }
+
   if (editing && selectedConfig) {
     const meta = agentMeta[selectedConfig.agent];
     return (
@@ -1687,9 +1812,7 @@ function ConfigCenter({
           leading={
             <div className={`agent-avatar small ${meta.tone}`}>{meta.mark}</div>
           }
-          title={`${meta.name} ${
-            selectedConfig.scope === "global" ? "全局" : "工作空间"
-          }配置`}
+          title={`${meta.name} ${displayedScopeLabel}配置${inheritedGlobalConfig ? "（继承全局）" : ""}`}
           actions={
             <button className="button button-secondary" onClick={onPreview}>
               <Icon name="check" size={16} />
@@ -1827,6 +1950,17 @@ function ConfigCenter({
           />
         </aside>
         <section className="config-detail">
+          {selectedScope === "workspace" && workspacePath && (
+            <div
+              className="config-workspace-context"
+              aria-label="当前工作空间目录"
+            >
+              <span className="config-workspace-context-label">
+                当前工作空间
+              </span>
+              <code title={workspacePath}>{workspacePath}</code>
+            </div>
+          )}
           {selectedConfig ? (
             <>
               <div className="detail-heading">
@@ -1839,8 +1973,8 @@ function ConfigCenter({
                   <div>
                     <h2>
                       {agentMeta[selectedConfig.agent].name}{" "}
-                      {selectedConfig.scope === "global" ? "全局" : "工作空间"}
-                      配置
+                      {displayedScopeLabel}配置
+                      {inheritedGlobalConfig ? "（继承全局）" : ""}
                     </h2>
                     <p>{selectedConfig.path}</p>
                   </div>
@@ -1857,7 +1991,8 @@ function ConfigCenter({
                   <div className="config-effective-note" role="status">
                     <span aria-hidden="true">i</span>
                     <span>
-                      当前工作空间未配置 {agentMeta[selectedConfig.agent].name}，实际生效的是全局配置。
+                      当前工作空间未配置 {agentMeta[selectedConfig.agent].name}
+                      ，实际生效的是全局配置。 编辑此处仍会修改全局配置文件。
                     </span>
                   </div>
                 )}
@@ -1902,10 +2037,32 @@ function ConfigCenter({
                     <Icon name="file" size={16} />
                     遮罩预览
                   </span>
-                  <span>默认只读</span>
+                  <span className="source-heading-actions">
+                    <span>默认只读</span>
+                    {canRevealSensitivePreview && (
+                      <button
+                        type="button"
+                        className="source-reveal-button"
+                        onClick={() => void toggleSensitivePreview()}
+                        disabled={loadingSensitivePreview}
+                        aria-pressed={showSensitivePreview}
+                        aria-label={
+                          showSensitivePreview ? "隐藏敏感值" : "显示敏感值"
+                        }
+                        title={showSensitivePreview ? "隐藏敏感值" : "显示敏感值"}
+                      >
+                        <Icon
+                          name={showSensitivePreview ? "eye-off" : "eye"}
+                          size={15}
+                        />
+                      </button>
+                    )}
+                  </span>
                 </div>
                 <pre className="source-preview">
-                  {selectedConfig.sourcePreview || "暂无可读取的配置文件"}
+                  {(showSensitivePreview
+                    ? sensitivePreview
+                    : selectedConfig.sourcePreview) || "暂无可读取的配置文件"}
                 </pre>
                 <div className="source-actions">
                   <button
@@ -1923,6 +2080,8 @@ function ConfigCenter({
                   instructions={visibleInstructions}
                   total={workspaceInstructions.length}
                   searchQuery={normalizedQuery}
+                  onCreateLink={onCreateInstructionLink}
+                  agent={selectedAgent}
                 />
               )}
             </>
@@ -1933,6 +2092,8 @@ function ConfigCenter({
                   instructions={visibleInstructions}
                   total={workspaceInstructions.length}
                   searchQuery={normalizedQuery}
+                  onCreateLink={onCreateInstructionLink}
+                  agent={selectedAgent}
                 />
               )}
               <div className="empty-state large">
@@ -1950,6 +2111,8 @@ function ConfigCenter({
                   instructions={visibleInstructions}
                   total={workspaceInstructions.length}
                   searchQuery={normalizedQuery}
+                  onCreateLink={onCreateInstructionLink}
+                  agent={selectedAgent}
                 />
               )}
               <div className="empty-state large">
@@ -1971,57 +2134,135 @@ function InstructionFilesPanel({
   instructions,
   total,
   searchQuery,
+  onCreateLink,
+  agent,
 }: {
   instructions: InstructionFile[];
   total: number;
   searchQuery: string;
+  onCreateLink: () => Promise<{ linkPath: string; targetPath: string }>;
+  agent: ConfigDocument["agent"];
 }) {
+  const hasAgentsFile = instructions.some(
+    (instruction) => instructionFileName(instruction.path) === "AGENTS.md",
+  );
+  const [creatingLink, setCreatingLink] = useState(false);
+  const [linkMessage, setLinkMessage] = useState<string>();
+  const [toast, setToast] = useState<string>();
+  const { confirm, ConfirmPortal } = useConfirm();
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(undefined), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+  async function createLink() {
+    if (creatingLink || !hasAgentsFile || agent !== "claude-code") return;
+    const confirmed = await confirm({
+        title: "创建 Claude Code 软链接？",
+        description: (
+          <p>
+          将在当前项目根目录的 <code>CLAUDE.md</code> 创建软链接，指向
+          <code>AGENTS.md</code>。如果目标已存在真实文件，AgentHub 不会覆盖它。
+          </p>
+        ),
+      confirmLabel: "确认创建",
+      cancelLabel: "取消",
+    });
+    if (!confirmed) return;
+    setCreatingLink(true);
+    setLinkMessage(undefined);
+    try {
+      const result = await onCreateLink();
+      setToast(
+        `软链接：${result.linkPath} → 真实文件：${result.targetPath}`,
+      );
+    } catch (error) {
+      setLinkMessage(
+        errorMessage(error, "软链接创建失败，请检查工作空间权限。"),
+      );
+    } finally {
+      setCreatingLink(false);
+    }
+  }
   return (
-    <section
-      className="instruction-files-panel"
-      aria-labelledby="instruction-files-title"
-    >
-      <div className="instruction-files-heading">
-        <div>
-          <p className="eyebrow">工作空间上下文</p>
-          <h3 id="instruction-files-title">软链接提示</h3>
+    <>
+      <section
+        className="instruction-files-panel"
+        aria-labelledby="instruction-files-title"
+      >
+        <div className="instruction-files-heading">
+          <div>
+            <p className="eyebrow">工作空间上下文</p>
+          <h3 id="instruction-files-title">指令文件</h3>
+          </div>
+          <div className="instruction-files-heading-actions">
+            <span className="instruction-files-count">
+              {searchQuery ? `${instructions.length} / ${total}` : total} 个
+            </span>
+            <button
+              className="button button-secondary"
+              type="button"
+              disabled={!hasAgentsFile || creatingLink || agent !== "claude-code"}
+              onClick={() => void createLink()}
+            >
+              {creatingLink
+                ? "创建中…"
+                : agent !== "claude-code"
+                  ? "当前 Agent 无需软链接"
+                  : hasAgentsFile
+                    ? "创建 Claude Code 软链接"
+                    : "请先创建 AGENTS.md"}
+            </button>
+          </div>
         </div>
-        <span className="instruction-files-count">
-          {searchQuery ? `${instructions.length} / ${total}` : total} 个
-        </span>
-      </div>
-      {instructions.length ? (
-        <div className="instruction-files-list">
-          {instructions.map((instruction) => (
-            <article className="instruction-file-row" key={instruction.path}>
-              <div className="instruction-file-icon">
-                <Icon name="file" size={16} />
-              </div>
-              <div className="instruction-file-copy">
-                <strong>{instructionFileName(instruction.path)}</strong>
-                {instructionFileName(instruction.path) === "AGENTS.md" ? (
-                  <span>{instructionKindLabel(instruction.kind)} · 真实文件</span>
-                ) : (
-                  <span>{instructionKindLabel(instruction.kind)} · 建议软链接到 AGENTS.md</span>
-                )}
-                <code title={instruction.path}>{instruction.path}</code>
-              </div>
-              <span className="instruction-readonly">
-                {instructionFileName(instruction.path) === "AGENTS.md"
-                  ? "真实文件"
-                  : "软链接提示"}
-              </span>
-            </article>
-          ))}
+        {linkMessage && (
+          <p className="inline-message" role="status">
+            {linkMessage}
+          </p>
+        )}
+        {!hasAgentsFile && (
+          <p className="instruction-files-empty">
+            请先在工作空间根目录创建真实的 AGENTS.md 文件，再创建 Claude Code
+            软链接。
+          </p>
+        )}
+        {instructions.length ? (
+          <div className="instruction-files-list">
+            {instructions.map((instruction) => (
+              <article className="instruction-file-row" key={instruction.path}>
+                <div className="instruction-file-icon">
+                  <Icon name="file" size={16} />
+                </div>
+                <div className="instruction-file-copy">
+                  <strong>{instructionFileName(instruction.path)}</strong>
+                  <span>
+                    {instructionKindLabel(instruction.kind)} ·{" "}
+                    {instruction.isSymlink ? "软链接" : "真实文件"}
+                  </span>
+                  <code title={instruction.path}>{instruction.path}</code>
+                </div>
+                <span className="instruction-readonly">
+                  {instruction.isSymlink ? "软链接" : "真实文件"}
+                </span>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="instruction-files-empty">
+            {searchQuery
+              ? "没有匹配的软链接提示。"
+              : "当前工作空间没有发现 AGENTS.md 或 CLAUDE.md，可创建软链接复用指令。"}
+          </p>
+        )}
+      </section>
+      {toast && (
+        <div className="workspace-toast" role="status" aria-live="polite">
+          <Icon name="check" size={16} />
+          <span>{toast}</span>
         </div>
-      ) : (
-        <p className="instruction-files-empty">
-          {searchQuery
-            ? "没有匹配的软链接提示。"
-            : "当前工作空间没有发现 AGENTS.md 或 CLAUDE.md，可通过软链接复用全局指令。"}
-        </p>
       )}
-    </section>
+      {ConfirmPortal}
+    </>
   );
 }
 
@@ -2076,6 +2317,27 @@ function SkillsCenter({
   const { confirm, ConfirmPortal } = useConfirm();
   const skillsScrollPosition = useRef({ main: 0, window: 0 });
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  useEffect(() => {
+    if (!normalizedQuery) return;
+    const matchingSkill = (skills?.skills ?? []).find((skill) =>
+      [
+        skill.displayName,
+        skill.name,
+        skill.relativePath,
+        skill.path,
+        skill.agent,
+        skill.scope,
+        skill.source.locator,
+        skill.compatibility,
+      ]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(normalizedQuery),
+    );
+    if (matchingSkill && matchingSkill.agent !== selectedAgent) {
+      setSelectedAgent(matchingSkill.agent);
+    }
+  }, [normalizedQuery, selectedAgent, skills]);
   const filteredSkills = useMemo(
     () =>
       (skills?.skills ?? []).filter((skill) => {
@@ -2086,9 +2348,13 @@ function SkillsCenter({
           skill.scope === filter;
         const haystack = [
           skill.displayName,
+          skill.name,
           skill.relativePath,
           skill.path,
           skill.agent,
+          skill.scope,
+          skill.source.locator,
+          skill.compatibility,
         ]
           .join(" ")
           .toLocaleLowerCase();
@@ -2563,7 +2829,9 @@ function SkillsCenter({
                         )}
                       </div>
                       <span className={`scope-pill ${skill.scope}`}>
-                        {skill.scope === "global" ? "所有工作空间" : "当前工作空间"}
+                        {skill.scope === "global"
+                          ? "所有工作空间"
+                          : "当前工作空间"}
                       </span>
                       <span className="managed-pill">
                         {skill.sourceTracked ? "已纳入管理" : "未纳入管理"}
@@ -3336,7 +3604,9 @@ function SkillSourcePanel({
               }}
             >
               <option value="global">全局（所有工作空间可用）</option>
-              <option value="workspace">当前工作空间（仅所选工作空间可用）</option>
+              <option value="workspace">
+                当前工作空间（仅所选工作空间可用）
+              </option>
             </select>
           </label>
           {scope === "workspace" && (

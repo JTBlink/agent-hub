@@ -1,5 +1,11 @@
 # AgentHub
 
+[![GitHub Release](https://img.shields.io/github/v/release/JTBlink/agent-hub?style=flat-square&color=168bff)](https://github.com/JTBlink/agent-hub/releases)
+[![License](https://img.shields.io/github/license/JTBlink/agent-hub?style=flat-square)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/JTBlink/agent-hub/ci.yml?style=flat-square&label=CI)](https://github.com/JTBlink/agent-hub/actions/workflows/ci.yml)
+
+> **[官网 & 下载页](https://jtblink.github.io/agent-hub/)** &mdash; 获取最新安装包、查看更新日志和平台支持信息。
+
 AgentHub 是一个本地优先的 AI Agent 配置与 Skills 管理器。它把 Claude Code、Codex 和 OpenCode 分散在全局目录、项目目录中的配置文件和 Skills 集中到一个工作台里，让你可以先看清状态，再安全地修改、安装和恢复。
 
 ## 它解决什么问题

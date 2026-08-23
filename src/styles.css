@@ -285,20 +285,38 @@ textarea:focus-visible {
   gap: 10px;
 }
 .search-field {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 210px;
+  width: 252px;
   min-height: 44px;
-  padding: 0 11px;
+  padding: 0 8px 0 12px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 12px;
   color: var(--quiet);
+  background: linear-gradient(135deg, #ffffff, #f8fcfb);
+  box-shadow:
+    0 2px 7px rgb(24 83 76 / 5%),
+    inset 0 1px rgb(255 255 255 / 80%);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+.search-field:hover {
+  border-color: #b8d8d3;
   background: #fff;
 }
 .search-field:focus-within {
-  border-color: #78c8be;
-  box-shadow: 0 0 0 3px rgb(13 148 136 / 12%);
+  border-color: #0d9488;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px rgb(13 148 136 / 14%),
+    0 5px 16px rgb(13 148 136 / 10%);
+}
+.search-field:focus-within > .icon {
+  color: #0d9488;
 }
 .search-field input {
   min-width: 0;
@@ -308,6 +326,7 @@ textarea:focus-visible {
   color: var(--ink);
   background: transparent;
   font-size: 12px;
+  line-height: 1;
 }
 .search-field input::-webkit-search-cancel-button {
   display: none;
@@ -327,6 +346,10 @@ textarea:focus-visible {
 .search-clear:hover {
   color: var(--ink);
   background: #eef7f5;
+}
+.search-clear:focus-visible {
+  outline: 2px solid #0d9488;
+  outline-offset: 1px;
 }
 .button {
   display: inline-flex;
@@ -987,6 +1010,36 @@ textarea:focus-visible {
   font-size: 11px;
   line-height: 1.45;
 }
+.config-workspace-context {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  margin: -2px 0 20px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid #d9e9e6;
+}
+.config-workspace-context-label {
+  flex: 0 0 auto;
+  color: #6d8581;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.config-workspace-context code {
+  min-width: 0;
+  overflow: hidden;
+  color: #315c56;
+  font-size: 10px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.instruction-files-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .source-block,
 .editor-block {
   border: 1px solid #e0eeec;
@@ -1008,6 +1061,35 @@ textarea:focus-visible {
   gap: 7px;
   color: var(--muted);
   font-weight: 700;
+}
+.source-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.source-reveal-button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+.source-reveal-button:hover:not(:disabled) {
+  color: var(--ink);
+  background: rgb(66 217 177 / 10%);
+}
+.source-reveal-button:focus-visible {
+  outline: 3px solid rgb(66 217 177 / 55%);
+  outline-offset: 2px;
+}
+.source-reveal-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 .source-preview,
 .diff-block pre {
@@ -1209,12 +1291,13 @@ textarea:focus-visible {
 .workspace-toast {
   position: fixed;
   top: 78px;
-  right: 24px;
+  left: 50%;
   z-index: 40;
   display: flex;
   align-items: center;
   gap: 9px;
   max-width: min(360px, calc(100vw - 32px));
+  transform: translateX(-50%);
   padding: 11px 14px;
   border: 1px solid rgb(87 223 208 / 34%);
   border-radius: 10px;
@@ -4402,7 +4485,13 @@ body {
 }
 .search-field:focus-within {
   border-color: #168bff;
-  box-shadow: 0 0 0 3px rgb(22 139 255 / 15%);
+  background: #0e1a32;
+  box-shadow:
+    0 0 0 3px rgb(22 139 255 / 18%),
+    0 6px 18px rgb(22 139 255 / 12%);
+}
+.search-field:focus-within > .icon {
+  color: #42d9b1;
 }
 .search-clear:hover {
   color: #fff;
@@ -4865,9 +4954,9 @@ body {
   }
   .workspace-toast {
     top: 72px;
-    right: 16px;
-    left: 16px;
+    left: 50%;
     max-width: none;
+    width: calc(100vw - 32px);
   }
   .topology-card {
     padding: 20px 17px;
@@ -5254,7 +5343,7 @@ body {
 .workspace-form input,
 .editor-block textarea {
   color: var(--ink);
-  background: #0e1730;
+  background: transparent;
 }
 .button-primary {
   color: #081326;
@@ -5386,6 +5475,14 @@ body {
   color: #66e5dd;
   background: #123f4c;
 }
+.config-agent-option-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.config-agent-option-meta svg {
+  color: #b86b16;
+}
 .surface-card > .section-title-row > .icon,
 .text-button,
 .diff-changed,
@@ -5422,6 +5519,15 @@ body {
   border-color: #245e5b;
   color: #8de4cb;
   background: #122d35;
+}
+.config-workspace-context {
+  border-color: #294457;
+}
+.config-workspace-context-label {
+  color: #8eb4ad;
+}
+.config-workspace-context code {
+  color: #c0eee3;
 }
 .alert-error,
 .diagnostic-card.error {
@@ -7167,8 +7273,13 @@ select:focus-visible {
 .skills-context-switchers {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  align-items: stretch;
   margin-bottom: 16px;
+  overflow: visible;
+  border: 1px solid rgb(56 79 122 / 74%);
+  border-radius: 14px;
+  background: rgb(14 25 48 / 80%);
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
 }
 
 .skills-context-switchers .skill-agent-switcher {
@@ -7177,14 +7288,15 @@ select:focus-visible {
 
 .skills-context-switchers .skill-agent-switcher,
 .skills-context-switchers .skill-workspace-switcher {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 80px;
   padding: 12px 14px 12px 17px;
-  border: 1px solid rgb(56 79 122 / 74%);
-  border-radius: 14px;
-  background: rgb(14 25 48 / 80%);
-  box-shadow:
-    inset 3px 0 var(--context-accent),
-    inset 0 1px rgb(255 255 255 / 5%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 3px 0 var(--context-accent);
 }
 
 .skills-context-switchers .skill-agent-switcher {
@@ -7193,6 +7305,10 @@ select:focus-visible {
 
 .skills-context-switchers .skill-workspace-switcher {
   --context-accent: rgb(165 168 255 / 66%);
+}
+
+.skills-context-switchers .skill-workspace-switcher {
+  border-left: 1px solid rgb(56 79 122 / 74%);
 }
 
 .skill-workspace-switcher {
@@ -7248,14 +7364,30 @@ select:focus-visible {
   flex: 1;
 }
 
-.skills-context-switchers .agent-dropdown,
-.skills-context-switchers .workspace-dropdown {
-  width: min(100%, 330px);
+.skills-context-switchers .skill-agent-switcher-kicker,
+.skills-context-switchers .skill-workspace-switcher-kicker {
+  text-transform: uppercase;
 }
 
-@media (max-width: 1100px) {
+.skills-context-switchers .agent-dropdown,
+.skills-context-switchers .workspace-dropdown {
+  width: min(100%, 250px);
+  flex: 0 1 250px;
+}
+
+.skills-context-switchers .dropdown-menu {
+  z-index: 2;
+}
+
+@media (max-width: 760px) {
   .skills-context-switchers {
+    display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .skills-context-switchers .skill-workspace-switcher {
+    border-top: 1px solid rgb(56 79 122 / 74%);
+    border-left: 0;
   }
 }
 
