@@ -985,6 +985,7 @@ function Overview({
   configs: ConfigDocument[];
   onNavigate: (section: Section) => void;
 }) {
+  const { t } = useLanguage();
   const topologyAgentIds = Array.from(
     new Set([...defaultAgentIds, ...configs.map((config) => config.agent)]),
   );
@@ -998,14 +999,15 @@ function Overview({
   const totalAgents = topologyAgentIds.length;
   const connected = totalAgents > 0 && readyCount === totalAgents;
   const hasAttention = diagnosticCount > 0 || readyCount < totalAgents;
-  const healthLabel = connected && !diagnosticCount ? "运行良好" : "需要关注";
+  const healthLabel =
+    connected && !diagnosticCount ? t("healthy") : t("attention");
   const healthTone = connected && !diagnosticCount ? "healthy" : "attention";
   return (
     <div className="page overview-page">
       <section className="overview-hero" aria-labelledby="overview-title">
         <div className="overview-hero-copy">
           <div className="overview-kicker">
-            <p className="eyebrow">工作台 / 总览</p>
+            <p className="eyebrow">{t("overviewKicker")}</p>
             <span
               className={`overview-status ${healthTone}`}
               aria-label={`本机工作区：${healthLabel}`}
@@ -1014,10 +1016,10 @@ function Overview({
               {healthLabel}
             </span>
           </div>
-          <h1 id="overview-title">掌控每个 Agent 的运行状态。</h1>
+          <h1 id="overview-title">{t("overviewTitle")}</h1>
           <p className="overview-hero-description">
-            <span>这里汇总配置、Skills 与诊断状态。</span>
-            <span>先看全局，再决定下一次安全写入。</span>
+            <span>{t("overviewDescription")}</span>
+            <span>{t("overviewDescription2")}</span>
           </p>
           <div className="overview-hero-actions">
             <button
@@ -1027,7 +1029,7 @@ function Overview({
               }
             >
               <Icon name={hasAttention ? "warning" : "edit"} size={16} />
-              {hasAttention ? "处理待关注项" : "管理配置"}
+              {hasAttention ? t("handleAttention") : t("manageConfig")}
               <Icon name="arrow" size={15} />
             </button>
           </div>
@@ -1037,18 +1039,20 @@ function Overview({
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          aria-label={`本机状态：${readyCount}/${totalAgents} 个 Agent 已连接，${skillCount} 个 Skills 已发现，${diagnosticCount} 项待处理诊断`}
+          aria-label={`${t("localStatus")}: ${readyCount}/${totalAgents} ${t("connectedAgents")}, ${skillCount} ${t("skillsFound")}, ${diagnosticCount} ${t("pendingItems")}`}
         >
           <div className="snapshot-heading">
-            <span>本地状态</span>
+            <span>{t("localStatus")}</span>
             <span className="snapshot-live">
               <i />
-              当前结果
+              {t("currentResult")}
             </span>
           </div>
           <div className="snapshot-score">
             <strong>{readyCount}</strong>
-            <span>/ {totalAgents} Agent 已连接</span>
+            <span>
+              / {totalAgents} {t("connectedAgents")}
+            </span>
           </div>
           <div className="snapshot-meter" aria-hidden="true">
             <i
@@ -1058,9 +1062,13 @@ function Overview({
             />
           </div>
           <div className="snapshot-footnote">
-            <span>{skillCount} 个 Skills 已发现</span>
+            <span>
+              {skillCount} {t("skillsFound")}
+            </span>
             <span className={diagnosticCount ? "has-attention" : ""}>
-              {diagnosticCount ? `${diagnosticCount} 项待处理` : "无待处理诊断"}
+              {diagnosticCount
+                ? `${diagnosticCount} ${t("pendingItems")}`
+                : t("noPendingDiagnostics")}
             </span>
           </div>
         </div>
@@ -1069,13 +1077,13 @@ function Overview({
       <section className="topology-card" aria-labelledby="topology-title">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">连接状态</p>
-            <h2 id="topology-title">Agent 连接拓扑</h2>
+            <p className="eyebrow">{t("connectionStatus")}</p>
+            <h2 id="topology-title">{t("topology")}</h2>
           </div>
           <div className="topology-meta">
             <span className="live-indicator">
               <i />
-              本地扫描
+              {t("localScan")}
             </span>
           </div>
         </div>
@@ -1165,16 +1173,16 @@ function Overview({
               <BrandGlyph size={46} />
             </div>
             <strong>AgentHub</strong>
-            <small>本地统一中枢</small>
+            <small>{t("hubSubtitle")}</small>
           </div>
         </div>
         <div className="topology-footer">
           <span>
             <i className="footer-signal" />
-            {readyCount}/{totalAgents} 个 Agent 正在为本地工作区提供配置
+            {readyCount}/{totalAgents} {t("workspaceConfig")}
           </span>
           <button className="text-button" onClick={() => onNavigate("configs")}>
-            查看配置状态 <Icon name="arrow" size={15} />
+            {t("viewConfigStatus")} <Icon name="arrow" size={15} />
           </button>
         </div>
       </section>
@@ -1182,8 +1190,8 @@ function Overview({
         <article className="health-panel health-panel-primary">
           <div className="section-title-row">
             <div>
-              <p className="eyebrow">工作区健康</p>
-              <h2>现在可以安全工作吗？</h2>
+              <p className="eyebrow">{t("workspaceHealth")}</p>
+              <h2>{t("safeToWork")}</h2>
             </div>
             <span className={`health-score ${healthTone}`}>
               {readyCount}/{totalAgents}
@@ -1191,8 +1199,8 @@ function Overview({
           </div>
           <p className="health-panel-copy">
             {connected && !diagnosticCount
-              ? `${totalAgents} 个 Agent 都已读取到有效配置，写入仍会经过 Diff 与备份。`
-              : "有配置或诊断需要确认，建议先处理后再进行批量写入。"}
+              ? `${totalAgents} ${t("agentsReady")}`
+              : t("attentionDescription")}
           </p>
           <div className="health-list">
             <button onClick={() => onNavigate("configs")}>
@@ -1200,9 +1208,9 @@ function Overview({
                 <Icon name="sliders" />
               </span>
               <span>
-                <strong>配置同步</strong>
+                <strong>{t("configSync")}</strong>
                 <small>
-                  {readyCount}/{totalAgents} 个 Agent 已准备好
+                  {readyCount}/{totalAgents} {t("agentsReadyShort")}
                 </small>
               </span>
               <Icon name="arrow" size={15} />
@@ -1212,8 +1220,10 @@ function Overview({
                 <Icon name="spark" />
               </span>
               <span>
-                <strong>Skills 目录</strong>
-                <small>{skillCount} 个能力可供管理</small>
+                <strong>{t("skillsDirectory")}</strong>
+                <small>
+                  {skillCount} {t("skillsAvailable")}
+                </small>
               </span>
               <Icon name="arrow" size={15} />
             </button>
@@ -1224,11 +1234,11 @@ function Overview({
                 <Icon name={diagnosticCount ? "warning" : "check"} />
               </span>
               <span>
-                <strong>诊断队列</strong>
+                <strong>{t("diagnosticQueue")}</strong>
                 <small>
                   {diagnosticCount
-                    ? `${diagnosticCount} 项需要处理`
-                    : "当前没有异常"}
+                    ? `${diagnosticCount} ${t("pendingItems")}`
+                    : t("currentNoIssues")}
                 </small>
               </span>
               <Icon name="arrow" size={15} />
@@ -1237,36 +1247,36 @@ function Overview({
         </article>
         <article className="next-panel">
           <div>
-            <p className="eyebrow">安全写入</p>
-            <h2>每次修改都可回退</h2>
-            <p>扫描、Diff、确认、备份，四步完成一次可追溯的配置变更。</p>
+            <p className="eyebrow">{t("secureWrite")}</p>
+            <h2>{t("everyChangeReversible")}</h2>
+            <p>{t("secureWriteDescription")}</p>
           </div>
           <div className="write-flow" aria-label="安全写入流程">
             <span className="write-flow-step done">
               <i>1</i>
-              <b>扫描</b>
+              <b>{t("scan")}</b>
             </span>
             <span className="write-flow-line" />
             <span className="write-flow-step done">
               <i>2</i>
-              <b>Diff</b>
+              <b>{t("diff")}</b>
             </span>
             <span className="write-flow-line" />
             <span className="write-flow-step">
               <i>3</i>
-              <b>确认</b>
+              <b>{t("confirm")}</b>
             </span>
             <span className="write-flow-line" />
             <span className="write-flow-step">
               <i>4</i>
-              <b>备份</b>
+              <b>{t("backup")}</b>
             </span>
           </div>
           <button
             className="button button-secondary"
             onClick={() => onNavigate("configs")}
           >
-            打开配置中心 <Icon name="arrow" size={15} />
+            {t("openConfigCenter")} <Icon name="arrow" size={15} />
           </button>
         </article>
       </section>
