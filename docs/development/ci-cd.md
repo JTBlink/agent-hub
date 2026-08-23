@@ -34,7 +34,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ## 手动构建
 
-在 GitHub Actions 中运行 `Build Installers` → `Run workflow`，可选择分支、tag 或 commit。手动构建只生成带保留期限的无签名 Actions artifacts，不读取生产签名 Secrets，也不创建正式 Release；即使手动选择的是 `v*` tag，也仍按手动构建处理。
+在 GitHub Actions 中运行 `Build Installers` → `Run workflow` 即可手动构建当前选中的分支。手动运行不需要填写额外参数，Actions artifact 固定保留 90 天，并从 `VERSION` 自动计算 `v<version>` Release tag；手动构建也会创建 GitHub Release。手动构建不读取生产签名 Secrets。Actions artifact 不能永久保存，但上传到 GitHub Release 的安装包和 `CHANGELOG.md` 会持续保留，直到手动删除 Release 或附件。
 
 ## Tag 发布
 

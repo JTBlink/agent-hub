@@ -56,7 +56,10 @@ export function legacyActionConfirmOptions(
   if (action === "migrate") {
     return {
       title: "要把这个 Codex Skill 移到推荐位置吗？",
-      paths: [`原位置：${sourceDirectory}`, `新位置：${preferredCodexSkillDirectory(sourcePath)}`],
+      paths: [
+        `原位置：${sourceDirectory}`,
+        `新位置：${preferredCodexSkillDirectory(sourcePath)}`,
+      ],
       note: "我们会先创建完整备份，再移动整个 Skill 目录。目标位置已有同名目录时会停止操作，不会覆盖现有文件。",
     };
   }
@@ -105,6 +108,6 @@ export function failedLegacyActionFeedback(
         ? error.message
         : typeof error === "string" && error.trim()
           ? error
-        : "目录状态可能已经变化，请重新扫描后再试。",
+          : "目录状态可能已经变化，请重新扫描后再试。",
   };
 }

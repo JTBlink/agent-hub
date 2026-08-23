@@ -24,7 +24,9 @@ function diagnostic(
   };
 }
 
-function installedSkill(overrides: Partial<InstalledSkill> = {}): InstalledSkill {
+function installedSkill(
+  overrides: Partial<InstalledSkill> = {},
+): InstalledSkill {
   return {
     agent: "codex",
     scope: "global",

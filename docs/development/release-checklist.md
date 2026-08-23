@@ -25,9 +25,7 @@ go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml
 
 ```bash
 gh workflow run "Build Installers" \
-  --ref main \
-  -f ref=main \
-  -f artifact_retention_days=14
+  --ref main
 gh run list --workflow "Build Installers" --limit 1
 gh run watch <run-id> --exit-status
 gh run download <run-id> --name "agent-hub-installers-<run-id>"
@@ -47,6 +45,6 @@ gh run download <run-id> --name "agent-hub-installers-<run-id>"
 
 ## 完成判定
 
-- 手动构建成功不证明 tag Release 成功；两条触发路径分别留存 run URL 和结论。
+- 手动构建和 tag 构建都会创建 Release；两条触发路径分别留存 run URL 和结论。
 - 任一安装格式缺失、checksum 不匹配、版本不一致或矩阵 job 失败，均不得发布。
 - B14 只有在三平台安装/启动、配置扫描、安全写入、SQLite 新装和 migration 升级均通过后才能标记 `resolved`。
