@@ -728,7 +728,7 @@ export function App() {
               <small>数据只保存在此设备</small>
             </span>
           </div>
-          <span className="version">v{runtimeVersion ?? "0.1.0"}</span>
+          <span className="version">v{runtimeVersion ?? __APP_VERSION__}</span>
         </div>
       </aside>
       <main

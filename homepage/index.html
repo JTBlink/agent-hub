@@ -760,8 +760,8 @@
             ></a>
           </div>
           <div class="hero-meta">
-            <span class="status">当前版本 v0.1.0</span><span>MIT License</span
-            ><span>macOS / Windows / Linux</span>
+            <span class="status">当前版本 v__APP_VERSION__</span
+            ><span>MIT License</span><span>macOS / Windows / Linux</span>
           </div>
         </div>
         <div class="hero-visual">
@@ -993,7 +993,7 @@
     <script>
       const list = document.querySelector("#release-list");
       const fallback =
-        '<div class="release"><div><span class="release-version">v0.1.0</span><span class="release-date">初始发布</span></div><div><h3>AgentHub 首次公开版本</h3><p>统一配置管理、Skills 安装与管理、诊断中心和变更历史。</p></div></div>';
+        '<div class="release"><div><span class="release-version">v__APP_VERSION__</span><span class="release-date">2026-08-23</span></div><div><h3>AgentHub 入口与预编译修复</h3><p>分离桌面端与官网入口，并支持 main 分支 push 自动生成跨平台预编译包。</p></div></div>';
       const escapeHtml = (value) =>
         String(value).replace(
           /[&<>'"]/g,

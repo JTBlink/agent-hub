@@ -41,6 +41,8 @@
 
 当前历史记录仅有 `Initial commit`，尚未形成正式的提交规范。提交标题应简洁并采用祈使语气，例如 `Add workspace configuration loader`；每个提交只处理一个明确事项。变更说明应链接对应的 `.scratch/<feature>/issues/<id>-<slug>.md`，并列出验证步骤。涉及用户可见的变更时，请附上截图或终端输出；配置变更和后续事项也应明确说明。代码审查可以使用任意协作入口，但需求状态必须回写 `.scratch/`。
 
+每次提交前都必须检查本次变更是否影响用户可见行为、发布流程或兼容性；如有影响，及时在根目录 `CHANGELOG.md` 的 `Unreleased` 或对应版本章节中补充记录。
+
 ## Agent skills
 
 ### Issue tracker
