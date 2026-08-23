@@ -38,7 +38,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ## Tag 发布
 
-先使用仓库脚本同步 `package.json`、lockfile、Cargo 和 Tauri 版本号，再提交版本变更并推送同名 tag：
+版本唯一维护在仓库根目录的 `VERSION` 文件。直接修改它后运行 `npm run version:sync`，即可同步生成 `package.json`、lockfile、Cargo 和 Tauri 版本号；也可以用 `npm run version:set -- <version>` 一步完成修改与同步。完成后提交版本变更并推送同名 tag：
 
 ```bash
 npm run version:set -- 0.1.0

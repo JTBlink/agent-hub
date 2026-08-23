@@ -1,64 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="flow-top" x1="470" y1="180" x2="550" y2="390" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#AAB5FF" />
-      <stop offset="0.48" stop-color="#7D8CFF" />
-      <stop offset="1" stop-color="#2C9CFF" />
-    </linearGradient>
-    <linearGradient id="flow-left" x1="205" y1="825" x2="470" y2="545" gradientUnits="userSpaceOnUse">
+    <!-- Same highlight direction as the topology's .hub-orbit surface. -->
+    <radialGradient id="workspace" cx="35%" cy="28%" r="100%">
+      <stop stop-color="#294A7C" />
+      <stop offset="0.68" stop-color="#0D1930" />
+      <stop offset="1" stop-color="#0D1930" />
+    </radialGradient>
+    <!-- Exact palette and direction from the page's BrandGlyph component. -->
+    <linearGradient id="brand-flow" x1="10" y1="8" x2="55" y2="57" gradientUnits="userSpaceOnUse">
       <stop stop-color="#168BFF" />
-      <stop offset="1" stop-color="#7185FF" />
-    </linearGradient>
-    <linearGradient id="flow-right" x1="805" y1="825" x2="555" y2="535" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#42D9B1" />
-      <stop offset="0.5" stop-color="#25C8C8" />
-      <stop offset="1" stop-color="#2C9CFF" />
-    </linearGradient>
-    <linearGradient id="hub" x1="375" y1="365" x2="660" y2="655" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8A8DFF" />
-      <stop offset="0.48" stop-color="#168BFF" />
-      <stop offset="1" stop-color="#42D9B1" />
-    </linearGradient>
-    <linearGradient id="core" x1="474" y1="470" x2="552" y2="552" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#AAB5FF" />
-      <stop offset="0.5" stop-color="#6E89FF" />
+      <stop offset="0.52" stop-color="#4F8DFF" />
       <stop offset="1" stop-color="#42D9B1" />
     </linearGradient>
   </defs>
 
-  <!--
-    Master icon contract: 1024 × 1024 RGBA canvas.
-    Opaque card: x/y 97, size 830, radius 192.
-    Inner border: x/y 105, size 814, radius 184, stroke 6.
-    Only the rounded-corner outside remains transparent.
-  -->
+  <!-- macOS master: 1024 canvas, 830px opaque rounded card, transparent only outside. -->
   <rect x="97" y="97" width="830" height="830" rx="192" fill="#0F1835" />
   <rect x="105" y="105" width="814" height="814" rx="184" fill="none" stroke="#263B67" stroke-width="6" />
 
-  <!-- Opaque rails add depth without relying on shadows or transparency. -->
-  <path d="M512 246 C512 318 512 357 512 410" fill="none" stroke="#1A294D" stroke-width="52" stroke-linecap="round" />
-  <path d="M261 771 C337 692 400 620 450 566" fill="none" stroke="#1A294D" stroke-width="52" stroke-linecap="round" />
-  <path d="M763 771 C687 692 624 620 574 566" fill="none" stroke="#163B4C" stroke-width="52" stroke-linecap="round" />
-
-  <!-- Edge-inspired flowing energy bands, retaining AgentHub's three-node topology. -->
-  <path d="M512 246 C512 318 512 357 512 410" fill="none" stroke="url(#flow-top)" stroke-width="34" stroke-linecap="round" />
-  <path d="M261 771 C337 692 400 620 450 566" fill="none" stroke="url(#flow-left)" stroke-width="34" stroke-linecap="round" />
-  <path d="M763 771 C687 692 624 620 574 566" fill="none" stroke="url(#flow-right)" stroke-width="34" stroke-linecap="round" />
-
-  <!-- Three Agent endpoints. -->
-  <circle cx="512" cy="246" r="66" fill="url(#flow-top)" />
-  <circle cx="261" cy="771" r="66" fill="url(#flow-left)" />
-  <circle cx="763" cy="771" r="66" fill="url(#flow-right)" />
-  <circle cx="512" cy="246" r="43" fill="#182748" />
-  <circle cx="261" cy="771" r="43" fill="#182748" />
-  <circle cx="763" cy="771" r="43" fill="#123746" />
-  <circle cx="512" cy="246" r="17" fill="#F4F7FF" />
-  <circle cx="261" cy="771" r="17" fill="#F4F7FF" />
-  <circle cx="763" cy="771" r="17" fill="#E8FFF8" />
-
-  <!-- One local Hub receives all three flows. -->
-  <circle cx="512" cy="510" r="154" fill="url(#hub)" />
-  <circle cx="512" cy="510" r="112" fill="#101B39" />
-  <circle cx="512" cy="510" r="51" fill="url(#core)" />
-  <circle cx="512" cy="510" r="19" fill="#F4F7FF" />
+  <!-- One circular workspace carries the existing AgentHub BrandGlyph. -->
+  <circle cx="512" cy="522" r="304" fill="#09142B" />
+  <circle cx="512" cy="512" r="304" fill="url(#workspace)" stroke="#47699E" stroke-width="10" />
+  <g transform="translate(281.6 267.2) scale(7.2)">
+    <path d="M32 12v14M15 48l12-9M49 48l-12-9" fill="none" stroke="#07101F" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M32 10v16M13 49l14-10M51 49 37 39" fill="none" stroke="url(#brand-flow)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="32" cy="9" r="6" fill="#172B4F" stroke="#5FAAFF" stroke-width="3" />
+    <circle cx="12" cy="50" r="6" fill="#172B4F" stroke="#868FFF" stroke-width="3" />
+    <circle cx="52" cy="50" r="6" fill="#172B4F" stroke="#42D9B1" stroke-width="3" />
+    <circle cx="32" cy="34" r="11" fill="#0D1930" stroke="#263F70" stroke-width="4" />
+    <circle cx="32" cy="34" r="6" fill="#168BFF" stroke="#62DDBD" stroke-width="2" />
+    <circle cx="32" cy="34" r="2.3" fill="#EFFFFF" />
+  </g>
 </svg>

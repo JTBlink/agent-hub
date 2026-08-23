@@ -36,7 +36,7 @@ jobs:
       resolved_sha: ${{ steps.resolve_ref.outputs.sha }}
     steps:
       - name: Check out requested revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.ref }}
 
@@ -46,7 +46,7 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -96,7 +96,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out requested revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.preflight.outputs.resolved_sha }}
 
@@ -109,7 +109,7 @@ jobs:
             libwebkit2gtk-4.1-dev
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -176,7 +176,7 @@ jobs:
 
     steps:
       - name: Check out requested revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.preflight.outputs.resolved_sha }}
 
@@ -192,7 +192,7 @@ jobs:
             patchelf
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -264,7 +264,7 @@ jobs:
 
     steps:
       - name: Check out requested revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.preflight.outputs.resolved_sha }}
 
@@ -276,7 +276,7 @@ jobs:
           merge-multiple: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
