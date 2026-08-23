@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+后续版本变更将在此记录。
+
+## [0.1.0] - 2026-08-23
+
 ### 产品定位
 
 - 明确 AgentHub 第一版以配置中心为核心：统一管理 Claude Code、Codex 和 OpenCode 的全局配置与工作空间配置。
