@@ -1,599 +1,1054 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a1020" />
-  <meta name="description" content="AgentHub - 本地优先的 AI Agent 工作空间管理器。统一管理 Claude Code、Codex、OpenCode 的配置与 Skills。" />
-  <title>AgentHub</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0a1020;
-      --surface: #111b2e;
-      --ink: #dce6f5;
-      --body: #9aacc4;
-      --dim: #5c7190;
-      --line: #1c2b42;
-      --accent: #3ea8ff;
-      --accent-hover: #5bb8ff;
-    }
-
-    body {
-      font-family: Inter, -apple-system, system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    a { color: inherit; text-decoration: none; }
-
-    /* NAV */
-    .nav {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      height: 52px;
-      padding: 0 clamp(20px, 4vw, 48px);
-      display: flex;
-      align-items: center;
-      background: rgba(10, 16, 32, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--line);
-    }
-
-    .nav-brand {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      margin-right: auto;
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      list-style: none;
-    }
-
-    .nav-links a {
-      font-size: 13px;
-      color: var(--dim);
-      transition: color 0.15s;
-    }
-
-    .nav-links a:hover { color: var(--ink); }
-
-    .nav-links .dl-link {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    /* HERO */
-    .hero {
-      padding: clamp(60px, 10vw, 120px) clamp(20px, 4vw, 48px) 0;
-      max-width: 980px;
-    }
-
-    .hero h1 {
-      font-size: clamp(32px, 5.5vw, 52px);
-      font-weight: 700;
-      letter-spacing: -0.035em;
-      line-height: 1.15;
-      margin-bottom: 16px;
-    }
-
-    .hero-desc {
-      font-size: clamp(15px, 1.6vw, 17px);
-      color: var(--body);
-      max-width: 480px;
-      line-height: 1.7;
-      margin-bottom: 32px;
-    }
-
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .btn-dl {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: 6px;
-      background: var(--accent);
-      color: #0a1020;
-      font-size: 14px;
-      font-weight: 600;
-      transition: background 0.15s;
-    }
-
-    .btn-dl:hover { background: var(--accent-hover); }
-
-    .btn-gh {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: 6px;
-      background: transparent;
-      border: 1px solid var(--line);
-      color: var(--body);
-      font-size: 14px;
-      font-weight: 500;
-      transition: border-color 0.15s, color 0.15s;
-    }
-
-    .btn-gh:hover {
-      border-color: var(--dim);
-      color: var(--ink);
-    }
-
-    .hero-version {
-      margin-top: 14px;
-      font-size: 12px;
-      color: var(--dim);
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* SCREENSHOT */
-    .screenshot {
-      margin: 56px auto 0;
-      padding: 0 clamp(20px, 4vw, 48px);
-      max-width: 1060px;
-    }
-
-    .screenshot-frame {
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      background: var(--surface);
-    }
-
-    .screenshot-bar {
-      height: 36px;
-      display: flex;
-      align-items: center;
-      padding: 0 12px;
-      gap: 6px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .screenshot-bar i {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--line);
-    }
-
-    .screenshot-frame img {
-      width: 100%;
-      display: block;
-    }
-
-    .screenshot-gallery {
-      max-width: 1060px;
-      padding: 64px clamp(20px, 4vw, 48px) 0;
-    }
-
-    .screenshot-gallery h2 {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--dim);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 20px;
-    }
-
-    .screenshot-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    .screenshot-card {
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-    }
-
-    .screenshot-card img {
-      width: 100%;
-      display: block;
-    }
-
-    .screenshot-card figcaption {
-      padding: 10px 12px;
-      color: var(--body);
-      font-size: 12px;
-      border-top: 1px solid var(--line);
-    }
-
-    /* PLATFORMS */
-    .platforms {
-      max-width: 980px;
-      padding: 80px clamp(20px, 4vw, 48px) 0;
-    }
-
-    .platforms h2 {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--dim);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 20px;
-    }
-
-    .platform-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .platform-cell {
-      padding: 20px;
-      border-right: 1px solid var(--line);
-    }
-
-    .platform-cell:last-child { border-right: none; }
-
-    .platform-cell h3 {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-
-    .platform-cell .meta {
-      font-size: 12px;
-      color: var(--dim);
-      margin-bottom: 12px;
-    }
-
-    .platform-cell .links {
-      display: flex;
-      gap: 8px;
-    }
-
-    .platform-cell .links a {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--accent);
-      padding: 4px 10px;
-      border-radius: 4px;
-      background: rgba(62, 168, 255, 0.08);
-      transition: background 0.15s;
-    }
-
-    .platform-cell .links a:hover {
-      background: rgba(62, 168, 255, 0.15);
-    }
-
-    .platforms-note {
-      margin-top: 12px;
-      font-size: 12px;
-      color: var(--dim);
-    }
-
-    .platforms-note a { color: var(--accent); }
-
-    /* ABOUT */
-    .about {
-      max-width: 980px;
-      padding: 80px clamp(20px, 4vw, 48px) 0;
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 40px;
-    }
-
-    .about-label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--dim);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      padding-top: 3px;
-    }
-
-    .about-content p {
-      font-size: 15px;
-      color: var(--body);
-      margin-bottom: 24px;
-      line-height: 1.7;
-      max-width: 560px;
-    }
-
-    .about-list {
-      list-style: none;
-      padding: 0;
-      display: grid;
-      gap: 12px;
-    }
-
-    .about-list li {
-      font-size: 14px;
-      color: var(--body);
-      padding-left: 16px;
-      position: relative;
-      line-height: 1.5;
-    }
-
-    .about-list li::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 9px;
-      width: 6px;
-      height: 1px;
-      background: var(--dim);
-    }
-
-    /* CHANGELOG */
-    .changelog-section {
-      max-width: 980px;
-      padding: 80px clamp(20px, 4vw, 48px) 0;
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 40px;
-    }
-
-    .cl-list {
-      max-width: 560px;
-    }
-
-    .cl-entry {
-      padding-bottom: 32px;
-      border-left: 1px solid var(--line);
-      padding-left: 20px;
-      position: relative;
-    }
-
-    .cl-entry::before {
-      content: "";
-      position: absolute;
-      left: -3px;
-      top: 6px;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    .cl-ver {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-
-    .cl-date {
-      font-size: 12px;
-      color: var(--dim);
-      margin-bottom: 10px;
-    }
-
-    .cl-entry ul {
-      list-style: none;
-      padding: 0;
-    }
-
-    .cl-entry li {
-      font-size: 13px;
-      color: var(--body);
-      margin-bottom: 4px;
-      line-height: 1.5;
-    }
-
-    .cl-more {
-      margin-top: 4px;
-      padding-left: 20px;
-    }
-
-    .cl-more a {
-      font-size: 13px;
-      color: var(--accent);
-    }
-
-    /* FOOTER */
-    .footer {
-      max-width: 980px;
-      padding: 60px clamp(20px, 4vw, 48px) 32px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-top: 1px solid var(--line);
-      margin-top: 80px;
-    }
-
-    .footer-left {
-      font-size: 12px;
-      color: var(--dim);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 20px;
-      list-style: none;
-    }
-
-    .footer-links a {
-      font-size: 12px;
-      color: var(--dim);
-      transition: color 0.15s;
-    }
-
-    .footer-links a:hover { color: var(--ink); }
-
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      .nav-links { gap: 16px; }
-      .nav-links li:not(:last-child):not(:nth-last-child(2)) { display: none; }
-      .platform-row { grid-template-columns: 1fr; }
-      .platform-cell { border-right: none; border-bottom: 1px solid var(--line); }
-      .platform-cell:last-child { border-bottom: none; }
-      .screenshot-grid { grid-template-columns: 1fr; }
-      .about { grid-template-columns: 1fr; gap: 12px; }
-      .changelog-section { grid-template-columns: 1fr; gap: 12px; }
-      .footer { flex-direction: column; gap: 12px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-    }
-
-    /* Focus */
-    a:focus-visible, button:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-  </style>
-</head>
-<body>
-  <nav class="nav">
-    <a href="#" class="nav-brand">AgentHub</a>
-    <ul class="nav-links">
-      <li><a href="#platforms">下载</a></li>
-      <li><a href="#about">关于</a></li>
-      <li><a href="#changelog">日志</a></li>
-      <li><a href="https://github.com/JTBlink/agent-hub" target="_blank" rel="noopener" class="dl-link">GitHub</a></li>
-    </ul>
-  </nav>
-
-  <section class="hero">
-    <h1>统一管理你的<br />AI Agent 工作空间</h1>
-    <p class="hero-desc">
-      把 Claude Code、Codex、OpenCode 分散各处的配置文件和 Skills
-      集中到一个桌面应用里。先看清状态，再安全地修改。
-    </p>
-    <div class="hero-actions">
-      <a href="#platforms" class="btn-dl">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        下载
-      </a>
-      <a href="https://github.com/JTBlink/agent-hub" target="_blank" rel="noopener" class="btn-gh">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        源码
-      </a>
-    </div>
-    <p class="hero-version">v0.1.0 &middot; MIT License &middot; macOS / Windows / Linux</p>
-  </section>
-
-  <div class="screenshot">
-    <div class="screenshot-frame">
-      <div class="screenshot-bar"><i></i><i></i><i></i></div>
-      <img src="./assets/overview.png" alt="AgentHub 总览界面" />
-    </div>
-  </div>
-
-  <section class="screenshot-gallery" aria-labelledby="screenshots-title">
-    <h2 id="screenshots-title">产品界面</h2>
-    <div class="screenshot-grid">
-      <figure class="screenshot-card">
-        <img src="./assets/config-center.png" alt="AgentHub 配置中心" />
-        <figcaption>配置中心：按 Agent 和作用域查看实际配置</figcaption>
-      </figure>
-      <figure class="screenshot-card">
-        <img src="./assets/skills.png" alt="AgentHub Skills 管理" />
-        <figcaption>Skills：查看安装状态、来源和作用域</figcaption>
-      </figure>
-      <figure class="screenshot-card">
-        <img src="./assets/workspaces.png" alt="AgentHub 工作空间管理" />
-        <figcaption>工作空间：登记目录并扫描配置</figcaption>
-      </figure>
-      <figure class="screenshot-card">
-        <img src="./assets/diagnostics.png" alt="AgentHub 诊断中心" />
-        <figcaption>诊断中心：集中处理配置和 Skill 问题</figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <section class="platforms" id="platforms">
-    <h2>下载安装</h2>
-    <div class="platform-row">
-      <div class="platform-cell">
-        <h3>macOS</h3>
-        <p class="meta">Universal (Apple Silicon + Intel)</p>
-        <div class="links">
-          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.dmg</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#090b0e" />
+    <meta
+      name="description"
+      content="AgentHub：把多个 AI Agent 的配置、Skills 和工作空间放进一个可追溯的控制台。"
+    />
+    <title>AgentHub — 给 Agent 一个清晰的工作台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #edf3ed;
+        --muted: #9da9a1;
+        --faint: #647069;
+        --line: #26302b;
+        --line-bright: #35423a;
+        --bg: #090b0e;
+        --surface: #111613;
+        --surface-2: #151b17;
+        --acid: #b7f36b;
+        --acid-ink: #12200d;
+        --cyan: #8bd7ff;
+        --max: 1180px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        background: var(--bg);
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            ellipse 80% 55% at 80% -10%,
+            rgba(86, 140, 77, 0.17),
+            transparent 65%
+          ),
+          var(--bg);
+        font-family: "IBM Plex Sans", system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      a,
+      button {
+        -webkit-tap-highlight-color: transparent;
+      }
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--acid);
+        outline-offset: 4px;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+      .mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+
+      .shell {
+        width: min(var(--max), calc(100% - 48px));
+        margin-inline: auto;
+      }
+      .topbar {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        position: relative;
+        z-index: 2;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .brand-mark {
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--acid);
+        position: relative;
+        transform: rotate(45deg);
+      }
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        background: var(--acid);
+        left: 5px;
+        top: 5px;
+      }
+      .brand small {
+        color: var(--faint);
+        font:
+          500 10px "JetBrains Mono",
+          monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .nav a {
+        transition: color 0.2s ease;
+      }
+      .nav a:hover {
+        color: var(--ink);
+      }
+      .nav .nav-cta {
+        color: var(--acid);
+        font:
+          600 12px "JetBrains Mono",
+          monospace;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        padding: 98px 0 110px;
+        display: grid;
+        grid-template-columns: minmax(0, 0.95fr) minmax(400px, 1.05fr);
+        gap: 76px;
+        align-items: center;
+      }
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--acid);
+        font:
+          600 11px "JetBrains Mono",
+          monospace;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+      .eyebrow::before {
+        content: "";
+        width: 27px;
+        height: 1px;
+        background: var(--acid);
+      }
+      h1 {
+        font-size: clamp(45px, 6vw, 77px);
+        line-height: 0.99;
+        letter-spacing: -0.065em;
+        max-width: 680px;
+        margin: 23px 0 27px;
+      }
+      h1 em {
+        color: var(--acid);
+        font-style: normal;
+      }
+      .hero-copy {
+        color: var(--muted);
+        font-size: 18px;
+        max-width: 480px;
+        line-height: 1.7;
+      }
+      .hero-actions {
+        margin-top: 36px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+      .button {
+        min-height: 46px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 18px;
+        border: 1px solid var(--line-bright);
+        border-radius: 3px;
+        font-size: 14px;
+        font-weight: 600;
+        transition:
+          transform 0.2s ease,
+          background 0.2s ease,
+          border-color 0.2s ease;
+      }
+      .button:hover {
+        transform: translateY(-2px);
+        border-color: var(--acid);
+      }
+      .button.primary {
+        color: var(--acid-ink);
+        background: var(--acid);
+        border-color: var(--acid);
+      }
+      .button.primary:hover {
+        background: #d0fb95;
+      }
+      .button.ghost {
+        color: var(--muted);
+      }
+      .button svg {
+        width: 15px;
+        height: 15px;
+      }
+      .hero-meta {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-top: 19px;
+        color: var(--faint);
+        font:
+          11px "JetBrains Mono",
+          monospace;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .status::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--acid);
+        box-shadow: 0 0 0 4px rgba(183, 243, 107, 0.1);
+      }
+
+      .hero-visual {
+        position: relative;
+      }
+      .visual-label {
+        position: absolute;
+        z-index: 1;
+        top: -18px;
+        right: 20px;
+        padding: 7px 10px;
+        color: var(--acid);
+        background: var(--bg);
+        border: 1px solid var(--line-bright);
+        font:
+          10px "JetBrains Mono",
+          monospace;
+        letter-spacing: 0.08em;
+      }
+      .visual-frame {
+        padding: 12px;
+        border: 1px solid var(--line-bright);
+        background: #0c100d;
+        box-shadow: 17px 17px 0 rgba(183, 243, 107, 0.09);
+        transform: rotate(1.4deg);
+      }
+      .visual-chrome {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 27px;
+        padding: 0 7px;
+        border-bottom: 1px solid var(--line);
+        color: var(--faint);
+        font:
+          10px "JetBrains Mono",
+          monospace;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--line-bright);
+      }
+      .visual-chrome span {
+        margin-left: auto;
+        color: var(--acid);
+      }
+      .visual-frame img {
+        width: 100%;
+        aspect-ratio: 1.61;
+        object-fit: cover;
+        object-position: top;
+      }
+      .visual-note {
+        position: absolute;
+        bottom: -24px;
+        left: -29px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 15px;
+        color: var(--muted);
+        background: var(--surface-2);
+        border: 1px solid var(--line-bright);
+        font-size: 12px;
+      }
+      .visual-note strong {
+        display: block;
+        color: var(--ink);
+        font:
+          600 12px "JetBrains Mono",
+          monospace;
+      }
+
+      .signal {
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .signal-inner {
+        display: grid;
+        grid-template-columns: 1.4fr repeat(3, 1fr);
+      }
+      .signal-item {
+        min-height: 92px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 24px;
+        border-left: 1px solid var(--line);
+      }
+      .signal-item:first-child {
+        padding-left: 0;
+        border-left: 0;
+      }
+      .signal-kicker {
+        color: var(--faint);
+        font:
+          10px "JetBrains Mono",
+          monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .signal-value {
+        margin-top: 7px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .signal-value .green {
+        color: var(--acid);
+      }
+
+      .section {
+        padding: 128px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 30px;
+        margin-bottom: 44px;
+      }
+      .section-title {
+        font-size: clamp(29px, 4vw, 46px);
+        line-height: 1.04;
+        letter-spacing: -0.05em;
+        margin: 14px 0 0;
+      }
+      .section-intro {
+        max-width: 380px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+      }
+      .feature {
+        min-height: 270px;
+        padding: 28px;
+        background: var(--surface);
+        position: relative;
+        overflow: hidden;
+      }
+      .feature::after {
+        content: "";
+        position: absolute;
+        width: 170px;
+        height: 170px;
+        right: -90px;
+        bottom: -90px;
+        border-radius: 50%;
+        border: 1px solid rgba(183, 243, 107, 0.18);
+      }
+      .feature-index {
+        color: var(--acid);
+        font:
+          11px "JetBrains Mono",
+          monospace;
+      }
+      .feature h3 {
+        margin: 57px 0 12px;
+        font-size: 20px;
+        letter-spacing: -0.025em;
+      }
+      .feature p {
+        max-width: 285px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .feature code {
+        color: var(--cyan);
+        font:
+          11px "JetBrains Mono",
+          monospace;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 0.7fr 1.3fr;
+        gap: 72px;
+        align-items: start;
+      }
+      .workspace-copy {
+        position: sticky;
+        top: 110px;
+      }
+      .workspace-copy p {
+        max-width: 330px;
+        margin: 20px 0 28px;
+        color: var(--muted);
+      }
+      .text-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--acid);
+        font:
+          600 12px "JetBrains Mono",
+          monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .text-link:hover svg {
+        transform: translateX(4px);
+      }
+      .text-link svg {
+        transition: transform 0.2s ease;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+      }
+      .gallery figure {
+        margin: 0;
+        border: 1px solid var(--line-bright);
+        background: var(--surface);
+      }
+      .gallery figure:first-child {
+        grid-column: span 2;
+      }
+      .gallery img {
+        width: 100%;
+        aspect-ratio: 1.65;
+        object-fit: cover;
+        object-position: top;
+      }
+      .gallery figcaption {
+        padding: 11px 13px;
+        color: var(--muted);
+        font:
+          11px "JetBrains Mono",
+          monospace;
+        border-top: 1px solid var(--line);
+      }
+
+      .log-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 72px;
+      }
+      .release-list {
+        border-top: 1px solid var(--line);
+      }
+      .release {
+        display: grid;
+        grid-template-columns: 125px 1fr;
+        gap: 24px;
+        padding: 22px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .release-version {
+        color: var(--acid);
+        font:
+          600 13px "JetBrains Mono",
+          monospace;
+      }
+      .release-date {
+        display: block;
+        margin-top: 5px;
+        color: var(--faint);
+        font:
+          10px "JetBrains Mono",
+          monospace;
+      }
+      .release h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+      .release p,
+      .release ul {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .release ul {
+        padding-left: 17px;
+      }
+      .release-loading {
+        padding: 25px 0;
+        color: var(--faint);
+        font:
+          12px "JetBrains Mono",
+          monospace;
+      }
+      .log-side {
+        padding: 24px;
+        border: 1px solid var(--line-bright);
+        background: var(--surface);
+      }
+      .log-side h3 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+      .log-side p {
+        margin: 0 0 23px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .log-side .mono {
+        color: var(--faint);
+        font-size: 11px;
+        line-height: 1.8;
+      }
+
+      .closing {
+        padding: 112px 0 126px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: end;
+        gap: 35px;
+      }
+      .closing h2 {
+        max-width: 600px;
+        margin: 13px 0 0;
+        font-size: clamp(34px, 5vw, 60px);
+        line-height: 1.01;
+        letter-spacing: -0.06em;
+      }
+      .closing h2 em {
+        color: var(--acid);
+        font-style: normal;
+      }
+      footer {
+        padding: 22px 0 30px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        color: var(--faint);
+        font:
+          11px "JetBrains Mono",
+          monospace;
+      }
+      footer nav {
+        display: flex;
+        gap: 18px;
+      }
+      footer a:hover {
+        color: var(--ink);
+      }
+
+      @media (max-width: 840px) {
+        .shell {
+          width: min(var(--max), calc(100% - 36px));
+        }
+        .nav {
+          gap: 15px;
+        }
+        .nav a:not(.nav-cta) {
+          display: none;
+        }
+        .hero {
+          padding: 72px 0 100px;
+          grid-template-columns: 1fr;
+          gap: 65px;
+        }
+        .hero-visual {
+          max-width: 640px;
+          margin-inline: auto;
+        }
+        .signal-inner {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .signal-item,
+        .signal-item:first-child {
+          padding: 17px 14px;
+          border-left: 1px solid var(--line);
+        }
+        .signal-item:nth-child(odd) {
+          border-left: 0;
+        }
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+        .feature {
+          min-height: 215px;
+        }
+        .workspace,
+        .log-grid {
+          grid-template-columns: 1fr;
+          gap: 45px;
+        }
+        .workspace-copy {
+          position: static;
+        }
+        .closing {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+      }
+      @media (max-width: 520px) {
+        .shell {
+          width: calc(100% - 30px);
+        }
+        .topbar {
+          height: 64px;
+        }
+        .brand small {
+          display: none;
+        }
+        h1 {
+          font-size: clamp(42px, 14vw, 63px);
+        }
+        .hero-copy {
+          font-size: 16px;
+        }
+        .hero-actions .button {
+          width: 100%;
+          justify-content: center;
+        }
+        .visual-note {
+          position: static;
+          margin-top: 12px;
+        }
+        .section {
+          padding: 85px 0;
+        }
+        .section-head {
+          display: block;
+          margin-bottom: 30px;
+        }
+        .section-intro {
+          margin-top: 17px;
+        }
+        .gallery {
+          grid-template-columns: 1fr;
+        }
+        .gallery figure:first-child {
+          grid-column: auto;
+        }
+        .release {
+          grid-template-columns: 1fr;
+          gap: 7px;
+        }
+        footer {
+          display: block;
+        }
+        footer nav {
+          margin-top: 14px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="shell topbar">
+      <a class="brand" href="./" aria-label="AgentHub 首页"
+        ><span class="brand-mark" aria-hidden="true"></span><span>AgentHub</span
+        ><small>agent workspace manager</small></a
+      >
+      <nav class="nav" aria-label="主导航">
+        <a href="#product">产品</a><a href="#workspace">界面</a
+        ><a href="#releases">更新</a>
+        <a
+          class="nav-cta"
+          href="https://github.com/JTBlink/agent-hub/releases/latest"
+          target="_blank"
+          rel="noopener"
+          >下载 ↗</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="shell hero">
+        <div>
+          <div class="eyebrow">Local-first / v0.1</div>
+          <h1>让 Agent 的每一次改变，都<em>看得见。</em></h1>
+          <p class="hero-copy">
+            AgentHub 把 Claude Code、Codex、OpenCode 的配置、Skills
+            与工作空间，整理成一个可检查、可回滚的本地控制台。
+          </p>
+          <div class="hero-actions">
+            <a
+              class="button primary"
+              href="https://github.com/JTBlink/agent-hub/releases/latest"
+              target="_blank"
+              rel="noopener"
+              >获取最新版本
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="M8 2v9m0 0 3.5-3.5M8 11 4.5 7.5M2.5 14h11"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+            ></a>
+            <a
+              class="button ghost"
+              href="https://github.com/JTBlink/agent-hub"
+              target="_blank"
+              rel="noopener"
+              >查看源码
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path
+                  d="m6 3 5 5-5 5"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+            ></a>
+          </div>
+          <div class="hero-meta">
+            <span class="status">当前版本 v0.1.0</span><span>MIT License</span
+            ><span>macOS / Windows / Linux</span>
+          </div>
         </div>
-      </div>
-      <div class="platform-cell">
-        <h3>Windows</h3>
-        <p class="meta">x86_64</p>
-        <div class="links">
-          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.exe</a>
-          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.msi</a>
+        <div class="hero-visual">
+          <div class="visual-label">LIVE / CONFIG GRAPH</div>
+          <div class="visual-frame">
+            <div class="visual-chrome">
+              <i class="dot"></i><i class="dot"></i><i class="dot"></i
+              ><span>agenthub://overview</span>
+            </div>
+            <img
+              src="./assets/overview.png"
+              alt="AgentHub 总览控制台，显示 Agent 配置状态和工作空间"
+            />
+          </div>
+          <div class="visual-note">
+            <span class="status"></span>
+            <div><strong>SAFE TO EDIT</strong>写入前自动生成 Diff 与备份</div>
+          </div>
         </div>
-      </div>
-      <div class="platform-cell">
-        <h3>Linux</h3>
-        <p class="meta">x86_64</p>
-        <div class="links">
-          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.AppImage</a>
-          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.deb</a>
+      </section>
+
+      <section class="signal">
+        <div class="shell signal-inner">
+          <div class="signal-item">
+            <span class="signal-kicker">One console</span
+            ><span class="signal-value">把分散的设置放在同一张图上</span>
+          </div>
+          <div class="signal-item">
+            <span class="signal-kicker">Config</span
+            ><span class="signal-value"
+              ><span class="green">●</span> 可追溯</span
+            >
+          </div>
+          <div class="signal-item">
+            <span class="signal-kicker">Skills</span
+            ><span class="signal-value"
+              ><span class="green">●</span> 可复用</span
+            >
+          </div>
+          <div class="signal-item">
+            <span class="signal-kicker">Privacy</span
+            ><span class="signal-value"
+              ><span class="green">●</span> 本地优先</span
+            >
+          </div>
         </div>
-      </div>
-    </div>
-    <p class="platforms-note">
-      所有安装包附带 SHA256 校验。<a href="https://github.com/JTBlink/agent-hub/releases" target="_blank" rel="noopener">查看全部版本</a>
-    </p>
-  </section>
+      </section>
 
-  <section class="about" id="about">
-    <div class="about-label">功能</div>
-    <div class="about-content">
-      <p>
-        当多个 Agent 同时使用时，问题不是"不会配置"，
-        而是不确定哪个文件被哪个 Agent 读取、改错格式后工作流突然失效、
-        同一个 Skill 重复安装在不同作用域。AgentHub 把这些信息放到操作前面。
-      </p>
-      <ul class="about-list">
-        <li>扫描 Claude Code、Codex、OpenCode 的全局配置和工作空间配置</li>
-        <li>表单或源码编辑，写入前生成 Diff 并自动备份</li>
-        <li>从 skills.sh、Marketplace、Git 仓库安装 Skills，管理生命周期</li>
-        <li>检测配置冲突和权限问题，提供一键修复路径</li>
-        <li>变更历史可追溯，即时还原到任意备份</li>
-        <li>默认只读扫描，外部修改检测，敏感字段遮罩</li>
-      </ul>
-    </div>
-  </section>
+      <section class="section" id="product">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">What it keeps clear</div>
+              <h2 class="section-title">
+                不是又一个设置页。<br />是 Agent 的控制面。
+              </h2>
+            </div>
+            <p class="section-intro">
+              当配置散落在多个目录、多个作用域，真正昂贵的是“不确定”。AgentHub
+              先把事实摆出来，再让你动手。
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature">
+              <span class="feature-index">01 / CONFIG</span>
+              <h3>知道它实际读了什么</h3>
+              <p>
+                扫描全局与工作空间配置，标出实际路径、格式、解析状态和冲突来源。
+              </p>
+              <code>scope → source → revision</code>
+            </article>
+            <article class="feature">
+              <span class="feature-index">02 / SKILLS</span>
+              <h3>知道能力从哪里来</h3>
+              <p>
+                为每个 Skill 记录来源、版本、兼容 Agent
+                和安装作用域，避免重复与漂移。
+              </p>
+              <code>source → descriptor → install</code>
+            </article>
+            <article class="feature">
+              <span class="feature-index">03 / RECOVERY</span>
+              <h3>知道改错后怎么回来</h3>
+              <p>
+                写入前查看
+                Diff，自动保留备份；诊断中心把修复路径和变更历史连在一起。
+              </p>
+              <code>revision → diff → rollback</code>
+            </article>
+          </div>
+        </div>
+      </section>
 
-  <section class="changelog-section" id="changelog">
-    <div class="about-label">更新</div>
-    <div class="cl-list">
-      <div class="cl-entry">
-        <div class="cl-ver">v0.1.0</div>
-        <div class="cl-date">初始发布</div>
-        <ul>
-          <li>统一配置管理：全局和工作空间配置可视化编辑</li>
-          <li>Skills 安装与管理：多来源支持</li>
-          <li>诊断中心与变更历史</li>
-          <li>跨平台构建：macOS / Windows / Linux</li>
-          <li>GitHub Actions 自动构建与发布</li>
-        </ul>
-      </div>
-      <div class="cl-more">
-        <a href="https://github.com/JTBlink/agent-hub/blob/main/CHANGELOG.md" target="_blank" rel="noopener">完整日志 &rarr;</a>
-      </div>
-    </div>
-  </section>
+      <section class="section" id="workspace">
+        <div class="shell workspace">
+          <div class="workspace-copy">
+            <div class="eyebrow">Inside the workbench</div>
+            <h2 class="section-title">把复杂度<br />压在界面里。</h2>
+            <p>
+              你看到的是清晰的状态、边界和下一步；不是一堆需要记住的目录规则。
+            </p>
+            <a
+              class="text-link"
+              href="https://github.com/JTBlink/agent-hub"
+              target="_blank"
+              rel="noopener"
+              >探索项目结构
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 8h9m-4-4 4 4-4 4"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                /></svg
+            ></a>
+          </div>
+          <div class="gallery">
+            <figure>
+              <img
+                src="./assets/config-center.png"
+                alt="AgentHub 配置中心"
+                loading="lazy"
+              />
+              <figcaption>
+                config / 在表单和源码之间切换，写入前看 Diff
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="./assets/skills.png"
+                alt="AgentHub Skills 管理"
+                loading="lazy"
+              />
+              <figcaption>skills / 来源、兼容性与作用域</figcaption>
+            </figure>
+            <figure>
+              <img
+                src="./assets/diagnostics.png"
+                alt="AgentHub 诊断中心"
+                loading="lazy"
+              />
+              <figcaption>diagnostics / 问题、证据与修复路径</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
 
-  <footer class="footer">
-    <span class="footer-left">AgentHub &middot; MIT License</span>
-    <ul class="footer-links">
-      <li><a href="https://github.com/JTBlink/agent-hub" target="_blank" rel="noopener">GitHub</a></li>
-      <li><a href="https://github.com/JTBlink/agent-hub/releases" target="_blank" rel="noopener">Releases</a></li>
-      <li><a href="https://github.com/JTBlink/agent-hub/issues" target="_blank" rel="noopener">Issues</a></li>
-    </ul>
-  </footer>
-</body>
+      <section class="section" id="releases">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">Changelog / live feed</div>
+              <h2 class="section-title">最近发生了什么。</h2>
+            </div>
+            <p class="section-intro">
+              更新日志直接读取 GitHub
+              Releases。发布新版本后，这里会自动出现最新内容。
+            </p>
+          </div>
+          <div class="log-grid">
+            <div id="release-list" class="release-list" aria-live="polite">
+              <div class="release-loading">正在同步 GitHub Releases…</div>
+            </div>
+            <aside class="log-side">
+              <h3>保持在最新状态</h3>
+              <p>关注仓库，或直接前往 Releases 获取适合你平台的安装包。</p>
+              <a
+                class="button ghost"
+                href="https://github.com/JTBlink/agent-hub/releases"
+                target="_blank"
+                rel="noopener"
+                >查看全部版本 ↗</a
+              >
+              <p class="mono" style="margin-top: 22px">
+                GET /repos/JTBlink/agent-hub/releases<br />缓存时间：每次打开页面时刷新
+              </p>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="shell closing">
+        <div>
+          <div class="eyebrow">Ready when you are</div>
+          <h2>先看清楚，<em>再开始改。</em></h2>
+        </div>
+        <a
+          class="button primary"
+          href="https://github.com/JTBlink/agent-hub/releases/latest"
+          target="_blank"
+          rel="noopener"
+          >下载 AgentHub
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M8 2v9m0 0 3.5-3.5M8 11 4.5 7.5M2.5 14h11"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg
+        ></a>
+      </section>
+    </main>
+
+    <footer class="shell">
+      <span>AgentHub · MIT License</span>
+      <nav aria-label="页脚导航">
+        <a
+          href="https://github.com/JTBlink/agent-hub"
+          target="_blank"
+          rel="noopener"
+          >GitHub</a
+        ><a
+          href="https://github.com/JTBlink/agent-hub/issues"
+          target="_blank"
+          rel="noopener"
+          >Issues</a
+        ><a href="mailto:user@example.invalid">联系</a>
+      </nav>
+    </footer>
+
+    <script>
+      const list = document.querySelector("#release-list");
+      const fallback =
+        '<div class="release"><div><span class="release-version">v0.1.0</span><span class="release-date">初始发布</span></div><div><h3>AgentHub 首次公开版本</h3><p>统一配置管理、Skills 安装与管理、诊断中心和变更历史。</p></div></div>';
+      const escapeHtml = (value) =>
+        String(value).replace(
+          /[&<>'"]/g,
+          (char) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              "'": "&#39;",
+              '"': "&quot;",
+            })[char],
+        );
+      const excerpt = (body) => {
+        const clean = String(body || "")
+          .replace(/[#*_`>\[\]]/g, "")
+          .replace(/\r?\n+/g, " ")
+          .trim();
+        return clean.length > 180 ? clean.slice(0, 177) + "…" : clean;
+      };
+      const dateLabel = (date) =>
+        new Intl.DateTimeFormat("zh-CN", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        }).format(new Date(date));
+      fetch(
+        "https://api.github.com/repos/JTBlink/agent-hub/releases?per_page=5",
+        { headers: { Accept: "application/vnd.github+json" } },
+      )
+        .then((response) => {
+          if (!response.ok) throw new Error("release request failed");
+          return response.json();
+        })
+        .then((releases) => {
+          const published = releases.filter((release) => !release.draft);
+          if (!published.length) {
+            list.innerHTML = fallback;
+            return;
+          }
+          list.innerHTML = published
+            .map(
+              (release) =>
+                `<article class="release"><div><span class="release-version">${escapeHtml(release.tag_name || release.name)}</span><span class="release-date">${dateLabel(release.published_at || release.created_at)}</span></div><div><h3>${escapeHtml(release.name || release.tag_name)}</h3><p>${escapeHtml(excerpt(release.body) || "查看此版本的完整变更记录。")}</p></div></article>`,
+            )
+            .join("");
+        })
+        .catch(() => {
+          list.innerHTML =
+            fallback +
+            '<p class="release-loading">实时日志暂时不可用，<a class="text-link" href="https://github.com/JTBlink/agent-hub/releases" target="_blank" rel="noopener">前往 GitHub 查看完整记录 ↗</a></p>';
+        });
+    </script>
+  </body>
 </html>
