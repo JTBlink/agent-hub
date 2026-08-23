@@ -1,9 +1,12 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 
 import {
   addWorkspace,
   applySkillInstall,
   browseSkillSource,
+  clearUserData,
   executeDiagnosticRecovery,
   getAppInfo,
   getClaudeGlobalConfig,
@@ -11,6 +14,7 @@ import {
   getDiagnostics,
   getOpenCodeGlobalConfig,
   getSkillInventory,
+  getUserDataPaths,
   listConfigHistory,
   listWorkspaces,
   planSkillInstall,
@@ -56,17 +60,38 @@ import {
   diagnosticSubject,
   matchingSkillsForDiagnostic,
 } from "../lib/diagnostic-presentation";
+import {
+  compactUserPath,
+  diagnosticRecoveryPresentation,
+} from "../lib/diagnostic-recovery-presentation";
+import {
+  failedLegacyActionFeedback,
+  legacyActionConfirmation,
+  preferredCodexSkillDirectory,
+  successfulLegacyActionFeedback,
+  type LegacySkillFeedback,
+} from "../lib/legacy-codex-skill";
 import { createTopologyLayout } from "../lib/topology";
 import {
   buildSkillSourceRequest,
   type SkillSourceMode,
 } from "../lib/skill-source-flow";
 import {
+  currentSkillVersion,
+  isSkillUpdateSupported,
+} from "../lib/skill-update-flow";
+import {
   selectMarketplaceManifest,
   selectSkillSourceDirectory,
   selectWorkspaceDirectory,
 } from "../lib/workspace-dialog";
+import {
+  DuplicateSkillsPage,
+  type DuplicateSkillGroup,
+} from "./DuplicateSkillsPage";
+import { DiagnosticRecoveryPage } from "./DiagnosticRecoveryPage";
 import { ExternalSkillsPage } from "./ExternalSkillsPage";
+import { SubTabs } from "./SubTabs";
 
 type Section =
   | "overview"
@@ -684,8 +709,6 @@ export function App() {
             onNavigate={setSection}
             workspaces={workspaces}
             onInstalled={refreshSkillInventory}
-            diagnosticFocus={skillDiagnosticFocus}
-            onDismissDiagnostic={() => setSkillDiagnosticFocus(undefined)}
           />
         )}
         {section === "workspaces" && (
@@ -703,11 +726,14 @@ export function App() {
         {section === "diagnostics" && (
           <DiagnosticsPage
             diagnostics={diagnostics}
+            skills={skills}
+            diagnosticFocus={skillDiagnosticFocus}
+            onDismissDiagnostic={() => setSkillDiagnosticFocus(undefined)}
             onNavigate={setSection}
             onViewSkillDetails={(item) => {
               setSkillDiagnosticFocus(item);
               setSearchQuery("");
-              setSection("skills");
+              setSection("diagnostics");
             }}
             onRepair={scan}
             searchQuery={searchQuery}
@@ -1755,6 +1781,90 @@ function ConfigCenter({
   );
 }
 
+function LegacyActionFeedbackModal({
+  feedback,
+  onDismiss,
+}: {
+  feedback: LegacySkillFeedback;
+  onDismiss: () => void;
+}) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const dismissRef = useRef(onDismiss);
+  useEffect(() => {
+    dismissRef.current = onDismiss;
+  }, [onDismiss]);
+  useEffect(() => {
+    titleRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      dismissRef.current();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+  return createPortal(
+    <div
+      className="action-feedback-backdrop"
+      role="presentation"
+      onMouseDown={() => dismissRef.current()}
+    >
+      <section
+        className={`action-feedback-modal ${feedback.tone}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="legacy-action-feedback-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="action-feedback-modal-icon" aria-hidden="true">
+          <Icon
+            name={feedback.tone === "error" ? "warning" : "check"}
+            size={20}
+          />
+        </div>
+        <div className="action-feedback-modal-copy">
+          <p className="eyebrow">处理结果</p>
+          <h2 id="legacy-action-feedback-title" ref={titleRef} tabIndex={-1}>
+            {feedback.title}
+          </h2>
+          <p>{feedback.summary}</p>
+          <div className="action-feedback-modal-paths">
+            {feedback.originalPath && (
+              <code>原位置：{feedback.originalPath}</code>
+            )}
+            {feedback.destinationPath && (
+              <code>
+                {feedback.destinationLabel ?? "目标位置"}：
+                {feedback.destinationPath}
+              </code>
+            )}
+            {feedback.backupPath &&
+              feedback.backupPath !== feedback.destinationPath && (
+                <code>备份位置：{feedback.backupPath}</code>
+              )}
+          </div>
+          <button
+            className="button button-primary"
+            type="button"
+            onClick={onDismiss}
+          >
+            关闭结果
+          </button>
+        </div>
+        <button
+          className="icon-button action-feedback-modal-close"
+          type="button"
+          aria-label="关闭处理结果"
+          onClick={onDismiss}
+        >
+          <Icon name="close" size={16} />
+        </button>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 function SkillsCenter({
   skills,
   searchQuery,
@@ -1762,8 +1872,6 @@ function SkillsCenter({
   onNavigate,
   workspaces,
   onInstalled,
-  diagnosticFocus,
-  onDismissDiagnostic,
 }: {
   skills?: SkillInventory;
   searchQuery: string;
@@ -1771,8 +1879,6 @@ function SkillsCenter({
   onNavigate: (section: Section) => void;
   workspaces: WorkspaceRecord[];
   onInstalled: (workspaceDirectory?: string) => void;
-  diagnosticFocus?: UnifiedDiagnostic;
-  onDismissDiagnostic: () => void;
 }) {
   const [view, setView] = useState<"installed" | "marketplace">("installed");
   const [filter, setFilter] = useState<
@@ -1782,6 +1888,9 @@ function SkillsCenter({
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [legacyActionPath, setLegacyActionPath] = useState<string>();
   const [legacyAction, setLegacyAction] = useState<"migrate" | "archive">();
+  const [legacyFeedback, setLegacyFeedback] = useState<LegacySkillFeedback>();
+  const [updateTarget, setUpdateTarget] = useState<InstalledSkill>();
+  const skillsScrollPosition = useRef({ main: 0, window: 0 });
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredSkills = useMemo(
     () =>
@@ -1815,12 +1924,7 @@ function SkillsCenter({
     return result;
   }, [filteredSkills]);
   const duplicateGroups = useMemo(() => {
-    const result: Array<{
-      name: string;
-      agent: string;
-      scope: string;
-      matches: InstalledSkill[];
-    }> = [];
+    const result: DuplicateSkillGroup[] = [];
     for (const name of skills?.duplicateNames ?? []) {
       const matches = (skills?.skills ?? []).filter(
         (skill) => skill.name === name || skill.displayName === name,
@@ -1831,32 +1935,22 @@ function SkillsCenter({
             (skill) => skill.agent === agent && skill.scope === scope,
           );
           if (scoped.length > 1) {
-            result.push({ name, agent, scope, matches: scoped });
+            const meta = getAgentMeta(agent);
+            result.push({
+              name,
+              agent,
+              agentName: meta.name,
+              agentMark: meta.mark,
+              agentTone: meta.tone,
+              scope,
+              matches: scoped,
+            });
           }
         }
       }
     }
     return result;
   }, [skills]);
-  const focusedSkills = useMemo(
-    () =>
-      diagnosticFocus
-        ? matchingSkillsForDiagnostic(diagnosticFocus, skills?.skills ?? [])
-        : [],
-    [diagnosticFocus, skills],
-  );
-  useEffect(() => {
-    if (!diagnosticFocus) return;
-    const panel = document.getElementById("focused-skill-diagnostic");
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    panel?.scrollIntoView({
-      block: "start",
-      behavior: reduceMotion ? "auto" : "smooth",
-    });
-    panel?.focus({ preventScroll: true });
-  }, [diagnosticFocus]);
   const filters = [
     ["all", "全部"],
     ["global", "全局"],
@@ -1865,6 +1959,13 @@ function SkillsCenter({
     ["external", "外部管理"],
     ["storage", "安装信息"],
   ] as const;
+  useEffect(() => {
+    if (!showDuplicates) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("duplicate-page-title")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [showDuplicates]);
   if (view === "marketplace") {
     return (
       <ExternalSkillsPage
@@ -1875,16 +1976,7 @@ function SkillsCenter({
             onChange={setView}
           />
         }
-        sourcePanel={
-          <SkillSourcePanel
-            id="marketplace-browser"
-            workspaces={workspaces}
-            onNavigate={onNavigate}
-            onInstalled={onInstalled}
-            installedSkills={skills?.skills ?? []}
-            searchQuery={searchQuery}
-          />
-        }
+        localRoots={skills?.roots ?? []}
         renderIcon={(name, size) => <Icon name={name} size={size} />}
       />
     );
@@ -1894,22 +1986,71 @@ function SkillsCenter({
     action: "migrate" | "archive",
   ) {
     if (legacyActionPath) return;
+    if (!window.confirm(legacyActionConfirmation(sourcePath, action))) return;
     setLegacyActionPath(sourcePath);
     setLegacyAction(action);
+    setLegacyFeedback(undefined);
     try {
-      await resolveLegacyCodexSkill({ sourcePath, action });
+      const result = await resolveLegacyCodexSkill({ sourcePath, action });
+      setLegacyFeedback(successfulLegacyActionFeedback(result));
       onInstalled();
-      setShowDuplicates(false);
     } catch (error) {
-      window.alert(
-        error instanceof Error
-          ? error.message
-          : "旧版 Codex Skill 处理失败，请确认目标目录仍未变化。",
-      );
+      setLegacyFeedback(failedLegacyActionFeedback(error));
     } finally {
       setLegacyActionPath(undefined);
       setLegacyAction(undefined);
     }
+  }
+  function openDuplicatePage() {
+    const main = document.querySelector<HTMLElement>(".main-content");
+    skillsScrollPosition.current = {
+      main: main?.scrollTop ?? 0,
+      window: window.scrollY,
+    };
+    setShowDuplicates(true);
+    window.requestAnimationFrame(() => {
+      main?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    });
+  }
+  function closeDuplicatePage() {
+    const main = document.querySelector<HTMLElement>(".main-content");
+    setShowDuplicates(false);
+    window.requestAnimationFrame(() => {
+      main?.scrollTo({ top: skillsScrollPosition.current.main });
+      window.scrollTo({ top: skillsScrollPosition.current.window });
+      document
+        .querySelector<HTMLButtonElement>('[data-duplicate-trigger="true"]')
+        ?.focus();
+    });
+  }
+  if (showDuplicates) {
+    return (
+      <DuplicateSkillsPage
+        groups={duplicateGroups}
+        feedback={
+          legacyFeedback ? (
+            <LegacyActionFeedbackModal
+              feedback={legacyFeedback}
+              onDismiss={() => setLegacyFeedback(undefined)}
+            />
+          ) : undefined
+        }
+        backIcon={<Icon name="arrow" size={16} />}
+        warningIcon={<Icon name="warning" size={18} />}
+        resolvedIcon={<Icon name="check" size={24} />}
+        busyPath={legacyActionPath}
+        busyAction={legacyAction}
+        onBack={closeDuplicatePage}
+        onArchive={(path) => void handleLegacyAction(path, "archive")}
+        renderLocation={(skill) => (
+          <SkillLocation
+            key={`${skill.agent}-${skill.scope}-${skill.path}`}
+            skill={skill}
+          />
+        )}
+      />
+    );
   }
   return (
     <div className="page">
@@ -1919,6 +2060,12 @@ function SkillsCenter({
         installedCount={skills?.skills.length ?? 0}
         onChange={setView}
       />
+      {legacyFeedback && (
+        <LegacyActionFeedbackModal
+          feedback={legacyFeedback}
+          onDismiss={() => setLegacyFeedback(undefined)}
+        />
+      )}
       <div className="skill-toolbar">
         <div className="source-chips" role="group" aria-label="Skill 筛选">
           {filters.map(([value, label]) => (
@@ -1954,304 +2101,135 @@ function SkillsCenter({
         <SkillStorageSummary roots={skills?.roots ?? []} />
       ) : (
         <>
-      {showSourceGuide && (
-        <SkillSourcePanel
-          id="source-guide"
-          workspaces={workspaces}
-          onNavigate={onNavigate}
-          onInstalled={onInstalled}
-          installedSkills={skills?.skills ?? []}
-          searchQuery={searchQuery}
-        />
-      )}
-      {duplicateGroups.length ? (
-        <div className="alert alert-warning" role="status">
-          <Icon name="warning" />
-          <span>
-            发现 {duplicateGroups.length} 组同 Agent 重复 Skill：
-            {duplicateGroups.map((group) => `${group.agent} · ${group.name}`).join("、")}
-            。跨 Agent 共用同一路径属于正常安装，不计入冲突。
-          </span>
-          <button
-            type="button"
-            aria-expanded={showDuplicates}
-            aria-controls="duplicate-skill-details"
-            onClick={() => setShowDuplicates((visible) => !visible)}
-          >
-            {showDuplicates ? "收起重复项" : "查看重复项"}
-          </button>
-        </div>
-      ) : null}
-      {showDuplicates && duplicateGroups.length ? (
-        <section
-          className="skill-issue-panel duplicate-skill-panel"
-          id="duplicate-skill-details"
-          aria-labelledby="duplicate-skill-title"
-        >
-          <div className="skill-issue-heading">
-            <div>
-              <p className="eyebrow">重复安装</p>
-              <h2 id="duplicate-skill-title">选择需要保留的 Skill</h2>
-              <p>
-                这里仅列出同一个 Agent、同一个作用域下的多个真实副本。不同 Agent
-                共用 ~/.agents/skills 是 skills.sh 的正常布局，不需要清理。
-              </p>
-            </div>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="关闭重复 Skill 详情"
-              onClick={() => setShowDuplicates(false)}
-            >
-              <Icon name="close" size={16} />
-            </button>
-          </div>
-          <div className="duplicate-skill-groups">
-            {duplicateGroups.map((group) => {
-              const isCodexLegacy =
-                group.agent === "codex" && group.scope === "global" &&
-                group.matches.some((skill) => skill.path.includes("/.codex/skills/"));
-              return (
-                <article key={`${group.agent}-${group.scope}-${group.name}`}>
-                  <strong>{group.name}</strong>
-                  <span>
-                    {getAgentMeta(group.agent).name} · {group.scope === "global" ? "全局" : "工作空间"} · {group.matches.length} 个真实副本
-                  </span>
-                  {isCodexLegacy && (
-                    <div className="duplicate-skill-recommendation">
-                      Codex 推荐保留 <code>~/.agents/skills</code>；
-                      <code>~/.codex/skills</code> 是兼容目录，建议迁移或归档后再扫描。
-                      <div className="duplicate-skill-actions">
-                        {group.matches
-                          .filter((skill) => skill.path.includes("/.codex/skills/"))
-                          .map((skill) => (
-                            <span key={skill.path}>
-                              <button
-                                className="button button-ghost"
-                                type="button"
-                                disabled={Boolean(legacyActionPath)}
-                                onClick={() => void handleLegacyAction(skill.path, "archive")}
-                              >
-                                {legacyActionPath === skill.path && legacyAction === "archive"
-                                  ? "归档中…"
-                                  : "归档旧副本"}
-                              </button>
-                            </span>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    {group.matches.map((skill) => (
-                      <SkillLocation
-                        key={`${skill.agent}-${skill.scope}-${skill.path}`}
-                        skill={skill}
-                      />
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-      {diagnosticFocus ? (
-        <section
-          className={`skill-issue-panel ${diagnosticFocus.severity}`}
-          id="focused-skill-diagnostic"
-          aria-labelledby="focused-skill-diagnostic-title"
-          tabIndex={-1}
-        >
-          <div className="skill-issue-heading">
-            <div>
-              <p className="eyebrow">Skill 问题详情</p>
-              <h2 id="focused-skill-diagnostic-title">
-                {diagnosticSubject(diagnosticFocus)}
-              </h2>
-              <p>{diagnosticProblem(diagnosticFocus)}</p>
-            </div>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="关闭 Skill 问题详情"
-              onClick={onDismissDiagnostic}
-            >
-              <Icon name="close" size={16} />
-            </button>
-          </div>
-          <dl className="skill-issue-facts">
-            <div>
-              <dt>可能影响</dt>
-              <dd>{diagnosticFocus.impact}</dd>
-            </div>
-            <div>
-              <dt>处理建议</dt>
-              <dd>{diagnosticFocus.nextAction}</dd>
-            </div>
-            <div>
-              <dt>诊断码</dt>
-              <dd className="mono">{diagnosticFocus.code}</dd>
-            </div>
-            {diagnosticFocus.resourcePath && (
-              <div>
-                <dt>问题位置</dt>
-                <dd className="mono">{diagnosticFocus.resourcePath}</dd>
-              </div>
-            )}
-            {diagnosticFocus.code === "skill:symlink-skipped" && (
-              <>
-                <div>
-                  <dt>入口类型</dt>
-                  <dd className="skill-storage-kind symlink">
-                    软链接
-                    <Icon name="link" size={14} />
-                  </dd>
-                </div>
-                <div>
-                  <dt>真实 Skill 路径</dt>
-                  <dd className="mono">
-                    {diagnosticRealSkillPath(diagnosticFocus) ?? "无法解析链接目标"}
-                  </dd>
-                </div>
-              </>
-            )}
-          </dl>
-          {focusedSkills.length > 0 && (
-            <div className="skill-issue-locations">
-              <strong>
-                {focusedSkills.length > 1 ? "冲突安装位置" : "已识别的 Skill"}
-              </strong>
-              {focusedSkills.map((skill) => (
-                <SkillLocation
-                  key={`${skill.agent}-${skill.scope}-${skill.path}`}
-                  skill={skill}
-                />
-              ))}
-            </div>
+          {showSourceGuide && (
+            <SkillSourcePanel
+              id="source-guide"
+              workspaces={workspaces}
+              onNavigate={onNavigate}
+              onInstalled={onInstalled}
+              installedSkills={skills?.skills ?? []}
+              searchQuery={searchQuery}
+              updateSkill={updateTarget}
+              onClearUpdate={() => setUpdateTarget(undefined)}
+            />
           )}
-          <div className="skill-issue-actions">
-            <button
-              className="button button-ghost"
-              onClick={onDismissDiagnostic}
-            >
-              关闭
-            </button>
-            <button className="button button-secondary" onClick={onScan}>
-              <Icon name="refresh" size={15} />
-              重新扫描
-            </button>
-            {focusedSkills
-              .filter(
-                (skill) =>
-                  skill.agent === "codex" &&
-                  skill.path.includes("/.codex/skills/"),
-              )
-              .map((skill) => {
-                const hasPreferredCopy = focusedSkills.some(
-                  (candidate) =>
-                    candidate.agent === "codex" &&
-                    candidate.path.includes("/.agents/skills/"),
-                );
-                const action = hasPreferredCopy ? "archive" : "migrate";
-                return (
-                  <button
-                    className="button button-primary"
-                    key={skill.path}
-                    type="button"
-                    disabled={Boolean(legacyActionPath)}
-                    onClick={() => void handleLegacyAction(skill.path, action)}
-                  >
-                    {legacyActionPath === skill.path
-                      ? action === "archive"
-                        ? "归档中…"
-                        : "迁移中…"
-                      : action === "archive"
-                        ? "保留 .agents 并归档旧副本"
-                        : "迁移到 .agents/skills"}
-                  </button>
-                );
-              })}
-          </div>
-        </section>
-      ) : null}
-      <div className="skill-grid">
-        {skills && filteredSkills.length > 0 ? (
-          Array.from(groups.entries()).map(([agent, items]) => (
-            <section className="skill-group" key={agent}>
-              <div className="group-heading">
-                <div
-                  className={`agent-avatar small ${agentMeta[agent as keyof typeof agentMeta].tone}`}
-                >
-                  {agentMeta[agent as keyof typeof agentMeta].mark}
-                </div>
-                <div>
-                  <h2>{agentMeta[agent as keyof typeof agentMeta].name}</h2>
-                  <span>{items.length} 个 Skill · 全局与工作空间</span>
-                </div>
-              </div>
-              {items.map((skill) => (
-                <article
-                  className="skill-row"
-                  key={`${skill.agent}-${skill.scope}-${skill.path}`}
-                >
-                  <div className="skill-icon">
-                    <Icon name="spark" size={17} />
-                  </div>
-                  <div className="skill-copy">
-                    <strong>{skill.displayName}</strong>
-                    <span>
-                      {skill.relativePath} · {skill.compatibility ?? "通用兼容"}
-                    </span>
-                    <small>
-                      {skillSourceLabel(skill.source.kind)} ·{" "}
-                      {skill.enabled ? "已启用" : "已停用"}
-                    </small>
-                    <code className="skill-path" title={skill.path}>
-                      安装路径：{skill.path}
-                    </code>
-                    {skill.storageKind === "symlink" && (
-                      <>
-                        <span className="skill-storage-kind symlink">
-                          软链接
-                          <Icon name="link" size={12} />
-                        </span>
-                        <code className="skill-path skill-real-path" title={skill.realPath}>
-                          真实路径：{skill.realPath}
-                        </code>
-                      </>
-                    )}
-                  </div>
-                  <span className={`scope-pill ${skill.scope}`}>
-                    {skill.scope === "global" ? "全局" : "工作空间"}
-                  </span>
-                  <span className="managed-pill">
-                    {skill.sourceTracked ? "AgentHub 管理" : "外部管理"}
-                  </span>
-                </article>
-              ))}
-            </section>
-          ))
-        ) : (
-          <div className="empty-state large">
-            <div className="empty-icon">
-              <Icon name="spark" size={24} />
+          {duplicateGroups.length ? (
+            <div className="alert alert-warning" role="status">
+              <Icon name="warning" />
+              <span>
+                发现 {duplicateGroups.length} 组同 Agent 重复 Skill：
+                {duplicateGroups
+                  .map((group) => `${group.agent} · ${group.name}`)
+                  .join("、")}
+                。跨 Agent 共用同一路径属于正常安装，不计入冲突。
+              </span>
+              <button
+                type="button"
+                data-duplicate-trigger="true"
+                onClick={openDuplicatePage}
+              >
+                查看重复项
+              </button>
             </div>
-            <h2>还没有发现 Skill</h2>
-            <p>
-              {normalizedQuery || filter !== "all"
-                ? "没有符合当前搜索或筛选条件的 Skill。"
-                : "添加本地目录、Git 仓库或标准 Marketplace 后，在这里统一查看。"}
-            </p>
-            <button
-              className="button button-primary"
-              onClick={() => setShowSourceGuide(true)}
-            >
-              <Icon name="plus" size={16} />
-              添加第一个来源
-            </button>
+          ) : null}
+          <div className="skill-grid">
+            {skills && filteredSkills.length > 0 ? (
+              Array.from(groups.entries()).map(([agent, items]) => (
+                <section className="skill-group" key={agent}>
+                  <div className="group-heading">
+                    <div
+                      className={`agent-avatar small ${agentMeta[agent as keyof typeof agentMeta].tone}`}
+                    >
+                      {agentMeta[agent as keyof typeof agentMeta].mark}
+                    </div>
+                    <div>
+                      <h2>{agentMeta[agent as keyof typeof agentMeta].name}</h2>
+                      <span>{items.length} 个 Skill · 全局与工作空间</span>
+                    </div>
+                  </div>
+                  {items.map((skill) => (
+                    <article
+                      className="skill-row"
+                      key={`${skill.agent}-${skill.scope}-${skill.path}`}
+                    >
+                      <div className="skill-icon">
+                        <Icon name="spark" size={17} />
+                      </div>
+                      <div className="skill-copy">
+                        <strong>{skill.displayName}</strong>
+                        <span>
+                          {skill.relativePath} ·{" "}
+                          {skill.compatibility ?? "通用兼容"}
+                        </span>
+                        <small>
+                          {skillSourceLabel(skill.source.kind)} ·{" "}
+                          {skill.enabled ? "已启用" : "已停用"}
+                        </small>
+                        <small className="skill-version">
+                          当前版本：{currentSkillVersion(skill)}
+                        </small>
+                        <code className="skill-path" title={skill.path}>
+                          安装路径：{skill.path}
+                        </code>
+                        {skill.storageKind === "symlink" && (
+                          <>
+                            <span className="skill-storage-kind symlink">
+                              软链接
+                              <Icon name="link" size={12} />
+                            </span>
+                            <code
+                              className="skill-path skill-real-path"
+                              title={skill.realPath}
+                            >
+                              真实路径：{skill.realPath}
+                            </code>
+                          </>
+                        )}
+                      </div>
+                      <span className={`scope-pill ${skill.scope}`}>
+                        {skill.scope === "global" ? "全局" : "工作空间"}
+                      </span>
+                      <span className="managed-pill">
+                        {skill.sourceTracked ? "AgentHub 管理" : "外部管理"}
+                      </span>
+                      {isSkillUpdateSupported(skill) && (
+                        <button
+                          className="button button-ghost skill-update-button"
+                          type="button"
+                          onClick={() => {
+                            setUpdateTarget(skill);
+                            setShowSourceGuide(true);
+                          }}
+                        >
+                          <Icon name="refresh" size={13} />
+                          更新
+                        </button>
+                      )}
+                    </article>
+                  ))}
+                </section>
+              ))
+            ) : (
+              <div className="empty-state large">
+                <div className="empty-icon">
+                  <Icon name="spark" size={24} />
+                </div>
+                <h2>还没有发现 Skill</h2>
+                <p>
+                  {normalizedQuery || filter !== "all"
+                    ? "没有符合当前搜索或筛选条件的 Skill。"
+                    : "添加本地目录、Git 仓库或标准 Marketplace 后，在这里统一查看。"}
+                </p>
+                <button
+                  className="button button-primary"
+                  onClick={() => setShowSourceGuide(true)}
+                >
+                  <Icon name="plus" size={16} />
+                  添加第一个来源
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
         </>
       )}
     </div>
@@ -2260,7 +2238,10 @@ function SkillsCenter({
 
 function SkillStorageSummary({ roots }: { roots: SkillInventory["roots"] }) {
   return (
-    <section className="skill-storage-summary" aria-labelledby="skill-storage-title">
+    <section
+      className="skill-storage-summary"
+      aria-labelledby="skill-storage-title"
+    >
       <div>
         <p className="eyebrow">安装信息</p>
         <h2 id="skill-storage-title">安装目录与占用</h2>
@@ -2296,26 +2277,19 @@ function SkillsViewTabs({
   onChange: (view: "installed" | "marketplace") => void;
 }) {
   return (
-    <div className="skills-view-tabs" role="tablist" aria-label="Skills 视图">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={view === "installed"}
-        className={view === "installed" ? "active" : ""}
-        onClick={() => onChange("installed")}
-      >
-        已安装 <span>{installedCount}</span>
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={view === "marketplace"}
-        className={view === "marketplace" ? "active" : ""}
-        onClick={() => onChange("marketplace")}
-      >
-        Marketplace
-      </button>
-    </div>
+    <SubTabs
+      value={view}
+      ariaLabel="Skills 视图"
+      onChange={onChange}
+      items={[
+        {
+          value: "installed",
+          label: "已安装",
+          badge: <span>{installedCount}</span>,
+        },
+        { value: "marketplace", label: "Marketplace" },
+      ]}
+    />
   );
 }
 
@@ -2362,12 +2336,17 @@ function installedSkillsFor(
   const identities = [skill.name, skill.displayName]
     .filter((value): value is string => Boolean(value))
     .map((value) => value.trim().toLocaleLowerCase());
-  return installedSkills.filter((installed) =>
-    [installed.name, installed.displayName]
+  return installedSkills.filter((installed) => {
+    const sameIdentity = [installed.name, installed.displayName]
       .filter((value): value is string => Boolean(value))
       .map((value) => value.trim().toLocaleLowerCase())
-      .some((value) => identities.includes(value)),
-  );
+      .some((value) => identities.includes(value));
+    return (
+      sameIdentity &&
+      (!installed.sourceTracked ||
+        installed.source.locator === skill.source.locator)
+    );
+  });
 }
 
 function discoveredSkillKey(skill: {
@@ -2384,6 +2363,8 @@ function SkillSourcePanel({
   onInstalled,
   installedSkills,
   searchQuery,
+  updateSkill,
+  onClearUpdate,
 }: {
   id: string;
   workspaces: WorkspaceRecord[];
@@ -2391,10 +2372,26 @@ function SkillSourcePanel({
   onInstalled: (workspaceDirectory?: string) => void;
   installedSkills: InstalledSkill[];
   searchQuery: string;
+  updateSkill?: InstalledSkill;
+  onClearUpdate: () => void;
 }) {
-  const [mode, setMode] = useState<SkillSourceMode>("skills-sh");
-  const [locator, setLocator] = useState("anthropics/skills");
-  const [requestedRef, setRequestedRef] = useState("");
+  const initialMode = updateSkill
+    ? updateSkill.source.kind === "skills-sh"
+      ? "skills-sh"
+      : updateSkill.source.kind === "git" ||
+          updateSkill.source.kind === "preset-git"
+        ? "git"
+        : updateSkill.source.kind
+    : "skills-sh";
+  const [mode, setMode] = useState<SkillSourceMode>(initialMode);
+  const [locator, setLocator] = useState(
+    updateSkill
+      ? (updateSkill.source.manifestPath ?? updateSkill.source.locator)
+      : "anthropics/skills",
+  );
+  const [requestedRef, setRequestedRef] = useState(
+    updateSkill?.source.requestedRef ?? "",
+  );
   const [subdirectory, setSubdirectory] = useState("");
   const [browseResult, setBrowseResult] = useState<SkillSourceBrowseResult>();
   const [selectedSkillKey, setSelectedSkillKey] = useState("");
@@ -2408,8 +2405,36 @@ function SkillSourcePanel({
   const [message, setMessage] = useState<string>();
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogFilter, setCatalogFilter] = useState<"uninstalled" | "all">(
-    "uninstalled",
+    updateSkill ? "all" : "uninstalled",
   );
+
+  useEffect(() => {
+    if (!updateSkill) return;
+    const source = updateSkill.source;
+    const nextMode =
+      source.kind === "skills-sh"
+        ? "skills-sh"
+        : source.kind === "git" || source.kind === "preset-git"
+          ? "git"
+          : source.kind;
+    setMode(nextMode);
+    setLocator(
+      source.kind === "skills-sh"
+        ? source.locator.replace(/^https:\/\/skills\.sh\//, "")
+        : (source.manifestPath ?? source.locator),
+    );
+    setRequestedRef(source.requestedRef ?? "");
+    setAgent(updateSkill.agent);
+    setScope(updateSkill.scope);
+    const workspace = workspaces.find((item) =>
+      updateSkill.path.startsWith(item.normalizedPath),
+    );
+    setWorkspaceId(workspace?.id ?? "");
+    setCatalogFilter("all");
+    setBrowseResult(undefined);
+    setPlan(undefined);
+    setMessage(undefined);
+  }, [updateSkill, workspaces]);
 
   const request = useMemo<SkillSourceRequest | undefined>(
     () =>
@@ -2473,11 +2498,19 @@ function SkillSourcePanel({
       const result = await browseSkillSource(request);
       setBrowseResult(result);
       const first =
+        (updateSkill &&
+          result.skills.find(
+            (skill) =>
+              (skill.name === updateSkill.name ||
+                skill.displayName === updateSkill.displayName) &&
+              skill.installable,
+          )) ??
         result.skills.find(
           (skill) =>
             skill.installable &&
             installedSkillsFor(skill, installedSkills).length === 0,
-        ) ?? result.skills.find((skill) => skill.installable);
+        ) ??
+        result.skills.find((skill) => skill.installable);
       if (first) setSelectedSkillKey(discoveredSkillKey(first));
       if (!result.skills.length && result.catalogEntries.length) {
         setMessage(
@@ -2525,8 +2558,13 @@ function SkillSourcePanel({
     setMessage(undefined);
     try {
       await applySkillInstall(plan.planId);
-      setMessage("Skill 已安装，并已记录来源与版本。");
+      setMessage(
+        updateSkill
+          ? "Skill 已更新，并已记录新的来源版本。"
+          : "Skill 已安装，并已记录来源与版本。",
+      );
       setPlan(undefined);
+      onClearUpdate();
       onInstalled(workspace?.normalizedPath);
     } catch (error) {
       setMessage(errorMessage(error, "安装未完成，磁盘状态未被静默覆盖。"));
@@ -2544,10 +2582,15 @@ function SkillSourcePanel({
       <div className="source-guide-heading">
         <div>
           <p className="eyebrow">来源与安装</p>
-          <h2 id={`${id}-title`}>发现 Skill，确认后安装</h2>
+          <h2 id={`${id}-title`}>
+            {updateSkill
+              ? `更新 ${updateSkill.displayName}`
+              : "发现 Skill，确认后安装"}
+          </h2>
           <p>
-            网页浏览不会下载内容；只有点击“检查并读取”后，AgentHub
-            才会获取来源并进入安全安装流程。
+            {updateSkill
+              ? `当前版本 ${currentSkillVersion(updateSkill)}。重新读取来源后，确认新版本和文件清单再更新。`
+              : "网页浏览不会下载内容；只有点击“检查并读取”后，AgentHub 才会获取来源并进入安全安装流程。"}
           </p>
         </div>
         <button
@@ -2705,7 +2748,7 @@ function SkillSourcePanel({
           onClick={() => void browse()}
         >
           <Icon name="search" size={15} />
-          {busy ? "读取中…" : "检查并读取"}
+          {busy ? "读取中…" : updateSkill ? "检查更新" : "检查并读取"}
         </button>
       </div>
       {browseResult && (
@@ -2721,7 +2764,11 @@ function SkillSourcePanel({
             </div>
             <div className="source-result-actions">
               {browseResult.skills.length > 0 && (
-                <span>{uninstalledCount} 个未安装</span>
+                <span>
+                  {updateSkill
+                    ? "已加载当前 Skill 来源"
+                    : `${uninstalledCount} 个未安装`}
+                </span>
               )}
               {sourceBrowserUrl(browseResult.source) && (
                 <button
@@ -2902,7 +2949,7 @@ function SkillSourcePanel({
             disabled={busy || !selectedSkill.installable}
             onClick={() => void createPlan()}
           >
-            {busy ? "生成中…" : "生成安装计划"}
+            {busy ? "生成中…" : updateSkill ? "生成更新计划" : "生成安装计划"}
           </button>
         </div>
       )}
@@ -2956,7 +3003,7 @@ function SkillSourcePanel({
               disabled={busy}
               onClick={() => void install()}
             >
-              {busy ? "安装中…" : "确认安装"}
+              {busy ? "执行中…" : updateSkill ? "确认更新" : "确认安装"}
             </button>
           </div>
         </div>
@@ -3057,7 +3104,7 @@ function WorkspacesPage({
               id="workspace-path"
               value={path}
               onChange={(event) => setPath(event.target.value)}
-              placeholder="例如 /Users/me/projects/demo"
+              placeholder="例如 ~/projects/demo"
             />
             <button
               className="button button-secondary"
@@ -3161,12 +3208,18 @@ function WorkspacesPage({
 
 function DiagnosticsPage({
   diagnostics,
+  skills,
+  diagnosticFocus,
+  onDismissDiagnostic,
   onNavigate,
   onViewSkillDetails,
   onRepair,
   searchQuery,
 }: {
   diagnostics: UnifiedDiagnostic[];
+  skills?: SkillInventory;
+  diagnosticFocus?: UnifiedDiagnostic;
+  onDismissDiagnostic: () => void;
   onNavigate: (section: Section) => void;
   onViewSkillDetails: (item: UnifiedDiagnostic) => void;
   onRepair: () => void;
@@ -3174,8 +3227,14 @@ function DiagnosticsPage({
 }) {
   const [recoveryPreview, setRecoveryPreview] =
     useState<DiagnosticRecoveryPreview>();
+  const [recoveryDiagnostic, setRecoveryDiagnostic] =
+    useState<UnifiedDiagnostic>();
   const [recoveryMessage, setRecoveryMessage] = useState<string>();
   const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [legacyActionPath, setLegacyActionPath] = useState<string>();
+  const [legacyFeedback, setLegacyFeedback] = useState<LegacySkillFeedback>();
+  const diagnosticsScrollPosition = useRef({ main: 0, window: 0 });
+  const recoveryReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const actionable = diagnostics
     .filter((item) => {
@@ -3205,15 +3264,31 @@ function DiagnosticsPage({
         diagnosticSubject(left).localeCompare(diagnosticSubject(right), "zh-CN")
       );
     });
-  async function previewRecovery(item: UnifiedDiagnostic) {
+  async function previewRecovery(
+    item: UnifiedDiagnostic,
+    trigger?: HTMLButtonElement,
+  ) {
+    const main = document.querySelector<HTMLElement>(".main-content");
+    diagnosticsScrollPosition.current = {
+      main: main?.scrollTop ?? 0,
+      window: window.scrollY,
+    };
+    recoveryReturnFocusRef.current = trigger ?? null;
     setRecoveryBusy(true);
     setRecoveryMessage(undefined);
+    setRecoveryPreview(undefined);
+    setRecoveryDiagnostic(undefined);
     try {
       const preview = await previewDiagnosticRecovery({
         diagnosticCode: item.code,
         resourcePath: item.resourcePath ?? undefined,
       });
       setRecoveryPreview(preview);
+      setRecoveryDiagnostic(item);
+      window.requestAnimationFrame(() => {
+        main?.scrollTo({ top: 0 });
+        window.scrollTo({ top: 0 });
+      });
     } catch {
       setRecoveryMessage("该问题需要在对应功能中手动处理，请按建议打开详情。");
     } finally {
@@ -3221,16 +3296,192 @@ function DiagnosticsPage({
     }
   }
   useEffect(() => {
-    if (!recoveryPreview) return;
-    const panel = document.getElementById("recovery-title");
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    panel?.closest(".restore-panel")?.scrollIntoView({
+    if (!recoveryMessage) return;
+    document.getElementById("recovery-message")?.scrollIntoView({
       block: "nearest",
-      behavior: reduceMotion ? "auto" : "smooth",
+      behavior: "smooth",
     });
-  }, [recoveryPreview]);
+  }, [recoveryMessage]);
+  const recoveryPresentation = recoveryPreview
+    ? diagnosticRecoveryPresentation(recoveryPreview, recoveryDiagnostic)
+    : undefined;
+  useEffect(() => {
+    if (!recoveryPresentation) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("recovery-page-title")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [recoveryPresentation]);
+  async function handleLegacyAction(
+    sourcePath: string,
+    action: "migrate" | "archive",
+  ) {
+    if (legacyActionPath) return;
+    if (!window.confirm(legacyActionConfirmation(sourcePath, action))) return;
+    setLegacyActionPath(sourcePath);
+    setLegacyFeedback(undefined);
+    try {
+      const result = await resolveLegacyCodexSkill({ sourcePath, action });
+      setLegacyFeedback(successfulLegacyActionFeedback(result));
+      onRepair();
+    } catch (error) {
+      setLegacyFeedback(failedLegacyActionFeedback(error));
+    } finally {
+      setLegacyActionPath(undefined);
+    }
+  }
+  if (diagnosticFocus) {
+    const focusedSkills = matchingSkillsForDiagnostic(
+      diagnosticFocus,
+      skills?.skills ?? [],
+    );
+    const legacySkill = focusedSkills.find(
+      (skill) =>
+        skill.agent === "codex" && skill.path.includes("/.codex/skills/"),
+    );
+    const legacyAction = focusedSkills.some(
+      (skill) =>
+        skill.agent === "codex" && skill.path.includes("/.agents/skills/"),
+    )
+      ? "archive"
+      : "migrate";
+    return (
+      <div className="page diagnostic-detail-page">
+        <div className="diagnostic-detail-toolbar">
+          <button className="button button-ghost" onClick={onDismissDiagnostic}>
+            <Icon name="arrow" size={15} />
+            返回诊断列表
+          </button>
+        </div>
+        {legacyFeedback && (
+          <LegacyActionFeedbackModal
+            feedback={legacyFeedback}
+            onDismiss={() => setLegacyFeedback(undefined)}
+          />
+        )}
+        <section
+          className={`skill-issue-panel ${diagnosticFocus.severity}`}
+          aria-labelledby="diagnostic-detail-title"
+        >
+          <div className="skill-issue-heading">
+            <div>
+              <p className="eyebrow">诊断中心 · Skill 问题</p>
+              <h2 id="diagnostic-detail-title">
+                {diagnosticSubject(diagnosticFocus)}
+              </h2>
+              <p>{diagnosticProblem(diagnosticFocus)}</p>
+            </div>
+            <span className="diagnostic-severity">
+              {diagnosticFocus.severity === "error" ? "错误" : "警告"}
+            </span>
+          </div>
+          <dl className="skill-issue-facts">
+            <div>
+              <dt>可能影响</dt>
+              <dd>{diagnosticFocus.impact}</dd>
+            </div>
+            <div>
+              <dt>处理建议</dt>
+              <dd>{diagnosticFocus.nextAction}</dd>
+            </div>
+            <div>
+              <dt>诊断码</dt>
+              <dd className="mono">{diagnosticFocus.code}</dd>
+            </div>
+            {diagnosticFocus.resourcePath && (
+              <div>
+                <dt>问题位置</dt>
+                <dd className="mono">{diagnosticFocus.resourcePath}</dd>
+              </div>
+            )}
+            {diagnosticFocus.code === "skill:symlink-skipped" && (
+              <>
+                <div>
+                  <dt>入口类型</dt>
+                  <dd className="skill-storage-kind symlink">
+                    软链接 <Icon name="link" size={14} />
+                  </dd>
+                </div>
+                <div>
+                  <dt>真实 Skill 路径</dt>
+                  <dd className="mono">
+                    {diagnosticRealSkillPath(diagnosticFocus) ??
+                      "无法解析链接目标"}
+                  </dd>
+                </div>
+              </>
+            )}
+            {diagnosticFocus.code === "skill:codex-legacy-location" &&
+              focusedSkills[0] && (
+                <>
+                  <div>
+                    <dt>迁移目标</dt>
+                    <dd className="mono">
+                      {preferredCodexSkillDirectory(focusedSkills[0].path)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>如何处理</dt>
+                    <dd>
+                      迁移会移动整个目录，不覆盖已有
+                      Skill；如果目标已存在，改用“归档旧副本”。
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>备份位置</dt>
+                    <dd>
+                      迁移前会先创建完整备份；完成后显示绝对路径。备份位于
+                      <code>~/.agenthub/backups/legacy-codex-skills/</code>。
+                    </dd>
+                  </div>
+                </>
+              )}
+          </dl>
+          {focusedSkills.length > 0 && (
+            <div className="skill-issue-locations">
+              <strong>相关安装位置</strong>
+              {focusedSkills.map((skill) => (
+                <SkillLocation
+                  key={`${skill.agent}-${skill.scope}-${skill.path}`}
+                  skill={skill}
+                />
+              ))}
+            </div>
+          )}
+          <div className="skill-issue-actions">
+            <button
+              className="button button-ghost"
+              onClick={onDismissDiagnostic}
+            >
+              返回诊断列表
+            </button>
+            <button className="button button-secondary" onClick={onRepair}>
+              <Icon name="refresh" size={15} />
+              重新扫描
+            </button>
+            {legacySkill && (
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={Boolean(legacyActionPath)}
+                onClick={() =>
+                  void handleLegacyAction(legacySkill.path, legacyAction)
+                }
+              >
+                {legacyActionPath
+                  ? legacyAction === "archive"
+                    ? "归档中…"
+                    : "迁移中…"
+                  : legacyAction === "archive"
+                    ? "保留 .agents 并归档旧副本"
+                    : "迁移到 .agents/skills"}
+              </button>
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  }
   async function executeRecovery() {
     if (!recoveryPreview || recoveryBusy) return;
     setRecoveryBusy(true);
@@ -3244,11 +3495,14 @@ function DiagnosticsPage({
         confirmed: recoveryPreview.plan.confirmationRequired,
       });
       setRecoveryMessage(
-        result.outcome === "applied"
-          ? "修复已应用，并已刷新诊断。"
-          : "安全恢复已执行，并已刷新诊断。",
+        recoveryPresentation?.readOnly
+          ? "扫描完成，诊断结果已刷新；没有修改任何文件。"
+          : result.outcome === "applied"
+            ? "修复已应用，并已刷新诊断。"
+            : "安全恢复已执行，并已刷新诊断。",
       );
       setRecoveryPreview(undefined);
+      setRecoveryDiagnostic(undefined);
       onRepair();
     } catch {
       setRecoveryMessage("恢复未执行：状态可能已变化，请重新扫描后预览。");
@@ -3256,11 +3510,44 @@ function DiagnosticsPage({
       setRecoveryBusy(false);
     }
   }
+  function closeRecoveryPage() {
+    const main = document.querySelector<HTMLElement>(".main-content");
+    setRecoveryPreview(undefined);
+    setRecoveryDiagnostic(undefined);
+    window.requestAnimationFrame(() => {
+      main?.scrollTo({ top: diagnosticsScrollPosition.current.main });
+      window.scrollTo({ top: diagnosticsScrollPosition.current.window });
+      recoveryReturnFocusRef.current?.focus();
+      recoveryReturnFocusRef.current = null;
+    });
+  }
+  if (recoveryPreview && recoveryPresentation) {
+    return (
+      <DiagnosticRecoveryPage
+        presentation={recoveryPresentation}
+        warningIcon={
+          <Icon
+            name={recoveryPresentation.readOnly ? "check" : "warning"}
+            size={15}
+          />
+        }
+        backIcon={<Icon name="arrow" size={15} />}
+        onBack={closeRecoveryPage}
+        onExecute={() => void executeRecovery()}
+        busy={recoveryBusy}
+      />
+    );
+  }
   return (
     <div className="page">
       <h1 className="sr-only">诊断中心</h1>
       {recoveryMessage && (
-        <div className="alert alert-warning" role="status" aria-live="polite">
+        <div
+          className="alert alert-warning"
+          id="recovery-message"
+          role="status"
+          aria-live="polite"
+        >
           <Icon name="warning" />
           <span>{recoveryMessage}</span>
         </div>
@@ -3304,7 +3591,9 @@ function DiagnosticsPage({
                     <button
                       className="button button-secondary"
                       disabled={recoveryBusy}
-                      onClick={() => void previewRecovery(item)}
+                      onClick={(event) =>
+                        void previewRecovery(item, event.currentTarget)
+                      }
                     >
                       查看处理方案
                     </button>
@@ -3351,52 +3640,6 @@ function DiagnosticsPage({
             打开配置中心
           </button>
         </div>
-      )}
-      {recoveryPreview && (
-        <section className="restore-panel" aria-labelledby="recovery-title">
-          <div className="editor-header">
-            <div>
-              <span className="eyebrow">处理方案</span>
-              <strong id="recovery-title">{recoveryPreview.summary}</strong>
-            </div>
-            <button
-              className="icon-button"
-              aria-label="关闭恢复预览"
-              onClick={() => setRecoveryPreview(undefined)}
-            >
-              <Icon name="close" />
-            </button>
-          </div>
-          <p>
-            {recoveryPreview.plan.confirmationRequired
-              ? "这是一个可能改变配置或安装状态的操作。请先核对问题范围和资源路径。"
-              : "这是安全的重新扫描或刷新操作，不会直接修改源文件。"}
-          </p>
-          {recoveryPreview.plan.resourcePath && (
-            <code className="recovery-path">
-              {recoveryPreview.plan.resourcePath}
-            </code>
-          )}
-          <div className="editor-footer">
-            <button
-              className="button button-ghost"
-              onClick={() => setRecoveryPreview(undefined)}
-            >
-              取消
-            </button>
-            <button
-              className="button button-primary"
-              disabled={recoveryBusy}
-              onClick={() => void executeRecovery()}
-            >
-              {recoveryBusy
-                ? "执行中…"
-                : recoveryPreview.plan.confirmationRequired
-                  ? "确认并处理"
-                  : "执行处理方案"}
-            </button>
-          </div>
-        </section>
       )}
     </div>
   );
@@ -3576,56 +3819,183 @@ function HistoryPage({
 }
 
 function SettingsPage() {
+  const [tab, setTab] = useState<"privacy" | "scanning" | "data">("privacy");
+  const [dataPaths, setDataPaths] =
+    useState<Awaited<ReturnType<typeof getUserDataPaths>>>();
+  const [pathError, setPathError] = useState<string>();
+  const [clearingKind, setClearingKind] = useState<"logs" | "skillSources">();
+  useEffect(() => {
+    void getUserDataPaths()
+      .then(setDataPaths)
+      .catch(() => {
+        setPathError("无法读取 AgentHub 用户数据目录，请稍后重试。");
+      });
+  }, []);
+  function openPath(path: string) {
+    void revealItemInDir(path).catch(() => {
+      setPathError("无法打开文件管理器，请检查系统权限设置。");
+    });
+  }
+  const dataLocations = dataPaths
+    ? ([
+        ["AgentHub 数据目录", dataPaths.root, undefined],
+        ["数据库", dataPaths.database, undefined],
+        ["备份", dataPaths.backups, undefined],
+        ["Skill 来源缓存", dataPaths.skillSources, "skillSources"],
+        ["日志", dataPaths.logs, "logs"],
+      ] as const)
+    : [];
+  function clearPath(kind: "logs" | "skillSources", label: string) {
+    if (
+      !window.confirm(
+        `确定清理${label}吗？此操作会删除其中的文件，且无法从 AgentHub 恢复。`,
+      )
+    )
+      return;
+    setClearingKind(kind);
+    setPathError(undefined);
+    void clearUserData(kind)
+      .then(setDataPaths)
+      .catch(() => setPathError(`无法清理${label}，请稍后重试。`))
+      .finally(() => setClearingKind(undefined));
+  }
   return (
     <div className="page">
-      <h1 className="sr-only">设置</h1>
-      <div className="settings-grid">
-        <section className="surface-card">
-          <div className="section-title-row">
-            <div>
-              <p className="eyebrow">隐私与安全</p>
-              <h2>本地优先</h2>
+      <div className="settings-heading">
+        <div>
+          <p className="eyebrow">应用设置</p>
+          <h1>设置</h1>
+        </div>
+        <p>管理本地隐私策略、扫描偏好和 AgentHub 用户数据。</p>
+      </div>
+      <SubTabs
+        value={tab}
+        ariaLabel="设置分类"
+        onChange={setTab}
+        items={[
+          {
+            value: "privacy",
+            label: "隐私与安全",
+            icon: <Icon name="shield" size={16} />,
+          },
+          {
+            value: "scanning",
+            label: "扫描偏好",
+            icon: <Icon name="refresh" size={16} />,
+          },
+          {
+            value: "data",
+            label: "用户数据",
+            icon: <Icon name="folder" size={16} />,
+          },
+        ]}
+      />
+      <div className="settings-panel">
+        {tab === "privacy" && (
+          <section className="surface-card">
+            <div className="section-title-row">
+              <div>
+                <p className="eyebrow">隐私与安全</p>
+                <h2>本地优先</h2>
+              </div>
+              <Icon name="shield" size={24} />
             </div>
-            <Icon name="shield" size={24} />
-          </div>
-          <div className="setting-row">
-            <div>
-              <strong>敏感值遮罩</strong>
-              <span>Token、密钥和密码在预览与诊断中自动隐藏</span>
+            <div className="setting-row">
+              <div>
+                <strong>敏感值遮罩</strong>
+                <span>Token、密钥和密码在预览与诊断中自动隐藏</span>
+              </div>
+              <span className="setting-value">强制开启</span>
             </div>
-            <span className="setting-value">强制开启</span>
-          </div>
-          <div className="setting-row">
-            <div>
-              <strong>写入前备份</strong>
-              <span>每次确认写入都会保留可回滚副本</span>
+            <div className="setting-row">
+              <div>
+                <strong>写入前备份</strong>
+                <span>每次确认写入都会保留可回滚副本</span>
+              </div>
+              <span className="setting-value">强制开启</span>
             </div>
-            <span className="setting-value">强制开启</span>
-          </div>
-        </section>
-        <section className="surface-card">
-          <div className="section-title-row">
-            <div>
-              <p className="eyebrow">扫描偏好</p>
-              <h2>保持信息新鲜</h2>
+          </section>
+        )}
+        {tab === "scanning" && (
+          <section className="surface-card">
+            <div className="section-title-row">
+              <div>
+                <p className="eyebrow">扫描偏好</p>
+                <h2>保持信息新鲜</h2>
+              </div>
+              <Icon name="refresh" size={24} />
             </div>
-            <Icon name="refresh" size={24} />
-          </div>
-          <div className="setting-row">
-            <div>
-              <strong>启动时扫描</strong>
-              <span>打开应用后读取三种 Agent 的全局配置</span>
+            <div className="setting-row">
+              <div>
+                <strong>启动时扫描</strong>
+                <span>打开应用后读取三种 Agent 的全局配置</span>
+              </div>
+              <span className="setting-value">默认开启</span>
             </div>
-            <span className="setting-value">默认开启</span>
-          </div>
-          <div className="setting-row">
-            <div>
-              <strong>界面语言</strong>
-              <span>中文（简体）</span>
+            <div className="setting-row">
+              <div>
+                <strong>界面语言</strong>
+                <span>中文（简体）</span>
+              </div>
+              <span className="setting-value">中文</span>
             </div>
-            <span className="setting-value">中文</span>
-          </div>
-        </section>
+          </section>
+        )}
+        {tab === "data" && (
+          <section className="surface-card settings-data-card">
+            <div className="section-title-row">
+              <div>
+                <p className="eyebrow">用户数据</p>
+                <h2>数据目录与备份</h2>
+              </div>
+              <Icon name="folder" size={24} />
+            </div>
+            <p className="settings-data-description">
+              AgentHub 的数据库、备份、Skill
+              来源缓存和日志都保存在本机。打开目录不会修改其中的文件。
+            </p>
+            <div className="settings-data-list">
+              {dataLocations.map(([label, location, clearKind]) => (
+                <div className="settings-data-row" key={location.path}>
+                  <div>
+                    <strong>{label}</strong>
+                    <code title={location.path}>
+                      {compactUserPath(location.path)}
+                    </code>
+                    <span className="settings-data-size">
+                      {formatBytes(location.bytes)}
+                    </span>
+                  </div>
+                  <div className="settings-data-actions">
+                    <button
+                      className="button button-ghost"
+                      type="button"
+                      onClick={() => openPath(location.path)}
+                    >
+                      <Icon name="external" size={14} />
+                      打开目录
+                    </button>
+                    {clearKind && (
+                      <button
+                        className="button button-danger-ghost"
+                        type="button"
+                        disabled={Boolean(clearingKind)}
+                        onClick={() => clearPath(clearKind, label)}
+                      >
+                        {clearingKind === clearKind ? "清理中…" : "清理"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {pathError && (
+              <p className="settings-data-error" role="alert">
+                {pathError}
+              </p>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

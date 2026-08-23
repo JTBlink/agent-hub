@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fs,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -9,7 +10,8 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use tauri::{Emitter, Manager, State};
+use tauri_plugin_deep_link::DeepLinkExt;
 
 use agents::{claude::ClaudeCodeAdapter, AgentConfigAdapter, ConfigDocument, ScanContext};
 use persistence::{
@@ -17,10 +19,13 @@ use persistence::{
 };
 
 pub mod agents;
+pub mod app_paths;
 pub mod configuration;
+pub mod deep_link;
 pub mod diagnostics;
 pub mod domain;
 pub mod logging;
+pub mod marketplace_browser;
 pub mod persistence;
 pub mod skill_installation;
 pub mod skills;
@@ -32,6 +37,84 @@ pub use domain::{Agent, ConfigFormat, InstallationState, ParseStatus, Scope, Ski
 struct AppInfo {
     name: &'static str,
     version: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UserDataLocation {
+    path: String,
+    bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UserDataPaths {
+    root: UserDataLocation,
+    database: UserDataLocation,
+    backups: UserDataLocation,
+    skill_sources: UserDataLocation,
+    logs: UserDataLocation,
+}
+
+#[tauri::command]
+fn user_data_paths(state: State<'_, AppState>) -> UserDataPaths {
+    let root = state
+        .backup_root
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| state.backup_root.clone());
+    user_data_paths_for_root(&root)
+}
+
+#[tauri::command]
+fn clear_user_data(kind: String, state: State<'_, AppState>) -> Result<UserDataPaths, String> {
+    let root = state
+        .backup_root
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| state.backup_root.clone());
+    let target = match kind.as_str() {
+        "logs" => root.join("logs"),
+        "skillSources" => root.join("skill-sources"),
+        _ => return Err("only logs and skill source cache can be cleared".to_owned()),
+    };
+    if target.exists() {
+        fs::remove_dir_all(&target).map_err(|error| error.to_string())?;
+    }
+    fs::create_dir_all(&target).map_err(|error| error.to_string())?;
+    Ok(user_data_paths_for_root(&root))
+}
+
+fn user_data_paths_for_root(root: &Path) -> UserDataPaths {
+    let location = |path: PathBuf| UserDataLocation {
+        bytes: path_size(&path),
+        path: path.display().to_string(),
+    };
+    UserDataPaths {
+        database: location(root.join("agent-hub.sqlite3")),
+        backups: location(root.join("backups")),
+        skill_sources: location(root.join("skill-sources")),
+        logs: location(root.join("logs")),
+        root: location(root.to_path_buf()),
+    }
+}
+
+fn path_size(path: &Path) -> u64 {
+    let Ok(metadata) = fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if metadata.is_file() {
+        return metadata.len();
+    }
+    if !metadata.is_dir() {
+        return 0;
+    }
+    fs::read_dir(path)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| path_size(&entry.path()))
+        .sum()
 }
 
 #[tauri::command]
@@ -1541,24 +1624,47 @@ fn restore_config_history(
     Ok(result)
 }
 
+#[tauri::command]
+fn resolve_deep_link_install(
+    app: tauri::AppHandle,
+    plugin_name: String,
+    marketplace: String,
+) -> Result<deep_link::DeepLinkResolution, String> {
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    let request = deep_link::DeepLinkInstallRequest {
+        plugin_name: plugin_name.clone(),
+        marketplace: marketplace.clone(),
+        catalog_key: format!("{plugin_name}@{marketplace}"),
+    };
+    deep_link::resolve_from_catalog(&home, &request).map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let home_directory = dirs::home_dir().expect("could not resolve the user home directory");
+    let app_paths = app_paths::AppPaths::from_home(&home_directory);
     tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(logging::plugin())
-        .setup(|app| {
-            let data_directory = app.path().app_data_dir().map_err(|error| {
-                std::io::Error::other(format!("could not resolve app data directory: {error}"))
+        .plugin(logging::plugin(app_paths.logs.clone()))
+        .setup(move |app| {
+            let legacy_data_directory = app.path().app_data_dir().map_err(|error| {
+                std::io::Error::other(format!(
+                    "could not resolve legacy app data directory: {error}"
+                ))
             })?;
-            let database_path = data_directory.join("agent-hub.sqlite3");
-            let database = persistence::Database::open(&database_path).map_err(|error| {
+            app_paths.prepare(&legacy_data_directory)?;
+            let database = persistence::Database::open(&app_paths.database).map_err(|error| {
                 logging::command_failed(
                     logging::Command::DatabaseOpen,
                     logging::FailureCode::Persistence,
                 );
                 std::io::Error::other(error.to_string())
             })?;
+            database
+                .relocate_backup_paths(legacy_data_directory.join("backups"), &app_paths.backups)
+                .map_err(|error| std::io::Error::other(error.to_string()))?;
             logging::database_opened();
             logging::app_started(env!("CARGO_PKG_VERSION"));
             let database = Arc::new(database);
@@ -1570,19 +1676,35 @@ pub fn run() {
                 workspace_repository,
                 config_metadata_repository,
                 storage_repository,
-                data_directory.join("backups"),
+                app_paths.backups.clone(),
             );
             state.configure_skill_services(
                 skill_repository,
                 Arc::new(skills::SkillSourceManager::new(
-                    data_directory.join("skill-sources"),
+                    app_paths.skill_sources.clone(),
                 )),
             );
             app.manage(state);
+            let handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                for url in event.urls() {
+                    match deep_link::parse_deep_link_url(url.as_str()) {
+                        Ok(request) => {
+                            let _ = handle.emit("deep-link-install", &request);
+                        }
+                        Err(error) => {
+                            log::warn!(target: "agent_hub", "deep link rejected: {error}");
+                            let _ = handle.emit("deep-link-error", error.to_string());
+                        }
+                    }
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
+            user_data_paths,
+            clear_user_data,
             storage_diagnostics,
             scan_claude_global,
             scan_codex_global,
@@ -1608,7 +1730,11 @@ pub fn run() {
             list_config_history,
             get_config_history_entry,
             preview_config_restore,
-            restore_config_history
+            restore_config_history,
+            marketplace_browser::navigate_marketplace_browser,
+            marketplace_browser::control_marketplace_browser,
+            marketplace_browser::marketplace_browser_url,
+            resolve_deep_link_install
         ])
         .run(tauri::generate_context!())
         .expect("error while running AgentHub");

@@ -5,6 +5,19 @@ export interface AppInfo {
   version: string;
 }
 
+export interface UserDataLocation {
+  path: string;
+  bytes: number;
+}
+
+export interface UserDataPaths {
+  root: UserDataLocation;
+  database: UserDataLocation;
+  backups: UserDataLocation;
+  skillSources: UserDataLocation;
+  logs: UserDataLocation;
+}
+
 export interface StorageDiagnostics {
   databasePath: string;
   schemaVersion: number;
@@ -66,6 +79,8 @@ export interface InstalledSkill {
   name: string | null;
   relativePath: string;
   compatibility: string | null;
+  currentVersion?: string | null;
+  installedFingerprint?: string | null;
   enabled: boolean;
   sourceTracked: boolean;
   diagnostics: {
@@ -301,6 +316,16 @@ export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
+export function getUserDataPaths(): Promise<UserDataPaths> {
+  return invoke<UserDataPaths>("user_data_paths");
+}
+
+export function clearUserData(
+  kind: "logs" | "skillSources",
+): Promise<UserDataPaths> {
+  return invoke<UserDataPaths>("clear_user_data", { kind });
+}
+
 export function getStorageDiagnostics(): Promise<StorageDiagnostics> {
   return invoke<StorageDiagnostics>("storage_diagnostics");
 }
@@ -368,6 +393,7 @@ export interface LegacyCodexSkillResolution {
   action: LegacyCodexSkillAction;
   originalPath: string;
   destinationPath: string;
+  backupPath: string;
 }
 
 export function resolveLegacyCodexSkill(input: {
