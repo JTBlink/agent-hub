@@ -59,6 +59,8 @@ export interface InstalledSkill {
   agent: Agent;
   scope: ConfigScope;
   path: string;
+  storageKind: "copy" | "symlink";
+  realPath: string;
   source: SkillSourceMetadata;
   displayName: string;
   name: string | null;
@@ -71,18 +73,27 @@ export interface InstalledSkill {
     message: string;
     severity: string;
     path: string | null;
+    targetPath: string | null;
   }[];
 }
 
 export interface SkillInventory {
   skills: InstalledSkill[];
   duplicateNames: string[];
+  roots: SkillRootUsage[];
   diagnostics: {
     code: string;
     message: string;
     severity: string;
     path: string | null;
+    targetPath: string | null;
   }[];
+}
+
+export interface SkillRootUsage {
+  path: string;
+  bytes: number;
+  skillCount: number;
 }
 
 export type SkillSourceRequest =
@@ -349,6 +360,23 @@ export function uninstallSkill(input: {
   workspaceDirectory?: string;
 }): Promise<ManagedInstallation> {
   return invoke<ManagedInstallation>("uninstall_skill", input);
+}
+
+export type LegacyCodexSkillAction = "migrate" | "archive";
+
+export interface LegacyCodexSkillResolution {
+  action: LegacyCodexSkillAction;
+  originalPath: string;
+  destinationPath: string;
+}
+
+export function resolveLegacyCodexSkill(input: {
+  sourcePath: string;
+  action: LegacyCodexSkillAction;
+}): Promise<LegacyCodexSkillResolution> {
+  return invoke<LegacyCodexSkillResolution>("resolve_legacy_codex_skill", {
+    input,
+  });
 }
 
 export function getDiagnostics(

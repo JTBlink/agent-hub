@@ -29,6 +29,8 @@ function installedSkill(overrides: Partial<InstalledSkill> = {}): InstalledSkill
     agent: "codex",
     scope: "global",
     path: "/home/me/.agents/skills/review",
+    storageKind: "copy",
+    realPath: "/home/me/.agents/skills/review",
     source: {
       kind: "local-directory",
       locator: "/repo/.agents/skills",

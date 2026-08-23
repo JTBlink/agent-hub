@@ -316,6 +316,16 @@ pub fn from_skill(
     agent: Option<Agent>,
     scope: Option<Scope>,
 ) -> UnifiedDiagnostic {
+    let impact = source
+        .target_path
+        .as_ref()
+        .map(|target| format!("软链接入口未读取；真实 Skill 路径：{target}"))
+        .unwrap_or_else(|| skill_impact(&source.code).into());
+    let next_action = source
+        .target_path
+        .as_ref()
+        .map(|_| "请确认真实来源目录后重新扫描；不要把软链接当作真实拷贝处理".into())
+        .unwrap_or_else(|| skill_next_action(&source.code).into());
     UnifiedDiagnostic {
         code: format!("skill:{}", source.code),
         kind: skill_kind(&source.code),
@@ -327,8 +337,8 @@ pub fn from_skill(
         agent,
         scope,
         resource_path: source.path.as_ref().map(PathBuf::from),
-        impact: skill_impact(&source.code).into(),
-        next_action: skill_next_action(&source.code).into(),
+        impact,
+        next_action,
         fix_safety: skill_fix_safety(&source.code),
     }
 }
@@ -338,6 +348,11 @@ pub fn duplicate_skill(
     agent: Option<Agent>,
     scope: Option<Scope>,
 ) -> UnifiedDiagnostic {
+    let next_action = if agent == Some(Agent::Codex) && scope == Some(Scope::Global) {
+        "保留 ~/.agents/skills 中的副本；旧的 ~/.codex/skills 副本建议先迁移或归档后再重新扫描"
+    } else {
+        "比较该 Agent 在相同作用域下的安装路径，只保留需要加载的副本"
+    };
     UnifiedDiagnostic {
         code: format!("skill:duplicate-name:{name}"),
         kind: DiagnosticKind::DuplicateSkill,
@@ -346,7 +361,7 @@ pub fn duplicate_skill(
         scope,
         resource_path: None,
         impact: format!("同一个 Agent 在多个目录发现了同名 Skill `{name}`，副本内容可能已经漂移"),
-        next_action: "保留 ~/.agents/skills 中的副本；旧的 ~/.codex/skills 副本建议先迁移或归档后再重新扫描".into(),
+        next_action: next_action.into(),
         fix_safety: FixSafety::RequiresConfirmation,
     }
 }
@@ -687,6 +702,9 @@ fn skill_impact(code: &str) -> &'static str {
     if code == "symlink-skipped" {
         return "该入口没有被读取，因此对应 Skill 不会出现在可安装清单中";
     }
+    if code == "codex-legacy-location" {
+        return "当前 Codex 仍可兼容加载，但旧目录不再是推荐的全局安装位置";
+    }
     match skill_kind(code) {
         DiagnosticKind::DuplicateSkill => "同名 Skill 可能按非预期顺序被目标 Agent 加载",
         DiagnosticKind::VersionMismatch => "Skill 可能与目标 Agent 或来源版本不兼容",
@@ -697,6 +715,9 @@ fn skill_impact(code: &str) -> &'static str {
 fn skill_next_action(code: &str) -> &'static str {
     if code == "symlink-skipped" {
         return "直接添加符号链接指向的真实来源目录，或将该入口替换为真实目录";
+    }
+    if code == "codex-legacy-location" {
+        return "将该 Skill 迁移到 ~/.agents/skills，迁移前会检查目标是否已存在";
     }
     match skill_kind(code) {
         DiagnosticKind::DuplicateSkill => "比较安装路径并确认需要保留的 Skill",
@@ -851,6 +872,7 @@ mod tests {
             message: "source diagnostic".into(),
             severity: crate::skills::DiagnosticSeverity::Warning,
             path: Some("skills/review/SKILL.md".into()),
+            target_path: None,
         };
 
         assert_eq!(

@@ -17,6 +17,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
+mod legacy_codex;
+pub use legacy_codex::{
+    resolve_legacy_codex_skill, LegacyCodexSkillAction, LegacyCodexSkillError,
+    LegacyCodexSkillResolution,
+};
+
 const SKILL_FILE: &str = "SKILL.md";
 const MAX_SKILL_BYTES: u64 = 1024 * 1024;
 const MAX_SCAN_DEPTH: usize = 32;
@@ -70,6 +76,7 @@ pub struct SourceDiagnostic {
     pub message: String,
     pub severity: DiagnosticSeverity,
     pub path: Option<String>,
+    pub target_path: Option<String>,
 }
 
 impl SourceDiagnostic {
@@ -79,6 +86,7 @@ impl SourceDiagnostic {
             message: message.into(),
             severity: DiagnosticSeverity::Error,
             path: path.map(path_string),
+            target_path: None,
         }
     }
 
@@ -88,6 +96,7 @@ impl SourceDiagnostic {
             message: message.into(),
             severity: DiagnosticSeverity::Warning,
             path: path.map(path_string),
+            target_path: None,
         }
     }
 }
@@ -127,6 +136,8 @@ pub struct InstalledSkill {
     pub agent: crate::Agent,
     pub scope: crate::Scope,
     pub path: String,
+    pub storage_kind: SkillStorageKind,
+    pub real_path: String,
     pub source: SourceMetadata,
     pub display_name: String,
     pub name: Option<String>,
@@ -137,12 +148,28 @@ pub struct InstalledSkill {
     pub diagnostics: Vec<SourceDiagnostic>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SkillStorageKind {
+    Copy,
+    Symlink,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkillInventory {
     pub skills: Vec<InstalledSkill>,
     pub duplicate_names: Vec<String>,
     pub diagnostics: Vec<SourceDiagnostic>,
+    pub roots: Vec<SkillRootUsage>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillRootUsage {
+    pub path: String,
+    pub bytes: u64,
+    pub skill_count: usize,
 }
 
 /// Scan the standard read-only Skill roots for all supported Agents.
@@ -218,11 +245,23 @@ pub fn scan_installed_skills(
         skills: Vec::new(),
         duplicate_names: Vec::new(),
         diagnostics: Vec::new(),
+        roots: Vec::new(),
     };
     let mut names = BTreeMap::<(String, String, String), usize>::new();
     for (agent, scope, root) in roots {
         if !root.exists() {
             continue;
+        }
+        if inventory
+            .roots
+            .iter()
+            .all(|usage| Path::new(&usage.path) != root)
+        {
+            inventory.roots.push(SkillRootUsage {
+                path: path_string(&root),
+                bytes: directory_size(&root),
+                skill_count: 0,
+            });
         }
         match LocalSourceAdapter::new(&root).scan() {
             Ok(scan) => {
@@ -255,6 +294,8 @@ pub fn scan_installed_skills(
                         agent,
                         scope,
                         path: path_string(&entrypoint),
+                        storage_kind: storage_kind(&entrypoint),
+                        real_path: real_skill_path(&entrypoint),
                         source,
                         display_name: skill.display_name,
                         name: skill.name,
@@ -281,7 +322,93 @@ pub fn scan_installed_skills(
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
+    for usage in &mut inventory.roots {
+        usage.skill_count = inventory
+            .skills
+            .iter()
+            .filter(|skill| Path::new(&skill.path).starts_with(&usage.path))
+            .map(|skill| skill.path.as_str())
+            .collect::<BTreeSet<_>>()
+            .len();
+    }
+    let preferred_root = home.join(".agents/skills");
+    let legacy_root = home.join(".codex/skills");
+    let preferred_names = inventory
+        .skills
+        .iter()
+        .filter(|skill| {
+            skill.agent == crate::Agent::Codex
+                && skill.scope == crate::Scope::Global
+                && Path::new(&skill.path).starts_with(&preferred_root)
+        })
+        .map(installed_skill_name)
+        .collect::<BTreeSet<_>>();
+    let legacy_only = inventory
+        .skills
+        .iter()
+        .filter_map(|skill| {
+            let name = installed_skill_name(skill);
+            if skill.agent == crate::Agent::Codex
+                && skill.scope == crate::Scope::Global
+                && Path::new(&skill.path).starts_with(&legacy_root)
+                && !preferred_names.contains(&name)
+            {
+                Some(SourceDiagnostic::warning(
+                    "codex-legacy-location",
+                    "Codex Skill is installed only in the legacy ~/.codex/skills directory",
+                    Some(Path::new(&skill.path)),
+                ))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    inventory.diagnostics.extend(legacy_only);
     inventory
+}
+
+fn directory_size(path: &Path) -> u64 {
+    let Ok(metadata) = fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if metadata.file_type().is_symlink() {
+        return 0;
+    }
+    if metadata.is_file() {
+        return metadata.len();
+    }
+    fs::read_dir(path)
+        .map(|entries| {
+            entries
+                .flatten()
+                .map(|entry| directory_size(&entry.path()))
+                .sum()
+        })
+        .unwrap_or_default()
+}
+
+fn installed_skill_name(skill: &InstalledSkill) -> String {
+    skill
+        .name
+        .clone()
+        .unwrap_or_else(|| skill.display_name.clone())
+}
+
+fn storage_kind(entrypoint: &Path) -> SkillStorageKind {
+    entrypoint
+        .parent()
+        .and_then(|directory| fs::symlink_metadata(directory).ok())
+        .filter(|metadata| metadata.file_type().is_symlink())
+        .map(|_| SkillStorageKind::Symlink)
+        .unwrap_or(SkillStorageKind::Copy)
+}
+
+fn real_skill_path(entrypoint: &Path) -> String {
+    entrypoint
+        .canonicalize()
+        .unwrap_or_else(|_| entrypoint.to_path_buf())
+        .to_string_lossy()
+        .into_owned()
 }
 
 fn append_disabled_managed_skills(
@@ -356,6 +483,8 @@ fn append_disabled_managed_skills(
                 agent,
                 scope,
                 path: path_string(&path),
+                storage_kind: storage_kind(&path),
+                real_path: real_skill_path(&path),
                 source: skill.source.clone(),
                 display_name: skill.display_name,
                 name: skill.name,
@@ -1224,11 +1353,31 @@ fn walk_skill_files(
             }
         };
         if file_type.is_symlink() {
+            let target_path = fs::read_link(entry.path()).ok().map(|target| {
+                if target.is_absolute() {
+                    target
+                } else {
+                    entry
+                        .path()
+                        .parent()
+                        .map(|parent| parent.join(target.clone()))
+                        .unwrap_or(target)
+                }
+            });
+            let target_display = target_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().into_owned());
             diagnostics.push(SourceDiagnostic::warning(
                 "symlink-skipped",
-                "symlink was skipped during read-only discovery",
+                target_display
+                    .as_deref()
+                    .map(|target| format!("软链接入口已跳过；真实 Skill 路径：{target}"))
+                    .unwrap_or_else(|| "软链接入口已跳过，无法读取真实 Skill 路径".into()),
                 Some(&entry.path()),
             ));
+            if let Some(last) = diagnostics.last_mut() {
+                last.target_path = target_display;
+            }
             continue;
         }
         let path = entry.path();
@@ -1728,6 +1877,15 @@ mod tests {
             .diagnostics
             .iter()
             .any(|item| item.code == "symlink-skipped"));
+        let expected_target = path_string(&outside.path().join("outside"));
+        assert_eq!(
+            result
+                .diagnostics
+                .iter()
+                .find(|item| item.code == "symlink-skipped")
+                .and_then(|item| item.target_path.as_deref()),
+            Some(expected_target.as_str())
+        );
     }
 
     #[test]

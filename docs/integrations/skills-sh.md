@@ -24,6 +24,18 @@
 
 优先使用官方稳定命令或公开接口；Git 来源使用浅克隆或归档下载，并固定到可追溯的 tag/commit。失败时保留原工作空间状态，不记录半完成安装。卸载只删除 AgentHub 明确记录和管理的文件，不递归删除来源不明的目录。
 
+### skills CLI 与 Codex 目录策略
+
+skills.sh 官方 CLI 默认使用软链接模式：先把内容写入 `.agents/skills/<name>` 规范副本，再为需要独立目录的 Agent 创建软链接；`--copy` 会改为向各 Agent 目录写入互相独立的真实副本。软链接失败时 CLI 可能回退为拷贝。
+
+当前 CLI 的 Codex 配置仍把项目目录定义为 `.agents/skills`、全局目录定义为 `$CODEX_HOME/skills`（默认 `~/.codex/skills`）。Codex 当前产品文档推荐的用户级目录则是 `~/.agents/skills`，并继续兼容读取旧的 `$CODEX_HOME/skills`。AgentHub 采用以下策略：
+
+- 新的 Codex 全局安装只写入 `~/.agents/skills`。
+- `~/.codex/skills` 只读识别为兼容目录，不再作为新安装目标。
+- 同一个 Codex Skill 同时存在于两处时，只把 Codex 的两个真实副本标为冲突；OpenCode 等 Agent 共用 `.agents/skills` 不算冲突。
+- 旧目录没有首选副本时可迁移到 `.agents/skills`；已有首选副本时归档旧副本，归档进入 AgentHub 备份目录而非永久删除。
+- 界面只为软链接显示链接图标与解析后的真实路径；真实文件不重复展示相同路径。
+
 ## 第一版边界
 
 第一版支持标准 Claude Marketplace manifest、skills.sh 目录、一个官方仓库、三个预置 Git 仓库、符合 Skill 目录规范的自定义 Git 仓库和本地仓库目录，但不承诺自动解析任意项目的复杂目录结构、私有仓库凭据托管、仓库依赖安装或自动发布能力。用户需明确选择 Marketplace 条目、仓库 ref、本地目录和 Skill 子目录；后续可在同一 adapter interface 上扩展更多来源。
