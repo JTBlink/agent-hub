@@ -21,6 +21,14 @@ impl SettingsRepository for Database {
                     "backup retention days must be between 1 and 365, got {days}"
                 )))
             }
+            AppSetting::LastLocalSkillSource(path) if !path.trim().is_empty() => {
+                ("lastLocalSkillSource", path.to_owned())
+            }
+            AppSetting::LastLocalSkillSource(_) => {
+                return Err(PersistenceError::InvalidInput(
+                    "last local Skill source cannot be empty".into(),
+                ))
+            }
         };
         let connection = self.lock_connection()?;
         connection.execute(
@@ -34,6 +42,7 @@ impl SettingsRepository for Database {
         let key_name = match key {
             SettingKey::Theme => "theme",
             SettingKey::BackupRetentionDays => "backupRetentionDays",
+            SettingKey::LastLocalSkillSource => "lastLocalSkillSource",
         };
         let connection = self.lock_connection()?;
         let value: Option<String> = connection

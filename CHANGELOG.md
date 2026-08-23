@@ -4,7 +4,14 @@
 
 ## [Unreleased]
 
-后续版本变更将在此记录。
+### Added
+
+- 支持识别 Claude/Codex 的软链接 Skill，并允许从共享 `.agents/skills` 目录多选后一键安装到其他 Agent。
+- 已安装 Skill 支持安全卸载，并自动清理指向该安装目录的相关软链接。
+
+### Changed
+
+- 系统 Skill（例如 `.codex/skills/.system`）单独分类，不计入用户 Skill 的重复检查。
 
 ## [0.1.1] - 2026-08-23
 

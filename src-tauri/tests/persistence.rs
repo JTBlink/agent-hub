@@ -16,7 +16,7 @@ fn first_open_creates_and_migrates_the_database() {
     let diagnostics = database.diagnostics().expect("diagnostics are available");
 
     assert!(path.is_file());
-    assert_eq!(diagnostics.schema_version, 2);
+    assert_eq!(diagnostics.schema_version, 3);
     assert_eq!(diagnostics.journal_mode, "wal");
     assert!(diagnostics.foreign_keys_enabled);
     assert_eq!(diagnostics.database_path, path);
@@ -243,6 +243,15 @@ fn application_settings_are_typed_and_schema_audit_rejects_sensitive_columns() {
             .setting(SettingKey::BackupRetentionDays)
             .expect("retention loads"),
         Some(AppSetting::BackupRetentionDays(30))
+    );
+    reopened
+        .set_setting(AppSetting::LastLocalSkillSource("/projects/skills".into()))
+        .expect("local Skill source is saved");
+    assert_eq!(
+        reopened
+            .setting(SettingKey::LastLocalSkillSource)
+            .expect("local Skill source loads"),
+        Some(AppSetting::LastLocalSkillSource("/projects/skills".into()))
     );
     assert!(reopened
         .diagnostics()

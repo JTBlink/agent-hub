@@ -43,5 +43,9 @@ export function currentSkillVersion(skill: InstalledSkill): string {
 }
 
 export function isSkillUpdateSupported(skill: InstalledSkill): boolean {
-  return skill.sourceTracked && Boolean(buildSkillUpdateRequest(skill.source));
+  return (
+    skill.sourceTracked &&
+    skill.storageKind !== "symlink" &&
+    Boolean(buildSkillUpdateRequest(skill.source))
+  );
 }

@@ -7,6 +7,11 @@ import {
   useState,
 } from "react";
 import { ConfirmModal, Modal, useConfirm } from "./Modal";
+import {
+  SkillInstallTargetSelector,
+  SkillInstallationSummary,
+} from "./SkillInstallActions";
+import { SkillUninstallButton } from "./SkillUninstallButton";
 
 import {
   addWorkspace,
@@ -19,11 +24,13 @@ import {
   getClaudeGlobalConfig,
   getCodexGlobalConfig,
   getDiagnostics,
+  getLastLocalSkillSource,
   getOpenCodeGlobalConfig,
   getSkillInventory,
   getUserDataPaths,
   listConfigHistory,
   listWorkspaces,
+  linkSkillToAgent,
   openDirectoryInEditor,
   planSkillInstall,
   previewConfigEdit,
@@ -35,6 +42,7 @@ import {
   removeWorkspace,
   scanWorkspace,
   restoreConfigHistory,
+  setLastLocalSkillSource,
   writeConfig,
   type ConfigDocument,
   type ConfigEditPreview,
@@ -2288,9 +2296,9 @@ function SkillsCenter({
   onWorkspaceChange: (workspacePath: string) => void;
   onInstalled: (workspaceDirectory?: string) => void;
 }) {
-  const [view, setView] = useState<"installed" | "storage" | "marketplace">(
-    "installed",
-  );
+  const [view, setView] = useState<
+    "installed" | "storage" | "install" | "marketplace"
+  >("installed");
   const [selectedAgent, setSelectedAgent] =
     useState<InstalledSkill["agent"]>("codex");
   const agentOptions = useMemo(
@@ -2308,7 +2316,7 @@ function SkillsCenter({
     [skills],
   );
   const [filter, setFilter] = useState<
-    "all" | "global" | "workspace" | "managed" | "external"
+    "all" | "global" | "workspace" | "managed" | "external" | "system"
   >("all");
   const [showSourcePage, setShowSourcePage] = useState(false);
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -2317,9 +2325,28 @@ function SkillsCenter({
   const [legacyFeedback, setLegacyFeedback] = useState<LegacySkillFeedback>();
   const [skillViewer, setSkillViewer] = useState<SkillViewerState>();
   const [updateTarget, setUpdateTarget] = useState<InstalledSkill>();
+  const [uninstallMessage, setUninstallMessage] = useState<string>();
+  const [selectedSharedSkills, setSelectedSharedSkills] = useState<Set<string>>(
+    new Set(),
+  );
+  const [batchTargetAgent, setBatchTargetAgent] =
+    useState<InstalledSkill["agent"]>("claude-code");
+  const [batchInstalling, setBatchInstalling] = useState(false);
   const { confirm, ConfirmPortal } = useConfirm();
   const skillsScrollPosition = useRef({ main: 0, window: 0 });
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
+  const batchTargetAgents = useMemo(
+    () =>
+      defaultAgentIds.filter(
+        (agent) => agent !== selectedAgent,
+      ) as InstalledSkill["agent"][],
+    [selectedAgent],
+  );
+  useEffect(() => {
+    if (!batchTargetAgents.includes(batchTargetAgent) && batchTargetAgents[0]) {
+      setBatchTargetAgent(batchTargetAgents[0]);
+    }
+  }, [batchTargetAgent, batchTargetAgents, selectedAgent]);
   useEffect(() => {
     if (!normalizedQuery) return;
     const matchingSkill = (skills?.skills ?? []).find((skill) =>
@@ -2348,6 +2375,7 @@ function SkillsCenter({
           filter === "all" ||
           (filter === "managed" && skill.sourceTracked) ||
           (filter === "external" && !skill.sourceTracked) ||
+          (filter === "system" && skill.category === "system") ||
           skill.scope === filter;
         const haystack = [
           skill.displayName,
@@ -2368,6 +2396,19 @@ function SkillsCenter({
         );
       }),
     [filter, normalizedQuery, selectedAgent, skills],
+  );
+  const sharedSkills = useMemo(
+    () =>
+      (skills?.skills ?? []).filter(
+        (skill) =>
+          skill.category === "user" &&
+          skill.scope === "global" &&
+          isSharedAgentsSkill(skill),
+      ),
+    [skills],
+  );
+  const selectedSharedSkillItems = sharedSkills.filter((skill) =>
+    selectedSharedSkills.has(skill.path),
   );
   const groups = useMemo(() => {
     const result = new Map<string, InstalledSkill[]>();
@@ -2407,10 +2448,11 @@ function SkillsCenter({
   }, [skills]);
   const filters = [
     ["all", "全部"],
-    ["global", "所有工作空间 Skill"],
-    ["workspace", "当前工作空间 Skill"],
-    ["managed", "已纳入管理"],
-    ["external", "未纳入管理"],
+    ["global", "全局"],
+    ["workspace", "工作区"],
+    ["system", "系统"],
+    ["managed", "已管理"],
+    ["external", "外部"],
   ] as const;
   async function handleViewSkill(skill: InstalledSkill) {
     setSkillViewer({ skill, loading: true });
@@ -2438,6 +2480,36 @@ function SkillsCenter({
       );
     }
   }
+
+  async function installSelectedSharedSkills() {
+    if (batchInstalling || selectedSharedSkillItems.length === 0) return;
+    const confirmed = await confirm({
+      title: `安装 ${selectedSharedSkillItems.length} 个 Skill？`,
+      description: `将在 ${getAgentMeta(batchTargetAgent).name} 全局目录创建指向共享 .agents/skills 的软链接。已有非软链接目录会被拒绝覆盖。`,
+      confirmLabel: "确认安装",
+    });
+    if (!confirmed) return;
+    setBatchInstalling(true);
+    setUninstallMessage(undefined);
+    try {
+      for (const skill of selectedSharedSkillItems) {
+        await linkSkillToAgent({
+          sourceDirectory: skillSourceDirectory(skill),
+          targetName: skill.name || skill.displayName,
+          agent: batchTargetAgent,
+          scope: "global",
+        });
+      }
+      setSelectedSharedSkills(new Set());
+      onInstalled();
+    } catch (error) {
+      setUninstallMessage(
+        errorMessage(error, "批量安装失败，已完成的项目保持不变。"),
+      );
+    } finally {
+      setBatchInstalling(false);
+    }
+  }
   useEffect(() => {
     if (!showDuplicates) return;
     const frame = window.requestAnimationFrame(() => {
@@ -2462,7 +2534,10 @@ function SkillsCenter({
           id="source-page"
           workspaces={workspaces}
           onNavigate={onNavigate}
-          onBack={() => setShowSourcePage(false)}
+          onBack={() => {
+            setShowSourcePage(false);
+            setView("installed");
+          }}
           onInstalled={onInstalled}
           installedSkills={skills?.skills ?? []}
           searchQuery={searchQuery}
@@ -2669,6 +2744,15 @@ function SkillsCenter({
           )}
         </Modal>
       )}
+      {uninstallMessage && (
+        <div className="alert alert-error" role="alert">
+          <Icon name="warning" />
+          <span>{uninstallMessage}</span>
+          <button type="button" onClick={() => setUninstallMessage(undefined)}>
+            关闭
+          </button>
+        </div>
+      )}
       {skillViewer && (
         <Modal
           open
@@ -2745,13 +2829,34 @@ function SkillsCenter({
               ))}
             </div>
             <div className="skill-toolbar-actions">
-              <button
-                className="button button-secondary"
-                onClick={() => setShowSourcePage(true)}
-              >
-                <Icon name="plus" size={16} />
-                添加来源
-              </button>
+              {selectedSharedSkillItems.length > 0 && (
+                <div className="skill-batch-actions">
+                  <span>已选 {selectedSharedSkillItems.length}</span>
+                  <select
+                    aria-label="批量安装目标 Agent"
+                    value={batchTargetAgent}
+                    onChange={(event) =>
+                      setBatchTargetAgent(
+                        event.target.value as InstalledSkill["agent"],
+                      )
+                    }
+                  >
+                    {batchTargetAgents.map((agent) => (
+                      <option key={agent} value={agent}>
+                        {getAgentMeta(agent).name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={batchInstalling}
+                    onClick={() => void installSelectedSharedSkills()}
+                  >
+                    {batchInstalling ? "安装中…" : "一键安装"}
+                  </button>
+                </div>
+              )}
               <button className="button button-ghost" onClick={onScan}>
                 <Icon name="refresh" size={16} />
                 扫描 Skills
@@ -2760,7 +2865,19 @@ function SkillsCenter({
           </div>
         </>
       )}
-      {view === "storage" ? (
+      {view === "install" ? (
+        <SkillSourcePanel
+          id="embedded-install"
+          workspaces={workspaces}
+          onNavigate={onNavigate}
+          onBack={() => setView("installed")}
+          onInstalled={onInstalled}
+          installedSkills={skills?.skills ?? []}
+          searchQuery={searchQuery}
+          updateSkill={updateTarget}
+          onClearUpdate={() => setUpdateTarget(undefined)}
+        />
+      ) : view === "storage" ? (
         <SkillStorageSummary roots={skills?.roots ?? []} />
       ) : (
         <>
@@ -2792,6 +2909,24 @@ function SkillsCenter({
                       className="skill-row"
                       key={`${skill.agent}-${skill.scope}-${skill.path}`}
                     >
+                      {isSharedAgentsSkill(skill) &&
+                        skill.category === "user" && (
+                          <input
+                            className="skill-select-checkbox"
+                            type="checkbox"
+                            aria-label={`选择 ${skill.displayName}`}
+                            checked={selectedSharedSkills.has(skill.path)}
+                            onChange={() =>
+                              setSelectedSharedSkills((current) => {
+                                const next = new Set(current);
+                                if (next.has(skill.path))
+                                  next.delete(skill.path);
+                                else next.add(skill.path);
+                                return next;
+                              })
+                            }
+                          />
+                        )}
                       <div className="skill-icon">
                         <Icon name="spark" size={17} />
                       </div>
@@ -2852,6 +2987,18 @@ function SkillsCenter({
                           更新
                         </button>
                       )}
+                      <SkillUninstallButton
+                        skill={skill}
+                        workspaceDirectory={
+                          skill.scope === "workspace"
+                            ? selectedWorkspacePath
+                            : undefined
+                        }
+                        onCompleted={() =>
+                          onInstalled(selectedWorkspacePath || undefined)
+                        }
+                        onError={(message) => setUninstallMessage(message)}
+                      />
                       <button
                         className="button button-ghost skill-view-button"
                         type="button"
@@ -2883,10 +3030,10 @@ function SkillsCenter({
                 </p>
                 <button
                   className="button button-primary"
-                  onClick={() => setShowSourcePage(true)}
+                  onClick={() => setView("install")}
                 >
                   <Icon name="plus" size={16} />
-                  添加第一个来源
+                  安装 Skill
                 </button>
               </div>
             )}
@@ -2905,10 +3052,15 @@ type SkillViewerState = {
 };
 
 function isSystemSkill(skill: InstalledSkill) {
-  const normalized = skill.path.replace(/\\/g, "/");
-  return ["/.codex/skills/.system/", "/.agents/skills/.system/"].some(
-    (marker) => normalized.includes(marker),
-  );
+  return skill.category === "system";
+}
+
+function isSharedAgentsSkill(skill: InstalledSkill) {
+  return skill.path.replace(/\\/g, "/").includes("/.agents/skills/");
+}
+
+function skillSourceDirectory(skill: InstalledSkill) {
+  return skill.realPath.replace(/[\\/]SKILL\.md(?:\.agent-hub-disabled)?$/, "");
 }
 
 function SkillStorageSummary({ roots }: { roots: SkillInventory["roots"] }) {
@@ -2947,9 +3099,9 @@ function SkillsViewTabs({
   installedCount,
   onChange,
 }: {
-  view: "installed" | "storage" | "marketplace";
+  view: "installed" | "storage" | "install" | "marketplace";
   installedCount: number;
-  onChange: (view: "installed" | "storage" | "marketplace") => void;
+  onChange: (view: "installed" | "storage" | "install" | "marketplace") => void;
 }) {
   return (
     <SubTabs
@@ -2963,6 +3115,7 @@ function SkillsViewTabs({
           badge: <span>{installedCount}</span>,
         },
         { value: "storage", label: "安装信息" },
+        { value: "install", label: "安装" },
         { value: "marketplace", label: "Marketplace" },
       ]}
     />
@@ -3073,18 +3226,29 @@ function SkillSourcePanel({
   const [subdirectory, setSubdirectory] = useState("");
   const [browseResult, setBrowseResult] = useState<SkillSourceBrowseResult>();
   const [selectedSkillKey, setSelectedSkillKey] = useState("");
-  const [agent, setAgent] = useState<"claude-code" | "codex" | "opencode">(
-    "claude-code",
-  );
+  const [selectedAgents, setSelectedAgents] = useState<
+    Set<InstalledSkill["agent"]>
+  >(new Set(["codex"]));
   const [scope, setScope] = useState<"global" | "workspace">("global");
   const [workspaceId, setWorkspaceId] = useState<number | "">("");
-  const [plan, setPlan] = useState<SkillInstallPlanPreview>();
+  const [plans, setPlans] = useState<SkillInstallPlanPreview[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogFilter, setCatalogFilter] = useState<"uninstalled" | "all">(
     updateSkill ? "all" : "uninstalled",
   );
+
+  useEffect(() => {
+    if (updateSkill || mode !== "local-directory" || locator.trim()) return;
+    void getLastLocalSkillSource()
+      .then((path) => {
+        if (path?.trim()) setLocator(path);
+      })
+      .catch(() => {
+        // The remembered path is best-effort and must not block installation.
+      });
+  }, [locator, mode, updateSkill]);
 
   useEffect(() => {
     if (!updateSkill) return;
@@ -3102,7 +3266,7 @@ function SkillSourcePanel({
         : (source.manifestPath ?? source.locator),
     );
     setRequestedRef(source.requestedRef ?? "");
-    setAgent(updateSkill.agent);
+    setSelectedAgents(new Set([updateSkill.agent]));
     setScope(updateSkill.scope);
     const workspace = workspaces.find((item) =>
       updateSkill.path.startsWith(item.normalizedPath),
@@ -3110,7 +3274,7 @@ function SkillSourcePanel({
     setWorkspaceId(workspace?.id ?? "");
     setCatalogFilter("all");
     setBrowseResult(undefined);
-    setPlan(undefined);
+    setPlans([]);
     setMessage(undefined);
   }, [updateSkill, workspaces]);
 
@@ -3128,6 +3292,12 @@ function SkillSourcePanel({
   const selectedSkill = browseResult?.skills.find(
     (skill) => discoveredSkillKey(skill) === selectedSkillKey,
   );
+  const existingInstallations = selectedSkill
+    ? installedSkillsFor(selectedSkill, installedSkills)
+    : [];
+  const overwriteAgents = existingInstallations
+    .filter((skill) => selectedAgents.has(skill.agent) && skill.scope === scope)
+    .map((skill) => getAgentMeta(skill.agent).name);
   const workspace = workspaces.find((item) => item.id === workspaceId);
   const browserUrl = sourceInputBrowserUrl(mode, locator);
   const normalizedCatalogQuery = (catalogQuery || searchQuery)
@@ -3158,7 +3328,10 @@ function SkillSourcePanel({
 
   async function chooseLocalDirectory() {
     const path = await selectSkillSourceDirectory();
-    if (path) setLocator(path);
+    if (path) {
+      setLocator(path);
+      await setLastLocalSkillSource(path).catch(() => undefined);
+    }
   }
 
   async function chooseMarketplaceManifest() {
@@ -3170,9 +3343,12 @@ function SkillSourcePanel({
     if (!request || busy) return;
     setBusy(true);
     setMessage(undefined);
-    setPlan(undefined);
+    setPlans([]);
     setSelectedSkillKey("");
     try {
+      if (request.kind === "local-directory") {
+        await setLastLocalSkillSource(request.path).catch(() => undefined);
+      }
       const result = await browseSkillSource(request);
       setBrowseResult(result);
       const first =
@@ -3205,6 +3381,10 @@ function SkillSourcePanel({
 
   async function createPlan() {
     if (!request || !selectedSkill?.installable || busy) return;
+    if (selectedAgents.size === 0) {
+      setMessage("请先选择至少一个目标 Agent。");
+      return;
+    }
     if (scope === "workspace" && !workspace) {
       setMessage("请先选择已登记的工作空间。");
       return;
@@ -3212,17 +3392,26 @@ function SkillSourcePanel({
     setBusy(true);
     setMessage(undefined);
     try {
-      setPlan(
-        await planSkillInstall({
-          request,
-          skillPath: selectedSkill.relativePath,
-          skillSourceLocator: selectedSkill.source.locator,
-          agent,
-          scope,
-          workspaceDirectory: workspace?.normalizedPath,
-          workspaceId: workspace?.id,
-        }),
+      const nextPlans = await Promise.all(
+        defaultAgentIds
+          .filter((id) =>
+            scope === "global"
+              ? id === "codex"
+              : selectedAgents.has(id as InstalledSkill["agent"]),
+          )
+          .map((agent) =>
+            planSkillInstall({
+              request,
+              skillPath: selectedSkill.relativePath,
+              skillSourceLocator: selectedSkill.source.locator,
+              agent: agent as InstalledSkill["agent"],
+              scope,
+              workspaceDirectory: workspace?.normalizedPath,
+              workspaceId: workspace?.id,
+            }),
+          ),
       );
+      setPlans(nextPlans);
     } catch (error) {
       setMessage(errorMessage(error, "无法生成安装计划，请重新扫描来源。"));
     } finally {
@@ -3231,17 +3420,29 @@ function SkillSourcePanel({
   }
 
   async function install() {
-    if (!plan || busy) return;
+    if (!plans.length || busy) return;
     setBusy(true);
     setMessage(undefined);
     try {
-      await applySkillInstall(plan.planId);
+      for (const item of plans) await applySkillInstall(item.planId);
+      if (scope === "global" && plans[0]) {
+        const sourceDirectory = plans[0].plan.targetDirectory.toString();
+        for (const agent of selectedAgents) {
+          if (agent === "codex") continue;
+          await linkSkillToAgent({
+            sourceDirectory,
+            targetName: selectedSkill?.name || selectedSkill?.displayName || "",
+            agent,
+            scope: "global",
+          });
+        }
+      }
       setMessage(
         updateSkill
           ? "Skill 已更新，并已记录新的来源版本。"
           : "Skill 已安装，并已记录来源与版本。",
       );
-      setPlan(undefined);
+      setPlans([]);
       onClearUpdate();
       onInstalled(workspace?.normalizedPath);
     } catch (error) {
@@ -3287,6 +3488,38 @@ function SkillSourcePanel({
           </button>
         </div>
       </div>
+      <SkillInstallTargetSelector
+        agents={defaultAgentIds.map((id) => ({
+          id: id as InstalledSkill["agent"],
+          name: getAgentMeta(id as InstalledSkill["agent"]).name,
+          mark: getAgentMeta(id as InstalledSkill["agent"]).mark,
+        }))}
+        selectedAgents={selectedAgents}
+        onAgentsChange={(nextAgents) => {
+          const required =
+            scope === "global"
+              ? new Set(["codex"] as const)
+              : new Set<InstalledSkill["agent"]>();
+          setSelectedAgents(new Set([...nextAgents, ...required]));
+        }}
+        lockedAgents={
+          scope === "global" ? new Set(["codex"] as const) : new Set()
+        }
+        scope={scope}
+        onScopeChange={(nextScope) => {
+          setScope(nextScope);
+          if (
+            nextScope === "workspace" &&
+            workspaceId === "" &&
+            workspaces[0]
+          ) {
+            setWorkspaceId(workspaces[0].id);
+          }
+        }}
+        workspaceId={workspaceId}
+        onWorkspaceChange={setWorkspaceId}
+        workspaces={workspaces}
+      />
       <div
         className="skill-source-tabs"
         role="tablist"
@@ -3308,7 +3541,7 @@ function SkillSourcePanel({
             onClick={() => {
               setMode(value);
               setBrowseResult(undefined);
-              setPlan(undefined);
+              setPlans([]);
               setMessage(undefined);
               if (value === "skills-sh") setLocator("anthropics/skills");
               if (value === "git")
@@ -3577,61 +3810,6 @@ function SkillSourcePanel({
       )}
       {selectedSkill && (
         <div className="skill-install-target">
-          <label>
-            目标 Agent
-            <select
-              value={agent}
-              onChange={(event) => setAgent(event.target.value as typeof agent)}
-            >
-              {defaultAgentIds.map((id) => (
-                <option key={id} value={id}>
-                  {getAgentMeta(id).name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            作用域
-            <select
-              value={scope}
-              onChange={(event) => {
-                const nextScope = event.target.value as typeof scope;
-                setScope(nextScope);
-                if (
-                  nextScope === "workspace" &&
-                  workspaceId === "" &&
-                  workspaces[0]
-                ) {
-                  setWorkspaceId(workspaces[0].id);
-                }
-              }}
-            >
-              <option value="global">全局（所有工作空间可用）</option>
-              <option value="workspace">
-                当前工作空间（仅所选工作空间可用）
-              </option>
-            </select>
-          </label>
-          {scope === "workspace" && (
-            <label>
-              工作空间
-              <select
-                value={workspaceId}
-                onChange={(event) =>
-                  setWorkspaceId(
-                    event.target.value ? Number(event.target.value) : "",
-                  )
-                }
-              >
-                <option value="">请选择已登记工作空间</option>
-                {workspaces.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <button
             className="button button-secondary"
             disabled={busy || !selectedSkill.installable}
@@ -3641,38 +3819,51 @@ function SkillSourcePanel({
           </button>
         </div>
       )}
-      {plan && (
+      {plans.length > 0 && (
         <div className="skill-install-plan">
           <div>
-            <span className="eyebrow">安装前确认</span>
-            <h3>{plan.displayName}</h3>
-            <p>{plan.description ?? "无描述"}</p>
+            <span className="eyebrow">Installation Summary</span>
+            <h3>{plans[0].displayName}</h3>
+            <p>{plans[0].description ?? "无描述"}</p>
           </div>
+          <SkillInstallationSummary
+            plans={plans}
+            agentName={(agent) => getAgentMeta(agent).name}
+            overwriteAgents={overwriteAgents}
+            linkedAgents={
+              scope === "global"
+                ? [...selectedAgents].filter((agent) => agent !== "codex")
+                : []
+            }
+          />
           <dl>
             <div>
               <dt>来源版本</dt>
-              <dd>{plan.plan.sourceRevision ?? "未提供"}</dd>
+              <dd>{plans[0].plan.sourceRevision ?? "未提供"}</dd>
             </div>
             <div>
               <dt>目标</dt>
               <dd>
-                {getAgentMeta(plan.plan.agent).name} ·{" "}
-                {plan.plan.scope === "global" ? "全局" : "当前工作空间"}
+                {scope === "global" ? selectedAgents.size : plans.length} 个
+                Agent ·{" "}
+                {plans[0].plan.scope === "global" ? "全局" : "当前工作空间"}
               </dd>
             </div>
             <div>
               <dt>文件</dt>
-              <dd>{plan.plan.files.length} 个受管文件</dd>
+              <dd>{plans[0].plan.files.length} 个受管文件</dd>
             </div>
             <div>
               <dt>目标路径</dt>
-              <dd className="mono">{plan.plan.targetDirectory}</dd>
+              <dd className="mono">
+                {plans.map((item) => item.plan.targetDirectory).join("\n")}
+              </dd>
             </div>
           </dl>
           <details className="skill-plan-files">
-            <summary>查看 {plan.plan.files.length} 个文件</summary>
+            <summary>查看 {plans[0].plan.files.length} 个文件</summary>
             <ul>
-              {plan.plan.files.map((file) => (
+              {plans[0].plan.files.map((file) => (
                 <li className="mono" key={file}>
                   {file}
                 </li>
@@ -3682,7 +3873,7 @@ function SkillSourcePanel({
           <div className="skill-install-plan-actions">
             <button
               className="button button-ghost"
-              onClick={() => setPlan(undefined)}
+              onClick={() => setPlans([])}
             >
               取消
             </button>

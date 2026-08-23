@@ -9,12 +9,15 @@ import {
   executeDiagnosticRecovery,
   getClaudeGlobalConfig,
   getDiagnostics,
+  getLastLocalSkillSource,
   listConfigHistory,
   planSkillInstall,
+  previewUninstallSkill,
   previewDiagnosticRecovery,
   previewConfigRestore,
   restoreConfigHistory,
   setSkillEnabled,
+  setLastLocalSkillSource,
   uninstallSkill,
 } from "./backend";
 
@@ -53,6 +56,17 @@ describe("Claude Code backend binding", () => {
 
     expect(invoke).toHaveBeenCalledWith("add_workspace", {
       path: "/projects/demo",
+    });
+  });
+
+  it("persists the last local Skill source directory", async () => {
+    vi.mocked(invoke).mockResolvedValue(null);
+    await getLastLocalSkillSource();
+    expect(invoke).toHaveBeenCalledWith("get_last_local_skill_source");
+
+    await setLastLocalSkillSource("/projects/skills");
+    expect(invoke).toHaveBeenCalledWith("set_last_local_skill_source", {
+      path: "/projects/skills",
     });
   });
 
@@ -122,11 +136,20 @@ describe("Claude Code backend binding", () => {
       workspaceDirectory: "/projects/demo",
     });
 
+    await previewUninstallSkill({
+      targetDirectory: "/projects/demo/.agents/skills/review",
+      workspaceDirectory: "/projects/demo",
+    });
+    expect(invoke).toHaveBeenNthCalledWith(5, "preview_uninstall_skill", {
+      targetDirectory: "/projects/demo/.agents/skills/review",
+      workspaceDirectory: "/projects/demo",
+    });
+
     await uninstallSkill({
       targetDirectory: "/projects/demo/.agents/skills/review",
       workspaceDirectory: "/projects/demo",
     });
-    expect(invoke).toHaveBeenNthCalledWith(5, "uninstall_skill", {
+    expect(invoke).toHaveBeenNthCalledWith(6, "uninstall_skill", {
       targetDirectory: "/projects/demo/.agents/skills/review",
       workspaceDirectory: "/projects/demo",
     });

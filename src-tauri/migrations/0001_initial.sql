@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS install_plan_actions (
 );
 
 CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY CHECK (key IN ('theme', 'backupRetentionDays')),
+    key TEXT PRIMARY KEY CHECK (key IN ('theme', 'backupRetentionDays', 'lastLocalSkillSource')),
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

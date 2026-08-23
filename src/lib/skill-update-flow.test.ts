@@ -28,6 +28,7 @@ const baseSkill: InstalledSkill = {
   installedFingerprint: "sha256:abcdef0123456789",
   enabled: true,
   sourceTracked: true,
+  category: "user",
   diagnostics: [],
 };
 

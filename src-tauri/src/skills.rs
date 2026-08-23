@@ -149,7 +149,15 @@ pub struct InstalledSkill {
     pub installed_fingerprint: Option<String>,
     pub enabled: bool,
     pub source_tracked: bool,
+    pub category: SkillCategory,
     pub diagnostics: Vec<SourceDiagnostic>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SkillCategory {
+    User,
+    System,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -274,10 +282,13 @@ pub fn scan_installed_skills(
                         .name
                         .clone()
                         .unwrap_or_else(|| skill.display_name.clone());
-                    *names
-                        .entry((agent.as_str().into(), scope.as_str().into(), key))
-                        .or_default() += 1;
                     let entrypoint = root.join(&skill.entrypoint_path);
+                    let category = skill_category(&entrypoint);
+                    if category == SkillCategory::User {
+                        *names
+                            .entry((agent.as_str().into(), scope.as_str().into(), key))
+                            .or_default() += 1;
+                    }
                     let managed = entrypoint.parent().and_then(|directory| {
                         crate::skill_installation::managed_installation(directory)
                             .ok()
@@ -316,6 +327,7 @@ pub fn scan_installed_skills(
                             .map(|installation| installation.installed_fingerprint.clone()),
                         enabled: true,
                         source_tracked: managed.is_some(),
+                        category,
                         diagnostics: skill.diagnostics,
                     });
                 }
@@ -503,9 +515,12 @@ fn append_disabled_managed_skills(
                 .name
                 .clone()
                 .unwrap_or_else(|| skill.display_name.clone());
-            *names
-                .entry((agent.as_str().into(), scope.as_str().into(), key))
-                .or_default() += 1;
+            let category = skill_category(&path);
+            if category == SkillCategory::User {
+                *names
+                    .entry((agent.as_str().into(), scope.as_str().into(), key))
+                    .or_default() += 1;
+            }
             let current_version = skill
                 .metadata
                 .get("version")
@@ -526,6 +541,7 @@ fn append_disabled_managed_skills(
                 installed_fingerprint: Some(managed.installed_fingerprint.clone()),
                 enabled: false,
                 source_tracked: true,
+                category,
                 diagnostics: skill.diagnostics,
             });
         }
@@ -1287,15 +1303,20 @@ pub fn preset_git_sources() -> Vec<GitSourceAdapter> {
 
 fn scan_directory(root: &Path, source: SourceMetadata) -> Result<SourceScan, SourceError> {
     let root_metadata = fs::symlink_metadata(root)?;
-    if root_metadata.file_type().is_symlink() || !root_metadata.is_dir() {
+    let scan_root = if root_metadata.file_type().is_symlink() {
+        root.canonicalize()?
+    } else {
+        root.to_path_buf()
+    };
+    if !scan_root.is_dir() {
         return Err(SourceError::NotDirectory(root.to_path_buf()));
     }
     let mut skills = Vec::new();
     let mut diagnostics = Vec::new();
     let mut budget = ScanBudget::default();
     walk_skill_files(
-        root,
-        root,
+        &scan_root,
+        &scan_root,
         0,
         &source,
         &mut skills,
@@ -1306,7 +1327,7 @@ fn scan_directory(root: &Path, source: SourceMetadata) -> Result<SourceScan, Sou
         diagnostics.push(SourceDiagnostic::warning(
             "no-skills",
             "source contains no SKILL.md entrypoints",
-            Some(root),
+            Some(&scan_root),
         ));
     }
     Ok(SourceScan {
@@ -1315,6 +1336,17 @@ fn scan_directory(root: &Path, source: SourceMetadata) -> Result<SourceScan, Sou
         catalog_entries: Vec::new(),
         diagnostics,
     })
+}
+
+fn skill_category(entrypoint: &Path) -> SkillCategory {
+    if entrypoint
+        .components()
+        .any(|component| component.as_os_str() == ".system")
+    {
+        SkillCategory::System
+    } else {
+        SkillCategory::User
+    }
 }
 
 #[derive(Default)]
@@ -1387,6 +1419,14 @@ fn walk_skill_files(
             }
         };
         if file_type.is_symlink() {
+            let path = entry.path();
+            if fs::metadata(&path).is_ok_and(|metadata| metadata.is_dir()) {
+                let entrypoint = path.join(SKILL_FILE);
+                if entrypoint.is_file() {
+                    skills.push(parse_skill(root, &entrypoint, source.clone()));
+                    continue;
+                }
+            }
             let target_path = fs::read_link(entry.path()).ok().map(|target| {
                 if target.is_absolute() {
                     target
@@ -1895,7 +1935,7 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
-    fn skips_symlinked_skill_directories() {
+    fn scans_symlinked_skill_directories_without_following_nested_links() {
         let directory = tempdir().expect("tempdir");
         let outside = tempdir().expect("outside");
         write_skill(
@@ -1911,20 +1951,50 @@ mod tests {
         let result = LocalSourceAdapter::new(directory.path())
             .scan()
             .expect("scan succeeds");
-        assert!(result.skills.is_empty());
-        assert!(result
+        assert_eq!(result.skills.len(), 1);
+        assert_eq!(result.skills[0].relative_path, "linked");
+        assert!(!result
             .diagnostics
             .iter()
             .any(|item| item.code == "symlink-skipped"));
-        let expected_target = path_string(&outside.path().join("outside"));
-        assert_eq!(
-            result
-                .diagnostics
-                .iter()
-                .find(|item| item.code == "symlink-skipped")
-                .and_then(|item| item.target_path.as_deref()),
-            Some(expected_target.as_str())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn inventory_marks_symlinked_and_system_skills_separately() {
+        let home = tempdir().expect("home");
+        let outside = tempdir().expect("outside");
+        write_skill(
+            &outside.path().join("source"),
+            "linked",
+            "---\nname: linked\ndescription: no\n---\n",
         );
+        fs::create_dir_all(home.path().join(".claude/skills")).expect("Claude root");
+        symlink(
+            outside.path().join("source/linked"),
+            home.path().join(".claude/skills/linked"),
+        )
+        .expect("symlink created");
+        write_skill(
+            &home.path().join(".codex/skills/.system"),
+            "builtin",
+            "---\nname: builtin\ndescription: system\n---\n",
+        );
+        let inventory = scan_installed_skills(home.path(), None::<&Path>);
+        let linked = inventory
+            .skills
+            .iter()
+            .find(|skill| skill.name.as_deref() == Some("linked"))
+            .expect("linked skill");
+        assert_eq!(linked.storage_kind, SkillStorageKind::Symlink);
+        assert_eq!(linked.category, SkillCategory::User);
+        let system = inventory
+            .skills
+            .iter()
+            .find(|skill| skill.name.as_deref() == Some("builtin"))
+            .expect("system skill");
+        assert_eq!(system.category, SkillCategory::System);
+        assert!(inventory.duplicate_names.is_empty());
     }
 
     #[test]
