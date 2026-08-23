@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
+    process::Command as ProcessCommand,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc, Mutex,
@@ -1370,11 +1371,63 @@ fn read_config_source(state: tauri::State<'_, AppState>, path: String) -> Result
 
 #[tauri::command]
 fn read_skill_source(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let entrypoint = PathBuf::from(&path);
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    read_skill_source_from_home(&home, Path::new(&path))
+}
+
+#[tauri::command]
+fn open_directory_in_editor(path: String) -> Result<bool, String> {
+    let requested = PathBuf::from(path);
+    let metadata = std::fs::metadata(&requested)
+        .map_err(|_| "目录不存在或无法读取".to_owned())?;
+    let directory = if metadata.is_dir() {
+        requested
+    } else {
+        requested
+            .parent()
+            .map(Path::to_path_buf)
+            .ok_or_else(|| "无法确定目录位置".to_owned())?
+    };
+
+    if ProcessCommand::new("code")
+        .arg("--reuse-window")
+        .arg(&directory)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+    {
+        return Ok(true);
+    }
+
+    #[cfg(target_os = "windows")]
+    if ProcessCommand::new("code.cmd")
+        .arg("--reuse-window")
+        .arg(&directory)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+    {
+        return Ok(true);
+    }
+
+    #[cfg(target_os = "macos")]
+    if ProcessCommand::new("open")
+        .args(["-a", "Visual Studio Code"])
+        .arg(&directory)
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+    {
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+fn read_skill_source_from_home(home: &Path, entrypoint: &Path) -> Result<String, String> {
     if entrypoint.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
         return Err("只允许查看 Skill 的 SKILL.md 入口文件".into());
     }
-    let home = app.path().home_dir().map_err(|error| error.to_string())?;
     let canonical_entrypoint = entrypoint
         .canonicalize()
         .map_err(|_| "Skill 入口文件不存在或无法读取".to_owned())?;
@@ -1754,6 +1807,7 @@ pub fn run() {
             scan_workspace,
             read_config_source,
             read_skill_source,
+            open_directory_in_editor,
             preview_config_edit,
             write_config,
             rollback_config,
@@ -1803,6 +1857,24 @@ mod tests {
                 version: env!("CARGO_PKG_VERSION"),
             }
         );
+    }
+
+    #[test]
+    fn reads_skill_entrypoints_only_from_supported_roots() {
+        let home = tempfile::tempdir().expect("home");
+        let system_skill = home.path().join(".codex/skills/.system/plugin-creator");
+        std::fs::create_dir_all(&system_skill).expect("system Skill");
+        let entrypoint = system_skill.join("SKILL.md");
+        std::fs::write(&entrypoint, "---\nname: plugin-creator\n---\n").expect("SKILL.md");
+
+        assert_eq!(
+            read_skill_source_from_home(home.path(), &entrypoint).expect("read Skill"),
+            "---\nname: plugin-creator\n---\n"
+        );
+        let outside = home.path().join("outside/SKILL.md");
+        std::fs::create_dir_all(outside.parent().expect("outside parent")).expect("outside");
+        std::fs::write(&outside, "private").expect("outside file");
+        assert!(read_skill_source_from_home(home.path(), &outside).is_err());
     }
 
     #[test]

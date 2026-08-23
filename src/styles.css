@@ -823,6 +823,59 @@ textarea:focus-visible {
 .config-agent.selected {
   background: var(--teal-soft);
 }
+
+/* Configuration center uses the same deliberate Agent picker as Skills. */
+.config-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+}
+
+.config-sidebar .scope-switch {
+  margin: 0;
+}
+
+.config-agent-switcher-heading {
+  display: grid;
+  gap: 4px;
+  padding: 5px 2px 0;
+}
+
+.config-agent-switcher-heading span {
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+}
+
+.config-agent-switcher-heading small {
+  color: var(--quiet);
+  font-size: 10px;
+}
+
+.config-agent-dropdown {
+  width: 100%;
+}
+
+.config-agent-dropdown .dropdown-menu-trigger {
+  min-height: 58px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.config-agent-dropdown .dropdown-menu-meta {
+  max-width: 76px;
+  color: var(--quiet);
+}
+
+.config-agent-dropdown .dropdown-menu-option {
+  min-height: 50px;
+}
+
+.config-agent-dropdown .dropdown-menu-option-meta {
+  color: var(--quiet);
+}
 .config-agent > span:nth-child(2) {
   min-width: 0;
 }
@@ -1047,7 +1100,11 @@ textarea:focus-visible {
 .instruction-file-copy code {
   overflow: hidden;
   color: var(--quiet);
-  font: 10px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  font:
+    10px/1.45 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3472,7 +3529,11 @@ textarea:focus-visible {
 .agent-picker-option.is-selected {
   border-color: rgb(87 223 208 / 34%);
   color: var(--ink);
-  background: linear-gradient(90deg, rgb(87 223 208 / 12%), rgb(31 48 84 / 72%));
+  background: linear-gradient(
+    90deg,
+    rgb(87 223 208 / 12%),
+    rgb(31 48 84 / 72%)
+  );
 }
 
 .agent-picker-option-copy {
@@ -3522,6 +3583,70 @@ textarea:focus-visible {
   }
 }
 
+/* Configuration center: controls first, selected configuration below. */
+.config-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.config-sidebar {
+  grid-template-columns: auto minmax(240px, 1fr);
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.config-sidebar .scope-switch {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.config-agent-switcher-heading,
+.config-agent-dropdown {
+  grid-column: 2;
+}
+
+.config-agent-dropdown {
+  width: min(100%, 420px);
+}
+
+.config-detail {
+  min-height: 420px;
+}
+
+.workspace-current-pill {
+  justify-self: end;
+  padding: 5px 8px;
+  border: 1px solid rgb(87 223 208 / 36%);
+  border-radius: 999px;
+  color: #8ef1e3;
+  background: rgb(18 60 70 / 76%);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.workspace-select-button {
+  min-height: 29px;
+  padding: 0 9px;
+  font-size: 10px;
+}
+
+@media (max-width: 620px) {
+  .config-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .config-sidebar .scope-switch,
+  .config-agent-switcher-heading,
+  .config-agent-dropdown {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .config-agent-dropdown {
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .agent-picker-menu {
     animation: none;
@@ -3531,6 +3656,67 @@ textarea:focus-visible {
     transition: none;
   }
 }
+
+.skill-viewer-meta {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.skill-viewer-meta code {
+  overflow: hidden;
+  color: var(--quiet);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-viewer-editor {
+  width: 100%;
+  min-height: min(54vh, 520px);
+  max-height: min(62vh, 620px);
+  margin: 0;
+  overflow: auto;
+  padding: 15px;
+  border: 1px solid rgb(50 72 111 / 76%);
+  border-radius: 9px;
+  color: #c8d7ed;
+  background: #081221;
+  font:
+    11px/1.65 ui-monospace,
+    "SF Mono",
+    "Cascadia Code",
+    monospace;
+  white-space: pre;
+  caret-color: transparent;
+  resize: vertical;
+  tab-size: 2;
+}
+
+.skill-viewer-editor:focus-visible {
+  border-color: rgb(87 223 208 / 66%);
+  outline: 2px solid rgb(87 223 208 / 24%);
+  outline-offset: 2px;
+}
+
+.skill-viewer-loading,
+.skill-viewer-error {
+  margin: 0;
+  padding: 28px 16px;
+  border: 1px solid rgb(50 72 111 / 76%);
+  border-radius: 9px;
+  color: var(--quiet);
+  background: #081221;
+  text-align: center;
+}
+
+.skill-viewer-error {
+  border-color: rgb(115 54 79 / 82%);
+  color: #ff9da5;
+  background: #291b31;
+  text-align: left;
+}
+
 .legacy-action-feedback {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -4670,13 +4856,12 @@ body {
     grid-template-columns: 1fr;
   }
   .config-sidebar {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding: 8px;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
   }
-  .config-agent {
-    min-width: 145px;
+  .config-agent-dropdown {
+    width: 100%;
   }
   .config-detail {
     padding: 19px 16px;
@@ -6277,8 +6462,16 @@ body {
 
 body {
   background:
-    radial-gradient(circle at 80% -10%, rgb(91 130 255 / 13%), transparent 30rem),
-    radial-gradient(circle at 12% 105%, rgb(56 214 192 / 9%), transparent 28rem),
+    radial-gradient(
+      circle at 80% -10%,
+      rgb(91 130 255 / 13%),
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at 12% 105%,
+      rgb(56 214 192 / 9%),
+      transparent 28rem
+    ),
     #080f20;
 }
 
@@ -6312,8 +6505,7 @@ select:focus-visible {
 
 .main-content {
   background:
-    linear-gradient(180deg, rgb(12 23 47 / 42%), transparent 23rem),
-    #080f20;
+    linear-gradient(180deg, rgb(12 23 47 / 42%), transparent 23rem), #080f20;
 }
 
 .page {
@@ -6327,7 +6519,12 @@ select:focus-visible {
   right: clamp(20px, 6vw, 90px);
   width: 180px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(87 223 208 / 55%), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(87 223 208 / 55%),
+    transparent
+  );
   content: "";
   opacity: 0.7;
 }
@@ -6436,6 +6633,51 @@ select:focus-visible {
   border-color: rgb(87 223 208 / 72%);
   color: #8ef1e3;
   background: #123c46;
+}
+
+.skill-agent-switcher-kicker {
+  color: var(--muted);
+}
+
+.agent-picker-trigger {
+  border-color: rgb(50 72 114 / 72%);
+  background: var(--surface-raised);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 4%),
+    0 4px 12px rgb(0 0 0 / 12%);
+}
+
+.agent-picker-trigger:hover,
+.agent-picker.is-open .agent-picker-trigger {
+  border-color: rgb(87 223 208 / 56%);
+  background: var(--surface-raised);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 6%),
+    0 6px 16px rgb(0 0 0 / 18%);
+}
+
+.agent-picker-count {
+  border-left-color: rgb(50 72 114 / 58%);
+}
+
+.agent-picker-menu {
+  border-color: rgb(50 72 114 / 86%);
+  background: var(--surface-deep);
+}
+
+.agent-picker-menu-heading {
+  border-bottom-color: rgb(50 72 114 / 66%);
+}
+
+.agent-picker-option:hover,
+.agent-picker-option:focus-visible {
+  border-color: rgb(50 72 114 / 72%);
+  background: var(--surface-raised);
+}
+
+.agent-picker-option.is-selected {
+  border-color: rgb(87 223 208 / 28%);
+  background: rgb(87 223 208 / 6%);
 }
 
 .chip {
@@ -6823,5 +7065,425 @@ select:focus-visible {
     width: min(100%, 360px);
     max-width: none;
     justify-self: start;
+  }
+}
+
+/* Skill viewer actions stay usable after the responsive card rules above. */
+.skill-row {
+  grid-template-columns: 32px minmax(0, 1fr) auto auto auto auto;
+}
+
+.skill-view-button {
+  min-height: 28px;
+  padding: 0 8px;
+  border-color: rgb(74 101 149 / 72%);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.skill-view-button:hover {
+  border-color: rgb(87 223 208 / 64%);
+  color: #8ef1e3;
+  background: rgb(18 60 70 / 76%);
+}
+
+.skill-system-pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  margin-top: 5px;
+  padding: 3px 7px;
+  border: 1px solid rgb(165 168 255 / 28%);
+  border-radius: 999px;
+  color: #c1c2ff;
+  background: rgb(56 57 101 / 56%);
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+@media (max-width: 740px) {
+  .skill-row {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+  }
+
+  .skill-row .skill-view-button,
+  .skill-row .skill-update-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .skill-row .managed-pill {
+    display: none;
+  }
+}
+
+.skills-context-switchers {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.skills-context-switchers .skill-agent-switcher {
+  margin: 0;
+}
+
+.skills-context-switchers .skill-agent-switcher,
+.skills-context-switchers .skill-workspace-switcher {
+  min-height: 80px;
+  padding: 12px 14px 12px 17px;
+  border: 1px solid rgb(56 79 122 / 74%);
+  border-radius: 14px;
+  background: rgb(14 25 48 / 80%);
+  box-shadow:
+    inset 3px 0 var(--context-accent),
+    inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.skills-context-switchers .skill-agent-switcher {
+  --context-accent: rgb(87 223 208 / 68%);
+}
+
+.skills-context-switchers .skill-workspace-switcher {
+  --context-accent: rgb(165 168 255 / 66%);
+}
+
+.skill-workspace-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.skill-workspace-switcher-heading {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.skill-workspace-switcher-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.skill-workspace-switcher-kicker {
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+}
+
+.skill-workspace-switcher-caption {
+  overflow: hidden;
+  color: var(--quiet);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-workspace-switcher .text-button {
+  flex: none;
+  color: #b9baff;
+  font-size: 10px;
+}
+
+.workspace-dropdown {
+  width: min(100%, 330px);
+}
+
+.skills-context-switchers .skill-agent-switcher-heading,
+.skills-context-switchers .skill-workspace-switcher-heading {
+  flex: 1;
+}
+
+.skills-context-switchers .agent-dropdown,
+.skills-context-switchers .workspace-dropdown {
+  width: min(100%, 330px);
+}
+
+@media (max-width: 620px) {
+  .skill-workspace-switcher {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .skill-workspace-switcher-heading {
+    align-items: flex-start;
+  }
+
+  .workspace-dropdown {
+    width: 100%;
+  }
+}
+
+/* Shared dropdown surface used by Agent switching and configuration enums. */
+.dropdown-menu {
+  position: relative;
+  width: min(100%, 330px);
+  flex: none;
+}
+
+.form-dropdown {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.dropdown-menu-trigger {
+  display: grid;
+  width: 100%;
+  min-height: 42px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 9px;
+  border: 1px solid rgb(74 101 149 / 82%);
+  border-radius: 11px;
+  color: var(--ink);
+  background: linear-gradient(145deg, #182746, #101b34);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 7%),
+    0 8px 20px rgb(0 0 0 / 14%);
+  text-align: left;
+  transition:
+    border-color var(--motion-fast) ease,
+    background var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.dropdown-menu-trigger:hover,
+.dropdown-menu-trigger.is-open {
+  border-color: rgb(87 223 208 / 72%);
+  background: linear-gradient(145deg, #19314d, #10263a);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 9%),
+    0 10px 24px rgb(0 0 0 / 20%);
+}
+
+.dropdown-menu-trigger:disabled {
+  cursor: not-allowed;
+}
+
+.dropdown-menu-leading {
+  display: grid;
+  width: 34px;
+  min-width: 0;
+  place-items: center;
+}
+
+.dropdown-menu-current {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.dropdown-menu-current > span {
+  overflow: hidden;
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dropdown-menu-current strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-menu-meta {
+  max-width: 120px;
+  overflow: hidden;
+  padding-left: 12px;
+  border-left: 1px solid rgb(70 97 145 / 58%);
+  color: var(--quiet);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-menu-meta strong {
+  font-weight: 600;
+}
+
+.dropdown-menu-chevron {
+  color: var(--quiet);
+  transition: transform var(--motion-fast) ease;
+}
+
+.dropdown-menu-trigger.is-open .dropdown-menu-chevron {
+  color: #8ef1e3;
+  transform: rotate(180deg);
+}
+
+.dropdown-menu-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 100%;
+  max-height: min(360px, 48vh);
+  overflow: auto;
+  border: 1px solid rgb(77 108 161 / 86%);
+  border-radius: 12px;
+  background: rgb(11 20 39 / 98%);
+  box-shadow:
+    0 22px 48px rgb(0 0 0 / 42%),
+    inset 0 1px rgb(255 255 255 / 7%);
+  backdrop-filter: blur(18px);
+  animation: agent-picker-enter 140ms ease-out;
+}
+
+.dropdown-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgb(53 75 116 / 66%);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.dropdown-menu-heading small {
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.dropdown-menu-options {
+  display: grid;
+  gap: 3px;
+  padding: 5px;
+}
+
+.dropdown-menu-option {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+}
+
+.dropdown-menu-option:hover,
+.dropdown-menu-option:focus-visible {
+  border-color: rgb(72 104 155 / 72%);
+  color: var(--ink);
+  background: rgb(25 42 76 / 88%);
+}
+
+.dropdown-menu-option.is-selected {
+  border-color: rgb(87 223 208 / 34%);
+  color: var(--ink);
+  background: linear-gradient(
+    90deg,
+    rgb(87 223 208 / 12%),
+    rgb(31 48 84 / 72%)
+  );
+}
+
+.dropdown-menu-option-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.dropdown-menu-option-copy strong {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 730;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-menu-option-copy small {
+  overflow: hidden;
+  color: var(--quiet);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-menu-option-meta {
+  color: var(--quiet);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.dropdown-menu-option-check {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #8ef1e3;
+  background: rgb(87 223 208 / 13%);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.form-dropdown .dropdown-menu-trigger {
+  min-height: 36px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font:
+    12px/1.4 ui-monospace,
+    "SF Mono",
+    "Cascadia Code",
+    "Fira Code",
+    monospace;
+}
+
+.form-dropdown .dropdown-menu-current > span {
+  display: none;
+}
+
+.form-dropdown .dropdown-menu-current strong {
+  font: inherit;
+}
+
+.form-dropdown .dropdown-menu-popover {
+  right: 0;
+  width: max(100%, 210px);
+}
+
+@media (max-width: 620px) {
+  .skill-agent-switcher {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .agent-dropdown {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-menu-popover,
+  .dropdown-menu-chevron {
+    animation: none;
+    transition: none;
   }
 }
