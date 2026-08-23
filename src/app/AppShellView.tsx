@@ -22,6 +22,7 @@ import {
   previewConfigRestore,
   previewDiagnosticRecovery,
   readConfigSource,
+  readSkillSource,
   resolveLegacyCodexSkill,
   removeWorkspace,
   scanWorkspace,
@@ -1944,6 +1945,7 @@ function SkillsCenter({
   const [legacyActionPath, setLegacyActionPath] = useState<string>();
   const [legacyAction, setLegacyAction] = useState<"migrate" | "archive">();
   const [legacyFeedback, setLegacyFeedback] = useState<LegacySkillFeedback>();
+  const [skillViewer, setSkillViewer] = useState<SkillViewerState>();
   const [updateTarget, setUpdateTarget] = useState<InstalledSkill>();
   const { confirm, ConfirmPortal } = useConfirm();
   const skillsScrollPosition = useRef({ main: 0, window: 0 });
@@ -2016,6 +2018,32 @@ function SkillsCenter({
     ["external", "外部管理"],
     ["storage", "安装信息"],
   ] as const;
+  async function handleViewSkill(skill: InstalledSkill) {
+    setSkillViewer({ skill, loading: true });
+    try {
+      const content = await readSkillSource(skill.path);
+      setSkillViewer((current) =>
+        current?.skill.path === skill.path
+          ? { skill, content, loading: false }
+          : current,
+      );
+    } catch (error) {
+      setSkillViewer((current) =>
+        current?.skill.path === skill.path
+          ? {
+              skill,
+              loading: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : typeof error === "string" && error.trim()
+                    ? error
+                    : "无法读取该 Skill 的 SKILL.md。",
+            }
+          : current,
+      );
+    }
+  }
   useEffect(() => {
     if (!showDuplicates) return;
     const frame = window.requestAnimationFrame(() => {
@@ -2247,6 +2275,39 @@ function SkillsCenter({
           )}
         </Modal>
       )}
+      {skillViewer && (
+        <Modal
+          open
+          onClose={() => setSkillViewer(undefined)}
+          title={`${skillViewer.skill.displayName} · SKILL.md`}
+          width="min(760px, calc(100vw - 32px))"
+          actions={
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={() => setSkillViewer(undefined)}
+            >
+              关闭
+            </button>
+          }
+        >
+          <div className="skill-viewer-meta">
+            <span className="eyebrow">
+              {isSystemSkill(skillViewer.skill) ? "Codex 系统 Skill" : "只读查看"}
+            </span>
+            <code title={skillViewer.skill.path}>{skillViewer.skill.path}</code>
+          </div>
+          {skillViewer.loading ? (
+            <div className="skill-viewer-loading">正在读取 SKILL.md…</div>
+          ) : skillViewer.error ? (
+            <p className="skill-viewer-error" role="alert">
+              {skillViewer.error}
+            </p>
+          ) : (
+            <pre className="skill-viewer-content">{skillViewer.content}</pre>
+          )}
+        </Modal>
+      )}
       <AgentSkillSwitcher
         options={agentOptions}
         selectedAgent={selectedAgent}
@@ -2346,6 +2407,11 @@ function SkillsCenter({
                         <code className="skill-path" title={skill.path}>
                           安装路径：{skill.path}
                         </code>
+                        {isSystemSkill(skill) && (
+                          <span className="skill-system-pill">
+                            系统 Skill · Codex 管理
+                          </span>
+                        )}
                         {skill.storageKind === "symlink" && (
                           <>
                             <span className="skill-storage-kind symlink">
@@ -2380,6 +2446,14 @@ function SkillsCenter({
                           更新
                         </button>
                       )}
+                      <button
+                        className="button button-ghost skill-view-button"
+                        type="button"
+                        onClick={() => void handleViewSkill(skill)}
+                      >
+                        <Icon name="file" size={13} />
+                        查看
+                      </button>
                     </article>
                   ))}
                 </section>
@@ -2414,6 +2488,19 @@ function SkillsCenter({
         </>
       )}
     </div>
+  );
+}
+
+type SkillViewerState = {
+  skill: InstalledSkill;
+  content?: string;
+  loading: boolean;
+  error?: string;
+};
+
+function isSystemSkill(skill: InstalledSkill) {
+  return ["/.codex/skills/.system/", "/.agents/skills/.system/"].some((marker) =>
+    skill.path.includes(marker),
   );
 }
 
