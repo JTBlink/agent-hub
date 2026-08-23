@@ -974,6 +974,19 @@ textarea:focus-visible {
   margin-bottom: 2px;
   font-size: 11px;
 }
+.config-effective-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 0 17px;
+  padding: 11px 12px;
+  border: 1px solid #b8e4d7;
+  border-radius: 9px;
+  color: #26745f;
+  background: #f1fbf7;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .source-block,
 .editor-block {
   border: 1px solid #e0eeec;
@@ -5404,6 +5417,11 @@ body {
   border-color: #79512b;
   color: #ffc16b;
   background: #2b211e;
+}
+.config-effective-note {
+  border-color: #245e5b;
+  color: #8de4cb;
+  background: #122d35;
 }
 .alert-error,
 .diagnostic-card.error {
