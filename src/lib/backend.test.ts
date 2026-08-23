@@ -4,11 +4,18 @@ import { invoke } from "@tauri-apps/api/core";
 
 import {
   addWorkspace,
+  applySkillInstall,
+  browseSkillSource,
+  executeDiagnosticRecovery,
   getClaudeGlobalConfig,
   getDiagnostics,
   listConfigHistory,
+  planSkillInstall,
+  previewDiagnosticRecovery,
   previewConfigRestore,
   restoreConfigHistory,
+  setSkillEnabled,
+  uninstallSkill,
 } from "./backend";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -77,6 +84,78 @@ describe("Claude Code backend binding", () => {
     expect(invoke).toHaveBeenCalledWith("restore_config_history", {
       operationId: 7,
       expectedChecksum: "expected-checksum",
+    });
+  });
+
+  it("uses explicit command envelopes for the Skill source and lifecycle API", async () => {
+    vi.mocked(invoke).mockResolvedValue({});
+    const request = { kind: "local-directory" as const, path: "/skills" };
+
+    await browseSkillSource(request);
+    expect(invoke).toHaveBeenCalledWith("browse_skill_source", { request });
+
+    const input = {
+      request,
+      skillPath: "review",
+      agent: "codex" as const,
+      scope: "workspace" as const,
+      workspaceDirectory: "/projects/demo",
+      workspaceId: 7,
+    };
+    await planSkillInstall(input);
+    expect(invoke).toHaveBeenNthCalledWith(2, "plan_skill_install", { input });
+
+    await applySkillInstall("plan-7");
+    expect(invoke).toHaveBeenNthCalledWith(3, "apply_skill_install", {
+      planId: "plan-7",
+    });
+
+    await setSkillEnabled({
+      targetDirectory: "/projects/demo/.agents/skills/review",
+      enabled: false,
+      workspaceDirectory: "/projects/demo",
+    });
+    expect(invoke).toHaveBeenNthCalledWith(4, "set_skill_enabled", {
+      targetDirectory: "/projects/demo/.agents/skills/review",
+      enabled: false,
+      workspaceDirectory: "/projects/demo",
+    });
+
+    await uninstallSkill({
+      targetDirectory: "/projects/demo/.agents/skills/review",
+      workspaceDirectory: "/projects/demo",
+    });
+    expect(invoke).toHaveBeenNthCalledWith(5, "uninstall_skill", {
+      targetDirectory: "/projects/demo/.agents/skills/review",
+      workspaceDirectory: "/projects/demo",
+    });
+  });
+
+  it("keeps diagnostic recovery behind a preview ticket", async () => {
+    vi.mocked(invoke).mockResolvedValue({});
+    const request = {
+      diagnosticCode: "cache:stale",
+      resourcePath: "/tmp/cache",
+    };
+
+    await previewDiagnosticRecovery(request);
+    expect(invoke).toHaveBeenCalledWith("preview_diagnostic_recovery", {
+      request,
+    });
+
+    await executeDiagnosticRecovery({
+      ...request,
+      recoveryId: "recovery-1",
+      previewed: true,
+      confirmed: true,
+    });
+    expect(invoke).toHaveBeenCalledWith("execute_diagnostic_recovery", {
+      request: {
+        ...request,
+        recoveryId: "recovery-1",
+        previewed: true,
+        confirmed: true,
+      },
     });
   });
 });

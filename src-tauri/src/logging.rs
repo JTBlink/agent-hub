@@ -30,6 +30,11 @@ pub enum Command {
     ScanCodexGlobal,
     ScanOpenCodeGlobal,
     ScanSkills,
+    BrowseSkillSource,
+    PlanSkillInstall,
+    ApplySkillInstall,
+    SetSkillEnabled,
+    UninstallSkill,
     PreviewDiagnosticRecovery,
     ExecuteDiagnosticRecovery,
     PreviewConfigEdit,
@@ -47,6 +52,11 @@ impl Command {
             Self::ScanCodexGlobal => "scan_codex_global",
             Self::ScanOpenCodeGlobal => "scan_opencode_global",
             Self::ScanSkills => "scan_skills",
+            Self::BrowseSkillSource => "browse_skill_source",
+            Self::PlanSkillInstall => "plan_skill_install",
+            Self::ApplySkillInstall => "apply_skill_install",
+            Self::SetSkillEnabled => "set_skill_enabled",
+            Self::UninstallSkill => "uninstall_skill",
             Self::PreviewDiagnosticRecovery => "preview_diagnostic_recovery",
             Self::ExecuteDiagnosticRecovery => "execute_diagnostic_recovery",
             Self::PreviewConfigEdit => "preview_config_edit",
@@ -62,6 +72,7 @@ pub enum FailureCode {
     Persistence,
     Configuration,
     Skills,
+    Diagnostics,
 }
 
 impl FailureCode {
@@ -70,6 +81,7 @@ impl FailureCode {
             Self::Persistence => "persistence_error",
             Self::Configuration => "configuration_error",
             Self::Skills => "skills_error",
+            Self::Diagnostics => "diagnostics_error",
         }
     }
 }

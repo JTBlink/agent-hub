@@ -129,8 +129,14 @@ const MAX_PENDING_RECOVERIES: usize = 128;
 #[derive(Debug, Default)]
 pub struct RecoveryRegistry {
     next_id: u64,
-    pending: HashMap<String, RecoveryPlan>,
+    pending: HashMap<String, PendingRecovery>,
     insertion_order: VecDeque<String>,
+}
+
+#[derive(Debug)]
+struct PendingRecovery {
+    plan: RecoveryPlan,
+    content_checksum: Option<String>,
 }
 
 impl RecoveryRegistry {
@@ -143,7 +149,13 @@ impl RecoveryRegistry {
                 self.pending.remove(&expired);
             }
         }
-        self.pending.insert(recovery_id.clone(), plan.clone());
+        self.pending.insert(
+            recovery_id.clone(),
+            PendingRecovery {
+                plan: plan.clone(),
+                content_checksum: None,
+            },
+        );
         self.insertion_order.push_back(recovery_id.clone());
         Some(RecoveryPreview {
             recovery_id,
@@ -154,7 +166,23 @@ impl RecoveryRegistry {
     }
 
     pub fn plan(&self, recovery_id: &str) -> Option<RecoveryPlan> {
-        self.pending.get(recovery_id).cloned()
+        self.pending
+            .get(recovery_id)
+            .map(|pending| pending.plan.clone())
+    }
+
+    pub fn bind_content_checksum(&mut self, recovery_id: &str, checksum: String) -> bool {
+        let Some(pending) = self.pending.get_mut(recovery_id) else {
+            return false;
+        };
+        pending.content_checksum = Some(checksum);
+        true
+    }
+
+    pub fn content_checksum(&self, recovery_id: &str) -> Option<String> {
+        self.pending
+            .get(recovery_id)
+            .and_then(|pending| pending.content_checksum.clone())
     }
 
     pub fn complete(&mut self, recovery_id: &str) -> bool {
