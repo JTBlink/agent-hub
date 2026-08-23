@@ -30,6 +30,7 @@ import {
   type WorkspaceScanResult,
 } from "../lib/backend";
 import { APP_NAME } from "../lib/app-meta";
+import { createTopologyLayout } from "../lib/topology";
 
 type Section =
   | "overview"
@@ -67,11 +68,23 @@ const navigation: { id: Section; label: string; icon: IconName }[] = [
   { id: "history", label: "变更历史", icon: "history" },
 ];
 
-const agentMeta = {
+const agentMeta: Record<string, { name: string; tone: string; mark: string }> = {
   "claude-code": { name: "Claude Code", tone: "violet", mark: "C" },
   codex: { name: "Codex", tone: "teal", mark: "X" },
   opencode: { name: "OpenCode", tone: "amber", mark: "O" },
-} as const;
+};
+
+const defaultAgentIds = Object.keys(agentMeta);
+
+function getAgentMeta(agent: string) {
+  return (
+    agentMeta[agent] ?? {
+      name: agent,
+      tone: "neutral",
+      mark: agent.slice(0, 1).toUpperCase() || "A",
+    }
+  );
+}
 
 function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -612,36 +625,44 @@ function Overview({
   configs: ConfigDocument[];
   onNavigate: (section: Section) => void;
 }) {
-  const connectionState = (agent: ConfigDocument["agent"]) => {
+  const topologyAgentIds = Array.from(
+    new Set([...defaultAgentIds, ...configs.map((config) => config.agent)]),
+  );
+  const topologyLayout = createTopologyLayout(topologyAgentIds.length);
+  const connectionState = (agent: string) => {
     const status = configs.find((config) => config.agent === agent)?.status;
     if (status === "ready") return "ready";
     if (status === "invalid" || status === "unreadable") return "warning";
     return "idle";
   };
-  const connected = readyCount === 3;
-  const hasAttention = diagnosticCount > 0 || readyCount < 3;
+  const totalAgents = topologyAgentIds.length;
+  const connected = totalAgents > 0 && readyCount === totalAgents;
+  const hasAttention = diagnosticCount > 0 || readyCount < totalAgents;
   const healthLabel = connected && !diagnosticCount ? "运行良好" : "需要关注";
   const healthTone = connected && !diagnosticCount ? "healthy" : "attention";
   return (
     <div className="page overview-page">
       <section className="overview-hero" aria-labelledby="overview-title">
         <div className="overview-hero-copy">
-          <div
-            className={`health-badge ${healthTone}`}
-            aria-label={`本机工作区：${healthLabel}`}
-          >
-            <i aria-hidden="true" />
-            <span>{healthLabel}</span>
-            <small>本机工作区</small>
+          <div className="overview-kicker">
+            <div
+              className={`health-badge ${healthTone}`}
+              aria-label={`本机工作区：${healthLabel}`}
+            >
+              <i aria-hidden="true" />
+              <span>{healthLabel}</span>
+              <small>本机工作区</small>
+            </div>
+            <p className="eyebrow">工作台 / 总览</p>
           </div>
-          <p className="eyebrow">工作台 / 总览</p>
-          <h1 id="overview-title">让每个 Agent 都处在掌控中。</h1>
+          <h1 id="overview-title">掌控每个 Agent 的运行状态。</h1>
           <p className="overview-hero-description">
-            这里汇总配置、Skills 与诊断状态。先看全局，再决定下一次安全写入。
+            <span>这里汇总配置、Skills 与诊断状态。</span>
+            <span>先看全局，再决定下一次安全写入。</span>
           </p>
           <div className="overview-hero-actions">
             <button
-              className="button button-primary"
+              className={`button button-primary ${hasAttention ? "attention-action" : ""}`}
               onClick={() =>
                 onNavigate(hasAttention ? "diagnostics" : "configs")
               }
@@ -661,7 +682,7 @@ function Overview({
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          aria-label={`本机状态：${readyCount}/3 个 Agent 已连接，${skillCount} 个 Skills 已发现，${diagnosticCount} 项待处理诊断`}
+          aria-label={`本机状态：${readyCount}/${totalAgents} 个 Agent 已连接，${skillCount} 个 Skills 已发现，${diagnosticCount} 项待处理诊断`}
         >
           <div className="snapshot-heading">
             <span>本地状态</span>
@@ -672,10 +693,14 @@ function Overview({
           </div>
           <div className="snapshot-score">
             <strong>{readyCount}</strong>
-            <span>/ 3 Agent 已连接</span>
+            <span>/ {totalAgents} Agent 已连接</span>
           </div>
           <div className="snapshot-meter" aria-hidden="true">
-            <i style={{ width: `${Math.round((readyCount / 3) * 100)}%` }} />
+            <i
+              style={{
+                width: `${totalAgents ? Math.round((readyCount / totalAgents) * 100) : 0}%`,
+              }}
+            />
           </div>
           <div className="snapshot-footnote">
             <span>{skillCount} 个 Skills 已发现</span>
@@ -710,10 +735,15 @@ function Overview({
             </span>
           </div>
         </div>
-        <div className="topology">
+        <div
+          className="topology"
+          style={{
+            "--topology-height": `${topologyLayout.height}px`,
+          } as React.CSSProperties}
+        >
           <svg
             className="topology-network"
-            viewBox="0 0 650 200"
+            viewBox={`0 0 100 ${topologyLayout.height}`}
             preserveAspectRatio="none"
             aria-hidden="true"
           >
@@ -731,47 +761,37 @@ function Overview({
                 <stop offset="1" stopColor="#2C9CFF" />
               </linearGradient>
             </defs>
-            <path className="network-rail" d="M170 32 C270 32 330 72 450 72" />
-            <path className="network-rail" d="M170 100 H450" />
-            <path
-              className="network-rail"
-              d="M170 168 C270 168 330 128 450 128"
-            />
-            <path
-              className={`network-flow flow-top ${connectionState("claude-code")}`}
-              d="M170 32 C270 32 330 72 450 72"
-            />
-            <path
-              className={`network-flow flow-mid ${connectionState("codex")}`}
-              d="M170 100 H450"
-            />
-            <path
-              className={`network-flow flow-bottom ${connectionState("opencode")}`}
-              d="M170 168 C270 168 330 128 450 128"
-            />
-            <circle
-              className={`network-pulse pulse-top ${connectionState("claude-code")}`}
-              cx="450"
-              cy="72"
-              r="5"
-            />
-            <circle
-              className={`network-pulse pulse-mid ${connectionState("codex")}`}
-              cx="450"
-              cy="100"
-              r="5"
-            />
-            <circle
-              className={`network-pulse pulse-bottom ${connectionState("opencode")}`}
-              cx="450"
-              cy="128"
-              r="5"
-            />
+            {topologyAgentIds.map((agent, index) => {
+              const connection = topologyLayout.connections[index];
+              return (
+                <g key={agent}>
+                  <path className="network-rail" d={connection.path} />
+                  <path
+                    className={`network-flow ${index < 3 ? `flow-${["top", "mid", "bottom"][index]}` : "flow-dynamic"} ${connectionState(agent)}`}
+                    d={connection.path}
+                  />
+                  <ellipse
+                    className={`network-pulse ${index < 3 ? `pulse-${["top", "mid", "bottom"][index]}` : "pulse-dynamic"} ${connectionState(agent)}`}
+                    cx={connection.pulseX}
+                    cy={connection.pulseY}
+                    rx="0.55"
+                    ry="5"
+                  />
+                </g>
+              );
+            })}
           </svg>
-          <div className="agent-nodes">
-            {(["claude-code", "codex", "opencode"] as const).map((agent) => {
+          <div
+            className="agent-nodes"
+            style={{
+              "--agent-stack-height": `${Math.max(0, topologyLayout.height - 20)}px`,
+              "--agent-gap": `${topologyLayout.gap}px`,
+              "--agent-node-height": `${topologyLayout.nodeHeight}px`,
+            } as React.CSSProperties}
+          >
+            {topologyAgentIds.map((agent) => {
               const config = configs.find((item) => item.agent === agent);
-              const meta = agentMeta[agent];
+              const meta = getAgentMeta(agent);
               const state = connectionState(agent);
               return (
                 <div
@@ -803,7 +823,7 @@ function Overview({
         <div className="topology-footer">
           <span>
             <i className="footer-signal" />
-            {readyCount}/3 个 Agent 正在为本地工作区提供配置
+            {readyCount}/{totalAgents} 个 Agent 正在为本地工作区提供配置
           </span>
           <button className="text-button" onClick={() => onNavigate("configs")}>
             查看配置状态 <Icon name="arrow" size={15} />
@@ -817,11 +837,13 @@ function Overview({
               <p className="eyebrow">工作区健康</p>
               <h2>现在可以安全工作吗？</h2>
             </div>
-            <span className={`health-score ${healthTone}`}>{readyCount}/3</span>
+            <span className={`health-score ${healthTone}`}>
+              {readyCount}/{totalAgents}
+            </span>
           </div>
           <p className="health-panel-copy">
             {connected && !diagnosticCount
-              ? "三个 Agent 都已读取到有效配置，写入仍会经过 Diff 与备份。"
+              ? `${totalAgents} 个 Agent 都已读取到有效配置，写入仍会经过 Diff 与备份。`
               : "有配置或诊断需要确认，建议先处理后再进行批量写入。"}
           </p>
           <div className="health-list">
@@ -831,7 +853,7 @@ function Overview({
               </span>
               <span>
                 <strong>配置同步</strong>
-                <small>{readyCount}/3 个 Agent 已准备好</small>
+                  <small>{readyCount}/{totalAgents} 个 Agent 已准备好</small>
               </span>
               <Icon name="arrow" size={15} />
             </button>

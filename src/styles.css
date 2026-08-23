@@ -24,6 +24,7 @@
   --shadow: 0 18px 50px rgb(0 0 0 / 25%);
   --motion-fast: 140ms;
   --motion-standard: 180ms;
+  overscroll-behavior: none;
 }
 * {
   box-sizing: border-box;
@@ -33,6 +34,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #08101f;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 button,
 input,
@@ -71,7 +74,8 @@ textarea:focus-visible {
 .app-shell {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 .sidebar {
   display: flex;
@@ -82,6 +86,7 @@ textarea:focus-visible {
   padding: 28px 16px 20px;
   border-right: 1px solid var(--line);
   background: #f7fffd;
+  overscroll-behavior: none;
 }
 .brand-lockup {
   display: flex;
@@ -242,14 +247,17 @@ textarea:focus-visible {
   font-size: 10px;
 }
 .main-content {
+  height: 100vh;
   min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  min-height: 72px;
+  min-height: 64px;
   padding: 0 clamp(24px, 4vw, 58px);
   border-bottom: 1px solid var(--line);
   background: rgb(255 255 255 / 78%);
@@ -1801,10 +1809,28 @@ body {
   background: linear-gradient(180deg, rgb(8 16 31 / 72%), #08101f 38rem);
 }
 .topbar {
-  border-color: rgb(38 59 103 / 75%);
-  background: rgb(8 16 31 / 78%);
-  box-shadow: inset 0 -1px rgb(255 255 255 / 2%);
-  backdrop-filter: blur(18px) saturate(130%);
+  position: relative;
+  border-color: #203458;
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.topbar::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(55 83 127 / 64%) 14%,
+    rgb(55 83 127 / 64%) 86%,
+    transparent 100%
+  );
+  content: "";
+  pointer-events: none;
 }
 .breadcrumb .icon {
   color: #4f6388;
@@ -2153,8 +2179,15 @@ body {
   }
 }
 @media (max-width: 740px) {
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
   .app-shell {
     display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
   .sidebar {
     position: static;
@@ -2178,7 +2211,13 @@ body {
     gap: 4px;
     overflow-x: auto;
     padding-bottom: 3px;
+    overscroll-behavior-x: none;
     scrollbar-width: thin;
+  }
+  .main-content {
+    height: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
   }
   .nav-item {
     flex: 0 0 auto;
@@ -2208,11 +2247,19 @@ body {
     display: none;
   }
   .topbar-actions {
+    min-width: 0;
     width: 100%;
   }
+  .topbar > .breadcrumb {
+    display: none;
+  }
   .search-field {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     width: auto;
+  }
+  .topbar-actions > .button {
+    flex: none;
   }
   .topbar .button {
     min-width: 44px;
@@ -2789,6 +2836,10 @@ body {
   stroke: url("#topology-amber");
   animation-delay: -1.2s;
 }
+.flow-dynamic {
+  stroke: #6d8ebf;
+  animation-delay: -1.5s;
+}
 .network-pulse {
   fill: #e8fff8;
   transform-box: fill-box;
@@ -2801,6 +2852,11 @@ body {
 }
 .pulse-bottom {
   animation-delay: -1.2s;
+}
+.pulse-dynamic {
+  fill: #c6d5ef;
+  animation-delay: -1.5s;
+  filter: drop-shadow(0 0 6px rgb(109 142 191 / 55%));
 }
 .network-pulse.idle {
   opacity: 0.25;
@@ -2828,12 +2884,13 @@ body {
   animation-delay: -1.4s;
 }
 .agent-nodes {
-  height: 178px;
+  height: var(--agent-stack-height, 178px);
+  gap: var(--agent-gap, 13px);
   justify-content: space-around;
 }
 .agent-node {
   width: min(460px, 100%);
-  min-height: 50px;
+  min-height: var(--agent-node-height, 50px);
   transition:
     border-color var(--motion-standard) ease,
     background var(--motion-standard) ease,
@@ -2845,6 +2902,10 @@ body {
 }
 .agent-node.scanning {
   border-color: #31486f;
+}
+.agent-avatar.neutral {
+  color: #c6d5ef;
+  background: #2b3c58;
 }
 .live-indicator i,
 .status-text.success i {
@@ -2996,34 +3057,53 @@ body {
 
 /* Overview control-room redesign: status first, topology second, action last. */
 .overview-page {
-  padding-top: 34px;
+  padding-top: 22px;
 }
 .overview-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.65fr);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.38fr);
+  gap: 18px;
   align-items: stretch;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 .overview-hero-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "kicker kicker"
+    "title title"
+    "description actions";
+  column-gap: 18px;
+  align-items: end;
   min-width: 0;
-  padding: 8px 0 4px;
+  padding: 2px 0;
 }
-.overview-hero-copy .eyebrow {
-  margin-top: 18px;
+.overview-kicker {
+  display: flex;
+  grid-area: kicker;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  margin-bottom: 4px;
+}
+.overview-kicker .eyebrow {
+  margin: 0;
 }
 .overview-hero-copy h1 {
-  max-width: 720px;
-  font-size: clamp(32px, 4.6vw, 58px);
-  line-height: 1.02;
+  grid-area: title;
+  max-width: 680px;
+  margin: 4px 0 0;
+  font-size: clamp(28px, 3.2vw, 38px);
+  line-height: 1.08;
   text-wrap: balance;
 }
 .overview-hero-description {
-  max-width: 600px;
-  margin: 16px 0 0;
+  grid-area: description;
+  max-width: 560px;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.5;
 }
 .health-badge {
   display: inline-flex;
@@ -3066,21 +3146,55 @@ body {
   box-shadow: 0 0 0 3px rgb(240 161 58 / 14%);
 }
 .overview-hero-actions {
+  grid-area: actions;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 8px;
 }
 .overview-hero-actions .button-primary {
-  min-width: 164px;
+  min-width: 0;
+  border-color: #2c4d73;
+  color: #b7d4ee;
+  background: #122542;
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+.overview-hero-actions .button-primary:hover {
+  border-color: #4b7098;
+  color: var(--ink);
+  background: #193252;
+}
+.overview-hero-actions .button-primary.attention-action {
+  border-color: #6b5130;
+  color: #f5cc91;
+  background: #2a251f;
+}
+.overview-hero-actions .button-primary.attention-action:hover {
+  border-color: #9a7040;
+  color: #ffe0ad;
+  background: #382d20;
+}
+.overview-hero-actions .button-primary .icon:last-child {
+  color: #82a5c5;
+}
+.overview-hero-actions .local-badge {
+  min-height: 44px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 0;
+  color: var(--quiet);
+  background: transparent;
+}
+.overview-hero-actions .local-badge .icon {
+  color: #5f8fa2;
 }
 .overview-snapshot {
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 190px;
-  padding: 22px;
+  min-height: 116px;
+  padding: 15px 17px;
   overflow: hidden;
   border: 1px solid #304b7d;
   border-radius: 16px;
@@ -3125,12 +3239,12 @@ body {
   display: flex;
   align-items: baseline;
   gap: 9px;
-  margin-top: 19px;
+  margin-top: 8px;
 }
 .snapshot-score strong {
   color: var(--ink);
   font-family: "Space Grotesk", sans-serif;
-  font-size: 48px;
+  font-size: 34px;
   letter-spacing: -0.08em;
   line-height: 0.9;
 }
@@ -3140,7 +3254,7 @@ body {
 }
 .snapshot-meter {
   height: 7px;
-  margin-top: 22px;
+  margin-top: 10px;
   overflow: hidden;
   border-radius: 999px;
   background: #0a142a;
@@ -3155,7 +3269,7 @@ body {
   transition: width 320ms ease;
 }
 .snapshot-footnote {
-  margin-top: 12px;
+  margin-top: 8px;
   color: var(--quiet);
   font-size: 10px;
 }
@@ -3163,7 +3277,7 @@ body {
   color: #ffc16b;
 }
 .topology-card {
-  padding: 26px 28px 0;
+  padding: 20px 24px 0;
 }
 .topology-card .section-title-row {
   align-items: center;
@@ -3198,11 +3312,14 @@ body {
 }
 .topology {
   grid-template-columns: minmax(280px, 0.7fr) minmax(360px, 1.3fr);
-  min-height: 218px;
-  margin-top: 12px;
+  min-height: var(--topology-height, 198px);
+  margin-top: 10px;
 }
 .topology-network {
   opacity: 0.96;
+}
+.topology > .hub-node {
+  transform: translateY(16px);
 }
 .network-flow.warning {
   stroke: #f0a13a;
@@ -3249,12 +3366,12 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
   gap: 14px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 .health-panel,
 .next-panel {
   min-width: 0;
-  padding: 23px 25px;
+  padding: 19px 21px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: linear-gradient(145deg, rgb(24 39 72 / 96%), rgb(14 25 47 / 98%));
@@ -3354,7 +3471,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 24px;
+  gap: 18px;
 }
 .next-panel h2 {
   margin: 0;
@@ -3417,14 +3534,13 @@ body {
     grid-template-columns: minmax(0, 1fr) minmax(220px, 0.72fr);
   }
   .overview-hero-actions {
-    align-items: stretch;
-    flex-direction: column;
-    max-width: 260px;
+    flex-wrap: wrap;
+    max-width: 100%;
   }
   .overview-hero-actions .button-primary,
   .overview-hero-actions .local-badge {
     justify-content: center;
-    width: 100%;
+    width: auto;
   }
   .topology {
     grid-template-columns: minmax(220px, 0.72fr) minmax(300px, 1.28fr);
@@ -3441,11 +3557,24 @@ body {
     grid-template-columns: 1fr;
     gap: 18px;
   }
-  .overview-hero-copy .eyebrow {
-    margin-top: 15px;
+  .overview-hero-copy {
+    display: block;
+  }
+  .overview-kicker {
+    margin-bottom: 8px;
+  }
+  .overview-kicker .eyebrow {
+    margin: 0;
   }
   .overview-hero-copy h1 {
+    max-width: 100%;
     font-size: 34px;
+    overflow-wrap: anywhere;
+    text-wrap: wrap;
+  }
+  .overview-hero-description {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
   .overview-hero-actions {
     align-items: stretch;
@@ -3458,7 +3587,7 @@ body {
     width: 100%;
   }
   .overview-snapshot {
-    min-height: 170px;
+    min-height: 148px;
   }
   .topology-card {
     padding: 21px 17px 0;
@@ -3473,12 +3602,14 @@ body {
   .topology {
     grid-template-columns: 1fr;
     gap: 20px;
+    min-height: 0;
   }
   .topology-network {
     display: none;
   }
-  .hub-node {
+  .topology > .hub-node {
     grid-row: 1;
+    transform: none;
   }
   .agent-nodes {
     grid-row: 2;
