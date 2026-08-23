@@ -79,6 +79,8 @@ export function matchingSkillsForDiagnostic(
   const subject = diagnosticSubject(item);
   const resourcePath = item.resourcePath?.replace(/[\\/]+$/, "");
   return skills.filter((skill) => {
+    if (item.agent && skill.agent !== item.agent) return false;
+    if (item.scope && skill.scope !== item.scope) return false;
     const skillPath = skill.path.replace(/[\\/]+$/, "");
     return (
       skill.name === subject ||
@@ -92,4 +94,3 @@ export function matchingSkillsForDiagnostic(
     );
   });
 }
-

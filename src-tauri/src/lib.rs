@@ -889,12 +889,29 @@ fn collect_all_diagnostics(
             .iter()
             .map(|item| diagnostics::from_skill(item, None, None)),
     );
-    collected.extend(
-        inventory
-            .duplicate_names
-            .iter()
-            .map(|name| diagnostics::duplicate_skill(name)),
-    );
+    for name in &inventory.duplicate_names {
+        for agent in Agent::ALL {
+            for scope in Scope::ALL {
+                let copies = inventory
+                    .skills
+                    .iter()
+                    .filter(|skill| {
+                        skill.agent == *agent
+                            && skill.scope == *scope
+                            && (skill.name.as_deref() == Some(name)
+                                || (skill.name.is_none() && skill.display_name == *name))
+                    })
+                    .count();
+                if copies > 1 {
+                    collected.push(diagnostics::duplicate_skill(
+                        name,
+                        Some(*agent),
+                        Some(*scope),
+                    ));
+                }
+            }
+        }
+    }
     let failed_config_scans = documents
         .iter()
         .filter(|document| {

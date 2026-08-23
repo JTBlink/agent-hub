@@ -1777,6 +1777,30 @@ function SkillsCenter({
     });
     return result;
   }, [filteredSkills]);
+  const duplicateGroups = useMemo(() => {
+    const result: Array<{
+      name: string;
+      agent: string;
+      scope: string;
+      matches: InstalledSkill[];
+    }> = [];
+    for (const name of skills?.duplicateNames ?? []) {
+      const matches = (skills?.skills ?? []).filter(
+        (skill) => skill.name === name || skill.displayName === name,
+      );
+      for (const agent of defaultAgentIds) {
+        for (const scope of ["global", "workspace"] as const) {
+          const scoped = matches.filter(
+            (skill) => skill.agent === agent && skill.scope === scope,
+          );
+          if (scoped.length > 1) {
+            result.push({ name, agent, scope, matches: scoped });
+          }
+        }
+      }
+    }
+    return result;
+  }, [skills]);
   const focusedSkills = useMemo(
     () =>
       diagnosticFocus
@@ -1845,12 +1869,13 @@ function SkillsCenter({
           onInstalled={onInstalled}
         />
       )}
-      {skills?.duplicateNames.length ? (
+      {duplicateGroups.length ? (
         <div className="alert alert-warning" role="status">
           <Icon name="warning" />
           <span>
-            发现同名 Skill：{skills.duplicateNames.join("、")}
-            。请确认优先级后再启用。
+            发现 {duplicateGroups.length} 组同 Agent 重复 Skill：
+            {duplicateGroups.map((group) => `${group.agent} · ${group.name}`).join("、")}
+            。跨 Agent 共用同一路径属于正常安装，不计入冲突。
           </span>
           <button
             type="button"
@@ -1862,7 +1887,7 @@ function SkillsCenter({
           </button>
         </div>
       ) : null}
-      {showDuplicates && skills?.duplicateNames.length ? (
+      {showDuplicates && duplicateGroups.length ? (
         <section
           className="skill-issue-panel duplicate-skill-panel"
           id="duplicate-skill-details"
@@ -1873,8 +1898,8 @@ function SkillsCenter({
               <p className="eyebrow">重复安装</p>
               <h2 id="duplicate-skill-title">选择需要保留的 Skill</h2>
               <p>
-                同名 Skill 出现在多个位置时，Agent
-                的加载顺序可能不同。请比较路径和作用域，再停用不需要的副本。
+                这里仅列出同一个 Agent、同一个作用域下的多个真实副本。不同 Agent
+                共用 ~/.agents/skills 是 skills.sh 的正常布局，不需要清理。
               </p>
             </div>
             <button
@@ -1887,16 +1912,24 @@ function SkillsCenter({
             </button>
           </div>
           <div className="duplicate-skill-groups">
-            {skills.duplicateNames.map((name) => {
-              const matches = skills.skills.filter(
-                (skill) => skill.name === name || skill.displayName === name,
-              );
+            {duplicateGroups.map((group) => {
+              const isCodexLegacy =
+                group.agent === "codex" && group.scope === "global" &&
+                group.matches.some((skill) => skill.path.includes("/.codex/skills/"));
               return (
-                <article key={name}>
-                  <strong>{name}</strong>
-                  <span>{matches.length} 个安装位置</span>
+                <article key={`${group.agent}-${group.scope}-${group.name}`}>
+                  <strong>{group.name}</strong>
+                  <span>
+                    {getAgentMeta(group.agent).name} · {group.scope === "global" ? "全局" : "工作空间"} · {group.matches.length} 个真实副本
+                  </span>
+                  {isCodexLegacy && (
+                    <p className="duplicate-skill-recommendation">
+                      Codex 推荐保留 <code>~/.agents/skills</code>；
+                      <code>~/.codex/skills</code> 是兼容目录，建议迁移或归档后再扫描。
+                    </p>
+                  )}
                   <div>
-                    {matches.map((skill) => (
+                    {group.matches.map((skill) => (
                       <SkillLocation
                         key={`${skill.agent}-${skill.scope}-${skill.path}`}
                         skill={skill}
@@ -2052,6 +2085,8 @@ function SkillsCenter({
 }
 
 function SkillLocation({ skill }: { skill: InstalledSkill }) {
+  const isCodexLegacy =
+    skill.agent === "codex" && skill.path.includes("/.codex/skills/");
   return (
     <div className="skill-location">
       <div>
@@ -2059,6 +2094,7 @@ function SkillLocation({ skill }: { skill: InstalledSkill }) {
         <span>
           {skill.scope === "global" ? "全局" : "工作空间"} ·{" "}
           {skill.sourceTracked ? "AgentHub 管理" : "外部管理"}
+          {isCodexLegacy ? " · Codex 兼容目录" : ""}
         </span>
       </div>
       <code>{skill.path}</code>

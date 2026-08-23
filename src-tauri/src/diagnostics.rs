@@ -866,7 +866,7 @@ mod tests {
             DiagnosticKind::SourceUnavailable
         );
         assert_eq!(
-            duplicate_skill("review").fix_safety,
+            duplicate_skill("review", Some(Agent::Codex), Some(Scope::Global)).fix_safety,
             FixSafety::RequiresConfirmation
         );
         let symlink = from_skill(&source("symlink-skipped"), None, None);
