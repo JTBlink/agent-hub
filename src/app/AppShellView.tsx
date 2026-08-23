@@ -363,6 +363,33 @@ function statusLabel(status: ConfigDocument["status"] | undefined) {
   return "扫描中";
 }
 
+/**
+ * A missing Codex project file is an intentional fallback: Codex continues
+ * using its global configuration. Keep the global document's path and scope
+ * so editing cannot accidentally target a non-existent project file.
+ */
+function getWorkspaceDisplayConfigs(
+  globalConfigs: ConfigDocument[],
+  workspaceConfigs: ConfigDocument[],
+) {
+  const workspaceCodex = workspaceConfigs.find(
+    (config) => config.agent === "codex",
+  );
+  const globalCodex = globalConfigs.find((config) => config.agent === "codex");
+  if (
+    !workspaceCodex ||
+    workspaceCodex.status !== "missing" ||
+    !globalCodex
+  ) {
+    return workspaceConfigs;
+  }
+  return workspaceConfigs.map((config) =>
+    config.agent === "codex"
+      ? { ...globalCodex, diagnostics: [] }
+      : config,
+  );
+}
+
 function instructionKindLabel(kind: InstructionFile["kind"]) {
   if (kind === "agents") return "Agent 指令";
   if (kind === "claude") return "Claude 指令";
