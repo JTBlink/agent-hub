@@ -240,11 +240,17 @@ export interface WorkspaceRecord {
   canonicalPath: string | null;
 }
 
+export interface InstructionFile {
+  path: string;
+  kind: string;
+  scope: ConfigScope;
+}
+
 export interface WorkspaceScanResult {
   workspace: WorkspaceRecord;
   configs: ConfigDocument[];
   skills: SkillInventory;
-  instructions: { path: string; kind: string; scope: ConfigScope }[];
+  instructions: InstructionFile[];
 }
 
 export type DiagnosticSeverity = "info" | "warning" | "error";
