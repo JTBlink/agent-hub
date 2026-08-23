@@ -1427,20 +1427,31 @@ textarea:focus-visible {
   color: var(--quiet);
   font-size: 10px;
 }
-.skill-storage-summary > strong {
+.skill-storage-total {
+  display: grid;
   align-self: center;
-  color: #08786e;
+  justify-items: end;
+  gap: 2px;
+}
+.skill-storage-total span {
+  color: var(--quiet);
+  font-size: 9px;
+}
+.skill-storage-total strong {
+  align-self: center;
+  color: var(--teal);
   font-family: "Space Grotesk", sans-serif;
   font-size: 20px;
 }
 .skill-storage-roots {
-  display: grid;
+  display: flex;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  flex-direction: column;
   gap: 6px;
 }
 .skill-storage-roots > div {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -1460,7 +1471,7 @@ textarea:focus-visible {
 .skill-storage-roots span {
   flex: none;
   color: var(--quiet);
-  font-size: 9px;
+  font-size: 10px;
 }
 .marketplace-intro {
   display: grid;
@@ -3324,8 +3335,9 @@ body {
   .marketplace-intro {
     grid-template-columns: 1fr;
   }
-  .skill-storage-summary > strong {
+  .skill-storage-total {
     justify-self: start;
+    justify-items: start;
   }
   .skill-storage-roots {
     grid-template-columns: 1fr;
