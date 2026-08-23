@@ -22,7 +22,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ### `build-installers.yml`
 
-触发条件：`v*` tag 和手动 `workflow_dispatch`。
+触发条件：`main` 分支 push、`v*` tag 和手动 `workflow_dispatch`。`main` push 只生成预编译 artifact，不创建 GitHub Release；`v*` tag 在相同质量门禁和打包流程通过后创建正式 Release。
 
 | Runner           | 目标                                    | 安装包              |
 | ---------------- | --------------------------------------- | ------------------- |
@@ -34,7 +34,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ## 手动构建
 
-在 GitHub Actions 中运行 `Build Installers` → `Run workflow` 即可手动构建当前选中的分支。手动运行不需要填写额外参数，Actions artifact 固定保留 90 天，并从 `VERSION` 自动计算 `v<version>` Release tag；手动构建也会创建 GitHub Release。手动构建不读取生产签名 Secrets。Actions artifact 不能永久保存，但上传到 GitHub Release 的安装包和 `CHANGELOG.md` 会持续保留，直到手动删除 Release 或附件。
+在 GitHub Actions 中运行 `Build Installers` → `Run workflow` 即可手动预编译当前选中的分支。手动运行不需要填写额外参数，Actions artifact 固定保留 90 天，只上传候选安装包和汇总校验文件，不创建 GitHub Release，也不读取生产签名 Secrets。Actions artifact 不能永久保存；正式 tag 发布后，上传到 GitHub Release 的安装包和 `CHANGELOG.md` 会持续保留，直到手动删除 Release 或附件。
 
 ## Tag 发布
 
