@@ -28,6 +28,10 @@ pub struct InstallPlan {
     pub source_kind: SourceKind,
     pub source_locator: String,
     pub source_revision: Option<String>,
+    #[serde(default)]
+    pub source_requested_ref: Option<String>,
+    #[serde(default)]
+    pub source_manifest_path: Option<String>,
     pub source_fingerprint: String,
     pub agent: Agent,
     pub scope: Scope,
@@ -50,6 +54,13 @@ pub struct ManagedInstallation {
     pub target_directory: PathBuf,
     pub files: Vec<String>,
     pub source_revision: Option<String>,
+    /// The ref the user selected (branch, tag, or commit). Keep this in the
+    /// marker so a later update can resolve the same source snapshot instead
+    /// of silently switching to the default branch.
+    #[serde(default)]
+    pub source_requested_ref: Option<String>,
+    #[serde(default)]
+    pub source_manifest_path: Option<String>,
     #[serde(default)]
     pub installed_fingerprint: String,
     #[serde(default = "enabled_by_default")]
@@ -168,6 +179,8 @@ fn plan_install(
         source_locator: skill.source.locator.clone(),
         source_kind: skill.source.kind,
         source_revision: skill.source.resolved_commit.clone(),
+        source_requested_ref: skill.source.requested_ref.clone(),
+        source_manifest_path: skill.source.manifest_path.clone(),
         source_fingerprint,
         agent,
         scope,
@@ -374,6 +387,8 @@ where
             target_directory: plan.target_directory.clone(),
             files: plan.files.clone(),
             source_revision: plan.source_revision.clone(),
+            source_requested_ref: plan.source_requested_ref.clone(),
+            source_manifest_path: plan.source_manifest_path.clone(),
             installed_fingerprint,
             enabled: true,
         };

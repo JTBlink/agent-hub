@@ -289,6 +289,39 @@ impl Database {
         })
     }
 
+    pub fn relocate_backup_paths(
+        &self,
+        previous_root: impl AsRef<Path>,
+        current_root: impl AsRef<Path>,
+    ) -> Result<usize, PersistenceError> {
+        let previous_root = previous_root.as_ref();
+        let current_root = current_root.as_ref();
+        let mut connection = self.lock_connection()?;
+        let transaction = connection.transaction()?;
+        let mut statement = transaction.prepare("SELECT id, backup_path FROM config_backups")?;
+        let entries = statement
+            .query_map([], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        drop(statement);
+
+        let mut updated = 0;
+        for (id, stored_path) in entries {
+            let stored_path = PathBuf::from(stored_path);
+            let Ok(relative_path) = stored_path.strip_prefix(previous_root) else {
+                continue;
+            };
+            let relocated = current_root.join(relative_path);
+            updated += transaction.execute(
+                "UPDATE config_backups SET backup_path = ?1 WHERE id = ?2",
+                rusqlite::params![relocated.to_string_lossy(), id],
+            )?;
+        }
+        transaction.commit()?;
+        Ok(updated)
+    }
+
     pub fn config_index_count(&self) -> Result<i64, PersistenceError> {
         let connection = self.lock_connection()?;
         Ok(connection.query_row("SELECT COUNT(*) FROM config_files", [], |row| row.get(0))?)

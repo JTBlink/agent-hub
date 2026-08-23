@@ -28,9 +28,9 @@ function installedSkill(overrides: Partial<InstalledSkill> = {}): InstalledSkill
   return {
     agent: "codex",
     scope: "global",
-    path: "/home/me/.agents/skills/review",
+    path: "~/.agents/skills/review",
     storageKind: "copy",
-    realPath: "/home/me/.agents/skills/review",
+    realPath: "~/.agents/skills/review",
     source: {
       kind: "local-directory",
       locator: "/repo/.agents/skills",
@@ -77,10 +77,10 @@ describe("diagnostic presentation", () => {
     });
     const matches = matchingSkillsForDiagnostic(item, [
       installedSkill(),
-      installedSkill({ path: "/home/me/.codex/skills/review" }),
+      installedSkill({ path: "~/.codex/skills/review" }),
       installedSkill({
         agent: "claude-code",
-        path: "/home/me/.claude/skills/review",
+        path: "~/.claude/skills/review",
       }),
       installedSkill({ name: "other", displayName: "other" }),
     ]);

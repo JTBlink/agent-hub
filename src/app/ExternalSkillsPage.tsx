@@ -1,5 +1,5 @@
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import type { SkillRootUsage } from "../lib/backend";
 import {
@@ -7,7 +7,13 @@ import {
   type BrowserNavigationRequest,
 } from "./MarketplaceBrowser";
 
-type ExternalSkillIcon = "external" | "file" | "folder" | "spark";
+type ExternalSkillIcon =
+  | "arrow"
+  | "close"
+  | "external"
+  | "file"
+  | "folder"
+  | "spark";
 
 const webSources: Array<{
   name: string;
@@ -58,17 +64,78 @@ export function ExternalSkillsPage({
     id: 0,
     url: webSources[0].url,
   });
-  const [activeSource, setActiveSource] = useState(webSources[0].url);
+  const [activeSource, setActiveSource] =
+    useState<(typeof webSources)[number]>();
+  const sourceTriggerRef = useRef<HTMLButtonElement>(null);
 
-  function browse(url: string) {
-    setActiveSource(url);
-    setNavigation((current) => ({ id: current.id + 1, url }));
+  function browse(
+    source: (typeof webSources)[number],
+    trigger: HTMLButtonElement,
+  ) {
+    sourceTriggerRef.current = trigger;
+    setActiveSource(source);
+    setNavigation((current) => ({ id: current.id + 1, url: source.url }));
   }
+
+  function closeBrowser() {
+    setActiveSource(undefined);
+    window.requestAnimationFrame(() => sourceTriggerRef.current?.focus());
+  }
+
+  useEffect(() => {
+    if (!activeSource) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeBrowser();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [activeSource]);
 
   function revealDirectory(path: string) {
     void revealItemInDir(path).catch(() => {
       window.alert("无法在文件管理器中显示该目录，请确认目录仍然存在。");
     });
+  }
+
+  if (activeSource) {
+    return (
+      <div className="page marketplace-browser-page">
+        <header className="marketplace-browser-page-header">
+          <button
+            className="button button-ghost marketplace-browser-back"
+            type="button"
+            onClick={closeBrowser}
+            title="退出内嵌浏览器（Esc）"
+          >
+            {renderIcon("arrow", 15)}
+            退出浏览器
+          </button>
+          <div className="marketplace-browser-page-title">
+            <h1>{activeSource.name}</h1>
+            <p>在 AgentHub 内浏览 Skill 来源</p>
+          </div>
+          <div className="marketplace-browser-page-actions">
+            <span className="marketplace-browser-badge">
+              <i /> 内嵌浏览器
+            </span>
+            <button
+              className="button button-ghost marketplace-browser-close"
+              type="button"
+              onClick={closeBrowser}
+              aria-label="关闭内嵌浏览器"
+              title="关闭内嵌浏览器"
+            >
+              {renderIcon("close", 16)}
+              <span>关闭</span>
+            </button>
+          </div>
+        </header>
+        <MarketplaceBrowser request={navigation} />
+      </div>
+    );
   }
 
   return (
@@ -89,11 +156,9 @@ export function ExternalSkillsPage({
       <nav className="marketplace-launchpad" aria-label="Skill 网站快捷入口">
         {webSources.map((source) => (
           <button
-            className={activeSource === source.url ? "active" : ""}
             key={source.name}
             type="button"
-            aria-current={activeSource === source.url ? "page" : undefined}
-            onClick={() => browse(source.url)}
+            onClick={(event) => browse(source, event.currentTarget)}
           >
             <span className="marketplace-launchpad-icon">
               {renderIcon(source.icon, 18)}
@@ -103,6 +168,9 @@ export function ExternalSkillsPage({
               <small>{source.description}</small>
             </span>
             <code>{source.host}</code>
+            <span className="marketplace-launchpad-action" aria-hidden="true">
+              {renderIcon("arrow", 14)}
+            </span>
           </button>
         ))}
       </nav>
@@ -139,8 +207,6 @@ export function ExternalSkillsPage({
           </div>
         </section>
       )}
-
-      <MarketplaceBrowser request={navigation} />
     </div>
   );
 }

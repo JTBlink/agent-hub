@@ -143,6 +143,10 @@ pub struct InstalledSkill {
     pub name: Option<String>,
     pub relative_path: String,
     pub compatibility: Option<String>,
+    /// Human-facing version declared by the Skill, falling back to the
+    /// immutable installed source revision for managed Git sources.
+    pub current_version: Option<String>,
+    pub installed_fingerprint: Option<String>,
     pub enabled: bool,
     pub source_tracked: bool,
     pub diagnostics: Vec<SourceDiagnostic>,
@@ -285,11 +289,16 @@ pub fn scan_installed_skills(
                         .map(|installation| SourceMetadata {
                             kind: installation.source_kind.unwrap_or(SourceKind::Git),
                             locator: installation.source_locator.clone(),
-                            manifest_path: None,
-                            requested_ref: None,
+                            manifest_path: installation.source_manifest_path.clone(),
+                            requested_ref: installation.source_requested_ref.clone(),
                             resolved_commit: installation.source_revision.clone(),
                         })
                         .unwrap_or_else(|| skill.source.clone());
+                    let current_version = skill.metadata.get("version").cloned().or_else(|| {
+                        managed
+                            .as_ref()
+                            .and_then(|installation| installation.source_revision.clone())
+                    });
                     inventory.skills.push(InstalledSkill {
                         agent,
                         scope,
@@ -301,6 +310,10 @@ pub fn scan_installed_skills(
                         name: skill.name,
                         relative_path: skill.relative_path,
                         compatibility: skill.compatibility,
+                        current_version,
+                        installed_fingerprint: managed
+                            .as_ref()
+                            .map(|installation| installation.installed_fingerprint.clone()),
                         enabled: true,
                         source_tracked: managed.is_some(),
                         diagnostics: skill.diagnostics,
@@ -467,9 +480,9 @@ fn append_disabled_managed_skills(
                 } else {
                     managed.source_locator
                 },
-                manifest_path: None,
-                requested_ref: None,
-                resolved_commit: managed.source_revision,
+                manifest_path: managed.source_manifest_path.clone(),
+                requested_ref: managed.source_requested_ref.clone(),
+                resolved_commit: managed.source_revision.clone(),
             };
             let skill = parse_skill(root, &path, source);
             let key = skill
@@ -479,6 +492,11 @@ fn append_disabled_managed_skills(
             *names
                 .entry((agent.as_str().into(), scope.as_str().into(), key))
                 .or_default() += 1;
+            let current_version = skill
+                .metadata
+                .get("version")
+                .cloned()
+                .or_else(|| managed.source_revision.clone());
             inventory.skills.push(InstalledSkill {
                 agent,
                 scope,
@@ -490,6 +508,8 @@ fn append_disabled_managed_skills(
                 name: skill.name,
                 relative_path: skill.relative_path,
                 compatibility: skill.compatibility,
+                current_version,
+                installed_fingerprint: Some(managed.installed_fingerprint.clone()),
                 enabled: false,
                 source_tracked: true,
                 diagnostics: skill.diagnostics,
@@ -1521,6 +1541,11 @@ fn parse_frontmatter(frontmatter: &str, skill: &mut DiscoveredSkill) {
             "description" => skill.description = non_empty(value),
             "license" => skill.license = non_empty(value),
             "compatibility" => skill.compatibility = non_empty(value),
+            "version" => {
+                if let Some(version) = non_empty(value) {
+                    skill.metadata.insert("version".into(), version);
+                }
+            }
             "metadata" => {}
             _ => {}
         }

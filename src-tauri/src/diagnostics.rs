@@ -581,7 +581,18 @@ pub fn recovery_plan(diagnostic: &UnifiedDiagnostic) -> Option<RecoveryPlan> {
         }
         DiagnosticKind::Cache | DiagnosticKind::Scan => RecoveryAction::RescanResource,
     };
-    let preview_required = diagnostic.fix_safety == FixSafety::RequiresConfirmation
+    let read_only_refresh = matches!(
+        action,
+        RecoveryAction::RescanResource
+            | RecoveryAction::ReloadResource
+            | RecoveryAction::RefreshSkillSource
+    );
+    let safety = if read_only_refresh {
+        FixSafety::Safe
+    } else {
+        diagnostic.fix_safety
+    };
+    let preview_required = safety == FixSafety::RequiresConfirmation
         || matches!(
             action,
             RecoveryAction::CreateConfig
@@ -594,9 +605,9 @@ pub fn recovery_plan(diagnostic: &UnifiedDiagnostic) -> Option<RecoveryPlan> {
         diagnostic_code: diagnostic.code.clone(),
         action,
         resource_path: diagnostic.resource_path.clone(),
-        safety: diagnostic.fix_safety,
+        safety,
         preview_required,
-        confirmation_required: diagnostic.fix_safety == FixSafety::RequiresConfirmation,
+        confirmation_required: safety == FixSafety::RequiresConfirmation,
     })
 }
 
@@ -669,7 +680,7 @@ fn recovery_summary(plan: &RecoveryPlan) -> &'static str {
         RecoveryAction::EditConfig => "授权进入配置编辑预览；写入仍需走安全编辑命令",
         RecoveryAction::RestoreBackup => "授权进入备份恢复预览；回滚仍需校验 revision",
         RecoveryAction::ResolveDuplicateSkill => "授权进入重复 Skill 处理流程",
-        RecoveryAction::RefreshSkillSource => "重新扫描当前 Skill 来源状态",
+        RecoveryAction::RefreshSkillSource => "重新读取 Skill 并刷新诊断",
         RecoveryAction::ReviewVersionCompatibility => "需要人工核对版本兼容性",
         RecoveryAction::ReviewPermissions => "需要人工检查文件所有者和权限",
         RecoveryAction::RepairStorage => "需要人工检查数据库 migration 和 schema",
@@ -854,7 +865,7 @@ mod tests {
             &error,
             Agent::OpenCode,
             Scope::Global,
-            "/home/user/.config/opencode/opencode.json",
+            "~/.config/opencode/opencode.json",
         );
         let serialized = serde_json::to_string(&diagnostic).expect("diagnostic serializes");
 
@@ -903,7 +914,7 @@ mod tests {
             agent: Agent::ClaudeCode,
             scope: Scope::Global,
             format: ConfigFormat::Json,
-            path: "/home/user/.claude/settings.json".into(),
+            path: "~/.claude/settings.json".into(),
             status: ConfigStatus::Invalid,
             checksum: None,
             modified_at_ms: None,
@@ -1018,8 +1029,9 @@ mod tests {
         let mut registry = RecoveryRegistry::default();
         let preview = registry.preview(&diagnostic).expect("preview plan");
         assert_eq!(preview.plan.action, RecoveryAction::ReloadResource);
-        assert!(preview.plan.preview_required);
-        assert!(preview.plan.confirmation_required);
+        assert_eq!(preview.plan.safety, FixSafety::Safe);
+        assert!(!preview.plan.preview_required);
+        assert!(!preview.plan.confirmation_required);
         assert_eq!(
             registry.plan(&preview.recovery_id),
             Some(preview.plan.clone())

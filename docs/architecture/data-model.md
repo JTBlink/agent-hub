@@ -21,4 +21,4 @@
 
 工作空间路径、配置文件索引、Skill 来源和安装目标均有唯一约束；global 行必须没有 `workspace_id`，workspace 行必须引用有效工作空间。`settings.key` 第一版只允许 `theme` 和 `backupRetentionDays`。
 
-磁盘上的配置文件始终是真实数据源；SQLite 不保存配置正文。Token、密码和其他敏感字段不得进入数据库或操作日志。备份正文只存放在受限权限的应用数据目录，SQLite 仅记录路径、checksum、操作原因、时间和固定状态。
+磁盘上的配置文件始终是真实数据源；SQLite 不保存配置正文。Token、密码和其他敏感字段不得进入数据库或操作日志。备份正文只存放在受限权限的 `~/.agenthub/backups`，SQLite 仅记录路径、checksum、操作原因、时间和固定状态。
