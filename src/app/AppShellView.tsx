@@ -1730,9 +1730,6 @@ function ConfigCenter({
   const configAgentOptions = (["claude-code", "codex", "opencode"] as const)
     .map((agent) => {
       const config = visibleConfigs.find((item) => item.agent === agent);
-      const workspaceConfig = workspaceConfigs.find(
-        (item) => item.agent === agent,
-      );
       const hasAgentsFile = workspaceInstructions.some(
         (instruction) => instructionFileName(instruction.path) === "AGENTS.md",
       );
