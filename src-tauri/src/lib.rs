@@ -577,7 +577,7 @@ fn create_claude_instruction_symlink(
             return Err("CLAUDE.md 已存在真实文件，为避免覆盖未创建软链接。".to_owned());
         }
         let target = fs::read_link(&destination).map_err(|error| error.to_string())?;
-        if target == source || target == PathBuf::from("../AGENTS.md") {
+        if target == source || target == Path::new("../AGENTS.md") {
             return Ok(InstructionSymlinkResult {
                 link_path: destination.to_string_lossy().into_owned(),
                 target_path: source.to_string_lossy().into_owned(),
@@ -586,8 +586,7 @@ fn create_claude_instruction_symlink(
         return Err("CLAUDE.md 已指向其他目标，未修改。".to_owned());
     }
     #[cfg(unix)]
-    std::os::unix::fs::symlink("AGENTS.md", &destination)
-        .map_err(|error| error.to_string())?;
+    std::os::unix::fs::symlink("AGENTS.md", &destination).map_err(|error| error.to_string())?;
     #[cfg(windows)]
     std::os::windows::fs::symlink_file("AGENTS.md", &destination)
         .map_err(|error| error.to_string())?;
