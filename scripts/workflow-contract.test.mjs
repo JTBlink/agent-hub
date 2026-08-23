@@ -93,8 +93,15 @@ describe("GitHub Actions workflow contract", () => {
       /release:\n[\s\S]*if: github\.event_name == 'push' && startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs: package/,
     );
     expect(installers).toContain("contents: write");
-    expect(installers).toContain("tag_name: ${{ github.ref_name }}");
-    expect(installers).toContain("name: AgentHub ${{ github.ref_name }}");
+    expect(installers).toContain("publish_release:");
+    expect(installers).toContain("release_tag:");
+    expect(installers).toContain("inputs.publish_release == true");
+    expect(installers).toContain(
+      "tag_name: ${{ inputs.release_tag || github.ref_name }}",
+    );
+    expect(installers).toContain(
+      "name: AgentHub ${{ inputs.release_tag || github.ref_name }}",
+    );
     expect(installers).toContain("generate_release_notes: false");
     expect(installers).toContain("release-assets/SHA256SUMS");
     expect(installers).toContain("npm run release:verify -- release-assets");
