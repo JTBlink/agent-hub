@@ -31,10 +31,16 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Assemble website
+        run: |
+          mkdir -p _site/assets
+          cp index.html _site/index.html
+          cp homepage/assets/* _site/assets/
+
       - name: Upload homepage artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: homepage
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
