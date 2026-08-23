@@ -474,6 +474,10 @@ export function readSkillSource(path: string): Promise<string> {
   return invoke<string>("read_skill_source", { path });
 }
 
+export function openDirectoryInEditor(path: string): Promise<boolean> {
+  return invoke<boolean>("open_directory_in_editor", { path });
+}
+
 export function writeConfig(
   path: string,
   format: ConfigFormat,
