@@ -59,6 +59,7 @@ import {
   type WorkspaceScanResult,
 } from "../lib/backend";
 import { APP_NAME } from "../lib/app-meta";
+import { useLanguage, type TranslationKey } from "../lib/i18n";
 import {
   openExternalSkillSource,
   sourceBrowserUrl,
@@ -159,6 +160,19 @@ const navigation: { id: Section; label: string; icon: IconName }[] = [
   { id: "diagnostics", label: "诊断中心", icon: "warning" },
   { id: "history", label: "变更历史", icon: "history" },
 ];
+
+function navigationLabel(id: Section, t: (key: TranslationKey) => string) {
+  const key: Partial<Record<Section, TranslationKey>> = {
+    overview: "overview",
+    configs: "configs",
+    skills: "skills",
+    workspaces: "workspace",
+    diagnostics: "diagnostics",
+    history: "history",
+    settings: "settings",
+  };
+  return key[id] ? t(key[id]!) : id;
+}
 
 const agentMeta: Record<string, { name: string; tone: string; mark: string }> =
   {
@@ -452,6 +466,7 @@ function persistWorkspacePath(path: string) {
 }
 
 export function App() {
+  const { t } = useLanguage();
   const [section, setSection] = useState<Section>("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [runtimeVersion, setRuntimeVersion] = useState<string>();
@@ -681,14 +696,14 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar" aria-label="主导航">
+      <aside className="sidebar" aria-label={t("mainNavigation")}>
         <div className="brand-lockup">
           <div className="brand-mark">
             <BrandGlyph />
           </div>
           <div>
             <strong>{APP_NAME}</strong>
-            <span>本地 Agent 工作空间</span>
+            <span>{t("localWorkspace")}</span>
           </div>
         </div>
         <div
@@ -698,12 +713,12 @@ export function App() {
         >
           <span className="workspace-dot" />
           <span>
-            <strong>个人工作区</strong>
-            <small>全局配置上下文</small>
+            <strong>{t("personalWorkspace")}</strong>
+            <small>{t("globalConfigContext")}</small>
           </span>
         </div>
         <nav className="main-nav">
-          <p className="nav-label">工作台</p>
+          <p className="nav-label">{t("workbench")}</p>
           {navigation.map((item) => (
             <button
               key={item.id}
@@ -712,20 +727,20 @@ export function App() {
               aria-current={section === item.id ? "page" : undefined}
             >
               <Icon name={item.icon} />
-              <span>{item.label}</span>
+              <span>{navigationLabel(item.id, t)}</span>
               {item.id === "skills" && skills && (
                 <em>{skills.skills.length}</em>
               )}
             </button>
           ))}
-          <p className="nav-label nav-label-lower">系统</p>
+          <p className="nav-label nav-label-lower">{t("settings")}</p>
           <button
             className={`nav-item ${section === "settings" ? "active" : ""}`}
             onClick={() => setSection("settings")}
             aria-current={section === "settings" ? "page" : undefined}
           >
             <Icon name="settings" />
-            <span>设置</span>
+            <span>{t("settings")}</span>
           </button>
         </nav>
         <div className="sidebar-footer">
@@ -749,26 +764,24 @@ export function App() {
           <div className="breadcrumb">
             <span>AgentHub</span>
             <Icon name="arrow" size={14} />
-            <strong>
-              {navigation.find((item) => item.id === section)?.label ?? "设置"}
-            </strong>
+            <strong>{navigationLabel(section, t)}</strong>
           </div>
           <div className="topbar-actions">
             <label className="search-field">
               <Icon name="search" size={16} />
-              <span className="sr-only">搜索配置、Skill 和工作空间</span>
+              <span className="sr-only">{t("searchAria")}</span>
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="搜索配置、Skill…"
-                aria-label="搜索配置、Skill 和工作空间"
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchAria")}
               />
               {searchQuery && (
                 <button
                   className="search-clear"
                   type="button"
-                  aria-label="清除搜索"
+                  aria-label={t("clearSearch")}
                   onClick={() => setSearchQuery("")}
                 >
                   <Icon name="close" size={14} />
@@ -779,24 +792,24 @@ export function App() {
               className="button button-ghost"
               onClick={scan}
               disabled={loading}
-              aria-label={loading ? "扫描中" : "重新扫描"}
+              aria-label={loading ? t("scanning") : t("rescan")}
             >
               <Icon name="refresh" size={16} />
-              <span>{loading ? "扫描中" : "重新扫描"}</span>
+              <span>{loading ? t("scanning") : t("rescan")}</span>
             </button>
           </div>
         </header>
         {loading && (
           <div className="loading-banner" role="status" aria-live="polite">
             <span className="loading-spinner" aria-hidden="true" />
-            正在扫描本机 Agent 配置与 Skills…
+            {t("loadingScan")}
           </div>
         )}
         {error && (
           <div className="alert alert-error" role="alert">
             <Icon name="warning" />
             <span>{error}</span>
-            <button onClick={scan}>重试</button>
+            <button onClick={scan}>{t("retry")}</button>
           </div>
         )}
         {section === "overview" && (
@@ -2296,6 +2309,7 @@ function SkillsCenter({
   onWorkspaceChange: (workspacePath: string) => void;
   onInstalled: (workspaceDirectory?: string) => void;
 }) {
+  const { t } = useLanguage();
   const [view, setView] = useState<
     "installed" | "storage" | "install" | "marketplace"
   >("installed");
@@ -2447,12 +2461,12 @@ function SkillsCenter({
     return result;
   }, [skills]);
   const filters = [
-    ["all", "全部"],
-    ["global", "全局"],
-    ["workspace", "工作区"],
-    ["system", "系统"],
-    ["managed", "已管理"],
-    ["external", "外部"],
+    ["all", t("all")],
+    ["global", t("globalFilter")],
+    ["workspace", t("workspaceFilter")],
+    ["system", t("system")],
+    ["managed", t("managed")],
+    ["external", t("external")],
   ] as const;
   async function handleViewSkill(skill: InstalledSkill) {
     setSkillViewer({ skill, loading: true });
@@ -2831,7 +2845,9 @@ function SkillsCenter({
             <div className="skill-toolbar-actions">
               {selectedSharedSkillItems.length > 0 && (
                 <div className="skill-batch-actions">
-                  <span>已选 {selectedSharedSkillItems.length}</span>
+                  <span>
+                    {t("selectedCount")} {selectedSharedSkillItems.length}
+                  </span>
                   <select
                     aria-label="批量安装目标 Agent"
                     value={batchTargetAgent}
@@ -2853,13 +2869,13 @@ function SkillsCenter({
                     disabled={batchInstalling}
                     onClick={() => void installSelectedSharedSkills()}
                   >
-                    {batchInstalling ? "安装中…" : "一键安装"}
+                    {batchInstalling ? t("installing") : t("oneClickInstall")}
                   </button>
                 </div>
               )}
               <button className="button button-ghost" onClick={onScan}>
                 <Icon name="refresh" size={16} />
-                扫描 Skills
+                {t("scanSkills")}
               </button>
             </div>
           </div>
@@ -3033,7 +3049,7 @@ function SkillsCenter({
                   onClick={() => setView("install")}
                 >
                   <Icon name="plus" size={16} />
-                  安装 Skill
+                  {t("addSkill")}
                 </button>
               </div>
             )}
@@ -3103,20 +3119,21 @@ function SkillsViewTabs({
   installedCount: number;
   onChange: (view: "installed" | "storage" | "install" | "marketplace") => void;
 }) {
+  const { t } = useLanguage();
   return (
     <SubTabs
       value={view}
-      ariaLabel="Skills 视图"
+      ariaLabel={t("skills")}
       onChange={onChange}
       items={[
         {
           value: "installed",
-          label: "已安装",
+          label: t("installed"),
           badge: <span>{installedCount}</span>,
         },
-        { value: "storage", label: "安装信息" },
-        { value: "install", label: "安装" },
-        { value: "marketplace", label: "Marketplace" },
+        { value: "storage", label: t("storage") },
+        { value: "install", label: t("install") },
+        { value: "marketplace", label: t("marketplace") },
       ]}
     />
   );
@@ -3206,6 +3223,7 @@ function SkillSourcePanel({
   updateSkill?: InstalledSkill;
   onClearUpdate: () => void;
 }) {
+  const { t } = useLanguage();
   const initialMode = updateSkill
     ? updateSkill.source.kind === "skills-sh"
       ? "skills-sh"
@@ -3240,15 +3258,17 @@ function SkillSourcePanel({
   );
 
   useEffect(() => {
-    if (updateSkill || mode !== "local-directory" || locator.trim()) return;
+    if (updateSkill || mode !== "local-directory") return;
     void getLastLocalSkillSource()
       .then((path) => {
-        if (path?.trim()) setLocator(path);
+        if (path?.trim()) {
+          setLocator((current) => (current.trim() ? current : path));
+        }
       })
       .catch(() => {
         // The remembered path is best-effort and must not block installation.
       });
-  }, [locator, mode, updateSkill]);
+  }, [mode, updateSkill]);
 
   useEffect(() => {
     if (!updateSkill) return;
@@ -3460,11 +3480,11 @@ function SkillSourcePanel({
     >
       <div className="source-guide-heading">
         <div>
-          <p className="eyebrow">来源与安装</p>
+          <p className="eyebrow">{t("sourceEyebrow")}</p>
           <h2 id={`${id}-title`}>
             {updateSkill
-              ? `更新 ${updateSkill.displayName}`
-              : "发现 Skill，确认后安装"}
+              ? `${t("updateHeading")} · ${updateSkill.displayName}`
+              : t("installHeading")}
           </h2>
           <p>
             {updateSkill
@@ -3476,7 +3496,7 @@ function SkillSourcePanel({
           {onBack && (
             <button className="button button-ghost" onClick={onBack}>
               <Icon name="arrow" size={16} />
-              返回 Skills
+              {t("backSkills")}
             </button>
           )}
           <button
@@ -3484,7 +3504,7 @@ function SkillSourcePanel({
             onClick={() => onNavigate("workspaces")}
           >
             <Icon name="folder" size={16} />
-            管理工作空间
+            {t("manageWorkspaces")}
           </button>
         </div>
       </div>
@@ -3667,7 +3687,11 @@ function SkillSourcePanel({
           onClick={() => void browse()}
         >
           <Icon name="search" size={15} />
-          {busy ? "读取中…" : updateSkill ? "检查更新" : "检查并读取"}
+          {busy
+            ? t("checkingSource")
+            : updateSkill
+              ? "检查更新"
+              : t("readSource")}
         </button>
       </div>
       {browseResult && (
@@ -3822,7 +3846,7 @@ function SkillSourcePanel({
       {plans.length > 0 && (
         <div className="skill-install-plan">
           <div>
-            <span className="eyebrow">Installation Summary</span>
+            <span className="eyebrow">{t("installationSummary")}</span>
             <h3>{plans[0].displayName}</h3>
             <p>{plans[0].description ?? "无描述"}</p>
           </div>
@@ -4835,6 +4859,7 @@ function HistoryPage({
 }
 
 function SettingsPage() {
+  const { language, setLanguage, t } = useLanguage();
   const [tab, setTab] = useState<"privacy" | "scanning" | "data">("privacy");
   const [dataPaths, setDataPaths] =
     useState<Awaited<ReturnType<typeof getUserDataPaths>>>();
@@ -4890,10 +4915,10 @@ function SettingsPage() {
     <div className="page">
       <div className="settings-heading">
         <div>
-          <p className="eyebrow">应用设置</p>
-          <h1>设置</h1>
+          <p className="eyebrow">{t("settings")}</p>
+          <h1>{t("settings")}</h1>
         </div>
-        <p>管理本地隐私策略、扫描偏好和 AgentHub 用户数据。</p>
+        <p>{t("settingsDescription")}</p>
       </div>
       <SubTabs
         value={tab}
@@ -4902,17 +4927,17 @@ function SettingsPage() {
         items={[
           {
             value: "privacy",
-            label: "隐私与安全",
+            label: t("settingsPrivacy"),
             icon: <Icon name="shield" size={16} />,
           },
           {
             value: "scanning",
-            label: "扫描偏好",
+            label: t("settingsScanning"),
             icon: <Icon name="refresh" size={16} />,
           },
           {
             value: "data",
-            label: "用户数据",
+            label: t("settingsData"),
             icon: <Icon name="folder" size={16} />,
           },
         ]}
@@ -4961,10 +4986,20 @@ function SettingsPage() {
             </div>
             <div className="setting-row">
               <div>
-                <strong>界面语言</strong>
-                <span>中文（简体）</span>
+                <strong>{t("language")}</strong>
+                <span>{t("languageDescription")}</span>
               </div>
-              <span className="setting-value">中文</span>
+              <select
+                className="setting-language-select"
+                aria-label={t("language")}
+                value={language}
+                onChange={(event) =>
+                  setLanguage(event.target.value as typeof language)
+                }
+              >
+                <option value="zh-CN">{t("simplifiedChinese")}</option>
+                <option value="en-US">{t("english")}</option>
+              </select>
             </div>
             <div className="setting-row">
               <div>

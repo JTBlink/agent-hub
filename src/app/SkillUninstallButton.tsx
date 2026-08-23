@@ -5,6 +5,7 @@ import {
   uninstallSkill,
 } from "../lib/backend";
 import type { InstalledSkill } from "../lib/backend";
+import { useLanguage } from "../lib/i18n";
 import { useConfirm } from "./Modal";
 
 function targetDirectory(skill: InstalledSkill) {
@@ -24,6 +25,7 @@ export function SkillUninstallButton({
 }) {
   const [busy, setBusy] = useState(false);
   const { confirm, ConfirmPortal } = useConfirm();
+  const { t } = useLanguage();
   const sharedLink =
     skill.storageKind === "symlink" &&
     skill.realPath.replace(/\\/g, "/").includes("/.agents/skills/");
@@ -51,17 +53,17 @@ export function SkillUninstallButton({
         : [];
       const confirmed = await confirm({
         tone: "danger",
-        title: `卸载 ${skill.displayName}？`,
+        title: `${t("uninstallTitle")} · ${skill.displayName}`,
         description: (
           <div>
             <p>
               {skill.storageKind === "symlink"
-                ? "只会删除当前 Agent 的软链接，不会删除 ~/.agents/skills 中的共享 Skill。"
-                : "只会删除 AgentHub 管理的安装目录；Git、Marketplace 和本地来源目录不会被删除。"}
+                ? t("symlinkUninstallDescription")
+                : t("managedUninstallDescription")}
             </p>
             {skill.storageKind === "symlink" ? (
               <p>
-                目标：<code>{skill.path}</code>
+                {t("uninstallTarget")}：<code>{skill.path}</code>
               </p>
             ) : (
               <>
@@ -80,7 +82,7 @@ export function SkillUninstallButton({
             )}
           </div>
         ),
-        confirmLabel: "确认卸载",
+        confirmLabel: t("confirmUninstall"),
       });
       if (!confirmed) return;
       if (skill.storageKind === "symlink") await unlinkSkill(input);
@@ -104,7 +106,7 @@ export function SkillUninstallButton({
         disabled={busy}
         onClick={() => void uninstall()}
       >
-        {busy ? "卸载中…" : "卸载"}
+        {busy ? t("uninstalling") : t("uninstall")}
       </button>
     </>
   );
