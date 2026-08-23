@@ -8,13 +8,22 @@
 
 安装包只支持上述架构和格式。首次发布后，应在干净虚拟机上验证安装、启动、配置扫描、数据库初始化、升级和卸载。
 
-## 应用数据目录
+## 用户数据目录
 
-- Windows：`%APPDATA%\com.jtstudio.agenthub\`
-- macOS：`$HOME/Library/Application Support/com.jtstudio.agenthub/`
-- Linux：`$XDG_DATA_HOME/com.jtstudio.agenthub/`；未设置时为 `$HOME/.local/share/com.jtstudio.agenthub/`
+AgentHub 自己产生的数据统一存放在用户主目录的 `.agenthub` 中，与应用安装目录、工作空间和 Agent 配置目录分离：
 
-卸载应用前应备份该目录。覆盖安装或升级不得主动删除 SQLite、配置备份和操作历史。
+```text
+~/.agenthub/
+├── agent-hub.sqlite3   # 工作空间索引、操作历史和安装元数据
+├── backups/            # 配置备份与 Codex 旧 Skill 归档
+├── skill-sources/      # Skill 来源缓存
+└── logs/               # 本地运行日志
+```
+
+- macOS / Linux：`$HOME/.agenthub/`
+- Windows：`%USERPROFILE%\.agenthub\`
+
+首次运行新版时，如果只存在旧版 Tauri 应用数据目录，AgentHub 会把其中的数据库、备份和来源缓存整体迁移到 `~/.agenthub/`。如果新目录已经包含数据库，旧数据不会覆盖它。卸载应用不会主动删除该目录；覆盖安装或升级也不得删除 SQLite、配置备份和操作历史。
 
 ## V1 已知限制
 

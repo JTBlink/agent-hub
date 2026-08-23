@@ -89,9 +89,15 @@ import {
   DuplicateSkillsPage,
   type DuplicateSkillGroup,
 } from "./DuplicateSkillsPage";
+import { DeepLinkInstallPanel } from "./DeepLinkInstallPanel";
 import { DiagnosticRecoveryPage } from "./DiagnosticRecoveryPage";
 import { ExternalSkillsPage } from "./ExternalSkillsPage";
 import { SubTabs } from "./SubTabs";
+import {
+  listenForDeepLinkInstall,
+  listenForDeepLinkError,
+  type DeepLinkInstallRequest,
+} from "../lib/deep-link";
 
 type Section =
   | "overview"
@@ -369,6 +375,8 @@ export function App() {
     useState<ConfigDocument["agent"]>("claude-code");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [deepLinkRequest, setDeepLinkRequest] =
+    useState<DeepLinkInstallRequest>();
   const [editing, setEditing] = useState(false);
   const [editMode, setEditMode] = useState<"form" | "source">("form");
   const [formState, setFormState] = useState<Record<string, unknown>>({});
@@ -422,6 +430,21 @@ export function App() {
   };
   useEffect(() => {
     scan();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribers = [
+      listenForDeepLinkInstall((req) => {
+        setDeepLinkRequest(req);
+        setSection("skills");
+      }),
+      listenForDeepLinkError((msg) => {
+        setError(`Deep link 错误: ${msg}`);
+      }),
+    ];
+    return () => {
+      unsubscribers.forEach((p) => void p.then((unsub) => unsub()));
+    };
   }, []);
 
   const visibleConfigs =
@@ -699,6 +722,16 @@ export function App() {
             onSave={saveChanges}
             saving={saving}
             searchQuery={searchQuery}
+          />
+        )}
+        {section === "skills" && deepLinkRequest && (
+          <DeepLinkInstallPanel
+            request={deepLinkRequest}
+            onDismiss={() => setDeepLinkRequest(undefined)}
+            onInstalled={() => {
+              setDeepLinkRequest(undefined);
+              refreshSkillInventory();
+            }}
           />
         )}
         {section === "skills" && (
@@ -1958,6 +1991,8 @@ function SkillsCenter({
   onInstalled: (workspaceDirectory?: string) => void;
 }) {
   const [view, setView] = useState<"installed" | "marketplace">("installed");
+  const [selectedAgent, setSelectedAgent] =
+    useState<InstalledSkill["agent"]>("codex");
   const [filter, setFilter] = useState<
     "all" | "global" | "workspace" | "managed" | "external" | "storage"
   >("all");
@@ -1986,11 +2021,12 @@ function SkillsCenter({
           .join(" ")
           .toLocaleLowerCase();
         return (
+          skill.agent === selectedAgent &&
           matchesFilter &&
           (!normalizedQuery || haystack.includes(normalizedQuery))
         );
       }),
-    [filter, normalizedQuery, skills],
+    [filter, normalizedQuery, selectedAgent, skills],
   );
   const groups = useMemo(() => {
     const result = new Map<string, InstalledSkill[]>();
@@ -2143,6 +2179,28 @@ function SkillsCenter({
           onDismiss={() => setLegacyFeedback(undefined)}
         />
       )}
+      <div className="skill-agent-switcher">
+        <label htmlFor="skill-agent-select">查看 Agent Skills</label>
+        <select
+          id="skill-agent-select"
+          value={selectedAgent}
+          onChange={(event) => {
+            setSelectedAgent(event.target.value as InstalledSkill["agent"]);
+            setUpdateTarget(undefined);
+          }}
+        >
+          {defaultAgentIds.map((agentId) => {
+            const count = (skills?.skills ?? []).filter(
+              (skill) => skill.agent === agentId,
+            ).length;
+            return (
+              <option key={agentId} value={agentId}>
+                {getAgentMeta(agentId).name}（{count}）
+              </option>
+            );
+          })}
+        </select>
+      </div>
       <div className="skill-toolbar">
         <div className="source-chips" role="group" aria-label="Skill 筛选">
           {filters.map(([value, label]) => (
@@ -2291,9 +2349,15 @@ function SkillsCenter({
                 <div className="empty-icon">
                   <Icon name="spark" size={24} />
                 </div>
-                <h2>还没有发现 Skill</h2>
+                <h2>
+                  {(skills?.skills.length ?? 0) > 0
+                    ? `${getAgentMeta(selectedAgent).name} 暂无匹配的 Skill`
+                    : "还没有发现 Skill"}
+                </h2>
                 <p>
-                  {normalizedQuery || filter !== "all"
+                  {(skills?.skills.length ?? 0) > 0 ||
+                  normalizedQuery ||
+                  filter !== "all"
                     ? "没有符合当前搜索或筛选条件的 Skill。"
                     : "添加本地目录、Git 仓库或标准 Marketplace 后，在这里统一查看。"}
                 </p>

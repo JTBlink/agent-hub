@@ -44,7 +44,7 @@ export function legacyActionConfirmation(
     "",
     `旧副本：${sourceDirectory}`,
     "",
-    "旧副本会移动到 AgentHub 的 backups/legacy-codex-skills 目录，不会永久删除。完成后会显示完整备份路径。",
+    "旧副本会移动到 ~/.agenthub/backups/legacy-codex-skills 目录，不会永久删除。完成后会显示完整备份路径。",
   ].join("\n");
 }
 
@@ -75,7 +75,9 @@ export function successfulLegacyActionFeedback(
   };
 }
 
-export function failedLegacyActionFeedback(error: unknown): LegacySkillFeedback {
+export function failedLegacyActionFeedback(
+  error: unknown,
+): LegacySkillFeedback {
   return {
     tone: "error",
     title: "Codex Skill 处理未完成",

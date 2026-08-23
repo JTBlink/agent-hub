@@ -1361,6 +1361,36 @@ textarea:focus-visible {
   gap: 12px;
   margin: 0 0 17px;
 }
+.skill-agent-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+}
+.skill-agent-switcher label {
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.skill-agent-switcher select {
+  min-width: 190px;
+  min-height: 40px;
+  padding: 0 30px 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface-deep);
+  font-size: 11px;
+  font-weight: 700;
+}
+.skill-agent-switcher select:hover,
+.skill-agent-switcher select:focus-visible {
+  border-color: var(--teal);
+  color: var(--ink);
+  background: var(--teal-soft);
+}
 .sub-tabs {
   display: flex;
   align-items: center;
@@ -3088,98 +3118,110 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 10px;
 }
-.action-feedback-backdrop {
+/* ── Modal system ─────────────────────────────────────────────── */
+.modal-backdrop {
   position: fixed;
   z-index: 1000;
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 24px;
-  background: rgb(2 7 17 / 76%);
-  backdrop-filter: blur(5px);
+  padding: clamp(16px, 5vw, 48px);
+  background: rgb(2 7 17 / 72%);
+  backdrop-filter: blur(3px);
+  animation: modal-scrim-in 160ms ease-out both;
 }
-.action-feedback-modal {
+.modal-panel {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
+  gap: 16px;
   width: min(560px, 100%);
-  padding: 24px;
-  border: 1px solid #2f765f;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #183c3c, #102637);
+  padding: 28px 28px 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0 0, rgb(22 139 255 / 8%), transparent 13rem),
+    linear-gradient(145deg, #172946, #0e1b33);
   box-shadow:
-    0 28px 90px rgb(0 0 0 / 48%),
+    0 24px 70px rgb(0 0 0 / 50%),
+    0 0 0 1px rgb(255 255 255 / 3%),
     inset 0 1px rgb(255 255 255 / 8%);
+  animation: modal-panel-in 190ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.action-feedback-modal.error {
+.modal-panel.tone-success {
+  border-color: #2b6675;
+  background:
+    radial-gradient(circle at 0 0, rgb(66 217 177 / 11%), transparent 13rem),
+    linear-gradient(145deg, #172946, #0e1b33);
+}
+.modal-panel.tone-error {
   border-color: #8a4a52;
-  background: linear-gradient(145deg, #3b2635, #211f35);
+  background:
+    radial-gradient(circle at 0 0, rgb(255 124 130 / 10%), transparent 13rem),
+    linear-gradient(145deg, #38253a, #211d34);
 }
-.action-feedback-modal-icon {
+.modal-panel.tone-danger {
+  border-color: #71404b;
+  background:
+    radial-gradient(circle at 0 0, rgb(255 124 130 / 10%), transparent 12rem),
+    linear-gradient(145deg, #38253a, #211d34);
+}
+.modal-icon {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
+  margin-top: 4px;
   place-items: center;
   border-radius: 11px;
+  color: var(--blue);
+  background: rgb(22 139 255 / 16%);
+}
+.modal-icon.tone-success {
   color: #77d2ae;
   background: #123f4c;
 }
-.action-feedback-modal.error .action-feedback-modal-icon {
+.modal-icon.tone-error,
+.modal-icon.tone-danger {
   color: #ff9da5;
   background: #4b252e;
 }
-.action-feedback-modal-copy {
+.modal-body {
   min-width: 0;
+  padding-right: 20px;
 }
-.action-feedback-modal-copy h2 {
-  margin: 3px 0 7px;
+.modal-title {
+  margin: 5px 0 8px;
   color: var(--ink);
   font-family: "Space Grotesk", sans-serif;
   font-size: 20px;
+  letter-spacing: -0.025em;
 }
-.action-feedback-modal-copy h2:focus {
+.modal-title:focus {
   outline: 0;
 }
-.action-feedback-modal-copy > p:not(.eyebrow) {
+.modal-content > p {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
 }
-.action-feedback-modal-paths {
-  display: grid;
-  gap: 7px;
-  margin: 15px 0 18px;
-  padding: 11px 12px;
-  border: 1px solid rgb(66 217 177 / 20%);
-  border-radius: 9px;
-  background: rgb(7 18 33 / 48%);
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
 }
-.action-feedback-modal.error .action-feedback-modal-paths {
-  border-color: rgb(255 124 130 / 24%);
+.modal-actions .button {
+  min-height: 42px;
 }
-.action-feedback-modal-paths code {
-  display: block;
-  overflow-wrap: anywhere;
-  color: var(--muted);
-  font:
-    10px/1.55 ui-monospace,
-    SFMono-Regular,
-    Consolas,
-    monospace;
-}
-.action-feedback-modal-copy .button {
-  min-height: 40px;
-}
-.action-feedback-modal-close {
+.modal-close {
   position: absolute;
   top: 14px;
   right: 14px;
   border-color: transparent;
   background: transparent;
 }
-.action-feedback-modal-close:hover {
+.modal-close:hover {
   border-color: #36517b;
 }
 .data-clear-confirm {
@@ -5653,5 +5695,253 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .snapshot-meter i {
     transition: none;
+  }
+}
+
+/* Polished midnight palette: quieter surfaces, clearer hierarchy, and one
+   consistent cyan-to-indigo accent language across the desktop workspace. */
+:root {
+  --ink: #f1f5ff;
+  --muted: #b7c4dc;
+  --quiet: #8292b2;
+  --line: #293a5d;
+  --surface: #111a31;
+  --surface-raised: #172442;
+  --surface-deep: #0b1327;
+  --blue: #69a7ff;
+  --teal: #57dfd0;
+  --teal-soft: #123c46;
+  --violet: #a5a8ff;
+  --violet-soft: #292951;
+  --amber: #f6bd6c;
+  --amber-soft: #453322;
+  --danger: #ff8f9c;
+  --danger-soft: #45283a;
+  --shadow: 0 20px 52px rgb(0 0 0 / 28%);
+}
+
+body {
+  background:
+    radial-gradient(circle at 80% -10%, rgb(91 130 255 / 13%), transparent 30rem),
+    radial-gradient(circle at 12% 105%, rgb(56 214 192 / 9%), transparent 28rem),
+    #080f20;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgb(87 223 208 / 14%);
+}
+
+.sidebar {
+  border-right-color: rgb(66 91 137 / 60%);
+  background: linear-gradient(180deg, #101a34 0%, #0b1429 100%);
+  box-shadow: 12px 0 38px rgb(0 0 0 / 12%);
+}
+
+.brand-mark {
+  border-color: rgb(123 169 255 / 35%);
+  background: linear-gradient(145deg, #233866, #111d3a);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 13%),
+    0 10px 24px rgb(0 0 0 / 32%);
+}
+
+.topbar {
+  background: rgb(8 15 32 / 78%);
+  backdrop-filter: blur(16px);
+}
+
+.main-content {
+  background:
+    linear-gradient(180deg, rgb(12 23 47 / 42%), transparent 23rem),
+    #080f20;
+}
+
+.page {
+  position: relative;
+}
+
+.page::before {
+  position: absolute;
+  top: -34px;
+  right: clamp(20px, 6vw, 90px);
+  width: 180px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(87 223 208 / 55%), transparent);
+  content: "";
+  opacity: 0.7;
+}
+
+.button-primary {
+  border-color: rgb(157 255 235 / 38%);
+  color: #071425;
+  background: linear-gradient(110deg, #6caeff 0%, #57dfd0 100%);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 34%),
+    0 10px 26px rgb(61 183 220 / 20%);
+}
+
+.button-primary:hover {
+  background: linear-gradient(110deg, #88bcff 0%, #78e8db 100%);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 38%),
+    0 12px 30px rgb(61 183 220 / 28%);
+}
+
+.button-secondary {
+  border-color: rgb(174 177 255 / 38%);
+  color: #11152e;
+  background: linear-gradient(135deg, #b0b3ff, #868cf0);
+  box-shadow: inset 0 1px rgb(255 255 255 / 34%);
+}
+
+.button-ghost,
+.icon-button {
+  border-color: rgb(74 101 149 / 68%);
+  background: rgb(20 32 59 / 86%);
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.button-ghost:hover,
+.icon-button:hover {
+  border-color: rgb(113 153 216 / 72%);
+  background: #1a2a4c;
+  box-shadow: inset 0 1px rgb(255 255 255 / 8%);
+}
+
+.surface-card,
+.metric-card,
+.topology-card,
+.config-sidebar,
+.config-detail,
+.skill-group,
+.history-row,
+.workspace-row,
+.diagnostic-card {
+  border-color: rgb(56 79 122 / 82%);
+  background: linear-gradient(145deg, rgb(22 35 65 / 96%), rgb(14 24 47 / 96%));
+  box-shadow: var(--shadow);
+}
+
+.skill-group {
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.group-heading {
+  padding-bottom: 15px;
+}
+
+.skill-row {
+  border-top-color: rgb(50 72 111 / 65%);
+  transition:
+    background var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+
+.skill-row:hover {
+  border-top-color: rgb(87 223 208 / 42%);
+  background: linear-gradient(90deg, rgb(87 223 208 / 7%), transparent 72%);
+}
+
+.skill-icon {
+  border: 1px solid rgb(165 168 255 / 20%);
+  background: linear-gradient(145deg, #303269, #24264d);
+  box-shadow: inset 0 1px rgb(255 255 255 / 8%);
+}
+
+.skill-agent-switcher {
+  margin: 22px 0 14px;
+  padding: 13px 15px;
+  border: 1px solid rgb(56 79 122 / 75%);
+  border-radius: 12px;
+  background: linear-gradient(105deg, rgb(19 31 58 / 84%), rgb(14 25 49 / 68%));
+  box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.skill-agent-switcher label {
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.skill-agent-switcher select {
+  border-color: rgb(94 125 181 / 75%);
+  color: var(--ink);
+  background: #111e3a;
+  box-shadow: inset 0 1px rgb(255 255 255 / 6%);
+}
+
+.skill-agent-switcher select:hover,
+.skill-agent-switcher select:focus-visible {
+  border-color: var(--teal);
+  background: #172a4b;
+}
+
+.chip {
+  border-color: rgb(70 97 145 / 78%);
+  color: var(--muted);
+  background: #111c35;
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%);
+}
+
+.chip:hover,
+.chip.active {
+  border-color: rgb(87 223 208 / 72%);
+  color: #8ef1e3;
+  background: #123c46;
+}
+
+.scope-pill.global {
+  color: #8ec2ff;
+  background: #172f55;
+}
+
+.scope-pill.workspace {
+  color: #d0c7ff;
+  background: #2c2b59;
+}
+
+.managed-pill {
+  color: #a8eadd;
+  background: #173d43;
+}
+
+.skill-update-button {
+  border-color: rgb(87 223 208 / 50%);
+  color: #8ef1e3;
+  background: rgb(18 60 70 / 76%);
+}
+
+.skill-update-button:hover {
+  border-color: var(--teal);
+  background: #1a535b;
+}
+
+.source-guide,
+.skill-install-plan {
+  border-color: rgb(87 223 208 / 42%);
+  background:
+    radial-gradient(circle at 94% 0%, rgb(87 223 208 / 8%), transparent 14rem),
+    linear-gradient(145deg, #122c3c, #101c35);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 22%);
+}
+
+.alert-warning {
+  border-color: rgb(246 189 108 / 48%);
+  background: rgb(72 50 31 / 78%);
+}
+
+@media (max-width: 560px) {
+  .skill-agent-switcher {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .skill-agent-switcher select {
+    width: 100%;
   }
 }

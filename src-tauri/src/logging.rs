@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use log::{error, info};
 use tauri_plugin_log::{Target, TargetKind};
 
@@ -6,11 +8,12 @@ use crate::{agents::ConfigStatus, Agent, Scope};
 const TARGET: &str = "agent_hub";
 
 /// Builds the single logging adapter used by the desktop runtime.
-pub fn plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+pub fn plugin(log_directory: PathBuf) -> tauri::plugin::TauriPlugin<tauri::Wry> {
     tauri_plugin_log::Builder::default()
         .targets([
             Target::new(TargetKind::Stdout),
-            Target::new(TargetKind::LogDir {
+            Target::new(TargetKind::Folder {
+                path: log_directory,
                 file_name: Some("agent-hub".into()),
             }),
         ])
@@ -87,7 +90,7 @@ impl FailureCode {
 }
 
 pub fn database_opened() {
-    info!(target: TARGET, "event=database_opened location=app_data");
+    info!(target: TARGET, "event=database_opened location=user_data");
 }
 
 pub fn command_failed(command: Command, code: FailureCode) {

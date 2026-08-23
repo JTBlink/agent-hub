@@ -62,9 +62,7 @@ export function MarketplaceBrowser({
   const editingAddressRef = useRef(false);
   const initialUrlRef = useRef(request.url);
   const lastRequestRef = useRef(request.id);
-  const [label] = useState(
-    () => `marketplace-browser-${Date.now()}-${++browserInstance}`,
-  );
+  const [label, setLabel] = useState<string>();
   const [state, setState] = useState<
     "creating" | "ready" | "unavailable" | "error"
   >("creating");
@@ -81,6 +79,7 @@ export function MarketplaceBrowser({
 
     const viewport = viewportRef.current;
     if (!viewport) return;
+    const webviewLabel = `marketplace-browser-${Date.now()}-${++browserInstance}`;
     let disposed = false;
     let animationFrame = 0;
     let webviewCreated = false;
@@ -120,7 +119,7 @@ export function MarketplaceBrowser({
     };
 
     const bounds = viewport.getBoundingClientRect();
-    const webview = new Webview(getCurrentWindow(), label, {
+    const webview = new Webview(getCurrentWindow(), webviewLabel, {
       url: initialUrlRef.current,
       x: Math.round(bounds.left + 1),
       y: Math.round(bounds.top + 1),
@@ -135,6 +134,7 @@ export function MarketplaceBrowser({
     void webview.once("tauri://created", () => {
       if (disposed) return;
       webviewCreated = true;
+      setLabel(webviewLabel);
       setState("ready");
       setMessage("");
       syncBounds();
@@ -157,12 +157,15 @@ export function MarketplaceBrowser({
       window.removeEventListener("resize", syncBounds);
       document.removeEventListener("scroll", syncBounds, true);
       webviewRef.current = undefined;
+      setLabel(undefined);
       void webview.close().catch(() => undefined);
     };
-  }, [label]);
+  }, []);
 
   useEffect(() => {
-    if (state !== "ready" || request.id === lastRequestRef.current) return;
+    if (!label || state !== "ready" || request.id === lastRequestRef.current) {
+      return;
+    }
     lastRequestRef.current = request.id;
     setCurrentUrl(request.url);
     setAddress(request.url);
@@ -172,7 +175,7 @@ export function MarketplaceBrowser({
   }, [label, request, state]);
 
   useEffect(() => {
-    if (state !== "ready") return;
+    if (!label || state !== "ready") return;
     const poll = window.setInterval(() => {
       void getMarketplaceBrowserUrl(label)
         .then((url) => {
@@ -187,6 +190,7 @@ export function MarketplaceBrowser({
   async function submitAddress(event: FormEvent) {
     event.preventDefault();
     try {
+      if (!label) throw new Error("内嵌浏览器仍在启动，请稍后重试。");
       const url = normalizeMarketplaceBrowserUrl(address);
       setMessage("");
       setCurrentUrl(url);
@@ -198,6 +202,7 @@ export function MarketplaceBrowser({
   }
 
   function control(action: MarketplaceBrowserAction) {
+    if (!label) return;
     setMessage("");
     void controlMarketplaceBrowser(label, action).catch(() => {
       setMessage("浏览器操作失败，请稍后重试。");

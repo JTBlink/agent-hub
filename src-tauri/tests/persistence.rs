@@ -23,6 +23,43 @@ fn first_open_creates_and_migrates_the_database() {
 }
 
 #[test]
+fn relocating_user_data_updates_recorded_backup_paths() {
+    let directory = tempdir().expect("temporary directory");
+    let database_path = directory.path().join("agent-hub.sqlite3");
+    let previous_root = directory.path().join("legacy-data/backups");
+    let current_root = directory.path().join(".agenthub/backups");
+    let previous_backup = previous_root.join("42/before");
+    let database = Database::open(&database_path).expect("database opens");
+    database
+        .record_backup(&NewConfigBackup {
+            config_file_id: None,
+            backup_path: previous_backup.to_string_lossy().into_owned(),
+            original_checksum: "before".into(),
+            operation_type: "migration-fixture".into(),
+        })
+        .expect("backup metadata");
+
+    assert_eq!(
+        database
+            .relocate_backup_paths(&previous_root, &current_root)
+            .expect("backup paths relocate"),
+        1
+    );
+    drop(database);
+
+    let connection = rusqlite::Connection::open(database_path).expect("database reopens");
+    let stored_path: String = connection
+        .query_row("SELECT backup_path FROM config_backups", [], |row| {
+            row.get(0)
+        })
+        .expect("stored backup path");
+    assert_eq!(
+        stored_path,
+        current_root.join("42/before").to_string_lossy()
+    );
+}
+
+#[test]
 fn normalized_workspace_paths_are_unique() {
     let directory = tempdir().expect("temporary directory");
     let database = Database::open(directory.path().join("state.sqlite3")).expect("database opens");
@@ -291,7 +328,7 @@ fn global_config_indexes_are_upserted_and_history_is_transactional() {
     let config = ConfigIndex {
         agent: Agent::Codex,
         scope: Scope::Global,
-        normalized_path: "/home/demo/.codex/config.toml".into(),
+        normalized_path: "~/.codex/config.toml".into(),
         format: ConfigFormat::Toml,
         checksum: "before".into(),
         parse_status: ParseStatus::Valid,
@@ -362,7 +399,7 @@ fn config_index_scope_must_match_workspace_association() {
     let global = ConfigIndex {
         agent: Agent::OpenCode,
         scope: Scope::Global,
-        normalized_path: "/home/demo/.config/opencode/opencode.json".into(),
+        normalized_path: "~/.config/opencode/opencode.json".into(),
         format: ConfigFormat::Jsonc,
         checksum: "checksum".into(),
         parse_status: ParseStatus::Valid,
@@ -445,7 +482,7 @@ fn version_one_database_upgrades_and_backfills_history_snapshots() {
             "CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
              INSERT INTO schema_migrations (version) VALUES (1);
              INSERT INTO config_files (id, workspace_id, agent, scope, normalized_path, format, checksum, parse_status)
-             VALUES (1, NULL, 'codex', 'global', '/home/demo/.codex/config.toml', 'toml', 'before', 'valid');
+             VALUES (1, NULL, 'codex', 'global', '~/.codex/config.toml', 'toml', 'before', 'valid');
              INSERT INTO config_backups (id, config_file_id, backup_path, original_checksum, operation_type)
              VALUES (1, 1, '/app-data/backups/before', 'before', 'edit');
              INSERT INTO config_operations (id, config_file_id, operation_type, before_checksum, after_checksum, backup_id, result)
@@ -466,6 +503,6 @@ fn version_one_database_upgrades_and_backfills_history_snapshots() {
         .expect("history entry");
     assert_eq!(entry.agent, Agent::Codex);
     assert_eq!(entry.scope, Scope::Global);
-    assert_eq!(entry.path, "/home/demo/.codex/config.toml");
+    assert_eq!(entry.path, "~/.codex/config.toml");
     assert_eq!(entry.format, ConfigFormat::Toml);
 }

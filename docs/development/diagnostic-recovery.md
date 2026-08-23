@@ -10,7 +10,7 @@
 {
   "request": {
     "diagnosticCode": "config:toml-syntax",
-    "resourcePath": "/Users/me/.codex/config.toml",
+    "resourcePath": "~/.codex/config.toml",
     "action": "edit_config",
     "format": "toml",
     "replacement": "model = \"gpt-5\"\n"
@@ -45,7 +45,7 @@
 {
   "request": {
     "diagnosticCode": "config:toml-syntax",
-    "resourcePath": "/Users/me/.codex/config.toml",
+    "resourcePath": "~/.codex/config.toml",
     "recoveryId": "recovery-1",
     "format": "toml",
     "expectedChecksum": "<configPreview.before.checksum>",
