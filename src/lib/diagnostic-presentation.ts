@@ -8,6 +8,8 @@ const agentNames: Record<string, string> = {
 
 const problemLabels: Record<string, string> = {
   "skill:symlink-skipped": "该 Skill 是符号链接，安全扫描已跳过。",
+  "skill:codex-legacy-location":
+    "该 Skill 仅安装在 Codex 旧版兼容目录中。",
   "skill:frontmatter-missing": "SKILL.md 缺少开头的 YAML 元数据。",
   "skill:frontmatter-invalid": "SKILL.md 开头的 YAML 元数据格式不正确。",
   "skill:name-invalid": "Skill 名称不符合小写字母、数字和连字符规范。",
@@ -61,7 +63,7 @@ export function diagnosticSubject(item: UnifiedDiagnostic) {
 
 export function diagnosticProblem(item: UnifiedDiagnostic) {
   if (item.code.startsWith("skill:duplicate-name:")) {
-    return "多个安装位置存在同名 Skill，实际生效版本可能不确定。";
+    return "同一个 Agent 在多个目录发现了同名 Skill，副本内容可能已经漂移。";
   }
   return (
     problemLabels[item.code] ??
@@ -69,6 +71,15 @@ export function diagnosticProblem(item: UnifiedDiagnostic) {
       ? "该 Skill 的结构或来源存在问题，可能无法被 Agent 正确加载。"
       : item.impact)
   );
+}
+
+export function diagnosticRealSkillPath(item: UnifiedDiagnostic) {
+  if (item.code !== "skill:symlink-skipped") return undefined;
+  const marker = "真实 Skill 路径：";
+  const markerIndex = item.impact.indexOf(marker);
+  return markerIndex >= 0
+    ? item.impact.slice(markerIndex + marker.length).trim()
+    : undefined;
 }
 
 export function matchingSkillsForDiagnostic(

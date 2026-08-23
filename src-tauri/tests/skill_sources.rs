@@ -1,8 +1,9 @@
 use std::fs;
 
 use agent_hub_lib::skills::{
-    preset_git_sources, scan_installed_skills, GitLocator, GitSourceAdapter, LocalSourceAdapter,
-    MarketplaceSourceAdapter, SkillSourceAdapter, SkillsShSourceAdapter, SourceError, SourceKind,
+    preset_git_sources, resolve_legacy_codex_skill, scan_installed_skills, GitLocator,
+    GitSourceAdapter, LegacyCodexSkillAction, LocalSourceAdapter, MarketplaceSourceAdapter,
+    SkillSourceAdapter, SkillsShSourceAdapter, SourceError, SourceKind,
 };
 use tempfile::tempdir;
 
@@ -99,4 +100,61 @@ fn inventory_reports_scope_path_external_management_and_duplicates_without_mutat
         .duplicate_names
         .iter()
         .any(|name| name == "review"));
+    assert_eq!(inventory.roots.len(), 3);
+    assert!(inventory.roots.iter().all(|root| root.bytes > 0));
+    assert!(inventory
+        .roots
+        .iter()
+        .any(|root| root.path.ends_with(".agents/skills") && root.skill_count == 1));
+}
+
+#[test]
+fn legacy_codex_skill_is_migrated_to_the_preferred_global_root() {
+    let home = tempdir().expect("home");
+    let backups = tempdir().expect("backups");
+    let legacy_root = home.path().join(".codex/skills");
+    write_skill(&legacy_root, "review");
+
+    let inventory = scan_installed_skills(home.path(), None::<&std::path::Path>);
+    assert!(inventory.duplicate_names.is_empty());
+    assert!(inventory
+        .diagnostics
+        .iter()
+        .any(|item| item.code == "codex-legacy-location"));
+
+    let source = legacy_root.join("review/SKILL.md");
+    let result = resolve_legacy_codex_skill(
+        home.path(),
+        backups.path(),
+        &source,
+        LegacyCodexSkillAction::Migrate,
+    )
+    .expect("legacy Skill migrates");
+
+    assert_eq!(
+        result.destination_path,
+        home.path().join(".agents/skills/review")
+    );
+    assert!(!legacy_root.join("review").exists());
+    assert!(home.path().join(".agents/skills/review/SKILL.md").is_file());
+}
+
+#[test]
+fn redundant_codex_legacy_copy_is_archived_instead_of_deleted() {
+    let home = tempdir().expect("home");
+    let backups = tempdir().expect("backups");
+    write_skill(&home.path().join(".agents/skills"), "review");
+    write_skill(&home.path().join(".codex/skills"), "review");
+
+    let result = resolve_legacy_codex_skill(
+        home.path(),
+        backups.path(),
+        home.path().join(".codex/skills/review/SKILL.md"),
+        LegacyCodexSkillAction::Archive,
+    )
+    .expect("legacy copy archives");
+
+    assert!(!home.path().join(".codex/skills/review").exists());
+    assert!(result.destination_path.join("SKILL.md").is_file());
+    assert!(home.path().join(".agents/skills/review/SKILL.md").is_file());
 }

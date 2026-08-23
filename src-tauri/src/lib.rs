@@ -846,6 +846,24 @@ fn uninstall_skill_for_state(
     .map_err(|error| error.to_string())
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LegacyCodexSkillRequest {
+    source_path: String,
+    action: skills::LegacyCodexSkillAction,
+}
+
+#[tauri::command]
+fn resolve_legacy_codex_skill(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    input: LegacyCodexSkillRequest,
+) -> Result<skills::LegacyCodexSkillResolution, String> {
+    let home = app.path().home_dir().map_err(|error| error.to_string())?;
+    skills::resolve_legacy_codex_skill(&home, &state.backup_root, input.source_path, input.action)
+        .map_err(|error| error.to_string())
+}
+
 #[tauri::command]
 fn collect_diagnostics(
     app: tauri::AppHandle,
@@ -883,12 +901,13 @@ fn collect_all_diagnostics(
         .flat_map(diagnostics::from_config)
         .collect::<Vec<_>>();
     let inventory = skills::scan_installed_skills(home_directory, None::<&Path>);
-    collected.extend(
-        inventory
-            .diagnostics
-            .iter()
-            .map(|item| diagnostics::from_skill(item, None, None)),
-    );
+    collected.extend(inventory.diagnostics.iter().map(|item| {
+        if item.code == "codex-legacy-location" {
+            diagnostics::from_skill(item, Some(Agent::Codex), Some(Scope::Global))
+        } else {
+            diagnostics::from_skill(item, None, None)
+        }
+    }));
     for name in &inventory.duplicate_names {
         for agent in Agent::ALL {
             for scope in Scope::ALL {
@@ -1526,6 +1545,7 @@ fn restore_config_history(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(logging::plugin())
         .setup(|app| {
             let data_directory = app.path().app_data_dir().map_err(|error| {
@@ -1573,6 +1593,7 @@ pub fn run() {
             apply_skill_install,
             set_skill_enabled,
             uninstall_skill,
+            resolve_legacy_codex_skill,
             collect_diagnostics,
             preview_diagnostic_recovery,
             execute_diagnostic_recovery,

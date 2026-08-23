@@ -29,7 +29,9 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
 
 ## 代码规范
 
-完整规范见 [ADR-0005：代码架构规范与 SOLID 约束](../adr/0005-code-architecture-conventions.md)。
+完整规范见 [ADR-0005：代码架构规范与 SOLID 约束](../adr/0005-code-architecture-conventions.md) 和 [ADR-0006：文件体量、模块拆分与代码复用规范](../adr/0006-file-size-and-reuse-conventions.md)。
+
+新增功能遵循以下硬规则：React/TypeScript 文件超过 600 行、Rust 模块超过 800 行时必须拆分；函数超过 80 行需要说明原因；重复的 Agent 路径、诊断文案、安装安全校验和标签必须复用统一实现，不能在页面中重新拼接。
 
 **审查时重点检查：**
 

@@ -13,6 +13,8 @@
 - `docs/`：产品、架构、集成和开发说明。
 - `.scratch/<feature>/`：存放可提交的规格、任务、依赖和开发状态；它是本仓库的正式 Issue tracker。
 
+新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。
+
 ## 构建、测试与开发命令
 
 - `npm run tauri dev`：启动桌面应用开发环境。
