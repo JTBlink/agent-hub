@@ -244,6 +244,7 @@ export interface InstructionFile {
   path: string;
   kind: string;
   scope: ConfigScope;
+  isSymlink?: boolean;
 }
 
 export interface WorkspaceScanResult {
@@ -452,6 +453,15 @@ export function removeWorkspace(workspaceId: number): Promise<boolean> {
 
 export function scanWorkspace(path: string): Promise<WorkspaceScanResult> {
   return invoke<WorkspaceScanResult>("scan_workspace", { path });
+}
+
+export function createClaudeInstructionSymlink(
+  workspacePath: string,
+): Promise<{ linkPath: string; targetPath: string }> {
+  return invoke<{ linkPath: string; targetPath: string }>(
+    "create_claude_instruction_symlink",
+    { workspacePath },
+  );
 }
 
 export function previewConfigEdit(

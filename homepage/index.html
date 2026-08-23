@@ -3,228 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#08101f" />
-  <meta name="description" content="AgentHub - AI Agent 工作空间管理器。统一管理 Claude Code、Codex、OpenCode 的配置与 Skills。" />
-  <title>AgentHub - AI Agent Workspace Manager</title>
+  <meta name="theme-color" content="#0a1020" />
+  <meta name="description" content="AgentHub - 本地优先的 AI Agent 工作空间管理器。统一管理 Claude Code、Codex、OpenCode 的配置与 Skills。" />
+  <title>AgentHub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #08101f;
-      --surface: #111d35;
-      --surface-raised: #182748;
-      --ink: #edf4ff;
-      --muted: #a7b9d6;
-      --quiet: #7184a5;
-      --line: #263b67;
-      --blue: #168bff;
-      --teal: #42d9b1;
-      --violet: #9b9cff;
-      --amber: #f3b75f;
-      --gradient-brand: linear-gradient(135deg, #168bff 0%, #4f8dff 40%, #42d9b1 100%);
-      --radius: 12px;
-      --radius-lg: 20px;
-      --shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-    }
-
-    html {
-      scroll-behavior: smooth;
+      --bg: #0a1020;
+      --surface: #111b2e;
+      --ink: #dce6f5;
+      --body: #9aacc4;
+      --dim: #5c7190;
+      --line: #1c2b42;
+      --accent: #3ea8ff;
+      --accent-hover: #5bb8ff;
     }
 
     body {
-      font-family: Inter, "Segoe UI Variable Text", ui-sans-serif, system-ui, sans-serif;
+      font-family: Inter, -apple-system, system-ui, sans-serif;
       background: var(--bg);
       color: var(--ink);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      overflow-x: hidden;
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
+    a { color: inherit; text-decoration: none; }
 
-    /* ─── NAV ─── */
+    /* NAV */
     .nav {
-      position: fixed;
+      position: sticky;
       top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 16px 32px;
+      z-index: 50;
+      height: 52px;
+      padding: 0 clamp(20px, 4vw, 48px);
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      backdrop-filter: blur(16px) saturate(1.4);
-      background: rgba(8, 16, 31, 0.8);
-      border-bottom: 1px solid rgba(38, 59, 103, 0.4);
-      transition: background 0.3s;
+      background: rgba(10, 16, 32, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
     }
 
     .nav-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      font-size: 15px;
       font-weight: 700;
-      font-size: 18px;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+      margin-right: auto;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 24px;
       list-style: none;
     }
 
     .nav-links a {
-      color: var(--muted);
-      font-size: 14px;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-
-    .nav-links a:hover {
-      color: var(--ink);
-    }
-
-    .nav-cta {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 20px;
-      border-radius: 8px;
-      background: var(--gradient-brand);
-      color: #fff;
-      font-weight: 600;
-      font-size: 14px;
-      transition: opacity 0.2s, transform 0.2s;
-    }
-
-    .nav-cta:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-
-    /* ─── HERO ─── */
-    .hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-      overflow: hidden;
-    }
-
-    .hero-bg {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      pointer-events: none;
-    }
-
-    .hero-bg::before {
-      content: "";
-      position: absolute;
-      top: -40%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 140%;
-      height: 80%;
-      background: radial-gradient(ellipse at center, rgba(22, 139, 255, 0.12) 0%, rgba(66, 217, 177, 0.06) 40%, transparent 70%);
-    }
-
-    .hero-bg::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 200px;
-      background: linear-gradient(to top, var(--bg), transparent);
-    }
-
-    .hero-glow {
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(22, 139, 255, 0.08) 0%, transparent 60%);
-      animation: pulse 6s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
-      50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
-    }
-
-    .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 16px;
-      border-radius: 100px;
-      background: rgba(22, 139, 255, 0.1);
-      border: 1px solid rgba(22, 139, 255, 0.3);
       font-size: 13px;
-      font-weight: 500;
-      color: var(--blue);
-      margin-bottom: 32px;
-      position: relative;
+      color: var(--dim);
+      transition: color 0.15s;
     }
 
-    .hero-badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--teal);
-      animation: blink 2s ease-in-out infinite;
+    .nav-links a:hover { color: var(--ink); }
+
+    .nav-links .dl-link {
+      color: var(--accent);
+      font-weight: 600;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+    /* HERO */
+    .hero {
+      padding: clamp(60px, 10vw, 120px) clamp(20px, 4vw, 48px) 0;
+      max-width: 980px;
     }
 
     .hero h1 {
-      font-size: clamp(40px, 7vw, 72px);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      margin-bottom: 24px;
-      position: relative;
-    }
-
-    .hero h1 .gradient-text {
-      background: var(--gradient-brand);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: clamp(32px, 5.5vw, 52px);
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      line-height: 1.15;
+      margin-bottom: 16px;
     }
 
     .hero-desc {
-      font-size: clamp(16px, 2.2vw, 20px);
-      color: var(--muted);
-      max-width: 640px;
-      margin-bottom: 48px;
+      font-size: clamp(15px, 1.6vw, 17px);
+      color: var(--body);
+      max-width: 480px;
       line-height: 1.7;
-      position: relative;
+      margin-bottom: 32px;
     }
 
     .hero-actions {
@@ -232,627 +101,437 @@
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
-      justify-content: center;
-      position: relative;
     }
 
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 32px;
-      border-radius: 10px;
-      background: var(--gradient-brand);
-      color: #fff;
-      font-weight: 600;
-      font-size: 16px;
-      border: none;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 24px rgba(22, 139, 255, 0.3);
-    }
-
-    .btn-primary:hover {
-      opacity: 0.92;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(22, 139, 255, 0.4);
-    }
-
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 32px;
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--ink);
-      font-weight: 600;
-      font-size: 16px;
-      border: 1px solid var(--line);
-      cursor: pointer;
-      transition: background 0.2s, transform 0.2s, border-color 0.2s;
-    }
-
-    .btn-secondary:hover {
-      background: var(--surface-raised);
-      border-color: var(--blue);
-      transform: translateY(-2px);
-    }
-
-    /* ─── HERO VISUAL ─── */
-    .hero-visual {
-      position: relative;
-      margin-top: 64px;
-      width: 100%;
-      max-width: 1000px;
-    }
-
-    .hero-visual img {
-      width: 100%;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow), 0 0 80px rgba(22, 139, 255, 0.1);
-    }
-
-    .hero-visual::before {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      border-radius: var(--radius-lg);
-      background: linear-gradient(180deg, rgba(22, 139, 255, 0.2) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    /* ─── SECTION ─── */
-    .section {
-      padding: 120px 24px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 64px;
-    }
-
-    .section-label {
-      display: inline-block;
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--teal);
-      margin-bottom: 16px;
-    }
-
-    .section-title {
-      font-size: clamp(28px, 4vw, 44px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-    }
-
-    .section-desc {
-      font-size: 17px;
-      color: var(--muted);
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    /* ─── FEATURES GRID ─── */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-
-    .feature-card {
-      padding: 32px;
-      border-radius: var(--radius);
-      background: var(--surface);
-      border: 1px solid var(--line);
-      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
-    }
-
-    .feature-card:hover {
-      border-color: rgba(22, 139, 255, 0.4);
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
-    }
-
-    .feature-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
-    .feature-icon.blue { background: rgba(22, 139, 255, 0.12); color: var(--blue); }
-    .feature-icon.teal { background: rgba(66, 217, 177, 0.12); color: var(--teal); }
-    .feature-icon.violet { background: rgba(155, 156, 255, 0.12); color: var(--violet); }
-    .feature-icon.amber { background: rgba(243, 183, 95, 0.12); color: var(--amber); }
-
-    .feature-card h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-
-    .feature-card p {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    /* ─── AGENTS SECTION ─── */
-    .agents-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-      margin-top: 48px;
-    }
-
-    .agent-card {
-      padding: 32px;
-      border-radius: var(--radius);
-      background: var(--surface);
-      border: 1px solid var(--line);
-      text-align: center;
-      transition: border-color 0.3s, transform 0.3s;
-    }
-
-    .agent-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(22, 139, 255, 0.3);
-    }
-
-    .agent-mark {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-
-    .agent-mark.violet { background: rgba(155, 156, 255, 0.15); color: var(--violet); }
-    .agent-mark.teal { background: rgba(66, 217, 177, 0.15); color: var(--teal); }
-    .agent-mark.amber { background: rgba(243, 183, 95, 0.15); color: var(--amber); }
-
-    .agent-card h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .agent-card p {
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    /* ─── INSTALL ─── */
-    .install-section {
-      text-align: center;
-      padding: 120px 24px;
-    }
-
-    .install-box {
-      display: inline-flex;
-      align-items: center;
-      gap: 16px;
-      padding: 16px 32px;
-      border-radius: var(--radius);
-      background: var(--surface);
-      border: 1px solid var(--line);
-      font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace;
-      font-size: 15px;
-      color: var(--muted);
-      margin-top: 32px;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    .install-box:hover {
-      border-color: var(--blue);
-    }
-
-    .install-box code {
-      color: var(--ink);
-    }
-
-    .install-box .copy-hint {
-      font-size: 12px;
-      color: var(--quiet);
-      font-family: Inter, sans-serif;
-    }
-
-    /* ─── PLATFORMS ─── */
-    .platforms {
-      display: flex;
-      justify-content: center;
-      gap: 24px;
-      margin-top: 40px;
-      flex-wrap: wrap;
-    }
-
-    .platform-badge {
+    .btn-dl {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 10px 20px;
-      border-radius: 8px;
-      background: var(--surface);
-      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--accent);
+      color: #0a1020;
       font-size: 14px;
-      font-weight: 500;
-      color: var(--muted);
-      transition: border-color 0.2s, color 0.2s;
+      font-weight: 600;
+      transition: background 0.15s;
     }
 
-    .platform-badge:hover {
-      border-color: var(--blue);
+    .btn-dl:hover { background: var(--accent-hover); }
+
+    .btn-gh {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 6px;
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--body);
+      font-size: 14px;
+      font-weight: 500;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-gh:hover {
+      border-color: var(--dim);
       color: var(--ink);
     }
 
-    /* ─── FOOTER ─── */
-    .footer {
-      padding: 48px 24px;
-      border-top: 1px solid var(--line);
-      text-align: center;
+    .hero-version {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
     }
 
-    .footer-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    /* SCREENSHOT */
+    .screenshot {
+      margin: 56px auto 0;
+      padding: 0 clamp(20px, 4vw, 48px);
+      max-width: 1060px;
     }
 
-    .footer-brand {
+    .screenshot-frame {
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .screenshot-bar {
+      height: 36px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      padding: 0 12px;
+      gap: 6px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .screenshot-bar i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--line);
+    }
+
+    .screenshot-frame img {
+      width: 100%;
+      display: block;
+    }
+
+    /* PLATFORMS */
+    .platforms {
+      max-width: 980px;
+      padding: 80px clamp(20px, 4vw, 48px) 0;
+    }
+
+    .platforms h2 {
+      font-size: 13px;
       font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 20px;
+    }
+
+    .platform-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .platform-cell {
+      padding: 20px;
+      border-right: 1px solid var(--line);
+    }
+
+    .platform-cell:last-child { border-right: none; }
+
+    .platform-cell h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .platform-cell .meta {
+      font-size: 12px;
+      color: var(--dim);
+      margin-bottom: 12px;
+    }
+
+    .platform-cell .links {
+      display: flex;
+      gap: 8px;
+    }
+
+    .platform-cell .links a {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: rgba(62, 168, 255, 0.08);
+      transition: background 0.15s;
+    }
+
+    .platform-cell .links a:hover {
+      background: rgba(62, 168, 255, 0.15);
+    }
+
+    .platforms-note {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--dim);
+    }
+
+    .platforms-note a { color: var(--accent); }
+
+    /* ABOUT */
+    .about {
+      max-width: 980px;
+      padding: 80px clamp(20px, 4vw, 48px) 0;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 40px;
+    }
+
+    .about-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding-top: 3px;
+    }
+
+    .about-content p {
       font-size: 15px;
+      color: var(--body);
+      margin-bottom: 24px;
+      line-height: 1.7;
+      max-width: 560px;
+    }
+
+    .about-list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .about-list li {
+      font-size: 14px;
+      color: var(--body);
+      padding-left: 16px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .about-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 6px;
+      height: 1px;
+      background: var(--dim);
+    }
+
+    /* CHANGELOG */
+    .changelog-section {
+      max-width: 980px;
+      padding: 80px clamp(20px, 4vw, 48px) 0;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 40px;
+    }
+
+    .cl-list {
+      max-width: 560px;
+    }
+
+    .cl-entry {
+      padding-bottom: 32px;
+      border-left: 1px solid var(--line);
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .cl-entry::before {
+      content: "";
+      position: absolute;
+      left: -3px;
+      top: 6px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .cl-ver {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .cl-date {
+      font-size: 12px;
+      color: var(--dim);
+      margin-bottom: 10px;
+    }
+
+    .cl-entry ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .cl-entry li {
+      font-size: 13px;
+      color: var(--body);
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+
+    .cl-more {
+      margin-top: 4px;
+      padding-left: 20px;
+    }
+
+    .cl-more a {
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* FOOTER */
+    .footer {
+      max-width: 980px;
+      padding: 60px clamp(20px, 4vw, 48px) 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      margin-top: 80px;
+    }
+
+    .footer-left {
+      font-size: 12px;
+      color: var(--dim);
     }
 
     .footer-links {
       display: flex;
-      gap: 24px;
+      gap: 20px;
       list-style: none;
     }
 
     .footer-links a {
-      font-size: 14px;
-      color: var(--quiet);
-      transition: color 0.2s;
+      font-size: 12px;
+      color: var(--dim);
+      transition: color 0.15s;
     }
 
-    .footer-links a:hover {
-      color: var(--ink);
-    }
+    .footer-links a:hover { color: var(--ink); }
 
-    .footer-copy {
-      font-size: 13px;
-      color: var(--quiet);
-    }
-
-    /* ─── TOPOLOGY ─── */
-    .topology-visual {
-      position: relative;
-      width: 100%;
-      max-width: 480px;
-      margin: 0 auto 48px;
-    }
-
-    .topology-visual svg {
-      width: 100%;
-      height: auto;
-    }
-
-    /* ─── RESPONSIVE ─── */
+    /* RESPONSIVE */
     @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .features-grid { grid-template-columns: 1fr; }
-      .agents-row { grid-template-columns: 1fr; }
-      .hero { padding: 100px 20px 60px; }
-      .section { padding: 80px 20px; }
-      .footer-content { flex-direction: column; gap: 16px; }
-      .install-box { flex-direction: column; gap: 8px; padding: 16px 20px; }
+      .nav-links { gap: 16px; }
+      .nav-links li:not(:last-child):not(:nth-last-child(2)) { display: none; }
+      .platform-row { grid-template-columns: 1fr; }
+      .platform-cell { border-right: none; border-bottom: 1px solid var(--line); }
+      .platform-cell:last-child { border-bottom: none; }
+      .about { grid-template-columns: 1fr; gap: 12px; }
+      .changelog-section { grid-template-columns: 1fr; gap: 12px; }
+      .footer { flex-direction: column; gap: 12px; }
     }
 
-    @media (max-width: 1024px) and (min-width: 769px) {
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* ─── REDUCED MOTION ─── */
     @media (prefers-reduced-motion: reduce) {
-      .hero-glow { animation: none; }
-      .hero-badge-dot { animation: none; }
       html { scroll-behavior: auto; }
-      .feature-card,
-      .agent-card,
-      .btn-primary,
-      .btn-secondary { transition: none; }
+    }
+
+    /* Focus */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
   </style>
 </head>
 <body>
-  <!-- NAV -->
-  <nav class="nav" role="navigation" aria-label="Main">
-    <a href="#" class="nav-brand">
-      <svg width="28" height="28" viewBox="0 0 64 64" aria-hidden="true">
-        <defs>
-          <linearGradient id="brand-grad" x1="10" y1="8" x2="55" y2="57">
-            <stop offset="0" stop-color="#168bff" />
-            <stop offset="0.52" stop-color="#4f8dff" />
-            <stop offset="1" stop-color="#42d9b1" />
-          </linearGradient>
-        </defs>
-        <path d="M32 12v14M15 48l12-9M49 48l-12-9" stroke="#263b67" stroke-width="3" stroke-linecap="round" fill="none" />
-        <path d="M32 10v16M13 49l14-10M51 49 37 39" stroke="url(#brand-grad)" stroke-width="3" stroke-linecap="round" fill="none" />
-        <circle cx="32" cy="9" r="5" fill="#182748" stroke="url(#brand-grad)" stroke-width="2" />
-        <circle cx="12" cy="50" r="5" fill="#182748" stroke="url(#brand-grad)" stroke-width="2" />
-        <circle cx="52" cy="50" r="5" fill="#182748" stroke="url(#brand-grad)" stroke-width="2" />
-        <circle cx="32" cy="34" r="10" fill="none" stroke="#263b67" stroke-width="2" />
-        <circle cx="32" cy="34" r="6" fill="#182748" stroke="url(#brand-grad)" stroke-width="2" />
-        <circle cx="32" cy="34" r="2.3" fill="#42d9b1" />
-      </svg>
-      AgentHub
-    </a>
+  <nav class="nav">
+    <a href="#" class="nav-brand">AgentHub</a>
     <ul class="nav-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#agents">Agents</a></li>
-      <li><a href="#install">Install</a></li>
-      <li><a href="https://github.com/nicололc/agent-hub" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="#platforms">下载</a></li>
+      <li><a href="#about">关于</a></li>
+      <li><a href="#changelog">日志</a></li>
+      <li><a href="https://github.com/JTBlink/agent-hub" target="_blank" rel="noopener" class="dl-link">GitHub</a></li>
     </ul>
-    <a href="#install" class="nav-cta">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-      Download
-    </a>
   </nav>
 
-  <!-- HERO -->
   <section class="hero">
-    <div class="hero-bg">
-      <div class="hero-glow"></div>
-    </div>
-
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      Open Source &middot; Cross Platform
-    </div>
-
-    <h1>
-      Manage Your AI Agents<br />
-      <span class="gradient-text">In One Place</span>
-    </h1>
-
+    <h1>统一管理你的<br />AI Agent 工作空间</h1>
     <p class="hero-desc">
-      AgentHub is a local-first workspace manager for AI coding agents.
-      Unified configuration, skill management, and diagnostics for
-      Claude Code, Codex, and OpenCode.
+      把 Claude Code、Codex、OpenCode 分散各处的配置文件和 Skills
+      集中到一个桌面应用里。先看清状态，再安全地修改。
     </p>
-
     <div class="hero-actions">
-      <a href="#install" class="btn-primary">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-        Download for Free
+      <a href="#platforms" class="btn-dl">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        下载
       </a>
-      <a href="https://github.com/nicololc/agent-hub" target="_blank" rel="noopener" class="btn-secondary">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        View on GitHub
+      <a href="https://github.com/JTBlink/agent-hub" target="_blank" rel="noopener" class="btn-gh">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        源码
       </a>
     </div>
-
-    <div class="hero-visual">
-      <img src="../docs/assets/screenshots/overview.png" alt="AgentHub application overview showing the unified agent workspace with configuration management, skill inventory, and diagnostic tools" loading="lazy" />
-    </div>
+    <p class="hero-version">v0.1.0 &middot; MIT License &middot; macOS / Windows / Linux</p>
   </section>
 
-  <!-- FEATURES -->
-  <section class="section" id="features">
-    <div class="section-header">
-      <span class="section-label">Features</span>
-      <h2 class="section-title">Everything You Need to Manage AI Agents</h2>
-      <p class="section-desc">
-        One desktop app to configure, monitor, and extend all your AI coding agents.
-      </p>
+  <div class="screenshot">
+    <div class="screenshot-frame">
+      <div class="screenshot-bar"><i></i><i></i><i></i></div>
+      <img src="./assets/overview.png" alt="AgentHub 总览界面" />
     </div>
+  </div>
 
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon blue">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 6h10M18 6h2" /><circle cx="16" cy="6" r="2" /><path d="M4 12h3M11 12h9" /><circle cx="9" cy="12" r="2" /><path d="M4 18h10M18 18h2" /><circle cx="16" cy="18" r="2" />
-          </svg>
+  <section class="platforms" id="platforms">
+    <h2>下载安装</h2>
+    <div class="platform-row">
+      <div class="platform-cell">
+        <h3>macOS</h3>
+        <p class="meta">Universal (Apple Silicon + Intel)</p>
+        <div class="links">
+          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.dmg</a>
         </div>
-        <h3>Unified Configuration</h3>
-        <p>Edit global and project-level configurations for all agents from a single interface with diff preview and safe writes.</p>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon violet">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m12 3 1.3 5.7L19 10l-5.7 1.3L12 17l-1.3-5.7L5 10l5.7-1.3L12 3Z" />
-            <path d="m19 16 .6 2.4L22 19l-2.4.6L19 22l-.6-2.4L16 19l2.4-.6L19 16Z" />
-          </svg>
+      <div class="platform-cell">
+        <h3>Windows</h3>
+        <p class="meta">x86_64</p>
+        <div class="links">
+          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.exe</a>
+          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.msi</a>
         </div>
-        <h3>Skill Management</h3>
-        <p>Install, browse, and manage agent skills from multiple sources including Git repos, marketplaces, and local directories.</p>
       </div>
-
-      <div class="feature-card">
-        <div class="feature-icon teal">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 4 21 20H3L12 4Z" /><path d="M12 10v4M12 17h.01" />
-          </svg>
+      <div class="platform-cell">
+        <h3>Linux</h3>
+        <p class="meta">x86_64</p>
+        <div class="links">
+          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.AppImage</a>
+          <a href="https://github.com/JTBlink/agent-hub/releases/latest" target="_blank" rel="noopener">.deb</a>
         </div>
-        <h3>Diagnostics</h3>
-        <p>Detect configuration conflicts, missing files, and permission issues. Guided recovery with one-click fixes.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon amber">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 12a8 8 0 1 0 2.3-5.7" /><path d="M4 5v5h5" /><path d="M12 8v4l2.7 1.7" />
-          </svg>
-        </div>
-        <h3>Change History</h3>
-        <p>Every config write is versioned with automatic backups. Compare, diff, and restore any previous state instantly.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon blue">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2h6.5A2.5 2.5 0 0 1 21 8.5v8A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-10Z" />
-          </svg>
-        </div>
-        <h3>Workspace Aware</h3>
-        <p>Switch between project workspaces seamlessly. Each project gets its own scoped configurations and skill inventory.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon teal">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3 20 6v5c0 5-3.4 8.1-8 10-4.6-1.9-8-5-8-10V6l8-3Z" /><path d="m8.5 12 2.2 2.2 4.8-5" />
-          </svg>
-        </div>
-        <h3>Safe by Default</h3>
-        <p>Read-preview-confirm-backup write cycle protects your agent configurations. Nothing changes without your explicit approval.</p>
       </div>
     </div>
-  </section>
-
-  <!-- AGENTS -->
-  <section class="section" id="agents">
-    <div class="section-header">
-      <span class="section-label">Supported Agents</span>
-      <h2 class="section-title">One Hub, All Your Agents</h2>
-      <p class="section-desc">
-        AgentHub supports the leading AI coding assistants out of the box, with a plugin architecture for more.
-      </p>
-    </div>
-
-    <!-- Topology Visual -->
-    <div class="topology-visual">
-      <svg viewBox="0 0 480 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Topology diagram showing three agents connecting to a central hub">
-        <defs>
-          <linearGradient id="topo-grad" x1="0" y1="0" x2="480" y2="240">
-            <stop offset="0" stop-color="#168bff" />
-            <stop offset="0.5" stop-color="#4f8dff" />
-            <stop offset="1" stop-color="#42d9b1" />
-          </linearGradient>
-        </defs>
-        <!-- Connection lines -->
-        <path d="M100 60 L240 120" stroke="#263b67" stroke-width="2" stroke-linecap="round" />
-        <path d="M240 40 L240 120" stroke="#263b67" stroke-width="2" stroke-linecap="round" />
-        <path d="M380 60 L240 120" stroke="#263b67" stroke-width="2" stroke-linecap="round" />
-        <!-- Glowing lines -->
-        <path d="M100 60 L240 120" stroke="url(#topo-grad)" stroke-width="2" stroke-linecap="round" opacity="0.7" />
-        <path d="M240 40 L240 120" stroke="url(#topo-grad)" stroke-width="2" stroke-linecap="round" opacity="0.7" />
-        <path d="M380 60 L240 120" stroke="url(#topo-grad)" stroke-width="2" stroke-linecap="round" opacity="0.7" />
-        <!-- Agent nodes -->
-        <circle cx="100" cy="60" r="24" fill="#182748" stroke="#9b9cff" stroke-width="2" />
-        <text x="100" y="66" text-anchor="middle" fill="#9b9cff" font-size="18" font-weight="700" font-family="Inter, sans-serif">C</text>
-        <circle cx="240" cy="40" r="24" fill="#182748" stroke="#42d9b1" stroke-width="2" />
-        <text x="240" y="46" text-anchor="middle" fill="#42d9b1" font-size="18" font-weight="700" font-family="Inter, sans-serif">X</text>
-        <circle cx="380" cy="60" r="24" fill="#182748" stroke="#f3b75f" stroke-width="2" />
-        <text x="380" y="66" text-anchor="middle" fill="#f3b75f" font-size="18" font-weight="700" font-family="Inter, sans-serif">O</text>
-        <!-- Hub -->
-        <circle cx="240" cy="150" r="36" fill="none" stroke="#263b67" stroke-width="2" />
-        <circle cx="240" cy="150" r="22" fill="#182748" stroke="url(#topo-grad)" stroke-width="2.5" />
-        <circle cx="240" cy="150" r="8" fill="#42d9b1" />
-        <!-- Labels -->
-        <text x="100" y="100" text-anchor="middle" fill="#7184a5" font-size="11" font-family="Inter, sans-serif">Claude Code</text>
-        <text x="240" y="10" text-anchor="middle" fill="#7184a5" font-size="11" font-family="Inter, sans-serif">Codex</text>
-        <text x="380" y="100" text-anchor="middle" fill="#7184a5" font-size="11" font-family="Inter, sans-serif">OpenCode</text>
-        <text x="240" y="205" text-anchor="middle" fill="#a7b9d6" font-size="12" font-weight="600" font-family="Inter, sans-serif">AgentHub</text>
-      </svg>
-    </div>
-
-    <div class="agents-row">
-      <div class="agent-card">
-        <div class="agent-mark violet">C</div>
-        <h3>Claude Code</h3>
-        <p>Anthropic's CLI agent for software engineering with full codebase context</p>
-      </div>
-      <div class="agent-card">
-        <div class="agent-mark teal">X</div>
-        <h3>Codex</h3>
-        <p>OpenAI's coding agent with autonomous task execution and multi-file editing</p>
-      </div>
-      <div class="agent-card">
-        <div class="agent-mark amber">O</div>
-        <h3>OpenCode</h3>
-        <p>Open-source terminal AI assistant with flexible model backends</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- INSTALL -->
-  <section class="install-section" id="install">
-    <span class="section-label">Get Started</span>
-    <h2 class="section-title">Install AgentHub</h2>
-    <p class="section-desc" style="margin: 0 auto;">
-      Available for macOS, Windows, and Linux. Download the latest release or build from source.
+    <p class="platforms-note">
+      所有安装包附带 SHA256 校验。<a href="https://github.com/JTBlink/agent-hub/releases" target="_blank" rel="noopener">查看全部版本</a>
     </p>
+  </section>
 
-    <div class="install-box" onclick="navigator.clipboard.writeText('brew install --cask agenthub')" title="Click to copy">
-      <code>$ brew install --cask agenthub</code>
-      <span class="copy-hint">Click to copy</span>
-    </div>
-
-    <div class="platforms">
-      <a href="#" class="platform-badge">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83"/><path d="M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/></svg>
-        macOS (Universal)
-      </a>
-      <a href="#" class="platform-badge">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.548l7.06-0.966v6.817H3V5.548zm0 12.904l7.06 0.966V12.6H3v5.852zm7.86 1.078L21 21V12.6H10.86v6.93zm0-14.06V12.6H21V3L10.86 5.47z"/></svg>
-        Windows
-      </a>
-      <a href="#" class="platform-badge">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a7.1 7.1 0 0 0 .067.413c.22 1.072.822 2.246 1.766 3.122.603.56 1.35 1.003 2.225 1.177.46.092.947.101 1.413.038.174-.024.342-.06.506-.109.168-.049.324-.115.494-.157a3.27 3.27 0 0 1 1.36 0c.17.042.326.108.494.157.164.049.332.085.506.109.466.063.953.054 1.413-.038.875-.174 1.622-.617 2.225-1.177.944-.876 1.546-2.05 1.766-3.122a7.1 7.1 0 0 0 .067-.413c.123-.805-.009-1.657-.287-2.489-.589-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0 0 12.504 0z"/></svg>
-        Linux
-      </a>
+  <section class="about" id="about">
+    <div class="about-label">功能</div>
+    <div class="about-content">
+      <p>
+        当多个 Agent 同时使用时，问题不是"不会配置"，
+        而是不确定哪个文件被哪个 Agent 读取、改错格式后工作流突然失效、
+        同一个 Skill 重复安装在不同作用域。AgentHub 把这些信息放到操作前面。
+      </p>
+      <ul class="about-list">
+        <li>扫描 Claude Code、Codex、OpenCode 的全局配置和工作空间配置</li>
+        <li>表单或源码编辑，写入前生成 Diff 并自动备份</li>
+        <li>从 skills.sh、Marketplace、Git 仓库安装 Skills，管理生命周期</li>
+        <li>检测配置冲突和权限问题，提供一键修复路径</li>
+        <li>变更历史可追溯，即时还原到任意备份</li>
+        <li>默认只读扫描，外部修改检测，敏感字段遮罩</li>
+      </ul>
     </div>
   </section>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-content">
-      <div class="footer-brand">
-        <svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true">
-          <defs>
-            <linearGradient id="footer-grad" x1="10" y1="8" x2="55" y2="57">
-              <stop offset="0" stop-color="#168bff" />
-              <stop offset="0.52" stop-color="#4f8dff" />
-              <stop offset="1" stop-color="#42d9b1" />
-            </linearGradient>
-          </defs>
-          <path d="M32 12v14M15 48l12-9M49 48l-12-9" stroke="#263b67" stroke-width="3" stroke-linecap="round" fill="none" />
-          <path d="M32 10v16M13 49l14-10M51 49 37 39" stroke="url(#footer-grad)" stroke-width="3" stroke-linecap="round" fill="none" />
-          <circle cx="32" cy="34" r="6" fill="#182748" stroke="url(#footer-grad)" stroke-width="2" />
-          <circle cx="32" cy="34" r="2.3" fill="#42d9b1" />
-        </svg>
-        AgentHub
+  <section class="changelog-section" id="changelog">
+    <div class="about-label">更新</div>
+    <div class="cl-list">
+      <div class="cl-entry">
+        <div class="cl-ver">v0.1.0</div>
+        <div class="cl-date">初始发布</div>
+        <ul>
+          <li>统一配置管理：全局和工作空间配置可视化编辑</li>
+          <li>Skills 安装与管理：多来源支持</li>
+          <li>诊断中心与变更历史</li>
+          <li>跨平台构建：macOS / Windows / Linux</li>
+          <li>GitHub Actions 自动构建与发布</li>
+        </ul>
       </div>
-      <ul class="footer-links">
-        <li><a href="https://github.com/nicololc/agent-hub" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="https://github.com/nicololc/agent-hub/releases" target="_blank" rel="noopener">Releases</a></li>
-        <li><a href="https://github.com/nicololc/agent-hub/issues" target="_blank" rel="noopener">Issues</a></li>
-      </ul>
-      <span class="footer-copy">Built with Tauri &middot; MIT License</span>
+      <div class="cl-more">
+        <a href="https://github.com/JTBlink/agent-hub/blob/main/CHANGELOG.md" target="_blank" rel="noopener">完整日志 &rarr;</a>
+      </div>
     </div>
+  </section>
+
+  <footer class="footer">
+    <span class="footer-left">AgentHub &middot; MIT License</span>
+    <ul class="footer-links">
+      <li><a href="https://github.com/JTBlink/agent-hub" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/JTBlink/agent-hub/releases" target="_blank" rel="noopener">Releases</a></li>
+      <li><a href="https://github.com/JTBlink/agent-hub/issues" target="_blank" rel="noopener">Issues</a></li>
+    </ul>
   </footer>
 </body>
 </html>
