@@ -321,6 +321,7 @@ export function browseSkillSource(
 export function planSkillInstall(input: {
   request: SkillSourceRequest;
   skillPath: string;
+  skillSourceLocator?: string;
   agent: Agent;
   scope: ConfigScope;
   workspaceDirectory?: string;

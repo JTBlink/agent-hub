@@ -14,6 +14,7 @@ usage() {
 命令:
   dev       启动开发模式（Tauri + React 热重载）
   build     编译当前平台安装包
+  clean     清理 Tauri/Cargo 构建缓存（图标未刷新时使用）
   release   打包发布产物并生成 SHA256SUMS
   test      运行前端和 Rust 测试
   lint      运行 ESLint 和 Cargo Clippy
@@ -27,6 +28,7 @@ usage() {
 示例:
   $(basename "$0") dev
   $(basename "$0") build
+  $(basename "$0") clean
   $(basename "$0") release dist/release refs/tags/v1.0.0
   $(basename "$0") test
   $(basename "$0") lint
@@ -59,6 +61,18 @@ usage_build() {
 示例:
   $(basename "$0") build
   $(basename "$0") build --bundles dmg
+EOF
+}
+
+usage_clean() {
+  cat <<EOF
+用法: $(basename "$0") clean
+
+通过 Cargo 清理 Tauri 构建缓存、调试程序和旧安装包产物。
+修改应用图标后若开发模式仍显示旧图标，请执行：
+
+  $(basename "$0") clean
+  $(basename "$0") dev
 EOF
 }
 
@@ -129,6 +143,7 @@ case "$cmd" in
     case "$subcmd" in
       dev)     usage_dev ;;
       build)   usage_build ;;
+      clean)   usage_clean ;;
       release) usage_release ;;
       test)    usage_test ;;
       lint)    usage_lint ;;
@@ -158,6 +173,21 @@ case "$cmd" in
     shift
     echo "编译 ${APP_NAME} v${APP_VERSION}（当前平台安装包）"
     exec npm run tauri -- build "$@"
+    ;;
+  clean)
+    require_cargo
+    shift
+    if [[ $# -ne 0 ]]; then
+      echo "错误：clean 不接受额外参数。" >&2
+      usage_clean >&2
+      exit 1
+    fi
+    echo "清理 ${APP_NAME} 的 Tauri/Cargo 构建缓存…"
+    if ! cargo clean --manifest-path src-tauri/Cargo.toml; then
+      echo "Cargo 清理遇到已不存在的增量文件，改为移除可再生的 src-tauri/target 目录。"
+      rm -rf -- "$ROOT_DIR/src-tauri/target"
+    fi
+    echo "清理完成。再次执行 './agent-hub.sh dev' 将重新编译并嵌入当前图标。"
     ;;
   release)
     require_npm

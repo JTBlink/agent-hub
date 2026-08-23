@@ -510,9 +510,7 @@ impl SkillSourceManager {
     pub fn browse(&self, request: SourceRequest) -> Result<SourceBrowseResult, SourceError> {
         let scan = match request {
             SourceRequest::LocalDirectory { path } => self.authorize_and_scan_local(path)?,
-            SourceRequest::Marketplace { manifest } => {
-                self.authorize_and_scan_marketplace(manifest)?
-            }
+            SourceRequest::Marketplace { manifest } => self.browse_marketplace(manifest)?,
             SourceRequest::Git {
                 url,
                 requested_ref,
@@ -530,6 +528,52 @@ impl SkillSourceManager {
             catalog_entries: scan.catalog_entries,
             diagnostics: scan.diagnostics,
         })
+    }
+
+    fn browse_marketplace(&self, manifest: PathBuf) -> Result<SourceScan, SourceError> {
+        let mut scan = self.authorize_and_scan_marketplace(manifest)?;
+        let mut diagnostics = scan
+            .diagnostics
+            .iter()
+            .filter(|item| !item.code.starts_with("marketplace-source-"))
+            .cloned()
+            .collect::<Vec<_>>();
+        for entry in &mut scan.catalog_entries {
+            let locator = match marketplace_git_locator(entry) {
+                Ok(Some(locator)) => locator,
+                Ok(None) => continue,
+                Err(error) => {
+                    entry.diagnostics.push(SourceDiagnostic::error(
+                        "marketplace-source-invalid",
+                        error.to_string(),
+                        scan.source.manifest_path.as_deref().map(Path::new),
+                    ));
+                    continue;
+                }
+            };
+            entry
+                .diagnostics
+                .retain(|item| item.code != "marketplace-source-unresolved");
+            match self.fetch_git(locator).and_then(|adapter| adapter.scan()) {
+                Ok(remote) => {
+                    entry.installable = remote.skills.iter().any(|skill| skill.installable);
+                    entry.diagnostics.extend(remote.diagnostics);
+                    scan.skills.extend(remote.skills);
+                }
+                Err(error) => entry.diagnostics.push(SourceDiagnostic::error(
+                    "marketplace-source-fetch-failed",
+                    error.to_string(),
+                    scan.source.manifest_path.as_deref().map(Path::new),
+                )),
+            }
+        }
+        diagnostics.extend(
+            scan.catalog_entries
+                .iter()
+                .flat_map(|entry| entry.diagnostics.clone()),
+        );
+        scan.diagnostics = diagnostics;
+        Ok(scan)
     }
 
     pub fn authorize_and_scan_local(

@@ -2,6 +2,8 @@ import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   addWorkspace,
+  applySkillInstall,
+  browseSkillSource,
   executeDiagnosticRecovery,
   getAppInfo,
   getClaudeGlobalConfig,
@@ -11,6 +13,7 @@ import {
   getSkillInventory,
   listConfigHistory,
   listWorkspaces,
+  planSkillInstall,
   previewConfigEdit,
   previewConfigRestore,
   previewDiagnosticRecovery,
@@ -24,13 +27,33 @@ import {
   type ConfigHistoryRecord,
   type DiagnosticRecoveryPreview,
   type InstalledSkill,
+  type SkillInstallPlanPreview,
   type SkillInventory,
+  type SkillSourceBrowseResult,
+  type SkillSourceRequest,
   type UnifiedDiagnostic,
   type WorkspaceRecord,
   type WorkspaceScanResult,
 } from "../lib/backend";
 import { APP_NAME } from "../lib/app-meta";
+import {
+  AGENT_SCHEMAS,
+  parseConfigSource,
+  serializeConfig,
+  splitKnownUnknown,
+  type AgentFormSchema,
+  type FieldDefinition,
+} from "../lib/config-schema";
 import { createTopologyLayout } from "../lib/topology";
+import {
+  buildSkillSourceRequest,
+  type SkillSourceMode,
+} from "../lib/skill-source-flow";
+import {
+  selectMarketplaceManifest,
+  selectSkillSourceDirectory,
+  selectWorkspaceDirectory,
+} from "../lib/workspace-dialog";
 
 type Section =
   | "overview"
@@ -68,11 +91,12 @@ const navigation: { id: Section; label: string; icon: IconName }[] = [
   { id: "history", label: "变更历史", icon: "history" },
 ];
 
-const agentMeta: Record<string, { name: string; tone: string; mark: string }> = {
-  "claude-code": { name: "Claude Code", tone: "violet", mark: "C" },
-  codex: { name: "Codex", tone: "teal", mark: "X" },
-  opencode: { name: "OpenCode", tone: "amber", mark: "O" },
-};
+const agentMeta: Record<string, { name: string; tone: string; mark: string }> =
+  {
+    "claude-code": { name: "Claude Code", tone: "violet", mark: "C" },
+    codex: { name: "Codex", tone: "teal", mark: "X" },
+    opencode: { name: "OpenCode", tone: "amber", mark: "O" },
+  };
 
 const defaultAgentIds = Object.keys(agentMeta);
 
@@ -267,6 +291,8 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [editing, setEditing] = useState(false);
+  const [editMode, setEditMode] = useState<"form" | "source">("form");
+  const [formState, setFormState] = useState<Record<string, unknown>>({});
   const [source, setSource] = useState("");
   const [draft, setDraft] = useState("");
   const [preview, setPreview] = useState<ConfigEditPreview>();
@@ -346,6 +372,13 @@ export function App() {
       setSource(raw);
       setDraft(raw);
       setPreview(undefined);
+      try {
+        const parsed = parseConfigSource(selectedConfig.format, raw);
+        setFormState(parsed);
+        setEditMode("form");
+      } catch {
+        setEditMode("source");
+      }
       setEditing(true);
     } catch {
       setSaveMessage("原文读取失败。请重新扫描后再试。");
@@ -530,6 +563,43 @@ export function App() {
             setSelectedAgent={setSelectedAgent}
             selectedConfig={selectedConfig}
             editing={editing}
+            editMode={editMode}
+            setEditMode={(mode) => {
+              if (mode === "source" && editMode === "form") {
+                try {
+                  const serialized = serializeConfig(
+                    selectedConfig?.format ?? "json",
+                    formState,
+                  );
+                  setDraft(serialized);
+                } catch {
+                  /* keep existing draft */
+                }
+              } else if (mode === "form" && editMode === "source") {
+                try {
+                  const parsed = parseConfigSource(
+                    selectedConfig?.format ?? "json",
+                    draft,
+                  );
+                  setFormState(parsed);
+                } catch {
+                  setSaveMessage("源码存在格式错误，无法切换到表单模式。");
+                  return;
+                }
+              }
+              setEditMode(mode);
+            }}
+            formState={formState}
+            setFormState={(next) => {
+              setFormState(next);
+              try {
+                setDraft(
+                  serializeConfig(selectedConfig?.format ?? "json", next),
+                );
+              } catch {
+                /* serialization failure; draft stays stale */
+              }
+            }}
             source={source}
             draft={draft}
             setDraft={setDraft}
@@ -553,6 +623,7 @@ export function App() {
             searchQuery={searchQuery}
             onScan={scan}
             onNavigate={setSection}
+            workspaces={workspaces}
           />
         )}
         {section === "workspaces" && (
@@ -585,29 +656,6 @@ export function App() {
         )}
         {section === "settings" && <SettingsPage />}
       </main>
-    </div>
-  );
-}
-
-function PageIntro({
-  eyebrow,
-  title,
-  description,
-  action,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="page-intro">
-      <div>
-        <p className="eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-      {action}
     </div>
   );
 }
@@ -737,9 +785,11 @@ function Overview({
         </div>
         <div
           className="topology"
-          style={{
-            "--topology-height": `${topologyLayout.height}px`,
-          } as React.CSSProperties}
+          style={
+            {
+              "--topology-height": `${topologyLayout.height}px`,
+            } as React.CSSProperties
+          }
         >
           <svg
             className="topology-network"
@@ -783,11 +833,13 @@ function Overview({
           </svg>
           <div
             className="agent-nodes"
-            style={{
-              "--agent-stack-height": `${Math.max(0, topologyLayout.height - 20)}px`,
-              "--agent-gap": `${topologyLayout.gap}px`,
-              "--agent-node-height": `${topologyLayout.nodeHeight}px`,
-            } as React.CSSProperties}
+            style={
+              {
+                "--agent-stack-height": `${Math.max(0, topologyLayout.height - 20)}px`,
+                "--agent-gap": `${topologyLayout.gap}px`,
+                "--agent-node-height": `${topologyLayout.nodeHeight}px`,
+              } as React.CSSProperties
+            }
           >
             {topologyAgentIds.map((agent) => {
               const config = configs.find((item) => item.agent === agent);
@@ -853,7 +905,9 @@ function Overview({
               </span>
               <span>
                 <strong>配置同步</strong>
-                  <small>{readyCount}/{totalAgents} 个 Agent 已准备好</small>
+                <small>
+                  {readyCount}/{totalAgents} 个 Agent 已准备好
+                </small>
               </span>
               <Icon name="arrow" size={15} />
             </button>
@@ -924,6 +978,375 @@ function Overview({
   );
 }
 
+const REDACTED = "••••••";
+
+function ConfigFormEditor({
+  schema,
+  formState,
+  setFormState,
+  source,
+  format,
+}: {
+  schema: AgentFormSchema;
+  formState: Record<string, unknown>;
+  setFormState: (state: Record<string, unknown>) => void;
+  source: string;
+  format: string;
+}) {
+  const { known, unknown: unknownFields } = splitKnownUnknown(
+    formState,
+    schema,
+  );
+
+  const originalParsed = useMemo(() => {
+    try {
+      return parseConfigSource(format as "json" | "jsonc" | "toml", source);
+    } catch {
+      return {};
+    }
+  }, [source, format]);
+
+  function updateField(key: string, value: unknown) {
+    setFormState({ ...formState, [key]: value });
+  }
+
+  return (
+    <div className="form-editor">
+      {schema.fields.length > 0 && (
+        <div className="form-section">
+          {schema.fields.map((field) => (
+            <FormField
+              key={field.key}
+              field={field}
+              value={known[field.key]}
+              originalValue={originalParsed[field.key]}
+              onChange={(v) => updateField(field.key, v)}
+            />
+          ))}
+        </div>
+      )}
+      {schema.fields.length === 0 && (
+        <p className="form-warning" role="status">
+          <Icon name="warning" size={14} />该 Agent
+          暂无已知字段定义，所有字段显示在"其他字段"中。可切换到源码模式编辑。
+        </p>
+      )}
+      <UnknownFieldsSection fields={unknownFields} />
+    </div>
+  );
+}
+
+function FormField({
+  field,
+  value,
+  originalValue,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  originalValue: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  switch (field.type) {
+    case "boolean":
+      return (
+        <BooleanFieldRow field={field} value={value} onChange={onChange} />
+      );
+    case "enum":
+      return <EnumFieldRow field={field} value={value} onChange={onChange} />;
+    case "key-value-map":
+      return (
+        <KeyValueMapEditor
+          field={field}
+          value={value}
+          originalValue={originalValue}
+          onChange={onChange}
+        />
+      );
+    case "nested-object":
+      return (
+        <NestedObjectEditor
+          field={field}
+          value={value}
+          originalValue={originalValue}
+          onChange={onChange}
+        />
+      );
+    default:
+      return <TextFieldRow field={field} value={value} onChange={onChange} />;
+  }
+}
+
+function TextFieldRow({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const strValue = typeof value === "string" ? value : "";
+  const isMasked = field.sensitive && strValue === REDACTED;
+  return (
+    <div className="form-field-row">
+      <div>
+        <strong>{field.label}</strong>
+        {field.description && <span>{field.description}</span>}
+      </div>
+      {isMasked ? (
+        <span className="setting-value">已遮罩</span>
+      ) : (
+        <input
+          className="form-input"
+          type="text"
+          value={strValue}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </div>
+  );
+}
+
+function BooleanFieldRow({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const boolValue = value === true;
+  return (
+    <div className="form-field-row">
+      <div>
+        <strong>{field.label}</strong>
+        {field.description && <span>{field.description}</span>}
+      </div>
+      <button
+        type="button"
+        className={`toggle ${boolValue ? "on" : ""}`}
+        onClick={() => onChange(!boolValue)}
+        aria-pressed={boolValue}
+        aria-label={field.label}
+      >
+        <i />
+      </button>
+    </div>
+  );
+}
+
+function EnumFieldRow({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const strValue = typeof value === "string" ? value : "";
+  return (
+    <div className="form-field-row">
+      <div>
+        <strong>{field.label}</strong>
+        {field.description && <span>{field.description}</span>}
+      </div>
+      <select
+        className="form-select"
+        value={strValue}
+        onChange={(e) => onChange(e.target.value || undefined)}
+      >
+        <option value="">未设置</option>
+        {field.enumValues?.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function KeyValueMapEditor({
+  field,
+  value,
+  originalValue,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  originalValue: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const map =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const originalMap =
+    originalValue &&
+    typeof originalValue === "object" &&
+    !Array.isArray(originalValue)
+      ? (originalValue as Record<string, unknown>)
+      : {};
+  const entries = Object.entries(map);
+  const isBooleanValues = field.kvValueType === "boolean";
+
+  function updateEntry(oldKey: string, newKey: string, newValue: unknown) {
+    const next: Record<string, unknown> = {};
+    for (const [k, v] of entries) {
+      if (k === oldKey) next[newKey] = newValue;
+      else next[k] = v;
+    }
+    onChange(next);
+  }
+  function removeEntry(key: string) {
+    const next = { ...map };
+    delete next[key];
+    onChange(next);
+  }
+  function addEntry() {
+    const next = { ...map };
+    let newKey = "new_key";
+    let i = 1;
+    while (newKey in next) {
+      newKey = `new_key_${i++}`;
+    }
+    next[newKey] = isBooleanValues ? true : "";
+    onChange(next);
+  }
+
+  return (
+    <div className="form-field-row kv-section">
+      <div className="kv-header">
+        <strong>{field.label}</strong>
+        {field.description && <span>{field.description}</span>}
+      </div>
+      <div className="kv-editor">
+        {entries.map(([key, val]) => {
+          const isMasked =
+            field.sensitive &&
+            typeof val === "string" &&
+            val === REDACTED &&
+            key in originalMap;
+          return (
+            <div key={key} className="kv-row">
+              <input
+                className="form-input"
+                type="text"
+                value={key}
+                onChange={(e) => updateEntry(key, e.target.value, val)}
+                placeholder="Key"
+              />
+              {isBooleanValues ? (
+                <button
+                  type="button"
+                  className={`toggle ${val === true ? "on" : ""}`}
+                  onClick={() => updateEntry(key, key, !val)}
+                  aria-pressed={val === true}
+                  aria-label={`${key} 开关`}
+                >
+                  <i />
+                </button>
+              ) : isMasked ? (
+                <span className="setting-value kv-masked">已遮罩</span>
+              ) : (
+                <input
+                  className="form-input"
+                  type="text"
+                  value={typeof val === "string" ? val : String(val ?? "")}
+                  onChange={(e) => updateEntry(key, key, e.target.value)}
+                  placeholder="Value"
+                />
+              )}
+              <button
+                type="button"
+                className="icon-button kv-remove"
+                onClick={() => removeEntry(key)}
+                aria-label={`删除 ${key}`}
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </div>
+          );
+        })}
+        <button
+          type="button"
+          className="button button-ghost kv-add-button"
+          onClick={addEntry}
+        >
+          <Icon name="plus" size={14} />
+          添加
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NestedObjectEditor({
+  field,
+  value,
+  originalValue,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  originalValue: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  const obj =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const origObj =
+    originalValue &&
+    typeof originalValue === "object" &&
+    !Array.isArray(originalValue)
+      ? (originalValue as Record<string, unknown>)
+      : {};
+
+  function updateChild(key: string, childValue: unknown) {
+    onChange({ ...obj, [key]: childValue });
+  }
+
+  if (!field.nestedFields?.length) return null;
+
+  return (
+    <div className="form-field-row nested-group">
+      <div className="nested-group-header">
+        <strong>{field.label}</strong>
+        {field.description && <span>{field.description}</span>}
+      </div>
+      <div className="nested-group-body">
+        {field.nestedFields.map((child) => (
+          <FormField
+            key={child.key}
+            field={child}
+            value={obj[child.key]}
+            originalValue={origObj[child.key]}
+            onChange={(v) => updateChild(child.key, v)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UnknownFieldsSection({ fields }: { fields: Record<string, unknown> }) {
+  const keys = Object.keys(fields);
+  if (keys.length === 0) return null;
+  return (
+    <div className="form-section unknown-fields">
+      <div className="form-section-title">
+        <strong>其他字段</strong>
+        <span>以下字段未纳入表单，保存时会原样保留</span>
+      </div>
+      <pre className="source-preview">{JSON.stringify(fields, null, 2)}</pre>
+    </div>
+  );
+}
+
 function ConfigCenter({
   configs,
   workspaceConfigs,
@@ -933,6 +1356,10 @@ function ConfigCenter({
   setSelectedAgent,
   selectedConfig,
   editing,
+  editMode,
+  setEditMode,
+  formState,
+  setFormState,
   source,
   draft,
   setDraft,
@@ -953,6 +1380,10 @@ function ConfigCenter({
   setSelectedAgent: (agent: ConfigDocument["agent"]) => void;
   selectedConfig?: ConfigDocument;
   editing: boolean;
+  editMode: "form" | "source";
+  setEditMode: (mode: "form" | "source") => void;
+  formState: Record<string, unknown>;
+  setFormState: (state: Record<string, unknown>) => void;
   source: string;
   draft: string;
   setDraft: (value: string) => void;
@@ -977,25 +1408,128 @@ function ConfigCenter({
           .includes(normalizedQuery);
       })
     : visibleConfigs;
+
+  if (editing && selectedConfig) {
+    const meta = agentMeta[selectedConfig.agent];
+    return (
+      <div className="page config-edit-page">
+        <div className="config-edit-topbar">
+          <button
+            className="button button-ghost config-back-button"
+            onClick={onCancel}
+          >
+            <Icon name="arrow" size={15} />
+            返回
+          </button>
+          <div className="config-edit-topbar-title">
+            <div className={`agent-avatar small ${meta.tone}`}>{meta.mark}</div>
+            <strong>
+              {meta.name}{" "}
+              {selectedConfig.scope === "global" ? "全局" : "工作空间"}配置
+            </strong>
+          </div>
+          <div className="config-edit-topbar-actions">
+            <button className="button button-secondary" onClick={onPreview}>
+              <Icon name="check" size={16} />
+              生成 Diff
+            </button>
+          </div>
+        </div>
+        <div
+          className="scope-switch edit-mode-switch"
+          role="group"
+          aria-label="编辑模式"
+        >
+          <button
+            className={editMode === "form" ? "selected" : ""}
+            aria-pressed={editMode === "form"}
+            onClick={() => setEditMode("form")}
+          >
+            <Icon name="sliders" size={14} />
+            表单
+          </button>
+          <button
+            className={editMode === "source" ? "selected" : ""}
+            aria-pressed={editMode === "source"}
+            onClick={() => setEditMode("source")}
+          >
+            <Icon name="file" size={14} />
+            源码
+          </button>
+        </div>
+        {(selectedConfig.format === "jsonc" ||
+          selectedConfig.format === "toml") &&
+          editMode === "form" && (
+            <p className="form-warning" role="status">
+              <Icon name="warning" size={14} />
+              表单模式会移除原始注释。若需保留注释，请使用源码模式。
+            </p>
+          )}
+        <div className="config-edit-body">
+          {editMode === "form" ? (
+            <ConfigFormEditor
+              schema={AGENT_SCHEMAS[selectedConfig.agent]}
+              formState={formState}
+              setFormState={setFormState}
+              source={source}
+              format={selectedConfig.format}
+            />
+          ) : (
+            <div className="editor-block">
+              <label className="editor-label" htmlFor="config-editor">
+                配置原文
+              </label>
+              <textarea
+                id="config-editor"
+                value={draft}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                }}
+                spellCheck={false}
+              />
+              <div className="editor-hint">
+                原始内容 {source.length.toLocaleString()} 字符
+              </div>
+            </div>
+          )}
+        </div>
+        {preview && (
+          <div className="diff-block">
+            <div className="source-heading">
+              <span>即将写入的变更</span>
+              <span className={preview.changed ? "diff-changed" : ""}>
+                {preview.changed ? "有变更" : "无变更"}
+              </span>
+            </div>
+            <pre>{preview.diff}</pre>
+            <div className="diff-actions">
+              <button className="button button-ghost" onClick={onCancel}>
+                取消
+              </button>
+              <button
+                className="button button-primary"
+                disabled={!preview.changed || saving}
+                onClick={onSave}
+              >
+                {saving ? "保存中…" : "确认写入并备份"}
+              </button>
+            </div>
+          </div>
+        )}
+        {saveMessage && (
+          <p className="inline-message" role="status">
+            {saveMessage}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="page">
-      <PageIntro
-        eyebrow="工作台 / 配置中心"
-        title="配置，清楚地放在眼前。"
-        description="默认只读和遮罩。进入编辑模式后，AgentHub 会先生成 Diff，再写入并保留备份。"
-        action={
-          <span className="privacy-inline">
-            <Icon name="shield" size={15} />
-            敏感值已遮罩
-          </span>
-        }
-      />
+      <h1 className="sr-only">配置中心</h1>
       <div className="config-layout">
         <aside className="config-sidebar">
-          <div className="config-side-heading">
-            <strong>Agent 配置</strong>
-            <span>{selectedScope === "global" ? "全局" : "工作空间"}</span>
-          </div>
           <div className="scope-switch" role="group" aria-label="配置作用域">
             <button
               className={selectedScope === "global" ? "selected" : ""}
@@ -1046,17 +1580,6 @@ function ConfigCenter({
               </button>
             );
           })}
-          <div className="scope-note">
-            <Icon name="file" size={16} />
-            <span>
-              <strong>当前作用域</strong>
-              <small>
-                {selectedScope === "global"
-                  ? "全局配置 · 只影响你的用户账户"
-                  : "工作空间配置 · 只影响当前项目"}
-              </small>
-            </span>
-          </div>
         </aside>
         <section className="config-detail">
           {selectedConfig ? (
@@ -1119,101 +1642,28 @@ function ConfigCenter({
                   </span>
                 </div>
               )}
-              {!editing ? (
-                <div className="source-block">
-                  <div className="source-heading">
-                    <span>
-                      <Icon name="file" size={16} />
-                      遮罩预览
-                    </span>
-                    <span>默认只读</span>
-                  </div>
-                  <pre className="source-preview">
-                    {selectedConfig.sourcePreview || "暂无可读取的配置文件"}
-                  </pre>
-                  <div className="source-actions">
-                    <button
-                      className="button button-primary"
-                      disabled={selectedConfig.status !== "ready"}
-                      onClick={onEdit}
-                    >
-                      <Icon name="edit" size={16} />
-                      加载原文并编辑
-                    </button>
-                    <span>编辑前会再次确认文件校验和</span>
-                  </div>
+              <div className="source-block">
+                <div className="source-heading">
+                  <span>
+                    <Icon name="file" size={16} />
+                    遮罩预览
+                  </span>
+                  <span>默认只读</span>
                 </div>
-              ) : (
-                <div className="editor-block">
-                  <div className="editor-header">
-                    <div>
-                      <span className="eyebrow">编辑模式</span>
-                      <strong>只在本次会话中读取原文</strong>
-                    </div>
-                    <button
-                      className="icon-button"
-                      aria-label="关闭编辑模式"
-                      onClick={onCancel}
-                    >
-                      <Icon name="close" />
-                    </button>
-                  </div>
-                  <label className="editor-label" htmlFor="config-editor">
-                    配置原文
-                  </label>
-                  <textarea
-                    id="config-editor"
-                    value={draft}
-                    onChange={(event) => {
-                      setDraft(event.target.value);
-                    }}
-                    spellCheck={false}
-                  />
-                  <div className="editor-footer">
-                    <span className="editor-hint">
-                      原始内容 {source.length.toLocaleString()} 字符
-                    </span>
-                    <div>
-                      <button
-                        className="button button-ghost"
-                        onClick={onCancel}
-                      >
-                        取消
-                      </button>
-                      <button
-                        className="button button-secondary"
-                        onClick={onPreview}
-                      >
-                        <Icon name="check" size={16} />
-                        生成 Diff
-                      </button>
-                    </div>
-                  </div>
-                  {preview && (
-                    <div className="diff-block">
-                      <div className="source-heading">
-                        <span>即将写入的变更</span>
-                        <span className={preview.changed ? "diff-changed" : ""}>
-                          {preview.changed ? "有变更" : "无变更"}
-                        </span>
-                      </div>
-                      <pre>{preview.diff}</pre>
-                      <button
-                        className="button button-primary"
-                        disabled={!preview.changed || saving}
-                        onClick={onSave}
-                      >
-                        {saving ? "保存中…" : "确认写入并备份"}
-                      </button>
-                    </div>
-                  )}
-                  {saveMessage && (
-                    <p className="inline-message" role="status">
-                      {saveMessage}
-                    </p>
-                  )}
+                <pre className="source-preview">
+                  {selectedConfig.sourcePreview || "暂无可读取的配置文件"}
+                </pre>
+                <div className="source-actions">
+                  <button
+                    className="button button-primary"
+                    disabled={selectedConfig.status !== "ready"}
+                    onClick={onEdit}
+                  >
+                    <Icon name="edit" size={16} />
+                    编辑
+                  </button>
                 </div>
-              )}
+              </div>
             </>
           ) : normalizedQuery ? (
             <div className="empty-state large">
@@ -1229,7 +1679,7 @@ function ConfigCenter({
                 <Icon name="file" size={24} />
               </div>
               <h2>还没有扫描结果</h2>
-              <p>点击右上角“重新扫描”，AgentHub 会从本地读取配置状态。</p>
+              <p>点击右上角"重新扫描"，AgentHub 会从本地读取配置状态。</p>
             </div>
           )}
         </section>
@@ -1243,11 +1693,13 @@ function SkillsCenter({
   searchQuery,
   onScan,
   onNavigate,
+  workspaces,
 }: {
   skills?: SkillInventory;
   searchQuery: string;
   onScan: () => void;
   onNavigate: (section: Section) => void;
+  workspaces: WorkspaceRecord[];
 }) {
   const [filter, setFilter] = useState<
     "all" | "global" | "workspace" | "managed" | "external"
@@ -1294,54 +1746,7 @@ function SkillsCenter({
   ] as const;
   return (
     <div className="page">
-      <PageIntro
-        eyebrow="工作台 / Skills"
-        title="Skills，从哪里来一目了然。"
-        description="统一盘点全局与工作空间里的 Skill，区分来源、作用域和管理归属。"
-        action={
-          <button
-            className="button button-primary"
-            aria-expanded={showSourceGuide}
-            aria-controls="source-guide"
-            onClick={() => setShowSourceGuide((visible) => !visible)}
-          >
-            <Icon name="plus" size={16} />
-            添加来源
-          </button>
-        }
-      />
-      {showSourceGuide && (
-        <section
-          className="source-guide"
-          id="source-guide"
-          aria-labelledby="source-guide-title"
-        >
-          <div>
-            <p className="eyebrow">添加来源</p>
-            <h2 id="source-guide-title">先从本地工作空间开始</h2>
-            <p>
-              登记项目目录后会自动发现其中的
-              Skills。Git、自定义仓库、Marketplace 与 skills.sh
-              来源将在来源管理流程中统一安装和更新。
-            </p>
-          </div>
-          <div className="source-guide-actions">
-            <button
-              className="button button-primary"
-              onClick={() => onNavigate("workspaces")}
-            >
-              <Icon name="folder" size={16} />
-              添加本地目录
-            </button>
-            <button
-              className="button button-ghost"
-              onClick={() => setShowSourceGuide(false)}
-            >
-              稍后处理
-            </button>
-          </div>
-        </section>
-      )}
+      <h1 className="sr-only">Skills</h1>
       <div className="skill-toolbar">
         <div className="source-chips" role="group" aria-label="Skill 筛选">
           {filters.map(([value, label]) => (
@@ -1357,11 +1762,30 @@ function SkillsCenter({
             </button>
           ))}
         </div>
-        <button className="button button-ghost" onClick={onScan}>
-          <Icon name="refresh" size={16} />
-          扫描 Skills
-        </button>
+        <div className="skill-toolbar-actions">
+          <button
+            className="button button-secondary"
+            aria-expanded={showSourceGuide}
+            aria-controls="source-guide"
+            onClick={() => setShowSourceGuide((visible) => !visible)}
+          >
+            <Icon name="plus" size={16} />
+            添加来源
+          </button>
+          <button className="button button-ghost" onClick={onScan}>
+            <Icon name="refresh" size={16} />
+            扫描 Skills
+          </button>
+        </div>
       </div>
+      {showSourceGuide && (
+        <SkillSourcePanel
+          id="source-guide"
+          workspaces={workspaces}
+          onNavigate={onNavigate}
+          onScan={onScan}
+        />
+      )}
       {skills?.duplicateNames.length ? (
         <div className="alert alert-warning" role="status">
           <Icon name="warning" />
@@ -1433,6 +1857,494 @@ function SkillsCenter({
   );
 }
 
+const presetSkillRepositories = [
+  ["anthropics/skills", "Anthropic 官方"],
+  ["mattpocock/skills", "Matt Pocock"],
+  ["obra/superpowers", "Superpowers"],
+  ["affaan-m/ECC", "Everything Claude Code"],
+] as const;
+
+function discoveredSkillKey(skill: {
+  source: { kind: string; locator: string };
+  relativePath: string;
+}) {
+  return `${skill.source.kind}:${skill.source.locator}:${skill.relativePath}`;
+}
+
+function SkillSourcePanel({
+  id,
+  workspaces,
+  onNavigate,
+  onScan,
+}: {
+  id: string;
+  workspaces: WorkspaceRecord[];
+  onNavigate: (section: Section) => void;
+  onScan: () => void;
+}) {
+  const [mode, setMode] = useState<SkillSourceMode>("skills-sh");
+  const [locator, setLocator] = useState("anthropics/skills");
+  const [requestedRef, setRequestedRef] = useState("");
+  const [subdirectory, setSubdirectory] = useState("");
+  const [browseResult, setBrowseResult] = useState<SkillSourceBrowseResult>();
+  const [selectedSkillKey, setSelectedSkillKey] = useState("");
+  const [agent, setAgent] = useState<"claude-code" | "codex" | "opencode">(
+    "claude-code",
+  );
+  const [scope, setScope] = useState<"global" | "workspace">("global");
+  const [workspaceId, setWorkspaceId] = useState<number | "">("");
+  const [plan, setPlan] = useState<SkillInstallPlanPreview>();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string>();
+
+  const request = useMemo<SkillSourceRequest | undefined>(
+    () =>
+      buildSkillSourceRequest({
+        mode,
+        locator,
+        requestedRef,
+        subdirectory,
+      }),
+    [locator, mode, requestedRef, subdirectory],
+  );
+
+  const selectedSkill = browseResult?.skills.find(
+    (skill) => discoveredSkillKey(skill) === selectedSkillKey,
+  );
+  const workspace = workspaces.find((item) => item.id === workspaceId);
+
+  async function chooseLocalDirectory() {
+    const path = await selectSkillSourceDirectory();
+    if (path) setLocator(path);
+  }
+
+  async function chooseMarketplaceManifest() {
+    const path = await selectMarketplaceManifest();
+    if (path) setLocator(path);
+  }
+
+  async function browse() {
+    if (!request || busy) return;
+    setBusy(true);
+    setMessage(undefined);
+    setPlan(undefined);
+    setSelectedSkillKey("");
+    try {
+      const result = await browseSkillSource(request);
+      setBrowseResult(result);
+      const first = result.skills.find((skill) => skill.installable);
+      if (first) setSelectedSkillKey(discoveredSkillKey(first));
+      if (!result.skills.length && result.catalogEntries.length) {
+        setMessage(
+          "已读取 Marketplace 条目；远程条目需要先解析为可获取的来源。",
+        );
+      }
+    } catch (error) {
+      setBrowseResult(undefined);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "来源读取失败，请检查地址后重试。",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createPlan() {
+    if (!request || !selectedSkill?.installable || busy) return;
+    if (scope === "workspace" && !workspace) {
+      setMessage("请先选择已登记的工作空间。");
+      return;
+    }
+    setBusy(true);
+    setMessage(undefined);
+    try {
+      setPlan(
+        await planSkillInstall({
+          request,
+          skillPath: selectedSkill.relativePath,
+          skillSourceLocator: selectedSkill.source.locator,
+          agent,
+          scope,
+          workspaceDirectory: workspace?.normalizedPath,
+          workspaceId: workspace?.id,
+        }),
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "无法生成安装计划，请重新扫描来源。",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function install() {
+    if (!plan || busy) return;
+    setBusy(true);
+    setMessage(undefined);
+    try {
+      await applySkillInstall(plan.planId);
+      setMessage("Skill 已安装，并已记录来源与版本。");
+      setPlan(undefined);
+      onScan();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "安装未完成，磁盘状态未被静默覆盖。",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section
+      className="source-guide skill-source-panel"
+      id={id}
+      aria-labelledby={`${id}-title`}
+    >
+      <div className="source-guide-heading">
+        <div>
+          <p className="eyebrow">来源与安装</p>
+          <h2 id={`${id}-title`}>发现 Skill，确认后安装</h2>
+          <p>
+            skills.sh、远程 Git、本地目录和 Marketplace
+            共用同一条只读扫描与安全安装流程。
+          </p>
+        </div>
+        <button
+          className="button button-ghost"
+          onClick={() => onNavigate("workspaces")}
+        >
+          <Icon name="folder" size={16} />
+          管理工作空间
+        </button>
+      </div>
+      <div
+        className="skill-source-tabs"
+        role="tablist"
+        aria-label="Skill 来源类型"
+      >
+        {(
+          [
+            ["skills-sh", "skills.sh"],
+            ["git", "远程 Git"],
+            ["local-directory", "本地目录"],
+            ["marketplace", "Marketplace"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            className={mode === value ? "active" : ""}
+            role="tab"
+            aria-selected={mode === value}
+            onClick={() => {
+              setMode(value);
+              setBrowseResult(undefined);
+              setPlan(undefined);
+              setMessage(undefined);
+              if (value === "skills-sh") setLocator("anthropics/skills");
+              if (value === "git")
+                setLocator("https://github.com/anthropics/skills.git");
+              if (value === "local-directory") setLocator("");
+              if (value === "marketplace") setLocator("");
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="skill-source-form">
+        <label>
+          {mode === "skills-sh"
+            ? "仓库标识"
+            : mode === "git"
+              ? "Git 仓库 URL"
+              : mode === "local-directory"
+                ? "来源目录"
+                : "Marketplace manifest"}
+          <input
+            value={locator}
+            onChange={(event) => setLocator(event.target.value)}
+            placeholder={
+              mode === "skills-sh"
+                ? "owner/repository"
+                : mode === "git"
+                  ? "https://github.com/owner/repo.git"
+                  : mode === "local-directory"
+                    ? "/path/to/skills"
+                    : "/path/to/.claude-plugin/marketplace.json"
+            }
+          />
+        </label>
+        {mode === "git" && (
+          <>
+            <label>
+              ref（可选）
+              <input
+                value={requestedRef}
+                onChange={(event) => setRequestedRef(event.target.value)}
+                placeholder="main / v1.0.0 / commit"
+              />
+            </label>
+            <label>
+              子目录（可选）
+              <input
+                value={subdirectory}
+                onChange={(event) => setSubdirectory(event.target.value)}
+                placeholder="skills"
+              />
+            </label>
+          </>
+        )}
+        {mode === "git" && (
+          <label>
+            预置仓库
+            <select
+              value={
+                presetSkillRepositories.some(([value]) =>
+                  locator.includes(value),
+                )
+                  ? presetSkillRepositories.find(([value]) =>
+                      locator.includes(value),
+                    )?.[0]
+                  : ""
+              }
+              onChange={(event) =>
+                event.target.value &&
+                setLocator(`https://github.com/${event.target.value}.git`)
+              }
+            >
+              <option value="">自定义 Git 地址</option>
+              {presetSkillRepositories.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}（{value}）
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {mode === "local-directory" && (
+          <button
+            className="button button-ghost"
+            type="button"
+            onClick={() => void chooseLocalDirectory()}
+          >
+            <Icon name="folder" size={15} />
+            选择目录
+          </button>
+        )}
+        {mode === "marketplace" && (
+          <button
+            className="button button-ghost"
+            type="button"
+            onClick={() => void chooseMarketplaceManifest()}
+          >
+            <Icon name="file" size={15} />
+            选择 manifest
+          </button>
+        )}
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={!request || busy}
+          onClick={() => void browse()}
+        >
+          <Icon name="search" size={15} />
+          {busy ? "读取中…" : "读取来源"}
+        </button>
+      </div>
+      {browseResult && (
+        <div className="skill-source-results">
+          <div className="source-result-heading">
+            <div>
+              <strong>{browseResult.source.locator}</strong>
+              <small>
+                {browseResult.source.resolvedCommit
+                  ? `版本 ${browseResult.source.resolvedCommit.slice(0, 12)}`
+                  : "来源已读取"}
+              </small>
+            </div>
+            {browseResult.skills.length > 0 && (
+              <span>{browseResult.skills.length} 个 Skill</span>
+            )}
+          </div>
+          {browseResult.diagnostics.map((item) => (
+            <p
+              className={`source-diagnostic ${item.severity}`}
+              key={`${item.code}-${item.message}`}
+            >
+              <Icon
+                name={item.severity === "error" ? "warning" : "file"}
+                size={14}
+              />
+              {item.message}
+            </p>
+          ))}
+          {browseResult.catalogEntries.length > 0 && (
+            <div className="source-catalog">
+              {browseResult.catalogEntries.map((entry, index) => (
+                <div key={`${entry.name ?? "entry"}-${index}`}>
+                  <strong>{entry.name ?? "未命名条目"}</strong>
+                  <span>
+                    {entry.installable ? "可安装来源" : "需要补充来源"}
+                  </span>
+                  <small>{entry.description ?? "暂无描述"}</small>
+                </div>
+              ))}
+            </div>
+          )}
+          {browseResult.skills.length > 0 && (
+            <div className="source-skill-list">
+              {browseResult.skills.map((skill) => (
+                <button
+                  key={skill.relativePath}
+                    className={
+                      selectedSkillKey === discoveredSkillKey(skill)
+                        ? "selected"
+                        : ""
+                    }
+                  disabled={!skill.installable}
+                    onClick={() =>
+                      setSelectedSkillKey(discoveredSkillKey(skill))
+                    }
+                >
+                  <span>
+                    <strong>{skill.displayName}</strong>
+                    <small>
+                      {skill.relativePath} · {skill.description ?? "暂无描述"}
+                    </small>
+                  </span>
+                  <em>{skill.installable ? "可安装" : "需处理"}</em>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {selectedSkill && (
+        <div className="skill-install-target">
+          <label>
+            目标 Agent
+            <select
+              value={agent}
+              onChange={(event) => setAgent(event.target.value as typeof agent)}
+            >
+              {defaultAgentIds.map((id) => (
+                <option key={id} value={id}>
+                  {getAgentMeta(id).name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            作用域
+            <select
+              value={scope}
+              onChange={(event) => setScope(event.target.value as typeof scope)}
+            >
+              <option value="global">全局</option>
+              <option value="workspace">工作空间</option>
+            </select>
+          </label>
+          {scope === "workspace" && (
+            <label>
+              工作空间
+              <select
+                value={workspaceId}
+                onChange={(event) =>
+                  setWorkspaceId(
+                    event.target.value ? Number(event.target.value) : "",
+                  )
+                }
+              >
+                <option value="">请选择已登记工作空间</option>
+                {workspaces.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button
+            className="button button-secondary"
+            disabled={busy || !selectedSkill.installable}
+            onClick={() => void createPlan()}
+          >
+            {busy ? "生成中…" : "生成安装计划"}
+          </button>
+        </div>
+      )}
+      {plan && (
+        <div className="skill-install-plan">
+          <div>
+            <span className="eyebrow">安装前确认</span>
+            <h3>{plan.displayName}</h3>
+            <p>{plan.description ?? "无描述"}</p>
+          </div>
+          <dl>
+            <div>
+              <dt>来源版本</dt>
+              <dd>{plan.plan.sourceRevision ?? "未提供"}</dd>
+            </div>
+            <div>
+              <dt>目标</dt>
+              <dd>
+                {getAgentMeta(plan.plan.agent).name} ·{" "}
+                {plan.plan.scope === "global" ? "全局" : "工作空间"}
+              </dd>
+            </div>
+            <div>
+              <dt>文件</dt>
+              <dd>{plan.plan.files.length} 个受管文件</dd>
+            </div>
+            <div>
+              <dt>目标路径</dt>
+              <dd className="mono">{plan.plan.targetDirectory}</dd>
+            </div>
+          </dl>
+          <details className="skill-plan-files">
+            <summary>查看 {plan.plan.files.length} 个文件</summary>
+            <ul>
+              {plan.plan.files.map((file) => (
+                <li className="mono" key={file}>
+                  {file}
+                </li>
+              ))}
+            </ul>
+          </details>
+          <div className="skill-install-plan-actions">
+            <button
+              className="button button-ghost"
+              onClick={() => setPlan(undefined)}
+            >
+              取消
+            </button>
+            <button
+              className="button button-primary"
+              disabled={busy}
+              onClick={() => void install()}
+            >
+              {busy ? "安装中…" : "确认安装"}
+            </button>
+          </div>
+        </div>
+      )}
+      {message && (
+        <p className="inline-message" role="status">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}
+
 function WorkspacesPage({
   workspaces,
   onChanged,
@@ -1447,6 +2359,7 @@ function WorkspacesPage({
   const [path, setPath] = useState("");
   const [message, setMessage] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const visibleWorkspaces = normalizedQuery
     ? workspaces.filter((workspace) =>
@@ -1476,6 +2389,25 @@ function WorkspacesPage({
       setBusy(false);
     }
   }
+  async function chooseDirectory() {
+    if (busy || choosing) return;
+    setChoosing(true);
+    setMessage(undefined);
+    try {
+      const selection = await selectWorkspaceDirectory();
+      if (selection) {
+        setPath(selection);
+      }
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "无法打开目录选择器，请直接输入目录路径。",
+      );
+    } finally {
+      setChoosing(false);
+    }
+  }
   async function remove(id: number) {
     try {
       await removeWorkspace(id);
@@ -1487,11 +2419,7 @@ function WorkspacesPage({
   }
   return (
     <div className="page">
-      <PageIntro
-        eyebrow="工作台 / 工作空间"
-        title="把项目放进自己的上下文。"
-        description="登记本地目录后，AgentHub 会扫描配置、AGENTS.md 与 Skills；移除记录不会触碰磁盘文件。"
-      />
+      <h1 className="sr-only">工作空间</h1>
       <section className="workspace-add surface-card">
         <div>
           <p className="eyebrow">添加本地目录</p>
@@ -1499,7 +2427,7 @@ function WorkspacesPage({
         </div>
         <div className="workspace-form">
           <label htmlFor="workspace-path">目录路径</label>
-          <div>
+          <div className="workspace-path-row">
             <input
               id="workspace-path"
               value={path}
@@ -1507,7 +2435,17 @@ function WorkspacesPage({
               placeholder="例如 /Users/me/projects/demo"
             />
             <button
+              className="button button-secondary"
+              type="button"
+              disabled={busy || choosing}
+              onClick={() => void chooseDirectory()}
+            >
+              <Icon name="folder" size={16} />
+              {choosing ? "选择中…" : "选择文件夹"}
+            </button>
+            <button
               className="button button-primary"
+              type="button"
               disabled={!path.trim() || busy}
               onClick={addAndScan}
             >
@@ -1664,17 +2602,7 @@ function DiagnosticsPage({
   }
   return (
     <div className="page">
-      <PageIntro
-        eyebrow="系统 / 诊断中心"
-        title="问题要有下一步。"
-        description="统一查看配置、来源和本地存储状态；每条诊断都附带影响范围与恢复建议。"
-        action={
-          <button className="button button-ghost" onClick={onRepair}>
-            <Icon name="refresh" size={15} />
-            执行安全重扫
-          </button>
-        }
-      />
+      <h1 className="sr-only">诊断中心</h1>
       {recoveryMessage && (
         <div className="alert alert-warning" role="status" aria-live="polite">
           <Icon name="warning" />
@@ -1868,11 +2796,7 @@ function HistoryPage({
   }
   return (
     <div className="page">
-      <PageIntro
-        eyebrow="工作台 / 变更历史"
-        title="每一次写入，都留有退路。"
-        description="这里只保存非敏感元数据和备份位置；恢复前仍会生成遮罩 Diff 并要求明确确认。"
-      />
+      <h1 className="sr-only">变更历史</h1>
       {message && (
         <div className="alert alert-warning" role="status">
           <Icon name="warning" />
@@ -1989,11 +2913,7 @@ function HistoryPage({
 function SettingsPage() {
   return (
     <div className="page">
-      <PageIntro
-        eyebrow="系统 / 设置"
-        title="让 AgentHub 按你的习惯工作。"
-        description="隐私、扫描和显示偏好都保存在本机。"
-      />
+      <h1 className="sr-only">设置</h1>
       <div className="settings-grid">
         <section className="surface-card">
           <div className="section-title-row">
