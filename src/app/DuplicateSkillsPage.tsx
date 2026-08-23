@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { InstalledSkill } from "../lib/backend";
+import { PageNavigation } from "./PageNavigation";
 
 export type DuplicateSkillGroup = {
   name: string;
@@ -15,7 +16,6 @@ export type DuplicateSkillGroup = {
 type DuplicateSkillsPageProps = {
   groups: DuplicateSkillGroup[];
   feedback?: ReactNode;
-  backIcon: ReactNode;
   warningIcon: ReactNode;
   resolvedIcon: ReactNode;
   busyPath?: string;
@@ -28,7 +28,6 @@ type DuplicateSkillsPageProps = {
 export function DuplicateSkillsPage({
   groups,
   feedback,
-  backIcon,
   warningIcon,
   resolvedIcon,
   busyPath,
@@ -44,32 +43,31 @@ export function DuplicateSkillsPage({
 
   return (
     <div className="page duplicate-skills-page">
-      <button className="duplicate-page-back" type="button" onClick={onBack}>
-        <span className="duplicate-page-back-icon">{backIcon}</span>
-        返回 Skills
-      </button>
-
-      <header className="duplicate-page-heading">
-        <div>
-          <p className="eyebrow">Skills / 重复项</p>
-          <h1 id="duplicate-page-title" tabIndex={-1}>
-            检查重复 Skill
-          </h1>
-          <p>
+      <PageNavigation
+        backLabel="返回 Skills"
+        onBack={onBack}
+        eyebrow="Skills / 重复项"
+        title="检查重复 Skill"
+        titleId="duplicate-page-title"
+        titleTabIndex={-1}
+        description={
+          <>
             同一个
             Agent、同一个作用域下存在多个真实副本。逐组确认来源和安装位置，再决定是否归档旧副本。
-          </p>
-        </div>
-        {groups.length > 0 && (
-          <div className="duplicate-page-summary" aria-label="重复项统计">
-            <strong>{groups.length}</strong>
-            <span>组冲突</span>
-            <i aria-hidden="true" />
-            <strong>{replicaCount}</strong>
-            <span>个副本</span>
-          </div>
-        )}
-      </header>
+          </>
+        }
+        actions={
+          groups.length > 0 ? (
+            <div className="duplicate-page-summary" aria-label="重复项统计">
+              <strong>{groups.length}</strong>
+              <span>组冲突</span>
+              <i aria-hidden="true" />
+              <strong>{replicaCount}</strong>
+              <span>个副本</span>
+            </div>
+          ) : undefined
+        }
+      />
 
       {feedback}
 

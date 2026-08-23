@@ -4,21 +4,21 @@ import { Webview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import { openExternalSkillSource } from "../lib/external-skill-links";
 import {
-  controlMarketplaceBrowser,
-  getMarketplaceBrowserUrl,
-  navigateMarketplaceBrowser,
-  normalizeMarketplaceBrowserUrl,
-  type MarketplaceBrowserAction,
-} from "../lib/marketplace-browser";
+  controlEmbeddedBrowser,
+  getEmbeddedBrowserUrl,
+  navigateEmbeddedBrowser,
+  normalizeEmbeddedBrowserUrl,
+  openExternalUrl,
+  type EmbeddedBrowserAction,
+} from "../lib/embedded-browser";
 
 let browserInstance = 0;
 
 function BrowserControlIcon({
   name,
 }: {
-  name: MarketplaceBrowserAction | "external";
+  name: EmbeddedBrowserAction | "copy" | "external";
 }) {
   if (name === "reload") {
     return (
@@ -32,6 +32,14 @@ function BrowserControlIcon({
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M14 4h6v6M20 4 11 13M18 13v6H4V5h6" />
+      </svg>
+    );
+  }
+  if (name === "copy") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="8" y="8" width="11" height="11" rx="2" />
+        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
       </svg>
     );
   }
@@ -52,13 +60,14 @@ export interface BrowserNavigationRequest {
   url: string;
 }
 
-export function MarketplaceBrowser({
+export function EmbeddedBrowser({
   request,
 }: {
   request: BrowserNavigationRequest;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const webviewRef = useRef<Webview | undefined>(undefined);
+  const addressInputRef = useRef<HTMLInputElement>(null);
   const editingAddressRef = useRef(false);
   const initialUrlRef = useRef(request.url);
   const lastRequestRef = useRef(request.id);
@@ -69,6 +78,7 @@ export function MarketplaceBrowser({
   const [currentUrl, setCurrentUrl] = useState(request.url);
   const [address, setAddress] = useState(request.url);
   const [message, setMessage] = useState("正在启动内嵌浏览器…");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isTauri()) {
@@ -79,7 +89,7 @@ export function MarketplaceBrowser({
 
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const webviewLabel = `marketplace-browser-${Date.now()}-${++browserInstance}`;
+    const webviewLabel = `embedded-browser-${Date.now()}-${++browserInstance}`;
     let disposed = false;
     let animationFrame = 0;
     let webviewCreated = false;
@@ -132,7 +142,14 @@ export function MarketplaceBrowser({
     webviewRef.current = webview;
 
     void webview.once("tauri://created", () => {
-      if (disposed) return;
+      // React can unmount the browser before Tauri finishes creating the
+      // native webview (for example when the user immediately clicks
+      // “退出浏览器”). In that case the cleanup below ran too early and the
+      // late-created webview was left over the main window.
+      if (disposed) {
+        void webview.close().catch(() => undefined);
+        return;
+      }
       webviewCreated = true;
       setLabel(webviewLabel);
       setState("ready");
@@ -158,7 +175,10 @@ export function MarketplaceBrowser({
       document.removeEventListener("scroll", syncBounds, true);
       webviewRef.current = undefined;
       setLabel(undefined);
-      void webview.close().catch(() => undefined);
+      void webview
+        .hide()
+        .catch(() => undefined)
+        .then(() => webview.close().catch(() => undefined));
     };
   }, []);
 
@@ -169,7 +189,7 @@ export function MarketplaceBrowser({
     lastRequestRef.current = request.id;
     setCurrentUrl(request.url);
     setAddress(request.url);
-    void navigateMarketplaceBrowser(label, request.url).catch(() => {
+    void navigateEmbeddedBrowser(label, request.url).catch(() => {
       setMessage("网页打开失败，请检查地址或网络连接。");
     });
   }, [label, request, state]);
@@ -177,7 +197,7 @@ export function MarketplaceBrowser({
   useEffect(() => {
     if (!label || state !== "ready") return;
     const poll = window.setInterval(() => {
-      void getMarketplaceBrowserUrl(label)
+      void getEmbeddedBrowserUrl(label)
         .then((url) => {
           setCurrentUrl(url);
           if (!editingAddressRef.current) setAddress(url);
@@ -191,34 +211,46 @@ export function MarketplaceBrowser({
     event.preventDefault();
     try {
       if (!label) throw new Error("内嵌浏览器仍在启动，请稍后重试。");
-      const url = normalizeMarketplaceBrowserUrl(address);
+      const url = normalizeEmbeddedBrowserUrl(address);
       setMessage("");
       setCurrentUrl(url);
       setAddress(url);
-      await navigateMarketplaceBrowser(label, url);
+      await navigateEmbeddedBrowser(label, url);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "网页打开失败。");
     }
   }
 
-  function control(action: MarketplaceBrowserAction) {
+  function control(action: EmbeddedBrowserAction) {
     if (!label) return;
     setMessage("");
-    void controlMarketplaceBrowser(label, action).catch(() => {
+    void controlEmbeddedBrowser(label, action).catch(() => {
       setMessage("浏览器操作失败，请稍后重试。");
     });
   }
 
   function openExternal() {
-    void openExternalSkillSource(currentUrl).catch(() => {
+    void openExternalUrl(currentUrl).catch(() => {
       setMessage("无法打开系统浏览器，请检查默认浏览器设置。");
     });
   }
 
+  async function copyUrl() {
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setMessage("无法复制网址，请选中地址栏后手动复制。");
+      addressInputRef.current?.focus();
+      addressInputRef.current?.select();
+    }
+  }
+
   return (
-    <section className="marketplace-browser-shell" aria-label="内嵌网页浏览器">
-      <div className="marketplace-browser-toolbar">
-        <div className="marketplace-browser-history" aria-label="浏览器导航">
+    <section className="embedded-browser" aria-label="内嵌网页浏览器">
+      <div className="browser-toolbar">
+        <div className="browser-navigation-controls" aria-label="浏览器导航">
           <button
             type="button"
             onClick={() => control("back")}
@@ -241,13 +273,14 @@ export function MarketplaceBrowser({
             <BrowserControlIcon name="reload" />
           </button>
         </div>
-        <form className="marketplace-address-bar" onSubmit={submitAddress}>
+        <form className="browser-address-bar" onSubmit={submitAddress}>
           <span aria-hidden="true" />
-          <label className="sr-only" htmlFor="marketplace-browser-address">
+          <label className="sr-only" htmlFor="embedded-browser-address">
             网页地址
           </label>
           <input
-            id="marketplace-browser-address"
+            id="embedded-browser-address"
+            ref={addressInputRef}
             type="text"
             inputMode="url"
             autoCapitalize="none"
@@ -263,18 +296,31 @@ export function MarketplaceBrowser({
             onChange={(event) => setAddress(event.target.value)}
           />
         </form>
-        <button
-          className="marketplace-browser-external"
-          type="button"
-          onClick={openExternal}
-          aria-label="在系统浏览器中打开"
-          title="在系统浏览器中打开"
-        >
-          <BrowserControlIcon name="external" />
-        </button>
+        <div className="browser-toolbar-actions">
+          <button
+            className="browser-copy-url"
+            type="button"
+            onClick={() => void copyUrl()}
+            aria-label="复制网址"
+            title="复制网址"
+          >
+            <BrowserControlIcon name="copy" />
+            <span>{copied ? "已复制" : "复制网址"}</span>
+          </button>
+          <button
+            className="browser-open-external"
+            type="button"
+            onClick={openExternal}
+            aria-label="在系统浏览器中打开"
+            title="在系统浏览器中打开"
+          >
+            <BrowserControlIcon name="external" />
+            <span>系统浏览器打开</span>
+          </button>
+        </div>
       </div>
       {message && (
-        <p className={`marketplace-browser-message ${state}`} role="status">
+        <p className={`browser-message ${state}`} role="status">
           {message}
           {state === "unavailable" || state === "error" ? (
             <button type="button" onClick={openExternal}>
@@ -284,7 +330,7 @@ export function MarketplaceBrowser({
         </p>
       )}
       <div
-        className={`marketplace-browser-viewport ${state}`}
+        className={`browser-viewport ${state}`}
         ref={viewportRef}
         aria-label="网页内容区域"
       >

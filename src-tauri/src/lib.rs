@@ -24,8 +24,8 @@ pub mod configuration;
 pub mod deep_link;
 pub mod diagnostics;
 pub mod domain;
+pub mod embedded_browser;
 pub mod logging;
-pub mod marketplace_browser;
 pub mod persistence;
 pub mod skill_installation;
 pub mod skills;
@@ -1732,9 +1732,9 @@ pub fn run() {
             get_config_history_entry,
             preview_config_restore,
             restore_config_history,
-            marketplace_browser::navigate_marketplace_browser,
-            marketplace_browser::control_marketplace_browser,
-            marketplace_browser::marketplace_browser_url,
+            embedded_browser::navigate_embedded_browser,
+            embedded_browser::control_embedded_browser,
+            embedded_browser::embedded_browser_url,
             resolve_deep_link_install
         ])
         .run(tauri::generate_context!())

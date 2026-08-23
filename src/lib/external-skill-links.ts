@@ -1,10 +1,9 @@
-import { openUrl } from "@tauri-apps/plugin-opener";
-
 import type { SkillSourceBrowseResult } from "./backend";
+import { openExternalUrl } from "./embedded-browser";
 import type { SkillSourceMode } from "./skill-source-flow";
 
 export function openExternalSkillSource(url: string) {
-  return openUrl(url);
+  return openExternalUrl(url);
 }
 
 export function sourceBrowserUrl(source: SkillSourceBrowseResult["source"]) {
@@ -19,10 +18,7 @@ export function sourceBrowserUrl(source: SkillSourceBrowseResult["source"]) {
   return undefined;
 }
 
-export function sourceInputBrowserUrl(
-  mode: SkillSourceMode,
-  locator: string,
-) {
+export function sourceInputBrowserUrl(mode: SkillSourceMode, locator: string) {
   const value = locator.trim();
   if (mode === "skills-sh" && value.startsWith("https://skills.sh/")) {
     return value;

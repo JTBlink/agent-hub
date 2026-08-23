@@ -48,6 +48,25 @@ export function legacyActionConfirmation(
   ].join("\n");
 }
 
+export function legacyActionConfirmOptions(
+  sourcePath: string,
+  action: LegacyCodexSkillAction,
+) {
+  const sourceDirectory = skillDirectory(sourcePath);
+  if (action === "migrate") {
+    return {
+      title: "确认迁移 Codex 旧目录 Skill？",
+      paths: [`原位置：${sourceDirectory}`, `新位置：${preferredCodexSkillDirectory(sourcePath)}`],
+      note: "AgentHub 会先创建完整备份，再移动整个目录；如果目标已存在，操作会停止且不会覆盖。完成后会显示备份位置。",
+    };
+  }
+  return {
+    title: "确认归档 Codex 旧目录副本？",
+    paths: [`旧副本：${sourceDirectory}`],
+    note: "旧副本会移动到 ~/.agenthub/backups/legacy-codex-skills 目录，不会永久删除。完成后会显示完整备份路径。",
+  };
+}
+
 export function successfulLegacyActionFeedback(
   result: LegacyCodexSkillResolution,
 ): LegacySkillFeedback {

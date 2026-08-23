@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
 import type { DiagnosticRecoveryPresentation } from "../lib/diagnostic-recovery-presentation";
+import { PageNavigation } from "./PageNavigation";
 
 type DiagnosticRecoveryPageProps = {
   presentation: DiagnosticRecoveryPresentation;
   warningIcon: ReactNode;
-  backIcon: ReactNode;
   onBack: () => void;
   onExecute: () => void;
   busy: boolean;
@@ -14,24 +14,21 @@ type DiagnosticRecoveryPageProps = {
 export function DiagnosticRecoveryPage({
   presentation,
   warningIcon,
-  backIcon,
   onBack,
   onExecute,
   busy,
 }: DiagnosticRecoveryPageProps) {
   return (
     <div className="page recovery-page">
-      <button className="recovery-page-back" type="button" onClick={onBack}>
-        {backIcon}
-        返回诊断列表
-      </button>
-      <header className="recovery-page-heading">
-        <p className="eyebrow">{presentation.eyebrow}</p>
-        <h1 id="recovery-page-title" tabIndex={-1}>
-          {presentation.title}
-        </h1>
-        <p>{presentation.description}</p>
-      </header>
+      <PageNavigation
+        backLabel="返回诊断列表"
+        onBack={onBack}
+        eyebrow={presentation.eyebrow}
+        title={presentation.title}
+        titleId="recovery-page-title"
+        titleTabIndex={-1}
+        description={presentation.description}
+      />
       {presentation.details.length > 0 && (
         <dl className="recovery-page-details">
           {presentation.details.map((detail) => (
