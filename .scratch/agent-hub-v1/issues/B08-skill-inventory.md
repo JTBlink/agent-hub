@@ -25,3 +25,5 @@ Blocked by: D01, D02, B02
 - `scan_installed_skills` 只读扫描三 Agent 的 global/workspace 根目录，返回 Agent、作用域、绝对入口路径、兼容性、启用状态和可追踪来源。
 - 解析有效/无效 `SKILL.md`，报告不可读根、无效入口、symlink 和同一冲突域内的重复名称；未发现 marker 的条目标为外部管理。
 - AgentHub marker 可识别启用和禁用安装，扫描测试验证不会改变源目录。
+- Skills 页的重复项详情改为独立二级页面，支持明确的“返回 Skills”入口，并在返回时恢复列表滚动位置与焦点。
+- Marketplace 快捷入口与网页浏览器拆分为两个页面；点击站点后进入独立浏览页，返回时恢复入口焦点。

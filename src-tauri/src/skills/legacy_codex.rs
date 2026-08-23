@@ -22,6 +22,7 @@ pub struct LegacyCodexSkillResolution {
     pub action: LegacyCodexSkillAction,
     pub original_path: PathBuf,
     pub destination_path: PathBuf,
+    pub backup_path: PathBuf,
 }
 
 #[derive(Debug, Error)]
@@ -60,15 +61,24 @@ pub fn resolve_legacy_codex_skill(
         return Err(LegacyCodexSkillError::InvalidSource);
     }
 
+    let backup_path = archive_target(backup_root.as_ref(), skill_name)?;
     let destination = match action {
-        LegacyCodexSkillAction::Migrate => migration_target(home, skill_name)?,
-        LegacyCodexSkillAction::Archive => archive_target(backup_root.as_ref(), skill_name)?,
+        LegacyCodexSkillAction::Migrate => {
+            let target = migration_target(home, skill_name)?;
+            copy_directory(source_directory, &backup_path)?;
+            fs::rename(source_directory, &target)?;
+            target
+        }
+        LegacyCodexSkillAction::Archive => {
+            fs::rename(source_directory, &backup_path)?;
+            backup_path.clone()
+        }
     };
-    fs::rename(source_directory, &destination)?;
     Ok(LegacyCodexSkillResolution {
         action,
         original_path: source_directory.to_path_buf(),
         destination_path: destination,
+        backup_path,
     })
 }
 
@@ -106,6 +116,25 @@ fn archive_target(
         .unwrap_or_default()
         .as_nanos();
     Ok(archive_root.join(format!("{timestamp}-{}", skill_name.to_string_lossy())))
+}
+
+fn copy_directory(source: &Path, destination: &Path) -> Result<(), LegacyCodexSkillError> {
+    fs::create_dir(destination)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = destination.join(entry.file_name());
+        let metadata = fs::symlink_metadata(&source_path)?;
+        if metadata.file_type().is_symlink() {
+            return Err(LegacyCodexSkillError::UnsafePath(source_path));
+        }
+        if metadata.is_dir() {
+            copy_directory(&source_path, &target_path)?;
+        } else if metadata.is_file() {
+            fs::copy(source_path, target_path)?;
+        }
+    }
+    Ok(())
 }
 
 fn ensure_real_directory(path: &Path) -> Result<(), LegacyCodexSkillError> {

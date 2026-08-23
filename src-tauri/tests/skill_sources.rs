@@ -137,6 +137,7 @@ fn legacy_codex_skill_is_migrated_to_the_preferred_global_root() {
     );
     assert!(!legacy_root.join("review").exists());
     assert!(home.path().join(".agents/skills/review/SKILL.md").is_file());
+    assert!(result.backup_path.join("SKILL.md").is_file());
 }
 
 #[test]
@@ -156,5 +157,6 @@ fn redundant_codex_legacy_copy_is_archived_instead_of_deleted() {
 
     assert!(!home.path().join(".codex/skills/review").exists());
     assert!(result.destination_path.join("SKILL.md").is_file());
+    assert_eq!(result.backup_path, result.destination_path);
     assert!(home.path().join(".agents/skills/review/SKILL.md").is_file());
 }
