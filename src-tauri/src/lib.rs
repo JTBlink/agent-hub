@@ -633,8 +633,7 @@ fn select_discovered_skill(
         .iter()
         .find(|skill| {
             (skill.relative_path == requested_path || skill.display_name == requested_path)
-                && requested_source_locator
-                    .is_none_or(|locator| skill.source.locator == locator)
+                && requested_source_locator.is_none_or(|locator| skill.source.locator == locator)
         })
         .cloned()
         .ok_or_else(|| "the requested source does not contain an installable Skill".into())
