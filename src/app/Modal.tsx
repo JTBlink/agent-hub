@@ -19,6 +19,7 @@ export interface ModalProps {
   icon?: ReactNode;
   actions?: ReactNode;
   width?: string;
+  dismissOnBackdrop?: boolean;
 }
 
 export function Modal({
@@ -30,6 +31,7 @@ export function Modal({
   icon,
   actions,
   width,
+  dismissOnBackdrop = true,
 }: ModalProps) {
   const titleId = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -57,7 +59,9 @@ export function Modal({
     <div
       className="modal-backdrop"
       role="presentation"
-      onMouseDown={() => closeRef.current()}
+      onMouseDown={() => {
+        if (dismissOnBackdrop) closeRef.current();
+      }}
     >
       <section
         className={`modal-panel ${tone !== "neutral" ? `tone-${tone}` : ""}`}
@@ -67,20 +71,22 @@ export function Modal({
         style={width ? { width } : undefined}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {icon && (
-          <div className={`modal-icon tone-${tone}`} aria-hidden="true">
-            {icon}
-          </div>
-        )}
         <div className="modal-body">
-          <h2
-            className="modal-title"
-            id={titleId}
-            ref={titleRef}
-            tabIndex={-1}
-          >
-            {title}
-          </h2>
+          <div className="modal-heading">
+            {icon && (
+              <div className={`modal-icon tone-${tone}`} aria-hidden="true">
+                {icon}
+              </div>
+            )}
+            <h2
+              className="modal-title"
+              id={titleId}
+              ref={titleRef}
+              tabIndex={-1}
+            >
+              {title}
+            </h2>
+          </div>
           <div className="modal-content">{children}</div>
           {actions && <div className="modal-actions">{actions}</div>}
         </div>
@@ -161,6 +167,7 @@ export function ConfirmModal({
       tone={tone === "danger" ? "danger" : "neutral"}
       title={title}
       icon={icon ?? defaultIcon}
+      dismissOnBackdrop={false}
       actions={
         <>
           <button

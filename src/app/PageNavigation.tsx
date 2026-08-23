@@ -46,14 +46,17 @@ export function PageNavigation({
   className,
 }: PageNavigationProps) {
   return (
-    <header className={`page-navigation${className ? ` ${className}` : ""}`}>
+    <nav
+      className={`page-navigation${className ? ` ${className}` : ""}`}
+      aria-label="页面导航"
+    >
       <button
         className="button button-ghost page-navigation-back"
         type="button"
         onClick={onBack}
       >
         <BackIcon />
-        {backLabel}
+        <span>{backLabel}</span>
       </button>
       <div className="page-navigation-main">
         {leading && <div className="page-navigation-leading">{leading}</div>}
@@ -68,6 +71,6 @@ export function PageNavigation({
         </div>
       </div>
       {actions && <div className="page-navigation-actions">{actions}</div>}
-    </header>
+    </nav>
   );
 }

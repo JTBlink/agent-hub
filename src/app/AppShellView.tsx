@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { ConfirmModal, Modal } from "./Modal";
+import { ConfirmModal, Modal, useConfirm } from "./Modal";
 
 import {
   addWorkspace,
@@ -32,6 +31,7 @@ import {
   type ConfigEditPreview,
   type ConfigHistoryRecord,
   type DiagnosticRecoveryPreview,
+  type InstructionFile,
   type InstalledSkill,
   type SkillInstallPlanPreview,
   type SkillInventory,
@@ -352,6 +352,16 @@ function statusLabel(status: ConfigDocument["status"] | undefined) {
   return "扫描中";
 }
 
+function instructionKindLabel(kind: InstructionFile["kind"]) {
+  if (kind === "agents") return "Agent 指令";
+  if (kind === "claude") return "Claude 指令";
+  return "指令文件";
+}
+
+function instructionFileName(path: string) {
+  return path.split(/[\\/]/).pop() || path;
+}
+
 function errorMessage(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message;
   return typeof error === "string" && error.trim() ? error : fallback;
@@ -365,6 +375,9 @@ export function App() {
   const [workspaceConfigs, setWorkspaceConfigs] = useState<ConfigDocument[]>(
     [],
   );
+  const [workspaceInstructions, setWorkspaceInstructions] = useState<
+    InstructionFile[]
+  >([]);
   const [selectedScope, setSelectedScope] =
     useState<ConfigDocument["scope"]>("global");
   const [skills, setSkills] = useState<SkillInventory>();
@@ -663,6 +676,7 @@ export function App() {
           <ConfigCenter
             configs={configs}
             workspaceConfigs={workspaceConfigs}
+            workspaceInstructions={workspaceInstructions}
             selectedScope={selectedScope}
             setSelectedScope={(scope) => {
               setSelectedScope(scope);
@@ -753,6 +767,7 @@ export function App() {
             searchQuery={searchQuery}
             onScanned={(result) => {
               setWorkspaceConfigs(result.configs);
+              setWorkspaceInstructions(result.instructions);
               setSelectedScope("workspace");
               setSection("configs");
             }}
@@ -1462,6 +1477,7 @@ function UnknownFieldsSection({ fields }: { fields: Record<string, unknown> }) {
 function ConfigCenter({
   configs,
   workspaceConfigs,
+  workspaceInstructions,
   selectedScope,
   setSelectedScope,
   selectedAgent,
@@ -1486,6 +1502,7 @@ function ConfigCenter({
 }: {
   configs: ConfigDocument[];
   workspaceConfigs: ConfigDocument[];
+  workspaceInstructions: InstructionFile[];
   selectedScope: ConfigDocument["scope"];
   setSelectedScope: (scope: ConfigDocument["scope"]) => void;
   selectedAgent: ConfigDocument["agent"];
@@ -1520,6 +1537,20 @@ function ConfigCenter({
           .includes(normalizedQuery);
       })
     : visibleConfigs;
+  const visibleInstructions =
+    selectedScope === "workspace"
+      ? workspaceInstructions.filter((instruction) => {
+          if (!normalizedQuery) return true;
+          return [
+            instruction.path,
+            instruction.kind,
+            instructionKindLabel(instruction.kind),
+          ]
+            .join(" ")
+            .toLocaleLowerCase()
+            .includes(normalizedQuery);
+        })
+      : [];
 
   if (editing && selectedConfig) {
     const meta = agentMeta[selectedConfig.agent];
@@ -1647,7 +1678,7 @@ function ConfigCenter({
             <button
               className={selectedScope === "workspace" ? "selected" : ""}
               aria-pressed={selectedScope === "workspace"}
-              disabled={!workspaceConfigs.length}
+              disabled={!workspaceConfigs.length && !workspaceInstructions.length}
               onClick={() => setSelectedScope("workspace")}
             >
               工作空间
@@ -1770,23 +1801,48 @@ function ConfigCenter({
                   </button>
                 </div>
               </div>
+              {selectedScope === "workspace" && (
+                <InstructionFilesPanel
+                  instructions={visibleInstructions}
+                  total={workspaceInstructions.length}
+                  searchQuery={normalizedQuery}
+                />
+              )}
             </>
           ) : normalizedQuery ? (
-            <div className="empty-state large">
-              <div className="empty-icon">
-                <Icon name="search" size={24} />
+            <>
+              {selectedScope === "workspace" && (
+                <InstructionFilesPanel
+                  instructions={visibleInstructions}
+                  total={workspaceInstructions.length}
+                  searchQuery={normalizedQuery}
+                />
+              )}
+              <div className="empty-state large">
+                <div className="empty-icon">
+                  <Icon name="search" size={24} />
+                </div>
+                <h2>没有匹配的配置</h2>
+                <p>试试搜索 Agent 名称、文件路径或状态，例如“Codex”。</p>
               </div>
-              <h2>没有匹配的配置</h2>
-              <p>试试搜索 Agent 名称、文件路径或状态，例如“Codex”。</p>
-            </div>
+            </>
           ) : (
-            <div className="empty-state large">
-              <div className="empty-icon">
-                <Icon name="file" size={24} />
+            <>
+              {selectedScope === "workspace" && (
+                <InstructionFilesPanel
+                  instructions={visibleInstructions}
+                  total={workspaceInstructions.length}
+                  searchQuery={normalizedQuery}
+                />
+              )}
+              <div className="empty-state large">
+                <div className="empty-icon">
+                  <Icon name="file" size={24} />
+                </div>
+                <h2>还没有扫描结果</h2>
+                <p>点击右上角"重新扫描"，AgentHub 会从本地读取配置状态。</p>
               </div>
-              <h2>还没有扫描结果</h2>
-              <p>点击右上角"重新扫描"，AgentHub 会从本地读取配置状态。</p>
-            </div>
+            </>
           )}
         </section>
       </div>
@@ -1794,6 +1850,54 @@ function ConfigCenter({
   );
 }
 
+function InstructionFilesPanel({
+  instructions,
+  total,
+  searchQuery,
+}: {
+  instructions: InstructionFile[];
+  total: number;
+  searchQuery: string;
+}) {
+  return (
+    <section className="instruction-files-panel" aria-labelledby="instruction-files-title">
+      <div className="instruction-files-heading">
+        <div>
+          <p className="eyebrow">工作空间上下文</p>
+          <h3 id="instruction-files-title">指令文件</h3>
+        </div>
+        <span className="instruction-files-count">
+          {searchQuery ? `${instructions.length} / ${total}` : total} 个
+        </span>
+      </div>
+      {instructions.length ? (
+        <div className="instruction-files-list">
+          {instructions.map((instruction) => (
+            <article className="instruction-file-row" key={instruction.path}>
+              <div className="instruction-file-icon">
+                <Icon name="file" size={16} />
+              </div>
+              <div className="instruction-file-copy">
+                <strong>{instructionFileName(instruction.path)}</strong>
+                <span>
+                  {instructionKindLabel(instruction.kind)} · 工作空间
+                </span>
+                <code title={instruction.path}>{instruction.path}</code>
+              </div>
+              <span className="instruction-readonly">只读发现</span>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="instruction-files-empty">
+          {searchQuery
+            ? "没有匹配的指令文件。"
+            : "当前工作空间没有发现 AGENTS.md 或 CLAUDE.md。"}
+        </p>
+      )}
+    </section>
+  );
+}
 
 function SkillsCenter({
   skills,
@@ -1822,6 +1926,7 @@ function SkillsCenter({
   const [legacyAction, setLegacyAction] = useState<"migrate" | "archive">();
   const [legacyFeedback, setLegacyFeedback] = useState<LegacySkillFeedback>();
   const [updateTarget, setUpdateTarget] = useState<InstalledSkill>();
+  const { confirm, ConfirmPortal } = useConfirm();
   const skillsScrollPosition = useRef({ main: 0, window: 0 });
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const filteredSkills = useMemo(
@@ -1953,7 +2058,9 @@ function SkillsCenter({
       description: (
         <>
           <div className="modal-paths">
-            {opts.paths.map((p) => <code key={p}>{p}</code>)}
+            {opts.paths.map((p) => (
+              <code key={p}>{p}</code>
+            ))}
           </div>
           <p>{opts.note}</p>
         </>
@@ -2003,67 +2110,67 @@ function SkillsCenter({
       <>
         {ConfirmPortal}
         <DuplicateSkillsPage
-        groups={duplicateGroups}
-        feedback={
-          legacyFeedback ? (
-            <Modal
-              open
-              onClose={() => setLegacyFeedback(undefined)}
-              tone={legacyFeedback.tone === "error" ? "error" : "success"}
-              title={legacyFeedback.title}
-              icon={
-                <Icon
-                  name={legacyFeedback.tone === "error" ? "warning" : "check"}
-                  size={20}
-                />
-              }
-              actions={
-                <button
-                  className="button button-primary"
-                  type="button"
-                  onClick={() => setLegacyFeedback(undefined)}
-                >
-                  关闭结果
-                </button>
-              }
-            >
-              <p>{legacyFeedback.summary}</p>
-              {(legacyFeedback.originalPath ||
-                legacyFeedback.destinationPath ||
-                legacyFeedback.backupPath) && (
-                <div className="modal-paths">
-                  {legacyFeedback.originalPath && (
-                    <code>原位置：{legacyFeedback.originalPath}</code>
-                  )}
-                  {legacyFeedback.destinationPath && (
-                    <code>
-                      {legacyFeedback.destinationLabel ?? "目标位置"}：
-                      {legacyFeedback.destinationPath}
-                    </code>
-                  )}
-                  {legacyFeedback.backupPath &&
-                    legacyFeedback.backupPath !==
-                      legacyFeedback.destinationPath && (
-                      <code>备份位置：{legacyFeedback.backupPath}</code>
+          groups={duplicateGroups}
+          feedback={
+            legacyFeedback ? (
+              <Modal
+                open
+                onClose={() => setLegacyFeedback(undefined)}
+                tone={legacyFeedback.tone === "error" ? "error" : "success"}
+                title={legacyFeedback.title}
+                icon={
+                  <Icon
+                    name={legacyFeedback.tone === "error" ? "warning" : "check"}
+                    size={20}
+                  />
+                }
+                actions={
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    onClick={() => setLegacyFeedback(undefined)}
+                  >
+                    关闭结果
+                  </button>
+                }
+              >
+                <p>{legacyFeedback.summary}</p>
+                {(legacyFeedback.originalPath ||
+                  legacyFeedback.destinationPath ||
+                  legacyFeedback.backupPath) && (
+                  <div className="modal-paths">
+                    {legacyFeedback.originalPath && (
+                      <code>原位置：{legacyFeedback.originalPath}</code>
                     )}
-                </div>
-              )}
-            </Modal>
-          ) : undefined
-        }
-        warningIcon={<Icon name="warning" size={18} />}
-        resolvedIcon={<Icon name="check" size={24} />}
-        busyPath={legacyActionPath}
-        busyAction={legacyAction}
-        onBack={closeDuplicatePage}
-        onArchive={(path) => void handleLegacyAction(path, "archive")}
-        renderLocation={(skill) => (
-          <SkillLocation
-            key={`${skill.agent}-${skill.scope}-${skill.path}`}
-            skill={skill}
-          />
-        )}
-      />
+                    {legacyFeedback.destinationPath && (
+                      <code>
+                        {legacyFeedback.destinationLabel ?? "目标位置"}：
+                        {legacyFeedback.destinationPath}
+                      </code>
+                    )}
+                    {legacyFeedback.backupPath &&
+                      legacyFeedback.backupPath !==
+                        legacyFeedback.destinationPath && (
+                        <code>备份位置：{legacyFeedback.backupPath}</code>
+                      )}
+                  </div>
+                )}
+              </Modal>
+            ) : undefined
+          }
+          warningIcon={<Icon name="warning" size={18} />}
+          resolvedIcon={<Icon name="check" size={24} />}
+          busyPath={legacyActionPath}
+          busyAction={legacyAction}
+          onBack={closeDuplicatePage}
+          onArchive={(path) => void handleLegacyAction(path, "archive")}
+          renderLocation={(skill) => (
+            <SkillLocation
+              key={`${skill.agent}-${skill.scope}-${skill.path}`}
+              skill={skill}
+            />
+          )}
+        />
       </>
     );
   }
@@ -3312,13 +3419,22 @@ function DiagnosticsPage({
   const [recoveryBusy, setRecoveryBusy] = useState(false);
   const [legacyActionPath, setLegacyActionPath] = useState<string>();
   const [legacyFeedback, setLegacyFeedback] = useState<LegacySkillFeedback>();
-  const { confirm: confirmLegacy, ConfirmPortal: LegacyConfirmPortal } = useConfirm();
+  const { confirm: confirmLegacy, ConfirmPortal: LegacyConfirmPortal } =
+    useConfirm();
   const diagnosticsScrollPosition = useRef({ main: 0, window: 0 });
   const recoveryReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
-  const actionable = diagnostics
+  const issueDiagnostics = diagnostics.filter(
+    (item) => item.severity !== "info",
+  );
+  const errorCount = issueDiagnostics.filter(
+    (item) => item.severity === "error",
+  ).length;
+  const warningCount = issueDiagnostics.filter(
+    (item) => item.severity === "warning",
+  ).length;
+  const actionable = issueDiagnostics
     .filter((item) => {
-      if (item.severity === "info") return false;
       return (
         !normalizedQuery ||
         [
@@ -3404,7 +3520,9 @@ function DiagnosticsPage({
       description: (
         <>
           <div className="modal-paths">
-            {opts.paths.map((p) => <code key={p}>{p}</code>)}
+            {opts.paths.map((p) => (
+              <code key={p}>{p}</code>
+            ))}
           </div>
           <p>{opts.note}</p>
         </>
@@ -3442,12 +3560,20 @@ function DiagnosticsPage({
     return (
       <div className="page diagnostic-detail-page">
         {LegacyConfirmPortal}
-        <div className="diagnostic-detail-toolbar">
-          <button className="button button-ghost" onClick={onDismissDiagnostic}>
-            <Icon name="arrow" size={15} />
-            返回诊断列表
-          </button>
-        </div>
+        <PageNavigation
+          backLabel="返回诊断列表"
+          onBack={onDismissDiagnostic}
+          eyebrow="诊断中心 / 处理方案"
+          title={diagnosticSubject(diagnosticFocus)}
+          titleId="diagnostic-detail-title"
+          titleTabIndex={-1}
+          description={diagnosticProblem(diagnosticFocus)}
+          actions={
+            <span className={`diagnostic-severity ${diagnosticFocus.severity}`}>
+              {diagnosticFocus.severity === "error" ? "错误" : "警告"}
+            </span>
+          }
+        />
         {legacyFeedback && (
           <Modal
             open
@@ -3497,27 +3623,27 @@ function DiagnosticsPage({
           className={`skill-issue-panel ${diagnosticFocus.severity}`}
           aria-labelledby="diagnostic-detail-title"
         >
-          <div className="skill-issue-heading">
-            <div>
-              <p className="eyebrow">诊断中心 · Skill 问题</p>
-              <h2 id="diagnostic-detail-title">
-                {diagnosticSubject(diagnosticFocus)}
-              </h2>
-              <p>{diagnosticProblem(diagnosticFocus)}</p>
-            </div>
-            <span className="diagnostic-severity">
-              {diagnosticFocus.severity === "error" ? "错误" : "警告"}
-            </span>
+          <div className="skill-issue-summary">
+            <article className="skill-issue-summary-card impact">
+              <span className="skill-issue-summary-icon">
+                <Icon name="warning" size={18} />
+              </span>
+              <div>
+                <strong>可能影响</strong>
+                <p>{diagnosticFocus.impact}</p>
+              </div>
+            </article>
+            <article className="skill-issue-summary-card recommendation">
+              <span className="skill-issue-summary-icon">
+                <Icon name="check" size={18} />
+              </span>
+              <div>
+                <strong>处理建议</strong>
+                <p>{diagnosticFocus.nextAction}</p>
+              </div>
+            </article>
           </div>
           <dl className="skill-issue-facts">
-            <div>
-              <dt>可能影响</dt>
-              <dd>{diagnosticFocus.impact}</dd>
-            </div>
-            <div>
-              <dt>处理建议</dt>
-              <dd>{diagnosticFocus.nextAction}</dd>
-            </div>
             <div>
               <dt>诊断码</dt>
               <dd className="mono">{diagnosticFocus.code}</dd>
@@ -3583,12 +3709,6 @@ function DiagnosticsPage({
             </div>
           )}
           <div className="skill-issue-actions">
-            <button
-              className="button button-ghost"
-              onClick={onDismissDiagnostic}
-            >
-              返回诊断列表
-            </button>
             <button className="button button-secondary" onClick={onRepair}>
               <Icon name="refresh" size={15} />
               重新扫描
@@ -3673,7 +3793,32 @@ function DiagnosticsPage({
   }
   return (
     <div className="page">
-      <h1 className="sr-only">诊断中心</h1>
+      <header className="diagnostics-page-heading">
+        <div>
+          <p className="eyebrow">运行状态 / Diagnostics</p>
+          <h1>诊断中心</h1>
+          <p>集中查看需要确认的配置、Skill 和存储问题。</p>
+        </div>
+        <dl className="diagnostics-summary" aria-label="诊断问题统计">
+          <div className="total">
+            <dt>待处理</dt>
+            <dd>{issueDiagnostics.length}</dd>
+          </div>
+          <div className="error">
+            <dt>错误</dt>
+            <dd>{errorCount}</dd>
+          </div>
+          <div className="warning">
+            <dt>警告</dt>
+            <dd>{warningCount}</dd>
+          </div>
+        </dl>
+      </header>
+      {normalizedQuery && (
+        <p className="diagnostics-filter-result" role="status">
+          当前搜索显示 {actionable.length} / {issueDiagnostics.length} 项问题
+        </p>
+      )}
       {recoveryMessage && (
         <div
           className="alert alert-warning"

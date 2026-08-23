@@ -36,7 +36,7 @@ describe("diagnostic recovery presentation", () => {
 
     const result = diagnosticRecoveryPresentation(preview, diagnostic);
 
-    expect(result.title).toBe("重新扫描 imagegen");
+    expect(result.title).toBe("imagegen");
     expect(result.readOnly).toBe(true);
     expect(result.safetyNote).toContain("不会修改配置");
     expect(result.details).toEqual([

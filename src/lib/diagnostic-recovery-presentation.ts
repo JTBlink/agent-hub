@@ -95,11 +95,10 @@ export function diagnosticRecoveryPresentation(
   if (readOnly) {
     return {
       eyebrow: diagnostic?.code.startsWith("skill:")
-        ? "Skill 扫描预览"
+        ? "Skill 扫描"
         : "扫描预览",
-      title: `重新扫描 ${subject}`,
-      description:
-        "AgentHub 会重新读取当前目录和入口文件，用最新的磁盘状态刷新诊断结果。",
+      title: subject,
+      description: "只读重新读取当前 Skill，刷新诊断结果。",
       details,
       effects: ["重新读取目录和入口文件", "刷新诊断列表中的检查结果"],
       safetyNote:

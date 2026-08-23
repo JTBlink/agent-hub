@@ -237,7 +237,13 @@ export function EmbeddedBrowser({
 
   async function copyUrl() {
     try {
-      await navigator.clipboard.writeText(currentUrl);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentUrl);
+      } else {
+        addressInputRef.current?.focus();
+        addressInputRef.current?.select();
+        if (!document.execCommand("copy")) throw new Error("copy failed");
+      }
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } catch {
