@@ -6,6 +6,14 @@ function readJsonVersion(path) {
   return JSON.parse(readFileSync(path, "utf8")).version;
 }
 
+function readSourceVersion(path) {
+  const version = readFileSync(path, "utf8").trim();
+  if (!version) {
+    throw new Error(`Could not read application version from ${path}`);
+  }
+  return version;
+}
+
 function readCargoVersion(path) {
   const cargoToml = readFileSync(path, "utf8");
   const packageSection = cargoToml.split("[package]", 2)[1]?.split("[", 1)[0];
@@ -41,6 +49,7 @@ function readCargoLockVersion(path) {
 
 export function readVersions(root = process.cwd()) {
   return {
+    source: readSourceVersion(resolve(root, "VERSION")),
     package: readJsonVersion(resolve(root, "package.json")),
     ...readPackageLockVersions(resolve(root, "package-lock.json")),
     cargo: readCargoVersion(resolve(root, "src-tauri/Cargo.toml")),
@@ -55,7 +64,7 @@ export function validateVersions({ root = process.cwd(), tag = "" } = {}) {
 
   if (uniqueVersions.size !== 1) {
     throw new Error(
-      `Version mismatch: package=${versions.package}, package-lock=${versions.packageLock}, package-lock-root=${versions.packageLockRoot}, cargo=${versions.cargo}, cargo-lock=${versions.cargoLock}, tauri=${versions.tauri}`,
+      `Version mismatch: source=${versions.source}, package=${versions.package}, package-lock=${versions.packageLock}, package-lock-root=${versions.packageLockRoot}, cargo=${versions.cargo}, cargo-lock=${versions.cargoLock}, tauri=${versions.tauri}`,
     );
   }
 

@@ -38,7 +38,7 @@ gh run download <run-id> --name "agent-hub-installers-<run-id>"
 ## Tag 发布
 
 1. 把 `CHANGELOG.md` 的 `Unreleased` 内容归档到与版本一致的章节。
-2. 运行 `npm run version:set -- <version>`，再运行 `npm run version:check -- v<version>`。
+2. 修改仓库根目录 `VERSION`，运行 `npm run version:sync` 同步所有 manifest，再运行 `npm run version:check -- v<version>` 校验；也可使用 `npm run version:set -- <version>` 一步完成修改与同步。
 3. 提交版本变更，创建并推送 `v<version>` tag。
 4. 确认质量门禁和三个矩阵 job 全部成功，之后才应出现 GitHub Release。
 5. 下载 Release 附件并核验 `SHA256SUMS`、发布说明、平台支持矩阵及所有安装格式。

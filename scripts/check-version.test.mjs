@@ -13,6 +13,7 @@ function fixture({
 } = {}) {
   const root = mkdtempSync(join(tmpdir(), "agent-hub-version-"));
   mkdirSync(join(root, "src-tauri"));
+  writeFileSync(join(root, "VERSION"), "1.2.3\n");
   writeFileSync(
     join(root, "package.json"),
     JSON.stringify({ version: packageVersion }),
@@ -46,6 +47,12 @@ describe("release version validation", () => {
 
   it("rejects inconsistent manifests", () => {
     const root = fixture({ cargoVersion: "2.0.0" });
+    expect(() => validateVersions({ root })).toThrow("Version mismatch");
+  });
+
+  it("rejects a stale canonical VERSION file", () => {
+    const root = fixture();
+    writeFileSync(join(root, "VERSION"), "9.9.9\n");
     expect(() => validateVersions({ root })).toThrow("Version mismatch");
   });
 

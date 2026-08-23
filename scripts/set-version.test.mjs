@@ -10,6 +10,7 @@ import { setVersions } from "./set-version.mjs";
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "agent-hub-set-version-"));
   mkdirSync(join(root, "src-tauri"));
+  writeFileSync(join(root, "VERSION"), "1.0.0\n");
   writeFileSync(
     join(root, "package.json"),
     JSON.stringify({ name: "agent-hub", version: "1.0.0" }),
@@ -54,6 +55,7 @@ describe("release version updates", () => {
     expect(readFileSync(join(root, "src-tauri/Cargo.lock"), "utf8")).toContain(
       'name = "agent-hub"\nversion = "2.1.0-beta.1"',
     );
+    expect(readFileSync(join(root, "VERSION"), "utf8")).toBe("2.1.0-beta.1\n");
   });
 
   it("rejects invalid semantic versions without editing files", () => {

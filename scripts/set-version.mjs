@@ -13,6 +13,7 @@ export function setVersions({ root = process.cwd(), version }) {
   }
 
   const packagePath = resolve(root, "package.json");
+  const sourcePath = resolve(root, "VERSION");
   const lockfilePath = resolve(root, "package-lock.json");
   const tauriPath = resolve(root, "src-tauri/tauri.conf.json");
   const cargoPath = resolve(root, "src-tauri/Cargo.toml");
@@ -58,6 +59,7 @@ export function setVersions({ root = process.cwd(), version }) {
   tauriConfig.version = version;
 
   writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  writeFileSync(sourcePath, `${version}\n`);
   writeFileSync(lockfilePath, `${JSON.stringify(lockfile, null, 2)}\n`);
   writeFileSync(tauriPath, `${JSON.stringify(tauriConfig, null, 2)}\n`);
   writeFileSync(cargoPath, beforePackage + updatedPackage + afterPackage);
@@ -71,7 +73,9 @@ const invokedPath = process.argv[1]
   ? pathToFileURL(resolve(process.argv[1])).href
   : "";
 if (invokedPath === import.meta.url) {
-  const version = process.argv[2] ?? "";
+  const version =
+    process.argv[2] ??
+    readFileSync(resolve(process.cwd(), "VERSION"), "utf8").trim();
   try {
     setVersions({ version });
     console.log(`Updated AgentHub to version ${version}`);

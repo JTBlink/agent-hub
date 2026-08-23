@@ -30,7 +30,7 @@
 - 增加产品、架构、数据模型、集成、ADR 和开发指南文档目录。
 - 初始化可运行的 Tauri 2 + React 工程骨架，并加入前端到 Rust 的命令调用示例。
 - 增加 GitHub Actions 跨平台 CI/CD：支持手动构建 Actions artifacts，以及 `v*` tag 自动生成 Windows、macOS、Linux 安装包和 GitHub Release。
-- 增加 `npm run version:set` 和 `npm run version:check`，统一维护并校验发布版本号。
+- 增加根目录 `VERSION` 单一版本源，以及 `npm run version:set` / `npm run version:check`，统一同步并校验发布版本号。
 - 手动和 tag 构建均生成包含全平台安装包、SHA-256 校验和、变更日志与平台支持矩阵的汇总产物。
 - 发布门禁同时校验 npm、Cargo 锁文件与应用 manifests 的版本一致性。
 - 增加 workflow contract 测试，锁定手动/tag 触发、三平台格式、汇总 artifact 和 Release 权限边界。

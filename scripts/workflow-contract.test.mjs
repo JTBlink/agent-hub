@@ -12,6 +12,17 @@ const ci = readFileSync(
 );
 
 describe("GitHub Actions workflow contract", () => {
+  it("uses official actions backed by the Node.js 24 runtime", () => {
+    for (const workflow of [installers, ci]) {
+      expect(workflow).not.toContain("actions/checkout@v4");
+      expect(workflow).not.toContain("actions/setup-node@v4");
+    }
+    expect(installers).toContain("actions/checkout@v5");
+    expect(installers).toContain("actions/setup-node@v5");
+    expect(ci).toContain("actions/checkout@v5");
+    expect(ci).toContain("actions/setup-node@v5");
+  });
+
   it("supports manual and v-tag installer builds", () => {
     expect(installers).toContain("workflow_dispatch:");
     expect(installers).toMatch(/tags:\n\s+- "v\*"/);
