@@ -836,31 +836,12 @@ textarea:focus-visible {
   margin: 0;
 }
 
-.config-agent-switcher-heading {
-  display: grid;
-  gap: 4px;
-  padding: 5px 2px 0;
-}
-
-.config-agent-switcher-heading span {
-  color: var(--ink);
-  font-family: "Space Grotesk", sans-serif;
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.045em;
-}
-
-.config-agent-switcher-heading small {
-  color: var(--quiet);
-  font-size: 10px;
-}
-
 .config-agent-dropdown {
   width: 100%;
 }
 
 .config-agent-dropdown .dropdown-menu-trigger {
-  min-height: 58px;
+  min-height: 48px;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
 
@@ -870,7 +851,7 @@ textarea:focus-visible {
 }
 
 .config-agent-dropdown .dropdown-menu-option {
-  min-height: 50px;
+  min-height: 44px;
 }
 
 .config-agent-dropdown .dropdown-menu-option-meta {
@@ -1211,6 +1192,28 @@ textarea:focus-visible {
   margin: 13px 0 0;
   color: var(--teal);
   font-size: 11px;
+}
+.workspace-toast {
+  position: fixed;
+  top: 78px;
+  right: 24px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 11px 14px;
+  border: 1px solid rgb(87 223 208 / 34%);
+  border-radius: 10px;
+  color: var(--ink);
+  background: linear-gradient(145deg, #173c4b, #122a40);
+  box-shadow: 0 14px 30px rgb(0 0 0 / 24%);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.workspace-toast .icon {
+  flex: none;
+  color: var(--teal);
 }
 
 /* Config edit page (second-level editing view) */
@@ -2675,12 +2678,26 @@ textarea:focus-visible {
 .workspace-list {
   min-height: 210px;
 }
+.workspace-list-heading {
+  align-items: baseline;
+}
+.workspace-list-heading .eyebrow {
+  margin: 0;
+}
+.workspace-list-heading h2 {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
 .workspace-rows {
   margin-top: 14px;
 }
 .workspace-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto 36px;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
   min-height: 63px;
@@ -2708,6 +2725,16 @@ textarea:focus-visible {
 .workspace-row .icon-button {
   width: 44px;
   height: 44px;
+}
+.workspace-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.workspace-row-actions .workspace-current-pill {
+  white-space: nowrap;
 }
 .workspace-empty {
   display: grid;
@@ -3595,12 +3622,6 @@ textarea:focus-visible {
   gap: 8px 16px;
 }
 
-.config-sidebar .scope-switch {
-  grid-row: 1 / span 2;
-  align-self: center;
-}
-
-.config-agent-switcher-heading,
 .config-agent-dropdown {
   grid-column: 2;
 }
@@ -3636,7 +3657,6 @@ textarea:focus-visible {
   }
 
   .config-sidebar .scope-switch,
-  .config-agent-switcher-heading,
   .config-agent-dropdown {
     grid-column: 1;
     grid-row: auto;
@@ -4830,6 +4850,12 @@ body {
   .page {
     padding: 28px 16px 45px;
   }
+  .workspace-toast {
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    max-width: none;
+  }
   .topology-card {
     padding: 20px 17px;
   }
@@ -5001,11 +5027,14 @@ body {
     flex-direction: column;
   }
   .workspace-row {
-    grid-template-columns: 30px minmax(0, 1fr) 34px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    align-items: start;
   }
-  .workspace-row .button {
-    grid-column: 2 / 3;
-    justify-self: start;
+  .workspace-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    padding-left: 41px;
   }
   .diagnostic-card {
     grid-template-columns: 32px minmax(0, 1fr);
@@ -7119,6 +7148,7 @@ select:focus-visible {
 
 .skills-context-switchers {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -7203,6 +7233,12 @@ select:focus-visible {
 .skills-context-switchers .agent-dropdown,
 .skills-context-switchers .workspace-dropdown {
   width: min(100%, 330px);
+}
+
+@media (max-width: 1100px) {
+  .skills-context-switchers {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 620px) {

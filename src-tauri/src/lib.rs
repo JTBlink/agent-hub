@@ -1378,15 +1378,13 @@ fn read_skill_source(app: tauri::AppHandle, path: String) -> Result<String, Stri
 #[tauri::command]
 fn open_directory_in_editor(path: String) -> Result<bool, String> {
     let requested = PathBuf::from(path);
-    let metadata = std::fs::metadata(&requested)
-        .map_err(|_| "目录不存在或无法读取".to_owned())?;
-    let directory = if metadata.is_dir() {
-        requested
-    } else {
-        requested
+    let directory = match std::fs::metadata(&requested) {
+        Ok(metadata) if metadata.is_file() => requested
             .parent()
             .map(Path::to_path_buf)
-            .ok_or_else(|| "无法确定目录位置".to_owned())?
+            .ok_or_else(|| "无法确定目录位置".to_owned())?,
+        Ok(_) => requested,
+        Err(_) => return Err("目录不存在或无法读取".to_owned()),
     };
 
     if ProcessCommand::new("code")
@@ -1421,7 +1419,18 @@ fn open_directory_in_editor(path: String) -> Result<bool, String> {
         return Ok(true);
     }
 
-    Ok(false)
+    #[cfg(target_os = "windows")]
+    let fallback = ProcessCommand::new("explorer").arg(&directory).status();
+
+    #[cfg(target_os = "macos")]
+    let fallback = ProcessCommand::new("open").arg(&directory).status();
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let fallback = ProcessCommand::new("xdg-open").arg(&directory).status();
+
+    fallback
+        .map(|status| status.success())
+        .map_err(|error| error.to_string())
 }
 
 fn read_skill_source_from_home(home: &Path, entrypoint: &Path) -> Result<String, String> {
