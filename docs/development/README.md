@@ -15,6 +15,7 @@
 npm ci
 ./agent-hub.sh dev        # 启动开发模式
 ./agent-hub.sh build      # 编译当前平台安装包
+./agent-hub.sh clean      # 清理 Tauri/Cargo 构建缓存（用于刷新应用图标）
 ./agent-hub.sh test       # 运行前端和 Rust 测试
 ./agent-hub.sh lint       # ESLint + Cargo fmt + Clippy
 ./agent-hub.sh release <output-dir> <git-ref>  # 打包发布产物

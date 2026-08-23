@@ -547,6 +547,8 @@ struct SkillInstallPlanPreview {
 struct SkillInstallRequest {
     request: skills::SourceRequest,
     skill_path: String,
+    #[serde(default)]
+    skill_source_locator: Option<String>,
     agent: Agent,
     scope: Scope,
     #[serde(default)]
@@ -616,6 +618,7 @@ fn lifecycle_target_context(
 fn select_discovered_skill(
     source: &skills::SourceBrowseResult,
     requested_path: &str,
+    requested_source_locator: Option<&str>,
 ) -> Result<skills::DiscoveredSkill, String> {
     let requested_path = requested_path.trim().trim_matches('/');
     if requested_path.is_empty()
@@ -628,7 +631,11 @@ fn select_discovered_skill(
     source
         .skills
         .iter()
-        .find(|skill| skill.relative_path == requested_path || skill.display_name == requested_path)
+        .find(|skill| {
+            (skill.relative_path == requested_path || skill.display_name == requested_path)
+                && requested_source_locator
+                    .is_none_or(|locator| skill.source.locator == locator)
+        })
         .cloned()
         .ok_or_else(|| "the requested source does not contain an installable Skill".into())
 }
@@ -687,7 +694,11 @@ fn create_skill_install_plan_for_state(
         .skill_sources()?
         .browse(input.request)
         .map_err(|error| error.to_string())?;
-    let skill = select_discovered_skill(&source, &input.skill_path)?;
+    let skill = select_discovered_skill(
+        &source,
+        &input.skill_path,
+        input.skill_source_locator.as_deref(),
+    )?;
     let context = skill_target_context(home, workspace_directory.as_deref())?;
     let plan = skill_installation::plan_install_for(&skill, input.agent, input.scope, &context)
         .map_err(|error| error.to_string())?;
@@ -1498,6 +1509,7 @@ fn restore_config_history(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(logging::plugin())
         .setup(|app| {
             let data_directory = app.path().app_data_dir().map_err(|error| {
@@ -1991,9 +2003,9 @@ mod tests {
             catalog_entries: Vec::new(),
             diagnostics: Vec::new(),
         };
-        assert!(select_discovered_skill(&browse, "../review").is_err());
+        assert!(select_discovered_skill(&browse, "../review", None).is_err());
         assert_eq!(
-            select_discovered_skill(&browse, "review")
+            select_discovered_skill(&browse, "review", None)
                 .expect("Skill selected")
                 .name
                 .as_deref(),
@@ -2058,6 +2070,7 @@ mod tests {
                     path: root.path().join("source"),
                 },
                 skill_path: "review".into(),
+                skill_source_locator: None,
                 agent: Agent::OpenCode,
                 scope: Scope::Workspace,
                 workspace_directory: Some(workspace.to_string_lossy().into_owned()),
@@ -2097,6 +2110,7 @@ mod tests {
                     path: root.path().join("source"),
                 },
                 skill_path: "review".into(),
+                skill_source_locator: None,
                 agent: Agent::Codex,
                 scope: Scope::Global,
                 workspace_directory: None,
@@ -2157,6 +2171,7 @@ mod tests {
                     path: root.path().join("source"),
                 },
                 skill_path: "review".into(),
+                skill_source_locator: None,
                 agent: Agent::ClaudeCode,
                 scope: Scope::Global,
                 workspace_directory: None,
@@ -2229,6 +2244,7 @@ mod tests {
                     path: root.path().join("source"),
                 },
                 skill_path: "review".into(),
+                skill_source_locator: None,
                 agent: Agent::Codex,
                 scope: Scope::Global,
                 workspace_directory: None,
