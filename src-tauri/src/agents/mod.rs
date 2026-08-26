@@ -72,9 +72,12 @@ impl ScanContext {
     }
 
     pub(crate) fn opencode_config_file(&self) -> PathBuf {
-        self.opencode_config_file
-            .clone()
-            .unwrap_or_else(|| self.home_directory.join(".config/opencode/opencode.json"))
+        self.opencode_config_file.clone().unwrap_or_else(|| {
+            self.home_directory
+                .join(".config")
+                .join("opencode")
+                .join("opencode.json")
+        })
     }
 }
 
