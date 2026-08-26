@@ -1,7 +1,7 @@
 # B13：统一诊断、冲突和恢复体验
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D04, B05, B06, B07, B12
 
 ## 交付
@@ -26,3 +26,11 @@ Blocked by: D04, B05, B06, B07, B12
 - 已暴露 `preview_diagnostic_recovery` / `execute_diagnostic_recovery`：服务端重新匹配当前诊断并签发有界、一次性进程内票据；安全扫描无需确认即可执行，配置修复返回遮罩 Diff，执行时强制 `previewed + confirmed`、原 revision 和已预览内容 checksum，随后复用备份/原子写入/历史记录闭环；`manual` 无条件拒绝自动执行。
 - Rust 后端测试覆盖安全扫描、危险编辑缺少预览/确认、预览后替换内容篡改、成功写入、票据重放和 manual 拒绝；命令参数与返回结构记录在 `docs/development/diagnostic-recovery.md`。
 - 剩余：React 诊断中心接入上述两个 command，并完成 Tauri WebView/UI 层的干净环境端到端测试。
+
+## Result
+
+- React 诊断中心已接入 `preview_diagnostic_recovery` 与 `execute_diagnostic_recovery`，覆盖安全扫描、配置编辑预览/确认、一次性票据、外部修改提示和手动处理分支。
+- Rust 恢复集成测试覆盖真实临时配置文件的外部修改取消写入、确认回滚、备份和诊断刷新；`cargo test --manifest-path src-tauri/Cargo.toml` 全部通过。
+- Windows Tauri release 二进制已启动并显示 AgentHub 主窗口；通过桌面可访问性树确认 WebView 内容区域可见，随后安全退出测试进程。
+- 前端 `npm test -- --run`：73 个测试通过、1 个跳过；`npm run build` 与 `npm run lint` 通过（仅保留既有 Fast Refresh 提示）。
+- 验证命令：`cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`、`cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings`、`cargo test --manifest-path src-tauri/Cargo.toml`。
