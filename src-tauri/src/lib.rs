@@ -2016,6 +2016,29 @@ mod tests {
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
 
+    struct EnvironmentGuard {
+        key: &'static str,
+        original: Option<std::ffi::OsString>,
+    }
+
+    impl EnvironmentGuard {
+        fn set(key: &'static str, value: &Path) -> Self {
+            let original = std::env::var_os(key);
+            std::env::set_var(key, value);
+            Self { key, original }
+        }
+    }
+
+    impl Drop for EnvironmentGuard {
+        fn drop(&mut self) {
+            if let Some(value) = self.original.take() {
+                std::env::set_var(self.key, value);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
+
     fn test_state(root: &Path) -> AppState {
         let database = Arc::new(
             persistence::Database::open(root.join("state/agent-hub.sqlite3")).expect("database"),
@@ -2124,6 +2147,7 @@ mod tests {
         let root = tempfile::tempdir().expect("home");
         let codex_directory = root.path().join(".codex");
         std::fs::create_dir(&codex_directory).expect("Codex directory");
+        let _codex_home = EnvironmentGuard::set("CODEX_HOME", &codex_directory);
         let path = codex_directory.join("config.toml");
         std::fs::write(&path, "model = [\n").expect("invalid config");
         let state = test_state(root.path());
