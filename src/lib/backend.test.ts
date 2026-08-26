@@ -7,6 +7,7 @@ import {
   applySkillInstall,
   browseSkillSource,
   executeDiagnosticRecovery,
+  getAgentRuntimes,
   getClaudeGlobalConfig,
   getDiagnostics,
   getLastLocalSkillSource,
@@ -36,6 +37,14 @@ describe("Claude Code backend binding", () => {
     await getClaudeGlobalConfig();
 
     expect(invoke).toHaveBeenCalledWith("scan_claude_global");
+  });
+
+  it("reads installed Agent runtimes separately from config files", async () => {
+    vi.mocked(invoke).mockResolvedValue([]);
+
+    await getAgentRuntimes();
+
+    expect(invoke).toHaveBeenCalledWith("scan_agent_runtimes");
   });
 
   it("passes typed diagnostic filters to the unified command", async () => {

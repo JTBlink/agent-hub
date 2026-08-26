@@ -27,6 +27,10 @@ export interface StorageDiagnostics {
 }
 
 export type Agent = "claude-code" | "codex" | "opencode";
+export interface AgentRuntimeStatus {
+  agent: Agent;
+  installed: boolean;
+}
 export type ConfigScope = "global" | "workspace";
 export type ConfigFormat = "json" | "jsonc" | "toml" | "yaml" | "markdown";
 export type ConfigStatus = "ready" | "missing" | "invalid" | "unreadable";
@@ -348,6 +352,10 @@ export function getStorageDiagnostics(): Promise<StorageDiagnostics> {
 
 export function getClaudeGlobalConfig(): Promise<ConfigDocument> {
   return invoke<ConfigDocument>("scan_claude_global");
+}
+
+export function getAgentRuntimes(): Promise<AgentRuntimeStatus[]> {
+  return invoke<AgentRuntimeStatus[]>("scan_agent_runtimes");
 }
 
 export function getCodexGlobalConfig(): Promise<ConfigDocument> {

@@ -129,6 +129,11 @@ fn app_info() -> AppInfo {
 }
 
 #[tauri::command]
+fn scan_agent_runtimes() -> Vec<agents::AgentRuntimeStatus> {
+    agents::runtime_statuses()
+}
+
+#[tauri::command]
 fn get_last_local_skill_source(
     state: tauri::State<'_, AppState>,
 ) -> Result<Option<String>, String> {
@@ -1970,6 +1975,7 @@ pub fn run() {
             user_data_paths,
             clear_user_data,
             storage_diagnostics,
+            scan_agent_runtimes,
             scan_claude_global,
             scan_codex_global,
             scan_opencode_global,

@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 use serde::Serialize;
 use serde_json::Value;
@@ -81,6 +84,76 @@ impl ScanContext {
     }
 }
 
+/// Returns whether the agent's command-line runtime is discoverable on PATH.
+/// Configuration files may exist independently of an installed runtime, so
+/// callers should use this signal when deciding which agents to present.
+pub fn runtime_installed(agent: Agent) -> bool {
+    let Some(path) = std::env::var_os("PATH") else {
+        return false;
+    };
+    runtime_installed_in_path(agent, &path)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentRuntimeStatus {
+    pub agent: Agent,
+    pub installed: bool,
+}
+
+pub fn runtime_statuses() -> Vec<AgentRuntimeStatus> {
+    Agent::ALL
+        .iter()
+        .copied()
+        .map(|agent| AgentRuntimeStatus {
+            agent,
+            installed: runtime_installed(agent),
+        })
+        .collect()
+}
+
+fn runtime_installed_in_path(agent: Agent, path: &OsStr) -> bool {
+    let command = match agent {
+        Agent::ClaudeCode => "claude",
+        Agent::Codex => "codex",
+        Agent::OpenCode => "opencode",
+    };
+    std::env::split_paths(path).any(|directory| {
+        if cfg!(windows) {
+            [command, "exe", "cmd", "bat", "ps1"]
+                .iter()
+                .any(|extension| {
+                    let candidate = if *extension == command {
+                        directory.join(command)
+                    } else {
+                        directory.join(format!("{command}.{extension}"))
+                    };
+                    is_runtime_file(&candidate)
+                })
+        } else {
+            is_runtime_file(&directory.join(command))
+        }
+    })
+}
+
+#[cfg(windows)]
+fn is_runtime_file(path: &Path) -> bool {
+    path.is_file()
+}
+
+#[cfg(unix)]
+fn is_runtime_file(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    path.metadata()
+        .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(any(unix, windows)))]
+fn is_runtime_file(path: &Path) -> bool {
+    path.is_file()
+}
+
 pub trait AgentConfigAdapter {
     fn scan_global(&self, context: &ScanContext) -> ConfigDocument;
 }
@@ -139,4 +212,36 @@ pub struct ConfigDocument {
     pub structured_view: Value,
     pub source_preview: String,
     pub diagnostics: Vec<Diagnostic>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn runtime_lookup_requires_agent_command_on_path() {
+        let directory = tempfile::tempdir().expect("runtime directory");
+        let command = if cfg!(windows) {
+            directory.path().join("opencode.cmd")
+        } else {
+            directory.path().join("opencode")
+        };
+        std::fs::write(&command, b"placeholder").expect("runtime shim");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(&command).unwrap().permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(&command, permissions).unwrap();
+        }
+        let path = std::env::join_paths([directory.path()]).expect("PATH value");
+        assert!(runtime_installed_in_path(Agent::OpenCode, &path));
+        assert!(!runtime_installed_in_path(Agent::ClaudeCode, &path));
+        #[cfg(windows)]
+        {
+            std::fs::write(directory.path().join("claude.ps1"), b"placeholder")
+                .expect("PowerShell runtime shim");
+            assert!(runtime_installed_in_path(Agent::ClaudeCode, &path));
+        }
+    }
 }
