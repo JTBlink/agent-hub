@@ -44,7 +44,7 @@ export function setVersions({ root = process.cwd(), version }) {
   }
 
   const updatedCargoLock = cargoLock.replace(
-    /(\[\[package\]\]\nname = "agent-hub"\nversion = )"[^"]+"/,
+    /(\[\[package\]\]\r?\nname = "agent-hub"\r?\nversion = )"[^"]+"/,
     `$1"${version}"`,
   );
   if (updatedCargoLock === cargoLock) {

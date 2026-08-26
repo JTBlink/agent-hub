@@ -65,4 +65,14 @@ describe("release version updates", () => {
     );
     expect(validateVersions({ root })).toBe("1.0.0");
   });
+
+  it("updates a Cargo.lock package with Windows line endings", () => {
+    const root = fixture();
+    const lockPath = join(root, "src-tauri/Cargo.lock");
+    const lock = readFileSync(lockPath, "utf8").replaceAll("\n", "\r\n");
+    writeFileSync(lockPath, lock);
+
+    expect(setVersions({ root, version: "2.2.0" })).toBe("2.2.0");
+    expect(validateVersions({ root, tag: "v2.2.0" })).toBe("2.2.0");
+  });
 });
