@@ -120,6 +120,18 @@ describe("GitHub Actions workflow contract", () => {
     expect(installers).toContain("--smoke");
   });
 
+  it("captures the Windows GUI smoke exit code explicitly", () => {
+    expect(installers).toContain(
+      '$smoke = Start-Process -FilePath $executable -ArgumentList "--smoke" -Wait -PassThru',
+    );
+    expect(installers).toContain(
+      'if ($smoke.ExitCode -ne 0) { throw "Installed AgentHub package smoke checks failed (exit code $($smoke.ExitCode))" }',
+    );
+    expect(installers).not.toContain(
+      "& $executable --smoke\n          if ($LASTEXITCODE -ne 0)",
+    );
+  });
+
   it("validates notarization only for signed tag builds", () => {
     expect(installers).toContain("name: Verify macOS notarization");
     expect(installers).toContain("xcrun stapler validate");
@@ -166,6 +178,16 @@ describe("GitHub Actions workflow contract", () => {
     for (const extension of ["exe", "msi", "dmg", "AppImage", "deb"]) {
       expect(installers).toContain(`release-assets/*.${extension}`);
     }
+  });
+
+  it("does not ask the release action to update an existing release", () => {
+    expect(installers).toContain(
+      "name: Check whether GitHub Release already exists",
+    );
+    expect(installers).toContain("gh api --silent");
+    expect(installers).toContain(
+      "if: steps.existing_release.outputs.exists != 'true'",
+    );
   });
 
   it("never treats a manually selected tag as a production release", () => {
