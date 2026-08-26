@@ -47,6 +47,7 @@ Blocked by: B13
 - 当前提交已在 Windows 本地完成 NSIS `.exe` 与 MSI 打包，安装包位于 Tauri release bundle；release 二进制可启动并正常响应。Windows CRLF 下的版本校验也已加入回归测试。
 - `v0.1.2` tag 已完成正式发布：[`Build Installers #32956993957`](https://github.com/JTBlink/agent-hub/actions/runs/32956993957) 的三平台构建、汇总校验和 Release 发布全部成功；Release 附件下载后 `npm run release:verify` 验证 5 个安装包及 8 个校验文件通过。
 - Windows 本地已执行 NSIS 静默安装并启动安装后的 `agent-hub.exe`，进程保持响应；构建矩阵新增 Windows/Linux/macOS 安装后启动 smoke 测试。
+- 修复 Linux smoke 测试使用相对 `.deb` 路径导致 `apt-get` 将其当作包名的问题；提交 `cadb427` 的 [`Build Installers #32960306383`](https://github.com/JTBlink/agent-hub/actions/runs/32960306383) 已在 Windows、macOS、Linux 完成安装包构建、安装后启动 smoke、汇总产物生成与 SHA-256 验证，全部成功。
 
 ## Current status
 
