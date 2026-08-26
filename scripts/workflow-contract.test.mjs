@@ -109,6 +109,29 @@ describe("GitHub Actions workflow contract", () => {
     );
   });
 
+  it("runs platform configuration, recovery, and migration checks", () => {
+    expect(installers).toContain(
+      "name: Run cross-platform configuration and persistence tests",
+    );
+    expect(installers).toContain("--test agent_configs");
+    expect(installers).toContain("--test diagnostic_recovery");
+    expect(installers).toContain("--test persistence");
+    expect(installers).toContain("agent-hub --smoke");
+    expect(installers).toContain("--smoke");
+  });
+
+  it("validates notarization only for signed tag builds", () => {
+    expect(installers).toContain("name: Verify macOS notarization");
+    expect(installers).toContain("xcrun stapler validate");
+    expect(installers).toContain("spctl --assess --type execute");
+    const notarization = installers.match(
+      /- name: Verify macOS notarization[\s\S]*?(?=\n      - name:|\n  package:)/,
+    )?.[0];
+    expect(notarization).toContain("github.event_name == 'push'");
+    expect(notarization).toContain("startsWith(github.ref, 'refs/tags/v')");
+    expect(notarization).toContain("vars.ENABLE_APPLE_SIGNING == 'true'");
+  });
+
   it("assembles complete artifacts before publishing tag releases", () => {
     expect(installers).toContain(
       'run: npm run release:assemble -- release-assets "$BUILD_REF"',

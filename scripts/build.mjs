@@ -151,6 +151,10 @@ function printVersion() {
   return 0;
 }
 
+// Keep the dispatch table in one place: it is the stable public contract shared
+// by npm scripts and the Windows .bat/Unix shell thin launchers. Individual
+// command implementations stay in the helpers above so platform branching is
+// not duplicated across entrypoints.
 export function runCommand(
   command,
   args,
