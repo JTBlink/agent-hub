@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+暂无未发布变更。
+
+## [0.1.2] - 2026-08-26
+
 ### Added
 
 - 支持识别 Claude/Codex 的软链接 Skill，并允许从共享 `.agents/skills` 目录多选后一键安装到其他 Agent。
@@ -15,6 +19,10 @@
 
 - 系统 Skill（例如 `.codex/skills/.system`）单独分类，不计入用户 Skill 的重复检查。
 - 构建命令统一由跨平台 `scripts/build.mjs` 编排，Windows 提供 `agent-hub.bat` 薄入口。
+
+### Fixed
+
+- 修复 Windows 路径安全检查和版本锁文件换行符兼容性，确保跨端安装与发布门禁稳定运行。
 
 ## [0.1.1] - 2026-08-23
 
