@@ -94,6 +94,9 @@ describe("GitHub Actions workflow contract", () => {
       "if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING == 'true'",
     );
     expect(installers).not.toMatch(/^\s+APPLE_RELEASE_SIGNING:/m);
+    expect(installers).toContain(
+      "name: Validate Apple signing and notarization configuration",
+    );
   });
 
   it("documents optional Windows signing behind a tag-only switch", () => {
