@@ -1881,7 +1881,9 @@ fn non_empty(value: &str) -> Option<String> {
 }
 
 fn path_string(path: &Path) -> String {
-    path.to_string_lossy().into_owned()
+    // Keep serialized paths platform-neutral so diagnostics and inventory
+    // consumers can compare suffixes consistently across Windows and Unix.
+    path.to_string_lossy().replace('\\', "/")
 }
 
 #[cfg(test)]

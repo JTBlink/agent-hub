@@ -82,6 +82,7 @@ AgentHub 当前不提供云同步、多人协作、远程 Agent 托管、账号�
 ```bash
 npm ci
 ./agent-hub.sh dev
+# Windows: agent-hub.bat dev
 ```
 
 修改图标或 Tauri 配置后，如果开发模式仍显示旧构建缓存，可执行：
@@ -101,6 +102,10 @@ npm ci
 | `./agent-hub.sh test`                     | 运行前端和 Rust 测试            |
 | `./agent-hub.sh lint`                     | 运行 ESLint、Rust fmt 和 Clippy |
 | `./agent-hub.sh release <目录> <git-ref>` | 汇总并校验发布产物              |
+
+Windows 使用同样的命令参数调用 `agent-hub.bat`；底层命令编排统一由
+`scripts/build.mjs` 提供，也可以直接使用 `npm run app:build`、
+`npm run app:test` 等 `app:*` 命令。
 
 ## 文档与项目状态
 

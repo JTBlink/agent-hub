@@ -463,11 +463,6 @@ fn file_id(metadata: &fs::Metadata) -> Option<u64> {
     Some(metadata.ino())
 }
 
-#[cfg(not(unix))]
-fn file_id(_: &fs::Metadata) -> Option<u64> {
-    None
-}
-
 #[cfg(unix)]
 fn set_private_directory(path: &Path) -> Result<(), ConfigurationError> {
     use std::os::unix::fs::PermissionsExt;
@@ -480,12 +475,15 @@ fn set_private_directory(_: &Path) -> Result<(), ConfigurationError> {
     Ok(())
 }
 
+#[cfg(unix)]
 fn set_private_file(file: &File) -> Result<(), ConfigurationError> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        file.set_permissions(fs::Permissions::from_mode(0o600))?;
-    }
+    use std::os::unix::fs::PermissionsExt;
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn set_private_file(_file: &File) -> Result<(), ConfigurationError> {
     Ok(())
 }
 

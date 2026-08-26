@@ -689,9 +689,21 @@ fn real_directory(path: &Path) -> Result<PathBuf, InstallationError> {
 }
 
 fn ensure_no_symlink_components(path: &Path) -> Result<(), InstallationError> {
-    let mut current = PathBuf::new();
+    // On Windows, querying metadata for a drive prefix such as `C:` yields
+    // ERROR_INVALID_FUNCTION. Start relative paths at `.` and defer checks
+    // for absolute paths until the root component has been appended.
+    let mut current = if path.is_relative() {
+        PathBuf::from(".")
+    } else {
+        PathBuf::new()
+    };
     for component in path.components() {
         current.push(component.as_os_str());
+        // A Windows drive prefix (e.g. `C:`) and root are not filesystem
+        // directories; querying either directly returns ERROR_INVALID_FUNCTION.
+        if !matches!(component, std::path::Component::Normal(_)) {
+            continue;
+        }
         match fs::symlink_metadata(&current) {
             Ok(metadata) if metadata.file_type().is_symlink() => {
                 return Err(InstallationError::UnsafePath(current));

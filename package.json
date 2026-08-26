@@ -6,6 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "app:dev": "node scripts/build.mjs dev",
+    "app:build": "node scripts/build.mjs build",
+    "app:clean": "node scripts/build.mjs clean",
+    "app:release": "node scripts/build.mjs release",
+    "app:test": "node scripts/build.mjs test",
+    "app:lint": "node scripts/build.mjs lint",
+    "app:version": "node scripts/build.mjs version",
     "preview": "vite preview",
     "lint": "eslint .",
     "format:check": "prettier --check .",

@@ -14,6 +14,7 @@
 ### Changed
 
 - 系统 Skill（例如 `.codex/skills/.system`）单独分类，不计入用户 Skill 的重复检查。
+- 构建命令统一由跨平台 `scripts/build.mjs` 编排，Windows 提供 `agent-hub.bat` 薄入口。
 
 ## [0.1.1] - 2026-08-23
 

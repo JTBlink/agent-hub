@@ -2,17 +2,13 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-const installers = readFileSync(
+const readText = (url) => readFileSync(url, "utf8").replaceAll("\r\n", "\n");
+const installers = readText(
   new URL("../.github/workflows/build-installers.yml", import.meta.url),
-  "utf8",
 );
-const ci = readFileSync(
-  new URL("../.github/workflows/ci.yml", import.meta.url),
-  "utf8",
-);
-const pages = readFileSync(
+const ci = readText(new URL("../.github/workflows/ci.yml", import.meta.url));
+const pages = readText(
   new URL("../.github/workflows/deploy-pages.yml", import.meta.url),
-  "utf8",
 );
 const desktopIndex = readFileSync(
   new URL("../index.html", import.meta.url),
@@ -82,6 +78,13 @@ describe("GitHub Actions workflow contract", () => {
       expect(installers).toContain(`*${second}`);
     },
   );
+
+  it("routes installer builds through the shared Node orchestrator", () => {
+    expect(installers).toContain(
+      "run: npm run app:build -- ${{ matrix.tauri_args }}",
+    );
+    expect(installers).not.toContain("run: npm run tauri build --");
+  });
 
   it("isolates production Apple secrets from manual builds", () => {
     expect(installers).toContain(
