@@ -231,8 +231,10 @@ jobs:
           Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installRoot" -Wait
           $executable = Join-Path $installRoot "agent-hub.exe"
           if (-not (Test-Path -LiteralPath $executable)) { throw "Installed AgentHub executable was not found" }
-          & $executable --smoke
-          if ($LASTEXITCODE -ne 0) { throw "Installed AgentHub package smoke checks failed" }
+          # GUI-subsystem executables do not reliably populate PowerShell's
+          # $LASTEXITCODE. Capture the native process exit code explicitly.
+          $smoke = Start-Process -FilePath $executable -ArgumentList "--smoke" -Wait -PassThru
+          if ($smoke.ExitCode -ne 0) { throw "Installed AgentHub package smoke checks failed (exit code $($smoke.ExitCode))" }
           $process = Start-Process -FilePath $executable -PassThru
           Start-Sleep -Seconds 8
           $process.Refresh()
@@ -372,7 +374,20 @@ jobs:
           name: agent-hub-installers-${{ github.run_id }}
           path: release-assets
 
+      - name: Check whether GitHub Release already exists
+        id: existing_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.preflight.outputs.release_tag }}
+        run: |
+          if gh api --silent "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish release
+        if: steps.existing_release.outputs.exists != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.preflight.outputs.release_tag }}
