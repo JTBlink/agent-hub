@@ -48,6 +48,7 @@ Blocked by: B13
 - `v0.1.2` tag 已完成正式发布：[`Build Installers #32956993957`](https://github.com/JTBlink/agent-hub/actions/runs/32956993957) 的三平台构建、汇总校验和 Release 发布全部成功；Release 附件下载后 `npm run release:verify` 验证 5 个安装包及 8 个校验文件通过。
 - Windows 本地已执行 NSIS 静默安装并启动安装后的 `agent-hub.exe`，进程保持响应；构建矩阵新增 Windows/Linux/macOS 安装后启动 smoke 测试。
 - 修复 Linux smoke 测试使用相对 `.deb` 路径导致 `apt-get` 将其当作包名的问题；提交 `cadb427` 的 [`Build Installers #32960306383`](https://github.com/JTBlink/agent-hub/actions/runs/32960306383) 已在 Windows、macOS、Linux 完成安装包构建、安装后启动 smoke、汇总产物生成与 SHA-256 验证，全部成功。
+- 构建矩阵现在在三个原生 Runner 上调用已安装包的 `agent-hub --smoke`，覆盖配置扫描、诊断恢复、安全写入和 SQLite migration；同时执行对应集成测试。签名 tag 的 macOS job 额外运行 `xcrun stapler validate` 与 `spctl` 公证校验，均仅在对应平台和生产开关开启时执行。
 
 ## Current status
 

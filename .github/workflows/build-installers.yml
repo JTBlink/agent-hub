@@ -231,6 +231,8 @@ jobs:
           Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installRoot" -Wait
           $executable = Join-Path $installRoot "agent-hub.exe"
           if (-not (Test-Path -LiteralPath $executable)) { throw "Installed AgentHub executable was not found" }
+          & $executable --smoke
+          if ($LASTEXITCODE -ne 0) { throw "Installed AgentHub package smoke checks failed" }
           $process = Start-Process -FilePath $executable -PassThru
           Start-Sleep -Seconds 8
           $process.Refresh()
@@ -245,6 +247,7 @@ jobs:
           test -n "$deb"
           sudo apt-get install --yes "$(realpath "$deb")"
           command -v agent-hub
+          agent-hub --smoke
           timeout 15s xvfb-run -a agent-hub || test "$?" -eq 124
 
       - name: Smoke install and launch macOS package
@@ -259,10 +262,29 @@ jobs:
           hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point"
           ditto "$mount_point/AgentHub.app" "$app_path"
           hdiutil detach "$mount_point"
+          "$app_path/Contents/MacOS/agent-hub" --smoke
           open "$app_path"
           sleep 8
           pgrep -f "$app_path/Contents/MacOS/agent-hub"
           pkill -f "$app_path/Contents/MacOS/agent-hub" || true
+
+      - name: Verify macOS notarization
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING == 'true'
+        shell: bash
+        run: |
+          app="src-tauri/target/universal-apple-darwin/release/bundle/macos/AgentHub.app"
+          test -d "$app"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose "$app"
+
+      - name: Run cross-platform configuration and persistence tests
+        shell: bash
+        run: >-
+          cargo test --manifest-path src-tauri/Cargo.toml
+          --test agent_configs
+          --test claude_config
+          --test diagnostic_recovery
+          --test persistence
 
       - name: Sign Windows installers
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows' && vars.ENABLE_WINDOWS_SIGNING == 'true'

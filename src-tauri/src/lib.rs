@@ -34,6 +34,90 @@ pub mod skills;
 
 pub use domain::{Agent, ConfigFormat, InstallationState, ParseStatus, Scope, SkillKind};
 
+/// Run the package-level smoke checks without starting the GUI.
+///
+/// Release workflows invoke this through the installed binary on each native
+/// runner. It exercises the same read-only scan, guarded atomic write and
+/// migration code shipped in the package, while keeping all fixtures in a
+/// disposable temporary directory.
+pub fn run_package_smoke() -> Result<(), String> {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!(
+        "agent-hub-package-smoke-{}-{nonce}",
+        std::process::id()
+    ));
+    if root.exists() {
+        fs::remove_dir_all(&root).map_err(|error| error.to_string())?;
+    }
+    let result = run_package_smoke_in(&root);
+    let cleanup = fs::remove_dir_all(&root);
+    match (result, cleanup) {
+        (Err(error), Ok(())) | (Err(error), Err(_)) => Err(error),
+        (Ok(()), Ok(())) => Ok(()),
+        (Ok(()), Err(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        (Ok(()), Err(error)) => Err(format!("smoke fixture cleanup failed: {error}")),
+    }
+}
+
+fn run_package_smoke_in(root: &Path) -> Result<(), String> {
+    let config_directory = root.join(".claude");
+    fs::create_dir_all(&config_directory).map_err(|error| error.to_string())?;
+    let config_path = config_directory.join("settings.json");
+    let initial = br#"{"model":"sonnet","apiKey":"smoke-secret"}
+"#;
+    fs::write(&config_path, initial).map_err(|error| error.to_string())?;
+
+    let document = ClaudeCodeAdapter.scan_global(&ScanContext::new(root));
+    if document.status != agents::ConfigStatus::Ready {
+        return Err(format!("package smoke scan returned {:?}", document.status));
+    }
+    let expected_checksum = document
+        .checksum
+        .as_deref()
+        .ok_or_else(|| "package smoke scan did not return a checksum".to_owned())?;
+    let replacement = br#"{"model":"opus","apiKey":"smoke-secret"}
+"#;
+    let preview = configuration::preview(&config_path, ConfigFormat::Json, replacement)
+        .map_err(|error| error.to_string())?;
+    if !preview.changed {
+        return Err("package smoke preview did not detect the edit".to_owned());
+    }
+    let backup_root = root.join(".agenthub").join("backups");
+    let write = configuration::write_atomically(
+        &config_path,
+        ConfigFormat::Json,
+        expected_checksum,
+        replacement,
+        &backup_root,
+    )
+    .map_err(|error| error.to_string())?;
+    if fs::read(&config_path).map_err(|error| error.to_string())? != replacement {
+        return Err("package smoke write did not persist the replacement".to_owned());
+    }
+    if !write.backup_path.is_file() {
+        return Err("package smoke write did not create a backup".to_owned());
+    }
+
+    let database_path = root.join(".agenthub").join("agent-hub.sqlite3");
+    let database =
+        persistence::Database::open(&database_path).map_err(|error| error.to_string())?;
+    let diagnostics = database.diagnostics().map_err(|error| error.to_string())?;
+    if diagnostics.schema_version < 1 || !diagnostics.foreign_keys_enabled {
+        return Err("package smoke migration diagnostics are incomplete".to_owned());
+    }
+    drop(database);
+    let reopened =
+        persistence::Database::open(&database_path).map_err(|error| error.to_string())?;
+    let reopened_diagnostics = reopened.diagnostics().map_err(|error| error.to_string())?;
+    if reopened_diagnostics.schema_version != diagnostics.schema_version {
+        return Err("package smoke migration was not idempotent".to_owned());
+    }
+    Ok(())
+}
+
 #[derive(Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AppInfo {
@@ -2021,6 +2105,11 @@ mod tests {
     use super::*;
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
+
+    #[test]
+    fn package_smoke_covers_scan_write_and_migration_contract() {
+        run_package_smoke().expect("package smoke checks");
+    }
 
     struct EnvironmentGuard {
         key: &'static str,
