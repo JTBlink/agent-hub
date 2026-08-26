@@ -1,10 +1,9 @@
 use std::fs;
 
 use agent_hub_lib::{
-    agents::ScanContext,
     agents::{
         standard::{CodexAdapter, OpenCodeAdapter},
-        ConfigStatus, DiagnosticCode,
+        AgentConfigAdapter, ConfigStatus, DiagnosticCode, ScanContext,
     },
     configuration::{read_revision, write_atomically, ConfigurationError},
     Agent, ConfigFormat, Scope,
@@ -80,6 +79,20 @@ fn explicit_global_overrides_are_captured_by_the_scan_context() {
     assert_eq!(codex.status, ConfigStatus::Ready);
     assert_eq!(opencode.path, opencode_path);
     assert_eq!(opencode.status, ConfigStatus::Ready);
+}
+
+#[test]
+fn opencode_global_uses_native_default_user_config_path() {
+    let home = tempdir().expect("home");
+    let directory = home.path().join(".config").join("opencode");
+    fs::create_dir_all(&directory).expect("OpenCode directory");
+    let path = directory.join("opencode.json");
+    fs::write(&path, include_str!("fixtures/opencode/opencode.jsonc")).expect("OpenCode fixture");
+
+    let document = OpenCodeAdapter.scan_global(&ScanContext::new(home.path()));
+
+    assert_eq!(document.path, path);
+    assert_eq!(document.status, ConfigStatus::Ready);
 }
 
 #[test]

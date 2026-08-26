@@ -61,11 +61,12 @@ impl CodexAdapter {
 
 impl OpenCodeAdapter {
     pub fn scan_workspace(&self, workspace: impl AsRef<Path>) -> ConfigDocument {
+        let path = workspace.as_ref().join("opencode.json");
         scan_file(
             Agent::OpenCode,
             Scope::Workspace,
             ConfigFormat::Jsonc,
-            workspace.as_ref().join("opencode.json"),
+            path,
             parse_jsonc,
         )
     }
