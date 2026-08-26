@@ -44,7 +44,8 @@ Blocked by: B13
 - 最新 `main` 提交 `a056117f4f99fd8493ebaf4be152a86ceadc43f3` 的 [`CI #32580341632`](https://github.com/JTBlink/agent-hub/actions/runs/32580341632) 为 success；本地 workflow contract、release assembly/verification/version 脚本共 23 项定向测试通过，`actionlint v1.7.7` 退出码为 0。
 - 发布 bundle verifier 现要求每种安装格式恰好一个、所有根目录文件都列入 `SHA256SUMS`、拒绝符号链接/特殊文件、安装包文件名版本与 `package.json` 一致，并检查发布说明包含三平台、应用数据目录和已知限制；新增 4 项篡改、遗漏、重复格式、版本漂移和符号链接回归测试。
 - 当前发布 assembly/verifier/version/workflow 定向测试共 29 项通过，`actionlint v1.7.7` 再次验证工作流无语法或表达式错误；全量前端 37 项和 Rust 71 项测试通过。
+- 当前提交已在 Windows 本地完成 NSIS `.exe` 与 MSI 打包，安装包位于 Tauri release bundle；release 二进制可启动并正常响应。Windows CRLF 下的版本校验也已加入回归测试。
 
 ## Current status
 
-CI/CD 自动化和一次远程手动三平台构建已验证；仍需执行 `v*` tag 流程以确认 GitHub Release 实际创建。B13 的应用级安装、启动、配置扫描和升级验收仍未完成，因此本任务暂不标记 `resolved`。
+CI/CD 自动化和一次远程手动三平台构建已验证；Windows 本地构建与启动已验证。仍需执行当前提交对应的 `v*` tag 流程以确认 GitHub Release 实际创建，并在干净的 Windows、macOS、Linux 环境完成安装、启动、配置扫描、安全写入、SQLite 新装与 migration 升级验收，因此本任务暂不标记 `resolved`。
