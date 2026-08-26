@@ -21,6 +21,7 @@ import {
   createClaudeInstructionSymlink,
   executeDiagnosticRecovery,
   getAppInfo,
+  getAgentRuntimes,
   getClaudeGlobalConfig,
   getCodexGlobalConfig,
   getDiagnostics,
@@ -181,7 +182,6 @@ const agentMeta: Record<string, { name: string; tone: string; mark: string }> =
     opencode: { name: "OpenCode", tone: "amber", mark: "O" },
   };
 
-const defaultAgentIds = Object.keys(agentMeta);
 const SELECTED_WORKSPACE_STORAGE_KEY = "agenthub.selected-workspace";
 
 function getAgentMeta(agent: string) {
@@ -471,6 +471,9 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [runtimeVersion, setRuntimeVersion] = useState<string>();
   const [configs, setConfigs] = useState<ConfigDocument[]>([]);
+  const [installedAgentIds, setInstalledAgentIds] = useState<
+    ConfigDocument["agent"][]
+  >([]);
   const [workspaceConfigs, setWorkspaceConfigs] = useState<ConfigDocument[]>(
     [],
   );
@@ -490,6 +493,11 @@ export function App() {
   );
   const [selectedAgent, setSelectedAgent] =
     useState<ConfigDocument["agent"]>("claude-code");
+  useEffect(() => {
+    if (!installedAgentIds.includes(selectedAgent) && installedAgentIds[0]) {
+      setSelectedAgent(installedAgentIds[0]);
+    }
+  }, [installedAgentIds, selectedAgent]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [deepLinkRequest, setDeepLinkRequest] =
@@ -519,13 +527,21 @@ export function App() {
     setLoading(true);
     setError(undefined);
     void Promise.allSettled([
+      getAgentRuntimes(),
       getAppInfo(),
       getClaudeGlobalConfig(),
       getCodexGlobalConfig(),
       getOpenCodeGlobalConfig(),
       getSkillInventory(selectedSkillWorkspace || undefined),
     ]).then((results) => {
-      const [appResult, ...rest] = results;
+      const [runtimeResult, appResult, ...rest] = results;
+      const nextInstalledAgents =
+        runtimeResult.status === "fulfilled"
+          ? runtimeResult.value
+              .filter((status) => status.installed)
+              .map((status) => status.agent)
+          : [];
+      setInstalledAgentIds(nextInstalledAgents);
       if (appResult.status === "fulfilled")
         setRuntimeVersion(appResult.value.version);
       const configResults = rest.slice(
@@ -533,9 +549,12 @@ export function App() {
         3,
       ) as PromiseSettledResult<ConfigDocument>[];
       const nextConfigs = configResults.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
+        result.status === "fulfilled" &&
+        nextInstalledAgents.includes(result.value.agent)
+          ? [result.value]
+          : [],
       );
-      if (nextConfigs.length) setConfigs(nextConfigs);
+      setConfigs(nextConfigs);
       const skillsResult = rest[3] as PromiseSettledResult<SkillInventory>;
       if (skillsResult?.status === "fulfilled") setSkills(skillsResult.value);
       if (!nextConfigs.length && skillsResult?.status === "rejected")
@@ -597,10 +616,16 @@ export function App() {
     };
   }, []);
 
+  const availableConfigs = configs.filter((config) =>
+    installedAgentIds.includes(config.agent),
+  );
+  const availableWorkspaceConfigs = workspaceConfigs.filter((config) =>
+    installedAgentIds.includes(config.agent),
+  );
   const visibleConfigs =
     selectedScope === "global"
-      ? configs
-      : getWorkspaceDisplayConfigs(configs, workspaceConfigs);
+      ? availableConfigs
+      : getWorkspaceDisplayConfigs(availableConfigs, availableWorkspaceConfigs);
   const selectedConfig = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
     const matches = (config: ConfigDocument) => {
@@ -630,12 +655,17 @@ export function App() {
       setEditing(false);
     }
   }, [searchQuery, selectedConfig, selectedAgent]);
-  const readyCount = configs.filter(
+  const readyCount = availableConfigs.filter(
     (config) => config.status === "ready",
   ).length;
   const diagnosticCount = diagnostics.filter(
-    (item) => item.severity !== "info",
+    (item) =>
+      item.severity !== "info" &&
+      (item.agent === null || installedAgentIds.includes(item.agent)),
   ).length;
+  const visibleDiagnostics = diagnostics.filter(
+    (item) => item.agent === null || installedAgentIds.includes(item.agent),
+  );
 
   async function startEditing() {
     if (!selectedConfig || selectedConfig.status !== "ready") return;
@@ -817,14 +847,14 @@ export function App() {
             readyCount={readyCount}
             skillCount={skills?.skills.length ?? 0}
             diagnosticCount={diagnosticCount}
-            configs={configs}
+            configs={availableConfigs}
             onNavigate={setSection}
           />
         )}
         {section === "configs" && (
           <ConfigCenter
-            configs={configs}
-            workspaceConfigs={workspaceConfigs}
+            configs={availableConfigs}
+            workspaceConfigs={availableWorkspaceConfigs}
             workspaceInstructions={workspaceInstructions}
             workspacePath={selectedSkillWorkspace}
             onCreateInstructionLink={async () => {
@@ -910,6 +940,7 @@ export function App() {
         {section === "skills" && (
           <SkillsCenter
             skills={skills}
+            installedAgentIds={installedAgentIds}
             searchQuery={searchQuery}
             onScan={scan}
             onNavigate={setSection}
@@ -944,7 +975,7 @@ export function App() {
         )}
         {section === "diagnostics" && (
           <DiagnosticsPage
-            diagnostics={diagnostics}
+            diagnostics={visibleDiagnostics}
             skills={skills}
             diagnosticFocus={skillDiagnosticFocus}
             onDismissDiagnostic={() => setSkillDiagnosticFocus(undefined)}
@@ -987,7 +1018,7 @@ function Overview({
 }) {
   const { t } = useLanguage();
   const topologyAgentIds = Array.from(
-    new Set([...defaultAgentIds, ...configs.map((config) => config.agent)]),
+    new Set(configs.map((config) => config.agent)),
   );
   const topologyLayout = createTopologyLayout(topologyAgentIds.length);
   const connectionState = (agent: string) => {
@@ -1794,11 +1825,16 @@ function ConfigCenter({
         ),
       };
     })
-    .filter(
-      (option) =>
-        !normalizedQuery ||
-        filteredConfigs.some((config) => config.agent === option.value),
-    );
+    .filter((option) => {
+      const installed = visibleConfigs.some(
+        (config) => config.agent === option.value,
+      );
+      return (
+        installed &&
+        (!normalizedQuery ||
+          filteredConfigs.some((config) => config.agent === option.value))
+      );
+    });
 
   const inheritedGlobalConfig =
     selectedScope === "workspace" && selectedConfig?.scope === "global";
@@ -2302,6 +2338,7 @@ function InstructionFilesPanel({
 
 function SkillsCenter({
   skills,
+  installedAgentIds,
   searchQuery,
   onScan,
   onNavigate,
@@ -2311,6 +2348,7 @@ function SkillsCenter({
   onInstalled,
 }: {
   skills?: SkillInventory;
+  installedAgentIds: ConfigDocument["agent"][];
   searchQuery: string;
   onScan: () => void;
   onNavigate: (section: Section) => void;
@@ -2325,9 +2363,14 @@ function SkillsCenter({
   >("installed");
   const [selectedAgent, setSelectedAgent] =
     useState<InstalledSkill["agent"]>("codex");
+  useEffect(() => {
+    if (!installedAgentIds.includes(selectedAgent) && installedAgentIds[0]) {
+      setSelectedAgent(installedAgentIds[0]);
+    }
+  }, [installedAgentIds, selectedAgent]);
   const agentOptions = useMemo(
     () =>
-      defaultAgentIds.map((agentId) => {
+      installedAgentIds.map((agentId) => {
         const meta = getAgentMeta(agentId);
         return {
           id: agentId as InstalledSkill["agent"],
@@ -2337,7 +2380,7 @@ function SkillsCenter({
           ).length,
         };
       }),
-    [skills],
+    [installedAgentIds, skills],
   );
   const [filter, setFilter] = useState<
     "all" | "global" | "workspace" | "managed" | "external" | "system"
@@ -2361,10 +2404,10 @@ function SkillsCenter({
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase();
   const batchTargetAgents = useMemo(
     () =>
-      defaultAgentIds.filter(
+      installedAgentIds.filter(
         (agent) => agent !== selectedAgent,
       ) as InstalledSkill["agent"][],
-    [selectedAgent],
+    [installedAgentIds, selectedAgent],
   );
   useEffect(() => {
     if (!batchTargetAgents.includes(batchTargetAgent) && batchTargetAgents[0]) {
@@ -2373,25 +2416,27 @@ function SkillsCenter({
   }, [batchTargetAgent, batchTargetAgents, selectedAgent]);
   useEffect(() => {
     if (!normalizedQuery) return;
-    const matchingSkill = (skills?.skills ?? []).find((skill) =>
-      [
-        skill.displayName,
-        skill.name,
-        skill.relativePath,
-        skill.path,
-        skill.agent,
-        skill.scope,
-        skill.source.locator,
-        skill.compatibility,
-      ]
-        .join(" ")
-        .toLocaleLowerCase()
-        .includes(normalizedQuery),
+    const matchingSkill = (skills?.skills ?? []).find(
+      (skill) =>
+        installedAgentIds.includes(skill.agent) &&
+        [
+          skill.displayName,
+          skill.name,
+          skill.relativePath,
+          skill.path,
+          skill.agent,
+          skill.scope,
+          skill.source.locator,
+          skill.compatibility,
+        ]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery),
     );
     if (matchingSkill && matchingSkill.agent !== selectedAgent) {
       setSelectedAgent(matchingSkill.agent);
     }
-  }, [normalizedQuery, selectedAgent, skills]);
+  }, [installedAgentIds, normalizedQuery, selectedAgent, skills]);
   const filteredSkills = useMemo(
     () =>
       (skills?.skills ?? []).filter((skill) => {
@@ -2414,22 +2459,24 @@ function SkillsCenter({
           .join(" ")
           .toLocaleLowerCase();
         return (
+          installedAgentIds.includes(skill.agent) &&
           skill.agent === selectedAgent &&
           matchesFilter &&
           (!normalizedQuery || haystack.includes(normalizedQuery))
         );
       }),
-    [filter, normalizedQuery, selectedAgent, skills],
+    [filter, installedAgentIds, normalizedQuery, selectedAgent, skills],
   );
   const sharedSkills = useMemo(
     () =>
       (skills?.skills ?? []).filter(
         (skill) =>
           skill.category === "user" &&
+          installedAgentIds.includes(skill.agent) &&
           skill.scope === "global" &&
           isSharedAgentsSkill(skill),
       ),
-    [skills],
+    [installedAgentIds, skills],
   );
   const selectedSharedSkillItems = sharedSkills.filter((skill) =>
     selectedSharedSkills.has(skill.path),
@@ -2448,7 +2495,7 @@ function SkillsCenter({
       const matches = (skills?.skills ?? []).filter(
         (skill) => skill.name === name || skill.displayName === name,
       );
-      for (const agent of defaultAgentIds) {
+      for (const agent of installedAgentIds) {
         for (const scope of ["global", "workspace"] as const) {
           const scoped = matches.filter(
             (skill) => skill.agent === agent && skill.scope === scope,
@@ -2469,7 +2516,7 @@ function SkillsCenter({
       }
     }
     return result;
-  }, [skills]);
+  }, [installedAgentIds, skills]);
   const filters = [
     ["all", t("all")],
     ["global", t("globalFilter")],
@@ -2564,6 +2611,7 @@ function SkillsCenter({
           }}
           onInstalled={onInstalled}
           installedSkills={skills?.skills ?? []}
+          installedAgentIds={installedAgentIds}
           searchQuery={searchQuery}
           updateSkill={updateTarget}
           onClearUpdate={() => setUpdateTarget(undefined)}
@@ -2899,6 +2947,7 @@ function SkillsCenter({
           onBack={() => setView("installed")}
           onInstalled={onInstalled}
           installedSkills={skills?.skills ?? []}
+          installedAgentIds={installedAgentIds}
           searchQuery={searchQuery}
           updateSkill={updateTarget}
           onClearUpdate={() => setUpdateTarget(undefined)}
@@ -3219,6 +3268,7 @@ function SkillSourcePanel({
   onBack,
   onInstalled,
   installedSkills,
+  installedAgentIds,
   searchQuery,
   updateSkill,
   onClearUpdate,
@@ -3229,6 +3279,7 @@ function SkillSourcePanel({
   onBack?: () => void;
   onInstalled: (workspaceDirectory?: string) => void;
   installedSkills: InstalledSkill[];
+  installedAgentIds: ConfigDocument["agent"][];
   searchQuery: string;
   updateSkill?: InstalledSkill;
   onClearUpdate: () => void;
@@ -3257,7 +3308,19 @@ function SkillSourcePanel({
   const [selectedAgents, setSelectedAgents] = useState<
     Set<InstalledSkill["agent"]>
   >(new Set(["codex"]));
+  const primaryAgent = installedAgentIds.includes("codex")
+    ? "codex"
+    : installedAgentIds[0];
   const [scope, setScope] = useState<"global" | "workspace">("global");
+  useEffect(() => {
+    setSelectedAgents((current) => {
+      const next = new Set(
+        [...current].filter((agent) => installedAgentIds.includes(agent)),
+      );
+      if (scope === "global" && primaryAgent) next.add(primaryAgent);
+      return next;
+    });
+  }, [installedAgentIds, primaryAgent, scope]);
   const [workspaceId, setWorkspaceId] = useState<number | "">("");
   const [plans, setPlans] = useState<SkillInstallPlanPreview[]>([]);
   const [busy, setBusy] = useState(false);
@@ -3423,10 +3486,10 @@ function SkillSourcePanel({
     setMessage(undefined);
     try {
       const nextPlans = await Promise.all(
-        defaultAgentIds
+        installedAgentIds
           .filter((id) =>
             scope === "global"
-              ? id === "codex"
+              ? id === primaryAgent
               : selectedAgents.has(id as InstalledSkill["agent"]),
           )
           .map((agent) =>
@@ -3458,7 +3521,7 @@ function SkillSourcePanel({
       if (scope === "global" && plans[0]) {
         const sourceDirectory = plans[0].plan.targetDirectory.toString();
         for (const agent of selectedAgents) {
-          if (agent === "codex") continue;
+          if (agent === primaryAgent) continue;
           await linkSkillToAgent({
             sourceDirectory,
             targetName: selectedSkill?.name || selectedSkill?.displayName || "",
@@ -3519,7 +3582,7 @@ function SkillSourcePanel({
         </div>
       </div>
       <SkillInstallTargetSelector
-        agents={defaultAgentIds.map((id) => ({
+        agents={installedAgentIds.map((id) => ({
           id: id as InstalledSkill["agent"],
           name: getAgentMeta(id as InstalledSkill["agent"]).name,
           mark: getAgentMeta(id as InstalledSkill["agent"]).mark,
@@ -3527,13 +3590,15 @@ function SkillSourcePanel({
         selectedAgents={selectedAgents}
         onAgentsChange={(nextAgents) => {
           const required =
-            scope === "global"
-              ? new Set(["codex"] as const)
+            scope === "global" && primaryAgent
+              ? new Set([primaryAgent])
               : new Set<InstalledSkill["agent"]>();
           setSelectedAgents(new Set([...nextAgents, ...required]));
         }}
         lockedAgents={
-          scope === "global" ? new Set(["codex"] as const) : new Set()
+          scope === "global" && primaryAgent
+            ? new Set([primaryAgent])
+            : new Set()
         }
         scope={scope}
         onScopeChange={(nextScope) => {
