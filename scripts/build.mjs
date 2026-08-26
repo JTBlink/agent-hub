@@ -98,89 +98,92 @@ function runClean(args, runner, remove = rmSync) {
   return 0;
 }
 
+function runTest(args, runner) {
+  if (!requireCargo(runner)) return 1;
+  let status = runNpm(["run", "test", ...args], runner);
+  if (status === 0)
+    status = run(
+      "cargo",
+      ["test", "--manifest-path", "src-tauri/Cargo.toml"],
+      runner,
+    );
+  return status;
+}
+
+function runLint(runner) {
+  if (!requireCargo(runner)) return 1;
+  let status = runNpm(["run", "lint"], runner);
+  if (status === 0)
+    status = run(
+      "cargo",
+      [
+        "fmt",
+        "--manifest-path",
+        "src-tauri/Cargo.toml",
+        "--all",
+        "--",
+        "--check",
+      ],
+      runner,
+    );
+  if (status === 0)
+    status = run(
+      "cargo",
+      [
+        "clippy",
+        "--manifest-path",
+        "src-tauri/Cargo.toml",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings",
+      ],
+      runner,
+    );
+  return status;
+}
+
+function printVersion() {
+  const packageJson = JSON.parse(
+    readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"),
+  );
+  console.log(`AgentHub v${packageJson.version}`);
+  return 0;
+}
+
 export function runCommand(
   command,
   args,
   { runner = spawnSync, remove = rmSync } = {},
 ) {
-  let status = 0;
   switch (command) {
     case "dev":
-      status = runNpm(["run", "tauri", "--", "dev", ...args], runner);
-      break;
+      return runNpm(["run", "tauri", "--", "dev", ...args], runner);
     case "build":
-      status = runNpm(["run", "tauri", "--", "build", ...args], runner);
-      break;
+      return runNpm(["run", "tauri", "--", "build", ...args], runner);
     case "clean":
-      status = runClean(args, runner, remove);
-      break;
+      return runClean(args, runner, remove);
     case "release":
-      status = runRelease(args, runner);
-      break;
+      return runRelease(args, runner);
     case "test":
-      if (!requireCargo(runner)) return 1;
-      status = runNpm(["run", "test", ...args], runner);
-      if (status === 0)
-        status = run(
-          "cargo",
-          ["test", "--manifest-path", "src-tauri/Cargo.toml"],
-          runner,
-        );
-      break;
+      return runTest(args, runner);
     case "lint":
-      if (!requireCargo(runner)) return 1;
-      status = runNpm(["run", "lint"], runner);
-      if (status === 0)
-        status = run(
-          "cargo",
-          [
-            "fmt",
-            "--manifest-path",
-            "src-tauri/Cargo.toml",
-            "--all",
-            "--",
-            "--check",
-          ],
-          runner,
-        );
-      if (status === 0)
-        status = run(
-          "cargo",
-          [
-            "clippy",
-            "--manifest-path",
-            "src-tauri/Cargo.toml",
-            "--all-targets",
-            "--",
-            "-D",
-            "warnings",
-          ],
-          runner,
-        );
-      break;
-    case "version": {
-      const packageJson = JSON.parse(
-        readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"),
-      );
-      console.log(`AgentHub v${packageJson.version}`);
-      break;
-    }
+      return runLint(runner);
+    case "version":
+      return printVersion();
     case "-V":
     case "--version":
-      status = runCommand("version", [], { runner, remove });
-      break;
+      return printVersion();
     case "help":
     case "--help":
     case "-h":
       console.log(usage());
-      break;
+      return 0;
     default:
       console.error(`错误：未知命令 '${command}'`);
       console.error(usage());
-      status = 1;
+      return 1;
   }
-
-  return status;
 }
 
 export function main(argv = process.argv.slice(2), options = {}) {

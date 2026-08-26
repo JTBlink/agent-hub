@@ -41,7 +41,7 @@ gh run download <run-id> --name "agent-hub-installers-<run-id>"
 4. 确认质量门禁和三个矩阵 job 全部成功，之后才应出现 GitHub Release。
 5. 下载 Release 附件并核验 `SHA256SUMS`、发布说明、平台支持矩阵及所有安装格式。
 
-平台签名默认关闭。只有六项 Apple Secrets 已完整配置时，才把 `ENABLE_APPLE_SIGNING` 设为 `true`；只有 Base64 PFX、密码和时间戳 URL 三项 Windows Secrets 已完整配置时，才把 `ENABLE_WINDOWS_SIGNING` 设为 `true`。未启用签名时必须在发布说明中保留限制。
+平台签名默认关闭。只有六项 Apple Secrets 已完整配置时，才把 `ENABLE_APPLE_SIGNING` 设为 `true`；同一组 Apple ID、应用专用密码和 Team ID 由 Tauri 用于 notarization。只有 Base64 PFX、密码和时间戳 URL 三项 Windows Secrets 已完整配置时，才把 `ENABLE_WINDOWS_SIGNING` 设为 `true`。未启用签名时必须在发布说明中保留限制。
 
 ## 完成判定
 

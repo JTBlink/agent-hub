@@ -53,11 +53,12 @@ git push origin v0.1.1
 
 ## 签名与密钥
 
-- tag 发布默认生成未签名包。macOS 需要完整配置 `APPLE_CERTIFICATE`、`APPLE_CERTIFICATE_PASSWORD`、`APPLE_SIGNING_IDENTITY`、`APPLE_ID`、`APPLE_PASSWORD`、`APPLE_TEAM_ID` 六项 Secrets，并将仓库 Variable `ENABLE_APPLE_SIGNING` 设为 `true`；只有 tag 的 macOS step 满足该开关时才读取 Secrets。
+- tag 发布默认生成未签名包。macOS 需要完整配置 `APPLE_CERTIFICATE`、`APPLE_CERTIFICATE_PASSWORD`、`APPLE_SIGNING_IDENTITY`、`APPLE_ID`、`APPLE_PASSWORD`、`APPLE_TEAM_ID` 六项 Secrets，并将仓库 Variable `ENABLE_APPLE_SIGNING` 设为 `true`；只有 tag 的 macOS step 满足该开关时才读取 Secrets。Tauri 在同一 tag-only step 中使用 Apple ID、应用专用密码和 Team ID 执行 notarization；任一公证凭据缺失时 preflight 失败，不会发布半签名包。
 - Windows Authenticode 签名需要 `WINDOWS_CERTIFICATE`（Base64 PFX）、`WINDOWS_CERTIFICATE_PASSWORD`、`WINDOWS_SIGNING_TIMESTAMP_URL` 三项 Secrets，并将 `ENABLE_WINDOWS_SIGNING` 设为 `true`。tag 的 Windows step 使用 runner 的 `signtool.exe` 签署 `.exe`/`.msi`；开关关闭时生成明确标注的未签名包。
 - 签名证书、密码和 Apple/Windows 凭据只存入 GitHub Actions Secrets；发布使用最小权限的内置 `GITHUB_TOKEN`。
 - 手动构建永远不读取上述生产签名 Secrets；开关开启但 Secrets 不完整时，tag preflight 直接失败，不发布半签名产物。
 - 来自 fork 的拉取请求不得访问发布密钥或执行发布步骤。
+- macOS notarization 不使用工作流输入或明文配置；公证凭据只通过 GitHub Actions Secrets 注入 tag job，手动构建和非 tag 事件不会读取这些变量。
 
 ## 发布保护
 
