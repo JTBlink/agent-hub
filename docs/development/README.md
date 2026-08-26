@@ -19,6 +19,10 @@ npm ci
 ./agent-hub.sh test       # 运行前端和 Rust 测试
 ./agent-hub.sh lint       # ESLint + Cargo fmt + Clippy
 ./agent-hub.sh release <output-dir> <git-ref>  # 打包发布产物
+npm run app:build        # 跨平台 Node.js 构建入口
+# Windows: agent-hub.bat build
+npm run app:test         # 跨平台 Node.js 测试入口
+npm run app:lint         # 跨平台 Node.js lint 入口
 npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 cargo fmt --all -- --check
