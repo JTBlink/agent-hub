@@ -45,6 +45,16 @@ describe("release version validation", () => {
     expect(validateVersions({ root: fixture(), tag: "v1.2.3" })).toBe("1.2.3");
   });
 
+  it("accepts Cargo.lock files checked out with Windows line endings", () => {
+    const root = fixture();
+    const lockfile = join(root, "src-tauri/Cargo.lock");
+    writeFileSync(
+      lockfile,
+      '[[package]]\r\nname = "agent-hub"\r\nversion = "1.2.3"\r\n',
+    );
+    expect(validateVersions({ root, tag: "v1.2.3" })).toBe("1.2.3");
+  });
+
   it("rejects inconsistent manifests", () => {
     const root = fixture({ cargoVersion: "2.0.0" });
     expect(() => validateVersions({ root })).toThrow("Version mismatch");
