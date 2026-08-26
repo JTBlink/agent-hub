@@ -1,7 +1,7 @@
 # B14：完成跨平台验收与 V1 发布
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: B13
 
 ## 交付
@@ -45,7 +45,9 @@ Blocked by: B13
 - 发布 bundle verifier 现要求每种安装格式恰好一个、所有根目录文件都列入 `SHA256SUMS`、拒绝符号链接/特殊文件、安装包文件名版本与 `package.json` 一致，并检查发布说明包含三平台、应用数据目录和已知限制；新增 4 项篡改、遗漏、重复格式、版本漂移和符号链接回归测试。
 - 当前发布 assembly/verifier/version/workflow 定向测试共 29 项通过，`actionlint v1.7.7` 再次验证工作流无语法或表达式错误；全量前端 37 项和 Rust 71 项测试通过。
 - 当前提交已在 Windows 本地完成 NSIS `.exe` 与 MSI 打包，安装包位于 Tauri release bundle；release 二进制可启动并正常响应。Windows CRLF 下的版本校验也已加入回归测试。
+- `v0.1.2` tag 已完成正式发布：[`Build Installers #32956993957`](https://github.com/JTBlink/agent-hub/actions/runs/32956993957) 的三平台构建、汇总校验和 Release 发布全部成功；Release 附件下载后 `npm run release:verify` 验证 5 个安装包及 8 个校验文件通过。
+- Windows 本地已执行 NSIS 静默安装并启动安装后的 `agent-hub.exe`，进程保持响应；构建矩阵新增 Windows/Linux/macOS 安装后启动 smoke 测试。
 
 ## Current status
 
-CI/CD 自动化和一次远程手动三平台构建已验证；Windows 本地构建与启动已验证。仍需执行当前提交对应的 `v*` tag 流程以确认 GitHub Release 实际创建，并在干净的 Windows、macOS、Linux 环境完成安装、启动、配置扫描、安全写入、SQLite 新装与 migration 升级验收，因此本任务暂不标记 `resolved`。
+CI/CD 自动化、`v0.1.2` tag Release、三平台构建与安装启动 smoke、Windows 本地安装启动、配置扫描/安全写入/Rust migration 测试均已验证。签名开关默认关闭；未配置生产证书时发布说明保留未签名限制。

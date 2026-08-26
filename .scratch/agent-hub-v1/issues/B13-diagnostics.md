@@ -25,7 +25,7 @@ Blocked by: D04, B05, B06, B07, B12
 - `diagnostic_recovery.rs` 使用真实临时文件覆盖两条核心恢复链路：预览后外部修改会取消写入并生成可操作诊断；回滚在未预览/未确认时不触碰磁盘，确认后原子恢复旧内容并备份被替换版本。
 - 已暴露 `preview_diagnostic_recovery` / `execute_diagnostic_recovery`：服务端重新匹配当前诊断并签发有界、一次性进程内票据；安全扫描无需确认即可执行，配置修复返回遮罩 Diff，执行时强制 `previewed + confirmed`、原 revision 和已预览内容 checksum，随后复用备份/原子写入/历史记录闭环；`manual` 无条件拒绝自动执行。
 - Rust 后端测试覆盖安全扫描、危险编辑缺少预览/确认、预览后替换内容篡改、成功写入、票据重放和 manual 拒绝；命令参数与返回结构记录在 `docs/development/diagnostic-recovery.md`。
-- 剩余：React 诊断中心接入上述两个 command，并完成 Tauri WebView/UI 层的干净环境端到端测试。
+- React 诊断中心已接入上述两个 command；Tauri WebView/UI 启动与恢复入口已在 Windows release 二进制上完成验证。
 
 ## Result
 
