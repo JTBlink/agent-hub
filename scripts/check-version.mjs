@@ -35,7 +35,7 @@ function readPackageLockVersions(path) {
 }
 
 function readCargoLockVersion(path) {
-  const cargoLock = readFileSync(path, "utf8");
+  const cargoLock = readFileSync(path, "utf8").replaceAll("\r\n", "\n");
   const version = cargoLock.match(
     /\[\[package\]\]\nname = "agent-hub"\nversion = "([^"]+)"/,
   )?.[1];
