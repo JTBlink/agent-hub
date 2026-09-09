@@ -14,7 +14,7 @@ use thiserror::Error;
 use crate::{
     persistence::{NewSkillDescriptor, NewSkillInstallation, NewSkillSource, SkillRepository},
     skills::{DiscoveredSkill, SourceKind},
-    Agent, InstallationState, Scope, SkillKind,
+    strip_windows_verbatim_prefix, Agent, InstallationState, Scope, SkillKind,
 };
 
 const MARKER: &str = ".agent-hub-managed.json";
@@ -685,7 +685,7 @@ fn real_directory(path: &Path) -> Result<PathBuf, InstallationError> {
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Err(InstallationError::UnsafePath(path.to_path_buf()));
     }
-    Ok(path.canonicalize()?)
+    Ok(strip_windows_verbatim_prefix(path.canonicalize()?))
 }
 
 fn ensure_no_symlink_components(path: &Path) -> Result<(), InstallationError> {
