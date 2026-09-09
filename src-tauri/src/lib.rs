@@ -529,6 +529,22 @@ fn discover_instruction_files_with_limits(
     found
 }
 
+// `Path::canonicalize` on Windows returns the `\\?\` extended-length prefix
+// (and `\\?\UNC\` for network shares). It is valid but confuses users when
+// stored and displayed verbatim, so strip it back to a normal-looking path.
+pub(crate) fn strip_windows_verbatim_prefix(path: PathBuf) -> PathBuf {
+    let Some(raw) = path.to_str() else {
+        return path;
+    };
+    if let Some(rest) = raw.strip_prefix(r"\\?\UNC\") {
+        PathBuf::from(format!(r"\\{rest}"))
+    } else if let Some(rest) = raw.strip_prefix(r"\\?\") {
+        PathBuf::from(rest)
+    } else {
+        path
+    }
+}
+
 fn workspace_input(path: &str) -> Result<persistence::NewWorkspace, String> {
     let entered_path = path.trim();
     if entered_path.is_empty() {
@@ -540,9 +556,11 @@ fn workspace_input(path: &str) -> Result<persistence::NewWorkspace, String> {
     if metadata.file_type().is_symlink() || !metadata.is_dir() {
         return Err("workspace path must be a real directory, not a symlink".into());
     }
-    let canonical = entered
-        .canonicalize()
-        .map_err(|error| format!("workspace path cannot be canonicalized: {error}"))?;
+    let canonical = strip_windows_verbatim_prefix(
+        entered
+            .canonicalize()
+            .map_err(|error| format!("workspace path cannot be canonicalized: {error}"))?,
+    );
     let normalized_path = canonical.to_string_lossy().into_owned();
     let display_name = canonical
         .file_name()
@@ -2195,9 +2213,7 @@ mod tests {
         assert_eq!(
             input.canonical_path.as_deref(),
             Some(
-                root.path()
-                    .canonicalize()
-                    .expect("canonical")
+                strip_windows_verbatim_prefix(root.path().canonicalize().expect("canonical"))
                     .to_string_lossy()
                     .as_ref()
             )
@@ -2216,6 +2232,22 @@ mod tests {
         symlink(root.path(), &link).expect("symlink");
         assert!(workspace_input(&link.to_string_lossy()).is_err());
         std::fs::remove_file(link).expect("remove link");
+    }
+
+    #[test]
+    fn strip_windows_verbatim_prefix_removes_extended_length_prefix() {
+        assert_eq!(
+            strip_windows_verbatim_prefix(PathBuf::from(r"\\?\D:\JTStudio\dev-tools")),
+            PathBuf::from(r"D:\JTStudio\dev-tools"),
+        );
+        assert_eq!(
+            strip_windows_verbatim_prefix(PathBuf::from(r"\\?\UNC\server\share\dir")),
+            PathBuf::from(r"\\server\share\dir"),
+        );
+        assert_eq!(
+            strip_windows_verbatim_prefix(PathBuf::from(r"D:\JTStudio\dev-tools")),
+            PathBuf::from(r"D:\JTStudio\dev-tools"),
+        );
     }
 
     #[test]
@@ -2653,9 +2685,7 @@ mod tests {
         .expect("workspace installation plan");
         assert_eq!(
             preview.plan.target_directory,
-            workspace
-                .canonicalize()
-                .expect("canonical workspace")
+            strip_windows_verbatim_prefix(workspace.canonicalize().expect("canonical workspace"))
                 .join(".opencode/skills/review")
         );
         let installed = apply_skill_install_for_state(&state, &preview.plan_id)
