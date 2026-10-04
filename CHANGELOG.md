@@ -17,6 +17,8 @@
 
 ### Fixed
 
+- 修复 Rust 1.99 严格 Clippy 对路径重定位闭包的检查失败。
+
 - 修复 Linux 安装包 smoke 测试的本地路径解析。
 - Windows 路径展示移除扩展长度前缀并保留 UNC 共享语义。
 

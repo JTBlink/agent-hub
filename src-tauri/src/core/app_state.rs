@@ -273,7 +273,7 @@ fn repoint_after_move(store: &SkillStore, from: &Path, to: &Path) -> Result<usiz
             changed = true;
         }
         for field in [&mut skill.source_ref, &mut skill.source_ref_resolved] {
-            if let Some(path) = field.as_deref().and_then(&rebase) {
+            if let Some(path) = field.as_deref().and_then(rebase) {
                 *field = Some(path);
                 changed = true;
             }
