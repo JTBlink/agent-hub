@@ -12,3 +12,4 @@ ADR 用于记录影响范围大、长期存在或难以撤销的技术决策。
 - [ADR-0004：按 Agent 官方层级展示作用域并显式处理冲突](0004-explicit-scope-and-conflict-boundaries.md)
 - [ADR-0005：代码架构规范与 SOLID 约束](0005-code-architecture-conventions.md)
 - [ADR-0006：文件体量、模块拆分与代码复用规范](0006-file-size-and-reuse-conventions.md)
+- [ADR-0007：独立 Skills 管理器与唯一管理入口](0007-independent-skills-manager.md)

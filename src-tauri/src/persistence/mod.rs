@@ -120,7 +120,7 @@ pub struct ConfigHistoryRecord {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewSkillSource {
-    pub source_type: crate::skills::SourceKind,
+    pub source_type: crate::domain::SourceKind,
     pub canonical_locator: String,
     pub manifest_path: Option<String>,
     pub requested_ref: Option<String>,

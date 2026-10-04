@@ -1,4 +1,4 @@
-import type { InstalledSkill, UnifiedDiagnostic } from "./backend";
+import type { UnifiedDiagnostic } from "./backend";
 
 const agentNames: Record<string, string> = {
   "claude-code": "Claude Code",
@@ -73,37 +73,4 @@ export function diagnosticProblem(item: UnifiedDiagnostic) {
       ? "该 Skill 的结构或来源存在问题，可能无法被 Agent 正确加载。"
       : item.impact)
   );
-}
-
-export function diagnosticRealSkillPath(item: UnifiedDiagnostic) {
-  if (item.code !== "skill:symlink-skipped") return undefined;
-  const marker = "真实 Skill 路径：";
-  const markerIndex = item.impact.indexOf(marker);
-  return markerIndex >= 0
-    ? item.impact.slice(markerIndex + marker.length).trim()
-    : undefined;
-}
-
-export function matchingSkillsForDiagnostic(
-  item: UnifiedDiagnostic,
-  skills: InstalledSkill[],
-) {
-  if (!item.code.startsWith("skill:")) return [];
-  const subject = diagnosticSubject(item);
-  const resourcePath = item.resourcePath?.replace(/[\\/]+$/, "");
-  return skills.filter((skill) => {
-    if (item.agent && skill.agent !== item.agent) return false;
-    if (item.scope && skill.scope !== item.scope) return false;
-    const skillPath = skill.path.replace(/[\\/]+$/, "");
-    return (
-      skill.name === subject ||
-      skill.displayName === subject ||
-      Boolean(
-        resourcePath &&
-        (skillPath === resourcePath ||
-          resourcePath.startsWith(`${skillPath}/`) ||
-          skillPath.startsWith(`${resourcePath}/`)),
-      )
-    );
-  });
 }

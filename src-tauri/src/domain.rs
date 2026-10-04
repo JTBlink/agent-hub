@@ -161,3 +161,27 @@ domain_enum! {
         Failed => "failed"
     }
 }
+
+// Retained for compatibility with existing Skill metadata in SQLite.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SourceKind {
+    PresetGit,
+    Git,
+    #[serde(rename = "local-directory")]
+    Local,
+    Marketplace,
+    SkillsSh,
+}
+
+impl SourceKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::PresetGit => "preset-git",
+            Self::Git => "git",
+            Self::Local => "local-directory",
+            Self::Marketplace => "marketplace",
+            Self::SkillsSh => "skills-sh",
+        }
+    }
+}

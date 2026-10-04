@@ -11,12 +11,18 @@
     "core:webview:allow-webview-close",
     "core:webview:allow-webview-hide",
     "core:webview:allow-webview-show",
-    "deep-link:default",
     "dialog:default",
     "opener:allow-reveal-item-in-dir",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://*" }, { "url": "http://*" }]
+      "allow": [
+        {
+          "url": "https://*"
+        },
+        {
+          "url": "http://*"
+        }
+      ]
     }
   ]
 }

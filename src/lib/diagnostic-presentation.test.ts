@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { InstalledSkill, UnifiedDiagnostic } from "./backend";
+import type { UnifiedDiagnostic } from "./backend";
 import {
   diagnosticProblem,
   diagnosticSubject,
-  matchingSkillsForDiagnostic,
 } from "./diagnostic-presentation";
 
 function diagnostic(
@@ -20,34 +19,6 @@ function diagnostic(
     impact: "Skill may not load",
     nextAction: "Check source",
     fixSafety: "manual",
-    ...overrides,
-  };
-}
-
-function installedSkill(
-  overrides: Partial<InstalledSkill> = {},
-): InstalledSkill {
-  return {
-    agent: "codex",
-    scope: "global",
-    path: "~/.agents/skills/review",
-    storageKind: "copy",
-    realPath: "~/.agents/skills/review",
-    source: {
-      kind: "local-directory",
-      locator: "/repo/.agents/skills",
-      manifestPath: null,
-      requestedRef: null,
-      resolvedCommit: null,
-    },
-    displayName: "review",
-    name: "review",
-    relativePath: "review",
-    compatibility: null,
-    enabled: true,
-    sourceTracked: true,
-    category: "user",
-    diagnostics: [],
     ...overrides,
   };
 }
@@ -71,25 +42,14 @@ describe("diagnostic presentation", () => {
     ).toBe("writer");
   });
 
-  it("limits duplicate details to the affected agent", () => {
+  it("describes the affected configuration and scope", () => {
     const item = diagnostic({
-      code: "skill:duplicate-name:review",
-      kind: "duplicate_skill",
-      agent: "codex",
-      resourcePath: null,
+      code: "config:json-syntax",
+      agent: "claude-code",
+      scope: "workspace",
+      resourcePath: "/repo/.claude/settings.json",
     });
-    const matches = matchingSkillsForDiagnostic(item, [
-      installedSkill(),
-      installedSkill({ path: "~/.codex/skills/review" }),
-      installedSkill({
-        agent: "claude-code",
-        path: "~/.claude/skills/review",
-      }),
-      installedSkill({ name: "other", displayName: "other" }),
-    ]);
-
-    expect(diagnosticSubject(item)).toBe("review");
-    expect(matches).toHaveLength(2);
-    expect(matches.every((skill) => skill.agent === "codex")).toBe(true);
+    expect(diagnosticSubject(item)).toBe("Claude Code 工作空间配置");
+    expect(diagnosticProblem(item)).toBe("JSON 配置存在语法错误。");
   });
 });
