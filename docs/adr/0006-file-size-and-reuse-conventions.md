@@ -20,11 +20,7 @@
 
 ### SOLID 落地规则
 
-- **单一职责**：扫描、诊断呈现、安装计划、文件迁移不能互相持有实现细节。
-- **开放/封闭**：新增 Agent、Skill 来源或安装策略时扩展 enum/adapter，不在全局 `if/else` 链中复制规则。
-- **里氏替换**：所有 `AgentConfigAdapter`、`SkillSourceAdapter` 实现必须遵守同一错误、只读扫描和授权边界。
-- **接口隔离**：command 只依赖所需的 repository trait；不要为一个页面注入“万能 service”。
-- **依赖倒置**：领域规则依赖 trait 和值对象，UI 通过 `src/lib` bindings 调用 command，不直接拼接路径或执行文件系统操作。
+SOLID 的具体落地规则统一见[开发规范](../development/coding-standards.md)。当前 Agent 目录规则由 `core/tool_adapters.rs` 管理，前端 bindings 位于 `src/lib/tauri.ts`；需要新抽象时以实际实现与调用方为依据。
 
 ### 复用优先级
 
@@ -35,7 +31,7 @@
 
 ### UI 文件拆分建议
 
-页面壳保留路由、页面级状态和组合；列表行、详情面板、空状态、弹窗和来源向导各自独立。共享显示规则放在 `src/lib/*-presentation.ts`，共享调用放在 `src/lib/backend.ts`。
+页面壳保留页面级状态和组合；路由入口在 `src/App.tsx`。列表行、详情面板、空状态、弹窗和来源向导按职责拆分。共享展示规则放在 `src/lib/` 的纯函数，共享 Tauri 调用放在 `src/lib/tauri.ts`。
 
 ## 验证要求
 

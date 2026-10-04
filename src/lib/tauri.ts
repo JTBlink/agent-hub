@@ -191,8 +191,6 @@ export const setToolEnabled = (key: string, enabled: boolean) =>
 export const setAllToolsEnabled = (enabled: boolean) =>
   invoke<void>("set_all_tools_enabled", { enabled });
 
-export const getToolOrder = () => invoke<string[]>("get_tool_order_cmd");
-
 export const setToolOrder = (order: string[]) =>
   invoke<void>("set_tool_order_cmd", { order });
 
