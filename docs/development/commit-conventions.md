@@ -25,7 +25,7 @@ docs(security): 更新配置安全策略文档
 涉及任务的提交正文必须包含对应 tracker 文件链接或路径，例如：
 
 ```text
-关联：.scratch/agent-hub-v1/issues/B14-release.md
+关联：.scratch/skills-manager-integration/issues/B10-primary-application.md
 ```
 
 正文应简要说明：
@@ -37,7 +37,7 @@ docs(security): 更新配置安全策略文档
 示例：
 
 ```text
-关联：.scratch/agent-hub-v1/issues/B14-release.md
+关联：.scratch/skills-manager-integration/issues/B10-primary-application.md
 
 修复 Linux 安装包 smoke 测试的本地路径解析，并在原生 Runner
 执行配置扫描、原子写入和 SQLite migration 验证。

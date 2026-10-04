@@ -13,6 +13,8 @@
 - 清理上游赞助、个人推广、旧工作流、更新地址、公钥和 OAuth ID，发布与反馈指向本项目。
 - GitHub 备份设备码登录需配置自有公开 Client ID，缺省使用令牌或普通 Git。
 
+- 删除旧 V1 规划、原型和已替代 ADR；规划设计统一以 Skills Manager 实现为基线。
+
 ### Fixed
 
 - 修复 Linux 安装包 smoke 测试的本地路径解析。
