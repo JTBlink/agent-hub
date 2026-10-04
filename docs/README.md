@@ -7,7 +7,7 @@
 - [系统架构](architecture/overview.md)
 - [目录与本地数据](architecture/directory-structure.md)
 - [视觉规范](design/ui-guidelines.md)与[图标](development/icon-assets.md)
-- [开发指南](development/README.md)
+- [开发指南](development/README.md)与[开发规范](development/coding-standards.md)
 - [CI/CD](development/ci-cd.md)、[平台支持](development/platform-support.md)及[发布验收](development/release-checklist.md)
 - [提交规范](development/commit-conventions.md)
 - [ADR 索引](adr/README.md)

@@ -1,5 +1,7 @@
 # 开发指南
 
+代码设计、SOLID 原则与模块边界见[开发规范](coding-standards.md)；文件拆分触发线见 [ADR-0006](../adr/0006-file-size-and-reuse-conventions.md)。
+
 安装 Node.js 22、Rust stable、平台 Tauri 2 依赖，然后在仓库根目录运行：
 
 ```bash

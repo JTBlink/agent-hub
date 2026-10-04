@@ -15,6 +15,8 @@
 
 新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。
 
+具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](docs/development/coding-standards.md)。
+
 ## 构建、测试与开发命令
 
 - `npm run tauri dev`：启动桌面应用开发环境。
