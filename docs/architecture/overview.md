@@ -1,57 +1,13 @@
-# 系统架构
+# 当前系统架构
 
-> 状态：规划中
+agent-hub 使用单个 Tauri 2 桌面应用和 React 前端，业务实现来自导入的 Skills Manager。原配置管理宿主与独立 Skills 子进程已退役，替换决策见 [ADR-0008](../adr/0008-primary-application.md)。
 
-## 总体结构
+前端 `src/App.tsx` 组合路由与 Provider，`views/` 提供总览、技能库、工作空间、项目、安装、备份和设置页面。可复用界面在 `components/`，状态和共享逻辑在 `context/`、`hooks/`、`lib/`。
 
-```text
-React UI
-   ↓ Tauri commands / events
-Rust 业务模块
-   ↓ interfaces
-Agent 配置、Skill 来源、SQLite 和文件系统 adapters
-```
+`src-tauri/src/commands/` 提供桌面命令，`core/` 管理技能仓库、SQLite、工具适配、Git 和同步。`src-tauri/src/bin/agent-hub-cli.rs` 与桌面端共享核心逻辑。`main.rs` 仅负责启动及包内 smoke 分支。
 
-React 负责配置导航、表单或文本编辑、差异展示和 Skill 操作；Rust 负责配置发现、解析、校验、备份、原子写入和外部命令调用。前端不能直接访问 SQLite 或 Agent 配置文件。
+`src-tauri/src/core/central_repo.rs` 统一解析库路径、配置和日志路径；`cli_bridge.rs` 负责将同版本 CLI 发布到固定的应用目录。应用默认根目录为 `~/.agent-hub`，不自动迁移旧数据库。
 
-## 核心模块
+开发与打包共用 `scripts/primary-app.mjs`：先构建同版本 CLI，再把它作为 sidecar 放入主应用安装包。macOS Universal 的 CLI 同样合并两种架构。
 
-- `configuration`：全局与工作空间配置的索引、读取、编辑、校验、备份和回滚。
-- `workspace`：工作空间注册、扫描和配置作用域管理。
-- `scope`：按 Agent 官方层级呈现全局/工作空间配置，规范化路径并诊断冲突。
-- `agent`：Agent 探测、配置约定和配置格式适配。
-- `skill`：Skill 发现、安装状态、变更计划和生命周期操作。
-- `history`：配置变更、备份和恢复记录。
-- `settings`：应用级偏好和安全选项。
-
-Claude Code、Codex、OpenCode 在 `AgentConfigAdapter` seam 上提供不同 adapter。业务调用方只认识统一的配置文档与作用域模型，不处理各工具的路径、格式和校验差异。Skills 通过独立的 `SkillSource` adapter 接入，第一版覆盖 skills.sh、标准 Marketplace、官方及预置仓库、自定义 Git 仓库和本地仓库目录来源。
-
-配置文件是唯一真实数据源。SQLite 不保存可直接覆盖配置文件的内容副本，只保存文件路径、校验和、解析状态、操作记录和备份位置。首次启动会在平台 app-data 目录创建 SQLite 数据库并运行幂等 migration。
-
-作用域与冲突规则见[作用域、优先级与冲突规则](scope-and-conflicts.md)；AgentHub 不在不同 Agent 之间推断统一优先级。
-
-## 依赖规则
-
-```text
-页面 → feature hooks → Tauri commands → 业务模块 → interface → adapter
-```
-
-- Tauri command 只负责参数转换、业务调用和结果返回。
-- 业务模块不得依赖 React 或具体数据库实现。
-- 外部副作用集中在 `infrastructure` 和具体 adapter。
-- adapter 之间不得互相调用；跨域流程由业务模块编排。
-
-## 代码架构规范
-
-完整规范见 [ADR-0005：代码架构规范与 SOLID 约束](../adr/0005-code-architecture-conventions.md)。以下是核心约束摘要：
-
-- **模块边界**：`persistence.rs` 超过约 300 行或包含多于两个 repository trait 实现时，必须拆分为 `persistence/` 子模块（workspace、config、skill、settings、migration）。
-- **值类型优先**：agent 名称、scope、format、parse_status 等有限枚举集合必须用 `enum` 表达，不用裸 `String`。
-- **依赖倒置**：Tauri command 依赖 repository trait，不依赖 `Database` 具体类型，保证无 DB 环境下可单元测试。
-- **迁移系统**：`run_migrations` 须支持顺序应用多个版本，不得硬编码版本号判断。
-- **接口隔离**：admin / 诊断方法（如 `storage_summary`）不归属于领域 repository trait，收归独立 trait 或挂在 `Database` 上作为非 trait 方法。
-- **数据安全**：schema 中禁止出现 `token`、`secret`、`password`、`credential`、`content`、`raw_content` 列名。
-
-## 安全原则
-
-配置写入采用“重新读取并校验版本 → 生成差异 → 用户确认 → 创建备份 → 原子替换 → 重新解析验证”的流程。如果磁盘文件在编辑期间被其他程序修改，必须阻止覆盖并提示重新载入。敏感字段默认遮罩；备份目录沿用原文件权限，日志不得记录 Token 或完整配置内容。
+继承代码中仍有超大页面和 Rust 模块，按 [ADR-0006](../adr/0006-file-size-and-reuse-conventions.md) 在后续功能修改时逐步拆分，避免本次主入口切换同时重写核心行为。

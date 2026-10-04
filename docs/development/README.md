@@ -1,62 +1,30 @@
 # 开发指南
 
-> 状态：工程骨架已初始化，以下命令已在 macOS 验证。
-
-## 预期环境
-
-- Node.js 当前 LTS
-- Rust stable
-- Tauri 2 所需的平台工具链
-- SQLite
-
-## 开发命令
+安装 Node.js 22、Rust stable、平台 Tauri 2 依赖，然后在仓库根目录运行：
 
 ```bash
 npm ci
-./agent-hub.sh dev        # 启动开发模式
-./agent-hub.sh build      # 编译当前平台安装包
-./agent-hub.sh clean      # 清理 Tauri/Cargo 构建缓存（用于刷新应用图标）
-./agent-hub.sh test       # 运行前端和 Rust 测试
-./agent-hub.sh lint       # ESLint + Cargo fmt + Clippy
-./agent-hub.sh release <output-dir> <git-ref>  # 打包发布产物
-npm run app:build        # 跨平台 Node.js 构建入口
-# Windows: agent-hub.bat build
-npm run app:test         # 跨平台 Node.js 测试入口
-npm run app:lint         # 跨平台 Node.js lint 入口
-npm run build
-cargo test --manifest-path src-tauri/Cargo.toml
-cargo fmt --all -- --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+npm run app:dev
 ```
 
-以 `package.json` 和 CI 中实际可运行的命令为准。业务变更至少覆盖 Rust 模块测试；配置解析和 adapter 行为使用文件夹具测试；关键桌面流程放入 `tests/e2e/`。
+`npm run app:build` 构建当前平台安装包。macOS 本地调试包可用 `npm run tauri -- build --debug --bundles app`。所有打包入口自动编译 `agent-hub-cli`；不要绕过包装脚本直接构建发布包。
 
-## 代码规范
+## 检查
 
-完整规范见 [ADR-0005：代码架构规范与 SOLID 约束](../adr/0005-code-architecture-conventions.md) 和 [ADR-0006：文件体量、模块拆分与代码复用规范](../adr/0006-file-size-and-reuse-conventions.md)。
+```bash
+npm run version:check
+npm run tasks:check
+npm run format:check
+npm run lint
+npm test
+npm run build
+cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml
+```
 
-Git 提交标题、正文和提交前检查见 [Git 提交规范](commit-conventions.md)。
+Rust 单元测试使用临时目录；需要网络仓库的 tag 测试默认忽略，显式配置测试 fixture 后才运行。包内 `agent-hub --smoke` 验证隔离数据库初始化和重开，不启动 UI。
 
-新增功能遵循以下硬规则：React/TypeScript 文件超过 600 行、Rust 模块超过 800 行时必须拆分；函数超过 80 行需要说明原因；重复的 Agent 路径、诊断文案、安装安全校验和标签必须复用统一实现，不能在页面中重新拼接。
+本地默认数据位于 `~/.agent-hub`，不自动迁移其他应用数据。不要把运行数据、截图中的个人信息或访问令牌提交到仓库。
 
-**审查时重点检查：**
-
-- `persistence.rs` 超过约 300 行时须拆分为子模块
-- agent、scope、format 等有限集合用 `enum` 而非裸 `String`
-- Tauri command 依赖 repository trait，不依赖 `Database` 具体类型
-- `run_migrations` 使用循环版本遍历，不硬编码版本号
-- schema 中禁止出现 `token`、`secret`、`password`、`credential`、`content`、`raw_content` 列名
-- `storage_summary` 等跨域诊断方法不归属于领域 repository trait
-
-跨平台检查、打包和发布流程见 [CI/CD 与跨平台发布](ci-cd.md)。
-发布前逐项执行 [V1 发布验收清单](release-checklist.md)，并把远程 run 结果回写 `.scratch/agent-hub-v1/issues/B14-release.md`。
-应用图标的母版参数、生成命令和验收方法见 [应用图标资源规范](icon-assets.md)。
-诊断中心接入恢复操作时遵循 [诊断恢复命令契约](diagnostic-recovery.md)，不得绕过一次性票据、预览、确认或 revision 校验。
-
-## 日志规范
-
-Rust 代码统一通过 `src-tauri/src/logging.rs` 的领域函数记录事件，不直接使用 `println!`、`eprintln!` 或在业务模块中拼接任意日志文本。日志同时写入标准输出和 Tauri 平台日志目录，默认级别为 `info`。
-
-- 新增事件时先定义固定事件名、命令名和错误码，再提供类型化函数，例如 `config_scan_completed(agent, scope, status)`。
-- 只记录排障所需的枚举、状态和非敏感标识；不得记录配置正文、Diff、Token、环境变量值、任意错误上下文或真实数据库路径。
-- 向用户返回的错误可包含可操作说明；日志仅记录稳定错误码，避免意外泄漏底层数据。
+前端、桌面端和 CLI 共用根版本；使用 `npm run version:set -- <version>` 更新。提交遵循[提交规范](commit-conventions.md)，任务状态回写 `.scratch/`；发布方式见 [CI/CD](ci-cd.md)。

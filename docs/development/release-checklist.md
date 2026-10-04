@@ -1,50 +1,12 @@
-# V1 发布验收清单
+# 发布验收
 
-本清单区分“仓库内已验证”和“必须由 GitHub Runner/干净系统验证”。需求状态仍记录在 `.scratch/`，本文件只提供发布操作顺序。
+- 当前提交通过开发指南中的格式、lint、测试、版本和构建检查。
+- Windows、macOS Universal、Linux 原生 Runner 均生成安装包并通过包内 smoke。
+- 安装包包含匹配版本及架构的 `agent-hub-cli`。
+- 干净用户环境首次启动成功，技能库、工作空间、设置和主题切换正常。
+- 数据默认写入 `~/.agent-hub`，不自动接管旧版或原管理器数据库。
+- Logo、安装包图标、应用名和发布链接均属于 agent-hub。
+- 已配置测试远端时，验证备份、恢复、冲突流程；无远端时不声称已验证。
+- CHANGELOG、平台矩阵与 `.scratch/` 记录实际结果，汇总安装包及 SHA256SUMS 校验通过。
 
-## 仓库内门禁
-
-```bash
-npm ci
-npm run format:check
-npm run lint
-npm run test
-npm run build
-npm run version:check -- v0.1.1
-cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml
-go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/*.yml
-```
-
-这些门禁验证源码、版本、发布汇总脚本和 workflow contract，但不能代替三个托管 Runner 的真实打包。
-
-## 手动候选包
-
-工作流提交到远程后，推送 `main` 会自动运行预编译；也可以手动运行：
-
-```bash
-gh workflow run "Build Installers" \
-  --ref main
-gh run list --workflow "Build Installers" --limit 1
-gh run watch <run-id> --exit-status
-gh run download <run-id> --name "agent-hub-installers-<run-id>"
-```
-
-汇总 artifact 必须同时包含 `.exe`、`.msi`、`.dmg`、`.AppImage`、`.deb`、`SHA256SUMS`、`CHANGELOG.md`、`PLATFORM_SUPPORT.md` 和 `RELEASE_NOTES.md`。下载后运行 `npm run release:verify -- <bundle-directory>` 校验所有文件和 SHA-256，再分别在干净 Windows、macOS 和 Linux 环境验证安装、启动、数据目录保留和卸载。
-
-## Tag 发布
-
-1. 把 `CHANGELOG.md` 的 `Unreleased` 内容归档到与版本一致的章节。
-2. 修改仓库根目录 `VERSION`，运行 `npm run version:sync` 同步所有 manifest，再运行 `npm run version:check -- v<version>` 校验；也可使用 `npm run version:set -- <version>` 一步完成修改与同步。
-3. 提交版本变更，创建并推送 `v<version>` tag。
-4. 确认质量门禁和三个矩阵 job 全部成功，之后才应出现 GitHub Release。
-5. 下载 Release 附件并核验 `SHA256SUMS`、发布说明、平台支持矩阵及所有安装格式。
-
-平台签名默认关闭。只有六项 Apple Secrets 已完整配置时，才把 `ENABLE_APPLE_SIGNING` 设为 `true`；同一组 Apple ID、应用专用密码和 Team ID 由 Tauri 用于 notarization。只有 Base64 PFX、密码和时间戳 URL 三项 Windows Secrets 已完整配置时，才把 `ENABLE_WINDOWS_SIGNING` 设为 `true`。未启用签名时必须在发布说明中保留限制。
-
-## 完成判定
-
-- 手动构建只生成候选 artifact；只有 tag 构建会创建 Release，两条触发路径分别留存 run URL 和结论。
-- 任一安装格式缺失、checksum 不匹配、版本不一致或矩阵 job 失败，均不得发布。
-- B14 只有在三平台安装/启动、配置扫描、安全写入、SQLite 新装和 migration 升级均通过后才能标记 `resolved`。
+单台 macOS 本地验证不代表 Windows、Linux 或 Universal 安装验收完成。

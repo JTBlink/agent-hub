@@ -1,14 +1,16 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { i18nReady } from "./i18n";
+import { logStartupEvent } from "./lib/tauri";
+import "./index.css";
+import App from "./App.tsx";
 
-import { App } from "./app/App";
-import { LanguageProvider } from "./lib/LanguageProvider";
-import "./styles.css";
+await i18nReady;
+logStartupEvent("i18n_ready", performance.now()).catch(() => {});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <LanguageProvider>
-      <App />
-    </LanguageProvider>
+    <App />
   </StrictMode>,
 );
+logStartupEvent("root_rendered", performance.now()).catch(() => {});

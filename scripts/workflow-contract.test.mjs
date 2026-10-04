@@ -25,8 +25,8 @@ describe("GitHub Actions workflow contract", () => {
     expect(desktopIndex).toContain(
       '<script type="module" src="/src/main.tsx"></script>',
     );
-    expect(desktopIndex).not.toContain("Changelog / live feed");
-    expect(websiteIndex).toContain("Changelog / live feed");
+    expect(websiteIndex).not.toContain('src="/src/main.tsx"');
+    expect(websiteIndex).toContain("__APP_VERSION__");
     expect(pages).toContain("npm run homepage:build -- _site/index.html");
   });
 
@@ -109,13 +109,12 @@ describe("GitHub Actions workflow contract", () => {
     );
   });
 
-  it("runs platform configuration, recovery, and migration checks", () => {
+  it("runs the current application core and package smoke checks", () => {
+    expect(installers).toContain("name: Run application core tests");
     expect(installers).toContain(
-      "name: Run cross-platform configuration and persistence tests",
+      "cargo test --manifest-path src-tauri/Cargo.toml",
     );
-    expect(installers).toContain("--test agent_configs");
-    expect(installers).toContain("--test diagnostic_recovery");
-    expect(installers).toContain("--test persistence");
+    expect(installers).not.toContain("--test agent_configs");
     expect(installers).toContain("agent-hub --smoke");
     expect(installers).toContain("--smoke");
   });

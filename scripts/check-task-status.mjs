@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-const root = resolve(process.argv[2] ?? ".scratch/agent-hub-v1");
+const root = resolve(process.argv[2] ?? ".scratch/skills-manager-integration");
 const issuesDirectory = join(root, "issues");
 const statusPath = join(root, "status.md");
 

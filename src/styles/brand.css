@@ -1,0 +1,57 @@
+/* AgentHub identity: navy surfaces, blue actions, cyan and violet accents. */
+@layer base {
+  :root {
+    --app-scale: 1;
+    --color-bg: #f3f7ff;
+    --color-bg-secondary: #eaf1fc;
+    --color-surface: #ffffff;
+    --color-surface-hover: #edf4ff;
+    --color-surface-active: #ddeaff;
+    --color-border: #c1d2ed;
+    --color-border-subtle: #d7e2f3;
+    --color-border-faint: #e5edf9;
+    --color-text-primary: #111d35;
+    --color-text-secondary: #263b67;
+    --color-text-tertiary: #476084;
+    --color-text-muted: #607595;
+    --color-text-faint: #7184a5;
+    --color-accent: #168bff;
+    --color-accent-light: #0872dc;
+    --color-accent-dark: #0872dc;
+    --color-accent-bg: rgb(22 139 255 / 8%);
+    --color-accent-border: rgb(22 139 255 / 30%);
+    --color-brand-teal: #159e88;
+    --color-brand-violet: #696acb;
+    --color-danger: #c5364c;
+    --color-danger-bg: rgb(197 54 76 / 8%);
+    --shadow-card: 0 2px 8px rgb(17 29 53 / 5%);
+    --shadow-card-hover: 0 8px 24px rgb(17 29 53 / 10%);
+  }
+
+  .dark {
+    --color-bg: #08101f;
+    --color-bg-secondary: #0c162b;
+    --color-surface: #111d35;
+    --color-surface-hover: #182748;
+    --color-surface-active: #203356;
+    --color-border: #263b67;
+    --color-border-subtle: #203454;
+    --color-border-faint: #182748;
+    --color-text-primary: #edf4ff;
+    --color-text-secondary: #d4e2f8;
+    --color-text-tertiary: #a7b9d6;
+    --color-text-muted: #a7b9d6;
+    --color-text-faint: #7184a5;
+    --color-accent: #168bff;
+    --color-accent-light: #66b5ff;
+    --color-accent-dark: #0872dc;
+    --color-accent-bg: rgb(22 139 255 / 12%);
+    --color-accent-border: rgb(22 139 255 / 35%);
+    --color-brand-teal: #42d9b1;
+    --color-brand-violet: #9b9cff;
+    --color-danger: #ff7c82;
+    --color-danger-bg: #4b252e;
+    --shadow-card: 0 4px 16px rgb(0 0 0 / 16%);
+    --shadow-card-hover: 0 18px 50px rgb(0 0 0 / 25%);
+  }
+}
