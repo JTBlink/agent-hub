@@ -1,5 +1,7 @@
 # B00：整体导入独立 Skills 模块
 
+> 历史阶段记录：当前架构与范围见 B10 和 ADR-0008，本文件中的旧路径和命令不作为现行开发入口。
+
 Type: task
 Status: resolved
 Blocked by: none
@@ -24,7 +26,7 @@ Blocked by: none
 ## Result
 
 - 完整源码位于 `modules/skills/`，来源 commit 为 `def946d78ef4c739b0ba429e38ac509b8660ec34`；上游文件未改写。
-- [来源清单](../../../modules/skills-source-manifest.json) 保存 309 个文件的原 Git blob、模式、大小与 SHA-256；已逐项验证内容和执行位。
+- [来源清单](../../../docs/reference/skills-manager/source-manifest.json) 保存 309 个文件的原 Git blob、模式、大小与 SHA-256；已逐项验证内容和执行位。
 - 原 `.gitignore` 匹配但上游已经跟踪的文档也已导入。使用 Git intent-to-add 将整个快照纳入 diff，不修改上游 ignore，不创建嵌套 Git 仓库，未提交 Git。
 - 根 ESLint/Prettier 排除模块；[模块说明](../../../modules/README.md)、根 README 与 CHANGELOG 已更新。
 - 根 `npm run build`、`npm run lint`、`npm test` 通过（19 个测试文件、81 项测试）。根 lint 保留既有 Modal Fast Refresh warning，无错误。

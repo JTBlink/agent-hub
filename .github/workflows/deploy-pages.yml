@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "homepage/**"
-      - "assets/**"
+      - "src-tauri/icons/app-icon.svg"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -36,7 +36,7 @@ jobs:
         run: |
           mkdir -p _site/assets
           npm run homepage:build -- _site/index.html
-          cp assets/* _site/assets/
+          cp src-tauri/icons/app-icon.svg _site/assets/app-icon.svg
 
       - name: Upload homepage artifact
         uses: actions/upload-pages-artifact@v3

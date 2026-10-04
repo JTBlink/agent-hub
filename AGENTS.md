@@ -6,11 +6,11 @@
 
 本仓库是 AgentHub（AI Agent 工作空间管理器）的 Tauri 2 + React 工程。`src/` 存放 React/TypeScript 前端，`src-tauri/` 存放 Rust 桌面端和 Tauri 配置，`docs/` 存放产品与架构文档，`.scratch/` 是仓库内需求 tracker。GitHub 仅用于 Actions 持续集成、跨平台安装包构建和发布产物，不作为需求或项目状态数据库。
 
-- `src/app/`：页面壳和应用级 UI。
-- `src/lib/`：前端共享逻辑及 Tauri bindings。
+- `src/views/`、`src/components/`：页面与共享 UI。
+- `src/lib/`、`src/hooks/`、`src/context/`：共享逻辑、Tauri bindings 与状态。
 - `src-tauri/src/`：Rust 业务逻辑；保持 `main.rs` 精简。
 - `src-tauri/tests/`：跨模块集成测试（引入后）。
-- `docs/`：产品、架构、集成和开发说明。
+- `docs/`：产品、当前架构、开发说明；后续规划设计统一放在 `docs/plans/agent-hub.md`。
 - `.scratch/<feature>/`：存放可提交的规格、任务、依赖和开发状态；它是本仓库的正式 Issue tracker。
 
 新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。

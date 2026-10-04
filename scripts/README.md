@@ -34,7 +34,7 @@ node scripts/verify-release-bundle.mjs <bundle-dir>
 | 脚本                      | 作用                                                                                                             |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `serve-d04-prototype.mjs` | 为 `.scratch/prototypes/d04-ux/` 启动本地静态服务器（默认端口 `4173`，可通过 `AGENT_HUB_PROTOTYPE_PORT` 覆盖）。 |
-| `check-task-status.mjs`   | 校验 `.scratch/agent-hub-v1/status.md` 与 `issues/*.md` 的任务状态是否一致。                                     |
+| `check-task-status.mjs`   | 校验 `.scratch/skills-manager-integration/status.md` 与 `issues/*.md` 的任务状态是否一致。                       |
 
 ```bash
 node scripts/serve-d04-prototype.mjs
@@ -43,4 +43,8 @@ node scripts/serve-d04-prototype.mjs
 
 ## 测试
 
-每个脚本均有对应的 `.test.mjs` 文件，通过 `npm run test` 运行。
+关键构建、版本和发布逻辑由 `.test.mjs` 覆盖，通过 `npm test` 运行。
+
+## 主应用与 CLI
+
+`primary-app.mjs` 统一开发和打包流程，提前构建并放置 `agent-hub-cli` sidecar。`run-rust-cli.mjs` 提供 CLI 运行、构建和安装入口。前端、桌面与 CLI 均使用根目录工程。

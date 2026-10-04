@@ -1,5 +1,7 @@
 # B09：清理上游个人账号与项目服务配置
 
+> 历史阶段记录：当前架构与范围见 B10 和 ADR-0008，本文件中的旧路径和命令不作为现行开发入口。
+
 Type: task
 Status: resolved
 Blocked by: B08
@@ -28,7 +30,7 @@ Blocked by: B08
 - 项目链接与自带管理 Skill 来源统一指向 AgentHub。应用更新接口不访问网络，设置页只提供宿主发布页；模块不再继承上游更新地址及签名公钥。
 - 清理内置 OAuth ID，前后端统一读取构建变量 `VITE_AGENTHUB_GITHUB_OAUTH_CLIENT_ID`；缺省时隐藏设备码登录并拒绝相应后端请求，保留令牌与普通 Git 备份方式。
 - 两项原有网络 tag 集成测试改为显式配置 fixture，维持默认忽略。未配置网络 fixture，因此未执行这两项测试。
-- [来源清单](../../../modules/skills-source-manifest.json) 保留 309 个文件的原始基线，另记 10 项删除、22 项修改、4 项新增，当前源码共 303 个文件。新增 [校验脚本](../../../scripts/verify-skills-import.mjs) 验证文件集合、内容与权限。
+- [来源清单](../../../docs/reference/skills-manager/source-manifest.json) 保留 309 个文件的原始基线，另记 10 项删除、22 项修改、4 项新增，当前源码共 303 个文件。新增 历史校验脚本（见提交 `83ff0eb`） 验证文件集合、内容与权限。
 - 原 MIT 许可证未改写；来源项目未修改。
 
 验证：模块 `npm run build`、`npm run lint` 通过；模块 `commands::app_updates::tests` 和 `core::github_api::tests` 共 3 项测试通过。根 `npm test` 75 项、`npm run lint` 通过，保留既有 Modal Fast Refresh 警告。重新执行 `npm run tauri -- build --debug --bundles app` 成功，包内主程序 `--smoke` 通过；根 Rust 68 项测试及严格检查沿用 B08 已通过结果，宿主 Rust 未再修改。

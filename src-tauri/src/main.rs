@@ -1,13 +1,14 @@
+// Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
     if std::env::args().nth(1).as_deref() == Some("--smoke") {
-        if let Err(error) = agent_hub_lib::run_package_smoke() {
-            eprintln!("AgentHub package smoke test failed: {error}");
+        if let Err(error) = app_lib::run_package_smoke() {
+            eprintln!("agent-hub package smoke failed: {error}");
             std::process::exit(1);
         }
-        println!("AgentHub package smoke test passed");
+        println!("agent-hub package smoke passed");
         return;
     }
-    agent_hub_lib::run();
+    app_lib::run();
 }

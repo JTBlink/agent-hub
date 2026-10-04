@@ -1,28 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the AgentHub main window",
+  "description": "enables the default permissions",
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "core:webview:allow-create-webview",
-    "core:webview:allow-set-webview-position",
-    "core:webview:allow-set-webview-size",
-    "core:webview:allow-webview-close",
-    "core:webview:allow-webview-hide",
-    "core:webview:allow-webview-show",
+    "core:window:allow-start-dragging",
     "dialog:default",
-    "opener:allow-reveal-item-in-dir",
-    {
-      "identifier": "opener:allow-open-url",
-      "allow": [
-        {
-          "url": "https://*"
-        },
-        {
-          "url": "http://*"
-        }
-      ]
-    }
+    "dialog:allow-open",
+    "opener:default",
+    "updater:default",
+    "clipboard-manager:allow-write-text"
   ]
 }

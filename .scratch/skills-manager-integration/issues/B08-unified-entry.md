@@ -1,5 +1,7 @@
 # B08：统一 Skills 管理入口并移除旧功能
 
+> 历史阶段记录：当前架构与范围见 B10 和 ADR-0008，本文件中的旧路径和命令不作为现行开发入口。
+
 Type: task
 Status: resolved
 Blocked by: B00

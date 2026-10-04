@@ -13,3 +13,5 @@ ADR 用于记录影响范围大、长期存在或难以撤销的技术决策。
 - [ADR-0005：代码架构规范与 SOLID 约束](0005-code-architecture-conventions.md)
 - [ADR-0006：文件体量、模块拆分与代码复用规范](0006-file-size-and-reuse-conventions.md)
 - [ADR-0007：独立 Skills 管理器与唯一管理入口](0007-independent-skills-manager.md)
+
+- [ADR-0008：统一主应用与本地数据目录](0008-primary-application.md)（当前架构；旧宿主相关决策已替代）
