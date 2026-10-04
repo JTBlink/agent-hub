@@ -1,0 +1,36 @@
+# B09：清理上游个人账号与项目服务配置
+
+Type: task
+Status: resolved
+Blocked by: B08
+
+## 目标
+
+按用户提交前追加要求，清理导入模块中的上游个人账号、赞助与项目服务引用，再提交本次整合。
+
+## 验收标准
+
+- 移除上游赞助、个人推广、Star 图和模块内旧工作流，统一使用根仓库发布流程。
+- 项目、反馈及自带 Skill 来源指向当前 AgentHub 仓库；反馈使用本地 tracker 说明。
+- 应用更新不再访问上游发布服务或沿用其签名公钥；技能内容更新保持原能力。
+- 不内置上游 OAuth 应用 ID；未配置自有 ID 时使用令牌或普通 Git 方式备份。
+- 上游仓库相关集成测试改为显式配置 fixture，不再硬编码个人仓库；原许可证保持完整。
+- 来源清单保留原导入基线，并单独记录修改、删除和新增文件；验证后完成提交。
+
+## Comments
+
+- 2026-10-04：用户明确要求全部处理上游账号相关内容，此任务替代 B00/B08 的原样保留约束。只调整项目归属与服务边界；继承的大文件不作全面重写，新增更新逻辑独立成模块。
+- 2026-10-04：Standards 审查确认项目元数据集中管理、更新器与 OAuth 不继承上游账号配置、许可证保留，顺手清理原始快照中的空白错误。Spec 审查确认指定账号及关联推广/服务标识已从模块源码清除，统一入口与技能内容管理能力保持。
+
+## Result
+
+- 删除模块内旧工作流、赞助及 Issue 模板，移除个人推广与 Star 图；发布由根工作流管理，反馈入口指向仓库 tracker 说明。
+- 项目链接与自带管理 Skill 来源统一指向 AgentHub。应用更新接口不访问网络，设置页只提供宿主发布页；模块不再继承上游更新地址及签名公钥。
+- 清理内置 OAuth ID，前后端统一读取构建变量 `VITE_AGENTHUB_GITHUB_OAUTH_CLIENT_ID`；缺省时隐藏设备码登录并拒绝相应后端请求，保留令牌与普通 Git 备份方式。
+- 两项原有网络 tag 集成测试改为显式配置 fixture，维持默认忽略。未配置网络 fixture，因此未执行这两项测试。
+- [来源清单](../../../modules/skills-source-manifest.json) 保留 309 个文件的原始基线，另记 10 项删除、22 项修改、4 项新增，当前源码共 303 个文件。新增 [校验脚本](../../../scripts/verify-skills-import.mjs) 验证文件集合、内容与权限。
+- 原 MIT 许可证未改写；来源项目未修改。
+
+验证：模块 `npm run build`、`npm run lint` 通过；模块 `commands::app_updates::tests` 和 `core::github_api::tests` 共 3 项测试通过。根 `npm test` 75 项、`npm run lint` 通过，保留既有 Modal Fast Refresh 警告。重新执行 `npm run tauri -- build --debug --bundles app` 成功，包内主程序 `--smoke` 通过；根 Rust 68 项测试及严格检查沿用 B08 已通过结果，宿主 Rust 未再修改。
+
+完整模块源码扫描无指定账号、关联推广域名或旧 OAuth ID；来源校验、任务状态、版本和完整 staged diff 空白检查通过。管理器 GUI、Windows/Linux/Universal 安装包仍待验证；未配置自有 OAuth ID 时不提供设备码登录。

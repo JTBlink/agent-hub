@@ -1,0 +1,5 @@
+{
+  "bundle": {
+    "externalBin": ["binaries/skills-manager", "binaries/skills-manager-cli"]
+  }
+}

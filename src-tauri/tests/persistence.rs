@@ -169,7 +169,7 @@ fn repository_metadata_survives_database_reopen_without_storing_file_content() {
         .expect("operation metadata is saved");
     let source_id = database
         .add_skill_source(&NewSkillSource {
-            source_type: agent_hub_lib::skills::SourceKind::Git,
+            source_type: agent_hub_lib::domain::SourceKind::Git,
             canonical_locator: "https://example.invalid/skills.git".into(),
             manifest_path: None,
             requested_ref: Some("main".into()),
@@ -265,7 +265,7 @@ fn skill_install_snapshot_is_atomic_and_idempotent() {
     let directory = tempdir().expect("temporary directory");
     let database = Database::open(directory.path().join("state.sqlite3")).expect("database opens");
     let source = NewSkillSource {
-        source_type: agent_hub_lib::skills::SourceKind::Git,
+        source_type: agent_hub_lib::domain::SourceKind::Git,
         canonical_locator: "https://github.com/example/skills.git".into(),
         manifest_path: None,
         requested_ref: Some("main".into()),

@@ -34,15 +34,6 @@ export interface AgentRuntimeStatus {
 export type ConfigScope = "global" | "workspace";
 export type ConfigFormat = "json" | "jsonc" | "toml" | "yaml" | "markdown";
 export type ConfigStatus = "ready" | "missing" | "invalid" | "unreadable";
-export type SkillSourceKind =
-  "preset-git" | "git" | "local-directory" | "marketplace" | "skills-sh";
-export interface SkillSourceMetadata {
-  kind: SkillSourceKind;
-  locator: string;
-  manifestPath: string | null;
-  requestedRef: string | null;
-  resolvedCommit: string | null;
-}
 export type DiagnosticCode =
   | "file_missing"
   | "permission_denied"
@@ -70,139 +61,6 @@ export interface ConfigDocument {
   structuredView: unknown;
   sourcePreview: string;
   diagnostics: ConfigDiagnostic[];
-}
-
-export interface InstalledSkill {
-  agent: Agent;
-  scope: ConfigScope;
-  path: string;
-  storageKind: "copy" | "symlink";
-  realPath: string;
-  source: SkillSourceMetadata;
-  displayName: string;
-  name: string | null;
-  relativePath: string;
-  compatibility: string | null;
-  currentVersion?: string | null;
-  installedFingerprint?: string | null;
-  enabled: boolean;
-  sourceTracked: boolean;
-  category: "user" | "system";
-  diagnostics: {
-    code: string;
-    message: string;
-    severity: string;
-    path: string | null;
-    targetPath: string | null;
-  }[];
-}
-
-export interface SkillInventory {
-  skills: InstalledSkill[];
-  duplicateNames: string[];
-  roots: SkillRootUsage[];
-  diagnostics: {
-    code: string;
-    message: string;
-    severity: string;
-    path: string | null;
-    targetPath: string | null;
-  }[];
-}
-
-export interface SkillRootUsage {
-  path: string;
-  bytes: number;
-  skillCount: number;
-}
-
-export type SkillSourceRequest =
-  | { kind: "local-directory"; path: string }
-  | {
-      kind: "git";
-      url: string;
-      requestedRef?: string | null;
-      subdirectory?: string | null;
-    }
-  | { kind: "marketplace"; manifest: string }
-  | { kind: "skills-sh"; ownerRepository: string };
-
-export interface SkillSourceDiagnostic {
-  code: string;
-  message: string;
-  severity: "info" | "warning" | "error";
-  path: string | null;
-}
-
-export interface DiscoveredSkill {
-  source: SkillSourceMetadata;
-  relativePath: string;
-  entrypointPath: string;
-  sourceDirectory: string;
-  displayName: string;
-  name: string | null;
-  description: string | null;
-  license: string | null;
-  compatibility: string | null;
-  metadata: Record<string, string>;
-  rawFrontmatter: string | null;
-  installable: boolean;
-  diagnostics: SkillSourceDiagnostic[];
-}
-
-export interface MarketplaceEntry {
-  name: string | null;
-  description: string | null;
-  version: string | null;
-  author: string | null;
-  homepage: string | null;
-  compatibility: unknown;
-  source: unknown;
-  raw: unknown;
-  installable: boolean;
-  diagnostics: SkillSourceDiagnostic[];
-}
-
-export interface SkillSourceBrowseResult {
-  source: SkillSourceMetadata;
-  skills: DiscoveredSkill[];
-  catalogEntries: MarketplaceEntry[];
-  diagnostics: SkillSourceDiagnostic[];
-}
-
-export interface SkillInstallPlan {
-  skillKey: string;
-  sourceKind: SkillSourceKind;
-  sourceLocator: string;
-  sourceRevision: string | null;
-  sourceFingerprint: string;
-  agent: Agent;
-  scope: ConfigScope;
-  sourceDirectory: string;
-  targetRoot: string;
-  targetDirectory: string;
-  files: string[];
-}
-
-export interface SkillInstallPlanPreview {
-  planId: string;
-  plan: SkillInstallPlan;
-  source: SkillSourceMetadata;
-  displayName: string;
-  description: string | null;
-}
-
-export interface ManagedInstallation {
-  skillKey: string;
-  sourceLocator: string;
-  sourceKind: SkillSourceKind | null;
-  agent: Agent;
-  scope: ConfigScope;
-  targetDirectory: string;
-  files: string[];
-  sourceRevision: string | null;
-  installedFingerprint: string;
-  enabled: boolean;
 }
 
 export interface ConfigEditPreview {
@@ -255,7 +113,6 @@ export interface InstructionFile {
 export interface WorkspaceScanResult {
   workspace: WorkspaceRecord;
   configs: ConfigDocument[];
-  skills: SkillInventory;
   instructions: InstructionFile[];
 }
 
@@ -328,20 +185,12 @@ export function getAppInfo(): Promise<AppInfo> {
   return invoke<AppInfo>("app_info");
 }
 
-export function getLastLocalSkillSource(): Promise<string | null> {
-  return invoke<string | null>("get_last_local_skill_source");
-}
-
-export function setLastLocalSkillSource(path: string): Promise<void> {
-  return invoke<void>("set_last_local_skill_source", { path });
-}
-
 export function getUserDataPaths(): Promise<UserDataPaths> {
   return invoke<UserDataPaths>("user_data_paths");
 }
 
 export function clearUserData(
-  kind: "backups" | "logs" | "skillSources",
+  kind: "backups" | "logs",
 ): Promise<UserDataPaths> {
   return invoke<UserDataPaths>("clear_user_data", { kind });
 }
@@ -364,93 +213,6 @@ export function getCodexGlobalConfig(): Promise<ConfigDocument> {
 
 export function getOpenCodeGlobalConfig(): Promise<ConfigDocument> {
   return invoke<ConfigDocument>("scan_opencode_global");
-}
-
-export function getSkillInventory(
-  workspaceDirectory?: string,
-): Promise<SkillInventory> {
-  return invoke<SkillInventory>("scan_skills", { workspaceDirectory });
-}
-
-export function browseSkillSource(
-  request: SkillSourceRequest,
-): Promise<SkillSourceBrowseResult> {
-  return invoke<SkillSourceBrowseResult>("browse_skill_source", { request });
-}
-
-export function planSkillInstall(input: {
-  request: SkillSourceRequest;
-  skillPath: string;
-  skillSourceLocator?: string;
-  agent: Agent;
-  scope: ConfigScope;
-  workspaceDirectory?: string;
-  workspaceId?: number;
-}): Promise<SkillInstallPlanPreview> {
-  return invoke<SkillInstallPlanPreview>("plan_skill_install", { input });
-}
-
-export function applySkillInstall(
-  planId: string,
-): Promise<ManagedInstallation> {
-  return invoke<ManagedInstallation>("apply_skill_install", { planId });
-}
-
-export function setSkillEnabled(input: {
-  targetDirectory: string;
-  enabled: boolean;
-  workspaceDirectory?: string;
-}): Promise<ManagedInstallation> {
-  return invoke<ManagedInstallation>("set_skill_enabled", input);
-}
-
-export function uninstallSkill(input: {
-  targetDirectory: string;
-  workspaceDirectory?: string;
-}): Promise<ManagedInstallation> {
-  return invoke<ManagedInstallation>("uninstall_skill", input);
-}
-
-export function linkSkillToAgent(input: {
-  sourceDirectory: string;
-  targetName: string;
-  agent: Agent;
-  scope: ConfigScope;
-  workspaceDirectory?: string;
-}): Promise<string> {
-  return invoke<string>("link_skill_to_agent", { input });
-}
-
-export function unlinkSkill(input: {
-  targetDirectory: string;
-  workspaceDirectory?: string;
-}): Promise<void> {
-  return invoke<void>("unlink_skill", input);
-}
-
-export function previewUninstallSkill(input: {
-  targetDirectory: string;
-  workspaceDirectory?: string;
-}): Promise<ManagedInstallation> {
-  return invoke<ManagedInstallation>("preview_uninstall_skill", input);
-}
-
-export type LegacyCodexSkillAction = "migrate" | "archive";
-
-export interface LegacyCodexSkillResolution {
-  action: LegacyCodexSkillAction;
-  originalPath: string;
-  destinationPath: string;
-  backupPath: string;
-}
-
-export function resolveLegacyCodexSkill(input: {
-  sourcePath: string;
-  action: LegacyCodexSkillAction;
-}): Promise<LegacyCodexSkillResolution> {
-  return invoke<LegacyCodexSkillResolution>("resolve_legacy_codex_skill", {
-    input,
-  });
 }
 
 export function getDiagnostics(
@@ -519,10 +281,6 @@ export function previewConfigEdit(
 
 export function readConfigSource(path: string): Promise<string> {
   return invoke<string>("read_config_source", { path });
-}
-
-export function readSkillSource(path: string): Promise<string> {
-  return invoke<string>("read_skill_source", { path });
 }
 
 export function openDirectoryInEditor(path: string): Promise<boolean> {

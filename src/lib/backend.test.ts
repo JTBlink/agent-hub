@@ -4,22 +4,14 @@ import { invoke } from "@tauri-apps/api/core";
 
 import {
   addWorkspace,
-  applySkillInstall,
-  browseSkillSource,
   executeDiagnosticRecovery,
   getAgentRuntimes,
   getClaudeGlobalConfig,
   getDiagnostics,
-  getLastLocalSkillSource,
   listConfigHistory,
-  planSkillInstall,
-  previewUninstallSkill,
-  previewDiagnosticRecovery,
   previewConfigRestore,
+  previewDiagnosticRecovery,
   restoreConfigHistory,
-  setSkillEnabled,
-  setLastLocalSkillSource,
-  uninstallSkill,
 } from "./backend";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -68,17 +60,6 @@ describe("Claude Code backend binding", () => {
     });
   });
 
-  it("persists the last local Skill source directory", async () => {
-    vi.mocked(invoke).mockResolvedValue(null);
-    await getLastLocalSkillSource();
-    expect(invoke).toHaveBeenCalledWith("get_last_local_skill_source");
-
-    await setLastLocalSkillSource("/projects/skills");
-    expect(invoke).toHaveBeenCalledWith("set_last_local_skill_source", {
-      path: "/projects/skills",
-    });
-  });
-
   it("passes an optional resource path to diagnostic filtering", async () => {
     vi.mocked(invoke).mockResolvedValue([]);
 
@@ -107,60 +88,6 @@ describe("Claude Code backend binding", () => {
     expect(invoke).toHaveBeenCalledWith("restore_config_history", {
       operationId: 7,
       expectedChecksum: "expected-checksum",
-    });
-  });
-
-  it("uses explicit command envelopes for the Skill source and lifecycle API", async () => {
-    vi.mocked(invoke).mockResolvedValue({});
-    const request = { kind: "local-directory" as const, path: "/skills" };
-
-    await browseSkillSource(request);
-    expect(invoke).toHaveBeenCalledWith("browse_skill_source", { request });
-
-    const input = {
-      request,
-      skillPath: "review",
-      skillSourceLocator: "https://skills.sh/anthropics/skills",
-      agent: "codex" as const,
-      scope: "workspace" as const,
-      workspaceDirectory: "/projects/demo",
-      workspaceId: 7,
-    };
-    await planSkillInstall(input);
-    expect(invoke).toHaveBeenNthCalledWith(2, "plan_skill_install", { input });
-
-    await applySkillInstall("plan-7");
-    expect(invoke).toHaveBeenNthCalledWith(3, "apply_skill_install", {
-      planId: "plan-7",
-    });
-
-    await setSkillEnabled({
-      targetDirectory: "/projects/demo/.agents/skills/review",
-      enabled: false,
-      workspaceDirectory: "/projects/demo",
-    });
-    expect(invoke).toHaveBeenNthCalledWith(4, "set_skill_enabled", {
-      targetDirectory: "/projects/demo/.agents/skills/review",
-      enabled: false,
-      workspaceDirectory: "/projects/demo",
-    });
-
-    await previewUninstallSkill({
-      targetDirectory: "/projects/demo/.agents/skills/review",
-      workspaceDirectory: "/projects/demo",
-    });
-    expect(invoke).toHaveBeenNthCalledWith(5, "preview_uninstall_skill", {
-      targetDirectory: "/projects/demo/.agents/skills/review",
-      workspaceDirectory: "/projects/demo",
-    });
-
-    await uninstallSkill({
-      targetDirectory: "/projects/demo/.agents/skills/review",
-      workspaceDirectory: "/projects/demo",
-    });
-    expect(invoke).toHaveBeenNthCalledWith(6, "uninstall_skill", {
-      targetDirectory: "/projects/demo/.agents/skills/review",
-      workspaceDirectory: "/projects/demo",
     });
   });
 

@@ -4,11 +4,20 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Skills 入口统一打开内置 Skills Manager 独立窗口；开发与桌面打包自动包含管理器和 CLI。
+- 内置 Skills Manager 随 AgentHub 更新，设置页链接到宿主发布页；清理上游赞助、个人推广、旧工作流、更新地址及签名公钥，技能内容更新不受影响。
+- Skills 备份不再内置上游 OAuth 应用 ID，默认使用个人访问令牌或 Git 远端；设备码登录需要构建时配置项目自己的公开 Client ID。
+- 移除原 Skills 盘点、安装、更新、卸载、诊断迁移和 `agenthub://install` 入口；已有技能文件、旧数据库和来源缓存保留，不自动迁移。
+- 将主应用大页面和 Tauri command 按配置、工作空间、诊断等职责拆分。
+- 将完整 Skills Manager 项目收录为 `modules/skills/` 独立源码模块，保留自身依赖、锁文件和构建入口；根项目检查与模块隔离。
+
 ### Fixed
 
 - 修复 Windows 下添加工作空间时路径显示带有 `\\?\` 扩展长度前缀的问题，工作空间列表、配置扫描、Instructions 和 Skill 安装信息（目标目录）展示的路径现在都是正常形式。
 - 修正 OpenCode 全局配置默认路径的跨平台拼接，并补充 Windows 路径检测回归测试。
-- 配置扫描现在同时检查各 Agent CLI 是否位于 PATH；未安装的 Agent 不再出现在总览、配置、Skills 和诊断列表中。
+- 配置扫描现在同时检查各 Agent CLI 是否位于 PATH；未安装的 Agent 不再出现在主应用总览、配置和诊断列表中，Skills 使用独立管理器的 Agent 规则。
 - 修复 Linux 安装包 smoke 测试未将 `.deb` 路径解析为本地绝对路径导致安装失败的问题。
 
 ## [0.1.2] - 2026-08-26

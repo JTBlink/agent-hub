@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  selectMarketplaceManifest,
-  selectSkillSourceDirectory,
-  selectWorkspaceDirectory,
-} from "./workspace-dialog";
+import { selectWorkspaceDirectory } from "./workspace-dialog";
 
 describe("workspace directory picker", () => {
   it("opens a single-directory dialog and returns the selected path", async () => {
@@ -24,31 +20,5 @@ describe("workspace directory picker", () => {
     const openDialog = vi.fn().mockResolvedValue(null);
 
     await expect(selectWorkspaceDirectory(openDialog)).resolves.toBeNull();
-  });
-
-  it("uses explicit pickers for local Skill sources and Marketplace manifests", async () => {
-    const openDialog = vi
-      .fn()
-      .mockResolvedValueOnce("/skills")
-      .mockResolvedValueOnce("/marketplace.json");
-
-    await expect(selectSkillSourceDirectory(openDialog)).resolves.toBe(
-      "/skills",
-    );
-    expect(openDialog).toHaveBeenNthCalledWith(1, {
-      directory: true,
-      multiple: false,
-      title: "选择 Skill 来源目录",
-    });
-
-    await expect(selectMarketplaceManifest(openDialog)).resolves.toBe(
-      "/marketplace.json",
-    );
-    expect(openDialog).toHaveBeenNthCalledWith(2, {
-      directory: false,
-      multiple: false,
-      title: "选择 Marketplace manifest",
-      filters: [{ name: "Marketplace JSON", extensions: ["json"] }],
-    });
   });
 });
