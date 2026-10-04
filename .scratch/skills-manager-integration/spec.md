@@ -11,6 +11,6 @@
 
 ## 历史基线
 
-最初导入源提交为 `def946d78ef4c739b0ba429e38ac509b8660ec34`，309 个跟踪文件。完整导入、独立入口和元数据清理已于 `83ff0eb` 提交，见 B00、B08、B09 及[来源清单](../../docs/reference/skills-manager/source-manifest.json)。这些阶段的原样保留及双窗口约束已由用户后续要求替代。
+最初导入源提交为 `def946d78ef4c739b0ba429e38ac509b8660ec34`，309 个跟踪文件。完整导入、独立入口和元数据清理已于 `4debf00` 提交，见 B00、B08、B09 及[来源清单](../../docs/reference/skills-manager/source-manifest.json)。这些阶段的原样保留及双窗口约束已由用户后续要求替代。
 
-D01 和 B01–B07 为旧方案候选任务，当前不执行，需重新评估后领取。
+旧 V1 规格、原型以及 D01、B01–B07 旧候选任务已删除。后续统一基于现有 Skills Manager 实现，规划见 docs/plans/agent-hub.md。

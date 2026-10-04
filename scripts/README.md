@@ -29,17 +29,9 @@ node scripts/assemble-release.mjs <output-dir> <build-ref>
 node scripts/verify-release-bundle.mjs <bundle-dir>
 ```
 
-### 开发辅助
+### 任务状态
 
-| 脚本                      | 作用                                                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `serve-d04-prototype.mjs` | 为 `.scratch/prototypes/d04-ux/` 启动本地静态服务器（默认端口 `4173`，可通过 `AGENT_HUB_PROTOTYPE_PORT` 覆盖）。 |
-| `check-task-status.mjs`   | 校验 `.scratch/skills-manager-integration/status.md` 与 `issues/*.md` 的任务状态是否一致。                       |
-
-```bash
-node scripts/serve-d04-prototype.mjs
-# 访问 http://127.0.0.1:4173/?variant=A
-```
+`check-task-status.mjs` 校验 `.scratch/skills-manager-integration/` 中任务和状态汇总，可传入其他 tracker 目录作为参数。
 
 ## 测试
 
