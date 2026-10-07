@@ -4,6 +4,8 @@ export const RELEASES_URL = `${PROJECT_URL}/releases`;
 export const FEEDBACK_URL = `${PROJECT_URL}/blob/main/docs/agents/issue-tracker.md`;
 export const MANAGE_SKILLS_SOURCE = `${PROJECT_URL}/tree/main/skills/manage-skills`;
 
-/** Optional public client ID supplied to both Vite and Cargo at build time. */
-export const GITHUB_OAUTH_CLIENT_ID =
-  import.meta.env.VITE_AGENTHUB_GITHUB_OAUTH_CLIENT_ID?.trim() ?? "";
+/**
+ * Public GitHub OAuth App client ID used by the device flow.
+ * Client IDs are not secrets and are intentionally shipped in the app.
+ */
+export const GITHUB_OAUTH_CLIENT_ID = "Ov23liuxI32ZuqaZKBbt";

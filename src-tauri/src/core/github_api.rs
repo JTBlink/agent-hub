@@ -13,17 +13,9 @@ use super::skillssh_api::build_http_client;
 
 const API_BASE: &str = "https://api.github.com";
 
-/// Use a host-owned public client ID only when explicitly configured at build time.
-fn oauth_client_id() -> Result<&'static str> {
-    configured_oauth_client_id(option_env!("VITE_AGENTHUB_GITHUB_OAUTH_CLIENT_ID"))
-}
-
-fn configured_oauth_client_id(value: Option<&str>) -> Result<&str> {
-    value
-        .map(str::trim)
-        .filter(|id| !id.is_empty())
-        .context("GITHUB_DEVICE_UNAVAILABLE: use a personal access token")
-}
+/// Public OAuth App client ID for the GitHub Device Flow. Client IDs are not
+/// secrets and are intentionally shipped in the open-source app.
+pub const OAUTH_CLIENT_ID: &str = "Ov23liuxI32ZuqaZKBbt";
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct GithubConnectInfo {
@@ -187,12 +179,11 @@ pub enum DevicePollOutcome {
 
 /// Request a device + user code pair to start the flow.
 pub fn device_flow_start(proxy_url: Option<&str>) -> Result<DeviceFlowStart> {
-    let client_id = oauth_client_id()?;
     let client = build_http_client(proxy_url, 20);
     let resp = client
         .post("https://github.com/login/device/code")
         .header("Accept", "application/json")
-        .form(&[("client_id", client_id), ("scope", "repo")])
+        .form(&[("client_id", OAUTH_CLIENT_ID), ("scope", "repo")])
         .send()
         .context("GITHUB_NETWORK: could not reach github.com")?;
     if !resp.status().is_success() {
@@ -220,13 +211,12 @@ pub fn device_flow_start(proxy_url: Option<&str>) -> Result<DeviceFlowStart> {
 /// One poll of the token endpoint. The caller owns the pacing loop
 /// (`interval` seconds between calls, +5s on `SlowDown`, stop at expiry).
 pub fn device_flow_poll(device_code: &str, proxy_url: Option<&str>) -> Result<DevicePollOutcome> {
-    let client_id = oauth_client_id()?;
     let client = build_http_client(proxy_url, 20);
     let resp = client
         .post("https://github.com/login/oauth/access_token")
         .header("Accept", "application/json")
         .form(&[
-            ("client_id", client_id),
+            ("client_id", OAUTH_CLIENT_ID),
             ("device_code", device_code),
             ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
         ])
@@ -257,13 +247,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn device_flow_requires_a_host_owned_client_id() {
-        assert!(configured_oauth_client_id(None).is_err());
-        assert!(configured_oauth_client_id(Some("  ")).is_err());
-        assert_eq!(
-            configured_oauth_client_id(Some(" configured-client ")).unwrap(),
-            "configured-client"
-        );
+    fn device_flow_and_frontend_settings_use_the_same_oauth_app() {
+        let frontend = include_str!("../../../src/lib/distribution.ts");
+        assert!(frontend.contains(&format!(
+            "export const GITHUB_OAUTH_CLIENT_ID = \"{OAUTH_CLIENT_ID}\";"
+        )));
     }
 
     #[test]
