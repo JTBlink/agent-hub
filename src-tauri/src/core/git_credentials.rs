@@ -6,9 +6,14 @@
 //! a static askpass script that only echoes environment variables.
 
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::OnceLock};
 
 use super::central_repo;
+
+fn credential_cache() -> &'static super::credential_cache::CredentialCache {
+    static CACHE: OnceLock<super::credential_cache::CredentialCache> = OnceLock::new();
+    CACHE.get_or_init(Default::default)
+}
 
 const KEYRING_SERVICE: &str = "agent-hub-git-backup";
 
@@ -97,15 +102,17 @@ fn keyring_entry(host: &str) -> Result<keyring::Entry> {
 
 pub fn store_credential(host: &str, cred: &RemoteCredential) -> Result<()> {
     let payload = serde_json::to_string(cred)?;
-    keyring_entry(host)?
-        .set_password(&payload)
-        .with_context(|| format!("Failed to store git credential for {host} in OS keychain"))?;
+    credential_cache().write(host, Some(cred.clone()), || {
+        keyring_entry(host)?
+            .set_password(&payload)
+            .with_context(|| format!("Failed to store git credential for {host} in OS keychain"))
+    })?;
     log::info!("git credentials: stored credential for {host} in OS keychain");
     Ok(())
 }
 
 pub fn load_credential(host: &str) -> Result<Option<RemoteCredential>> {
-    match keyring_entry(host)?.get_password() {
+    credential_cache().read(host, || match keyring_entry(host)?.get_password() {
         Ok(payload) => {
             Ok(Some(serde_json::from_str(&payload).with_context(|| {
                 format!("Corrupted keychain entry for {host}")
@@ -113,17 +120,19 @@ pub fn load_credential(host: &str) -> Result<Option<RemoteCredential>> {
         }
         Err(keyring::Error::NoEntry) => Ok(None),
         Err(e) => Err(e).with_context(|| format!("Failed to read git credential for {host}")),
-    }
+    })
 }
 
 pub fn delete_credential(host: &str) -> Result<()> {
-    match keyring_entry(host)?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => {
-            log::info!("git credentials: removed credential for {host}");
-            Ok(())
+    credential_cache().write(host, None, || {
+        match keyring_entry(host)?.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => {
+                log::info!("git credentials: removed credential for {host}");
+                Ok(())
+            }
+            Err(e) => Err(e).with_context(|| format!("Failed to delete git credential for {host}")),
         }
-        Err(e) => Err(e).with_context(|| format!("Failed to delete git credential for {host}")),
-    }
+    })
 }
 
 /// Attach a credentials callback to libgit2 network operations against `url`.
