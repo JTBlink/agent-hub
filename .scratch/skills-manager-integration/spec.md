@@ -23,7 +23,7 @@
 
 ## 扫描性能与 Agent 检测
 
-一次扫描中复用同一实际目录的完整指纹，ARM64 使用兼容的 SHA-2 硬件检测加速。Agent 仅有 Skills 目录不代表已安装，首页统计已检测且启用的 Agent；这些独立 Skill 目录仍可发现。执行记录见 [B17](issues/B17-local-scan-performance.md) 与 [B18](issues/B18-agent-detection.md)。
+一次扫描中复用同一实际目录的完整指纹，ARM64 使用兼容的 SHA-2 硬件检测加速。Agent 安装证据是可执行文件、桌面应用或宿主已安装的 IDE 扩展；配置、历史、Skills 目录和手动路径不代表已安装，首页统计已检测且启用的 Agent；这些独立 Skill 目录仍可发现。执行记录见 [B17](issues/B17-local-scan-performance.md) 与 [B18](issues/B18-agent-detection.md)。
 
 ## 历史基线
 

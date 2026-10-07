@@ -127,21 +127,15 @@ impl ToolAdapter {
         dirs
     }
 
+    /// Whether executable code for this Agent is installed on this machine.
     pub fn is_installed(&self) -> bool {
-        // Product decision: when users explicitly provide a skills path (override/custom),
-        // we treat the tool as available so sync can proceed without probing vendor install state.
-        if self.is_custom || self.override_skills_dir.is_some() {
-            return true;
-        }
-        let skills_dirs = Self::candidate_paths(&self.relative_skills_dir);
-        Self::candidate_paths(&self.relative_detect_dir)
-            .iter()
-            .any(|detect_dir| {
-                skills_dirs.iter().any(|skills_dir| {
-                    skills_dir.starts_with(detect_dir)
-                        && super::tool_detection::has_agent_state(detect_dir, skills_dir)
-                })
-            })
+        super::tool_detection::is_installed(&self.key)
+    }
+
+    /// Explicit destinations remain usable for manual/custom deployment, but
+    /// configuring a destination is never evidence of an installed Agent.
+    pub fn can_deploy(&self) -> bool {
+        self.is_custom || self.override_skills_dir.is_some() || self.is_installed()
     }
 
     /// Whether this adapter's skills_dir has been overridden from the default.
@@ -992,7 +986,7 @@ pub fn find_adapter_with_store(
 }
 
 /// Returns adapters that are installed and not in the disabled list.
-pub fn enabled_installed_adapters(
+pub fn enabled_deployable_adapters(
     store: &crate::core::skill_store::SkillStore,
 ) -> Vec<ToolAdapter> {
     let disabled: Vec<String> = store
@@ -1003,7 +997,7 @@ pub fn enabled_installed_adapters(
         .unwrap_or_default();
     all_tool_adapters(store)
         .into_iter()
-        .filter(|a| a.is_installed() && !disabled.contains(&a.key))
+        .filter(|a| a.can_deploy() && !disabled.contains(&a.key))
         .collect()
 }
 
@@ -1018,22 +1012,15 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn builtin_skills_only_scaffolding_is_not_installed_but_explicit_paths_remain_available() {
+    fn explicit_destination_does_not_imply_installed_agent() {
         let tmp = tempdir().unwrap();
-        let skills = tmp.path().join("skills");
-        std::fs::create_dir_all(&skills).unwrap();
-        let mut adapter = default_tool_adapters()
-            .into_iter()
-            .find(|a| a.key == "codex")
-            .unwrap();
-        adapter.relative_detect_dir = tmp.path().to_string_lossy().into_owned();
-        adapter.relative_skills_dir = skills.to_string_lossy().into_owned();
+        let mut adapter = default_tool_adapters().remove(0);
+        adapter.key = "fixture-uninstalled-agent".into();
+        adapter.override_skills_dir = Some(tmp.path().to_string_lossy().into_owned());
         assert!(!adapter.is_installed());
-        std::fs::write(tmp.path().join("settings.json"), "{}").unwrap();
-        assert!(adapter.is_installed());
-        std::fs::remove_file(tmp.path().join("settings.json")).unwrap();
-        adapter.override_skills_dir = Some(skills.to_string_lossy().into_owned());
-        assert!(adapter.is_installed());
+        assert!(adapter.can_deploy());
+        adapter.is_custom = true;
+        assert!(!adapter.is_installed());
     }
 
     #[test]

@@ -32,3 +32,9 @@ cargo test --manifest-path src-tauri/Cargo.toml scan_timing_workload -- --ignore
 ## 删除弹窗回归
 
 启动本地 Vite 服务后运行 `browser-use < tests/browser/local-skill-delete.py`。fixture 使用受控 IPC Promise 挂起删除和扫描，验证删除成功后不等待刷新、刷新失败不重新打开弹窗，以及删除失败可重试；不会调用真实文件删除。
+
+## 有效 Agent 的检测
+
+“已启用 Agent”只统计本机检测到安装程序且启用的 Agent。后端检查 PATH 和常见用户程序目录中的可执行文件、已安装桌面应用，以及宿主已安装的 IDE 扩展（扩展需具备匹配的 publisher/name 和入口文件，排除卸载标记）。配置文件、历史、Skills 目录和手动配置的路径都不算安装证据。
+
+检测不启动 Agent，也不表示其正在运行或已登录。手动配置的自定义部署目标仍可由明确的部署操作使用，但不增加已安装统计；遗留 Skills 保留只读扫描与管理能力。
