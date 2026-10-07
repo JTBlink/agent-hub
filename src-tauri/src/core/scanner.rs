@@ -190,21 +190,23 @@ fn scan_local_skills_with_hasher(
     };
 
     for adapter in adapters {
-        let installed = adapter.is_installed();
         let primary_scan_dir = adapter.skills_dir();
+        let primary_exists = primary_scan_dir.is_dir();
         let additional_dirs = adapter.additional_existing_scan_dirs();
 
         // Discover via additional_scan_dirs even when the legacy detect dir is
         // missing — handles tools whose skills land in a shared location
         // (e.g. copilot → ~/.agents/skills) on machines without the legacy
         // vendor dir.
-        if !installed && additional_dirs.is_empty() {
+        if !primary_exists && additional_dirs.is_empty() {
             continue;
         }
 
         tools_scanned += 1;
 
-        if installed && primary_scan_dir.exists() {
+        // Skills-only directories remain discoverable even if they do not
+        // provide enough state to detect an installed Agent.
+        if primary_exists {
             if adapter.recursive_scan {
                 scan_recursive_dir(
                     &adapter.key,
@@ -339,6 +341,21 @@ mod tests {
             reads, 1,
             "shared directory content should only be read once per scan"
         );
+    }
+
+    #[test]
+    fn skills_only_scaffolding_remains_discoverable_without_an_installed_agent() {
+        let tmp = tempdir().unwrap();
+        let root = tmp.path().join("skills");
+        write_skill(&root.join("demo"));
+        let mut adapter = test_adapter("one", &root);
+        adapter.is_custom = false;
+        adapter.override_skills_dir = None;
+        adapter.relative_detect_dir = tmp.path().to_string_lossy().into_owned();
+        adapter.relative_skills_dir = root.to_string_lossy().into_owned();
+        assert!(!adapter.is_installed());
+        let plan = scan_local_skills_with_adapters(&[], &[adapter]).unwrap();
+        assert_eq!(plan.skills_found, 1);
     }
 
     #[test]

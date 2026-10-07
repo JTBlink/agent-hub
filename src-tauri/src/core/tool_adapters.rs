@@ -133,9 +133,15 @@ impl ToolAdapter {
         if self.is_custom || self.override_skills_dir.is_some() {
             return true;
         }
+        let skills_dirs = Self::candidate_paths(&self.relative_skills_dir);
         Self::candidate_paths(&self.relative_detect_dir)
             .iter()
-            .any(|path| path.exists())
+            .any(|detect_dir| {
+                skills_dirs.iter().any(|skills_dir| {
+                    skills_dir.starts_with(detect_dir)
+                        && super::tool_detection::has_agent_state(detect_dir, skills_dir)
+                })
+            })
     }
 
     /// Whether this adapter's skills_dir has been overridden from the default.
@@ -1010,6 +1016,25 @@ mod tests {
     use crate::core::skill_store::SkillStore;
 
     use tempfile::tempdir;
+
+    #[test]
+    fn builtin_skills_only_scaffolding_is_not_installed_but_explicit_paths_remain_available() {
+        let tmp = tempdir().unwrap();
+        let skills = tmp.path().join("skills");
+        std::fs::create_dir_all(&skills).unwrap();
+        let mut adapter = default_tool_adapters()
+            .into_iter()
+            .find(|a| a.key == "codex")
+            .unwrap();
+        adapter.relative_detect_dir = tmp.path().to_string_lossy().into_owned();
+        adapter.relative_skills_dir = skills.to_string_lossy().into_owned();
+        assert!(!adapter.is_installed());
+        std::fs::write(tmp.path().join("settings.json"), "{}").unwrap();
+        assert!(adapter.is_installed());
+        std::fs::remove_file(tmp.path().join("settings.json")).unwrap();
+        adapter.override_skills_dir = Some(skills.to_string_lossy().into_owned());
+        assert!(adapter.is_installed());
+    }
 
     #[test]
     fn antigravity_uses_current_default_skills_path() {

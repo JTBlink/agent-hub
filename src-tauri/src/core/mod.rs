@@ -32,4 +32,5 @@ pub mod sync_engine;
 pub mod sync_metadata;
 pub mod timing;
 pub mod tool_adapters;
+mod tool_detection;
 pub mod tool_service;

@@ -12,4 +12,6 @@ agent-hub 是管理 AI Agent Skills 的桌面工作台。当前提供技能库�
 
 GitHub 备份默认使用独立注册的 agent-hub OAuth App 进行设备授权登录，也可使用个人访问令牌。应用内展示设备码并打开 GitHub 验证页面；授权凭证保存在系统钥匙串中。设备授权不依赖回调地址，也不需要在桌面应用中配置 Client Secret。
 
+Agent 可用性由独立的 Agent 状态或显式自定义路径配置判断，仅有 `skills` 目录不算检测到 Agent。首页显示已检测且启用的 Agent 数量；本地扫描的来源目录数量与此不同。扫描仍覆盖仅含 Skills 的目录，共享路径的删除会影响所有读取该路径的 Agent。
+
 本地管理的操作与性能验证见[本地 Skills 管理](local-skills-management.md)。

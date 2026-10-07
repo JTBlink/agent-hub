@@ -72,10 +72,10 @@
   },
   "dashboard": {
     "greeting": "你好！",
-    "summary": "Library 中 {{skills}} 個 Skills · 已接入 {{agents}} 個 Agent · {{projects}} 個 Project",
+    "summary": "Library 中 {{skills}} 個 Skills · 已啟用 {{agents}} 個 Agent · {{projects}} 個 Project",
     "librarySkills": "Library Skills",
     "syncCoverage": "同步覆蓋",
-    "connectedAgents": "已接入 Agent",
+    "connectedAgents": "已啟用 Agent",
     "synced": "已同步",
     "notSynced": "未同步",
     "scanImport": "本機 Skills 管理",
