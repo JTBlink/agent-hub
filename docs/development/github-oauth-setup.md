@@ -94,3 +94,11 @@ git diff --check
 ```
 
 更新 CHANGELOG 与 [B15 任务记录](../../.scratch/skills-manager-integration/issues/B15-github-oauth-branding.md)，同步任务索引并进行 Standards / Spec 审查。提交前检查新增内容是否包含个人身份信息或凭证，采用 [中文提交规范](commit-conventions.md) 生成本地提交。
+
+## macOS 钥匙串重复授权
+
+备份凭证仍保存在系统钥匙串的 `agent-hub-git-backup` 项中。单次进程按主机复用读取结果并合并并发请求，登录、令牌更新及退出同步更新缓存；拒绝或读取失败不会在后台反复重新申请，重新连接或重启可重新尝试。缓存不写入磁盘或日志。多个 CLI 进程各自持有缓存。
+
+当前开发可执行文件使用 ad-hoc 签名。重新编译可能使 macOS 不再信任先前授权的程序；此时即使之前选择过“始终允许”，系统仍可能再次询问。正式 macOS 构建需要稳定的签名身份。首次系统授权不能由应用跳过，也不应把钥匙串项开放给所有程序。
+
+Apple 说明：[授权选项](https://support.apple.com/en-ie/guide/keychain-access/kyca1243/mac)、[已信任程序再次请求授权](https://support.apple.com/en-ie/guide/keychain-access/kyca1331/mac)。回归测试使用隔离后端计数验证重复读取、并发请求、拒绝、登录更新和退出；不会读写真实钥匙串。
