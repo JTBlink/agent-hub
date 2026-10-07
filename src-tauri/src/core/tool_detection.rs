@@ -185,7 +185,10 @@ impl InstallationProbe {
             .unwrap_or_default();
         #[cfg(unix)]
         bins.extend(["/usr/local/bin", "/opt/homebrew/bin", "/usr/bin"].map(PathBuf::from));
+        #[cfg(any(target_os = "macos", windows))]
         let mut apps = Vec::new();
+        #[cfg(not(any(target_os = "macos", windows)))]
+        let apps = Vec::new();
         #[cfg(target_os = "macos")]
         apps.push(PathBuf::from("/Applications"));
         #[cfg(windows)]
