@@ -41,7 +41,7 @@ export function useLocalSkillManagement(
       if (id === requestId.current) setDocumentLoading(false);
     }
   };
-  const removeLocation = async () => {
+  const removeLocation = async (): Promise<void | false> => {
     if (!deleteTarget) return;
     setBusy(true);
     try {
@@ -49,18 +49,22 @@ export function useLocalSkillManagement(
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, t("common.error")));
       setBusy(false);
-      return;
+      return false;
     }
+    setDeleteTarget(null);
+    setBusy(false);
     toast.success(
       t("globalWorkspace.localSkills.deletedLocalToast", {
         name: deleteTarget.name,
         agent: deleteTarget.location.tool,
       }),
     );
-    const results = await Promise.allSettled([runScan(), onChanged()]);
-    if (results.some((result) => result.status === "rejected"))
-      toast.error(t("install.scan.refreshFailed"));
-    setBusy(false);
+    // The confirmed deletion has finished. Refreshing can take much longer;
+    // keep it separate so the modal and its busy state end now.
+    void Promise.allSettled([runScan(), onChanged()]).then((results) => {
+      if (results.some((result) => result.status === "rejected"))
+        toast.error(t("install.scan.refreshFailed"));
+    });
   };
   const closeDetail = () => {
     requestId.current += 1;

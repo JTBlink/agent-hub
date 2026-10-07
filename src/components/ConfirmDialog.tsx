@@ -10,7 +10,8 @@ interface Props {
   confirmLabel?: string;
   tone?: "danger" | "warning";
   onClose: () => void;
-  onConfirm: () => Promise<void>;
+  /** Return false when the action failed and the dialog should stay open. */
+  onConfirm: () => Promise<void | false>;
 }
 
 export function ConfirmDialog({
@@ -41,8 +42,8 @@ export function ConfirmDialog({
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await onConfirm();
-      onClose();
+      const confirmed = await onConfirm();
+      if (confirmed !== false) onClose();
     } finally {
       setLoading(false);
     }
