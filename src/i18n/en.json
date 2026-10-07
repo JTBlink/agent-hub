@@ -72,10 +72,10 @@
   },
   "dashboard": {
     "greeting": "Hello!",
-    "summary": "{{skills}} Skills in Library · {{agents}} Agents connected · {{projects}} Projects",
+    "summary": "{{skills}} Skills in Library · {{agents}} enabled Agents · {{projects}} Projects",
     "librarySkills": "Library Skills",
     "syncCoverage": "Sync Coverage",
-    "connectedAgents": "Connected Agents",
+    "connectedAgents": "Enabled Agents",
     "synced": "Synced",
     "notSynced": "Not synced",
     "scanImport": "Manage local Skills",

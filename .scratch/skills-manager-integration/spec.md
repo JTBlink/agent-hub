@@ -21,9 +21,9 @@
 
 现有本地扫描入口同时提供导入和按安装位置管理能力，支持内容查看、打开目录、搜索、Agent 筛选和确认删除。使用扫描记录标识定位副本，后端校验当前目录边界、内容版本及部署归属；删除软链接时保留目标。已托管部署仍由 Agent 工作区管理。执行记录见 [B16](issues/B16-local-skills-management.md)。
 
-## 扫描性能
+## 扫描性能与 Agent 检测
 
-一次扫描中复用同一实际目录的完整指纹，ARM64 使用兼容的 SHA-2 硬件检测加速。执行记录见 [B17](issues/B17-local-scan-performance.md)。
+一次扫描中复用同一实际目录的完整指纹，ARM64 使用兼容的 SHA-2 硬件检测加速。Agent 仅有 Skills 目录不代表已安装，首页统计已检测且启用的 Agent；这些独立 Skill 目录仍可发现。执行记录见 [B17](issues/B17-local-scan-performance.md) 与 [B18](issues/B18-agent-detection.md)。
 
 ## 历史基线
 

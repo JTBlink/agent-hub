@@ -91,6 +91,7 @@ agent-hub/
 │   │       ├── mod.rs
 │   │       ├── app_state.rs        #     全局应用状态
 │   │       ├── error.rs            #     统一错误类型
+│   │       ├── tool_detection.rs   #     区分 Agent 状态与仅 Skills 目录
 │   │       ├── scanner.rs          #     Agent 目录扫描
 │   │       ├── project_scanner.rs  #     项目扫描器
 │   │       ├── sync_engine.rs      #     配置同步引擎
