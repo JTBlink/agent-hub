@@ -1064,6 +1064,8 @@ pub fn run() {
             commands::scan::scan_local_skills,
             commands::discovered_skills::get_discovered_skill_document,
             commands::discovered_skills::delete_discovered_skill,
+            commands::local_cleanup::get_local_cleanup_plan,
+            commands::local_cleanup::cleanup_uninstalled_agent_skills,
             commands::scan::import_existing_skill,
             commands::scan::import_all_discovered,
             // Browse

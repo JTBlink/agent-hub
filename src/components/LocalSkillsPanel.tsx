@@ -18,6 +18,7 @@ import {
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DetailSheet } from "./DetailSheet";
 import { SkillMarkdown } from "./SkillMarkdown";
+import { LocalSkillCleanup } from "./LocalSkillCleanup";
 import { LocalSkillLocation } from "./LocalSkillLocation";
 import { useLocalSkillManagement } from "../hooks/useLocalSkillManagement";
 
@@ -92,7 +93,12 @@ export function LocalSkillsPanel({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <LocalSkillCleanup
+              disabled={scanLoading || importingAll || busy}
+              runScan={runScan}
+              onChanged={onChanged}
+            />
             <button
               onClick={runScan}
               disabled={scanLoading}

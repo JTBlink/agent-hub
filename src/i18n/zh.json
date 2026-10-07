@@ -571,7 +571,17 @@
       "openFolder": "打开目录",
       "deleteLocation": "删除 {{agent}} 中的 {{name}}",
       "deleteHint": "仅删除所选路径；软链接仅移除链接。使用同一路径的 Agent 会同时受影响，其他独立副本和技能库保留。",
-      "refreshFailed": "删除已完成，但刷新失败，请重新扫描查看最新状态。"
+      "refreshFailed": "删除已完成，但刷新失败，请重新扫描查看最新状态。",
+      "cleanup": "一键清理",
+      "cleanupTitle": "清理未安装 Agent 的遗留 Skills？",
+      "cleanupConfirm": "确认清理",
+      "cleanupEmpty": "没有可清理的未安装 Agent 遗留目录",
+      "cleanupHint": "将删除以下 {{count}} 个遗留 Skill 位置或空 Skills 目录。此操作不可恢复。",
+      "cleanupSafety": "只清理未安装 Agent 的 Skills，完成后移除空目录。保留已安装 Agent 共用的目录、手动配置的目录、其他配置与技能库。",
+      "cleanupDone": "已清理 {{count}} 项，{{failed}} 项跳过或失败",
+      "cleanupFailures": "未清理的位置",
+      "cleanupAgent": "按 Agent 清理",
+      "cleanupAllAgents": "全部未安装 Agent"
     }
   },
   "settings": {

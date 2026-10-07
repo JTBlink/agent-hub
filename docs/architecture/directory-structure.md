@@ -29,6 +29,7 @@ agent-hub/
 │   │   ├── AddSkillsSheet.tsx      #   添加技能面板
 │   │   ├── SkillPickerRow.tsx      #   技能选择行
 │   │   ├── LocalSkillsPanel.tsx   #   本地扫描列表、筛选与导入
+│   │   ├── LocalSkillCleanup.tsx  #   按 Agent 预览、确认清理与失败反馈
 │   │   ├── LocalSkillLocation.tsx #   单个本地安装位置操作
 │   │   ├── SkillMarkdown.tsx       #   技能 Markdown 渲染
 │   │   ├── SkillSourceDiffViewer.tsx  # 技能源码 Diff
@@ -78,6 +79,7 @@ agent-hub/
 │   │   │   ├── agent_workspace.rs  #     Agent 工作空间管理
 │   │   │   ├── projects.rs         #     项目管理
 │   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
+│   │   │   ├── local_cleanup.rs   #     未安装 Agent 遗留 Skills 预览与批量清理
 │   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
 │   │   │   ├── presets.rs          #     预设管理
 │   │   │   ├── skills.rs           #     技能管理

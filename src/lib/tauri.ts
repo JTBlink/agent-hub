@@ -437,6 +437,23 @@ export const importExistingSkill = (sourcePath: string, name?: string) =>
 
 export const importAllDiscovered = () => invoke<void>("import_all_discovered");
 
+export interface LocalCleanupLocation {
+  id: string;
+  tool: string;
+  path: string;
+  empty_root: boolean;
+}
+export interface LocalCleanupResult {
+  removed: number;
+  failures: { path: string; reason: string }[];
+}
+export const getLocalCleanupPlan = () =>
+  invoke<LocalCleanupLocation[]>("get_local_cleanup_plan");
+export const cleanupUninstalledAgentSkills = (locationIds: string[]) =>
+  invoke<LocalCleanupResult>("cleanup_uninstalled_agent_skills", {
+    locationIds,
+  });
+
 // ── Browse ──
 
 export const fetchLeaderboard = (board: string) =>
