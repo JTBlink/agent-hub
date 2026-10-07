@@ -1,7 +1,7 @@
 # B17：优化本地 Skills 扫描性能
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Scope
@@ -14,3 +14,17 @@ Blocked by: none
 - 同一实际 Skill 在一次扫描中不重复读取全文；下一次扫描仍能识别修改。
 - 保留同名不同版本、所有 Agent 来源和托管目录排除行为。
 - 必要测试与构建检查通过，记录测量范围和局限，更新 CHANGELOG。
+
+## Result
+
+- 复现命令：`cargo test --manifest-path src-tauri/Cargo.toml shared_root_reads_content_once -- --nocapture`。优化前失败，实际读取 2 次而期望 1 次。修复后保留两个 Agent 位置但只读取一次。
+- 根因是共享目录及软链接别名重复全量哈希，以及 ARM64 sha2 0.10 默认软件后端。单次扫描按规范路径复用结果；ARM64 非 Windows 平台启用运行时 SHA-2 指令检测，开发构建只优化 sha2 依赖。
+- 16 Skills × 64 个 8KiB 文件、8 个 Agent 共享目录：3111 ms → 70 ms；本机扫描：127080 ms → 20801 ms，复测 13550 ms。发现规则改进后位置数从 3172 增至 3376。计时覆盖扫描器，受构建、文件缓存和后台负载影响。
+- 第三个假设的 SQLite 对照测量：3376 行独立自动提交约 116 ms，单事务约 3 ms，远小于文件扫描耗时，本轮保留该代码。
+- 回归覆盖共享根、链接别名、下一次扫描内容变更和大文件已知 SHA-256 指纹；完整测试、fmt、Clippy 通过。临时分段计时日志已删除，保留显式运行的计时 workload。
+
+## Review
+
+Standards：完整复用内容哈希范围，没有排除依赖目录或跨扫描保留缓存；无新增线程或硬件指令要求，运行时检测有软件回退。
+
+Spec：扫描结果和各 Agent 来源保留，指纹格式不变。性能数字注明开发构建和测量边界，不作为跨平台或完整 UI 耗时承诺。

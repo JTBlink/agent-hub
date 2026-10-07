@@ -56,3 +56,14 @@ clap = { version = "4.5", features = ["derive"] }
 
 [target.'cfg(windows)'.dependencies]
 junction = "2"
+
+# sha2 0.10 defaults to its software backend on ARM64. Enable its runtime
+# SHA-2 feature detection on Apple/Linux ARM64; unsupported CPUs still fall
+# back to software and existing fingerprints remain byte-for-byte identical.
+[target.'cfg(all(target_arch = "aarch64", not(target_os = "windows")))'.dependencies]
+sha2 = { version = "0.10", features = ["asm"] }
+
+# Keep hashing representative in desktop development builds as well as release.
+# Optimizing this dependency preserves application debug symbols and behavior.
+[profile.dev.package.sha2]
+opt-level = 3

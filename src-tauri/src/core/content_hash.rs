@@ -300,6 +300,27 @@ mod tests {
     /// #502: the update tiebreaker looks past dependency installs, while the
     /// stored-identity hash keeps seeing them.
     #[test]
+    fn large_payload_hash_stays_compatible_across_sha_backends() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("payload.bin");
+        let payload: Vec<u8> = (0..256)
+            .map(|byte| byte as u8)
+            .collect::<Vec<_>>()
+            .repeat(4096);
+        std::fs::write(&path, payload).unwrap();
+        let entries = [ContentEntry {
+            relative_path: "payload.bin".into(),
+            path,
+            exec_bits: None,
+            modified_ms: None,
+        }];
+        assert_eq!(
+            hash_entries(&entries),
+            "5d37ac92c6ac77921c2440c7c0276efb7bc843bf04f4db46219ad4865f338d72"
+        );
+    }
+
+    #[test]
     fn dependency_installs_only_bypass_the_update_tiebreaker() {
         let tmp = tempdir().unwrap();
         fs::write(tmp.path().join("SKILL.md"), "# hello").unwrap();
