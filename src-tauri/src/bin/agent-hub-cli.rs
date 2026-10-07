@@ -2682,7 +2682,9 @@ fn select_preset_agents(
             .iter()
             .find(|agent| agent.key == *key)
             .ok_or_else(|| anyhow!("unknown agent: {key}"))?;
-        if require_available && !agent.installed {
+        let can_deploy = tool_adapters::find_adapter_with_store(store, key)
+            .is_some_and(|adapter| adapter.can_deploy());
+        if require_available && !can_deploy {
             bail!("agent is not installed: {}", agent.display_name);
         }
         if require_available && !agent.enabled {

@@ -441,7 +441,7 @@ pub fn backfill_stranded_agent_targets(store: &SkillStore) -> usize {
     let adapters = tool_adapters::all_tool_adapters(store);
     let available_tools: Vec<String> = adapters
         .iter()
-        .filter(|adapter| adapter.is_installed() && !disabled.contains(&adapter.key))
+        .filter(|adapter| adapter.can_deploy() && !disabled.contains(&adapter.key))
         .map(|adapter| adapter.key.clone())
         .collect();
 
@@ -475,7 +475,7 @@ pub fn backfill_stranded_agent_targets(store: &SkillStore) -> usize {
     let mut repaired = 0usize;
 
     for adapter in &adapters {
-        if !adapter.is_installed() || disabled.contains(&adapter.key) {
+        if !adapter.can_deploy() || disabled.contains(&adapter.key) {
             continue;
         }
         let targets = store.get_all_targets().unwrap_or_default();
@@ -771,7 +771,7 @@ mod tests {
             })
             .unwrap();
         store.add_skill_to_scenario("active", &skill_id).unwrap();
-        for adapter in tool_adapters::enabled_installed_adapters(&store) {
+        for adapter in tool_adapters::enabled_deployable_adapters(&store) {
             if adapter.key != "hermes" {
                 store
                     .set_scenario_skill_tool_enabled("active", &skill_id, &adapter.key, false)
@@ -1466,7 +1466,7 @@ mod tests {
         let disabled = tool_service::get_disabled_tools(&store);
         let available: Vec<String> = tool_adapters::all_tool_adapters(&store)
             .iter()
-            .filter(|a| a.is_installed() && !disabled.contains(&a.key))
+            .filter(|a| a.can_deploy() && !disabled.contains(&a.key))
             .map(|a| a.key.clone())
             .collect();
         let sig = super::stranded_candidate_signature(
@@ -1557,7 +1557,7 @@ mod tests {
         let disabled = tool_service::get_disabled_tools(&store);
         let available: Vec<String> = tool_adapters::all_tool_adapters(&store)
             .iter()
-            .filter(|a| a.is_installed() && !disabled.contains(&a.key))
+            .filter(|a| a.can_deploy() && !disabled.contains(&a.key))
             .map(|a| a.key.clone())
             .collect();
         let sig = super::stranded_candidate_signature(

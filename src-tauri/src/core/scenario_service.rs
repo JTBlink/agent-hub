@@ -46,12 +46,12 @@ pub fn ensure_scenario_exists(store: &SkillStore, scenario_id: &str) -> Result<(
     Ok(())
 }
 
-pub fn enabled_installed_adapters_for_scenario_skill(
+pub fn enabled_deployable_adapters_for_scenario_skill(
     store: &SkillStore,
     scenario_id: &str,
     skill_id: &str,
 ) -> Result<Vec<tool_adapters::ToolAdapter>, AppError> {
-    let adapters = tool_adapters::enabled_installed_adapters(store);
+    let adapters = tool_adapters::enabled_deployable_adapters(store);
     let adapter_keys: Vec<String> = adapters.iter().map(|a| a.key.clone()).collect();
 
     store
@@ -84,7 +84,7 @@ pub fn collect_scenario_sync_targets(
         let source = PathBuf::from(&skill.central_path);
         let target_name = sync_engine::target_dir_name(&source, &skill.name);
         let adapters =
-            enabled_installed_adapters_for_scenario_skill(store, scenario_id, &skill.id)?;
+            enabled_deployable_adapters_for_scenario_skill(store, scenario_id, &skill.id)?;
         for adapter in &adapters {
             let target = deployment_target(adapter, &target_name, &skill.id, &existing_targets);
             let mode = sync_engine::sync_mode_for_tool(&adapter.key, configured_mode.as_deref());
@@ -606,7 +606,7 @@ pub fn sync_skill_to_active_scenario(
     if let Ok(Some(active_id)) = store.get_active_scenario_id() {
         if active_id == scenario_id {
             let adapters =
-                enabled_installed_adapters_for_scenario_skill(store, scenario_id, skill_id)?;
+                enabled_deployable_adapters_for_scenario_skill(store, scenario_id, skill_id)?;
             let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
             let Ok(Some(skill)) = store.get_skill_by_id(skill_id) else {
                 return Ok(());
@@ -776,7 +776,7 @@ pub fn sync_active_scenario_to_tool(store: &SkillStore, tool_key: &str) {
         };
         for skill_id in skill_ids {
             if let Ok(adapters) =
-                enabled_installed_adapters_for_scenario_skill(store, &active_id, &skill_id)
+                enabled_deployable_adapters_for_scenario_skill(store, &active_id, &skill_id)
             {
                 if adapters.iter().any(|adapter| adapter.key == tool_key) {
                     let _ = sync_skill_to_active_scenario(store, &active_id, &skill_id);
@@ -872,7 +872,7 @@ pub fn sync_single_skill_to_tool(
     let adapter = tool_adapters::find_adapter_with_store(store, tool)
         .ok_or_else(|| AppError::not_found(format!("Unknown tool: {}", tool)))?;
 
-    if !adapter.is_installed() {
+    if !adapter.can_deploy() {
         return Err(AppError::not_found(format!(
             "{} is not installed",
             adapter.display_name
@@ -1018,7 +1018,7 @@ fn apply_add(
             log::warn!("apply_skills_to_tools: unknown tool {key}");
             continue;
         };
-        if !adapter.is_installed() {
+        if !adapter.can_deploy() {
             log::debug!(
                 "apply_skills_to_tools: skipping uninstalled tool {} ({key})",
                 adapter.display_name

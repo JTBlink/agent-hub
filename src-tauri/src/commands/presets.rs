@@ -514,7 +514,7 @@ pub async fn apply_preset_to_coding_agents(
         if skill_ids.is_empty() {
             return Ok(());
         }
-        let tool_keys: Vec<String> = tool_adapters::enabled_installed_adapters(&store)
+        let tool_keys: Vec<String> = tool_adapters::enabled_deployable_adapters(&store)
             .into_iter()
             .filter(|adapter| matches!(adapter.category, tool_adapters::ToolCategory::Coding))
             .map(|adapter| adapter.key)

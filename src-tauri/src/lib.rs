@@ -156,7 +156,7 @@ fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData
         .filter(|s| s.update_status == "update_available")
         .count();
 
-    let coding_keys: Vec<String> = core::tool_adapters::enabled_installed_adapters(store)
+    let coding_keys: Vec<String> = core::tool_adapters::enabled_deployable_adapters(store)
         .into_iter()
         .filter(|adapter| matches!(adapter.category, core::tool_adapters::ToolCategory::Coding))
         .map(|adapter| adapter.key)
@@ -492,7 +492,7 @@ fn apply_preset_from_tray<R: tauri::Runtime>(
                 return Ok(false);
             }
             let tool_keys: Vec<String> =
-                core::tool_adapters::enabled_installed_adapters(&store_for_task)
+                core::tool_adapters::enabled_deployable_adapters(&store_for_task)
                     .into_iter()
                     .filter(|adapter| {
                         matches!(adapter.category, core::tool_adapters::ToolCategory::Coding)

@@ -88,7 +88,7 @@ pub async fn sync_skill_to_tool(
                     .map_err(AppError::db)?;
                 if skill_ids.contains(&skill_id) {
                     let adapter_keys: Vec<String> =
-                        tool_adapters::enabled_installed_adapters(&store)
+                        tool_adapters::enabled_deployable_adapters(&store)
                             .iter()
                             .map(|a| a.key.clone())
                             .collect();
@@ -177,7 +177,7 @@ pub async fn unsync_skill_from_tool(
                     .map_err(AppError::db)?;
                 if skill_ids.contains(&skill_id) {
                     let adapter_keys: Vec<String> =
-                        tool_adapters::enabled_installed_adapters(&store)
+                        tool_adapters::enabled_deployable_adapters(&store)
                             .iter()
                             .map(|a| a.key.clone())
                             .collect();
