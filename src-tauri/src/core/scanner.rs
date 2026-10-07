@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use super::content_hash;
@@ -92,13 +92,14 @@ fn push_discovered(
     path: PathBuf,
     managed_paths: &[String],
     discovered: &mut Vec<DiscoveredSkillRecord>,
+    hash_directory: &mut impl FnMut(&Path) -> Option<String>,
 ) {
     let path_str = path.to_string_lossy().to_string();
     if managed_paths.contains(&path_str) {
         return;
     }
     let name = skill_metadata::infer_skill_name(&path);
-    let fingerprint = content_hash::hash_directory(&path).ok();
+    let fingerprint = hash_directory(&path);
     let found_at = std::fs::metadata(&path)
         .and_then(|m| m.modified())
         .ok()
@@ -121,6 +122,7 @@ fn scan_flat_dir(
     scan_dir: &Path,
     managed_paths: &[String],
     discovered: &mut Vec<DiscoveredSkillRecord>,
+    hash_directory: &mut impl FnMut(&Path) -> Option<String>,
 ) {
     let entries = match std::fs::read_dir(scan_dir) {
         Ok(e) => e,
@@ -135,7 +137,7 @@ fn scan_flat_dir(
         if is_symlink_to_central(&path) || !skill_metadata::is_valid_skill_dir(&path) {
             continue;
         }
-        push_discovered(adapter_key, path, managed_paths, discovered);
+        push_discovered(adapter_key, path, managed_paths, discovered, hash_directory);
     }
 }
 
@@ -144,12 +146,13 @@ fn scan_recursive_dir(
     scan_dir: &Path,
     managed_paths: &[String],
     discovered: &mut Vec<DiscoveredSkillRecord>,
+    hash_directory: &mut impl FnMut(&Path) -> Option<String>,
 ) {
     let mut skill_dirs = Vec::new();
     let mut visited = HashSet::new();
     collect_skill_dirs_recursive(scan_dir, &mut visited, &mut skill_dirs);
     for path in skill_dirs {
-        push_discovered(adapter_key, path, managed_paths, discovered);
+        push_discovered(adapter_key, path, managed_paths, discovered, hash_directory);
     }
 }
 
@@ -162,11 +165,33 @@ pub fn scan_local_skills_with_adapters(
     managed_paths: &[String],
     adapters: &[tool_adapters::ToolAdapter],
 ) -> Result<ScanPlan> {
+    scan_local_skills_with_hasher(managed_paths, adapters, &mut |path| {
+        content_hash::hash_directory(path).ok()
+    })
+}
+
+fn scan_local_skills_with_hasher(
+    managed_paths: &[String],
+    adapters: &[tool_adapters::ToolAdapter],
+    hash_directory: &mut impl FnMut(&Path) -> Option<String>,
+) -> Result<ScanPlan> {
     let mut discovered = Vec::new();
     let mut tools_scanned = 0;
+    // Shared roots and symlink aliases still produce one location per Agent,
+    // but read each physical skill's full content only once in this scan.
+    // This cache never survives a scan, so later edits cannot reuse stale hashes.
+    let mut fingerprints = HashMap::new();
+    let mut cached_hasher = |path: &Path| {
+        let canonical = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        fingerprints
+            .entry(canonical)
+            .or_insert_with(|| hash_directory(path))
+            .clone()
+    };
 
     for adapter in adapters {
         let installed = adapter.is_installed();
+        let primary_scan_dir = adapter.skills_dir();
         let additional_dirs = adapter.additional_existing_scan_dirs();
 
         // Discover via additional_scan_dirs even when the legacy detect dir is
@@ -179,30 +204,35 @@ pub fn scan_local_skills_with_adapters(
 
         tools_scanned += 1;
 
-        if installed {
-            let primary_scan_dir = adapter.skills_dir();
-            if primary_scan_dir.exists() {
-                if adapter.recursive_scan {
-                    scan_recursive_dir(
-                        &adapter.key,
-                        &primary_scan_dir,
-                        managed_paths,
-                        &mut discovered,
-                    );
-                } else {
-                    scan_flat_dir(
-                        &adapter.key,
-                        &primary_scan_dir,
-                        managed_paths,
-                        &mut discovered,
-                    );
-                }
+        if installed && primary_scan_dir.exists() {
+            if adapter.recursive_scan {
+                scan_recursive_dir(
+                    &adapter.key,
+                    &primary_scan_dir,
+                    managed_paths,
+                    &mut discovered,
+                    &mut cached_hasher,
+                );
+            } else {
+                scan_flat_dir(
+                    &adapter.key,
+                    &primary_scan_dir,
+                    managed_paths,
+                    &mut discovered,
+                    &mut cached_hasher,
+                );
             }
         }
 
         // Additional scan dirs are already resolved to concrete skills roots.
         for scan_dir in additional_dirs {
-            scan_flat_dir(&adapter.key, &scan_dir, managed_paths, &mut discovered);
+            scan_flat_dir(
+                &adapter.key,
+                &scan_dir,
+                managed_paths,
+                &mut discovered,
+                &mut cached_hasher,
+            );
         }
     }
 
@@ -271,6 +301,135 @@ mod tests {
         collect_skill_dirs_recursive(root, &mut visited, &mut results);
         results.sort();
         results
+    }
+
+    fn test_adapter(key: &str, root: &Path) -> tool_adapters::ToolAdapter {
+        tool_adapters::ToolAdapter {
+            key: key.into(),
+            display_name: key.into(),
+            relative_skills_dir: String::new(),
+            relative_detect_dir: String::new(),
+            additional_scan_dirs: vec![],
+            override_skills_dir: Some(root.to_string_lossy().into_owned()),
+            is_custom: true,
+            recursive_scan: false,
+            project_relative_skills_dir: None,
+            category: Default::default(),
+        }
+    }
+
+    #[test]
+    fn shared_root_reads_content_once_and_keeps_all_agent_locations() {
+        let tmp = tempdir().unwrap();
+        write_skill(&tmp.path().join("demo"));
+        let adapters = [
+            test_adapter("one", tmp.path()),
+            test_adapter("two", tmp.path()),
+        ];
+        let mut reads = 0;
+        let plan = scan_local_skills_with_hasher(&[], &adapters, &mut |path| {
+            reads += 1;
+            content_hash::hash_directory(path).ok()
+        })
+        .unwrap();
+        assert_eq!(plan.tools_scanned, 2);
+        assert_eq!(plan.skills_found, 2);
+        assert_eq!(group_discovered(&plan.discovered)[0].locations.len(), 2);
+        assert_eq!(
+            reads, 1,
+            "shared directory content should only be read once per scan"
+        );
+    }
+
+    #[test]
+    fn next_scan_sees_content_changes_in_shared_directory() {
+        let tmp = tempdir().unwrap();
+        let dir = tmp.path().join("demo");
+        write_skill(&dir);
+        let adapters = [
+            test_adapter("one", tmp.path()),
+            test_adapter("two", tmp.path()),
+        ];
+        let first = scan_local_skills_with_adapters(&[], &adapters).unwrap();
+        fs::write(dir.join("resource.txt"), "updated").unwrap();
+        let second = scan_local_skills_with_adapters(&[], &adapters).unwrap();
+        assert_ne!(
+            first.discovered[0].fingerprint,
+            second.discovered[0].fingerprint
+        );
+        assert_eq!(
+            second.discovered[0].fingerprint,
+            second.discovered[1].fingerprint
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_aliases_read_once_but_preserve_lexical_locations() {
+        let tmp = tempdir().unwrap();
+        let first = tmp.path().join("first");
+        let second = tmp.path().join("second");
+        fs::create_dir_all(&second).unwrap();
+        write_skill(&first.join("demo"));
+        std::os::unix::fs::symlink(first.join("demo"), second.join("alias")).unwrap();
+        let adapters = [test_adapter("one", &first), test_adapter("two", &second)];
+        let mut reads = 0;
+        let plan = scan_local_skills_with_hasher(&[], &adapters, &mut |path| {
+            reads += 1;
+            content_hash::hash_directory(path).ok()
+        })
+        .unwrap();
+        assert_eq!(reads, 1);
+        assert_eq!(plan.skills_found, 2);
+        assert_eq!(
+            plan.discovered[0].found_path,
+            first.join("demo").to_string_lossy()
+        );
+        assert_eq!(
+            plan.discovered[1].found_path,
+            second.join("alias").to_string_lossy()
+        );
+    }
+
+    /// Reproducible workload, run explicitly when comparing scanner performance.
+    #[test]
+    #[ignore]
+    fn scan_timing_workload() {
+        let tmp = tempdir().unwrap();
+        let payload = vec![b'x'; 8192];
+        for skill in 0..16 {
+            let dir = tmp.path().join(format!("skill-{skill}"));
+            write_skill(&dir);
+            for file in 0..64 {
+                fs::write(dir.join(format!("resource-{file}")), &payload).unwrap();
+            }
+        }
+        for count in [1, 8] {
+            let adapters: Vec<_> = (0..count)
+                .map(|i| test_adapter(&format!("agent-{i}"), tmp.path()))
+                .collect();
+            let start = std::time::Instant::now();
+            let plan = scan_local_skills_with_adapters(&[], &adapters).unwrap();
+            println!(
+                "fixture agents={count} locations={} elapsed_ms={}",
+                plan.skills_found,
+                start.elapsed().as_millis()
+            );
+            assert_eq!(plan.skills_found, 16 * count);
+        }
+        let detected = tool_adapters::default_tool_adapters()
+            .iter()
+            .filter(|adapter| adapter.is_installed())
+            .count();
+        println!("detected_agent_state={detected}");
+        let start = std::time::Instant::now();
+        let plan = scan_local_skills(&[]).unwrap();
+        println!(
+            "scan_sources={} locations={} elapsed_ms={}",
+            plan.tools_scanned,
+            plan.skills_found,
+            start.elapsed().as_millis()
+        );
     }
 
     #[test]
