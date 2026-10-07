@@ -1062,6 +1062,8 @@ pub fn run() {
             commands::sync::set_skill_tool_toggle,
             // Scan
             commands::scan::scan_local_skills,
+            commands::discovered_skills::get_discovered_skill_document,
+            commands::discovered_skills::delete_discovered_skill,
             commands::scan::import_existing_skill,
             commands::scan::import_all_discovered,
             // Browse

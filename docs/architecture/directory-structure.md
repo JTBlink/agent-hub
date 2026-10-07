@@ -28,6 +28,8 @@ agent-hub/
 │   │   ├── SkillDetailPanel.tsx    #   技能详情面板
 │   │   ├── AddSkillsSheet.tsx      #   添加技能面板
 │   │   ├── SkillPickerRow.tsx      #   技能选择行
+│   │   ├── LocalSkillsPanel.tsx   #   本地扫描列表、筛选与导入
+│   │   ├── LocalSkillLocation.tsx #   单个本地安装位置操作
 │   │   ├── SkillMarkdown.tsx       #   技能 Markdown 渲染
 │   │   ├── SkillSourceDiffViewer.tsx  # 技能源码 Diff
 │   │   ├── DocumentDiffViewer.tsx  #   文档 Diff 查看器
@@ -36,10 +38,12 @@ agent-hub/
 │   │   ├── AppContext.tsx          #   应用全局上下文
 │   │   └── ThemeContext.tsx        #   主题上下文
 │   ├── hooks/                      # 自定义 Hooks
+│   │   ├── useLocalSkillManagement.ts # 本地内容读取与删除状态
 │   │   ├── useMultiSelect.ts       #   多选逻辑
 │   │   ├── useDragWindow.ts        #   窗口拖拽
 │   │   └── useTheme.ts             #   主题切换
 │   ├── lib/                        # 工具函数与 Tauri Bindings
+│   │   ├── localSkillScan.ts       #   扫描分组标识与筛选纯函数
 │   │   ├── tauri.ts                #   Tauri IPC 封装
 │   │   ├── error.ts                #   错误处理
 │   │   ├── gitErrors.ts            #   Git 错误映射
@@ -73,7 +77,8 @@ agent-hub/
 │   │   │   ├── mod.rs
 │   │   │   ├── agent_workspace.rs  #     Agent 工作空间管理
 │   │   │   ├── projects.rs         #     项目管理
-│   │   │   ├── scan.rs             #     项目扫描
+│   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
+│   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
 │   │   │   ├── presets.rs          #     预设管理
 │   │   │   ├── skills.rs           #     技能管理
 │   │   │   ├── sync.rs             #     同步操作

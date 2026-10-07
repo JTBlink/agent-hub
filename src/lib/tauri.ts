@@ -426,6 +426,12 @@ export const setSkillToolToggle = (
 
 export const scanLocalSkills = () => invoke<ScanResult>("scan_local_skills");
 
+export const getDiscoveredSkillDocument = (locationId: string) =>
+  invoke<string>("get_discovered_skill_document", { locationId });
+
+export const deleteDiscoveredSkill = (locationId: string) =>
+  invoke<void>("delete_discovered_skill", { locationId });
+
 export const importExistingSkill = (sourcePath: string, name?: string) =>
   invoke<void>("import_existing_skill", { sourcePath, name: name || null });
 
