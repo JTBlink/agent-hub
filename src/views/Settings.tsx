@@ -55,6 +55,7 @@ import {
 } from "@tauri-apps/plugin-dialog";
 import { useNavigate } from "react-router-dom";
 import { cn, compactHomePath } from "../utils";
+import { useSectionAnchor } from "../hooks/useSectionAnchor";
 import { useApp } from "../context/AppContext";
 import { useThemeContext } from "../context/ThemeContext";
 import { PROJECT_URL, FEEDBACK_URL } from "../lib/distribution";
@@ -159,6 +160,7 @@ function AgentGroupDnd({
 export function Settings() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  useSectionAnchor("agents");
   const { tools, refreshTools, openHelp } = useApp();
   const [togglingTools, setTogglingTools] = useState<Set<string>>(new Set());
   const { theme, setTheme } = useThemeContext();
@@ -1096,7 +1098,7 @@ export function Settings() {
 
       <div className="space-y-6">
         {/* Agent status */}
-        <section>
+        <section id="agents" tabIndex={-1} className="scroll-mt-4 outline-none">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="app-section-title">

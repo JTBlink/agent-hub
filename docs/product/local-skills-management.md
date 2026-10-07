@@ -2,7 +2,7 @@
 
 ## 入口与操作
 
-1. 从仪表盘或命令面板打开“本地 Skills 管理”，也可进入“安装 Skills → 本地”。
+1. 点击仪表盘的“已启用 Agent”卡片进入设置中的 Agent 管理区；从仪表盘或命令面板打开“本地 Skills 管理”，也可进入“安装 Skills → 本地”。
 2. 首次进入扫描本机 Agent Skills 目录。点击“重新扫描”更新结果。
 3. 按 Skill 名称、路径或 Agent 搜索；使用 Agent 下拉框限定来源。
 4. 每个安装位置支持“查看内容”和“打开目录”。同名不同内容分别展示；相同内容保留来源标签。
@@ -44,3 +44,5 @@ cargo test --manifest-path src-tauri/Cargo.toml scan_timing_workload -- --ignore
 默认技能目录为 `~/.agent-hub/skills/`，数据库为 `~/.agent-hub/agent-hub.db`。旧默认 `~/.agent-hub/library/` 在桌面启动、取得排他库租约后迁入上一级，数据库、WAL、密钥、元数据及内容一并保留，随后重写库内路径和部署软链接。固定配置、日志和 CLI 仍在 `~/.agent-hub` 下，自定义库路径保持原位置，也不会自动接管 `~/.skills-manager`。
 
 目标有同名内容时保留旧库并提示迁移未完成，禁止覆盖合并。迁移日志支持中断恢复；仍有其他进程使用旧库时继续使用旧路径，退出这些进程后重新启动再迁移。只读 CLI 不提前创建空库。本机升级已确认新路径可用，数据库中的库路径已重写、旧目录和迁移日志已移除；回归测试使用临时库覆盖冲突与中断恢复。
+
+首页入口回归：`browser-use < tests/browser/dashboard-agents.py`，使用真实首页与设置组件验证鼠标、Tab/Enter 导航、Agent 区域聚焦及统计。

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Layers,
   CheckCircle2,
@@ -68,6 +68,7 @@ export function Dashboard() {
       <div className="grid grid-cols-3 gap-3.5">
         {[
           {
+            href: null,
             title: t("dashboard.librarySkills"),
             value: String(totalSkills),
             icon: Layers,
@@ -75,6 +76,7 @@ export function Dashboard() {
             bg: "bg-accent-bg",
           },
           {
+            href: null,
             title: t("dashboard.syncCoverage"),
             value: coverageLabel,
             icon: syncCardIcon,
@@ -82,6 +84,7 @@ export function Dashboard() {
             bg: syncCardBg,
           },
           {
+            href: "/settings#agents",
             title: t("dashboard.connectedAgents"),
             value: String(enabledAgents.length),
             icon: Bot,
@@ -90,11 +93,8 @@ export function Dashboard() {
           },
         ].map((stat, i) => {
           const Icon = stat.icon;
-          return (
-            <div
-              key={i}
-              className="app-panel flex items-center justify-between px-4 py-4 transition-colors hover:border-border"
-            >
+          const content = (
+            <>
               <div>
                 <p className="app-section-title mb-1">{stat.title}</p>
                 <h3 className="text-xl font-semibold text-primary leading-none">
@@ -106,6 +106,21 @@ export function Dashboard() {
               >
                 <Icon className="w-4 h-4" />
               </div>
+            </>
+          );
+          const className =
+            "app-panel flex items-center justify-between px-4 py-4 transition-colors hover:border-border";
+          return stat.href ? (
+            <Link
+              key={i}
+              to={stat.href}
+              className={`${className} focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent`}
+            >
+              {content}
+            </Link>
+          ) : (
+            <div key={i} className={className}>
+              {content}
             </div>
           );
         })}
