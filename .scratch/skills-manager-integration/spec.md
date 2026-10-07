@@ -15,7 +15,7 @@
 
 ## 技能组命名与 GitHub 授权
 
-中文界面将 Preset 称为技能组，区分组内成员编辑和工作空间批量部署，内部命名与持久化保持兼容。GitHub 备份默认提供设备授权登录，使用本项目独立注册的 agent-hub OAuth App，保留个人访问令牌入口与系统钥匙串凭证存储。执行记录见 [B14](issues/B14-skill-group-naming.md) 与 [B15](issues/B15-github-oauth-branding.md)。
+中文界面将 Preset 称为技能组，英文界面称为 Skill Group，区分组内成员编辑和工作空间批量部署，内部命名与持久化保持兼容。GitHub 备份默认提供设备授权登录，使用本项目独立注册的 agent-hub OAuth App，保留个人访问令牌入口与系统钥匙串凭证存储。执行记录见 [B14](issues/B14-skill-group-naming.md) 与 [B15](issues/B15-github-oauth-branding.md)。
 
 ## 本地 Skills 管理
 
