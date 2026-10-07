@@ -63,7 +63,7 @@
     "presets": "技能组",
     "projects": "项目",
     "actions": "操作",
-    "scanImport": "扫描并导入本地技能",
+    "scanImport": "本地 Skills 管理",
     "hints": {
       "navigate": "选择",
       "open": "打开",
@@ -78,7 +78,7 @@
     "connectedAgents": "已接入 Agent",
     "synced": "已同步",
     "notSynced": "未同步",
-    "scanImport": "扫描本地 Skills 导入",
+    "scanImport": "本地 Skills 管理",
     "installNew": "安装新 Skills",
     "recentActivity": "近期动态"
   },
@@ -543,12 +543,12 @@
       "empty": "未发现可导入的技能"
     },
     "scan": {
-      "title": "扫描本地 Skills 并导入",
-      "initial": "扫描当前机器上各 Agent 已安装的 Skills。",
-      "summary": "已扫描 {{tools}} 个工具目录，发现 {{skills}} 个可导入 Skills。",
+      "title": "本地 Skills 管理",
+      "initial": "扫描当前机器上各 Agent 已安装的 Skills，可查看内容、打开目录、删除本地副本或导入技能库。",
+      "summary": "已扫描 {{tools}} 个 Agent 目录，发现 {{skills}} 个本地安装位置",
       "rescan": "重新扫描",
       "scanning": "正在扫描本地 Skills...",
-      "importAll": "全部导入",
+      "importAll": "导入全部扫描结果",
       "importOne": "导入",
       "imported": "已导入",
       "importedOne": "已导入 {{name}}",
@@ -563,7 +563,15 @@
         "detected": "已发现",
         "pending": "待导入",
         "imported": "已导入"
-      }
+      },
+      "search": "搜索 Skill、路径或 Agent…",
+      "agentFilter": "按 Agent 筛选",
+      "allAgents": "所有 Agent",
+      "viewContent": "查看内容",
+      "openFolder": "打开目录",
+      "deleteLocation": "删除 {{agent}} 中的 {{name}}",
+      "deleteHint": "仅删除所选路径；软链接仅移除链接。使用同一路径的 Agent 会同时受影响，其他独立副本和技能库保留。",
+      "refreshFailed": "删除已完成，但刷新失败，请重新扫描查看最新状态。"
     }
   },
   "settings": {

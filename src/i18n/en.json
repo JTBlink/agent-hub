@@ -63,7 +63,7 @@
     "presets": "Presets",
     "projects": "Projects",
     "actions": "Actions",
-    "scanImport": "Scan & import local skills",
+    "scanImport": "Manage local Skills",
     "hints": {
       "navigate": "navigate",
       "open": "open",
@@ -78,7 +78,7 @@
     "connectedAgents": "Connected Agents",
     "synced": "Synced",
     "notSynced": "Not synced",
-    "scanImport": "Scan & Import Local Skills",
+    "scanImport": "Manage local Skills",
     "installNew": "Install New Skills",
     "recentActivity": "Recent Activity"
   },
@@ -543,12 +543,12 @@
       "empty": "No importable skills found"
     },
     "scan": {
-      "title": "Scan Local Skills",
-      "initial": "Scan agent skill folders already present on this machine.",
-      "summary": "Scanned {{tools}} tool folders and found {{skills}} importable skills.",
+      "title": "Manage local Skills",
+      "initial": "Scan Skills installed by Agents on this machine. View their contents, open their folders, delete local copies, or import them.",
+      "summary": "Scanned {{tools}} Agent directories · {{skills}} local installations found",
       "rescan": "Rescan",
       "scanning": "Scanning local skills...",
-      "importAll": "Import All",
+      "importAll": "Import all scan results",
       "importOne": "Import",
       "imported": "Imported",
       "importedOne": "Imported {{name}}",
@@ -563,7 +563,15 @@
         "detected": "Detected",
         "pending": "Pending",
         "imported": "Imported"
-      }
+      },
+      "search": "Search Skills, paths, or Agents…",
+      "agentFilter": "Filter by Agent",
+      "allAgents": "All Agents",
+      "viewContent": "View contents",
+      "openFolder": "Open folder",
+      "deleteLocation": "Delete {{name}} from {{agent}}",
+      "deleteHint": "Remove only the selected path; symlinks are only unlinked. Agents sharing this path are affected. Independent copies and the library are kept.",
+      "refreshFailed": "Removed, but refreshing failed. Scan again to see the latest state."
     }
   },
   "settings": {

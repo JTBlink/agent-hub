@@ -63,7 +63,7 @@
     "presets": "技能組",
     "projects": "專案",
     "actions": "操作",
-    "scanImport": "掃描並匯入本機技能",
+    "scanImport": "本機 Skills 管理",
     "hints": {
       "navigate": "選擇",
       "open": "開啟",
@@ -78,7 +78,7 @@
     "connectedAgents": "已接入 Agent",
     "synced": "已同步",
     "notSynced": "未同步",
-    "scanImport": "掃描本機 Skills 匯入",
+    "scanImport": "本機 Skills 管理",
     "installNew": "安裝新 Skills",
     "recentActivity": "近期動態"
   },
@@ -495,12 +495,12 @@
     "gitReinstall": "重新安裝並更新",
     "installClone": "安裝並複製",
     "scan": {
-      "title": "掃描本機 Skills 並匯入",
-      "initial": "掃描當前電腦上各 Agent 已安裝的 Skills。",
-      "summary": "已掃描 {{tools}} 個工具目錄，發現 {{skills}} 個可匯入 Skills。",
+      "title": "本機 Skills 管理",
+      "initial": "掃描目前機器上各 Agent 已安裝的 Skills，可查看內容、開啟目錄、刪除本機副本或匯入技能庫。",
+      "summary": "已掃描 {{tools}} 個 Agent 目錄，發現 {{skills}} 個本機安裝位置",
       "rescan": "重新掃描",
       "scanning": "正在掃描本機 Skills...",
-      "importAll": "全部匯入",
+      "importAll": "匯入全部掃描結果",
       "importOne": "匯入",
       "imported": "已匯入",
       "importedOne": "已匯入 {{name}}",
@@ -515,7 +515,15 @@
         "detected": "已發現",
         "pending": "待匯入",
         "imported": "已匯入"
-      }
+      },
+      "search": "搜尋 Skill、路徑或 Agent…",
+      "agentFilter": "依 Agent 篩選",
+      "allAgents": "所有 Agent",
+      "viewContent": "查看內容",
+      "openFolder": "開啟目錄",
+      "deleteLocation": "刪除 {{agent}} 中的 {{name}}",
+      "deleteHint": "僅刪除所選路徑；軟連結僅移除連結。使用相同路徑的 Agent 會同時受影響，其他獨立副本與技能庫保留。",
+      "refreshFailed": "刪除已完成，但重新整理失敗，請重新掃描查看最新狀態。"
     }
   },
   "settings": {

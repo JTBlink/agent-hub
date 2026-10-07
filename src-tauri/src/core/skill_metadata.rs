@@ -76,7 +76,7 @@ fn parse_frontmatter(content: &str) -> SkillMeta {
 }
 
 /// Skill directory marker files used across the application.
-const SKILL_DIR_MARKERS: &[&str] = &["SKILL.md", "skill.md"];
+pub(crate) const SKILL_DIR_MARKERS: &[&str] = &["SKILL.md", "skill.md"];
 
 /// Check whether a directory looks like a valid skill directory
 /// (contains at least one recognised marker file).
