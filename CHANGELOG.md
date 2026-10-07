@@ -6,6 +6,8 @@
 
 ### Changed
 
+- 简体与繁体中文界面的 Preset 统一更名为“技能组”，明确组内成员与 Agent 部署的区别；CLI 和数据格式保持兼容。
+
 - 以 Skills Manager 实现作为唯一主应用，对外名称保持 agent-hub，统一根目录前端、Rust 核心和 CLI 构建。
 - 保留原 Logo、平台图标和深蓝、蓝青紫色调，支持明暗及系统主题。
 - 默认本地数据、配置、日志和 CLI 统一使用 `~/.agent-hub`，CLI 更名为 `agent-hub-cli`，不自动迁入旧目录数据。

@@ -1,7 +1,7 @@
 # B14：明确技能组命名与部署语义
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Scope
@@ -17,3 +17,11 @@ Blocked by: none
 ## Comments
 
 接管此前中断会话中的未提交改动，继续完成验证和提交。
+
+## Result
+
+- 简体与繁体中文统一为技能组/技能組，补充成员管理、批量部署与非自动同步的说明。
+- 更新 CONTEXT、产品文档和 CHANGELOG；CLI、数据格式与国际化资源键保持兼容。
+- 验证：`npm run build`、`npm run lint`、`npm test -- --run`（50 个测试）通过；各语言本次变更的资源键和插值占位符检查通过。
+- Standards 审查：复用现有国际化结构，无领域类型、数据库或路径规则变更。
+- Spec 审查：界面、帮助与产品定义一致，保留内部 preset 命名与部署语义。

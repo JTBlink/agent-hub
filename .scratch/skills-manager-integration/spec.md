@@ -13,6 +13,10 @@
 
 新增独立的开发规范，覆盖 SOLID、模块复用、前后端契约、迁移与验证，并接入 `AGENTS.md` 和文档导航。基于当前调用关系记录旧逻辑清理候选，修正过时的工程文档；本轮不删除尚未验证兼容性的运行逻辑。执行记录见 [B13](issues/B13-development-standards.md)。
 
+## 技能组命名
+
+中文界面将 Preset 称为技能组，区分组内成员编辑和工作空间批量部署，内部命名与持久化保持兼容。执行记录见 [B14](issues/B14-skill-group-naming.md)。
+
 ## 历史基线
 
 最初导入源提交为 `def946d78ef4c739b0ba429e38ac509b8660ec34`，309 个跟踪文件。完整导入、独立入口和元数据清理已于 `4debf00` 提交，见 B00、B08、B09 及[来源清单](../../docs/reference/skills-manager/source-manifest.json)。这些阶段的原样保留及双窗口约束已由用户后续要求替代。
