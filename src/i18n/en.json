@@ -571,7 +571,17 @@
       "openFolder": "Open folder",
       "deleteLocation": "Delete {{name}} from {{agent}}",
       "deleteHint": "Remove only the selected path; symlinks are only unlinked. Agents sharing this path are affected. Independent copies and the library are kept.",
-      "refreshFailed": "Removed, but refreshing failed. Scan again to see the latest state."
+      "refreshFailed": "Removed, but refreshing failed. Scan again to see the latest state.",
+      "cleanup": "Clean up",
+      "cleanupTitle": "Clean up Skills from uninstalled Agents?",
+      "cleanupConfirm": "Confirm cleanup",
+      "cleanupEmpty": "No leftover directories from uninstalled Agents to clean up",
+      "cleanupHint": "Delete these {{count}} leftover Skill locations or empty Skills directories. This cannot be undone.",
+      "cleanupSafety": "Only Skills for uninstalled Agents are cleaned up; empty directories are removed afterwards. Shared installed-Agent roots, manually configured paths, other configuration and the library are preserved.",
+      "cleanupDone": "Cleaned up {{count}} items; {{failed}} skipped or failed",
+      "cleanupFailures": "Locations kept",
+      "cleanupAgent": "Clean up by Agent",
+      "cleanupAllAgents": "All uninstalled Agents"
     }
   },
   "settings": {

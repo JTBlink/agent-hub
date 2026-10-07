@@ -30,3 +30,5 @@
 最初导入源提交为 `def946d78ef4c739b0ba429e38ac509b8660ec34`，309 个跟踪文件。完整导入、独立入口和元数据清理已于 `4debf00` 提交，见 B00、B08、B09 及[来源清单](../../docs/reference/skills-manager/source-manifest.json)。这些阶段的原样保留及双窗口约束已由用户后续要求替代。
 
 旧 V1 规格、原型以及 D01、B01–B07 旧候选任务已删除。后续统一基于现有 Skills Manager 实现，规划见 docs/plans/agent-hub.md。
+
+本地管理支持按 Agent 预览并清理未安装 Agent 的遗留 Skills 与空目录，保留共享安装、手动目标和其他配置；执行前复查。默认库移除 `library/` 层级，旧默认库在排他租约下无覆盖迁移并重写路径。首页 Agent 卡片进入设置的 Agent 区域。

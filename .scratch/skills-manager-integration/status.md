@@ -1,31 +1,31 @@
 # 主应用整合状态
 
-更新时间：2026-10-07。主应用整合、技能组命名、GitHub 授权、本地管理、扫描性能和 Agent 检测修复完成，后续设计统一以现有实现为基线。
+更新时间：2026-10-08。主应用整合、技能组命名、GitHub 授权、本地管理、扫描性能和 Agent 检测修复完成，后续设计统一以现有实现为基线。
 
 | 类别 | 已完成 | 进行中 | 待开始 | 总数 |
 | ---- | -----: | -----: | -----: | ---: |
-| 构建 |     17 |      1 |      0 |   18 |
-| 合计 |     17 |      1 |      0 |   18 |
+| 构建 |     18 |      0 |      0 |   18 |
+| 合计 |     18 |      0 |      0 |   18 |
 
-| ID  | 主题                       | 状态     | 依赖 |
-| --- | -------------------------- | -------- | ---- |
-| B00 | 导入来源记录               | resolved | —    |
-| B08 | 首次入口整合记录           | resolved | B00  |
-| B09 | 项目元数据清理             | resolved | B08  |
-| B10 | 统一主应用、品牌与本地目录 | resolved | B09  |
-| B11 | 删除旧方案并统一设计基线   | resolved | B10  |
-| B12 | 适配 CI 新版 Clippy        | resolved | B11  |
-| B13 | 定义开发规范并盘点旧逻辑   | resolved | B10  |
-| B14 | 明确技能组命名与部署语义   | resolved | —    |
-| B15 | 恢复 GitHub 登录与应用品牌 | resolved | —    |
-| B16 | 本地扫描与 Skill 管理     | resolved | —    |
-| B17 | 优化本地扫描性能         | resolved | —    |
-| B18 | 修正 Agent 接入数量误判  | resolved | —    |
-| B19 | 删除完成后立即关闭弹窗  | resolved | —    |
-| B20 | 仅检测本机已安装 Agent | resolved  | —    |
-| B21 | 简化默认技能库层级     | resolved  | —    |
-| B22 | 首页 Agent 管理入口 | resolved | — |
-| B23 | 减少钥匙串重复提示 | resolved | — |
-| B24 | 清理未安装 Agent 遗留 Skills | claimed | — |
+| ID  | 主题                         | 状态     | 依赖 |
+| --- | ---------------------------- | -------- | ---- |
+| B00 | 导入来源记录                 | resolved | —    |
+| B08 | 首次入口整合记录             | resolved | B00  |
+| B09 | 项目元数据清理               | resolved | B08  |
+| B10 | 统一主应用、品牌与本地目录   | resolved | B09  |
+| B11 | 删除旧方案并统一设计基线     | resolved | B10  |
+| B12 | 适配 CI 新版 Clippy          | resolved | B11  |
+| B13 | 定义开发规范并盘点旧逻辑     | resolved | B10  |
+| B14 | 明确技能组命名与部署语义     | resolved | —    |
+| B15 | 恢复 GitHub 登录与应用品牌   | resolved | —    |
+| B16 | 本地扫描与 Skill 管理        | resolved | —    |
+| B17 | 优化本地扫描性能             | resolved | —    |
+| B18 | 修正 Agent 接入数量误判      | resolved | —    |
+| B19 | 删除完成后立即关闭弹窗       | resolved | —    |
+| B20 | 仅检测本机已安装 Agent       | resolved | —    |
+| B21 | 简化默认技能库层级           | resolved | —    |
+| B22 | 首页 Agent 管理入口          | resolved | —    |
+| B23 | 减少钥匙串重复提示           | resolved | —    |
+| B24 | 清理未安装 Agent 遗留 Skills | resolved | —    |
 
 后续规划：[docs/plans/agent-hub.md](../../docs/plans/agent-hub.md)。旧候选任务已删除，不再保留为待执行事项。

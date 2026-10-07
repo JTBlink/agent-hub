@@ -39,10 +39,19 @@ cargo test --manifest-path src-tauri/Cargo.toml scan_timing_workload -- --ignore
 
 检测不启动 Agent，也不表示其正在运行或已登录。手动配置的自定义部署目标仍可由明确的部署操作使用，但不增加已安装统计；遗留 Skills 保留只读扫描与管理能力。
 
+## 按 Agent 一键清理
+
+1. 在“本地 Skills 管理”点击“一键清理”。后端自动预览未安装 Agent 的遗留 Skill 位置及空 Skills 目录。
+2. 选择“按 Agent 清理”中的某个 Agent，或选择“全部未安装 Agent”；检查列出的实际路径和数量。
+3. 点击“确认清理”。取消不会删除文件。执行前重新检查安装状态、路径、内容指纹和托管部署；已安装 Agent 共用目录、手动配置路径、链接根、额外共享发现目录及技能库不参与清理。同一路径保留各 Agent 的预览入口，批量清理时实际只删除一次。
+4. 清理完成后弹窗立即关闭，后台刷新。成功删除后移除空 Skills 目录，保留 Agent 的其他配置与历史；软链接只移除链接。失败或已变化的位置保留并列出原因。
+
+不会在启动时静默删除内容。浏览器回归：`browser-use < tests/browser/local-skill-cleanup.py`，验证预览、取消、按 Agent 选择、仅提交所选位置、刷新期间关闭及空结果提示，使用模拟 IPC；Rust 临时目录测试验证真实文件行为。
+
 ## 默认目录升级
 
 默认技能目录为 `~/.agent-hub/skills/`，数据库为 `~/.agent-hub/agent-hub.db`。旧默认 `~/.agent-hub/library/` 在桌面启动、取得排他库租约后迁入上一级，数据库、WAL、密钥、元数据及内容一并保留，随后重写库内路径和部署软链接。固定配置、日志和 CLI 仍在 `~/.agent-hub` 下，自定义库路径保持原位置，也不会自动接管 `~/.skills-manager`。
 
 目标有同名内容时保留旧库并提示迁移未完成，禁止覆盖合并。迁移日志支持中断恢复；仍有其他进程使用旧库时继续使用旧路径，退出这些进程后重新启动再迁移。只读 CLI 不提前创建空库。本机升级已确认新路径可用，数据库中的库路径已重写、旧目录和迁移日志已移除；回归测试使用临时库覆盖冲突与中断恢复。
 
-首页入口回归：`browser-use < tests/browser/dashboard-agents.py`，使用真实首页与设置组件验证鼠标、Tab/Enter 导航、Agent 区域聚焦及统计。
+首页入口回归：`browser-use < tests/browser/dashboard-agents.py`，使用真实首页与设置组件验证鼠标、Tab/Enter 导航、Agent 区域聚焦及统计。清理 fixture 的 Agent 下拉框使用原生 change 事件，避免后台浏览器依赖系统选择器；确认与取消仍通过 CDP 点击。

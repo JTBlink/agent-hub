@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { X, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,7 @@ interface Props {
   title?: string;
   message: string;
   details?: string[];
+  children?: ReactNode;
   confirmLabel?: string;
   tone?: "danger" | "warning";
   onClose: () => void;
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   title,
   message,
   details,
+  children,
   confirmLabel,
   tone = "danger",
   onClose,
@@ -86,6 +88,10 @@ export function ConfirmDialog({
             ))}
           </div>
         ) : null}
+
+        {children && (
+          <div className="mb-5 min-h-0 overflow-y-auto">{children}</div>
+        )}
 
         <div className="flex justify-end gap-2">
           <button

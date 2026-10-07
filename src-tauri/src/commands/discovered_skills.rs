@@ -13,7 +13,7 @@ use crate::core::{
     sync_engine, sync_metadata, tool_adapters,
 };
 
-fn validate_location(path: &Path, roots: &[PathBuf]) -> Result<(), AppError> {
+pub(super) fn validate_location(path: &Path, roots: &[PathBuf]) -> Result<(), AppError> {
     for root in roots {
         let Ok(relative) = path.strip_prefix(root) else {
             continue;
@@ -36,7 +36,7 @@ fn validate_location(path: &Path, roots: &[PathBuf]) -> Result<(), AppError> {
     ))
 }
 
-fn resolve_location(
+pub(super) fn resolve_location(
     store: &SkillStore,
     location_id: &str,
 ) -> Result<DiscoveredSkillRecord, AppError> {
@@ -76,7 +76,10 @@ pub async fn get_discovered_skill_document(
     .await?
 }
 
-fn delete_location(store: &SkillStore, record: &DiscoveredSkillRecord) -> Result<(), AppError> {
+pub(super) fn delete_location(
+    store: &SkillStore,
+    record: &DiscoveredSkillRecord,
+) -> Result<(), AppError> {
     let path = Path::new(&record.found_path);
     let library = crate::core::central_repo::skills_dir();
     if path_guard::is_path_safe(&library, path) || path_guard::is_path_safe(path, &library) {
@@ -107,7 +110,6 @@ fn delete_location(store: &SkillStore, record: &DiscoveredSkillRecord) -> Result
     }
     scenario_service::detach_source_refs_from_adoption_target(store, path)?;
     sync_engine::remove_target(path).map_err(AppError::io)?;
-    sync_metadata::write_all_from_db_unlocked(store).map_err(AppError::io)?;
     Ok(())
 }
 
@@ -121,6 +123,7 @@ pub async fn delete_discovered_skill(
         sync_metadata::with_repo_lock("delete scanned local skill", || {
             let record = resolve_location(&store, &location_id)?;
             delete_location(&store, &record)?;
+            sync_metadata::write_all_from_db_unlocked(&store)?;
             Ok(())
         })
         .map_err(AppError::io)
