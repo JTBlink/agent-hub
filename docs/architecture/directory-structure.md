@@ -110,6 +110,8 @@ agent-hub/
 │   │       ├── git_fetcher.rs      #     Git 远程拉取
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端
+│   │       ├── credential_cache.rs #     进程内钥匙串读取缓存与并发合并
+│   │       ├── library_layout.rs   #     默认库层级升级、冲突保护与中断恢复
 │   │       ├── central_repo.rs     #     中央仓库管理
 │   │       ├── merge/              #     合并引擎
 │   │       │   ├── mod.rs

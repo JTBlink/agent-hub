@@ -87,7 +87,7 @@ struct RepoPathConfig {
 }
 
 fn default_base_dir() -> PathBuf {
-    home_base_dir().join("library")
+    home_base_dir()
 }
 
 /// `~/.agent-hub`, ignoring any configured relocation.
@@ -167,7 +167,12 @@ fn save_config(config: &RepoPathConfig) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
-    fs::write(path, serde_json::to_vec_pretty(config)?)?;
+    use std::io::Write;
+    let mut file =
+        tempfile::NamedTempFile::new_in(path.parent().context("Missing config parent")?)?;
+    file.write_all(&serde_json::to_vec_pretty(config)?)?;
+    file.as_file().sync_all()?;
+    file.persist(path)?;
     Ok(())
 }
 
@@ -231,6 +236,12 @@ fn live_base_from(config: &RepoPathConfig) -> PathBuf {
         if source.is_dir() {
             return source;
         }
+    }
+    // Older default installations remain live until a startup holding the
+    // exclusive library lease can promote them. Read-only CLI calls never
+    // create a second empty library while the desktop is still using the old one.
+    if config.repo_path.is_none() && super::library_layout::legacy_exists(&home_base_dir()) {
+        return home_base_dir().join("library");
     }
     requested_base_from(config)
 }
@@ -625,6 +636,24 @@ fn migrate_repo_if_needed(config: &mut RepoPathConfig, current_base: &Path) -> M
         }
     };
 
+    if source == home_base_dir().join("library")
+        && current_base == home_base_dir()
+        && (source.exists() || super::library_layout::interrupted(current_base))
+    {
+        match super::library_layout::flatten(&source, current_base) {
+            Ok(()) => {
+                config.pending_migration_from = None;
+                config.repoint_from = Some(source.to_string_lossy().to_string());
+                return MigrationOutcome::Proceed;
+            }
+            Err(err) => {
+                record_startup_error(format!("central repo: default layout migration failed ({err:#}); keeping original library"));
+                push_startup_warning("migration_incomplete");
+                return MigrationOutcome::UseSource;
+            }
+        }
+    }
+
     // Nothing left to move: the source is gone (moved already, or the old
     // location was removed), or source and target are the same directory.
     // Compare canonically, not just lexically — on a case-insensitive volume
@@ -838,11 +867,31 @@ pub fn ensure_central_repo(allow_migration: bool) -> Result<()> {
     // shares the lease; it just never moves the app's library.
     let override_active = base_dir_override_active();
     let may_move = take_library_lease(
-        allow_migration && !override_active && config.pending_migration_from.is_some(),
+        allow_migration
+            && !override_active
+            && (config.pending_migration_from.is_some()
+                || (config.repo_path.is_none()
+                    && super::library_layout::legacy_exists(&home_base_dir()))
+                || super::library_layout::interrupted(&home_base_dir())),
     );
     if may_move {
         // Re-read: another process may have finished a move while we waited.
         config = load_config();
+        if config.repo_path.is_none()
+            && config.pending_migration_from.is_none()
+            && (super::library_layout::legacy_exists(&home_base_dir())
+                || super::library_layout::interrupted(&home_base_dir()))
+        {
+            config.pending_migration_from = Some(
+                home_base_dir()
+                    .join("library")
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+            // Persist before moving even one entry so interrupted upgrades can
+            // never open a fresh database in either partially moved location.
+            save_config(&config)?;
+        }
         let pending_before = config.pending_migration_from.clone();
         let target = requested_base_from(&config);
         let _ = migrate_repo_if_needed(&mut config, &target);
@@ -854,6 +903,11 @@ pub fn ensure_central_repo(allow_migration: bool) -> Result<()> {
             }
         }
         downgrade_library_lease();
+    }
+    if !override_active && super::library_layout::interrupted(&home_base_dir()) {
+        anyhow::bail!(
+            "An interrupted library upgrade needs to be completed by restarting the desktop app"
+        );
     }
     // Re-resolve: a completed move changed the base.
 
@@ -875,13 +929,50 @@ mod tests {
         let root = home.path().join(".agent-hub");
         assert_eq!(home_base_dir(), root);
         assert_eq!(config_file_path(), root.join("repo-config.json"));
-        assert_eq!(default_base_dir(), root.join("library"));
+        assert_eq!(default_base_dir(), root);
         assert_eq!(log_dir(), root.join("logs"));
         assert!(!home.path().join(".skills-manager").exists());
         set_test_home_dir_override(None);
     }
 
     use super::*;
+
+    #[test]
+    fn old_default_stays_live_until_migration_and_custom_libraries_are_unchanged() {
+        let _guard = test_base_dir_lock();
+        let home = tempfile::tempdir().unwrap();
+        set_test_home_dir_override(Some(home.path().to_path_buf()));
+        let root = home_base_dir();
+        let old = root.join("library");
+        fs::create_dir_all(old.join("skills/demo")).unwrap();
+        fs::write(old.join("agent-hub.db"), "fixture").unwrap();
+        assert_eq!(live_base_from(&RepoPathConfig::default()), old);
+        let custom = home.path().join("custom");
+        let configured = RepoPathConfig {
+            repo_path: Some(custom.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        assert_eq!(live_base_from(&configured), custom);
+        let mut config = RepoPathConfig {
+            pending_migration_from: Some(old.to_string_lossy().into_owned()),
+            ..Default::default()
+        };
+        assert!(matches!(
+            migrate_repo_if_needed(&mut config, &root),
+            MigrationOutcome::Proceed
+        ));
+        assert_eq!(live_base_from(&config), root);
+        assert!(config.pending_migration_from.is_none());
+        assert_eq!(
+            config.repoint_from,
+            Some(old.to_string_lossy().into_owned())
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("agent-hub.db")).unwrap(),
+            "fixture"
+        );
+        set_test_home_dir_override(None);
+    }
 
     // ── migrate_repo_if_needed (#252) ──
 
