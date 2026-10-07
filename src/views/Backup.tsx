@@ -113,7 +113,7 @@ export function Backup() {
   const [githubToken, setGithubToken] = useState("");
   const [githubRepoName, setGithubRepoName] = useState(DEFAULT_GITHUB_REPO);
   const [githubError, setGithubError] = useState<string | null>(null);
-  const [patMode, setPatMode] = useState(!GITHUB_OAUTH_CLIENT_ID);
+  const [patMode, setPatMode] = useState(false);
   const [deviceInfo, setDeviceInfo] =
     useState<api.GithubDeviceFlowStart | null>(null);
   const deviceCancelRef = useRef(false);
@@ -1207,23 +1207,21 @@ export function Backup() {
               ) : (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    {GITHUB_OAUTH_CLIENT_ID && (
-                      <button
-                        type="button"
-                        onClick={handleDeviceFlow}
-                        disabled={!!loading}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {loading === "github" ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Github className="h-3.5 w-3.5" />
-                        )}
-                        {loading === "github"
-                          ? t("backup.github.connecting")
-                          : t("backup.github.deviceSignIn")}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={handleDeviceFlow}
+                      disabled={!!loading}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loading === "github" ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Github className="h-3.5 w-3.5" />
+                      )}
+                      {loading === "github"
+                        ? t("backup.github.connecting")
+                        : t("backup.github.deviceSignIn")}
+                    </button>
                     <input
                       type="text"
                       value={githubRepoName}

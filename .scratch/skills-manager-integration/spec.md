@@ -13,9 +13,9 @@
 
 新增独立的开发规范，覆盖 SOLID、模块复用、前后端契约、迁移与验证，并接入 `AGENTS.md` 和文档导航。基于当前调用关系记录旧逻辑清理候选，修正过时的工程文档；本轮不删除尚未验证兼容性的运行逻辑。执行记录见 [B13](issues/B13-development-standards.md)。
 
-## 技能组命名
+## 技能组命名与 GitHub 授权
 
-中文界面将 Preset 称为技能组，区分组内成员编辑和工作空间批量部署，内部命名与持久化保持兼容。执行记录见 [B14](issues/B14-skill-group-naming.md)。
+中文界面将 Preset 称为技能组，区分组内成员编辑和工作空间批量部署，内部命名与持久化保持兼容。GitHub 备份默认提供设备授权登录，使用本项目独立注册的 agent-hub OAuth App，保留个人访问令牌入口与系统钥匙串凭证存储。执行记录见 [B14](issues/B14-skill-group-naming.md) 与 [B15](issues/B15-github-oauth-branding.md)。
 
 ## 历史基线
 

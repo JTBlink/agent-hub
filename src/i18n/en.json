@@ -155,7 +155,7 @@
     },
     "github": {
       "title": "Connect with GitHub",
-      "desc": "Connect a private GitHub backup repository with a personal access token. Credentials stay in the OS keychain.",
+      "desc": "Sign in with GitHub and a private backup repository will be created automatically. Credentials stay in the OS keychain and never touch a file.",
       "tokenPlaceholder": "GitHub personal access token (ghp_… / github_pat_…)",
       "repoLabel": "Repository name",
       "connect": "Connect",

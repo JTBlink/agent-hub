@@ -155,7 +155,7 @@
     },
     "github": {
       "title": "使用 GitHub 連線",
-      "desc": "使用個人存取權杖連接 GitHub 私有備份儲存庫。憑證保存在系統鑰匙圈中。",
+      "desc": "使用 GitHub 登入，私有備份儲存庫會自動建立。憑證保存在系統鑰匙圈中，不會寫入任何檔案。",
       "tokenPlaceholder": "GitHub 個人存取權杖（ghp_… / github_pat_…）",
       "repoLabel": "儲存庫名稱",
       "connect": "連線",

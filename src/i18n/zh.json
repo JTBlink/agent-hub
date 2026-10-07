@@ -155,7 +155,7 @@
     },
     "github": {
       "title": "使用 GitHub 连接",
-      "desc": "使用个人访问令牌连接 GitHub 私有备份仓库。凭证保存在系统钥匙串中。",
+      "desc": "使用 GitHub 登录，私有备份仓库会自动创建。凭证保存在系统钥匙串中，不会写进任何文件。",
       "tokenPlaceholder": "GitHub 个人访问令牌（ghp_… / github_pat_…）",
       "repoLabel": "仓库名",
       "connect": "连接",
