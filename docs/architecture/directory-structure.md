@@ -30,7 +30,8 @@ agent-hub/
 │   │   ├── SkillPickerRow.tsx      #   技能选择行
 │   │   ├── LocalSkillsPanel.tsx   #   本地扫描列表、筛选与导入
 │   │   ├── LocalSkillCleanup.tsx  #   按 Agent 预览、确认清理与失败反馈
-│   │   ├── LocalSkillLocation.tsx #   单个本地安装位置操作
+│   │   ├── LocalSkillLocation.tsx #   目录操作、适用 Agent 与软链接指示
+│   │   ├── SkillsDirectorySetting.tsx # 技能路径展示与打开目录
 │   │   ├── SkillMarkdown.tsx       #   技能 Markdown 渲染
 │   │   ├── SkillSourceDiffViewer.tsx  # 技能源码 Diff
 │   │   ├── DocumentDiffViewer.tsx  #   文档 Diff 查看器
@@ -108,13 +109,18 @@ agent-hub/
 │   │       ├── tool_service.rs     #     工具管理服务
 │   │       ├── tool_adapters.rs    #     工具适配器
 │   │       ├── git_backup.rs       #     Git 备份核心
+│   │       ├── git_backup/         #     分阶段克隆恢复与应用状态排除
 │   │       ├── git2_engine.rs      #     libgit2 引擎封装
 │   │       ├── git_fetcher.rs      #     Git 远程拉取
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端
 │   │       ├── credential_cache.rs #     进程内钥匙串读取缓存与并发合并
 │   │       ├── library_layout.rs   #     默认库层级升级、冲突保护与中断恢复
-│   │       ├── central_repo.rs     #     中央仓库管理
+│   │       ├── central_repo.rs     #     库路径与应用状态目录
+│   │       ├── central_repo_migration.rs # 应用数据目录迁移
+│   │       ├── central_repo_tests.rs #   库路径与迁移回归
+│   │       ├── shared_library.rs   #     默认共享技能库无覆盖迁移
+│   │       ├── shared_skill_index.rs #   共享技能原地登记
 │   │       ├── merge/              #     合并引擎
 │   │       │   ├── mod.rs
 │   │       │   ├── protocol.rs     #       合并协议

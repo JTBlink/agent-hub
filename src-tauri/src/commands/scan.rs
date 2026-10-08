@@ -54,9 +54,16 @@ pub async fn scan_local_skills(
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let all_targets = store.get_all_targets().map_err(AppError::db)?;
-        let managed_paths: Vec<String> =
-            all_targets.iter().map(|t| t.target_path.clone()).collect();
         let managed_skills = store.get_all_skills().map_err(AppError::db)?;
+        let managed_paths: Vec<String> = all_targets
+            .iter()
+            .map(|t| t.target_path.clone())
+            .chain(
+                managed_skills
+                    .iter()
+                    .map(|skill| skill.central_path.clone()),
+            )
+            .collect();
 
         let adapters = tool_adapters::all_tool_adapters(&store);
         let mut plan = scanner::scan_local_skills_with_adapters(&managed_paths, &adapters)

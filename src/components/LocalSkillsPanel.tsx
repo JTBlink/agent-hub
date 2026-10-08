@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Calendar,
   Check,
+  ChevronRight,
   DownloadCloud,
   FolderSearch,
   Loader2,
@@ -13,7 +14,9 @@ import { cn, compactHomePath } from "../utils";
 import type { ScanResult } from "../lib/tauri";
 import {
   discoveredGroupKey,
+  discoveredSkillCounts,
   filterDiscoveredGroups,
+  uniqueDiscoveredLocations,
 } from "../lib/localSkillScan";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { DetailSheet } from "./DetailSheet";
@@ -48,7 +51,6 @@ export function LocalSkillsPanel({
     {},
   );
   const [query, setQuery] = useState("");
-  const [agent, setAgent] = useState("");
   const {
     detail,
     content,
@@ -62,18 +64,15 @@ export function LocalSkillsPanel({
     closeDetail,
     closeDelete,
   } = useLocalSkillManagement(runScan, onChanged);
-  const scanGroups = scanResult?.groups ?? [];
+  const scanGroups = useMemo(
+    () => uniqueDiscoveredLocations(scanResult?.groups ?? []),
+    [scanResult],
+  );
   const pendingGroups = scanGroups.filter((group) => !group.imported);
-  const agents = [
-    ...new Set(
-      scanGroups.flatMap((group) =>
-        group.locations.map((location) => location.tool),
-      ),
-    ),
-  ].sort();
+  const counts = discoveredSkillCounts(scanGroups);
   const visibleGroups = useMemo(
-    () => filterDiscoveredGroups(scanResult?.groups ?? [], query, agent),
-    [scanResult, query, agent],
+    () => filterDiscoveredGroups(scanGroups, query),
+    [scanGroups, query],
   );
   return (
     <>
@@ -85,10 +84,7 @@ export function LocalSkillsPanel({
             </h2>
             <p className="mt-0.5 text-[13px] text-muted">
               {scanResult
-                ? t("install.scan.summary", {
-                    tools: scanResult.tools_scanned,
-                    skills: scanResult.skills_found,
-                  })
+                ? t("install.scan.summary", counts)
                 : t("install.scan.initial")}
             </p>
           </div>
@@ -134,19 +130,6 @@ export function LocalSkillsPanel({
             placeholder={t("install.scan.search")}
             className="app-input min-w-0 flex-1"
           />
-          <select
-            aria-label={t("install.scan.agentFilter")}
-            value={agent}
-            onChange={(event) => setAgent(event.target.value)}
-            className="app-input max-w-full"
-          >
-            <option value="">{t("install.scan.allAgents")}</option>
-            {agents.map((key) => (
-              <option key={key} value={key}>
-                {key}
-              </option>
-            ))}
-          </select>
         </div>
         <div className="space-y-4 p-4">
           {scanLoading ? (
@@ -295,8 +278,14 @@ export function LocalSkillsPanel({
                       </div>
 
                       {otherLocations.length > 0 ? (
-                        <div className="border-t border-border-subtle bg-surface/40 px-3 py-1.5">
-                          <div className="space-y-1">
+                        <details className="group border-t border-border-subtle bg-surface/40 px-3 py-1.5">
+                          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded py-1 text-[12px] text-muted hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                            <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
+                            {t("install.scan.otherLocations", {
+                              count: otherLocations.length,
+                            })}
+                          </summary>
+                          <div className="space-y-1 pt-1">
                             {otherLocations.map((location) => (
                               <LocalSkillLocation
                                 key={location.id}
@@ -308,7 +297,7 @@ export function LocalSkillsPanel({
                               />
                             ))}
                           </div>
-                        </div>
+                        </details>
                       ) : null}
                     </article>
                   );
@@ -337,9 +326,8 @@ export function LocalSkillsPanel({
       <ConfirmDialog
         open={!!deleteTarget}
         title={t("globalWorkspace.localSkills.deleteLocalConfirmTitle")}
-        message={t("globalWorkspace.localSkills.deleteLocalConfirmMessage", {
+        message={t("install.scan.deleteConfirmMessage", {
           name: deleteTarget?.name ?? "",
-          agent: deleteTarget?.location.tool ?? "",
         })}
         details={
           deleteTarget

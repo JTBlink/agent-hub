@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as api from "../lib/tauri";
+import { compactHomePath } from "../utils";
 import { getErrorMessage } from "../lib/error";
 import type { LocalSkillSelection } from "../lib/localSkillScan";
 
@@ -54,9 +55,9 @@ export function useLocalSkillManagement(
     setDeleteTarget(null);
     setBusy(false);
     toast.success(
-      t("globalWorkspace.localSkills.deletedLocalToast", {
+      t("install.scan.deletedLocation", {
         name: deleteTarget.name,
-        agent: deleteTarget.location.tool,
+        path: compactHomePath(deleteTarget.location.found_path),
       }),
     );
     // The confirmed deletion has finished. Refreshing can take much longer;

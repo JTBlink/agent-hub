@@ -1,3 +1,4 @@
+import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Folder,
@@ -1320,7 +1321,10 @@ export function Settings() {
             {t("settings.globalConfig")}
           </h2>
           <div className="app-panel overflow-hidden divide-y divide-border-faint">
-            {/* Repo path */}
+            <div className="px-5 py-4">
+              <SkillsDirectorySetting />
+            </div>
+            {/* Application data path (legacy custom repositories remain compatible). */}
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
               <div className="min-w-0 flex-1">
                 <h3 className="text-[14px] font-semibold text-primary">
@@ -1771,6 +1775,9 @@ export function Settings() {
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="mt-0.5 text-[12px] text-muted">
                   {t("settings.gitSyncConfigDesc")}
+                  <span className="mt-1 block">
+                    {t("settings.backupRecoveryHint")}
+                  </span>
                 </p>
                 <button
                   type="button"

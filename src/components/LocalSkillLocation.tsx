@@ -1,4 +1,4 @@
-import { FileText, FolderOpen, Trash2 } from "lucide-react";
+import { FileText, FolderOpen, Link2, Trash2 } from "lucide-react";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -23,12 +23,39 @@ export function LocalSkillLocation({
   const selection = { name, location };
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
-      <span className="rounded border border-border-subtle bg-surface px-1.5 py-px text-[12px] text-tertiary">
-        {location.tool}
-      </span>
-      <code className="min-w-0 flex-1 break-all text-[12px] text-muted">
-        {compactHomePath(location.found_path)}
-      </code>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-1.5">
+          {location.is_symlink && (
+            <span
+              role="img"
+              aria-label={t("install.scan.symlink")}
+              title={t("install.scan.symlink")}
+              className="mt-0.5 shrink-0 text-accent"
+            >
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+          )}
+          <code className="min-w-0 break-all text-[12px] text-muted">
+            {compactHomePath(location.found_path)}
+          </code>
+        </div>
+        <div
+          className="mt-1 flex flex-wrap items-center gap-1"
+          title={t("install.scan.applicableAgentsHint")}
+        >
+          <span className="mr-0.5 text-[11px] text-muted">
+            {t("install.scan.applicableAgents")}
+          </span>
+          {location.tools.map((tool) => (
+            <span
+              key={tool}
+              className="rounded border border-border-subtle bg-surface px-1.5 py-px text-[11px] text-tertiary"
+            >
+              {tool}
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="flex flex-wrap items-center gap-1">
         <button
           type="button"
@@ -58,7 +85,7 @@ export function LocalSkillLocation({
           onClick={() => onDelete(selection)}
           aria-label={t("install.scan.deleteLocation", {
             name,
-            agent: location.tool,
+            path: compactHomePath(location.found_path),
           })}
           className="rounded p-1.5 text-muted hover:bg-red-500/10 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50"
         >

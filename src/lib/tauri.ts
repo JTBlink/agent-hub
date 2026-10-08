@@ -109,7 +109,12 @@ export interface Preset {
 export interface DiscoveredGroup {
   name: string;
   fingerprint: string | null;
-  locations: { id: string; tool: string; found_path: string }[];
+  locations: {
+    id: string;
+    tool: string;
+    found_path: string;
+    is_symlink: boolean;
+  }[];
   imported: boolean;
   found_at: number;
 }
@@ -949,3 +954,6 @@ export const deleteGlobalLocalSkill = (
   agent: string,
   skillRelativePath: string,
 ) => invoke<void>("delete_global_local_skill", { agent, skillRelativePath });
+
+/** Actual Skills root, separate from application data. */
+export const getSkillsDirectory = () => invoke<string>("get_skills_directory");

@@ -73,6 +73,11 @@ pub async fn set_settings(
 }
 
 #[tauri::command]
+pub fn get_skills_directory() -> String {
+    central_repo::skills_dir().to_string_lossy().to_string()
+}
+
+#[tauri::command]
 pub fn get_central_repo_path() -> String {
     central_repo::base_dir().to_string_lossy().to_string()
 }
