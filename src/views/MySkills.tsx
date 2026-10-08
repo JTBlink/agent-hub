@@ -40,7 +40,8 @@ import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import { BatchTagDialog } from "../components/BatchTagDialog";
 import { BatchSyncAgentDialog } from "../components/BatchSyncAgentDialog";
 import { SyncDots } from "../components/SyncDots";
-import { ToggleSwitch } from "../components/ToggleSwitch";
+import { SkillGroupMembershipButton } from "../components/SkillGroupMembershipButton";
+import { SkillGroupContext } from "../components/SkillGroupContext";
 import { CardActionMenu } from "../components/CardActionMenu";
 import * as api from "../lib/tauri";
 import {
@@ -720,8 +721,8 @@ export function MySkills() {
       if (count > 0) {
         toast.success(
           enabling
-            ? t("mySkills.batchEnabled", { count })
-            : t("mySkills.batchDisabled", { count }),
+            ? t("mySkills.batchEnabled", { count, group: viewedPreset.name })
+            : t("mySkills.batchDisabled", { count, group: viewedPreset.name }),
         );
       }
       if (failed > 0) {
@@ -853,10 +854,20 @@ export function MySkills() {
     const enabledInPreset = skill.preset_ids.includes(viewedPreset.id);
     if (enabledInPreset) {
       await api.removeSkillFromPreset(skill.id, viewedPreset.id);
-      toast.success(`${skill.name} ${t("mySkills.disabledInPreset")}`);
+      toast.success(
+        t("mySkills.membership.removed", {
+          skill: skill.name,
+          group: viewedPreset.name,
+        }),
+      );
     } else {
       await api.addSkillToPreset(skill.id, viewedPreset.id);
-      toast.success(`${skill.name} ${t("mySkills.enabledInPreset")}`);
+      toast.success(
+        t("mySkills.membership.added", {
+          skill: skill.name,
+          group: viewedPreset.name,
+        }),
+      );
     }
     await Promise.all([refreshManagedSkills(), refreshPresets()]);
   };
@@ -1221,6 +1232,15 @@ export function MySkills() {
         </h1>
       </div>
 
+      <SkillGroupContext
+        groupName={viewedPreset?.name}
+        count={
+          viewedPreset
+            ? skills.filter((skill) => skill.preset_ids.includes(viewedPreset.id)).length
+            : 0
+        }
+      />
+
       <div className="app-toolbar">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative w-full min-w-[200px] max-w-[280px]">
@@ -1242,6 +1262,7 @@ export function MySkills() {
               <button
                 key={mode}
                 onClick={() => setFilterMode(mode)}
+                disabled={mode !== "all" && !viewedPreset}
                 className={cn(
                   "app-segmented-button",
                   filterMode === mode && "app-segmented-button-active",
@@ -1609,8 +1630,12 @@ export function MySkills() {
                                     )}
                                     title={
                                       enabledInPreset
-                                        ? t("mySkills.enabledButton")
-                                        : t("mySkills.notInPreset")
+                                        ? t("mySkills.membership.inNamed", {
+                                            group: viewedPresetName,
+                                          })
+                                        : t("mySkills.membership.notInNamed", {
+                                            group: viewedPresetName,
+                                          })
                                     }
                                   />
                                   {dragHandle}
@@ -1702,15 +1727,11 @@ export function MySkills() {
                                     },
                                   ]}
                                 />
-                                <ToggleSwitch
-                                  checked={enabledInPreset}
-                                  disabled={!viewedPreset}
+                                <SkillGroupMembershipButton
+                                  included={enabledInPreset}
+                                  groupName={viewedPreset?.name}
+                                  skillName={skill.name}
                                   onChange={() => handleTogglePreset(skill)}
-                                  title={
-                                    enabledInPreset
-                                      ? t("mySkills.enabledButton")
-                                      : t("mySkills.enable")
-                                  }
                                 />
                               </>
                             )}
@@ -1962,8 +1983,12 @@ export function MySkills() {
                                 )}
                                 title={
                                   enabledInPreset
-                                    ? t("mySkills.enabledButton")
-                                    : t("mySkills.notInPreset")
+                                    ? t("mySkills.membership.inNamed", {
+                                        group: viewedPresetName,
+                                      })
+                                    : t("mySkills.membership.notInNamed", {
+                                        group: viewedPresetName,
+                                      })
                                 }
                               />
                               {dragHandle}
@@ -2155,15 +2180,11 @@ export function MySkills() {
                                 },
                               ]}
                             />
-                            <ToggleSwitch
-                              checked={enabledInPreset}
-                              disabled={!viewedPreset}
+                            <SkillGroupMembershipButton
+                              included={enabledInPreset}
+                              groupName={viewedPreset?.name}
+                              skillName={skill.name}
                               onChange={() => handleTogglePreset(skill)}
-                              title={
-                                enabledInPreset
-                                  ? t("mySkills.enabledButton")
-                                  : t("mySkills.enable")
-                              }
                             />
                           </div>
                         )}
