@@ -144,6 +144,11 @@
       "none": "未連接",
       "unknown": "未知"
     },
+    "gh": {
+      "title": "優先使用 GitHub CLI（gh）",
+      "desc": "預設開啟，GitHub HTTPS 備份優先沿用 gh 登入；未安裝或未登入時改用 AgentHub 憑證。關閉後使用 AgentHub 憑證。SSH 不受影響，下次備份生效。",
+      "loadFailed": "讀取設定失敗，點擊重試"
+    },
     "auto": {
       "title": "自動備份",
       "desc": "變更停止幾分鐘後自動備份；結束應用程式時也會先在本機保存一次。"
@@ -739,7 +744,7 @@
     "gitNeedRemoteSetup": "請先填寫備份倉庫位址",
     "gitNeedPullFirst": "遠端有更新，請先拉取以避免衝突。",
     "gitPendingSync": "本機變更待同步",
-    "gitErrorAuth": "Git 伺服器拒絕了目前的 HTTPS 憑證。GitHub 備份請點擊「重新連接 GitHub」，重新授權後再同步。",
+    "gitErrorAuth": "Git 伺服器拒絕了目前的 HTTPS 憑證。若使用 gh，請檢查 gh auth status 並更新 CLI 登入；若使用 AgentHub 憑證，請點擊「重新連接 GitHub」重新授權。",
     "gitErrorNetwork": "網路連線失敗，請檢查網路和遠端倉庫位址。",
     "gitErrorConflict": "本機與遠端的變更發生衝突，請選擇修復方式。",
     "gitErrorNotRepo": "未偵測到 Git 倉庫，請先設定備份。",

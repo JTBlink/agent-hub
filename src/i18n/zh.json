@@ -144,6 +144,11 @@
       "none": "未连接",
       "unknown": "未知"
     },
+    "gh": {
+      "title": "优先使用 GitHub CLI（gh）",
+      "desc": "默认开启，GitHub HTTPS 备份优先复用 gh 登录；未安装或未登录时回退到 AgentHub 凭据。关闭后使用 AgentHub 凭据。SSH 不受影响，下一次备份生效。",
+      "loadFailed": "读取设置失败，点击重试"
+    },
     "auto": {
       "title": "自动备份",
       "desc": "改动停止几分钟后自动备份；退出应用时也会先在本地保存一次。"
@@ -794,7 +799,7 @@
     "gitNeedRemoteSetup": "请先填写备份仓库地址",
     "gitNeedPullFirst": "远程有更新，请先拉取以避免冲突。",
     "gitPendingSync": "本地变更待同步",
-    "gitErrorAuth": "Git 服务器拒绝了当前 HTTPS 凭证。GitHub 备份请点击“重新连接 GitHub”，重新授权后再同步。",
+    "gitErrorAuth": "Git 服务器拒绝了当前 HTTPS 凭证。若使用 gh，请检查 gh auth status 并更新 CLI 登录；若使用 AgentHub 凭据，请点击“重新连接 GitHub”重新授权。",
     "gitErrorNetwork": "网络连接失败，请检查网络和远程仓库地址。",
     "gitErrorConflict": "本地与远程的改动发生冲突，请选择修复方式。",
     "gitErrorNotRepo": "未检测到 Git 仓库，请先设置备份。",

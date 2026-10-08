@@ -101,8 +101,12 @@ git diff --check
 
 同一进程内复用凭据，不反复读文件；新进程先读本地记录。仅在没有记录时读取旧 `agent-hub-git-backup` 钥匙串项，成功后写入本地。首次迁移仍可能弹出系统授权；取消后本进程不反复询问，也可直接重新登录保存新凭据。退出写入空记录，防止旧钥匙串凭据重新生效。登录/令牌轮换立即刷新内存和文件。
 
-应用已提供凭据时，单次 Git 子进程关闭系统 credential helper，防止 helper 先于 askpass 再次访问钥匙串；不修改用户全局 Git 配置。没有应用凭据的普通 Git/SSH 流程保留兼容行为。
+备份页提供“优先使用 GitHub CLI（gh）”开关，默认开启，保存于本机数据库的 `backup_use_gh`，桌面与 CLI 重启后保留。关闭后跳过 gh 登录查询；修改后下一次凭据解析生效，SSH 不受影响。
 
-如果 GitHub 返回 `Invalid username or token`，使用备份页“重新连接 GitHub”重新授权。缓存不能修复失效或已撤销令牌。开发模式 Rust 文件变化会触发应用重启，授权期间应暂停修改，或使用 `npm run tauri dev -- --no-watch` 启动稳定的验证会话。
+开关开启时，GitHub HTTPS 备份优先通过已安装的 `gh auth token --hostname github.com` 读取当前登录，不额外保存这份令牌。`gh` 是可选依赖；未安装、未登录或无法读取令牌时，回退到 AgentHub 保存的设备授权或个人访问令牌。其他 Git 主机不查询 `gh`，SSH 保留密钥认证。该选择同时用于系统 Git 和 libgit2；应用内仓库列表等 GitHub API 功能仍使用应用授权。
+
+取得凭据后，单次 Git 子进程替换系统 credential helper，使用仅响应目标主机的非交互 helper，通过子进程环境传递凭据，避免再次访问系统 helper 或依赖 askpass。即使 `credential.interactive=false` 也能工作；不修改全局 Git 配置、不把令牌写入命令参数或 helper 文件。没有可用凭据时保留普通 Git 的既有配置。
+
+如果 GitHub 返回 `Invalid username or token`，先确认当前凭据来源：使用 `gh` 时通过 `gh auth status` 检查并更新 CLI 登录；使用应用凭据时通过备份页“重新连接 GitHub”重新授权。缓存不能修复失效或已撤销令牌。开发模式 Rust 文件变化会触发应用重启，授权期间应暂停修改，或使用 `npm run tauri dev -- --no-watch` 启动稳定的验证会话。
 
 回归测试只使用临时文件、假凭据和 mock 钥匙串，覆盖跨会话读取、退出、更新、文件权限及 Git helper 绕过。

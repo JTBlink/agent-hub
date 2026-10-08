@@ -1,3 +1,4 @@
+import { GhCredentialSetting } from "../components/GhCredentialSetting";
 import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -1385,6 +1386,7 @@ export function Backup() {
         </div>
 
         <aside className="space-y-4">
+          <GhCredentialSetting disabled={loading !== null} />
           <section className="app-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-muted" />
