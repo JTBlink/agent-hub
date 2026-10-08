@@ -24,6 +24,7 @@ function ThemedToaster() {
     <Toaster
       theme={resolvedTheme}
       position="bottom-right"
+      closeButton
       toastOptions={{
         style: {
           background: "var(--color-surface)",

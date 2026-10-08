@@ -378,7 +378,7 @@ fn set_project_skill_enabled_state(
     }
 
     if !enabled_path.is_dir() {
-        return Err(AppError::not_found("Skill directory not found"));
+        return Ok(());
     }
     ensure_dir_within_root(&enabled_path, skills_dir)?;
     if let Some(parent) = disabled_path.parent() {
@@ -1254,7 +1254,7 @@ pub async fn delete_project_skill(
                 disabled_root.expect("present when disabled_dir exists"),
             )
         } else {
-            return Err(AppError::not_found("Skill directory not found"));
+            return Ok(());
         };
 
         ensure_dir_within_root(&target, &target_root)?;
