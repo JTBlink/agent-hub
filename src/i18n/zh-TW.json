@@ -736,14 +736,17 @@
     "gitNeedRemoteSetup": "請先填寫備份倉庫位址",
     "gitNeedPullFirst": "遠端有更新，請先拉取以避免衝突。",
     "gitPendingSync": "本機變更待同步",
-    "gitErrorAuth": "驗證失敗，請檢查 SSH Key 或存取權杖。",
+    "gitErrorAuth": "Git 伺服器拒絕了目前的 HTTPS 憑證。GitHub 備份請點擊「重新連接 GitHub」，重新授權後再同步。",
     "gitErrorNetwork": "網路連線失敗，請檢查網路和遠端倉庫位址。",
     "gitErrorConflict": "本機與遠端的變更發生衝突，請選擇修復方式。",
     "gitErrorNotRepo": "未偵測到 Git 倉庫，請先設定備份。",
     "gitErrorRejected": "遠端有新的更新，需要先合併後再同步。",
     "gitErrorUnrelatedHistories": "本機倉庫與遠端倉庫歷史不一致。請打開「修復同步設定」選擇處理方式。",
     "gitErrorNoUpstream": "尚未建立遠端追蹤關係。請打開「修復同步設定」處理。",
-    "gitErrorGeneric": "Git 操作失敗，請檢查設定中的遠端倉庫位址後重試。"
+    "gitErrorGeneric": "Git 操作失敗，請檢查設定中的遠端倉庫位址後重試。",
+    "gitErrorSshAuth": "SSH 驗證失敗：請檢查 SSH 金鑰、ssh-agent 及該金鑰對儲存庫的存取權限。",
+    "gitErrorCredentialMissing": "Git 未能取得登入憑證。GitHub 備份請點擊「重新連接 GitHub」；其他遠端請設定相應憑證。",
+    "gitErrorCredentialRead": "無法讀取或儲存 Git 憑證。請檢查應用程式資料目錄權限並重新連接帳號。"
   },
   "common": {
     "loading": "載入中...",

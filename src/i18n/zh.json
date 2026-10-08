@@ -791,7 +791,7 @@
     "gitNeedRemoteSetup": "请先填写备份仓库地址",
     "gitNeedPullFirst": "远程有更新，请先拉取以避免冲突。",
     "gitPendingSync": "本地变更待同步",
-    "gitErrorAuth": "认证失败，请检查 SSH Key 或访问令牌。",
+    "gitErrorAuth": "Git 服务器拒绝了当前 HTTPS 凭证。GitHub 备份请点击“重新连接 GitHub”，重新授权后再同步。",
     "gitErrorNetwork": "网络连接失败，请检查网络和远程仓库地址。",
     "gitErrorConflict": "本地与远程的改动发生冲突，请选择修复方式。",
     "gitErrorNotRepo": "未检测到 Git 仓库，请先设置备份。",
@@ -808,7 +808,10 @@
     "trayIconDesc": "在系统托盘中显示图标，便于快速执行显示和退出操作。",
     "trayIcon_on": "显示",
     "trayIcon_off": "隐藏",
-    "trayIconOffHint": "托盘图标已隐藏，关闭窗口时将直接退出应用。"
+    "trayIconOffHint": "托盘图标已隐藏，关闭窗口时将直接退出应用。",
+    "gitErrorSshAuth": "SSH 认证失败：请检查 SSH 密钥、ssh-agent 及该密钥对仓库的访问权限。",
+    "gitErrorCredentialMissing": "Git 未能取得登录凭证。GitHub 备份请点击“重新连接 GitHub”；其他远端请配置相应凭证。",
+    "gitErrorCredentialRead": "无法读取或保存 Git 凭证。请检查应用数据目录权限并重新连接账号。"
   },
   "closeAction": {
     "title": "关闭行为",
