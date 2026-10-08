@@ -603,15 +603,15 @@
       "deleteConfirmMessage": "Delete “{{name}}” from the selected directory? This cannot be undone.",
       "deletedLocation": "Deleted {{name}}: {{path}}",
       "cleanup": "Clean up",
-      "cleanupTitle": "Clean up Skills from uninstalled Agents?",
+      "cleanupTitle": "Clean up Skills from local Agents?",
       "cleanupConfirm": "Confirm cleanup",
-      "cleanupEmpty": "No leftover directories from uninstalled Agents to clean up",
-      "cleanupHint": "Delete these {{count}} leftover Skill locations or empty Skills directories. This cannot be undone.",
-      "cleanupSafety": "Only Skills for uninstalled Agents are cleaned up; empty directories are removed afterwards. Shared installed-Agent roots, manually configured paths, other configuration and the library are preserved.",
+      "cleanupEmpty": "No local Agent Skill directories to clean up",
+      "cleanupHint": "Delete these {{count}} local Skill locations or empty Skills directories. This cannot be undone.",
+      "cleanupSafety": "Installation state, content fingerprints and managed deployments are checked again before cleanup. The library, manually configured paths and managed targets are preserved.",
       "cleanupDone": "Cleaned up {{count}} items; {{failed}} skipped or failed",
       "cleanupFailures": "Locations kept",
       "cleanupAgent": "Clean up by Agent",
-      "cleanupAllAgents": "All uninstalled Agents"
+      "cleanupAllAgents": "All Agents"
     }
   },
   "settings": {

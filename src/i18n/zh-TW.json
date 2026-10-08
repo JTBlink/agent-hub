@@ -555,15 +555,15 @@
       "deleteConfirmMessage": "確定刪除所選目錄中的「{{name}}」？此操作無法復原。",
       "deletedLocation": "已刪除 {{name}}：{{path}}",
       "cleanup": "一鍵清理",
-      "cleanupTitle": "清理未安裝 Agent 的遺留 Skills？",
+      "cleanupTitle": "清理本機 Agent 的 Skills？",
       "cleanupConfirm": "確認清理",
-      "cleanupEmpty": "沒有可清理的未安裝 Agent 遺留目錄",
-      "cleanupHint": "將刪除以下 {{count}} 個遺留 Skill 位置或空 Skills 目錄。此操作無法復原。",
-      "cleanupSafety": "只清理未安裝 Agent 的 Skills，完成後移除空目錄。保留已安裝 Agent 共用的目錄、手動設定的目錄、其他設定與技能庫。",
+      "cleanupEmpty": "沒有可清理的本機 Agent Skill 目錄",
+      "cleanupHint": "將刪除以下 {{count}} 個本機 Skill 位置或空 Skills 目錄。此操作無法復原。",
+      "cleanupSafety": "清理前會重新檢查安裝狀態、內容指紋和託管部署。技能庫、手動設定的目錄及已部署目標會保留。",
       "cleanupDone": "已清理 {{count}} 項，{{failed}} 項略過或失敗",
       "cleanupFailures": "未清理的位置",
       "cleanupAgent": "依 Agent 清理",
-      "cleanupAllAgents": "全部未安裝 Agent"
+      "cleanupAllAgents": "全部 Agent"
     }
   },
   "settings": {

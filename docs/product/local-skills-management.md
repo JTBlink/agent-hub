@@ -43,12 +43,16 @@ cargo test --manifest-path src-tauri/Cargo.toml scan_timing_workload -- --ignore
 
 ## 按 Agent 一键清理
 
-1. 在“本地 Skills 管理”点击“一键清理”。后端自动预览未安装 Agent 的遗留 Skill 位置及空 Skills 目录。
-2. 选择“按 Agent 清理”中的某个 Agent，或选择“全部未安装 Agent”；检查列出的实际路径和数量。
-3. 点击“确认清理”。取消不会删除文件。执行前重新检查安装状态、路径、内容指纹和托管部署；已安装 Agent 共用目录、手动配置路径、链接根、额外共享发现目录及技能库不参与清理。同一路径保留各 Agent 的预览入口，批量清理时实际只删除一次。
+1. 在“本地 Skills 管理”点击“一键清理”。后端自动预览本机 Agent 的 Skill 位置及空 Skills 目录，已安装 Agent 也会纳入清理候选。
+2. 选择“按 Agent 清理”中的某个 Agent，或选择“全部 Agent”；检查列出的实际路径和数量。
+3. 点击“确认清理”。取消不会删除文件。执行前重新检查安装状态、路径、内容指纹和托管部署；手动配置路径、链接根、额外共享发现目录及技能库不参与清理。同一路径保留各 Agent 的预览入口，批量清理时实际只删除一次。
 4. 清理完成后弹窗立即关闭，后台刷新。成功删除后移除空 Skills 目录，保留 Agent 的其他配置与历史；软链接只移除链接。失败或已变化的位置保留并列出原因。
 
 不会在启动时静默删除内容。浏览器回归：`browser-use < tests/browser/local-skill-cleanup.py`，验证预览、取消、按 Agent 选择、仅提交所选位置、刷新期间关闭及空结果提示，使用模拟 IPC；Rust 临时目录测试验证真实文件行为。
+
+CLI 同样支持：`agent-hub-cli skills cleanup` 先执行一次本地扫描并输出预览；追加 `--yes` 执行删除，追加 `--uninstalled-only` 只处理未检测到安装的 Agent。支持全局 `--json` 输出机器可读结果。
+
+从 skills.sh 安装已有本地同名 Skill 时，应用会比较内容指纹并复用原技能库目录，更新其 skills.sh 来源和版本信息，不会再生成带 `-2` 后缀的重复条目。
 
 ## 默认目录升级
 

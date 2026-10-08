@@ -23,7 +23,7 @@ def click_button(name):
 def preview():
     wait_until("document.body.innerText.includes('一键清理')", "cleanup entry absent")
     click_button("一键清理")
-    wait_until("document.body.innerText.includes('清理未安装 Agent 的遗留 Skills？')", "preview absent")
+    wait_until("document.body.innerText.includes('清理本地 Agent 的 Skills？')", "preview absent")
 
 
 base = os.environ.get("LOCAL_SKILL_TEST_URL", "http://127.0.0.1:1420")
@@ -44,7 +44,7 @@ try:
     wait_until("JSON.stringify(window.localCleanupHarness.selected)==='[\"qwen-empty\"]'", "cleanup sent other Agents' paths")
     js("window.localCleanupHarness.cleanup.resolve({removed:1,failures:[]})")
     wait_until("window.localCleanupHarness.refreshStarted", "refresh not started")
-    wait_until("!document.body.innerText.includes('清理未安装 Agent 的遗留 Skills？')", "cleanup modal waited for scan")
+    wait_until("!document.body.innerText.includes('清理本地 Agent 的 Skills？')", "cleanup modal waited for scan")
     js("window.localCleanupHarness.refresh.resolve();window.localCleanupHarness.empty=true")
     click_button("一键清理")
     wait_until("document.body.innerText.includes('没有可清理')", "empty cleanup result not explained")

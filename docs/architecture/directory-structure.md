@@ -80,7 +80,7 @@ agent-hub/
 │   │   │   ├── agent_workspace.rs  #     Agent 工作空间管理
 │   │   │   ├── projects.rs         #     项目管理
 │   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
-│   │   │   ├── local_cleanup.rs   #     未安装 Agent 遗留 Skills 预览与批量清理
+│   │   │   ├── local_cleanup.rs   #     本机 Agent Skills 预览与批量清理（桌面/CLI 共用）
 │   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
 │   │   │   ├── presets.rs          #     预设管理
 │   │   │   ├── skills.rs           #     技能管理
