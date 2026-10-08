@@ -397,6 +397,28 @@ pub fn sync_skill(
 ///   user needs. Callers without hash context should pass `None`,
 ///   which preserves the historical "always recopy" behavior. See
 ///   `SkillTargetRecord.source_hash` and issue #153 for context.
+pub(crate) fn is_library_entry(path: &Path) -> bool {
+    let root = super::central_repo::skills_dir();
+    let Ok(root) = root.canonicalize() else {
+        return false;
+    };
+    path == root
+        || path
+            .parent()
+            .and_then(|parent| parent.canonicalize().ok())
+            .is_some_and(|parent| parent.starts_with(&root))
+}
+
+fn uses_library_directly(source: &Path, target: &Path) -> bool {
+    is_library_entry(target)
+        && source.is_dir()
+        && source
+            .canonicalize()
+            .ok()
+            .zip(target.canonicalize().ok())
+            .is_some_and(|(a, b)| a == b)
+}
+
 pub fn is_target_current(
     source: &Path,
     target: &Path,
@@ -404,6 +426,9 @@ pub fn is_target_current(
     last_synced_source_hash: Option<&str>,
     current_source_hash: Option<&str>,
 ) -> bool {
+    if uses_library_directly(source, target) {
+        return true;
+    }
     match mode {
         SyncMode::Symlink => symlink_points_to(target, source),
         SyncMode::Copy => match (last_synced_source_hash, current_source_hash) {
@@ -485,6 +510,9 @@ pub fn remove_classified_target(target: &Path, state: TargetState) -> Result<()>
 /// removing a link whether or not it still resolves to the skill we deployed
 /// (the library may have moved) — so no source path is required.
 pub fn remove_recorded_target(target: &Path, recorded_mode: &str) -> Result<bool> {
+    if is_library_entry(target) {
+        return Ok(false);
+    }
     let state = classify_target(target, None)?;
     let policy = ReplacePolicy::Recorded {
         mode: recorded_mode,
@@ -536,7 +564,7 @@ pub fn matches_recorded_deployment(target: &Path, recorded_mode: &str) -> Result
 
 /// Unlink a symlink (or, on Windows, a directory symlink / junction) without
 /// following it.
-fn remove_link(target: &Path) -> Result<()> {
+pub(crate) fn remove_link(target: &Path) -> Result<()> {
     #[cfg(windows)]
     {
         use std::os::windows::fs::FileTypeExt;

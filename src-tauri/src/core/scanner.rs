@@ -28,10 +28,11 @@ pub struct DiscoveredLocation {
     pub id: String,
     pub tool: String,
     pub found_path: String,
+    pub is_symlink: bool,
 }
 
 /// Directories to skip during recursive scans (internal/tool-specific metadata).
-const RECURSIVE_SCAN_SKIP_DIRS: &[&str] = &[".hub", ".git", "node_modules"];
+const RECURSIVE_SCAN_SKIP_DIRS: &[&str] = &[".hub", ".agent-hub", ".git", "node_modules"];
 
 fn is_symlink_to_central(path: &Path) -> bool {
     if let Ok(target) = std::fs::read_link(path) {
@@ -247,6 +248,13 @@ fn scan_local_skills_with_hasher(
 }
 
 pub fn group_discovered(records: &[DiscoveredSkillRecord]) -> Vec<DiscoveredGroup> {
+    group_discovered_with_preferred_root(records, &tool_adapters::shared_skills_dir())
+}
+
+fn group_discovered_with_preferred_root(
+    records: &[DiscoveredSkillRecord],
+    preferred_root: &Path,
+) -> Vec<DiscoveredGroup> {
     use std::collections::HashMap;
     let mut groups: HashMap<String, DiscoveredGroup> = HashMap::new();
 
@@ -278,10 +286,18 @@ pub fn group_discovered(records: &[DiscoveredSkillRecord]) -> Vec<DiscoveredGrou
             id: rec.id.clone(),
             tool: rec.tool.clone(),
             found_path: rec.found_path.clone(),
+            is_symlink: Path::new(&rec.found_path).is_symlink(),
         });
     }
 
     let mut result: Vec<_> = groups.into_values().collect();
+    for group in &mut result {
+        // Keep alternate paths actionable, but default display and imports to
+        // the shared root regardless of database or Agent discovery order.
+        group
+            .locations
+            .sort_by_key(|location| !Path::new(&location.found_path).starts_with(preferred_root));
+    }
     result.sort_by(|a, b| a.name.cmp(&b.name));
     result
 }
@@ -406,6 +422,21 @@ mod tests {
             plan.discovered[1].found_path,
             second.join("alias").to_string_lossy()
         );
+        let groups = group_discovered(&plan.discovered);
+        let locations: Vec<_> = groups.iter().flat_map(|group| &group.locations).collect();
+        assert!(
+            !locations
+                .iter()
+                .find(|location| location.tool == "one")
+                .unwrap()
+                .is_symlink
+        );
+        let linked = locations
+            .iter()
+            .find(|location| location.tool == "two")
+            .unwrap();
+        assert!(linked.is_symlink);
+        assert_eq!(serde_json::to_value(linked).unwrap()["is_symlink"], true);
     }
 
     /// Reproducible workload, run explicitly when comparing scanner performance.
@@ -638,5 +669,34 @@ mod tests {
         let groups = group_discovered(&records);
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].locations.len(), 2);
+    }
+
+    #[test]
+    fn grouping_prefers_shared_agents_root_for_primary_location() {
+        let preferred = PathBuf::from("/tmp/shared/.agents/skills");
+        let records = vec![
+            DiscoveredSkillRecord {
+                id: "other".into(),
+                tool: "other-agent".into(),
+                found_path: "/tmp/other/skills/demo".into(),
+                name_guess: Some("demo".into()),
+                fingerprint: Some("same".into()),
+                found_at: 10,
+                imported_skill_id: None,
+            },
+            DiscoveredSkillRecord {
+                id: "shared".into(),
+                tool: "codex".into(),
+                found_path: "/tmp/shared/.agents/skills/demo".into(),
+                name_guess: Some("demo".into()),
+                fingerprint: Some("same".into()),
+                found_at: 20,
+                imported_skill_id: None,
+            },
+        ];
+
+        let groups = group_discovered_with_preferred_root(&records, &preferred);
+        assert_eq!(groups[0].locations[0].id, "shared");
+        assert_eq!(groups[0].locations[1].id, "other");
     }
 }

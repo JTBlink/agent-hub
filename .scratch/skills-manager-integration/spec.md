@@ -1,10 +1,10 @@
 # 主应用整合规格
 
-当前以 [B10](issues/B10-primary-application.md) 和 [ADR-0008](../../docs/adr/0008-primary-application.md) 为准。
+当前以 [B10](issues/B10-primary-application.md)、[B28](issues/B28-shared-skills-library.md) 和 [ADR-0009](../../docs/adr/0009-shared-skills-library.md) 为准。
 
 - Skills Manager 的前端与 Rust 核心成为唯一应用，根目录只保留一套依赖和构建入口。
 - 对外名称 agent-hub；保留原 Logo、图标、主题与色调。
-- 默认数据归于 `~/.agent-hub`，技能直接位于其 `skills/` 子目录，配置、日志与 CLI 使用固定目录，避免库移动影响应用身份。
+- 技能内容默认位于 `~/.agents/skills`，数据库、配置、日志与 CLI 仍使用 `~/.agent-hub`；共享目录内 Skills 原地登记，旧默认库无覆盖合并，已有自定义库保持兼容。
 - CLI、凭据服务、缓存和同步元数据使用新命名空间；不自动迁入旧库。
 - 删除旧宿主代码、嵌套工程和过时文档，保留原许可证及导入清单。
 - 完成本地构建、核心测试和桌面启动验证后提交，再继续迭代。
@@ -19,7 +19,7 @@
 
 ## 本地 Skills 管理
 
-现有本地扫描入口同时提供导入和按安装位置管理能力，支持内容查看、打开目录、搜索、Agent 筛选和确认删除。使用扫描记录标识定位副本，后端校验当前目录边界、内容版本及部署归属；删除软链接时保留目标。已托管部署仍由 Agent 工作区管理。执行记录见 [B16](issues/B16-local-skills-management.md)。
+现有本地扫描入口同时提供导入和按安装位置管理能力，支持内容查看、打开目录、按名称、路径与适用 Agent 搜索和确认删除。使用扫描记录标识定位副本，后端校验当前目录边界、内容版本及部署归属；删除软链接时保留目标。已托管部署仍由 Agent 工作区管理。相同完整路径合并展示并按去重目录计数，每个目录下方直接展示适用 Agent 标签，提示说明不代表已安装；同一 Skill 的其他来源目录默认折叠，保留独立路径与不同内容版本；软链接目录显示链接指示图标。执行记录见 [B16](issues/B16-local-skills-management.md) 与 [B27](issues/B27-local-directory-display.md)。
 
 ## 扫描性能与 Agent 检测
 
@@ -32,3 +32,5 @@
 旧 V1 规格、原型以及 D01、B01–B07 旧候选任务已删除。后续统一基于现有 Skills Manager 实现，规划见 docs/plans/agent-hub.md。
 
 本地管理支持按 Agent 预览并清理未安装 Agent 的遗留 Skills 与空目录，保留共享安装、手动目标和其他配置；执行前复查。默认库移除 `library/` 层级，旧默认库在排他租约下无覆盖迁移并重写路径。首页 Agent 卡片进入设置的 Agent 区域。
+
+GitHub 备份使用实际技能根，迁移保留历史与远端，排除应用运行状态。克隆先下载再替换，完整旧库留作恢复副本，本地独有条目带入新库；历史快照保留安全点。执行记录见 [B28](issues/B28-shared-skills-library.md)。

@@ -26,6 +26,8 @@ pub mod removals;
 pub mod repo_lock;
 pub mod scanner;
 pub mod scenario_service;
+mod shared_library;
+pub(crate) mod shared_skill_index;
 pub mod skill_auto_updater;
 pub mod skill_metadata;
 pub mod skill_store;

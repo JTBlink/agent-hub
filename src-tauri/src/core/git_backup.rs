@@ -1,5 +1,8 @@
+mod local_state;
+mod restore;
 use anyhow::{Context, Result};
 use chrono::Utc;
+pub(crate) use restore::{clone_into_unlocked, reclone_from_remote_unlocked};
 use std::path::Path;
 use std::process::Command;
 
@@ -898,6 +901,7 @@ pub(crate) fn restore_snapshot_version_unlocked(skills_dir: &Path, tag: &str) ->
         // Sticky protocol marker (§6): a pre-protocol snapshot self-heals on
         // the restore commit instead of resurrecting a marker-less tree.
         protocol::ensure_protocol_file(skills_dir)?;
+        ensure_gitignore(skills_dir)?;
         // The snapshot's .gitignore predates the managed oversized section —
         // rebuild it before add -A, or a locally-kept oversized skill would
         // ride into the restore commit.
@@ -988,160 +992,6 @@ fn ensure_clean_clone_target(skills_dir: &Path) -> Result<()> {
         );
     }
     Ok(())
-}
-
-/// Reset a local repo by clearing its `.git` then cloning from the remote.
-/// The existing skill files are preserved through the same backup-then-merge flow
-/// used by `clone_into_unlocked`. The previous `.git` is moved to a sibling
-/// directory and only deleted after a successful clone, so a failed re-clone
-/// (e.g., network/auth error) restores the original repository state instead
-/// of permanently losing history, snapshots, and remotes.
-pub(crate) fn reclone_from_remote_unlocked(skills_dir: &Path, url: &str) -> Result<()> {
-    let git_dir = skills_dir.join(".git");
-    if !git_dir.exists() {
-        return clone_into_unlocked(skills_dir, url);
-    }
-
-    log::info!("git reclone: re-cloning from remote, preserving local skills");
-    let ts = Utc::now().format("%Y%m%d-%H%M%S");
-    let git_backup = skills_dir.with_file_name(format!("skills-git-recovery-{ts}"));
-    if git_backup.exists() {
-        std::fs::remove_dir_all(&git_backup)?;
-    }
-    std::fs::rename(&git_dir, &git_backup)
-        .context("Failed to move existing .git aside before re-clone")?;
-
-    match clone_into_unlocked(skills_dir, url) {
-        Ok(()) => {
-            let _ = std::fs::remove_dir_all(&git_backup);
-            Ok(())
-        }
-        Err(e) => {
-            // Two failure shapes are possible inside clone_into_unlocked:
-            //   1. `git clone` itself failed: clone_into_unlocked already
-            //      restored skill files from skills-backup-before-clone, and
-            //      no `.git` exists in skills_dir.
-            //   2. `git clone` succeeded but the subsequent merge_backup
-            //      step failed: skills_dir now contains a fresh `.git` plus
-            //      partially-merged files, and the user's original files are
-            //      still parked at skills-backup-before-clone.
-            // In case 2 we must tear down the partial clone and restore the
-            // pre-clone user files before renaming our saved .git back, or
-            // the rename collides with the new .git and silently leaves the
-            // user inside the wrong repository.
-            let new_git_dir = skills_dir.join(".git");
-            if new_git_dir.exists() {
-                let pre_clone_backup = skills_dir.with_file_name("skills-backup-before-clone");
-                let _ = std::fs::remove_dir_all(skills_dir);
-                if pre_clone_backup.exists() {
-                    let _ = std::fs::rename(&pre_clone_backup, skills_dir);
-                }
-            }
-            if !skills_dir.exists() {
-                let _ = std::fs::create_dir_all(skills_dir);
-            }
-            if let Err(restore_err) = std::fs::rename(&git_backup, skills_dir.join(".git")) {
-                anyhow::bail!(
-                    "Re-clone failed: {e}. Could not restore previous .git directory ({restore_err}); a backup is kept at {}",
-                    git_backup.display()
-                );
-            }
-            Err(e)
-        }
-    }
-}
-
-pub(crate) fn clone_into_unlocked(skills_dir: &Path, url: &str) -> Result<()> {
-    if skills_dir.join(".git").exists() {
-        anyhow::bail!("Skills directory is already a git repository");
-    }
-
-    // If skills dir has content, move it aside temporarily
-    let has_existing = skills_dir.exists()
-        && std::fs::read_dir(skills_dir)
-            .map(|mut d| d.next().is_some())
-            .unwrap_or(false);
-
-    let backup_dir = if has_existing {
-        let backup = skills_dir.with_file_name("skills-backup-before-clone");
-        if backup.exists() {
-            std::fs::remove_dir_all(&backup)?;
-        }
-        std::fs::rename(skills_dir, &backup)?;
-        Some(backup)
-    } else {
-        None
-    };
-
-    log::info!(
-        "git clone: cloning {} (existing_local_content={has_existing})",
-        redact_url(url)
-    );
-
-    // Clone
-    let clone_result: Result<()> = if git2_engine::applies_to(url) {
-        git2_engine::clone(url, skills_dir)
-    } else {
-        let env = git_credentials::credential_env_for_url(url);
-        let output = git_command()
-            .args(["-c", "init.defaultRefFormat=files", "clone"])
-            .env_remove("GIT_DEFAULT_REF_FORMAT")
-            .arg(url)
-            .arg(skills_dir)
-            .envs(env.iter().map(|(k, v)| (k.as_str(), v.as_str())))
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::piped())
-            .output();
-        match output {
-            Ok(o) if o.status.success() => Ok(()),
-            Ok(o) => {
-                let stderr = String::from_utf8_lossy(&o.stderr);
-                let detail = stderr.trim();
-                if detail.is_empty() {
-                    Err(anyhow::anyhow!(
-                        "git clone failed with exit code {}",
-                        o.status
-                    ))
-                } else {
-                    Err(anyhow::anyhow!(
-                        "git clone failed: {}",
-                        redact_urls_in_text(detail)
-                    ))
-                }
-            }
-            Err(e) => Err(anyhow::Error::new(e).context("Failed to spawn git clone")),
-        }
-    };
-
-    match clone_result {
-        Ok(()) => {
-            // Merge back any existing skills that don't conflict
-            if let Some(backup) = backup_dir {
-                merge_backup(&backup, skills_dir).with_context(|| {
-                    format!(
-                        "Failed to merge local backup into cloned repository. Backup kept at {}",
-                        backup.display()
-                    )
-                })?;
-                std::fs::remove_dir_all(&backup)?;
-            }
-            log::info!("git clone: done");
-            Ok(())
-        }
-        Err(e) => {
-            // Restore backup on failure. A partial git2 clone can leave a
-            // half-created target (system git cleans up after itself);
-            // clear it so a retry doesn't hit "already a git repository".
-            if let Some(backup) = backup_dir {
-                let _ = std::fs::remove_dir_all(skills_dir);
-                let _ = std::fs::rename(&backup, skills_dir);
-            } else if skills_dir.join(".git").exists() {
-                let _ = std::fs::remove_dir_all(skills_dir);
-            }
-            log::warn!("git clone: failed: {e:#}");
-            Err(e)
-        }
-    }
 }
 
 /// Count distinct top-level directories touched by a `git status --porcelain`
@@ -1488,12 +1338,18 @@ fn ensure_gitignore(skills_dir: &Path) -> Result<()> {
     };
     let existing: std::collections::HashSet<String> =
         lines.iter().map(|line| line.trim().to_string()).collect();
-    for line in required {
+    for line in required
+        .into_iter()
+        .chain(local_state::PATTERNS.iter().copied())
+    {
         if !existing.contains(line) {
             lines.push(line.to_string());
         }
     }
     std::fs::write(&gitignore, format!("{}\n", lines.join("\n")))?;
+    if skills_dir.join(".git").exists() {
+        local_state::untrack(skills_dir)?;
+    }
     Ok(())
 }
 
@@ -1622,43 +1478,6 @@ fn get_ahead_behind(dir: &Path) -> Result<(u32, u32)> {
     } else {
         Ok((0, 0))
     }
-}
-
-/// Merge backup directory contents into the cloned repo (non-conflicting files only).
-fn merge_backup(backup: &Path, target: &Path) -> Result<()> {
-    crate::core::sync_engine::ensure_dst_not_inside_src(backup, target)?;
-    let entries = std::fs::read_dir(backup)?;
-    for entry in entries {
-        let entry = entry?;
-        let name = entry.file_name();
-        let dest = target.join(&name);
-        if !dest.exists() && name != ".git" {
-            if entry.file_type()?.is_dir() {
-                copy_dir_all(&entry.path(), &dest)?;
-            } else {
-                std::fs::copy(entry.path(), &dest)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        // Skip symlinks to prevent following links outside the source directory
-        if ty.is_symlink() {
-            continue;
-        }
-        if ty.is_dir() {
-            copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
-        } else {
-            std::fs::copy(entry.path(), dst.join(entry.file_name()))?;
-        }
-    }
-    Ok(())
 }
 
 fn redact_urls_in_text(text: &str) -> String {

@@ -1082,6 +1082,7 @@ pub fn run() {
             commands::settings::get_settings,
             commands::settings::set_settings,
             commands::settings::get_central_repo_path,
+            commands::settings::get_skills_directory,
             commands::settings::get_central_repo_path_override,
             commands::settings::get_central_repo_pending_path,
             commands::settings::get_central_repo_warnings,

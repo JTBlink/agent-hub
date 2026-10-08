@@ -1,13 +1,12 @@
 use crate::core::{
     central_repo, error::AppError, git2_engine, git_backup, git_credentials, git_fetcher,
-    github_api, merge, skill_metadata, sync_metadata,
+    github_api, merge, sync_metadata,
 };
 use anyhow::Context;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::State;
-use walkdir::WalkDir;
 
 use crate::core::skill_store::SkillStore;
 
@@ -603,9 +602,8 @@ pub async fn git_backup_clone(
     .await?
 }
 
-/// Recovery: discard the local `.git` and re-clone from the configured remote.
-/// Existing skill files are preserved via the same backup-then-merge flow
-/// used by the regular clone path.
+/// Recovery: stage a fresh clone and retain the entire previous tree, including
+/// Git history. Local-only entries are carried into the restored tree.
 #[tauri::command]
 pub async fn git_backup_reclone(
     store: State<'_, Arc<SkillStore>>,
@@ -815,8 +813,18 @@ fn migrate_embedded_credentials_unlocked(
 pub(crate) fn reconcile_skills_index_unlocked(store: &SkillStore) -> anyhow::Result<()> {
     sync_metadata::cleanup_temporary_files()?;
     if sync_metadata::has_complete_skill_snapshot() {
-        sync_metadata::reindex_from_metadata_unlocked(store)?;
-        return Ok(());
+        match sync_metadata::reindex_from_metadata_unlocked(store) {
+            Ok(()) => {
+                if crate::core::shared_skill_index::register_missing(store)? {
+                    sync_metadata::write_all_from_db_unlocked(store)?;
+                }
+                return Ok(());
+            }
+            // An empty remote snapshot can coexist with local-only Skills
+            // carried forward by clone. Register them instead of discarding them.
+            Err(err) if err.is::<sync_metadata::EmptySkillMetadata>() => {}
+            Err(err) => return Err(err),
+        }
     }
 
     let skills_dir = central_repo::skills_dir();
@@ -830,59 +838,7 @@ pub(crate) fn reconcile_skills_index_unlocked(store: &SkillStore) -> anyhow::Res
         }
     }
 
-    // Add missing DB records for directories present in central repo.
-    for entry in WalkDir::new(&skills_dir)
-        .min_depth(1)
-        .max_depth(6)
-        .into_iter()
-        .filter_entry(|e| e.file_name().to_string_lossy() != ".git")
-        .flatten()
-    {
-        let path = entry.path().to_path_buf();
-        if !entry.file_type().is_dir() || !skill_metadata::is_valid_skill_dir(&path) {
-            continue;
-        }
-
-        let central_path = path.to_string_lossy().to_string();
-        if store.get_skill_by_central_path(&central_path)?.is_some() {
-            continue;
-        }
-
-        let meta = crate::core::skill_metadata::parse_skill_md(&path);
-        let inferred_name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "unknown-skill".to_string());
-        let name = meta
-            .name
-            .filter(|s| !s.trim().is_empty())
-            .unwrap_or(inferred_name);
-        let now = chrono::Utc::now().timestamp_millis();
-
-        let record = crate::core::skill_store::SkillRecord {
-            id: uuid::Uuid::new_v4().to_string(),
-            name,
-            description: meta.description,
-            source_type: "import".to_string(),
-            source_ref: Some(central_path.clone()),
-            source_ref_resolved: None,
-            source_subpath: None,
-            source_branch: None,
-            source_revision: None,
-            remote_revision: None,
-            central_path,
-            content_hash: crate::core::content_hash::hash_directory(&path).ok(),
-            enabled: true,
-            created_at: now,
-            updated_at: now,
-            status: "ok".to_string(),
-            update_status: "local_only".to_string(),
-            last_checked_at: Some(now),
-            last_check_error: None,
-        };
-
-        store.insert_skill(&record)?;
-    }
+    crate::core::shared_skill_index::register_missing(store)?;
 
     sync_metadata::write_all_from_db_unlocked(store)
 }
@@ -944,6 +900,29 @@ mod tests {
             .output()
             .unwrap();
         String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    #[test]
+    fn restored_metadata_keeps_local_only_skills_even_when_remote_snapshot_is_empty() {
+        let env = test_env();
+        sync_metadata::write_all_from_db_unlocked(&env.store).unwrap();
+        let local = env.skills_dir.join("local-only");
+        std::fs::create_dir_all(&local).unwrap();
+        std::fs::write(local.join("SKILL.md"), "# Local only").unwrap();
+        reconcile_skills_index_unlocked(&env.store).unwrap();
+        let skills = env.store.get_all_skills().unwrap();
+        assert_eq!(skills.len(), 1);
+        let id = skills[0].id.clone();
+        let additional = env.skills_dir.join("another-local");
+        std::fs::create_dir_all(&additional).unwrap();
+        std::fs::write(additional.join("SKILL.md"), "# Another local").unwrap();
+        reconcile_skills_index_unlocked(&env.store).unwrap();
+        let skills = env.store.get_all_skills().unwrap();
+        assert_eq!(skills.len(), 2);
+        assert!(skills.iter().any(|skill| skill.id == id));
+        sync_metadata::reindex_from_metadata_unlocked(&env.store).unwrap();
+        assert_eq!(env.store.get_all_skills().unwrap().len(), 2);
+        assert!(local.join("SKILL.md").is_file());
     }
 
     #[test]

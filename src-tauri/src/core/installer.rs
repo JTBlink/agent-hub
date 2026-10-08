@@ -154,6 +154,16 @@ pub fn install_skill_dir_to_destination(
 ) -> Result<InstallResult> {
     let meta = skill_metadata::parse_skill_md(source);
 
+    if sync_engine::is_library_entry(destination)
+        && source.canonicalize()? == destination.canonicalize().unwrap_or_default()
+    {
+        return Ok(InstallResult {
+            name: name.to_string(),
+            description: meta.description,
+            central_path: destination.to_path_buf(),
+            content_hash: content_hash::hash_directory(destination)?,
+        });
+    }
     sync_engine::ensure_dst_not_inside_src(source, destination)?;
 
     if destination.exists() {

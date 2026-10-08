@@ -68,12 +68,17 @@ fn reindex_or_rebuild_metadata(store: &SkillStore) -> Result<()> {
     // better record: rebuild the metadata from it. Otherwise keep refusing —
     // starting with an empty library would let the auto backup commit that
     // emptiness.
-    if err.is::<sync_metadata::EmptySkillMetadata>() && db_library_is_intact(store) {
+    if err.is::<sync_metadata::EmptySkillMetadata>()
+        && (db_library_is_intact(store) || super::shared_skill_index::is_shared())
+    {
         central_repo::record_startup_error(format!(
             "sync metadata: {err}; rebuilt it from the database"
         ));
-        return sync_metadata::write_all_from_db(store)
-            .context("Failed to rebuild sync metadata from the database");
+        return sync_metadata::with_repo_lock("rebuild shared skills metadata", || {
+            super::shared_skill_index::refresh(store)?;
+            sync_metadata::write_all_from_db_unlocked(store)
+        })
+        .context("Failed to rebuild sync metadata from the database");
     }
     Err(err.context("Failed to reindex from sync metadata"))
 }
@@ -171,6 +176,15 @@ fn initialize_store_inner(
         }
     }
 
+    if let Some((from, to)) = central_repo::take_shared_repoint_from()? {
+        let failures = sync_metadata::with_repo_lock("repoint shared skills", || {
+            repoint_after_move(&store, &from, &to)
+        })?;
+        if failures == 0 {
+            central_repo::clear_shared_repoint_from()?;
+        }
+    }
+
     timings.skill_count = store.get_all_skills().map(|s| s.len()).unwrap_or(0);
 
     if sync_metadata::metadata_exists() {
@@ -183,14 +197,17 @@ fn initialize_store_inner(
     let changed = scenario_service::restore_all_skills_sync_included(&store)
         .map_err(|e| anyhow::anyhow!(e.to_string()))
         .context("Failed to restore skill sync inclusion")?;
+    let (changed, write_ms) = sync_metadata::with_repo_lock("index shared skills", || {
+        let changed = super::shared_skill_index::refresh(&store)? || changed;
+        let write_start = Instant::now();
+        if changed {
+            sync_metadata::write_all_from_db_unlocked(&store)?;
+        }
+        Ok((changed, changed.then(|| write_start.elapsed().as_millis())))
+    })?;
     timings.restore_sync_included_ms = step.elapsed().as_millis();
     timings.restore_sync_included_changed = changed;
-    if changed {
-        let step = Instant::now();
-        sync_metadata::write_all_from_db(&store)
-            .context("Failed to persist restored skill sync inclusion")?;
-        timings.write_all_from_db_ms = Some(step.elapsed().as_millis());
-    }
+    timings.write_all_from_db_ms = write_ms;
 
     let step = Instant::now();
     if apply_startup_default {
