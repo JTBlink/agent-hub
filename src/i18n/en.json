@@ -147,7 +147,7 @@
     },
     "gh": {
       "title": "Prefer GitHub CLI (gh)",
-      "desc": "On by default. GitHub HTTPS backups reuse your gh login, falling back to AgentHub credentials if gh is unavailable or signed out. Turn off to use AgentHub credentials. SSH is unaffected. Applies to your next backup.",
+      "desc": "Use your gh login when available, otherwise use AgentHub credentials.",
       "loadFailed": "Could not load this setting. Click to retry."
     },
     "auto": {

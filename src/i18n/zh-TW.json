@@ -147,7 +147,7 @@
     },
     "gh": {
       "title": "優先使用 GitHub CLI（gh）",
-      "desc": "預設開啟，GitHub HTTPS 備份優先沿用 gh 登入；未安裝或未登入時改用 AgentHub 憑證。關閉後使用 AgentHub 憑證。SSH 不受影響，下次備份生效。",
+      "desc": "優先使用 gh 登入，無法使用時改用 AgentHub 憑證。",
       "loadFailed": "讀取設定失敗，點擊重試"
     },
     "auto": {
