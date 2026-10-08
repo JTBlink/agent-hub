@@ -35,3 +35,5 @@ Blocked by: none
 2026-10-08：按反馈将 gh 与自动备份开关合并到同一张“备份设置”卡片，以分隔线区分设置项；保留独立说明与原有保存行为。布局提取为 BackupPreferences，减少页面职责。
 
 分组调整验证：npm run build、npm run lint、npm test（70 项）、npm run tasks:check 与 git diff --check 通过。Standards：复用现有开关并抽取设置分组组件；Spec：单一卡片包含两个设置项，无独立子卡片。
+
+2026-10-08：精简 gh 开关说明，仅保留优先使用与不可用时回退的含义，同步简中、繁中和英文。JSON 解析、格式与差异检查通过。
