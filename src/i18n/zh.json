@@ -597,6 +597,7 @@
       "deleteHint": "仅删除所选路径；软链接仅移除链接。使用同一路径的 Agent 会同时受影响，其他独立副本和技能库保留。",
       "refreshFailed": "删除已完成，但刷新失败，请重新扫描查看最新状态。",
       "symlink": "符号链接（软链接）",
+      "resolvedPath": "真实路径：{{path}}",
       "applicableAgents": "适用 Agent",
       "applicableAgentsHint": "依据目录规则匹配，不代表已安装。",
       "otherLocations": "其他 {{count}} 个来源目录",

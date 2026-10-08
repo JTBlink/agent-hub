@@ -114,6 +114,7 @@ export interface DiscoveredGroup {
     tool: string;
     found_path: string;
     is_symlink: boolean;
+    resolved_path?: string | null;
   }[];
   imported: boolean;
   found_at: number;

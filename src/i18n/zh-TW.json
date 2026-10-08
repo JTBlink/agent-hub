@@ -549,6 +549,7 @@
       "deleteHint": "僅刪除所選路徑；軟連結僅移除連結。使用相同路徑的 Agent 會同時受影響，其他獨立副本與技能庫保留。",
       "refreshFailed": "刪除已完成，但重新整理失敗，請重新掃描查看最新狀態。",
       "symlink": "符號連結（軟連結）",
+      "resolvedPath": "實際路徑：{{path}}",
       "applicableAgents": "適用 Agent",
       "applicableAgentsHint": "依目錄規則比對，不代表已安裝。",
       "otherLocations": "其他 {{count}} 個來源目錄",
