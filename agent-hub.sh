@@ -12,7 +12,7 @@ install_cli() {
   case "${profile}" in
     debug|release) ;;
     *)
-      echo "用法: $0 install-cli [debug|release]" >&2
+      echo "用法: $0 install [debug|release]" >&2
       return 2
       ;;
   esac
@@ -55,10 +55,10 @@ install_cli() {
   fi
 }
 
-if [[ "${1:-}" == "install-cli" ]]; then
+if [[ "${1:-}" == "install" ]]; then
   shift
   if [[ "$#" -gt 1 ]]; then
-    echo "用法: $0 install-cli [debug|release]" >&2
+    echo "用法: $0 install [debug|release]" >&2
     exit 2
   fi
   install_cli "${1:-debug}"

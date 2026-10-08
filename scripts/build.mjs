@@ -18,7 +18,7 @@ export function usage() {
   test      运行前端和 Rust 测试
   lint      运行 ESLint 和 Cargo Clippy
   version   显示应用版本号
-  install-cli [debug|release]  编译并软链接 CLI（仅 ./agent-hub.sh）
+  install [debug|release]      编译并软链接 CLI（仅 ./agent-hub.sh）
   help      显示此帮助
 `;
 }
