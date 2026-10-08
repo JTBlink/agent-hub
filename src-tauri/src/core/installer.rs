@@ -7,6 +7,9 @@ use super::content_hash;
 use super::skill_metadata::{self, sanitize_skill_name};
 use super::sync_engine;
 
+#[cfg(test)]
+mod import_tests;
+
 pub struct InstallResult {
     pub name: String,
     pub description: Option<String>,
@@ -25,6 +28,7 @@ enum PreparedSource {
 impl PreparedSource {
     fn open(source: &Path) -> Result<Self> {
         if source.is_dir() {
+            validate_skill_source(source)?;
             Ok(PreparedSource::Directory(source.to_path_buf()))
         } else {
             Self::from_archive(source)
@@ -50,17 +54,20 @@ impl PreparedSource {
         for entry in WalkDir::new(temp_dir.path()).max_depth(4) {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy();
-            if name == "SKILL.md" || name == "skill.md" {
+            if entry.file_type().is_file()
+                && skill_metadata::SKILL_DIR_MARKERS.contains(&name.as_ref())
+            {
                 if let Some(parent) = entry.path().parent() {
                     found.push(parent.to_path_buf());
                 }
             }
         }
 
+        found.sort();
         found.dedup();
 
         let skill_dir = match found.len() {
-            0 => temp_dir.path().to_path_buf(),
+            0 => bail!("INVALID_SKILL_SOURCE: Archive contains no SKILL.md or skill.md file"),
             1 => found.into_iter().next().unwrap(),
             _ => bail!("Multiple skill directories found in archive"),
         };
@@ -77,6 +84,13 @@ impl PreparedSource {
             PreparedSource::Archive { skill_dir, .. } => skill_dir,
         }
     }
+}
+
+fn validate_skill_source(source: &Path) -> Result<()> {
+    if !skill_metadata::is_valid_skill_dir(source) {
+        bail!("INVALID_SKILL_SOURCE: Select a skill folder containing a SKILL.md or skill.md file");
+    }
+    Ok(())
 }
 
 pub fn install_from_local(source: &Path, name: Option<&str>) -> Result<InstallResult> {
@@ -152,6 +166,9 @@ pub fn install_skill_dir_to_destination(
     name: &str,
     destination: &Path,
 ) -> Result<InstallResult> {
+    // All entry points, including direct Git installs and reimports, must
+    // validate before an existing destination can be removed.
+    validate_skill_source(source)?;
     let meta = skill_metadata::parse_skill_md(source);
 
     if sync_engine::is_library_entry(destination)

@@ -538,15 +538,17 @@
     },
     "local": {
       "title": "Import a local skill source",
-      "description": "Choose a folder that contains `SKILL.md`, or import a `.zip` or `.skill` package.",
+      "description": "Choose a skill folder with SKILL.md or skill.md, or a .zip / .skill archive containing one.",
       "selectFolder": "Select folder",
-      "selectArchive": "Select archive or file",
+      "selectArchive": "Select Skill archive",
       "batchImport": "Batch import from folder",
       "batchImporting": "Scanning for skills...",
       "batchProgress": "Importing {{current}}/{{total}}: {{name}}...",
       "batchSuccess": "Imported {{imported}} skill(s), skipped {{skipped}} already-imported",
       "batchAllSkipped": "All {{skipped}} skill(s) were already imported",
-      "batchErrors": "{{count}} skill(s) failed to import"
+      "batchErrors": "{{count}} skill(s) failed to import",
+      "importFailed": "Import failed",
+      "invalidSource": "No valid Skill found. Choose a folder containing a SKILL.md or skill.md file, or an archive containing such a folder."
     },
     "selectLocal": "Select local file...",
     "gitTitle": "Install from Git Repository",
