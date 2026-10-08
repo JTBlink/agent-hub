@@ -95,6 +95,7 @@
     "errorGeneric": "Could not set this up."
   },
   "backup": {
+    "preferencesTitle": "Backup settings",
     "title": "Backup",
     "subtitle": "Connect once, then back up or restore your skill library from one place.",
     "status": {

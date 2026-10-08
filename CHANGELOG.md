@@ -6,6 +6,8 @@
 
 ### Changed
 
+- 备份页将 GitHub CLI 优先使用与自动备份开关合并为一张“备份设置”卡片。
+
 - Git 备份独立使用 `~/.agent-hub/backup`，仓库以 `skills/` 保存原始 Skill，支持 `npx skills@latest add`；保留旧 Git 历史与恢复副本，桌面、CLI 和自动备份使用相同流程。
 - 凭据按用户要求改为应用数据目录下 `credentials/` 本地缓存与进程内复用，首次成功迁移后不再读取钥匙串；Unix 文件仅当前用户可读写，退出防止旧凭据重新加载，凭据目录不进入备份。
 - 设置页展示独立备份目录，本地 Skills 和设置目录新增“在 VS Code 中打开”。

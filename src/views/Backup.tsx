@@ -1,4 +1,4 @@
-import { GhCredentialSetting } from "../components/GhCredentialSetting";
+import { BackupPreferences } from "../components/BackupPreferences";
 import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -26,7 +26,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "../utils";
-import { ToggleSwitch } from "../components/ToggleSwitch";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { GitRecoveryDialog } from "../components/GitRecoveryDialog";
 import { GitSetupDialog } from "../components/GitSetupDialog";
@@ -1386,7 +1385,12 @@ export function Backup() {
         </div>
 
         <aside className="space-y-4">
-          <GhCredentialSetting disabled={loading !== null} />
+          <BackupPreferences
+            disabled={loading !== null}
+            autoBackupEnabled={autoBackupEnabled}
+            autoBackupSaving={autoBackupSaving}
+            onToggleAutoBackup={handleToggleAutoBackup}
+          />
           <section className="app-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-muted" />
@@ -1438,26 +1442,6 @@ export function Backup() {
                 {t("backup.scope.sizeHint")}
               </div>
             )}
-          </section>
-
-          <section className="app-panel p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-[14px] font-semibold text-secondary">
-                  {t("backup.auto.title")}
-                </h2>
-                <p className="mt-1 text-[12px] leading-5 text-muted">
-                  {t("backup.auto.desc")}
-                </p>
-              </div>
-              <ToggleSwitch
-                className="mt-0.5"
-                checked={autoBackupEnabled}
-                loading={autoBackupSaving}
-                onChange={handleToggleAutoBackup}
-                title={t("backup.auto.title")}
-              />
-            </div>
           </section>
 
           <section className="app-panel p-4">

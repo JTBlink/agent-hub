@@ -95,6 +95,7 @@
     "errorGeneric": "啟用失敗。"
   },
   "backup": {
+    "preferencesTitle": "備份設定",
     "title": "備份",
     "subtitle": "連接一次後，就可以在一個頁面完成備份、還原和斷開。",
     "status": {

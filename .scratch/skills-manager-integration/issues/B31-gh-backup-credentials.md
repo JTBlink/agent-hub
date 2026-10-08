@@ -29,3 +29,9 @@ Blocked by: none
 默认开启 gh 登录复用；备份页提供持久化开关，关闭后跳过 gh 查询。无 gh 时应用凭据继续可用。凭据通过目标主机限定的非交互 helper 提供，不依赖密码提示脚本。认证失败提示区分 CLI 登录与应用重新授权，来源日志不含令牌。
 
 验证：`cargo test --manifest-path src-tauri/Cargo.toml`（604 个库测试、6 个 CLI 测试通过，8 个已有测试忽略）；`npm test`（70 项）；`npm run build`；`npm run lint`；Rust 格式与严格 Clippy 检查通过。开关关闭、CLI 缺失/退出/令牌轮换、主机隔离及禁用交互提示的回归通过。实机备份 fetch、push 成功。
+
+## Comments
+
+2026-10-08：按反馈将 gh 与自动备份开关合并到同一张“备份设置”卡片，以分隔线区分设置项；保留独立说明与原有保存行为。布局提取为 BackupPreferences，减少页面职责。
+
+分组调整验证：npm run build、npm run lint、npm test（70 项）、npm run tasks:check 与 git diff --check 通过。Standards：复用现有开关并抽取设置分组组件；Spec：单一卡片包含两个设置项，无独立子卡片。
