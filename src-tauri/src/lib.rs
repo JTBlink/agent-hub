@@ -37,6 +37,9 @@ const TRAY_OPEN_UPDATES_EVENT: &str = "tray-open-updates";
 const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/32x32.png");
 #[cfg(not(target_os = "macos"))]
 const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/32x32.png");
+// Menu-bar icons must be monochrome and transparent on macOS. Keep this
+// separate from the colorful application icon used by the Dock and windows.
+const TRAY_TEMPLATE_ICON_BYTES: &[u8] = include_bytes!("../icons/tray-template.png");
 
 fn parse_bool_setting(value: Option<String>, default: bool) -> bool {
     match value.as_deref().map(str::trim).map(str::to_ascii_lowercase) {
@@ -99,6 +102,19 @@ fn request_quit(app: &tauri::AppHandle) {
 fn load_custom_tray_icon() -> Option<tauri::image::Image<'static>> {
     let img = image::load_from_memory_with_format(CUSTOM_TRAY_ICON_BYTES, image::ImageFormat::Png)
         .ok()?;
+    let rgba = img.to_rgba8();
+    let (width, height) = rgba.dimensions();
+    Some(tauri::image::Image::new_owned(
+        rgba.into_raw(),
+        width,
+        height,
+    ))
+}
+
+fn load_tray_template_icon() -> Option<tauri::image::Image<'static>> {
+    let img =
+        image::load_from_memory_with_format(TRAY_TEMPLATE_ICON_BYTES, image::ImageFormat::Png)
+            .ok()?;
     let rgba = img.to_rgba8();
     let (width, height) = rgba.dimensions();
     Some(tauri::image::Image::new_owned(
@@ -720,14 +736,19 @@ fn ensure_tray_icon(app: &tauri::AppHandle) -> tauri::Result<()> {
             }
         });
 
-    if let Some(icon) = load_custom_tray_icon().or_else(|| app.default_window_icon().cloned()) {
+    #[cfg(target_os = "macos")]
+    let tray_icon = load_tray_template_icon().or_else(|| load_custom_tray_icon());
+    #[cfg(not(target_os = "macos"))]
+    let tray_icon = load_custom_tray_icon();
+
+    if let Some(icon) = tray_icon.or_else(|| app.default_window_icon().cloned()) {
         builder = builder.icon(icon);
     }
 
     #[cfg(target_os = "macos")]
     {
-        // Render the original white PNG directly for maximum brightness.
-        builder = builder.icon_as_template(false);
+        // Let macOS derive the menu-bar tint from the monochrome alpha mask.
+        builder = builder.icon_as_template(true);
     }
 
     // On macOS, left-click on tray icon opens the menu by default;
