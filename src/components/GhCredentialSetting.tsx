@@ -43,12 +43,12 @@ export function GhCredentialSetting({ disabled }: { disabled: boolean }) {
   };
 
   return (
-    <section className="app-panel p-4">
+    <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[14px] font-semibold text-secondary">
+          <h3 className="text-[13px] font-medium text-secondary">
             {t("backup.gh.title")}
-          </h2>
+          </h3>
           <p className="mt-1 text-[12px] leading-5 text-muted">
             {t("backup.gh.desc")}
           </p>
@@ -71,6 +71,6 @@ export function GhCredentialSetting({ disabled }: { disabled: boolean }) {
           {t("backup.gh.loadFailed")}
         </button>
       )}
-    </section>
+    </div>
   );
 }

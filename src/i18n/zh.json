@@ -95,6 +95,7 @@
     "errorGeneric": "启用失败。"
   },
   "backup": {
+    "preferencesTitle": "备份设置",
     "title": "备份",
     "subtitle": "连接一次后，就可以在一个页面完成备份、恢复和断开。",
     "status": {
