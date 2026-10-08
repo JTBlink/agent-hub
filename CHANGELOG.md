@@ -6,6 +6,10 @@
 
 ### Changed
 
+- macOS 菜单栏托盘图标改用独立的单色透明模板图标，避免应用彩色方形图标缩放后在顶部菜单栏显示异常；Dock 和窗口继续使用完整应用图标。
+
+- CLI 顶层技能组命令显示为 `skill-groups`，保留 `presets` 和 `scenarios` 兼容别名。
+
 - Unix 开发入口 `agent-hub.sh install` 支持编译 CLI 并在 Cargo bin 目录创建指向仓库构建产物的软链接，可通过 `AGENT_HUB_CLI_BIN_DIR` 自定义链接目录。
 
 - 本地 Skill 导入校验入口文件，拒绝普通目录、无 Skill 压缩包与伪入口目录，失败前保留已有目标；导入错误使用弹窗提示。中文首页统计与卡片统一使用“技能库”名称。
@@ -47,6 +51,8 @@
 - 删除旧 V1 规划、原型和已替代 ADR；规划设计统一以 Skills Manager 实现为基线。
 
 ### Fixed
+
+- 本地扫描删除共享技能的 Agent 软链接时只解除链接，保留 `~/.agents/skills` 中的共享内容。
 
 - 备份页新增默认开启的“优先使用 GitHub CLI（gh）”开关，可随时关闭；GitHub 备份复用已登录的 `gh`，缺少 CLI 或登录时回退到应用凭据；使用非交互凭证 helper，修复禁用交互提示时有效令牌仍无法传给 Git 的问题。
 
