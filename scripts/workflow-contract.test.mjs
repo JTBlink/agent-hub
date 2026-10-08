@@ -20,6 +20,23 @@ const websiteIndex = readFileSync(
 );
 
 describe("GitHub Actions workflow contract", () => {
+  it.each([
+    ["CI", ci],
+    ["Build Installers", installers],
+    ["Deploy website", pages],
+  ])("triggers %s only manually or on version tag pushes", (_, workflow) => {
+    const triggers = workflow.match(/^on:\n([\s\S]*?)(?=\n\S)/m)?.[1];
+    expect(triggers).toBeDefined();
+    const events = [...triggers.matchAll(/^ {2}(\w+):/gm)].map(
+      (match) => match[1],
+    );
+    expect(events.sort()).toEqual(["push", "workflow_dispatch"]);
+    expect(triggers).toMatch(/push:\n {4}tags:\n {6}- "v\*"/);
+    expect(triggers).not.toMatch(
+      /branches(?:-ignore)?:|tags-ignore:|paths(?:-ignore)?:/,
+    );
+  });
+
   it("keeps the desktop and GitHub Pages entrypoints separate", () => {
     expect(desktopIndex).toContain('<div id="root"></div>');
     expect(desktopIndex).toContain(
@@ -43,7 +60,6 @@ describe("GitHub Actions workflow contract", () => {
 
   it("supports manual and v-tag installer builds", () => {
     expect(installers).toContain("workflow_dispatch:");
-    expect(installers).toMatch(/branches:\n\s+- main/);
     expect(installers).toMatch(/tags:\n\s+- "v\*"/);
     expect(installers).toContain("ref: ${{ github.ref }}");
     expect(installers).not.toContain("inputs.ref");
@@ -197,10 +213,7 @@ describe("GitHub Actions workflow contract", () => {
     }
   });
 
-  it("runs the full quality gate on main, pull requests, and manually", () => {
-    expect(ci).toContain("branches: [main]");
-    expect(ci).toContain("pull_request:");
-    expect(ci).toContain("workflow_dispatch:");
+  it("keeps the full quality gate for tag and manual runs", () => {
     expect(ci).toContain("npm run tasks:check");
     for (const command of [
       "npm run format:check",

@@ -4,7 +4,7 @@
 
 ## 目标
 
-GitHub Actions 负责持续检查和跨平台打包。普通提交和拉取请求只运行验证；版本 tag 负责构建完整安装包、生成校验和并创建 GitHub Release。
+GitHub Actions 负责质量检查、跨平台打包和主页部署。所有工作流仅支持推送 `v*` 版本 tag 或手动 `workflow_dispatch` 触发；普通分支提交和拉取请求不自动运行。版本 tag 负责构建完整安装包、生成校验和并创建 GitHub Release。
 
 GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任务依赖和开发状态以仓库内 `.scratch/` Markdown 为准。
 
@@ -12,7 +12,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ### `ci.yml`
 
-触发条件：拉取请求及 `main` 分支提交。
+触发条件：推送 `v*` tag 或手动 `workflow_dispatch`。
 
 - 安装锁定版本的 Node.js、Rust stable 和平台依赖。
 - 执行前端格式、lint、类型检查和测试。
@@ -22,7 +22,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ### `build-installers.yml`
 
-触发条件：`main` 分支 push、`v*` tag 和手动 `workflow_dispatch`。`main` push 只生成预编译 artifact，不创建 GitHub Release；`v*` tag 在相同质量门禁和打包流程通过后创建正式 Release。
+触发条件：推送 `v*` tag 或手动 `workflow_dispatch`。手动运行只生成预编译 artifact，不创建 GitHub Release；`v*` tag 在质量门禁和打包流程通过后创建正式 Release。
 
 | Runner           | 目标                                    | 安装包              |
 | ---------------- | --------------------------------------- | ------------------- |
@@ -33,6 +33,10 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 使用 Tauri 官方构建工具生成平台原生包。预检任务先把输入的 branch、tag 或 commit 解析为不可变 commit SHA，后续质量门禁、三平台构建和汇总任务统一检出该 SHA。手动运行会上传各平台 artifacts，并额外上传包含全部安装包、`SHA256SUMS`、`CHANGELOG.md`、版本说明和支持矩阵的汇总 artifact；汇总任务还会运行 `release:verify`，在发布前检查五种安装格式、元数据和每一条校验和。正式 tag 同时创建 GitHub Release。汇总目录中的安装包会扁平化，`SHA256SUMS` 可直接在 Release 附件所在目录校验。
 
 平台构建命令统一经过 `scripts/build.mjs` 编排。Unix 使用 `./agent-hub.sh build`，Windows 使用 `agent-hub.bat build`，CI 使用 `npm run app:build -- <Tauri 参数>`；这些入口只在当前平台的原生 Runner 上生成该平台安装包，不能替代 macOS、Windows 和 Linux 之间的交叉编译工具链。
+
+### `deploy-pages.yml`
+
+触发条件：推送 `v*` tag 或手动 `workflow_dispatch`。构建并部署对应版本的主页；普通主页文件变更不自动部署。
 
 ## 手动构建
 
