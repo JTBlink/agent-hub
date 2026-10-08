@@ -372,9 +372,9 @@
     },
     "gitConfigEntry": "同步設定",
     "filters": {
-      "all": "全部",
-      "enabled": "已加入當前技能組",
-      "available": "未加入當前技能組"
+      "all": "全部技能",
+      "enabled": "組內技能",
+      "available": "未加入"
     },
     "sourceType": "來源類型",
     "sourceFilter": {
@@ -415,10 +415,10 @@
     "cancelSelect": "取消多選",
     "selectAll": "全選",
     "deselectAll": "取消全選",
-    "batchEnable": "啟用 {{count}} 個",
-    "batchDisable": "停用 {{count}} 個",
-    "batchEnabled": "已啟用 {{count}} 個 Skill",
-    "batchDisabled": "已停用 {{count}} 個 Skill",
+    "batchEnable": "加入技能組 · {{count}} 個",
+    "batchDisable": "移出技能組 · {{count}} 個",
+    "batchEnabled": "已將 {{count}} 個技能加入「{{group}}」",
+    "batchDisabled": "已將 {{count}} 個技能從「{{group}}」移出",
     "batchHeldBack": "有 {{count}} 個 skill 未更新——更新會刪除檔案（{{names}}）。逐個更新可以看到具體是哪些。",
     "batchSyncAgents": "同步到 Agent ({{count}})",
     "batchSynced": "已同步 {{count}} 項到 Agent",
@@ -429,6 +429,21 @@
       "apply": "同步 {{count}} 項",
       "noAgents": "沒有已安裝並啟用的 Agent。",
       "allSynced": "選取的 Skill 都已同步到這個 Agent"
+    },
+    "membership": {
+      "add": "加入技能組",
+      "remove": "移出技能組",
+      "addNamed": "將 {{skill}} 加入「{{group}}」",
+      "removeNamed": "將 {{skill}} 從「{{group}}」移出",
+      "editing": "正在編輯技能組",
+      "chooseGroup": "先在側邊欄選擇或建立技能組",
+      "count": "{{count}} 個技能",
+      "hint": "加入或移出只修改分組。到工作區選擇 Agent，再點擊組名批次加入。",
+      "openWorkspace": "前往工作區加入 →",
+      "inNamed": "已加入「{{group}}」",
+      "notInNamed": "未加入「{{group}}」",
+      "added": "已將 {{skill}} 加入「{{group}}」",
+      "removed": "已將 {{skill}} 從「{{group}}」移出"
     }
   },
   "install": {

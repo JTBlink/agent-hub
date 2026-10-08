@@ -403,9 +403,9 @@
     },
     "gitConfigEntry": "同步配置",
     "filters": {
-      "all": "全部",
-      "enabled": "已加入当前技能组",
-      "available": "未加入当前技能组"
+      "all": "全部技能",
+      "enabled": "组内技能",
+      "available": "未加入"
     },
     "sourceFilter": {
       "all": "全部来源",
@@ -445,10 +445,10 @@
     "cancelSelect": "取消多选",
     "selectAll": "全选",
     "deselectAll": "取消全选",
-    "batchEnable": "启用 {{count}} 个",
-    "batchDisable": "停用 {{count}} 个",
-    "batchEnabled": "已启用 {{count}} 个 Skill",
-    "batchDisabled": "已停用 {{count}} 个 Skill",
+    "batchEnable": "加入技能组 · {{count}} 个",
+    "batchDisable": "移出技能组 · {{count}} 个",
+    "batchEnabled": "已将 {{count}} 个技能加入「{{group}}」",
+    "batchDisabled": "已将 {{count}} 个技能从「{{group}}」移出",
     "batchEditTags": "标签 ({{count}})",
     "batchTagsUpdated": "已更新 {{count}} 个 Skill 的标签",
     "batchTagsFailed": "{{count}} 个 Skill 标签更新失败",
@@ -472,6 +472,21 @@
       "apply": "同步 {{count}} 项",
       "noAgents": "没有已安装并启用的 Agent。",
       "allSynced": "选中的 Skill 都已同步到这个 Agent"
+    },
+    "membership": {
+      "add": "加入技能组",
+      "remove": "移出技能组",
+      "addNamed": "将 {{skill}} 加入「{{group}}」",
+      "removeNamed": "将 {{skill}} 从「{{group}}」移出",
+      "editing": "正在编辑技能组",
+      "chooseGroup": "先在侧边栏选择或创建技能组",
+      "count": "{{count}} 个技能",
+      "hint": "加入或移出只修改分组。到工作区选择 Agent，再点击组名批量添加。",
+      "openWorkspace": "去工作区添加 →",
+      "inNamed": "已加入「{{group}}」",
+      "notInNamed": "未加入「{{group}}」",
+      "added": "已将 {{skill}} 加入「{{group}}」",
+      "removed": "已将 {{skill}} 从「{{group}}」移出"
     }
   },
   "install": {

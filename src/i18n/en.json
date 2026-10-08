@@ -403,9 +403,9 @@
     },
     "gitConfigEntry": "Sync Config",
     "filters": {
-      "all": "All",
-      "enabled": "Enabled",
-      "available": "Available"
+      "all": "All skills",
+      "enabled": "In group",
+      "available": "Not in group"
     },
     "sourceFilter": {
       "all": "All Sources",
@@ -445,10 +445,10 @@
     "cancelSelect": "Cancel selection",
     "selectAll": "Select All",
     "deselectAll": "Deselect All",
-    "batchEnable": "Enable {{count}}",
-    "batchDisable": "Disable {{count}}",
-    "batchEnabled": "{{count}} skills enabled",
-    "batchDisabled": "{{count}} skills disabled",
+    "batchEnable": "Add {{count}} to group",
+    "batchDisable": "Remove {{count}} from group",
+    "batchEnabled": "Added {{count}} skills to “{{group}}”",
+    "batchDisabled": "Removed {{count}} skills from “{{group}}”",
     "batchEditTags": "Tags ({{count}})",
     "batchTagsUpdated": "Tags updated for {{count}} skills",
     "batchTagsFailed": "{{count}} skills failed to update tags",
@@ -472,6 +472,21 @@
       "apply": "Sync {{count}}",
       "noAgents": "No installed and enabled agents.",
       "allSynced": "Every selected skill is already on this agent"
+    },
+    "membership": {
+      "add": "Add to group",
+      "remove": "Remove from group",
+      "addNamed": "Add {{skill}} to “{{group}}”",
+      "removeNamed": "Remove {{skill}} from “{{group}}”",
+      "editing": "Editing skill group",
+      "chooseGroup": "Select or create a group in the sidebar",
+      "count": "{{count}} skills",
+      "hint": "Adding or removing only changes group membership. In a workspace, select an Agent and click the group name to add its skills.",
+      "openWorkspace": "Add in workspace →",
+      "inNamed": "In “{{group}}”",
+      "notInNamed": "Not in “{{group}}”",
+      "added": "Added {{skill}} to “{{group}}”",
+      "removed": "Removed {{skill}} from “{{group}}”"
     }
   },
   "install": {
