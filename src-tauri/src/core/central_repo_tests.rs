@@ -16,7 +16,7 @@ fn app_identity_paths_are_isolated_from_other_managers() {
 use super::*;
 
 #[test]
-fn old_default_stays_live_until_migration_and_custom_libraries_are_unchanged() {
+fn old_default_is_no_longer_live_and_custom_libraries_are_unchanged() {
     let _guard = test_base_dir_lock();
     let home = tempfile::tempdir().unwrap();
     set_test_home_dir_override(Some(home.path().to_path_buf()));
@@ -24,31 +24,14 @@ fn old_default_stays_live_until_migration_and_custom_libraries_are_unchanged() {
     let old = root.join("library");
     fs::create_dir_all(old.join("skills/demo")).unwrap();
     fs::write(old.join("agent-hub.db"), "fixture").unwrap();
-    assert_eq!(live_base_from(&RepoPathConfig::default()), old);
+    // Legacy layout is no longer recognized — base_dir is the default.
+    assert_eq!(live_base_from(&RepoPathConfig::default()), root);
     let custom = home.path().join("custom");
     let configured = RepoPathConfig {
         repo_path: Some(custom.to_string_lossy().into_owned()),
         ..Default::default()
     };
     assert_eq!(live_base_from(&configured), custom);
-    let mut config = RepoPathConfig {
-        pending_migration_from: Some(old.to_string_lossy().into_owned()),
-        ..Default::default()
-    };
-    assert!(matches!(
-        migrate_repo_if_needed(&mut config, &root),
-        MigrationOutcome::Proceed
-    ));
-    assert_eq!(live_base_from(&config), root);
-    assert!(config.pending_migration_from.is_none());
-    assert_eq!(
-        config.repoint_from,
-        Some(old.to_string_lossy().into_owned())
-    );
-    assert_eq!(
-        fs::read_to_string(root.join("agent-hub.db")).unwrap(),
-        "fixture"
-    );
     set_test_home_dir_override(None);
 }
 

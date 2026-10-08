@@ -307,7 +307,7 @@ fn true_conflict_keeps_ours_declares_trailer_and_pins_theirs() {
     assert_eq!(summary.pending_total, 1);
     let head_msg = a.head_message();
     assert!(
-        head_msg.contains("Skills-Manager-Conflicts: skill-1"),
+        head_msg.contains("Agent-Hub-Conflicts: skill-1"),
         "{head_msg}"
     );
     assert!(protocol::has_protocol_trailer(&head_msg));
@@ -360,9 +360,7 @@ fn resolve_keep_local_closes_pending_across_devices() {
             .unwrap();
     assert!(safety.starts_with("sm-v-"));
     assert_eq!(a.skill_md("alpha"), "edited on A");
-    assert!(a
-        .head_message()
-        .contains("Skills-Manager-Resolved: skill-1"));
+    assert!(a.head_message().contains("Agent-Hub-Resolved: skill-1"));
     assert!(a.store.list_pending_conflicts().unwrap().is_empty());
     let repo = git2::Repository::open(&a.skills).unwrap();
     assert!(pending::ref_target(&repo, &conflict_ref("skill-1")).is_none());
@@ -674,7 +672,7 @@ fn legacy_dirt_does_not_brick_the_merge() {
         &[
             "commit",
             "-m",
-            "backup: edit + leaked tmp file\n\nSkills-Manager-Protocol: 2",
+            "backup: edit + leaked tmp file\n\nAgent-Hub-Protocol: 2",
         ],
     );
     b.reindex();
@@ -883,7 +881,7 @@ fn heal_rewrites_stale_conflict_ref_after_re_declaration() {
             "-s",
             "ours",
             "-m",
-            "sync: merge\n\nSkills-Manager-Protocol: 2\nSkills-Manager-Conflicts: skill-1",
+            "sync: merge\n\nAgent-Hub-Protocol: 2\nAgent-Hub-Conflicts: skill-1",
             "side1",
         ],
     );
@@ -893,7 +891,7 @@ fn heal_rewrites_stale_conflict_ref_after_re_declaration() {
             "commit",
             "--allow-empty",
             "-m",
-            "resolve\n\nSkills-Manager-Protocol: 2\nSkills-Manager-Resolved: skill-1",
+            "resolve\n\nAgent-Hub-Protocol: 2\nAgent-Hub-Resolved: skill-1",
         ],
     );
     let p2 = mk_side("side2", "theirs v2");
@@ -905,7 +903,7 @@ fn heal_rewrites_stale_conflict_ref_after_re_declaration() {
             "-s",
             "ours",
             "-m",
-            "sync: merge\n\nSkills-Manager-Protocol: 2\nSkills-Manager-Conflicts: skill-1",
+            "sync: merge\n\nAgent-Hub-Protocol: 2\nAgent-Hub-Conflicts: skill-1",
             "side2",
         ],
     );

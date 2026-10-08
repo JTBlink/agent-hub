@@ -1,6 +1,6 @@
 //! Merge protocol markers (merge-engine design §6).
 //!
-//! Every commit the app creates carries a `Skills-Manager-Protocol: 2`
+//! Every commit the app creates carries a `Agent-Hub-Protocol: 2`
 //! trailer and guarantees `.agent-hub/protocol.json` exists in the tree
 //! (sticky — restoring a pre-protocol snapshot self-heals on the next
 //! commit). Together these let the object-merge engine detect writes made by
@@ -17,14 +17,14 @@ use std::path::Path;
 pub const MERGE_PROTOCOL_VERSION: u32 = 2;
 const PROTOCOL_SCHEMA_VERSION: u32 = 1;
 
-pub const TRAILER_PROTOCOL: &str = "Skills-Manager-Protocol";
-pub const TRAILER_CONFLICTS: &str = "Skills-Manager-Conflicts";
-pub const TRAILER_RESOLVED: &str = "Skills-Manager-Resolved";
+pub const TRAILER_PROTOCOL: &str = "Agent-Hub-Protocol";
+pub const TRAILER_CONFLICTS: &str = "Agent-Hub-Conflicts";
+pub const TRAILER_RESOLVED: &str = "Agent-Hub-Resolved";
 
 /// Repo-relative path of the protocol marker file.
 pub const PROTOCOL_FILE_REL: &str = ".agent-hub/protocol.json";
 
-/// Cap on ids in a single `Skills-Manager-Conflicts:` trailer (§4). Overflow
+/// Cap on ids in a single `Agent-Hub-Conflicts:` trailer (§4). Overflow
 /// is recorded as `+N` and blocks the automatic path.
 pub const CONFLICTS_TRAILER_CAP: usize = 20;
 
@@ -166,14 +166,14 @@ mod tests {
     #[test]
     fn app_commit_message_appends_trailer_once() {
         let msg = app_commit_message("backup");
-        assert_eq!(msg, "backup\n\nSkills-Manager-Protocol: 2");
+        assert_eq!(msg, "backup\n\nAgent-Hub-Protocol: 2");
         assert!(has_protocol_trailer(&msg));
         assert!(!has_protocol_trailer("backup"));
     }
 
     #[test]
     fn parse_trailer_ids_splits_and_skips_overflow_marker() {
-        let msg = "sync: merged\n\nSkills-Manager-Protocol: 2\nSkills-Manager-Conflicts: a, b, +3";
+        let msg = "sync: merged\n\nAgent-Hub-Protocol: 2\nAgent-Hub-Conflicts: a, b, +3";
         assert_eq!(parse_trailer_ids(msg, TRAILER_CONFLICTS), vec!["a", "b"]);
         assert!(parse_trailer_ids(msg, TRAILER_RESOLVED).is_empty());
     }
@@ -191,6 +191,6 @@ mod tests {
             format_conflicts_trailer(&["b".to_string(), "a".to_string()]).unwrap();
         assert!(!overflowed);
         // Sorted for determinism across devices.
-        assert_eq!(line, "Skills-Manager-Conflicts: a, b");
+        assert_eq!(line, "Agent-Hub-Conflicts: a, b");
     }
 }

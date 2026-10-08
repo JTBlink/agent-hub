@@ -240,12 +240,6 @@ fn live_base_from(config: &RepoPathConfig) -> PathBuf {
             return source;
         }
     }
-    // Older default installations remain live until a startup holding the
-    // exclusive library lease can promote them. Read-only CLI calls never
-    // create a second empty library while the desktop is still using the old one.
-    if config.repo_path.is_none() && super::library_layout::legacy_exists(&home_base_dir()) {
-        return home_base_dir().join("library");
-    }
     requested_base_from(config)
 }
 
@@ -599,30 +593,11 @@ pub fn ensure_central_repo(allow_migration: bool) -> Result<()> {
     let may_move = take_library_lease(
         allow_migration
             && !override_active
-            && (migrate_shared
-                || config.pending_migration_from.is_some()
-                || (config.repo_path.is_none()
-                    && super::library_layout::legacy_exists(&home_base_dir()))
-                || super::library_layout::interrupted(&home_base_dir())),
+            && (migrate_shared || config.pending_migration_from.is_some()),
     );
     if may_move {
         // Re-read: another process may have finished a move while we waited.
         config = load_config();
-        if config.repo_path.is_none()
-            && config.pending_migration_from.is_none()
-            && (super::library_layout::legacy_exists(&home_base_dir())
-                || super::library_layout::interrupted(&home_base_dir()))
-        {
-            config.pending_migration_from = Some(
-                home_base_dir()
-                    .join("library")
-                    .to_string_lossy()
-                    .into_owned(),
-            );
-            // Persist before moving even one entry so interrupted upgrades can
-            // never open a fresh database in either partially moved location.
-            save_config(&config)?;
-        }
         let pending_before = config.pending_migration_from.clone();
         let target = requested_base_from(&config);
         let _ = migrate_repo_if_needed(&mut config, &target);
@@ -651,11 +626,6 @@ pub fn ensure_central_repo(allow_migration: bool) -> Result<()> {
             }
         }
         downgrade_library_lease();
-    }
-    if !override_active && super::library_layout::interrupted(&home_base_dir()) {
-        anyhow::bail!(
-            "An interrupted library upgrade needs to be completed by restarting the desktop app"
-        );
     }
     // Re-resolve: a completed move changed the base.
 

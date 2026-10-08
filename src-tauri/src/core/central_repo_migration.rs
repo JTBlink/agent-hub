@@ -200,24 +200,6 @@ pub(super) fn migrate_repo_if_needed(
         }
     };
 
-    if source == home_base_dir().join("library")
-        && current_base == home_base_dir()
-        && (source.exists() || crate::core::library_layout::interrupted(current_base))
-    {
-        match crate::core::library_layout::flatten(&source, current_base) {
-            Ok(()) => {
-                config.pending_migration_from = None;
-                config.repoint_from = Some(source.to_string_lossy().to_string());
-                return MigrationOutcome::Proceed;
-            }
-            Err(err) => {
-                record_startup_error(format!("central repo: default layout migration failed ({err:#}); keeping original library"));
-                push_startup_warning("migration_incomplete");
-                return MigrationOutcome::UseSource;
-            }
-        }
-    }
-
     // Nothing left to move: the source is gone (moved already, or the old
     // location was removed), or source and target are the same directory.
     // Compare canonically, not just lexically — on a case-insensitive volume
