@@ -6,7 +6,7 @@
 
 ### Changed
 
-- Unix 开发入口 `agent-hub.sh install-cli` 支持编译 CLI 并在 Cargo bin 目录创建指向仓库构建产物的软链接，可通过 `AGENT_HUB_CLI_BIN_DIR` 自定义链接目录。
+- Unix 开发入口 `agent-hub.sh install` 支持编译 CLI 并在 Cargo bin 目录创建指向仓库构建产物的软链接，可通过 `AGENT_HUB_CLI_BIN_DIR` 自定义链接目录。
 
 - 本地 Skill 导入校验入口文件，拒绝普通目录、无 Skill 压缩包与伪入口目录，失败前保留已有目标；导入错误使用弹窗提示。中文首页统计与卡片统一使用“技能库”名称。
 

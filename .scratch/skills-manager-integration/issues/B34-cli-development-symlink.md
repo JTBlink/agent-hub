@@ -21,4 +21,4 @@ Blocked by: none
 
 ## Result
 
-`./agent-hub.sh install-cli [debug|release]` 编译并安装软链接，支持 `AGENT_HUB_CLI_BIN_DIR`。通过 `bash -n agent-hub.sh`、`git diff --check`、临时目录中的安装及重复安装验证，链接执行 `--version` 成功；已有文件和外部软链接的覆盖保护验证通过。
+`./agent-hub.sh install [debug|release]` 编译并安装软链接，支持 `AGENT_HUB_CLI_BIN_DIR`。通过 `bash -n agent-hub.sh`、`git diff --check`、临时目录中的安装及重复安装验证，链接执行 `--version` 成功；已有文件和外部软链接的覆盖保护验证通过。

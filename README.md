@@ -25,7 +25,7 @@ npm run app:dev
 ```bash
 npm run app:build
 npm run cli -- --help
-./agent-hub.sh install-cli
+./agent-hub.sh install
 npm run build
 npm test
 npm run lint
