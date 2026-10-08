@@ -17,6 +17,27 @@ fn credential_cache() -> &'static super::credential_cache::CredentialCache {
 
 const KEYRING_SERVICE: &str = "agent-hub-git-backup";
 
+/// Debug binaries are ad-hoc signed on macOS. Their code signature changes on
+/// every rebuild, so background reads can repeatedly trigger a Keychain ACL
+/// prompt. Keep background access off in development unless explicitly opted in.
+pub fn background_access_enabled() -> bool {
+    #[cfg(debug_assertions)]
+    {
+        std::env::var("AGENT_HUB_DEV_KEYCHAIN")
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "1" | "true" | "on"
+                )
+            })
+            .unwrap_or(false)
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        true
+    }
+}
+
 /// Environment variable names consumed by the askpass script. The script
 /// itself contains no secrets — it just echoes these back to git.
 const ENV_USERNAME: &str = "AGENT_HUB_ASKPASS_USERNAME";

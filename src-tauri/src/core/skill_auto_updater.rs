@@ -40,6 +40,12 @@ struct AutoUpdatePayload {
 }
 
 pub fn start<R: Runtime>(app: AppHandle<R>, store: Arc<SkillStore>) {
+    if !crate::core::git_credentials::background_access_enabled() {
+        log::info!(
+            "skill auto-updater: disabled for debug builds; set AGENT_HUB_DEV_KEYCHAIN=1 to opt in"
+        );
+        return;
+    }
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(INITIAL_DELAY).await;
         loop {

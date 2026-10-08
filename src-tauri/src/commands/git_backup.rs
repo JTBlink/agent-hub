@@ -725,6 +725,12 @@ pub async fn git_backup_size_report() -> Result<git_backup::BackupSizeReport, Ap
 pub async fn git_backup_migrate_credentials(
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<Option<String>, AppError> {
+    if !git_credentials::background_access_enabled() {
+        log::info!(
+            "git credentials: migration skipped for debug build; set AGENT_HUB_DEV_KEYCHAIN=1 to opt in"
+        );
+        return Ok(None);
+    }
     let store = store.inner().clone();
     tokio::task::spawn_blocking(move || migrate_embedded_credentials(&store).map_err(AppError::git))
         .await?
