@@ -256,11 +256,9 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
         return Outcome::Skipped("interrupted git operation");
     }
 
-    // See the true remote state (3d-γ): rounds are debounced, so one quiet
-    // fetch per round is cheap; offline it just leaves the refs stale.
-    if let Err(e) = git_backup::fetch_remote(&skills_dir) {
-        log::debug!("auto backup: fetch failed (continuing offline): {e:#}");
-    }
+    // Keep the failed fetch until after the local save, then stop. Retrying a
+    // rejected credential with push only duplicates the error.
+    let fetch_error = git_backup::fetch_remote(&skills_dir).err();
 
     let status = match git_backup::get_status(&skills_dir) {
         Ok(status) => status,
@@ -294,6 +292,10 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
         }
         Ok(false) => {}
         Err(e) => return Outcome::Failed(format!("{e:#}")),
+    }
+
+    if let Some(error) = fetch_error {
+        return Outcome::Failed(format!("{error:#}"));
     }
 
     if status.behind > 0 {

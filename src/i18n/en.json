@@ -791,7 +791,7 @@
     "gitNeedRemoteSetup": "Set a backup repository URL first",
     "gitNeedPullFirst": "Remote has newer changes. Pull first to avoid conflicts.",
     "gitPendingSync": "Local changes are ready to sync",
-    "gitErrorAuth": "Authentication failed. Check SSH key or access token.",
+    "gitErrorAuth": "The Git server rejected the current HTTPS credentials. For GitHub backups, choose “Reconnect GitHub”, authorize again, then sync.",
     "gitErrorNetwork": "Network connection failed. Check your network and remote URL.",
     "gitErrorConflict": "Local and remote changes conflict. Choose how to resolve it.",
     "gitErrorNotRepo": "Git repository not found. Set up backup first.",
@@ -808,7 +808,10 @@
     "trayIconDesc": "Show an icon in the system tray for quick Show and Quit actions.",
     "trayIcon_on": "Show",
     "trayIcon_off": "Hide",
-    "trayIconOffHint": "Tray icon is hidden, so closing the window will quit the app."
+    "trayIconOffHint": "Tray icon is hidden, so closing the window will quit the app.",
+    "gitErrorSshAuth": "SSH authentication failed. Check your SSH key, ssh-agent, and the key’s repository access.",
+    "gitErrorCredentialMissing": "Git could not obtain login credentials. Reconnect GitHub for GitHub backups, or configure credentials for the remote host.",
+    "gitErrorCredentialRead": "Git credentials could not be read or saved. Check the application data directory permissions and reconnect your account."
   },
   "closeAction": {
     "title": "Close behavior",

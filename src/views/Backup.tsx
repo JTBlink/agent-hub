@@ -31,7 +31,7 @@ import { GitSetupDialog } from "../components/GitSetupDialog";
 import { GITHUB_OAUTH_CLIENT_ID } from "../lib/distribution";
 import { useApp } from "../context/AppContext";
 import { getErrorKind, getErrorMessage } from "../lib/error";
-import { mapGitErrorMessage } from "../lib/gitErrors";
+import { getGitAuthErrorKind, mapGitErrorMessage } from "../lib/gitErrors";
 import * as api from "../lib/tauri";
 import type {
   GitBackupSizeReport,
@@ -843,11 +843,12 @@ export function Backup() {
   })();
   // Token revoked/expired on the GitHub side → offer an explicit reconnect
   // instead of only a failure card (backup redesign Phase 2 待办).
+  const authErrorKind = getGitAuthErrorKind(backupErrorRaw);
   const authErrorNeedsReconnect =
     isGithubRemote &&
-    /authentication failed|401|403|invalid.{0,24}(credentials|token)|could not read username/i.test(
-      backupErrorRaw,
-    );
+    (authErrorKind === "https" ||
+      authErrorKind === "missing" ||
+      authErrorKind === "storage");
 
   // §3.1 row 2: revoking is done on GitHub's side (a public device-flow app
   // has no client secret, so tokens cannot be revoked via API) — open the

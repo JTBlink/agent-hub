@@ -1,3 +1,7 @@
+mod sync_transaction;
+use sync_transaction::run_sync_blocking;
+pub use sync_transaction::SyncOutcome;
+
 use crate::core::{
     central_repo, error::AppError, git2_engine, git_backup, git_credentials, git_fetcher,
     github_api, merge, sync_metadata,
@@ -407,18 +411,6 @@ pub async fn git_backup_pull(
     .await?
 }
 
-/// Outcome of a full sync transaction for the frontend.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct SyncOutcome {
-    /// Local changes were committed as part of this sync.
-    pub committed: bool,
-    /// Merge result when a merge ran (None when nothing to pull).
-    pub merge: Option<merge::MergeSummary>,
-    pub pushed: bool,
-    /// Snapshot tag on the pushed state (None when nothing was pushed).
-    pub snapshot_tag: Option<String>,
-}
-
 /// Full backup sync as one transaction under a single repo lock (merge-engine
 /// design §9 并发收敛): commit → fetch/merge → snapshot → push, retrying the
 /// fetch/merge/push tail when another device pushes concurrently. Replaces
@@ -439,102 +431,6 @@ pub async fn git_backup_sync(
         .map_err(classify_git_chain)
     })
     .await?
-}
-
-const SYNC_PUSH_ATTEMPTS: usize = 3;
-
-fn run_sync_blocking(
-    store: &SkillStore,
-    skills_dir: &Path,
-    message: &str,
-) -> anyhow::Result<SyncOutcome> {
-    apply_device_identity(store, skills_dir);
-
-    // Local changes first — they must be safe before any network step.
-    sync_metadata::write_all_from_db_unlocked(store)?;
-    // Rebuild the oversized exclusions BEFORE the dirty check: a previously
-    // excluded skill that shrank below the limit re-enters the backup by
-    // making .gitignore (and the skill itself) show up as changes.
-    if let Err(e) =
-        git_backup::apply_oversized_exclusions(skills_dir, git_backup::SKILL_SIZE_LIMIT_BYTES)
-    {
-        log::warn!("backup size: exclusion scan failed (continuing): {e:#}");
-    }
-    let mut committed = false;
-    if git_backup::has_uncommitted_changes(skills_dir)? {
-        git_backup::commit_all_unlocked(skills_dir, message)?;
-        committed = true;
-    }
-
-    // Best-effort initial fetch: a missing remote branch (fresh remote) or a
-    // network failure must not block the local commit; push surfaces real
-    // connectivity errors below when there is something to push.
-    let branch = git_backup::current_branch(skills_dir);
-    if let Err(e) = git_backup::fetch_branch(skills_dir, &branch) {
-        log::info!("git sync: initial fetch failed (continuing): {e:#}");
-    }
-
-    let mut merge_summary: Option<merge::MergeSummary> = None;
-    let mut pushed = false;
-    let mut snapshot_tag: Option<String> = None;
-    for attempt in 0..SYNC_PUSH_ATTEMPTS {
-        let status = git_backup::get_status(skills_dir)?;
-        if status.behind > 0 {
-            let summary = merge::gated_pull_unlocked(store, skills_dir)?;
-            reconcile_skills_index_unlocked(store)?;
-            merge_summary = Some(summary);
-        }
-
-        let status = git_backup::get_status(skills_dir)?;
-        let needs_push = committed || status.ahead > 0 || status.upstream_health == "no_upstream";
-        if !needs_push {
-            break;
-        }
-        // Reuses an existing tag on HEAD, so retries don't mint duplicates.
-        snapshot_tag = Some(git_backup::create_snapshot_tag_unlocked(skills_dir)?);
-        match git_backup::push_unlocked(skills_dir) {
-            Ok(()) => {
-                pushed = true;
-                break;
-            }
-            Err(e) => {
-                let msg = format!("{e:#}");
-                let rejected = msg.contains("non-fast-forward")
-                    || msg.contains("fetch first")
-                    || msg.contains("[rejected]")
-                    || msg.contains("failed to push some refs");
-                if !rejected || attempt + 1 == SYNC_PUSH_ATTEMPTS {
-                    return Err(e);
-                }
-                log::info!(
-                    "git sync: push rejected (attempt {}), refetching",
-                    attempt + 1
-                );
-                git_backup::fetch_branch(skills_dir, &branch)?;
-            }
-        }
-    }
-
-    if pushed {
-        // A successful sync also clears a lingering auto-backup failure card.
-        let _ = store.set_setting(crate::core::auto_backup::SETTING_LAST_ERROR, "");
-    }
-    store.log_audit(
-        crate::core::audit_log::AuditDraft::new("sync")
-            .detail(format!(
-                "committed={} merged={} pushed={}",
-                committed,
-                merge_summary.is_some(),
-                pushed
-            ))
-            .ok(),
-    );
-    Ok(SyncOutcome {
-        committed,
-        merge: merge_summary,
-        pushed,
-        snapshot_tag,
-    })
 }
 
 /// Pending "needs attention" conflicts (merge-engine design §4) for the
