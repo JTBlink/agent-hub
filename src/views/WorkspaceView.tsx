@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { cn, compactHomePath } from "../utils";
 import { useApp } from "../context/AppContext";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { PresetBar } from "../components/PresetBar";
+import { SkillGroupBar } from "../components/SkillGroupBar";
 import { AgentIcon } from "../components/AgentIcon";
 import { DetailSheet } from "../components/DetailSheet";
 import { SkillMarkdown } from "../components/SkillMarkdown";
@@ -269,7 +269,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const { agentKey } = useParams<{ agentKey?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { tools, managedSkills, presets, refreshManagedSkills, refreshTools } =
+  const { tools, managedSkills, skillGroups, refreshManagedSkills, refreshTools } =
     useApp();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -358,12 +358,12 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     [agentKey, installedTools],
   );
 
-  // Preset actions must target what is actually rendered: a single agent when
+  // SkillGroup actions must target what is actually rendered: a single agent when
   // `currentTool` resolves, otherwise every installed agent in this category.
   // Falling back to the raw URL `agentKey` would let a stale deep link (a
   // bookmarked route for a since-disabled or uninstalled agent) mutate the
   // hidden agent while the overview is shown.
-  const presetBarAgentKeys = useMemo(
+  const skillGroupBarAgentKeys = useMemo(
     () => (currentTool ? [currentTool.key] : installedTools.map((t) => t.key)),
     [currentTool, installedTools],
   );
@@ -831,21 +831,21 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     [],
   );
 
-  const handlePresetAdd = useCallback(
+  const handleSkillGroupAdd = useCallback(
     async (skill: ManagedSkill, agentK: string) => {
       await api.syncSkillToTool(skill.id, agentK);
     },
     [],
   );
 
-  const handlePresetRemove = useCallback(
+  const handleSkillGroupRemove = useCallback(
     async (skill: ManagedSkill, agentK: string) => {
       await api.unsyncSkillFromTool(skill.id, agentK);
     },
     [],
   );
 
-  const handlePresetComplete = useCallback(async () => {
+  const handleSkillGroupComplete = useCallback(async () => {
     await Promise.all([
       refreshManagedSkills(),
       refreshTools(),
@@ -995,15 +995,15 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             </div>
           </div>
 
-          {presets.length > 0 && (
-            <PresetBar
-              presets={presets}
+          {skillGroups.length > 0 && (
+            <SkillGroupBar
+              skillGroups={skillGroups}
               managedSkills={managedSkills}
-              agentKeys={presetBarAgentKeys}
+              agentKeys={skillGroupBarAgentKeys}
               existsInWorkspace={existsInGlobal}
-              onAddSkill={handlePresetAdd}
-              onRemoveSkill={handlePresetRemove}
-              onComplete={handlePresetComplete}
+              onAddSkill={handleSkillGroupAdd}
+              onRemoveSkill={handleSkillGroupRemove}
+              onComplete={handleSkillGroupComplete}
             />
           )}
         </div>
@@ -1225,16 +1225,16 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
           </div>
         )}
 
-        {/* Preset bar */}
-        {presets.length > 0 && (
-          <PresetBar
-            presets={presets}
+        {/* SkillGroup bar */}
+        {skillGroups.length > 0 && (
+          <SkillGroupBar
+            skillGroups={skillGroups}
             managedSkills={managedSkills}
-            agentKeys={presetBarAgentKeys}
+            agentKeys={skillGroupBarAgentKeys}
             existsInWorkspace={existsInGlobal}
-            onAddSkill={handlePresetAdd}
-            onRemoveSkill={handlePresetRemove}
-            onComplete={handlePresetComplete}
+            onAddSkill={handleSkillGroupAdd}
+            onRemoveSkill={handleSkillGroupRemove}
+            onComplete={handleSkillGroupComplete}
           />
         )}
       </div>

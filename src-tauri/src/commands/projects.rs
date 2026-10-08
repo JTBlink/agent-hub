@@ -3,6 +3,7 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Instant;
+use walkdir::WalkDir;
 
 use serde::Serialize;
 use tauri::State;
@@ -38,6 +39,12 @@ pub struct ProjectDto {
 #[derive(Serialize)]
 pub struct ProjectSkillDocumentDto {
     pub skill_name: String,
+    pub filename: String,
+    pub content: String,
+}
+
+#[derive(Serialize)]
+pub struct ProjectSkillFileDto {
     pub filename: String,
     pub content: String,
 }
@@ -905,6 +912,62 @@ pub async fn get_project_skill_document(
         Err(AppError::not_found(
             "No document file found in skill directory",
         ))
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn get_project_skill_files(
+    project_id: String,
+    skill_relative_path: String,
+    agent: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Vec<ProjectSkillFileDto>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        ensure_safe_skill_relative_path(&skill_relative_path)?;
+        let record = store
+            .get_project_by_id(&project_id)
+            .map_err(AppError::db)?
+            .ok_or_else(|| AppError::not_found("Workspace not found"))?;
+        let (skills_root, disabled_root) = resolve_agent_skills_roots(&store, &record, &agent)
+            .ok_or_else(|| AppError::not_found(format!("Unknown workspace agent: {}", agent)))?;
+        let skill_dir = skills_root.join(&skill_relative_path);
+        let skill_dir = if skill_dir.is_dir() {
+            ensure_dir_within_root(&skill_dir, &skills_root)?;
+            skill_dir
+        } else if let Some(disabled_root) = disabled_root {
+            let disabled = disabled_root.join(&skill_relative_path);
+            if !disabled.is_dir() {
+                return Err(AppError::not_found("Skill directory not found"));
+            }
+            ensure_dir_within_root(&disabled, &disabled_root)?;
+            disabled
+        } else {
+            return Err(AppError::not_found("Skill directory not found"));
+        };
+
+        let mut files = Vec::new();
+        for entry in WalkDir::new(&skill_dir)
+            .max_depth(8)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            if !entry.file_type().is_file() {
+                continue;
+            }
+            let path = entry.path();
+            if let Ok(content) = std::fs::read_to_string(path) {
+                let filename = path
+                    .strip_prefix(&skill_dir)
+                    .map_err(AppError::io)?
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                files.push(ProjectSkillFileDto { filename, content });
+            }
+        }
+        files.sort_by(|a, b| a.filename.cmp(&b.filename));
+        Ok(files)
     })
     .await?
 }

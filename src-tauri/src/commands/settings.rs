@@ -71,6 +71,10 @@ pub async fn set_settings(
             "true" | "1" | "yes" | "on"
         );
         crate::set_tray_icon_enabled(&app, enabled).map_err(AppError::io)?;
+    } else if key == "language" {
+        // The tray menu is built by Rust and reads the persisted language;
+        // rebuild it immediately after the frontend changes locale.
+        crate::refresh_tray_menu(&app).map_err(AppError::io)?;
     }
     Ok(())
 }

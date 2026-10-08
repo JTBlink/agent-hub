@@ -1,24 +1,38 @@
+#[path = "agent-hub-cli/help.rs"]
+mod help;
+use help::localize_command;
+
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context};
-use app_lib::commands::{local_cleanup, presets as preset_cmd, skills as cmd, tools as tool_cmd};
+use app_lib::commands::{local_cleanup, skill_groups as skill_group_cmd, skills as cmd, tools as tool_cmd};
 use app_lib::core::{
     app_state, audit_log::AuditDraft, central_repo, error::AppError, git_backup, git_fetcher,
     installer, repo_lock::RepoLock, scanner, scenario_service, skill_metadata,
     skill_store::SkillStore, skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
 };
-use clap::{Args, Parser, Subcommand};
+use clap::{Arg, ArgAction, Args, Command, CommandFactory, FromArgMatches, Parser, Subcommand};
 use serde::Serialize;
 
 #[derive(Parser, Debug)]
-#[command(name = "agent-hub-cli")]
-#[command(about = "Shared-core CLI for agent-hub", version)]
+#[command(
+    name = "agent-hub-cli",
+    about = "管理 AgentHub 技能、技能组、Agent 和 Git 备份",
+    version,
+    disable_help_subcommand = true,
+    subcommand_help_heading = "命令",
+    next_help_heading = "选项",
+    help_template = "{about-with-newline}\n用法: {usage}\n\n{all-args}{after-help}",
+    after_help = "示例:\n  agent-hub-cli skills list\n  agent-hub-cli skill-groups list\n  agent-hub-cli skill-groups deploy \"日常开发\" --agent codex\n  agent-hub-cli --json skills list"
+)]
 struct Cli {
+    /// 输出机器可读的 JSON。
     #[arg(long, global = true)]
     json: bool,
-    #[arg(long, global = true)]
+    /// 使用备用技能根目录和隔离的 CLI 数据目录。
+    #[arg(long, global = true, value_name = "PATH")]
     skills_root: Option<PathBuf>,
     #[command(subcommand)]
     command: Commands,
@@ -26,16 +40,28 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 查看或修改中央技能库路径。
     Repo(RepoArgs),
     #[command(name = "agents", visible_alias = "tools")]
+    /// 列出和配置 Agent 工具适配器。
     Tools(ToolsArgs),
+    /// 安装、查看、打标签、更新和部署技能。
     Skills(SkillsArgs),
-    #[command(alias = "scenarios")]
-    Presets(PresetArgs),
+    /// 创建和管理命名技能组。
+    #[command(name = "skill-groups", alias = "presets", alias = "scenarios")]
+    SkillGroups(SkillGroupArgs),
+    /// 管理 Git 备份、快照和恢复操作。
     Git(GitArgs),
+    /// 显示帮助，或查看指定命令的帮助。
+    Help {
+        /// 要查看的命令路径，例如 skills list。
+        #[arg(value_name = "COMMAND")]
+        command: Vec<String>,
+    },
 }
 
 #[derive(Args, Debug)]
+#[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
 struct RepoArgs {
     #[command(subcommand)]
     command: RepoCommand,
@@ -43,12 +69,16 @@ struct RepoArgs {
 
 #[derive(Subcommand, Debug)]
 enum RepoCommand {
+    /// 查看仓库路径和数量统计。
     Status,
+    /// 将仓库移动到新路径。
     SetPath { path: String },
+    /// 清除自定义仓库路径并恢复默认路径。
     ResetPath,
 }
 
 #[derive(Args, Debug)]
+#[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
 struct ToolsArgs {
     #[command(subcommand)]
     command: ToolsCommand,
@@ -56,32 +86,36 @@ struct ToolsArgs {
 
 #[derive(Subcommand, Debug)]
 enum ToolsCommand {
+    /// 列出已知 Agent 及其安装状态。
     List,
+    /// 启用一个或多个 Agent。
     Enable {
         #[arg(required = true)]
         agents: Vec<String>,
     },
+    /// 停用一个或多个 Agent。
     Disable {
         #[arg(required = true)]
         agents: Vec<String>,
     },
-    /// Add a custom agent: a skills folder this app does not know by default
+    /// 添加自定义 Agent 技能目录。
     AddCustom {
-        /// Unique agent key, e.g. `hermes-work`
+        /// 唯一 Agent 标识，例如 hermes-work。
         key: String,
-        /// Agent skills folder, e.g. `~/.hermes/profiles/work/skills`
+        /// Agent 技能目录，例如 ~/.hermes/profiles/work/skills。
         #[arg(long)]
         path: String,
-        /// Display name (defaults to the key)
+        /// 显示名称，默认使用标识。
         #[arg(long)]
         name: Option<String>,
-        /// Project-relative skills folder, e.g. `.hermes/skills`
+        /// 项目内的相对技能目录，例如 .hermes/skills。
         #[arg(long)]
         project_path: Option<String>,
     },
 }
 
 #[derive(Args, Debug)]
+#[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
 struct SkillsArgs {
     #[command(subcommand)]
     command: SkillsCommand,
@@ -89,36 +123,39 @@ struct SkillsArgs {
 
 #[derive(Subcommand, Debug)]
 enum SkillsCommand {
+    /// 列出技能，可按关键词、标签、技能组、来源或部署目标筛选。
     List {
         #[arg(long)]
         query: Option<String>,
         #[arg(long = "tag", conflicts_with = "untagged")]
         tags: Vec<String>,
-        #[arg(long)]
-        preset: Option<String>,
+        /// 仅显示指定技能组中的技能。
+        #[arg(long = "skill-group", alias = "preset", value_name = "GROUP")]
+        skill_group: Option<String>,
         #[arg(long, value_name = "AGENT")]
         deployed_to: Option<String>,
         #[arg(long)]
         untagged: bool,
-        #[arg(long)]
-        no_preset: bool,
+        /// 仅显示未加入任何技能组的技能。
+        #[arg(long = "no-skill-group", alias = "no-preset")]
+        no_skill_group: bool,
         #[arg(long)]
         source: Option<String>,
     },
-    Show {
-        reference: String,
-    },
+    /// 查看技能详情、标签、来源、技能组和部署状态。
+    Show { reference: String },
+    /// 从中央技能库导出技能目录。
     Export {
         reference: String,
         #[arg(long)]
         dest: PathBuf,
-        /// Overwrite the destination if it already exists. Without this, an
-        /// existing destination is left untouched and the command fails.
+        /// 覆盖已存在的目标目录；默认保留目标并报错。
         #[arg(long)]
         force: bool,
     },
+    /// 从本地路径、Git 或 Skills.sh 安装技能。
     Install {
-        /// Ref: local path, git URL, or owner/repo[@skill] / owner/repo/skill
+        /// 本地路径、Git URL 或 owner/repo[@skill] 等引用。
         reference: String,
         #[arg(long, conflicts_with_all = ["git", "skillssh"])]
         local: bool,
@@ -128,19 +165,26 @@ enum SkillsCommand {
         skillssh: bool,
         #[arg(long)]
         name: Option<String>,
-        /// Add to current active preset and sync agents
-        #[arg(long, conflicts_with = "sync_preset")]
+        /// 加入当前活动技能组并同步到 Agent。
+        #[arg(long, conflicts_with = "sync_skill_group")]
         sync: bool,
-        /// Add to given preset (by id or name) and sync agents
-        #[arg(long, alias = "sync-scenario", value_name = "REF")]
-        sync_preset: Option<String>,
+        /// 加入指定技能组（ID 或名称）并同步到 Agent。
+        #[arg(
+            long = "sync-skill-group",
+            alias = "sync-preset",
+            alias = "sync-scenario",
+            value_name = "GROUP"
+        )]
+        sync_skill_group: Option<String>,
     },
+    /// 从记录的来源更新一个或全部技能。
     Update {
-        /// Skill ref (id / name / dir basename / central path). Omit for --all.
+        /// 技能 ID、名称、目录名或中央路径；配合 --all 时省略。
         reference: Option<String>,
         #[arg(long)]
         all: bool,
     },
+    /// 检查一个或全部技能是否有来源更新。
     Check {
         reference: Option<String>,
         #[arg(long)]
@@ -148,6 +192,7 @@ enum SkillsCommand {
         #[arg(long)]
         force: bool,
     },
+    /// 从中央技能库及托管部署中移除技能。
     Remove {
         references: Vec<String>,
         #[arg(long, short)]
@@ -155,27 +200,23 @@ enum SkillsCommand {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Preview and remove local Skill directories discovered under Agent roots.
+    /// 预览并清理 Agent 目录中扫描到的本地技能。
     Cleanup {
-        /// Include roots for Agents detected as installed (the default).
+        /// 包含已安装 Agent 的技能目录（默认行为）。
         #[arg(long)]
         include_installed: bool,
-        /// Restrict cleanup to roots of Agents not detected as installed.
+        /// 只清理未检测到安装的 Agent 目录。
         #[arg(long)]
         uninstalled_only: bool,
-        /// Delete the previewed locations. Without this flag the command is a preview.
+        /// 删除预览结果；默认仅预览。
         #[arg(long, short)]
         yes: bool,
     },
-    /// Deprecated compatibility command: use skills deploy.
-    Enable {
-        references: Vec<String>,
-    },
-    /// Deprecated compatibility command: use skills undeploy.
-    Disable {
-        references: Vec<String>,
-    },
-    /// Deploy library skills to one or more agents' global skill directories.
+    /// 已弃用的兼容命令；请使用 skills deploy。
+    Enable { references: Vec<String> },
+    /// 已弃用的兼容命令；请使用 skills undeploy。
+    Disable { references: Vec<String> },
+    /// 将技能部署到一个或多个 Agent 的全局技能目录。
     Deploy {
         #[arg(required = true)]
         references: Vec<String>,
@@ -184,7 +225,7 @@ enum SkillsCommand {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Remove managed deployments from one or more agents.
+    /// 移除一个或多个 Agent 上的托管部署。
     Undeploy {
         #[arg(required = true)]
         references: Vec<String>,
@@ -193,66 +234,69 @@ enum SkillsCommand {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Show preset membership and actual per-agent deployment state.
-    Status {
-        reference: String,
-    },
+    /// 查看技能组成员及各 Agent 的实际部署状态。
+    Status { reference: String },
+    /// 将活动技能组同步到已启用的 Agent。
     Sync {
-        /// Preset id or name (default = current active preset)
-        #[arg(long, alias = "scenario")]
-        preset: Option<String>,
-        /// Tool key (default = all enabled tools)
+        /// 技能组 ID 或名称，默认使用当前活动技能组。
+        #[arg(
+            long = "skill-group",
+            alias = "preset",
+            alias = "scenario",
+            value_name = "GROUP"
+        )]
+        skill_group: Option<String>,
+        /// Agent 标识，默认同步到所有已启用 Agent。
         #[arg(long)]
         tool: Option<String>,
         #[arg(long)]
         dry_run: bool,
     },
+    /// 搜索在线技能目录。
     Search {
         query: String,
         #[arg(long)]
         limit: Option<usize>,
     },
-    /// Re-point an installed skill at a git source in place, keeping its id,
-    /// tags, preset membership and deployments.
+    /// 为已安装技能重新指定 Git 来源，保留原有身份。
     SetSource {
-        /// Skill ref (id / name / dir basename / central path)
+        /// 技能 ID、名称、目录名或中央路径。
         reference: String,
-        /// Git URL or owner/repo, optionally a GitHub tree URL encoding branch and subpath
+        /// Git URL 或 owner/repo，可包含分支和子路径。
         #[arg(long = "git-url")]
         git_url: String,
-        /// Subpath inside the repo. Pass "" if the skill is at the repo root.
-        /// Overrides a subpath encoded in the URL.
+        /// 仓库内子路径；技能在根目录时传空字符串，可覆盖 URL 中的子路径。
         #[arg(long)]
         subpath: Option<String>,
-        /// Branch to track. Overrides a branch encoded in the URL.
+        /// 要跟踪的分支，可覆盖 URL 中的分支。
         #[arg(long)]
         branch: Option<String>,
-        /// Overwrite the central copy when the new source's content differs.
-        /// Without this, a content difference is refused.
+        /// 新来源内容不同时覆盖中央副本；默认遇到差异会拒绝。
         #[arg(long)]
         force: bool,
-        /// Resolve and compare without writing anything.
+        /// 仅解析和比较，不写入任何内容。
         #[arg(long)]
         dry_run: bool,
     },
+    /// 导入一个或多个 Agent 目录中发现的技能。
     Adopt {
-        /// Agent skill dirs to scan (e.g. ~/.claude/skills), or a single skill dir
+        /// 要扫描的 Agent 技能目录，或单个技能目录。
         paths: Vec<PathBuf>,
-        /// If set, adopt as git source (only with single adoptable skill)
+        /// 指定后将其作为 Git 来源导入，仅支持单个技能。
         #[arg(long)]
         git_url: Option<String>,
-        /// Subpath inside the git repo where the adopted skill lives. Required
-        /// with --git-url when the URL itself does not encode a subpath. Pass
-        /// "" if the skill is at the repo root.
+        /// Git 仓库内的技能子路径；URL 未包含子路径时必须指定，根目录传空字符串。
         #[arg(long)]
         git_subpath: Option<String>,
         #[arg(long)]
         dry_run: bool,
     },
+    /// 添加、移除、重命名或列出技能标签。
     Tag(TagArgs),
 }
 
 #[derive(Args, Debug)]
+#[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
 struct TagArgs {
     #[command(subcommand)]
     command: TagCommand,
@@ -260,22 +304,24 @@ struct TagArgs {
 
 #[derive(Subcommand, Debug)]
 enum TagCommand {
+    /// 为一个技能添加标签。
     Add {
         reference: String,
         tags: Vec<String>,
     },
+    /// 移除一个技能的标签。
     Remove {
         reference: String,
         tags: Vec<String>,
     },
+    /// 替换一个技能的全部标签。
     Set {
         reference: String,
         tags: Vec<String>,
     },
-    Rename {
-        old_name: String,
-        new_name: String,
-    },
+    /// 在全部技能中重命名标签。
+    Rename { old_name: String, new_name: String },
+    /// 从全部技能中删除标签。
     Delete {
         name: String,
         #[arg(long, short)]
@@ -283,24 +329,29 @@ enum TagCommand {
         #[arg(long)]
         dry_run: bool,
     },
-    List {
-        reference: Option<String>,
-    },
+    /// 列出全部标签或指定技能的标签。
+    List { reference: Option<String> },
 }
 
 #[derive(Args, Debug)]
-struct PresetArgs {
+#[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
+struct SkillGroupArgs {
     #[command(subcommand)]
-    command: PresetCommand,
+    command: SkillGroupCommand,
 }
 
 #[derive(Subcommand, Debug)]
-enum PresetCommand {
+enum SkillGroupCommand {
+    /// 列出全部技能组。
     List,
+    /// 查看当前活动技能组。
     Current,
+    /// 查看技能组详情及成员数量。
     Show {
+        #[arg(value_name = "GROUP")]
         reference: String,
     },
+    /// 创建技能组。
     Create {
         name: String,
         #[arg(long)]
@@ -308,7 +359,9 @@ enum PresetCommand {
         #[arg(long)]
         icon: Option<String>,
     },
+    /// 修改技能组名称、描述或图标。
     Update {
+        #[arg(value_name = "GROUP")]
         reference: String,
         #[arg(long)]
         name: Option<String>,
@@ -317,60 +370,75 @@ enum PresetCommand {
         #[arg(long)]
         icon: Option<String>,
     },
+    /// 删除技能组，保留组内技能。
     Delete {
+        #[arg(value_name = "GROUP")]
         reference: String,
         #[arg(long, short)]
         yes: bool,
         #[arg(long)]
         dry_run: bool,
     },
+    /// 预览技能组的部署变化。
     Preview {
+        #[arg(value_name = "GROUP")]
         reference: String,
     },
-    /// Legacy exclusive switch: replaces the current active preset.
+    /// 旧版互斥切换：替换当前活动技能组。
     Apply {
+        #[arg(value_name = "GROUP")]
         reference: String,
     },
-    /// Legacy exclusive close operation. Prefer undeploy for additive presets.
+    /// 旧版互斥关闭；叠加部署请使用 undeploy。
     Deactivate {
+        #[arg(value_name = "GROUP")]
         reference: String,
     },
-    /// Additively deploy this preset without removing other deployed presets.
+    /// 部署技能组，保留其他已部署技能组。
     #[command(alias = "activate", alias = "enable", alias = "start", alias = "open")]
     Deploy {
+        #[arg(value_name = "GROUP")]
         reference: String,
         #[arg(long = "agent", value_name = "AGENT")]
         agents: Vec<String>,
         #[arg(long)]
         dry_run: bool,
     },
-    /// Remove this preset's deployed pairs without changing its membership.
+    /// 移除技能组部署，保留成员关系。
     #[command(alias = "disable", alias = "stop", alias = "close", alias = "off")]
     Undeploy {
+        #[arg(value_name = "GROUP")]
         reference: String,
         #[arg(long = "agent", value_name = "AGENT")]
         agents: Vec<String>,
         #[arg(long)]
         dry_run: bool,
     },
+    /// 查看各 Agent 上已部署的组内技能数量。
     Status {
+        #[arg(value_name = "GROUP")]
         reference: String,
         #[arg(long = "agent", value_name = "AGENT")]
         agents: Vec<String>,
     },
+    /// 将一个或多个技能加入技能组，不执行部署。
     AddSkill {
-        preset: String,
+        #[arg(value_name = "GROUP")]
+        skill_group: String,
         #[arg(required = true)]
         skills: Vec<String>,
     },
+    /// 从技能组移除一个或多个技能，不撤销部署。
     RemoveSkill {
-        preset: String,
+        #[arg(value_name = "GROUP")]
+        skill_group: String,
         #[arg(required = true)]
         skills: Vec<String>,
     },
 }
 
 #[derive(Args, Debug)]
+#[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
 struct GitArgs {
     #[command(subcommand)]
     command: GitCommand,
@@ -378,29 +446,31 @@ struct GitArgs {
 
 #[derive(Subcommand, Debug)]
 enum GitCommand {
+    /// 查看 Git 备份状态。
     Status,
+    /// 初始化本地 Git 备份仓库。
     Init,
-    Clone {
-        url: String,
-    },
-    SetRemote {
-        url: String,
-    },
+    /// 克隆远端 Git 备份仓库。
+    Clone { url: String },
+    /// 设置 Git 备份远端 URL。
+    SetRemote { url: String },
+    /// 拉取并合并远端备份变更。
     Pull,
+    /// 将本地备份提交推送到远端。
     Push,
+    /// 使用指定说明提交备份快照。
     Commit {
         #[arg(short, long)]
         message: String,
     },
+    /// 列出可用备份快照。
     Versions {
         #[arg(long)]
         limit: Option<usize>,
     },
-    Restore {
-        tag: String,
-    },
-    /// Remove refs/agent-hub/* that a `git push --mirror`/--all style
-    /// operation uploaded to the backup remote. Local sync refs are kept.
+    /// 按标签恢复备份快照。
+    Restore { tag: String },
+    /// 清理误传到远端的内部同步引用，保留本地引用。
     PruneSyncRefs,
 }
 
@@ -411,8 +481,8 @@ struct RepoStatus {
     db_path: String,
     metadata_dir: String,
     skill_count: usize,
-    preset_count: usize,
-    active_preset_id: Option<String>,
+    skill_group_count: usize,
+    active_skill_group_id: Option<String>,
     /// Set while a move to another location waits for the app to restart.
     #[serde(skip_serializing_if = "Option::is_none")]
     pending_base_dir: Option<String>,
@@ -428,8 +498,8 @@ struct SkillSummary {
     tags: Vec<String>,
     source_type: String,
     source_ref: Option<String>,
-    preset_ids: Vec<String>,
-    presets: Vec<String>,
+    skill_group_ids: Vec<String>,
+    skill_groups: Vec<String>,
     deployed_to: Vec<String>,
 }
 
@@ -489,7 +559,7 @@ struct SkillDetail {
 }
 
 #[derive(Debug, Serialize)]
-struct PresetInfo {
+struct SkillGroupInfo {
     id: String,
     name: String,
     description: Option<String>,
@@ -500,7 +570,7 @@ struct PresetInfo {
 }
 
 #[derive(Debug, Serialize)]
-struct PresetAgentStatus {
+struct SkillGroupAgentStatus {
     key: String,
     display_name: String,
     deployed: usize,
@@ -509,17 +579,17 @@ struct PresetAgentStatus {
 }
 
 #[derive(Debug, Serialize)]
-struct PresetStatusReport {
-    preset: PresetInfo,
-    agents: Vec<PresetAgentStatus>,
+struct SkillGroupStatusReport {
+    skill_group: SkillGroupInfo,
+    agents: Vec<SkillGroupAgentStatus>,
 }
 
 #[derive(Debug, Serialize)]
-struct PresetDeploymentReport {
+struct SkillGroupDeploymentReport {
     ok: bool,
     action: String,
-    preset_id: String,
-    preset_name: String,
+    skill_group_id: String,
+    skill_group_name: String,
     agents: Vec<String>,
     dry_run: bool,
     skill_count: usize,
@@ -531,10 +601,10 @@ struct PresetDeploymentReport {
 }
 
 #[derive(Debug, Serialize)]
-struct PresetDeleteReport {
+struct SkillGroupDeleteReport {
     ok: bool,
-    preset_id: String,
-    preset_name: String,
+    skill_group_id: String,
+    skill_group_name: String,
     dry_run: bool,
     deleted: bool,
 }
@@ -547,7 +617,7 @@ struct InstallReport {
     central_path: String,
     source_type: String,
     synced: bool,
-    preset_id: Option<String>,
+    skill_group_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -597,21 +667,21 @@ struct DeprecatedEnableReport {
 #[derive(Debug, Serialize)]
 struct SyncReport {
     ok: bool,
-    preset_id: String,
-    preset_name: String,
+    skill_group_id: String,
+    skill_group_name: String,
     tool: Option<String>,
     dry_run: bool,
     targets: Vec<scenario_service::SyncPreviewTarget>,
 }
 
 #[derive(Debug, Serialize)]
-struct PresetDeactivateReport {
+struct SkillGroupDeactivateReport {
     ok: bool,
-    preset_id: String,
-    preset_name: String,
+    skill_group_id: String,
+    skill_group_name: String,
     removed_target_count: usize,
-    active_preset_id: Option<String>,
-    active_preset_name: Option<String>,
+    active_skill_group_id: Option<String>,
+    active_skill_group_name: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -658,9 +728,9 @@ struct GlobalTagReport {
 }
 
 #[derive(Debug, Serialize)]
-struct PresetMembershipReport {
-    preset_id: String,
-    preset_name: String,
+struct SkillGroupMembershipReport {
+    skill_group_id: String,
+    skill_group_name: String,
     added: Vec<String>,
     removed: Vec<String>,
     missing: Vec<String>,
@@ -678,13 +748,30 @@ enum SyncTarget {
     Specific(String),
 }
 
+fn parse_cli() -> Result<Cli, clap::Error> {
+    let matches = cli_command().try_get_matches()?;
+    Cli::from_arg_matches(&matches)
+}
+
+fn cli_command() -> Command {
+    localize_command(Cli::command())
+        .disable_version_flag(true)
+        .arg(
+            Arg::new("version")
+                .short('V')
+                .long("version")
+                .action(ArgAction::Version)
+                .help("显示版本"),
+        )
+}
+
 fn main() {
     let json = std::env::args()
         .skip(1)
         .take_while(|a| a != "--")
         .any(|a| a == "--json" || a.starts_with("--json="));
 
-    let cli = match Cli::try_parse() {
+    let cli = match parse_cli() {
         Ok(c) => c,
         Err(e) => {
             if !e.use_stderr() {
@@ -704,6 +791,16 @@ fn main() {
             e.exit();
         }
     };
+
+    if let Commands::Help { command } = &cli.command {
+        let args = std::iter::once("agent-hub-cli")
+            .chain(command.iter().map(String::as_str))
+            .chain(std::iter::once("-h"));
+        if let Err(error) = cli_command().try_get_matches_from(args) {
+            error.exit();
+        }
+        return;
+    }
 
     if let Err(err) = run(cli) {
         if json {
@@ -747,8 +844,9 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         Commands::Repo(args) => run_repo(args, &store, cli.json),
         Commands::Tools(args) => run_tools(args, &store, cli.json),
         Commands::Skills(args) => run_skills(args, &store, cli.json),
-        Commands::Presets(args) => run_presets(args, &store, cli.json),
+        Commands::SkillGroups(args) => run_skill_groups(args, &store, cli.json),
         Commands::Git(args) => run_git(args, &store, cli.skills_root.is_some(), cli.json),
+        Commands::Help { .. } => unreachable!("handled before opening the store"),
     }
 }
 
@@ -771,8 +869,8 @@ fn repo_status(store: &SkillStore) -> RepoStatus {
         db_path: central_repo::db_path().to_string_lossy().to_string(),
         metadata_dir: sync_metadata::metadata_dir().to_string_lossy().to_string(),
         skill_count: store.get_all_skills().unwrap_or_default().len(),
-        preset_count: store.get_all_scenarios().unwrap_or_default().len(),
-        active_preset_id: store.get_active_scenario_id().unwrap_or(None),
+        skill_group_count: store.get_all_scenarios().unwrap_or_default().len(),
+        active_skill_group_id: store.get_active_scenario_id().unwrap_or(None),
         pending_base_dir: central_repo::pending_base_dir()
             .map(|path| path.to_string_lossy().to_string()),
     }
@@ -866,20 +964,20 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
         SkillsCommand::List {
             query,
             tags,
-            preset,
+            skill_group,
             deployed_to,
             untagged,
-            no_preset,
+            no_skill_group,
             source,
         } => print_json(
             &list_skills_filtered(
                 store,
                 query.as_deref(),
                 &tags,
-                preset.as_deref(),
+                skill_group.as_deref(),
                 deployed_to.as_deref(),
                 untagged,
-                no_preset,
+                no_skill_group,
                 source.as_deref(),
             )?,
             json,
@@ -903,10 +1001,10 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
             skillssh,
             name,
             sync,
-            sync_preset,
+            sync_skill_group,
         } => {
             let kind = classify_ref(&reference, local, git, skillssh)?;
-            let sync_target = if let Some(ref s) = sync_preset {
+            let sync_target = if let Some(ref s) = sync_skill_group {
                 SyncTarget::Specific(s.clone())
             } else if sync {
                 SyncTarget::Active
@@ -990,11 +1088,11 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
             print_json(&skill_status(store, &reference)?, json);
         }
         SkillsCommand::Sync {
-            preset,
+            skill_group,
             tool,
             dry_run,
         } => {
-            let report = run_sync(store, preset.as_deref(), tool.as_deref(), dry_run)?;
+            let report = run_sync(store, skill_group.as_deref(), tool.as_deref(), dry_run)?;
             print_json(&report, json);
         }
         SkillsCommand::Search { query, limit } => {
@@ -1074,8 +1172,8 @@ fn list_skills(store: &SkillStore) -> anyhow::Result<Vec<SkillSummary>> {
 
     let mut items = Vec::new();
     for skill in store.get_all_skills()? {
-        let preset_ids = store.get_scenarios_for_skill(&skill.id)?;
-        let preset_names = preset_ids
+        let skill_group_ids = store.get_scenarios_for_skill(&skill.id)?;
+        let skill_group_names = skill_group_ids
             .iter()
             .filter_map(|id| scenario_lookup.get(id).cloned())
             .collect();
@@ -1095,8 +1193,8 @@ fn list_skills(store: &SkillStore) -> anyhow::Result<Vec<SkillSummary>> {
             tags: tags_map.get(&skill.id).cloned().unwrap_or_default(),
             source_type: skill.source_type.clone(),
             source_ref: skill.source_ref.clone(),
-            preset_ids,
-            presets: preset_names,
+            skill_group_ids,
+            skill_groups: skill_group_names,
             deployed_to,
         });
     }
@@ -1108,14 +1206,14 @@ fn list_skills_filtered(
     store: &SkillStore,
     query: Option<&str>,
     tags: &[String],
-    preset_ref: Option<&str>,
+    skill_group_ref: Option<&str>,
     deployed_to: Option<&str>,
     untagged: bool,
-    no_preset: bool,
+    no_skill_group: bool,
     source: Option<&str>,
 ) -> anyhow::Result<Vec<SkillSummary>> {
-    let preset_id = preset_ref
-        .map(|reference| resolve_scenario(store, reference).map(|preset| preset.id))
+    let skill_group_id = skill_group_ref
+        .map(|reference| resolve_scenario(store, reference).map(|skill_group| skill_group.id))
         .transpose()?;
     if let Some(agent) = deployed_to {
         if tool_adapters::find_adapter_with_store(store, agent).is_none() {
@@ -1152,11 +1250,11 @@ fn list_skills_filtered(
         })
         .filter(|skill| wanted_tags.iter().all(|tag| skill.tags.contains(tag)))
         .filter(|skill| !untagged || skill.tags.is_empty())
-        .filter(|skill| !no_preset || skill.preset_ids.is_empty())
+        .filter(|skill| !no_skill_group || skill.skill_group_ids.is_empty())
         .filter(|skill| {
-            preset_id
+            skill_group_id
                 .as_ref()
-                .map_or(true, |id| skill.preset_ids.contains(id))
+                .map_or(true, |id| skill.skill_group_ids.contains(id))
         })
         .filter(|skill| {
             deployed_to.as_ref().map_or(true, |agent| {
@@ -1276,7 +1374,7 @@ fn run_skill_deployment(
     let existing_targets = store.get_all_targets()?;
     let skill_ids: Vec<String> = skills.iter().map(|skill| skill.id.clone()).collect();
     let agent_keys = if deploy {
-        select_preset_agents(store, requested_agents, true)?
+        select_skill_group_agents(store, requested_agents, true)?
             .into_iter()
             .map(|agent| agent.key)
             .collect()
@@ -1614,13 +1712,13 @@ fn run_install(
     kind: InstallKind,
     sync: SyncTarget,
 ) -> anyhow::Result<InstallReport> {
-    let preset_id = resolve_sync_target(store, &sync)?;
-    let synced = preset_id.is_some();
+    let skill_group_id = resolve_sync_target(store, &sync)?;
+    let synced = skill_group_id.is_some();
 
     let (skill_id, install_name, central_path, source_type) = match kind {
-        InstallKind::Local => install_local_action(store, reference, name, preset_id.as_deref())?,
-        InstallKind::Git => install_git_action(store, reference, name, preset_id.as_deref())?,
-        InstallKind::Skillssh => install_skillssh_action(store, reference, preset_id.as_deref())?,
+        InstallKind::Local => install_local_action(store, reference, name, skill_group_id.as_deref())?,
+        InstallKind::Git => install_git_action(store, reference, name, skill_group_id.as_deref())?,
+        InstallKind::Skillssh => install_skillssh_action(store, reference, skill_group_id.as_deref())?,
     };
 
     Ok(InstallReport {
@@ -1630,7 +1728,7 @@ fn run_install(
         central_path,
         source_type,
         synced,
-        preset_id,
+        skill_group_id,
     })
 }
 
@@ -2036,26 +2134,26 @@ fn run_deprecated_set_enabled(
 
 fn run_sync(
     store: &SkillStore,
-    preset_ref: Option<&str>,
+    skill_group_ref: Option<&str>,
     tool_key: Option<&str>,
     dry_run: bool,
 ) -> anyhow::Result<SyncReport> {
-    let preset = match preset_ref {
+    let skill_group = match skill_group_ref {
         Some(s) => resolve_scenario(store, s)?,
         None => {
             let active = store
                 .get_active_scenario_id()?
-                .ok_or_else(|| anyhow!("no active preset; pass --preset"))?;
+                .ok_or_else(|| anyhow!("no active Skill Group; pass --skill-group"))?;
             store
                 .get_all_scenarios()?
                 .into_iter()
                 .find(|s| s.id == active)
-                .ok_or_else(|| anyhow!("active preset not found"))?
+                .ok_or_else(|| anyhow!("active Skill Group not found"))?
         }
     };
 
     let preview =
-        scenario_service::preview_scenario_sync(store, &preset.id).map_err(map_app_err)?;
+        scenario_service::preview_scenario_sync(store, &skill_group.id).map_err(map_app_err)?;
 
     let filtered: Vec<_> = if let Some(t) = tool_key {
         preview.into_iter().filter(|p| p.tool == t).collect()
@@ -2064,7 +2162,7 @@ fn run_sync(
     };
 
     if dry_run {
-        let desired = scenario_service::collect_scenario_sync_targets(store, &preset.id)
+        let desired = scenario_service::collect_scenario_sync_targets(store, &skill_group.id)
             .map_err(map_app_err)?;
         let desired: Vec<_> = desired
             .into_iter()
@@ -2073,18 +2171,18 @@ fn run_sync(
         scenario_service::preflight_scenario_sync_targets(store, &desired).map_err(map_app_err)?;
         return Ok(SyncReport {
             ok: true,
-            preset_id: preset.id,
-            preset_name: preset.name,
+            skill_group_id: skill_group.id,
+            skill_group_name: skill_group.name,
             tool: tool_key.map(|s| s.to_string()),
             dry_run: true,
             targets: filtered,
         });
     }
 
-    // Make preset active if it isn't, then sync.
+    // Make skill_group active if it isn't, then sync.
     let active = store.get_active_scenario_id()?;
-    if active.as_deref() != Some(preset.id.as_str()) {
-        store.set_active_scenario(&preset.id)?;
+    if active.as_deref() != Some(skill_group.id.as_str()) {
+        store.set_active_scenario(&skill_group.id)?;
     }
 
     if let Some(t) = tool_key {
@@ -2092,7 +2190,7 @@ fn run_sync(
         // fan out to every enabled adapter (which is what
         // sync_active_scenario_to_tool ends up doing via
         // sync_skill_to_active_scenario).
-        let all_targets = scenario_service::collect_scenario_sync_targets(store, &preset.id)
+        let all_targets = scenario_service::collect_scenario_sync_targets(store, &skill_group.id)
             .map_err(map_app_err)?;
         let desired: Vec<_> = all_targets.into_iter().filter(|tg| tg.tool == t).collect();
         let refusals =
@@ -2100,14 +2198,14 @@ fn run_sync(
         scenario_service::refusals_to_error(refusals).map_err(map_app_err)?;
     } else {
         let refusals =
-            scenario_service::apply_scenario_to_default(store, &preset.id).map_err(map_app_err)?;
+            scenario_service::apply_scenario_to_default(store, &skill_group.id).map_err(map_app_err)?;
         scenario_service::refusals_to_error(refusals).map_err(map_app_err)?;
     }
 
     Ok(SyncReport {
         ok: true,
-        preset_id: preset.id,
-        preset_name: preset.name,
+        skill_group_id: skill_group.id,
+        skill_group_name: skill_group.name,
         tool: tool_key.map(|s| s.to_string()),
         dry_run: false,
         targets: filtered,
@@ -2318,7 +2416,7 @@ fn run_adopt(
             central_path,
             source_type,
             synced: false,
-            preset_id: None,
+            skill_group_id: None,
         });
     }
 
@@ -2507,31 +2605,31 @@ fn run_tag(args: TagArgs, store: &SkillStore, json: bool) -> anyhow::Result<()> 
     Ok(())
 }
 
-// ── presets ───────────────────────────────────────────────────────────────
+// ── skill groups ───────────────────────────────────────────────────────────────
 
-fn run_presets(args: PresetArgs, store: &SkillStore, json: bool) -> anyhow::Result<()> {
+fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> anyhow::Result<()> {
     match args.command {
-        PresetCommand::List => print_json(&list_presets(store)?, json),
-        PresetCommand::Current => print_json(&current_preset(store)?, json),
-        PresetCommand::Show { reference } => {
-            let preset = resolve_scenario(store, &reference)?;
-            print_json(&preset_info_for(store, preset)?, json);
+        SkillGroupCommand::List => print_json(&list_skill_groups(store)?, json),
+        SkillGroupCommand::Current => print_json(&current_skill_group(store)?, json),
+        SkillGroupCommand::Show { reference } => {
+            let skill_group = resolve_scenario(store, &reference)?;
+            print_json(&skill_group_info_for(store, skill_group)?, json);
         }
-        PresetCommand::Create {
+        SkillGroupCommand::Create {
             name,
             description,
             icon,
         } => {
-            let preset = preset_cmd::create_preset_internal(
+            let skill_group = skill_group_cmd::create_skill_group_internal(
                 store,
                 &name,
                 description.as_deref(),
                 icon.as_deref(),
             )
             .map_err(map_app_err)?;
-            print_json(&preset_info_for(store, preset)?, json);
+            print_json(&skill_group_info_for(store, skill_group)?, json);
         }
-        PresetCommand::Update {
+        SkillGroupCommand::Update {
             reference,
             name,
             description,
@@ -2540,73 +2638,73 @@ fn run_presets(args: PresetArgs, store: &SkillStore, json: bool) -> anyhow::Resu
             if name.is_none() && description.is_none() && icon.is_none() {
                 bail!("pass at least one of --name, --description, or --icon");
             }
-            let preset = resolve_scenario(store, &reference)?;
-            let next_name = name.unwrap_or_else(|| preset.name.clone());
+            let skill_group = resolve_scenario(store, &reference)?;
+            let next_name = name.unwrap_or_else(|| skill_group.name.clone());
             let next_description = match description {
                 Some(value) if value.trim().is_empty() => None,
                 Some(value) => Some(value),
-                None => preset.description.clone(),
+                None => skill_group.description.clone(),
             };
             let next_icon = match icon {
                 Some(value) if value.trim().is_empty() => None,
                 Some(value) => Some(value),
-                None => preset.icon.clone(),
+                None => skill_group.icon.clone(),
             };
-            preset_cmd::update_preset_internal(
+            skill_group_cmd::update_skill_group_internal(
                 store,
-                &preset.id,
+                &skill_group.id,
                 &next_name,
                 next_description.as_deref(),
                 next_icon.as_deref(),
             )
             .map_err(map_app_err)?;
-            let updated = resolve_scenario(store, &preset.id)?;
-            print_json(&preset_info_for(store, updated)?, json);
+            let updated = resolve_scenario(store, &skill_group.id)?;
+            print_json(&skill_group_info_for(store, updated)?, json);
         }
-        PresetCommand::Delete {
+        SkillGroupCommand::Delete {
             reference,
             yes,
             dry_run,
         } => {
-            let preset = resolve_scenario(store, &reference)?;
+            let skill_group = resolve_scenario(store, &reference)?;
             if !dry_run && !yes {
-                bail!("refusing to delete preset without --yes");
+                bail!("refusing to delete Skill Group without --yes");
             }
             if !dry_run {
-                preset_cmd::delete_preset_internal(store, &preset.id).map_err(map_app_err)?;
+                skill_group_cmd::delete_skill_group_internal(store, &skill_group.id).map_err(map_app_err)?;
             }
             print_json(
-                &PresetDeleteReport {
+                &SkillGroupDeleteReport {
                     ok: true,
-                    preset_id: preset.id,
-                    preset_name: preset.name,
+                    skill_group_id: skill_group.id,
+                    skill_group_name: skill_group.name,
                     dry_run,
                     deleted: !dry_run,
                 },
                 json,
             );
         }
-        PresetCommand::Preview { reference } => {
-            let preset = resolve_scenario(store, &reference)?;
+        SkillGroupCommand::Preview { reference } => {
+            let skill_group = resolve_scenario(store, &reference)?;
             let preview =
-                scenario_service::preview_scenario_sync(store, &preset.id).map_err(map_app_err)?;
+                scenario_service::preview_scenario_sync(store, &skill_group.id).map_err(map_app_err)?;
             print_json(&preview, json);
         }
-        PresetCommand::Apply { reference } => {
-            let preset = resolve_scenario(store, &reference)?;
-            let refusals = scenario_service::apply_scenario_to_default(store, &preset.id)
+        SkillGroupCommand::Apply { reference } => {
+            let skill_group = resolve_scenario(store, &reference)?;
+            let refusals = scenario_service::apply_scenario_to_default(store, &skill_group.id)
                 .map_err(map_app_err)?;
             scenario_service::refusals_to_error(refusals).map_err(map_app_err)?;
-            print_json(&current_preset(store)?, json);
+            print_json(&current_skill_group(store)?, json);
         }
-        PresetCommand::Deactivate { reference } => {
-            let preset = resolve_scenario(store, &reference)?;
+        SkillGroupCommand::Deactivate { reference } => {
+            let skill_group = resolve_scenario(store, &reference)?;
             let active = store.get_active_scenario_id()?;
-            let is_active = active.as_deref() == Some(preset.id.as_str());
-            let count_before = count_synced_targets_for_preset(store, &preset.id)?;
+            let is_active = active.as_deref() == Some(skill_group.id.as_str());
+            let count_before = count_synced_targets_for_skill_group(store, &skill_group.id)?;
 
             if is_active {
-                let next_active = replacement_preset_after_deactivate(store, &preset.id)?;
+                let next_active = replacement_skill_group_after_deactivate(store, &skill_group.id)?;
                 if let Some(next) = next_active.as_ref() {
                     for refusal in scenario_service::apply_scenario_to_default(store, &next.id)
                         .map_err(map_app_err)?
@@ -2614,16 +2712,16 @@ fn run_presets(args: PresetArgs, store: &SkillStore, json: bool) -> anyhow::Resu
                         eprintln!("warning: {refusal}");
                     }
                 } else {
-                    scenario_service::unsync_scenario_skills(store, &preset.id)
+                    scenario_service::unsync_scenario_skills(store, &skill_group.id)
                         .map_err(map_app_err)?;
                     store.clear_active_scenario()?;
                 }
             } else {
-                // Closing a non-active preset still tears down sync targets for
-                // any skills it shares with the active preset. Unsync this
-                // preset first, then re-sync the active preset so the shared
+                // Closing a non-active skill group still tears down sync targets for
+                // any skills it shares with the active skill group. Unsync this
+                // skill group first, then re-sync the active skill group so the shared
                 // targets are restored.
-                scenario_service::unsync_scenario_skills(store, &preset.id).map_err(map_app_err)?;
+                scenario_service::unsync_scenario_skills(store, &skill_group.id).map_err(map_app_err)?;
                 if let Some(active_id) = active.as_deref() {
                     // The delete already happened; a refusal here must not fail
                     // the command, only be reported.
@@ -2635,51 +2733,51 @@ fn run_presets(args: PresetArgs, store: &SkillStore, json: bool) -> anyhow::Resu
                 }
             }
 
-            let count_after = count_synced_targets_for_preset(store, &preset.id)?;
+            let count_after = count_synced_targets_for_skill_group(store, &skill_group.id)?;
             let removed_target_count = count_before.saturating_sub(count_after);
 
-            let active_after = current_preset(store)?;
+            let active_after = current_skill_group(store)?;
             print_json(
-                &PresetDeactivateReport {
+                &SkillGroupDeactivateReport {
                     ok: true,
-                    preset_id: preset.id,
-                    preset_name: preset.name,
+                    skill_group_id: skill_group.id,
+                    skill_group_name: skill_group.name,
                     removed_target_count,
-                    active_preset_id: active_after.as_ref().map(|preset| preset.id.clone()),
-                    active_preset_name: active_after.map(|preset| preset.name),
+                    active_skill_group_id: active_after.as_ref().map(|skill_group| skill_group.id.clone()),
+                    active_skill_group_name: active_after.map(|skill_group| skill_group.name),
                 },
                 json,
             );
         }
-        PresetCommand::Deploy {
+        SkillGroupCommand::Deploy {
             reference,
             agents,
             dry_run,
         } => {
-            let report = run_preset_deployment(store, &reference, &agents, true, dry_run)?;
+            let report = run_skill_group_deployment(store, &reference, &agents, true, dry_run)?;
             print_json(&report, json);
         }
-        PresetCommand::Undeploy {
+        SkillGroupCommand::Undeploy {
             reference,
             agents,
             dry_run,
         } => {
-            let report = run_preset_deployment(store, &reference, &agents, false, dry_run)?;
+            let report = run_skill_group_deployment(store, &reference, &agents, false, dry_run)?;
             print_json(&report, json);
         }
-        PresetCommand::Status { reference, agents } => {
-            print_json(&preset_status(store, &reference, &agents)?, json);
+        SkillGroupCommand::Status { reference, agents } => {
+            print_json(&skill_group_status(store, &reference, &agents)?, json);
         }
-        PresetCommand::AddSkill { preset, skills } => {
-            let s = resolve_scenario(store, &preset)?;
+        SkillGroupCommand::AddSkill { skill_group, skills } => {
+            let s = resolve_scenario(store, &skill_group)?;
             let resolved = resolve_skill_references(store, &skills)?;
             let ids: Vec<String> = resolved.iter().map(|skill| skill.id.clone()).collect();
-            preset_cmd::set_preset_skills_internal(store, &s.id, &ids, true)
+            skill_group_cmd::set_skill_group_skills_internal(store, &s.id, &ids, true)
                 .map_err(map_app_err)?;
             print_json(
-                &PresetMembershipReport {
-                    preset_id: s.id,
-                    preset_name: s.name,
+                &SkillGroupMembershipReport {
+                    skill_group_id: s.id,
+                    skill_group_name: s.name,
                     added: resolved.into_iter().map(|skill| skill.name).collect(),
                     removed: Vec::new(),
                     missing: Vec::new(),
@@ -2687,16 +2785,16 @@ fn run_presets(args: PresetArgs, store: &SkillStore, json: bool) -> anyhow::Resu
                 json,
             );
         }
-        PresetCommand::RemoveSkill { preset, skills } => {
-            let s = resolve_scenario(store, &preset)?;
+        SkillGroupCommand::RemoveSkill { skill_group, skills } => {
+            let s = resolve_scenario(store, &skill_group)?;
             let resolved = resolve_skill_references(store, &skills)?;
             let ids: Vec<String> = resolved.iter().map(|skill| skill.id.clone()).collect();
-            preset_cmd::set_preset_skills_internal(store, &s.id, &ids, false)
+            skill_group_cmd::set_skill_group_skills_internal(store, &s.id, &ids, false)
                 .map_err(map_app_err)?;
             print_json(
-                &PresetMembershipReport {
-                    preset_id: s.id,
-                    preset_name: s.name,
+                &SkillGroupMembershipReport {
+                    skill_group_id: s.id,
+                    skill_group_name: s.name,
                     added: Vec::new(),
                     removed: resolved.into_iter().map(|skill| skill.name).collect(),
                     missing: Vec::new(),
@@ -2708,23 +2806,23 @@ fn run_presets(args: PresetArgs, store: &SkillStore, json: bool) -> anyhow::Resu
     Ok(())
 }
 
-fn preset_info_for(
+fn skill_group_info_for(
     store: &SkillStore,
-    preset: app_lib::core::skill_store::ScenarioRecord,
-) -> anyhow::Result<PresetInfo> {
+    skill_group: app_lib::core::skill_store::ScenarioRecord,
+) -> anyhow::Result<SkillGroupInfo> {
     let active = store.get_active_scenario_id()?;
-    Ok(PresetInfo {
-        skill_count: store.get_skill_ids_for_scenario(&preset.id)?.len(),
-        active: active.as_deref() == Some(preset.id.as_str()),
-        id: preset.id,
-        name: preset.name,
-        description: preset.description,
-        icon: preset.icon,
-        sort_order: preset.sort_order,
+    Ok(SkillGroupInfo {
+        skill_count: store.get_skill_ids_for_scenario(&skill_group.id)?.len(),
+        active: active.as_deref() == Some(skill_group.id.as_str()),
+        id: skill_group.id,
+        name: skill_group.name,
+        description: skill_group.description,
+        icon: skill_group.icon,
+        sort_order: skill_group.sort_order,
     })
 }
 
-fn select_preset_agents(
+fn select_skill_group_agents(
     store: &SkillStore,
     requested: &[String],
     require_available: bool,
@@ -2798,14 +2896,14 @@ fn select_agent_keys_for_removal(
     Ok(selected)
 }
 
-fn preset_status(
+fn skill_group_status(
     store: &SkillStore,
     reference: &str,
     requested_agents: &[String],
-) -> anyhow::Result<PresetStatusReport> {
-    let preset = resolve_scenario(store, reference)?;
-    let preset_info = preset_info_for(store, preset.clone())?;
-    let skill_ids = store.get_skill_ids_for_scenario(&preset.id)?;
+) -> anyhow::Result<SkillGroupStatusReport> {
+    let skill_group = resolve_scenario(store, reference)?;
+    let skill_group_info = skill_group_info_for(store, skill_group.clone())?;
+    let skill_ids = store.get_skill_ids_for_scenario(&skill_group.id)?;
     let all_targets = store.get_all_targets()?;
     let targets: std::collections::HashSet<(String, String)> = all_targets
         .iter()
@@ -2857,7 +2955,7 @@ fn preset_status(
                 .find(|agent| agent.key == agent_key)
                 .map(|agent| agent.display_name.clone())
                 .unwrap_or_else(|| agent_key.clone());
-            PresetAgentStatus {
+            SkillGroupAgentStatus {
                 key: agent_key,
                 display_name,
                 deployed,
@@ -2866,24 +2964,24 @@ fn preset_status(
             }
         })
         .collect();
-    Ok(PresetStatusReport {
-        preset: preset_info,
+    Ok(SkillGroupStatusReport {
+        skill_group: skill_group_info,
         agents,
     })
 }
 
-fn run_preset_deployment(
+fn run_skill_group_deployment(
     store: &SkillStore,
     reference: &str,
     requested_agents: &[String],
     deploy: bool,
     dry_run: bool,
-) -> anyhow::Result<PresetDeploymentReport> {
-    let preset = resolve_scenario(store, reference)?;
-    let skill_ids = store.get_skill_ids_for_scenario(&preset.id)?;
+) -> anyhow::Result<SkillGroupDeploymentReport> {
+    let skill_group = resolve_scenario(store, reference)?;
+    let skill_ids = store.get_skill_ids_for_scenario(&skill_group.id)?;
     let existing_targets = store.get_all_targets()?;
     let agent_keys = if deploy {
-        select_preset_agents(store, requested_agents, true)?
+        select_skill_group_agents(store, requested_agents, true)?
             .into_iter()
             .map(|agent| agent.key)
             .collect()
@@ -2953,7 +3051,7 @@ fn run_preset_deployment(
                         })
                         .skill(skill.id.clone(), skill.name.clone())
                         .tool(agent.clone())
-                        .detail(format!("preset={} ({})", preset.name, preset.id))
+                        .detail(format!("preset={} ({})", skill_group.name, skill_group.id))
                         .ok(),
                     );
                 }
@@ -2970,11 +3068,11 @@ fn run_preset_deployment(
         }
     }
 
-    Ok(PresetDeploymentReport {
+    Ok(SkillGroupDeploymentReport {
         ok: true,
         action: if deploy { "deploy" } else { "undeploy" }.to_string(),
-        preset_id: preset.id,
-        preset_name: preset.name,
+        skill_group_id: skill_group.id,
+        skill_group_name: skill_group.name,
         agents: agent_keys,
         dry_run,
         skill_count: skill_ids.len(),
@@ -2984,12 +3082,12 @@ fn run_preset_deployment(
     })
 }
 
-fn list_presets(store: &SkillStore) -> anyhow::Result<Vec<PresetInfo>> {
+fn list_skill_groups(store: &SkillStore) -> anyhow::Result<Vec<SkillGroupInfo>> {
     let active = store.get_active_scenario_id()?;
     let scenarios = store.get_all_scenarios()?;
     Ok(scenarios
         .into_iter()
-        .map(|scenario| PresetInfo {
+        .map(|scenario| SkillGroupInfo {
             skill_count: store
                 .get_skill_ids_for_scenario(&scenario.id)
                 .unwrap_or_default()
@@ -3004,13 +3102,13 @@ fn list_presets(store: &SkillStore) -> anyhow::Result<Vec<PresetInfo>> {
         .collect())
 }
 
-fn current_preset(store: &SkillStore) -> anyhow::Result<Option<PresetInfo>> {
-    let scenarios = list_presets(store)?;
+fn current_skill_group(store: &SkillStore) -> anyhow::Result<Option<SkillGroupInfo>> {
+    let scenarios = list_skill_groups(store)?;
     Ok(scenarios.into_iter().find(|s| s.active))
 }
 
-fn count_synced_targets_for_preset(store: &SkillStore, preset_id: &str) -> anyhow::Result<usize> {
-    let skill_ids = store.get_skill_ids_for_scenario(preset_id)?;
+fn count_synced_targets_for_skill_group(store: &SkillStore, skill_group_id: &str) -> anyhow::Result<usize> {
+    let skill_ids = store.get_skill_ids_for_scenario(skill_group_id)?;
     let mut count = 0;
     for skill_id in skill_ids {
         count += store.get_targets_for_skill(&skill_id)?.len();
@@ -3018,7 +3116,7 @@ fn count_synced_targets_for_preset(store: &SkillStore, preset_id: &str) -> anyho
     Ok(count)
 }
 
-fn replacement_preset_after_deactivate(
+fn replacement_skill_group_after_deactivate(
     store: &SkillStore,
     deactivated_id: &str,
 ) -> anyhow::Result<Option<app_lib::core::skill_store::ScenarioRecord>> {
@@ -3036,11 +3134,11 @@ fn resolve_scenario(
     if reference == "current" {
         let active = store
             .get_active_scenario_id()?
-            .ok_or_else(|| anyhow!("no active preset"))?;
+            .ok_or_else(|| anyhow!("no active Skill Group"))?;
         return scenarios
             .into_iter()
             .find(|scenario| scenario.id == active)
-            .ok_or_else(|| anyhow!("active preset not found"));
+            .ok_or_else(|| anyhow!("active Skill Group not found"));
     }
     let matches: Vec<_> = scenarios
         .into_iter()
@@ -3048,8 +3146,8 @@ fn resolve_scenario(
         .collect();
     match matches.len() {
         1 => Ok(matches.into_iter().next().unwrap()),
-        0 => Err(anyhow!("preset not found: {reference}")),
-        _ => Err(anyhow!("preset reference is ambiguous: {reference}")),
+        0 => Err(anyhow!("Skill Group not found: {reference}")),
+        _ => Err(anyhow!("Skill Group reference is ambiguous: {reference}")),
     }
 }
 
@@ -3161,6 +3259,27 @@ fn print_json<T: Serialize>(value: &T, json: bool) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn root_and_nested_help_use_chinese_and_current_group_name() {
+        let root = cli_command()
+            .try_get_matches_from(["agent-hub-cli", "-h"])
+            .unwrap_err()
+            .to_string();
+        assert!(root.contains("skill-groups"));
+        assert!(root.contains("显示帮助"));
+        assert!(!root.contains("presets"));
+        assert!(!root.contains("Print help"));
+
+        let nested = cli_command()
+            .try_get_matches_from(["agent-hub-cli", "skills", "list", "-h"])
+            .unwrap_err()
+            .to_string();
+        assert!(nested.contains("选项:"));
+        assert!(nested.contains("搜索关键词"));
+        assert!(nested.contains("--skill-group"));
+        assert!(!nested.contains("Options:"));
+    }
+
     /// An agent has to name the directory that is in the way and say the
     /// contents survived. Flattening the refusal into one sentence is what
     /// made that impossible, so the paths must reach the envelope as data.
@@ -3315,8 +3434,8 @@ mod tests {
             true,
         )
         .unwrap_err();
-        let preset_err =
-            run_preset_deployment(&store, "Demo", &["test_agent".to_string()], true, true)
+        let skill_group_err =
+            run_skill_group_deployment(&store, "Demo", &["test_agent".to_string()], true, true)
                 .unwrap_err();
         let sync_err = run_sync(&store, Some("Demo"), Some("test_agent"), true).unwrap_err();
         assert_eq!(store.get_active_scenario_id().unwrap(), None);
@@ -3329,16 +3448,16 @@ mod tests {
             false,
         )
         .unwrap_err();
-        let real_preset_err =
-            run_preset_deployment(&store, "Demo", &["test_agent".to_string()], true, false)
+        let real_skill_group_err =
+            run_skill_group_deployment(&store, "Demo", &["test_agent".to_string()], true, false)
                 .unwrap_err();
         let real_sync_err = run_sync(&store, Some("Demo"), Some("test_agent"), false).unwrap_err();
         for error in [
             skill_err,
-            preset_err,
+            skill_group_err,
             sync_err,
             real_skill_err,
-            real_preset_err,
+            real_skill_group_err,
             real_sync_err,
         ] {
             let envelope = error_envelope(&error);
@@ -3387,7 +3506,7 @@ mod tests {
             "react",
             "--tag",
             "frontend",
-            "--preset",
+            "--skill-group",
             "Web Dev",
             "--deployed-to",
             "claude_code",
@@ -3399,13 +3518,13 @@ mod tests {
                 command: SkillsCommand::List {
                     query: Some(query),
                     tags,
-                    preset: Some(preset),
+                    skill_group: Some(group),
                     deployed_to: Some(agent),
                     ..
                 }
             }) if query == "react"
                 && tags == vec!["frontend"]
-                && preset == "Web Dev"
+                && group == "Web Dev"
                 && agent == "claude_code"
         ));
 
@@ -3421,7 +3540,7 @@ mod tests {
 
         let cli = Cli::try_parse_from([
             "agent-hub-cli",
-            "presets",
+            "skill-groups",
             "open",
             "Web Dev",
             "--agent",
@@ -3430,18 +3549,33 @@ mod tests {
         .unwrap();
         assert!(matches!(
             cli.command,
-            Commands::Presets(PresetArgs {
-                command: PresetCommand::Deploy {
+            Commands::SkillGroups(SkillGroupArgs {
+                command: SkillGroupCommand::Deploy {
                     reference,
                     agents,
                     ..
                 }
             }) if reference == "Web Dev" && agents == vec!["codex"]
         ));
+
+        let cli = Cli::try_parse_from(["agent-hub-cli", "presets", "list"]).unwrap();
+        assert!(matches!(cli.command, Commands::SkillGroups(_)));
+
+        let cli = Cli::try_parse_from(["agent-hub-cli", "skills", "list", "--preset", "Web Dev"])
+            .unwrap();
+        assert!(matches!(
+            cli.command,
+            Commands::Skills(SkillsArgs {
+                command: SkillsCommand::List {
+                    skill_group: Some(group),
+                    ..
+                }
+            }) if group == "Web Dev"
+        ));
     }
 
     #[test]
-    fn skill_and_preset_deployment_round_trip() {
+    fn skill_and_skill_group_deployment_round_trip() {
         let tmp = tempdir().unwrap();
         let store = SkillStore::new(&tmp.path().join("skills.db")).unwrap();
         let source = tmp.path().join("central/demo");
@@ -3568,10 +3702,10 @@ mod tests {
             .unwrap();
 
         let deployed =
-            run_preset_deployment(&store, "Web Dev", &["test_agent".to_string()], true, false)
+            run_skill_group_deployment(&store, "Web Dev", &["test_agent".to_string()], true, false)
                 .unwrap();
         assert_eq!(deployed.changed_pairs, 1);
-        let status = preset_status(&store, "Web Dev", &["test_agent".to_string()]).unwrap();
+        let status = skill_group_status(&store, "Web Dev", &["test_agent".to_string()]).unwrap();
         assert_eq!(status.agents[0].status, "active");
 
         store
@@ -3580,7 +3714,7 @@ mod tests {
                 &serde_json::to_string(&vec!["test_agent"]).unwrap(),
             )
             .unwrap();
-        let status = preset_status(&store, "Web Dev", &[]).unwrap();
+        let status = skill_group_status(&store, "Web Dev", &[]).unwrap();
         assert!(status
             .agents
             .iter()
@@ -3593,9 +3727,9 @@ mod tests {
             .iter()
             .any(|agent| { agent.key == "test_agent" && agent.deployed && !agent.installed }));
 
-        run_preset_deployment(&store, "Web Dev", &[], false, false).unwrap();
+        run_skill_group_deployment(&store, "Web Dev", &[], false, false).unwrap();
         tool_service::set_custom_tools(&store, &[test_agent]).unwrap();
-        let status = preset_status(&store, "Web Dev", &["test_agent".to_string()]).unwrap();
+        let status = skill_group_status(&store, "Web Dev", &["test_agent".to_string()]).unwrap();
         assert_eq!(status.agents[0].status, "inactive");
         assert!(!target_root.join("demo").exists());
 

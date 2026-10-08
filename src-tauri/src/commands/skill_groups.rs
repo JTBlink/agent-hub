@@ -15,13 +15,13 @@ use crate::core::{
 
 fn refresh_tray_menu_best_effort(app: &tauri::AppHandle) {
     if let Err(err) = crate::refresh_tray_menu(app) {
-        log::warn!("Failed to refresh tray menu after preset mutation: {err}");
+        log::warn!("Failed to refresh tray menu after skill group mutation: {err}");
     }
 }
 
-/// Sync a skill's files to all enabled tool adapter directories for the given preset.
-/// Only performs sync if the preset is the currently active one.
-pub(crate) fn sync_skill_to_active_preset(
+/// Sync a skill's files to all enabled tool adapter directories for the given skill_group.
+/// Only performs sync if the skill group is the currently active one.
+pub(crate) fn sync_skill_to_active_skill_group(
     store: &SkillStore,
     scenario_id: &str,
     skill_id: &str,
@@ -30,7 +30,7 @@ pub(crate) fn sync_skill_to_active_preset(
 }
 
 #[derive(Debug, Serialize)]
-pub struct PresetDto {
+pub struct SkillGroupDto {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
@@ -41,11 +41,11 @@ pub struct PresetDto {
     pub updated_at: i64,
 }
 
-static GET_PRESETS_FIRST_CALL: AtomicBool = AtomicBool::new(true);
+static GET_SKILL_GROUPS_FIRST_CALL: AtomicBool = AtomicBool::new(true);
 
-fn preset_dto(store: &SkillStore, scenario: ScenarioRecord) -> PresetDto {
+fn skill_group_dto(store: &SkillStore, scenario: ScenarioRecord) -> SkillGroupDto {
     let skill_count = store.count_skills_for_scenario(&scenario.id).unwrap_or(0);
-    PresetDto {
+    SkillGroupDto {
         id: scenario.id,
         name: scenario.name,
         description: scenario.description,
@@ -58,7 +58,7 @@ fn preset_dto(store: &SkillStore, scenario: ScenarioRecord) -> PresetDto {
 }
 
 #[tauri::command]
-pub async fn get_presets(store: State<'_, Arc<SkillStore>>) -> Result<Vec<PresetDto>, AppError> {
+pub async fn get_skill_groups(store: State<'_, Arc<SkillStore>>) -> Result<Vec<SkillGroupDto>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let start = Instant::now();
@@ -66,11 +66,11 @@ pub async fn get_presets(store: State<'_, Arc<SkillStore>>) -> Result<Vec<Preset
         let count = scenarios.len();
         let mut result = Vec::new();
         for s in scenarios {
-            result.push(preset_dto(&store, s));
+            result.push(skill_group_dto(&store, s));
         }
         let elapsed_ms = start.elapsed().as_millis();
-        if should_log_first_or_slow(&GET_PRESETS_FIRST_CALL, elapsed_ms, 100) {
-            log::info!("get_presets: {count} presets in {elapsed_ms} ms");
+        if should_log_first_or_slow(&GET_SKILL_GROUPS_FIRST_CALL, elapsed_ms, 100) {
+            log::info!("get_skill_groups: {count} skill groups in {elapsed_ms} ms");
         }
         Ok(result)
     })
@@ -78,9 +78,9 @@ pub async fn get_presets(store: State<'_, Arc<SkillStore>>) -> Result<Vec<Preset
 }
 
 #[tauri::command]
-pub async fn get_active_preset(
+pub async fn get_active_skill_group(
     store: State<'_, Arc<SkillStore>>,
-) -> Result<Option<PresetDto>, AppError> {
+) -> Result<Option<SkillGroupDto>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let active_id = store.get_active_scenario_id().map_err(AppError::db)?;
@@ -88,7 +88,7 @@ pub async fn get_active_preset(
         if let Some(id) = active_id {
             let scenarios = store.get_all_scenarios().map_err(AppError::db)?;
             if let Some(s) = scenarios.into_iter().find(|s| s.id == id) {
-                return Ok(Some(preset_dto(&store, s)));
+                return Ok(Some(skill_group_dto(&store, s)));
             }
         }
         Ok(None)
@@ -97,17 +97,17 @@ pub async fn get_active_preset(
 }
 
 #[tauri::command]
-pub async fn create_preset(
+pub async fn create_skill_group(
     app: tauri::AppHandle,
     name: String,
     description: Option<String>,
     icon: Option<String>,
     store: State<'_, Arc<SkillStore>>,
-) -> Result<PresetDto, AppError> {
+) -> Result<SkillGroupDto, AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        create_and_activate_preset_internal(&store, &name, description.as_deref(), icon.as_deref())
-            .map(|scenario| preset_dto(&store, scenario))
+        create_and_activate_skill_group_internal(&store, &name, description.as_deref(), icon.as_deref())
+            .map(|scenario| skill_group_dto(&store, scenario))
     })
     .await?;
     if result.is_ok() {
@@ -116,7 +116,7 @@ pub async fn create_preset(
     result
 }
 
-pub fn create_preset_internal(
+pub fn create_skill_group_internal(
     store: &SkillStore,
     name: &str,
     description: Option<&str>,
@@ -124,7 +124,7 @@ pub fn create_preset_internal(
 ) -> Result<ScenarioRecord, AppError> {
     let name = name.trim();
     if name.is_empty() {
-        return Err(AppError::invalid_input("Preset name cannot be empty"));
+        return Err(AppError::invalid_input("Skill group name cannot be empty"));
     }
 
     let now = chrono::Utc::now().timestamp_millis();
@@ -145,7 +145,7 @@ pub fn create_preset_internal(
         updated_at: now,
     };
 
-    sync_metadata::with_repo_lock("create preset", || {
+    sync_metadata::with_repo_lock("create skill group", || {
         store.insert_scenario(&record)?;
         sync_metadata::write_all_from_db_unlocked(store)
     })
@@ -154,15 +154,15 @@ pub fn create_preset_internal(
 }
 
 /// Preserve the desktop app's legacy create-and-select behavior while the CLI
-/// uses [`create_preset_internal`] as a pure organization operation.
-fn create_and_activate_preset_internal(
+/// uses [`create_skill_group_internal`] as a pure organization operation.
+fn create_and_activate_skill_group_internal(
     store: &SkillStore,
     name: &str,
     description: Option<&str>,
     icon: Option<&str>,
 ) -> Result<ScenarioRecord, AppError> {
     let previous_active_id = store.get_active_scenario_id().map_err(AppError::db)?;
-    let record = create_preset_internal(store, name, description, icon)?;
+    let record = create_skill_group_internal(store, name, description, icon)?;
     if let Some(previous_id) = previous_active_id.as_deref() {
         unsync_scenario_skills(store, previous_id)?;
     }
@@ -173,7 +173,7 @@ fn create_and_activate_preset_internal(
 }
 
 #[tauri::command]
-pub async fn update_preset(
+pub async fn update_skill_group(
     app: tauri::AppHandle,
     id: String,
     name: String,
@@ -183,7 +183,7 @@ pub async fn update_preset(
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        update_preset_internal(&store, &id, &name, description.as_deref(), icon.as_deref())
+        update_skill_group_internal(&store, &id, &name, description.as_deref(), icon.as_deref())
     })
     .await?;
     if result.is_ok() {
@@ -192,7 +192,7 @@ pub async fn update_preset(
     result
 }
 
-pub fn update_preset_internal(
+pub fn update_skill_group_internal(
     store: &SkillStore,
     id: &str,
     name: &str,
@@ -202,11 +202,11 @@ pub fn update_preset_internal(
     scenario_service::ensure_scenario_exists(store, id)?;
     let name = name.trim();
     if name.is_empty() {
-        return Err(AppError::invalid_input("Preset name cannot be empty"));
+        return Err(AppError::invalid_input("Skill group name cannot be empty"));
     }
     let description = description.map(str::trim).filter(|value| !value.is_empty());
     let icon = icon.map(str::trim).filter(|value| !value.is_empty());
-    sync_metadata::with_repo_lock("update preset", || {
+    sync_metadata::with_repo_lock("update skill group", || {
         store.update_scenario(id, name, description, icon)?;
         sync_metadata::write_all_from_db_unlocked(store)
     })
@@ -214,14 +214,14 @@ pub fn update_preset_internal(
 }
 
 #[tauri::command]
-pub async fn delete_preset(
+pub async fn delete_skill_group(
     app: tauri::AppHandle,
     id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        delete_preset_with_active_fallback_internal(&store, &id)
+        delete_skill_group_with_active_fallback_internal(&store, &id)
     })
     .await?;
     if result.is_ok() {
@@ -230,7 +230,7 @@ pub async fn delete_preset(
     result
 }
 
-pub fn delete_preset_internal(store: &SkillStore, id: &str) -> Result<(), AppError> {
+pub fn delete_skill_group_internal(store: &SkillStore, id: &str) -> Result<(), AppError> {
     scenario_service::ensure_scenario_exists(store, id)?;
     let was_active = store
         .get_active_scenario_id()
@@ -238,7 +238,7 @@ pub fn delete_preset_internal(store: &SkillStore, id: &str) -> Result<(), AppErr
         .as_deref()
         == Some(id);
 
-    sync_metadata::with_repo_lock("delete preset", || {
+    sync_metadata::with_repo_lock("delete skill group", || {
         if was_active {
             store.clear_active_scenario()?;
         }
@@ -248,10 +248,10 @@ pub fn delete_preset_internal(store: &SkillStore, id: &str) -> Result<(), AppErr
     .map_err(AppError::db)
 }
 
-/// Preserve the desktop app's legacy active-preset transition. The CLI calls
-/// [`delete_preset_internal`] directly so deleting an organization object does
+/// Preserve the desktop app's legacy active-skill-group transition. The CLI calls
+/// [`delete_skill_group_internal`] directly so deleting an organization object does
 /// not implicitly undeploy skills.
-fn delete_preset_with_active_fallback_internal(
+fn delete_skill_group_with_active_fallback_internal(
     store: &SkillStore,
     id: &str,
 ) -> Result<(), AppError> {
@@ -266,16 +266,16 @@ fn delete_preset_with_active_fallback_internal(
         unsync_scenario_skills(store, id)?;
     }
 
-    delete_preset_internal(store, id)?;
+    delete_skill_group_internal(store, id)?;
 
     if was_active {
         let remaining = store.get_all_scenarios().map_err(AppError::db)?;
         if let Some(first) = remaining.first() {
             store.set_active_scenario(&first.id).map_err(AppError::db)?;
-            // The preset is already deleted and the fallback already active, so
+            // The skill group is already deleted and the fallback already active, so
             // a refusal here cannot undo any of that — report it, don't fail.
             for refusal in sync_scenario_skills(store, &first.id)? {
-                log::warn!("fallback preset sync skipped a target: {refusal}");
+                log::warn!("fallback skill group sync skipped a target: {refusal}");
             }
         }
     }
@@ -283,34 +283,34 @@ fn delete_preset_with_active_fallback_internal(
     Ok(())
 }
 
-/// Apply a preset to the default targets (all enabled agent globals).
+/// Apply a skill group to the default targets (all enabled agent globals).
 ///
 /// This is the explicit user-initiated action introduced in v1.16. It performs
-/// the same disk-writing work as the legacy [`switch_preset`] command but is
+/// the same disk-writing work as the legacy [`switch_skill_group`] command but is
 /// only invoked when the user clicks "Apply to Default" — sidebar/command-palette
-/// preset clicks no longer call this.
+/// skill group clicks no longer call this.
 #[tauri::command]
-pub async fn apply_preset_to_default(
+pub async fn apply_skill_group_to_default(
     app: tauri::AppHandle,
     id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
-    apply_preset_to_default_impl(app, id, store.inner().clone()).await
+    apply_skill_group_to_default_impl(app, id, store.inner().clone()).await
 }
 
 /// Legacy command kept for the CLI and backward compatibility. New callers
-/// should use [`apply_preset_to_default`] (or [`apply_preset_to_coding_agents`]
+/// should use [`apply_skill_group_to_default`] (or [`apply_skill_group_to_coding_agents`]
 /// for the workspace-scoped variant the tray now uses).
 #[tauri::command]
-pub async fn switch_preset(
+pub async fn switch_skill_group(
     app: tauri::AppHandle,
     id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
-    apply_preset_to_default_impl(app, id, store.inner().clone()).await
+    apply_skill_group_to_default_impl(app, id, store.inner().clone()).await
 }
 
-async fn apply_preset_to_default_impl(
+async fn apply_skill_group_to_default_impl(
     app: tauri::AppHandle,
     id: String,
     store: Arc<SkillStore>,
@@ -320,30 +320,30 @@ async fn apply_preset_to_default_impl(
     })
     .await?;
     // Refresh even on failure. `apply_scenario_to_default` commits the active
-    // preset before syncing, and syncing now reports ownership refusals as an
-    // error (#363) — so an error here still means the preset switched and most
+    // skill group before syncing, and syncing now reports ownership refusals as an
+    // error (#363) — so an error here still means the skill group switched and most
     // skills deployed. Gating the refresh on success would leave the tray
-    // showing the old preset while the app is on the new one. Failures that
+    // showing the old skill_group while the app is on the new one. Failures that
     // happen before the switch make this a harmless no-op refresh.
     refresh_tray_menu_best_effort(&app);
     result.and_then(scenario_service::refusals_to_error)
 }
 
 #[tauri::command]
-pub async fn add_skill_to_preset(
+pub async fn add_skill_to_skill_group(
     app: tauri::AppHandle,
     skill_id: String,
-    preset_id: String,
+    skill_group_id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        set_preset_skills_internal(&store, &preset_id, &[skill_id], true)?;
+        set_skill_group_skills_internal(&store, &skill_group_id, &[skill_id], true)?;
         // Membership-only edit. We intentionally do NOT sync to disk here,
-        // even when this preset happens to be the legacy `active_scenario_id`,
-        // because in the post-v1.16 model presets are curation labels, not
-        // implicit deployment switches. Users apply presets explicitly via
-        // PresetBar / the tray, which is where the actual write happens.
+        // even when this skill group happens to be the legacy `active_scenario_id`,
+        // because in the post-v1.16 model skill groups are curation labels, not
+        // implicit deployment switches. Users apply skill groups explicitly via
+        // SkillGroupBar / the tray, which is where the actual write happens.
         Ok(())
     })
     .await?;
@@ -354,18 +354,18 @@ pub async fn add_skill_to_preset(
 }
 
 #[tauri::command]
-pub async fn remove_skill_from_preset(
+pub async fn remove_skill_from_skill_group(
     app: tauri::AppHandle,
     skill_id: String,
-    preset_id: String,
+    skill_group_id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        set_preset_skills_internal(&store, &preset_id, &[skill_id], false)?;
-        // Same rationale as add_skill_to_preset: editing preset membership
+        set_skill_group_skills_internal(&store, &skill_group_id, &[skill_id], false)?;
+        // Same rationale as add_skill_to_skill_group: editing skill group membership
         // never wipes on-disk skill targets. To remove a skill from a coding
-        // agent the caller goes through PresetBar / the tray (or the explicit
+        // agent the caller goes through SkillGroupBar / the tray (or the explicit
         // per-skill unsync command).
         Ok(())
     })
@@ -376,20 +376,20 @@ pub async fn remove_skill_from_preset(
     result
 }
 
-/// Add or remove a pre-resolved set of skills from one preset under the repo
+/// Add or remove a pre-resolved set of skills from one skill group under the repo
 /// lock. Membership edits are curation-only and deliberately do not deploy.
-pub fn set_preset_skills_internal(
+pub fn set_skill_group_skills_internal(
     store: &SkillStore,
-    preset_id: &str,
+    skill_group_id: &str,
     skill_ids: &[String],
     add: bool,
 ) -> Result<(), AppError> {
-    scenario_service::ensure_scenario_exists(store, preset_id)?;
+    scenario_service::ensure_scenario_exists(store, skill_group_id)?;
     sync_metadata::with_repo_lock(
         if add {
-            "add skills to preset"
+            "add skills to skill group"
         } else {
-            "remove skills from preset"
+            "remove skills from skill group"
         },
         || {
             for skill_id in skill_ids {
@@ -397,9 +397,9 @@ pub fn set_preset_skills_internal(
                     return Err(anyhow::anyhow!("Skill not found: {skill_id}"));
                 }
                 if add {
-                    store.add_skill_to_scenario(preset_id, skill_id)?;
+                    store.add_skill_to_scenario(skill_group_id, skill_id)?;
                 } else {
-                    store.remove_skill_from_scenario(preset_id, skill_id)?;
+                    store.remove_skill_from_scenario(skill_group_id, skill_id)?;
                 }
             }
             sync_metadata::write_all_from_db_unlocked(store)
@@ -409,7 +409,7 @@ pub fn set_preset_skills_internal(
 }
 
 #[tauri::command]
-pub async fn reorder_presets(
+pub async fn reorder_skill_groups(
     app: tauri::AppHandle,
     ids: Vec<String>,
     store: State<'_, Arc<SkillStore>>,
@@ -430,29 +430,29 @@ pub async fn reorder_presets(
 }
 
 #[tauri::command]
-pub async fn get_preset_skill_order(
-    preset_id: String,
+pub async fn get_skill_group_skill_order(
+    skill_group_id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<Vec<String>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         store
-            .get_skill_ids_for_scenario(&preset_id)
+            .get_skill_ids_for_scenario(&skill_group_id)
             .map_err(AppError::db)
     })
     .await?
 }
 
 #[tauri::command]
-pub async fn reorder_preset_skills(
-    preset_id: String,
+pub async fn reorder_skill_group_skills(
+    skill_group_id: String,
     skill_ids: Vec<String>,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         sync_metadata::with_repo_lock("reorder scenario skills", || {
-            store.reorder_scenario_skills(&preset_id, &skill_ids)?;
+            store.reorder_scenario_skills(&skill_group_id, &skill_ids)?;
             sync_metadata::write_all_from_db_unlocked(&store)
         })
         .map_err(AppError::db)
@@ -478,38 +478,38 @@ pub(crate) fn unsync_scenario_skills(
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum PresetApplyMode {
+pub enum SkillGroupApplyMode {
     Add,
     Remove,
 }
 
-impl From<PresetApplyMode> for BatchApplyMode {
-    fn from(value: PresetApplyMode) -> Self {
+impl From<SkillGroupApplyMode> for BatchApplyMode {
+    fn from(value: SkillGroupApplyMode) -> Self {
         match value {
-            PresetApplyMode::Add => BatchApplyMode::Add,
-            PresetApplyMode::Remove => BatchApplyMode::Remove,
+            SkillGroupApplyMode::Add => BatchApplyMode::Add,
+            SkillGroupApplyMode::Remove => BatchApplyMode::Remove,
         }
     }
 }
 
-/// Apply (or remove) every skill in `preset_id` against every enabled coding
-/// agent (`ToolCategory::Coding`). Mirrors the PresetBar behavior in the
+/// Apply (or remove) every skill in `skill_group_id` against every enabled coding
+/// agent (`ToolCategory::Coding`). Mirrors the SkillGroupBar behavior in the
 /// global workspace view but covers all enabled coding agents at once.
 ///
 /// Lobster agents are intentionally excluded — they have their own workspace
-/// and their own preset bar.
+/// and their own skill group bar.
 #[tauri::command]
-pub async fn apply_preset_to_coding_agents(
+pub async fn apply_skill_group_to_coding_agents(
     app: tauri::AppHandle,
-    preset_id: String,
-    mode: PresetApplyMode,
+    skill_group_id: String,
+    mode: SkillGroupApplyMode,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        scenario_service::ensure_scenario_exists(&store, &preset_id)?;
+        scenario_service::ensure_scenario_exists(&store, &skill_group_id)?;
         let skill_ids = store
-            .get_skill_ids_for_scenario(&preset_id)
+            .get_skill_ids_for_scenario(&skill_group_id)
             .map_err(AppError::db)?;
         if skill_ids.is_empty() {
             return Ok(());
@@ -643,7 +643,7 @@ mod tests {
     }
 
     #[test]
-    fn organization_crud_does_not_switch_or_deploy_presets() {
+    fn organization_crud_does_not_switch_or_deploy_skill_groups() {
         let repo = metadata_test_repo();
         repo.store
             .insert_scenario(&sample_scenario("current", "Current"))
@@ -651,7 +651,7 @@ mod tests {
         repo.store.set_active_scenario("current").unwrap();
 
         let created =
-            create_preset_internal(&repo.store, "  Web Dev  ", Some(" Frontend work "), None)
+            create_skill_group_internal(&repo.store, "  Web Dev  ", Some(" Frontend work "), None)
                 .unwrap();
         assert_eq!(created.name, "Web Dev");
         assert_eq!(created.description.as_deref(), Some("Frontend work"));
@@ -661,13 +661,13 @@ mod tests {
         );
         assert!(repo.store.get_all_targets().unwrap().is_empty());
 
-        delete_preset_internal(&repo.store, &created.id).unwrap();
+        delete_skill_group_internal(&repo.store, &created.id).unwrap();
         assert_eq!(
             repo.store.get_active_scenario_id().unwrap().as_deref(),
             Some("current")
         );
 
-        delete_preset_internal(&repo.store, "current").unwrap();
+        delete_skill_group_internal(&repo.store, "current").unwrap();
         assert_eq!(repo.store.get_active_scenario_id().unwrap(), None);
         assert!(repo.store.get_all_targets().unwrap().is_empty());
     }

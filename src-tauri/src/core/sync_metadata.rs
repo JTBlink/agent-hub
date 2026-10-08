@@ -94,14 +94,14 @@ pub fn has_complete_skill_snapshot() -> bool {
 
 #[allow(dead_code)]
 pub fn write_all_from_db(store: &SkillStore) -> Result<()> {
-    // Foreground wait: this runs at startup and from CLI preset/enable
+    // Foreground wait: this runs at startup and from CLI skill group/enable
     // commands, which must succeed (startup aborts on error), not skip.
     let _lock = RepoLock::acquire_foreground("write sync metadata")?;
     write_all_from_db_unlocked(store)
 }
 
 /// Runs `f` while holding the central-repo lock. Callers are user-initiated
-/// operations (set tags, delete, preset edits, imports), so we wait out
+/// operations (set tags, delete, skill group edits, imports), so we wait out
 /// transient contention with background work instead of failing fast.
 pub fn with_repo_lock<T, F>(operation: &str, f: F) -> Result<T>
 where

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
-import { PRESET_ICON_OPTIONS } from "../lib/presetIcons";
+import { SKILL_GROUP_ICON_OPTIONS } from "../lib/skillGroupIcons";
 
 interface Props {
   open: boolean;
@@ -14,11 +14,11 @@ interface Props {
   ) => Promise<void>;
 }
 
-export function CreatePresetDialog({ open, onClose, onCreate }: Props) {
+export function CreateSkillGroupDialog({ open, onClose, onCreate }: Props) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState(PRESET_ICON_OPTIONS[0].key);
+  const [icon, setIcon] = useState(SKILL_GROUP_ICON_OPTIONS[0].key);
   const [loading, setLoading] = useState(false);
 
   if (!open) return null;
@@ -30,7 +30,7 @@ export function CreatePresetDialog({ open, onClose, onCreate }: Props) {
       await onCreate(name.trim(), description.trim() || undefined, icon);
       setName("");
       setDescription("");
-      setIcon(PRESET_ICON_OPTIONS[0].key);
+      setIcon(SKILL_GROUP_ICON_OPTIONS[0].key);
       onClose();
     } finally {
       setLoading(false);
@@ -49,7 +49,7 @@ export function CreatePresetDialog({ open, onClose, onCreate }: Props) {
       <div className="relative bg-surface border border-border rounded-xl w-full max-w-[400px] p-5 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[13px] font-semibold text-primary">
-            {t("preset.create")}
+            {t("skillGroup.create")}
           </h2>
           <button
             onClick={onClose}
@@ -62,13 +62,13 @@ export function CreatePresetDialog({ open, onClose, onCreate }: Props) {
         <div className="space-y-3">
           <div>
             <label className="block text-[13px] font-medium text-tertiary mb-1">
-              {t("preset.name")}
+              {t("skillGroup.name")}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t("preset.namePlaceholder")}
+              placeholder={t("skillGroup.namePlaceholder")}
               className={inputClass}
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -76,22 +76,22 @@ export function CreatePresetDialog({ open, onClose, onCreate }: Props) {
           </div>
           <div>
             <label className="block text-[13px] font-medium text-tertiary mb-1">
-              {t("preset.description")}
+              {t("skillGroup.description")}
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("preset.descPlaceholder")}
+              placeholder={t("skillGroup.descPlaceholder")}
               className={inputClass}
             />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-tertiary mb-1.5">
-              {t("preset.icon")}
+              {t("skillGroup.icon")}
             </label>
             <div className="grid max-h-[220px] grid-cols-[repeat(auto-fill,minmax(36px,1fr))] gap-1.5 overflow-y-auto pr-1">
-              {PRESET_ICON_OPTIONS.map((option) => {
+              {SKILL_GROUP_ICON_OPTIONS.map((option) => {
                 const Icon = option.icon;
                 const selected = option.key === icon;
                 return (

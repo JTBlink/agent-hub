@@ -13,7 +13,7 @@ import type {
   AppUpdateInfo,
   ManagedSkill,
   Project,
-  Preset,
+  SkillGroup,
   ToolInfo,
 } from "../lib/tauri";
 import * as api from "../lib/tauri";
@@ -22,11 +22,11 @@ import { applyTextSize } from "../lib/textScale";
 import { toast } from "sonner";
 
 interface AppState {
-  presets: Preset[];
+  skillGroups: SkillGroup[];
   /** Backend-tracked "last applied to default targets". Drives the "Applied to..." status, not the sidebar selection. */
-  activePreset: Preset | null;
-  /** Frontend-only "currently being viewed/edited" preset. Persisted to localStorage. UI selection. */
-  viewedPreset: Preset | null;
+  activeSkillGroup: SkillGroup | null;
+  /** Frontend-only "currently being viewed/edited" skillGroup. Persisted to localStorage. UI selection. */
+  viewedSkillGroup: SkillGroup | null;
   tools: ToolInfo[];
   managedSkills: ManagedSkill[];
   projects: Project[];
@@ -39,12 +39,12 @@ interface AppState {
   appUpdate: AppUpdateInfo | null;
   refreshAppUpdate: () => Promise<AppUpdateInfo>;
   refreshAppData: () => Promise<void>;
-  refreshPresets: () => Promise<void>;
+  refreshSkillGroups: () => Promise<void>;
   refreshTools: () => Promise<void>;
   refreshManagedSkills: () => Promise<void>;
   refreshProjects: () => Promise<void>;
-  setViewedPresetId: (id: string) => void;
-  applyPresetToDefault: (id: string) => Promise<void>;
+  setViewedSkillGroupId: (id: string) => void;
+  applySkillGroupToDefault: (id: string) => Promise<void>;
   clearAppError: () => void;
   openHelp: () => void;
   closeHelp: () => void;
@@ -52,22 +52,22 @@ interface AppState {
   closeSkillDetail: () => void;
 }
 
-const VIEWED_PRESET_LS_KEY = "agent-hub.viewedPresetId";
-const LEGACY_VIEWED_PRESET_LS_KEY = "agent-hub.viewedScenarioId";
+const VIEWED_SKILL_GROUP_LS_KEY = "agent-hub.viewedSkillGroupId";
+const LEGACY_VIEWED_SKILL_GROUP_LS_KEY = "agent-hub.viewedScenarioId";
 
 const AppContext = createContext<AppState | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const SKILL_UPDATE_TOAST_ID = "skill-update-available";
   const APP_UPDATE_TOAST_ID = "app-update-available";
-  const [presets, setPresets] = useState<Preset[]>([]);
-  const [activePreset, setActivePreset] = useState<Preset | null>(null);
-  const [viewedPresetId, setViewedPresetIdState] = useState<string | null>(
+  const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
+  const [activeSkillGroup, setActiveSkillGroup] = useState<SkillGroup | null>(null);
+  const [viewedSkillGroupId, setViewedSkillGroupIdState] = useState<string | null>(
     () => {
       try {
         return (
-          localStorage.getItem(VIEWED_PRESET_LS_KEY) ||
-          localStorage.getItem(LEGACY_VIEWED_PRESET_LS_KEY)
+          localStorage.getItem(VIEWED_SKILL_GROUP_LS_KEY) ||
+          localStorage.getItem(LEGACY_VIEWED_SKILL_GROUP_LS_KEY)
         );
       } catch {
         return null;
@@ -85,34 +85,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const autoCheckInFlightRef = useRef(false);
   const appUpdateCheckedRef = useRef(false);
   const lastUpdateNotificationRef = useRef<string | null>(null);
-  const lastActivePresetIdRef = useRef<string | null>(null);
+  const lastActiveSkillGroupIdRef = useRef<string | null>(null);
 
   const setTranslatedError = useCallback((key: string) => {
     setAppError(i18n.t("common.loadFailed", { item: i18n.t(key) }));
   }, []);
 
-  const refreshPresets = useCallback(async () => {
+  const refreshSkillGroups = useCallback(async () => {
     try {
       const [s, active] = await Promise.all([
-        api.getPresets(),
-        api.getActivePreset(),
+        api.getSkillGroups(),
+        api.getActiveSkillGroup(),
       ]);
-      setPresets(s);
-      setActivePreset(active);
-      const previousActiveId = lastActivePresetIdRef.current;
+      setSkillGroups(s);
+      setActiveSkillGroup(active);
+      const previousActiveId = lastActiveSkillGroupIdRef.current;
       const nextActiveId = active?.id ?? null;
       if (previousActiveId !== nextActiveId) {
-        lastActivePresetIdRef.current = nextActiveId;
+        lastActiveSkillGroupIdRef.current = nextActiveId;
         // Carry the sidebar along only when the user was viewing the old
-        // active preset — that way an external switch (e.g. CLI) follows,
-        // but a user who's browsing some other preset isn't yanked away.
+        // active skillGroup — that way an external switch (e.g. CLI) follows,
+        // but a user who's browsing some other skillGroup isn't yanked away.
         // Skip the initial load (previousActiveId === null) entirely so a
-        // persisted viewedPreset from localStorage isn't clobbered.
+        // persisted viewedSkillGroup from localStorage isn't clobbered.
         if (nextActiveId && previousActiveId !== null) {
-          setViewedPresetIdState((current) => {
+          setViewedSkillGroupIdState((current) => {
             if (current !== previousActiveId) return current;
             try {
-              localStorage.setItem(VIEWED_PRESET_LS_KEY, nextActiveId);
+              localStorage.setItem(VIEWED_SKILL_GROUP_LS_KEY, nextActiveId);
             } catch {
               // localStorage may be unavailable; selection is still tracked in memory.
             }
@@ -122,8 +122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       setAppError(null);
     } catch (e) {
-      console.error("Failed to load presets:", e);
-      setTranslatedError("common.presets");
+      console.error("Failed to load skillGroups:", e);
+      setTranslatedError("common.skillGroups");
     }
   }, [setTranslatedError]);
 
@@ -163,53 +163,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshAppData = useCallback(async () => {
     setLoading(true);
     await Promise.all([
-      refreshPresets(),
+      refreshSkillGroups(),
       refreshTools(),
       refreshManagedSkills(),
       refreshProjects(),
     ]);
     setLoading(false);
-  }, [refreshManagedSkills, refreshProjects, refreshPresets, refreshTools]);
+  }, [refreshManagedSkills, refreshProjects, refreshSkillGroups, refreshTools]);
 
-  const setViewedPresetId = useCallback((id: string) => {
-    setViewedPresetIdState(id);
+  const setViewedSkillGroupId = useCallback((id: string) => {
+    setViewedSkillGroupIdState(id);
     try {
-      localStorage.setItem(VIEWED_PRESET_LS_KEY, id);
+      localStorage.setItem(VIEWED_SKILL_GROUP_LS_KEY, id);
     } catch {
       // localStorage may be unavailable; selection is still tracked in memory.
     }
   }, []);
 
-  const handleApplyPresetToDefault = useCallback(
+  const handleApplySkillGroupToDefault = useCallback(
     async (id: string) => {
-      await api.applyPresetToDefault(id);
-      await Promise.all([refreshPresets(), refreshManagedSkills()]);
+      await api.applySkillGroupToDefault(id);
+      await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
     },
-    [refreshManagedSkills, refreshPresets],
+    [refreshManagedSkills, refreshSkillGroups],
   );
 
-  // Resolve viewedPreset: persisted id > activePreset > first preset.
+  // Resolve viewedSkillGroup: persisted id > activeSkillGroup > first skillGroup.
   // Persist whichever resolves so the next launch matches what the user saw.
-  const viewedPreset = (() => {
-    if (viewedPresetId) {
-      const found = presets.find((s) => s.id === viewedPresetId);
+  const viewedSkillGroup = (() => {
+    if (viewedSkillGroupId) {
+      const found = skillGroups.find((s) => s.id === viewedSkillGroupId);
       if (found) return found;
     }
-    return activePreset ?? presets[0] ?? null;
+    return activeSkillGroup ?? skillGroups[0] ?? null;
   })();
 
   useEffect(() => {
-    if (!viewedPreset) return;
-    if (viewedPreset.id !== viewedPresetId) {
+    if (!viewedSkillGroup) return;
+    if (viewedSkillGroup.id !== viewedSkillGroupId) {
       // Persist the resolved fallback so subsequent reads are stable.
-      setViewedPresetIdState(viewedPreset.id);
+      setViewedSkillGroupIdState(viewedSkillGroup.id);
       try {
-        localStorage.setItem(VIEWED_PRESET_LS_KEY, viewedPreset.id);
+        localStorage.setItem(VIEWED_SKILL_GROUP_LS_KEY, viewedSkillGroup.id);
       } catch {
         // ignore
       }
     }
-  }, [viewedPreset, viewedPresetId]);
+  }, [viewedSkillGroup, viewedSkillGroupId]);
 
   useEffect(() => {
     async function init() {
@@ -454,9 +454,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        presets,
-        activePreset,
-        viewedPreset,
+        skillGroups,
+        activeSkillGroup,
+        viewedSkillGroup,
         tools,
         managedSkills,
         projects,
@@ -467,12 +467,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         appUpdate,
         refreshAppUpdate,
         refreshAppData,
-        refreshPresets,
+        refreshSkillGroups,
         refreshTools,
         refreshManagedSkills,
         refreshProjects,
-        setViewedPresetId,
-        applyPresetToDefault: handleApplyPresetToDefault,
+        setViewedSkillGroupId,
+        applySkillGroupToDefault: handleApplySkillGroupToDefault,
         clearAppError: () => setAppError(null),
         openHelp: () => setHelpOpen(true),
         closeHelp: () => setHelpOpen(false),

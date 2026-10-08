@@ -8,7 +8,9 @@
 
 - macOS 菜单栏托盘图标改用独立的单色透明模板图标，避免应用彩色方形图标缩放后在顶部菜单栏显示异常；Dock 和窗口继续使用完整应用图标。
 
-- CLI 顶层技能组命令显示为 `skill-groups`，保留 `presets` 和 `scenarios` 兼容别名。
+- 托盘菜单会跟随界面语言显示中文技能组、状态、更新和操作文案；首次启动会保存检测到的语言，切换语言后立即刷新菜单。
+
+- CLI 帮助统一使用中文说明，技能组命令显示为 `skill-groups`，旧的 `presets` 和 `scenarios` 仅作为兼容别名解析。
 
 - Unix 开发入口 `agent-hub.sh install` 支持编译 CLI 并在 Cargo bin 目录创建指向仓库构建产物的软链接，可通过 `AGENT_HUB_CLI_BIN_DIR` 自定义链接目录。
 

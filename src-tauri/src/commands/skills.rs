@@ -213,7 +213,7 @@ pub struct ManagedSkillDto {
     pub updated_at: i64,
     pub status: String,
     pub targets: Vec<TargetDto>,
-    pub preset_ids: Vec<String>,
+    pub skill_group_ids: Vec<String>,
     pub tags: Vec<String>,
 }
 
@@ -354,14 +354,14 @@ pub async fn get_managed_skills(
 }
 
 #[tauri::command]
-pub async fn get_skills_for_preset(
-    preset_id: String,
+pub async fn get_skills_for_skill_group(
+    skill_group_id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<Vec<ManagedSkillDto>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let skills = store
-            .get_skills_for_scenario(&preset_id)
+            .get_skills_for_scenario(&skill_group_id)
             .map_err(AppError::db)?;
         let all_targets = store.get_all_targets().map_err(AppError::db)?;
         let tags_map = store.get_tags_map().map_err(AppError::db)?;
@@ -906,7 +906,7 @@ pub async fn install_local(
             let result =
                 installer::install_from_local(&path, name.as_deref()).map_err(AppError::io)?;
             let skill_name = result.name.clone();
-            // Install only adds the skill to the central library; preset
+            // Install only adds the skill to the central library; skill_group
             // membership is an explicit action (see issue #213).
             let skill_id = store_installed_skill_unlocked(&store, &result, &metadata, None)?;
             Ok((skill_id, skill_name))
@@ -1826,7 +1826,7 @@ fn managed_skill_to_dto(
         })
         .collect();
 
-    let preset_ids = store.get_scenarios_for_skill(&skill.id).unwrap_or_default();
+    let skill_group_ids = store.get_scenarios_for_skill(&skill.id).unwrap_or_default();
     let tags = tags_map.get(&skill.id).cloned().unwrap_or_default();
 
     // Prefer description from SKILL.md so the list view reflects edits made
@@ -1858,7 +1858,7 @@ fn managed_skill_to_dto(
         updated_at: skill.updated_at,
         status: skill.status,
         targets,
-        preset_ids,
+        skill_group_ids,
         tags,
     }
 }
@@ -2138,7 +2138,7 @@ fn resolve_repoint_skill_dir(repo_dir: &Path, subpath: Option<&str>) -> Result<P
 
 /// Re-point an installed skill at a git source **in place**.
 ///
-/// The skill row is updated by id, so the skill id, tags, preset membership and
+/// The skill row is updated by id, so the skill id, tags, skill group membership and
 /// deployment targets all survive. This is the only safe way to convert a
 /// `local` skill to a `git` one: `install` reuses a central directory only when
 /// the content hash matches exactly (see `installer::unique_skill_dest`) and
@@ -2469,9 +2469,9 @@ pub fn store_installed_skill_unlocked(
 
         if let Some(scenario_id) = active_scenario_id {
             if let Err(e) =
-                super::presets::sync_skill_to_active_preset(store, scenario_id, &existing.id)
+                super::skill_groups::sync_skill_to_active_skill_group(store, scenario_id, &existing.id)
             {
-                log::warn!("Failed to sync reinstalled skill to preset: {e}");
+                log::warn!("Failed to sync reinstalled skill to skill group: {e}");
             }
         }
 
@@ -2511,8 +2511,8 @@ pub fn store_installed_skill_unlocked(
     sync_metadata::write_all_from_db_unlocked(store).map_err(AppError::db)?;
 
     if let Some(scenario_id) = active_scenario_id {
-        if let Err(e) = super::presets::sync_skill_to_active_preset(store, scenario_id, &id) {
-            log::warn!("Failed to sync newly installed skill to preset: {e}");
+        if let Err(e) = super::skill_groups::sync_skill_to_active_skill_group(store, scenario_id, &id) {
+            log::warn!("Failed to sync newly installed skill to skill group: {e}");
         }
     }
 

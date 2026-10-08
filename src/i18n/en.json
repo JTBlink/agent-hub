@@ -9,8 +9,8 @@
     "lobsterAgents": "Lobster Agents",
     "installSkills": "Install Skills",
     "backup": "Backup",
-    "presets": "Skill Groups",
-    "newPreset": "New Skill Group",
+    "skillGroups": "Skill Groups",
+    "newSkillGroup": "New Skill Group",
     "projects": "Project Workspaces",
     "addProject": "Link Project",
     "settings": "Settings"
@@ -24,7 +24,7 @@
         "title": "Recommended Workflows",
         "description": "Single-agent: install skills → open Global Workspace → click a Skill Group pill to activate, or hit + Add Skills to pick from your library and toggle target agents inline. Multi-project: open a Project Workspace and use the same Skill Group pills or + Add Skills picker for that project's agents. Multi-machine: turn on Git Backup in Settings to sync your library across devices."
       },
-      "presets": {
+      "skillGroups": {
         "title": "Skill Groups",
         "description": "Group skills into named skill groups. In any workspace, click a Skill Group pill to instantly activate or deactivate all its skills for the current agent scope. Active skill groups show ✓; partially installed ones show a count. Applying a skill group is a one-time copy — not a live sync."
       },
@@ -60,7 +60,7 @@
     "placeholder": "Jump to skill, skill group, project, action…",
     "empty": "No matches. Try a different query.",
     "skills": "Skills",
-    "presets": "Skill Groups",
+    "skillGroups": "Skill Groups",
     "projects": "Projects",
     "actions": "Actions",
     "scanImport": "Manage local Skills",
@@ -253,7 +253,7 @@
     "defaultLocationMissing": "Default location missing",
     "openLocationSettings": "Open settings",
     "applyCallout": "Clicking a skill group only opens it. Use Apply Skill Group to add or remove its skills from selected agents.",
-    "subtitle": "{{count}} skills from the central library are enabled in “{{preset}}”",
+    "subtitle": "{{count}} skills from the central library are enabled in “{{skillGroup}}”",
     "searchPlaceholder": "Search skills in the central library...",
     "allStatus": "All Status",
     "synced": "Synced",
@@ -262,12 +262,12 @@
     "enable": "Enable",
     "enabledButton": "Enabled",
     "disable": "Disable",
-    "enableForPreset": "Enable for current skill group",
-    "disableForPreset": "Disable for current skill group",
-    "enabledInPreset": "Added to current skill group",
-    "disabledInPreset": "Removed from current skill group",
-    "inPreset": "Enabled in current skill group",
-    "notInPreset": "Not enabled in current skill group",
+    "enableForSkillGroup": "Enable for current skill group",
+    "disableForSkillGroup": "Disable for current skill group",
+    "enabledInSkillGroup": "Added to current skill group",
+    "disabledInSkillGroup": "Removed from current skill group",
+    "inSkillGroup": "Enabled in current skill group",
+    "notInSkillGroup": "Not enabled in current skill group",
     "remove": "Remove from skill group",
     "moreActions": "More actions",
     "dragToReorder": "Drag to reorder",
@@ -279,9 +279,9 @@
     "addFirst": "Click \"Install Skills\" to add skills into the central library",
     "noMatch": "No skills match the current search or filter",
     "clearFilters": "Clear filters",
-    "noPreset": "No skill group is currently available",
-    "currentPresetFallback": "Current skill group",
-    "presetCount": "{{count}} skill groups",
+    "noSkillGroup": "No skill group is currently available",
+    "currentSkillGroupFallback": "Current skill group",
+    "skillGroupCount": "{{count}} skill groups",
     "syncCoverage": "Sync coverage",
     "syncSummary": "{{synced}} / {{total}} synced",
     "moreAgents": "+{{count}} more",
@@ -683,8 +683,8 @@
     "syncModeDesc": "Symlinks are recommended — minimal disk usage with live updates. Applies to both global and project workspaces; note that symlinks in a project point to this machine's central library and won't travel with the repo.",
     "symlink": "Symlink",
     "copy": "File Copy",
-    "currentPreset": "Current Skill Group",
-    "currentPresetDesc": "Switch the app to another skill group and refresh active skills immediately.",
+    "currentSkillGroup": "Current Skill Group",
+    "currentSkillGroupDesc": "Switch the app to another skill group and refresh active skills immediately.",
     "theme": "Theme",
     "themeDesc": "Choose the app appearance.",
     "themeLight": "Light",
@@ -857,7 +857,7 @@
     "loadFailed": "Failed to load {{item}}",
     "dataOutOfDate": "Some data could not be refreshed",
     "documentMissing": "No document file was found",
-    "presets": "skill groups",
+    "skillGroups": "skill groups",
     "agents": "agent status",
     "skills": "skill list",
     "success": "Operation successful",
@@ -915,7 +915,9 @@
       "unavailable": "Select a target agent first"
     }
   },
-  "preset": {
+  "skillGroup": {
+    "defaultName": "Default",
+    "defaultDescription": "Default skill group",
     "create": "New Skill Group",
     "name": "Skill Group Name",
     "description": "Description (optional)",
@@ -979,6 +981,14 @@
     "importFromCenterSuccess": "\"{{name}}\" added to {{count}} project agents",
     "updateCenterSuccess": "\"{{name}}\" updated to Skills Center",
     "updateCenterConflict": "\"{{name}}\": {{count}} variants each may hold content of their own — reconcile them into one before updating the center. Nothing was written.",
+    "updateCenterConflictTitle": "Confirm Skills Center update",
+    "updateCenterConflictMessage": "The project variants of \"{{name}}\" contain different content. Choose which version should replace the center copy, then confirm the overwrite.",
+    "updateCenterConflictHint": "The selected version is compared with the other variants' SKILL.md files. Confirming writes the selected version to the center and aligns the other variants to it.",
+    "updateCenterDiffLabel": "Compare",
+    "updateCenterOverwrite": "Confirm overwrite and update",
+    "updateCenterSelectedVersion": "Selected version: {{agent}}",
+    "updateCenterDiffLegend": "Red is the comparison version; green is the selected version",
+    "updateCenterNoDiff": "These two variants have the same file contents.",
     "updateCenterAlignFailed": "\"{{name}}\": pushed to center, but {{count}} variant(s) failed to realign",
     "updateProjectSuccess": "\"{{name}}\" updated to project",
     "resetFromCenter": "Restore center version",
@@ -1061,11 +1071,11 @@
     "batchTagsFailed": "{{count}} center skills failed to update tags",
     "batchTagScopeNote": "Tags live in the central library, so edits affect every project using these skills. Project-only local skills are left untouched."
   },
-  "presetActions": {
+  "skillGroupActions": {
     "button": "Apply Skill Group",
     "applyToProject": "Apply Skill Group to This Project",
     "applyToGlobal": "Apply Skill Group to Global Workspace",
-    "preset": "Skill Group",
+    "skillGroup": "Skill Group",
     "action": "Action",
     "addMissing": "Add missing skills",
     "removeMatching": "Remove matching skills",
@@ -1094,7 +1104,7 @@
     "activate": "Activate",
     "deactivate": "Deactivate"
   },
-  "presetBar": {
+  "skillGroupBar": {
     "shiftClickHint": "{{name}} · Shift+click to toggle",
     "skillCount": "{{count}} skills",
     "deactivateConfirm": "Remove all {{count}} installed skills from \"{{name}}\"?"

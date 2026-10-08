@@ -1,6 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import { getSettings } from "../lib/tauri";
+import { getSettings, setSettings } from "../lib/tauri";
 import zh from "./zh.json";
 import zhTW from "./zh-TW.json";
 import en from "./en.json";
@@ -55,6 +55,12 @@ export const i18nReady = (async () => {
     : storedLanguage || detectLanguage();
 
   localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
+
+  // The native tray cannot read localStorage. Persist the first-run choice so
+  // it can use the same language as the window and refresh its menu.
+  if (!isSupportedLanguage(savedLanguage)) {
+    void setSettings("language", lng).catch(() => {});
+  }
 
   await i18n.use(initReactI18next).init({
     resources: {

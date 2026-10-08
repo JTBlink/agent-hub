@@ -1,3 +1,4 @@
+import { getSkillGroupDisplayName, getSkillGroupDisplayDescription } from "../lib/skillGroupDisplay";
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   DragDropContext,
@@ -26,14 +27,14 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "../utils";
 import { useApp } from "../context/AppContext";
-import { CreatePresetDialog } from "./CreatePresetDialog";
-import { RenamePresetDialog } from "./RenamePresetDialog";
+import { CreateSkillGroupDialog } from "./CreateSkillGroupDialog";
+import { RenameSkillGroupDialog } from "./RenameSkillGroupDialog";
 import { AddProjectDialog } from "./AddProjectDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AgentIcon } from "./AgentIcon";
 import * as api from "../lib/tauri";
 import type { SyncHealth, ToolCategory, ToolInfo } from "../lib/tauri";
-import { getPresetIconOption } from "../lib/presetIcons";
+import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
 
 function getSyncHealthIndicator(
   health: SyncHealth,
@@ -65,11 +66,11 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const {
-    presets,
-    viewedPreset,
-    setViewedPresetId,
+    skillGroups,
+    viewedSkillGroup,
+    setViewedSkillGroupId,
     closeSkillDetail,
-    refreshPresets,
+    refreshSkillGroups,
     refreshManagedSkills,
     projects,
     refreshProjects,
@@ -105,16 +106,16 @@ export function Sidebar() {
     () => installedTools.filter((t) => t.category === "lobster"),
     [installedTools],
   );
-  const [orderedPresets, setOrderedPresets] = useState(presets);
+  const [orderedSkillGroups, setOrderedSkillGroups] = useState(skillGroups);
   const [orderedProjects, setOrderedProjects] = useState(projects);
   const [orderedCodingTools, setOrderedCodingTools] =
     useState(installedCodingTools);
   const [orderedLobsterTools, setOrderedLobsterTools] = useState(
     installedLobsterTools,
   );
-  const presetReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const skillGroupReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
   const projectReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const [presetsOpen, setPresetsOpen] = useState(true);
+  const [skillGroupsOpen, setSkillGroupsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [globalWorkspaceOpen, setGlobalWorkspaceOpen] = useState(true);
   const [lobsterWorkspaceOpen, setLobsterWorkspaceOpen] = useState(true);
@@ -130,8 +131,8 @@ export function Sidebar() {
   }, [installedTools, managedSkills]);
 
   useEffect(() => {
-    setOrderedPresets(presets);
-  }, [presets]);
+    setOrderedSkillGroups(skillGroups);
+  }, [skillGroups]);
   useEffect(() => {
     setOrderedProjects(projects);
   }, [projects]);
@@ -163,18 +164,18 @@ export function Sidebar() {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination || result.destination.index === result.source.index)
       return;
-    const reordered = [...orderedPresets];
+    const reordered = [...orderedSkillGroups];
     const [moved] = reordered.splice(result.source.index, 1);
     reordered.splice(result.destination.index, 0, moved);
-    setOrderedPresets(reordered);
+    setOrderedSkillGroups(reordered);
 
-    presetReorderQueueRef.current = presetReorderQueueRef.current
+    skillGroupReorderQueueRef.current = skillGroupReorderQueueRef.current
       .catch(() => undefined)
       .then(async () => {
         try {
-          await api.reorderPresets(reordered.map((s) => s.id));
+          await api.reorderSkillGroups(reordered.map((s) => s.id));
         } catch {
-          await refreshPresets();
+          await refreshSkillGroups();
           toast.error(t("common.error"));
         }
       });
@@ -234,58 +235,58 @@ export function Sidebar() {
     { name: t("sidebar.backup"), path: "/backup", icon: CloudUpload },
   ];
 
-  const handleSwitchPreset = (id: string) => {
+  const handleSwitchSkillGroup = (id: string) => {
     closeSkillDetail();
-    setViewedPresetId(id);
+    setViewedSkillGroupId(id);
     if (location.pathname !== "/my-skills") {
       navigate("/my-skills");
     }
   };
 
-  const handleCreatePreset = async (
+  const handleCreateSkillGroup = async (
     name: string,
     description?: string,
     icon?: string,
   ) => {
-    await api.createPreset(name, description, icon);
-    await Promise.all([refreshPresets(), refreshManagedSkills()]);
+    await api.createSkillGroup(name, description, icon);
+    await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
     if (location.pathname === "/settings") {
       navigate("/my-skills");
     }
-    toast.success(t("preset.created"));
+    toast.success(t("skillGroup.created"));
   };
 
-  const handleRenamePreset = async (
+  const handleRenameSkillGroup = async (
     newName: string,
     icon?: string,
     description?: string,
   ) => {
     if (!renameTarget) return;
-    const preset = presets.find((s) => s.id === renameTarget.id);
-    if (!preset) return;
-    await api.updatePreset(
+    const skillGroup = skillGroups.find((s) => s.id === renameTarget.id);
+    if (!skillGroup) return;
+    await api.updateSkillGroup(
       renameTarget.id,
       newName,
       description,
-      icon || preset.icon || undefined,
+      icon || skillGroup.icon || undefined,
     );
-    await refreshPresets();
-    toast.success(t("preset.updated"));
+    await refreshSkillGroups();
+    toast.success(t("skillGroup.updated"));
   };
 
-  const handleDeletePreset = async () => {
+  const handleDeleteSkillGroup = async () => {
     if (!deleteTarget) return;
-    await api.deletePreset(deleteTarget.id);
-    await Promise.all([refreshPresets(), refreshManagedSkills()]);
+    await api.deleteSkillGroup(deleteTarget.id);
+    await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
     if (location.pathname === "/settings") {
       navigate("/my-skills");
     }
-    toast.success(t("preset.deleted"));
+    toast.success(t("skillGroup.deleted"));
   };
 
   const handleRenameClick = (
     event: React.MouseEvent,
-    preset: {
+    skillGroup: {
       id: string;
       name: string;
       icon?: string | null;
@@ -294,16 +295,16 @@ export function Sidebar() {
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    setRenameTarget(preset);
+    setRenameTarget(skillGroup);
   };
 
   const handleDeleteClick = (
     event: React.MouseEvent,
-    preset: { id: string; name: string },
+    skillGroup: { id: string; name: string },
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    setDeleteTarget(preset);
+    setDeleteTarget(skillGroup);
   };
 
   const handleDeleteProject = async () => {
@@ -535,40 +536,40 @@ export function Sidebar() {
 
         {/* Scrollable section */}
         <div className="px-2.5 flex-1 overflow-y-auto scrollbar-hide min-h-0">
-          {/* ── Presets ── */}
+          {/* ── SkillGroups ── */}
           <div className="mb-1.5 px-2.5 flex items-center gap-1">
             <button
-              onClick={() => setPresetsOpen((v) => !v)}
+              onClick={() => setSkillGroupsOpen((v) => !v)}
               className="flex min-w-0 flex-1 items-center gap-1 text-left outline-none"
             >
-              {presetsOpen ? (
+              {skillGroupsOpen ? (
                 <ChevronDown className="h-3 w-3 shrink-0 text-faint" />
               ) : (
                 <ChevronRight className="h-3 w-3 shrink-0 text-faint" />
               )}
               <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-muted whitespace-nowrap">
-                {t("sidebar.presets")}
+                {t("sidebar.skillGroups")}
               </span>
             </button>
           </div>
-          {presetsOpen && (
+          {skillGroupsOpen && (
             <>
               <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="presets">
+                <Droppable droppableId="skillGroups">
                   {(droppableProvided) => (
                     <div
                       className="space-y-0.5"
                       ref={droppableProvided.innerRef}
                       {...droppableProvided.droppableProps}
                     >
-                      {orderedPresets.map((preset, index) => {
-                        const isActive = viewedPreset?.id === preset.id;
-                        const presetIcon = getPresetIconOption(preset);
-                        const PresetIcon = presetIcon.icon;
+                      {orderedSkillGroups.map((skillGroup, index) => {
+                        const isActive = viewedSkillGroup?.id === skillGroup.id;
+                        const skillGroupIcon = getSkillGroupIconOption(skillGroup);
+                        const SkillGroupIcon = skillGroupIcon.icon;
                         return (
                           <Draggable
-                            key={preset.id}
-                            draggableId={preset.id}
+                            key={skillGroup.id}
+                            draggableId={skillGroup.id}
                             index={index}
                           >
                             {(provided) => (
@@ -583,8 +584,8 @@ export function Sidebar() {
                                 )}
                               >
                                 <button
-                                  onClick={() => handleSwitchPreset(preset.id)}
-                                  title={preset.description || undefined}
+                                  onClick={() => handleSwitchSkillGroup(skillGroup.id)}
+                                  title={getSkillGroupDisplayDescription(skillGroup, t) || undefined}
                                   className={cn(
                                     "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none",
                                     isActive
@@ -596,17 +597,17 @@ export function Sidebar() {
                                     className={cn(
                                       "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border",
                                       isActive
-                                        ? `${presetIcon.activeClass} ${presetIcon.colorClass}`
+                                        ? `${skillGroupIcon.activeClass} ${skillGroupIcon.colorClass}`
                                         : "border-border bg-surface text-muted group-hover:border-border group-hover:text-tertiary",
                                     )}
                                   >
-                                    <PresetIcon className="h-3 w-3" />
+                                    <SkillGroupIcon className="h-3 w-3" />
                                   </span>
                                   <span className="flex-1 truncate">
-                                    {preset.name}
+                                    {getSkillGroupDisplayName(skillGroup.name, t)}
                                   </span>
                                   <span className="ml-auto flex h-[18px] w-[32px] shrink-0 items-center justify-end group-hover:hidden">
-                                    {preset.skill_count > 0 && (
+                                    {skillGroup.skill_count > 0 && (
                                       <span
                                         className={cn(
                                           "min-w-[18px] rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
@@ -615,7 +616,7 @@ export function Sidebar() {
                                             : "bg-surface-hover text-muted",
                                         )}
                                       >
-                                        {preset.skill_count}
+                                        {skillGroup.skill_count}
                                       </span>
                                     )}
                                   </span>
@@ -636,7 +637,7 @@ export function Sidebar() {
                                   </div>
                                   <button
                                     onClick={(event) =>
-                                      handleRenameClick(event, preset)
+                                      handleRenameClick(event, skillGroup)
                                     }
                                     className="rounded p-1 text-faint transition hover:text-secondary"
                                     title={t("common.edit")}
@@ -645,7 +646,7 @@ export function Sidebar() {
                                   </button>
                                   <button
                                     onClick={(event) =>
-                                      handleDeleteClick(event, preset)
+                                      handleDeleteClick(event, skillGroup)
                                     }
                                     className="rounded p-1 text-faint transition hover:text-red-400"
                                     title={t("common.delete")}
@@ -668,7 +669,7 @@ export function Sidebar() {
                 className="flex items-center gap-2 px-2.5 py-[7px] mt-1 rounded-md text-sm text-muted hover:text-secondary hover:bg-surface-hover transition-colors w-full outline-none"
               >
                 <Plus className="w-3.5 h-3.5" />
-                {t("sidebar.newPreset")}
+                {t("sidebar.newSkillGroup")}
               </button>
             </>
           )}
@@ -899,26 +900,26 @@ export function Sidebar() {
         </div>
       </div>
 
-      <CreatePresetDialog
+      <CreateSkillGroupDialog
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreate={handleCreatePreset}
+        onCreate={handleCreateSkillGroup}
       />
 
-      <RenamePresetDialog
+      <RenameSkillGroupDialog
         open={renameTarget !== null}
         currentName={renameTarget?.name || ""}
         currentIcon={renameTarget?.icon}
         currentDescription={renameTarget?.description}
         onClose={() => setRenameTarget(null)}
-        onRename={handleRenamePreset}
+        onRename={handleRenameSkillGroup}
       />
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        message={t("preset.deleteConfirm", { name: deleteTarget?.name || "" })}
+        message={t("skillGroup.deleteConfirm", { name: getSkillGroupDisplayName(deleteTarget?.name || "", t) })}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDeletePreset}
+        onConfirm={handleDeleteSkillGroup}
       />
 
       <AddProjectDialog

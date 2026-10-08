@@ -18,6 +18,8 @@
 
 中文界面将 Preset 称为技能组，英文界面称为 Skill Group，区分组内成员编辑和工作空间批量部署，内部命名与持久化保持兼容。GitHub 备份默认提供设备授权登录，使用本项目独立注册的 agent-hub OAuth App，保留个人访问令牌入口与系统钥匙串凭证存储。执行记录见 [B14](issues/B14-skill-group-naming.md) 与 [B15](issues/B15-github-oauth-branding.md)。
 
+原生托盘菜单跟随应用语言设置，首次启动保存检测到的语言，切换语言立即刷新；中文状态、更新提示和技能组菜单保持统一。CLI 帮助使用中文说明并显示 `skill-groups`，保留旧别名解析。执行记录见 [B36](issues/B36-tray-menu-localization.md)。
+
 ## 本地 Skills 管理
 
 现有本地扫描入口同时提供导入和按安装位置管理能力，支持内容查看、打开目录、按名称、路径与适用 Agent 搜索和确认删除。使用扫描记录标识定位副本，后端校验当前目录边界、内容版本及部署归属；删除软链接时保留目标。已托管部署仍由 Agent 工作区管理。相同完整路径合并展示并同时统计 Skill 数和去重目录数，每个目录下方直接展示适用 Agent 标签，提示说明不代表已安装；同一 Skill 的其他来源目录默认折叠，保留独立路径与不同内容版本；共享 `~/.agents/skills` 存在时优先展示，否则回退到其他来源；软链接目录显示链接指示图标。执行记录见 [B16](issues/B16-local-skills-management.md) 与 [B27](issues/B27-local-directory-display.md)。

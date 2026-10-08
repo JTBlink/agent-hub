@@ -1,6 +1,6 @@
 ---
 name: manage-skills
-description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, deploy or undeploy skills per agent, manage presets, organize tags, search, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, preset membership, updates, and cross-agent deployment state.
+description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, deploy or undeploy skills per agent, manage skill groups, organize tags, search, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
 ## Before doing anything
@@ -80,15 +80,15 @@ aside and retry. Never delete it for them.
 
 ## Mental model
 
-There's **one central library** at `~/.agent-hub/skills/` that all agents share. Each skill has source metadata, preset membership, tags, and zero or more real deployments in agent directories. A **preset** is a reusable group; several presets may be deployed at the same time.
+There's **one central library** at `~/.agents/skills` that all agents share. Each skill has source metadata, skill group membership, tags, and zero or more real deployments in agent directories. A **skill group** is a reusable group; several skill groups may be deployed at the same time.
 
 Keep these three states separate:
 
 - **Library**: install/remove controls whether agent-hub owns the skill.
-- **Preset membership**: `presets add-skill/remove-skill` organizes the library only.
-- **Deployment**: `skills deploy/undeploy` and `presets deploy/undeploy` control what an agent can actually see.
+- **Skill group membership**: `skill-groups add-skill/remove-skill` organizes the library only.
+- **Deployment**: `skills deploy/undeploy` and `skill-groups deploy/undeploy` control what an agent can actually see.
 
-Internally, presets are still stored as scenarios for backward-compatible Git Backup. The CLI and UI call them presets.
+Internally, skill groups are still stored as scenarios for backward-compatible Git Backup. The CLI and UI call them skill groups.
 
 ## Install
 
@@ -114,7 +114,7 @@ Internally, presets are still stored as scenarios for backward-compatible Git Ba
 "$SM" skills deploy <skill> --agent claude_code --agent codex
 ```
 
-`--sync` and `--sync-preset` remain legacy shortcuts for the exclusive active-preset workflow.
+`--sync` and `--sync-skill-group` remain legacy shortcuts for the exclusive active-skill-group workflow.
 
 **Ref resolution** is deterministic, no path-existence guessing:
 
@@ -123,7 +123,7 @@ Internally, presets are still stored as scenarios for backward-compatible Git Ba
 3. Matches `owner/repo`, `owner/repo/skill`, or `owner/repo@skill` → skillssh
 4. Otherwise → error; pass `--local` / `--git` / `--skillssh` to disambiguate
 
-**Always verify after install** with `skills list` or `skills show <name>` so you can confirm the skill landed and report the preset / sync state back to the user.
+**Always verify after install** with `skills list` or `skills show <name>` so you can confirm the skill landed and report the skill group / sync state back to the user.
 
 ## Search
 
@@ -184,21 +184,21 @@ Remove deletes the central-library copy, all synced targets across agents, and t
 "$SM" --json skills status <skill>
 ```
 
-These commands change real managed deployments without deleting the central-library copy or changing preset membership. `skills enable/disable` are deprecated compatibility commands and do not change deployment; never use them.
+These commands change real managed deployments without deleting the central-library copy or changing skill group membership. `skills enable/disable` are deprecated compatibility commands and do not change deployment; never use them.
 
 `skills deploy` and `skills undeploy` always require at least one explicit `--agent`, whether the command names one skill or several. `skills status` also reports target rows left by a custom agent that is no longer registered, so stale deployments stay visible and can be cleaned with an explicit undeploy while the row exists.
 
 ## Legacy exclusive sync
 
 ```bash
-# Sync current active preset to all enabled agents
+# Sync current active skill group to all enabled agents
 "$SM" skills sync
 
 # Preview the target list — safe, no writes
 "$SM" skills sync --dry-run
 
-# Switch the one legacy active preset, then sync
-"$SM" skills sync --preset "Web Dev"
+# Switch the one legacy active skill group, then sync
+"$SM" skills sync --skill-group "Web Dev"
 
 # Only sync to a single agent (useful when one agent's directory got out of sync)
 "$SM" skills sync --tool claude_code
@@ -246,7 +246,7 @@ When skills already live in an agent's directory (e.g. installed via `npx skills
 
 This is how a `local` skill becomes git-backed so `update` works, and how a
 skill pointed at the wrong repo gets corrected. It updates the row **in place**,
-so the skill id survives and the tags, preset membership and per-agent
+so the skill id survives and the tags, skill group membership and per-agent
 deployments keyed to it all stay intact.
 
 - The flag is `--subpath` here, not `--git-subpath` — that one belongs to `adopt`. Pass `--subpath ""` when the skill is at the repo root, which must itself hold a `SKILL.md`.
@@ -280,53 +280,53 @@ Useful organization queries:
 
 ```bash
 "$SM" --json skills list --untagged
-"$SM" --json skills list --no-preset
+"$SM" --json skills list --no-skill-group
 "$SM" --json skills list --tag frontend
-"$SM" --json skills list --preset "Web Dev"
+"$SM" --json skills list --skill-group "Web Dev"
 "$SM" --json skills list --deployed-to codex
 ```
 
-## Presets
+## Skill Groups
 
 ```bash
-"$SM" presets list
-"$SM" presets current
-"$SM" presets show "Web Dev"
-"$SM" presets create "Web Dev" --description "Frontend work"
-"$SM" presets update "Web Dev" --name "Frontend"
-"$SM" presets delete "Old" --dry-run
-"$SM" presets delete "Old" --yes
+"$SM" skill-groups list
+"$SM" skill-groups current
+"$SM" skill-groups show "Web Dev"
+"$SM" skill-groups create "Web Dev" --description "Frontend work"
+"$SM" skill-groups update "Web Dev" --name "Frontend"
+"$SM" skill-groups delete "Old" --dry-run
+"$SM" skill-groups delete "Old" --yes
 
-"$SM" presets add-skill <preset> <skill>...
-"$SM" presets remove-skill <preset> <skill>...
+"$SM" skill-groups add-skill <skill-group> <skill>...
+"$SM" skill-groups remove-skill <skill-group> <skill>...
 
-"$SM" presets deploy <preset>                  # all enabled coding agents
-"$SM" presets deploy <preset> --agent codex
-"$SM" presets undeploy <preset> --agent claude_code
-"$SM" presets undeploy <preset>                # every agent with target rows for this preset
-"$SM" --json presets status <preset>
+"$SM" skill-groups deploy <skill-group>                  # all enabled coding agents
+"$SM" skill-groups deploy <skill-group> --agent codex
+"$SM" skill-groups undeploy <skill-group> --agent claude_code
+"$SM" skill-groups undeploy <skill-group>                # every agent with target rows for this skill group
+"$SM" --json skill-groups status <skill-group>
 ```
 
-`deploy/undeploy` are additive and match the app's Preset pills. Explicit `presets apply/deactivate` commands remain for the legacy exclusive active-preset model; do not use them for normal "turn this preset on/off" requests.
+`deploy/undeploy` are additive and match the app's Skill Group pills. Explicit `skill-groups apply/deactivate` commands remain for the legacy exclusive active-skill-group model; do not use them for normal "turn this skill group on/off" requests.
 
-The no-`--agent` defaults intentionally differ: deploy targets all installed, enabled coding agents; undeploy discovers the preset's actual target rows and removes them even when an agent is now disabled, uninstalled, or no longer registered. Use the no-agent undeploy for "turn this preset off everywhere."
+The no-`--agent` defaults intentionally differ: deploy targets all installed, enabled coding agents; undeploy discovers the skill group's actual target rows and removes them even when an agent is now disabled, uninstalled, or no longer registered. Use the no-agent undeploy for "turn this skill group off everywhere."
 
-Preset create/update/delete and add-skill/remove-skill are organization-only CLI operations. They never deploy or undeploy agent files implicitly.
+Skill group create/update/delete and add-skill/remove-skill are organization-only CLI operations. They never deploy or undeploy agent files implicitly.
 
 ## Health check
 
 When sync misbehaves or a command errors in a confusing way:
 
 ```bash
-"$SM" --json repo status   # base dir, skill / preset counts, active preset
+"$SM" --json repo status   # base dir, skill / skill group counts, active skill group
 "$SM" --json agents list  # detected agents and their target paths
 "$SM" agents enable codex
 "$SM" agents disable claude_code
 ```
 
-`repo status` and `agents list` are read-only and are the first checks for "why isn't this skill showing up in Cursor" questions. `agents disable` is a real mutation: it removes every managed deployment for that agent. `agents enable` makes the agent globally available again and re-syncs the legacy active preset, if one exists; use explicit skill or preset deployment afterward when the requested state is additive.
+`repo status` and `agents list` are read-only and are the first checks for "why isn't this skill showing up in Cursor" questions. `agents disable` is a real mutation: it removes every managed deployment for that agent. `agents enable` makes the agent globally available again and re-syncs the legacy active skill group, if one exists; use explicit skill or skill group deployment afterward when the requested state is additive.
 
-Use `agents disable <agent>` when the user wants the whole Agent integration turned off or wants every managed skill removed from it. If they only want one skill or preset removed while keeping the Agent available for future deployments, use `skills undeploy` or `presets undeploy` instead.
+Use `agents disable <agent>` when the user wants the whole Agent integration turned off or wants every managed skill removed from it. If they only want one skill or skill group removed while keeping the Agent available for future deployments, use `skills undeploy` or `skill-groups undeploy` instead.
 
 ## Typical workflows
 
@@ -344,7 +344,7 @@ Use `agents disable <agent>` when the user wants the whole Agent integration tur
 "$SM" --json skills list
 ```
 
-The `preset_ids`, `presets`, `deployed_to`, `tags`, and `source_type` fields are usually the most informative. The legacy `enabled` field is not deployment state.
+The `skill_group_ids`, `skill_groups`, `deployed_to`, `tags`, and `source_type` fields are usually the most informative. The legacy `enabled` field is not deployment state.
 
 ### "Pull in the skills already installed in my agent directories"
 
@@ -364,7 +364,7 @@ Report which skills actually refreshed (`refreshed: true` in the JSON) vs which 
 ## Pitfalls
 
 - **Install succeeded but skill doesn't appear in the agent** → install defaults to library-only. Use `skills deploy <skill> --agent <key>`.
-- **Preset membership changed but agent files did not** → membership is organization only. Follow with `presets deploy` or `skills deploy` when the user also asked to make it visible.
-- **No active preset** only affects legacy `skills sync` / `presets apply`; additive deploy commands do not require one.
-- **Adopted skills can't be `update`d from git** → `npx skills add` and manual `git clone` don't leave source metadata, so adopt has to treat them as `local`. Re-point them with `skills set-source`. Do **not** reach for `adopt --git-url` here: adopt only ever creates new library entries, and it fails _late_ — `--dry-run` returns `ok: true` with the skill sitting in `skipped`, and only the real run errors with `--git-url requires exactly one adoptable skill, found 0`. Do **not** remove-then-reinstall either — that drops the skill id, and with it the tags, preset membership and every per-agent deployment.
-- Use `--dry-run` before bulk remove, tag delete, preset delete, deploy, or undeploy operations. Use `check` before `update`.
+- **Skill group membership changed but agent files did not** → membership is organization only. Follow with `skill-groups deploy` or `skills deploy` when the user also asked to make it visible.
+- **No active skill group** only affects legacy `skills sync` / `skill-groups apply`; additive deploy commands do not require one.
+- **Adopted skills can't be `update`d from git** → `npx skills add` and manual `git clone` don't leave source metadata, so adopt has to treat them as `local`. Re-point them with `skills set-source`. Do **not** reach for `adopt --git-url` here: adopt only ever creates new library entries, and it fails _late_ — `--dry-run` returns `ok: true` with the skill sitting in `skipped`, and only the real run errors with `--git-url requires exactly one adoptable skill, found 0`. Do **not** remove-then-reinstall either — that drops the skill id, and with it the tags, skill group membership and every per-agent deployment.
+- Use `--dry-run` before bulk remove, tag delete, skill group delete, deploy, or undeploy operations. Use `check` before `update`.
