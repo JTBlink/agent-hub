@@ -103,7 +103,7 @@ pub fn write_all_from_db(store: &SkillStore) -> Result<()> {
 /// Runs `f` while holding the central-repo lock. Callers are user-initiated
 /// operations (set tags, delete, preset edits, imports), so we wait out
 /// transient contention with background work instead of failing fast.
-pub(crate) fn with_repo_lock<T, F>(operation: &str, f: F) -> Result<T>
+pub fn with_repo_lock<T, F>(operation: &str, f: F) -> Result<T>
 where
     F: FnOnce() -> Result<T>,
 {

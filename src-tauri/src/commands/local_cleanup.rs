@@ -1,4 +1,4 @@
-//! Reviewable cleanup of scanned Skills belonging to uninstalled Agents.
+//! Reviewable cleanup of scanned Skills belonging to configured Agents.
 use super::discovered_skills::{delete_location, validate_location};
 use crate::core::{
     central_repo,
@@ -46,17 +46,23 @@ fn roots(
     adapters: &[ToolAdapter],
     installed: &HashSet<String>,
     library: &Path,
+    include_installed: bool,
 ) -> HashMap<String, PathBuf> {
     let mut protected = vec![library.to_path_buf()];
     for adapter in adapters {
-        if installed.contains(&adapter.key) || adapter.is_custom || adapter.has_path_override() {
+        if adapter.is_custom
+            || adapter.has_path_override()
+            || (!include_installed && installed.contains(&adapter.key))
+        {
             protected.extend(adapter.all_scan_dirs());
         }
     }
     adapters
         .iter()
         .filter(|adapter| {
-            !installed.contains(&adapter.key) && !adapter.is_custom && !adapter.has_path_override()
+            (include_installed || !installed.contains(&adapter.key))
+                && !adapter.is_custom
+                && !adapter.has_path_override()
         })
         .filter_map(|adapter| {
             let root = adapter.skills_dir();
@@ -69,6 +75,34 @@ fn roots(
             .then(|| (adapter.key.clone(), root))
         })
         .collect()
+}
+
+pub fn preview_for_cli(
+    store: &SkillStore,
+    include_installed: bool,
+) -> Result<Vec<CleanupLocation>, AppError> {
+    let adapters = tool_adapters::all_tool_adapters(store);
+    plan(store, &adapters, &installed(&adapters), include_installed)
+}
+
+pub fn cleanup_for_cli(
+    store: &SkillStore,
+    selected: &[String],
+    include_installed: bool,
+) -> Result<CleanupResult, AppError> {
+    Ok(
+        sync_metadata::with_repo_lock("clean local Agent Skills", || {
+            let adapters = tool_adapters::all_tool_adapters(store);
+            Ok(execute(
+                store,
+                selected,
+                &adapters,
+                &installed(&adapters),
+                include_installed,
+            )?)
+        })
+        .map_err(AppError::io)?,
+    )
 }
 
 fn empty_tree(path: &Path) -> bool {
@@ -100,8 +134,14 @@ fn plan(
     store: &SkillStore,
     adapters: &[ToolAdapter],
     installed: &HashSet<String>,
+    include_installed: bool,
 ) -> Result<Vec<CleanupLocation>, AppError> {
-    let roots = roots(adapters, installed, &central_repo::skills_dir());
+    let roots = roots(
+        adapters,
+        installed,
+        &central_repo::skills_dir(),
+        include_installed,
+    );
     let targets = store.get_all_targets().map_err(AppError::db)?;
     let mut result = Vec::new();
     let mut seen = HashSet::new();
@@ -155,11 +195,16 @@ fn installed(adapters: &[ToolAdapter]) -> HashSet<String> {
 #[tauri::command]
 pub async fn get_local_cleanup_plan(
     store: State<'_, Arc<SkillStore>>,
+    include_installed: Option<bool>,
 ) -> Result<Vec<CleanupLocation>, AppError> {
     let store = store.inner().clone();
+    // The desktop one-click action cleans all detected Agent roots by default.
+    // Keep the argument optional for older callers, while making installed
+    // Agents eligible instead of silently reporting an empty result.
+    let include_installed = include_installed.unwrap_or(true);
     tauri::async_runtime::spawn_blocking(move || {
         let adapters = tool_adapters::all_tool_adapters(&store);
-        plan(&store, &adapters, &installed(&adapters))
+        plan(&store, &adapters, &installed(&adapters), include_installed)
     })
     .await?
 }
@@ -169,6 +214,7 @@ fn execute(
     selected: &[String],
     adapters: &[ToolAdapter],
     installed: &HashSet<String>,
+    include_installed: bool,
 ) -> Result<CleanupResult, AppError> {
     // Reuse the scanned records instead of re-reading the whole scan table for
     // every selected item. The plan already checked the primary root boundary.
@@ -178,11 +224,16 @@ fn execute(
         .into_iter()
         .map(|record| (record.id.clone(), record))
         .collect();
-    let current: HashMap<_, _> = plan(store, adapters, installed)?
+    let current: HashMap<_, _> = plan(store, adapters, installed, include_installed)?
         .into_iter()
         .map(|entry| (entry.id.clone(), entry))
         .collect();
-    let roots = roots(adapters, installed, &central_repo::skills_dir());
+    let roots = roots(
+        adapters,
+        installed,
+        &central_repo::skills_dir(),
+        include_installed,
+    );
     let mut result = CleanupResult::default();
     let mut seen = HashSet::new();
     let mut removed_paths = HashSet::new();
@@ -244,10 +295,12 @@ fn execute(
 pub async fn cleanup_uninstalled_agent_skills(
     store: State<'_, Arc<SkillStore>>,
     location_ids: Vec<String>,
+    include_installed: Option<bool>,
 ) -> Result<CleanupResult, AppError> {
     let store = store.inner().clone();
+    let include_installed = include_installed.unwrap_or(true);
     tauri::async_runtime::spawn_blocking(move || {
-        sync_metadata::with_repo_lock("clean uninstalled Agent Skills", || {
+        sync_metadata::with_repo_lock("clean local Agent Skills", || {
             // Fresh installation snapshot after the user confirmed the preview.
             let adapters = tool_adapters::all_tool_adapters(&store);
             Ok(execute(
@@ -255,6 +308,7 @@ pub async fn cleanup_uninstalled_agent_skills(
                 &location_ids,
                 &adapters,
                 &installed(&adapters),
+                include_installed,
             )?)
         })
         .map_err(AppError::io)
@@ -300,7 +354,8 @@ mod tests {
         assert!(roots(
             &[a.clone(), b.clone()],
             &HashSet::from(["two".into()]),
-            &tmp.path().join("library")
+            &tmp.path().join("library"),
+            false,
         )
         .is_empty());
         let mut manual = b;
@@ -308,10 +363,26 @@ mod tests {
         assert!(roots(
             &[a.clone(), manual],
             &HashSet::new(),
-            &tmp.path().join("library")
+            &tmp.path().join("library"),
+            false,
         )
         .is_empty());
-        assert!(roots(&[a], &HashSet::new(), &root).is_empty());
+        assert!(roots(&[a], &HashSet::new(), &root, false).is_empty());
+    }
+
+    #[test]
+    fn installed_agent_roots_are_candidates_when_requested() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("installed/skills");
+        std::fs::create_dir_all(root.join("demo")).unwrap();
+        let adapter = adapter(&root, "installed");
+        let candidates = roots(
+            &[adapter],
+            &HashSet::from(["installed".into()]),
+            &tmp.path().join("library"),
+            true,
+        );
+        assert_eq!(candidates.get("installed"), Some(&root));
     }
     #[test]
     fn installed_after_preview_is_skipped_and_changed_contents_are_preserved() {
@@ -322,20 +393,26 @@ mod tests {
         let root = tmp.path().join("agent/skills");
         let id = discovered(&store, &root, "fixture");
         let adapters = [adapter(&root, "fixture")];
-        assert_eq!(plan(&store, &adapters, &HashSet::new()).unwrap().len(), 1);
+        assert_eq!(
+            plan(&store, &adapters, &HashSet::new(), false)
+                .unwrap()
+                .len(),
+            1
+        );
         assert_eq!(
             execute(
                 &store,
                 std::slice::from_ref(&id),
                 &adapters,
-                &HashSet::from(["fixture".into()])
+                &HashSet::from(["fixture".into()]),
+                false,
             )
             .unwrap()
             .removed,
             0
         );
         std::fs::write(root.join("demo/SKILL.md"), "# Changed").unwrap();
-        let result = execute(&store, &[id], &adapters, &HashSet::new()).unwrap();
+        let result = execute(&store, &[id], &adapters, &HashSet::new(), false).unwrap();
         assert_eq!(result.removed, 0);
         assert_eq!(result.failures.len(), 1);
         assert!(root.join("demo").exists());
@@ -351,7 +428,7 @@ mod tests {
         let id = discovered(&store, &root, "fixture");
         let adapters = [adapter(&root, "fixture")];
         std::fs::write(root.parent().unwrap().join("config.json"), "keep").unwrap();
-        let result = execute(&store, &[id.clone(), id], &adapters, &HashSet::new()).unwrap();
+        let result = execute(&store, &[id.clone(), id], &adapters, &HashSet::new(), false).unwrap();
         assert_eq!(result.removed, 1);
         assert!(result.failures.is_empty());
         assert!(!root.exists());
@@ -400,6 +477,7 @@ mod tests {
             &["link".into()],
             &[adapter(&root, "fixture")],
             &HashSet::new(),
+            false,
         )
         .unwrap();
         assert_eq!(result.removed, 1);
@@ -410,7 +488,8 @@ mod tests {
         assert!(roots(
             &[adapter(&root, "fixture")],
             &HashSet::new(),
-            &tmp.path().join("library")
+            &tmp.path().join("library"),
+            false,
         )
         .is_empty());
         central_repo::set_test_base_dir_override(None);
@@ -426,10 +505,10 @@ mod tests {
         let a = discovered(&store, &root, "one");
         let b = discovered(&store, &root, "two");
         let adapters = [adapter(&root, "one"), adapter(&root, "two")];
-        let preview = plan(&store, &adapters, &HashSet::new()).unwrap();
+        let preview = plan(&store, &adapters, &HashSet::new(), false).unwrap();
         assert_eq!(preview.len(), 2);
         assert!(preview.iter().any(|entry| entry.tool == "two"));
-        let result = execute(&store, &[b, a], &adapters, &HashSet::new()).unwrap();
+        let result = execute(&store, &[b, a], &adapters, &HashSet::new(), false).unwrap();
         assert_eq!(result.removed, 1);
         assert!(result.failures.is_empty());
         assert!(!root.exists());

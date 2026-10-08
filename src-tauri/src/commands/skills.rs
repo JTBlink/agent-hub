@@ -1071,10 +1071,19 @@ pub async fn install_from_skillssh(
                 let _lock =
                     RepoLock::acquire_foreground("install skillssh skill").map_err(AppError::db)?;
                 let skill_dir = resolve_skill_dir(&temp_dir, None, Some(&skill_id))?;
+                // A local import can already contain the exact skills.sh
+                // content. Reuse that library entry so installing its remote
+                // source upgrades the existing record instead of creating a
+                // `-2` duplicate.
+                let source_hash = installer::hash_local_source(&skill_dir).map_err(AppError::io)?;
                 let revision = git_fetcher::get_head_revision(&temp_dir).map_err(AppError::git)?;
                 let source_ref = format!("{}/{}", source, skill_id);
-                let (install_name, destination) =
-                    resolve_skillssh_install_target(&store, &source_ref, &skill_id)?;
+                let (install_name, destination) = resolve_skillssh_install_target(
+                    &store,
+                    &source_ref,
+                    &skill_id,
+                    Some(&source_hash),
+                )?;
                 let result = installer::install_skill_dir_to_destination(
                     &skill_dir,
                     &install_name,
@@ -2898,12 +2907,36 @@ pub fn resolve_skillssh_install_target(
     store: &SkillStore,
     source_ref: &str,
     skill_id: &str,
+    source_hash: Option<&str>,
 ) -> Result<(String, PathBuf), AppError> {
     if let Some(existing) = store
         .get_skill_by_source_ref("skillssh", source_ref)
         .map_err(AppError::db)?
     {
         return Ok((existing.name, PathBuf::from(existing.central_path)));
+    }
+
+    if let Some(source_hash) = source_hash {
+        if let Some(existing) = store
+            .get_all_skills()
+            .map_err(AppError::db)?
+            .into_iter()
+            .find(|skill| {
+                let same_content = skill.content_hash.as_deref() == Some(source_hash)
+                    || (std::path::Path::new(&skill.central_path).is_dir()
+                        && installer::hash_local_source(std::path::Path::new(&skill.central_path))
+                            .ok()
+                            .as_deref()
+                            == Some(source_hash));
+                let same_skill_key = skill.name.eq_ignore_ascii_case(skill_id)
+                    || std::path::Path::new(&skill.central_path)
+                        .file_name()
+                        .is_some_and(|name| name.eq_ignore_ascii_case(skill_id));
+                same_content && same_skill_key
+            })
+        {
+            return Ok((existing.name, PathBuf::from(existing.central_path)));
+        }
     }
 
     let base_name = skill_id.trim();
@@ -3351,6 +3384,26 @@ mod tests {
         assert!(sync_metadata::metadata_dir()
             .join("skills/skill-2.json")
             .exists());
+    }
+
+    #[test]
+    fn skillssh_install_reuses_same_content_from_local_import() {
+        let repo = test_repo();
+        let existing_dir = write_skill_dir("agent-browser");
+        let hash = installer::hash_local_source(&existing_dir).unwrap();
+        let mut existing = sample_skill("local", "agent-browser", &existing_dir);
+        existing.content_hash = Some(hash.clone());
+        repo.store.insert_skill(&existing).unwrap();
+
+        let (name, path) = resolve_skillssh_install_target(
+            &repo.store,
+            "owner/repo/agent-browser",
+            "agent-browser",
+            Some(&hash),
+        )
+        .unwrap();
+        assert_eq!(name, "agent-browser");
+        assert_eq!(path, existing_dir);
     }
 
     /// The whole point of the preflight: it must see the user's file in the

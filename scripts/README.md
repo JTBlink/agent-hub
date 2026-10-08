@@ -40,3 +40,5 @@ node scripts/verify-release-bundle.mjs <bundle-dir>
 ## 主应用与 CLI
 
 `primary-app.mjs` 统一开发和打包流程，提前构建并放置 `agent-hub-cli` sidecar。`run-rust-cli.mjs` 提供 CLI 运行、构建和安装入口。前端、桌面与 CLI 均使用根目录工程。
+
+Unix 开发环境可运行 `./agent-hub.sh install-cli`：先编译 CLI，再将 `${CARGO_HOME:-~/.cargo}/bin/agent-hub-cli` 链接到仓库的 debug 构建产物。`./agent-hub.sh install-cli release` 使用 release 构建；`AGENT_HUB_CLI_BIN_DIR` 可指定链接目录。已有普通文件或指向其他位置的软链接不会被覆盖。

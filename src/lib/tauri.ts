@@ -452,11 +452,17 @@ export interface LocalCleanupResult {
   removed: number;
   failures: { path: string; reason: string }[];
 }
-export const getLocalCleanupPlan = () =>
-  invoke<LocalCleanupLocation[]>("get_local_cleanup_plan");
-export const cleanupUninstalledAgentSkills = (locationIds: string[]) =>
+export const getLocalCleanupPlan = (includeInstalled = true) =>
+  invoke<LocalCleanupLocation[]>("get_local_cleanup_plan", {
+    includeInstalled,
+  });
+export const cleanupUninstalledAgentSkills = (
+  locationIds: string[],
+  includeInstalled = true,
+) =>
   invoke<LocalCleanupResult>("cleanup_uninstalled_agent_skills", {
     locationIds,
+    includeInstalled,
   });
 
 // ── Browse ──

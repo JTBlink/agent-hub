@@ -3,11 +3,11 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context};
-use app_lib::commands::{presets as preset_cmd, skills as cmd, tools as tool_cmd};
+use app_lib::commands::{local_cleanup, presets as preset_cmd, skills as cmd, tools as tool_cmd};
 use app_lib::core::{
     app_state, audit_log::AuditDraft, central_repo, error::AppError, git_backup, git_fetcher,
-    installer, repo_lock::RepoLock, scenario_service, skill_metadata, skill_store::SkillStore,
-    skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
+    installer, repo_lock::RepoLock, scanner, scenario_service, skill_metadata,
+    skill_store::SkillStore, skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
 };
 use clap::{Args, Parser, Subcommand};
 use serde::Serialize;
@@ -154,6 +154,18 @@ enum SkillsCommand {
         yes: bool,
         #[arg(long)]
         dry_run: bool,
+    },
+    /// Preview and remove local Skill directories discovered under Agent roots.
+    Cleanup {
+        /// Include roots for Agents detected as installed (the default).
+        #[arg(long)]
+        include_installed: bool,
+        /// Restrict cleanup to roots of Agents not detected as installed.
+        #[arg(long)]
+        uninstalled_only: bool,
+        /// Delete the previewed locations. Without this flag the command is a preview.
+        #[arg(long, short)]
+        yes: bool,
     },
     /// Deprecated compatibility command: use skills deploy.
     Enable {
@@ -924,6 +936,32 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
             let report = run_remove(store, &references, yes, dry_run)?;
             print_json(&report, json);
         }
+        SkillsCommand::Cleanup {
+            include_installed,
+            uninstalled_only,
+            yes,
+        } => {
+            let include_installed = !uninstalled_only || include_installed;
+            refresh_local_cleanup_scan(store)?;
+            let plan =
+                local_cleanup::preview_for_cli(store, include_installed).map_err(map_app_err)?;
+            if !yes {
+                print_json(
+                    &serde_json::json!({
+                        "ok": true,
+                        "dry_run": true,
+                        "include_installed": include_installed,
+                        "locations": plan,
+                    }),
+                    json,
+                );
+            } else {
+                let ids: Vec<String> = plan.iter().map(|entry| entry.id.clone()).collect();
+                let result = local_cleanup::cleanup_for_cli(store, &ids, include_installed)
+                    .map_err(map_app_err)?;
+                print_json(&result, json);
+            }
+        }
         SkillsCommand::Enable { references } => {
             let reports = run_deprecated_set_enabled(store, &references, true)?;
             print_json(&reports, json);
@@ -1001,6 +1039,28 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
             print_json(&report, json);
         }
         SkillsCommand::Tag(args) => run_tag(args, store, json)?,
+    }
+    Ok(())
+}
+
+fn refresh_local_cleanup_scan(store: &SkillStore) -> anyhow::Result<()> {
+    let managed_paths: Vec<String> = store
+        .get_all_targets()?
+        .into_iter()
+        .map(|target| target.target_path)
+        .chain(
+            store
+                .get_all_skills()?
+                .into_iter()
+                .map(|skill| skill.central_path),
+        )
+        .collect();
+    let adapters = tool_adapters::all_tool_adapters(store);
+    let scan = scanner::scan_local_skills_with_adapters(&managed_paths, &adapters)
+        .map_err(|error| anyhow!(error))?;
+    store.clear_discovered()?;
+    for record in scan.discovered {
+        store.insert_discovered(&record)?;
     }
     Ok(())
 }
@@ -1665,11 +1725,16 @@ fn install_skillssh_action(
         let _lock = RepoLock::acquire_foreground("cli install skillssh")?;
         let skill_dir =
             cmd::resolve_skill_dir(&temp_dir, None, Some(&skill_id_field)).map_err(map_app_err)?;
+        let source_hash = installer::hash_local_source(&skill_dir)?;
         let revision = git_fetcher::get_head_revision(&temp_dir)?;
         let source_ref = format!("{}/{}", source, skill_id_field);
-        let (install_name, destination) =
-            cmd::resolve_skillssh_install_target(store, &source_ref, &skill_id_field)
-                .map_err(map_app_err)?;
+        let (install_name, destination) = cmd::resolve_skillssh_install_target(
+            store,
+            &source_ref,
+            &skill_id_field,
+            Some(&source_hash),
+        )
+        .map_err(map_app_err)?;
         let install_result =
             installer::install_skill_dir_to_destination(&skill_dir, &install_name, &destination)?;
         let metadata = cmd::InstallSourceMetadata {
