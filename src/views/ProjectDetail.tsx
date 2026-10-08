@@ -180,6 +180,13 @@ export function ProjectDetail() {
   >(null);
   const [batchUpdatingCenter, setBatchUpdatingCenter] = useState(false);
   const [batchUpdatingProject, setBatchUpdatingProject] = useState(false);
+  const [centerConflict, setCenterConflict] = useState<{
+    skill: ProjectSkillGroup;
+    variants: ProjectSkill[];
+  } | null>(null);
+  const [centerConflictAgent, setCenterConflictAgent] = useState<string | null>(
+    null,
+  );
   const [togglingSkill, setTogglingSkill] = useState<string | null>(null);
   const [togglingAgentTarget, setTogglingAgentTarget] = useState<{
     skillKey: string;
@@ -325,7 +332,22 @@ export function ProjectDetail() {
         )[0],
         status: getGroupStatus(group.variants),
       }))
-      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+      .sort((a, b) => {
+        // Put skills that need attention ahead of the clean list. This keeps
+        // project workspaces useful as a review queue while preserving the
+        // stable alphabetical order within each sync state.
+        const statusRank: Record<ProjectSkill["sync_status"], number> = {
+          diverged: 0,
+          project_newer: 1,
+          center_newer: 2,
+          project_only: 3,
+          in_sync: 4,
+        };
+        return (
+          statusRank[a.status] - statusRank[b.status] ||
+          a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+        );
+      });
   }, [skills]);
 
   useEffect(() => {
@@ -622,15 +644,19 @@ export function ProjectDetail() {
   // the way 1.34.0 answers a write that would destroy something.
   const pushSkillToCenterAndAlign = async (
     skill: ProjectSkillGroup,
+    selectedWinner?: ProjectSkill,
   ): Promise<{ alignFailed: number; conflicting: number }> => {
     if (!id) return { alignFailed: 0, conflicting: 0 };
 
     const unproven = skill.variants.filter((v) => v.sync_status !== "in_sync");
-    if (unproven.length > 1) {
+    if (unproven.length > 1 && !selectedWinner) {
       return { alignFailed: 0, conflicting: unproven.length };
     }
 
-    const winner = unproven[0] ?? skill.primaryVariant;
+    const winner = selectedWinner ?? unproven[0] ?? skill.primaryVariant;
+    if (!skill.variants.some((variant) => variant === winner)) {
+      throw new Error("Selected project skill variant is no longer available");
+    }
     await api.updateProjectSkillToCenter(
       id,
       winner.relative_path,
@@ -665,12 +691,12 @@ export function ProjectDetail() {
       const { alignFailed, conflicting } =
         await pushSkillToCenterAndAlign(skill);
       if (conflicting > 0) {
-        toast.warning(
-          t("project.updateCenterConflict", {
-            name: skill.name,
-            count: conflicting,
-          }),
+        const variants = skill.variants.filter(
+          (variant) => variant.sync_status !== "in_sync",
         );
+        setCenterConflict({ skill, variants });
+        setCenterConflictAgent(variants[0]?.agent ?? null);
+        return;
       } else if (alignFailed > 0) {
         toast.warning(
           t("project.updateCenterAlignFailed", {
@@ -688,6 +714,46 @@ export function ProjectDetail() {
       ]);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, t("common.error")));
+    } finally {
+      setUpdatingCenterSkill(null);
+    }
+  };
+
+  const handleConfirmCenterConflict = async () => {
+    if (!centerConflict || !centerConflictAgent) return false;
+    const winner = centerConflict.variants.find(
+      (variant) => variant.agent === centerConflictAgent,
+    );
+    if (!winner || !id) return false;
+
+    setUpdatingCenterSkill(getSkillKey(centerConflict.skill));
+    try {
+      const { alignFailed } = await pushSkillToCenterAndAlign(
+        centerConflict.skill,
+        winner,
+      );
+      if (alignFailed > 0) {
+        toast.warning(
+          t("project.updateCenterAlignFailed", {
+            name: centerConflict.skill.name,
+            count: alignFailed,
+          }),
+        );
+      } else {
+        toast.success(
+          t("project.updateCenterSuccess", { name: centerConflict.skill.name }),
+        );
+      }
+      await Promise.all([
+        refreshManagedSkills(),
+        refreshPresets(),
+        loadSkills(),
+      ]);
+      setCenterConflict(null);
+      setCenterConflictAgent(null);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, t("common.error")));
+      return false;
     } finally {
       setUpdatingCenterSkill(null);
     }
@@ -1035,7 +1101,7 @@ export function ProjectDetail() {
     async (skill: ManagedSkill, agentKey: string) => {
       if (!id) return;
       const projectVariant = findProjectPresetVariant(skill, agentKey);
-      if (!projectVariant) throw new Error(t("project.skillDirectoryNotFound"));
+      if (!projectVariant) return;
       await api.deleteProjectSkill(id, projectVariant.relative_path, agentKey);
     },
     [findProjectPresetVariant, id, t],
@@ -1811,6 +1877,33 @@ export function ProjectDetail() {
         onApply={handleBatchEditTags}
       />
 
+      {centerConflict && (
+        <ConfirmDialog
+          open={true}
+          title={t("project.updateCenterConflictTitle")}
+          message={t("project.updateCenterConflictMessage", {
+            name: centerConflict.skill.name,
+          })}
+          details={centerConflict.variants.map(
+            (variant) => variant.agent_display_name,
+          )}
+          tone="warning"
+          confirmLabel={t("project.updateCenterOverwrite")}
+          onClose={() => {
+            setCenterConflict(null);
+            setCenterConflictAgent(null);
+          }}
+          onConfirm={handleConfirmCenterConflict}
+        >
+          <ProjectSkillConflictPreview
+            projectId={id ?? ""}
+            variants={centerConflict.variants}
+            selectedAgent={centerConflictAgent}
+            onSelectAgent={setCenterConflictAgent}
+          />
+        </ConfirmDialog>
+      )}
+
       {id && (
         <AddSkillsSheet
           open={showExportDialog}
@@ -1831,6 +1924,129 @@ export function ProjectDetail() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function ProjectSkillConflictPreview({
+  projectId,
+  variants,
+  selectedAgent,
+  onSelectAgent,
+}: {
+  projectId: string;
+  variants: ProjectSkill[];
+  selectedAgent: string | null;
+  onSelectAgent: (agent: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [documents, setDocuments] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [compareAgent, setCompareAgent] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setDocuments({});
+    Promise.all(
+      variants.map(async (variant) => {
+        try {
+          const document = await api.getProjectSkillDocument(
+            projectId,
+            variant.relative_path,
+            variant.agent,
+          );
+          return [variant.agent, document.content] as const;
+        } catch {
+          return [variant.agent, ""] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setDocuments(Object.fromEntries(entries));
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, variants]);
+
+  useEffect(() => {
+    const fallback = variants.find((variant) => variant.agent !== selectedAgent);
+    setCompareAgent((current) =>
+      current && variants.some((variant) => variant.agent === current)
+        ? current
+        : fallback?.agent ?? null,
+    );
+  }, [selectedAgent, variants]);
+
+  const selectedVariant = variants.find(
+    (variant) => variant.agent === selectedAgent,
+  );
+  const compareVariant = variants.find(
+    (variant) => variant.agent === compareAgent,
+  );
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[12px] leading-5 text-muted">
+        {t("project.updateCenterConflictHint")}
+      </p>
+      <div className="space-y-1.5">
+        {variants.map((variant) => (
+          <label
+            key={variant.agent}
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-[12px] text-secondary hover:bg-surface-hover"
+          >
+            <input
+              type="radio"
+              name="center-conflict-source"
+              checked={selectedAgent === variant.agent}
+              onChange={() => onSelectAgent(variant.agent)}
+            />
+            <span className="font-medium">{variant.agent_display_name}</span>
+            <span className="ml-auto text-muted">
+              {variant.sync_status === "project_only"
+                ? t("project.syncStatus.projectOnly")
+                : t("project.syncStatus.diverged")}
+            </span>
+          </label>
+        ))}
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 py-4 text-[12px] text-muted">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t("common.loading")}
+        </div>
+      ) : selectedVariant && compareVariant ? (
+        <>
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+            <span>{t("project.updateCenterDiffLabel")}</span>
+            {variants
+              .filter((variant) => variant.agent !== selectedAgent)
+              .map((variant) => (
+                <button
+                  key={variant.agent}
+                  type="button"
+                  onClick={() => setCompareAgent(variant.agent)}
+                  className={cn(
+                    "rounded-full px-2 py-0.5",
+                    compareAgent === variant.agent
+                      ? "bg-accent text-white"
+                      : "bg-surface-hover text-secondary",
+                  )}
+                >
+                  {variant.agent_display_name}
+                </button>
+              ))}
+          </div>
+          <DocumentDiffViewer
+            original={documents[compareVariant.agent] ?? ""}
+            updated={documents[selectedVariant.agent] ?? ""}
+            className="max-h-64 overflow-y-auto"
+          />
+        </>
+      ) : null}
     </div>
   );
 }
