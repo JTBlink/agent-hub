@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 const IS_MACOS = navigator.userAgent.includes("Mac");
@@ -34,14 +34,22 @@ export function DetailSheet({
         onClick={onClose}
       />
       <div className="absolute inset-0 z-10 flex min-h-0 flex-col overflow-hidden border-l border-border-subtle bg-bg-secondary">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-5 z-10 shrink-0 rounded-md p-1.5 text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-5 py-2.5">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1.5 text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-6 scrollbar-hide">
-          <h2 className="mb-3 min-w-0 pr-10 text-[28px] font-semibold leading-tight tracking-tight text-primary">
+          <h2 className="mb-3 min-w-0 text-[28px] font-semibold leading-tight tracking-tight text-primary">
             <span className="block">{title}</span>
           </h2>
           {description ? (
