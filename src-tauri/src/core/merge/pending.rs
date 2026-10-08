@@ -1,6 +1,6 @@
 //! Pending-conflict machinery (design §4, §11-4/5): the source of truth for
-//! "needs attention" is the commit history's `Skills-Manager-Conflicts:` /
-//! `Skills-Manager-Resolved:` trailers, replayed in topological order. The
+//! "needs attention" is the commit history's `Agent-Hub-Conflicts:` /
+//! `Agent-Hub-Resolved:` trailers, replayed in topological order. The
 //! hidden refs under `refs/agent-hub/` only pin theirs-side objects
 //! against GC and record where the theirs version lives; the SQLite table is
 //! a rebuildable UI projection.

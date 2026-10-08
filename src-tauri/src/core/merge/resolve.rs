@@ -1,6 +1,6 @@
 //! Conflict resolution actions (design §4): keep local / use remote / keep
 //! both. Each runs inside the repo lock, takes a user-visible safety
-//! snapshot first, records the resolution with a `Skills-Manager-Resolved:`
+//! snapshot first, records the resolution with a `Agent-Hub-Resolved:`
 //! trailer (the cross-device close signal), then drops the pinned ref and
 //! projection row.
 
