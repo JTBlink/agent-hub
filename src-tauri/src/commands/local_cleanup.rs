@@ -1,5 +1,5 @@
 //! Reviewable cleanup of scanned Skills belonging to configured Agents.
-use super::discovered_skills::{delete_location, validate_location};
+use super::discovered_skills::{delete_location, symlink_resolves_into_library, validate_location};
 use crate::core::{
     central_repo,
     error::AppError,
@@ -90,19 +90,17 @@ pub fn cleanup_for_cli(
     selected: &[String],
     include_installed: bool,
 ) -> Result<CleanupResult, AppError> {
-    Ok(
-        sync_metadata::with_repo_lock("clean local Agent Skills", || {
-            let adapters = tool_adapters::all_tool_adapters(store);
-            Ok(execute(
-                store,
-                selected,
-                &adapters,
-                &installed(&adapters),
-                include_installed,
-            )?)
-        })
-        .map_err(AppError::io)?,
-    )
+    sync_metadata::with_repo_lock("clean local Agent Skills", || {
+        let adapters = tool_adapters::all_tool_adapters(store);
+        Ok(execute(
+            store,
+            selected,
+            &adapters,
+            &installed(&adapters),
+            include_installed,
+        )?)
+    })
+    .map_err(AppError::io)
 }
 
 fn empty_tree(path: &Path) -> bool {
@@ -153,9 +151,15 @@ fn plan(
         if !path.exists()
             || record.fingerprint.is_none()
             || validate_location(path, std::slice::from_ref(root)).is_err()
-            || targets
-                .iter()
-                .any(|target| overlaps(path, Path::new(&target.target_path)))
+            || targets.iter().any(|target| {
+                let target_path = Path::new(&target.target_path);
+                let matched = if path.is_symlink() {
+                    path == target_path
+                } else {
+                    overlaps(path, target_path)
+                };
+                matched && !symlink_resolves_into_library(path)
+            })
         {
             continue;
         }
@@ -449,13 +453,13 @@ mod tests {
     }
     #[cfg(unix)]
     #[test]
-    fn linked_skill_is_unlinked_but_linked_primary_root_is_not_cleaned() {
+    fn shared_library_alias_is_unlinked_but_linked_primary_root_is_not_cleaned() {
         let _guard = central_repo::test_base_dir_lock();
         let tmp = tempfile::tempdir().unwrap();
         central_repo::set_test_base_dir_override(Some(tmp.path().join("library")));
         let store = SkillStore::new(&tmp.path().join("db")).unwrap();
         let root = tmp.path().join("agent/skills");
-        let target = tmp.path().join("original");
+        let target = central_repo::skills_dir().join("demo");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::create_dir_all(&target).unwrap();
         std::fs::write(target.join("SKILL.md"), "# Demo").unwrap();

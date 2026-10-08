@@ -64,7 +64,7 @@ export function filterDiscoveredGroups(
     const locations = group.locations.filter(
       (location) =>
         !needle ||
-        `${group.name} ${location.found_path} ${location.tools.join(" ")}`
+        `${group.name} ${location.found_path} ${location.resolved_path ?? ""} ${location.tools.join(" ")}`
           .toLocaleLowerCase()
           .includes(needle),
     );

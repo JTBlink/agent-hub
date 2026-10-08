@@ -597,6 +597,7 @@
       "deleteHint": "Remove only the selected path; symlinks are only unlinked. Agents sharing this path are affected. Independent copies and the library are kept.",
       "refreshFailed": "Removed, but refreshing failed. Scan again to see the latest state.",
       "symlink": "Symbolic link",
+      "resolvedPath": "Real path: {{path}}",
       "applicableAgents": "Compatible Agents",
       "applicableAgentsHint": "Matched by directory rules; this does not indicate installation.",
       "otherLocations": "Other source directories ({{count}})",

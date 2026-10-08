@@ -29,17 +29,19 @@ pub struct DiscoveredLocation {
     pub tool: String,
     pub found_path: String,
     pub is_symlink: bool,
+    pub resolved_path: Option<String>,
 }
 
 /// Directories to skip during recursive scans (internal/tool-specific metadata).
 const RECURSIVE_SCAN_SKIP_DIRS: &[&str] = &[".hub", ".agent-hub", ".git", "node_modules"];
 
-fn is_symlink_to_central(path: &Path) -> bool {
-    if let Ok(target) = std::fs::read_link(path) {
-        let central = super::central_repo::skills_dir();
-        return target.starts_with(&central);
+fn symlink_target(path: &Path) -> Option<String> {
+    if !path.is_symlink() {
+        return None;
     }
-    false
+    std::fs::canonicalize(path)
+        .ok()
+        .map(|target| target.to_string_lossy().into_owned())
 }
 
 /// Recursively walk `dir` and return all subdirectories that contain SKILL.md.
@@ -73,9 +75,6 @@ fn collect_skill_dirs_recursive(
         let dir_name = entry.file_name();
         let dir_name_str = dir_name.to_string_lossy();
         if RECURSIVE_SCAN_SKIP_DIRS.iter().any(|s| dir_name_str == *s) {
-            continue;
-        }
-        if is_symlink_to_central(&path) {
             continue;
         }
         if skill_metadata::is_valid_skill_dir(&path) {
@@ -135,7 +134,7 @@ fn scan_flat_dir(
         if !path.is_dir() && !path.is_symlink() {
             continue;
         }
-        if is_symlink_to_central(&path) || !skill_metadata::is_valid_skill_dir(&path) {
+        if !skill_metadata::is_valid_skill_dir(&path) {
             continue;
         }
         push_discovered(adapter_key, path, managed_paths, discovered, hash_directory);
@@ -287,6 +286,7 @@ fn group_discovered_with_preferred_root(
             tool: rec.tool.clone(),
             found_path: rec.found_path.clone(),
             is_symlink: Path::new(&rec.found_path).is_symlink(),
+            resolved_path: symlink_target(Path::new(&rec.found_path)),
         });
     }
 
@@ -305,6 +305,7 @@ fn group_discovered_with_preferred_root(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::central_repo;
     use std::fs;
     use tempfile::tempdir;
 
@@ -437,6 +438,40 @@ mod tests {
             .unwrap();
         assert!(linked.is_symlink);
         assert_eq!(serde_json::to_value(linked).unwrap()["is_symlink"], true);
+        assert_eq!(
+            serde_json::to_value(linked).unwrap()["resolved_path"],
+            serde_json::Value::String(
+                first
+                    .join("demo")
+                    .canonicalize()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned()
+            )
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scans_absolute_alias_into_shared_library_for_local_cleanup() {
+        let _guard = central_repo::test_base_dir_lock();
+        let tmp = tempdir().unwrap();
+        central_repo::set_test_base_dir_override(Some(tmp.path().join("repo")));
+        let central = central_repo::skills_dir().join("demo");
+        let agent_root = tmp.path().join("agent/skills");
+        write_skill(&central);
+        fs::create_dir_all(&agent_root).unwrap();
+        let alias = agent_root.join("demo");
+        std::os::unix::fs::symlink(&central, &alias).unwrap();
+
+        let plan =
+            scan_local_skills_with_adapters(&[], &[test_adapter("agent", &agent_root)]).unwrap();
+        assert_eq!(plan.skills_found, 1);
+        let location = &group_discovered(&plan.discovered)[0].locations[0];
+        assert_eq!(location.found_path, alias.to_string_lossy());
+        let real = central.canonicalize().unwrap();
+        assert_eq!(location.resolved_path.as_deref(), real.to_str());
+        central_repo::set_test_base_dir_override(None);
     }
 
     /// Reproducible workload, run explicitly when comparing scanner performance.

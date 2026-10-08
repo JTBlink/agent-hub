@@ -56,6 +56,23 @@ describe("local skill scan management", () => {
     ).toEqual([]);
   });
 
+  it("searches the real path of a symlink", () => {
+    const linked = {
+      ...group,
+      locations: [
+        {
+          ...group.locations[0],
+          is_symlink: true,
+          resolved_path: "<workspace>/.agents/skills/demo",
+        },
+      ],
+    };
+    expect(
+      filterDiscoveredGroups(uniqueDiscoveredLocations([linked]), ".agents")
+        .length,
+    ).toBe(1);
+  });
+
   it("merges shared paths while retaining an actionable record and independent copies", () => {
     const shared = {
       id: "shared",

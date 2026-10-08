@@ -37,6 +37,13 @@ export function LocalSkillLocation({
             {compactHomePath(location.found_path)}
           </code>
         </div>
+        {location.resolved_path && (
+          <div className="mt-1 min-w-0 break-all pl-5 text-[11px] text-tertiary">
+            {t("install.scan.resolvedPath", {
+              path: compactHomePath(location.resolved_path),
+            })}
+          </div>
+        )}
         <div
           className="mt-1 flex flex-wrap items-center gap-1"
           title={t("install.scan.applicableAgentsHint")}

@@ -13,6 +13,17 @@ use crate::core::{
     sync_engine, sync_metadata, tool_adapters,
 };
 
+pub(super) fn symlink_resolves_into_library(path: &Path) -> bool {
+    if !path.is_symlink() {
+        return false;
+    }
+    let library = crate::core::central_repo::skills_dir();
+    let Ok(library) = library.canonicalize() else {
+        return false;
+    };
+    std::fs::canonicalize(path).is_ok_and(|resolved| resolved.starts_with(&library))
+}
+
 pub(super) fn validate_location(path: &Path, roots: &[PathBuf]) -> Result<(), AppError> {
     for root in roots {
         let Ok(relative) = path.strip_prefix(root) else {
@@ -82,7 +93,16 @@ pub(super) fn delete_location(
 ) -> Result<(), AppError> {
     let path = Path::new(&record.found_path);
     let library = crate::core::central_repo::skills_dir();
-    if path_guard::is_path_safe(&library, path) || path_guard::is_path_safe(path, &library) {
+    let is_link =
+        std::fs::symlink_metadata(path).is_ok_and(|metadata| metadata.file_type().is_symlink());
+    // Check the entry's parent separately: resolving the final link would
+    // mistake an Agent alias for the shared library entry it points to.
+    if path == library
+        || sync_engine::is_library_entry(path)
+        || (!is_link
+            && (path_guard::is_path_safe(&library, path)
+                || path_guard::is_path_safe(path, &library)))
+    {
         return Err(AppError::invalid_input(
             "Cannot delete the skill library from local scan",
         ));
@@ -97,16 +117,26 @@ pub(super) fn delete_location(
         ));
     }
     let targets = store.get_all_targets().map_err(AppError::db)?;
-    if targets.iter().any(|target| {
-        target.target_path == record.found_path
-            || std::fs::canonicalize(&target.target_path)
-                .ok()
-                .zip(std::fs::canonicalize(path).ok())
-                .is_some_and(|(target, local)| target == local)
-    }) {
-        return Err(AppError::invalid_input(
-            "Skill is now managed; remove its deployment from the agent workspace",
-        ));
+    let managed_targets: Vec<_> = targets
+        .iter()
+        .filter(|target| {
+            target.target_path == record.found_path
+                || (!is_link
+                    && std::fs::canonicalize(&target.target_path)
+                        .ok()
+                        .zip(std::fs::canonicalize(path).ok())
+                        .is_some_and(|(target, local)| target == local))
+        })
+        .collect();
+    if !managed_targets.is_empty() {
+        if !symlink_resolves_into_library(path) {
+            return Err(AppError::invalid_input(
+                "Skill is now managed; remove its deployment from the agent workspace",
+            ));
+        }
+        for target in &managed_targets {
+            let _ = store.delete_target(&target.skill_id, &target.tool);
+        }
     }
     scenario_service::detach_source_refs_from_adoption_target(store, path)?;
     sync_engine::remove_target(path).map_err(AppError::io)?;
@@ -245,6 +275,61 @@ mod tests {
                 .as_deref(),
             original.to_str()
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn deletion_unlinks_alias_into_library_without_removing_library_skill() {
+        let repo = repo();
+        let central = crate::core::central_repo::skills_dir().join("demo");
+        let alias_root = repo._temp.path().join("agent/skills");
+        let alias = alias_root.join("demo");
+        std::fs::create_dir_all(&central).unwrap();
+        std::fs::write(central.join("SKILL.md"), "# Demo").unwrap();
+        std::fs::create_dir_all(&alias_root).unwrap();
+        std::os::unix::fs::symlink(&central, &alias).unwrap();
+
+        delete_location(&repo.store, &discovered(&alias)).unwrap();
+
+        assert!(!alias.exists());
+        assert!(central.join("SKILL.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn deletion_unlinks_unmanaged_alias_even_when_another_link_is_managed() {
+        let repo = repo();
+        let central = crate::core::central_repo::skills_dir().join("demo");
+        let aliases = repo._temp.path().join("agent/skills");
+        let selected = aliases.join("selected");
+        let managed = aliases.join("managed");
+        std::fs::create_dir_all(&central).unwrap();
+        std::fs::write(central.join("SKILL.md"), "# Demo").unwrap();
+        std::fs::create_dir_all(&aliases).unwrap();
+        std::os::unix::fs::symlink(&central, &selected).unwrap();
+        std::os::unix::fs::symlink(&central, &managed).unwrap();
+        repo.store
+            .insert_skill(&imported(&central, &central))
+            .unwrap();
+        repo.store
+            .insert_target(&crate::core::skill_store::SkillTargetRecord {
+                id: "target".into(),
+                skill_id: "imported".into(),
+                tool: "test".into(),
+                target_path: managed.to_string_lossy().into_owned(),
+                mode: "symlink".into(),
+                status: "ok".into(),
+                synced_at: None,
+                last_error: None,
+                source_hash: None,
+            })
+            .unwrap();
+
+        delete_location(&repo.store, &discovered(&selected)).unwrap();
+
+        assert!(!selected.exists());
+        assert!(managed.is_symlink());
+        assert!(central.join("SKILL.md").exists());
     }
 
     #[test]
