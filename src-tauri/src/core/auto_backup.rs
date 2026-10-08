@@ -22,7 +22,6 @@ use super::git_backup;
 use super::merge;
 use super::repo_lock::RepoLock;
 use super::skill_store::SkillStore;
-use super::sync_metadata;
 
 /// Off-switch setting. Anything except an explicit "off"-ish value means on.
 const SETTING_ENABLED: &str = "backup_auto_enabled";
@@ -234,11 +233,13 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
     if !is_enabled(store) {
         return Outcome::Skipped("disabled");
     }
-    let skills_dir = central_repo::skills_dir();
-    if !skills_dir.join(".git").exists() {
+    let skills_dir = super::backup_workspace::repo_dir();
+    if !skills_dir.join(".git").exists() && !central_repo::skills_dir().join(".git").exists() {
         return Outcome::Skipped("no repo");
     }
-    if git_backup::raw_remote_url(&skills_dir).is_none() {
+    if git_backup::raw_remote_url(&skills_dir).is_none()
+        && git_backup::raw_remote_url(&central_repo::skills_dir()).is_none()
+    {
         return Outcome::Skipped("no remote");
     }
     crate::commands::git_backup::sync_engine_pref(store);
@@ -247,20 +248,27 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
     let Ok(_lock) = RepoLock::acquire("auto backup") else {
         return Outcome::Skipped("repo busy");
     };
+    match super::backup_workspace::run_unlocked(store, |root| Ok(run_prepared_round(store, root))) {
+        Ok(outcome) => outcome,
+        Err(error) => Outcome::Failed(format!("{error:#}")),
+    }
+}
+
+fn run_prepared_round(store: &SkillStore, skills_dir: &std::path::Path) -> Outcome {
     // Before the check below, which reports any error as a quiet skip: an
     // unreadable repo format must reach the backup card, not stall silently.
-    if let Err(e) = git_backup::ensure_files_ref_format(&skills_dir) {
+    if let Err(e) = git_backup::ensure_files_ref_format(skills_dir) {
         return Outcome::Failed(format!("{e:#}"));
     }
-    if git_backup::ensure_no_interrupted_git_operation(&skills_dir).is_err() {
+    if git_backup::ensure_no_interrupted_git_operation(skills_dir).is_err() {
         return Outcome::Skipped("interrupted git operation");
     }
 
     // Keep the failed fetch until after the local save, then stop. Retrying a
     // rejected credential with push only duplicates the error.
-    let fetch_error = git_backup::fetch_remote(&skills_dir).err();
+    let fetch_error = git_backup::fetch_remote(skills_dir).err();
 
-    let status = match git_backup::get_status(&skills_dir) {
+    let status = match git_backup::get_status(skills_dir) {
         Ok(status) => status,
         Err(e) => return Outcome::Failed(format!("{e:#}")),
     };
@@ -270,22 +278,22 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
         return Outcome::Skipped("needs manual repair");
     }
 
-    crate::commands::git_backup::apply_device_identity(store, &skills_dir);
-    if let Err(e) = sync_metadata::write_all_from_db_unlocked(store) {
+    crate::commands::git_backup::apply_device_identity(store, skills_dir);
+    if let Err(e) = super::backup_workspace::write_metadata(store, skills_dir) {
         return Outcome::Failed(format!("{e:#}"));
     }
     // Before the dirty check, so a shrunk previously-excluded skill re-enters
     // the backup via the resulting .gitignore change (§3.6).
     if let Err(e) =
-        git_backup::apply_oversized_exclusions(&skills_dir, git_backup::SKILL_SIZE_LIMIT_BYTES)
+        git_backup::apply_oversized_exclusions(skills_dir, git_backup::SKILL_SIZE_LIMIT_BYTES)
     {
         log::debug!("auto backup: exclusion scan failed (continuing): {e:#}");
     }
 
     let mut committed = false;
-    match git_backup::has_uncommitted_changes(&skills_dir) {
+    match git_backup::has_uncommitted_changes(skills_dir) {
         Ok(true) => {
-            if let Err(e) = git_backup::commit_all_unlocked(&skills_dir, AUTO_COMMIT_MESSAGE) {
+            if let Err(e) = git_backup::commit_all_unlocked(skills_dir, AUTO_COMMIT_MESSAGE) {
                 return Outcome::Failed(format!("{e:#}"));
             }
             committed = true;
@@ -307,15 +315,14 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
         // §4 收窄阻尼: unrelated remote updates flow automatically; a remote
         // change to a skill awaiting a local conflict decision pauses the
         // round (deliberate backpressure, cleared by resolving + syncing).
-        match merge::remote_touches_pending(store, &skills_dir) {
+        match merge::remote_touches_pending(store, skills_dir) {
             Ok(true) => return Outcome::PausedOnConflict,
             Ok(false) => {}
             Err(e) => return Outcome::Failed(format!("{e:#}")),
         }
-        match merge::gated_pull_unlocked(store, &skills_dir) {
+        match merge::gated_pull_unlocked(store, skills_dir) {
             Ok(_summary) => {
-                if let Err(e) = crate::commands::git_backup::reconcile_skills_index_unlocked(store)
-                {
+                if let Err(e) = super::backup_workspace::reconcile(store, skills_dir) {
                     return Outcome::Failed(format!("{e:#}"));
                 }
             }
@@ -325,7 +332,7 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
 
     // Re-read after a possible merge: a merge commit shows up as ahead > 0,
     // a pure fast-forward leaves nothing to push.
-    let status = match git_backup::get_status(&skills_dir) {
+    let status = match git_backup::get_status(skills_dir) {
         Ok(status) => status,
         Err(e) => return Outcome::Failed(format!("{e:#}")),
     };
@@ -333,7 +340,7 @@ pub(crate) fn run_round_blocking(store: &SkillStore) -> Outcome {
     if !needs_push {
         return Outcome::UpToDate;
     }
-    match git_backup::push_unlocked(&skills_dir) {
+    match git_backup::push_unlocked(skills_dir) {
         Ok(()) => Outcome::BackedUp,
         Err(e) => {
             let msg = format!("{e:#}");
@@ -360,7 +367,7 @@ pub fn commit_on_exit(store: &SkillStore) {
     if !is_enabled(store) {
         return;
     }
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = super::backup_workspace::repo_dir();
     if !skills_dir.join(".git").exists() {
         return;
     }
@@ -370,8 +377,12 @@ pub fn commit_on_exit(store: &SkillStore) {
     if git_backup::ensure_no_interrupted_git_operation(&skills_dir).is_err() {
         return;
     }
+    if let Err(e) = super::backup_workspace::prepare_unlocked(store) {
+        log::warn!("exit backup preparation failed: {e:#}");
+        return;
+    }
     crate::commands::git_backup::apply_device_identity(store, &skills_dir);
-    if let Err(e) = sync_metadata::write_all_from_db_unlocked(store) {
+    if let Err(e) = super::backup_workspace::write_metadata(store, &skills_dir) {
         log::warn!("auto backup on exit: metadata write failed: {e:#}");
     }
     match git_backup::has_uncommitted_changes(&skills_dir) {
@@ -384,6 +395,9 @@ pub fn commit_on_exit(store: &SkillStore) {
         }
         Ok(false) => {}
         Err(e) => log::warn!("auto backup on exit: status check failed: {e:#}"),
+    }
+    if let Err(e) = super::backup_workspace::finish_unlocked(store) {
+        log::warn!("exit backup publication failed: {e:#}");
     }
 }
 
@@ -424,6 +438,7 @@ mod tests {
         _tmp: tempfile::TempDir,
         store: SkillStore,
         skills_dir: std::path::PathBuf,
+        repo_dir: std::path::PathBuf,
         remote: std::path::PathBuf,
     }
 
@@ -475,15 +490,17 @@ mod tests {
             .unwrap();
         assert!(out.status.success());
 
-        git_backup::init_repo_unlocked(&skills_dir, "Test Device").unwrap();
-        git_backup::set_remote_unlocked(&skills_dir, remote.to_str().unwrap()).unwrap();
-        git_backup::push_unlocked(&skills_dir).unwrap();
+        crate::core::backup_workspace::initialize(&store).unwrap();
+        let repo_dir = crate::core::backup_workspace::repo_dir();
+        git_backup::set_remote_unlocked(&repo_dir, remote.to_str().unwrap()).unwrap();
+        git_backup::push_unlocked(&repo_dir).unwrap();
 
         TestEnv {
             _lock: lock,
             _tmp: tmp,
             store,
             skills_dir,
+            repo_dir,
             remote,
         }
     }
@@ -499,14 +516,14 @@ mod tests {
 
         // The change reached the remote…
         let remote_head = git_out(&env.remote, &["rev-parse", "main"]);
-        let local_head = git_out(&env.skills_dir, &["rev-parse", "HEAD"]);
+        let local_head = git_out(&env.repo_dir, &["rev-parse", "HEAD"]);
         assert_eq!(remote_head, local_head);
         assert_eq!(
-            git_out(&env.skills_dir, &["log", "-1", "--format=%s"]),
+            git_out(&env.repo_dir, &["log", "-1", "--format=%s"]),
             AUTO_COMMIT_MESSAGE
         );
         // …and §3.4 holds: automatic backups never mint a snapshot tag.
-        assert_eq!(git_out(&env.skills_dir, &["tag", "--list", "sm-v-*"]), "");
+        assert_eq!(git_out(&env.repo_dir, &["tag", "--list", "sm-v-*"]), "");
 
         // A second round with nothing new is a no-op.
         assert_eq!(run_round_blocking(&env.store), Outcome::UpToDate);
@@ -517,7 +534,7 @@ mod tests {
         let env = test_env();
         let out = std::process::Command::new("git")
             .arg("-C")
-            .arg(&env.skills_dir)
+            .arg(&env.repo_dir)
             .args(["refs", "migrate", "--ref-format=reftable"])
             .output()
             .unwrap();
@@ -542,6 +559,7 @@ mod tests {
             .unwrap();
         assert!(out.status.success());
         git_backup::configure_device_identity(&other, "Device B").unwrap();
+        std::fs::create_dir_all(other.join("skills")).unwrap();
         other
     }
 
@@ -551,7 +569,7 @@ mod tests {
         // Escape hatch: the legacy engine never merges in the background.
         env.store.set_setting("merge_engine", "system").unwrap();
         let other = clone_other_device(&env);
-        std::fs::write(other.join("from-b.md"), "b").unwrap();
+        std::fs::write(other.join("skills/from-b.md"), "b").unwrap();
         git(&other, &["add", "-A"]);
         git(&other, &["commit", "-m", "from B"]);
         git(&other, &["push", "origin", "main"]);
@@ -561,7 +579,7 @@ mod tests {
         let outcome = run_round_blocking(&env.store);
         assert_eq!(outcome, Outcome::RemoteAhead);
         // The local change was still committed (protected locally)…
-        assert!(!git_backup::has_uncommitted_changes(&env.skills_dir).unwrap());
+        assert!(!git_backup::has_uncommitted_changes(&env.repo_dir).unwrap());
         // …but nothing reached the remote and no failure is recorded.
         assert_eq!(
             git_out(&env.remote, &["log", "-1", "--format=%s", "main"]),
@@ -577,7 +595,7 @@ mod tests {
         // sync, including the round's own fetch.
         let env = test_env();
         let other = clone_other_device(&env);
-        std::fs::write(other.join("from-b.md"), "b").unwrap();
+        std::fs::write(other.join("skills/from-b.md"), "b").unwrap();
         git_backup::commit_all_unlocked(&other, "from B").unwrap();
         git(&other, &["push", "origin", "main"]);
 
@@ -590,7 +608,7 @@ mod tests {
         assert!(env.skills_dir.join("from-b.md").exists());
         assert!(env.skills_dir.join("local.md").exists());
         let remote_head = git_out(&env.remote, &["rev-parse", "main"]);
-        let local_head = git_out(&env.skills_dir, &["rev-parse", "HEAD"]);
+        let local_head = git_out(&env.repo_dir, &["rev-parse", "HEAD"]);
         assert_eq!(remote_head, local_head);
         assert_eq!(env.store.get_setting(SETTING_LAST_ERROR).unwrap(), None);
     }
@@ -637,8 +655,8 @@ mod tests {
         };
         seed_skill(&env.skills_dir);
         crate::core::sync_metadata::reindex_from_metadata_unlocked(&env.store).unwrap();
-        git_backup::commit_all_unlocked(&env.skills_dir, "seed skill").unwrap();
-        git_backup::push_unlocked(&env.skills_dir).unwrap();
+        crate::core::backup_workspace::commit(&env.store, "seed skill").unwrap();
+        git_backup::push_unlocked(&env.repo_dir).unwrap();
         git(&other, &["pull", "origin", "main"]);
 
         // The skill is pending a local decision (projection row is the gate
@@ -647,13 +665,13 @@ mod tests {
             .replace_pending_conflicts(&[crate::core::skill_store::PendingConflictRow {
                 skill_id: "skill-1".to_string(),
                 theirs_commit: String::new(),
-                theirs_path: Some("alpha".to_string()),
+                theirs_path: Some("skills/alpha".to_string()),
                 detected_at: 1,
             }])
             .unwrap();
 
         // Remote touches that very skill → the round pauses.
-        std::fs::write(other.join("alpha/SKILL.md"), "changed on B").unwrap();
+        std::fs::write(other.join("skills/alpha/SKILL.md"), "changed on B").unwrap();
         git_backup::commit_all_unlocked(&other, "touch pending skill").unwrap();
         git(&other, &["push", "origin", "main"]);
         std::fs::write(env.skills_dir.join("local.md"), "a").unwrap();
@@ -682,7 +700,11 @@ mod tests {
         env.store.set_setting(SETTING_ENABLED, "off").unwrap();
         std::fs::write(env.skills_dir.join("x.md"), "x").unwrap();
         assert_eq!(run_round_blocking(&env.store), Outcome::Skipped("disabled"));
-        assert!(git_backup::has_uncommitted_changes(&env.skills_dir).unwrap());
+        assert_eq!(
+            std::fs::read_to_string(env.skills_dir.join("x.md")).unwrap(),
+            "x"
+        );
+        assert!(!env.repo_dir.join("skills/x.md").exists());
     }
 
     #[test]
@@ -693,9 +715,9 @@ mod tests {
 
         commit_on_exit(&env.store);
 
-        assert!(!git_backup::has_uncommitted_changes(&env.skills_dir).unwrap());
+        assert!(!git_backup::has_uncommitted_changes(&env.repo_dir).unwrap());
         assert_eq!(
-            git_out(&env.skills_dir, &["log", "-1", "--format=%s"]),
+            git_out(&env.repo_dir, &["log", "-1", "--format=%s"]),
             AUTO_COMMIT_MESSAGE
         );
         // Exit-time save is local only; the push belongs to the next launch.

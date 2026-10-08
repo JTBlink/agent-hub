@@ -957,3 +957,4 @@ export const deleteGlobalLocalSkill = (
 
 /** Actual Skills root, separate from application data. */
 export const getSkillsDirectory = () => invoke<string>("get_skills_directory");
+export const getBackupDirectory = () => invoke<string>("get_backup_directory");

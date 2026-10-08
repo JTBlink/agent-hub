@@ -3,8 +3,8 @@ use sync_transaction::run_sync_blocking;
 pub use sync_transaction::SyncOutcome;
 
 use crate::core::{
-    central_repo, error::AppError, git2_engine, git_backup, git_credentials, git_fetcher,
-    github_api, merge, sync_metadata,
+    backup_workspace, central_repo, error::AppError, git2_engine, git_backup, git_credentials,
+    git_fetcher, github_api, merge, sync_metadata,
 };
 use anyhow::Context;
 use std::path::Path;
@@ -95,7 +95,7 @@ pub async fn git_backup_fetch(store: State<'_, Arc<SkillStore>>) -> Result<(), A
     let Some(_guard) = FetchInFlightGuard::try_acquire() else {
         return Ok(());
     };
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || {
         git_backup::fetch_remote(&skills_dir).map_err(AppError::git)
     })
@@ -106,46 +106,35 @@ pub async fn git_backup_fetch(store: State<'_, Arc<SkillStore>>) -> Result<(), A
 pub async fn git_backup_status(
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<git_backup::GitBackupStatus, AppError> {
-    let _ = store; // ensure DB is available
-    let skills_dir = central_repo::skills_dir();
-    tokio::task::spawn_blocking(move || git_backup::get_status(&skills_dir).map_err(AppError::git))
+    let store = store.inner().clone();
+    tokio::task::spawn_blocking(move || backup_workspace::status(&store).map_err(AppError::git))
         .await?
 }
 
 #[tauri::command]
 pub async fn git_backup_init(store: State<'_, Arc<SkillStore>>) -> Result<(), AppError> {
     let store = store.inner().clone();
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        git_backup::with_repo_lock("git init", || {
-            sync_metadata::write_all_from_db_unlocked(&store)?;
-            git_backup::init_repo_unlocked(&skills_dir, &effective_device_name(&store))
+        backup_workspace::run(&store, "git init", |skills_dir| {
+            backup_workspace::write_metadata(&store, skills_dir)?;
+            git_backup::init_repo_unlocked(skills_dir, &effective_device_name(&store))
         })
         .map_err(AppError::git)
     })
     .await?
 }
 
-/// Move credentials embedded in `url` into the OS keychain and return the
-/// sanitized URL. Falls back to the original URL when the keychain is
-/// unavailable (e.g. Linux without a secret service) so backup keeps working
-/// with the legacy embedded-credential behavior.
-fn sanitize_url_to_keychain(url: &str) -> String {
+/// Persist embedded URL credentials before returning a sanitized URL. A failed
+/// save is surfaced, never worked around by persisting a secret-bearing URL.
+fn sanitize_url_to_store(url: &str) -> Result<String, AppError> {
     let Some((cred, sanitized)) = git_credentials::split_credentials_from_url(url) else {
-        return url.to_string();
+        return Ok(url.to_string());
     };
-    let Some(host) = git_credentials::https_host(&sanitized) else {
-        return url.to_string();
-    };
-    match git_credentials::store_credential(&host, &cred) {
-        Ok(()) => sanitized,
-        Err(e) => {
-            log::warn!(
-                "git credentials: keychain unavailable, keeping embedded credentials: {e:#}"
-            );
-            url.to_string()
-        }
-    }
+    let host = git_credentials::https_host(&sanitized)
+        .ok_or_else(|| AppError::invalid_input("Invalid credential host"))?;
+    git_credentials::store_credential(&host, &cred)
+        .map_err(|e| AppError::internal(format!("CREDENTIAL_STORE_UNAVAILABLE: {e:#}")))?;
+    Ok(sanitized)
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -164,7 +153,7 @@ pub struct GithubBackupConnectResult {
 
 /// GitHub guided connect (backup redesign Phase 2, PAT mode): validate the
 /// token, find or create the private backup repository, store the token in
-/// the OS keychain, and save the credential-free URL. The keychain is
+/// the local credential store, and save the credential-free URL. The credential store is
 /// mandatory here — guided mode never falls back to token-in-URL.
 #[tauri::command]
 pub async fn github_backup_connect(
@@ -209,7 +198,7 @@ fn connect_with_token(
             password: token.to_string(),
         },
     )
-    .map_err(|e| AppError::internal(format!("KEYCHAIN_UNAVAILABLE: {e:#}")))?;
+    .map_err(|e| AppError::internal(format!("CREDENTIAL_STORE_UNAVAILABLE: {e:#}")))?;
 
     store
         .set_setting("git_backup_remote_url", &info.url)
@@ -285,12 +274,12 @@ pub async fn github_device_flow_poll(
 }
 
 /// Sanitize a remote URL before it is persisted anywhere: embedded
-/// credentials go to the OS keychain, the returned URL is what the frontend
+/// credentials go to the local credential store, the returned URL is what the frontend
 /// must save and display.
 #[tauri::command]
 pub async fn git_backup_sanitize_remote_url(url: String) -> Result<String, AppError> {
     git_fetcher::validate_git_url(&url).map_err(AppError::git)?;
-    tokio::task::spawn_blocking(move || Ok(sanitize_url_to_keychain(url.trim()))).await?
+    tokio::task::spawn_blocking(move || sanitize_url_to_store(url.trim())).await?
 }
 
 #[tauri::command]
@@ -300,9 +289,9 @@ pub async fn git_backup_set_remote(
 ) -> Result<String, AppError> {
     sync_engine_pref(&store);
     git_fetcher::validate_git_url(&url).map_err(AppError::git)?;
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || {
-        let effective = sanitize_url_to_keychain(url.trim());
+        let effective = sanitize_url_to_store(url.trim())?;
         git_backup::set_remote(&skills_dir, &effective).map_err(classify_git_chain)?;
         Ok(effective)
     })
@@ -316,7 +305,7 @@ pub async fn git_backup_set_remote(
 #[tauri::command]
 pub async fn git_backup_remove_remote(store: State<'_, Arc<SkillStore>>) -> Result<(), AppError> {
     let store = store.inner().clone();
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || disconnect_local(&store, &skills_dir)).await?
 }
 
@@ -338,7 +327,7 @@ fn disconnect_local(store: &SkillStore, skills_dir: &Path) -> Result<(), AppErro
 
     for host in hosts {
         if let Err(e) = git_credentials::delete_credential(&host) {
-            log::warn!("git disconnect: failed to delete keychain credential: {e:#}");
+            log::warn!("git disconnect: failed to delete local credential: {e:#}");
         }
     }
     Ok(())
@@ -350,12 +339,11 @@ pub async fn git_backup_commit(
     message: String,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        git_backup::with_repo_lock("git commit", || {
-            apply_device_identity(&store, &skills_dir);
-            sync_metadata::write_all_from_db_unlocked(&store)?;
-            git_backup::commit_all_unlocked(&skills_dir, &message)
+        backup_workspace::run(&store, "git commit", |skills_dir| {
+            apply_device_identity(&store, skills_dir);
+            backup_workspace::write_metadata(&store, skills_dir)?;
+            git_backup::commit_all_unlocked(skills_dir, &message)
         })
         .map_err(AppError::git)
     })
@@ -366,7 +354,7 @@ pub async fn git_backup_commit(
 pub async fn git_backup_push(store: State<'_, Arc<SkillStore>>) -> Result<(), AppError> {
     sync_engine_pref(&store);
     let store = store.inner().clone();
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || {
         git_backup::push(&skills_dir).map_err(classify_git_chain)?;
         // A successful manual push also resolves any lingering auto-backup
@@ -383,15 +371,14 @@ pub async fn git_backup_pull(
 ) -> Result<merge::MergeSummary, AppError> {
     let store = store.inner().clone();
     sync_engine_pref(&store);
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        git_backup::with_repo_lock("git pull", || {
+        backup_workspace::run(&store, "git pull", |skills_dir| {
             // Merge commits must carry this device's identity too.
-            apply_device_identity(&store, &skills_dir);
+            apply_device_identity(&store, skills_dir);
             // Object merge by default since 3d-β; merge_engine=system is the
             // escape hatch back to the line-level git merge.
-            let summary = merge::gated_pull_unlocked(&store, &skills_dir)?;
-            reconcile_skills_index_unlocked(&store)?;
+            let summary = merge::gated_pull_unlocked(&store, skills_dir)?;
+            backup_workspace::reconcile(&store, skills_dir)?;
             store.log_audit(
                 crate::core::audit_log::AuditDraft::new("sync_merge")
                     .detail(format!(
@@ -423,10 +410,9 @@ pub async fn git_backup_sync(
 ) -> Result<SyncOutcome, AppError> {
     let store = store.inner().clone();
     sync_engine_pref(&store);
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        git_backup::with_repo_lock("git sync", || {
-            run_sync_blocking(&store, &skills_dir, &message)
+        backup_workspace::run(&store, "git sync", |skills_dir| {
+            run_sync_blocking(&store, skills_dir, &message)
         })
         .map_err(classify_git_chain)
     })
@@ -457,13 +443,12 @@ pub async fn git_backup_resolve_conflict(
         return Err(AppError::invalid_input("Unknown resolve action"));
     };
     let store = store.inner().clone();
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        git_backup::with_repo_lock("resolve conflict", || {
-            apply_device_identity(&store, &skills_dir);
+        backup_workspace::run(&store, "resolve conflict", |skills_dir| {
+            apply_device_identity(&store, skills_dir);
             let safety_tag =
-                merge::resolve::resolve_conflict_unlocked(&store, &skills_dir, &skill_id, action)?;
-            reconcile_skills_index_unlocked(&store)?;
+                merge::resolve::resolve_conflict_unlocked(&store, skills_dir, &skill_id, action)?;
+            backup_workspace::reconcile(&store, skills_dir)?;
             store.log_audit(
                 crate::core::audit_log::AuditDraft::new("resolve_conflict")
                     .skill(skill_id.clone(), skill_id.clone())
@@ -485,13 +470,12 @@ pub async fn git_backup_clone(
     git_fetcher::validate_git_url(&url).map_err(AppError::git)?;
     let store = store.inner().clone();
     sync_engine_pref(&store);
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        let effective = sanitize_url_to_keychain(url.trim());
-        git_backup::with_repo_lock("git clone", || {
-            git_backup::clone_into_unlocked(&skills_dir, &effective)?;
-            apply_device_identity(&store, &skills_dir);
-            reconcile_skills_index_unlocked(&store)
+        let effective = sanitize_url_to_store(url.trim())?;
+        backup_workspace::run(&store, "git clone", |skills_dir| {
+            backup_workspace::clone_unlocked(skills_dir, &effective)?;
+            apply_device_identity(&store, skills_dir);
+            Ok(())
         })
         .map_err(classify_git_chain)
     })
@@ -508,13 +492,12 @@ pub async fn git_backup_reclone(
     git_fetcher::validate_git_url(&url).map_err(AppError::git)?;
     let store = store.inner().clone();
     sync_engine_pref(&store);
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        let effective = sanitize_url_to_keychain(url.trim());
-        git_backup::with_repo_lock("git reclone", || {
-            git_backup::reclone_from_remote_unlocked(&skills_dir, &effective)?;
-            apply_device_identity(&store, &skills_dir);
-            reconcile_skills_index_unlocked(&store)
+        let effective = sanitize_url_to_store(url.trim())?;
+        backup_workspace::run(&store, "git reclone", |skills_dir| {
+            backup_workspace::clone_unlocked(skills_dir, &effective)?;
+            apply_device_identity(&store, skills_dir);
+            Ok(())
         })
         .map_err(classify_git_chain)
     })
@@ -526,7 +509,7 @@ pub async fn git_backup_create_snapshot(
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<String, AppError> {
     let _ = store;
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || {
         git_backup::create_snapshot_tag(&skills_dir).map_err(AppError::git)
     })
@@ -539,7 +522,7 @@ pub async fn git_backup_list_versions(
     limit: Option<u32>,
 ) -> Result<Vec<git_backup::GitBackupVersion>, AppError> {
     let _ = store;
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || {
         git_backup::list_snapshot_versions(&skills_dir, limit.map(|v| v as usize))
             .map_err(AppError::git)
@@ -555,13 +538,12 @@ pub async fn git_backup_restore_version(
     tag: String,
 ) -> Result<String, AppError> {
     let store = store.inner().clone();
-    let skills_dir = central_repo::skills_dir();
     tokio::task::spawn_blocking(move || {
-        git_backup::with_repo_lock("git restore snapshot", || {
+        backup_workspace::run(&store, "git restore snapshot", |skills_dir| {
             // The safety-point and restore commits are made by this device.
-            apply_device_identity(&store, &skills_dir);
-            let safety_tag = git_backup::restore_snapshot_version_unlocked(&skills_dir, &tag)?;
-            reconcile_skills_index_unlocked(&store)?;
+            apply_device_identity(&store, skills_dir);
+            let safety_tag = git_backup::restore_snapshot_version_unlocked(skills_dir, &tag)?;
+            backup_workspace::reconcile(&store, skills_dir)?;
             Ok(safety_tag)
         })
         .map_err(AppError::git)
@@ -593,7 +575,7 @@ pub async fn backup_set_device_name(
         store
             .set_setting("backup_device_name", &sanitized)
             .map_err(AppError::db)?;
-        let skills_dir = central_repo::skills_dir();
+        let skills_dir = backup_workspace::repo_dir();
         if let Err(e) = git_backup::configure_device_identity(&skills_dir, &sanitized) {
             log::warn!("device name: failed to configure git identity: {e:#}");
         }
@@ -604,13 +586,13 @@ pub async fn backup_set_device_name(
 
 #[tauri::command]
 pub async fn git_backup_size_report() -> Result<git_backup::BackupSizeReport, AppError> {
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     tokio::task::spawn_blocking(move || git_backup::size_report(&skills_dir).map_err(AppError::io))
         .await?
 }
 
 /// Migrate credentials embedded in the remote URL (`user:token@host`) into
-/// the OS keychain (§3.7). Rewrites `.git/config` and the saved setting to
+/// the local credential store (§3.7). Rewrites `.git/config` and the saved setting to
 /// the credential-free URL, verifies authentication still works, and rolls
 /// everything back on any failure — no half-migrated state. Returns the
 /// sanitized URL when a migration happened, `None` when there was nothing to
@@ -632,7 +614,7 @@ pub async fn git_backup_migrate_credentials(
 
 pub fn migrate_embedded_credentials(store: &SkillStore) -> anyhow::Result<Option<String>> {
     sync_engine_pref(store);
-    let skills_dir = central_repo::skills_dir();
+    let skills_dir = backup_workspace::repo_dir();
     git_backup::with_repo_lock("git credential migration", || {
         migrate_embedded_credentials_unlocked(store, &skills_dir)
     })
@@ -670,12 +652,12 @@ fn migrate_embedded_credentials_unlocked(
     let host = git_credentials::https_host(&sanitized)
         .context("Cannot determine host for credential migration")?;
 
-    // Step 1: token into the keychain. Nothing on disk has changed yet, so a
+    // Step 1: token into the credential store. Nothing on disk has changed yet, so a
     // failure here leaves everything as it was.
     git_credentials::store_credential(&host, &cred)?;
 
     // Step 2: rewrite `.git/config` to the credential-free URL, then verify
-    // that authentication through the keychain still works. Any failure rolls
+    // that authentication through the credential store still works. Any failure rolls
     // back to the exact previous state.
     if config_had_creds {
         if let Err(e) = git_backup::set_remote_url_only(skills_dir, &sanitized) {
@@ -702,7 +684,7 @@ fn migrate_embedded_credentials_unlocked(
         }
     }
 
-    log::info!("git credentials: migrated embedded token to OS keychain for {host}");
+    log::info!("git credentials: migrated embedded token to local credential store for {host}");
     Ok(Some(sanitized))
 }
 
@@ -990,7 +972,7 @@ mod tests {
     fn migrate_sanitizes_setting_when_no_repo_exists() {
         let env = test_env();
         // Only the saved setting carries a token (repo not initialized yet):
-        // the token moves to the keychain and the setting is rewritten, with
+        // the token moves to the credential store and the setting is rewritten, with
         // no network verification possible or needed.
         env.store
             .set_setting(

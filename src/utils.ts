@@ -8,12 +8,16 @@ export function cn(...inputs: ClassValue[]) {
 /** Shorten the user's home directory to `~` for display. Windows paths also
  *  get their separators unified: agent dirs are joined from `/`-separated
  *  relative paths, which reads as `~\.workbuddy/skills` otherwise (#495). */
-export function compactHomePath(path: string) {
-  const readable = path.startsWith("\\\\?\\UNC\\")
+export function stripWindowsExtendedPrefix(path: string) {
+  return path.startsWith("\\\\?\\UNC\\")
     ? "\\\\" + path.slice(8)
     : path.startsWith("\\\\?\\")
       ? path.slice(4)
       : path;
+}
+
+export function compactHomePath(path: string) {
+  const readable = stripWindowsExtendedPrefix(path);
   const display = /^[A-Za-z]:\\/.test(readable)
     ? readable.replace(/\//g, "\\")
     : readable;

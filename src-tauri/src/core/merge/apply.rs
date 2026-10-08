@@ -60,7 +60,7 @@ pub fn object_merge_pull_unlocked(store: &SkillStore, skills_dir: &Path) -> Resu
     git_backup::ensure_no_interrupted_git_operation(skills_dir)?;
 
     // P1: project the DB to metadata files, then commit anything dirty.
-    sync_metadata::write_all_from_db_unlocked(store)?;
+    crate::core::backup_workspace::write_metadata(store, skills_dir)?;
     if git_backup::has_uncommitted_changes(skills_dir)? {
         git_backup::commit_all_unlocked(skills_dir, "backup")?;
     }

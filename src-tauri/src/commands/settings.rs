@@ -73,6 +73,13 @@ pub async fn set_settings(
 }
 
 #[tauri::command]
+pub fn get_backup_directory() -> String {
+    crate::core::backup_workspace::repo_dir()
+        .to_string_lossy()
+        .to_string()
+}
+
+#[tauri::command]
 pub fn get_skills_directory() -> String {
     central_repo::skills_dir().to_string_lossy().to_string()
 }

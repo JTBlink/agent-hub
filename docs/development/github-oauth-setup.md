@@ -17,7 +17,7 @@
 | 公共 Client ID             | `Ov23liuxI32ZuqaZKBbt`                                                                                                                                                       |
 | 请求权限                   | `repo`，用于私有备份仓库                                                                                                                                                     |
 
-Client ID 是公开标识，可以随源码发布。Client Secret、访问令牌、设备码和个人账户信息不得写入文档、日志或提交。本流程无需生成 Client Secret，令牌交换与钥匙串存储由 Rust 端完成。
+Client ID 是公开标识，可以随源码发布。Client Secret、访问令牌、设备码和个人账户信息不得写入文档、日志或提交。本流程无需生成 Client Secret，令牌交换与本地凭据存储由 Rust 端完成。
 
 ## 1. 确认旧应用与本项目应用的区别
 
@@ -95,10 +95,14 @@ git diff --check
 
 更新 CHANGELOG 与 [B15 任务记录](../../.scratch/skills-manager-integration/issues/B15-github-oauth-branding.md)，同步任务索引并进行 Standards / Spec 审查。提交前检查新增内容是否包含个人身份信息或凭证，采用 [中文提交规范](commit-conventions.md) 生成本地提交。
 
-## macOS 钥匙串重复授权
+## 本地凭据缓存与 macOS 授权
 
-备份凭证仍保存在系统钥匙串的 `agent-hub-git-backup` 项中。单次进程按主机复用读取结果并合并并发请求，登录、令牌更新及退出同步更新缓存；拒绝或读取失败不会在后台反复重新申请，重新连接或重启可重新尝试。缓存不写入磁盘或日志。多个 CLI 进程各自持有缓存。
+凭据默认保存在 `~/.agent-hub/credentials/`，自定义应用数据目录与 CLI 显式 Skills 根使用各自隔离的数据目录。主机名哈希作为文件名，内容为本地凭据；Unix 目录 0700、文件 0600，通过临时文件原子替换。Windows 继承用户目录 ACL。文件权限保护不等于加密，请勿将该目录加入共享或备份。Git 备份排除该目录。
 
-当前开发可执行文件使用 ad-hoc 签名。重新编译可能使 macOS 不再信任先前授权的程序；此时即使之前选择过“始终允许”，系统仍可能再次询问。正式 macOS 构建需要稳定的签名身份。首次系统授权不能由应用跳过，也不应把钥匙串项开放给所有程序。
+同一进程内复用凭据，不反复读文件；新进程先读本地记录。仅在没有记录时读取旧 `agent-hub-git-backup` 钥匙串项，成功后写入本地。首次迁移仍可能弹出系统授权；取消后本进程不反复询问，也可直接重新登录保存新凭据。退出写入空记录，防止旧钥匙串凭据重新生效。登录/令牌轮换立即刷新内存和文件。
 
-Apple 说明：[授权选项](https://support.apple.com/en-ie/guide/keychain-access/kyca1243/mac)、[已信任程序再次请求授权](https://support.apple.com/en-ie/guide/keychain-access/kyca1331/mac)。回归测试使用隔离后端计数验证重复读取、并发请求、拒绝、登录更新和退出；不会读写真实钥匙串。
+应用已提供凭据时，单次 Git 子进程关闭系统 credential helper，防止 helper 先于 askpass 再次访问钥匙串；不修改用户全局 Git 配置。没有应用凭据的普通 Git/SSH 流程保留兼容行为。
+
+如果 GitHub 返回 `Invalid username or token`，使用备份页“重新连接 GitHub”重新授权。缓存不能修复失效或已撤销令牌。开发模式 Rust 文件变化会触发应用重启，授权期间应暂停修改，或使用 `npm run tauri dev -- --no-watch` 启动稳定的验证会话。
+
+回归测试只使用临时文件、假凭据和 mock 钥匙串，覆盖跨会话读取、退出、更新、文件权限及 Git helper 绕过。

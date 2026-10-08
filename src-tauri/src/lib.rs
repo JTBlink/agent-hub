@@ -966,8 +966,9 @@ pub fn run() {
             tauri::async_runtime::spawn_blocking(move || {
                 core::merge::recover_on_startup(
                     &store_for_merge_recovery,
-                    &core::central_repo::skills_dir(),
+                    &core::backup_workspace::repo_dir(),
                 );
+                core::backup_workspace::recover_on_startup(&store_for_merge_recovery);
             });
 
             // Automatic backup (§3.4): debounced commit+push after central-repo
@@ -1083,6 +1084,7 @@ pub fn run() {
             commands::settings::set_settings,
             commands::settings::get_central_repo_path,
             commands::settings::get_skills_directory,
+            commands::settings::get_backup_directory,
             commands::settings::get_central_repo_path_override,
             commands::settings::get_central_repo_pending_path,
             commands::settings::get_central_repo_warnings,

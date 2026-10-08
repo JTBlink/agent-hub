@@ -1,3 +1,4 @@
+import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -33,6 +34,11 @@ import { useApp } from "../context/AppContext";
 import { getErrorKind, getErrorMessage } from "../lib/error";
 import { getGitAuthErrorKind, mapGitErrorMessage } from "../lib/gitErrors";
 import * as api from "../lib/tauri";
+import {
+  displaySnapshotLabel,
+  formatDateTime,
+  formatSnapshotWhen,
+} from "../lib/backupTime";
 import type {
   GitBackupSizeReport,
   GitBackupStatus,
@@ -55,29 +61,6 @@ const DEFAULT_GITHUB_REPO = "agent-hub-backup";
 const GITHUB_TOKEN_URL =
   "https://github.com/settings/tokens/new?scopes=repo&description=Skills%20Manager%20Backup";
 type RecoveryReason = GitUpstreamHealth | "conflict";
-
-function displaySnapshotLabel(tag: string) {
-  const raw = tag.startsWith("sm-v-") ? tag.slice("sm-v-".length) : tag;
-  const parts = raw.split("-");
-  if (parts.length < 3) return raw;
-  return `${parts[0]}-${parts[1]}`;
-}
-
-function formatSnapshotWhen(tag: string | null) {
-  if (!tag) return null;
-  const label = displaySnapshotLabel(tag);
-  const match = label.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/);
-  if (!match) return label;
-  const [, year, month, day, hour, min] = match;
-  return `${year}-${month}-${day} ${hour}:${min}`;
-}
-
-function formatDateTime(iso: string) {
-  if (!iso) return "-";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString();
-}
 
 function formatBytes(bytes: number) {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
@@ -203,7 +186,7 @@ export function Backup() {
 
   useEffect(() => {
     void (async () => {
-      // §3.7: move any token embedded in the remote URL into the OS keychain
+      // §3.7: move any token embedded in the remote URL into the local credential store
       // before the URL is read or displayed. Idempotent and best-effort —
       // offline machines simply retry on the next visit.
       const migrated = await api
@@ -430,8 +413,8 @@ export function Backup() {
     const trimmed = remoteInput.trim();
     setLoading("save");
     try {
-      // Never persist credentials embedded in the URL: they go to the OS
-      // keychain and only the sanitized URL is saved and shown (§3.7).
+      // Never persist credentials embedded in the URL: they go to the local
+      // credential store and only the sanitized URL is saved and shown (§3.7).
       const effective = trimmed
         ? await api.gitBackupSanitizeRemoteUrl(trimmed)
         : "";
@@ -644,7 +627,7 @@ export function Backup() {
     if (message.includes("GITHUB_TOKEN_INVALID"))
       return t("backup.github.errorToken");
     if (message.includes("GITHUB_SCOPE")) return t("backup.github.errorScope");
-    if (message.includes("KEYCHAIN_UNAVAILABLE"))
+    if (message.includes("CREDENTIAL_STORE_UNAVAILABLE"))
       return t("backup.github.errorKeychain");
     if (message.includes("GITHUB_DEVICE_EXPIRED"))
       return t("backup.github.deviceExpired");
@@ -718,7 +701,7 @@ export function Backup() {
         token,
         githubRepoName.trim() || DEFAULT_GITHUB_REPO,
       );
-      // Token is in the OS keychain now; drop it from component state.
+      // Token is in the local credential store now; drop it from component state.
       setGithubToken("");
       await finishGithubConnect(res);
     } catch (error) {
@@ -910,6 +893,7 @@ export function Backup() {
         </button>
       </div>
 
+      <SkillsDirectorySetting backup />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <section className={cn("app-panel border p-4", statusMeta.className)}>
@@ -1368,7 +1352,9 @@ export function Backup() {
                   >
                     <div className="min-w-0">
                       <div className="truncate text-[13px] font-semibold text-secondary">
-                        {displaySnapshotLabel(version.tag)}
+                        {t("backup.history.snapshotTime", {
+                          time: displaySnapshotLabel(version.tag),
+                        })}
                       </div>
                       <div className="truncate text-[12px] text-muted">
                         {version.message || version.commit}
@@ -1376,7 +1362,9 @@ export function Backup() {
                       <div className="text-[11px] text-faint">
                         {version.author ? `${version.author} · ` : ""}
                         {version.commit} ·{" "}
-                        {formatDateTime(version.committed_at)}
+                        {t("backup.history.commitTime", {
+                          time: formatDateTime(version.committed_at),
+                        })}
                       </div>
                     </div>
                     <button

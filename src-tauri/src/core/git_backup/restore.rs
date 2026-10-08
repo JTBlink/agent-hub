@@ -3,7 +3,8 @@
 use super::*;
 use std::fs;
 
-pub(crate) fn reclone_from_remote_unlocked(root: &Path, url: &str) -> Result<()> {
+#[cfg(test)]
+fn reclone_from_remote_unlocked(root: &Path, url: &str) -> Result<()> {
     staged_clone(root, url)
 }
 

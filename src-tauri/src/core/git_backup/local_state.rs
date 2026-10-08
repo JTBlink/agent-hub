@@ -12,6 +12,10 @@ pub(super) const PATTERNS: &[&str] = &[
     "/cache/",
     "/recovery/",
     "/.secret.key",
+    "/credentials/",
+    "/backup/",
+    "/backup-publication.json",
+    "/backup-publication.tmp",
     "/.skill-lock.json",
 ];
 
@@ -57,11 +61,13 @@ mod tests {
         let root = temp.path();
         fs::create_dir_all(root.join("demo/logs")).unwrap();
         fs::create_dir_all(root.join("logs")).unwrap();
+        fs::create_dir_all(root.join("credentials")).unwrap();
         fs::create_dir_all(root.join(".agent-hub/skills")).unwrap();
         for path in [
             "agent-hub.db",
             "logs/debug.log",
             "repo-config.json",
+            "credentials/fixture.json",
             ".skill-lock.json",
             "demo/agent-hub.db",
             "demo/logs/fixture.log",
@@ -78,6 +84,7 @@ mod tests {
             "agent-hub.db",
             "logs/debug.log",
             "repo-config.json",
+            "credentials/fixture.json",
             ".skill-lock.json",
         ] {
             assert!(!tracked.lines().any(|line| line == path), "{path}");

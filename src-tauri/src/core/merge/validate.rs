@@ -126,7 +126,12 @@ fn validate_tree(
     //    claimed path may nest inside another claimed path.
     let claimed: BTreeSet<&str> = metas.values().map(|m| m.path.as_str()).collect();
     for meta in metas.values() {
-        let depth = meta.path.split('/').count();
+        let depth = meta
+            .path
+            .strip_prefix("skills/")
+            .unwrap_or(&meta.path)
+            .split('/')
+            .count();
         if depth > MAX_SKILL_DEPTH || meta.path.is_empty() || meta.path.starts_with('.') {
             bail!(
                 "merged tree validation: {} path '{}' invalid or too deep",
@@ -252,7 +257,7 @@ fn collect_unclaimed(
     depth: usize,
     out: &mut BTreeSet<String>,
 ) -> Result<()> {
-    if depth >= MAX_SKILL_DEPTH {
+    if depth >= MAX_SKILL_DEPTH + usize::from(prefix == "skills" || prefix.starts_with("skills/")) {
         // Deliberately mirrors reconcile's WalkDir max_depth(6) horizon: a
         // SKILL.md deeper than 6 components is not a skill anywhere in the
         // system — reconcile never adopts it, merges treat its files as
