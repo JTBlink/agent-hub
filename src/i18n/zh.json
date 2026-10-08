@@ -72,8 +72,8 @@
   },
   "dashboard": {
     "greeting": "你好！",
-    "summary": "Library 中 {{skills}} 个 Skills · 已启用 {{agents}} 个 Agent · {{projects}} 个 Project",
-    "librarySkills": "Library Skills",
+    "summary": "技能库共 {{skills}} 个技能 · 已启用 {{agents}} 个 Agent · {{projects}} 个项目",
+    "librarySkills": "技能库",
     "syncCoverage": "同步覆盖",
     "connectedAgents": "已启用 Agent",
     "synced": "已同步",
@@ -538,15 +538,17 @@
     },
     "local": {
       "title": "导入本地 Skill 源",
-      "description": "选择包含 `SKILL.md` 的文件夹，或导入 `.zip` / `.skill` 文件。",
+      "description": "选择含 SKILL.md 或 skill.md 的技能文件夹，或包含该文件的 .zip / .skill 压缩包。",
       "selectFolder": "选择文件夹",
-      "selectArchive": "选择压缩包或单文件",
+      "selectArchive": "选择 Skill 压缩包",
       "batchImport": "从文件夹批量导入",
       "batchImporting": "正在扫描 Skill...",
       "batchProgress": "正在导入 {{current}}/{{total}}: {{name}}...",
       "batchSuccess": "已导入 {{imported}} 个 Skill，跳过 {{skipped}} 个已导入的",
       "batchAllSkipped": "全部 {{skipped}} 个 Skill 已导入过",
-      "batchErrors": "{{count}} 个 Skill 导入失败"
+      "batchErrors": "{{count}} 个 Skill 导入失败",
+      "importFailed": "导入失败",
+      "invalidSource": "未找到有效 Skill：文件夹中须有 SKILL.md 或 skill.md 文件，压缩包内须包含这样的技能目录。"
     },
     "selectLocal": "选择本地文件...",
     "gitTitle": "从 Git 仓库安装",

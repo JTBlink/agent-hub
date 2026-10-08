@@ -44,6 +44,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
 import { StatusBanner } from "../components/StatusBanner";
 import { LocalSkillsPanel } from "../components/LocalSkillsPanel";
+import { LocalImportErrorDialog } from "../components/LocalImportErrorDialog";
 import { getErrorMessage, getErrorKind } from "../lib/error";
 
 const MARKET_PAGE_SIZE = 24;
@@ -99,6 +100,7 @@ export function InstallSkills() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localImportError, setLocalImportError] = useState<string | null>(null);
   const [importingPaths, setImportingPaths] = useState<Set<string>>(new Set());
   const [importingAll, setImportingAll] = useState(false);
   const marketListRef = useRef<HTMLDivElement | null>(null);
@@ -361,14 +363,18 @@ export function InstallSkills() {
   }, [activeTab, scanLoading, scanResult, runScan]);
 
   const installLocalSource = async (sourcePath: string) => {
+    setLocalError(null);
     const name = sourcePath.split("/").pop() || sourcePath;
     const toastId = toast.loading(t("install.toast.installing", { name }));
     try {
       await api.installLocal(sourcePath);
     } catch (e) {
-      const message = getErrorMessage(e, t("common.error"));
-      setLocalError(message);
-      toast.error(message, { id: toastId });
+      const rawMessage = getErrorMessage(e, t("common.error"));
+      const message = rawMessage.includes("INVALID_SKILL_SOURCE")
+        ? t("install.local.invalidSource")
+        : rawMessage;
+      setLocalImportError(message);
+      toast.dismiss(toastId);
       return;
     }
     // Install succeeded — post-install refresh is best-effort and must not
@@ -811,6 +817,10 @@ export function InstallSkills() {
 
   return (
     <div className="app-page gap-4">
+      <LocalImportErrorDialog
+        message={localImportError}
+        onClose={() => setLocalImportError(null)}
+      />
       <div className="app-page-header border-b-0 pb-0">
         <h1 className="app-page-title mb-4">{t("install.title")}</h1>
         <div className="flex gap-1 border-b border-border-subtle">

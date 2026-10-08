@@ -72,8 +72,8 @@
   },
   "dashboard": {
     "greeting": "你好！",
-    "summary": "Library 中 {{skills}} 個 Skills · 已啟用 {{agents}} 個 Agent · {{projects}} 個 Project",
-    "librarySkills": "Library Skills",
+    "summary": "技能庫共 {{skills}} 個技能 · 已啟用 {{agents}} 個 Agent · {{projects}} 個專案",
+    "librarySkills": "技能庫",
     "syncCoverage": "同步覆蓋",
     "connectedAgents": "已啟用 Agent",
     "synced": "已同步",
@@ -495,15 +495,17 @@
     },
     "local": {
       "title": "匯入本機 Skill 來源",
-      "description": "選擇包含 `SKILL.md` 的資料夾，或匯入 `.zip` / `.skill` 檔案。",
+      "description": "選擇含 SKILL.md 或 skill.md 的技能資料夾，或包含該檔案的 .zip / .skill 壓縮檔。",
       "selectFolder": "選擇資料夾",
-      "selectArchive": "選擇壓縮檔或單一檔案",
+      "selectArchive": "選擇 Skill 壓縮檔",
       "batchImport": "從資料夾批次匯入",
       "batchImporting": "正在掃描 Skill...",
       "batchProgress": "正在匯入 {{current}}/{{total}}: {{name}}...",
       "batchSuccess": "已匯入 {{imported}} 個 Skill，略過 {{skipped}} 個已匯入的",
       "batchAllSkipped": "全部 {{skipped}} 個 Skill 已匯入過",
-      "batchErrors": "{{count}} 個 Skill 匯入失敗"
+      "batchErrors": "{{count}} 個 Skill 匯入失敗",
+      "importFailed": "匯入失敗",
+      "invalidSource": "找不到有效 Skill：資料夾中須有 SKILL.md 或 skill.md 檔案，壓縮檔內須包含這樣的技能目錄。"
     },
     "selectLocal": "選擇本機檔案...",
     "gitTitle": "從 Git 倉庫安裝",
