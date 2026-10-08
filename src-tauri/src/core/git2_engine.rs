@@ -51,7 +51,7 @@ pub fn applies_to(url: &str) -> bool {
 
 fn callbacks_for(url: &str) -> git2::RemoteCallbacks<'static> {
     let cred = git_credentials::https_host(url)
-        .and_then(|host| git_credentials::load_credential(&host).ok().flatten());
+        .and_then(|host| super::git_auth_source::resolve(&host).ok().flatten());
     let mut callbacks = git2::RemoteCallbacks::new();
     // libgit2 re-invokes the credentials callback after a rejection; without
     // a cap that loops forever on a bad token.

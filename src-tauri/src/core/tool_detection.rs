@@ -75,23 +75,29 @@ fn extensions(key: &str) -> &[&str] {
 
 impl InstallationProbe {
     fn command(&self, name: &str) -> bool {
+        self.command_path(name).is_some()
+    }
+
+    fn command_path(&self, name: &str) -> Option<PathBuf> {
         if name.is_empty()
             || !name
                 .bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
         {
-            return false;
+            return None;
         }
-        self.bins.iter().any(|root| {
+        self.bins.iter().find_map(|root| {
             #[cfg(windows)]
             {
                 ["exe", "cmd", "bat", "com"]
                     .iter()
-                    .any(|ext| executable(&root.join(format!("{name}.{ext}"))))
+                    .map(|ext| root.join(format!("{name}.{ext}")))
+                    .find(|path| executable(path))
             }
             #[cfg(not(windows))]
             {
-                executable(&root.join(name))
+                let path = root.join(name);
+                executable(&path).then_some(path)
             }
         })
     }
@@ -237,6 +243,10 @@ impl InstallationProbe {
         }
         probe
     }
+}
+
+pub(super) fn find_command(name: &str) -> Option<PathBuf> {
+    InstallationProbe::system().command_path(name)
 }
 
 pub(super) fn is_installed(key: &str) -> bool {

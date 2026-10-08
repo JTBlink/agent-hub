@@ -3,10 +3,10 @@
 //! Policy (backup redesign §3.7): tokens must never live in URLs on disk
 //! (`.git/config`, SQLite settings). Credentials embedded in a remote URL are
 //! saved in owner-only local credential files and injected into git through
-//! a static askpass script that only echoes environment variables.
+//! a noninteractive helper that reads credentials from environment variables.
 
 use anyhow::{Context, Result};
-use std::{path::PathBuf, sync::OnceLock};
+use std::sync::OnceLock;
 
 use super::central_repo;
 
@@ -209,7 +209,7 @@ pub fn install_git2_credentials(callbacks: &mut git2::RemoteCallbacks<'_>, url: 
                 tried_stored = true;
                 if let Some(cred) = host
                     .as_deref()
-                    .and_then(|h| load_credential(h).ok().flatten())
+                    .and_then(|h| super::git_auth_source::resolve(h).ok().flatten())
                 {
                     return git2::Cred::userpass_plaintext(&cred.username, &cred.password);
                 }
@@ -242,39 +242,17 @@ pub fn install_git2_credentials(callbacks: &mut git2::RemoteCallbacks<'_>, url: 
     });
 }
 
-/// The askpass script git invokes for username/password prompts. Static
-/// content, no secrets — safe on disk. Git for Windows executes shebang
-/// scripts through its bundled sh, so a single POSIX script covers all
-/// platforms.
-const ASKPASS_SCRIPT: &str = "#!/bin/sh\n\
-# Managed by agent-hub. Supplies git credentials from the environment.\n\
-case \"$1\" in\n\
-  *[Uu]sername*) printf '%s\\n' \"${AGENT_HUB_ASKPASS_USERNAME}\" ;;\n\
-  *) printf '%s\\n' \"${AGENT_HUB_ASKPASS_PASSWORD}\" ;;\n\
-esac\n";
-
-fn askpass_script_path() -> PathBuf {
-    central_repo::base_dir().join("git-askpass.sh")
-}
-
-fn ensure_askpass_script() -> Result<PathBuf> {
-    let path = askpass_script_path();
-    let up_to_date = std::fs::read_to_string(&path)
-        .map(|current| current == ASKPASS_SCRIPT)
-        .unwrap_or(false);
-    if !up_to_date {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(&path, ASKPASS_SCRIPT).context("Failed to write askpass script")?;
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))?;
-    }
-    Ok(path)
-}
+// Git invokes this helper before considering interactive prompts. Values live
+// only in the child environment; get is host-scoped, store/erase are no-ops.
+const CREDENTIAL_HELPER: &str = r#"!f() {
+  [ "$1" = get ] || return 0
+  h=; p=
+  while IFS= read -r line && [ -n "$line" ]; do
+    case "$line" in host=*) h=${line#host=} ;; protocol=*) p=${line#protocol=} ;; esac
+  done
+  [ "$h" = "$AGENT_HUB_CREDENTIAL_HOST" ] || return 0
+  case "$p" in http|https) printf 'username=%s\npassword=%s\n\n' "$AGENT_HUB_ASKPASS_USERNAME" "$AGENT_HUB_ASKPASS_PASSWORD" ;; esac
+}; f"#;
 
 /// Environment to inject into a git subprocess so it can authenticate against
 /// `url` without credentials on disk. Empty when not applicable: non-http(s)
@@ -287,7 +265,7 @@ pub fn credential_env_for_url(url: &str) -> Vec<(String, String)> {
     if split_credentials_from_url(url).is_some() {
         return Vec::new();
     }
-    let cred = match load_credential(&host) {
+    let cred = match super::git_auth_source::resolve(&host) {
         Ok(Some(cred)) => cred,
         Ok(None) => return Vec::new(),
         Err(e) => {
@@ -295,42 +273,37 @@ pub fn credential_env_for_url(url: &str) -> Vec<(String, String)> {
             return Vec::new();
         }
     };
-    let script = match ensure_askpass_script() {
-        Ok(path) => path,
-        Err(e) => {
-            log::warn!("git credentials: could not prepare askpass script: {e:#}");
-            return Vec::new();
-        }
-    };
-    askpass_env(&script, cred)
+    credential_env(cred, &host)
 }
 
-fn askpass_env(script: &std::path::Path, cred: RemoteCredential) -> Vec<(String, String)> {
-    // Git consults credential helpers BEFORE askpass and calls them again to
-    // approve/reject credentials. Bypass those helpers only when we already
-    // have an app credential, otherwise osxkeychain prompts on every sync
-    // despite the in-process cache. Preserve inherited command config entries.
+fn credential_env(cred: RemoteCredential, host: &str) -> Vec<(String, String)> {
+    // Preserve inherited config while replacing interactive credential helpers.
     let config_count = std::env::var("GIT_CONFIG_COUNT")
         .ok()
         .and_then(|value| value.parse::<usize>().ok())
         .unwrap_or(0);
     vec![
-        (
-            "GIT_ASKPASS".to_string(),
-            script.to_string_lossy().to_string(),
-        ),
+        ("AGENT_HUB_CREDENTIAL_HOST".to_string(), host.to_string()),
         (ENV_USERNAME.to_string(), cred.username),
         (ENV_PASSWORD.to_string(), cred.password),
         ("GIT_TERMINAL_PROMPT".to_string(), "0".to_string()),
         (
             "GIT_CONFIG_COUNT".to_string(),
-            (config_count + 1).to_string(),
+            (config_count + 2).to_string(),
         ),
         (
             format!("GIT_CONFIG_KEY_{config_count}"),
             "credential.helper".to_string(),
         ),
         (format!("GIT_CONFIG_VALUE_{config_count}"), String::new()),
+        (
+            format!("GIT_CONFIG_KEY_{}", config_count + 1),
+            "credential.helper".to_string(),
+        ),
+        (
+            format!("GIT_CONFIG_VALUE_{}", config_count + 1),
+            CREDENTIAL_HELPER.to_string(),
+        ),
     ]
 }
 
@@ -380,21 +353,17 @@ mod tests {
     #[test]
     fn cached_app_credentials_bypass_system_helper_reads_and_writes() {
         use std::io::Write;
-        use std::os::unix::fs::PermissionsExt;
         use std::process::{Command, Stdio};
 
         let tmp = tempfile::tempdir().unwrap();
         let config = tmp.path().join("gitconfig");
         std::fs::write(&config, "[credential]\nhelper = !touch helper-called\n").unwrap();
-        let script = tmp.path().join("askpass.sh");
-        std::fs::write(&script, ASKPASS_SCRIPT).unwrap();
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o700)).unwrap();
-        let env = askpass_env(
-            &script,
+        let env = credential_env(
             RemoteCredential {
                 username: "fixture".into(),
                 password: "fixture-password".into(),
             },
+            "example.invalid",
         );
         for operation in ["fill", "fill", "approve", "reject"] {
             let mut child = Command::new("git")
@@ -517,16 +486,5 @@ mod tests {
             Some("gitlab.example.com:8443")
         );
         assert_eq!(https_host("git@github.com:acme/repo.git"), None);
-    }
-
-    #[test]
-    fn askpass_script_answers_by_prompt() {
-        // Verify the script routes "Username"/"Password" prompts to the right
-        // environment variable — the contract git relies on.
-        assert!(ASKPASS_SCRIPT.contains("*[Uu]sername*"));
-        assert!(ASKPASS_SCRIPT.contains(ENV_USERNAME));
-        assert!(ASKPASS_SCRIPT.contains(ENV_PASSWORD));
-        // No secrets baked into the script itself.
-        assert!(!ASKPASS_SCRIPT.contains("token"));
     }
 }

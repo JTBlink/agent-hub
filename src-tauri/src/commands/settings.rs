@@ -47,6 +47,9 @@ pub async fn set_settings(
         store
             .set_setting(&key_for_store, &value_for_store)
             .map_err(AppError::db)?;
+        if key_for_store == crate::core::git_auth_source::SETTING_USE_GH {
+            crate::core::git_auth_source::set_preference(Some(&value_for_store));
+        }
         if key_for_store == "show_tray_icon" {
             let tray_enabled = matches!(
                 value_for_store.trim().to_ascii_lowercase().as_str(),

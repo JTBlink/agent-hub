@@ -145,6 +145,11 @@ fn initialize_store_inner(
     let db_path = central_repo::db_path();
     let step = Instant::now();
     let store = Arc::new(SkillStore::new(&db_path).context("Failed to initialize database")?);
+    super::git_auth_source::set_preference(
+        store
+            .get_setting(super::git_auth_source::SETTING_USE_GH)?
+            .as_deref(),
+    );
     timings.open_store_ms = step.elapsed().as_millis();
 
     let step = Instant::now();

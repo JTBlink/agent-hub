@@ -144,6 +144,11 @@
       "none": "Not connected",
       "unknown": "Unknown"
     },
+    "gh": {
+      "title": "Prefer GitHub CLI (gh)",
+      "desc": "On by default. GitHub HTTPS backups reuse your gh login, falling back to AgentHub credentials if gh is unavailable or signed out. Turn off to use AgentHub credentials. SSH is unaffected. Applies to your next backup.",
+      "loadFailed": "Could not load this setting. Click to retry."
+    },
     "auto": {
       "title": "Automatic backup",
       "desc": "Back up automatically a few minutes after changes settle; a local save also runs when the app quits."
@@ -794,7 +799,7 @@
     "gitNeedRemoteSetup": "Set a backup repository URL first",
     "gitNeedPullFirst": "Remote has newer changes. Pull first to avoid conflicts.",
     "gitPendingSync": "Local changes are ready to sync",
-    "gitErrorAuth": "The Git server rejected the current HTTPS credentials. For GitHub backups, choose “Reconnect GitHub”, authorize again, then sync.",
+    "gitErrorAuth": "The Git server rejected the current HTTPS credentials. If using gh, check gh auth status and renew the CLI login. If using AgentHub credentials, choose “Reconnect GitHub” to authorize again.",
     "gitErrorNetwork": "Network connection failed. Check your network and remote URL.",
     "gitErrorConflict": "Local and remote changes conflict. Choose how to resolve it.",
     "gitErrorNotRepo": "Git repository not found. Set up backup first.",
