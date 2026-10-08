@@ -1,10 +1,12 @@
 pub mod app_state;
 pub mod audit_log;
 pub mod auto_backup;
+pub mod backup_workspace;
 pub mod central_repo;
 pub mod cli_bridge;
 pub mod content_hash;
 mod credential_cache;
+mod credential_file;
 pub mod crypto;
 pub mod error;
 pub mod file_watcher;

@@ -1323,6 +1323,7 @@ export function Settings() {
           <div className="app-panel overflow-hidden divide-y divide-border-faint">
             <div className="px-5 py-4">
               <SkillsDirectorySetting />
+              <SkillsDirectorySetting backup />
             </div>
             {/* Application data path (legacy custom repositories remain compatible). */}
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">

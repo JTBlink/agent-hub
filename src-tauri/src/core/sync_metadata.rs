@@ -618,6 +618,9 @@ fn atomic_write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
     let bytes = canonical_json_bytes(value)?;
+    if fs::read(path).is_ok_and(|existing| existing == bytes) {
+        return Ok(());
+    }
     let tmp = path.with_extension(format!("json.tmp.{}", uuid::Uuid::now_v7()));
     {
         let mut file = fs::File::create(&tmp)?;

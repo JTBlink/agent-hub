@@ -1,9 +1,7 @@
-import { FileText, FolderOpen, Link2, Trash2 } from "lucide-react";
-import { openPath } from "@tauri-apps/plugin-opener";
+import { FileText, Link2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { compactHomePath } from "../utils";
-import { getErrorMessage } from "../lib/error";
+import { SkillDirectoryActions } from "./SkillDirectoryActions";
 import type { LocalSkillSelection } from "../lib/localSkillScan";
 
 export function LocalSkillLocation({
@@ -66,19 +64,7 @@ export function LocalSkillLocation({
           <FileText className="h-3.5 w-3.5" />
           {t("install.scan.viewContent")}
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            openPath(location.found_path).catch((error: unknown) =>
-              toast.error(getErrorMessage(error, t("common.error"))),
-            );
-          }}
-          className="app-button-secondary !px-2 !py-1 text-[12px] focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          <FolderOpen className="h-3.5 w-3.5" />
-          {t("install.scan.openFolder")}
-        </button>
+        <SkillDirectoryActions path={location.found_path} disabled={busy} />
         <button
           type="button"
           disabled={busy}

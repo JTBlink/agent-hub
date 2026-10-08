@@ -62,7 +62,7 @@ export function FirstRunRestoreDialog() {
     setError(null);
     try {
       // Same sanitize-first flow as the Backup page: embedded credentials go
-      // to the OS keychain, only the clean URL is persisted (§3.7).
+      // to the local credential store, only the clean URL is persisted (§3.7).
       const effective = await api.gitBackupSanitizeRemoteUrl(trimmed);
       await api.setSettings("git_backup_remote_url", effective);
       await api.gitBackupClone(effective);

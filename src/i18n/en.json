@@ -155,7 +155,7 @@
     },
     "github": {
       "title": "Connect with GitHub",
-      "desc": "Sign in with GitHub and a private backup repository will be created automatically. Credentials stay in the OS keychain and never touch a file.",
+      "desc": "Sign in with GitHub to create a private backup repository. Credentials are cached in memory and stored in local credentials/ files, excluded from backups.",
       "tokenPlaceholder": "GitHub personal access token (ghp_… / github_pat_…)",
       "repoLabel": "Repository name",
       "connect": "Connect",
@@ -165,7 +165,7 @@
       "tokenHint": "Create a token on GitHub (repo scope, pre-filled)",
       "errorToken": "GitHub rejected the token. Check that it hasn't expired and was copied completely.",
       "errorScope": "The token can't create or access the repository. Use a classic token with the \"repo\" scope, or grant a fine-grained token Administration (write) permission.",
-      "errorKeychain": "Couldn't store the token in the system keychain. Guided GitHub setup requires the keychain; you can still use the advanced Git URL below.",
+      "errorKeychain": "Could not save the local credential. Check the application data directory permissions and try again.",
       "deviceSignIn": "Sign in with GitHub",
       "deviceWaitDesc": "A browser window opened at {{uri}}. Enter the code above there to authorize — this page will continue automatically.",
       "deviceWaiting": "Waiting for authorization on GitHub…",
@@ -180,6 +180,8 @@
       "reconnectTitle": "Reconnect GitHub"
     },
     "history": {
+      "snapshotTime": "Snapshot: {{time}}",
+      "commitTime": "Commit: {{time}}",
       "title": "Backup History",
       "empty": "No visible snapshots yet. Run a backup to create one."
     },
@@ -222,7 +224,7 @@
       "skills": "Skills",
       "snapshots": "Snapshots"
     },
-    "credentialsMigrated": "The access token found in your backup URL was moved to the system keychain. It no longer appears in any file.",
+    "credentialsMigrated": "The access token was moved from the backup URL to the local credential store, excluded from backups.",
     "restoreSafetyPoint": "Your previous state was saved as snapshot {{tag}} — you can restore it from the history at any time."
   },
   "firstRun": {
@@ -567,6 +569,7 @@
       "search": "Search Skills, paths or Agents…",
       "viewContent": "View contents",
       "openFolder": "Open folder",
+      "openInVscode": "Open in VS Code",
       "deleteLocation": "Delete {{name}} at {{path}}",
       "deleteHint": "Remove only the selected path; symlinks are only unlinked. Agents sharing this path are affected. Independent copies and the library are kept.",
       "refreshFailed": "Removed, but refreshing failed. Scan again to see the latest state.",
@@ -731,7 +734,7 @@
     "gitDisconnected": "Backup disconnected. Local skills and remote data are kept.",
     "gitDisconnectHint": "Disconnect removes the remote configuration from this machine only. Local skills and the remote repository are kept.",
     "gitEngineGit2": "Built-in Git engine (experimental)",
-    "gitEngineGit2Desc": "Use the app's built-in Git engine for HTTPS backup network operations — no system git needed, credentials injected from the keychain. SSH and custom remotes always use system git. Turn off to revert at any time.",
+    "gitEngineGit2Desc": "Use the app's built-in Git engine for HTTPS backup network operations — no system git needed, credentials injected from the local credential cache. SSH and custom remotes always use system git. Turn off to revert at any time.",
     "gitMergeEngineObject": "Skill-aware sync merge",
     "gitMergeEngineObjectDesc": "Default. Merges synced changes per skill instead of per text line: renames combine with edits, and conflicting skills are kept locally and listed on the Backup page for review instead of blocking the sync. Turn off to fall back to the legacy line-based git merge.",
     "gitStartBackup": "Set Up Backup",
@@ -809,9 +812,11 @@
     "trayIcon_on": "Show",
     "trayIcon_off": "Hide",
     "trayIconOffHint": "Tray icon is hidden, so closing the window will quit the app.",
+    "backupDirectory": "Backup repository directory",
+    "backupDirectoryHint": "Independent Git repository with installable skills/ content. Use npx skills@latest add <repository-url> to install.",
     "gitErrorSshAuth": "SSH authentication failed. Check your SSH key, ssh-agent, and the key’s repository access.",
-    "gitErrorCredentialMissing": "Git could not obtain login credentials. Reconnect GitHub for GitHub backups, or configure credentials for the remote host.",
-    "gitErrorCredentialRead": "Git credentials could not be read or saved. Check the application data directory permissions and reconnect your account."
+    "gitErrorCredentialRead": "Git credentials could not be read or saved. Check the application data directory permissions and reconnect your account.",
+    "gitErrorCredentialMissing": "Git could not obtain login credentials. Reconnect GitHub for GitHub backups, or configure credentials for the remote host."
   },
   "closeAction": {
     "title": "Close behavior",

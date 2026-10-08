@@ -48,7 +48,7 @@ pub fn resolve_conflict_unlocked(
 
     // Protect the current state: flush the DB projection, commit anything
     // dirty, then take the user-visible safety snapshot (§4 先打快照 tag).
-    sync_metadata::write_all_from_db_unlocked(store)?;
+    crate::core::backup_workspace::write_metadata(store, skills_dir)?;
     if git_backup::has_uncommitted_changes(skills_dir)? {
         git_backup::commit_all_unlocked(skills_dir, "backup")?;
     }

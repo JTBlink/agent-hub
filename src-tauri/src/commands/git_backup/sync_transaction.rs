@@ -22,7 +22,7 @@ pub(super) fn run_sync_blocking(
     apply_device_identity(store, skills_dir);
 
     // Local changes first — they must be safe before any network step.
-    sync_metadata::write_all_from_db_unlocked(store)?;
+    backup_workspace::write_metadata(store, skills_dir)?;
     // Rebuild the oversized exclusions BEFORE the dirty check: a previously
     // excluded skill that shrank below the limit re-enters the backup by
     // making .gitignore (and the skill itself) show up as changes.
@@ -53,7 +53,7 @@ pub(super) fn run_sync_blocking(
         let status = git_backup::get_status(skills_dir)?;
         if status.behind > 0 {
             let summary = merge::gated_pull_unlocked(store, skills_dir)?;
-            reconcile_skills_index_unlocked(store)?;
+            backup_workspace::reconcile(store, skills_dir)?;
             merge_summary = Some(summary);
         }
 

@@ -155,7 +155,7 @@
     },
     "github": {
       "title": "使用 GitHub 連線",
-      "desc": "使用 GitHub 登入，私有備份儲存庫會自動建立。憑證保存在系統鑰匙圈中，不會寫入任何檔案。",
+      "desc": "使用 GitHub 登入，自動建立私人備份儲存庫。憑證快取於記憶體並保存在本機 credentials/ 檔案中，不進入備份。",
       "tokenPlaceholder": "GitHub 個人存取權杖（ghp_… / github_pat_…）",
       "repoLabel": "儲存庫名稱",
       "connect": "連線",
@@ -165,7 +165,7 @@
       "tokenHint": "到 GitHub 建立權杖（repo 權限，已預填）",
       "errorToken": "GitHub 拒絕了該權杖。請檢查它是否過期、是否複製完整。",
       "errorScope": "該權杖無法建立或存取儲存庫。請使用帶「repo」權限的 classic 權杖，或給 fine-grained 權杖授予 Administration（寫入）權限。",
-      "errorKeychain": "無法將權杖存入系統鑰匙圈。GitHub 引導連線依賴鑰匙圈；你仍可使用下方的進階 Git 位址方式。",
+      "errorKeychain": "無法保存本機憑證，請檢查應用程式資料目錄的寫入權限後重試。",
       "deviceSignIn": "使用 GitHub 登入",
       "deviceWaitDesc": "瀏覽器已開啟 {{uri}}。在該頁面輸入上方代碼完成授權——本頁會自動繼續。",
       "deviceWaiting": "等待在 GitHub 上完成授權…",
@@ -180,6 +180,8 @@
       "reconnectTitle": "重新連線 GitHub"
     },
     "history": {
+      "snapshotTime": "快照：{{time}}",
+      "commitTime": "提交：{{time}}",
       "title": "備份歷史",
       "empty": "還沒有可見快照。執行一次備份後會產生。"
     },
@@ -222,7 +224,7 @@
       "skills": "技能",
       "snapshots": "快照"
     },
-    "credentialsMigrated": "偵測到備份位址中包含存取權杖，已將其轉移至系統鑰匙圈，不再出現在任何檔案中。",
+    "credentialsMigrated": "存取權杖已從備份位址轉移到本機憑證檔案，不進入備份。",
     "restoreSafetyPoint": "還原前的狀態已儲存為備份點 {{tag}}，可隨時從歷史中還原。"
   },
   "firstRun": {
@@ -519,6 +521,7 @@
       "search": "搜尋 Skill、路徑或 Agent…",
       "viewContent": "查看內容",
       "openFolder": "開啟目錄",
+      "openInVscode": "在 VS Code 中開啟",
       "deleteLocation": "刪除 {{path}} 中的 {{name}}",
       "deleteHint": "僅刪除所選路徑；軟連結僅移除連結。使用相同路徑的 Agent 會同時受影響，其他獨立副本與技能庫保留。",
       "refreshFailed": "刪除已完成，但重新整理失敗，請重新掃描查看最新狀態。",
@@ -676,7 +679,7 @@
     "gitDisconnected": "已斷開備份，本機技能與遠端資料均保留。",
     "gitDisconnectHint": "斷開只會清除本機的遠端設定；本機技能和遠端倉庫資料都會保留。",
     "gitEngineGit2": "內建 Git 引擎（實驗性）",
-    "gitEngineGit2Desc": "HTTPS 備份的網路操作改用應用內建的 Git 引擎——不依賴系統 git，憑證從鑰匙圈記憶體注入。SSH 與自訂遠端始終走系統 git。可隨時關閉還原。",
+    "gitEngineGit2Desc": "HTTPS 備份的網路操作改用應用內建的 Git 引擎——不依賴系統 git，憑證從本機快取注入。SSH 與自訂遠端始終走系統 git。可隨時關閉還原。",
     "gitMergeEngineObject": "按技能合併同步",
     "gitMergeEngineObjectDesc": "預設開啟。同步時按技能物件而非文字行合併：重新命名與內容修改自動組合；真正衝突的技能會保留本機版本並在備份頁列出待處理，而不是阻塞同步。關閉則回退到舊的按行 git 合併。",
     "gitStartBackup": "設定備份",
@@ -744,9 +747,11 @@
     "gitErrorUnrelatedHistories": "本機倉庫與遠端倉庫歷史不一致。請打開「修復同步設定」選擇處理方式。",
     "gitErrorNoUpstream": "尚未建立遠端追蹤關係。請打開「修復同步設定」處理。",
     "gitErrorGeneric": "Git 操作失敗，請檢查設定中的遠端倉庫位址後重試。",
+    "backupDirectory": "備份儲存庫目錄",
+    "backupDirectoryHint": "獨立 Git 儲存庫，skills/ 下保存可安裝技能。可使用 npx skills@latest add <儲存庫位址> 安裝。",
     "gitErrorSshAuth": "SSH 驗證失敗：請檢查 SSH 金鑰、ssh-agent 及該金鑰對儲存庫的存取權限。",
-    "gitErrorCredentialMissing": "Git 未能取得登入憑證。GitHub 備份請點擊「重新連接 GitHub」；其他遠端請設定相應憑證。",
-    "gitErrorCredentialRead": "無法讀取或儲存 Git 憑證。請檢查應用程式資料目錄權限並重新連接帳號。"
+    "gitErrorCredentialRead": "無法讀取或儲存 Git 憑證。請檢查應用程式資料目錄權限並重新連接帳號。",
+    "gitErrorCredentialMissing": "Git 未能取得登入憑證。GitHub 備份請點擊「重新連接 GitHub」；其他遠端請設定相應憑證。"
   },
   "common": {
     "loading": "載入中...",

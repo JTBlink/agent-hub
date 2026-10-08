@@ -6,8 +6,8 @@ use anyhow::{anyhow, bail, Context};
 use app_lib::commands::{presets as preset_cmd, skills as cmd, tools as tool_cmd};
 use app_lib::core::{
     app_state, audit_log::AuditDraft, central_repo, error::AppError, git_backup, git_fetcher,
-    installer, merge, repo_lock::RepoLock, scenario_service, skill_metadata,
-    skill_store::SkillStore, skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
+    installer, repo_lock::RepoLock, scenario_service, skill_metadata, skill_store::SkillStore,
+    skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
 };
 use clap::{Args, Parser, Subcommand};
 use serde::Serialize;
@@ -2996,73 +2996,47 @@ fn run_git(
     has_skills_root: bool,
     json: bool,
 ) -> anyhow::Result<()> {
+    use app_lib::core::backup_workspace;
+    let root = backup_workspace::repo_dir();
     match args.command {
-        GitCommand::Status => {
-            print_json(&git_backup::get_status(&central_repo::skills_dir())?, json)
-        }
+        GitCommand::Status => print_json(&backup_workspace::status(store)?, json),
         GitCommand::Init => {
-            // No settings store on this path; the hostname default matches
-            // what the GUI derives, and the GUI reconciles the repo identity
-            // on its next backup anyway.
-            git_backup::init_repo(
-                &central_repo::skills_dir(),
-                &git_backup::default_device_name(),
-            )?;
-            print_json(&git_backup::get_status(&central_repo::skills_dir())?, json);
+            backup_workspace::initialize(store)?;
+            print_json(&git_backup::get_status(&root)?, json);
         }
         GitCommand::Clone { url } => {
-            let target = central_repo::skills_dir();
-            if has_skills_root {
-                git_backup::clone_into_strict(&target, &url)?;
-            } else {
-                git_backup::clone_into(&target, &url)?;
-            }
-            print_json(&git_backup::get_status(&target)?, json);
+            backup_workspace::clone_repo(store, &url, has_skills_root)?;
+            print_json(&git_backup::get_status(&root)?, json);
         }
         GitCommand::SetRemote { url } => {
-            git_backup::set_remote(&central_repo::skills_dir(), &url)?;
-            print_json(&git_backup::get_status(&central_repo::skills_dir())?, json);
+            backup_workspace::status(store)?;
+            git_backup::set_remote(&root, &url)?;
+            print_json(&git_backup::get_status(&root)?, json);
         }
         GitCommand::Pull => {
-            // Same engine gate as the GUI sync (object merge by default,
-            // merge_engine=system opts out). A raw line merge from this CLI
-            // would read as an old-client violation on other devices (§6).
-            let dir = central_repo::skills_dir();
-            {
-                let _lock = RepoLock::acquire_foreground("git pull")?;
-                let device = store
-                    .get_setting("backup_device_name")
-                    .ok()
-                    .flatten()
-                    .map(|v| git_backup::sanitize_device_name(&v))
-                    .filter(|v| !v.is_empty())
-                    .unwrap_or_else(git_backup::default_device_name);
-                let _ = git_backup::configure_device_identity(&dir, &device);
-                merge::gated_pull_unlocked(store, &dir)?;
-            }
-            // Reconcile the DB from the merged metadata (takes its own lock).
-            sync_metadata::reindex_from_metadata(store)?;
-            print_json(&git_backup::get_status(&dir)?, json);
+            backup_workspace::pull(store)?;
+            print_json(&git_backup::get_status(&root)?, json);
         }
         GitCommand::Push => {
-            git_backup::push(&central_repo::skills_dir())?;
-            print_json(&git_backup::get_status(&central_repo::skills_dir())?, json);
+            backup_workspace::status(store)?;
+            git_backup::push(&root)?;
+            print_json(&git_backup::get_status(&root)?, json);
         }
         GitCommand::Commit { message } => {
-            git_backup::commit_all(&central_repo::skills_dir(), &message)?;
-            let tag = git_backup::create_snapshot_tag(&central_repo::skills_dir())?;
+            let tag = backup_workspace::commit(store, &message)?;
             print_json(&serde_json::json!({"ok": true, "tag": tag}), json);
         }
-        GitCommand::Versions { limit } => print_json(
-            &git_backup::list_snapshot_versions(&central_repo::skills_dir(), limit)?,
-            json,
-        ),
+        GitCommand::Versions { limit } => {
+            backup_workspace::status(store)?;
+            print_json(&git_backup::list_snapshot_versions(&root, limit)?, json);
+        }
         GitCommand::Restore { tag } => {
-            git_backup::restore_snapshot_version(&central_repo::skills_dir(), &tag)?;
-            print_json(&git_backup::get_status(&central_repo::skills_dir())?, json);
+            backup_workspace::restore(store, &tag)?;
+            print_json(&git_backup::get_status(&root)?, json);
         }
         GitCommand::PruneSyncRefs => {
-            let removed = git_backup::prune_hidden_refs_on_remote(&central_repo::skills_dir())?;
+            backup_workspace::status(store)?;
+            let removed = git_backup::prune_hidden_refs_on_remote(&root)?;
             print_json(&serde_json::json!({ "removed": removed }), json);
         }
     }

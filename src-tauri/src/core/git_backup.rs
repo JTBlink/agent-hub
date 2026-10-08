@@ -2,7 +2,7 @@ mod local_state;
 mod restore;
 use anyhow::{Context, Result};
 use chrono::Utc;
-pub(crate) use restore::{clone_into_unlocked, reclone_from_remote_unlocked};
+pub(crate) use restore::clone_into_unlocked;
 use std::path::Path;
 use std::process::Command;
 
@@ -1010,6 +1010,7 @@ fn count_changed_top_dirs(porcelain: &str) -> u32 {
             path = renamed;
         }
         let path = path.trim().trim_matches('"');
+        let path = path.strip_prefix("skills/").unwrap_or(path);
         let top = path.split('/').next().unwrap_or_default();
         if top.is_empty() || top.starts_with('.') {
             continue;
@@ -1052,7 +1053,13 @@ fn oversized_skill_dirs(skills_dir: &Path, limit: u64) -> (Vec<(String, u64)>, u
     if skills_dir.exists() {
         let mut it = walkdir::WalkDir::new(skills_dir)
             .min_depth(1)
-            .max_depth(6)
+            .max_depth(
+                if skills_dir.join(".agent-hub/backup-layout.json").exists() {
+                    7
+                } else {
+                    6
+                },
+            )
             .into_iter()
             .filter_entry(|e| e.file_name().to_string_lossy() != ".git");
         while let Some(entry) = it.next() {

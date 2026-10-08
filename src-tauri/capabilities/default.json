@@ -9,6 +9,14 @@
     "dialog:default",
     "dialog:allow-open",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "vscode://file/*" }]
+    },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }]
+    },
     "updater:default",
     "clipboard-manager:allow-write-text"
   ]

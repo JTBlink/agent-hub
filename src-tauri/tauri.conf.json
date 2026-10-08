@@ -29,6 +29,9 @@
     }
   },
   "plugins": {
+    "opener": {
+      "requireLiteralLeadingDot": false
+    },
     "updater": {
       "pubkey": "",
       "endpoints": []
