@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Check, Loader2, Plus } from "lucide-react";
+import { Check, Loader2, Minus, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getErrorMessage } from "../lib/error";
@@ -29,7 +29,6 @@ export function SkillGroupMembershipButton({
         { group: groupName, skill: skillName },
       )
     : t("mySkills.membership.chooseGroup");
-  const Icon = saving ? Loader2 : included ? Check : Plus;
 
   return (
     <button
@@ -39,12 +38,7 @@ export function SkillGroupMembershipButton({
       aria-pressed={included}
       aria-busy={saving || undefined}
       title={description}
-      className={cn(
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
-        included
-          ? "border-accent/25 bg-accent/10 text-accent hover:bg-accent/15"
-          : "border-border-subtle text-muted hover:border-border hover:bg-surface-hover hover:text-secondary",
-      )}
+      className="group/membership inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-40"
       onClick={async (event) => {
         event.stopPropagation();
         if (pending.current || !groupName) return;
@@ -60,10 +54,32 @@ export function SkillGroupMembershipButton({
         }
       }}
     >
-      <Icon
+      <span
+        className={cn(
+          "relative flex h-5 w-5 items-center justify-center rounded-md transition-[color,background-color,transform] duration-150 motion-reduce:transition-none group-enabled/membership:group-active/membership:scale-95",
+          included
+            ? "bg-accent-bg text-accent-light group-enabled/membership:group-hover/membership:bg-surface-active"
+            : "text-faint group-enabled/membership:group-hover/membership:bg-accent-bg group-enabled/membership:group-hover/membership:text-accent-light",
+        )}
         aria-hidden="true"
-        className={cn("h-4 w-4", saving && "animate-spin")}
-      />
+      >
+        {saving ? (
+          <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" />
+        ) : included ? (
+          <>
+            <Check
+              strokeWidth={2.25}
+              className="h-3 w-3 transition-opacity duration-150 motion-reduce:transition-none group-enabled/membership:group-hover/membership:opacity-0 group-enabled/membership:group-focus-visible/membership:opacity-0"
+            />
+            <Minus
+              strokeWidth={2}
+              className="absolute h-3 w-3 opacity-0 transition-opacity duration-150 motion-reduce:transition-none group-enabled/membership:group-hover/membership:opacity-100 group-enabled/membership:group-focus-visible/membership:opacity-100"
+            />
+          </>
+        ) : (
+          <Plus strokeWidth={1.75} className="h-3 w-3" />
+        )}
+      </span>
     </button>
   );
 }
