@@ -1,3 +1,8 @@
+mod tray_text;
+use tray_text::{
+    format_status_line, format_tooltip, format_updates_label, skill_group_menu_label, TrayLanguage,
+};
+
 mod smoke;
 pub use smoke::run_package_smoke;
 
@@ -13,21 +18,21 @@ pub mod core;
 /// Shared flag: when true, CloseRequested should NOT be prevented.
 pub static QUITTING: AtomicBool = AtomicBool::new(false);
 
-/// Guards concurrent preset apply/remove from the tray so a quick double-click
+/// Guards concurrent skill group apply/remove from the tray so a quick double-click
 /// can't fire two batches at once. Intentionally separate from the
 /// `TRAY_CHECK_UPDATES_RUNNING` flag — update checks only touch
-/// `update_status` while preset apply touches `skill_targets`, so the two are
+/// `update_status` while skill group apply touches `skill_targets`, so the two are
 /// orthogonal and shouldn't block each other. Sharing the lock would silently
-/// drop preset clicks during long-running update checks.
-static TRAY_PRESET_APPLY_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+/// drop skill group clicks during long-running update checks.
+static TRAY_SKILL_GROUP_APPLY_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Tracks whether a manual "Check for skill updates" is currently running so the
 /// tray menu can render a disabled "Checking for updates..." label.
 static TRAY_CHECK_UPDATES_RUNNING: AtomicBool = AtomicBool::new(false);
 
 const MAIN_TRAY_ID: &str = "main-tray";
-const TRAY_PRESET_ADD_PREFIX: &str = "tray-preset-add:";
-const TRAY_PRESET_REMOVE_PREFIX: &str = "tray-preset-remove:";
+const TRAY_SKILL_GROUP_ADD_PREFIX: &str = "tray-skill-group-add:";
+const TRAY_SKILL_GROUP_REMOVE_PREFIX: &str = "tray-skill-group-remove:";
 const TRAY_OPEN_UPDATES_ID: &str = "tray-open-updates";
 const TRAY_OPEN_FOLDER_ID: &str = "tray-open-folder";
 const TRAY_CHECK_UPDATES_ID: &str = "tray-check-updates";
@@ -125,7 +130,7 @@ fn load_tray_template_icon() -> Option<tauri::image::Image<'static>> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TrayPresetStatus {
+enum TraySkillGroupStatus {
     Empty,
     Inactive,
     Partial,
@@ -133,7 +138,7 @@ enum TrayPresetStatus {
 }
 
 #[derive(Debug, Clone)]
-struct TrayPresetEntry {
+struct TraySkillGroupEntry {
     id: String,
     name: String,
     skill_count: usize,
@@ -141,30 +146,32 @@ struct TrayPresetEntry {
     total_pairs: usize,
 }
 
-impl TrayPresetEntry {
-    fn status(&self) -> TrayPresetStatus {
+impl TraySkillGroupEntry {
+    fn status(&self) -> TraySkillGroupStatus {
         if self.total_pairs == 0 {
-            TrayPresetStatus::Empty
+            TraySkillGroupStatus::Empty
         } else if self.synced_pairs == 0 {
-            TrayPresetStatus::Inactive
+            TraySkillGroupStatus::Inactive
         } else if self.synced_pairs >= self.total_pairs {
-            TrayPresetStatus::Active
+            TraySkillGroupStatus::Active
         } else {
-            TrayPresetStatus::Partial
+            TraySkillGroupStatus::Partial
         }
     }
 }
 
 #[derive(Debug, Clone)]
 struct TrayMenuData {
+    language: TrayLanguage,
     total_skills: usize,
     coding_agent_count: usize,
     update_count: usize,
-    presets: Vec<TrayPresetEntry>,
+    skill_groups: Vec<TraySkillGroupEntry>,
     check_updates_running: bool,
 }
 
 fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData {
+    let language = TrayLanguage::from_setting(store.get_setting("language").ok().flatten());
     let all_skills = store.get_all_skills().unwrap_or_default();
     let total_skills = all_skills.len();
     let update_count = all_skills
@@ -189,7 +196,7 @@ fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData
         .collect();
 
     let scenarios = store.get_all_scenarios().unwrap_or_default();
-    let mut presets = Vec::with_capacity(scenarios.len());
+    let mut skill_groups = Vec::with_capacity(scenarios.len());
     for scenario in scenarios {
         let skill_ids = store
             .get_skill_ids_for_scenario(&scenario.id)
@@ -206,7 +213,7 @@ fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData
                 }
             }
         }
-        presets.push(TrayPresetEntry {
+        skill_groups.push(TraySkillGroupEntry {
             id: scenario.id,
             name: scenario.name,
             skill_count,
@@ -216,78 +223,32 @@ fn collect_tray_menu_data(store: &core::skill_store::SkillStore) -> TrayMenuData
     }
 
     TrayMenuData {
+        language,
         total_skills,
         coding_agent_count,
         update_count,
-        presets,
+        skill_groups,
         check_updates_running: TRAY_CHECK_UPDATES_RUNNING.load(Ordering::SeqCst),
     }
 }
 
-fn format_status_line(data: &TrayMenuData) -> String {
-    let skill_label = if data.total_skills == 1 {
-        "skill"
-    } else {
-        "skills"
-    };
-    let agent_label = if data.coding_agent_count == 1 {
-        "agent"
-    } else {
-        "agents"
-    };
-    format!(
-        "{} {} · {} {} connected",
-        data.total_skills, skill_label, data.coding_agent_count, agent_label
-    )
-}
-
-fn format_tooltip(data: &TrayMenuData) -> String {
-    if data.update_count > 0 {
-        format!(
-            "agent-hub · {} skills · {} agents · {} updates",
-            data.total_skills, data.coding_agent_count, data.update_count
-        )
-    } else {
-        format!(
-            "agent-hub · {} skills · {} agents",
-            data.total_skills, data.coding_agent_count
-        )
-    }
-}
-
-fn preset_menu_item_id(preset: &TrayPresetEntry) -> (String, &'static str) {
-    // E1 semantics: only a fully-active preset removes on click. Partial
+fn skill_group_menu_item_id(skill_group: &TraySkillGroupEntry) -> (String, &'static str) {
+    // E1 semantics: only a fully-active skill group removes on click. Partial
     // and inactive both fill missing pairs up to fully active.
-    match preset.status() {
-        TrayPresetStatus::Active => (
-            format!("{TRAY_PRESET_REMOVE_PREFIX}{}", preset.id),
+    match skill_group.status() {
+        TraySkillGroupStatus::Active => (
+            format!("{TRAY_SKILL_GROUP_REMOVE_PREFIX}{}", skill_group.id),
             "remove",
         ),
-        _ => (format!("{TRAY_PRESET_ADD_PREFIX}{}", preset.id), "add"),
+        _ => (format!("{TRAY_SKILL_GROUP_ADD_PREFIX}{}", skill_group.id), "add"),
     }
 }
 
-fn preset_menu_label(preset: &TrayPresetEntry) -> String {
-    let unit = if preset.skill_count == 1 {
-        "skill"
-    } else {
-        "skills"
-    };
-    match preset.status() {
-        TrayPresetStatus::Active => format!("✓ {} ({} {unit})", preset.name, preset.skill_count),
-        TrayPresetStatus::Partial => format!(
-            "{} ({}/{} synced)",
-            preset.name, preset.synced_pairs, preset.total_pairs
-        ),
-        _ => format!("{} ({} {unit})", preset.name, preset.skill_count),
-    }
-}
-
-fn preset_id_from_menu_id(menu_id: &str) -> Option<(&str, scenario_service_alias::BatchApplyMode)> {
-    if let Some(id) = menu_id.strip_prefix(TRAY_PRESET_ADD_PREFIX) {
+fn skill_group_id_from_menu_id(menu_id: &str) -> Option<(&str, scenario_service_alias::BatchApplyMode)> {
+    if let Some(id) = menu_id.strip_prefix(TRAY_SKILL_GROUP_ADD_PREFIX) {
         return Some((id, scenario_service_alias::BatchApplyMode::Add));
     }
-    if let Some(id) = menu_id.strip_prefix(TRAY_PRESET_REMOVE_PREFIX) {
+    if let Some(id) = menu_id.strip_prefix(TRAY_SKILL_GROUP_REMOVE_PREFIX) {
         return Some((id, scenario_service_alias::BatchApplyMode::Remove));
     }
     None
@@ -326,11 +287,7 @@ fn build_tray_menu_from_data<R: tauri::Runtime>(
     menu.append(&status_line)?;
 
     if data.update_count > 0 {
-        let updates_label = if data.update_count == 1 {
-            "1 skill update available".to_string()
-        } else {
-            format!("{} skill updates available", data.update_count)
-        };
+        let updates_label = format_updates_label(data.update_count, data.language);
         let updates_item =
             MenuItem::with_id(app, TRAY_OPEN_UPDATES_ID, updates_label, true, None::<&str>)?;
         menu.append(&updates_item)?;
@@ -338,51 +295,69 @@ fn build_tray_menu_from_data<R: tauri::Runtime>(
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
 
-    let presets_submenu = Submenu::new(app, "Presets", true)?;
+    let skill_groups_label = match data.language {
+        TrayLanguage::SimplifiedChinese => "技能组",
+        TrayLanguage::TraditionalChinese => "技能組",
+        TrayLanguage::English => "Skill Groups",
+    };
+    let skill_groups_submenu = Submenu::new(app, skill_groups_label, true)?;
     if data.coding_agent_count == 0 {
+        let no_agents_label = match data.language {
+            TrayLanguage::SimplifiedChinese => "没有已连接的编码 Agent",
+            TrayLanguage::TraditionalChinese => "沒有已連接的編碼 Agent",
+            TrayLanguage::English => "No coding agents connected",
+        };
         let no_agents = MenuItem::with_id(
             app,
-            "tray-presets-no-agents",
-            "No coding agents connected",
+            "tray-skill-groups-no-agents",
+            no_agents_label,
             false,
             None::<&str>,
         )?;
-        presets_submenu.append(&no_agents)?;
+        skill_groups_submenu.append(&no_agents)?;
     } else {
         let visible: Vec<_> = data
-            .presets
+            .skill_groups
             .iter()
-            .filter(|p| !matches!(p.status(), TrayPresetStatus::Empty))
+            .filter(|p| !matches!(p.status(), TraySkillGroupStatus::Empty))
             .collect();
         if visible.is_empty() {
-            let empty = MenuItem::with_id(
-                app,
-                "tray-presets-empty",
-                "No presets with skills",
-                false,
-                None::<&str>,
-            )?;
-            presets_submenu.append(&empty)?;
+            let empty_label = match data.language {
+                TrayLanguage::SimplifiedChinese => "没有包含技能的技能组",
+                TrayLanguage::TraditionalChinese => "沒有包含技能的技能組",
+                TrayLanguage::English => "No skill groups with skills",
+            };
+            let empty =
+                MenuItem::with_id(app, "tray-skill-groups-empty", empty_label, false, None::<&str>)?;
+            skill_groups_submenu.append(&empty)?;
         } else {
-            for preset in visible {
-                let (id, _action) = preset_menu_item_id(preset);
-                let label = preset_menu_label(preset);
+            for skill_group in visible {
+                let (id, _action) = skill_group_menu_item_id(skill_group);
+                let label = skill_group_menu_label(skill_group, data.language);
                 let item = MenuItem::with_id(app, id, label, true, None::<&str>)?;
-                presets_submenu.append(&item)?;
+                skill_groups_submenu.append(&item)?;
             }
         }
     }
-    menu.append(&presets_submenu)?;
+    menu.append(&skill_groups_submenu)?;
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
 
-    let show_item = MenuItem::with_id(app, "show", "Open agent-hub", true, None::<&str>)?;
+    let show_label = match data.language {
+        TrayLanguage::SimplifiedChinese => "打开 agent-hub",
+        TrayLanguage::TraditionalChinese => "開啟 agent-hub",
+        TrayLanguage::English => "Open agent-hub",
+    };
+    let show_item = MenuItem::with_id(app, "show", show_label, true, None::<&str>)?;
     menu.append(&show_item)?;
 
-    let check_label = if data.check_updates_running {
-        "Checking for updates..."
-    } else {
-        "Check for skill updates"
+    let check_label = match (data.language, data.check_updates_running) {
+        (TrayLanguage::SimplifiedChinese, true) => "正在检查技能更新...",
+        (TrayLanguage::TraditionalChinese, true) => "正在檢查技能更新...",
+        (TrayLanguage::English, true) => "Checking for updates...",
+        (TrayLanguage::SimplifiedChinese, false) => "检查技能更新",
+        (TrayLanguage::TraditionalChinese, false) => "檢查技能更新",
+        (TrayLanguage::English, false) => "Check for skill updates",
     };
     let check_item = MenuItem::with_id(
         app,
@@ -396,7 +371,11 @@ fn build_tray_menu_from_data<R: tauri::Runtime>(
     let folder_item = MenuItem::with_id(
         app,
         TRAY_OPEN_FOLDER_ID,
-        "Open Skills Folder",
+        match data.language {
+            TrayLanguage::SimplifiedChinese => "打开技能文件夹",
+            TrayLanguage::TraditionalChinese => "開啟技能資料夾",
+            TrayLanguage::English => "Open Skills Folder",
+        },
         true,
         None::<&str>,
     )?;
@@ -404,7 +383,12 @@ fn build_tray_menu_from_data<R: tauri::Runtime>(
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
 
-    let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let quit_label = match data.language {
+        TrayLanguage::SimplifiedChinese => "退出",
+        TrayLanguage::TraditionalChinese => "退出",
+        TrayLanguage::English => "Quit",
+    };
+    let quit_item = MenuItem::with_id(app, "quit", quit_label, true, None::<&str>)?;
     menu.append(&quit_item)?;
 
     Ok((menu, format_tooltip(data)))
@@ -447,7 +431,7 @@ pub(crate) fn refresh_tray_menu<R: tauri::Runtime>(
 }
 
 /// Coalesce bursts into at most one tray rebuild per 300 ms window. Avoids
-/// rebuilding the menu N times when `PresetBar` loops `skill × agent` calls
+/// rebuilding the menu N times when `SkillGroupBar` loops `skill × agent` calls
 /// through `sync_skill_to_tool`. The first request schedules the rebuild;
 /// any further requests during the wait window are absorbed.
 static TRAY_REFRESH_PENDING: AtomicBool = AtomicBool::new(false);
@@ -467,9 +451,9 @@ pub(crate) fn schedule_tray_refresh(app: &tauri::AppHandle) {
     });
 }
 
-fn apply_preset_from_tray<R: tauri::Runtime>(
+fn apply_skill_group_from_tray<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
-    preset_id: &str,
+    skill_group_id: &str,
     mode: core::scenario_service::BatchApplyMode,
 ) {
     let store = app
@@ -477,32 +461,32 @@ fn apply_preset_from_tray<R: tauri::Runtime>(
         .inner()
         .clone();
     let app = app.clone();
-    let preset_id = preset_id.to_string();
+    let skill_group_id = skill_group_id.to_string();
 
     tauri::async_runtime::spawn(async move {
         let store_for_task = store.clone();
-        let preset_id_for_task = preset_id.clone();
+        let skill_group_id_for_task = skill_group_id.clone();
         // Result variants:
         //   Ok(true)  — the batch actually ran (do success-side effects)
         //   Ok(false) — skipped because another apply is in-flight or the
-        //               preset/agent set was empty (no real work happened, so
+        //               skill group/agent set was empty (no real work happened, so
         //               do NOT emit app-files-changed: that would lie to the
         //               frontend about state changes that didn't occur)
         //   Err(_)    — failure inside the batch
         let result = tauri::async_runtime::spawn_blocking(move || -> Result<bool, String> {
-            let _guard = match TRAY_PRESET_APPLY_LOCK.try_lock() {
+            let _guard = match TRAY_SKILL_GROUP_APPLY_LOCK.try_lock() {
                 Ok(guard) => guard,
                 Err(_) => {
                     log::debug!(
-                        "Another preset apply in flight, ignoring tray click for {preset_id_for_task}"
+                        "Another skill group apply in flight, ignoring tray click for {skill_group_id_for_task}"
                     );
                     return Ok(false);
                 }
             };
-            core::scenario_service::ensure_scenario_exists(&store_for_task, &preset_id_for_task)
+            core::scenario_service::ensure_scenario_exists(&store_for_task, &skill_group_id_for_task)
                 .map_err(|e| e.to_string())?;
             let skill_ids = store_for_task
-                .get_skill_ids_for_scenario(&preset_id_for_task)
+                .get_skill_ids_for_scenario(&skill_group_id_for_task)
                 .map_err(|e| e.to_string())?;
             if skill_ids.is_empty() {
                 return Ok(false);
@@ -532,21 +516,21 @@ fn apply_preset_from_tray<R: tauri::Runtime>(
         match result {
             Ok(Ok(true)) => {
                 if let Err(err) = refresh_tray_menu(&app) {
-                    log::warn!("Failed to refresh tray menu after preset apply: {err}");
+                    log::warn!("Failed to refresh tray menu after skill group apply: {err}");
                 }
                 if let Err(err) = app.emit("app-files-changed", ()) {
-                    log::warn!("Failed to emit app-files-changed after tray preset apply: {err}");
+                    log::warn!("Failed to emit app-files-changed after tray skill group apply: {err}");
                 }
             }
             Ok(Ok(false)) => {
                 // Refresh the menu so the user still sees fresh status (no
                 // app-files-changed because nothing actually changed on disk).
                 if let Err(err) = refresh_tray_menu(&app) {
-                    log::debug!("Failed to refresh tray menu after skipped preset apply: {err}");
+                    log::debug!("Failed to refresh tray menu after skipped skill group apply: {err}");
                 }
             }
-            Ok(Err(err)) => log::error!("Tray preset apply failed for {preset_id}: {err}"),
-            Err(err) => log::error!("Tray preset apply task panicked: {err}"),
+            Ok(Err(err)) => log::error!("Tray skill group apply failed for {skill_group_id}: {err}"),
+            Err(err) => log::error!("Tray skill group apply task panicked: {err}"),
         }
     });
 }
@@ -571,10 +555,10 @@ fn check_updates_from_tray<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 
     tauri::async_runtime::spawn(async move {
         let store_for_task = store.clone();
-        // Note: this intentionally does NOT take TRAY_PRESET_APPLY_LOCK.
-        // Update checks only mutate `update_status` columns; preset apply
+        // Note: this intentionally does NOT take TRAY_SKILL_GROUP_APPLY_LOCK.
+        // Update checks only mutate `update_status` columns; skill group apply
         // mutates `skill_targets`. They're orthogonal, and sharing a lock
-        // would silently drop preset clicks made during a long-running check.
+        // would silently drop skill group clicks made during a long-running check.
         let result = tauri::async_runtime::spawn_blocking(move || {
             let proxy_url = store_for_task.proxy_url();
             let ids: Vec<String> = store_for_task
@@ -728,16 +712,16 @@ fn ensure_tray_icon(app: &tauri::AppHandle) -> tauri::Result<()> {
                     check_updates_from_tray(app);
                 }
                 other => {
-                    if let Some((preset_id, mode)) = preset_id_from_menu_id(other) {
-                        log::debug!("Tray menu clicked: preset {preset_id} mode {:?}", mode);
-                        apply_preset_from_tray(app, preset_id, mode);
+                    if let Some((skill_group_id, mode)) = skill_group_id_from_menu_id(other) {
+                        log::debug!("Tray menu clicked: skill group {skill_group_id} mode {:?}", mode);
+                        apply_skill_group_from_tray(app, skill_group_id, mode);
                     }
                 }
             }
         });
 
     #[cfg(target_os = "macos")]
-    let tray_icon = load_tray_template_icon().or_else(|| load_custom_tray_icon());
+    let tray_icon = load_tray_template_icon().or_else(load_custom_tray_icon);
     #[cfg(not(target_os = "macos"))]
     let tray_icon = load_custom_tray_icon();
 
@@ -1059,7 +1043,7 @@ pub fn run() {
             commands::tools::remove_custom_tool,
             // Skills
             commands::skills::get_managed_skills,
-            commands::skills::get_skills_for_preset,
+            commands::skills::get_skills_for_skill_group,
             commands::skills::get_skill_document,
             commands::skills::get_source_skill_document,
             commands::skills::get_skill_source_diff,
@@ -1156,6 +1140,7 @@ pub fn run() {
             commands::projects::get_project_agent_targets,
             commands::projects::get_project_skills,
             commands::projects::get_project_skill_document,
+            commands::projects::get_project_skill_files,
             commands::projects::import_project_skill_to_center,
             commands::projects::export_skill_to_project,
             commands::projects::update_project_skill_to_center,
@@ -1169,21 +1154,21 @@ pub fn run() {
             commands::agent_workspace::import_global_local_skill_to_center,
             commands::agent_workspace::update_global_local_skill_from_center,
             commands::agent_workspace::delete_global_local_skill,
-            // Presets
-            commands::presets::get_presets,
-            commands::presets::get_active_preset,
-            commands::presets::create_preset,
-            commands::presets::update_preset,
-            commands::presets::delete_preset,
-            commands::presets::switch_preset,
-            commands::presets::apply_preset_to_default,
-            commands::presets::apply_preset_to_coding_agents,
-            commands::presets::add_skill_to_preset,
-            commands::presets::remove_skill_from_preset,
-            commands::presets::reorder_presets,
+            // SkillGroups
+            commands::skill_groups::get_skill_groups,
+            commands::skill_groups::get_active_skill_group,
+            commands::skill_groups::create_skill_group,
+            commands::skill_groups::update_skill_group,
+            commands::skill_groups::delete_skill_group,
+            commands::skill_groups::switch_skill_group,
+            commands::skill_groups::apply_skill_group_to_default,
+            commands::skill_groups::apply_skill_group_to_coding_agents,
+            commands::skill_groups::add_skill_to_skill_group,
+            commands::skill_groups::remove_skill_from_skill_group,
+            commands::skill_groups::reorder_skill_groups,
             commands::projects::reorder_projects,
-            commands::presets::get_preset_skill_order,
-            commands::presets::reorder_preset_skills,
+            commands::skill_groups::get_skill_group_skill_order,
+            commands::skill_groups::reorder_skill_group_skills,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

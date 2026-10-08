@@ -1,33 +1,33 @@
-import type { ManagedSkill, Preset } from "./tauri";
+import type { ManagedSkill, SkillGroup } from "./tauri";
 
-export type PresetStatus = "active" | "partial" | "inactive" | "empty";
+export type SkillGroupStatus = "active" | "partial" | "inactive" | "empty";
 
-export interface PresetStatusResult {
-  status: PresetStatus;
+export interface SkillGroupStatusResult {
+  status: SkillGroupStatus;
   installed: number;
   total: number;
 }
 
-/** Granularity of the preset status tally. */
-export type PresetStatusMode = "agent-pair" | "logical-skill";
+/** Granularity of the skillGroup status tally. */
+export type SkillGroupStatusMode = "agent-pair" | "logical-skill";
 
-/** How much of a preset is installed in the current workspace. */
-export function computePresetStatus(
-  preset: Preset,
+/** How much of a skillGroup is installed in the current workspace. */
+export function computeSkillGroupStatus(
+  skillGroup: SkillGroup,
   skills: ManagedSkill[],
   agentKeys: string[],
   existsInWorkspace: (skill: ManagedSkill, agentKey: string) => boolean,
-  mode: PresetStatusMode = "agent-pair",
-): PresetStatusResult {
-  const presetSkills = skills.filter((s) => s.preset_ids.includes(preset.id));
-  if (presetSkills.length === 0 || agentKeys.length === 0) {
+  mode: SkillGroupStatusMode = "agent-pair",
+): SkillGroupStatusResult {
+  const skillGroupSkills = skills.filter((s) => s.skillGroup_ids.includes(skillGroup.id));
+  if (skillGroupSkills.length === 0 || agentKeys.length === 0) {
     return { status: "empty", installed: 0, total: 0 };
   }
   if (mode === "logical-skill") {
-    const total = presetSkills.length;
+    const total = skillGroupSkills.length;
     let installed = 0;
     let anyCopy = false;
-    for (const skill of presetSkills) {
+    for (const skill of skillGroupSkills) {
       const deployed = agentKeys.filter((agentKey) =>
         existsInWorkspace(skill, agentKey),
       ).length;
@@ -37,15 +37,15 @@ export function computePresetStatus(
     if (installed === total) return { status: "active", installed, total };
     // A skill that reached some of the project's agents but not all of them
     // is not installed — but it is not absent either. Reporting it inactive
-    // would hide a half-applied preset behind the same grey pill as one that
+    // would hide a half-applied skillGroup behind the same grey pill as one that
     // was never applied at all.
     if (!anyCopy) return { status: "inactive", installed, total };
     return { status: "partial", installed, total };
   }
 
-  const total = presetSkills.length * agentKeys.length;
+  const total = skillGroupSkills.length * agentKeys.length;
   let installed = 0;
-  for (const skill of presetSkills) {
+  for (const skill of skillGroupSkills) {
     for (const agentKey of agentKeys) {
       if (existsInWorkspace(skill, agentKey)) installed++;
     }

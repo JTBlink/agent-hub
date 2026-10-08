@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
-import { PRESET_ICON_OPTIONS, getPresetIconOption } from "../lib/presetIcons";
+import { SKILL_GROUP_ICON_OPTIONS, getSkillGroupIconOption } from "../lib/skillGroupIcons";
 
 interface Props {
   open: boolean;
@@ -17,7 +17,7 @@ interface Props {
   ) => Promise<void>;
 }
 
-export function RenamePresetDialog({
+export function RenameSkillGroupDialog({
   open,
   currentName,
   currentIcon,
@@ -27,7 +27,7 @@ export function RenamePresetDialog({
 }: Props) {
   const { t } = useTranslation();
   // The icon the sidebar actually shows — inferred from the name when none is stored.
-  const shownIcon = getPresetIconOption({
+  const shownIcon = getSkillGroupIconOption({
     name: currentName,
     description: currentDescription ?? null,
     icon: currentIcon ?? null,
@@ -59,7 +59,7 @@ export function RenamePresetDialog({
     setLoading(true);
     try {
       // Only send an icon the user picked: saving a name or description must
-      // not pin the inferred icon of a preset that has none stored.
+      // not pin the inferred icon of a skillGroup that has none stored.
       await onRename(
         name.trim(),
         icon !== shownIcon ? icon : currentIcon || undefined,
@@ -96,13 +96,13 @@ export function RenamePresetDialog({
         <div className="space-y-3">
           <div>
             <label className="block text-[13px] font-medium text-tertiary mb-1">
-              {t("preset.name")}
+              {t("skillGroup.name")}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t("preset.namePlaceholder")}
+              placeholder={t("skillGroup.namePlaceholder")}
               className={inputClass}
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleRename()}
@@ -110,23 +110,23 @@ export function RenamePresetDialog({
           </div>
           <div>
             <label className="block text-[13px] font-medium text-tertiary mb-1">
-              {t("preset.description")}
+              {t("skillGroup.description")}
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("preset.descPlaceholder")}
+              placeholder={t("skillGroup.descPlaceholder")}
               className={inputClass}
               onKeyDown={(e) => e.key === "Enter" && handleRename()}
             />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-tertiary mb-1.5">
-              {t("preset.icon")}
+              {t("skillGroup.icon")}
             </label>
             <div className="grid max-h-[220px] grid-cols-[repeat(auto-fill,minmax(36px,1fr))] gap-1.5 overflow-y-auto pr-1">
-              {PRESET_ICON_OPTIONS.map((option) => {
+              {SKILL_GROUP_ICON_OPTIONS.map((option) => {
                 const Icon = option.icon;
                 const selected = option.key === icon;
                 return (

@@ -25,7 +25,7 @@ export function getDefaultExportAgents(
   const enabledKeys = enabledInstalledAgentKeys(targets);
   const availableKeys = new Set(enabledKeys);
   // Priority agents first, then every other enabled agent in its detected
-  // order. All enabled agents are included: preset export must reach each
+  // order. All enabled agents are included: skillGroup export must reach each
   // one the user has installed and enabled (issue #400 — non-priority
   // agents like "pi" were silently dropped when any priority agent was on).
   const prioritized = PROJECT_EXPORT_AGENT_PRIORITY.filter((key) =>

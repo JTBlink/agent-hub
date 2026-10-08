@@ -36,7 +36,7 @@ import {
 } from "../components/AgentToggleSection";
 import { ToggleSwitch } from "../components/ToggleSwitch";
 import { ProjectAgentDots } from "../components/ProjectAgentDots";
-import { PresetBar } from "../components/PresetBar";
+import { SkillGroupBar } from "../components/SkillGroupBar";
 import { SkillMarkdown } from "../components/SkillMarkdown";
 import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
 import {
@@ -61,7 +61,7 @@ import { AddSkillsSheet } from "../components/AddSkillsSheet";
 const projectLastUsedAgentsKey = (projectId: string) =>
   `project_last_used_export_agents:${projectId}`;
 
-interface ProjectSkillGroup {
+interface ProjectSkillEntry {
   id: string;
   name: string;
   dir_name: string;
@@ -148,10 +148,10 @@ export function ProjectDetail() {
   const { t } = useTranslation();
   const {
     projects,
-    presets,
+    skillGroups,
     managedSkills,
     refreshManagedSkills,
-    refreshPresets,
+    refreshSkillGroups,
     refreshProjects,
   } = useApp();
   const [skills, setSkills] = useState<ProjectSkill[]>([]);
@@ -165,7 +165,7 @@ export function ProjectDetail() {
   );
   const [search, setSearch] = useState("");
   const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
-  const [detailSkill, setDetailSkill] = useState<ProjectSkillGroup | null>(
+  const [detailSkill, setDetailSkill] = useState<ProjectSkillEntry | null>(
     null,
   );
   const [docContent, setDocContent] = useState<string | null>(null);
@@ -181,7 +181,7 @@ export function ProjectDetail() {
   const [batchUpdatingCenter, setBatchUpdatingCenter] = useState(false);
   const [batchUpdatingProject, setBatchUpdatingProject] = useState(false);
   const [centerConflict, setCenterConflict] = useState<{
-    skill: ProjectSkillGroup;
+    skill: ProjectSkillEntry;
     variants: ProjectSkill[];
   } | null>(null);
   const [centerConflictAgent, setCenterConflictAgent] = useState<string | null>(
@@ -193,7 +193,7 @@ export function ProjectDetail() {
     agent: string;
   } | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ProjectSkillGroup | null>(
+  const [deleteTarget, setDeleteTarget] = useState<ProjectSkillEntry | null>(
     null,
   );
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
@@ -217,7 +217,7 @@ export function ProjectDetail() {
   };
 
   const project = projects.find((p) => p.id === id);
-  const getSkillKey = useCallback((skill: Pick<ProjectSkillGroup, "id">) => {
+  const getSkillKey = useCallback((skill: Pick<ProjectSkillEntry, "id">) => {
     return skill.id;
   }, []);
 
@@ -278,8 +278,8 @@ export function ProjectDetail() {
     }
   }, [project, loading, navigate]);
 
-  const groupedSkills = useMemo<ProjectSkillGroup[]>(() => {
-    const groups = new Map<string, ProjectSkillGroup>();
+  const groupedSkills = useMemo<ProjectSkillEntry[]>(() => {
+    const groups = new Map<string, ProjectSkillEntry>();
     for (const skill of skills) {
       const key = skill.relative_path.toLowerCase();
       const existing = groups.get(key);
@@ -437,7 +437,7 @@ export function ProjectDetail() {
     return map;
   }, [skills]);
 
-  const projectPresetVariants = useMemo(() => {
+  const projectSkillGroupVariants = useMemo(() => {
     const map = new Map<string, ProjectSkill>();
     for (const skill of skills) {
       if (!skill.center_skill_id) continue;
@@ -446,10 +446,10 @@ export function ProjectDetail() {
     return map;
   }, [skills]);
 
-  const findProjectPresetVariant = useCallback(
+  const findProjectSkillGroupVariant = useCallback(
     (skill: ManagedSkill, agentKey: string) =>
-      projectPresetVariants.get(`${skill.id}::${agentKey}`) ?? null,
-    [projectPresetVariants],
+      projectSkillGroupVariants.get(`${skill.id}::${agentKey}`) ?? null,
+    [projectSkillGroupVariants],
   );
 
   const selectedExportAgents = useMemo(
@@ -513,9 +513,9 @@ export function ProjectDetail() {
     return selectedExportAgents.filter((k) => availableKeys.has(k));
   }, [exportTargets, lastUsedExportAgents, selectedExportAgents]);
 
-  const presetBarAgentKeys = useMemo(() => {
+  const skillGroupBarAgentKeys = useMemo(() => {
     // The real targets load asynchronously; until they arrive `exportTargets`
-    // stands in with a claude_code-only singleton. Applying a preset off that
+    // stands in with a claude_code-only singleton. Applying a skillGroup off that
     // stand-in would deploy to Claude Code alone — the exact failure #400
     // reported — so keep the bar out of the DOM until the targets are real.
     if (projectAgentTargets.length === 0) return [];
@@ -593,7 +593,7 @@ export function ProjectDetail() {
     [selectedSkills, anyDisabled],
   );
 
-  const handleOpenDetail = async (skill: ProjectSkillGroup) => {
+  const handleOpenDetail = async (skill: ProjectSkillEntry) => {
     setDetailSkill(skill);
     setDocContent(null);
     setDocLoading(true);
@@ -643,7 +643,7 @@ export function ProjectDetail() {
   // project_newer, so nothing stops it. Refuse and name the conflict instead,
   // the way 1.34.0 answers a write that would destroy something.
   const pushSkillToCenterAndAlign = async (
-    skill: ProjectSkillGroup,
+    skill: ProjectSkillEntry,
     selectedWinner?: ProjectSkill,
   ): Promise<{ alignFailed: number; conflicting: number }> => {
     if (!id) return { alignFailed: 0, conflicting: 0 };
@@ -684,7 +684,7 @@ export function ProjectDetail() {
     return { alignFailed, conflicting: 0 };
   };
 
-  const handleUpdateCenter = async (skill: ProjectSkillGroup) => {
+  const handleUpdateCenter = async (skill: ProjectSkillEntry) => {
     if (!id) return;
     setUpdatingCenterSkill(getSkillKey(skill));
     try {
@@ -709,7 +709,7 @@ export function ProjectDetail() {
       }
       await Promise.all([
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
         loadSkills(),
       ]);
     } catch (error: unknown) {
@@ -746,7 +746,7 @@ export function ProjectDetail() {
       }
       await Promise.all([
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
         loadSkills(),
       ]);
       setCenterConflict(null);
@@ -759,7 +759,7 @@ export function ProjectDetail() {
     }
   };
 
-  const handleUpdateProject = async (skill: ProjectSkillGroup) => {
+  const handleUpdateProject = async (skill: ProjectSkillEntry) => {
     if (!id) return;
     setUpdatingProjectSkill(getSkillKey(skill));
     try {
@@ -787,7 +787,7 @@ export function ProjectDetail() {
     }
   };
 
-  const handleToggleSkill = async (skill: ProjectSkillGroup) => {
+  const handleToggleSkill = async (skill: ProjectSkillEntry) => {
     if (!id) return;
     setTogglingSkill(getSkillKey(skill));
     try {
@@ -816,7 +816,7 @@ export function ProjectDetail() {
   };
 
   const handleToggleDetailAgent = async (
-    skill: ProjectSkillGroup,
+    skill: ProjectSkillEntry,
     agentKey: string,
     enabled: boolean,
   ) => {
@@ -1003,7 +1003,7 @@ export function ProjectDetail() {
       }
       await Promise.all([
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
         loadSkills(),
       ]);
     } finally {
@@ -1082,14 +1082,14 @@ export function ProjectDetail() {
     await Promise.all([refreshManagedSkills(), loadSkills()]);
   };
 
-  const presetSkillExistsInProject = useCallback(
+  const skillGroupSkillExistsInProject = useCallback(
     (skill: ManagedSkill, agentKey: string) => {
-      return findProjectPresetVariant(skill, agentKey) !== null;
+      return findProjectSkillGroupVariant(skill, agentKey) !== null;
     },
-    [findProjectPresetVariant],
+    [findProjectSkillGroupVariant],
   );
 
-  const handleAddPresetSkillToProject = useCallback(
+  const handleAddSkillGroupSkillToProject = useCallback(
     async (skill: ManagedSkill, agentKey: string) => {
       if (!id) return;
       await api.exportSkillToProject(skill.id, id, [agentKey]);
@@ -1097,17 +1097,17 @@ export function ProjectDetail() {
     [id],
   );
 
-  const handleRemovePresetSkillFromProject = useCallback(
+  const handleRemoveSkillGroupSkillFromProject = useCallback(
     async (skill: ManagedSkill, agentKey: string) => {
       if (!id) return;
-      const projectVariant = findProjectPresetVariant(skill, agentKey);
+      const projectVariant = findProjectSkillGroupVariant(skill, agentKey);
       if (!projectVariant) return;
       await api.deleteProjectSkill(id, projectVariant.relative_path, agentKey);
     },
-    [findProjectPresetVariant, id, t],
+    [findProjectSkillGroupVariant, id, t],
   );
 
-  const handlePresetActionComplete = useCallback(async () => {
+  const handleSkillGroupActionComplete = useCallback(async () => {
     await Promise.all([loadSkills(), refreshProjects()]);
   }, [loadSkills, refreshProjects]);
 
@@ -1318,17 +1318,17 @@ export function ProjectDetail() {
           </div>
         )}
 
-        {/* Preset bar */}
-        {presets.length > 0 && presetBarAgentKeys.length > 0 && (
-          <PresetBar
-            presets={presets}
+        {/* SkillGroup bar */}
+        {skillGroups.length > 0 && skillGroupBarAgentKeys.length > 0 && (
+          <SkillGroupBar
+            skillGroups={skillGroups}
             managedSkills={managedSkills}
-            agentKeys={presetBarAgentKeys}
+            agentKeys={skillGroupBarAgentKeys}
             statusMode="logical-skill"
-            existsInWorkspace={presetSkillExistsInProject}
-            onAddSkill={handleAddPresetSkillToProject}
-            onRemoveSkill={handleRemovePresetSkillFromProject}
-            onComplete={handlePresetActionComplete}
+            existsInWorkspace={skillGroupSkillExistsInProject}
+            onAddSkill={handleAddSkillGroupSkillToProject}
+            onRemoveSkill={handleRemoveSkillGroupSkillFromProject}
+            onComplete={handleSkillGroupActionComplete}
           />
         )}
       </div>
@@ -1940,30 +1940,36 @@ function ProjectSkillConflictPreview({
   onSelectAgent: (agent: string) => void;
 }) {
   const { t } = useTranslation();
-  const [documents, setDocuments] = useState<Record<string, string>>({});
+  const [filesByAgent, setFilesByAgent] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [loading, setLoading] = useState(true);
   const [compareAgent, setCompareAgent] = useState<string | null>(null);
+  const [activeFile, setActiveFile] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setDocuments({});
+    setFilesByAgent({});
     Promise.all(
       variants.map(async (variant) => {
         try {
-          const document = await api.getProjectSkillDocument(
+          const files = await api.getProjectSkillFiles(
             projectId,
             variant.relative_path,
             variant.agent,
           );
-          return [variant.agent, document.content] as const;
+          return [
+            variant.agent,
+            Object.fromEntries(files.map((file) => [file.filename, file.content])),
+          ] as const;
         } catch {
-          return [variant.agent, ""] as const;
+          return [variant.agent, {}] as const;
         }
       }),
     ).then((entries) => {
       if (cancelled) return;
-      setDocuments(Object.fromEntries(entries));
+      setFilesByAgent(Object.fromEntries(entries));
       setLoading(false);
     });
     return () => {
@@ -1986,6 +1992,21 @@ function ProjectSkillConflictPreview({
   const compareVariant = variants.find(
     (variant) => variant.agent === compareAgent,
   );
+  const selectedFiles = selectedVariant
+    ? filesByAgent[selectedVariant.agent] ?? {}
+    : {};
+  const compareFiles = compareVariant
+    ? filesByAgent[compareVariant.agent] ?? {}
+    : {};
+  const filenames = Array.from(
+    new Set([...Object.keys(selectedFiles), ...Object.keys(compareFiles)]),
+  ).sort();
+  const changedFiles = filenames.filter(
+    (filename) => selectedFiles[filename] !== compareFiles[filename],
+  );
+  const file = activeFile && filenames.includes(activeFile)
+    ? activeFile
+    : changedFiles[0] ?? filenames[0] ?? null;
 
   return (
     <div className="space-y-3">
@@ -2020,7 +2041,12 @@ function ProjectSkillConflictPreview({
         </div>
       ) : selectedVariant && compareVariant ? (
         <>
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+            <span className="rounded bg-accent/10 px-2 py-1 text-accent">
+              {t("project.updateCenterSelectedVersion", {
+                agent: selectedVariant.agent_display_name,
+              })}
+            </span>
             <span>{t("project.updateCenterDiffLabel")}</span>
             {variants
               .filter((variant) => variant.agent !== selectedAgent)
@@ -2040,11 +2066,44 @@ function ProjectSkillConflictPreview({
                 </button>
               ))}
           </div>
-          <DocumentDiffViewer
-            original={documents[compareVariant.agent] ?? ""}
-            updated={documents[selectedVariant.agent] ?? ""}
-            className="max-h-64 overflow-y-auto"
-          />
+          {changedFiles.length > 0 ? (
+            <>
+              <div className="flex max-h-20 flex-wrap gap-1 overflow-y-auto">
+                {changedFiles.map((filename) => (
+                  <button
+                    key={filename}
+                    type="button"
+                    onClick={() => setActiveFile(filename)}
+                    className={cn(
+                      "rounded px-2 py-1 font-mono text-[11px]",
+                      file === filename
+                        ? "bg-accent text-white"
+                        : "bg-surface-hover text-secondary",
+                    )}
+                  >
+                    {filename}
+                  </button>
+                ))}
+              </div>
+              {file ? (
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted">
+                    <span className="font-mono">{file}</span>
+                    <span>{t("project.updateCenterDiffLegend")}</span>
+                  </div>
+                  <DocumentDiffViewer
+                    original={compareFiles[file] ?? ""}
+                    updated={selectedFiles[file] ?? ""}
+                    className="max-h-64 overflow-y-auto"
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-lg border border-border-subtle px-3 py-4 text-center text-[12px] text-muted">
+              {t("project.updateCenterNoDiff")}
+            </div>
+          )}
         </>
       ) : null}
     </div>
@@ -2062,7 +2121,7 @@ function ProjectSkillDetailPanel({
   centerDocLoading,
   onClose,
 }: {
-  skill: ProjectSkillGroup;
+  skill: ProjectSkillEntry;
   targets: ProjectAgentTarget[];
   togglingAgent: string | null;
   onToggleAgent: (agentKey: string, enabled: boolean) => void;

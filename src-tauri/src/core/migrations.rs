@@ -300,7 +300,7 @@ fn migrate_v6_to_v7(conn: &Connection) -> Result<()> {
 /// It was written behind a "save default agents" action that 688fc9b removed
 /// along with the old Add Skills flow, leaving the reader behind. Users who
 /// used that button still carry a frozen subset they can neither see nor
-/// change, and it silently narrows which agents a project preset reaches —
+/// change, and it silently narrows which agents a project skill group reaches —
 /// exactly the failure #400 reported, but invisible and unfixable from the UI.
 /// A preference with no way to inspect or edit it is a trap, not a preference.
 fn migrate_v7_to_v8(conn: &Connection) -> Result<()> {

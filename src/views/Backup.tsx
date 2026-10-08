@@ -70,7 +70,7 @@ function formatBytes(bytes: number) {
 
 export function Backup() {
   const { t } = useTranslation();
-  const { managedSkills, refreshManagedSkills, refreshPresets } = useApp();
+  const { managedSkills, refreshManagedSkills, refreshSkillGroups } = useApp();
   const [gitStatus, setGitStatus] = useState<GitBackupStatus | null>(null);
   const [remoteInput, setRemoteInput] = useState("");
   const [remoteConfig, setRemoteConfig] = useState("");
@@ -263,13 +263,13 @@ export function Backup() {
       void refreshVersions();
       void refreshPendingConflicts();
       // A completed background round may have merged remote changes into the
-      // library (multi-device auto-sync reindexes skills + presets into the
+      // library (multi-device auto-sync reindexes skills + skillGroups into the
       // DB). The merge is an app-internal write, so the file watcher's
       // self-write mute can swallow it — refresh here so the sidebar reflects
-      // remote presets/skills without waiting for a restart (#302).
+      // remote skillGroups/skills without waiting for a restart (#302).
       if (event.payload.ok && !event.payload.pending) {
         void refreshManagedSkills();
-        void refreshPresets();
+        void refreshSkillGroups();
       }
     });
     return () => {
@@ -281,7 +281,7 @@ export function Backup() {
     refreshPendingConflicts,
     refreshVersions,
     refreshManagedSkills,
-    refreshPresets,
+    refreshSkillGroups,
   ]);
 
   const handleToggleAutoBackup = async () => {
@@ -441,7 +441,7 @@ export function Backup() {
       await Promise.all([
         refreshGitStatus(true),
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
         refreshVersions(),
       ]);
     } catch (error) {
@@ -481,7 +481,7 @@ export function Backup() {
       await Promise.all([
         refreshGitStatus(true),
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
         refreshVersions(),
       ]);
     } catch (error) {
@@ -544,7 +544,7 @@ export function Backup() {
         toast.success(t("settings.gitPullSuccess"));
       }
       if (merge) {
-        await Promise.all([refreshManagedSkills(), refreshPresets()]);
+        await Promise.all([refreshManagedSkills(), refreshSkillGroups()]);
       }
       if (outcome.pushed && outcome.snapshot_tag) {
         toast.success(
@@ -602,9 +602,9 @@ export function Backup() {
         refreshGitStatus(),
         refreshVersions(),
         refreshManagedSkills(),
-        // "Use remote"/"keep both" reindex metadata, which can move preset
+        // "Use remote"/"keep both" reindex metadata, which can move skillGroup
         // memberships — keep the sidebar in sync (#302).
-        refreshPresets(),
+        refreshSkillGroups(),
       ]);
     } catch (error) {
       toast.error(mapGitError(error));
@@ -677,7 +677,7 @@ export function Backup() {
       await Promise.all([
         refreshGitStatus(true),
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
         refreshVersions(),
       ]);
     } else {
@@ -777,7 +777,7 @@ export function Backup() {
         refreshGitStatus(),
         refreshVersions(),
         refreshManagedSkills(),
-        refreshPresets(),
+        refreshSkillGroups(),
       ]);
       setRestoreVersionTag(null);
     } catch (error) {

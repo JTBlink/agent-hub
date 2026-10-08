@@ -9,8 +9,8 @@
     "lobsterAgents": "龍蝦 Agent",
     "installSkills": "安裝 Skills",
     "backup": "備份",
-    "presets": "技能組",
-    "newPreset": "新增技能組",
+    "skillGroups": "技能組",
+    "newSkillGroup": "新增技能組",
     "projects": "專案工作區",
     "addProject": "關聯專案",
     "settings": "設定"
@@ -24,7 +24,7 @@
         "title": "推薦工作流程",
         "description": "單一 Agent 用戶：安裝 Skills → 開啟全域工作區 → 點擊技能組標籤啟用，或點 + 新增 Skills 從技能庫挑選並即時切換目標 Agent。多專案用戶：開啟專案工作區，同樣可用技能組標籤或 + 新增 Skills 彈窗為該專案的 Agent 設定 Skills。多機用戶：在設定頁開啟 Git 備份，把中央倉庫在多台裝置間同步。"
       },
-      "presets": {
+      "skillGroups": {
         "title": "技能組",
         "description": "技能組是按用途整理的一組 Skills，例如「日常開發」。在側邊欄選擇技能組可檢視和編輯成員；在工作區點擊技能組按鈕可批次加入或移除其中的 Skills。全部加入後顯示 ✓，部分加入時顯示數量。修改組內成員不會自動更新既有部署。"
       },
@@ -60,7 +60,7 @@
     "placeholder": "跳轉到技能、技能組、專案或操作…",
     "empty": "沒有符合項目，換個關鍵字試試。",
     "skills": "技能",
-    "presets": "技能組",
+    "skillGroups": "技能組",
     "projects": "專案",
     "actions": "操作",
     "scanImport": "本機 Skills 管理",
@@ -253,7 +253,7 @@
     "defaultLocationMissing": "預設目標位置缺失",
     "openLocationSettings": "開啟設定",
     "applyCallout": "點擊技能組只會開啟瀏覽。使用「套用技能組」可把其中的 Skills 加入到或移出選中的 Agent。",
-    "subtitle": "技能組中已啟用 {{count}} 個 Skills（目前組：「{{preset}}」）",
+    "subtitle": "技能組中已啟用 {{count}} 個 Skills（目前組：「{{skillGroup}}」）",
     "searchPlaceholder": "搜尋中央倉庫中的 Skills...",
     "allStatus": "全部狀態",
     "synced": "已同步",
@@ -262,12 +262,12 @@
     "enable": "啟用",
     "enabledButton": "已啟用",
     "disable": "停用",
-    "enableForPreset": "加入當前技能組",
-    "disableForPreset": "從當前技能組移除",
-    "enabledInPreset": "已加入當前技能組",
-    "disabledInPreset": "已從當前技能組移除",
-    "inPreset": "已加入當前技能組",
-    "notInPreset": "未加入當前技能組",
+    "enableForSkillGroup": "加入當前技能組",
+    "disableForSkillGroup": "從當前技能組移除",
+    "enabledInSkillGroup": "已加入當前技能組",
+    "disabledInSkillGroup": "已從當前技能組移除",
+    "inSkillGroup": "已加入當前技能組",
+    "notInSkillGroup": "未加入當前技能組",
     "remove": "從當前技能組移除",
     "moreActions": "更多操作",
     "dragToReorder": "拖曳排序",
@@ -279,9 +279,9 @@
     "addFirst": "點擊「安裝 Skills」開始新增到中央倉庫",
     "noMatch": "沒有符合當前搜尋或篩選條件的 Skills",
     "clearFilters": "清除篩選",
-    "noPreset": "當前還沒有可用技能組",
-    "currentPresetFallback": "當前技能組",
-    "presetCount": "{{count}} 個技能組",
+    "noSkillGroup": "當前還沒有可用技能組",
+    "currentSkillGroupFallback": "當前技能組",
+    "skillGroupCount": "{{count}} 個技能組",
     "syncCoverage": "同步覆蓋",
     "syncSummary": "已同步 {{synced}} / {{total}}",
     "agentTogglesTitle": "全域工作區",
@@ -634,8 +634,8 @@
     "syncModeDesc": "建議使用符號連結，佔用空間極小且修改可即時生效。全域與專案工作區均生效；注意專案裡的符號連結指向本機中央庫，不會隨倉庫帶走。",
     "symlink": "符號連結",
     "copy": "檔案複製",
-    "currentPreset": "當前技能組",
-    "currentPresetDesc": "立即切換應用當前使用的技能組，並重新整理 Skills 設定。",
+    "currentSkillGroup": "當前技能組",
+    "currentSkillGroupDesc": "立即切換應用當前使用的技能組，並重新整理 Skills 設定。",
     "theme": "主題",
     "themeDesc": "選擇應用的外觀主題。",
     "themeLight": "淺色",
@@ -785,7 +785,7 @@
     "loadFailed": "載入{{item}}失敗",
     "dataOutOfDate": "部分資料未成功重新整理",
     "documentMissing": "沒有找到文件檔案",
-    "presets": "技能組",
+    "skillGroups": "技能組",
     "agents": "Agent 狀態",
     "skills": "Skills 清單",
     "success": "操作成功",
@@ -842,7 +842,9 @@
       "unavailable": "請先選擇目標 Agent"
     }
   },
-  "preset": {
+  "skillGroup": {
+    "defaultName": "預設",
+    "defaultDescription": "預設技能組",
     "create": "新增技能組",
     "name": "技能組名稱",
     "description": "描述（選填）",
@@ -900,6 +902,14 @@
     "importFromCenterSuccess": "「{{name}}」已加入專案的 {{count}} 個 Agent",
     "updateCenterSuccess": "「{{name}}」已更新到 Skills 中心",
     "updateCenterConflict": "「{{name}}」：{{count}} 個變體可能各有獨有內容——請先整理成一份再更新中心。本次未做任何寫入。",
+    "updateCenterConflictTitle": "確認更新 Skills 中心",
+    "updateCenterConflictMessage": "「{{name}}」的多個專案變體內容不同。請選擇要覆蓋到中心的版本，並確認覆蓋其他變體。",
+    "updateCenterConflictHint": "下面展示選中版本與其他變體的 SKILL.md 差異。確認後，選中版本會寫入中心，其餘變體會同步為該版本。",
+    "updateCenterDiffLabel": "比較",
+    "updateCenterOverwrite": "確認覆蓋並更新",
+    "updateCenterSelectedVersion": "選取版本：{{agent}}",
+    "updateCenterDiffLegend": "紅色是比較版本，綠色是選取版本",
+    "updateCenterNoDiff": "這兩個變體的檔案內容一致。",
     "updateCenterAlignFailed": "「{{name}}」：已推送到中心，但 {{count}} 個變體對齊失敗",
     "updateProjectSuccess": "「{{name}}」已更新到專案",
     "resetFromCenter": "還原中心版本",
@@ -977,11 +987,11 @@
     "batchTagsFailed": "{{count}} 個中心 Skill 標籤更新失敗",
     "batchTagScopeNote": "標籤儲存在中央技能庫，改動會影響所有使用這個 Skill 的專案。只屬於本專案的本機 Skill 不會被修改。"
   },
-  "presetActions": {
+  "skillGroupActions": {
     "button": "套用技能組",
     "applyToProject": "將技能組套用到目前專案",
     "applyToGlobal": "將技能組套用到全域工作區",
-    "preset": "技能組",
+    "skillGroup": "技能組",
     "action": "操作",
     "addMissing": "加入缺少的 Skills",
     "removeMatching": "移除符合的 Skills",
@@ -1010,7 +1020,7 @@
     "activate": "啟用",
     "deactivate": "取消啟用"
   },
-  "presetBar": {
+  "skillGroupBar": {
     "shiftClickHint": "{{name}} · Shift+點擊直接切換",
     "skillCount": "{{count}} 個 Skills",
     "deactivateConfirm": "從 \"{{name}}\" 中移除全部 {{count}} 個已安裝 Skills？"

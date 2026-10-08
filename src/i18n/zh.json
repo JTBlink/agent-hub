@@ -9,8 +9,8 @@
     "lobsterAgents": "龙虾 Agent",
     "installSkills": "安装 Skills",
     "backup": "备份",
-    "presets": "技能组",
-    "newPreset": "新建技能组",
+    "skillGroups": "技能组",
+    "newSkillGroup": "新建技能组",
     "projects": "项目工作区",
     "addProject": "关联项目",
     "settings": "设置"
@@ -24,7 +24,7 @@
         "title": "推荐工作流",
         "description": "单 Agent 用户：安装 Skills → 打开全局工作区 → 点击技能组标签激活，或点 + 添加 Skills 从技能库挑选并即时切换目标 Agent。多项目用户：打开项目工作区，同样可用技能组标签或 + 添加 Skills 弹层为该项目的 Agent 配置 Skills。多机用户：在设置页开启 Git 备份，把中央仓库在多台设备间同步。"
       },
-      "presets": {
+      "skillGroups": {
         "title": "技能组",
         "description": "技能组是按用途整理的一组 Skills，例如“日常开发”。在侧边栏选择技能组可查看和编辑成员；在工作区点击技能组按钮可批量添加或移除其中的 Skills。全部添加后显示 ✓，部分添加时显示数量。修改组内成员不会自动更新已有部署。"
       },
@@ -60,7 +60,7 @@
     "placeholder": "跳转到技能、技能组、项目或操作…",
     "empty": "没有匹配项，换个关键词试试。",
     "skills": "技能",
-    "presets": "技能组",
+    "skillGroups": "技能组",
     "projects": "项目",
     "actions": "操作",
     "scanImport": "本地 Skills 管理",
@@ -253,7 +253,7 @@
     "defaultLocationMissing": "默认目标位置缺失",
     "openLocationSettings": "打开设置",
     "applyCallout": "点击技能组只会打开浏览。使用「应用技能组」可把其中的 Skills 添加到或移出选中的 Agent。",
-    "subtitle": "技能组中已启用 {{count}} 个 Skills（当前组：“{{preset}}”）",
+    "subtitle": "技能组中已启用 {{count}} 个 Skills（当前组：“{{skillGroup}}”）",
     "searchPlaceholder": "搜索中央仓库中的 Skills...",
     "allStatus": "全部状态",
     "synced": "已同步",
@@ -262,12 +262,12 @@
     "enable": "启用",
     "enabledButton": "已启用",
     "disable": "停用",
-    "enableForPreset": "加入当前技能组",
-    "disableForPreset": "从当前技能组移除",
-    "enabledInPreset": "已加入当前技能组",
-    "disabledInPreset": "已从当前技能组移除",
-    "inPreset": "已加入当前技能组",
-    "notInPreset": "未加入当前技能组",
+    "enableForSkillGroup": "加入当前技能组",
+    "disableForSkillGroup": "从当前技能组移除",
+    "enabledInSkillGroup": "已加入当前技能组",
+    "disabledInSkillGroup": "已从当前技能组移除",
+    "inSkillGroup": "已加入当前技能组",
+    "notInSkillGroup": "未加入当前技能组",
     "remove": "从当前技能组移除",
     "moreActions": "更多操作",
     "dragToReorder": "拖动排序",
@@ -279,9 +279,9 @@
     "addFirst": "点击“安装 Skills”开始添加到中央仓库",
     "noMatch": "没有符合当前搜索或筛选条件的 Skills",
     "clearFilters": "清除筛选",
-    "noPreset": "当前还没有可用技能组",
-    "currentPresetFallback": "当前技能组",
-    "presetCount": "{{count}} 个技能组",
+    "noSkillGroup": "当前还没有可用技能组",
+    "currentSkillGroupFallback": "当前技能组",
+    "skillGroupCount": "{{count}} 个技能组",
     "syncCoverage": "同步覆盖",
     "syncSummary": "已同步 {{synced}} / {{total}}",
     "moreAgents": "+{{count}} 个 Agent",
@@ -683,8 +683,8 @@
     "syncModeDesc": "推荐使用符号链接，占用空间极小且修改可实时生效。全局与项目工作区均生效；注意项目里的符号链接指向本机中央库，不会随仓库带走。",
     "symlink": "符号链接",
     "copy": "文件复制",
-    "currentPreset": "当前技能组",
-    "currentPresetDesc": "立即切换应用当前使用的技能组，并刷新 Skills 配置。",
+    "currentSkillGroup": "当前技能组",
+    "currentSkillGroupDesc": "立即切换应用当前使用的技能组，并刷新 Skills 配置。",
     "theme": "主题",
     "themeDesc": "选择应用的外观主题。",
     "themeLight": "浅色",
@@ -857,7 +857,7 @@
     "loadFailed": "加载{{item}}失败",
     "dataOutOfDate": "部分数据未成功刷新",
     "documentMissing": "没有找到文档文件",
-    "presets": "技能组",
+    "skillGroups": "技能组",
     "agents": "Agent 状态",
     "skills": "Skills 列表",
     "success": "操作成功",
@@ -915,7 +915,9 @@
       "unavailable": "请先选择目标 Agent"
     }
   },
-  "preset": {
+  "skillGroup": {
+    "defaultName": "默认",
+    "defaultDescription": "默认技能组",
     "create": "新建技能组",
     "name": "技能组名称",
     "description": "描述 (可选)",
@@ -979,6 +981,14 @@
     "importFromCenterSuccess": "\"{{name}}\" 已添加到项目的 {{count}} 个 Agent",
     "updateCenterSuccess": "\"{{name}}\" 已更新到 Skills 中心",
     "updateCenterConflict": "\"{{name}}\"：{{count}} 个变体可能各有独有内容——请先整理成一份再更新中心。本次未做任何写入。",
+    "updateCenterConflictTitle": "确认更新 Skills 中心",
+    "updateCenterConflictMessage": "\"{{name}}\" 的多个项目变体内容不同。请选择要覆盖到中心的版本，并确认覆盖其他变体。",
+    "updateCenterConflictHint": "下面展示选中版本与其他变体的 SKILL.md 差异。确认后，选中版本会写入中心，其余变体会同步为该版本。",
+    "updateCenterDiffLabel": "对比",
+    "updateCenterOverwrite": "确认覆盖并更新",
+    "updateCenterSelectedVersion": "选中版本：{{agent}}",
+    "updateCenterDiffLegend": "红色为对比版本，绿色为选中版本",
+    "updateCenterNoDiff": "这两个变体的文件内容一致。",
     "updateCenterAlignFailed": "\"{{name}}\"：已推送到中心，但 {{count}} 个变体对齐失败",
     "updateProjectSuccess": "\"{{name}}\" 已更新到项目",
     "resetFromCenter": "恢复中心版本",
@@ -1061,11 +1071,11 @@
     "batchTagsFailed": "{{count}} 个中心 Skill 标签更新失败",
     "batchTagScopeNote": "标签保存在中央技能库里，改动会影响所有使用这个 Skill 的项目。只属于本项目的本地 Skill 不会被修改。"
   },
-  "presetActions": {
+  "skillGroupActions": {
     "button": "应用技能组",
     "applyToProject": "将技能组应用到当前项目",
     "applyToGlobal": "将技能组应用到全局工作区",
-    "preset": "技能组",
+    "skillGroup": "技能组",
     "action": "操作",
     "addMissing": "添加缺失 Skills",
     "removeMatching": "移除匹配 Skills",
@@ -1094,7 +1104,7 @@
     "activate": "激活",
     "deactivate": "取消激活"
   },
-  "presetBar": {
+  "skillGroupBar": {
     "shiftClickHint": "{{name}} · Shift+点击直接切换",
     "skillCount": "{{count}} 个 Skills",
     "deactivateConfirm": "从 \"{{name}}\" 中移除全部 {{count}} 个已安装 Skills？"

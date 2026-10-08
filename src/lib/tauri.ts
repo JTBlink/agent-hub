@@ -37,7 +37,7 @@ export interface ManagedSkill {
   updated_at: number;
   status: string;
   targets: SkillTarget[];
-  preset_ids: string[];
+  skillGroup_ids: string[];
   tags: string[];
 }
 
@@ -95,7 +95,7 @@ export interface SkillSourceDiff {
   entries: SkillSourceDiffEntry[];
 }
 
-export interface Preset {
+export interface SkillGroup {
   id: string;
   name: string;
   description: string | null;
@@ -187,6 +187,11 @@ export interface ProjectSkillDocument {
   content: string;
 }
 
+export interface ProjectSkillFile {
+  filename: string;
+  content: string;
+}
+
 // ── Tools ──
 
 export const getToolStatus = () => invoke<ToolInfo[]>("get_tool_status");
@@ -239,9 +244,9 @@ export const removeCustomTool = (key: string) =>
 export const getManagedSkills = () =>
   invoke<ManagedSkill[]>("get_managed_skills");
 
-export const getSkillsForPreset = (presetId: string) =>
-  invoke<ManagedSkill[]>("get_skills_for_preset", {
-    presetId,
+export const getSkillsForSkillGroup = (skillGroupId: string) =>
+  invoke<ManagedSkill[]>("get_skills_for_skill_group", {
+    skillGroupId,
   });
 
 export const getSkillDocument = (skillId: string) =>
@@ -417,16 +422,16 @@ export const syncSkillToTool = (skillId: string, tool: string) =>
 export const unsyncSkillFromTool = (skillId: string, tool: string) =>
   invoke<void>("unsync_skill_from_tool", { skillId, tool });
 
-export const getSkillToolToggles = (skillId: string, presetId: string) =>
-  invoke<SkillToolToggle[]>("get_skill_tool_toggles", { skillId, presetId });
+export const getSkillToolToggles = (skillId: string, skillGroupId: string) =>
+  invoke<SkillToolToggle[]>("get_skill_tool_toggles", { skillId, skillGroupId });
 
 export const setSkillToolToggle = (
   skillId: string,
-  presetId: string,
+  skillGroupId: string,
   tool: string,
   enabled: boolean,
 ) =>
-  invoke<void>("set_skill_tool_toggle", { skillId, presetId, tool, enabled });
+  invoke<void>("set_skill_tool_toggle", { skillId, skillGroupId, tool, enabled });
 
 // ── Scan ──
 
@@ -759,63 +764,63 @@ export const gitBackupListVersions = (limit?: number) =>
 export const gitBackupRestoreVersion = (tag: string) =>
   invoke<string>("git_backup_restore_version", { tag });
 
-// ── Presets ──
+// ── SkillGroups ──
 
-export const getPresets = () => invoke<Preset[]>("get_presets");
+export const getSkillGroups = () => invoke<SkillGroup[]>("get_skill_groups");
 
-export const getActivePreset = () => invoke<Preset | null>("get_active_preset");
+export const getActiveSkillGroup = () => invoke<SkillGroup | null>("get_active_skill_group");
 
-export const createPreset = (
+export const createSkillGroup = (
   name: string,
   description?: string,
   icon?: string,
 ) =>
-  invoke<Preset>("create_preset", {
+  invoke<SkillGroup>("create_skill_group", {
     name,
     description: description || null,
     icon: icon || null,
   });
 
-export const updatePreset = (
+export const updateSkillGroup = (
   id: string,
   name: string,
   description?: string,
   icon?: string,
 ) =>
-  invoke<void>("update_preset", {
+  invoke<void>("update_skill_group", {
     id,
     name,
     description: description || null,
     icon: icon || null,
   });
 
-export const deletePreset = (id: string) =>
-  invoke<void>("delete_preset", { id });
+export const deleteSkillGroup = (id: string) =>
+  invoke<void>("delete_skill_group", { id });
 
-/** @deprecated v1.16+: clicking a scene no longer applies. Use applyPresetToDefault. */
-export const switchPreset = (id: string) =>
-  invoke<void>("switch_preset", { id });
+/** @deprecated v1.16+: clicking a scene no longer applies. Use applySkillGroupToDefault. */
+export const switchSkillGroup = (id: string) =>
+  invoke<void>("switch_skill_group", { id });
 
-export const applyPresetToDefault = (id: string) =>
-  invoke<void>("apply_preset_to_default", { id });
+export const applySkillGroupToDefault = (id: string) =>
+  invoke<void>("apply_skill_group_to_default", { id });
 
-export const addSkillToPreset = (skillId: string, presetId: string) =>
-  invoke<void>("add_skill_to_preset", { skillId, presetId });
+export const addSkillToSkillGroup = (skillId: string, skillGroupId: string) =>
+  invoke<void>("add_skill_to_skill_group", { skillId, skillGroupId });
 
-export const removeSkillFromPreset = (skillId: string, presetId: string) =>
-  invoke<void>("remove_skill_from_preset", { skillId, presetId });
+export const removeSkillFromSkillGroup = (skillId: string, skillGroupId: string) =>
+  invoke<void>("remove_skill_from_skill_group", { skillId, skillGroupId });
 
-export const reorderPresets = (ids: string[]) =>
-  invoke<void>("reorder_presets", { ids });
+export const reorderSkillGroups = (ids: string[]) =>
+  invoke<void>("reorder_skill_groups", { ids });
 
 export const reorderProjects = (ids: string[]) =>
   invoke<void>("reorder_projects", { ids });
 
-export const getPresetSkillOrder = (presetId: string) =>
-  invoke<string[]>("get_preset_skill_order", { presetId });
+export const getSkillGroupSkillOrder = (skillGroupId: string) =>
+  invoke<string[]>("get_skill_group_skill_order", { skillGroupId });
 
-export const reorderPresetSkills = (presetId: string, skillIds: string[]) =>
-  invoke<void>("reorder_preset_skills", { presetId, skillIds });
+export const reorderSkillGroupSkills = (skillGroupId: string, skillIds: string[]) =>
+  invoke<void>("reorder_skill_group_skills", { skillGroupId, skillIds });
 
 // ── Projects ──
 
@@ -853,6 +858,17 @@ export const getProjectSkillDocument = (
   agent: string,
 ) =>
   invoke<ProjectSkillDocument>("get_project_skill_document", {
+    projectId,
+    skillRelativePath,
+    agent,
+  });
+
+export const getProjectSkillFiles = (
+  projectId: string,
+  skillRelativePath: string,
+  agent: string,
+) =>
+  invoke<ProjectSkillFile[]>("get_project_skill_files", {
     projectId,
     skillRelativePath,
     agent,

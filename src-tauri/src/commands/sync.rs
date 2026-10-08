@@ -21,8 +21,8 @@ fn disabled_tools(store: &SkillStore) -> Vec<String> {
     tool_service::get_disabled_tools(store)
 }
 
-/// Sync commands fire one call per `(skill, agent)` pair when PresetBar
-/// applies a preset from the in-app workspace view. Route through the
+/// Sync commands fire one call per `(skill, agent)` pair when SkillGroupBar
+/// applies a skill group from the in-app workspace view. Route through the
 /// coalescing refresh so a burst rebuilds the tray at most once per window
 /// instead of once per row.
 fn schedule_tray_refresh(app: &AppHandle) {
@@ -42,10 +42,10 @@ fn sync_skill_to_tool_internal(
     )
 }
 
-/// The disk-side half of turning a preset toggle off for one tool: the
+/// The disk-side half of turning a skill group toggle off for one tool: the
 /// `skill_targets` record always goes, while whatever is at the recorded path
 /// is only removed when it still matches what we deployed (#435).
-fn unsync_skill_for_tool_in_preset(
+fn unsync_skill_for_tool_in_skill_group(
     store: &SkillStore,
     skill_id: &str,
     tool: &str,
@@ -228,16 +228,16 @@ fn log_sync_outcome(
 #[tauri::command]
 pub async fn get_skill_tool_toggles(
     skill_id: String,
-    preset_id: String,
+    skill_group_id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<Vec<SkillToolToggleDto>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let skill_ids = store
-            .get_skill_ids_for_scenario(&preset_id)
+            .get_skill_ids_for_scenario(&skill_group_id)
             .map_err(AppError::db)?;
         if !skill_ids.contains(&skill_id) {
-            return Err(AppError::not_found("Skill is not enabled in this preset"));
+            return Err(AppError::not_found("Skill is not enabled in this skill group"));
         }
 
         let disabled = disabled_tools(&store);
@@ -248,11 +248,11 @@ pub async fn get_skill_tool_toggles(
             .map(|adapter| adapter.key.clone())
             .collect();
         store
-            .ensure_scenario_skill_tool_defaults(&preset_id, &skill_id, &default_enabled_keys)
+            .ensure_scenario_skill_tool_defaults(&skill_group_id, &skill_id, &default_enabled_keys)
             .map_err(AppError::db)?;
 
         let toggles = store
-            .get_scenario_skill_tool_toggles(&preset_id, &skill_id)
+            .get_scenario_skill_tool_toggles(&skill_group_id, &skill_id)
             .map_err(AppError::db)?;
         let enabled_map: std::collections::HashMap<String, bool> = toggles
             .into_iter()
@@ -286,7 +286,7 @@ pub async fn get_skill_tool_toggles(
 pub async fn set_skill_tool_toggle(
     app: AppHandle,
     skill_id: String,
-    preset_id: String,
+    skill_group_id: String,
     tool: String,
     enabled: bool,
     store: State<'_, Arc<SkillStore>>,
@@ -294,10 +294,10 @@ pub async fn set_skill_tool_toggle(
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
         let skill_ids = store
-            .get_skill_ids_for_scenario(&preset_id)
+            .get_skill_ids_for_scenario(&skill_group_id)
             .map_err(AppError::db)?;
         if !skill_ids.contains(&skill_id) {
-            return Err(AppError::not_found("Skill is not enabled in this preset"));
+            return Err(AppError::not_found("Skill is not enabled in this skill group"));
         }
 
         let adapter = tool_adapters::find_adapter_with_store(&store, &tool)
@@ -321,7 +321,7 @@ pub async fn set_skill_tool_toggle(
         }
 
         sync_metadata::with_repo_lock("set skill tool toggle", || {
-            store.set_scenario_skill_tool_enabled(&preset_id, &skill_id, &tool, enabled)?;
+            store.set_scenario_skill_tool_enabled(&skill_group_id, &skill_id, &tool, enabled)?;
             sync_metadata::write_all_from_db_unlocked(&store)
         })
         .map_err(AppError::db)?;
@@ -330,12 +330,12 @@ pub async fn set_skill_tool_toggle(
             .get_active_scenario_id()
             .map_err(AppError::db)?
             .as_deref()
-            == Some(preset_id.as_str());
+            == Some(skill_group_id.as_str());
         if is_active {
             if enabled {
                 sync_skill_to_tool_internal(&store, &skill_id, &tool)?;
             } else {
-                unsync_skill_for_tool_in_preset(&store, &skill_id, &tool)?;
+                unsync_skill_for_tool_in_skill_group(&store, &skill_id, &tool)?;
             }
         }
 
@@ -547,12 +547,12 @@ mod tests {
         );
     }
 
-    /// #435: unchecking a skill for one tool in the active preset used to
+    /// #435: unchecking a skill for one tool in the active skill group used to
     /// delete whatever sat at the recorded path. A real directory that
     /// replaced our symlink is the user's — preserve it and drop only the
     /// record.
     #[test]
-    fn preset_unsync_preserves_user_content_that_replaced_a_recorded_link() {
+    fn skill_group_unsync_preserves_user_content_that_replaced_a_recorded_link() {
         let tmp = tempdir().unwrap();
         let store = SkillStore::new(&tmp.path().join("test.db")).unwrap();
         let target = tmp.path().join("agent-skills").join("my-skill");
@@ -575,7 +575,7 @@ mod tests {
             })
             .unwrap();
 
-        unsync_skill_for_tool_in_preset(&store, "s1", "agent_a").unwrap();
+        unsync_skill_for_tool_in_skill_group(&store, "s1", "agent_a").unwrap();
 
         assert_eq!(
             fs::read_to_string(target.join("mine.txt")).unwrap(),
@@ -587,7 +587,7 @@ mod tests {
 
     /// Unchecking one tool must not delete a deployment another tool shares.
     #[test]
-    fn preset_unsync_keeps_a_deployment_another_tool_shares() {
+    fn skill_group_unsync_keeps_a_deployment_another_tool_shares() {
         let tmp = tempdir().unwrap();
         let store = SkillStore::new(&tmp.path().join("test.db")).unwrap();
         let target = tmp.path().join("agent-skills").join("my-skill");
@@ -612,7 +612,7 @@ mod tests {
                 .unwrap();
         }
 
-        unsync_skill_for_tool_in_preset(&store, "s1", "agent_a").unwrap();
+        unsync_skill_for_tool_in_skill_group(&store, "s1", "agent_a").unwrap();
 
         assert!(target.exists(), "agent_b still deploys this path");
         let remaining = store.get_targets_for_skill("s1").unwrap();

@@ -696,8 +696,8 @@ pub fn ensure_default_startup_scenario(store: &SkillStore) -> Result<(), AppErro
         scenarios.push(default_scenario);
     }
 
-    // Startup restores whatever preset was last active; there is no separate
-    // "default startup preset" setting to override it.
+    // Startup restores whatever skill group was last active; there is no separate
+    // "default startup skill group" setting to override it.
     let current_active = store.get_active_scenario_id().map_err(AppError::db)?;
 
     let desired_active = current_active
@@ -961,16 +961,16 @@ pub enum BatchApplyMode {
 /// Apply a batch of `(skill_id × tool_key)` pairs in either Add or Remove mode
 /// without touching `active_scenario_id` or `scenario_skill_tools` toggles.
 ///
-/// This is the tray-side preset apply primitive. Unlike [`sync_single_skill_to_tool`]
+/// This is the tray-side skill group apply primitive. Unlike [`sync_single_skill_to_tool`]
 /// (which is wrapped by the `sync_skill_to_tool` Tauri command and carries the
-/// implicit active-preset toggle side-effect), this batch is a pure
+/// implicit active-skill-group toggle side-effect), this batch is a pure
 /// "write/remove files + maintain `skill_targets` rows" operation.
 ///
 /// Remove mode handles shared physical paths: a `target_path` may be referenced
 /// by multiple `(skill_id, tool)` records when several tools resolve to the same
 /// skills directory. The filesystem path is only removed when no remaining
 /// `skill_targets` row references it after the batch deletions, so removing one
-/// preset's tools never wipes another tool's still-active files.
+/// skill group's tools never wipes another tool's still-active files.
 pub fn apply_skills_to_tools(
     store: &SkillStore,
     skill_ids: &[String],

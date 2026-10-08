@@ -60,7 +60,7 @@ export function HelpDialog() {
           {(
             [
               "workflows",
-              "presets",
+              "skillGroups",
               "install",
               "sync",
               "global",

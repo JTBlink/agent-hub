@@ -32,9 +32,9 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import type { Preset } from "./tauri";
+import type { SkillGroup } from "./tauri";
 
-export interface PresetIconOption {
+export interface SkillGroupIconOption {
   key: string;
   label: string;
   icon: LucideIcon;
@@ -42,7 +42,7 @@ export interface PresetIconOption {
   activeClass: string;
 }
 
-export const PRESET_ICON_OPTIONS: PresetIconOption[] = [
+export const SKILL_GROUP_ICON_OPTIONS: SkillGroupIconOption[] = [
   {
     key: "briefcase",
     label: "Work",
@@ -262,11 +262,11 @@ export const PRESET_ICON_OPTIONS: PresetIconOption[] = [
   },
 ];
 
-const PRESET_ICON_MAP = new Map(
-  PRESET_ICON_OPTIONS.map((option) => [option.key, option] as const),
+const SKILL_GROUP_ICON_MAP = new Map(
+  SKILL_GROUP_ICON_OPTIONS.map((option) => [option.key, option] as const),
 );
 
-const PRESET_KEYWORD_RULES: Array<{ key: string; keywords: string[] }> = [
+const SKILL_GROUP_KEYWORD_RULES: Array<{ key: string; keywords: string[] }> = [
   { key: "briefcase", keywords: ["工作", "work", "office", "client"] },
   {
     key: "book-open",
@@ -311,25 +311,25 @@ const PRESET_KEYWORD_RULES: Array<{ key: string; keywords: string[] }> = [
   { key: "palette", keywords: ["设计", "design", "brand", "ui"] },
 ];
 
-export function inferPresetIconKey(
-  preset?: Pick<Preset, "name" | "description" | "icon"> | null,
+export function inferSkillGroupIconKey(
+  skillGroup?: Pick<SkillGroup, "name" | "description" | "icon"> | null,
 ) {
-  if (preset?.icon && PRESET_ICON_MAP.has(preset.icon)) {
-    return preset.icon;
+  if (skillGroup?.icon && SKILL_GROUP_ICON_MAP.has(skillGroup.icon)) {
+    return skillGroup.icon;
   }
 
   const haystack =
-    `${preset?.name || ""} ${preset?.description || ""}`.toLowerCase();
-  const matched = PRESET_KEYWORD_RULES.find((rule) =>
+    `${skillGroup?.name || ""} ${skillGroup?.description || ""}`.toLowerCase();
+  const matched = SKILL_GROUP_KEYWORD_RULES.find((rule) =>
     rule.keywords.some((keyword) => haystack.includes(keyword)),
   );
 
   return matched?.key || "briefcase";
 }
 
-export function getPresetIconOption(
-  preset?: Pick<Preset, "name" | "description" | "icon"> | string | null,
+export function getSkillGroupIconOption(
+  skillGroup?: Pick<SkillGroup, "name" | "description" | "icon"> | string | null,
 ) {
-  const key = typeof preset === "string" ? preset : inferPresetIconKey(preset);
-  return PRESET_ICON_MAP.get(key) || PRESET_ICON_OPTIONS[0];
+  const key = typeof skillGroup === "string" ? skillGroup : inferSkillGroupIconKey(skillGroup);
+  return SKILL_GROUP_ICON_MAP.get(key) || SKILL_GROUP_ICON_OPTIONS[0];
 }

@@ -280,7 +280,7 @@ impl StartupTimings {
 /// After the library moved, point what still names the old location at the new
 /// one: DB paths, and the symlinks deployed into agent and project skills
 /// directories. Project deployments have no target records and startup sync
-/// only covers the active preset, so neither heals on its own. Only links that
+/// only covers the active skill group, so neither heals on its own. Only links that
 /// resolve into the old library are touched — never anything else in there.
 /// Returns how many links could not be inspected or repointed.
 fn repoint_after_move(store: &SkillStore, from: &Path, to: &Path) -> Result<usize> {
@@ -561,7 +561,7 @@ mod tests {
             .unwrap();
 
         // A nested recorded deployment (Hermes-style category dir), outside
-        // any scanned root and not in the active preset.
+        // any scanned root and not in the active skill group.
         let nested = tmp.path().join("agent/cat/nested");
         std::fs::create_dir_all(nested.parent().unwrap()).unwrap();
         std::os::unix::fs::symlink(from.join("skills/cat/nested"), &nested).unwrap();
