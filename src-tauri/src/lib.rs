@@ -979,15 +979,22 @@ pub fn run() {
             // embedded in the backup remote URL into the OS keychain so no
             // token stays in `.git/config`. Best-effort in the background —
             // offline machines retry on the next launch.
-            let store_for_cred_migration = store_for_setup.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                match commands::git_backup::migrate_embedded_credentials(&store_for_cred_migration)
-                {
-                    Ok(Some(_)) => log::info!("startup: migrated backup token to OS keychain"),
-                    Ok(None) => {}
-                    Err(e) => log::warn!("startup: backup credential migration skipped: {e:#}"),
-                }
-            });
+            if core::git_credentials::background_access_enabled() {
+                let store_for_cred_migration = store_for_setup.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    match commands::git_backup::migrate_embedded_credentials(
+                        &store_for_cred_migration,
+                    ) {
+                        Ok(Some(_)) => log::info!("startup: migrated backup token to OS keychain"),
+                        Ok(None) => {}
+                        Err(e) => log::warn!("startup: backup credential migration skipped: {e:#}"),
+                    }
+                });
+            } else {
+                log::info!(
+                    "startup: backup credential migration skipped for debug build; set AGENT_HUB_DEV_KEYCHAIN=1 to opt in"
+                );
+            }
 
             // Intercept window close — let frontend decide (close vs hide to tray)
             // When QUITTING is set, allow the close to proceed so the process fully exits.

@@ -42,6 +42,13 @@ const INITIAL_DELAY: Duration = Duration::from_secs(90);
 /// Cap for the exponential retry backoff after failed rounds: 2^5 × 2min ≈ 1h.
 const MAX_BACKOFF_SHIFT: u32 = 5;
 
+/// Tauri's debug binary is ad-hoc signed on macOS. Each rebuild gets a new
+/// code signature, so background keychain access would ask for permission
+/// again. Developers can still exercise these paths explicitly by opting in.
+fn debug_auto_backup_enabled() -> bool {
+    super::git_credentials::background_access_enabled()
+}
+
 static DIRTY: AtomicBool = AtomicBool::new(false);
 static LAST_CHANGE_MS: AtomicI64 = AtomicI64::new(0);
 static CONSECUTIVE_FAILURES: AtomicU32 = AtomicU32::new(0);
@@ -93,6 +100,12 @@ pub(crate) enum Outcome {
 }
 
 pub fn start<R: Runtime>(app: AppHandle<R>, store: Arc<SkillStore>) {
+    if !debug_auto_backup_enabled() {
+        log::info!(
+            "auto backup: disabled for debug builds; set AGENT_HUB_DEV_KEYCHAIN=1 to opt in"
+        );
+        return;
+    }
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(INITIAL_DELAY).await;
         // Startup round: push whatever the exit-time commit captured. Backdate
