@@ -139,11 +139,11 @@ pub(crate) fn reindex_from_metadata_unlocked(store: &SkillStore) -> Result<()> {
         bail!("incomplete sync metadata snapshot: missing schema.json or skills directory");
     }
 
-    let skills = read_skill_files()?;
+    let mut skills = read_skill_files()?;
     if skills.is_empty() && central_repo_has_valid_skill_dirs()? {
         return Err(EmptySkillMetadata.into());
     }
-    ensure_unique_path_keys(&skills)?;
+    dedup_by_path_key(&mut skills)?;
 
     let has_complete_scenario_snapshot = metadata_has_complete_scenario_snapshot();
     let scenarios = if has_complete_scenario_snapshot {
@@ -255,7 +255,9 @@ pub(crate) fn ensure_skill_metadata_unlocked(store: &SkillStore, skill_id: &str)
         .get_skill_by_id(skill_id)?
         .ok_or_else(|| anyhow!("skill not found: {skill_id}"))?;
     let tags = store.get_tags_map()?.remove(skill_id).unwrap_or_default();
-    write_skill_file(&skill, &tags)
+    let pk = path_key(&relative_skill_path(&skill.central_path)?);
+    write_skill_file(&skill, &tags)?;
+    remove_duplicate_path_key_files(skill_id, &pk)
 }
 
 pub fn cleanup_temporary_files() -> Result<()> {
@@ -538,19 +540,88 @@ fn read_json_files<T: for<'de> Deserialize<'de>>(dir: PathBuf) -> Result<Vec<T>>
     Ok(records)
 }
 
-fn ensure_unique_path_keys(skills: &[SkillMetaFile]) -> Result<()> {
-    let mut seen = HashMap::new();
-    for skill in skills {
+fn dedup_by_path_key(skills: &mut Vec<SkillMetaFile>) -> Result<()> {
+    for skill in skills.iter() {
         let computed = path_key(&skill.path);
         if computed != skill.path_key {
             bail!("path_key mismatch for skill {}", skill.skill_id);
         }
-        if let Some(previous) = seen.insert(skill.path_key.clone(), skill.skill_id.clone()) {
-            bail!(
-                "case-insensitive path collision between {} and {}",
-                previous,
-                skill.skill_id
+    }
+
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    let mut to_remove_indices: Vec<usize> = Vec::new();
+    let skills_dir = metadata_dir().join("skills");
+
+    for (i, skill) in skills.iter().enumerate() {
+        if let Some(&kept) = seen.get(&skill.path_key) {
+            let loser_id = if skills[kept].skill_id < skill.skill_id {
+                &skill.skill_id
+            } else {
+                let winner_idx = i;
+                to_remove_indices.push(kept);
+                seen.insert(skill.path_key.clone(), winner_idx);
+                &skills[kept].skill_id
+            };
+            log::warn!(
+                "duplicate path_key '{}': keeping one entry, removing {}",
+                skill.path_key,
+                loser_id
             );
+            if loser_id == &skill.skill_id {
+                to_remove_indices.push(i);
+            }
+            let stale = skills_dir.join(format!("{loser_id}.json"));
+            if stale.exists() {
+                let _ = fs::remove_file(&stale);
+            }
+        } else {
+            seen.insert(skill.path_key.clone(), i);
+        }
+    }
+
+    to_remove_indices.sort_unstable();
+    to_remove_indices.dedup();
+    for i in to_remove_indices.into_iter().rev() {
+        skills.swap_remove(i);
+    }
+    Ok(())
+}
+
+fn remove_duplicate_path_key_files(skill_id: &str, target_path_key: &str) -> Result<()> {
+    let dir = metadata_dir().join("skills");
+    if !dir.exists() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(&dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !entry.file_type()?.is_file()
+            || path.extension().map(|e| e != "json").unwrap_or(true)
+        {
+            continue;
+        }
+        let stem = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+        if stem == skill_id {
+            continue;
+        }
+        let raw = match fs::read_to_string(&path) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        let meta: SkillMetaFile = match serde_json::from_str(&raw) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        if meta.path_key == target_path_key {
+            log::warn!(
+                "removing stale metadata {} (same path_key '{}')",
+                stem,
+                target_path_key
+            );
+            let _ = fs::remove_file(&path);
         }
     }
     Ok(())
