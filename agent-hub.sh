@@ -52,7 +52,7 @@ install_cli() {
   case "${profile}" in
     debug|release) ;;
     *)
-      echo "用法: $0 install [debug|release]" >&2
+      echo "用法: $0 install --dev [debug|release]" >&2
       return 2
       ;;
   esac
@@ -98,12 +98,16 @@ install_cli() {
 
 if [[ "${1:-}" == "install" ]]; then
   shift
-  if [[ "$#" -gt 1 ]]; then
-    echo "用法: $0 install [debug|release]" >&2
-    exit 2
+  if [[ "${1:-}" == "--dev" ]]; then
+    shift
+    if [[ "$#" -gt 1 ]]; then
+      echo "用法: $0 install --dev [debug|release]" >&2
+      exit 2
+    fi
+    install_cli "${1:-debug}"
+    exit $?
   fi
-  install_cli "${1:-debug}"
-  exit $?
+  exec node "$ROOT_DIR/scripts/build.mjs" build "$@"
 fi
 
 exec node "$ROOT_DIR/scripts/build.mjs" "$@"

@@ -25,12 +25,14 @@ npm run app:dev
 ```bash
 npm run app:build
 npm run cli -- --help
-./agent-hub.sh install
+./agent-hub.sh install --dev
 npm run build
 npm test
 npm run lint
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
+
+`./agent-hub.sh install` 默认构建当前平台安装包；开发时如需只更新 CLI，使用 `./agent-hub.sh install --dev`，也可追加 `release` 构建 release CLI。
 
 开发和打包入口会先编译并放置 `agent-hub-cli`，然后启动或构建同一个桌面应用。`npm run dev` 仅启动前端服务器，文件系统和数据库功能需要 Tauri 桌面运行时。
 
