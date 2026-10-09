@@ -566,7 +566,11 @@
       "cleanupDone": "已清理 {{count}} 項，{{failed}} 項略過或失敗",
       "cleanupFailures": "未清理的位置",
       "cleanupAgent": "依 Agent 清理",
-      "cleanupAllAgents": "全部 Agent"
+      "cleanupAllAgents": "全部 Agent",
+      "overwriteTitle": "覆蓋已有技能？",
+      "overwriteSingle": "技能「{{name}}」已存在，覆蓋將替換原有內容。",
+      "overwriteMultiple": "以下 {{count}} 個技能已存在，覆蓋將替換原有內容：",
+      "overwriteConfirm": "確認覆蓋"
     }
   },
   "settings": {

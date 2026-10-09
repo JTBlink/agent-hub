@@ -269,8 +269,25 @@ export interface BatchDeleteSkillsResult {
 export const deleteManagedSkills = (skillIds: string[]) =>
   invoke<BatchDeleteSkillsResult>("delete_managed_skills", { skillIds });
 
-export const installLocal = (sourcePath: string, name?: string) =>
-  invoke<void>("install_local", { sourcePath, name: name || null });
+export const installLocal = (
+  sourcePath: string,
+  name?: string,
+  overwrite?: boolean,
+) =>
+  invoke<void>("install_local", {
+    sourcePath,
+    name: name || null,
+    overwrite: overwrite ?? null,
+  });
+
+export const checkInstallLocalConflict = (
+  sourcePath: string,
+  name?: string,
+) =>
+  invoke<string | null>("check_install_local_conflict", {
+    sourcePath,
+    name: name || null,
+  });
 
 export const installGit = (repoUrl: string, name?: string) =>
   invoke<void>("install_git", { repoUrl, name: name || null });
@@ -401,8 +418,17 @@ export interface BatchImportResult {
   errors: string[];
 }
 
-export const batchImportFolder = (folderPath: string) =>
-  invoke<BatchImportResult>("batch_import_folder", { folderPath });
+export const batchImportFolder = (
+  folderPath: string,
+  overwrite?: boolean,
+) =>
+  invoke<BatchImportResult>("batch_import_folder", {
+    folderPath,
+    overwrite: overwrite ?? null,
+  });
+
+export const checkBatchImportConflicts = (folderPath: string) =>
+  invoke<string[]>("check_batch_import_conflicts", { folderPath });
 
 export const getAllTags = () => invoke<string[]>("get_all_tags");
 
@@ -451,10 +477,25 @@ export const getDiscoveredSkillDocument = (locationId: string) =>
 export const deleteDiscoveredSkill = (locationId: string) =>
   invoke<void>("delete_discovered_skill", { locationId });
 
-export const importExistingSkill = (sourcePath: string, name?: string) =>
-  invoke<void>("import_existing_skill", { sourcePath, name: name || null });
+export const importExistingSkill = (
+  sourcePath: string,
+  name?: string,
+  overwrite?: boolean,
+) =>
+  invoke<void>("import_existing_skill", {
+    sourcePath,
+    name: name || null,
+    overwrite: overwrite ?? null,
+  });
 
-export const importAllDiscovered = () => invoke<void>("import_all_discovered");
+export const importAllDiscovered = (overwrite?: boolean) =>
+  invoke<void>("import_all_discovered", { overwrite: overwrite ?? null });
+
+export const checkImportConflict = (name: string) =>
+  invoke<string | null>("check_import_conflict", { name });
+
+export const checkImportAllConflicts = () =>
+  invoke<string[]>("check_import_all_conflicts");
 
 export interface LocalCleanupLocation {
   id: string;

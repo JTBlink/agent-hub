@@ -4,7 +4,10 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::core::{
-    error::AppError, installer, scanner, skill_store::SkillStore, sync_metadata, tool_adapters,
+    central_repo, error::AppError, installer, scanner,
+    skill_metadata::sanitize_skill_name,
+    skill_store::SkillStore,
+    sync_metadata, tool_adapters,
 };
 
 fn canonicalize_lossy(path: &str) -> PathBuf {
@@ -91,10 +94,67 @@ pub async fn scan_local_skills(
     .await?
 }
 
+fn remove_existing_skill_by_name(
+    store: &SkillStore,
+    sanitized_name: &str,
+) -> Result<(), anyhow::Error> {
+    let central_path = central_repo::skills_dir().join(sanitized_name);
+    let central_str = central_path.to_string_lossy().to_string();
+    if let Some(existing) = store.get_skill_by_central_path(&central_str)? {
+        store.delete_skill(&existing.id)?;
+    }
+    if central_path.exists() {
+        std::fs::remove_dir_all(&central_path)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn check_import_conflict(
+    name: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Option<String>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let sanitized = sanitize_skill_name(&name).unwrap_or_else(|| name.clone());
+        let central_path = central_repo::skills_dir().join(&sanitized);
+        let central_str = central_path.to_string_lossy().to_string();
+        let existing = store.get_skill_by_central_path(&central_str).map_err(AppError::db)?;
+        Ok(existing.map(|s| s.name))
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn check_import_all_conflicts(
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Vec<String>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let discovered = store.get_all_discovered().map_err(AppError::db)?;
+        let groups = scanner::group_discovered(&discovered);
+        let mut conflicts = Vec::new();
+        for group in &groups {
+            if group.imported {
+                continue;
+            }
+            let sanitized = sanitize_skill_name(&group.name).unwrap_or_else(|| group.name.clone());
+            let central_path = central_repo::skills_dir().join(&sanitized);
+            let central_str = central_path.to_string_lossy().to_string();
+            if let Ok(Some(_)) = store.get_skill_by_central_path(&central_str) {
+                conflicts.push(group.name.clone());
+            }
+        }
+        Ok(conflicts)
+    })
+    .await?
+}
+
 #[tauri::command]
 pub async fn import_existing_skill(
     source_path: String,
     name: Option<String>,
+    overwrite: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
@@ -102,6 +162,12 @@ pub async fn import_existing_skill(
         sync_metadata::with_repo_lock("import existing skill", || {
             let path = PathBuf::from(&source_path);
             let resolved_name = installer::resolve_local_skill_name(&path, name.as_deref())?;
+
+            if overwrite.unwrap_or(false) {
+                let sanitized = sanitize_skill_name(&resolved_name)
+                    .unwrap_or_else(|| resolved_name.clone());
+                remove_existing_skill_by_name(&store, &sanitized)?;
+            }
 
             let result = installer::install_from_local(&path, Some(&resolved_name))?;
 
@@ -149,7 +215,10 @@ pub async fn import_existing_skill(
 }
 
 #[tauri::command]
-pub async fn import_all_discovered(store: State<'_, Arc<SkillStore>>) -> Result<(), AppError> {
+pub async fn import_all_discovered(
+    overwrite: Option<bool>,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<(), AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         sync_metadata::with_repo_lock("import all discovered skills", || {
@@ -164,6 +233,12 @@ pub async fn import_all_discovered(store: State<'_, Arc<SkillStore>>) -> Result<
                 }
                 if let Some(first) = group.locations.first() {
                     let path = PathBuf::from(&first.found_path);
+
+                    if overwrite.unwrap_or(false) {
+                        let sanitized = sanitize_skill_name(&group.name)
+                            .unwrap_or_else(|| group.name.clone());
+                        remove_existing_skill_by_name(&store, &sanitized)?;
+                    }
 
                     if let Ok(result) = installer::install_from_local(&path, Some(&group.name)) {
                         if store
