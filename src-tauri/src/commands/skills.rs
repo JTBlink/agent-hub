@@ -882,9 +882,31 @@ fn log_reimport_outcome(
 }
 
 #[tauri::command]
+pub async fn check_install_local_conflict(
+    source_path: String,
+    name: Option<String>,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Option<String>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = PathBuf::from(&source_path);
+        let resolved = installer::resolve_local_skill_name(&path, name.as_deref())
+            .map_err(AppError::io)?;
+        let sanitized = skill_metadata::sanitize_skill_name(&resolved)
+            .unwrap_or(resolved);
+        let central_path = central_repo::skills_dir().join(&sanitized);
+        let central_str = central_path.to_string_lossy().to_string();
+        let existing = store.get_skill_by_central_path(&central_str).map_err(AppError::db)?;
+        Ok(existing.map(|s| s.name))
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn install_local(
     source_path: String,
     name: Option<String>,
+    overwrite: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
@@ -903,6 +925,22 @@ pub async fn install_local(
             };
             let _lock =
                 RepoLock::acquire_foreground("install local skill").map_err(AppError::db)?;
+
+            if overwrite.unwrap_or(false) {
+                let resolved = installer::resolve_local_skill_name(&path, name.as_deref())
+                    .map_err(AppError::io)?;
+                let sanitized = skill_metadata::sanitize_skill_name(&resolved)
+                    .unwrap_or_else(|| resolved.clone());
+                let central_path = central_repo::skills_dir().join(&sanitized);
+                let central_str = central_path.to_string_lossy().to_string();
+                if let Some(existing) = store.get_skill_by_central_path(&central_str).map_err(AppError::db)? {
+                    store.delete_skill(&existing.id).map_err(AppError::db)?;
+                }
+                if central_path.exists() {
+                    std::fs::remove_dir_all(&central_path).map_err(AppError::io)?;
+                }
+            }
+
             let result =
                 installer::install_from_local(&path, name.as_deref()).map_err(AppError::io)?;
             let skill_name = result.name.clone();
@@ -3165,8 +3203,38 @@ pub struct BatchImportResult {
 }
 
 #[tauri::command]
+pub async fn check_batch_import_conflicts(
+    folder_path: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Vec<String>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = PathBuf::from(&folder_path);
+        if !root.is_dir() {
+            return Ok(vec![]);
+        }
+        let mut conflicts = Vec::new();
+        let entries = std::fs::read_dir(&root)?;
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if is_valid_skill_dir(&path) {
+                let name = skill_metadata::infer_skill_name(&path);
+                let central_path = central_repo::skills_dir().join(&name);
+                let central_str = central_path.to_string_lossy().to_string();
+                if let Ok(Some(_)) = store.get_skill_by_central_path(&central_str) {
+                    conflicts.push(name);
+                }
+            }
+        }
+        Ok(conflicts)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn batch_import_folder(
     folder_path: String,
+    overwrite: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
     app_handle: tauri::AppHandle,
 ) -> Result<BatchImportResult, AppError> {
@@ -3219,9 +3287,16 @@ pub async fn batch_import_folder(
             // Check if already imported by prospective central path
             let prospective_central = central_repo::skills_dir().join(&name);
             let central_str = prospective_central.to_string_lossy().to_string();
-            if let Ok(Some(_)) = store.get_skill_by_central_path(&central_str) {
-                skipped += 1;
-                continue;
+            if let Ok(Some(existing)) = store.get_skill_by_central_path(&central_str) {
+                if overwrite.unwrap_or(false) {
+                    let _ = store.delete_skill(&existing.id);
+                    if prospective_central.exists() {
+                        let _ = std::fs::remove_dir_all(&prospective_central);
+                    }
+                } else {
+                    skipped += 1;
+                    continue;
+                }
             }
 
             let install_result = (|| -> Result<String, AppError> {

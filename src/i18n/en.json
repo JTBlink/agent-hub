@@ -614,7 +614,11 @@
       "cleanupDone": "Cleaned up {{count}} items; {{failed}} skipped or failed",
       "cleanupFailures": "Locations kept",
       "cleanupAgent": "Clean up by Agent",
-      "cleanupAllAgents": "All Agents"
+      "cleanupAllAgents": "All Agents",
+      "overwriteTitle": "Overwrite existing skill?",
+      "overwriteSingle": "Skill \"{{name}}\" already exists. Overwriting will replace its content.",
+      "overwriteMultiple": "The following {{count}} skills already exist and will be replaced:",
+      "overwriteConfirm": "Overwrite"
     }
   },
   "settings": {

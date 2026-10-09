@@ -46,6 +46,7 @@ import { listen } from "@tauri-apps/api/event";
 import { StatusBanner } from "../components/StatusBanner";
 import { LocalSkillsPanel } from "../components/LocalSkillsPanel";
 import { LocalImportErrorDialog } from "../components/LocalImportErrorDialog";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { getErrorMessage, getErrorKind } from "../lib/error";
 
 const MARKET_PAGE_SIZE = 24;
@@ -104,6 +105,13 @@ export function InstallSkills() {
   const [localImportError, setLocalImportError] = useState<string | null>(null);
   const [importingPaths, setImportingPaths] = useState<Set<string>>(new Set());
   const [importingAll, setImportingAll] = useState(false);
+  const [overwriteConfirm, setOverwriteConfirm] = useState<{
+    type: "single" | "all" | "local" | "batch";
+    names: string[];
+    sourcePath?: string;
+    importName?: string;
+    folderPath?: string;
+  } | null>(null);
   const marketListRef = useRef<HTMLDivElement | null>(null);
   const [sourceOverflowOpen, setSourceOverflowOpen] = useState(false);
   const [sourceOverflowSide, setSourceOverflowSide] = useState<
@@ -374,12 +382,32 @@ export function InstallSkills() {
     }
   }, [activeTab, scanLoading, scanResult, runScan]);
 
-  const installLocalSource = async (sourcePath: string) => {
+  const installLocalSource = async (
+    sourcePath: string,
+    overwrite?: boolean,
+  ) => {
     setLocalError(null);
     const name = sourcePath.split("/").pop() || sourcePath;
+
+    if (!overwrite) {
+      try {
+        const conflict = await api.checkInstallLocalConflict(sourcePath);
+        if (conflict) {
+          setOverwriteConfirm({
+            type: "local",
+            names: [conflict],
+            sourcePath,
+          });
+          return;
+        }
+      } catch {
+        // conflict check failed — proceed with install
+      }
+    }
+
     const toastId = toast.loading(t("install.toast.installing", { name }));
     try {
-      await api.installLocal(sourcePath);
+      await api.installLocal(sourcePath, undefined, overwrite);
     } catch (e) {
       const rawMessage = getErrorMessage(e, t("common.error"));
       const message = rawMessage.includes("INVALID_SKILL_SOURCE")
@@ -433,11 +461,29 @@ export function InstallSkills() {
     }
   };
 
-  const handleBatchImportFolder = async () => {
+  const handleBatchImportFolder = async (overwriteFolder?: string) => {
     let unlisten: (() => void) | null = null;
     try {
-      const selected = await api.pickDirectory();
+      const selected = overwriteFolder ?? (await api.pickDirectory());
       if (!selected) return;
+
+      if (!overwriteFolder) {
+        try {
+          const conflicts = await api.checkBatchImportConflicts(
+            selected as string,
+          );
+          if (conflicts.length > 0) {
+            setOverwriteConfirm({
+              type: "batch",
+              names: conflicts,
+              folderPath: selected as string,
+            });
+            return;
+          }
+        } catch {
+          // conflict check failed — proceed with import
+        }
+      }
 
       const toastId = toast.loading(t("install.local.batchImporting"));
 
@@ -454,6 +500,7 @@ export function InstallSkills() {
 
       const result: BatchImportResult = await api.batchImportFolder(
         selected as string,
+        !!overwriteFolder,
       );
 
       if (result.errors.length > 0) {
@@ -636,11 +683,32 @@ export function InstallSkills() {
     }
   };
 
-  const handleImportDiscovered = async (sourcePath: string, name: string) => {
+  const handleImportDiscovered = async (
+    sourcePath: string,
+    name: string,
+    overwrite?: boolean,
+  ) => {
+    if (!overwrite) {
+      try {
+        const conflict = await api.checkImportConflict(name);
+        if (conflict) {
+          setOverwriteConfirm({
+            type: "single",
+            names: [conflict],
+            sourcePath,
+            importName: name,
+          });
+          return;
+        }
+      } catch {
+        // conflict check failed — proceed with import
+      }
+    }
+
     setImportingPaths((prev) => new Set(prev).add(sourcePath));
     try {
       try {
-        await api.importExistingSkill(sourcePath, name);
+        await api.importExistingSkill(sourcePath, name, overwrite);
       } catch (error: unknown) {
         toast.error(getErrorMessage(error, t("common.error")));
         return;
@@ -661,11 +729,23 @@ export function InstallSkills() {
     }
   };
 
-  const handleImportAllDiscovered = async () => {
+  const handleImportAllDiscovered = async (overwrite?: boolean) => {
+    if (!overwrite) {
+      try {
+        const conflicts = await api.checkImportAllConflicts();
+        if (conflicts.length > 0) {
+          setOverwriteConfirm({ type: "all", names: conflicts });
+          return;
+        }
+      } catch {
+        // conflict check failed — proceed with import
+      }
+    }
+
     setImportingAll(true);
     try {
       try {
-        await api.importAllDiscovered();
+        await api.importAllDiscovered(overwrite);
       } catch (error: unknown) {
         toast.error(getErrorMessage(error, t("common.error")));
         return;
@@ -1450,7 +1530,7 @@ export function InstallSkills() {
                   </button>
                   <button
                     type="button"
-                    onClick={handleBatchImportFolder}
+                    onClick={() => handleBatchImportFolder()}
                     className="app-button-secondary bg-background"
                   >
                     <FolderInput className="h-4 w-4" />
@@ -1701,6 +1781,56 @@ export function InstallSkills() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!overwriteConfirm}
+        title={t("install.scan.overwriteTitle")}
+        message={
+          overwriteConfirm && overwriteConfirm.names.length === 1
+            ? t("install.scan.overwriteSingle", {
+                name: overwriteConfirm.names[0],
+              })
+            : t("install.scan.overwriteMultiple", {
+                count: overwriteConfirm?.names.length ?? 0,
+              })
+        }
+        details={
+          overwriteConfirm && overwriteConfirm.names.length > 1
+            ? overwriteConfirm.names
+            : undefined
+        }
+        confirmLabel={t("install.scan.overwriteConfirm")}
+        tone="warning"
+        onClose={() => setOverwriteConfirm(null)}
+        onConfirm={async () => {
+          const ctx = overwriteConfirm;
+          setOverwriteConfirm(null);
+          if (!ctx) return;
+          switch (ctx.type) {
+            case "single":
+              if (ctx.sourcePath && ctx.importName) {
+                await handleImportDiscovered(
+                  ctx.sourcePath,
+                  ctx.importName,
+                  true,
+                );
+              }
+              break;
+            case "all":
+              await handleImportAllDiscovered(true);
+              break;
+            case "local":
+              if (ctx.sourcePath) {
+                await installLocalSource(ctx.sourcePath, true);
+              }
+              break;
+            case "batch":
+              if (ctx.folderPath) {
+                await handleBatchImportFolder(ctx.folderPath);
+              }
+              break;
+          }
+        }}
+      />
     </div>
   );
 }

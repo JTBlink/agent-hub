@@ -1069,6 +1069,7 @@ pub fn run() {
             commands::skills::delete_managed_skill,
             commands::skills::delete_managed_skills,
             commands::skills::install_local,
+            commands::skills::check_install_local_conflict,
             commands::skills::install_git,
             commands::skills::preview_git_install,
             commands::skills::confirm_git_install,
@@ -1087,6 +1088,7 @@ pub fn run() {
             commands::skills::delete_tag,
             commands::skills::cancel_install,
             commands::skills::batch_import_folder,
+            commands::skills::check_batch_import_conflicts,
             // Sync
             commands::sync::sync_skill_to_tool,
             commands::sync::unsync_skill_from_tool,
@@ -1100,6 +1102,8 @@ pub fn run() {
             commands::local_cleanup::cleanup_uninstalled_agent_skills,
             commands::scan::import_existing_skill,
             commands::scan::import_all_discovered,
+            commands::scan::check_import_conflict,
+            commands::scan::check_import_all_conflicts,
             // Browse
             commands::browse::fetch_leaderboard,
             commands::browse::search_skillssh,
