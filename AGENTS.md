@@ -34,6 +34,15 @@
 - `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`：检查 Rust 格式。
 - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings`：执行严格的 Rust 静态检查。
 
+## 版本管理
+
+版本号的唯一来源是根目录 `VERSION` 文件。以下命令会将版本同步到 `package.json`、`package-lock.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 和 `src-tauri/Cargo.lock`：
+
+- `npm run version:set -- <version>`：设置并同步所有文件到指定版本。
+- `npm run version:sync`：从 `VERSION` 文件读取版本号并同步到所有配置文件。
+
+版本变更需在 `CHANGELOG.md` 的 `Unreleased` 章节记录对应的用户可见变更。
+
 ## 编码风格与命名约定
 
 使用标准 `rustfmt` 格式（四空格缩进），并解决所有 Clippy 警告。模块、函数和变量使用 `snake_case`；类型和 trait 使用 `UpperCamelCase`；常量使用 `SCREAMING_SNAKE_CASE`。优先创建职责单一的小型模块，提供清晰的错误信息，并为公开 API 编写文档。不要提交 `target/`、`debug/`、变异测试产物或 IDE 元数据。
