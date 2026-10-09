@@ -464,6 +464,7 @@
     "filters": {
       "source": "來源",
       "allSources": "全部來源",
+      "installed": "已安裝",
       "filteredCount": "當前已載入 {{count}} 筆結果"
     },
     "noResults": {

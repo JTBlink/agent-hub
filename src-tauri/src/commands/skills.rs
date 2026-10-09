@@ -1049,9 +1049,27 @@ pub async fn install_git(
 }
 
 #[tauri::command]
+pub async fn check_skillssh_conflict(
+    skill_id: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Option<String>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let sanitized = skill_metadata::sanitize_skill_name(&skill_id)
+            .unwrap_or_else(|| skill_id.clone());
+        let central_path = central_repo::skills_dir().join(&sanitized);
+        let central_str = central_path.to_string_lossy().to_string();
+        let existing = store.get_skill_by_central_path(&central_str).map_err(AppError::db)?;
+        Ok(existing.map(|s| s.name))
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn install_from_skillssh(
     source: String,
     skill_id: String,
+    overwrite: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
     cancel_registry: State<'_, Arc<InstallCancelRegistry>>,
     app_handle: tauri::AppHandle,
@@ -1095,9 +1113,10 @@ pub async fn install_from_skillssh(
                     )
                     .ok();
             });
-            let temp_dir = git_fetcher::clone_repo_ref_with_progress(
+            let temp_dir = git_fetcher::clone_repo_ref_scoped(
                 &repo_url,
                 None,
+                Some(&skill_id),
                 Some(&cancel),
                 proxy_url.as_deref(),
                 Some(progress_cb),
@@ -1108,11 +1127,21 @@ pub async fn install_from_skillssh(
             let install_result = (|| -> Result<(String, String), AppError> {
                 let _lock =
                     RepoLock::acquire_foreground("install skillssh skill").map_err(AppError::db)?;
-                let skill_dir = resolve_skill_dir(&temp_dir, None, Some(&skill_id))?;
-                // A local import can already contain the exact skills.sh
-                // content. Reuse that library entry so installing its remote
-                // source upgrades the existing record instead of creating a
-                // `-2` duplicate.
+                let skill_dir = resolve_skill_dir(&temp_dir, Some(&skill_id), Some(&skill_id))?;
+
+                if overwrite.unwrap_or(false) {
+                    let sanitized = skill_metadata::sanitize_skill_name(&skill_id)
+                        .unwrap_or_else(|| skill_id.clone());
+                    let central_path = central_repo::skills_dir().join(&sanitized);
+                    let central_str = central_path.to_string_lossy().to_string();
+                    if let Some(existing) = store.get_skill_by_central_path(&central_str).map_err(AppError::db)? {
+                        store.delete_skill(&existing.id).map_err(AppError::db)?;
+                    }
+                    if central_path.exists() {
+                        std::fs::remove_dir_all(&central_path).map_err(AppError::io)?;
+                    }
+                }
+
                 let source_hash = installer::hash_local_source(&skill_dir).map_err(AppError::io)?;
                 let revision = git_fetcher::get_head_revision(&temp_dir).map_err(AppError::git)?;
                 let source_ref = format!("{}/{}", source, skill_id);
@@ -2986,26 +3015,8 @@ pub fn resolve_skillssh_install_target(
         return Err(AppError::invalid_input("Skill id is empty"));
     }
 
-    let mut attempt = 1;
-    loop {
-        let candidate_name = if attempt == 1 {
-            base_name.to_string()
-        } else {
-            format!("{base_name}-{attempt}")
-        };
-        let candidate_path = central_repo::skills_dir().join(&candidate_name);
-        let candidate_path_str = candidate_path.to_string_lossy().to_string();
-        let occupied = store
-            .get_skill_by_central_path(&candidate_path_str)
-            .map_err(AppError::db)?
-            .is_some();
-
-        if !occupied {
-            return Ok((candidate_name, candidate_path));
-        }
-
-        attempt += 1;
-    }
+    let candidate_path = central_repo::skills_dir().join(base_name);
+    Ok((base_name.to_string(), candidate_path))
 }
 
 pub fn staged_path_for(central_path: &str) -> PathBuf {
