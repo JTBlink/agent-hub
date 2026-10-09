@@ -26,6 +26,7 @@ import {
   Search,
   X,
   MoreHorizontal,
+  Link2,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -178,6 +179,17 @@ export function InstallSkills() {
     for (const skill of managedSkills) {
       if (skill.source_type === "skillssh" && skill.source_ref) {
         set.add(skill.source_ref);
+      }
+    }
+    return set;
+  }, [managedSkills]);
+
+  const installedDirNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const skill of managedSkills) {
+      const dirName = skill.central_path.split("/").pop();
+      if (dirName) {
+        set.add(dirName.toLowerCase());
       }
     }
     return set;
@@ -1188,7 +1200,11 @@ export function InstallSkills() {
                       const owner = skill.source.split("/")[0];
                       const avatarUrl = `https://github.com/${owner}.png?size=32`;
                       const sourceRef = `${skill.source}/${skill.skill_id}`;
-                      const isInstalled = installedSourceRefs.has(sourceRef);
+                      const isMarketInstalled =
+                        installedSourceRefs.has(sourceRef);
+                      const isLocalMatch =
+                        !isMarketInstalled &&
+                        installedDirNames.has(skill.skill_id.toLowerCase());
 
                       return (
                         <div
@@ -1227,7 +1243,7 @@ export function InstallSkills() {
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </button>
-                              {isInstalled ? (
+                              {isMarketInstalled ? (
                                 <span
                                   className="rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 p-1 text-emerald-400"
                                   title={t("install.installed")}
@@ -1249,6 +1265,15 @@ export function InstallSkills() {
                                   <span className="text-[11px] leading-none font-medium">
                                     {t("install.cancel")}
                                   </span>
+                                </button>
+                              ) : isLocalMatch ? (
+                                <button
+                                  onClick={() => handleInstallSkillssh(skill)}
+                                  disabled={installing !== null}
+                                  className="rounded-[5px] border border-amber-500/30 bg-amber-500/10 p-1 text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+                                  title={t("install.linkToMarket")}
+                                >
+                                  <Link2 className="h-3.5 w-3.5" />
                                 </button>
                               ) : (
                                 <button
@@ -1290,10 +1315,15 @@ export function InstallSkills() {
                                     : skill.installs}
                               </span>
                             )}
-                            {isInstalled ? (
+                            {isMarketInstalled ? (
                               <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-emerald-400">
                                 <Check className="h-3 w-3" />
                                 {t("install.installed")}
+                              </span>
+                            ) : isLocalMatch ? (
+                              <span className="inline-flex items-center gap-1 rounded-[5px] border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-amber-400">
+                                <Link2 className="h-3 w-3" />
+                                {t("install.localMatch")}
                               </span>
                             ) : null}
                           </div>

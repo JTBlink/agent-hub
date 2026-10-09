@@ -525,6 +525,8 @@
     "loadingMore": "Loading more...",
     "installing": "Installing...",
     "installed": "Installed",
+    "localMatch": "Imported",
+    "linkToMarket": "Link to market version (enable updates)",
     "cancel": "Cancel",
     "toast": {
       "cloning": "Cloning repository...",
