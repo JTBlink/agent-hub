@@ -3,6 +3,46 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
+publish_cli_bridge() {
+  local binary="$1"
+  local bridge_dir="${AGENT_HUB_BRIDGE_DIR:-${HOME}/.agent-hub/bin}"
+  local bridge_path="${bridge_dir}/agent-hub-cli"
+  local stamp_path="${bridge_dir}/.version"
+  local staged_path="${bridge_dir}/.agent-hub-cli.staged.$$"
+  local version_output
+  local version
+
+  mkdir -p "${bridge_dir}"
+
+  version_output="$("${binary}" --version 2>/dev/null)" || {
+    echo "CLI 可执行文件无法运行: ${binary}" >&2
+    return 1
+  }
+  if [[ "${version_output}" != agent-hub-cli\ * ]]; then
+    echo "CLI 版本输出格式无效: ${version_output}" >&2
+    return 1
+  fi
+  version="${version_output##* }"
+
+  # Remove the stamp before staging so a failed update can never leave the old
+  # bridge looking trusted to manage-skills.
+  rm -f "${stamp_path}"
+  rm -f "${staged_path}"
+  if ! cp "${binary}" "${staged_path}"; then
+    rm -f "${staged_path}"
+    echo "无法复制 CLI 到 bridge: ${bridge_dir}" >&2
+    return 1
+  fi
+  chmod +x "${staged_path}"
+  if ! mv -f "${staged_path}" "${bridge_path}"; then
+    rm -f "${staged_path}"
+    echo "无法更新 CLI bridge: ${bridge_path}" >&2
+    return 1
+  fi
+  printf '%s\n' "${version}" >"${stamp_path}"
+  echo "已更新 CLI bridge: ${bridge_path} (版本 ${version})"
+}
+
 install_cli() {
   local profile="${1:-debug}"
   local install_dir="${AGENT_HUB_CLI_BIN_DIR:-${CARGO_HOME:-${HOME}/.cargo}/bin}"
@@ -50,6 +90,7 @@ install_cli() {
   mkdir -p "${install_dir}"
   ln -sfn "${binary}" "${link_path}"
   echo "已安装软链接: ${link_path} -> ${binary}"
+  publish_cli_bridge "${binary}"
   if [[ ":${PATH}:" != *":${install_dir}:"* ]]; then
     echo "提示: 将 ${install_dir} 加入 PATH 后可直接运行 agent-hub-cli" >&2
   fi

@@ -19,6 +19,7 @@
 - CLI 帮助统一使用中文说明，技能组命令显示为 `skill-groups`，旧的 `presets` 和 `scenarios` 仅作为兼容别名解析。
 
 - Unix 开发入口 `agent-hub.sh install` 支持编译 CLI 并在 Cargo bin 目录创建指向仓库构建产物的软链接，可通过 `AGENT_HUB_CLI_BIN_DIR` 自定义链接目录。
+- `agent-hub.sh install` 编译后同步刷新 `~/.agent-hub/bin` 中的 CLI bridge，避免开发构建后 `manage-skills` 继续使用旧版本。
 
 - 本地 Skill 导入校验入口文件，拒绝普通目录、无 Skill 压缩包与伪入口目录，失败前保留已有目标；导入错误使用弹窗提示。中文首页统计与卡片统一使用“技能库”名称。
 
