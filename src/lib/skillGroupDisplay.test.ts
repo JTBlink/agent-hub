@@ -36,7 +36,10 @@ describe("default skill group display", () => {
         "Default tools",
       );
       expect(
-        getSkillGroupDisplayDescription({ ...group, description: "My tools" }, i18n.t),
+        getSkillGroupDisplayDescription(
+          { ...group, description: "My tools" },
+          i18n.t,
+        ),
       ).toBe("My tools");
     }
     expect(group.name).toBe("Default");

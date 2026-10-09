@@ -62,7 +62,8 @@ pub(super) fn migrate(home: &Path, legacy: &Path, shared: &Path) -> Result<()> {
         return Ok(());
     }
     if legacy == shared {
-        bail!("Shared and legacy Skills roots must differ");
+        fs::create_dir_all(shared)?;
+        return save(home, &Layout::default());
     }
     if !legacy.exists() {
         fs::create_dir_all(shared)?;
@@ -315,5 +316,17 @@ mod tests {
         assert!(shared.join("demo/SKILL.md").is_file());
         assert!(shared.join("external").is_symlink());
         assert!(legacy.join("demo/SKILL.md").is_file());
+    }
+
+    #[test]
+    fn same_legacy_and_shared_activates_without_copying() {
+        let temp = tempfile::tempdir().unwrap();
+        let home = temp.path().join("app");
+        let same = home.join("skills");
+        fs::create_dir_all(same.join("demo")).unwrap();
+        fs::write(same.join("demo/SKILL.md"), "# Demo").unwrap();
+        migrate(&home, &same, &same).unwrap();
+        assert!(activated(&home));
+        assert!(same.join("demo/SKILL.md").is_file());
     }
 }

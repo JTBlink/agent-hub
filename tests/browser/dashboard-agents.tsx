@@ -36,7 +36,7 @@ Object.assign(window, {
       if (command === "get_tool_status") return tools;
       if (
         [
-          "get_presets",
+          "get_skill_groups",
           "get_managed_skills",
           "get_projects",
           "get_central_repo_warnings",

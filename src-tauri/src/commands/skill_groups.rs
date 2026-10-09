@@ -1,3 +1,6 @@
+pub mod membership;
+pub use membership::set_skill_group_skills_internal;
+
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -58,7 +61,9 @@ fn skill_group_dto(store: &SkillStore, scenario: ScenarioRecord) -> SkillGroupDt
 }
 
 #[tauri::command]
-pub async fn get_skill_groups(store: State<'_, Arc<SkillStore>>) -> Result<Vec<SkillGroupDto>, AppError> {
+pub async fn get_skill_groups(
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Vec<SkillGroupDto>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let start = Instant::now();
@@ -106,8 +111,13 @@ pub async fn create_skill_group(
 ) -> Result<SkillGroupDto, AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        create_and_activate_skill_group_internal(&store, &name, description.as_deref(), icon.as_deref())
-            .map(|scenario| skill_group_dto(&store, scenario))
+        create_and_activate_skill_group_internal(
+            &store,
+            &name,
+            description.as_deref(),
+            icon.as_deref(),
+        )
+        .map(|scenario| skill_group_dto(&store, scenario))
     })
     .await?;
     if result.is_ok() {
@@ -330,85 +340,6 @@ async fn apply_skill_group_to_default_impl(
 }
 
 #[tauri::command]
-pub async fn add_skill_to_skill_group(
-    app: tauri::AppHandle,
-    skill_id: String,
-    skill_group_id: String,
-    store: State<'_, Arc<SkillStore>>,
-) -> Result<(), AppError> {
-    let store = store.inner().clone();
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        set_skill_group_skills_internal(&store, &skill_group_id, &[skill_id], true)?;
-        // Membership-only edit. We intentionally do NOT sync to disk here,
-        // even when this skill group happens to be the legacy `active_scenario_id`,
-        // because in the post-v1.16 model skill groups are curation labels, not
-        // implicit deployment switches. Users apply skill groups explicitly via
-        // SkillGroupBar / the tray, which is where the actual write happens.
-        Ok(())
-    })
-    .await?;
-    if result.is_ok() {
-        refresh_tray_menu_best_effort(&app);
-    }
-    result
-}
-
-#[tauri::command]
-pub async fn remove_skill_from_skill_group(
-    app: tauri::AppHandle,
-    skill_id: String,
-    skill_group_id: String,
-    store: State<'_, Arc<SkillStore>>,
-) -> Result<(), AppError> {
-    let store = store.inner().clone();
-    let result = tauri::async_runtime::spawn_blocking(move || {
-        set_skill_group_skills_internal(&store, &skill_group_id, &[skill_id], false)?;
-        // Same rationale as add_skill_to_skill_group: editing skill group membership
-        // never wipes on-disk skill targets. To remove a skill from a coding
-        // agent the caller goes through SkillGroupBar / the tray (or the explicit
-        // per-skill unsync command).
-        Ok(())
-    })
-    .await?;
-    if result.is_ok() {
-        refresh_tray_menu_best_effort(&app);
-    }
-    result
-}
-
-/// Add or remove a pre-resolved set of skills from one skill group under the repo
-/// lock. Membership edits are curation-only and deliberately do not deploy.
-pub fn set_skill_group_skills_internal(
-    store: &SkillStore,
-    skill_group_id: &str,
-    skill_ids: &[String],
-    add: bool,
-) -> Result<(), AppError> {
-    scenario_service::ensure_scenario_exists(store, skill_group_id)?;
-    sync_metadata::with_repo_lock(
-        if add {
-            "add skills to skill group"
-        } else {
-            "remove skills from skill group"
-        },
-        || {
-            for skill_id in skill_ids {
-                if store.get_skill_by_id(skill_id)?.is_none() {
-                    return Err(anyhow::anyhow!("Skill not found: {skill_id}"));
-                }
-                if add {
-                    store.add_skill_to_scenario(skill_group_id, skill_id)?;
-                } else {
-                    store.remove_skill_from_scenario(skill_group_id, skill_id)?;
-                }
-            }
-            sync_metadata::write_all_from_db_unlocked(store)
-        },
-    )
-    .map_err(AppError::db)
-}
-
-#[tauri::command]
 pub async fn reorder_skill_groups(
     app: tauri::AppHandle,
     ids: Vec<String>,
@@ -533,6 +464,7 @@ pub async fn apply_skill_group_to_coding_agents(
 
 #[cfg(test)]
 mod tests {
+    mod membership_tests;
     use super::*;
     use crate::core::scenario_service::{
         collect_scenario_sync_targets, sync_desired_targets, unsync_obsolete_scenario_targets,

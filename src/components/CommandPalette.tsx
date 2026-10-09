@@ -13,6 +13,10 @@ import {
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
+import {
+  getSkillGroupDisplayName,
+  getSkillGroupDisplayDescription,
+} from "../lib/skillGroupDisplay";
 import { cn } from "../utils";
 
 type ItemKind = "skill" | "skillGroup" | "project" | "action";
@@ -104,7 +108,12 @@ export function CommandPalette() {
       }));
 
     const skillGroupItems: PaletteItem[] = skillGroups
-      .filter((s) => !q || s.name.toLowerCase().includes(q))
+      .filter(
+        (s) =>
+          !q ||
+          s.name.toLowerCase().includes(q) ||
+          getSkillGroupDisplayName(s.name, t).toLowerCase().includes(q),
+      )
       .slice(0, 6)
       .map((s) => {
         const option = getSkillGroupIconOption(s);
@@ -112,8 +121,9 @@ export function CommandPalette() {
         return {
           id: `skillGroup:${s.id}`,
           kind: "skillGroup",
-          label: s.name,
-          sublabel: s.description || `${s.skill_count} skills`,
+          label: getSkillGroupDisplayName(s.name, t),
+          sublabel:
+            getSkillGroupDisplayDescription(s, t) || `${s.skill_count} skills`,
           icon: <Icon className="h-3.5 w-3.5" />,
           run: () => {
             if (viewedSkillGroup?.id !== s.id) {

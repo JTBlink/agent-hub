@@ -1,4 +1,7 @@
-import { getSkillGroupDisplayName, getSkillGroupDisplayDescription } from "../lib/skillGroupDisplay";
+import {
+  getSkillGroupDisplayName,
+  getSkillGroupDisplayDescription,
+} from "../lib/skillGroupDisplay";
 import { useCallback, useMemo, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -64,7 +67,7 @@ export function SkillGroupBar({
       setLoadingKey(`${skillGroup.id}-add`);
       try {
         const skillGroupSkills = managedSkills.filter((s) =>
-          s.skillGroup_ids.includes(skillGroup.id),
+          s.skill_group_ids.includes(skillGroup.id),
         );
         let added = 0,
           skipped = 0,
@@ -115,7 +118,7 @@ export function SkillGroupBar({
       setLoadingKey(`${skillGroup.id}-remove`);
       try {
         const skillGroupSkills = managedSkills.filter((s) =>
-          s.skillGroup_ids.includes(skillGroup.id),
+          s.skill_group_ids.includes(skillGroup.id),
         );
         let removed = 0,
           failed = 0;
@@ -201,7 +204,9 @@ export function SkillGroupBar({
               ) : (
                 <Icon className="h-3 w-3" />
               )}
-              <span className="max-w-[140px] truncate">{getSkillGroupDisplayName(skillGroup.name, t)}</span>
+              <span className="max-w-[140px] truncate">
+                {getSkillGroupDisplayName(skillGroup.name, t)}
+              </span>
               {s.status === "active" && <Check className="h-3 w-3 shrink-0" />}
               {s.status === "partial" && (
                 <span className="rounded-full bg-amber-500/20 px-1.5 py-px text-[10px] font-semibold">

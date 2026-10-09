@@ -100,29 +100,37 @@ pub(super) fn format_updates_label(count: usize, language: TrayLanguage) -> Stri
     }
 }
 
-pub(super) fn skill_group_menu_label(skill_group: &TraySkillGroupEntry, language: TrayLanguage) -> String {
+pub(super) fn skill_group_menu_label(
+    skill_group: &TraySkillGroupEntry,
+    language: TrayLanguage,
+) -> String {
+    let name = match (skill_group.name.as_str(), language) {
+        ("Default", TrayLanguage::SimplifiedChinese) => "默认",
+        ("Default", TrayLanguage::TraditionalChinese) => "預設",
+        (name, _) => name,
+    };
     if matches!(language, TrayLanguage::SimplifiedChinese) {
         return match skill_group.status() {
             TraySkillGroupStatus::Active => {
-                format!("✓ {} ({} 个技能)", skill_group.name, skill_group.skill_count)
+                format!("✓ {} ({} 个技能)", name, skill_group.skill_count)
             }
             TraySkillGroupStatus::Partial => format!(
                 "{} ({} / {} 已同步)",
-                skill_group.name, skill_group.synced_pairs, skill_group.total_pairs
+                name, skill_group.synced_pairs, skill_group.total_pairs
             ),
-            _ => format!("{} ({} 个技能)", skill_group.name, skill_group.skill_count),
+            _ => format!("{} ({} 个技能)", name, skill_group.skill_count),
         };
     }
     if matches!(language, TrayLanguage::TraditionalChinese) {
         return match skill_group.status() {
             TraySkillGroupStatus::Active => {
-                format!("✓ {} ({} 個技能)", skill_group.name, skill_group.skill_count)
+                format!("✓ {} ({} 個技能)", name, skill_group.skill_count)
             }
             TraySkillGroupStatus::Partial => format!(
                 "{} ({} / {} 已同步)",
-                skill_group.name, skill_group.synced_pairs, skill_group.total_pairs
+                name, skill_group.synced_pairs, skill_group.total_pairs
             ),
-            _ => format!("{} ({} 個技能)", skill_group.name, skill_group.skill_count),
+            _ => format!("{} ({} 個技能)", name, skill_group.skill_count),
         };
     }
     let unit = if skill_group.skill_count == 1 {
@@ -131,18 +139,42 @@ pub(super) fn skill_group_menu_label(skill_group: &TraySkillGroupEntry, language
         "skills"
     };
     match skill_group.status() {
-        TraySkillGroupStatus::Active => format!("✓ {} ({} {unit})", skill_group.name, skill_group.skill_count),
+        TraySkillGroupStatus::Active => format!("✓ {} ({} {unit})", name, skill_group.skill_count),
         TraySkillGroupStatus::Partial => format!(
             "{} ({}/{} synced)",
-            skill_group.name, skill_group.synced_pairs, skill_group.total_pairs
+            name, skill_group.synced_pairs, skill_group.total_pairs
         ),
-        _ => format!("{} ({} {unit})", skill_group.name, skill_group.skill_count),
+        _ => format!("{} ({} {unit})", name, skill_group.skill_count),
     }
 }
 
 #[cfg(test)]
 mod tray_menu_text_tests {
     use super::*;
+
+    #[test]
+    fn default_group_name_follows_tray_language_without_renaming() {
+        let group = TraySkillGroupEntry {
+            id: "default-group".into(),
+            name: "Default".into(),
+            skill_count: 2,
+            synced_pairs: 2,
+            total_pairs: 2,
+        };
+        assert_eq!(
+            skill_group_menu_label(&group, TrayLanguage::SimplifiedChinese),
+            "✓ 默认 (2 个技能)"
+        );
+        assert_eq!(
+            skill_group_menu_label(&group, TrayLanguage::TraditionalChinese),
+            "✓ 預設 (2 個技能)"
+        );
+        assert_eq!(
+            skill_group_menu_label(&group, TrayLanguage::English),
+            "✓ Default (2 skills)"
+        );
+        assert_eq!(group.name, "Default");
+    }
 
     #[test]
     fn tray_language_defaults_to_chinese_before_frontend_saves_locale() {

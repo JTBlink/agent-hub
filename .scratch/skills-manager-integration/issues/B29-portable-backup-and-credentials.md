@@ -6,7 +6,7 @@ Blocked by: none
 
 ## Scope
 
-- 活跃 Skills 保持在 `~/.agents/skills`；Git 仓库默认使用 `~/.agent-hub/backup`，以 `skills/<目录>/SKILL.md` 保存内容，支持分类子目录与 `npx skills`。
+- 活跃 Skills 保持在 `~/.agent-hub/skills`；Git 仓库默认使用 `~/.agent-hub/backup`，以 `skills/<目录>/SKILL.md` 保存内容，支持分类子目录与 `npx skills`。
 - 复制保留旧仓库历史，桌面、CLI、自动备份、合并、恢复统一使用独立仓库。远端更新应用前检测外部修改，保留恢复副本与中断日志。
 - 修复隐藏目录打开权限，设置页与本地 Skill 位置增加 VS Code 入口。
 - 快照标签保持 UTC 编号兼容，界面统一转换为本地时间并展示时区，区分快照生成与提交时间。
@@ -27,7 +27,7 @@ Blocked by: none
 
 ## Result
 
-独立备份、目录打开与 VS Code 入口、本地凭据缓存和本地快照时间展示完成。备份目录默认 `~/.agent-hub/backup`；活跃技能目录保持 `~/.agents/skills`。已有 Git 历史及恢复标签保留，凭据不进入仓库。
+独立备份、目录打开与 VS Code 入口、本地凭据缓存和本地快照时间展示完成。备份目录默认 `~/.agent-hub/backup`；活跃技能目录保持 `~/.agent-hub/skills`。已有 Git 历史及恢复标签保留，凭据不进入仓库。
 
 在隔离的待提交快照运行前端测试（70 项）、`npm run build`、`npm run lint`、`npm run format:check`；`cargo test --manifest-path src-tauri/Cargo.toml`（604 项库测试、6 项 CLI 测试通过，8 项已有测试忽略）、`cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` 与 `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check` 全部通过。标准安装器已在临时目录验证发现和安装，未操作实际全局 Skills。
 

@@ -1,3 +1,6 @@
+mod membership;
+pub(crate) use membership::write_scenario_membership_metadata_unlocked;
+
 use anyhow::{anyhow, bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -304,22 +307,7 @@ fn write_skill_records_from_db(store: &SkillStore) -> Result<()> {
 fn write_scenario_records_from_db(store: &SkillStore) -> Result<()> {
     for scenario in store.get_all_scenarios()? {
         write_scenario_file(&scenario)?;
-        let skill_ids = store.get_skill_ids_for_scenario(&scenario.id)?;
-        for (index, skill_id) in skill_ids.iter().enumerate() {
-            let tools = store
-                .get_scenario_skill_tool_toggles(&scenario.id, skill_id)?
-                .into_iter()
-                .map(|toggle| (toggle.tool, toggle.enabled))
-                .collect::<BTreeMap<_, _>>();
-            let member = ScenarioSkillMetaFile {
-                schema_version: SCHEMA_VERSION,
-                scenario_id: scenario.id.clone(),
-                skill_id: skill_id.clone(),
-                sort_order: index as i32,
-                tools,
-            };
-            write_membership_file(&member)?;
-        }
+        membership::write_membership_records(store, &scenario.id)?;
     }
     Ok(())
 }
@@ -387,10 +375,11 @@ fn remove_stale_metadata_files(store: &SkillStore) -> Result<()> {
     Ok(())
 }
 
-fn remove_stale_json_files(dir: &Path, expected_stems: &HashSet<String>) -> Result<()> {
+fn remove_stale_json_files(dir: &Path, expected_stems: &HashSet<String>) -> Result<bool> {
     if !dir.exists() {
-        return Ok(());
+        return Ok(false);
     }
+    let mut removed = false;
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         if !entry.file_type()?.is_file() {
@@ -404,10 +393,11 @@ fn remove_stale_json_files(dir: &Path, expected_stems: &HashSet<String>) -> Resu
                 .unwrap_or_default();
             if !expected_stems.contains(&stem) {
                 fs::remove_file(&path)?;
+                removed = true;
             }
         }
     }
-    Ok(())
+    Ok(removed)
 }
 
 fn write_skill_file(skill: &SkillRecord, tags: &[String]) -> Result<()> {

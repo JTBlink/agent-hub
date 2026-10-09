@@ -80,7 +80,7 @@ aside and retry. Never delete it for them.
 
 ## Mental model
 
-There's **one central library** at `~/.agents/skills` that all agents share. Each skill has source metadata, skill group membership, tags, and zero or more real deployments in agent directories. A **skill group** is a reusable group; several skill groups may be deployed at the same time.
+There's **one central library** at `~/.agent-hub/skills` that all agents share. Each skill has source metadata, skill group membership, tags, and zero or more real deployments in agent directories. A **skill group** is a reusable group; several skill groups may be deployed at the same time.
 
 Keep these three states separate:
 

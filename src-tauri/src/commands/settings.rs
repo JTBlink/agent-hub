@@ -92,6 +92,31 @@ pub fn get_skills_directory() -> String {
 }
 
 #[tauri::command]
+pub fn get_shared_skills_link_status() -> bool {
+    central_repo::is_shared_link_active()
+}
+
+#[tauri::command]
+pub async fn set_shared_skills_link(
+    enabled: bool,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if enabled {
+            central_repo::enable_shared_link().map_err(AppError::io)?;
+        } else {
+            central_repo::disable_shared_link().map_err(AppError::io)?;
+        }
+        store
+            .set_setting("shared_skills_link", if enabled { "true" } else { "false" })
+            .map_err(AppError::db)?;
+        Ok(())
+    })
+    .await?
+}
+
+#[tauri::command]
 pub fn get_central_repo_path() -> String {
     central_repo::base_dir().to_string_lossy().to_string()
 }

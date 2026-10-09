@@ -1,3 +1,5 @@
+mod membership;
+
 use anyhow::Result;
 use rusqlite::{params, Connection};
 use serde::Serialize;

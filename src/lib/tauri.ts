@@ -37,7 +37,7 @@ export interface ManagedSkill {
   updated_at: number;
   status: string;
   targets: SkillTarget[];
-  skillGroup_ids: string[];
+  skill_group_ids: string[];
   tags: string[];
 }
 
@@ -423,7 +423,10 @@ export const unsyncSkillFromTool = (skillId: string, tool: string) =>
   invoke<void>("unsync_skill_from_tool", { skillId, tool });
 
 export const getSkillToolToggles = (skillId: string, skillGroupId: string) =>
-  invoke<SkillToolToggle[]>("get_skill_tool_toggles", { skillId, skillGroupId });
+  invoke<SkillToolToggle[]>("get_skill_tool_toggles", {
+    skillId,
+    skillGroupId,
+  });
 
 export const setSkillToolToggle = (
   skillId: string,
@@ -431,7 +434,12 @@ export const setSkillToolToggle = (
   tool: string,
   enabled: boolean,
 ) =>
-  invoke<void>("set_skill_tool_toggle", { skillId, skillGroupId, tool, enabled });
+  invoke<void>("set_skill_tool_toggle", {
+    skillId,
+    skillGroupId,
+    tool,
+    enabled,
+  });
 
 // ── Scan ──
 
@@ -768,7 +776,8 @@ export const gitBackupRestoreVersion = (tag: string) =>
 
 export const getSkillGroups = () => invoke<SkillGroup[]>("get_skill_groups");
 
-export const getActiveSkillGroup = () => invoke<SkillGroup | null>("get_active_skill_group");
+export const getActiveSkillGroup = () =>
+  invoke<SkillGroup | null>("get_active_skill_group");
 
 export const createSkillGroup = (
   name: string,
@@ -807,8 +816,17 @@ export const applySkillGroupToDefault = (id: string) =>
 export const addSkillToSkillGroup = (skillId: string, skillGroupId: string) =>
   invoke<void>("add_skill_to_skill_group", { skillId, skillGroupId });
 
-export const removeSkillFromSkillGroup = (skillId: string, skillGroupId: string) =>
-  invoke<void>("remove_skill_from_skill_group", { skillId, skillGroupId });
+export const removeSkillFromSkillGroup = (
+  skillId: string,
+  skillGroupId: string,
+) => invoke<void>("remove_skill_from_skill_group", { skillId, skillGroupId });
+
+export const setSkillGroupMembership = (
+  skillIds: string[],
+  skillGroupId: string,
+  add: boolean,
+) =>
+  invoke<void>("set_skill_group_membership", { skillIds, skillGroupId, add });
 
 export const reorderSkillGroups = (ids: string[]) =>
   invoke<void>("reorder_skill_groups", { ids });
@@ -819,8 +837,10 @@ export const reorderProjects = (ids: string[]) =>
 export const getSkillGroupSkillOrder = (skillGroupId: string) =>
   invoke<string[]>("get_skill_group_skill_order", { skillGroupId });
 
-export const reorderSkillGroupSkills = (skillGroupId: string, skillIds: string[]) =>
-  invoke<void>("reorder_skill_group_skills", { skillGroupId, skillIds });
+export const reorderSkillGroupSkills = (
+  skillGroupId: string,
+  skillIds: string[],
+) => invoke<void>("reorder_skill_group_skills", { skillGroupId, skillIds });
 
 // ── Projects ──
 
@@ -980,4 +1000,8 @@ export const deleteGlobalLocalSkill = (
 
 /** Actual Skills root, separate from application data. */
 export const getSkillsDirectory = () => invoke<string>("get_skills_directory");
+export const getSharedSkillsLinkStatus = () =>
+  invoke<boolean>("get_shared_skills_link_status");
+export const setSharedSkillsLink = (enabled: boolean) =>
+  invoke<void>("set_shared_skills_link", { enabled });
 export const getBackupDirectory = () => invoke<string>("get_backup_directory");
