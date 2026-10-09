@@ -190,6 +190,27 @@ fn initialize_store_inner(
         }
     }
 
+    // The one-time shared-library migration can finish before a skill is
+    // imported. In that case an older Agent link still points at the former
+    // `~/.agents/skills` root and has no target row to identify it as ours.
+    // Re-run the narrow, path-based repair on every startup so those links do
+    // not become permanent deployment conflicts. `repoint_after_move` only
+    // touches links whose raw target is inside the known legacy root.
+    let legacy = central_repo::legacy_default_skills_dir();
+    let current = central_repo::default_skills_dir();
+    if central_repo::skills_dir() == current
+        && legacy != current
+        && legacy.symlink_metadata().is_ok()
+    {
+        match repoint_after_move(&store, &legacy, &current) {
+            Ok(failures) if failures > 0 => {
+                log::warn!("startup: could not repair {failures} legacy Agent skill link(s)")
+            }
+            Ok(_) => {}
+            Err(err) => log::warn!("startup: legacy Agent link repair failed: {err:#}"),
+        }
+    }
+
     timings.skill_count = store.get_all_skills().map(|s| s.len()).unwrap_or(0);
 
     if sync_metadata::metadata_exists() {
@@ -603,6 +624,45 @@ mod tests {
         assert_eq!(
             skill.source_ref.as_deref(),
             Some(to.join("skills/s").to_string_lossy().as_ref())
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn repoints_legacy_shared_agent_link_without_target_record() {
+        let tmp = tempfile::tempdir().unwrap();
+        let legacy = tmp.path().join(".agents/skills");
+        let current = tmp.path().join(".agent-hub/skills");
+        let codex_root = tmp.path().join(".codex/skills");
+        std::fs::create_dir_all(legacy.join("browser-use")).unwrap();
+        std::fs::create_dir_all(current.join("browser-use")).unwrap();
+        std::fs::create_dir_all(&codex_root).unwrap();
+        std::os::unix::fs::symlink(legacy.join("browser-use"), codex_root.join("browser-use"))
+            .unwrap();
+
+        // Project roots are scanned independently of deployment records. This
+        // models an old Codex link left behind after the shared library move.
+        let store = SkillStore::new(&tmp.path().join("test.db")).unwrap();
+        store
+            .insert_project(&ProjectRecord {
+                id: "codex".into(),
+                name: "Codex skills".into(),
+                path: codex_root.to_string_lossy().into(),
+                workspace_type: "linked".into(),
+                linked_agent_key: Some("codex".into()),
+                linked_agent_name: None,
+                disabled_path: None,
+                sort_order: 0,
+                created_at: 0,
+                updated_at: 0,
+            })
+            .unwrap();
+
+        assert!(store.get_all_targets().unwrap().is_empty());
+        assert_eq!(repoint_after_move(&store, &legacy, &current).unwrap(), 0);
+        assert_eq!(
+            std::fs::read_link(codex_root.join("browser-use")).unwrap(),
+            current.join("browser-use")
         );
     }
 }

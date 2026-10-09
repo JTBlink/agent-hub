@@ -27,7 +27,6 @@ import {
   Tag,
   Trash2,
 } from "lucide-react";
-import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -920,7 +919,7 @@ export function MySkills() {
   ) => {
     const selected =
       skillGroupSource ??
-      (await dialogOpen({ directory: true, multiple: false }));
+      (await api.pickDirectory());
     if (!selected || Array.isArray(selected)) return;
 
     setUpdatingSkillId(skill.id);
@@ -1132,7 +1131,7 @@ export function MySkills() {
   const anyRefreshableSelected = useMemo(
     () =>
       skills.some((skill) => selectedIds.has(skill.id) && canRefresh(skill)),
-    [skills, selectedIds],
+    [skills, selectedIds, canRefresh],
   );
   const availableUpdateCount = useMemo(
     () =>
@@ -1140,13 +1139,13 @@ export function MySkills() {
         (skill) =>
           skill.update_status === "update_available" && canRefresh(skill),
       ).length,
-    [skills],
+    [skills, canRefresh],
   );
   const refreshableSelectedCount = useMemo(
     () =>
       skills.filter((skill) => selectedIds.has(skill.id) && canRefresh(skill))
         .length,
-    [skills, selectedIds],
+    [skills, selectedIds, canRefresh],
   );
   /**
    * Only the selected skills the toggle would actually change — a mixed selection

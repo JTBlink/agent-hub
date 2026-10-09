@@ -7,7 +7,9 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context};
-use app_lib::commands::{local_cleanup, skill_groups as skill_group_cmd, skills as cmd, tools as tool_cmd};
+use app_lib::commands::{
+    local_cleanup, skill_groups as skill_group_cmd, skills as cmd, tools as tool_cmd,
+};
 use app_lib::core::{
     app_state, audit_log::AuditDraft, central_repo, error::AppError, git_backup, git_fetcher,
     installer, repo_lock::RepoLock, scanner, scenario_service, skill_metadata,
@@ -1716,9 +1718,13 @@ fn run_install(
     let synced = skill_group_id.is_some();
 
     let (skill_id, install_name, central_path, source_type) = match kind {
-        InstallKind::Local => install_local_action(store, reference, name, skill_group_id.as_deref())?,
+        InstallKind::Local => {
+            install_local_action(store, reference, name, skill_group_id.as_deref())?
+        }
         InstallKind::Git => install_git_action(store, reference, name, skill_group_id.as_deref())?,
-        InstallKind::Skillssh => install_skillssh_action(store, reference, skill_group_id.as_deref())?,
+        InstallKind::Skillssh => {
+            install_skillssh_action(store, reference, skill_group_id.as_deref())?
+        }
     };
 
     Ok(InstallReport {
@@ -2197,8 +2203,8 @@ fn run_sync(
             scenario_service::sync_desired_targets(store, &desired).map_err(map_app_err)?;
         scenario_service::refusals_to_error(refusals).map_err(map_app_err)?;
     } else {
-        let refusals =
-            scenario_service::apply_scenario_to_default(store, &skill_group.id).map_err(map_app_err)?;
+        let refusals = scenario_service::apply_scenario_to_default(store, &skill_group.id)
+            .map_err(map_app_err)?;
         scenario_service::refusals_to_error(refusals).map_err(map_app_err)?;
     }
 
@@ -2671,7 +2677,8 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
                 bail!("refusing to delete Skill Group without --yes");
             }
             if !dry_run {
-                skill_group_cmd::delete_skill_group_internal(store, &skill_group.id).map_err(map_app_err)?;
+                skill_group_cmd::delete_skill_group_internal(store, &skill_group.id)
+                    .map_err(map_app_err)?;
             }
             print_json(
                 &SkillGroupDeleteReport {
@@ -2686,8 +2693,8 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
         }
         SkillGroupCommand::Preview { reference } => {
             let skill_group = resolve_scenario(store, &reference)?;
-            let preview =
-                scenario_service::preview_scenario_sync(store, &skill_group.id).map_err(map_app_err)?;
+            let preview = scenario_service::preview_scenario_sync(store, &skill_group.id)
+                .map_err(map_app_err)?;
             print_json(&preview, json);
         }
         SkillGroupCommand::Apply { reference } => {
@@ -2721,7 +2728,8 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
                 // any skills it shares with the active skill group. Unsync this
                 // skill group first, then re-sync the active skill group so the shared
                 // targets are restored.
-                scenario_service::unsync_scenario_skills(store, &skill_group.id).map_err(map_app_err)?;
+                scenario_service::unsync_scenario_skills(store, &skill_group.id)
+                    .map_err(map_app_err)?;
                 if let Some(active_id) = active.as_deref() {
                     // The delete already happened; a refusal here must not fail
                     // the command, only be reported.
@@ -2743,7 +2751,9 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
                     skill_group_id: skill_group.id,
                     skill_group_name: skill_group.name,
                     removed_target_count,
-                    active_skill_group_id: active_after.as_ref().map(|skill_group| skill_group.id.clone()),
+                    active_skill_group_id: active_after
+                        .as_ref()
+                        .map(|skill_group| skill_group.id.clone()),
                     active_skill_group_name: active_after.map(|skill_group| skill_group.name),
                 },
                 json,
@@ -2768,7 +2778,10 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
         SkillGroupCommand::Status { reference, agents } => {
             print_json(&skill_group_status(store, &reference, &agents)?, json);
         }
-        SkillGroupCommand::AddSkill { skill_group, skills } => {
+        SkillGroupCommand::AddSkill {
+            skill_group,
+            skills,
+        } => {
             let s = resolve_scenario(store, &skill_group)?;
             let resolved = resolve_skill_references(store, &skills)?;
             let ids: Vec<String> = resolved.iter().map(|skill| skill.id.clone()).collect();
@@ -2785,7 +2798,10 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
                 json,
             );
         }
-        SkillGroupCommand::RemoveSkill { skill_group, skills } => {
+        SkillGroupCommand::RemoveSkill {
+            skill_group,
+            skills,
+        } => {
             let s = resolve_scenario(store, &skill_group)?;
             let resolved = resolve_skill_references(store, &skills)?;
             let ids: Vec<String> = resolved.iter().map(|skill| skill.id.clone()).collect();
@@ -3051,7 +3067,10 @@ fn run_skill_group_deployment(
                         })
                         .skill(skill.id.clone(), skill.name.clone())
                         .tool(agent.clone())
-                        .detail(format!("skill_group={} ({})", skill_group.name, skill_group.id))
+                        .detail(format!(
+                            "skill_group={} ({})",
+                            skill_group.name, skill_group.id
+                        ))
                         .ok(),
                     );
                 }
@@ -3107,7 +3126,10 @@ fn current_skill_group(store: &SkillStore) -> anyhow::Result<Option<SkillGroupIn
     Ok(scenarios.into_iter().find(|s| s.active))
 }
 
-fn count_synced_targets_for_skill_group(store: &SkillStore, skill_group_id: &str) -> anyhow::Result<usize> {
+fn count_synced_targets_for_skill_group(
+    store: &SkillStore,
+    skill_group_id: &str,
+) -> anyhow::Result<usize> {
     let skill_ids = store.get_skill_ids_for_scenario(skill_group_id)?;
     let mut count = 0;
     for skill_id in skill_ids {

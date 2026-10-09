@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { X, FolderOpen, Search, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
 import { cn } from "../utils";
 import * as api from "../lib/tauri";
 
@@ -39,7 +38,7 @@ export function AddProjectDialog({ open, onClose, onAdded }: Props) {
   if (!open) return null;
 
   const handleSelectFolder = async () => {
-    const dir = await dialogOpen({ directory: true, multiple: false });
+    const dir = await api.pickDirectory();
     if (!dir) return;
     setAdding(true);
     try {
@@ -97,7 +96,7 @@ export function AddProjectDialog({ open, onClose, onAdded }: Props) {
   };
 
   const handleSelectBrowse = async () => {
-    const dir = await dialogOpen({ directory: true, multiple: false });
+    const dir = await api.pickDirectory();
     if (dir) setScanRoot(dir as string);
   };
 
@@ -295,10 +294,7 @@ export function AddProjectDialog({ open, onClose, onAdded }: Props) {
               />
               <button
                 onClick={async () => {
-                  const dir = await dialogOpen({
-                    directory: true,
-                    multiple: false,
-                  });
+                  const dir = await api.pickDirectory();
                   if (dir) setLinkedPath(dir as string);
                 }}
                 className="px-2.5 rounded-lg border border-border-subtle bg-background text-muted hover:text-secondary hover:border-border transition-all outline-none"

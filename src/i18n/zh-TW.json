@@ -936,6 +936,10 @@
     "skillEnabled": "「{{name}}」已啟用",
     "skillDisabled": "「{{name}}」已停用",
     "searchPlaceholder": "搜尋專案中的 Skills...",
+    "agentFilter": {
+      "label": "按 Agent 篩選",
+      "all": "全部"
+    },
     "filters": {
       "all": "全部",
       "enabled": "已啟用",

@@ -50,10 +50,7 @@ import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { writeText as clipboardWriteText } from "@tauri-apps/plugin-clipboard-manager";
-import {
-  open as dialogOpen,
-  confirm as dialogConfirm,
-} from "@tauri-apps/plugin-dialog";
+import { confirm as dialogConfirm } from "@tauri-apps/plugin-dialog";
 import { useNavigate } from "react-router-dom";
 import { cn, compactHomePath } from "../utils";
 import { useSectionAnchor } from "../hooks/useSectionAnchor";
@@ -281,7 +278,7 @@ export function Settings() {
   };
 
   const handleBrowsePath = async (setter: (v: string) => void) => {
-    const selected = await dialogOpen({ directory: true, multiple: false });
+    const selected = await api.pickDirectory();
     if (selected && typeof selected === "string") {
       setter(selected);
     }

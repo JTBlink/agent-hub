@@ -6,6 +6,8 @@
 
 ### Changed
 
+- 项目工作区的 Skills 列表支持按 Agent 筛选，可同时选择多个 Agent 查看对应的 Skill 变体。
+
 - 默认技能库目录从 `~/.agents/skills` 改为 `~/.agent-hub/skills`，统一放在应用数据目录下。`~/.agents/skills` 变为可选软链接，可在设置中开启或关闭，方便其他 AI 工具发现技能。
 
 - 代码层全面重命名：`Preset` / `preset` → `SkillGroup` / `skill_group`，涵盖 Rust 命令层、TypeScript/React 前端、i18n 键名与文件名；数据库层保留 `scenario`，CLI 旧别名 `presets`、`--preset`、`--no-preset`、`--sync-preset` 继续兼容。
@@ -61,6 +63,10 @@
 - 删除旧 V1 规划、原型和已替代 ADR；规划设计统一以 Skills Manager 实现为基线。
 
 ### Fixed
+
+- 修复技能库从旧共享目录迁移后，Codex 等 Agent 遗留软链接被误判为未托管而无法部署的问题；启动时仅重定向明确指向旧 AgentHub 技能库的链接，保留其他外部链接不变。
+
+- macOS 目录选择器默认显示隐藏目录（如 `~/.agent-hub`），使用自定义 NSOpenPanel 替代 Tauri dialog 插件的标准目录选择器；其他平台使用 rfd 原生对话框。
 
 - 优化加入和移出技能组：批量成员一次提交，仅更新当前组元数据与界面成员状态；减少全库、项目及备份扫描，合并托盘刷新，降低连续操作等待。
 
