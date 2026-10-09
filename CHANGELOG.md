@@ -20,6 +20,7 @@
 
 - Unix 开发入口 `agent-hub.sh install` 支持编译 CLI 并在 Cargo bin 目录创建指向仓库构建产物的软链接，可通过 `AGENT_HUB_CLI_BIN_DIR` 自定义链接目录。
 - `agent-hub.sh install` 编译后同步刷新 `~/.agent-hub/bin` 中的 CLI bridge，避免开发构建后 `manage-skills` 继续使用旧版本。
+- `agent-hub.sh install` 默认走当前平台打包流程；仅在传入 `--dev` 时编译并安装开发 CLI，避免普通安装命令修改 Cargo bin 软链接。
 
 - 本地 Skill 导入校验入口文件，拒绝普通目录、无 Skill 压缩包与伪入口目录，失败前保留已有目标；导入错误使用弹窗提示。中文首页统计与卡片统一使用“技能库”名称。
 
