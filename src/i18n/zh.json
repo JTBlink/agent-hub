@@ -525,6 +525,8 @@
     "loadingMore": "正在加载更多...",
     "installing": "安装中...",
     "installed": "已安装",
+    "localMatch": "已导入",
+    "linkToMarket": "关联到市场版本（可接收更新）",
     "cancel": "取消",
     "toast": {
       "cloning": "正在克隆仓库...",

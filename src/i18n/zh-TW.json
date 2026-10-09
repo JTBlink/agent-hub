@@ -482,6 +482,8 @@
     "loadingMore": "正在載入更多...",
     "installing": "安裝中...",
     "installed": "已安裝",
+    "localMatch": "已匯入",
+    "linkToMarket": "關聯到市場版本（可接收更新）",
     "cancel": "取消",
     "toast": {
       "cloning": "正在複製倉庫...",
