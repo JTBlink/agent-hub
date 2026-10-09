@@ -507,6 +507,7 @@
     "filters": {
       "source": "来源",
       "allSources": "全部来源",
+      "installed": "已安装",
       "filteredCount": "当前已加载 {{count}} 条结果"
     },
     "noResults": {

@@ -74,6 +74,7 @@ export function InstallSkills() {
   );
   const [marketQuery, setMarketQuery] = useState("");
   const [marketSourceFilter, setMarketSourceFilter] = useState("all");
+  const [marketInstalledFilter, setMarketInstalledFilter] = useState(false);
   const [marketSkills, setMarketSkills] = useState<SkillsShSkill[]>([]);
   const [marketPage, setMarketPage] = useState(1);
   const [marketSearchLimit, setMarketSearchLimit] =
@@ -106,11 +107,12 @@ export function InstallSkills() {
   const [importingPaths, setImportingPaths] = useState<Set<string>>(new Set());
   const [importingAll, setImportingAll] = useState(false);
   const [overwriteConfirm, setOverwriteConfirm] = useState<{
-    type: "single" | "all" | "local" | "batch";
+    type: "single" | "all" | "local" | "batch" | "skillssh";
     names: string[];
     sourcePath?: string;
     importName?: string;
     folderPath?: string;
+    skillsshSkill?: SkillsShSkill;
   } | null>(null);
   const marketListRef = useRef<HTMLDivElement | null>(null);
   const [sourceOverflowOpen, setSourceOverflowOpen] = useState(false);
@@ -540,9 +542,26 @@ export function InstallSkills() {
     }
   };
 
-  const handleInstallSkillssh = async (skill: SkillsShSkill) => {
+  const handleInstallSkillssh = async (skill: SkillsShSkill, overwrite?: boolean) => {
     const displayName = skill.name || skill.skill_id;
     const cancelKey = `${skill.source}/${skill.skill_id}`;
+
+    if (!overwrite) {
+      try {
+        const conflict = await api.checkSkillsshConflict(skill.skill_id);
+        if (conflict) {
+          setOverwriteConfirm({
+            type: "skillssh",
+            names: [conflict],
+            skillsshSkill: skill,
+          });
+          return;
+        }
+      } catch {
+        // conflict check failed — proceed with install
+      }
+    }
+
     setInstalling(skill.id);
 
     const toastId = toast.loading(t("install.toast.cloning"));
@@ -567,7 +586,7 @@ export function InstallSkills() {
           });
         }
       });
-      await api.installFromSkillssh(skill.source, skill.skill_id);
+      await api.installFromSkillssh(skill.source, skill.skill_id, overwrite);
       await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
       toast.success(t("install.toast.success", { name: displayName }), {
         id: toastId,
@@ -835,15 +854,31 @@ export function InstallSkills() {
   }, [computeVisibleCount]);
 
   const filteredMarketSkills = useMemo(() => {
-    const filtered =
+    let filtered =
       marketSourceFilter === "all"
         ? marketSkills
         : marketSkills.filter((skill) => skill.source === marketSourceFilter);
+    if (marketInstalledFilter) {
+      filtered = filtered.filter((skill) => {
+        const sourceRef = `${skill.source}/${skill.skill_id}`;
+        return (
+          installedSourceRefs.has(sourceRef) ||
+          installedDirNames.has(skill.skill_id.toLowerCase())
+        );
+      });
+    }
     if (debouncedMarketQuery.trim().length > 0) {
       return [...filtered].sort((a, b) => b.installs - a.installs);
     }
     return filtered;
-  }, [marketSkills, marketSourceFilter, debouncedMarketQuery]);
+  }, [
+    marketSkills,
+    marketSourceFilter,
+    marketInstalledFilter,
+    installedSourceRefs,
+    installedDirNames,
+    debouncedMarketQuery,
+  ]);
 
   const totalMarketPages = Math.max(
     1,
@@ -1017,6 +1052,21 @@ export function InstallSkills() {
                     <span className="shrink-0 text-[13px] font-medium text-tertiary">
                       {t("install.filters.source")}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMarketInstalledFilter((v) => !v);
+                        setMarketPage(1);
+                      }}
+                      className={cn(
+                        "shrink-0 rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
+                        marketInstalledFilter
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                          : "border-border-subtle bg-background text-muted hover:text-secondary",
+                      )}
+                    >
+                      {t("install.filters.installed")}
+                    </button>
                     <div
                       ref={filterContainerRef}
                       className="relative min-w-0 flex-1"
@@ -1826,6 +1876,11 @@ export function InstallSkills() {
             case "batch":
               if (ctx.folderPath) {
                 await handleBatchImportFolder(ctx.folderPath);
+              }
+              break;
+            case "skillssh":
+              if (ctx.skillsshSkill) {
+                await handleInstallSkillssh(ctx.skillsshSkill, true);
               }
               break;
           }

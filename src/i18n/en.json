@@ -507,6 +507,7 @@
     "filters": {
       "source": "Source",
       "allSources": "All sources",
+      "installed": "Installed",
       "filteredCount": "{{count}} loaded results"
     },
     "noResults": {

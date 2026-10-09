@@ -321,8 +321,11 @@ export const confirmGitInstall = (
 export const cancelGitPreview = (tempDir: string) =>
   invoke<void>("cancel_git_preview", { tempDir });
 
-export const installFromSkillssh = (source: string, skillId: string) =>
-  invoke<void>("install_from_skillssh", { source, skillId });
+export const checkSkillsshConflict = (skillId: string) =>
+  invoke<string | null>("check_skillssh_conflict", { skillId });
+
+export const installFromSkillssh = (source: string, skillId: string, overwrite?: boolean) =>
+  invoke<void>("install_from_skillssh", { source, skillId, overwrite });
 
 export const cancelInstall = (key: string) =>
   invoke<boolean>("cancel_install", { key });

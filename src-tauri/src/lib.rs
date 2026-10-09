@@ -1070,6 +1070,7 @@ pub fn run() {
             commands::skills::delete_managed_skills,
             commands::skills::install_local,
             commands::skills::check_install_local_conflict,
+            commands::skills::check_skillssh_conflict,
             commands::skills::install_git,
             commands::skills::preview_git_install,
             commands::skills::confirm_git_install,
