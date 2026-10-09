@@ -362,24 +362,19 @@ export function MySkills() {
       const bNeedsUpdate = hasAvailableUpdate(b) ? 0 : 1;
       if (aNeedsUpdate !== bNeedsUpdate) return aNeedsUpdate - bNeedsUpdate;
 
-      if (viewedSkillGroup) {
-        // Keep enabled skills together after the update priority.
-        const aEnabled = a.skill_group_ids.includes(viewedSkillGroup.id)
-          ? 0
-          : 1;
-        const bEnabled = b.skill_group_ids.includes(viewedSkillGroup.id)
-          ? 0
-          : 1;
-        if (aEnabled !== bEnabled) return aEnabled - bEnabled;
+      if (!viewedSkillGroup) return 0;
 
-        // Within the same group, use the custom skill group order.
-        const aOrder = skillGroupSkillOrder.indexOf(a.id);
-        const bOrder = skillGroupSkillOrder.indexOf(b.id);
-        if (aOrder !== -1 && bOrder !== -1) return aOrder - bOrder;
-        if (aOrder !== -1) return -1;
-        if (bOrder !== -1) return 1;
-      }
+      // Keep enabled skills together after the update priority.
+      const aEnabled = a.skill_group_ids.includes(viewedSkillGroup.id) ? 0 : 1;
+      const bEnabled = b.skill_group_ids.includes(viewedSkillGroup.id) ? 0 : 1;
+      if (aEnabled !== bEnabled) return aEnabled - bEnabled;
 
+      // Within the same group, use the custom skill group order.
+      const aOrder = skillGroupSkillOrder.indexOf(a.id);
+      const bOrder = skillGroupSkillOrder.indexOf(b.id);
+      if (aOrder !== -1 && bOrder !== -1) return aOrder - bOrder;
+      if (aOrder !== -1) return -1;
+      if (bOrder !== -1) return 1;
       return a.name.localeCompare(b.name);
     });
 
