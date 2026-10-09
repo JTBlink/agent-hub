@@ -330,6 +330,15 @@ pub fn default_skills_dir() -> PathBuf {
     super::tool_adapters::shared_skills_dir()
 }
 
+/// The pre-2026 default Skills root. It remains a migration source for
+/// links created before the library moved under `~/.agent-hub`.
+pub(crate) fn legacy_default_skills_dir() -> PathBuf {
+    home_base_dir()
+        .parent()
+        .map(|home| home.join(".agents/skills"))
+        .unwrap_or_else(|| PathBuf::from(".agents/skills"))
+}
+
 pub(crate) fn take_shared_repoint_from() -> Result<Option<(PathBuf, PathBuf)>> {
     if base_dir_override_active() {
         return Ok(None);

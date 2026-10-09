@@ -58,6 +58,7 @@ import type {
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
+import { AgentIcon } from "../components/AgentIcon";
 const projectLastUsedAgentsKey = (projectId: string) =>
   `project_last_used_export_agents:${projectId}`;
 
@@ -164,6 +165,7 @@ export function ProjectDetail() {
     "all",
   );
   const [search, setSearch] = useState("");
+  const [agentFilters, setAgentFilters] = useState<Set<string>>(new Set());
   const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
   const [detailSkill, setDetailSkill] = useState<ProjectSkillEntry | null>(
     null,
@@ -247,6 +249,7 @@ export function ProjectDetail() {
   useEffect(() => {
     setSearch("");
     setFilterMode("all");
+    setAgentFilters(new Set());
     setTagFilters(new Set());
     setDetailSkill(null);
     setDocContent(null);
@@ -350,6 +353,24 @@ export function ProjectDetail() {
       });
   }, [skills]);
 
+  const agentFilterOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    for (const target of projectAgentTargets) {
+      if (target.installed && target.enabled) {
+        options.set(target.key, target.display_name);
+      }
+    }
+    for (const skill of skills) {
+      if (!options.has(skill.agent)) {
+        options.set(skill.agent, skill.agent_display_name || skill.agent);
+      }
+    }
+    return [...options.entries()].map(([key, displayName]) => ({
+      key,
+      displayName,
+    }));
+  }, [projectAgentTargets, skills]);
+
   useEffect(() => {
     if (!detailSkill) return;
     const refreshed =
@@ -370,6 +391,12 @@ export function ProjectDetail() {
         skill.name.toLowerCase().includes(search.toLowerCase()) ||
         (skill.description || "").toLowerCase().includes(search.toLowerCase());
       if (!matchesSearch) return false;
+      if (
+        agentFilters.size > 0 &&
+        !skill.variants.some((variant) => agentFilters.has(variant.agent))
+      ) {
+        return false;
+      }
       if (tagFilters.size > 0) {
         const wantUntagged = tagFilters.has(UNTAGGED_FILTER);
         const matchUntagged = wantUntagged && skill.tags.length === 0;
@@ -380,7 +407,20 @@ export function ProjectDetail() {
       if (filterMode === "disabled") return skill.enabledCount === 0;
       return true;
     });
-  }, [groupedSkills, search, filterMode, tagFilters]);
+  }, [groupedSkills, search, filterMode, agentFilters, tagFilters]);
+
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    filterMode !== "all" ||
+    agentFilters.size > 0 ||
+    tagFilters.size > 0;
+
+  const clearFilters = () => {
+    setSearch("");
+    setFilterMode("all");
+    setAgentFilters(new Set());
+    setTagFilters(new Set());
+  };
 
   const {
     isMultiSelect,
@@ -396,7 +436,12 @@ export function ProjectDetail() {
     filtered,
     getKey: getSkillKey,
     isItemActive: (s) => s.enabledCount === s.totalCount,
-    filterSignal: JSON.stringify([search, [...tagFilters].sort(), filterMode]),
+    filterSignal: JSON.stringify([
+      search,
+      [...agentFilters].sort(),
+      [...tagFilters].sort(),
+      filterMode,
+    ]),
     scopeSignal: id ?? "",
     escapeEnabled: !batchTagDialogOpen && !batchDeleteConfirm,
   });
@@ -1104,7 +1149,7 @@ export function ProjectDetail() {
       if (!projectVariant) return;
       await api.deleteProjectSkill(id, projectVariant.relative_path, agentKey);
     },
-    [findProjectSkillGroupVariant, id, t],
+    [findProjectSkillGroupVariant, id],
   );
 
   const handleSkillGroupActionComplete = useCallback(async () => {
@@ -1247,6 +1292,58 @@ export function ProjectDetail() {
             </div>
           </div>
         </div>
+
+        {agentFilterOptions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[12px] text-muted">
+              {t("project.agentFilter.label")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAgentFilters(new Set())}
+              className={cn(
+                "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                agentFilters.size === 0
+                  ? "bg-accent text-white dark:bg-accent dark:text-white"
+                  : "bg-surface-hover text-muted hover:text-secondary",
+              )}
+            >
+              {t("project.agentFilter.all")}
+            </button>
+            {agentFilterOptions.map(({ key, displayName }) => {
+              const active = agentFilters.has(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setAgentFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    });
+                  }}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium transition-colors",
+                    active
+                      ? "bg-accent text-white dark:bg-accent dark:text-white"
+                      : "bg-surface-hover text-muted hover:text-secondary",
+                  )}
+                  title={displayName}
+                >
+                  <AgentIcon
+                    agentKey={key}
+                    displayName={displayName}
+                    className="h-4 w-4 border-0 bg-transparent"
+                  />
+                  <span>{displayName}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {allTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
@@ -1446,6 +1543,11 @@ export function ProjectDetail() {
             >
               <Plus className="h-3.5 w-3.5" />
               {t("project.addSkillsCta")}
+            </button>
+          )}
+          {groupedSkills.length > 0 && hasActiveFilters && (
+            <button onClick={clearFilters} className="app-button-secondary mt-4">
+              {t("mySkills.clearFilters")}
             </button>
           )}
         </div>
@@ -1940,17 +2042,19 @@ function ProjectSkillConflictPreview({
   onSelectAgent: (agent: string) => void;
 }) {
   const { t } = useTranslation();
-  const [filesByAgent, setFilesByAgent] = useState<
-    Record<string, Record<string, string>>
-  >({});
-  const [loading, setLoading] = useState(true);
   const [compareAgent, setCompareAgent] = useState<string | null>(null);
   const [activeFile, setActiveFile] = useState<string | null>(null);
+  const requestKey = [
+    projectId,
+    ...variants.map((variant) => `${variant.agent}:${variant.relative_path}`),
+  ].join("\u0000");
+  const [fileState, setFileState] = useState<{
+    key: string;
+    files: Record<string, Record<string, string>>;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setFilesByAgent({});
     Promise.all(
       variants.map(async (variant) => {
         try {
@@ -1969,28 +2073,28 @@ function ProjectSkillConflictPreview({
       }),
     ).then((entries) => {
       if (cancelled) return;
-      setFilesByAgent(Object.fromEntries(entries));
-      setLoading(false);
+      setFileState({ key: requestKey, files: Object.fromEntries(entries) });
     });
     return () => {
       cancelled = true;
     };
-  }, [projectId, variants]);
+  }, [projectId, requestKey, variants]);
 
-  useEffect(() => {
-    const fallback = variants.find((variant) => variant.agent !== selectedAgent);
-    setCompareAgent((current) =>
-      current && variants.some((variant) => variant.agent === current)
-        ? current
-        : fallback?.agent ?? null,
-    );
-  }, [selectedAgent, variants]);
+  const loading = fileState?.key !== requestKey;
+  const filesByAgent = fileState?.key === requestKey ? fileState.files : {};
+  const fallbackCompareAgent = variants.find(
+    (variant) => variant.agent !== selectedAgent,
+  )?.agent ?? null;
+  const effectiveCompareAgent =
+    compareAgent && variants.some((variant) => variant.agent === compareAgent)
+      ? compareAgent
+      : fallbackCompareAgent;
 
   const selectedVariant = variants.find(
     (variant) => variant.agent === selectedAgent,
   );
   const compareVariant = variants.find(
-    (variant) => variant.agent === compareAgent,
+    (variant) => variant.agent === effectiveCompareAgent,
   );
   const selectedFiles = selectedVariant
     ? filesByAgent[selectedVariant.agent] ?? {}

@@ -408,12 +408,9 @@ export function InstallSkills() {
 
   const handleLocalFolderInstall = async () => {
     try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      });
+      const selected = await api.pickDirectory();
       if (!selected) return;
-      installLocalSource(selected as string);
+      installLocalSource(selected);
     } catch (error: unknown) {
       const message = getErrorMessage(error, t("common.error"));
       setLocalError(message);
@@ -439,10 +436,7 @@ export function InstallSkills() {
   const handleBatchImportFolder = async () => {
     let unlisten: (() => void) | null = null;
     try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-      });
+      const selected = await api.pickDirectory();
       if (!selected) return;
 
       const toastId = toast.loading(t("install.local.batchImporting"));

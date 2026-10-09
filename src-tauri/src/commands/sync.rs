@@ -237,7 +237,9 @@ pub async fn get_skill_tool_toggles(
             .get_skill_ids_for_scenario(&skill_group_id)
             .map_err(AppError::db)?;
         if !skill_ids.contains(&skill_id) {
-            return Err(AppError::not_found("Skill is not enabled in this skill group"));
+            return Err(AppError::not_found(
+                "Skill is not enabled in this skill group",
+            ));
         }
 
         let disabled = disabled_tools(&store);
@@ -297,7 +299,9 @@ pub async fn set_skill_tool_toggle(
             .get_skill_ids_for_scenario(&skill_group_id)
             .map_err(AppError::db)?;
         if !skill_ids.contains(&skill_id) {
-            return Err(AppError::not_found("Skill is not enabled in this skill group"));
+            return Err(AppError::not_found(
+                "Skill is not enabled in this skill group",
+            ));
         }
 
         let adapter = tool_adapters::find_adapter_with_store(&store, &tool)

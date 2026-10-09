@@ -2468,9 +2468,11 @@ pub fn store_installed_skill_unlocked(
         sync_metadata::write_all_from_db_unlocked(store).map_err(AppError::db)?;
 
         if let Some(scenario_id) = active_scenario_id {
-            if let Err(e) =
-                super::skill_groups::sync_skill_to_active_skill_group(store, scenario_id, &existing.id)
-            {
+            if let Err(e) = super::skill_groups::sync_skill_to_active_skill_group(
+                store,
+                scenario_id,
+                &existing.id,
+            ) {
                 log::warn!("Failed to sync reinstalled skill to skill group: {e}");
             }
         }
@@ -2511,7 +2513,9 @@ pub fn store_installed_skill_unlocked(
     sync_metadata::write_all_from_db_unlocked(store).map_err(AppError::db)?;
 
     if let Some(scenario_id) = active_scenario_id {
-        if let Err(e) = super::skill_groups::sync_skill_to_active_skill_group(store, scenario_id, &id) {
+        if let Err(e) =
+            super::skill_groups::sync_skill_to_active_skill_group(store, scenario_id, &id)
+        {
             log::warn!("Failed to sync newly installed skill to skill group: {e}");
         }
     }

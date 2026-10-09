@@ -240,11 +240,16 @@ fn skill_group_menu_item_id(skill_group: &TraySkillGroupEntry) -> (String, &'sta
             format!("{TRAY_SKILL_GROUP_REMOVE_PREFIX}{}", skill_group.id),
             "remove",
         ),
-        _ => (format!("{TRAY_SKILL_GROUP_ADD_PREFIX}{}", skill_group.id), "add"),
+        _ => (
+            format!("{TRAY_SKILL_GROUP_ADD_PREFIX}{}", skill_group.id),
+            "add",
+        ),
     }
 }
 
-fn skill_group_id_from_menu_id(menu_id: &str) -> Option<(&str, scenario_service_alias::BatchApplyMode)> {
+fn skill_group_id_from_menu_id(
+    menu_id: &str,
+) -> Option<(&str, scenario_service_alias::BatchApplyMode)> {
     if let Some(id) = menu_id.strip_prefix(TRAY_SKILL_GROUP_ADD_PREFIX) {
         return Some((id, scenario_service_alias::BatchApplyMode::Add));
     }
@@ -327,8 +332,13 @@ fn build_tray_menu_from_data<R: tauri::Runtime>(
                 TrayLanguage::TraditionalChinese => "沒有包含技能的技能組",
                 TrayLanguage::English => "No skill groups with skills",
             };
-            let empty =
-                MenuItem::with_id(app, "tray-skill-groups-empty", empty_label, false, None::<&str>)?;
+            let empty = MenuItem::with_id(
+                app,
+                "tray-skill-groups-empty",
+                empty_label,
+                false,
+                None::<&str>,
+            )?;
             skill_groups_submenu.append(&empty)?;
         } else {
             for skill_group in visible {
@@ -519,17 +529,23 @@ fn apply_skill_group_from_tray<R: tauri::Runtime>(
                     log::warn!("Failed to refresh tray menu after skill group apply: {err}");
                 }
                 if let Err(err) = app.emit("app-files-changed", ()) {
-                    log::warn!("Failed to emit app-files-changed after tray skill group apply: {err}");
+                    log::warn!(
+                        "Failed to emit app-files-changed after tray skill group apply: {err}"
+                    );
                 }
             }
             Ok(Ok(false)) => {
                 // Refresh the menu so the user still sees fresh status (no
                 // app-files-changed because nothing actually changed on disk).
                 if let Err(err) = refresh_tray_menu(&app) {
-                    log::debug!("Failed to refresh tray menu after skipped skill group apply: {err}");
+                    log::debug!(
+                        "Failed to refresh tray menu after skipped skill group apply: {err}"
+                    );
                 }
             }
-            Ok(Err(err)) => log::error!("Tray skill group apply failed for {skill_group_id}: {err}"),
+            Ok(Err(err)) => {
+                log::error!("Tray skill group apply failed for {skill_group_id}: {err}")
+            }
             Err(err) => log::error!("Tray skill group apply task panicked: {err}"),
         }
     });
@@ -713,7 +729,10 @@ fn ensure_tray_icon(app: &tauri::AppHandle) -> tauri::Result<()> {
                 }
                 other => {
                     if let Some((skill_group_id, mode)) = skill_group_id_from_menu_id(other) {
-                        log::debug!("Tray menu clicked: skill group {skill_group_id} mode {:?}", mode);
+                        log::debug!(
+                            "Tray menu clicked: skill group {skill_group_id} mode {:?}",
+                            mode
+                        );
                         apply_skill_group_from_tray(app, skill_group_id, mode);
                     }
                 }
@@ -1084,6 +1103,8 @@ pub fn run() {
             // Browse
             commands::browse::fetch_leaderboard,
             commands::browse::search_skillssh,
+            // Dialog
+            commands::dialog::pick_directory,
             // Settings
             commands::settings::get_settings,
             commands::settings::set_settings,

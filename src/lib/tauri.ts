@@ -1005,3 +1005,8 @@ export const getSharedSkillsLinkStatus = () =>
 export const setSharedSkillsLink = (enabled: boolean) =>
   invoke<void>("set_shared_skills_link", { enabled });
 export const getBackupDirectory = () => invoke<string>("get_backup_directory");
+
+// ── Dialog ──
+
+export const pickDirectory = (defaultPath?: string) =>
+  invoke<string | null>("pick_directory", { defaultPath: defaultPath ?? null });

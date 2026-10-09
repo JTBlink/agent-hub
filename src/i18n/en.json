@@ -1015,6 +1015,10 @@
     "skillEnabled": "\"{{name}}\" enabled",
     "skillDisabled": "\"{{name}}\" disabled",
     "searchPlaceholder": "Search skills in this project...",
+    "agentFilter": {
+      "label": "Filter by Agent",
+      "all": "All"
+    },
     "filters": {
       "all": "All",
       "enabled": "Enabled",
