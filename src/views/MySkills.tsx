@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "../utils";
 import { useApp } from "../context/AppContext";
+import { useSkillGroupMembershipActions } from "../hooks/useSkillGroupMembershipActions";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { TagRenameDialog } from "../components/TagRenameDialog";
@@ -57,6 +58,7 @@ import type {
   GitBackupStatus,
   SkillToolToggle,
 } from "../lib/tauri";
+import { skillLibraryContentKey } from "../lib/skillGroupMembership";
 import { getErrorMessage } from "../lib/error";
 import {
   DndContext,
@@ -145,6 +147,19 @@ function centralDirName(skill: ManagedSkill) {
   return skill.central_path.split(/[\\/]/).filter(Boolean).pop() || skill.name;
 }
 
+function canRefreshSkill(skill: ManagedSkill) {
+  return (
+    skill.source_type === "git" ||
+    skill.source_type === "skillssh" ||
+    ((skill.source_type === "local" || skill.source_type === "import") &&
+      !!skill.source_ref)
+  );
+}
+
+function hasAvailableUpdate(skill: ManagedSkill) {
+  return skill.update_status === "update_available" && canRefreshSkill(skill);
+}
+
 export function MySkills() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -183,7 +198,6 @@ export function MySkills() {
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
   const [batchTagDialogOpen, setBatchTagDialogOpen] = useState(false);
   const [batchSyncDialogOpen, setBatchSyncDialogOpen] = useState(false);
-  const [batchToggling, setBatchToggling] = useState(false);
   const [checkingAll, setCheckingAll] = useState(false);
   const [checkingSkillId, setCheckingSkillId] = useState<string | null>(null);
   const [updatingSkillId, setUpdatingSkillId] = useState<string | null>(null);
@@ -204,12 +218,13 @@ export function MySkills() {
   const [tagInput, setTagInput] = useState("");
   const tagInputRef = useRef<HTMLInputElement>(null);
 
-  const [skillGroupSkillOrder, setSkillGroupSkillOrder] = useState<string[]>([]);
+  const [skillGroupSkillOrder, setSkillGroupSkillOrder] = useState<string[]>(
+    [],
+  );
 
-  const viewedSkillGroupName =
-    viewedSkillGroup
-      ? getSkillGroupDisplayName(viewedSkillGroup.name, t)
-      : t("mySkills.currentSkillGroupFallback");
+  const viewedSkillGroupName = viewedSkillGroup
+    ? getSkillGroupDisplayName(viewedSkillGroup.name, t)
+    : t("mySkills.currentSkillGroupFallback");
 
   // Fetch sort order whenever active skillGroup changes
   useEffect(() => {
@@ -333,27 +348,40 @@ export function MySkills() {
 
       if (!viewedSkillGroup) return true;
 
-      const enabledInSkillGroup = skill.skillGroup_ids.includes(viewedSkillGroup.id);
+      const enabledInSkillGroup = skill.skill_group_ids.includes(
+        viewedSkillGroup.id,
+      );
       if (filterMode === "enabled") return enabledInSkillGroup;
       if (filterMode === "available") return !enabledInSkillGroup;
       return true;
     });
 
-    // Always sort enabled skills first; within enabled group, use custom sort order
-    if (viewedSkillGroup) {
-      result.sort((a, b) => {
-        const aEnabled = a.skillGroup_ids.includes(viewedSkillGroup.id) ? 0 : 1;
-        const bEnabled = b.skillGroup_ids.includes(viewedSkillGroup.id) ? 0 : 1;
+    result.sort((a, b) => {
+      // Skills with an actionable update stay at the front of the library.
+      const aNeedsUpdate = hasAvailableUpdate(a) ? 0 : 1;
+      const bNeedsUpdate = hasAvailableUpdate(b) ? 0 : 1;
+      if (aNeedsUpdate !== bNeedsUpdate) return aNeedsUpdate - bNeedsUpdate;
+
+      if (viewedSkillGroup) {
+        // Keep enabled skills together after the update priority.
+        const aEnabled = a.skill_group_ids.includes(viewedSkillGroup.id)
+          ? 0
+          : 1;
+        const bEnabled = b.skill_group_ids.includes(viewedSkillGroup.id)
+          ? 0
+          : 1;
         if (aEnabled !== bEnabled) return aEnabled - bEnabled;
-        // Within same group, use skillGroup sort order
+
+        // Within the same group, use the custom skill group order.
         const aOrder = skillGroupSkillOrder.indexOf(a.id);
         const bOrder = skillGroupSkillOrder.indexOf(b.id);
         if (aOrder !== -1 && bOrder !== -1) return aOrder - bOrder;
         if (aOrder !== -1) return -1;
         if (bOrder !== -1) return 1;
-        return a.name.localeCompare(b.name);
-      });
-    }
+      }
+
+      return a.name.localeCompare(b.name);
+    });
 
     return result;
   }, [
@@ -381,7 +409,7 @@ export function MySkills() {
     filtered,
     getKey: (s) => s.id,
     isItemActive: (s) =>
-      viewedSkillGroup ? s.skillGroup_ids.includes(viewedSkillGroup.id) : true,
+      viewedSkillGroup ? s.skill_group_ids.includes(viewedSkillGroup.id) : true,
     filterSignal: JSON.stringify([
       search,
       [...sourceFilters].sort(),
@@ -412,7 +440,7 @@ export function MySkills() {
 
       // Only reorder enabled skills (they are always at the front)
       const enabledSkills = filtered.filter((s) =>
-        s.skillGroup_ids.includes(viewedSkillGroup.id),
+        s.skill_group_ids.includes(viewedSkillGroup.id),
       );
       const oldIndex = enabledSkills.findIndex((s) => s.id === active.id);
       const newIndex = enabledSkills.findIndex((s) => s.id === over.id);
@@ -497,12 +525,16 @@ export function MySkills() {
     };
   }, [refreshGitStatus]);
 
+  const libraryContentKey = useMemo(
+    () => skillLibraryContentKey(skills),
+    [skills],
+  );
   useEffect(() => {
     const timer = window.setTimeout(() => {
       refreshGitStatusLocal();
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [skills, refreshGitStatusLocal]);
+  }, [libraryContentKey, refreshGitStatusLocal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -511,7 +543,7 @@ export function MySkills() {
         setToolToggles(null);
         return;
       }
-      if (!selectedSkill.skillGroup_ids.includes(viewedSkillGroup.id)) {
+      if (!selectedSkill.skill_group_ids.includes(viewedSkillGroup.id)) {
         setToolToggles(null);
         return;
       }
@@ -701,42 +733,6 @@ export function MySkills() {
     await refreshAllTags();
   };
 
-  const handleBatchToggleSkillGroup = async () => {
-    if (!viewedSkillGroup || batchToggling) return;
-    const enabling = anyDisabled;
-    let count = 0;
-    let failed = 0;
-    setBatchToggling(true);
-    try {
-      for (const skill of togglableSelectedSkills) {
-        try {
-          if (enabling) {
-            await api.addSkillToSkillGroup(skill.id, viewedSkillGroup.id);
-          } else {
-            await api.removeSkillFromSkillGroup(skill.id, viewedSkillGroup.id);
-          }
-          count++;
-        } catch {
-          failed++;
-          // continue with remaining
-        }
-      }
-      if (count > 0) {
-        toast.success(
-          enabling
-            ? t("mySkills.batchEnabled", { count, group: viewedSkillGroupName })
-            : t("mySkills.batchDisabled", { count, group: viewedSkillGroupName }),
-        );
-      }
-      if (failed > 0) {
-        toast.error(t("mySkills.batchToggleFailed", { count: failed }));
-      }
-      await Promise.all([refreshManagedSkills(), refreshSkillGroups()]);
-    } finally {
-      setBatchToggling(false);
-    }
-  };
-
   const handleBatchSyncAgents = async (agentKeys: string[]) => {
     const selectedSkillsList = skills.filter((s) => selectedIds.has(s.id));
     let synced = 0;
@@ -852,29 +848,6 @@ export function MySkills() {
     }
   };
 
-  const handleToggleSkillGroup = async (skill: ManagedSkill) => {
-    if (!viewedSkillGroup) return;
-    const enabledInSkillGroup = skill.skillGroup_ids.includes(viewedSkillGroup.id);
-    if (enabledInSkillGroup) {
-      await api.removeSkillFromSkillGroup(skill.id, viewedSkillGroup.id);
-      toast.success(
-        t("mySkills.membership.removed", {
-          skill: skill.name,
-          group: viewedSkillGroupName,
-        }),
-      );
-    } else {
-      await api.addSkillToSkillGroup(skill.id, viewedSkillGroup.id);
-      toast.success(
-        t("mySkills.membership.added", {
-          skill: skill.name,
-          group: viewedSkillGroupName,
-        }),
-      );
-    }
-    await Promise.all([refreshManagedSkills(), refreshSkillGroups()]);
-  };
-
   const handleCheckAllUpdates = async () => {
     setCheckingAll(true);
     try {
@@ -951,7 +924,8 @@ export function MySkills() {
     approvedRemovals?: string,
   ) => {
     const selected =
-      skillGroupSource ?? (await dialogOpen({ directory: true, multiple: false }));
+      skillGroupSource ??
+      (await dialogOpen({ directory: true, multiple: false }));
     if (!selected || Array.isArray(selected)) return;
 
     setUpdatingSkillId(skill.id);
@@ -1158,11 +1132,7 @@ export function MySkills() {
     }
   };
 
-  const canRefresh = (skill: ManagedSkill) =>
-    skill.source_type === "git" ||
-    skill.source_type === "skillssh" ||
-    ((skill.source_type === "local" || skill.source_type === "import") &&
-      !!skill.source_ref);
+  const canRefresh = canRefreshSkill;
 
   const anyRefreshableSelected = useMemo(
     () =>
@@ -1192,9 +1162,21 @@ export function MySkills() {
     const enabling = anyDisabled;
     return skills.filter((skill) => {
       if (!selectedIds.has(skill.id)) return false;
-      return skill.skillGroup_ids.includes(viewedSkillGroup.id) !== enabling;
+      return skill.skill_group_ids.includes(viewedSkillGroup.id) !== enabling;
     });
   }, [skills, selectedIds, viewedSkillGroup, anyDisabled]);
+
+  const { batchToggling, handleToggleSkillGroup, handleBatchToggleSkillGroup } =
+    useSkillGroupMembershipActions({
+      group: viewedSkillGroup,
+      groupName: viewedSkillGroupName,
+      selectedSkills: togglableSelectedSkills,
+      enabling: anyDisabled,
+      onChanged: () =>
+        setGitStatus((current) =>
+          current ? { ...current, has_changes: true } : current,
+        ),
+    });
 
   const sourceTypeLabel = (skill: ManagedSkill) =>
     skill.source_type === "skillssh" ? "skills.sh" : skill.source_type;
@@ -1239,7 +1221,9 @@ export function MySkills() {
         groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
         count={
           viewedSkillGroup
-            ? skills.filter((skill) => skill.skillGroup_ids.includes(viewedSkillGroup.id)).length
+            ? skills.filter((skill) =>
+                skill.skill_group_ids.includes(viewedSkillGroup.id),
+              ).length
             : 0
         }
       />
@@ -1562,7 +1546,7 @@ export function MySkills() {
             >
               {filtered.map((skill) => {
                 const enabledInSkillGroup = viewedSkillGroup
-                  ? skill.skillGroup_ids.includes(viewedSkillGroup.id)
+                  ? skill.skill_group_ids.includes(viewedSkillGroup.id)
                   : false;
                 const badge = statusBadge(skill);
                 const hasUpdate =
@@ -1732,7 +1716,11 @@ export function MySkills() {
                                 />
                                 <SkillGroupMembershipButton
                                   included={enabledInSkillGroup}
-                                  groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
+                                  groupName={
+                                    viewedSkillGroup
+                                      ? viewedSkillGroupName
+                                      : undefined
+                                  }
                                   skillName={skill.name}
                                   onChange={() => handleToggleSkillGroup(skill)}
                                 />
@@ -2185,7 +2173,11 @@ export function MySkills() {
                             />
                             <SkillGroupMembershipButton
                               included={enabledInSkillGroup}
-                              groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
+                              groupName={
+                                viewedSkillGroup
+                                  ? viewedSkillGroupName
+                                  : undefined
+                              }
                               skillName={skill.name}
                               onChange={() => handleToggleSkillGroup(skill)}
                             />

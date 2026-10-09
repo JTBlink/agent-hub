@@ -18,6 +18,7 @@ import type {
 } from "../lib/tauri";
 import * as api from "../lib/tauri";
 import i18n from "../i18n";
+import { withSkillGroupMembership } from "../lib/skillGroupMembership";
 import { applyTextSize } from "../lib/textScale";
 import { toast } from "sonner";
 
@@ -42,6 +43,7 @@ interface AppState {
   refreshSkillGroups: () => Promise<void>;
   refreshTools: () => Promise<void>;
   refreshManagedSkills: () => Promise<void>;
+  refreshSkillGroupMembership: (groupId: string) => Promise<void>;
   refreshProjects: () => Promise<void>;
   setViewedSkillGroupId: (id: string) => void;
   applySkillGroupToDefault: (id: string) => Promise<void>;
@@ -61,19 +63,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const SKILL_UPDATE_TOAST_ID = "skill-update-available";
   const APP_UPDATE_TOAST_ID = "app-update-available";
   const [skillGroups, setSkillGroups] = useState<SkillGroup[]>([]);
-  const [activeSkillGroup, setActiveSkillGroup] = useState<SkillGroup | null>(null);
-  const [viewedSkillGroupId, setViewedSkillGroupIdState] = useState<string | null>(
-    () => {
-      try {
-        return (
-          localStorage.getItem(VIEWED_SKILL_GROUP_LS_KEY) ||
-          localStorage.getItem(LEGACY_VIEWED_SKILL_GROUP_LS_KEY)
-        );
-      } catch {
-        return null;
-      }
-    },
+  const [activeSkillGroup, setActiveSkillGroup] = useState<SkillGroup | null>(
+    null,
   );
+  const [viewedSkillGroupId, setViewedSkillGroupIdState] = useState<
+    string | null
+  >(() => {
+    try {
+      return (
+        localStorage.getItem(VIEWED_SKILL_GROUP_LS_KEY) ||
+        localStorage.getItem(LEGACY_VIEWED_SKILL_GROUP_LS_KEY)
+      );
+    } catch {
+      return null;
+    }
+  });
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [managedSkills, setManagedSkills] = useState<ManagedSkill[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -159,6 +163,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Managed skill changes affect project sync health badges
     refreshProjects();
   }, [setTranslatedError, refreshProjects]);
+
+  const membershipRequests = useRef(new Map<string, number>());
+  const refreshSkillGroupMembership = useCallback(async (groupId: string) => {
+    const request = (membershipRequests.current.get(groupId) ?? 0) + 1;
+    membershipRequests.current.set(groupId, request);
+    const ids = await api.getSkillGroupSkillOrder(groupId);
+    if (membershipRequests.current.get(groupId) !== request) return;
+    setManagedSkills((current) =>
+      withSkillGroupMembership(current, groupId, ids),
+    );
+    setSkillGroups((current) =>
+      current.map((group) =>
+        group.id === groupId ? { ...group, skill_count: ids.length } : group,
+      ),
+    );
+    setActiveSkillGroup((current) =>
+      current?.id === groupId
+        ? { ...current, skill_count: ids.length }
+        : current,
+    );
+  }, []);
 
   const refreshAppData = useCallback(async () => {
     setLoading(true);
@@ -470,6 +495,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshSkillGroups,
         refreshTools,
         refreshManagedSkills,
+        refreshSkillGroupMembership,
         refreshProjects,
         setViewedSkillGroupId,
         applySkillGroupToDefault: handleApplySkillGroupToDefault,

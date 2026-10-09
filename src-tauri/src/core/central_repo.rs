@@ -325,7 +325,7 @@ pub fn default_skills_dir() -> PathBuf {
         .unwrap()
         .clone()
     {
-        return home.join(".agents/skills");
+        return home.join(".agent-hub/skills");
     }
     super::tool_adapters::shared_skills_dir()
 }
@@ -440,6 +440,92 @@ pub fn cache_dir() -> PathBuf {
 
 pub fn db_path() -> PathBuf {
     base_dir().join("agent-hub.db")
+}
+
+/// The cross-tool shared skills path (`~/.agents/skills`). When enabled, a
+/// symlink is placed here pointing at [`skills_dir`] so other AI tools can
+/// discover the same skills.
+pub fn shared_link_path() -> PathBuf {
+    dirs::home_dir()
+        .expect("Cannot determine home directory")
+        .join(".agents/skills")
+}
+
+/// Whether `~/.agents/skills` exists as a symlink pointing at the skills
+/// library. Returns `false` when the path is missing, a real directory, or a
+/// symlink to somewhere else.
+pub fn is_shared_link_active() -> bool {
+    let link = shared_link_path();
+    if !link.is_symlink() {
+        return false;
+    }
+    match std::fs::read_link(&link) {
+        Ok(target) => {
+            let absolute = if target.is_absolute() {
+                target
+            } else {
+                link.parent().unwrap_or(Path::new("/")).join(target)
+            };
+            absolute == skills_dir()
+        }
+        Err(_) => false,
+    }
+}
+
+/// Create the `~/.agents/skills` → [`skills_dir`] symlink.
+pub fn enable_shared_link() -> Result<()> {
+    let link = shared_link_path();
+    let target = skills_dir();
+
+    if link.is_symlink() {
+        if std::fs::read_link(&link)
+            .ok()
+            .map(|t| {
+                if t.is_absolute() {
+                    t
+                } else {
+                    link.parent().unwrap_or(Path::new("/")).join(t)
+                }
+            })
+            .as_deref()
+            == Some(&target)
+        {
+            return Ok(());
+        }
+        super::sync_engine::remove_link(&link)?;
+    } else if link.exists() {
+        return Err(anyhow!(
+            "{} exists and is not a symlink; refusing to overwrite",
+            link.display()
+        ));
+    }
+
+    if let Some(parent) = link.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&target, &link)?;
+    #[cfg(windows)]
+    std::os::windows::fs::symlink_dir(&target, &link)?;
+
+    Ok(())
+}
+
+/// Remove the `~/.agents/skills` symlink. Only removes a symlink — refuses to
+/// delete a real directory to avoid data loss.
+pub fn disable_shared_link() -> Result<()> {
+    let link = shared_link_path();
+    if !link.exists() && !link.is_symlink() {
+        return Ok(());
+    }
+    if !link.is_symlink() {
+        return Err(anyhow!(
+            "{} is not a symlink; refusing to delete",
+            link.display()
+        ));
+    }
+    super::sync_engine::remove_link(&link)
 }
 
 pub fn set_base_dir_override(path: Option<String>) -> Result<PathBuf> {

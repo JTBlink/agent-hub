@@ -168,6 +168,7 @@ export function Settings() {
   const [syncMode, setSyncMode] = useState("symlink");
   const [closeAction, setCloseAction] = useState("");
   const [showTrayIcon, setShowTrayIcon] = useState(true);
+  const [sharedSkillsLink, setSharedSkillsLink] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [openingRepo, setOpeningRepo] = useState(false);
   const [openingGithub, setOpeningGithub] = useState(false);
@@ -376,6 +377,7 @@ export function Settings() {
         ),
       );
     });
+    api.getSharedSkillsLinkStatus().then(setSharedSkillsLink);
     api.getSettings("text_size").then((v) => {
       if (v) {
         setTextSize(v);
@@ -484,6 +486,16 @@ export function Settings() {
     if (!enabled && closeAction === "hide") {
       setCloseAction("close");
       await api.setSettings("close_action", "close");
+    }
+  };
+
+  const handleSharedSkillsLinkChange = async (enabled: boolean) => {
+    setSharedSkillsLink(enabled);
+    try {
+      await api.setSharedSkillsLink(enabled);
+    } catch {
+      setSharedSkillsLink(!enabled);
+      toast.error(t("common.error"));
     }
   };
 
@@ -1324,6 +1336,29 @@ export function Settings() {
             <div className="px-5 py-4">
               <SkillsDirectorySetting />
               <SkillsDirectorySetting backup />
+            </div>
+            {/* Shared skills link toggle */}
+            <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-[14px] font-semibold text-primary">
+                  {t("settings.sharedSkillsLink")}
+                </h3>
+                <p className="mt-0.5 text-[12px] text-muted">
+                  {t("settings.sharedSkillsLinkDesc")}
+                </p>
+              </div>
+              <ToggleSwitch
+                className="mt-1"
+                checked={sharedSkillsLink}
+                onChange={() =>
+                  handleSharedSkillsLinkChange(!sharedSkillsLink)
+                }
+                title={
+                  sharedSkillsLink
+                    ? t("settings.sharedSkillsLink_on")
+                    : t("settings.sharedSkillsLink_off")
+                }
+              />
             </div>
             {/* Application data path (legacy custom repositories remain compatible). */}
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">

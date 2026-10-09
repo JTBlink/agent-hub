@@ -1,4 +1,7 @@
-import { getSkillGroupDisplayName, getSkillGroupDisplayDescription } from "../lib/skillGroupDisplay";
+import {
+  getSkillGroupDisplayName,
+  getSkillGroupDisplayDescription,
+} from "../lib/skillGroupDisplay";
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   DragDropContext,
@@ -564,7 +567,8 @@ export function Sidebar() {
                     >
                       {orderedSkillGroups.map((skillGroup, index) => {
                         const isActive = viewedSkillGroup?.id === skillGroup.id;
-                        const skillGroupIcon = getSkillGroupIconOption(skillGroup);
+                        const skillGroupIcon =
+                          getSkillGroupIconOption(skillGroup);
                         const SkillGroupIcon = skillGroupIcon.icon;
                         return (
                           <Draggable
@@ -584,8 +588,15 @@ export function Sidebar() {
                                 )}
                               >
                                 <button
-                                  onClick={() => handleSwitchSkillGroup(skillGroup.id)}
-                                  title={getSkillGroupDisplayDescription(skillGroup, t) || undefined}
+                                  onClick={() =>
+                                    handleSwitchSkillGroup(skillGroup.id)
+                                  }
+                                  title={
+                                    getSkillGroupDisplayDescription(
+                                      skillGroup,
+                                      t,
+                                    ) || undefined
+                                  }
                                   className={cn(
                                     "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none",
                                     isActive
@@ -604,7 +615,10 @@ export function Sidebar() {
                                     <SkillGroupIcon className="h-3 w-3" />
                                   </span>
                                   <span className="flex-1 truncate">
-                                    {getSkillGroupDisplayName(skillGroup.name, t)}
+                                    {getSkillGroupDisplayName(
+                                      skillGroup.name,
+                                      t,
+                                    )}
                                   </span>
                                   <span className="ml-auto flex h-[18px] w-[32px] shrink-0 items-center justify-end group-hover:hidden">
                                     {skillGroup.skill_count > 0 && (
@@ -917,7 +931,9 @@ export function Sidebar() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        message={t("skillGroup.deleteConfirm", { name: getSkillGroupDisplayName(deleteTarget?.name || "", t) })}
+        message={t("skillGroup.deleteConfirm", {
+          name: getSkillGroupDisplayName(deleteTarget?.name || "", t),
+        })}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteSkillGroup}
       />

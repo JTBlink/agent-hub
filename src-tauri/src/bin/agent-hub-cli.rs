@@ -3045,13 +3045,13 @@ fn run_skill_group_deployment(
                 {
                     store.log_audit(
                         AuditDraft::new(if deploy {
-                            "deploy_preset"
+                            "deploy_skill_group"
                         } else {
-                            "undeploy_preset"
+                            "undeploy_skill_group"
                         })
                         .skill(skill.id.clone(), skill.name.clone())
                         .tool(agent.clone())
-                        .detail(format!("preset={} ({})", skill_group.name, skill_group.id))
+                        .detail(format!("skill_group={} ({})", skill_group.name, skill_group.id))
                         .ok(),
                     );
                 }
@@ -3401,7 +3401,7 @@ mod tests {
             .unwrap();
         store
             .insert_scenario(&ScenarioRecord {
-                id: "preset-demo".to_string(),
+                id: "skill-group-demo".to_string(),
                 name: "Demo".to_string(),
                 description: None,
                 icon: None,
@@ -3411,7 +3411,7 @@ mod tests {
             })
             .unwrap();
         store
-            .add_skill_to_scenario("preset-demo", "skill-demo")
+            .add_skill_to_scenario("skill-group-demo", "skill-demo")
             .unwrap();
 
         let target = target_root.join("demo");
@@ -3688,7 +3688,7 @@ mod tests {
 
         store
             .insert_scenario(&ScenarioRecord {
-                id: "preset-web".to_string(),
+                id: "skill-group-web".to_string(),
                 name: "Web Dev".to_string(),
                 description: None,
                 icon: None,
@@ -3698,7 +3698,7 @@ mod tests {
             })
             .unwrap();
         store
-            .add_skill_to_scenario("preset-web", "skill-demo")
+            .add_skill_to_scenario("skill-group-web", "skill-demo")
             .unwrap();
 
         let deployed =

@@ -19,7 +19,7 @@ export function computeSkillGroupStatus(
   existsInWorkspace: (skill: ManagedSkill, agentKey: string) => boolean,
   mode: SkillGroupStatusMode = "agent-pair",
 ): SkillGroupStatusResult {
-  const skillGroupSkills = skills.filter((s) => s.skillGroup_ids.includes(skillGroup.id));
+  const skillGroupSkills = skills.filter((s) => s.skill_group_ids.includes(skillGroup.id));
   if (skillGroupSkills.length === 0 || agentKeys.length === 0) {
     return { status: "empty", installed: 0, total: 0 };
   }

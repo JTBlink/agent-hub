@@ -480,7 +480,7 @@ fn default_skills_are_shared_but_database_config_and_logs_stay_in_app_home() {
     let _guard = test_base_dir_lock();
     let temp = tempfile::tempdir().unwrap();
     set_test_home_dir_override(Some(temp.path().into()));
-    assert_eq!(skills_dir(), temp.path().join(".agents/skills"));
+    assert_eq!(skills_dir(), temp.path().join(".agent-hub/skills"));
     assert_eq!(db_path(), temp.path().join(".agent-hub/agent-hub.db"));
     assert_eq!(
         config_file_path(),

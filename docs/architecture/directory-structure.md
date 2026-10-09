@@ -23,7 +23,7 @@ agent-hub/
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗
 │   │   ├── StatusBanner.tsx        #   状态横幅
-│   │   ├── PresetBar.tsx           #   预设切换栏
+│   │   ├── SkillGroupBar.tsx        #   技能组切换栏
 │   │   ├── AgentIcon.tsx           #   Agent 图标
 │   │   ├── SkillDetailPanel.tsx    #   技能详情面板
 │   │   ├── AddSkillsSheet.tsx      #   添加技能面板
@@ -54,8 +54,8 @@ agent-hub/
 │   │   ├── agentIcons.ts           #   Agent 图标映射
 │   │   ├── skillTags.ts            #   技能标签
 │   │   ├── skillPickerStatus.ts    #   技能选择状态
-│   │   ├── presetStatus.ts         #   预设状态
-│   │   ├── presetIcons.tsx         #   预设图标
+│   │   ├── skillGroupStatus.ts      #   技能组状态
+│   │   ├── skillGroupIcons.tsx      #   技能组图标
 │   │   └── textScale.ts            #   文本缩放
 │   ├── i18n/                       # 国际化
 │   │   ├── index.ts                #   i18n 初始化
@@ -82,7 +82,7 @@ agent-hub/
 │   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
 │   │   │   ├── local_cleanup.rs   #     本机 Agent Skills 预览与批量清理（桌面/CLI 共用）
 │   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
-│   │   │   ├── presets.rs          #     预设管理
+│   │   │   ├── skill_groups.rs     #     技能组管理
 │   │   │   ├── skills.rs           #     技能管理
 │   │   │   ├── sync.rs             #     同步操作
 │   │   │   ├── git_backup.rs       #     Git 备份

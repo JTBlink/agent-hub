@@ -146,7 +146,7 @@ impl ToolAdapter {
 
 /// Shared user-level Skills root, independent of per-Agent overrides.
 pub fn shared_skills_dir() -> PathBuf {
-    ToolAdapter::home().join(".agents/skills")
+    ToolAdapter::home().join(".agent-hub/skills")
 }
 
 pub fn default_tool_adapters() -> Vec<ToolAdapter> {
