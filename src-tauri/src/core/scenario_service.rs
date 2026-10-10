@@ -475,7 +475,7 @@ pub fn preflight_scenario_sync_targets(
     } else {
         Err(AppError::target_conflict(
             format!(
-                "Refusing to sync: {} target(s) would overwrite content that is not ours. Nothing was changed.",
+                "拒绝同步：{} 个目标路径已有内容且不由 AgentHub 管理，未做任何修改。",
                 conflicts.len()
             ),
             conflicts,
@@ -491,14 +491,13 @@ pub fn refusals_to_error(refusals: Vec<TargetConflict>) -> Result<(), AppError> 
         return Ok(());
     }
     let summary = format!(
-        "{} skill(s) were skipped because their target is not ours to replace \
-         (nothing at those paths was deleted; everything else was applied). {}",
+        "已跳过 {} 个技能——目标路径已有内容且不由 AgentHub 管理（这些路径未被删除，其余技能已正常部署）。{}",
         refusals.len(),
         refusals
             .iter()
             .map(|c| c.to_string())
             .collect::<Vec<_>>()
-            .join("; ")
+            .join("；")
     );
     Err(AppError::target_conflict(
         summary,
@@ -1183,15 +1182,14 @@ fn apply_add(
     }
     if !conflicts.is_empty() {
         let summary = format!(
-            "Refusing to deploy: {} of {} target(s) would overwrite content that is not ours. \
-             Nothing was changed. {}",
+            "拒绝部署：{}/{} 个目标路径已有内容且不由 AgentHub 管理，未做任何修改。{}",
             conflicts.len(),
             plan.len(),
             conflicts
                 .iter()
                 .map(|c| sync_engine::refusal_message(Path::new(&c.path), &c.reason))
                 .collect::<Vec<_>>()
-                .join("; ")
+                .join("；")
         );
         return Err(AppError::target_conflict(summary, conflicts));
     }

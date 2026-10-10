@@ -151,9 +151,9 @@ impl ReplacePolicy<'_> {
 
     fn describe(&self) -> &'static str {
         match self {
-            ReplacePolicy::NoClobber => "is not managed by agent-hub",
-            ReplacePolicy::Recorded { .. } => "does not match its recorded deployment",
-            ReplacePolicy::UserConfirmed => "cannot be replaced",
+            ReplacePolicy::NoClobber => "不由 AgentHub 管理",
+            ReplacePolicy::Recorded { .. } => "与已记录的部署不一致",
+            ReplacePolicy::UserConfirmed => "无法被替换",
         }
     }
 }
@@ -174,8 +174,8 @@ pub struct ReplaceRefused {
 /// the two cannot drift apart.
 pub fn refusal_message(target: &Path, reason: &str) -> String {
     format!(
-        "Refusing to replace {target:?}: it {reason}. The existing content was left untouched — \
-         import it into the library, or move it aside, and try again."
+        "拒绝替换 {target:?}：该路径{reason}。已有内容未被修改——\
+         请先将其导入技能库或移至其他位置后重试。"
     )
 }
 

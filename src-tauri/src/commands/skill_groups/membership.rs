@@ -57,11 +57,12 @@ pub async fn set_skill_group_membership(
     skill_group_id: String,
     add: bool,
     store: State<'_, Arc<SkillStore>>,
-) -> Result<(), AppError> {
+) -> Result<Vec<String>, AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        set_skill_group_skills_internal(&store, &skill_group_id, &skill_ids, add)?;
-        Ok(())
+        let displaced =
+            set_skill_group_skills_internal(&store, &skill_group_id, &skill_ids, add)?;
+        Ok(displaced)
     })
     .await?;
     if result.is_ok() {

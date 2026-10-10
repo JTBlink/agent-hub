@@ -6,7 +6,7 @@ import {
 import { setSkillGroupMembership } from "./tauri";
 import { invoke } from "@tauri-apps/api/core";
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn().mockResolvedValue(undefined),
+  invoke: vi.fn().mockResolvedValue([]),
 }));
 
 const skills = [

@@ -37,13 +37,20 @@ export function useSkillGroupMembershipActions({
     async (skill: ManagedSkill) => {
       if (!group) return;
       try {
-        await api.setSkillGroupMembership([skill.id], group.id, true);
+        const displaced = await api.setSkillGroupMembership(
+          [skill.id],
+          group.id,
+          true,
+        );
         onChanged();
         toast.success(
           t("mySkills.membership.added", {
             skill: skill.name,
             group: groupName,
           }),
+        );
+        await Promise.all(
+          displaced.map((id) => refreshSkillGroupMembership(id)),
         );
       } finally {
         await refreshSkillGroupMembership(group.id);
@@ -109,7 +116,7 @@ export function useSkillGroupMembershipActions({
     pendingBatch.current = true;
     setBatchToggling(true);
     try {
-      await api.setSkillGroupMembership(
+      const displaced = await api.setSkillGroupMembership(
         selectedSkills.map((skill) => skill.id),
         group.id,
         enabling,
@@ -121,6 +128,11 @@ export function useSkillGroupMembershipActions({
           group: groupName,
         }),
       );
+      if (displaced.length > 0) {
+        await Promise.all(
+          displaced.map((id) => refreshSkillGroupMembership(id)),
+        );
+      }
     } catch (error) {
       toast.error(getErrorMessage(error, t("common.error")));
     } finally {
