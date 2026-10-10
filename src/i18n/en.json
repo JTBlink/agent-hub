@@ -559,7 +559,10 @@
       "removed": "Removed {{skill}} from “{{group}}”",
       "moveConfirmTitle": "Move skill",
       "moveConfirmMessage": "“{{skill}}” is currently in “{{fromGroup}}”. Move to “{{toGroup}}”?",
-      "moveConfirmAction": "Move"
+      "moveConfirmAction": "Move",
+      "switchGroup": "Switch group",
+      "removeFromGroup": "Remove from group",
+      "movedTo": "Moved {{skill}} to “{{group}}”"
     }
   },
   "install": {
