@@ -55,11 +55,7 @@ const FEATURE_KEYS = [
   "commandPalette",
 ] as const;
 
-const SHORTCUT_KEYS = [
-  "commandPalette",
-  "settings",
-  "refresh",
-] as const;
+const SHORTCUT_KEYS = ["commandPalette", "settings", "refresh"] as const;
 
 const FAQ_KEYS = [
   "installFail",
@@ -231,7 +227,9 @@ export function Help() {
           <MessageCircle className="mr-1.5 inline-block h-4 w-4 align-text-bottom" />
           {t("help.feedback")}
         </h2>
-        <p className="text-[13px] text-muted">{t("help.feedbackDescription")}</p>
+        <p className="text-[13px] text-muted">
+          {t("help.feedbackDescription")}
+        </p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

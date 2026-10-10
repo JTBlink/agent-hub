@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
-import { SKILL_GROUP_ICON_OPTIONS, getSkillGroupIconOption } from "../lib/skillGroupIcons";
+import {
+  SKILL_GROUP_ICON_OPTIONS,
+  getSkillGroupIconOption,
+} from "../lib/skillGroupIcons";
 
 interface Props {
   open: boolean;

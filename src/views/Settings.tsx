@@ -1347,9 +1347,7 @@ export function Settings() {
               <ToggleSwitch
                 className="mt-1"
                 checked={sharedSkillsLink}
-                onChange={() =>
-                  handleSharedSkillsLinkChange(!sharedSkillsLink)
-                }
+                onChange={() => handleSharedSkillsLinkChange(!sharedSkillsLink)}
                 title={
                   sharedSkillsLink
                     ? t("settings.sharedSkillsLink_on")

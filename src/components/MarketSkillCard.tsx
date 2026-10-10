@@ -97,9 +97,7 @@ export function MarketSkillCard({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              openUrl(
-                `https://skills.sh/${skill.source}/${skill.skill_id}`,
-              );
+              openUrl(`https://skills.sh/${skill.source}/${skill.skill_id}`);
             }}
             className="rounded-[5px] p-1 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
             title={t("install.viewOnWeb")}

@@ -269,8 +269,13 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const { agentKey } = useParams<{ agentKey?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { tools, managedSkills, skillGroups, refreshManagedSkills, refreshTools } =
-    useApp();
+  const {
+    tools,
+    managedSkills,
+    skillGroups,
+    refreshManagedSkills,
+    refreshTools,
+  } = useApp();
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");

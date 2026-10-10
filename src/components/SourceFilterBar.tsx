@@ -290,10 +290,7 @@ export function SourceFilterBar({
                               e.preventDefault();
                               if (filteredOverflow.length === 0) return;
                               setFocusedIndex((i) => (i <= 0 ? 0 : i - 1));
-                            } else if (
-                              e.key === "Enter" &&
-                              focusedIndex >= 0
-                            ) {
+                            } else if (e.key === "Enter" && focusedIndex >= 0) {
                               const target = filteredOverflow[focusedIndex];
                               if (target) {
                                 onChange(target);

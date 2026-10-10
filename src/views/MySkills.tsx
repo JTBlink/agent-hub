@@ -247,10 +247,7 @@ export function MySkills() {
   const groupNameMap = useMemo(
     () =>
       new Map(
-        skillGroups.map((g) => [
-          g.id,
-          getSkillGroupDisplayName(g.name, t),
-        ]),
+        skillGroups.map((g) => [g.id, getSkillGroupDisplayName(g.name, t)]),
       ),
     [skillGroups, t],
   );
@@ -374,8 +371,7 @@ export function MySkills() {
       if (sourceFilters.size > 0 && !sourceFilters.has(skill.source_type))
         return false;
 
-      if (filterUngrouped && skill.skill_group_ids.length > 0)
-        return false;
+      if (filterUngrouped && skill.skill_group_ids.length > 0) return false;
 
       if (tagFilters.size > 0) {
         const wantUntagged = tagFilters.has(UNTAGGED_FILTER);
@@ -433,7 +429,8 @@ export function MySkills() {
   ]);
 
   const filterCounts = useMemo(() => {
-    if (!viewedSkillGroup) return { all: skills.length, enabled: 0, available: 0 };
+    if (!viewedSkillGroup)
+      return { all: skills.length, enabled: 0, available: 0 };
     const enabled = skills.filter((s) =>
       s.skill_group_ids.includes(viewedSkillGroup.id),
     ).length;
@@ -973,9 +970,7 @@ export function MySkills() {
     skillGroupSource?: string,
     approvedRemovals?: string,
   ) => {
-    const selected =
-      skillGroupSource ??
-      (await api.pickDirectory());
+    const selected = skillGroupSource ?? (await api.pickDirectory());
     if (!selected || Array.isArray(selected)) return;
 
     setUpdatingSkillId(skill.id);
@@ -1224,16 +1219,16 @@ export function MySkills() {
     confirmMove,
     cancelMove,
   } = useSkillGroupMembershipActions({
-      group: viewedSkillGroup,
-      groupName: viewedSkillGroupName,
-      groupNameMap,
-      selectedSkills: togglableSelectedSkills,
-      enabling: anyDisabled,
-      onChanged: () =>
-        setGitStatus((current) =>
-          current ? { ...current, has_changes: true } : current,
-        ),
-    });
+    group: viewedSkillGroup,
+    groupName: viewedSkillGroupName,
+    groupNameMap,
+    selectedSkills: togglableSelectedSkills,
+    enabling: anyDisabled,
+    onChanged: () =>
+      setGitStatus((current) =>
+        current ? { ...current, has_changes: true } : current,
+      ),
+  });
 
   const sourceTypeLabel = (skill: ManagedSkill) =>
     skill.source_type === "skillssh" ? "skills.sh" : skill.source_type;
@@ -1967,7 +1962,10 @@ export function MySkills() {
                               {sourceRefLabel(skill) && (
                                 <>
                                   <span className="text-faint">·</span>
-                                  <span className="truncate text-[12px] text-faint" title={skill.source_ref ?? undefined}>
+                                  <span
+                                    className="truncate text-[12px] text-faint"
+                                    title={skill.source_ref ?? undefined}
+                                  >
                                     {sourceRefLabel(skill)}
                                   </span>
                                 </>
@@ -2170,7 +2168,10 @@ export function MySkills() {
                             {sourceTypeLabel(skill)}
                           </span>
                           {sourceRefLabel(skill) && (
-                            <span className="text-[13px] text-faint" title={skill.source_ref ?? undefined}>
+                            <span
+                              className="text-[13px] text-faint"
+                              title={skill.source_ref ?? undefined}
+                            >
                               {sourceRefLabel(skill)}
                             </span>
                           )}

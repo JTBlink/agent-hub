@@ -281,10 +281,7 @@ export const installLocal = (
     overwrite: overwrite ?? null,
   });
 
-export const checkInstallLocalConflict = (
-  sourcePath: string,
-  name?: string,
-) =>
+export const checkInstallLocalConflict = (sourcePath: string, name?: string) =>
   invoke<string | null>("check_install_local_conflict", {
     sourcePath,
     name: name || null,
@@ -325,8 +322,16 @@ export const cancelGitPreview = (tempDir: string) =>
 export const checkSkillsshConflict = (skillId: string) =>
   invoke<string | null>("check_skillssh_conflict", { skillId });
 
-export const installFromSkillssh = (source: string, skillId: string, overwrite?: boolean) =>
-  invoke<void>("install_from_skillssh", { source, skillId, overwrite: overwrite ?? null });
+export const installFromSkillssh = (
+  source: string,
+  skillId: string,
+  overwrite?: boolean,
+) =>
+  invoke<void>("install_from_skillssh", {
+    source,
+    skillId,
+    overwrite: overwrite ?? null,
+  });
 
 export const cancelInstall = (key: string) =>
   invoke<boolean>("cancel_install", { key });
@@ -422,10 +427,7 @@ export interface BatchImportResult {
   errors: string[];
 }
 
-export const batchImportFolder = (
-  folderPath: string,
-  overwrite?: boolean,
-) =>
+export const batchImportFolder = (folderPath: string, overwrite?: boolean) =>
   invoke<BatchImportResult>("batch_import_folder", {
     folderPath,
     overwrite: overwrite ?? null,
