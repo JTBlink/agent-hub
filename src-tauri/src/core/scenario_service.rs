@@ -1226,7 +1226,8 @@ fn apply_add(
             .get(target.as_path())
             .map(String::as_str)
             .or_else(|| evidence_for(target, &mut key_memo));
-        match sync_engine::sync_skill(source, target, *mode, replace_policy(effective_mode, force)) {
+        match sync_engine::sync_skill(source, target, *mode, replace_policy(effective_mode, force))
+        {
             Ok(actual_mode) => {
                 written_in_batch.insert(target.as_path(), actual_mode.as_str().to_string());
                 let now = chrono::Utc::now().timestamp_millis();

@@ -2186,7 +2186,8 @@ fn run_sync(
             .into_iter()
             .filter(|target| tool_key.map_or(true, |tool| target.tool == tool))
             .collect();
-        scenario_service::preflight_scenario_sync_targets(store, &desired, false).map_err(map_app_err)?;
+        scenario_service::preflight_scenario_sync_targets(store, &desired, false)
+            .map_err(map_app_err)?;
         return Ok(SyncReport {
             ok: true,
             skill_group_id: skill_group.id,
@@ -2713,8 +2714,9 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
         }
         SkillGroupCommand::Apply { reference } => {
             let skill_group = resolve_scenario(store, &reference)?;
-            let refusals = scenario_service::apply_scenario_to_default(store, &skill_group.id, false)
-                .map_err(map_app_err)?;
+            let refusals =
+                scenario_service::apply_scenario_to_default(store, &skill_group.id, false)
+                    .map_err(map_app_err)?;
             scenario_service::refusals_to_error(refusals).map_err(map_app_err)?;
             print_json(&current_skill_group(store)?, json);
         }
@@ -2727,8 +2729,9 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
             if is_active {
                 let next_active = replacement_skill_group_after_deactivate(store, &skill_group.id)?;
                 if let Some(next) = next_active.as_ref() {
-                    for refusal in scenario_service::apply_scenario_to_default(store, &next.id, false)
-                        .map_err(map_app_err)?
+                    for refusal in
+                        scenario_service::apply_scenario_to_default(store, &next.id, false)
+                            .map_err(map_app_err)?
                     {
                         eprintln!("warning: {refusal}");
                     }
