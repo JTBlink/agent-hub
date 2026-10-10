@@ -81,6 +81,7 @@
     "scanImport": "Manage local Skills",
     "installNew": "Install New Skills",
     "recentActivity": "Recent Activity"
+    ,"version": "Version"
   },
   "agentControl": {
     "title": "Let your agents manage skills",
@@ -527,6 +528,7 @@
     "loadingMore": "Loading more...",
     "installing": "Installing...",
     "installed": "Installed",
+    "installedFrom": "Installed from @{{source}}",
     "uninstallTitle": "Uninstall skill?",
     "uninstallMessage": "Are you sure you want to uninstall \"{{name}}\"? The library copy and all deployed copies to agents will be removed.",
     "uninstallConfirm": "Uninstall",

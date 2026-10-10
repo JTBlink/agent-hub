@@ -146,6 +146,20 @@ function centralDirName(skill: ManagedSkill) {
   return skill.central_path.split(/[\\/]/).filter(Boolean).pop() || skill.name;
 }
 
+function sourceRefLabel(skill: ManagedSkill): string | null {
+  const ref = skill.source_ref;
+  if (!ref) return null;
+  if (skill.source_type === "skillssh") {
+    const parts = ref.split("/");
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : ref;
+  }
+  if (skill.source_type === "git") {
+    const m = ref.replace(/\.git$/, "").match(/([^/]+\/[^/]+)$/);
+    return m ? m[1] : ref;
+  }
+  return null;
+}
+
 function canRefreshSkill(skill: ManagedSkill) {
   return (
     skill.source_type === "git" ||
@@ -1937,6 +1951,14 @@ export function MySkills() {
                                 {sourceIcon(skill.source_type)}
                                 {sourceTypeLabel(skill)}
                               </span>
+                              {sourceRefLabel(skill) && (
+                                <>
+                                  <span className="text-faint">·</span>
+                                  <span className="truncate text-[12px] text-faint" title={skill.source_ref ?? undefined}>
+                                    {sourceRefLabel(skill)}
+                                  </span>
+                                </>
+                              )}
                               {skill.skill_group_ids.length > 0 && (
                                 <>
                                   <span className="text-faint">·</span>
@@ -2134,6 +2156,11 @@ export function MySkills() {
                             {sourceIcon(skill.source_type)}
                             {sourceTypeLabel(skill)}
                           </span>
+                          {sourceRefLabel(skill) && (
+                            <span className="text-[13px] text-faint" title={skill.source_ref ?? undefined}>
+                              {sourceRefLabel(skill)}
+                            </span>
+                          )}
                           {skill.skill_group_ids.length > 0 && (
                             <span className="text-[13px] font-medium text-amber-600 dark:text-amber-400/80">
                               {skill.skill_group_ids

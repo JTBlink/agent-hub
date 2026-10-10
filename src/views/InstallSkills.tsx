@@ -172,12 +172,27 @@ export function InstallSkills() {
   const installedDirNames = useMemo(() => {
     const set = new Set<string>();
     for (const skill of managedSkills) {
+      if (skill.source_type === "skillssh" && skill.source_ref) continue;
       const dirName = skill.central_path.split("/").pop();
       if (dirName) {
         set.add(dirName.toLowerCase());
       }
     }
     return set;
+  }, [managedSkills]);
+
+  const installedSourceBySkillId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const skill of managedSkills) {
+      if (skill.source_type === "skillssh" && skill.source_ref) {
+        const parts = skill.source_ref.split("/");
+        const id = parts.pop();
+        if (id) {
+          map.set(id.toLowerCase(), parts.join("/"));
+        }
+      }
+    }
+    return map;
   }, [managedSkills]);
 
   const findInstalledByGitUrl = useCallback(
@@ -581,7 +596,7 @@ export function InstallSkills() {
       }),
     );
     let success = 0;
-    let failed = 0;
+    const failedNames: string[] = [];
     for (let i = 0; i < skills.length; i++) {
       const skill = skills[i];
       const displayName = skill.name || skill.skill_id;
@@ -596,21 +611,24 @@ export function InstallSkills() {
       try {
         await api.installFromSkillssh(skill.source, skill.skill_id, true);
         success++;
-      } catch {
-        failed++;
+      } catch (error) {
+        console.error(`[batch-link] failed: ${skill.source}/${skill.skill_id}`, error);
+        failedNames.push(displayName);
       }
     }
     await Promise.allSettled([refreshSkillGroups(), refreshManagedSkills()]);
     setBatchLinking(false);
     exitMarketMultiSelect();
-    if (failed === 0) {
+    if (failedNames.length === 0) {
       toast.success(t("install.batchLinkSuccess", { count: success }), {
         id: toastId,
       });
     } else {
-      toast.warning(t("install.batchLinkPartial", { success, failed }), {
-        id: toastId,
-      });
+      toast.warning(
+        t("install.batchLinkPartial", { success, failed: failedNames.length }) +
+          "\n" + failedNames.join(", "),
+        { id: toastId, duration: 8000 },
+      );
     }
   };
 
@@ -1151,6 +1169,11 @@ export function InstallSkills() {
                       const isLocalMatch =
                         !isMarketInstalled &&
                         installedDirNames.has(skill.skill_id.toLowerCase());
+                      const otherSource = !isMarketInstalled
+                        ? installedSourceBySkillId.get(
+                            skill.skill_id.toLowerCase(),
+                          )
+                        : undefined;
 
                       return (
                         <MarketSkillCard
@@ -1158,6 +1181,7 @@ export function InstallSkills() {
                           skill={skill}
                           isMarketInstalled={isMarketInstalled}
                           isLocalMatch={isLocalMatch}
+                          installedFromSource={otherSource}
                           isMultiSelect={isMarketMultiSelect}
                           isSelected={
                             isMarketMultiSelect &&

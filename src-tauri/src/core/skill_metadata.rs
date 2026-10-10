@@ -3,6 +3,7 @@ use std::path::Path;
 pub struct SkillMeta {
     pub name: Option<String>,
     pub description: Option<String>,
+    pub version: Option<String>,
 }
 
 fn read_named_file_exact(dir: &Path, target_name: &str) -> Option<String> {
@@ -38,9 +39,10 @@ fn parse_skill_md_with_candidates(dir: &Path, candidates: &[&str]) -> SkillMeta 
             return parse_frontmatter(&content);
         }
     }
-    SkillMeta {
-        name: None,
-        description: None,
+        SkillMeta {
+            name: None,
+            description: None,
+            version: None,
     }
 }
 
@@ -50,6 +52,7 @@ fn parse_frontmatter(content: &str) -> SkillMeta {
         return SkillMeta {
             name: None,
             description: None,
+            version: None,
         };
     }
 
@@ -65,13 +68,22 @@ fn parse_frontmatter(content: &str) -> SkillMeta {
                 .get("description")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
-            return SkillMeta { name, description };
+            let version = yaml
+                .get("version")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            return SkillMeta {
+                name,
+                description,
+                version,
+            };
         }
     }
 
-    SkillMeta {
-        name: None,
-        description: None,
+        SkillMeta {
+            name: None,
+            description: None,
+            version: None,
     }
 }
 

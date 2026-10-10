@@ -178,6 +178,11 @@ export function Dashboard() {
                       <span className="text-[9px] px-1.5 py-px rounded bg-surface-hover text-muted border border-border font-normal">
                         {skill.source_type}
                       </span>
+                      {skill.version && (
+                        <span className="text-[9px] px-1.5 py-px rounded bg-accent-bg text-accent-light border border-accent/20 font-normal">
+                          v{skill.version}
+                        </span>
+                      )}
                     </h4>
                     <p className="text-[13px] text-muted mt-px">
                       {skill.targets.length > 0
