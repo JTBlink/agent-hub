@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use super::{
     error::{AppError, TargetConflictDetail},
+    skill_metadata,
     skill_store::{ScenarioRecord, SkillStore, SkillTargetRecord},
     sync_engine, tool_adapters, tool_service,
 };
@@ -464,6 +465,7 @@ pub fn preflight_scenario_sync_targets(
                 conflicts.push(TargetConflictDetail {
                     path: refused.target.display().to_string(),
                     reason: refused.reason.to_string(),
+                    is_skill: skill_metadata::is_valid_skill_dir(&refused.target),
                 });
             } else {
                 return Err(AppError::io(error));
@@ -506,6 +508,7 @@ pub fn refusals_to_error(refusals: Vec<TargetConflict>) -> Result<(), AppError> 
             .map(|c| TargetConflictDetail {
                 path: c.target.display().to_string(),
                 reason: c.reason,
+                is_skill: skill_metadata::is_valid_skill_dir(&c.target),
             })
             .collect(),
     ))
@@ -1164,6 +1167,7 @@ fn apply_add(
                 Some(refused) => conflicts.push(TargetConflictDetail {
                     path: refused.target.display().to_string(),
                     reason: refused.reason.to_string(),
+                    is_skill: skill_metadata::is_valid_skill_dir(&refused.target),
                 }),
                 // Failing to even inspect the target (permissions, a broken
                 // mount) is an IO problem. Reporting it as a conflict would

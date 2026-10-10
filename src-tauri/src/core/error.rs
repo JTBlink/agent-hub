@@ -31,6 +31,8 @@ pub struct ErrorDetails {
 pub struct TargetConflictDetail {
     pub path: String,
     pub reason: String,
+    /// The target path already contains a valid skill (has SKILL.md).
+    pub is_skill: bool,
 }
 
 #[derive(Debug, PartialEq, Serialize)]
