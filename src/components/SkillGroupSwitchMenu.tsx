@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -140,72 +141,74 @@ export function SkillGroupSwitchMenu({
       >
         {currentGroupName}
       </button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={(e) => {
-              e.stopPropagation();
-              setPos(null);
-            }}
-          />
-          <div
-            ref={panelRef}
-            className="fixed z-50 min-w-[180px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg"
-            style={{ top: pos.top, left: pos.left }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-wider text-faint">
-              {t("mySkills.membership.switchGroup")}
-            </div>
-            {skillGroups.map((group) => {
-              const isCurrent = group.id === currentGroupId;
-              const isPending = pending === group.id;
-              return (
-                <button
-                  key={group.id}
-                  type="button"
-                  disabled={!!pending}
-                  onClick={() => handleSelect(group.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
-                    isCurrent
-                      ? "font-medium text-accent"
-                      : "text-secondary hover:bg-surface-hover",
-                  )}
-                >
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-                    {isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : isCurrent ? (
-                      <Check className="h-3 w-3" />
-                    ) : null}
-                  </span>
-                  <span className="truncate">
-                    {groupNameMap.get(group.id) ?? group.id}
-                  </span>
-                </button>
-              );
-            })}
-            <div className="mx-1 my-0.5 border-t border-border" />
-            <button
-              type="button"
-              disabled={!!pending}
-              onClick={handleRemove}
-              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[13px] text-danger transition-colors hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-40"
+      {open &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPos(null);
+              }}
+            />
+            <div
+              ref={panelRef}
+              className="fixed z-50 min-w-[180px] overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg"
+              style={{ top: pos.top, left: pos.left }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-                {pending === "__remove__" ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <X className="h-3 w-3" />
-                )}
-              </span>
-              {t("mySkills.membership.removeFromGroup")}
-            </button>
-          </div>
-        </>
-      )}
+              <div className="px-2 py-1 text-[11px] font-medium uppercase tracking-wider text-faint">
+                {t("mySkills.membership.switchGroup")}
+              </div>
+              {skillGroups.map((group) => {
+                const isCurrent = group.id === currentGroupId;
+                const isPending = pending === group.id;
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    disabled={!!pending}
+                    onClick={() => handleSelect(group.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-2 py-1.5 text-left text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                      isCurrent
+                        ? "font-medium text-accent"
+                        : "text-secondary hover:bg-surface-hover",
+                    )}
+                  >
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                      {isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : isCurrent ? (
+                        <Check className="h-3 w-3" />
+                      ) : null}
+                    </span>
+                    <span className="truncate">
+                      {groupNameMap.get(group.id) ?? group.id}
+                    </span>
+                  </button>
+                );
+              })}
+              <div className="mx-1 my-0.5 border-t border-border" />
+              <button
+                type="button"
+                disabled={!!pending}
+                onClick={handleRemove}
+                className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-[13px] text-danger transition-colors hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                  {pending === "__remove__" ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <X className="h-3 w-3" />
+                  )}
+                </span>
+                {t("mySkills.membership.removeFromGroup")}
+              </button>
+            </div>
+          </>,
+          document.body,
+        )}
     </>
   );
 }
