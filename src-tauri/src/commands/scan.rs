@@ -4,10 +4,8 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::core::{
-    central_repo, error::AppError, installer, scanner,
-    skill_metadata::sanitize_skill_name,
-    skill_store::SkillStore,
-    sync_metadata, tool_adapters,
+    central_repo, error::AppError, installer, scanner, skill_metadata::sanitize_skill_name,
+    skill_store::SkillStore, sync_metadata, tool_adapters,
 };
 
 fn canonicalize_lossy(path: &str) -> PathBuf {
@@ -119,7 +117,9 @@ pub async fn check_import_conflict(
         let sanitized = sanitize_skill_name(&name).unwrap_or_else(|| name.clone());
         let central_path = central_repo::skills_dir().join(&sanitized);
         let central_str = central_path.to_string_lossy().to_string();
-        let existing = store.get_skill_by_central_path(&central_str).map_err(AppError::db)?;
+        let existing = store
+            .get_skill_by_central_path(&central_str)
+            .map_err(AppError::db)?;
         Ok(existing.map(|s| s.name))
     })
     .await?
@@ -164,8 +164,8 @@ pub async fn import_existing_skill(
             let resolved_name = installer::resolve_local_skill_name(&path, name.as_deref())?;
 
             if overwrite.unwrap_or(false) {
-                let sanitized = sanitize_skill_name(&resolved_name)
-                    .unwrap_or_else(|| resolved_name.clone());
+                let sanitized =
+                    sanitize_skill_name(&resolved_name).unwrap_or_else(|| resolved_name.clone());
                 remove_existing_skill_by_name(&store, &sanitized)?;
             }
 
@@ -235,8 +235,8 @@ pub async fn import_all_discovered(
                     let path = PathBuf::from(&first.found_path);
 
                     if overwrite.unwrap_or(false) {
-                        let sanitized = sanitize_skill_name(&group.name)
-                            .unwrap_or_else(|| group.name.clone());
+                        let sanitized =
+                            sanitize_skill_name(&group.name).unwrap_or_else(|| group.name.clone());
                         remove_existing_skill_by_name(&store, &sanitized)?;
                     }
 
