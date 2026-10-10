@@ -37,7 +37,7 @@
 - 设置页展示独立备份目录，本地 Skills 和设置目录新增“在 VS Code 中打开”。
 
 - GitHub Actions 统一仅在推送 `v*` tag 或手动运行时执行质量检查、安装包构建和主页部署，普通分支提交与 PR 不再自动触发。
-- 发布工作流复用打包 Job 发布 GitHub Release，取消重复的发布 Runner；安装包 Artifact 保留期缩短为 1 天，Tag 发布不再重复执行独立 CI。
+- 发布工作流复用打包 Job 发布 GitHub Release，取消重复的发布 Runner；移除与 Release 重复的汇总 Artifact，平台中间产物仅保留 1 天，Tag 发布不再重复执行独立 CI。
 
 - 开发构建默认暂停会触发 macOS 钥匙串访问的后台备份、更新和启动迁移，避免临时签名每次重编译重复弹窗；设置 `AGENT_HUB_DEV_KEYCHAIN=1` 可显式开启联调。
 
