@@ -54,7 +54,70 @@
         "title": "设置",
         "description": "管理 Agent 路径与开关、自定义 Agent、拖拽调整 Agent 在全应用中的显示顺序、同步模式、主题字号、语言、网络代理、Git 远程、AI 搜索 Key，以及应用更新。可用「导出日志」把最近日志与安装/移除/更新/同步活动打包成压缩文件，方便提交 Issue。"
       }
-    }
+    },
+    "pageTitle": "帮助中心",
+    "pageDescription": "了解 agent-hub 的核心功能、操作方式和常见问题。",
+    "quickStart": "快速上手",
+    "features": "功能亮点",
+    "featureItems": {
+      "multiAgent": {
+        "title": "多 Agent 管理",
+        "description": "统一管理 Claude Code、Cursor、Windsurf 等多个 AI Agent 的技能配置，一处安装、全端同步。"
+      },
+      "skillGroupSwitch": {
+        "title": "技能组一键切换",
+        "description": "将常用技能打包成技能组，一键切换工作模式——开发、写作、运维各有专属技能配置。"
+      },
+      "gitBackup": {
+        "title": "Git 备份与多设备同步",
+        "description": "通过 GitHub 仓库自动备份技能库，多台设备连接同一仓库即可保持一致，冲突时三选一处理。"
+      },
+      "projectWorkspace": {
+        "title": "项目工作区",
+        "description": "为每个项目关联独立的技能目录，对照中央库双向导入导出，不同项目可使用不同的技能配置。"
+      },
+      "commandPalette": {
+        "title": "命令面板",
+        "description": "按 ⌘K 随时呼出，快速跳转到任意技能、技能组、项目或执行操作，全键盘高效工作。"
+      }
+    },
+    "shortcuts": "键盘快捷键",
+    "shortcutItems": {
+      "commandPalette": {
+        "label": "打开命令面板",
+        "keys": "⌘ K"
+      },
+      "settings": {
+        "label": "打开设置",
+        "keys": "⌘ ,"
+      },
+      "refresh": {
+        "label": "刷新数据",
+        "keys": "⌘ R"
+      }
+    },
+    "faq": "常见问题",
+    "faqItems": {
+      "installFail": {
+        "question": "Skill 安装失败怎么办？",
+        "answer": "请检查来源路径是否正确，目录中是否包含有效的 Skill 入口文件（如 SKILL.md 或 CLAUDE.md）。如果从 Git 仓库安装，确保网络可达且仓库为公开或已配置凭据。可以在设置 → 关于中「导出日志」，把 zip 附到 GitHub issue 方便排查。"
+      },
+      "multiDevice": {
+        "question": "如何在多台设备间同步技能？",
+        "answer": "在备份页使用 GitHub 登录并连接一个仓库，之后备份会自动进行。在其他设备上连接同一仓库即可自动同步。如果同一技能在两台设备上同时被修改，会显示在「需要处理」列表中，可选择保留本机、使用远端或两个都保留。"
+      },
+      "customAgent": {
+        "question": "如何添加自定义 Agent？",
+        "answer": "在设置页的 Agent 列表中点击「添加自定义 Agent」，填写名称和全局技能目录路径。自定义 Agent 和内置 Agent 具有相同的技能管理能力，包括技能组、同步和备份。"
+      },
+      "skillConflict": {
+        "question": "技能冲突或覆盖怎么处理？",
+        "answer": "当通过备份同步遇到冲突时，agent-hub 会在操作前自动建立安全快照。你可以选择保留本机版本、使用远端版本或两个都保留（远端副本会带后缀重命名）。安全快照保存在 ~/.agent-hub/recovery 目录中。"
+      }
+    },
+    "feedback": "反馈与支持",
+    "feedbackDescription": "遇到问题或有功能建议？欢迎在 GitHub Issues 提交反馈。提交前建议先在设置 → 关于中点击「导出日志」，把生成的 zip 文件附到 issue 中，方便开发者快速定位。",
+    "reportIssue": "提交问题"
   },
   "commandPalette": {
     "placeholder": "跳转到技能、技能组、项目或操作…",
@@ -725,7 +788,7 @@
     "help": "帮助",
     "website": "官网",
     "about": "关于",
-    "version": "agent-hub 0.1.2",
+    "version": "agent-hub 0.1.3",
     "tagline": "跨平台。极简、高效、无感多技能组切换。",
     "checkUpdate": "检查更新",
     "checking": "检查中…",
@@ -891,6 +954,7 @@
     "skills": "Skills 列表",
     "success": "操作成功",
     "cancel": "取消",
+    "back": "返回",
     "confirm": "确认",
     "delete": "删除",
     "rename": "重命名",

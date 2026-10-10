@@ -54,7 +54,70 @@
         "title": "Settings",
         "description": "Manage agent paths and toggles, add custom agents, drag to reorder how agents appear across the app, change sync mode, theme, text size, language, proxy, Git remote, AI search key, and check for app updates. Use Export Logs to bundle recent logs and install/remove/update/sync activity into a single zip when filing an issue."
       }
-    }
+    },
+    "pageTitle": "Help Center",
+    "pageDescription": "Learn about agent-hub's core features, how to use it, and frequently asked questions.",
+    "quickStart": "Quick Start",
+    "features": "Features",
+    "featureItems": {
+      "multiAgent": {
+        "title": "Multi-Agent Management",
+        "description": "Manage skill configurations for multiple AI agents — Claude Code, Cursor, Windsurf, and more — from a single place. Install once, sync everywhere."
+      },
+      "skillGroupSwitch": {
+        "title": "One-Click Skill Group Switching",
+        "description": "Bundle frequently used skills into named groups and switch work modes instantly — development, writing, and ops each get their own configuration."
+      },
+      "gitBackup": {
+        "title": "Git Backup & Multi-Device Sync",
+        "description": "Automatically back up your skill library via a GitHub repository. Connect the same repo on multiple devices to stay in sync; conflicts offer a three-way choice."
+      },
+      "projectWorkspace": {
+        "title": "Project Workspaces",
+        "description": "Link each project to its own skill directory, compare with the central library, and import or export changes. Different projects can have different skill configurations."
+      },
+      "commandPalette": {
+        "title": "Command Palette",
+        "description": "Press ⌘K anytime to jump to any skill, skill group, project, or action — efficient keyboard-driven workflows."
+      }
+    },
+    "shortcuts": "Keyboard Shortcuts",
+    "shortcutItems": {
+      "commandPalette": {
+        "label": "Open Command Palette",
+        "keys": "⌘ K"
+      },
+      "settings": {
+        "label": "Open Settings",
+        "keys": "⌘ ,"
+      },
+      "refresh": {
+        "label": "Refresh Data",
+        "keys": "⌘ R"
+      }
+    },
+    "faq": "FAQ",
+    "faqItems": {
+      "installFail": {
+        "question": "What if a skill fails to install?",
+        "answer": "Check that the source path is correct and that the directory contains a valid skill entry file (e.g. SKILL.md or CLAUDE.md). For Git repositories, make sure the network is reachable and the repo is public or credentials are configured. Use Export Logs in Settings → About and attach the zip to your GitHub issue for easier debugging."
+      },
+      "multiDevice": {
+        "question": "How do I sync skills across devices?",
+        "answer": "Sign in with GitHub on the Backup page and connect a repository. Backups then run automatically. Connect the same repository on other devices to sync. If the same skill is edited on two devices simultaneously, it appears under 'Needs attention' with three choices: keep mine, use remote, or keep both."
+      },
+      "customAgent": {
+        "question": "How do I add a custom agent?",
+        "answer": "In the Settings page under the agent list, click 'Add Custom Agent' and enter a name and global skills directory path. Custom agents have the same skill management capabilities as built-in agents, including skill groups, sync, and backup."
+      },
+      "skillConflict": {
+        "question": "How are skill conflicts handled?",
+        "answer": "When backup sync encounters a conflict, agent-hub automatically creates a safety snapshot before any action. You can choose to keep your local version, use the remote version, or keep both (the remote copy is renamed with a suffix). Safety snapshots are stored in ~/.agent-hub/recovery."
+      }
+    },
+    "feedback": "Feedback & Support",
+    "feedbackDescription": "Found a bug or have a feature request? File an issue on GitHub. Before submitting, use Export Logs in Settings → About to bundle diagnostics as a zip and attach it to the issue for faster resolution.",
+    "reportIssue": "Report Issue"
   },
   "commandPalette": {
     "placeholder": "Jump to skill, skill group, project, action…",
@@ -725,7 +788,7 @@
     "help": "Help",
     "website": "Website",
     "about": "About",
-    "version": "agent-hub 0.1.2",
+    "version": "agent-hub 0.1.3",
     "tagline": "Cross-platform. Minimal, efficient, seamless multi-skill-group switching.",
     "checkUpdate": "Check for Updates",
     "checking": "Checking…",
@@ -891,6 +954,7 @@
     "skills": "skill list",
     "success": "Operation successful",
     "cancel": "Cancel",
+    "back": "Back",
     "confirm": "Confirm",
     "delete": "Delete",
     "rename": "Rename",
