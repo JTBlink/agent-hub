@@ -1021,7 +1021,7 @@ export function InstallSkills() {
                       spellCheck={false}
                     />
                   </div>
-                  {linkableMarketSkills.length > 0 && (
+                  {marketInstalledFilter && linkableMarketSkills.length > 0 && (
                     <>
                       <div
                         className="mx-1 h-5 w-px shrink-0 self-center bg-border-subtle"
@@ -1056,7 +1056,10 @@ export function InstallSkills() {
                 onChange={setMarketSourceFilter}
                 installedFilter={marketInstalledFilter}
                 onInstalledFilterToggle={() => {
-                  setMarketInstalledFilter((v) => !v);
+                  setMarketInstalledFilter((v) => {
+                    if (v) exitMarketMultiSelect();
+                    return !v;
+                  });
                   setMarketPage(1);
                 }}
               />
