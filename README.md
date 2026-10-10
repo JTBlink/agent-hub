@@ -2,6 +2,8 @@
 
 <img src="src-tauri/icons/app-icon.svg" alt="agent-hub" width="96" />
 
+[Homepage](https://jtblink.github.io/agent-hub/)
+
 本地优先的 AI Agent Skills 工作台，基于导入的 Skills Manager 二次开发，保留 agent-hub 的 Logo、深蓝底色及蓝、青、紫主题。
 
 ## 当前功能
