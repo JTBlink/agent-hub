@@ -874,7 +874,7 @@ export const setSkillGroupMembership = (
   skillGroupId: string,
   add: boolean,
 ) =>
-  invoke<void>("set_skill_group_membership", { skillIds, skillGroupId, add });
+  invoke<string[]>("set_skill_group_membership", { skillIds, skillGroupId, add });
 
 export const reorderSkillGroups = (ids: string[]) =>
   invoke<void>("reorder_skill_groups", { ids });
