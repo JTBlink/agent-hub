@@ -312,7 +312,7 @@ jobs:
           name: agent-hub-${{ matrix.artifact }}
           path: ${{ matrix.bundle_paths }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   package:
     name: Assemble installers and checksums
@@ -355,7 +355,7 @@ jobs:
           name: agent-hub-installers-${{ github.run_id }}
           path: release-assets
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
       # Publish from the packaging runner so a release does not need a second
       # Ubuntu runner just to download the files and call the Release API.
