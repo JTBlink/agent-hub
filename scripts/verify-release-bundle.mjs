@@ -57,7 +57,7 @@ function verifyReleaseMetadata(bundle) {
       );
     }
   }
-  for (const section of ["应用数据目录", "已知限制"]) {
+  for (const section of ["本地数据", "当前限制"]) {
     if (!platformSupport.includes(section) || !releaseNotes.includes(section)) {
       throw new Error(
         `Release metadata is missing required section: ${section}`,
