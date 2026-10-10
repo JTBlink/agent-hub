@@ -145,10 +145,9 @@ jobs:
             os: windows-latest
             artifact: windows-x86_64
             rust_targets: ""
-            tauri_args: "--bundles nsis,msi"
+            tauri_args: "--bundles nsis"
             bundle_paths: |
               src-tauri/target/release/bundle/nsis/*.exe
-              src-tauri/target/release/bundle/msi/*.msi
           - name: macOS Universal
             os: macos-latest
             artifact: macos-universal
@@ -296,7 +295,7 @@ jobs:
           [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
           $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
           if (-not $signTool) { throw "signtool.exe was not found on the runner" }
-          Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe", "src-tauri\target\release\bundle\msi\*.msi" | ForEach-Object {
+          Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe" | ForEach-Object {
             & $signTool.FullName sign /fd SHA256 /f $certificatePath /p $env:WINDOWS_CERTIFICATE_PASSWORD /tr $env:WINDOWS_SIGNING_TIMESTAMP_URL /td SHA256 $_.FullName
             if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($_.Name)" }
           }
@@ -374,7 +373,6 @@ jobs:
           generate_release_notes: false
           files: |
             release-assets/*.exe
-            release-assets/*.msi
             release-assets/*.dmg
             release-assets/*.AppImage
             release-assets/*.deb

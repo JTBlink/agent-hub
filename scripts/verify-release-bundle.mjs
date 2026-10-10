@@ -3,7 +3,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const REQUIRED_INSTALLERS = [".exe", ".msi", ".dmg", ".AppImage", ".deb"];
+const REQUIRED_INSTALLERS = [".exe", ".dmg", ".AppImage", ".deb"];
 const REQUIRED_METADATA = [
   "CHANGELOG.md",
   "PLATFORM_SUPPORT.md",

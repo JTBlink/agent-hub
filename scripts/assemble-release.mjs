@@ -11,7 +11,7 @@ import {
 import { basename, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const REQUIRED_INSTALLERS = [".exe", ".msi", ".dmg", ".AppImage", ".deb"];
+const REQUIRED_INSTALLERS = [".exe", ".dmg", ".AppImage", ".deb"];
 
 function isInstaller(path) {
   return REQUIRED_INSTALLERS.some((extension) =>

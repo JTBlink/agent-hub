@@ -93,7 +93,7 @@ describe("GitHub Actions workflow contract", () => {
   });
 
   it.each([
-    ["windows-latest", "--bundles nsis,msi", ".exe", ".msi"],
+    ["windows-latest", "--bundles nsis", ".exe", ".exe"],
     ["macos-latest", "--target universal-apple-darwin", ".dmg", ".dmg"],
     ["ubuntu-24.04", "--bundles appimage,deb", ".AppImage", ".deb"],
   ])(
@@ -199,7 +199,7 @@ describe("GitHub Actions workflow contract", () => {
     expect(installers).toContain("retention-days: 1");
     expect(installers).toContain("release-assets/SHA256SUMS");
     expect(installers).toContain("npm run release:verify -- release-assets");
-    for (const extension of ["exe", "msi", "dmg", "AppImage", "deb"]) {
+    for (const extension of ["exe", "dmg", "AppImage", "deb"]) {
       expect(installers).toContain(`release-assets/*.${extension}`);
     }
   });

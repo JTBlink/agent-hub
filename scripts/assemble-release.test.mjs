@@ -19,7 +19,7 @@ function fixture({ omit = "" } = {}) {
     join(root, "docs/development/platform-support.md"),
     "# 平台支持矩阵\n\n支持 Windows、macOS 和 Linux。\n",
   );
-  for (const extension of [".exe", ".msi", ".dmg", ".AppImage", ".deb"]) {
+  for (const extension of [".exe", ".dmg", ".AppImage", ".deb"]) {
     if (extension !== omit) {
       writeFileSync(join(output, "nested", `AgentHub${extension}`), extension);
     }
@@ -29,14 +29,14 @@ function fixture({ omit = "" } = {}) {
 
 describe("release assembly", () => {
   it("requires every documented installer format", async () => {
-    const root = fixture({ omit: ".msi" });
+    const root = fixture({ omit: ".dmg" });
     await expect(
       assembleRelease({
         root,
         outputDirectory: "release-assets",
         buildRef: "main",
       }),
-    ).rejects.toThrow(".msi");
+    ).rejects.toThrow(".dmg");
   });
 
   it("creates metadata and checksums for a versioned release", async () => {
@@ -47,8 +47,8 @@ describe("release assembly", () => {
       buildRef: "refs/tags/v1.2.3",
     });
 
-    expect(result.installers).toBe(5);
-    expect(result.checksums).toBe(8);
+    expect(result.installers).toBe(4);
+    expect(result.checksums).toBe(7);
     const notes = readFileSync(
       join(root, "release-assets/RELEASE_NOTES.md"),
       "utf8",
@@ -61,7 +61,7 @@ describe("release assembly", () => {
       "utf8",
     );
     expect(checksums).toMatch(/^[a-f0-9]{64}  \.\/CHANGELOG\.md$/m);
-    for (const extension of [".exe", ".msi", ".dmg", ".AppImage", ".deb"]) {
+    for (const extension of [".exe", ".dmg", ".AppImage", ".deb"]) {
       expect(checksums).toMatch(
         new RegExp(`^[a-f0-9]{64}  \\.\\/AgentHub\\${extension}$`, "m"),
       );
