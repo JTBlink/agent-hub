@@ -39,10 +39,10 @@ fn parse_skill_md_with_candidates(dir: &Path, candidates: &[&str]) -> SkillMeta 
             return parse_frontmatter(&content);
         }
     }
-        SkillMeta {
-            name: None,
-            description: None,
-            version: None,
+    SkillMeta {
+        name: None,
+        description: None,
+        version: None,
     }
 }
 
@@ -80,10 +80,10 @@ fn parse_frontmatter(content: &str) -> SkillMeta {
         }
     }
 
-        SkillMeta {
-            name: None,
-            description: None,
-            version: None,
+    SkillMeta {
+        name: None,
+        description: None,
+        version: None,
     }
 }
 
@@ -188,7 +188,8 @@ mod tests {
 
     #[test]
     fn parse_frontmatter_full() {
-        let content = "---\nname: my-skill\ndescription: A great skill\nversion: 1.1.0\n---\n# Content";
+        let content =
+            "---\nname: my-skill\ndescription: A great skill\nversion: 1.1.0\n---\n# Content";
         let meta = parse_frontmatter(content);
         assert_eq!(meta.name.as_deref(), Some("my-skill"));
         assert_eq!(meta.description.as_deref(), Some("A great skill"));

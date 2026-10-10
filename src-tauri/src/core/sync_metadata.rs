@@ -609,9 +609,7 @@ fn remove_duplicate_path_key_files(skill_id: &str, target_path_key: &str) -> Res
     for entry in fs::read_dir(&dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !entry.file_type()?.is_file()
-            || path.extension().map(|e| e != "json").unwrap_or(true)
-        {
+        if !entry.file_type()?.is_file() || path.extension().map(|e| e != "json").unwrap_or(true) {
             continue;
         }
         let stem = path

@@ -334,7 +334,7 @@ fn migrate_v8_to_v9(conn: &Connection) -> Result<()> {
             SELECT MAX(rowid) FROM scenario_skills GROUP BY skill_id
         );
         CREATE UNIQUE INDEX IF NOT EXISTS idx_scenario_skills_skill_exclusive
-            ON scenario_skills(skill_id);"
+            ON scenario_skills(skill_id);",
     )?;
     Ok(())
 }

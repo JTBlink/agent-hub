@@ -891,13 +891,14 @@ pub async fn check_install_local_conflict(
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(&source_path);
-        let resolved = installer::resolve_local_skill_name(&path, name.as_deref())
-            .map_err(AppError::io)?;
-        let sanitized = skill_metadata::sanitize_skill_name(&resolved)
-            .unwrap_or(resolved);
+        let resolved =
+            installer::resolve_local_skill_name(&path, name.as_deref()).map_err(AppError::io)?;
+        let sanitized = skill_metadata::sanitize_skill_name(&resolved).unwrap_or(resolved);
         let central_path = central_repo::skills_dir().join(&sanitized);
         let central_str = central_path.to_string_lossy().to_string();
-        let existing = store.get_skill_by_central_path(&central_str).map_err(AppError::db)?;
+        let existing = store
+            .get_skill_by_central_path(&central_str)
+            .map_err(AppError::db)?;
         Ok(existing.map(|s| s.name))
     })
     .await?
@@ -934,7 +935,10 @@ pub async fn install_local(
                     .unwrap_or_else(|| resolved.clone());
                 let central_path = central_repo::skills_dir().join(&sanitized);
                 let central_str = central_path.to_string_lossy().to_string();
-                if let Some(existing) = store.get_skill_by_central_path(&central_str).map_err(AppError::db)? {
+                if let Some(existing) = store
+                    .get_skill_by_central_path(&central_str)
+                    .map_err(AppError::db)?
+                {
                     store.delete_skill(&existing.id).map_err(AppError::db)?;
                 }
                 if central_path.exists() {
@@ -1056,11 +1060,13 @@ pub async fn check_skillssh_conflict(
 ) -> Result<Option<String>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let sanitized = skill_metadata::sanitize_skill_name(&skill_id)
-            .unwrap_or_else(|| skill_id.clone());
+        let sanitized =
+            skill_metadata::sanitize_skill_name(&skill_id).unwrap_or_else(|| skill_id.clone());
         let central_path = central_repo::skills_dir().join(&sanitized);
         let central_str = central_path.to_string_lossy().to_string();
-        let existing = store.get_skill_by_central_path(&central_str).map_err(AppError::db)?;
+        let existing = store
+            .get_skill_by_central_path(&central_str)
+            .map_err(AppError::db)?;
         Ok(existing.map(|s| s.name))
     })
     .await?
@@ -1100,10 +1106,7 @@ pub async fn install_from_skillssh(
         let outcome = (|| -> Result<(String, String), AppError> {
             emit_progress("cloning");
             let parts: Vec<&str> = source.split('/').collect();
-            if parts.len() != 2
-                || parts.iter().any(|p| p.is_empty())
-                || source.contains('.')
-            {
+            if parts.len() != 2 || parts.iter().any(|p| p.is_empty()) || source.contains('.') {
                 return Err(AppError::invalid_input(format!(
                     "Invalid skills.sh source '{}': expected 'owner/repo'",
                     source
@@ -1112,7 +1115,10 @@ pub async fn install_from_skillssh(
             let repo_url = format!("https://github.com/{}.git", source);
             log::info!(
                 "[skillssh] start install: source={}, skill_id={}, overwrite={:?}, repo_url={}",
-                source, skill_id, overwrite, repo_url
+                source,
+                skill_id,
+                overwrite,
+                repo_url
             );
             let app_for_progress = app_handle.clone();
             let skill_key_for_progress = skill_key.clone();
@@ -1136,7 +1142,11 @@ pub async fn install_from_skillssh(
                 Some(progress_cb),
             )
             .map_err(|e| {
-                log::error!("[skillssh] clone failed: repo_url={}, error={}", repo_url, e);
+                log::error!(
+                    "[skillssh] clone failed: repo_url={}, error={}",
+                    repo_url,
+                    e
+                );
                 AppError::classify_git_error(e)
             })?;
             log::info!("[skillssh] clone ok: temp_dir={}", temp_dir.display());
@@ -1145,11 +1155,16 @@ pub async fn install_from_skillssh(
             let install_result = (|| -> Result<(String, String), AppError> {
                 let _lock =
                     RepoLock::acquire_foreground("install skillssh skill").map_err(AppError::db)?;
-                log::info!("[skillssh] resolving skill_dir: temp_dir={}, skill_id={}", temp_dir.display(), skill_id);
-                let skill_dir = resolve_skill_dir(&temp_dir, None, Some(&skill_id)).map_err(|e| {
-                    log::error!("[skillssh] resolve_skill_dir failed: {}", e);
-                    e
-                })?;
+                log::info!(
+                    "[skillssh] resolving skill_dir: temp_dir={}, skill_id={}",
+                    temp_dir.display(),
+                    skill_id
+                );
+                let skill_dir =
+                    resolve_skill_dir(&temp_dir, None, Some(&skill_id)).map_err(|e| {
+                        log::error!("[skillssh] resolve_skill_dir failed: {}", e);
+                        e
+                    })?;
                 log::info!("[skillssh] skill_dir resolved: {}", skill_dir.display());
 
                 if overwrite.unwrap_or(false) {
@@ -1157,7 +1172,10 @@ pub async fn install_from_skillssh(
                         .unwrap_or_else(|| skill_id.clone());
                     let central_path = central_repo::skills_dir().join(&sanitized);
                     let central_str = central_path.to_string_lossy().to_string();
-                    if let Some(existing) = store.get_skill_by_central_path(&central_str).map_err(AppError::db)? {
+                    if let Some(existing) = store
+                        .get_skill_by_central_path(&central_str)
+                        .map_err(AppError::db)?
+                    {
                         store.delete_skill(&existing.id).map_err(AppError::db)?;
                     }
                     if central_path.exists() {
@@ -1168,14 +1186,23 @@ pub async fn install_from_skillssh(
                 let source_hash = installer::hash_local_source(&skill_dir).map_err(AppError::io)?;
                 let revision = git_fetcher::get_head_revision(&temp_dir).map_err(AppError::git)?;
                 let source_ref = format!("{}/{}", source, skill_id);
-                log::info!("[skillssh] source_hash={}, revision={}, source_ref={}", source_hash, revision, source_ref);
+                log::info!(
+                    "[skillssh] source_hash={}, revision={}, source_ref={}",
+                    source_hash,
+                    revision,
+                    source_ref
+                );
                 let (install_name, destination) = resolve_skillssh_install_target(
                     &store,
                     &source_ref,
                     &skill_id,
                     Some(&source_hash),
                 )?;
-                log::info!("[skillssh] install target: name={}, dest={}", install_name, destination.display());
+                log::info!(
+                    "[skillssh] install target: name={}, dest={}",
+                    install_name,
+                    destination.display()
+                );
                 let result = installer::install_skill_dir_to_destination(
                     &skill_dir,
                     &install_name,
@@ -1197,7 +1224,11 @@ pub async fn install_from_skillssh(
                 };
                 let skill_name = result.name.clone();
                 let new_id = store_installed_skill_unlocked(&store, &result, &metadata, None)?;
-                log::info!("[skillssh] install success: id={}, name={}", new_id, skill_name);
+                log::info!(
+                    "[skillssh] install success: id={}, name={}",
+                    new_id,
+                    skill_name
+                );
                 Ok((new_id, skill_name))
             })();
 
