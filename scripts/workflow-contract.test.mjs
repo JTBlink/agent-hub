@@ -21,7 +21,6 @@ const websiteIndex = readFileSync(
 
 describe("GitHub Actions workflow contract", () => {
   it.each([
-    ["CI", ci],
     ["Build Installers", installers],
     ["Deploy website", pages],
   ])("triggers %s only manually or on version tag pushes", (_, workflow) => {
@@ -32,6 +31,18 @@ describe("GitHub Actions workflow contract", () => {
     );
     expect(events.sort()).toEqual(["push", "workflow_dispatch"]);
     expect(triggers).toMatch(/push:\n {4}tags:\n {6}- "v\*"/);
+    expect(triggers).not.toMatch(
+      /branches(?:-ignore)?:|tags-ignore:|paths(?:-ignore)?:/,
+    );
+  });
+
+  it("triggers CI only on manual dispatch", () => {
+    const triggers = ci.match(/^on:\n([\s\S]*?)(?=\n\S)/m)?.[1];
+    expect(triggers).toBeDefined();
+    const events = [...triggers.matchAll(/^ {2}(\w+):/gm)].map(
+      (match) => match[1],
+    );
+    expect(events.sort()).toEqual(["workflow_dispatch"]);
     expect(triggers).not.toMatch(
       /branches(?:-ignore)?:|tags-ignore:|paths(?:-ignore)?:/,
     );
@@ -166,13 +177,11 @@ describe("GitHub Actions workflow contract", () => {
     expect(installers).toContain(
       "run: npm run release:verify -- release-assets",
     );
-    expect(installers).toContain(
-      "name: agent-hub-installers-${{ github.run_id }}",
-    );
+    expect(installers).toContain("name: agent-hub-${{ matrix.artifact }}");
     expect(installers).toContain(
       "if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')",
     );
-    expect(installers).toContain("needs: [preflight, package]");
+    expect(installers).toContain("needs: [preflight, build]");
     expect(installers).toContain("contents: write");
     expect(installers).not.toContain("publish_release:");
     expect(installers).not.toContain("inputs.release_tag");
@@ -187,7 +196,7 @@ describe("GitHub Actions workflow contract", () => {
     );
     expect(installers).toContain("generate_release_notes: false");
     expect(installers).toContain("release-assets/CHANGELOG.md");
-    expect(installers).toContain("retention-days: 90");
+    expect(installers).toContain("retention-days: 1");
     expect(installers).toContain("release-assets/SHA256SUMS");
     expect(installers).toContain("npm run release:verify -- release-assets");
     for (const extension of ["exe", "msi", "dmg", "AppImage", "deb"]) {
@@ -201,7 +210,7 @@ describe("GitHub Actions workflow contract", () => {
     );
     expect(installers).toContain("gh api --silent");
     expect(installers).toContain(
-      "if: steps.existing_release.outputs.exists != 'true'",
+      "steps.existing_release.outputs.exists != 'true'",
     );
   });
 
