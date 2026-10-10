@@ -253,7 +253,7 @@ pub fn delete_skill_group_internal(store: &SkillStore, id: &str) -> Result<(), A
             store.clear_active_scenario()?;
         }
         store.delete_scenario(id)?;
-        sync_metadata::write_all_from_db_unlocked(store)
+        sync_metadata::remove_scenario_metadata(id)
     })
     .map_err(AppError::db)
 }

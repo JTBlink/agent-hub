@@ -314,6 +314,20 @@ fn write_scenario_records_from_db(store: &SkillStore) -> Result<()> {
     Ok(())
 }
 
+pub(crate) fn remove_scenario_metadata(scenario_id: &str) -> Result<()> {
+    let scenario_file = metadata_dir()
+        .join("scenarios")
+        .join(format!("{scenario_id}.json"));
+    if scenario_file.exists() {
+        fs::remove_file(&scenario_file)?;
+    }
+    let membership_dir = metadata_dir().join("scenario-skills").join(scenario_id);
+    if membership_dir.exists() {
+        fs::remove_dir_all(&membership_dir)?;
+    }
+    Ok(())
+}
+
 fn remove_stale_metadata_files(store: &SkillStore) -> Result<()> {
     let skill_ids: HashSet<String> = store
         .get_all_skills()?
