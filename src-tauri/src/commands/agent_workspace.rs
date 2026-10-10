@@ -757,6 +757,7 @@ mod tests {
             std::slice::from_ref(&skill_id),
             &["hermes".to_string()],
             scenario_service::BatchApplyMode::Add,
+            false,
         )
         .unwrap();
         let now = chrono::Utc::now().timestamp_millis();

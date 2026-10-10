@@ -2,6 +2,11 @@
   "app": {
     "name": "agent-hub"
   },
+  "targetConflict": {
+    "title": "覆盖已有文件",
+    "message": "以下路径已存在且不由 AgentHub 管理，是否覆盖？",
+    "confirmAction": "覆盖"
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "mySkills": "技能库",

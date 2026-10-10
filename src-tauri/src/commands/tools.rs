@@ -164,7 +164,7 @@ pub async fn set_all_tools_enabled(
             if let Ok(Some(active_id)) = store.get_active_scenario_id() {
                 // Enabling the tools succeeded either way; a target we may not
                 // replace is reported, not fatal (#363).
-                match sync_scenario_skills(&store, &active_id) {
+                match sync_scenario_skills(&store, &active_id, false) {
                     Ok(refusals) => {
                         for refusal in refusals {
                             log::warn!("enable-all-tools sync skipped a target: {refusal}");
