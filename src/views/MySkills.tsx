@@ -44,6 +44,7 @@ import { SyncDots } from "../components/SyncDots";
 import { SkillGroupMembershipButton } from "../components/SkillGroupMembershipButton";
 import { SkillGroupContext } from "../components/SkillGroupContext";
 import { CardActionMenu } from "../components/CardActionMenu";
+import { SkillGroupSwitchMenu } from "../components/SkillGroupSwitchMenu";
 import * as api from "../lib/tauri";
 import {
   getTagActiveColor,
@@ -183,6 +184,7 @@ export function MySkills() {
     tools,
     managedSkills: skills,
     refreshSkillGroups,
+    refreshSkillGroupMembership,
     refreshManagedSkills,
     refreshTools,
     detailSkillId,
@@ -671,6 +673,31 @@ export function MySkills() {
       }
     },
     [togglingTarget, tools, t, refreshManagedSkills],
+  );
+
+  const handleSwitchSkillGroup = useCallback(
+    async (skillId: string, toGroupId: string) => {
+      const displaced = await api.setSkillGroupMembership(
+        [skillId],
+        toGroupId,
+        true,
+      );
+      await Promise.all([
+        refreshSkillGroupMembership(toGroupId),
+        ...displaced.map((id) => refreshSkillGroupMembership(id)),
+      ]);
+      refreshManagedSkills();
+    },
+    [refreshSkillGroupMembership, refreshManagedSkills],
+  );
+
+  const handleRemoveFromGroup = useCallback(
+    async (skillId: string, fromGroupId: string) => {
+      await api.setSkillGroupMembership([skillId], fromGroupId, false);
+      await refreshSkillGroupMembership(fromGroupId);
+      refreshManagedSkills();
+    },
+    [refreshSkillGroupMembership, refreshManagedSkills],
   );
 
   const scheduleRefreshAfterDelete = useCallback(() => {
@@ -1973,12 +2000,13 @@ export function MySkills() {
                               {skill.skill_group_ids.length > 0 && (
                                 <>
                                   <span className="text-faint">·</span>
-                                  <span className="truncate text-[12px] font-medium text-amber-600 dark:text-amber-400/80">
-                                    {skill.skill_group_ids
-                                      .map((gid) => groupNameMap.get(gid))
-                                      .filter(Boolean)
-                                      .join(", ")}
-                                  </span>
+                                  <SkillGroupSwitchMenu
+                                    skill={skill}
+                                    skillGroups={skillGroups}
+                                    groupNameMap={groupNameMap}
+                                    onSwitch={handleSwitchSkillGroup}
+                                    onRemove={handleRemoveFromGroup}
+                                  />
                                 </>
                               )}
                             </div>
@@ -2176,12 +2204,14 @@ export function MySkills() {
                             </span>
                           )}
                           {skill.skill_group_ids.length > 0 && (
-                            <span className="text-[13px] font-medium text-amber-600 dark:text-amber-400/80">
-                              {skill.skill_group_ids
-                                .map((gid) => groupNameMap.get(gid))
-                                .filter(Boolean)
-                                .join(", ")}
-                            </span>
+                            <SkillGroupSwitchMenu
+                              skill={skill}
+                              skillGroups={skillGroups}
+                              groupNameMap={groupNameMap}
+                              onSwitch={handleSwitchSkillGroup}
+                              onRemove={handleRemoveFromGroup}
+                              fontSize="text-[13px]"
+                            />
                           )}
                         </div>
 

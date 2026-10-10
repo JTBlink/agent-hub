@@ -559,7 +559,10 @@
       "removed": "已将 {{skill}} 从「{{group}}」移出",
       "moveConfirmTitle": "移动技能",
       "moveConfirmMessage": "「{{skill}}」当前在「{{fromGroup}}」中，是否移动到「{{toGroup}}」？",
-      "moveConfirmAction": "移动"
+      "moveConfirmAction": "移动",
+      "switchGroup": "切换技能组",
+      "removeFromGroup": "移出分组",
+      "movedTo": "已将 {{skill}} 移到「{{group}}」"
     }
   },
   "install": {
