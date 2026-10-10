@@ -348,15 +348,6 @@ jobs:
       - name: Verify release bundle
         run: npm run release:verify -- release-assets
 
-      - name: Upload combined installer bundle
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-artifact@v4
-        with:
-          name: agent-hub-installers-${{ github.run_id }}
-          path: release-assets
-          if-no-files-found: error
-          retention-days: 1
-
       # Publish from the packaging runner so a release does not need a second
       # Ubuntu runner just to download the files and call the Release API.
       - name: Check whether GitHub Release already exists
