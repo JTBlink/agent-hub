@@ -2,8 +2,12 @@ name: Deploy website
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+    paths:
+      - "scripts/build-homepage.mjs"
+      - "src-tauri/icons/app-icon.svg"
+      - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
 permissions:
