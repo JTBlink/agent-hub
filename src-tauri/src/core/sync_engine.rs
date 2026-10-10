@@ -885,7 +885,7 @@ mod tests {
         fs::write(tgt.join("unmanaged.txt"), "DO_NOT_OVERWRITE").unwrap();
 
         let err = sync_skill(&src, &tgt, SyncMode::Copy, ReplacePolicy::NoClobber).unwrap_err();
-        assert!(err.to_string().contains("Refusing to replace"), "{err}");
+        assert!(err.to_string().contains("拒绝替换"), "{err}");
         // Byte-for-byte preservation is the whole point.
         assert_eq!(
             fs::read_to_string(tgt.join("unmanaged.txt")).unwrap(),
@@ -939,7 +939,7 @@ mod tests {
             ReplacePolicy::Recorded { mode: "symlink" },
         )
         .unwrap_err();
-        assert!(err.to_string().contains("Refusing to replace"), "{err}");
+        assert!(err.to_string().contains("拒绝替换"), "{err}");
         assert_eq!(
             fs::read_to_string(tgt.join("mine.txt")).unwrap(),
             "user content"
@@ -1004,7 +1004,7 @@ mod tests {
             ReplacePolicy::Recorded { mode: "symlink" },
         ] {
             let err = sync_skill(&src, &tgt, SyncMode::Copy, policy).unwrap_err();
-            assert!(err.to_string().contains("Refusing to replace"), "{err}");
+            assert!(err.to_string().contains("拒绝替换"), "{err}");
         }
         assert_eq!(fs::read_to_string(&tgt).unwrap(), "user file");
     }
@@ -1023,7 +1023,7 @@ mod tests {
         std::os::unix::fs::symlink(&elsewhere, &tgt).unwrap();
 
         let err = sync_skill(&src, &tgt, SyncMode::Symlink, ReplacePolicy::NoClobber).unwrap_err();
-        assert!(err.to_string().contains("Refusing to replace"), "{err}");
+        assert!(err.to_string().contains("拒绝替换"), "{err}");
         assert_eq!(fs::read_link(&tgt).unwrap(), elsewhere);
         assert!(elsewhere.join("mine.md").exists());
     }
@@ -1043,7 +1043,7 @@ mod tests {
         std::os::unix::fs::symlink(&gone, &tgt).unwrap();
 
         let err = sync_skill(&src, &tgt, SyncMode::Symlink, ReplacePolicy::NoClobber).unwrap_err();
-        assert!(err.to_string().contains("Refusing to replace"), "{err}");
+        assert!(err.to_string().contains("拒绝替换"), "{err}");
 
         sync_skill(
             &src,
