@@ -58,7 +58,8 @@ export function prepareCli(
     );
   }
   if (target === "universal-apple-darwin") {
-    return run(
+    const fatBinary = resolve(output, `agent-hub-cli-${target}`);
+    const status = run(
       "lipo",
       [
         "-create",
@@ -66,10 +67,14 @@ export function prepareCli(
           resolve(output, `agent-hub-cli-${arch}`),
         ),
         "-output",
-        resolve(output, `agent-hub-cli-${target}`),
+        fatBinary,
       ],
       runner,
     );
+    if (status !== 0) return status;
+    const universalDir = resolve(targetDir, target, profile);
+    filesystem.mkdirSync(universalDir, { recursive: true });
+    filesystem.copyFileSync(fatBinary, resolve(universalDir, "agent-hub-cli"));
   }
   return 0;
 }
