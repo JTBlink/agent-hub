@@ -22,7 +22,6 @@ interface MarketSkillCardProps {
   isSelected: boolean;
   installing: string | null;
   batchLinking: boolean;
-  marketTab: string;
   marketSourceFilter: string;
   onToggleSelect: (id: string) => void;
   onInstall: (skill: SkillsShSkill) => void;
@@ -40,7 +39,6 @@ export function MarketSkillCard({
   isSelected,
   installing,
   batchLinking,
-  marketTab,
   marketSourceFilter,
   onToggleSelect,
   onInstall,
@@ -180,7 +178,7 @@ export function MarketSkillCard({
         >
           @{skill.source}
         </button>
-        {marketTab === "alltime" && skill.installs > 0 && (
+        {skill.installs > 0 && (
           <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted">
             <DownloadCloud className="h-3 w-3" />
             {skill.installs >= 1_000_000

@@ -80,8 +80,8 @@
     "notSynced": "未同步",
     "scanImport": "本機 Skills 管理",
     "installNew": "安裝新 Skills",
-    "recentActivity": "近期動態"
-    ,"version": "版本"
+    "recentActivity": "近期動態",
+    "version": "版本"
   },
   "agentControl": {
     "title": "讓你的 Agent 管理 Skills",

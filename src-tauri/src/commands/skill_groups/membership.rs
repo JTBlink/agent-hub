@@ -60,7 +60,8 @@ pub async fn set_skill_group_membership(
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     let result = tauri::async_runtime::spawn_blocking(move || {
-        set_skill_group_skills_internal(&store, &skill_group_id, &skill_ids, add)
+        set_skill_group_skills_internal(&store, &skill_group_id, &skill_ids, add)?;
+        Ok(())
     })
     .await?;
     if result.is_ok() {
@@ -71,12 +72,15 @@ pub async fn set_skill_group_membership(
 
 /// Add or remove a pre-resolved set of skills from one skill group under the repo
 /// lock. Membership edits are curation-only and deliberately do not deploy.
+///
+/// Returns the list of scenario-ids that lost members because of the exclusive
+/// move (empty when `add` is false or no skill was displaced).
 pub fn set_skill_group_skills_internal(
     store: &SkillStore,
     skill_group_id: &str,
     skill_ids: &[String],
     add: bool,
-) -> Result<(), AppError> {
+) -> Result<Vec<String>, AppError> {
     scenario_service::ensure_scenario_exists(store, skill_group_id)?;
     sync_metadata::with_repo_lock(
         if add {
@@ -85,9 +89,13 @@ pub fn set_skill_group_skills_internal(
             "remove skills from skill group"
         },
         || {
-            store.set_scenario_memberships(skill_group_id, skill_ids, add)?;
+            let displaced = store.set_scenario_memberships(skill_group_id, skill_ids, add)?;
             crate::core::file_watcher::mute_self_writes(&sync_metadata::metadata_dir());
-            sync_metadata::write_scenario_membership_metadata_unlocked(store, skill_group_id)
+            sync_metadata::write_scenario_membership_metadata_unlocked(store, skill_group_id)?;
+            for old_id in &displaced {
+                sync_metadata::write_scenario_membership_metadata_unlocked(store, old_id)?;
+            }
+            Ok(displaced)
         },
     )
     .map_err(AppError::db)

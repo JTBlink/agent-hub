@@ -736,6 +736,14 @@ struct SkillGroupMembershipReport {
     added: Vec<String>,
     removed: Vec<String>,
     missing: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    moved_from: Vec<SkillMovedFrom>,
+}
+
+#[derive(Debug, Serialize)]
+struct SkillMovedFrom {
+    skill: String,
+    from_group: String,
 }
 
 enum InstallKind {
@@ -2785,8 +2793,31 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
             let s = resolve_scenario(store, &skill_group)?;
             let resolved = resolve_skill_references(store, &skills)?;
             let ids: Vec<String> = resolved.iter().map(|skill| skill.id.clone()).collect();
+            let pre_groups: Vec<(String, Vec<String>)> = resolved
+                .iter()
+                .map(|skill| {
+                    let old = store
+                        .get_scenarios_for_skill(&skill.id)
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|sid| sid != &s.id)
+                        .collect();
+                    (skill.name.clone(), old)
+                })
+                .collect();
             skill_group_cmd::set_skill_group_skills_internal(store, &s.id, &ids, true)
                 .map_err(map_app_err)?;
+            let mut moved_from = Vec::new();
+            for (skill_name, old_ids) in &pre_groups {
+                for old_id in old_ids {
+                    if let Ok(Some(sc)) = store.get_scenario(old_id) {
+                        moved_from.push(SkillMovedFrom {
+                            skill: skill_name.clone(),
+                            from_group: sc.name,
+                        });
+                    }
+                }
+            }
             print_json(
                 &SkillGroupMembershipReport {
                     skill_group_id: s.id,
@@ -2794,6 +2825,7 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
                     added: resolved.into_iter().map(|skill| skill.name).collect(),
                     removed: Vec::new(),
                     missing: Vec::new(),
+                    moved_from,
                 },
                 json,
             );
@@ -2814,6 +2846,7 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
                     added: Vec::new(),
                     removed: resolved.into_iter().map(|skill| skill.name).collect(),
                     missing: Vec::new(),
+                    moved_from: Vec::new(),
                 },
                 json,
             );

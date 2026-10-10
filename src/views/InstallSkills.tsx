@@ -1189,7 +1189,6 @@ export function InstallSkills() {
                           }
                           installing={installing}
                           batchLinking={batchLinking}
-                          marketTab={marketTab}
                           marketSourceFilter={marketSourceFilter}
                           onToggleSelect={toggleMarketSelect}
                           onInstall={handleInstallSkillssh}

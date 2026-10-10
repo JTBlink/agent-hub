@@ -838,6 +838,10 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let now = chrono::Utc::now().timestamp_millis();
         conn.execute(
+            "DELETE FROM scenario_skills WHERE skill_id = ?1 AND scenario_id != ?2",
+            params![skill_id, scenario_id],
+        )?;
+        conn.execute(
             "INSERT OR IGNORE INTO scenario_skills (scenario_id, skill_id, added_at) VALUES (?1, ?2, ?3)",
             params![scenario_id, skill_id, now],
         )?;

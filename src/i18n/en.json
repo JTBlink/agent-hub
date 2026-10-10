@@ -80,8 +80,8 @@
     "notSynced": "Not synced",
     "scanImport": "Manage local Skills",
     "installNew": "Install New Skills",
-    "recentActivity": "Recent Activity"
-    ,"version": "Version"
+    "recentActivity": "Recent Activity",
+    "version": "Version"
   },
   "agentControl": {
     "title": "Let your agents manage skills",
