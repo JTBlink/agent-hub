@@ -109,6 +109,10 @@ export function Sidebar() {
     () => installedTools.filter((t) => t.category === "lobster"),
     [installedTools],
   );
+  const ungroupedCount = useMemo(
+    () => managedSkills.filter((s) => s.skill_group_ids.length === 0).length,
+    [managedSkills],
+  );
   const [orderedSkillGroups, setOrderedSkillGroups] = useState(skillGroups);
   const [orderedProjects, setOrderedProjects] = useState(projects);
   const [orderedCodingTools, setOrderedCodingTools] =
@@ -678,6 +682,29 @@ export function Sidebar() {
                   )}
                 </Droppable>
               </DragDropContext>
+              {ungroupedCount > 0 && (
+                <button
+                  onClick={() => {
+                    closeSkillDetail();
+                    if (location.pathname !== "/my-skills") {
+                      navigate("/my-skills");
+                    }
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 outline-none text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors",
+                  )}
+                >
+                  <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
+                    <Layers className="h-3 w-3" />
+                  </span>
+                  <span className="flex-1 truncate">
+                    {t("mySkills.sourceFilter.ungrouped")}
+                  </span>
+                  <span className="min-w-[18px] rounded-full bg-surface-hover px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums text-muted">
+                    {ungroupedCount}
+                  </span>
+                </button>
+              )}
               <button
                 onClick={() => setShowCreate(true)}
                 className="flex items-center gap-2 px-2.5 py-[7px] mt-1 rounded-md text-sm text-muted hover:text-secondary hover:bg-surface-hover transition-colors w-full outline-none"

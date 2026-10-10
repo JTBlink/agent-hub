@@ -188,10 +188,11 @@ mod tests {
 
     #[test]
     fn parse_frontmatter_full() {
-        let content = "---\nname: my-skill\ndescription: A great skill\n---\n# Content";
+        let content = "---\nname: my-skill\ndescription: A great skill\nversion: 1.1.0\n---\n# Content";
         let meta = parse_frontmatter(content);
         assert_eq!(meta.name.as_deref(), Some("my-skill"));
         assert_eq!(meta.description.as_deref(), Some("A great skill"));
+        assert_eq!(meta.version.as_deref(), Some("1.1.0"));
     }
 
     #[test]

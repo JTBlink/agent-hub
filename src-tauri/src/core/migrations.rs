@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use rusqlite::Connection;
 
 /// Current schema version. Bump this when adding a new migration.
-const LATEST_VERSION: u32 = 8;
+const LATEST_VERSION: u32 = 9;
 
 /// Run all pending migrations on the database.
 ///
@@ -55,6 +55,7 @@ fn migrate_step(conn: &Connection, from_version: u32) -> Result<()> {
         5 => migrate_v5_to_v6(conn),
         6 => migrate_v6_to_v7(conn),
         7 => migrate_v7_to_v8(conn),
+        8 => migrate_v8_to_v9(conn),
         _ => bail!("unknown migration version: {from_version}"),
     }
 }
@@ -317,6 +318,23 @@ fn migrate_v7_to_v8(conn: &Connection) -> Result<()> {
     conn.execute(
         "DELETE FROM settings WHERE key = 'project_default_export_agents'",
         [],
+    )?;
+    Ok(())
+}
+
+/// v8 → v9: Enforce exclusive skill-group membership.
+///
+/// Each skill may belong to at most one group. For any skill that ended up in
+/// multiple groups (which the old schema allowed), keep only the most-recently
+/// added row. Then add a UNIQUE index on `skill_id` so the database prevents
+/// future duplicates.
+fn migrate_v8_to_v9(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "DELETE FROM scenario_skills WHERE rowid NOT IN (
+            SELECT MAX(rowid) FROM scenario_skills GROUP BY skill_id
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_scenario_skills_skill_exclusive
+            ON scenario_skills(skill_id);"
     )?;
     Ok(())
 }
