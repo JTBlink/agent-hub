@@ -29,7 +29,7 @@ function fixture() {
   );
   writeFileSync(
     join(root, "docs/development/platform-support.md"),
-    "# 平台支持矩阵\n\nWindows、macOS、Linux。\n\n## 应用数据目录\n\n按平台保存。\n\n## V1 已知限制\n\n安装包默认未签名。\n",
+    "# 平台支持矩阵\n\nWindows、macOS、Linux。\n\n## 本地数据\n\n按平台保存。\n\n## 当前限制\n\n安装包默认未签名。\n",
   );
   for (const extension of [".exe", ".dmg", ".AppImage", ".deb"]) {
     writeFileSync(
