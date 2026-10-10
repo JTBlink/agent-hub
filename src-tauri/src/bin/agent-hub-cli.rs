@@ -2808,13 +2808,20 @@ fn run_skill_groups(args: SkillGroupArgs, store: &SkillStore, json: bool) -> any
             skill_group_cmd::set_skill_group_skills_internal(store, &s.id, &ids, true)
                 .map_err(map_app_err)?;
             let mut moved_from = Vec::new();
-            for (skill_name, old_ids) in &pre_groups {
-                for old_id in old_ids {
-                    if let Ok(Some(sc)) = store.get_scenario(old_id) {
-                        moved_from.push(SkillMovedFrom {
-                            skill: skill_name.clone(),
-                            from_group: sc.name,
-                        });
+            if pre_groups.iter().any(|(_, old)| !old.is_empty()) {
+                let all_scenarios = store.get_all_scenarios().unwrap_or_default();
+                let name_map: std::collections::HashMap<&str, &str> = all_scenarios
+                    .iter()
+                    .map(|sc| (sc.id.as_str(), sc.name.as_str()))
+                    .collect();
+                for (skill_name, old_ids) in &pre_groups {
+                    for old_id in old_ids {
+                        if let Some(name) = name_map.get(old_id.as_str()) {
+                            moved_from.push(SkillMovedFrom {
+                                skill: skill_name.clone(),
+                                from_group: (*name).to_string(),
+                            });
+                        }
                     }
                 }
             }

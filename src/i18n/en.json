@@ -488,7 +488,10 @@
       "inNamed": "In “{{group}}”",
       "notInNamed": "Not in “{{group}}”",
       "added": "Added {{skill}} to “{{group}}”",
-      "removed": "Removed {{skill}} from “{{group}}”"
+      "removed": "Removed {{skill}} from “{{group}}”",
+      "moveConfirmTitle": "Move skill",
+      "moveConfirmMessage": "“{{skill}}” is currently in “{{fromGroup}}”. Move to “{{toGroup}}”?",
+      "moveConfirmAction": "Move"
     }
   },
   "install": {

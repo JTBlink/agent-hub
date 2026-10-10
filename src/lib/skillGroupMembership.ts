@@ -13,7 +13,7 @@ export function withSkillGroupMembership<
     return {
       ...skill,
       skill_group_ids: included
-        ? [...skill.skill_group_ids, groupId]
+        ? [groupId]
         : skill.skill_group_ids.filter((id) => id !== groupId),
     };
   });

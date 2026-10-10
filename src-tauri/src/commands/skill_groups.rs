@@ -636,9 +636,9 @@ mod tests {
             .insert_skill(&sample_skill("new-only", "new-only", &new_only_dir))
             .unwrap();
 
+        // Exclusive: each skill belongs to exactly one group.
         store.add_skill_to_scenario("old", "shared").unwrap();
         store.add_skill_to_scenario("old", "old-only").unwrap();
-        store.add_skill_to_scenario("new", "shared").unwrap();
         store.add_skill_to_scenario("new", "new-only").unwrap();
 
         store.set_active_scenario("old").unwrap();
@@ -650,6 +650,17 @@ mod tests {
         assert_eq!(fs::read_link(&shared_target).unwrap(), shared_dir);
         assert!(old_only_target.is_symlink());
         let shared_inode_before = fs::symlink_metadata(&shared_target).unwrap().ino();
+
+        // Now move "shared" from "old" to "new" (exclusive: removes from old).
+        store.add_skill_to_scenario("new", "shared").unwrap();
+        assert!(
+            store
+                .get_skill_ids_for_scenario("old")
+                .unwrap()
+                .iter()
+                .all(|id| id != "shared"),
+            "exclusive add should remove shared from old"
+        );
 
         let desired_targets = collect_scenario_sync_targets(&store, "new").unwrap();
         unsync_obsolete_scenario_targets(&store, "old", &desired_targets).unwrap();

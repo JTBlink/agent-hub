@@ -1210,10 +1210,17 @@ export function MySkills() {
     });
   }, [skills, selectedIds, viewedSkillGroup, anyDisabled]);
 
-  const { batchToggling, handleToggleSkillGroup, handleBatchToggleSkillGroup } =
-    useSkillGroupMembershipActions({
+  const {
+    batchToggling,
+    handleToggleSkillGroup,
+    handleBatchToggleSkillGroup,
+    moveConfirm,
+    confirmMove,
+    cancelMove,
+  } = useSkillGroupMembershipActions({
       group: viewedSkillGroup,
       groupName: viewedSkillGroupName,
+      groupNameMap,
       selectedSkills: togglableSelectedSkills,
       enabling: anyDisabled,
       onChanged: () =>
@@ -2339,6 +2346,19 @@ export function MySkills() {
         message={t("mySkills.tags.deleteConfirm", { tag: tagToDelete || "" })}
         onClose={() => setTagToDelete(null)}
         onConfirm={handleDeleteTag}
+      />
+      <ConfirmDialog
+        open={moveConfirm !== null}
+        tone="warning"
+        title={t("mySkills.membership.moveConfirmTitle")}
+        message={t("mySkills.membership.moveConfirmMessage", {
+          skill: moveConfirm?.skill.name ?? "",
+          fromGroup: moveConfirm?.fromGroupName ?? "",
+          toGroup: viewedSkillGroupName,
+        })}
+        confirmLabel={t("mySkills.membership.moveConfirmAction")}
+        onClose={cancelMove}
+        onConfirm={confirmMove}
       />
       <TagRenameDialog
         open={tagToRename !== null}
