@@ -159,7 +159,7 @@ export function Settings() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   useSectionAnchor("agents");
-  const { tools, refreshTools, openHelp } = useApp();
+  const { tools, refreshTools } = useApp();
   const [togglingTools, setTogglingTools] = useState<Set<string>>(new Set());
   const { theme, setTheme } = useThemeContext();
   const [syncMode, setSyncMode] = useState("symlink");
@@ -1986,7 +1986,7 @@ export function Settings() {
               />
               <button
                 type="button"
-                onClick={openHelp}
+                onClick={() => navigate("/help")}
                 className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
               >
                 <BookOpen className="w-3 h-3" /> {t("settings.help")}
