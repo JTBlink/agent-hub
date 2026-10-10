@@ -25,9 +25,12 @@ describe("primary application packaging", () => {
         },
       }),
     ).toBe(0);
-    expect(copies).toHaveLength(2);
+    expect(copies).toHaveLength(3);
     expect(copies[0][1]).toMatch(/agent-hub-cli-aarch64-apple-darwin$/);
     expect(copies[1][1]).toMatch(/agent-hub-cli-x86_64-apple-darwin$/);
+    expect(copies[2][1]).toMatch(
+      /target\/universal-apple-darwin\/release\/agent-hub-cli$/,
+    );
     expect(calls.at(-1)[0]).toBe("lipo");
     expect(
       calls
