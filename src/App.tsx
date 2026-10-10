@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider, useThemeContext } from "./context/ThemeContext";
-import { HelpDialog } from "./components/HelpDialog";
 import { CloseActionGuard } from "./components/CloseActionGuard";
 import { FirstRunRestoreDialog } from "./components/FirstRunRestoreDialog";
 import { Layout } from "./components/Layout";
@@ -17,6 +16,7 @@ import { InstallSkills } from "./views/InstallSkills";
 import { Settings } from "./views/Settings";
 import { ProjectDetail } from "./views/ProjectDetail";
 import { Backup } from "./views/Backup";
+import { Help } from "./views/Help";
 
 function ThemedToaster() {
   const { resolvedTheme } = useThemeContext();
@@ -65,9 +65,9 @@ function App() {
               <Route path="/backup" element={<Backup />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/help" element={<Help />} />
             </Route>
           </Routes>
-          <HelpDialog />
           <CloseActionGuard />
           <FirstRunRestoreDialog />
         </BrowserRouter>
