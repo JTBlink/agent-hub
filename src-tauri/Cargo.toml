@@ -53,7 +53,7 @@ rand = "0.8"
 image = { version = "0.25", default-features = false, features = ["png"] }
 notify = "6.1.1"
 clap = { version = "4.5", features = ["derive"] }
-rfd = "0.16"
+rfd = { version = "0.16", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 junction = "2"
