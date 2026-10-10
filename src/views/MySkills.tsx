@@ -178,6 +178,7 @@ export function MySkills() {
   const navigate = useNavigate();
   const {
     viewedSkillGroup,
+    viewingUngrouped,
     skillGroups,
     tools,
     managedSkills: skills,
@@ -237,9 +238,11 @@ export function MySkills() {
     [],
   );
 
-  const viewedSkillGroupName = viewedSkillGroup
-    ? getSkillGroupDisplayName(viewedSkillGroup.name, t)
-    : t("mySkills.currentSkillGroupFallback");
+  const viewedSkillGroupName = viewingUngrouped
+    ? t("mySkills.sourceFilter.ungrouped")
+    : viewedSkillGroup
+      ? getSkillGroupDisplayName(viewedSkillGroup.name, t)
+      : t("mySkills.currentSkillGroupFallback");
 
   const groupNameMap = useMemo(
     () =>
@@ -265,8 +268,8 @@ export function MySkills() {
   }, [viewedSkillGroup, skills]);
 
   useEffect(() => {
-    setFilterMode(viewedSkillGroup ? "enabled" : "all");
-  }, [viewedSkillGroup?.id]);
+    setFilterMode(viewedSkillGroup && !viewingUngrouped ? "enabled" : "all");
+  }, [viewedSkillGroup?.id, viewingUngrouped]);
 
   // Skills with an unresolved sync conflict get a "needs attention" badge
   // that jumps to the Backup page (merge-engine design §4 UI).
@@ -381,6 +384,8 @@ export function MySkills() {
         if (!matchUntagged && !matchTag) return false;
       }
 
+      if (viewingUngrouped) return skill.skill_group_ids.length === 0;
+
       if (!viewedSkillGroup) return true;
 
       const enabledInSkillGroup = skill.skill_group_ids.includes(
@@ -423,6 +428,7 @@ export function MySkills() {
     tagFilters,
     filterMode,
     viewedSkillGroup,
+    viewingUngrouped,
     skillGroupSkillOrder,
   ]);
 

@@ -28,12 +28,13 @@ interface AppState {
   activeSkillGroup: SkillGroup | null;
   /** Frontend-only "currently being viewed/edited" skillGroup. Persisted to localStorage. UI selection. */
   viewedSkillGroup: SkillGroup | null;
+  viewingUngrouped: boolean;
   tools: ToolInfo[];
   managedSkills: ManagedSkill[];
   projects: Project[];
   loading: boolean;
   appError: string | null;
-  helpOpen: boolean;
+
   detailSkillId: string | null;
   /** Result of the last app-version check. Notification only: installing an
    *  update is always started by the user from Settings. */
@@ -46,10 +47,10 @@ interface AppState {
   refreshSkillGroupMembership: (groupId: string) => Promise<void>;
   refreshProjects: () => Promise<void>;
   setViewedSkillGroupId: (id: string) => void;
+  setViewingUngrouped: (v: boolean) => void;
   applySkillGroupToDefault: (id: string) => Promise<void>;
   clearAppError: () => void;
-  openHelp: () => void;
-  closeHelp: () => void;
+
   openSkillDetailById: (skillId: string) => void;
   closeSkillDetail: () => void;
 }
@@ -81,9 +82,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const [managedSkills, setManagedSkills] = useState<ManagedSkill[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [viewingUngrouped, setViewingUngroupedState] = useState(false);
   const [loading, setLoading] = useState(true);
   const [appError, setAppError] = useState<string | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
+
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
   const autoCheckInFlightRef = useRef(false);
@@ -198,11 +200,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setViewedSkillGroupId = useCallback((id: string) => {
     setViewedSkillGroupIdState(id);
+    setViewingUngroupedState(false);
     try {
       localStorage.setItem(VIEWED_SKILL_GROUP_LS_KEY, id);
     } catch {
       // localStorage may be unavailable; selection is still tracked in memory.
     }
+  }, []);
+
+  const setViewingUngrouped = useCallback((v: boolean) => {
+    setViewingUngroupedState(v);
+    if (v) setViewedSkillGroupIdState(null);
   }, []);
 
   const handleApplySkillGroupToDefault = useCallback(
@@ -216,6 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Resolve viewedSkillGroup: persisted id > activeSkillGroup > first skillGroup.
   // Persist whichever resolves so the next launch matches what the user saw.
   const viewedSkillGroup = (() => {
+    if (viewingUngrouped) return null;
     if (viewedSkillGroupId) {
       const found = skillGroups.find((s) => s.id === viewedSkillGroupId);
       if (found) return found;
@@ -487,7 +496,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         projects,
         loading,
         appError,
-        helpOpen,
         detailSkillId,
         appUpdate,
         refreshAppUpdate,
@@ -498,10 +506,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshSkillGroupMembership,
         refreshProjects,
         setViewedSkillGroupId,
+        viewingUngrouped,
+        setViewingUngrouped,
         applySkillGroupToDefault: handleApplySkillGroupToDefault,
         clearAppError: () => setAppError(null),
-        openHelp: () => setHelpOpen(true),
-        closeHelp: () => setHelpOpen(false),
         openSkillDetailById: (skillId: string) => setDetailSkillId(skillId),
         closeSkillDetail: () => setDetailSkillId(null),
       }}

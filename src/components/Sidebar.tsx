@@ -72,6 +72,8 @@ export function Sidebar() {
     skillGroups,
     viewedSkillGroup,
     setViewedSkillGroupId,
+    viewingUngrouped,
+    setViewingUngrouped,
     closeSkillDetail,
     refreshSkillGroups,
     refreshManagedSkills,
@@ -686,12 +688,16 @@ export function Sidebar() {
                 <button
                   onClick={() => {
                     closeSkillDetail();
+                    setViewingUngrouped(true);
                     if (location.pathname !== "/my-skills") {
                       navigate("/my-skills");
                     }
                   }}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 outline-none text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors",
+                    "flex w-full items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 outline-none transition-colors",
+                    viewingUngrouped
+                      ? "bg-surface-active text-primary"
+                      : "text-tertiary hover:text-secondary hover:bg-surface-hover",
                   )}
                 >
                   <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
