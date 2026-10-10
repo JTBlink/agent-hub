@@ -488,7 +488,10 @@
       "inNamed": "已加入「{{group}}」",
       "notInNamed": "未加入「{{group}}」",
       "added": "已将 {{skill}} 加入「{{group}}」",
-      "removed": "已将 {{skill}} 从「{{group}}」移出"
+      "removed": "已将 {{skill}} 从「{{group}}」移出",
+      "moveConfirmTitle": "移动技能",
+      "moveConfirmMessage": "「{{skill}}」当前在「{{fromGroup}}」中，是否移动到「{{toGroup}}」？",
+      "moveConfirmAction": "移动"
     }
   },
   "install": {

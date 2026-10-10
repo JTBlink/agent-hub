@@ -16,9 +16,9 @@ const skills = [
 ];
 
 describe("skill group membership refresh", () => {
-  it("patches authoritative membership while preserving other groups and unchanged records", () => {
+  it("replaces group membership exclusively when adding", () => {
     const next = withSkillGroupMembership(skills, "edited", ["a"]);
-    expect(next[0].skill_group_ids).toEqual(["other", "edited"]);
+    expect(next[0].skill_group_ids).toEqual(["edited"]);
     expect(next[1].skill_group_ids).toEqual([]);
     expect(next[2]).toBe(skills[2]);
     expect(next[0].tags).toBe(skills[0].tags);

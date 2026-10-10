@@ -40,6 +40,11 @@ fn membership_edit_leaves_unrelated_metadata_untouched() {
     );
     assert_eq!(repo.store.count_skills_for_scenario("batch").unwrap(), 20);
     assert_eq!(
+        repo.store.count_skills_for_scenario("group").unwrap(),
+        0,
+        "exclusive move should empty the source group"
+    );
+    assert_eq!(
         fs::read_to_string(unrelated).unwrap(),
         before,
         "membership edits must not re-export unrelated skill records"
@@ -66,7 +71,7 @@ fn membership_batch_is_atomic_when_a_skill_disappears() {
 }
 
 #[test]
-fn membership_add_remove_roundtrip_preserves_other_groups_order_and_tools() {
+fn membership_add_remove_roundtrip_exclusive_move_and_tools() {
     let repo = metadata_test_repo();
     for group in ["edited", "other"] {
         repo.store
@@ -81,17 +86,26 @@ fn membership_add_remove_roundtrip_preserves_other_groups_order_and_tools() {
     }
     repo.store.set_active_scenario("other").unwrap();
     repo.store.add_skill_to_scenario("other", "a").unwrap();
-    // First membership edit bootstraps a full, recoverable snapshot.
-    set_skill_group_skills_internal(
+    // Adding a, b, c to "edited" should exclusively move "a" out of "other".
+    let displaced = set_skill_group_skills_internal(
         &repo.store,
         "edited",
         &["a".into(), "b".into(), "c".into()],
         true,
     )
     .unwrap();
+    assert_eq!(displaced, vec!["other"], "a should be displaced from other");
     assert!(sync_metadata::metadata_dir()
         .join("skills/c.json")
         .is_file());
+    // "a" is no longer in "other".
+    assert!(
+        repo.store
+            .get_skill_ids_for_scenario("other")
+            .unwrap()
+            .is_empty(),
+        "exclusive move should remove a from other"
+    );
     repo.store
         .reorder_scenario_skills("edited", &["c".into(), "b".into(), "a".into()])
         .unwrap();
@@ -99,23 +113,15 @@ fn membership_add_remove_roundtrip_preserves_other_groups_order_and_tools() {
         .set_scenario_skill_tool_enabled("edited", "c", "test-agent", false)
         .unwrap();
     sync_metadata::write_all_from_db_unlocked(&repo.store).unwrap();
-    let other = sync_metadata::metadata_dir().join("scenario-skills/other/a.json");
-    let original = format!("{}\n", fs::read_to_string(&other).unwrap());
-    fs::write(&other, &original).unwrap();
 
     set_skill_group_skills_internal(&repo.store, "edited", &["b".into()], false).unwrap();
     assert!(!sync_metadata::metadata_dir()
         .join("scenario-skills/edited/b.json")
         .exists());
-    assert_eq!(fs::read_to_string(other).unwrap(), original);
     sync_metadata::reindex_from_metadata_unlocked(&repo.store).unwrap();
     assert_eq!(
         repo.store.get_skill_ids_for_scenario("edited").unwrap(),
         vec!["c", "a"]
-    );
-    assert_eq!(
-        repo.store.get_skill_ids_for_scenario("other").unwrap(),
-        vec!["a"]
     );
     let toggles = repo
         .store
