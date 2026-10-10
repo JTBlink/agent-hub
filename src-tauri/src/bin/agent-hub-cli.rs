@@ -3362,6 +3362,7 @@ mod tests {
             vec![app_lib::core::error::TargetConflictDetail {
                 path: "~/.claude/skills/db".to_string(),
                 reason: "is not a managed deployment".to_string(),
+                is_skill: false,
             }],
         ));
 
