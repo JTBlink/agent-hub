@@ -17,6 +17,7 @@ interface MarketSkillCardProps {
   skill: SkillsShSkill;
   isMarketInstalled: boolean;
   isLocalMatch: boolean;
+  installedFromSource?: string;
   isMultiSelect: boolean;
   isSelected: boolean;
   installing: string | null;
@@ -34,6 +35,7 @@ export function MarketSkillCard({
   skill,
   isMarketInstalled,
   isLocalMatch,
+  installedFromSource,
   isMultiSelect,
   isSelected,
   installing,
@@ -192,6 +194,11 @@ export function MarketSkillCard({
           <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-emerald-400">
             <Check className="h-3 w-3" />
             {t("install.installed")}
+          </span>
+        ) : installedFromSource ? (
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted">
+            <Check className="h-3 w-3" />
+            {t("install.installedFrom", { source: installedFromSource })}
           </span>
         ) : isLocalMatch ? (
           <span className="inline-flex items-center gap-1 rounded-[5px] border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-amber-400">

@@ -81,6 +81,7 @@
     "scanImport": "本地 Skills 管理",
     "installNew": "安装新 Skills",
     "recentActivity": "近期动态"
+    ,"version": "版本"
   },
   "agentControl": {
     "title": "让你的 Agent 管理 Skills",
@@ -527,6 +528,7 @@
     "loadingMore": "正在加载更多...",
     "installing": "安装中...",
     "installed": "已安装",
+    "installedFrom": "已从 @{{source}} 安装",
     "uninstallTitle": "卸载技能？",
     "uninstallMessage": "确定卸载「{{name}}」？中央仓库文件和已同步到各 Agent 的副本都会被移除。",
     "uninstallConfirm": "确认卸载",

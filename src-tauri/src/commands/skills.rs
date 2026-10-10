@@ -197,6 +197,7 @@ pub struct ManagedSkillDto {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
+    pub version: Option<String>,
     pub source_type: String,
     pub source_ref: Option<String>,
     pub source_ref_resolved: Option<String>,
@@ -1934,15 +1935,18 @@ fn managed_skill_to_dto(
     // directly on disk (file watcher emits a change event; this read serves
     // the fresh value). Keep `name` on the DB value to avoid drift with
     // sync target directory names.
-    let description = skill_metadata::parse_skill_md(Path::new(&skill.central_path))
+    let metadata = skill_metadata::parse_skill_md(Path::new(&skill.central_path));
+    let description = metadata
         .description
         .filter(|s| !s.trim().is_empty())
         .or(skill.description);
+    let version = metadata.version.filter(|s| !s.trim().is_empty());
 
     ManagedSkillDto {
         id: skill.id,
         name: skill.name,
         description,
+        version,
         source_type: skill.source_type,
         source_ref: skill.source_ref,
         source_ref_resolved: skill.source_ref_resolved,

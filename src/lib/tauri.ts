@@ -21,6 +21,7 @@ export interface ManagedSkill {
   id: string;
   name: string;
   description: string | null;
+  version: string | null;
   source_type: string;
   source_ref: string | null;
   source_ref_resolved: string | null;
