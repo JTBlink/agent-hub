@@ -1,10 +1,10 @@
 name: CI
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+
+# Release tags are validated by build-installers.yml's quality job. Keeping
+# this workflow manual avoids running the same full checks twice for a release.
 
 permissions:
   contents: read
