@@ -42,6 +42,7 @@ pub(crate) fn register_missing(store: &SkillStore) -> Result<bool> {
             source_subpath: None,
             source_branch: None,
             source_revision: None,
+            source_agent: None,
             remote_revision: None,
             central_path,
             content_hash: Some(content_hash::hash_directory(&path)?),

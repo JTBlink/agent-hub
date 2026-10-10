@@ -1766,6 +1766,7 @@ fn install_local_action(
         source_subpath: None,
         source_branch: None,
         source_revision: None,
+        source_agent: None,
         remote_revision: None,
         update_status: "local_only".to_string(),
     };
@@ -1807,6 +1808,7 @@ fn install_git_action(
             source_subpath: git_fetcher::relative_subpath(&temp_dir, &skill_dir),
             source_branch: parsed.branch.clone(),
             source_revision: Some(revision.clone()),
+            source_agent: None,
             remote_revision: Some(revision),
             update_status: "up_to_date".to_string(),
         };
@@ -1856,6 +1858,7 @@ fn install_skillssh_action(
             source_subpath: git_fetcher::relative_subpath(&temp_dir, &skill_dir),
             source_branch: None,
             source_revision: Some(revision.clone()),
+            source_agent: None,
             remote_revision: Some(revision),
             update_status: "up_to_date".to_string(),
         };
@@ -2403,6 +2406,7 @@ fn run_adopt(
                 source_subpath: subpath.clone(),
                 source_branch: branch.clone(),
                 source_revision: None,
+                source_agent: None,
                 remote_revision: None,
                 update_status: "unknown".to_string(),
             }
@@ -2414,6 +2418,7 @@ fn run_adopt(
                 source_subpath: None,
                 source_branch: None,
                 source_revision: None,
+                source_agent: None,
                 remote_revision: None,
                 update_status: "local_only".to_string(),
             }
@@ -3449,6 +3454,7 @@ mod tests {
                 source_subpath: None,
                 source_branch: None,
                 source_revision: None,
+                source_agent: None,
                 remote_revision: None,
                 central_path: source.to_string_lossy().to_string(),
                 content_hash: None,
@@ -3671,6 +3677,7 @@ mod tests {
                 source_subpath: None,
                 source_branch: None,
                 source_revision: None,
+                source_agent: None,
                 remote_revision: None,
                 central_path: source.to_string_lossy().to_string(),
                 content_hash: None,
@@ -3808,6 +3815,7 @@ mod tests {
                 source_subpath: None,
                 source_branch: None,
                 source_revision: None,
+                source_agent: None,
                 remote_revision: None,
                 central_path: missing_source.to_string_lossy().to_string(),
                 content_hash: None,
