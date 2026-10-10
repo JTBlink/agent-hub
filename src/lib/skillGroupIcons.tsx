@@ -328,8 +328,12 @@ export function inferSkillGroupIconKey(
 }
 
 export function getSkillGroupIconOption(
-  skillGroup?: Pick<SkillGroup, "name" | "description" | "icon"> | string | null,
+  skillGroup?:
+    Pick<SkillGroup, "name" | "description" | "icon"> | string | null,
 ) {
-  const key = typeof skillGroup === "string" ? skillGroup : inferSkillGroupIconKey(skillGroup);
+  const key =
+    typeof skillGroup === "string"
+      ? skillGroup
+      : inferSkillGroupIconKey(skillGroup);
   return SKILL_GROUP_ICON_MAP.get(key) || SKILL_GROUP_ICON_OPTIONS[0];
 }

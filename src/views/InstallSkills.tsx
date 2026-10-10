@@ -98,7 +98,8 @@ export function InstallSkills() {
   const [localImportError, setLocalImportError] = useState<string | null>(null);
   const [importingPaths, setImportingPaths] = useState<Set<string>>(new Set());
   const [importingAll, setImportingAll] = useState(false);
-  const [uninstallConfirm, setUninstallConfirm] = useState<SkillsShSkill | null>(null);
+  const [uninstallConfirm, setUninstallConfirm] =
+    useState<SkillsShSkill | null>(null);
   const [overwriteConfirm, setOverwriteConfirm] = useState<{
     type: "single" | "all" | "local" | "batch" | "skillssh" | "batch-link";
     names: string[];
@@ -223,7 +224,6 @@ export function InstallSkills() {
   useEffect(() => {
     marketSkillsLengthRef.current = marketSkills.length;
   }, [marketSkills.length]);
-
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -519,7 +519,10 @@ export function InstallSkills() {
     }
   };
 
-  const handleInstallSkillssh = async (skill: SkillsShSkill, overwrite?: boolean) => {
+  const handleInstallSkillssh = async (
+    skill: SkillsShSkill,
+    overwrite?: boolean,
+  ) => {
     const displayName = skill.name || skill.skill_id;
     const cancelKey = `${skill.source}/${skill.skill_id}`;
 
@@ -612,7 +615,10 @@ export function InstallSkills() {
         await api.installFromSkillssh(skill.source, skill.skill_id, true);
         success++;
       } catch (error) {
-        console.error(`[batch-link] failed: ${skill.source}/${skill.skill_id}`, error);
+        console.error(
+          `[batch-link] failed: ${skill.source}/${skill.skill_id}`,
+          error,
+        );
         failedNames.push(displayName);
       }
     }
@@ -626,7 +632,8 @@ export function InstallSkills() {
     } else {
       toast.warning(
         t("install.batchLinkPartial", { success, failed: failedNames.length }) +
-          "\n" + failedNames.join(", "),
+          "\n" +
+          failedNames.join(", "),
         { id: toastId, duration: 8000 },
       );
     }
@@ -851,7 +858,6 @@ export function InstallSkills() {
     [marketSkills],
   );
 
-
   const filteredMarketSkills = useMemo(() => {
     let filtered =
       marketSourceFilter === "all"
@@ -1041,9 +1047,7 @@ export function InstallSkills() {
                   </div>
                   {marketInstalledFilter && linkableMarketSkills.length > 0 && (
                     <>
-                      <div
-                        className="mx-1 h-5 w-px shrink-0 self-center bg-border-subtle"
-                      />
+                      <div className="mx-1 h-5 w-px shrink-0 self-center bg-border-subtle" />
                       <button
                         type="button"
                         aria-pressed={isMarketMultiSelect}
@@ -1379,7 +1383,6 @@ export function InstallSkills() {
         />
       )}
 
-
       <ConfirmDialog
         open={!!uninstallConfirm}
         title={t("install.uninstallTitle")}
@@ -1413,7 +1416,8 @@ export function InstallSkills() {
         }
         details={
           overwriteConfirm &&
-          (overwriteConfirm.type === "batch-link" || overwriteConfirm.names.length > 1)
+          (overwriteConfirm.type === "batch-link" ||
+            overwriteConfirm.names.length > 1)
             ? overwriteConfirm.names
             : undefined
         }

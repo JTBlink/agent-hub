@@ -87,9 +87,7 @@ export function GitImportPanel({
             <div className="flex gap-2 pt-2">
               {gitLoading ? (
                 <button
-                  onClick={() =>
-                    gitCancelKey && onCancelInstall(gitCancelKey)
-                  }
+                  onClick={() => gitCancelKey && onCancelInstall(gitCancelKey)}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-[13px] font-medium text-red-400 transition-colors hover:bg-red-500/20"
                   disabled={!gitCancelKey}
                 >
@@ -239,8 +237,7 @@ export function GitImportPanel({
                 type="button"
                 onClick={onConfirm}
                 disabled={
-                  gitConfirmLoading ||
-                  gitSelections.every((s) => !s.selected)
+                  gitConfirmLoading || gitSelections.every((s) => !s.selected)
                 }
                 className="app-button-primary"
               >

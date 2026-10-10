@@ -1546,7 +1546,10 @@ export function ProjectDetail() {
             </button>
           )}
           {groupedSkills.length > 0 && hasActiveFilters && (
-            <button onClick={clearFilters} className="app-button-secondary mt-4">
+            <button
+              onClick={clearFilters}
+              className="app-button-secondary mt-4"
+            >
               {t("mySkills.clearFilters")}
             </button>
           )}
@@ -2065,7 +2068,9 @@ function ProjectSkillConflictPreview({
           );
           return [
             variant.agent,
-            Object.fromEntries(files.map((file) => [file.filename, file.content])),
+            Object.fromEntries(
+              files.map((file) => [file.filename, file.content]),
+            ),
           ] as const;
         } catch {
           return [variant.agent, {}] as const;
@@ -2082,9 +2087,8 @@ function ProjectSkillConflictPreview({
 
   const loading = fileState?.key !== requestKey;
   const filesByAgent = fileState?.key === requestKey ? fileState.files : {};
-  const fallbackCompareAgent = variants.find(
-    (variant) => variant.agent !== selectedAgent,
-  )?.agent ?? null;
+  const fallbackCompareAgent =
+    variants.find((variant) => variant.agent !== selectedAgent)?.agent ?? null;
   const effectiveCompareAgent =
     compareAgent && variants.some((variant) => variant.agent === compareAgent)
       ? compareAgent
@@ -2097,10 +2101,10 @@ function ProjectSkillConflictPreview({
     (variant) => variant.agent === effectiveCompareAgent,
   );
   const selectedFiles = selectedVariant
-    ? filesByAgent[selectedVariant.agent] ?? {}
+    ? (filesByAgent[selectedVariant.agent] ?? {})
     : {};
   const compareFiles = compareVariant
-    ? filesByAgent[compareVariant.agent] ?? {}
+    ? (filesByAgent[compareVariant.agent] ?? {})
     : {};
   const filenames = Array.from(
     new Set([...Object.keys(selectedFiles), ...Object.keys(compareFiles)]),
@@ -2108,9 +2112,10 @@ function ProjectSkillConflictPreview({
   const changedFiles = filenames.filter(
     (filename) => selectedFiles[filename] !== compareFiles[filename],
   );
-  const file = activeFile && filenames.includes(activeFile)
-    ? activeFile
-    : changedFiles[0] ?? filenames[0] ?? null;
+  const file =
+    activeFile && filenames.includes(activeFile)
+      ? activeFile
+      : (changedFiles[0] ?? filenames[0] ?? null);
 
   return (
     <div className="space-y-3">
