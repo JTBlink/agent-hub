@@ -6,6 +6,8 @@
 
 ### Changed
 
+- `manage-skills` Skill 升级到 1.1.0：补充导出、清理和标签命令说明，并明确处理 skills.sh 目录条目失效导致的 `Skill not found` 错误，避免重复安装错误仓库根目录。
+
 - 项目工作区的 Skills 列表支持按 Agent 筛选，可同时选择多个 Agent 查看对应的 Skill 变体。
 
 - 默认技能库目录从 `~/.agents/skills` 改为 `~/.agent-hub/skills`，统一放在应用数据目录下。`~/.agents/skills` 变为可选软链接，可在设置中开启或关闭，方便其他 AI 工具发现技能。

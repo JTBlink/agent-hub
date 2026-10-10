@@ -325,7 +325,7 @@ export const checkSkillsshConflict = (skillId: string) =>
   invoke<string | null>("check_skillssh_conflict", { skillId });
 
 export const installFromSkillssh = (source: string, skillId: string, overwrite?: boolean) =>
-  invoke<void>("install_from_skillssh", { source, skillId, overwrite });
+  invoke<void>("install_from_skillssh", { source, skillId, overwrite: overwrite ?? null });
 
 export const cancelInstall = (key: string) =>
   invoke<boolean>("cancel_install", { key });

@@ -129,6 +129,14 @@ fn parse_skills_array(arr: &[serde_json::Value]) -> Vec<SkillsShSkill> {
             continue;
         }
 
+        let source_parts: Vec<&str> = source.split('/').collect();
+        if source_parts.len() != 2
+            || source_parts.iter().any(|p| p.is_empty())
+            || source.contains('.')
+        {
+            continue;
+        }
+
         let id = format!("{}/{}", source, skill_id);
         if !seen.insert(id.clone()) {
             continue;
@@ -189,6 +197,14 @@ fn parse_embedded_with_regex(html: &str, pattern: &Regex) -> Vec<SkillsShSkill> 
 
         let id = format!("{}/{}", source, skill_id);
         if !seen.insert(id.clone()) {
+            continue;
+        }
+
+        let source_parts: Vec<&str> = source.split('/').collect();
+        if source_parts.len() != 2
+            || source_parts.iter().any(|p| p.is_empty())
+            || source.contains('.')
+        {
             continue;
         }
 
@@ -285,5 +301,23 @@ mod tests {
         let skills = parse_embedded_skill_objects(html).expect("legacy fallback should parse");
         assert_eq!(skills.len(), 1);
         assert_eq!(skills[0].id, "openai/skills/playwright");
+    }
+
+    #[test]
+    fn filters_out_non_github_sources() {
+        let html = r#"
+        <html>
+          <script id="__NEXT_DATA__" type="application/json">
+            {"props":{"pageProps":{"initialSkills":[
+              {"source":"open.feishu.cn","skillId":"some-skill","name":"Some Skill","installs":10},
+              {"source":"anthropics/skills","skillId":"good-skill","name":"Good Skill","installs":50}
+            ]}}}
+          </script>
+        </html>
+        "#;
+
+        let skills = parse_next_data(html).expect("should parse");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].source, "anthropics/skills");
     }
 }
