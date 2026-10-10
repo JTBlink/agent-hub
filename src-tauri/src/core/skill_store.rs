@@ -28,6 +28,7 @@ pub struct SkillRecord {
     pub source_subpath: Option<String>,
     pub source_branch: Option<String>,
     pub source_revision: Option<String>,
+    pub source_agent: Option<String>,
     pub remote_revision: Option<String>,
     pub central_path: String,
     pub content_hash: Option<String>,
@@ -142,10 +143,10 @@ impl SkillStore {
         conn.execute(
             "INSERT INTO skills (
                 id, name, description, source_type, source_ref, source_ref_resolved, source_subpath,
-                source_branch, source_revision, remote_revision, central_path, content_hash, enabled,
+                source_branch, source_revision, source_agent, remote_revision, central_path, content_hash, enabled,
                 created_at, updated_at, status, update_status, last_checked_at, last_check_error
              )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)",
             params![
                 skill.id,
                 skill.name,
@@ -156,6 +157,7 @@ impl SkillStore {
                 skill.source_subpath,
                 skill.source_branch,
                 skill.source_revision,
+                skill.source_agent,
                 skill.remote_revision,
                 skill.central_path,
                 skill.content_hash,
@@ -176,10 +178,10 @@ impl SkillStore {
         conn.execute(
             "INSERT INTO skills (
                 id, name, description, source_type, source_ref, source_ref_resolved, source_subpath,
-                source_branch, source_revision, remote_revision, central_path, content_hash, enabled,
+                source_branch, source_revision, source_agent, remote_revision, central_path, content_hash, enabled,
                 created_at, updated_at, status, update_status, last_checked_at, last_check_error
              )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
              ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 description = excluded.description,
@@ -189,6 +191,7 @@ impl SkillStore {
                 source_subpath = excluded.source_subpath,
                 source_branch = excluded.source_branch,
                 source_revision = excluded.source_revision,
+                source_agent = excluded.source_agent,
                 remote_revision = excluded.remote_revision,
                 central_path = excluded.central_path,
                 content_hash = excluded.content_hash,
@@ -208,6 +211,7 @@ impl SkillStore {
                 skill.source_subpath,
                 skill.source_branch,
                 skill.source_revision,
+                skill.source_agent,
                 skill.remote_revision,
                 skill.central_path,
                 skill.content_hash,
@@ -227,7 +231,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, description, source_type, source_ref, source_ref_resolved, source_subpath,
-                    source_branch, source_revision, remote_revision, central_path, content_hash, enabled,
+                    source_branch, source_revision, source_agent, remote_revision, central_path, content_hash, enabled,
                     created_at, updated_at, status, update_status, last_checked_at, last_check_error
              FROM skills ORDER BY name",
         )?;
@@ -239,7 +243,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, description, source_type, source_ref, source_ref_resolved, source_subpath,
-                    source_branch, source_revision, remote_revision, central_path, content_hash, enabled,
+                    source_branch, source_revision, source_agent, remote_revision, central_path, content_hash, enabled,
                     created_at, updated_at, status, update_status, last_checked_at, last_check_error
              FROM skills WHERE id = ?1",
         )?;
@@ -251,7 +255,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, description, source_type, source_ref, source_ref_resolved, source_subpath,
-                    source_branch, source_revision, remote_revision, central_path, content_hash, enabled,
+                    source_branch, source_revision, source_agent, remote_revision, central_path, content_hash, enabled,
                     created_at, updated_at, status, update_status, last_checked_at, last_check_error
              FROM skills WHERE central_path = ?1",
         )?;
@@ -267,7 +271,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, description, source_type, source_ref, source_ref_resolved, source_subpath,
-                    source_branch, source_revision, remote_revision, central_path, content_hash, enabled,
+                    source_branch, source_revision, source_agent, remote_revision, central_path, content_hash, enabled,
                     created_at, updated_at, status, update_status, last_checked_at, last_check_error
              FROM skills
              WHERE source_type = ?1 AND source_ref = ?2",
@@ -883,7 +887,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT s.id, s.name, s.description, s.source_type, s.source_ref, s.source_ref_resolved, s.source_subpath,
-                    s.source_branch, s.source_revision, s.remote_revision, s.central_path, s.content_hash, s.enabled,
+                    s.source_branch, s.source_revision, s.source_agent, s.remote_revision, s.central_path, s.content_hash, s.enabled,
                     s.created_at, s.updated_at, s.status, s.update_status, s.last_checked_at, s.last_check_error
              FROM skills s
              INNER JOIN scenario_skills ss ON s.id = ss.skill_id
@@ -1453,6 +1457,7 @@ mod scenario_membership_tests {
             source_subpath: None,
             source_branch: None,
             source_revision: None,
+            source_agent: None,
             remote_revision: None,
             central_path: format!("/tmp/{id}"),
             content_hash: None,
@@ -1532,16 +1537,17 @@ fn map_skill_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<SkillRecord> {
         source_subpath: row.get(6)?,
         source_branch: row.get(7)?,
         source_revision: row.get(8)?,
-        remote_revision: row.get(9)?,
-        central_path: row.get(10)?,
-        content_hash: row.get(11)?,
-        enabled: row.get::<_, i32>(12)? != 0,
-        created_at: row.get(13)?,
-        updated_at: row.get(14)?,
-        status: row.get(15)?,
-        update_status: row.get(16)?,
-        last_checked_at: row.get(17)?,
-        last_check_error: row.get(18)?,
+        source_agent: row.get(9)?,
+        remote_revision: row.get(10)?,
+        central_path: row.get(11)?,
+        content_hash: row.get(12)?,
+        enabled: row.get::<_, i32>(13)? != 0,
+        created_at: row.get(14)?,
+        updated_at: row.get(15)?,
+        status: row.get(16)?,
+        update_status: row.get(17)?,
+        last_checked_at: row.get(18)?,
+        last_check_error: row.get(19)?,
     })
 }
 
@@ -1561,6 +1567,7 @@ mod tag_tests {
             source_subpath: None,
             source_branch: None,
             source_revision: None,
+            source_agent: None,
             remote_revision: None,
             central_path: format!("/tmp/{id}"),
             content_hash: None,

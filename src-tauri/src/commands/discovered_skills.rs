@@ -213,6 +213,7 @@ mod tests {
             source_subpath: None,
             source_branch: None,
             source_revision: None,
+            source_agent: None,
             remote_revision: None,
             central_path: central.to_string_lossy().into_owned(),
             content_hash: None,

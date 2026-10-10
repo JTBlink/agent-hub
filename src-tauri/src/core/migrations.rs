@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use rusqlite::Connection;
 
 /// Current schema version. Bump this when adding a new migration.
-const LATEST_VERSION: u32 = 9;
+const LATEST_VERSION: u32 = 10;
 
 /// Run all pending migrations on the database.
 ///
@@ -56,6 +56,7 @@ fn migrate_step(conn: &Connection, from_version: u32) -> Result<()> {
         6 => migrate_v6_to_v7(conn),
         7 => migrate_v7_to_v8(conn),
         8 => migrate_v8_to_v9(conn),
+        9 => migrate_v9_to_v10(conn),
         _ => bail!("unknown migration version: {from_version}"),
     }
 }
@@ -79,6 +80,7 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<()> {
             source_subpath TEXT,
             source_branch TEXT,
             source_revision TEXT,
+            source_agent TEXT,
             remote_revision TEXT,
             central_path TEXT NOT NULL UNIQUE,
             content_hash TEXT,
@@ -336,6 +338,13 @@ fn migrate_v8_to_v9(conn: &Connection) -> Result<()> {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_scenario_skills_skill_exclusive
             ON scenario_skills(skill_id);",
     )?;
+    Ok(())
+}
+
+/// v9 → v10: Add `source_agent` to `skills` to track which agent a skill
+/// was originally imported from. Existing rows get NULL (unknown origin).
+fn migrate_v9_to_v10(conn: &Connection) -> Result<()> {
+    add_column_if_missing(conn, "skills", "source_agent", "TEXT")?;
     Ok(())
 }
 

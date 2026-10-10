@@ -204,6 +204,7 @@ pub struct ManagedSkillDto {
     pub source_subpath: Option<String>,
     pub source_branch: Option<String>,
     pub source_revision: Option<String>,
+    pub source_agent: Option<String>,
     pub remote_revision: Option<String>,
     pub update_status: String,
     pub last_checked_at: Option<i64>,
@@ -279,6 +280,7 @@ pub struct InstallSourceMetadata {
     pub source_subpath: Option<String>,
     pub source_branch: Option<String>,
     pub source_revision: Option<String>,
+    pub source_agent: Option<String>,
     pub remote_revision: Option<String>,
     pub update_status: String,
 }
@@ -922,6 +924,7 @@ pub async fn install_local(
                 source_subpath: None,
                 source_branch: None,
                 source_revision: None,
+                source_agent: None,
                 remote_revision: None,
                 update_status: "local_only".to_string(),
             };
@@ -1032,6 +1035,7 @@ pub async fn install_git(
                     source_subpath: git_fetcher::relative_subpath(&temp_dir, &skill_dir),
                     source_branch: parsed.branch.clone(),
                     source_revision: Some(revision.clone()),
+                    source_agent: None,
                     remote_revision: Some(revision),
                     update_status: "up_to_date".to_string(),
                 };
@@ -1219,6 +1223,7 @@ pub async fn install_from_skillssh(
                     source_subpath: git_fetcher::relative_subpath(&temp_dir, &skill_dir),
                     source_branch: None,
                     source_revision: Some(revision.clone()),
+                    source_agent: None,
                     remote_revision: Some(revision),
                     update_status: "up_to_date".to_string(),
                 };
@@ -1389,6 +1394,7 @@ pub async fn confirm_git_install(
                     source_subpath: subpath,
                     source_branch: parsed.branch.clone(),
                     source_revision: Some(revision.clone()),
+                    source_agent: None,
                     remote_revision: Some(revision.clone()),
                     update_status: "up_to_date".to_string(),
                 };
@@ -1984,6 +1990,7 @@ fn managed_skill_to_dto(
         source_subpath: skill.source_subpath,
         source_branch: skill.source_branch,
         source_revision: skill.source_revision,
+        source_agent: skill.source_agent,
         remote_revision: skill.remote_revision,
         update_status: skill.update_status,
         last_checked_at: skill.last_checked_at,
@@ -2628,6 +2635,7 @@ pub fn store_installed_skill_unlocked(
         source_subpath: metadata.source_subpath.clone(),
         source_branch: metadata.source_branch.clone(),
         source_revision: metadata.source_revision.clone(),
+        source_agent: metadata.source_agent.clone(),
         remote_revision: metadata.remote_revision.clone(),
         central_path,
         content_hash: Some(result.content_hash.clone()),
@@ -3391,6 +3399,7 @@ pub async fn batch_import_folder(
                     source_subpath: None,
                     source_branch: None,
                     source_revision: None,
+                    source_agent: None,
                     remote_revision: None,
                     update_status: "local_only".to_string(),
                 };
@@ -3471,6 +3480,7 @@ mod tests {
             source_subpath: None,
             source_branch: None,
             source_revision: None,
+            source_agent: None,
             remote_revision: None,
             central_path: central_path.to_string_lossy().to_string(),
             content_hash: None,
