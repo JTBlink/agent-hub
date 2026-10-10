@@ -442,6 +442,7 @@ fn sanitize_dir_name_replaces_unsafe_characters() {
 
 #[test]
 fn external_base_dir_relative_path_is_stable_against_absolute_form() {
+    let _guard = test_base_dir_lock();
     // For a not-yet-existing target, a relative path should namespace the
     // same as its cwd-absolutized form. We simulate by passing both forms
     // and asserting they match.
@@ -453,6 +454,7 @@ fn external_base_dir_relative_path_is_stable_against_absolute_form() {
 
 #[test]
 fn external_base_dir_normalizes_redundant_segments() {
+    let _guard = test_base_dir_lock();
     // `./x`, `x`, and `a/../x` should all hash to the same namespace when
     // none of them exist on disk.
     let plain = external_base_dir(Path::new("nonexistent-norm-target"));
