@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.3",
   "license": "MIT",
+  "homepage": "https://jtblink.github.io/agent-hub/",
   "type": "module",
   "scripts": {
     "dev": "pkill -f 'esbuild.*service' 2>/dev/null; vite",
