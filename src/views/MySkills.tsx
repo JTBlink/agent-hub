@@ -412,6 +412,19 @@ export function MySkills() {
     skillGroupSkillOrder,
   ]);
 
+  const filterCounts = useMemo(() => {
+    if (!viewedSkillGroup) return { all: skills.length, enabled: 0, available: 0 };
+    const enabled = skills.filter((s) =>
+      s.skill_group_ids.includes(viewedSkillGroup.id),
+    ).length;
+    return { all: skills.length, enabled, available: skills.length - enabled };
+  }, [skills, viewedSkillGroup]);
+
+  const ungroupedCount = useMemo(
+    () => skills.filter((s) => s.skill_group_ids.length === 0).length,
+    [skills],
+  );
+
   const {
     isMultiSelect,
     setIsMultiSelect,
@@ -1273,6 +1286,7 @@ export function MySkills() {
                   )}
                 >
                   {t(`mySkills.filters.${mode}`)}
+                  <span className="ml-1 opacity-60">{filterCounts[mode]}</span>
                 </button>
               ))}
             </div>
@@ -1405,6 +1419,7 @@ export function MySkills() {
             >
               <CircleSlash className="h-3 w-3" />
               {t("mySkills.sourceFilter.ungrouped")}
+              <span className="opacity-60">{ungroupedCount}</span>
             </button>
           </>
         )}
