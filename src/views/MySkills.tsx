@@ -164,6 +164,7 @@ export function MySkills() {
   const navigate = useNavigate();
   const {
     viewedSkillGroup,
+    skillGroups,
     tools,
     managedSkills: skills,
     refreshSkillGroups,
@@ -177,7 +178,7 @@ export function MySkills() {
   } = useApp();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterMode, setFilterMode] = useState<"all" | "enabled" | "available">(
-    "all",
+    viewedSkillGroup ? "enabled" : "all",
   );
   const [sourceFilters, setSourceFilters] = useState<Set<string>>(new Set());
   const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
@@ -192,6 +193,7 @@ export function MySkills() {
   const [tagToRename, setTagToRename] = useState<string | null>(null);
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [filterUngrouped, setFilterUngrouped] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const refreshAfterDeleteRef = useRef<number | null>(null);
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
@@ -225,6 +227,17 @@ export function MySkills() {
     ? getSkillGroupDisplayName(viewedSkillGroup.name, t)
     : t("mySkills.currentSkillGroupFallback");
 
+  const groupNameMap = useMemo(
+    () =>
+      new Map(
+        skillGroups.map((g) => [
+          g.id,
+          getSkillGroupDisplayName(g.name, t),
+        ]),
+      ),
+    [skillGroups, t],
+  );
+
   // Fetch sort order whenever active skillGroup changes
   useEffect(() => {
     if (!viewedSkillGroup) {
@@ -236,6 +249,10 @@ export function MySkills() {
       .then(setSkillGroupSkillOrder)
       .catch(() => {});
   }, [viewedSkillGroup, skills]);
+
+  useEffect(() => {
+    setFilterMode(viewedSkillGroup ? "enabled" : "all");
+  }, [viewedSkillGroup?.id]);
 
   // Skills with an unresolved sync conflict get a "needs attention" badge
   // that jumps to the Backup page (merge-engine design §4 UI).
@@ -298,11 +315,13 @@ export function MySkills() {
   const hasActiveFilters =
     search.trim() !== "" ||
     sourceFilters.size > 0 ||
+    filterUngrouped ||
     tagFilters.size > 0 ||
     filterMode !== "all";
   const clearFilters = () => {
     setSearch("");
     setSourceFilters(new Set());
+    setFilterUngrouped(false);
     setTagFilters(new Set());
     setFilterMode("all");
   };
@@ -336,6 +355,9 @@ export function MySkills() {
       if (!matchesSearch) return false;
 
       if (sourceFilters.size > 0 && !sourceFilters.has(skill.source_type))
+        return false;
+
+      if (filterUngrouped && skill.skill_group_ids.length > 0)
         return false;
 
       if (tagFilters.size > 0) {
@@ -383,6 +405,7 @@ export function MySkills() {
     skillDisplayNames,
     search,
     sourceFilters,
+    filterUngrouped,
     tagFilters,
     filterMode,
     viewedSkillGroup,
@@ -1238,21 +1261,22 @@ export function MySkills() {
             />
           </div>
 
-          <div className="app-segmented app-toolbar-segmented shrink-0">
-            {(["all", "enabled", "available"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setFilterMode(mode)}
-                disabled={mode !== "all" && !viewedSkillGroup}
-                className={cn(
-                  "app-segmented-button",
-                  filterMode === mode && "app-segmented-button-active",
-                )}
-              >
-                {t(`mySkills.filters.${mode}`)}
-              </button>
-            ))}
-          </div>
+          {viewedSkillGroup && (
+            <div className="app-segmented app-toolbar-segmented shrink-0">
+              {(["enabled", "all", "available"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setFilterMode(mode)}
+                  className={cn(
+                    "app-segmented-button",
+                    filterMode === mode && "app-segmented-button-active",
+                  )}
+                >
+                  {t(`mySkills.filters.${mode}`)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Keep all library actions in one toolbar so they wrap together. */}
@@ -1367,6 +1391,23 @@ export function MySkills() {
             {t(`mySkills.sourceFilter.${src}`)}
           </button>
         ))}
+        {skills.some((s) => s.skill_group_ids.length === 0) && (
+          <>
+            <span className="mx-0.5 h-3 w-px bg-border-subtle" />
+            <button
+              onClick={() => setFilterUngrouped((v) => !v)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                filterUngrouped
+                  ? "bg-surface-active text-primary"
+                  : "border border-dashed border-border text-muted hover:text-secondary",
+              )}
+            >
+              <CircleSlash className="h-3 w-3" />
+              {t("mySkills.sourceFilter.ungrouped")}
+            </button>
+          </>
+        )}
         {allTags.length > 0 && (
           <>
             <span className="mx-0.5 h-3 w-px bg-border-subtle" />
@@ -1881,11 +1922,14 @@ export function MySkills() {
                                 {sourceIcon(skill.source_type)}
                                 {sourceTypeLabel(skill)}
                               </span>
-                              {enabledInSkillGroup && (
+                              {skill.skill_group_ids.length > 0 && (
                                 <>
                                   <span className="text-faint">·</span>
                                   <span className="truncate text-[12px] font-medium text-amber-600 dark:text-amber-400/80">
-                                    {viewedSkillGroupName}
+                                    {skill.skill_group_ids
+                                      .map((gid) => groupNameMap.get(gid))
+                                      .filter(Boolean)
+                                      .join(", ")}
                                   </span>
                                 </>
                               )}
@@ -2075,9 +2119,12 @@ export function MySkills() {
                             {sourceIcon(skill.source_type)}
                             {sourceTypeLabel(skill)}
                           </span>
-                          {enabledInSkillGroup && (
+                          {skill.skill_group_ids.length > 0 && (
                             <span className="text-[13px] font-medium text-amber-600 dark:text-amber-400/80">
-                              {viewedSkillGroupName}
+                              {skill.skill_group_ids
+                                .map((gid) => groupNameMap.get(gid))
+                                .filter(Boolean)
+                                .join(", ")}
                             </span>
                           )}
                         </div>

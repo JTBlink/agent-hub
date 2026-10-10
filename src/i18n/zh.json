@@ -403,16 +403,17 @@
     },
     "gitConfigEntry": "同步配置",
     "filters": {
-      "all": "全部技能",
-      "enabled": "组内技能",
-      "available": "未加入"
+      "all": "全部",
+      "enabled": "已添加",
+      "available": "待添加"
     },
     "sourceFilter": {
       "all": "全部来源",
       "local": "本地",
       "import": "导入",
       "git": "Git",
-      "skillssh": "skills.sh"
+      "skillssh": "skills.sh",
+      "ungrouped": "未分组"
     },
     "tags": {
       "filter": "标签",
@@ -526,6 +527,9 @@
     "loadingMore": "正在加载更多...",
     "installing": "安装中...",
     "installed": "已安装",
+    "uninstallTitle": "卸载技能？",
+    "uninstallMessage": "确定卸载「{{name}}」？中央仓库文件和已同步到各 Agent 的副本都会被移除。",
+    "uninstallConfirm": "确认卸载",
     "localMatch": "已导入",
     "linkToMarket": "关联到市场版本（可接收更新）",
     "cancel": "取消",
@@ -536,6 +540,7 @@
       "success": "{{name}} 安装成功",
       "done": "完成",
       "cancelled": "安装已取消",
+      "uninstalled": "{{name}} 已卸载",
       "timeout": "安装超时 — 请检查网络连接",
       "view": "查看"
     },

@@ -403,16 +403,17 @@
     },
     "gitConfigEntry": "Sync Config",
     "filters": {
-      "all": "All skills",
-      "enabled": "In group",
-      "available": "Not in group"
+      "all": "All",
+      "enabled": "Added",
+      "available": "Not added"
     },
     "sourceFilter": {
       "all": "All Sources",
       "local": "Local",
       "import": "Imported",
       "git": "Git",
-      "skillssh": "skills.sh"
+      "skillssh": "skills.sh",
+      "ungrouped": "Ungrouped"
     },
     "tags": {
       "filter": "Tags",
@@ -526,6 +527,9 @@
     "loadingMore": "Loading more...",
     "installing": "Installing...",
     "installed": "Installed",
+    "uninstallTitle": "Uninstall skill?",
+    "uninstallMessage": "Are you sure you want to uninstall \"{{name}}\"? The library copy and all deployed copies to agents will be removed.",
+    "uninstallConfirm": "Uninstall",
     "localMatch": "Imported",
     "linkToMarket": "Link to market version (enable updates)",
     "cancel": "Cancel",
@@ -536,6 +540,7 @@
       "success": "{{name}} installed successfully",
       "done": "Done",
       "cancelled": "Installation cancelled",
+      "uninstalled": "{{name}} uninstalled",
       "timeout": "Installation timed out — check your network",
       "view": "View"
     },
