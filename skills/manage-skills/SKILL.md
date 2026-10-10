@@ -1,7 +1,7 @@
 ---
 name: manage-skills
-version: 1.0.0
-description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, deploy or undeploy skills per agent, manage skill groups, organize tags, search, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
+version: 1.1.0
+description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
 ## Before doing anything
@@ -50,6 +50,12 @@ description: Manage the user's shared agent-skill library via agent-hub-cli — 
 ```bash
 "$SM" --json skills list
 ```
+
+If an install from the marketplace fails with `Skill '<name>' not found in
+<temporary checkout>`, the marketplace entry is stale or the skill was moved
+upstream. Do not retry the same reference or install the repository root as a
+replacement. Check the result with `skills search`, then use the returned
+`install_ref` or a direct Git URL with the correct `--subpath`.
 
 ### When a deployment is refused
 
@@ -175,6 +181,26 @@ Note what this does _not_ cover: a file the user edited that the new version als
 
 Remove deletes the central-library copy, all synced targets across agents, and the DB row. It's not reversible without re-installing.
 
+## Export and cleanup
+
+Export a managed skill without changing the central library:
+
+```bash
+"$SM" skills export <skill> --dest <directory>
+"$SM" skills export <skill> --dest <directory> --force
+```
+
+Scan agent directories for skills that are not managed by AgentHub. Preview
+first; add `--yes` only when the listed paths are correct:
+
+```bash
+"$SM" skills cleanup --dry-run
+"$SM" skills cleanup --uninstalled-only --yes
+```
+
+Cleanup removes only the selected unmanaged entries. It does not remove the
+central-library copy or managed deployments.
+
 ## Deploy / Undeploy
 
 ```bash
@@ -183,6 +209,16 @@ Remove deletes the central-library copy, all synced targets across agents, and t
 "$SM" skills deploy <skill-a> <skill-b> --agent codex --dry-run
 "$SM" skills deploy <skill> --agent claude_code --agent codex
 "$SM" --json skills status <skill>
+```
+
+Tag management is library metadata only and does not deploy a skill:
+
+```bash
+"$SM" skills tag add <skill> productivity team
+"$SM" skills tag set <skill> productivity team
+"$SM" skills tag remove <skill> team
+"$SM" skills tag rename old-name new-name
+"$SM" skills tag delete old-name --yes
 ```
 
 These commands change real managed deployments without deleting the central-library copy or changing skill group membership. `skills enable/disable` are deprecated compatibility commands and do not change deployment; never use them.

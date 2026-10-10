@@ -1,32 +1,26 @@
 import {
   useState,
   useEffect,
-  useLayoutEffect,
   useCallback,
   useRef,
   useMemo,
   useDeferredValue,
 } from "react";
 import {
-  DownloadCloud,
   UploadCloud,
   Github,
   Box,
   Star,
   TrendingUp,
   Clock,
-  Plus,
   FolderUp,
   Loader2,
   FolderInput,
-  ExternalLink,
-  Check,
   ChevronLeft,
   ChevronRight,
   Search,
-  X,
-  MoreHorizontal,
   Link2,
+  SquareCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -40,13 +34,18 @@ import type {
   GitPreviewResult,
 } from "../lib/tauri";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
 import { StatusBanner } from "../components/StatusBanner";
 import { LocalSkillsPanel } from "../components/LocalSkillsPanel";
 import { LocalImportErrorDialog } from "../components/LocalImportErrorDialog";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { GitImportPanel } from "../components/GitImportPanel";
+import type { GitSelection } from "../components/GitImportPanel";
+import { MarketSkillCard } from "../components/MarketSkillCard";
+import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
+import { SourceFilterBar } from "../components/SourceFilterBar";
+import { useMultiSelect } from "../hooks/useMultiSelect";
 import { getErrorMessage, getErrorKind } from "../lib/error";
 
 const MARKET_PAGE_SIZE = 24;
@@ -91,14 +90,7 @@ export function InstallSkills() {
   const [gitPreviewRepoUrl, setGitPreviewRepoUrl] = useState<string | null>(
     null,
   );
-  const [gitSelections, setGitSelections] = useState<
-    {
-      rel_path: string;
-      name: string;
-      description: string | null;
-      selected: boolean;
-    }[]
-  >([]);
+  const [gitSelections, setGitSelections] = useState<GitSelection[]>([]);
   const [gitConfirmLoading, setGitConfirmLoading] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [scanLoading, setScanLoading] = useState(false);
@@ -106,41 +98,24 @@ export function InstallSkills() {
   const [localImportError, setLocalImportError] = useState<string | null>(null);
   const [importingPaths, setImportingPaths] = useState<Set<string>>(new Set());
   const [importingAll, setImportingAll] = useState(false);
+  const [uninstallConfirm, setUninstallConfirm] = useState<SkillsShSkill | null>(null);
   const [overwriteConfirm, setOverwriteConfirm] = useState<{
-    type: "single" | "all" | "local" | "batch" | "skillssh";
+    type: "single" | "all" | "local" | "batch" | "skillssh" | "batch-link";
     names: string[];
     sourcePath?: string;
     importName?: string;
     folderPath?: string;
     skillsshSkill?: SkillsShSkill;
+    batchLinkSkills?: SkillsShSkill[];
   } | null>(null);
+  const [batchLinking, setBatchLinking] = useState(false);
   const marketListRef = useRef<HTMLDivElement | null>(null);
-  const [sourceOverflowOpen, setSourceOverflowOpen] = useState(false);
-  const [sourceOverflowSide, setSourceOverflowSide] = useState<
-    "left" | "right"
-  >("left");
-  const [sourceSearch, setSourceSearch] = useState("");
-  const [sourceFocusedIndex, setSourceFocusedIndex] = useState(-1);
-  const sourceListRef = useRef<HTMLDivElement | null>(null);
-  const [visibleSourceCount, setVisibleSourceCount] =
-    useState<number>(Infinity);
-  const sourceOverflowBtnRef = useRef<HTMLButtonElement | null>(null);
-  const sourceOverflowPanelRef = useRef<HTMLDivElement | null>(null);
-  const filterContainerRef = useRef<HTMLDivElement | null>(null);
-  const allBtnMeasureRef = useRef<HTMLButtonElement | null>(null);
-  const moreBtnMeasureRef = useRef<HTMLButtonElement | null>(null);
-  const sourceMeasureRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const marketSearchCacheRef = useRef<
     Map<string, { timestamp: number; data: SkillsShSkill[] }>
   >(new Map());
   const marketSkillsLengthRef = useRef(0);
   const [debouncedMarketQuery, setDebouncedMarketQuery] = useState("");
   const deferredMarketQuery = useDeferredValue(marketQuery);
-  const resetSourceOverflowState = useCallback(() => {
-    setSourceOverflowOpen(false);
-    setSourceSearch("");
-    setSourceFocusedIndex(-1);
-  }, []);
 
   const managedSkillsRef = useRef(managedSkills);
   managedSkillsRef.current = managedSkills;
@@ -234,19 +209,6 @@ export function InstallSkills() {
     marketSkillsLengthRef.current = marketSkills.length;
   }, [marketSkills.length]);
 
-  useEffect(() => {
-    if (!sourceOverflowOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        sourceOverflowBtnRef.current?.contains(e.target as Node) ||
-        sourceOverflowPanelRef.current?.contains(e.target as Node)
-      )
-        return;
-      resetSourceOverflowState();
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [resetSourceOverflowState, sourceOverflowOpen]);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -596,6 +558,7 @@ export function InstallSkills() {
         },
       });
     } catch (error: unknown) {
+      console.error("[skillssh] install error:", JSON.stringify(error), error);
       if (getErrorKind(error) === "cancelled") {
         toast.info(t("install.toast.cancelled"), { id: toastId });
       } else {
@@ -607,10 +570,82 @@ export function InstallSkills() {
     }
   };
 
+  const handleBatchLinkToMarket = async (skills: SkillsShSkill[]) => {
+    if (skills.length === 0) return;
+    setBatchLinking(true);
+    const toastId = toast.loading(
+      t("install.batchLinkProgress", {
+        current: 1,
+        total: skills.length,
+        name: skills[0].name || skills[0].skill_id,
+      }),
+    );
+    let success = 0;
+    let failed = 0;
+    for (let i = 0; i < skills.length; i++) {
+      const skill = skills[i];
+      const displayName = skill.name || skill.skill_id;
+      toast.loading(
+        t("install.batchLinkProgress", {
+          current: i + 1,
+          total: skills.length,
+          name: displayName,
+        }),
+        { id: toastId },
+      );
+      try {
+        await api.installFromSkillssh(skill.source, skill.skill_id, true);
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+    await Promise.allSettled([refreshSkillGroups(), refreshManagedSkills()]);
+    setBatchLinking(false);
+    exitMarketMultiSelect();
+    if (failed === 0) {
+      toast.success(t("install.batchLinkSuccess", { count: success }), {
+        id: toastId,
+      });
+    } else {
+      toast.warning(t("install.batchLinkPartial", { success, failed }), {
+        id: toastId,
+      });
+    }
+  };
+
   const handleCancelInstall = (cancelKey: string) => {
     api.cancelInstall(cancelKey).catch(() => {
       // Ignore race: install may have completed before cancel request arrives.
     });
+  };
+
+  const findManagedSkillForMarket = useCallback(
+    (skill: SkillsShSkill) => {
+      const sourceRef = `${skill.source}/${skill.skill_id}`;
+      return managedSkills.find(
+        (s) =>
+          (s.source_type === "skillssh" && s.source_ref === sourceRef) ||
+          s.central_path.split("/").pop()?.toLowerCase() ===
+            skill.skill_id.toLowerCase(),
+      );
+    },
+    [managedSkills],
+  );
+
+  const handleUninstallSkillssh = async (skill: SkillsShSkill) => {
+    const managed = findManagedSkillForMarket(skill);
+    if (!managed) return;
+    const displayName = skill.name || skill.skill_id;
+    try {
+      await api.deleteManagedSkill(managed.id);
+      await Promise.allSettled([refreshSkillGroups(), refreshManagedSkills()]);
+      toast.success(t("install.toast.uninstalled", { name: displayName }));
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, t("common.error")));
+    } finally {
+      setUninstallConfirm(null);
+    }
   };
 
   const handleGitPreview = async () => {
@@ -798,60 +833,6 @@ export function InstallSkills() {
     [marketSkills],
   );
 
-  // Measure how many source pills can fit in one row; reserve room for All + More.
-  const computeVisibleCount = useCallback(() => {
-    const container = filterContainerRef.current;
-    const allBtn = allBtnMeasureRef.current;
-    const moreBtn = moreBtnMeasureRef.current;
-    if (!container || !allBtn || !moreBtn) {
-      setVisibleSourceCount(Infinity);
-      return;
-    }
-
-    const containerWidth = container.clientWidth;
-    if (containerWidth <= 0) {
-      setVisibleSourceCount(Infinity);
-      return;
-    }
-
-    const styles = window.getComputedStyle(container);
-    const gap = parseFloat(styles.columnGap || styles.gap || "6") || 6;
-    const available =
-      containerWidth - allBtn.offsetWidth - gap - moreBtn.offsetWidth - gap;
-
-    if (available <= 0) {
-      setVisibleSourceCount(0);
-      return;
-    }
-
-    let used = 0;
-    let count = 0;
-    for (let i = 0; i < sourceOptions.length; i += 1) {
-      const el = sourceMeasureRefs.current[i];
-      const w = el?.offsetWidth ?? 0;
-      if (w <= 0) continue;
-      const nextUsed = used + (count > 0 ? gap : 0) + w;
-      if (nextUsed <= available) {
-        used = nextUsed;
-        count += 1;
-      } else {
-        break;
-      }
-    }
-    setVisibleSourceCount(count);
-  }, [sourceOptions]);
-
-  useLayoutEffect(() => {
-    computeVisibleCount();
-  }, [computeVisibleCount]);
-
-  useEffect(() => {
-    const container = filterContainerRef.current;
-    if (!container) return;
-    const observer = new ResizeObserver(computeVisibleCount);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [computeVisibleCount]);
 
   const filteredMarketSkills = useMemo(() => {
     let filtered =
@@ -880,6 +861,36 @@ export function InstallSkills() {
     debouncedMarketQuery,
   ]);
 
+  const linkableMarketSkills = useMemo(
+    () =>
+      filteredMarketSkills.filter((skill) => {
+        const sourceRef = `${skill.source}/${skill.skill_id}`;
+        return (
+          !installedSourceRefs.has(sourceRef) &&
+          installedDirNames.has(skill.skill_id.toLowerCase())
+        );
+      }),
+    [filteredMarketSkills, installedSourceRefs, installedDirNames],
+  );
+
+  const marketFilterSignal = `${marketSourceFilter}|${marketInstalledFilter}|${debouncedMarketQuery}`;
+  const {
+    isMultiSelect: isMarketMultiSelect,
+    setIsMultiSelect: setIsMarketMultiSelect,
+    selectedIds: marketSelectedIds,
+    toggleSelect: toggleMarketSelect,
+    isAllSelected: isMarketAllSelected,
+    handleSelectAll: handleMarketSelectAll,
+    exitMultiSelect: exitMarketMultiSelect,
+  } = useMultiSelect({
+    items: linkableMarketSkills,
+    filtered: linkableMarketSkills,
+    getKey: (s) => s.id,
+    isItemActive: () => true,
+    filterSignal: marketFilterSignal,
+    escapeEnabled: !overwriteConfirm && !uninstallConfirm,
+  });
+
   const totalMarketPages = Math.max(
     1,
     Math.ceil(filteredMarketSkills.length / MARKET_PAGE_SIZE),
@@ -902,39 +913,6 @@ export function InstallSkills() {
   const canLoadMoreSearch =
     hasMarketQuery && marketSkills.length >= marketSearchLimit;
   const isLoadingMoreSearch = hasMarketQuery && marketLoadingMore;
-  const overflowSources = sourceOptions.slice(visibleSourceCount);
-  const filteredOverflowSources = sourceSearch
-    ? overflowSources.filter((s) =>
-        s.toLowerCase().includes(sourceSearch.toLowerCase()),
-      )
-    : overflowSources;
-
-  useEffect(() => {
-    if (sourceOverflowOpen && visibleSourceCount >= sourceOptions.length) {
-      resetSourceOverflowState();
-    }
-  }, [
-    resetSourceOverflowState,
-    sourceOptions.length,
-    sourceOverflowOpen,
-    visibleSourceCount,
-  ]);
-
-  useEffect(() => {
-    setSourceFocusedIndex((idx) => {
-      if (filteredOverflowSources.length === 0) return -1;
-      if (idx < 0) return idx;
-      return Math.min(idx, filteredOverflowSources.length - 1);
-    });
-  }, [filteredOverflowSources.length]);
-
-  // Scroll the focused overflow item into view whenever the index changes
-  useEffect(() => {
-    if (sourceFocusedIndex < 0) return;
-    sourceListRef.current?.children[sourceFocusedIndex]?.scrollIntoView({
-      block: "nearest",
-    });
-  }, [sourceFocusedIndex]);
 
   return (
     <div className="app-page gap-4">
@@ -1043,243 +1021,89 @@ export function InstallSkills() {
                       spellCheck={false}
                     />
                   </div>
+                  {linkableMarketSkills.length > 0 && (
+                    <>
+                      <div
+                        className="mx-1 h-5 w-px shrink-0 self-center bg-border-subtle"
+                      />
+                      <button
+                        type="button"
+                        aria-pressed={isMarketMultiSelect}
+                        onClick={() =>
+                          isMarketMultiSelect
+                            ? exitMarketMultiSelect()
+                            : setIsMarketMultiSelect(true)
+                        }
+                        className={cn(
+                          "app-segmented-button inline-flex shrink-0 items-center gap-1.5 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-border",
+                          isMarketMultiSelect &&
+                            "app-segmented-button-active hover:bg-surface-active hover:text-secondary",
+                        )}
+                      >
+                        <SquareCheck className="h-4 w-4" />
+                        {isMarketMultiSelect
+                          ? t("mySkills.cancelSelect")
+                          : t("mySkills.selectMode")}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {sourceOptions.length > 0 && (
-                <div className="border-t border-border-subtle pt-2">
-                  <div className="flex items-center gap-3">
-                    <span className="shrink-0 text-[13px] font-medium text-tertiary">
-                      {t("install.filters.source")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMarketInstalledFilter((v) => !v);
-                        setMarketPage(1);
-                      }}
-                      className={cn(
-                        "shrink-0 rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
-                        marketInstalledFilter
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                          : "border-border-subtle bg-background text-muted hover:text-secondary",
-                      )}
-                    >
-                      {t("install.filters.installed")}
-                    </button>
-                    <div
-                      ref={filterContainerRef}
-                      className="relative min-w-0 flex-1"
-                    >
-                      {/* Hidden measurement layer — never visible, keeps all pills in DOM for width queries */}
-                      <div
-                        className="pointer-events-none invisible absolute left-0 top-0 flex h-0 items-center gap-1.5 overflow-hidden"
-                        aria-hidden="true"
-                      >
-                        <button
-                          ref={allBtnMeasureRef}
-                          tabIndex={-1}
-                          className="rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap"
-                        >
-                          {t("install.filters.allSources")}
-                        </button>
-                        {sourceOptions.map((source, i) => (
-                          <button
-                            key={source}
-                            ref={(el) => {
-                              sourceMeasureRefs.current[i] = el;
-                            }}
-                            tabIndex={-1}
-                            className="rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap"
-                          >
-                            @{source}
-                          </button>
-                        ))}
-                        <button
-                          ref={moreBtnMeasureRef}
-                          tabIndex={-1}
-                          className="flex items-center rounded-full border px-2 py-1"
-                        >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      {/* Visible row */}
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setMarketSourceFilter("all")}
-                          className={cn(
-                            "rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
-                            marketSourceFilter === "all"
-                              ? "border-accent-border bg-accent-bg text-accent-light"
-                              : "border-border-subtle bg-background text-muted hover:text-secondary",
-                          )}
-                        >
-                          {t("install.filters.allSources")}
-                        </button>
-                        {sourceOptions
-                          .slice(0, visibleSourceCount)
-                          .map((source) => (
-                            <button
-                              key={source}
-                              type="button"
-                              onClick={() => setMarketSourceFilter(source)}
-                              className={cn(
-                                "rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
-                                marketSourceFilter === source
-                                  ? "border-accent-border bg-accent-bg text-accent-light"
-                                  : "border-border-subtle bg-background text-muted hover:text-secondary",
-                              )}
-                            >
-                              @{source}
-                            </button>
-                          ))}
-                        {visibleSourceCount < sourceOptions.length && (
-                          <div className="relative">
-                            <button
-                              ref={sourceOverflowBtnRef}
-                              type="button"
-                              onClick={() => {
-                                if (sourceOverflowBtnRef.current) {
-                                  const rect =
-                                    sourceOverflowBtnRef.current.getBoundingClientRect();
-                                  setSourceOverflowSide(
-                                    rect.left + 192 > window.innerWidth
-                                      ? "right"
-                                      : "left",
-                                  );
-                                }
-                                setSourceOverflowOpen((v) => {
-                                  if (v) {
-                                    setSourceSearch("");
-                                    setSourceFocusedIndex(-1);
-                                  }
-                                  return !v;
-                                });
-                              }}
-                              className={cn(
-                                "flex items-center rounded-full border px-2 py-1 text-[13px] font-medium transition-colors",
-                                sourceOverflowOpen
-                                  ? "border-accent-border bg-accent-bg text-accent-light"
-                                  : "border-border-subtle bg-background text-muted hover:text-secondary",
-                              )}
-                              title={`${sourceOptions.length - visibleSourceCount} more`}
-                              aria-expanded={sourceOverflowOpen}
-                              aria-haspopup="listbox"
-                            >
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </button>
-                            {sourceOverflowOpen && (
-                              <div
-                                ref={sourceOverflowPanelRef}
-                                role="listbox"
-                                className={cn(
-                                  "absolute top-full z-50 mt-1.5 w-48 overflow-hidden rounded-xl border border-border bg-surface shadow-lg",
-                                  sourceOverflowSide === "left"
-                                    ? "left-0"
-                                    : "right-0",
-                                )}
-                              >
-                                <div className="border-b border-border-subtle px-2 py-1.5">
-                                  <div className="relative">
-                                    <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted" />
-                                    <input
-                                      type="text"
-                                      value={sourceSearch}
-                                      onChange={(e) => {
-                                        setSourceSearch(e.target.value);
-                                        setSourceFocusedIndex(-1);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "ArrowDown") {
-                                          e.preventDefault();
-                                          if (
-                                            filteredOverflowSources.length === 0
-                                          )
-                                            return;
-                                          setSourceFocusedIndex((i) =>
-                                            Math.min(
-                                              i + 1,
-                                              filteredOverflowSources.length -
-                                                1,
-                                            ),
-                                          );
-                                        } else if (e.key === "ArrowUp") {
-                                          e.preventDefault();
-                                          if (
-                                            filteredOverflowSources.length === 0
-                                          )
-                                            return;
-                                          setSourceFocusedIndex((i) =>
-                                            i <= 0 ? 0 : i - 1,
-                                          );
-                                        } else if (
-                                          e.key === "Enter" &&
-                                          sourceFocusedIndex >= 0
-                                        ) {
-                                          const target =
-                                            filteredOverflowSources[
-                                              sourceFocusedIndex
-                                            ];
-                                          if (target) {
-                                            setMarketSourceFilter(target);
-                                            resetSourceOverflowState();
-                                          }
-                                        } else if (e.key === "Escape") {
-                                          resetSourceOverflowState();
-                                        }
-                                      }}
-                                      placeholder={t("common.search")}
-                                      className="app-input w-full bg-background py-1 pl-6 pr-2 text-[12px]"
-                                      autoFocus
-                                      autoCapitalize="none"
-                                      autoCorrect="off"
-                                      spellCheck={false}
-                                    />
-                                  </div>
-                                </div>
-                                <div
-                                  ref={sourceListRef}
-                                  className="max-h-48 overflow-y-auto scrollbar-hide py-1"
-                                >
-                                  {filteredOverflowSources.map(
-                                    (source, idx) => (
-                                      <button
-                                        key={source}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={
-                                          marketSourceFilter === source
-                                        }
-                                        onClick={() => {
-                                          setMarketSourceFilter(source);
-                                          resetSourceOverflowState();
-                                        }}
-                                        className={cn(
-                                          "flex w-full items-center px-3 py-1.5 text-left text-[13px] transition-colors",
-                                          idx === sourceFocusedIndex
-                                            ? "bg-surface-hover text-primary"
-                                            : marketSourceFilter === source
-                                              ? "bg-accent-bg text-accent-light"
-                                              : "text-secondary hover:bg-surface-hover",
-                                        )}
-                                      >
-                                        @{source}
-                                      </button>
-                                    ),
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <SourceFilterBar
+                sources={sourceOptions}
+                value={marketSourceFilter}
+                onChange={setMarketSourceFilter}
+                installedFilter={marketInstalledFilter}
+                onInstalledFilterToggle={() => {
+                  setMarketInstalledFilter((v) => !v);
+                  setMarketPage(1);
+                }}
+              />
             </div>
           </div>
+
+          {isMarketMultiSelect && (
+            <MultiSelectToolbar
+              selectedCount={marketSelectedIds.size}
+              isAllSelected={isMarketAllSelected}
+              actions={[
+                {
+                  key: "batch-link",
+                  tone: "primary",
+                  label: t("install.batchLinkAction", {
+                    count: marketSelectedIds.size,
+                  }),
+                  icon: <Link2 className="h-3.5 w-3.5" />,
+                  busy: batchLinking,
+                  disabled: marketSelectedIds.size === 0,
+                  onSelect: () => {
+                    const selected = linkableMarketSkills.filter((s) =>
+                      marketSelectedIds.has(s.id),
+                    );
+                    if (selected.length === 0) return;
+                    setOverwriteConfirm({
+                      type: "batch-link",
+                      names: selected.map((s) => s.name || s.skill_id),
+                      batchLinkSkills: selected,
+                    });
+                  },
+                },
+              ]}
+              labels={{
+                hint: t("install.batchLinkSelectAll"),
+                selected: t("mySkills.selectedCount", {
+                  count: marketSelectedIds.size,
+                }),
+                selectAll: t("mySkills.selectAll"),
+                deselectAll: t("mySkills.deselectAll"),
+                cancel: t("common.cancel"),
+                more: t("mySkills.moreActions"),
+              }}
+              onSelectAll={handleMarketSelectAll}
+              onCancel={exitMarketMultiSelect}
+            />
+          )}
 
           {marketError ? (
             <div className="mb-4">
@@ -1318,11 +1142,6 @@ export function InstallSkills() {
                 <>
                   <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
                     {paginatedMarketSkills.map((skill) => {
-                      const displayName = skill.name || skill.skill_id;
-                      const showSkillId =
-                        skill.skill_id.trim() !== displayName.trim();
-                      const owner = skill.source.split("/")[0];
-                      const avatarUrl = `https://github.com/${owner}.png?size=32`;
                       const sourceRef = `${skill.source}/${skill.skill_id}`;
                       const isMarketInstalled =
                         installedSourceRefs.has(sourceRef);
@@ -1331,127 +1150,26 @@ export function InstallSkills() {
                         installedDirNames.has(skill.skill_id.toLowerCase());
 
                       return (
-                        <div
+                        <MarketSkillCard
                           key={skill.id}
-                          className="app-panel flex flex-col gap-2 p-3 transition-colors hover:border-border"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex min-w-0 flex-1 items-center gap-2">
-                              <img
-                                src={avatarUrl}
-                                alt={owner}
-                                className="h-6 w-6 shrink-0 rounded-full border border-border-subtle"
-                                loading="lazy"
-                              />
-                              <div className="min-w-0">
-                                <h3 className="truncate text-[13px] font-semibold text-secondary">
-                                  {displayName}
-                                </h3>
-                                {showSkillId ? (
-                                  <p className="truncate text-[13px] leading-4 text-muted">
-                                    {skill.skill_id}
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
-
-                            <div className="flex shrink-0 items-center gap-1">
-                              <button
-                                onClick={() =>
-                                  openUrl(
-                                    `https://skills.sh/${skill.source}/${skill.skill_id}`,
-                                  )
-                                }
-                                className="rounded-[5px] p-1 text-muted transition-colors hover:bg-surface-hover hover:text-secondary"
-                                title={t("install.viewOnWeb")}
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </button>
-                              {isMarketInstalled ? (
-                                <span
-                                  className="rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 p-1 text-emerald-400"
-                                  title={t("install.installed")}
-                                >
-                                  <Check className="h-3.5 w-3.5" />
-                                </span>
-                              ) : installing === skill.id ? (
-                                <button
-                                  onClick={() =>
-                                    handleCancelInstall(
-                                      `${skill.source}/${skill.skill_id}`,
-                                    )
-                                  }
-                                  className="inline-flex items-center gap-1 rounded-[5px] border border-red-500/30 bg-red-500/10 px-1.5 py-1 text-red-400 transition-colors hover:bg-red-500/20"
-                                  title={t("install.cancel")}
-                                  aria-label={t("install.cancel")}
-                                >
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  <span className="text-[11px] leading-none font-medium">
-                                    {t("install.cancel")}
-                                  </span>
-                                </button>
-                              ) : isLocalMatch ? (
-                                <button
-                                  onClick={() => handleInstallSkillssh(skill)}
-                                  disabled={installing !== null}
-                                  className="rounded-[5px] border border-amber-500/30 bg-amber-500/10 p-1 text-amber-400 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
-                                  title={t("install.linkToMarket")}
-                                >
-                                  <Link2 className="h-3.5 w-3.5" />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleInstallSkillssh(skill)}
-                                  disabled={installing !== null}
-                                  className="rounded-[5px] border border-accent-border bg-accent-dark p-1 text-white transition-colors hover:bg-accent disabled:opacity-50"
-                                  title={t("install.oneClickInstall")}
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setMarketSourceFilter(skill.source)
-                              }
-                              disabled={marketSourceFilter === skill.source}
-                              title={t("install.onlyThisContributor")}
-                              className={cn(
-                                "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-[13px] leading-4 font-medium text-accent-light transition-colors",
-                                marketSourceFilter === skill.source
-                                  ? "cursor-default opacity-90"
-                                  : "hover:bg-accent-bg/80",
-                              )}
-                            >
-                              @{skill.source}
-                            </button>
-                            {marketTab === "alltime" && skill.installs > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted">
-                                <DownloadCloud className="h-3 w-3" />
-                                {skill.installs >= 1_000_000
-                                  ? `${(skill.installs / 1_000_000).toFixed(1)}M`
-                                  : skill.installs >= 1_000
-                                    ? `${(skill.installs / 1_000).toFixed(1)}K`
-                                    : skill.installs}
-                              </span>
-                            )}
-                            {isMarketInstalled ? (
-                              <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-emerald-400">
-                                <Check className="h-3 w-3" />
-                                {t("install.installed")}
-                              </span>
-                            ) : isLocalMatch ? (
-                              <span className="inline-flex items-center gap-1 rounded-[5px] border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-amber-400">
-                                <Link2 className="h-3 w-3" />
-                                {t("install.localMatch")}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
+                          skill={skill}
+                          isMarketInstalled={isMarketInstalled}
+                          isLocalMatch={isLocalMatch}
+                          isMultiSelect={isMarketMultiSelect}
+                          isSelected={
+                            isMarketMultiSelect &&
+                            marketSelectedIds.has(skill.id)
+                          }
+                          installing={installing}
+                          batchLinking={batchLinking}
+                          marketTab={marketTab}
+                          marketSourceFilter={marketSourceFilter}
+                          onToggleSelect={toggleMarketSelect}
+                          onInstall={handleInstallSkillssh}
+                          onCancelInstall={handleCancelInstall}
+                          onUninstall={setUninstallConfirm}
+                          onFilterSource={setMarketSourceFilter}
+                        />
                       );
                     })}
                   </div>
@@ -1618,233 +1336,58 @@ export function InstallSkills() {
       )}
 
       {activeTab === "git" && (
-        <div className="animate-in fade-in duration-300">
-          <div className="app-panel max-w-lg p-5">
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface-hover">
-              <Github className="h-5 w-5 text-tertiary" />
-            </div>
-            <h2 className="mb-1 text-[14px] font-semibold text-primary">
-              {t("install.gitTitle")}
-            </h2>
-            <p className="mb-4 text-[13px] text-muted">
-              {t("install.gitDesc")}
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-[13px] font-medium text-tertiary">
-                  {t("install.repoUrl")}
-                </label>
-                <input
-                  type="text"
-                  value={gitUrl}
-                  onChange={(e) => setGitUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !gitLoading && gitUrl.trim())
-                      handleGitPreview();
-                  }}
-                  placeholder={t("install.repoUrlPlaceholder")}
-                  disabled={gitLoading}
-                  className="app-input w-full bg-background"
-                />
-              </div>
-              {gitUrl.trim() && findInstalledByGitUrl(gitUrl) && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-400">
-                  <Check className="h-3.5 w-3.5 shrink-0" />
-                  <span>
-                    {t("install.gitAlreadyInstalled", {
-                      name: findInstalledByGitUrl(gitUrl)!.name,
-                    })}
-                  </span>
-                </div>
-              )}
-              <div className="flex gap-2 pt-2">
-                {gitLoading ? (
-                  <button
-                    onClick={() =>
-                      gitCancelKey && handleCancelInstall(gitCancelKey)
-                    }
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-[13px] font-medium text-red-400 transition-colors hover:bg-red-500/20"
-                    disabled={!gitCancelKey}
-                  >
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    {t("install.cancel")}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleGitPreview}
-                    disabled={!gitUrl.trim()}
-                    className={cn(
-                      "flex w-full",
-                      gitUrl.trim() && findInstalledByGitUrl(gitUrl)
-                        ? "app-button-secondary bg-background"
-                        : "app-button-primary",
-                    )}
-                  >
-                    <DownloadCloud className="h-3.5 w-3.5" />
-                    {gitUrl.trim() && findInstalledByGitUrl(gitUrl)
-                      ? t("install.gitReinstall")
-                      : t("install.installClone")}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GitImportPanel
+          gitUrl={gitUrl}
+          setGitUrl={setGitUrl}
+          gitLoading={gitLoading}
+          gitCancelKey={gitCancelKey}
+          gitPreview={gitPreview}
+          gitSelections={gitSelections}
+          setGitSelections={setGitSelections}
+          gitConfirmLoading={gitConfirmLoading}
+          findInstalledByGitUrl={findInstalledByGitUrl}
+          onPreview={handleGitPreview}
+          onPreviewClose={handleGitPreviewClose}
+          onConfirm={handleGitConfirm}
+          onCancelInstall={handleCancelInstall}
+        />
       )}
 
-      {/* Git preview / selection dialog */}
-      {gitPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={handleGitPreviewClose}
-          />
-          <div className="relative w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-[14px] font-semibold text-primary">
-                {t("install.gitPreview.title")}
-              </h2>
-              <button
-                onClick={handleGitPreviewClose}
-                disabled={gitConfirmLoading}
-                className="rounded p-1 text-muted transition-colors hover:text-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="mb-3 text-[13px] text-muted">
-              {t("install.gitPreview.description")}
-            </p>
 
-            {/* Select all / deselect all */}
-            <div className="mb-2 flex gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setGitSelections((prev) =>
-                    prev.map((s) => ({ ...s, selected: true })),
-                  )
-                }
-                disabled={gitConfirmLoading}
-                className="text-[13px] text-accent-light hover:underline"
-              >
-                {t("install.gitPreview.selectAll")}
-              </button>
-              <span className="text-faint">·</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setGitSelections((prev) =>
-                    prev.map((s) => ({ ...s, selected: false })),
-                  )
-                }
-                disabled={gitConfirmLoading}
-                className="text-[13px] text-muted hover:underline"
-              >
-                {t("install.gitPreview.deselectAll")}
-              </button>
-            </div>
-
-            {gitSelections.length === 0 ? (
-              <p className="py-6 text-center text-[13px] text-muted">
-                {t("install.gitPreview.empty")}
-              </p>
-            ) : (
-              <div className="max-h-64 space-y-2 overflow-y-auto scrollbar-hide pr-1">
-                {gitSelections.map((item, idx) => (
-                  <div
-                    key={item.rel_path}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors",
-                      item.selected
-                        ? "border-accent-border bg-accent-bg/40"
-                        : "border-border-subtle bg-background opacity-50",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.selected}
-                      disabled={gitConfirmLoading}
-                      onChange={(e) =>
-                        setGitSelections((prev) =>
-                          prev.map((s, i) =>
-                            i === idx
-                              ? { ...s, selected: e.target.checked }
-                              : s,
-                          ),
-                        )
-                      }
-                      className="h-4 w-4 shrink-0 accent-accent"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) =>
-                          setGitSelections((prev) =>
-                            prev.map((s, i) =>
-                              i === idx ? { ...s, name: e.target.value } : s,
-                            ),
-                          )
-                        }
-                        disabled={!item.selected || gitConfirmLoading}
-                        placeholder={t("install.gitPreview.namePlaceholder")}
-                        className="app-input w-full bg-background py-1 text-[13px]"
-                      />
-                      {item.description ? (
-                        <p className="mt-1 truncate text-[12px] text-muted">
-                          {item.description}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleGitPreviewClose}
-                disabled={gitConfirmLoading}
-                className="px-3 py-1.5 text-[13px] font-medium text-muted hover:text-secondary transition-colors"
-              >
-                {t("common.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={handleGitConfirm}
-                disabled={
-                  gitConfirmLoading || gitSelections.every((s) => !s.selected)
-                }
-                className="app-button-primary"
-              >
-                {gitConfirmLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <DownloadCloud className="h-3.5 w-3.5" />
-                )}
-                {t("install.gitPreview.confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!uninstallConfirm}
+        title={t("install.uninstallTitle")}
+        message={t("install.uninstallMessage", {
+          name: uninstallConfirm?.name || uninstallConfirm?.skill_id || "",
+        })}
+        confirmLabel={t("install.uninstallConfirm")}
+        tone="danger"
+        onClose={() => setUninstallConfirm(null)}
+        onConfirm={async () => {
+          if (uninstallConfirm) {
+            await handleUninstallSkillssh(uninstallConfirm);
+          }
+        }}
+      />
       <ConfirmDialog
         open={!!overwriteConfirm}
         title={t("install.scan.overwriteTitle")}
         message={
-          overwriteConfirm && overwriteConfirm.names.length === 1
-            ? t("install.scan.overwriteSingle", {
-                name: overwriteConfirm.names[0],
+          overwriteConfirm?.type === "batch-link"
+            ? t("install.batchLinkConfirm", {
+                count: overwriteConfirm.names.length,
               })
-            : t("install.scan.overwriteMultiple", {
-                count: overwriteConfirm?.names.length ?? 0,
-              })
+            : overwriteConfirm && overwriteConfirm.names.length === 1
+              ? t("install.scan.overwriteSingle", {
+                  name: overwriteConfirm.names[0],
+                })
+              : t("install.scan.overwriteMultiple", {
+                  count: overwriteConfirm?.names.length ?? 0,
+                })
         }
         details={
-          overwriteConfirm && overwriteConfirm.names.length > 1
+          overwriteConfirm &&
+          (overwriteConfirm.type === "batch-link" || overwriteConfirm.names.length > 1)
             ? overwriteConfirm.names
             : undefined
         }
@@ -1881,6 +1424,11 @@ export function InstallSkills() {
             case "skillssh":
               if (ctx.skillsshSkill) {
                 await handleInstallSkillssh(ctx.skillsshSkill, true);
+              }
+              break;
+            case "batch-link":
+              if (ctx.batchLinkSkills) {
+                await handleBatchLinkToMarket(ctx.batchLinkSkills);
               }
               break;
           }

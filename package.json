@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pkill -f 'esbuild.*service' 2>/dev/null; vite",
     "build": "tsc -b && vite build",
     "app:dev": "node scripts/build.mjs dev",
     "app:build": "node scripts/build.mjs build",
