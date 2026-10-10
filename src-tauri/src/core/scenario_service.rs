@@ -1095,10 +1095,9 @@ fn apply_add(
     }
     if !duplicate_targets.is_empty() {
         return Err(AppError::invalid_input(format!(
-            "Refusing to deploy: {} target path(s) are claimed by two different skills. \
-             Nothing was changed. {}",
+            "拒绝部署：{} 个目标路径被多个技能同时占用，未做任何修改。{}",
             duplicate_targets.len(),
-            duplicate_targets.join("; ")
+            duplicate_targets.join("；")
         )));
     }
 
@@ -1175,9 +1174,9 @@ fn apply_add(
     }
     if !probe_errors.is_empty() {
         return Err(AppError::io(format!(
-            "Refusing to deploy: {} target(s) could not be inspected. Nothing was changed. {}",
+            "拒绝部署：{} 个目标路径无法检查，未做任何修改。{}",
             probe_errors.len(),
-            probe_errors.join("; ")
+            probe_errors.join("；")
         )));
     }
     if !conflicts.is_empty() {
@@ -1555,10 +1554,7 @@ mod sync_desired_targets_tests {
         let refusals = sync_desired_targets(&store, &desired, false)
             .expect("a refusal must not surface as Err: that panics app startup");
         assert_eq!(refusals.len(), 1, "{refusals:?}");
-        assert!(
-            refusals[0].to_string().contains("Refusing to replace"),
-            "{refusals:?}"
-        );
+        assert!(refusals[0].to_string().contains("拒绝替换"), "{refusals:?}");
         // The path must survive as data, not only inside the sentence: an
         // agent driving the CLI has to name the directory that is in the way.
         assert_eq!(refusals[0].target, target);

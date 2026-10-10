@@ -3358,7 +3358,7 @@ mod tests {
     #[test]
     fn a_deployment_refusal_keeps_its_paths_in_the_json_envelope() {
         let err = map_app_err(AppError::target_conflict(
-            "Refusing to deploy: 1 of 2 target(s) …",
+            "拒绝部署：1/2 个目标路径……",
             vec![app_lib::core::error::TargetConflictDetail {
                 path: "~/.claude/skills/db".to_string(),
                 reason: "is not a managed deployment".to_string(),
