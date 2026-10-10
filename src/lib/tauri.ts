@@ -855,11 +855,11 @@ export const deleteSkillGroup = (id: string) =>
   invoke<void>("delete_skill_group", { id });
 
 /** @deprecated v1.16+: clicking a scene no longer applies. Use applySkillGroupToDefault. */
-export const switchSkillGroup = (id: string) =>
-  invoke<void>("switch_skill_group", { id });
+export const switchSkillGroup = (id: string, force?: boolean) =>
+  invoke<void>("switch_skill_group", { id, force });
 
-export const applySkillGroupToDefault = (id: string) =>
-  invoke<void>("apply_skill_group_to_default", { id });
+export const applySkillGroupToDefault = (id: string, force?: boolean) =>
+  invoke<void>("apply_skill_group_to_default", { id, force });
 
 export const addSkillToSkillGroup = (skillId: string, skillGroupId: string) =>
   invoke<void>("add_skill_to_skill_group", { skillId, skillGroupId });

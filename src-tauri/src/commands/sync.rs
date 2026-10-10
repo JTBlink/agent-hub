@@ -481,6 +481,7 @@ mod tests {
             &["s1".to_string()],
             &["agent_a".to_string(), "agent_b".to_string()],
             scenario_service::BatchApplyMode::Add,
+            false,
         )
         .expect("a shared target directory must not make the second agent refuse");
 
@@ -540,6 +541,7 @@ mod tests {
             &["s1".to_string()],
             &["agent_a".to_string()],
             scenario_service::BatchApplyMode::Add,
+            false,
         );
 
         assert!(

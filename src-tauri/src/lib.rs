@@ -519,6 +519,7 @@ fn apply_skill_group_from_tray<R: tauri::Runtime>(
                 &skill_ids,
                 &tool_keys,
                 mode,
+                false,
             )
             .map_err(|e| e.to_string())?;
             Ok(true)

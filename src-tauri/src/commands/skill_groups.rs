@@ -284,7 +284,7 @@ fn delete_skill_group_with_active_fallback_internal(
             store.set_active_scenario(&first.id).map_err(AppError::db)?;
             // The skill group is already deleted and the fallback already active, so
             // a refusal here cannot undo any of that — report it, don't fail.
-            for refusal in sync_scenario_skills(store, &first.id)? {
+            for refusal in sync_scenario_skills(store, &first.id, false)? {
                 log::warn!("fallback skill group sync skipped a target: {refusal}");
             }
         }
@@ -303,9 +303,10 @@ fn delete_skill_group_with_active_fallback_internal(
 pub async fn apply_skill_group_to_default(
     app: tauri::AppHandle,
     id: String,
+    force: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
-    apply_skill_group_to_default_impl(app, id, store.inner().clone()).await
+    apply_skill_group_to_default_impl(app, id, force.unwrap_or(false), store.inner().clone()).await
 }
 
 /// Legacy command kept for the CLI and backward compatibility. New callers
@@ -315,18 +316,20 @@ pub async fn apply_skill_group_to_default(
 pub async fn switch_skill_group(
     app: tauri::AppHandle,
     id: String,
+    force: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
-    apply_skill_group_to_default_impl(app, id, store.inner().clone()).await
+    apply_skill_group_to_default_impl(app, id, force.unwrap_or(false), store.inner().clone()).await
 }
 
 async fn apply_skill_group_to_default_impl(
     app: tauri::AppHandle,
     id: String,
+    force: bool,
     store: Arc<SkillStore>,
 ) -> Result<(), AppError> {
     let result = tauri::async_runtime::spawn_blocking(move || {
-        scenario_service::apply_scenario_to_default(&store, &id)
+        scenario_service::apply_scenario_to_default(&store, &id, force)
     })
     .await?;
     // Refresh even on failure. `apply_scenario_to_default` commits the active
@@ -396,8 +399,9 @@ pub async fn reorder_skill_group_skills(
 pub(crate) fn sync_scenario_skills(
     store: &SkillStore,
     scenario_id: &str,
+    force: bool,
 ) -> Result<Vec<scenario_service::TargetConflict>, AppError> {
-    scenario_service::sync_scenario_skills(store, scenario_id)
+    scenario_service::sync_scenario_skills(store, scenario_id, force)
 }
 
 pub(crate) fn unsync_scenario_skills(
@@ -453,7 +457,7 @@ pub async fn apply_skill_group_to_coding_agents(
         if tool_keys.is_empty() {
             return Ok(());
         }
-        scenario_service::apply_skills_to_tools(&store, &skill_ids, &tool_keys, mode.into())
+        scenario_service::apply_skills_to_tools(&store, &skill_ids, &tool_keys, mode.into(), false)
     })
     .await?;
     if result.is_ok() {
@@ -643,7 +647,7 @@ mod tests {
         store.add_skill_to_scenario("new", "new-only").unwrap();
 
         store.set_active_scenario("old").unwrap();
-        sync_scenario_skills(&store, "old").unwrap();
+        sync_scenario_skills(&store, "old", false).unwrap();
 
         let shared_target = target_base.join("shared");
         let old_only_target = target_base.join("old-only");
@@ -666,7 +670,7 @@ mod tests {
         let desired_targets = collect_scenario_sync_targets(&store, "new").unwrap();
         unsync_obsolete_scenario_targets(&store, "old", &desired_targets).unwrap();
         store.set_active_scenario("new").unwrap();
-        sync_desired_targets(&store, &desired_targets).unwrap();
+        sync_desired_targets(&store, &desired_targets, false).unwrap();
 
         assert_eq!(fs::read_link(&shared_target).unwrap(), shared_dir);
         assert_eq!(
@@ -715,7 +719,7 @@ mod tests {
         store.add_skill_to_scenario("active", "first").unwrap();
         store.add_skill_to_scenario("active", "second").unwrap();
 
-        sync_scenario_skills(&store, "active").unwrap();
+        sync_scenario_skills(&store, "active", false).unwrap();
 
         assert_eq!(
             fs::read_to_string(target_base.join("skill123/unique.txt")).unwrap(),

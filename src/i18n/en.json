@@ -2,6 +2,11 @@
   "app": {
     "name": "agent-hub"
   },
+  "targetConflict": {
+    "title": "Overwrite existing files",
+    "message": "The following paths already exist and are not managed by AgentHub. Overwrite them?",
+    "confirmAction": "Overwrite"
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "mySkills": "Library",

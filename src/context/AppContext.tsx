@@ -18,6 +18,9 @@ import type {
 } from "../lib/tauri";
 import * as api from "../lib/tauri";
 import i18n from "../i18n";
+import { isAppError } from "../lib/error";
+import type { TargetConflictDetail } from "../lib/error";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { withSkillGroupMembership } from "../lib/skillGroupMembership";
 import { applyTextSize } from "../lib/textScale";
 import { toast } from "sonner";
@@ -92,6 +95,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const appUpdateCheckedRef = useRef(false);
   const lastUpdateNotificationRef = useRef<string | null>(null);
   const lastActiveSkillGroupIdRef = useRef<string | null>(null);
+  const [conflictState, setConflictState] = useState<{
+    groupId: string;
+    conflicts: TargetConflictDetail[];
+  } | null>(null);
 
   const setTranslatedError = useCallback((key: string) => {
     setAppError(i18n.t("common.loadFailed", { item: i18n.t(key) }));
@@ -215,7 +222,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const handleApplySkillGroupToDefault = useCallback(
     async (id: string) => {
-      await api.applySkillGroupToDefault(id);
+      try {
+        await api.applySkillGroupToDefault(id);
+      } catch (err) {
+        if (
+          isAppError(err) &&
+          err.kind === "target_conflict" &&
+          err.details?.conflicts?.length
+        ) {
+          setConflictState({ groupId: id, conflicts: err.details.conflicts });
+          return;
+        }
+        throw err;
+      }
       await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
     },
     [refreshManagedSkills, refreshSkillGroups],
@@ -514,6 +533,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         closeSkillDetail: () => setDetailSkillId(null),
       }}
     >
+      <ConfirmDialog
+        open={!!conflictState}
+        title={i18n.t("targetConflict.title")}
+        message={i18n.t("targetConflict.message")}
+        details={conflictState?.conflicts.map((c) => c.path)}
+        confirmLabel={i18n.t("targetConflict.confirmAction")}
+        tone="warning"
+        onClose={() => setConflictState(null)}
+        onConfirm={async () => {
+          if (!conflictState) return;
+          await api.applySkillGroupToDefault(conflictState.groupId, true);
+          await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
+          setConflictState(null);
+        }}
+      />
       {children}
     </AppContext.Provider>
   );

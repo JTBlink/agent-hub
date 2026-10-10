@@ -229,9 +229,10 @@ fn ownership_key(path: &Path, memo: &mut HashMap<PathBuf, PathBuf>) -> PathBuf {
 /// Authorization for a deployment write: a `skill_targets` row claiming this
 /// exact path lets us replace what it recorded, otherwise we may only write
 /// where nothing of the user's would be destroyed (#363).
-fn replace_policy(recorded_mode: Option<&str>) -> sync_engine::ReplacePolicy<'_> {
+fn replace_policy(recorded_mode: Option<&str>, force: bool) -> sync_engine::ReplacePolicy<'_> {
     match recorded_mode {
         Some(mode) => sync_engine::ReplacePolicy::Recorded { mode },
+        None if force => sync_engine::ReplacePolicy::UserConfirmed,
         None => sync_engine::ReplacePolicy::NoClobber,
     }
 }
@@ -264,6 +265,7 @@ impl fmt::Display for TargetConflict {
 pub fn sync_desired_targets(
     store: &SkillStore,
     desired_targets: &[ScenarioSyncTarget],
+    force: bool,
 ) -> Result<Vec<TargetConflict>, AppError> {
     let batch_start = Instant::now();
     let existing_targets: HashMap<(String, String), SkillTargetRecord> = store
@@ -365,7 +367,7 @@ pub fn sync_desired_targets(
             &desired.source,
             &desired.target,
             desired.mode,
-            replace_policy(recorded_mode.as_deref()),
+            replace_policy(recorded_mode.as_deref(), force),
         ) {
             Ok(actual_mode) => {
                 let now = chrono::Utc::now().timestamp_millis();
@@ -439,6 +441,7 @@ pub fn sync_desired_targets(
 pub fn preflight_scenario_sync_targets(
     store: &SkillStore,
     desired_targets: &[ScenarioSyncTarget],
+    force: bool,
 ) -> Result<(), AppError> {
     let existing_targets = store.get_all_targets().map_err(AppError::db)?;
     let mut conflicts = Vec::new();
@@ -455,7 +458,7 @@ pub fn preflight_scenario_sync_targets(
             &desired.source,
             &desired.target,
             desired.mode,
-            replace_policy(recorded_mode),
+            replace_policy(recorded_mode, force),
         ) {
             if let Some(refused) = error.downcast_ref::<sync_engine::ReplaceRefused>() {
                 conflicts.push(TargetConflictDetail {
@@ -574,14 +577,16 @@ pub fn unsync_scenario_skills(store: &SkillStore, scenario_id: &str) -> Result<(
 pub fn sync_scenario_skills(
     store: &SkillStore,
     scenario_id: &str,
+    force: bool,
 ) -> Result<Vec<TargetConflict>, AppError> {
     let desired_targets = collect_scenario_sync_targets(store, scenario_id)?;
-    sync_desired_targets(store, &desired_targets)
+    sync_desired_targets(store, &desired_targets, force)
 }
 
 pub fn apply_scenario_to_default(
     store: &SkillStore,
     scenario_id: &str,
+    force: bool,
 ) -> Result<Vec<TargetConflict>, AppError> {
     ensure_scenario_exists(store, scenario_id)?;
     let desired_targets = collect_scenario_sync_targets(store, scenario_id)?;
@@ -595,7 +600,7 @@ pub fn apply_scenario_to_default(
     store
         .set_active_scenario(scenario_id)
         .map_err(AppError::db)?;
-    sync_desired_targets(store, &desired_targets)
+    sync_desired_targets(store, &desired_targets, force)
 }
 
 pub fn sync_skill_to_active_scenario(
@@ -645,7 +650,7 @@ pub fn sync_skill_to_active_scenario(
                     &source,
                     &target,
                     mode,
-                    replace_policy(recorded_mode.as_deref()),
+                    replace_policy(recorded_mode.as_deref(), false),
                 ) {
                     Ok(actual_mode) => {
                         let now = chrono::Utc::now().timestamp_millis();
@@ -717,7 +722,7 @@ pub fn ensure_default_startup_scenario(store: &SkillStore) -> Result<(), AppErro
     // Startup policy: a collision must never stop the app from launching. The
     // colliding skill simply is not deployed, its content is untouched, and the
     // workspace view shows it as not synced.
-    let refusals = sync_scenario_skills(store, &desired_active)?;
+    let refusals = sync_scenario_skills(store, &desired_active, false)?;
     for refusal in &refusals {
         log::warn!("startup sync skipped a target: {refusal}");
     }
@@ -923,7 +928,7 @@ pub fn sync_single_skill_to_tool(
     };
     let policy = match intent {
         DeployIntent::AdoptExisting(_) => sync_engine::ReplacePolicy::UserConfirmed,
-        DeployIntent::Managed => replace_policy(recorded_mode.as_deref()),
+        DeployIntent::Managed => replace_policy(recorded_mode.as_deref(), false),
     };
     if matches!(intent, DeployIntent::AdoptExisting(_)) {
         // The directory at `target` may still be the import source of the very
@@ -976,13 +981,14 @@ pub fn apply_skills_to_tools(
     skill_ids: &[String],
     tool_keys: &[String],
     mode: BatchApplyMode,
+    force: bool,
 ) -> Result<(), AppError> {
     if skill_ids.is_empty() || tool_keys.is_empty() {
         return Ok(());
     }
 
     match mode {
-        BatchApplyMode::Add => apply_add(store, skill_ids, tool_keys, false),
+        BatchApplyMode::Add => apply_add(store, skill_ids, tool_keys, false, force),
         BatchApplyMode::Remove => apply_remove(store, skill_ids, tool_keys),
     }
 }
@@ -996,7 +1002,7 @@ pub fn preflight_add_skills_to_tools(
     if skill_ids.is_empty() || tool_keys.is_empty() {
         return Ok(());
     }
-    apply_add(store, skill_ids, tool_keys, true)
+    apply_add(store, skill_ids, tool_keys, true, false)
 }
 
 fn apply_add(
@@ -1004,6 +1010,7 @@ fn apply_add(
     skill_ids: &[String],
     tool_keys: &[String],
     preflight_only: bool,
+    force: bool,
 ) -> Result<(), AppError> {
     let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
     let disabled = tool_service::get_disabled_tools(store);
@@ -1150,7 +1157,7 @@ fn apply_add(
             &pair.source,
             &pair.target,
             pair.mode,
-            replace_policy(evidence_for(&pair.target, &mut key_memo)),
+            replace_policy(evidence_for(&pair.target, &mut key_memo), force),
         ) {
             // Keep the refusal's own path and reason: the caller may be an
             // agent that has to name the directory in the way and offer the
@@ -1219,7 +1226,7 @@ fn apply_add(
             .get(target.as_path())
             .map(String::as_str)
             .or_else(|| evidence_for(target, &mut key_memo));
-        match sync_engine::sync_skill(source, target, *mode, replace_policy(effective_mode)) {
+        match sync_engine::sync_skill(source, target, *mode, replace_policy(effective_mode, force)) {
             Ok(actual_mode) => {
                 written_in_batch.insert(target.as_path(), actual_mode.as_str().to_string());
                 let now = chrono::Utc::now().timestamp_millis();
@@ -1498,7 +1505,7 @@ mod sync_desired_targets_tests {
             },
         ];
 
-        sync_desired_targets(&store, &desired).unwrap();
+        sync_desired_targets(&store, &desired, false).unwrap();
 
         assert!(
             shared.join("SKILL.md").exists(),
@@ -1546,7 +1553,7 @@ mod sync_desired_targets_tests {
             source_hash: Some("h1".to_string()),
         }];
 
-        let refusals = sync_desired_targets(&store, &desired)
+        let refusals = sync_desired_targets(&store, &desired, false)
             .expect("a refusal must not surface as Err: that panics app startup");
         assert_eq!(refusals.len(), 1, "{refusals:?}");
         assert!(
@@ -1653,7 +1660,7 @@ mod sync_desired_targets_tests {
             source_hash: Some("h1".to_string()),
         }];
 
-        sync_desired_targets(&store, &desired).unwrap();
+        sync_desired_targets(&store, &desired, false).unwrap();
 
         // The marker file proves no re-sync ran (a real re-sync would
         // have called copy_dir_recursive after wiping the target).
@@ -1738,7 +1745,7 @@ mod sync_desired_targets_tests {
             source_hash: Some("h1".to_string()),
         }];
 
-        sync_desired_targets(&store, &desired).unwrap();
+        sync_desired_targets(&store, &desired, false).unwrap();
 
         // Sync must have run — target should now exist with the source content.
         assert!(

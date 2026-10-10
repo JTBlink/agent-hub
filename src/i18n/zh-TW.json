@@ -2,6 +2,11 @@
   "app": {
     "name": "agent-hub"
   },
+  "targetConflict": {
+    "title": "覆蓋已有檔案",
+    "message": "以下路徑已存在且不由 AgentHub 管理，是否覆蓋？",
+    "confirmAction": "覆蓋"
+  },
   "sidebar": {
     "dashboard": "Dashboard",
     "mySkills": "技能庫",
