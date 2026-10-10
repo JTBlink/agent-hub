@@ -372,9 +372,9 @@
     },
     "gitConfigEntry": "同步設定",
     "filters": {
-      "all": "全部技能",
-      "enabled": "組內技能",
-      "available": "未加入"
+      "all": "全部",
+      "enabled": "已加入",
+      "available": "待加入"
     },
     "sourceType": "來源類型",
     "sourceFilter": {
@@ -382,7 +382,8 @@
       "local": "本機",
       "import": "匯入",
       "git": "Git",
-      "skillssh": "skills.sh"
+      "skillssh": "skills.sh",
+      "ungrouped": "未分組"
     },
     "tags": {
       "filter": "標籤",
@@ -483,6 +484,9 @@
     "loadingMore": "正在載入更多...",
     "installing": "安裝中...",
     "installed": "已安裝",
+    "uninstallTitle": "解除安裝技能？",
+    "uninstallMessage": "確定解除安裝「{{name}}」？中央倉庫檔案和已同步到各 Agent 的副本都會被移除。",
+    "uninstallConfirm": "確認解除安裝",
     "localMatch": "已匯入",
     "linkToMarket": "關聯到市場版本（可接收更新）",
     "cancel": "取消",
@@ -493,6 +497,7 @@
       "success": "{{name}} 安裝成功",
       "done": "完成",
       "cancelled": "安裝已取消",
+      "uninstalled": "{{name}} 已解除安裝",
       "timeout": "安裝逾時 — 請檢查網路連線",
       "view": "檢視"
     },
