@@ -44,6 +44,7 @@ const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/32x32.png");
 const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../icons/32x32.png");
 // Menu-bar icons must be monochrome and transparent on macOS. Keep this
 // separate from the colorful application icon used by the Dock and windows.
+#[cfg(target_os = "macos")]
 const TRAY_TEMPLATE_ICON_BYTES: &[u8] = include_bytes!("../icons/tray-template.png");
 
 fn parse_bool_setting(value: Option<String>, default: bool) -> bool {
@@ -116,6 +117,7 @@ fn load_custom_tray_icon() -> Option<tauri::image::Image<'static>> {
     ))
 }
 
+#[cfg(target_os = "macos")]
 fn load_tray_template_icon() -> Option<tauri::image::Image<'static>> {
     let img =
         image::load_from_memory_with_format(TRAY_TEMPLATE_ICON_BYTES, image::ImageFormat::Png)
@@ -517,6 +519,7 @@ fn apply_skill_group_from_tray<R: tauri::Runtime>(
                 &skill_ids,
                 &tool_keys,
                 mode,
+                false,
             )
             .map_err(|e| e.to_string())?;
             Ok(true)
