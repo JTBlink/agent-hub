@@ -1,6 +1,7 @@
 import { getErrorKind, getErrorMessage } from "./error";
 
 export interface SkillGroupOperationError {
+  skillId: string;
   skillName: string;
   agentKey: string;
   error: unknown;
@@ -9,7 +10,7 @@ export interface SkillGroupOperationError {
 export interface SkillGroupErrorNotice {
   kind: "conflict" | "failure";
   count: number;
-  items: { skillName: string; agentKey: string; message: string }[];
+  items: { skillId: string; skillName: string; agentKey: string; message: string }[];
 }
 
 /** Keep every affected skill and reason; only ownership conflicts are skips. */
@@ -18,10 +19,11 @@ export function summarizeSkillGroupErrors(
   fallback: string,
 ): SkillGroupErrorNotice[] {
   const groups: SkillGroupErrorNotice[] = [];
-  for (const { skillName, agentKey, error } of errors) {
+  for (const { skillId, skillName, agentKey, error } of errors) {
     const kind =
       getErrorKind(error) === "target_conflict" ? "conflict" : "failure";
     const item = {
+      skillId,
       skillName,
       agentKey,
       message: getErrorMessage(error, fallback),

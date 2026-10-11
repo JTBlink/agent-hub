@@ -925,7 +925,8 @@
     "create": "建立",
     "goToSettings": "設定",
     "expandAll": "展開全部",
-    "collapse": "收合"
+    "collapse": "收合",
+    "done": "已完成"
   },
   "addFromLibrary": {
     "title": "從技能庫新增",
@@ -1038,6 +1039,7 @@
     "updateCenterDiffLegend": "紅色是比較版本，綠色是選取版本",
     "updateCenterNoDiff": "這兩個變體的檔案內容一致。",
     "updateCenterAlignFailed": "「{{name}}」：已推送到中心，但 {{count}} 個變體對齊失敗",
+    "updateProjectFailed": "更新專案 Skill「{{name}}」失敗：{{reason}}",
     "updateProjectSuccess": "「{{name}}」已更新到專案",
     "resetFromCenter": "還原中心版本",
     "resetFromCenterSuccess": "「{{name}}」已還原為中心版本",
@@ -1120,6 +1122,8 @@
   },
   "skillGroupActions": {
     "operationDetails": "查看詳情",
+    "overridden": "已覆蓋",
+    "forceOverride": "覆蓋",
     "button": "套用技能組",
     "applyToProject": "將技能組套用到目前專案",
     "applyToGlobal": "將技能組套用到全域工作區",
@@ -1192,6 +1196,9 @@
     "batchRemoved": "已移除 {{count}} 個 Skill",
     "batchRemoveFailed": "{{count}} 個 Skill 移除失敗",
     "localSkills": {
+      "unmanagedCount": "未管理 {{count}}",
+      "showUnmanaged": "查看未管理的 Skills",
+      "showAll": "顯示全部 Skills",
       "searchPlaceholder": "搜尋 Agent Skills…",
       "empty": "未發現本機 Skills",
       "summary": "{{total}} / {{managed}} 個受管理 / {{synced}} 個已同步",
@@ -1221,6 +1228,7 @@
       "deleteLocalBatchFailed": "{{count}} 個本機 Skill 刪除失敗"
     },
     "syncFromAgent": {
+      "button": "同步 Agent",
       "title": "從其他 Agent 同步",
       "heading": "同步自",
       "synced": "已從 {{agent}} 同步 {{count}} 個 Skill",

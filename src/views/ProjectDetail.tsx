@@ -827,7 +827,12 @@ export function ProjectDetail() {
       }
       await Promise.all([loadSkills(), refreshProjects()]);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, t("common.error")));
+      toast.error(
+        t("project.updateProjectFailed", {
+          name: skill.name,
+          reason: getErrorMessage(error, t("common.error")),
+        }),
+      );
     } finally {
       setUpdatingProjectSkill(null);
     }

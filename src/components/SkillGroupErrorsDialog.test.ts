@@ -16,11 +16,13 @@ it("renders every skipped skill with its agent and complete reason", () => {
   const notices = summarizeSkillGroupErrors(
     [
       {
+        skillId: "browser",
         skillName: "browser",
         agentKey: "claude",
         error: { kind: "target_conflict", message: reasonA },
       },
       {
+        skillId: "reviewer",
         skillName: "reviewer",
         agentKey: "codex",
         error: { kind: "target_conflict", message: reasonB },
@@ -37,4 +39,66 @@ it("renders every skipped skill with its agent and complete reason", () => {
   expect(html).toContain(reasonB.replaceAll('"', "&quot;"));
   expect(html.match(/<li /g)).toHaveLength(2);
   expect(html).toContain("break-all");
+});
+
+it("offers overwrite for each target conflict while keeping ordinary failures read-only", () => {
+  const notices = summarizeSkillGroupErrors(
+    [
+      {
+        skillId: "browser",
+        skillName: "browser",
+        agentKey: "hermes",
+        error: {
+          kind: "target_conflict",
+          message: "Existing content preserved",
+        },
+      },
+      {
+        skillId: "reviewer",
+        skillName: "reviewer",
+        agentKey: "codex",
+        error: { kind: "target_conflict", message: "Another target preserved" },
+      },
+      {
+        skillId: "writer",
+        skillName: "writer",
+        agentKey: "hermes",
+        error: { kind: "database", message: "Database unavailable" },
+      },
+    ],
+    "Unexpected error",
+  );
+  const html = renderToStaticMarkup(
+    createElement(SkillGroupErrorsDialog, {
+      notices,
+      onClose: vi.fn(),
+      onForceSync: vi.fn(),
+      onComplete: vi.fn(),
+    }),
+  );
+  expect(html.match(/skillGroupActions.forceOverride/g)).toHaveLength(2);
+  expect(html).toContain("browser · hermes");
+  expect(html).toContain("reviewer · codex");
+  expect(html).toContain("Database unavailable");
+});
+
+it("does not offer overwrite without a deployment handler", () => {
+  const notices = summarizeSkillGroupErrors(
+    [
+      {
+        skillId: "browser",
+        skillName: "browser",
+        agentKey: "hermes",
+        error: {
+          kind: "target_conflict",
+          message: "Existing content preserved",
+        },
+      },
+    ],
+    "Unexpected error",
+  );
+  const html = renderToStaticMarkup(
+    createElement(SkillGroupErrorsDialog, { notices, onClose: vi.fn() }),
+  );
+  expect(html).not.toContain("skillGroupActions.forceOverride");
 });

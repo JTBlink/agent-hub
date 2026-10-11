@@ -7,6 +7,7 @@ describe("skill group operation errors", () => {
       summarizeSkillGroupErrors(
         [
           {
+            skillId: "browser",
             skillName: "browser",
             agentKey: "claude",
             error: {
@@ -15,11 +16,13 @@ describe("skill group operation errors", () => {
             },
           },
           {
+            skillId: "writer",
             skillName: "writer",
             agentKey: "claude",
             error: { kind: "database", message: "Database unavailable" },
           },
           {
+            skillId: "reviewer",
             skillName: "reviewer",
             agentKey: "codex",
             error: {
@@ -28,6 +31,7 @@ describe("skill group operation errors", () => {
             },
           },
           {
+            skillId: "writer",
             skillName: "writer",
             agentKey: "codex",
             error: new Error("Permission denied"),
@@ -41,11 +45,13 @@ describe("skill group operation errors", () => {
         count: 2,
         items: [
           {
+            skillId: "browser",
             skillName: "browser",
             agentKey: "claude",
             message: "Existing browser preserved",
           },
           {
+            skillId: "reviewer",
             skillName: "reviewer",
             agentKey: "codex",
             message: "Existing reviewer preserved",
@@ -57,11 +63,13 @@ describe("skill group operation errors", () => {
         count: 2,
         items: [
           {
+            skillId: "writer",
             skillName: "writer",
             agentKey: "claude",
             message: "Database unavailable",
           },
           {
+            skillId: "writer",
             skillName: "writer",
             agentKey: "codex",
             message: "Permission denied",
@@ -74,6 +82,7 @@ describe("skill group operation errors", () => {
   it("preserves separate agents even when messages and skill names match", () => {
     const notices = summarizeSkillGroupErrors(
       ["claude", "codex"].map((agentKey) => ({
+        skillId: "browser",
         skillName: "browser",
         agentKey,
         error: { kind: "target_conflict", message: "Shared target preserved" },
@@ -91,8 +100,18 @@ describe("skill group operation errors", () => {
     expect(
       summarizeSkillGroupErrors(
         [
-          { skillName: "browser", agentKey: "claude", error: null },
-          { skillName: "writer", agentKey: "codex", error: "Disk full" },
+          {
+            skillId: "browser",
+            skillName: "browser",
+            agentKey: "claude",
+            error: null,
+          },
+          {
+            skillId: "writer",
+            skillName: "writer",
+            agentKey: "codex",
+            error: "Disk full",
+          },
         ],
         "Unexpected error",
       ),
@@ -102,11 +121,17 @@ describe("skill group operation errors", () => {
         count: 2,
         items: [
           {
+            skillId: "browser",
             skillName: "browser",
             agentKey: "claude",
             message: "Unexpected error",
           },
-          { skillName: "writer", agentKey: "codex", message: "Disk full" },
+          {
+            skillId: "writer",
+            skillName: "writer",
+            agentKey: "codex",
+            message: "Disk full",
+          },
         ],
       },
     ]);

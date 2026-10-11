@@ -8,6 +8,7 @@ import { AgentIcon } from "./AgentIcon";
 import * as api from "../lib/tauri";
 import type { ManagedSkill, ToolInfo } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { getAgentSyncSources } from "../lib/agentSync";
 
 interface Props {
   currentAgentKey: string;
@@ -35,36 +36,9 @@ export function SyncFromAgentMenu({
 
   const open = pos !== null;
 
-  const otherAgents = useMemo(() => {
-    return tools
-      .filter((tool) => tool.installed && tool.enabled && tool.key !== currentAgentKey)
-      .map((tool) => {
-        const sourceSkillIds = new Set(
-          managedSkills
-            .filter((s) => s.targets.some((t) => t.tool === tool.key))
-            .map((s) => s.id),
-        );
-        const currentSkillIds = new Set(
-          managedSkills
-            .filter((s) => s.targets.some((t) => t.tool === currentAgentKey))
-            .map((s) => s.id),
-        );
-        const missing = managedSkills.filter(
-          (s) => sourceSkillIds.has(s.id) && !currentSkillIds.has(s.id),
-        );
-        return {
-          key: tool.key,
-          displayName: tool.display_name,
-          total: sourceSkillIds.size,
-          missingCount: missing.length,
-          missingSkills: missing,
-        };
-      });
-  }, [tools, managedSkills, currentAgentKey]);
-
-  const totalMissing = useMemo(
-    () => otherAgents.reduce((sum, a) => Math.max(sum, a.missingCount), 0),
-    [otherAgents],
+  const otherAgents = useMemo(
+    () => getAgentSyncSources(currentAgentKey, tools, managedSkills),
+    [currentAgentKey, tools, managedSkills],
   );
 
   useEffect(() => {
@@ -101,47 +75,56 @@ export function SyncFromAgentMenu({
   }, [open]);
 
   const handleSync = useCallback(
-    async (sourceAgent: { key: string; displayName: string; missingSkills: ManagedSkill[] }) => {
+    async (sourceAgent: {
+      key: string;
+      displayName: string;
+      missingSkills: ManagedSkill[];
+    }) => {
       if (sourceAgent.missingSkills.length === 0) return;
       setSyncing(true);
       setPos(null);
-      let synced = 0;
-      const failures: { name: string; reason: string }[] = [];
-      for (const skill of sourceAgent.missingSkills) {
-        try {
-          await api.syncSkillToTool(skill.id, currentAgentKey);
-          synced++;
-        } catch (e) {
-          failures.push({
-            name: skill.name,
-            reason: getErrorMessage(e, t("common.error")),
-          });
+      try {
+        let synced = 0;
+        const failures: { name: string; reason: string }[] = [];
+        for (const skill of sourceAgent.missingSkills) {
+          try {
+            await api.syncSkillToTool(skill.id, currentAgentKey);
+            synced++;
+          } catch (e) {
+            failures.push({
+              name: skill.name,
+              reason: getErrorMessage(e, t("common.error")),
+            });
+          }
         }
+        if (synced > 0) {
+          toast.success(
+            t("globalWorkspace.syncFromAgent.synced", {
+              count: synced,
+              agent: sourceAgent.displayName,
+            }),
+          );
+        }
+        if (failures.length > 0) {
+          const detail = failures
+            .map((f) => `• ${f.name}: ${f.reason}`)
+            .join("\n");
+          toast.error(
+            t("globalWorkspace.syncFromAgent.failed", {
+              count: failures.length,
+            }),
+            { description: detail },
+          );
+        }
+        await onComplete();
+      } catch (error: unknown) {
+        toast.error(getErrorMessage(error, t("common.error")));
+      } finally {
+        setSyncing(false);
       }
-      if (synced > 0) {
-        toast.success(
-          t("globalWorkspace.syncFromAgent.synced", {
-            count: synced,
-            agent: sourceAgent.displayName,
-          }),
-        );
-      }
-      if (failures.length > 0) {
-        const detail = failures
-          .map((f) => `• ${f.name}: ${f.reason}`)
-          .join("\n");
-        toast.error(
-          t("globalWorkspace.syncFromAgent.failed", { count: failures.length }),
-          { description: detail },
-        );
-      }
-      await onComplete();
-      setSyncing(false);
     },
     [currentAgentKey, onComplete, t],
   );
-
-  if (otherAgents.length === 0) return null;
 
   return (
     <>
@@ -149,12 +132,15 @@ export function SyncFromAgentMenu({
         ref={triggerRef}
         type="button"
         onClick={handleToggle}
-        disabled={syncing || totalMissing === 0}
+        disabled={syncing || otherAgents.length === 0}
         className={cn(
-          "rounded-md p-2 text-muted transition-colors outline-none hover:text-tertiary disabled:opacity-50",
+          "rounded-md p-2 text-muted transition-colors hover:text-tertiary focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50",
           open && "bg-surface-active text-secondary",
         )}
-        title={t("globalWorkspace.syncFromAgent.title")}
+        title={t("globalWorkspace.syncFromAgent.button")}
+        aria-label={t("globalWorkspace.syncFromAgent.title")}
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
         {syncing ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -167,7 +153,8 @@ export function SyncFromAgentMenu({
         createPortal(
           <div
             ref={panelRef}
-            className="fixed z-50 min-w-[240px] rounded-lg border border-border bg-surface-popover p-1.5 shadow-xl"
+            role="menu"
+            className="fixed z-50 max-h-[60vh] overflow-y-auto min-w-[240px] rounded-lg border border-border bg-surface p-1.5 shadow-xl"
             style={{ top: pos.top, left: pos.left }}
           >
             <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wider text-faint">
@@ -176,6 +163,7 @@ export function SyncFromAgentMenu({
             {otherAgents.map((agent) => (
               <button
                 key={agent.key}
+                role="menuitem"
                 type="button"
                 disabled={agent.missingCount === 0}
                 onClick={() => void handleSync(agent)}
@@ -186,7 +174,9 @@ export function SyncFromAgentMenu({
                   displayName={agent.displayName}
                   className="h-5 w-5 shrink-0 rounded"
                 />
-                <span className="min-w-0 flex-1 truncate">{agent.displayName}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {agent.displayName}
+                </span>
                 {agent.missingCount > 0 ? (
                   <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
                     +{agent.missingCount}

@@ -46,6 +46,11 @@ import {
 } from "../lib/skillTags";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { SyncFromAgentMenu } from "../components/SyncFromAgentMenu";
+import { WorkspaceSkillSummary } from "../components/WorkspaceSkillSummary";
+import {
+  filterWorkspaceSkills,
+  isManagedWorkspaceSkill,
+} from "../lib/workspaceSkills";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import type { WorkspaceConfig } from "./workspaceConfigs";
@@ -281,6 +286,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
+  const [onlyUnmanaged, setOnlyUnmanaged] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [removingLocalSkillId, setRemovingLocalSkillId] = useState<
     string | null
@@ -460,6 +466,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     setPullConfirmSkill(null);
     setDeleteLocalConfirmSkill(null);
     setTagFilters(new Set());
+    setOnlyUnmanaged(false);
   }, [currentTool?.key]);
 
   const agentSkills = useMemo(
@@ -494,45 +501,6 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     );
   }, [allLocalTags, localSkills]);
 
-  const visibleLocalSkills = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return localSkills
-      .filter((skill) => {
-        if (q) {
-          const matchesQuery =
-            skill.name.toLowerCase().includes(q) ||
-            skill.dir_name.toLowerCase().includes(q) ||
-            (skill.description || "").toLowerCase().includes(q);
-          if (!matchesQuery) return false;
-        }
-        if (tagFilters.size > 0) {
-          const wantUntagged = tagFilters.has(UNTAGGED_FILTER);
-          const matchUntagged = wantUntagged && skill.tags.length === 0;
-          const matchTag = skill.tags.some((tag) => tagFilters.has(tag));
-          if (!matchUntagged && !matchTag) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        const priority: Record<ProjectSkill["sync_status"], number> = {
-          project_only: 0,
-          project_newer: 1,
-          diverged: 2,
-          center_newer: 3,
-          in_sync: 4,
-        };
-        return (
-          priority[a.sync_status] - priority[b.sync_status] ||
-          a.name.localeCompare(b.name)
-        );
-      });
-  }, [localSkills, search, tagFilters]);
-
-  const inSyncLocalCount = useMemo(
-    () => localSkills.filter((skill) => skill.sync_status === "in_sync").length,
-    [localSkills],
-  );
-
   const installedIds = useMemo(
     () => new Set(agentSkills.map((s) => s.id)),
     [agentSkills],
@@ -548,11 +516,24 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     [installedIds, localSkills],
   );
 
+  const visibleLocalSkills = useMemo(
+    () =>
+      filterWorkspaceSkills(
+        localSkills, search, tagFilters, managedLocalIds, onlyUnmanaged,
+      ),
+    [localSkills, search, tagFilters, managedLocalIds, onlyUnmanaged],
+  );
+
+  const inSyncLocalCount = useMemo(
+    () => localSkills.filter((skill) => skill.sync_status === "in_sync").length,
+    [localSkills],
+  );
+
   const managedLocalCount = useMemo(
     () =>
       localSkills.filter(
         (skill) =>
-          !!skill.center_skill_id && managedLocalIds.has(skill.center_skill_id),
+          isManagedWorkspaceSkill(skill, managedLocalIds),
       ).length,
     [localSkills, managedLocalIds],
   );
@@ -573,7 +554,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     filtered: visibleLocalSkills,
     getKey: localSkillKey,
     isItemActive: () => true,
-    filterSignal: JSON.stringify([search, [...tagFilters].sort()]),
+    filterSignal: JSON.stringify([search, [...tagFilters].sort(), onlyUnmanaged]),
     scopeSignal: agentKey ?? "",
     escapeEnabled: !batchUnsyncConfirm && !batchDeleteConfirm,
   });
@@ -844,6 +825,13 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     [],
   );
 
+  const handleSkillGroupForceSync = useCallback(
+    async (skillId: string, agentK: string) => {
+      await api.syncSkillToTool(skillId, agentK, true);
+    },
+    [],
+  );
+
   const handleSkillGroupRemove = useCallback(
     async (skill: ManagedSkill, agentK: string) => {
       await api.unsyncSkillFromTool(skill.id, agentK);
@@ -870,7 +858,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
       skill.sync_status === "center_newer" || skill.sync_status === "diverged";
     const isInSync = skill.sync_status === "in_sync";
     const isManaged =
-      !!skill.center_skill_id && managedLocalIds.has(skill.center_skill_id);
+      isManagedWorkspaceSkill(skill, managedLocalIds);
     const canDeleteLocal = !isManaged && skill.sync_status === "project_only";
     const removing = removingLocalSkillId === skill.relative_path;
     const buttonClassName =
@@ -1010,6 +998,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
               onAddSkill={handleSkillGroupAdd}
               onRemoveSkill={handleSkillGroupRemove}
               onComplete={handleSkillGroupComplete}
+              onForceSync={handleSkillGroupForceSync}
             />
           )}
         </div>
@@ -1061,18 +1050,25 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
               {currentTool.display_name}
               <span className="app-badge">{localSkills.length}</span>
             </h1>
-            <p
-              className="mt-1 truncate text-[13px] text-muted"
-              title={currentTool.skills_dir}
-            >
-              {compactHomePath(currentTool.skills_dir)}
-              <span className="px-1.5">·</span>
-              {t("globalWorkspace.localSkills.summary", {
-                total: localSkills.length,
-                managed: managedLocalCount,
-                synced: inSyncLocalCount,
-              })}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
+              <span className="min-w-0 truncate" title={currentTool.skills_dir}>
+                {compactHomePath(currentTool.skills_dir)}
+              </span>
+              <span>·</span>
+              <WorkspaceSkillSummary
+                total={localSkills.length}
+                managed={managedLocalCount}
+                synced={inSyncLocalCount}
+                onlyUnmanaged={onlyUnmanaged}
+                onChange={(value) => {
+                  setOnlyUnmanaged(value);
+                  if (value) {
+                    setSearch("");
+                    setTagFilters(new Set());
+                  }
+                }}
+              />
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-[2_1_520px] flex-wrap items-center justify-end gap-2">
@@ -1093,7 +1089,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             <div className="app-segmented app-toolbar-segmented shrink-0">
               <SyncFromAgentMenu
                 currentAgentKey={currentTool.key}
-                tools={installedTools}
+                tools={tools}
                 managedSkills={managedSkills}
                 onComplete={async () => {
                   await Promise.all([
@@ -1253,6 +1249,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             onAddSkill={handleSkillGroupAdd}
             onRemoveSkill={handleSkillGroupRemove}
             onComplete={handleSkillGroupComplete}
+            onForceSync={handleSkillGroupForceSync}
           />
         )}
       </div>

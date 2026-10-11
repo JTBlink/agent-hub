@@ -998,7 +998,8 @@
     "search": "Search",
     "goToSettings": "Settings",
     "expandAll": "Show all",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "done": "Done"
   },
   "addFromLibrary": {
     "title": "Add from Library",
@@ -1117,6 +1118,7 @@
     "updateCenterDiffLegend": "Red is the comparison version; green is the selected version",
     "updateCenterNoDiff": "These two variants have the same file contents.",
     "updateCenterAlignFailed": "\"{{name}}\": pushed to center, but {{count}} variant(s) failed to realign",
+    "updateProjectFailed": "Failed to update project Skill “{{name}}”: {{reason}}",
     "updateProjectSuccess": "\"{{name}}\" updated to project",
     "resetFromCenter": "Restore center version",
     "resetFromCenterSuccess": "\"{{name}}\" restored to center version",
@@ -1204,6 +1206,8 @@
   },
   "skillGroupActions": {
     "operationDetails": "View details",
+    "overridden": "Overwritten",
+    "forceOverride": "Override",
     "button": "Apply Skill Group",
     "applyToProject": "Apply Skill Group to This Project",
     "applyToGlobal": "Apply Skill Group to Global Workspace",
@@ -1276,6 +1280,9 @@
     "batchRemoved": "{{count}} skills removed",
     "batchRemoveFailed": "{{count}} skills failed to remove",
     "localSkills": {
+      "unmanagedCount": "Unmanaged {{count}}",
+      "showUnmanaged": "Show unmanaged skills",
+      "showAll": "Show all skills",
       "searchPlaceholder": "Search agent skills...",
       "empty": "No local skills found",
       "summary": "{{total}} / {{managed}} managed / {{synced}} in sync",
@@ -1305,6 +1312,7 @@
       "deleteLocalBatchFailed": "{{count}} local skills failed to delete"
     },
     "syncFromAgent": {
+      "button": "Sync agent",
       "title": "Sync from another agent",
       "heading": "Sync from",
       "synced": "Synced {{count}} skills from {{agent}}",

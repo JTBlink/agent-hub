@@ -29,6 +29,7 @@ export interface SkillGroupBarProps {
   onAddSkill: (skill: ManagedSkill, agentKey: string) => Promise<void>;
   onRemoveSkill: (skill: ManagedSkill, agentKey: string) => Promise<void>;
   onComplete: () => Promise<void>;
+  onForceSync?: (skillId: string, agentKey: string) => Promise<void>;
   /** Whether the status badge counts agent copies or logical skills. */
   statusMode?: SkillGroupStatusMode;
 }
@@ -41,6 +42,7 @@ export function SkillGroupBar({
   onAddSkill,
   onRemoveSkill,
   onComplete,
+  onForceSync,
   statusMode = "agent-pair",
 }: SkillGroupBarProps) {
   const { t } = useTranslation();
@@ -116,7 +118,7 @@ export function SkillGroupBar({
               await onAddSkill(skill, agentKey);
               added++;
             } catch (e) {
-              failures.push({ skillName: skill.name, agentKey, error: e });
+              failures.push({ skillId: skill.id, skillName: skill.name, agentKey, error: e });
             }
           }
         }
@@ -160,7 +162,7 @@ export function SkillGroupBar({
               await onRemoveSkill(skill, agentKey);
               removed++;
             } catch (e) {
-              failures.push({ skillName: skill.name, agentKey, error: e });
+              failures.push({ skillId: skill.id, skillName: skill.name, agentKey, error: e });
             }
           }
         }
@@ -252,6 +254,8 @@ export function SkillGroupBar({
       <SkillGroupErrorsDialog
         notices={errorNotices}
         onClose={() => setErrorNotices([])}
+        onForceSync={onForceSync}
+        onComplete={onComplete}
       />
     </>
   );
