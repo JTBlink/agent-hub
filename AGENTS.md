@@ -15,8 +15,10 @@
 - `src-tauri/src/core/`：核心业务（技能库、同步引擎、Git 备份、合并引擎、扫描器）。
 - `src-tauri/src/bin/`：agent-hub-cli 入口。
 - `scripts/`：Node.js 构建、发布与版本管理脚本。
-- `skills/`：内置 Skill。
-- `docs/`：产品、架构、开发规范；后续规划统一放在 `docs/plans/agent-hub.md`。
+- `skills/`：随产品分发的内置 Skill。
+- `.agents/skills/rust-dev/`：随仓库共享的项目内部开发、UI、测试与提交规范。
+- `.agents/skills/github-cli/`：GitHub 版本发布、自动 tag、Actions 与产物验收规范。
+- `docs/`：产品、架构与 ADR；后续规划统一放在 `docs/plans/agent-hub.md`。
 - `.scratch/<feature>/`：存放可提交的规格、任务、依赖和开发状态；它是本仓库的正式 Issue tracker。
 - `.github/workflows/`：CI、跨平台安装包构建和主页部署。
 
@@ -65,7 +67,7 @@
 
 ### Project development
 
-在本仓库实现功能、修复缺陷、调整 UI 或审查代码时，使用 [rust-dev](.agents/skills/rust-dev/SKILL.md)，按任务读取其中的代码、UI 和交付规范。项目现行文档与有效 ADR 仍是规范的权威来源。
+在本仓库开发、调整 UI 或审查时，使用 [rust-dev](.agents/skills/rust-dev/SKILL.md)。发布版本或维护 GitHub Actions 时，使用 [github-cli](.agents/skills/github-cli/SKILL.md)。规范原文集中维护于这两个项目级 Skill；领域上下文、架构文档和有效 ADR 保留原位。
 
 ### Issue tracker
 

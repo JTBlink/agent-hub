@@ -41,13 +41,10 @@ export function CardActionMenu({
     openChangeRef.current = onOpenChange;
   }, [onOpenChange]);
 
-  const setOpenState = useCallback(
-    (next: MenuPos | null) => {
-      setPos(next);
-      openChangeRef.current?.(next !== null);
-    },
-    [],
-  );
+  const setOpenState = useCallback((next: MenuPos | null) => {
+    setPos(next);
+    openChangeRef.current?.(next !== null);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

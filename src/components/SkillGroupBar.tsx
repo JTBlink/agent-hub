@@ -118,7 +118,12 @@ export function SkillGroupBar({
               await onAddSkill(skill, agentKey);
               added++;
             } catch (e) {
-              failures.push({ skillId: skill.id, skillName: skill.name, agentKey, error: e });
+              failures.push({
+                skillId: skill.id,
+                skillName: skill.name,
+                agentKey,
+                error: e,
+              });
             }
           }
         }
@@ -162,7 +167,12 @@ export function SkillGroupBar({
               await onRemoveSkill(skill, agentKey);
               removed++;
             } catch (e) {
-              failures.push({ skillId: skill.id, skillName: skill.name, agentKey, error: e });
+              failures.push({
+                skillId: skill.id,
+                skillName: skill.name,
+                agentKey,
+                error: e,
+              });
             }
           }
         }

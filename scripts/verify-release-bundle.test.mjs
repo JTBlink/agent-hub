@@ -17,7 +17,9 @@ import { verifyReleaseBundle } from "./verify-release-bundle.mjs";
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "agent-hub-release-verify-"));
   const output = join(root, "release-assets");
-  mkdirSync(join(root, ".agents/skills/rust-dev/references"), { recursive: true });
+  mkdirSync(join(root, ".agents/skills/github-cli/references"), {
+    recursive: true,
+  });
   mkdirSync(join(output, "platform"), { recursive: true });
   writeFileSync(
     join(root, "package.json"),
@@ -28,7 +30,7 @@ function fixture() {
     "# 更新日志\n\n## [Unreleased]\n\n- 下一版本。\n",
   );
   writeFileSync(
-    join(root, ".agents/skills/rust-dev/references/platform-support.md"),
+    join(root, ".agents/skills/github-cli/references/platform-support.md"),
     "# 平台支持矩阵\n\nWindows、macOS、Linux。\n\n## 本地数据\n\n按平台保存。\n\n## 当前限制\n\n安装包默认未签名。\n",
   );
   for (const extension of [".exe", ".dmg", ".AppImage", ".deb"]) {
