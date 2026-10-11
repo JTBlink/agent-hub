@@ -3276,6 +3276,42 @@ pub fn delete_tag_internal(store: &SkillStore, name: &str) -> Result<Vec<String>
 }
 
 #[tauri::command]
+pub async fn rename_skill(
+    id: String,
+    new_name: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || rename_skill_internal(&store, &id, &new_name))
+        .await?
+}
+
+pub fn rename_skill_internal(store: &SkillStore, id: &str, new_name: &str) -> Result<(), AppError> {
+    let new_name = new_name.trim();
+    if new_name.is_empty() {
+        return Err(AppError::invalid_input("技能名称不能为空"));
+    }
+    let skill = store
+        .get_skill_by_id(id)
+        .map_err(AppError::db)?
+        .ok_or_else(|| AppError::not_found(format!("技能不存在：{id}")))?;
+    if skill.name == new_name {
+        return Ok(());
+    }
+    sync_metadata::with_repo_lock("rename skill", || {
+        store.rename_skill(id, new_name)?;
+        sync_metadata::ensure_skill_metadata_unlocked(store, id)?;
+        store.log_audit(
+            AuditDraft::new("rename")
+                .skill(id.to_string(), new_name.to_string())
+                .ok(),
+        );
+        Ok(())
+    })
+    .map_err(AppError::db)
+}
+
+#[tauri::command]
 pub async fn cancel_install(
     key: String,
     cancel_registry: State<'_, Arc<InstallCancelRegistry>>,

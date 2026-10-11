@@ -6,7 +6,7 @@
   "homepage": "https://jtblink.github.io/agent-hub/",
   "type": "module",
   "scripts": {
-    "dev": "pkill -f 'esbuild.*service' 2>/dev/null; vite",
+    "dev": "lsof -ti :1420 | xargs kill 2>/dev/null; sleep 0.3; lsof -ti :1420 | xargs kill -9 2>/dev/null; vite",
     "build": "tsc -b && vite build",
     "app:dev": "node scripts/build.mjs dev",
     "app:build": "node scripts/build.mjs build",

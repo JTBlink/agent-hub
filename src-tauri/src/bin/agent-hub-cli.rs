@@ -293,6 +293,13 @@ enum SkillsCommand {
         #[arg(long)]
         dry_run: bool,
     },
+    /// 重命名技能的显示名称。
+    Rename {
+        /// 技能 ID、名称、目录名或中央路径。
+        reference: String,
+        /// 新名称。
+        name: String,
+    },
     /// 添加、移除、重命名或列出技能标签。
     Tag(TagArgs),
 }
@@ -654,6 +661,14 @@ struct RemoveReport {
     deleted: usize,
     failed: Vec<String>,
     dry_run: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct SkillRenameReport {
+    ok: bool,
+    skill_id: String,
+    old_name: String,
+    new_name: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -1145,6 +1160,20 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
                 dry_run,
             )?;
             print_json(&report, json);
+        }
+        SkillsCommand::Rename { reference, name } => {
+            let skill = resolve_skill(store, &reference)?;
+            let old_name = skill.name.clone();
+            cmd::rename_skill_internal(store, &skill.id, &name).map_err(map_app_err)?;
+            print_json(
+                &SkillRenameReport {
+                    ok: true,
+                    skill_id: skill.id,
+                    old_name,
+                    new_name: name.trim().to_string(),
+                },
+                json,
+            );
         }
         SkillsCommand::Tag(args) => run_tag(args, store, json)?,
     }

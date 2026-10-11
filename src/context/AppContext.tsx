@@ -537,7 +537,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         open={!!conflictState}
         title={i18n.t("targetConflict.title")}
         message={i18n.t("targetConflict.message")}
-        details={conflictState?.conflicts.map((c) => c.path)}
         confirmLabel={i18n.t("targetConflict.confirmAction")}
         tone="warning"
         onClose={() => setConflictState(null)}
@@ -547,7 +546,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
           await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
           setConflictState(null);
         }}
-      />
+      >
+        {conflictState && (
+          <div className="flex flex-wrap gap-2">
+            {conflictState.conflicts.map((c) => (
+              <span
+                key={c.path}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-[13px] text-secondary"
+              >
+                {c.path}
+                {c.is_skill && (
+                  <span className="rounded-full bg-accent-dark/20 px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                    Skill
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+      </ConfirmDialog>
       {children}
     </AppContext.Provider>
   );

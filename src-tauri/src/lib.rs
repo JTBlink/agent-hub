@@ -1090,6 +1090,7 @@ pub fn run() {
             commands::skills::set_skill_tags,
             commands::skills::rename_tag,
             commands::skills::delete_tag,
+            commands::skills::rename_skill,
             commands::skills::cancel_install,
             commands::skills::batch_import_folder,
             commands::skills::check_batch_import_conflicts,

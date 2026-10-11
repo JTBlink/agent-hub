@@ -447,6 +447,9 @@ export const renameTag = (oldName: string, newName: string) =>
 
 export const deleteTag = (name: string) => invoke<void>("delete_tag", { name });
 
+export const renameSkill = (id: string, newName: string) =>
+  invoke<void>("rename_skill", { id, newName });
+
 // ── Sync ──
 
 export const syncSkillToTool = (skillId: string, tool: string) =>
