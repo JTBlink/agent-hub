@@ -284,6 +284,7 @@ fn import_agent_local_skill_to_center(
             &existing.id,
             agent,
             scenario_service::DeployIntent::AdoptExisting(&source_path),
+            false,
         )?;
         return Ok(());
     }
@@ -327,6 +328,7 @@ fn import_agent_local_skill_to_center(
         &skill_record.id,
         agent,
         scenario_service::DeployIntent::AdoptExisting(&source_path),
+        false,
     ) {
         let _ = store.delete_skill(&skill_record.id);
         return Err(err);
@@ -546,6 +548,7 @@ pub fn backfill_stranded_agent_targets(store: &SkillStore) -> usize {
                 &matched.id,
                 &adapter.key,
                 scenario_service::DeployIntent::AdoptExisting(local_path),
+                false,
             ) {
                 Ok(()) => {
                     repaired += 1;
@@ -750,6 +753,7 @@ mod tests {
             &skill_id,
             "hermes",
             scenario_service::DeployIntent::Managed,
+            false,
         )
         .unwrap();
         scenario_service::apply_skills_to_tools(

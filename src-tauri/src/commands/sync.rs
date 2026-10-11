@@ -33,12 +33,14 @@ fn sync_skill_to_tool_internal(
     store: &SkillStore,
     skill_id: &str,
     tool: &str,
+    force: bool,
 ) -> Result<(), AppError> {
-    scenario_service::sync_single_skill_to_tool(
+    scenario_service::sync_single_skill_to_tool_with_force(
         store,
         skill_id,
         tool,
         scenario_service::DeployIntent::Managed,
+        force,
     )
 }
 
@@ -75,12 +77,14 @@ pub async fn sync_skill_to_tool(
     app: AppHandle,
     skill_id: String,
     tool: String,
+    force: Option<bool>,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
+    let force = force.unwrap_or(false);
     let result = tauri::async_runtime::spawn_blocking(move || {
         let outcome = (|| -> Result<(), AppError> {
-            sync_skill_to_tool_internal(&store, &skill_id, &tool)?;
+            sync_skill_to_tool_internal(&store, &skill_id, &tool, force)?;
 
             if let Ok(Some(active_id)) = store.get_active_scenario_id() {
                 let skill_ids = store
@@ -337,7 +341,7 @@ pub async fn set_skill_tool_toggle(
             == Some(skill_group_id.as_str());
         if is_active {
             if enabled {
-                sync_skill_to_tool_internal(&store, &skill_id, &tool)?;
+                sync_skill_to_tool_internal(&store, &skill_id, &tool, false)?;
             } else {
                 unsync_skill_for_tool_in_skill_group(&store, &skill_id, &tool)?;
             }
@@ -646,8 +650,8 @@ mod tests {
             .insert_skill(&sample_skill("second", "skill123", &second_dir))
             .unwrap();
 
-        sync_skill_to_tool_internal(&store, "first", "test_agent").unwrap();
-        sync_skill_to_tool_internal(&store, "second", "test_agent").unwrap();
+        sync_skill_to_tool_internal(&store, "first", "test_agent", false).unwrap();
+        sync_skill_to_tool_internal(&store, "second", "test_agent", false).unwrap();
 
         assert_eq!(
             fs::read_to_string(target_base.join("skill123/unique.txt")).unwrap(),

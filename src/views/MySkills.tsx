@@ -62,7 +62,8 @@ import type {
 import { skillLibraryContentKey } from "../lib/skillGroupMembership";
 import { matchesSkillSearch } from "../lib/skillSearch";
 import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
-import { getErrorMessage } from "../lib/error";
+import { getErrorMessage, isAppError } from "../lib/error";
+import type { TargetConflictDetail } from "../lib/error";
 import {
   DndContext,
   closestCenter,
@@ -230,6 +231,12 @@ export function MySkills() {
   const [togglingTarget, setTogglingTarget] = useState<{
     skillId: string;
     tool: string;
+  } | null>(null);
+  const [syncConflict, setSyncConflict] = useState<{
+    skillId: string;
+    tool: string;
+    displayName: string;
+    conflicts: TargetConflictDetail[];
   } | null>(null);
   const [gitStatus, setGitStatus] = useState<GitBackupStatus | null>(null);
   const [gitRemoteConfig, setGitRemoteConfig] = useState("");
