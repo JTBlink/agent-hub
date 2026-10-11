@@ -26,6 +26,8 @@ import { useApp } from "../context/AppContext";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
+import { ProjectBatchAgentDialog } from "../components/ProjectBatchAgentDialog";
+import { ProjectEnabledAgents } from "../components/ProjectEnabledAgents";
 import { BatchTagDialog } from "../components/BatchTagDialog";
 import { DetailSheet } from "../components/DetailSheet";
 import {
@@ -207,7 +209,7 @@ export function ProjectDetail() {
   );
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
   const [batchTagDialogOpen, setBatchTagDialogOpen] = useState(false);
-  const [batchToggling, setBatchToggling] = useState(false);
+  const [batchAgentMode, setBatchAgentMode] = useState<boolean | null>(null);
   const PROJECT_ADD_CALLOUT_KEY = "agent-hub.projectAddCalloutDismissed";
   const [showAddCallout, setShowAddCallout] = useState(() => {
     try {
@@ -435,7 +437,6 @@ export function ProjectDetail() {
     selectedIds,
     toggleSelect,
     isAllSelected,
-    anyDisabled,
     handleSelectAll,
     exitMultiSelect,
   } = useMultiSelect({
@@ -450,7 +451,8 @@ export function ProjectDetail() {
       filterMode,
     ]),
     scopeSignal: id ?? "",
-    escapeEnabled: !batchTagDialogOpen && !batchDeleteConfirm,
+    escapeEnabled:
+      !batchTagDialogOpen && !batchDeleteConfirm && batchAgentMode === null,
   });
 
   const exportTargets = useMemo(() => {
@@ -660,16 +662,6 @@ export function ProjectDetail() {
       ).length,
     [selectedSkills],
   );
-  const togglableSelectedCount = useMemo(
-    () =>
-      selectedSkills.filter((skill) =>
-        anyDisabled
-          ? skill.enabledCount !== skill.totalCount
-          : skill.enabledCount > 0,
-      ).length,
-    [selectedSkills, anyDisabled],
-  );
-
   const handleOpenDetail = async (skill: ProjectSkillEntry) => {
     setDetailSkill(skill);
     setDocContent(null);
@@ -988,61 +980,6 @@ export function ProjectDetail() {
     await Promise.all([loadSkills(), refreshProjects()]);
   };
 
-  const handleBatchToggleProject = async () => {
-    if (!id || batchToggling) return;
-    const enabling = anyDisabled;
-    let count = 0;
-    let failed = 0;
-    setBatchToggling(true);
-    try {
-      for (const skill of selectedSkills) {
-        try {
-          if (enabling && skill.enabledCount !== skill.totalCount) {
-            await Promise.all(
-              skill.variants.map((variant) =>
-                api.toggleProjectSkill(
-                  id,
-                  variant.relative_path,
-                  variant.agent,
-                  true,
-                ),
-              ),
-            );
-            count++;
-          } else if (!enabling && skill.enabledCount > 0) {
-            await Promise.all(
-              skill.variants.map((variant) =>
-                api.toggleProjectSkill(
-                  id,
-                  variant.relative_path,
-                  variant.agent,
-                  false,
-                ),
-              ),
-            );
-            count++;
-          }
-        } catch {
-          failed++;
-          // continue with remaining
-        }
-      }
-      if (count > 0) {
-        toast.success(
-          enabling
-            ? t("project.batchEnabled", { count })
-            : t("project.batchDisabled", { count }),
-        );
-      }
-      if (failed > 0) {
-        toast.error(t("project.batchToggleFailed", { count: failed }));
-      }
-      await loadSkills();
-    } finally {
-      setBatchToggling(false);
-    }
-  };
-
   const handleBatchUpdateCenter = async () => {
     if (!id) return;
     setBatchUpdatingCenter(true);
@@ -1207,13 +1144,14 @@ export function ProjectDetail() {
               {project.name}
               <span className="app-badge">{groupedSkills.length}</span>
             </h1>
-            <div
-              className="mt-1 flex items-center gap-1.5 text-[12px] leading-5 text-muted"
-            >
-              <span className="min-w-0 truncate" title={compactHomePath(project.path)}>
+            <div className="mt-1 flex items-center gap-1.5 text-[12px] leading-5 text-muted">
+              <span
+                className="min-w-0 truncate"
+                title={compactHomePath(project.path)}
+              >
                 {compactHomePath(project.path)}
                 {groupedSkills.length > 0 &&
-                  ` \u00B7 ${enabledCount} / ${groupedSkills.length} ${t("project.enabled")}`}
+                  ` \u00B7 ${t("project.batchAgents.summary", { active: enabledCount, total: groupedSkills.length })}`}
               </span>
               <SkillDirectoryActions path={project.path} compact />
             </div>
@@ -1476,25 +1414,20 @@ export function ProjectDetail() {
           selectedCount={selectedIds.size}
           isAllSelected={isAllSelected}
           actions={[
-            ...(project.supports_skill_toggle && togglableSelectedCount > 0
+            ...(project.supports_skill_toggle
               ? [
                   {
-                    key: "toggle",
+                    key: "enable-agents",
                     tone: "primary" as const,
-                    label: anyDisabled
-                      ? t("project.batchEnable", {
-                          count: togglableSelectedCount,
-                        })
-                      : t("project.batchDisable", {
-                          count: togglableSelectedCount,
-                        }),
-                    icon: anyDisabled ? (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    ) : (
-                      <Circle className="h-3.5 w-3.5" />
-                    ),
-                    busy: batchToggling,
-                    onSelect: handleBatchToggleProject,
+                    label: t("project.batchAgents.enable"),
+                    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+                    onSelect: () => setBatchAgentMode(true),
+                  },
+                  {
+                    key: "disable-agents",
+                    label: t("project.batchAgents.disable"),
+                    icon: <Circle className="h-3.5 w-3.5" />,
+                    onSelect: () => setBatchAgentMode(false),
                   },
                 ]
               : []),
@@ -1669,6 +1602,7 @@ export function ProjectDetail() {
                   />
 
                   <div className="px-3.5 pb-3">
+                    <ProjectEnabledAgents variants={skill.variants} />
                     <p className="text-[13px] leading-[18px] text-muted truncate">
                       {skill.description || "\u2014"}
                     </p>
@@ -1816,6 +1750,7 @@ export function ProjectDetail() {
                       {skill.files.length}
                     </span>
                   )}
+                  <ProjectEnabledAgents variants={skill.variants} />
                   <ProjectAgentDots
                     assignedAgents={assignedAgents}
                     targets={exportTargets}
@@ -1907,6 +1842,19 @@ export function ProjectDetail() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteSkill}
       />
+
+      {id && batchAgentMode !== null && (
+        <ProjectBatchAgentDialog
+          projectId={id}
+          skills={selectedSkills}
+          targets={exportTargets}
+          enabled={batchAgentMode}
+          onClose={() => setBatchAgentMode(null)}
+          onComplete={async () => {
+            await Promise.all([loadSkills(), refreshProjects()]);
+          }}
+        />
+      )}
 
       {/* Batch Delete Confirm Dialog */}
       <ConfirmDialog
