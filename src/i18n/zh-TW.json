@@ -1125,7 +1125,20 @@
     "batchEditTags": "標籤 ({{count}})",
     "batchTagsUpdated": "已更新 {{count}} 個中心 Skill 的標籤",
     "batchTagsFailed": "{{count}} 個中心 Skill 標籤更新失敗",
-    "batchTagScopeNote": "標籤儲存在中央技能庫，改動會影響所有使用這個 Skill 的專案。只屬於本專案的本機 Skill 不會被修改。"
+    "batchTagScopeNote": "標籤儲存在中央技能庫，改動會影響所有使用這個 Skill 的專案。只屬於本專案的本機 Skill 不會被修改。",
+    "batchAgents": {
+      "enable": "按 Agent 啟用",
+      "disable": "按 Agent 停用",
+      "enableHint": "已選 {{count}} 個技能。選擇要啟用的 Agent；缺少的技能將從中心庫安裝，已停用的副本將重新啟用。",
+      "disableHint": "已選 {{count}} 個技能。僅停用所選 Agent 的現有副本，保留其他 Agent 的狀態。",
+      "agentStatus": "{{active}} / {{total}} 已啟用",
+      "enabledOn": "專案已啟用：{{agents}}",
+      "none": "無",
+      "statusHint": "表示技能位於該 Agent 的專案啟用目錄；實際使用由 Agent 載入。",
+      "noAgents": "沒有已安裝且已啟用的 Agent",
+      "completed": "已更新 {{count}} 個 Agent 技能副本",
+      "summary": "{{active}} / {{total}} 個技能已在 Agent 中啟用"
+    }
   },
   "skillGroupActions": {
     "operationDetails": "查看詳情",

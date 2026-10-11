@@ -1209,7 +1209,20 @@
     "batchEditTags": "Tags ({{count}})",
     "batchTagsUpdated": "Tags updated for {{count}} center skills",
     "batchTagsFailed": "{{count}} center skills failed to update tags",
-    "batchTagScopeNote": "Tags live in the central library, so edits affect every project using these skills. Project-only local skills are left untouched."
+    "batchTagScopeNote": "Tags live in the central library, so edits affect every project using these skills. Project-only local skills are left untouched.",
+    "batchAgents": {
+      "enable": "Enable for agents",
+      "disable": "Disable for agents",
+      "enableHint": "{{count}} skills selected. Choose agents to enable. Missing skills are installed from the library; disabled copies are enabled.",
+      "disableHint": "{{count}} skills selected. Disable existing copies only for the chosen agents. Other agents keep their current state.",
+      "agentStatus": "{{active}} / {{total}} enabled",
+      "enabledOn": "Enabled in project: {{agents}}",
+      "none": "None",
+      "statusHint": "The skill is in this agent’s enabled project directory; the agent controls loading.",
+      "noAgents": "No installed, enabled agents",
+      "completed": "Updated {{count}} agent skill copies",
+      "summary": "{{active}} / {{total}} skills enabled for agents"
+    }
   },
   "skillGroupActions": {
     "operationDetails": "View details",

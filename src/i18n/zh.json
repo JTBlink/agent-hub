@@ -1209,7 +1209,20 @@
     "batchEditTags": "标签 ({{count}})",
     "batchTagsUpdated": "已更新 {{count}} 个中心 Skill 的标签",
     "batchTagsFailed": "{{count}} 个中心 Skill 标签更新失败",
-    "batchTagScopeNote": "标签保存在中央技能库里，改动会影响所有使用这个 Skill 的项目。只属于本项目的本地 Skill 不会被修改。"
+    "batchTagScopeNote": "标签保存在中央技能库里，改动会影响所有使用这个 Skill 的项目。只属于本项目的本地 Skill 不会被修改。",
+    "batchAgents": {
+      "enable": "按 Agent 启用",
+      "disable": "按 Agent 停用",
+      "enableHint": "已选 {{count}} 个技能。选择要启用的 Agent；缺失的技能将从中心库安装，已停用的副本将重新启用。",
+      "disableHint": "已选 {{count}} 个技能。仅停用所选 Agent 的现有副本，保留其他 Agent 的状态。",
+      "agentStatus": "{{active}} / {{total}} 已启用",
+      "enabledOn": "项目已启用：{{agents}}",
+      "none": "无",
+      "statusHint": "表示技能位于该 Agent 的项目启用目录；实际使用由 Agent 加载。",
+      "noAgents": "没有已安装且已启用的 Agent",
+      "completed": "已更新 {{count}} 个 Agent 技能副本",
+      "summary": "{{active}} / {{total}} 个技能已在 Agent 中启用"
+    }
   },
   "skillGroupActions": {
     "operationDetails": "查看详情",
