@@ -1,7 +1,7 @@
 # D04：稳定 Linux gh 凭据轮换测试
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D02
 
 ## Acceptance
@@ -20,3 +20,5 @@ Blocked by: D02
 - 通过仓库内固定可执行脚本及临时目录软链接读取每次响应；轮换只写响应数据，不再改写可执行 inode。测试覆盖实际 `auth token --hostname github.com` 参数及非交互环境，并保留轮换、非零退出、空和多行响应行为。
 - 目标单测与 Rust 全量测试通过（636 通过、8 忽略），Rust 格式、严格 Clippy、仓库格式和 shell 语法检查通过。生产凭据逻辑未改动。
 - 远端新提交 CI 验证待完成，完成后记录运行链接与结果。
+
+- 最终远端验证：[CI 38150713218](https://github.com/JTBlink/agent-hub/actions/runs/38150713218) 在修复提交 `53970d1` 全部通过，包含 Linux Rust 测试、严格 Clippy 与前端构建。

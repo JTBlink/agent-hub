@@ -1,7 +1,7 @@
 # D03：修复 v0.1.4 Actions 格式门禁
 
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D02
 
 ## Acceptance
@@ -28,3 +28,5 @@ Blocked by: D02
 
 - Standards：格式修改不改变应用行为，保持格式门禁；发布流程不重写已发布 tag，Actions 问题按最早失败步骤与新 SHA 验证。
 - Spec：已定位用户提供运行的失败点，修复六个文件并验证后续质量检查；远端验证结果将在完成后回写。
+
+- 最终远端验证：[CI 38150713218](https://github.com/JTBlink/agent-hub/actions/runs/38150713218) 在修复提交 `53970d1` 全部通过，包含 Linux Rust 测试、严格 Clippy 与前端构建。
