@@ -60,6 +60,8 @@ import type {
   SkillToolToggle,
 } from "../lib/tauri";
 import { skillLibraryContentKey } from "../lib/skillGroupMembership";
+import { matchesSkillSearch } from "../lib/skillSearch";
+import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
 import { getErrorMessage } from "../lib/error";
 import {
   DndContext,
@@ -366,10 +368,12 @@ export function MySkills() {
   const filtered = useMemo(() => {
     const result = skills.filter((skill) => {
       const displayName = skillDisplayNames.get(skill.id) || skill.name;
-      const matchesSearch =
-        skill.name.toLowerCase().includes(search.toLowerCase()) ||
-        displayName.toLowerCase().includes(search.toLowerCase()) ||
-        (skill.description || "").toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = matchesSkillSearch(
+        skill.name,
+        displayName,
+        skill.description,
+        search,
+      );
       if (!matchesSearch) return false;
 
       if (sourceFilters.size > 0 && !sourceFilters.has(skill.source_type))
@@ -1308,6 +1312,8 @@ export function MySkills() {
             : 0
         }
       />
+
+      <AgentControlSetupCard respectDismissal={false} />
 
       <div className="app-toolbar">
         <div className="flex flex-1 items-center gap-3">

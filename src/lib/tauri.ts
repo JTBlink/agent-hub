@@ -53,6 +53,31 @@ export interface SkillTarget {
   synced_at: number | null;
 }
 
+export interface AgentControlLocation {
+  path: string;
+  present: boolean;
+  occupied: boolean;
+  version: string | null;
+  outdated: boolean;
+}
+
+export interface AgentControlAgentLocation extends AgentControlLocation {
+  key: string;
+  display_name: string;
+  installed: boolean;
+  enabled: boolean;
+  managed: boolean;
+}
+
+export interface AgentControlStatus {
+  bundled_version: string;
+  library_skill_id: string | null;
+  library_source_type: string | null;
+  library_update_available: boolean;
+  library: AgentControlLocation;
+  agents: AgentControlAgentLocation[];
+}
+
 export interface SkillToolToggle {
   tool: string;
   display_name: string;
@@ -245,6 +270,9 @@ export const removeCustomTool = (key: string) =>
 
 export const getManagedSkills = () =>
   invoke<ManagedSkill[]>("get_managed_skills");
+
+export const getAgentControlStatus = () =>
+  invoke<AgentControlStatus>("get_agent_control_status");
 
 export const getSkillsForSkillGroup = (skillGroupId: string) =>
   invoke<ManagedSkill[]>("get_skills_for_skill_group", {

@@ -1,3 +1,4 @@
+pub mod agent_control;
 pub mod agent_workspace;
 pub mod app_updates;
 pub mod browse;
