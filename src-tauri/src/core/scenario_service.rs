@@ -104,7 +104,7 @@ pub fn collect_scenario_sync_targets(
     Ok(targets)
 }
 
-fn deployment_target(
+pub(crate) fn deployment_target(
     adapter: &tool_adapters::ToolAdapter,
     target_name: &str,
     skill_id: &str,

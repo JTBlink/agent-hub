@@ -1065,6 +1065,7 @@ pub fn run() {
             commands::tools::remove_custom_tool,
             // Skills
             commands::skills::get_managed_skills,
+            commands::agent_control::get_agent_control_status,
             commands::skills::get_skills_for_skill_group,
             commands::skills::get_skill_document,
             commands::skills::get_source_skill_document,

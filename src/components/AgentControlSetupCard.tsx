@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Terminal, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { getErrorMessage } from "../lib/error";
 import * as api from "../lib/tauri";
 import { MANAGE_SKILLS_SOURCE } from "../lib/distribution";
 import { AgentIcon } from "./AgentIcon";
+import {
+  agentControlCandidates,
+  agentControlMode,
+  isAgentControlPromptDismissed,
+} from "./agentControlPrompt";
 
 /** Dismissal flag, same shape as the backup first-run prompt. */
 const PROMPT_SETTING_KEY = "agent_control_setup_prompt";
@@ -16,18 +22,25 @@ const SKILL_NAME = "manage-skills";
 const SKILL_SOURCE = MANAGE_SKILLS_SOURCE;
 
 /**
- * One-time pointer to a capability nothing else advertises: an agent can drive
- * the library itself. It exists only because the skill is undiscoverable, not
- * because managing it needs a home of its own — once the skill is in the
- * library, adding or removing agents is the agent badge row on its card, and
- * a second control for the same state would be a second signal for it.
- *
- * So this renders only while the skill is absent, and never again afterwards.
+ * Entry for installing, deploying, or updating the bundled management Skill.
+ * The status comes from the actual library and Agent paths, not the saved name.
  */
-export function AgentControlSetupCard() {
+export function AgentControlSetupCard({
+  respectDismissal = true,
+}: {
+  respectDismissal?: boolean;
+}) {
   const { t } = useTranslation();
-  const { tools, managedSkills, loading, refreshManagedSkills } = useApp();
+  const navigate = useNavigate();
+  const {
+    tools,
+    managedSkills,
+    loading,
+    refreshManagedSkills,
+    openSkillDetailById,
+  } = useApp();
   const [dismissed, setDismissed] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<api.AgentControlStatus | null>(null);
   const [expanded, setExpanded] = useState(false);
   /**
    * Deliberately empty: pre-ticking every installed agent would make one click
@@ -38,25 +51,35 @@ export function AgentControlSetupCard() {
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const alreadyInstalled = useMemo(
-    () => managedSkills.some((skill) => skill.name === SKILL_NAME),
-    [managedSkills],
-  );
+  const refreshStatus = useCallback(async () => {
+    setStatus(await api.getAgentControlStatus());
+  }, []);
 
+  useEffect(() => {
+    void refreshStatus().catch((error) => {
+      console.error("Failed to inspect manage-skills paths:", error);
+    });
+  }, [refreshStatus, managedSkills, tools]);
+
+  const mode =
+    status && dismissed !== null
+      ? agentControlMode(status, respectDismissal && dismissed)
+      : null;
   const candidates = useMemo(
-    () => tools.filter((tool) => tool.installed && tool.enabled),
-    [tools],
+    () => (status ? agentControlCandidates(status) : []),
+    [status],
   );
+  const needsLibraryUpdate =
+    status?.library.outdated || status?.library_update_available || false;
 
   useEffect(() => {
     void api
       .getSettings(PROMPT_SETTING_KEY)
       .catch(() => null)
-      .then((flag) => setDismissed(Boolean(flag)));
+      .then((flag) => setDismissed(isAgentControlPromptDismissed(flag)));
   }, []);
 
-  if (loading || dismissed === null || dismissed || alreadyInstalled)
-    return null;
+  if (loading || !status || dismissed === null || !mode) return null;
 
   const dismiss = async () => {
     setDismissed(true);
@@ -71,10 +94,35 @@ export function AgentControlSetupCard() {
     );
 
   const enable = async () => {
-    if (busy || selected.length === 0) return;
+    if (busy || (mode === "deploy" && selected.length === 0)) return;
+    if (mode === "attention") {
+      if (status.library_skill_id) openSkillDetailById(status.library_skill_id);
+      navigate("/my-skills");
+      return;
+    }
     setBusy(true);
     try {
-      await api.installGit(SKILL_SOURCE);
+      if (mode === "install") {
+        await api.installGit(SKILL_SOURCE);
+      } else if (mode === "update" && needsLibraryUpdate) {
+        if (
+          status.library_source_type !== "git" &&
+          status.library_source_type !== "skillssh"
+        ) {
+          if (status.library_skill_id)
+            openSkillDetailById(status.library_skill_id);
+          navigate("/my-skills");
+          toast.info(t("agentControl.updateSourceManual"));
+          return;
+        }
+        const result = await api.updateSkill(status.library_skill_id!);
+        if (result.pending_removals.length > 0) {
+          openSkillDetailById(status.library_skill_id!);
+          navigate("/my-skills");
+          toast.info(t("agentControl.updateNeedsReview"));
+          return;
+        }
+      }
       const skills = await api.getManagedSkills();
       const installed = skills.find((skill) => skill.name === SKILL_NAME);
       if (!installed) {
@@ -83,8 +131,13 @@ export function AgentControlSetupCard() {
       for (const key of selected) {
         await api.syncSkillToTool(installed.id, key);
       }
-      toast.success(t("agentControl.done", { count: selected.length }));
-      await api.setSettings(PROMPT_SETTING_KEY, "installed").catch(() => {});
+      toast.success(
+        mode === "update"
+          ? t("agentControl.updated")
+          : selected.length > 0
+            ? t("agentControl.done", { count: selected.length })
+            : t("agentControl.installedToLibrary"),
+      );
     } catch (e) {
       toast.error(getErrorMessage(e, t("agentControl.errorGeneric")));
     } finally {
@@ -92,6 +145,7 @@ export function AgentControlSetupCard() {
       // some agents deployed, and leaving the card up would send the user
       // back through `installGit` on the next click.
       await refreshManagedSkills();
+      await refreshStatus().catch(() => {});
       setBusy(false);
     }
   };
@@ -104,41 +158,78 @@ export function AgentControlSetupCard() {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-[14px] font-semibold text-primary">
-            {t("agentControl.title")}
+            {t(`agentControl.${mode}Title`)}
           </h3>
           <p className="mt-0.5 text-[12px] leading-5 text-muted">
-            {t("agentControl.body")}
+            {t(`agentControl.${mode}Body`, {
+              version: status.bundled_version,
+            })}
           </p>
 
           {expanded && (
             <div className="mt-3">
-              <p className="app-section-title mb-2">
-                {t("agentControl.pickAgents")}
+              <p className="break-all text-[11px] text-faint">
+                {t("agentControl.libraryPath")}: {status.library.path}
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {candidates.map((tool) => {
-                  const on = selected.includes(tool.key);
-                  return (
-                    <button
-                      key={tool.key}
-                      onClick={() => toggle(tool.key)}
-                      disabled={busy}
-                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all duration-150 disabled:opacity-50 ${
-                        on
-                          ? "border-accent bg-accent-bg text-accent"
-                          : "border-border-subtle bg-surface-active text-muted"
-                      }`}
+              {mode === "attention" &&
+                status.agents
+                  .filter(
+                    (agent) =>
+                      agent.installed &&
+                      agent.enabled &&
+                      agent.occupied &&
+                      (!agent.present || (agent.outdated && !agent.managed)),
+                  )
+                  .map((agent) => (
+                    <p
+                      key={agent.key}
+                      className="mt-1 break-all text-[11px] text-faint"
                     >
-                      <AgentIcon
-                        agentKey={tool.key}
-                        displayName={tool.display_name}
-                        className="h-4 w-4 rounded-[4px]"
-                      />
-                      {tool.display_name}
-                    </button>
-                  );
-                })}
-              </div>
+                      {agent.display_name}: {agent.path}
+                    </p>
+                  ))}
+              {candidates.length > 0 && mode !== "attention" && (
+                <>
+                  <p className="app-section-title mb-2 mt-3">
+                    {t("agentControl.pickAgents")}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {candidates.map((agent) => {
+                      const on = selected.includes(agent.key);
+                      return (
+                        <button
+                          key={agent.key}
+                          onClick={() => toggle(agent.key)}
+                          disabled={busy}
+                          title={agent.path}
+                          className={`rounded-md border px-2.5 py-1 text-left text-[11px] disabled:opacity-50 ${
+                            on
+                              ? "border-accent bg-accent-bg text-accent"
+                              : "border-border-subtle bg-surface-active text-muted"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <AgentIcon
+                              agentKey={agent.key}
+                              displayName={agent.display_name}
+                              className="h-4 w-4 rounded-[4px]"
+                            />
+                            {agent.display_name}
+                            {agent.outdated
+                              ? t("agentControl.oldVersion", {
+                                  version: agent.version ?? "?",
+                                })
+                              : t("agentControl.missing")}
+                          </span>
+                          <span className="mt-0.5 block max-w-64 truncate text-faint">
+                            {agent.path}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -147,29 +238,37 @@ export function AgentControlSetupCard() {
           {expanded ? (
             <button
               onClick={enable}
-              disabled={busy || selected.length === 0}
+              disabled={
+                busy ||
+                (mode === "deploy" && selected.length === 0) ||
+                (mode === "update" &&
+                  !needsLibraryUpdate &&
+                  selected.length === 0)
+              }
               className="app-button-primary h-[34px] disabled:opacity-50"
             >
               {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {selected.length === 0
-                ? t("agentControl.confirmEmpty")
-                : t("agentControl.confirm", { count: selected.length })}
+              {mode === "install" && selected.length === 0
+                ? t("agentControl.installLibraryAction")
+                : t(`agentControl.${mode}Action`)}
             </button>
           ) : (
             <button
               onClick={() => setExpanded(true)}
               className="app-button-secondary h-[34px]"
             >
-              {t("agentControl.cta")}
+              {t("agentControl.inspect")}
             </button>
           )}
-          <button
-            onClick={dismiss}
-            title={t("agentControl.dismiss")}
-            className="rounded-md p-1.5 text-faint transition-colors duration-150 hover:bg-surface-active hover:text-muted"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          {respectDismissal && (mode === "install" || mode === "deploy") && (
+            <button
+              onClick={dismiss}
+              title={t("agentControl.dismiss")}
+              className="rounded-md p-1.5 text-faint transition-colors duration-150 hover:bg-surface-active hover:text-muted"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>

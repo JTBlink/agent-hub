@@ -1,6 +1,6 @@
 ---
 name: manage-skills
-version: 1.1.0
+version: 1.1.1
 description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -44,6 +44,12 @@ description: Manage the user's shared agent-skill library via agent-hub-cli — 
 
    If nothing is printed at all, this skill doesn't apply — fall back to
    find-skills, or tell the user to install agent-hub.
+
+   If the stamped CLI reports that the database schema is newer than it
+   supports, stop and ask the user to open the current desktop app once so it
+   republishes the bundled CLI. Run the command again only after that. If the
+   error persists, the app itself needs an upgrade; do not use an older CLI
+   from PATH as a workaround.
 
 2. **Always pass `--json` when you parse output yourself.** Pretty-printed output is for the user; JSON is for you. Errors include `ok=false`, a stable `code`, and `message` on stderr with a non-zero exit code.
 

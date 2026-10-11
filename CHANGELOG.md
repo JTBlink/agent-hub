@@ -11,6 +11,7 @@
 - 技能组成员关系改为互斥：每个技能最多属于一个分组。添加技能到新组时自动从旧组移出，前端弹窗确认移动操作。DB 迁移 v9 添加 `skill_id` 唯一索引，CLI 报告 `moved_from` 字段。
 
 - `manage-skills` Skill 升级到 1.1.0：补充导出、清理和标签命令说明，并明确处理 skills.sh 目录条目失效导致的 `Skill not found` 错误，避免重复安装错误仓库根目录。
+- `manage-skills` Skill 升级到 1.1.1：CLI bridge 与数据库 schema 不兼容时提示重新打开当前应用，并停止使用旧 CLI。
 
 - 项目工作区的 Skills 列表支持按 Agent 筛选，可同时选择多个 Agent 查看对应的 Skill 变体。
 
@@ -70,6 +71,11 @@
 - 删除旧 V1 规划、原型和已替代 ADR；规划设计统一以 Skills Manager 实现为基线。
 
 ### Fixed
+
+- 修复 `manage-skills` 曾安装后被移除时，首页安装入口仍被历史状态隐藏的问题。
+- 首页根据技能库与 Agent 实际安装路径检查 `manage-skills`，对未部署、旧版本和路径冲突分别提示，并在 Skill 更新可用时提供更新入口。
+- 技能库搜索支持技能名漏写一个字母；在技能库页直接显示 `manage-skills` 的安装、部署或更新入口。
+- 修复相同应用版本重新构建后仍复用旧 CLI bridge 的问题，避免 Skill 命令因数据库 schema 不兼容而失败。
 
 - 修复技能库从旧共享目录迁移后，Codex 等 Agent 遗留软链接被误判为未托管而无法部署的问题；启动时仅重定向明确指向旧 AgentHub 技能库的链接，保留其他外部链接不变。
 

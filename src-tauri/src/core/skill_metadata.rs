@@ -46,7 +46,7 @@ fn parse_skill_md_with_candidates(dir: &Path, candidates: &[&str]) -> SkillMeta 
     }
 }
 
-fn parse_frontmatter(content: &str) -> SkillMeta {
+pub(crate) fn parse_frontmatter(content: &str) -> SkillMeta {
     let trimmed = content.trim();
     if !trimmed.starts_with("---") {
         return SkillMeta {

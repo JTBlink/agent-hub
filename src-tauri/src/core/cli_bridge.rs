@@ -29,6 +29,8 @@
 //! small text file, so it can still be removed when the locked binary cannot.
 
 use anyhow::{bail, Context, Result};
+use sha2::{Digest, Sha256};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -175,18 +177,47 @@ fn verify(path: &Path, expected_version: &str) -> Result<()> {
 pub fn ensure_bridge(app_version: &str) {
     match ensure_bridge_inner(app_version) {
         Ok(path) => log::info!("cli bridge: ready at {}", path.display()),
-        Err(e) => log::warn!("cli bridge: not available: {e:#}"),
+        Err(e) => {
+            // A missing sidecar or failed content check must not leave a
+            // previously stamped, possibly incompatible CLI trusted by skills.
+            if let Err(invalidate_error) = invalidate_bridge() {
+                log::warn!("cli bridge: could not invalidate old copy: {invalidate_error:#}");
+            }
+            log::warn!("cli bridge: not available: {e:#}");
+        }
     }
 }
 
 fn ensure_bridge_inner(app_version: &str) -> Result<PathBuf> {
-    // Fast path: this version already published and still present. Checked
-    // before anything is removed so an ordinary launch does not spend 15 MB of
-    // copying, and so a running agent's binary is not disturbed for no reason.
-    if read_stamp().as_deref() == Some(app_version) && bridge_path().is_file() {
+    let source = bundled_cli()?;
+    ensure_bridge_from(&source, app_version)
+}
+
+fn file_digest(path: &Path) -> Result<[u8; 32]> {
+    let mut file = std::fs::File::open(path)?;
+    let mut digest = Sha256::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let count = file.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        digest.update(&buffer[..count]);
+    }
+    Ok(digest.finalize().into())
+}
+
+fn ensure_bridge_from(source: &Path, app_version: &str) -> Result<PathBuf> {
+    // Rebuilding with the same VERSION can change the CLI and its database
+    // compatibility. A version-only fast path left an older binary stamped as
+    // current, so compare the bundled and published bytes before trusting it.
+    if read_stamp().as_deref() == Some(app_version)
+        && bridge_path().is_file()
+        && file_digest(source)? == file_digest(&bridge_path())?
+    {
         return Ok(bridge_path());
     }
-    publish_from(&bundled_cli()?, app_version)
+    publish_from(source, app_version)
 }
 
 fn publish_from(source: &Path, app_version: &str) -> Result<PathBuf> {
@@ -295,6 +326,34 @@ mod tests {
         assert!(bridge_path().is_file());
         assert_eq!(read_stamp().as_deref(), Some("9.9.9"));
 
+        central_repo::set_test_home_dir_override(None);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn same_version_rebuild_replaces_an_older_cli() {
+        let _lock = central_repo::test_base_dir_lock();
+        let tmp = tempdir().unwrap();
+        central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+        let src_dir = tmp.path().join("bundle");
+        std::fs::create_dir_all(&src_dir).unwrap();
+
+        let source = fake_cli(&src_dir, "9.9.9");
+        ensure_bridge_from(&source, "9.9.9").unwrap();
+        let original = file_digest(&bridge_path()).unwrap();
+        std::fs::write(
+            &source,
+            "#!/bin/sh\necho 'agent-hub-cli 9.9.9'\n# rebuilt\n",
+        )
+        .unwrap();
+        ensure_bridge_from(&source, "9.9.9").unwrap();
+
+        assert_ne!(file_digest(&bridge_path()).unwrap(), original);
+        assert_eq!(
+            file_digest(&bridge_path()).unwrap(),
+            file_digest(&source).unwrap()
+        );
+        assert_eq!(read_stamp().as_deref(), Some("9.9.9"));
         central_repo::set_test_home_dir_override(None);
     }
 
