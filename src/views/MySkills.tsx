@@ -1,3 +1,8 @@
+import {
+  canRefreshSkill,
+  skillUpdateBadge,
+} from "../lib/skillUpdatePresentation";
+import { SkillImportProvenance } from "../components/SkillImportProvenance";
 import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -63,7 +68,10 @@ import { skillLibraryContentKey } from "../lib/skillGroupMembership";
 import { matchesSkillSearch } from "../lib/skillSearch";
 import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
 import { getErrorMessage, isAppError } from "../lib/error";
-import { SkillTargetConflictDialog, type SkillTargetConflict } from "../components/SkillTargetConflictDialog";
+import {
+  SkillTargetConflictDialog,
+  type SkillTargetConflict,
+} from "../components/SkillTargetConflictDialog";
 import {
   DndContext,
   closestCenter,
@@ -165,15 +173,6 @@ function sourceRefLabel(skill: ManagedSkill): string | null {
   return null;
 }
 
-function canRefreshSkill(skill: ManagedSkill) {
-  return (
-    skill.source_type === "git" ||
-    skill.source_type === "skillssh" ||
-    ((skill.source_type === "local" || skill.source_type === "import") &&
-      !!skill.source_ref)
-  );
-}
-
 function hasAvailableUpdate(skill: ManagedSkill) {
   return skill.update_status === "update_available" && canRefreshSkill(skill);
 }
@@ -232,7 +231,9 @@ export function MySkills() {
     skillId: string;
     tool: string;
   } | null>(null);
-  const [syncConflict, setSyncConflict] = useState<SkillTargetConflict | null>(null);
+  const [syncConflict, setSyncConflict] = useState<SkillTargetConflict | null>(
+    null,
+  );
   const [gitStatus, setGitStatus] = useState<GitBackupStatus | null>(null);
   const [gitRemoteConfig, setGitRemoteConfig] = useState("");
   const [tagEditSkillId, setTagEditSkillId] = useState<string | null>(null);
@@ -1287,28 +1288,6 @@ export function MySkills() {
       ? t("mySkills.updateActions.reimport")
       : t("mySkills.updateActions.update");
 
-  const statusBadge = (skill: ManagedSkill) => {
-    if (skill.update_status === "update_available") {
-      return {
-        label: "Update",
-        className: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
-      };
-    }
-    if (skill.update_status === "source_missing") {
-      return {
-        label: t("mySkills.updateStatus.sourceMissing"),
-        className: "bg-red-500/10 text-red-600 dark:text-red-300",
-      };
-    }
-    if (skill.update_status === "error") {
-      return {
-        label: t("mySkills.updateStatus.error"),
-        className: "bg-red-500/10 text-red-600 dark:text-red-300",
-      };
-    }
-    return null;
-  };
-
   return (
     <div className="app-page">
       <div className="app-page-header pr-2 pb-1 flex items-center justify-between gap-3">
@@ -1671,17 +1650,13 @@ export function MySkills() {
                 const enabledInSkillGroup = viewedSkillGroup
                   ? skill.skill_group_ids.includes(viewedSkillGroup.id)
                   : false;
-                const badge = statusBadge(skill);
+                const badge = skillUpdateBadge(skill, t);
                 const hasUpdate =
                   skill.update_status === "update_available" &&
                   canRefresh(skill);
                 // The header pill is hidden in multi-select, so the body badge has to
                 // take over — otherwise the update state vanishes entirely.
                 const showUpdatePill = hasUpdate && !isMultiSelect;
-                const isMissingLocalSource =
-                  skill.update_status === "source_missing" &&
-                  (skill.source_type === "local" ||
-                    skill.source_type === "import");
                 const displayName =
                   skillDisplayNames.get(skill.id) || skill.name;
 
@@ -1885,30 +1860,6 @@ export function MySkills() {
                                   >
                                     {badge.label}
                                   </span>
-                                )}
-                                {isMissingLocalSource && (
-                                  <>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRelinkSource(skill);
-                                      }}
-                                      disabled={updatingSkillId === skill.id}
-                                      className="rounded-full border border-border-subtle px-2 py-0.5 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
-                                    >
-                                      {t("mySkills.updateActions.relink")}
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDetachSource(skill);
-                                      }}
-                                      disabled={updatingSkillId === skill.id}
-                                      className="rounded-full border border-border-subtle px-2 py-0.5 text-[12px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-                                    >
-                                      {t("mySkills.updateActions.detachSource")}
-                                    </button>
-                                  </>
                                 )}
                               </div>
                             )}
@@ -2245,31 +2196,6 @@ export function MySkills() {
                           )}
                         </div>
 
-                        {isMissingLocalSource && !isMultiSelect && (
-                          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRelinkSource(skill);
-                              }}
-                              disabled={updatingSkillId === skill.id}
-                              className="rounded px-2 py-0.5 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
-                            >
-                              {t("mySkills.updateActions.relink")}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDetachSource(skill);
-                              }}
-                              disabled={updatingSkillId === skill.id}
-                              className="rounded px-2 py-0.5 text-[13px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-                            >
-                              {t("mySkills.updateActions.detachSource")}
-                            </button>
-                          </div>
-                        )}
-
                         {!isMultiSelect && (
                           <div className="flex shrink-0 items-center gap-2">
                             <CardActionMenu
@@ -2359,6 +2285,16 @@ export function MySkills() {
       <SkillDetailPanel
         key={selectedSkill?.id ?? "skill-detail-empty"}
         skill={selectedSkill}
+        sourceInfo={
+          selectedSkill ? (
+            <SkillImportProvenance
+              skill={selectedSkill}
+              busy={updatingSkillId === selectedSkill.id}
+              onRelink={() => void handleRelinkSource(selectedSkill)}
+              onDetach={() => void handleDetachSource(selectedSkill)}
+            />
+          ) : undefined
+        }
         onClose={closeSkillDetail}
         tools={tools}
         skillGroups={skillGroups}
@@ -2447,7 +2383,11 @@ export function MySkills() {
       />
       <SkillTargetConflictDialog
         conflict={syncConflict}
-        skillName={skills.find((skill) => skill.id === syncConflict?.skillId)?.name ?? syncConflict?.skillId ?? ""}
+        skillName={
+          skills.find((skill) => skill.id === syncConflict?.skillId)?.name ??
+          syncConflict?.skillId ??
+          ""
+        }
         onClose={() => setSyncConflict(null)}
         onInstalled={refreshManagedSkills}
       />

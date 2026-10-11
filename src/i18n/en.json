@@ -589,6 +589,10 @@
       "switchGroup": "Switch group",
       "removeFromGroup": "Remove from group",
       "movedTo": "Moved {{skill}} to “{{group}}”"
+    },
+    "importProvenance": {
+      "title": "Import origin",
+      "hint": "Records where this skill was imported from. Moving or deleting the original path does not affect the library copy."
     }
   },
   "install": {
