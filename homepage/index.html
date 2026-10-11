@@ -3,139 +3,350 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>agent-hub · AI Agent Skills 工作台</title>
+    <meta name="theme-color" content="#08101f" />
     <meta
       name="description"
-      content="本地优先的 AI Agent Skills 工作台，管理技能库、项目工作空间、Preset 和 Git 备份。"
+      content="AgentHub 是本地优先的 AI Agent Skills 工作台。统一管理技能库与技能组，为不同 Agent 和项目部署技能，用 Git 备份与恢复。"
     />
+    <title>AgentHub · 让每个 Agent 用上合适的 Skills</title>
     <link rel="icon" href="./assets/app-icon.svg" />
-    <style>
-      :root {
-        color-scheme: dark;
-        font-family: Inter, system-ui, sans-serif;
-        background: #08101f;
-        color: #edf4ff;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        background: radial-gradient(
-          ellipse at top right,
-          #182748,
-          transparent 65%
-        );
-        min-height: 100vh;
-      }
-      main {
-        max-width: 1060px;
-        margin: auto;
-        padding: 64px 24px;
-      }
-      header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      }
-      header img {
-        width: 72px;
-        height: 72px;
-      }
-      header strong {
-        font-size: 24px;
-      }
-      h1 {
-        font-size: clamp(36px, 6vw, 64px);
-        line-height: 1.15;
-        max-width: 800px;
-        margin: 64px 0 24px;
-      }
-      p {
-        color: #a7b9d6;
-        line-height: 1.8;
-        max-width: 720px;
-      }
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin: 32px 0 56px;
-      }
-      a {
-        color: #66b5ff;
-        text-underline-offset: 4px;
-      }
-      .actions a {
-        padding: 14px 24px;
-        border: 1px solid #263b67;
-        border-radius: 12px;
-        text-decoration: none;
-      }
-      .actions a:first-child {
-        background: #168bff;
-        color: white;
-      }
-      .features {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-        gap: 20px;
-      }
-      article {
-        background: #111d35;
-        border: 1px solid #263b67;
-        border-radius: 16px;
-        padding: 24px;
-      }
-      article h2 {
-        font-size: 20px;
-        color: #42d9b1;
-      }
-      article:nth-child(2) h2 {
-        color: #9b9cff;
-      }
-      footer {
-        margin-top: 48px;
-        color: #a7b9d6;
-      }
-    </style>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./preview.js" defer></script>
   </head>
   <body>
-    <main>
-      <header>
-        <img src="./assets/app-icon.svg" alt="agent-hub Logo" /><strong
-          >agent-hub</strong
-        >
-      </header>
-      <h1>让 Skills 在你的 Agent 工作空间中井然有序</h1>
-      <p>
-        本地优先的桌面工作台，统一管理技能库、Preset、全局和项目部署。基于
-        Skills Manager 二次开发，保留 agent-hub 的视觉风格。
-      </p>
-      <div class="actions">
-        <a href="https://github.com/JTBlink/agent-hub/releases">查看发布版本</a>
-        <a href="https://github.com/JTBlink/agent-hub">源码与开发指南</a>
-      </div>
-      <section class="features" aria-label="当前功能">
-        <article>
-          <h2>技能库</h2>
-          <p>发现、导入、组织与更新 Skills，通过标签和 Preset 管理技能集合。</p>
-        </article>
-        <article>
-          <h2>Agent 工作空间</h2>
-          <p>查看工具的全局与项目技能，按工作空间选择需要部署的能力。</p>
-        </article>
-        <article>
-          <h2>本地数据与 Git 备份</h2>
-          <p>
-            应用数据默认位于 ~/.agent-hub，可配置自己的 Git 远端备份技能库。
-          </p>
-        </article>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <header class="site-header wrap">
+      <a class="brand" href="#" aria-label="AgentHub 首页"
+        ><img src="./assets/app-icon.svg" alt="" width="36" height="36" /><span
+          >AgentHub</span
+        ></a
+      >
+      <nav aria-label="主导航">
+        <a href="#features">功能</a><a href="#workflow">工作流程</a
+        ><a href="#download">下载</a>
+        <a class="source-link" href="https://github.com/JTBlink/agent-hub"
+          >GitHub
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M7 17 17 7M7 7h10v10" /></svg
+        ></a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-intro">
+          <div>
+            <a
+              class="release"
+              href="https://github.com/JTBlink/agent-hub/releases"
+              ><span class="status-dot" aria-hidden="true"></span>开发版本
+              __APP_VERSION__<span class="release-note">查看发布记录</span
+              ><svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m9 6 6 6-6 6" /></svg
+            ></a>
+            <h1 id="hero-title">让每个 Agent<br />用上合适的 Skills。</h1>
+          </div>
+          <div class="hero-copy">
+            <p>
+              你的技能，不必散落各处。<br />在一个本地工作台里整理
+              Skills，按技能组分配到不同 Agent 和项目，让每个工作空间各就其位。
+            </p>
+            <div class="actions">
+              <a class="button primary" href="#download"
+                ><svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4" /></svg
+                >下载 AgentHub</a
+              ><a
+                class="button secondary"
+                href="https://github.com/JTBlink/agent-hub#开发与运行"
+                >阅读文档</a
+              >
+            </div>
+            <p class="hero-meta">本地优先 · Git 备份 · MIT 开源</p>
+          </div>
+        </div>
+        <div class="product-stage">
+          <div class="preview-toolbar">
+            <div class="preview-controls" aria-label="界面预览" hidden>
+              <button
+                type="button"
+                class="preview-button selected"
+                data-preview="library"
+                aria-controls="preview-library"
+                aria-pressed="true"
+              >
+                技能库
+              </button>
+              <button
+                type="button"
+                class="preview-button"
+                data-preview="dashboard"
+                aria-controls="preview-dashboard"
+                aria-pressed="false"
+              >
+                工作台概览
+              </button>
+            </div>
+            <span class="preview-hint"
+              ><span class="status-dot" aria-hidden="true"></span>你的
+              Skills，由你掌控</span
+            >
+          </div>
+          <figure id="preview-library" class="product-preview">
+            <a href="./assets/skill-library.png" aria-label="查看技能库完整截图"
+              ><img
+                src="./assets/skill-library.png"
+                alt="AgentHub 深色技能库界面：侧栏列出技能组、Agent 与项目，主区域展示技能描述、标签和部署状态。"
+                width="1440"
+                height="900"
+                fetchpriority="high"
+            /></a>
+            <figcaption>
+              技能库：集中整理内容、标签与部署状态。截图使用示例数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-dashboard" class="product-preview" hidden>
+            <a href="./assets/dashboard.png" aria-label="查看工作台概览完整截图"
+              ><img
+                src="./assets/dashboard.png"
+                alt="AgentHub 工作台概览：技能数量、部署覆盖、已连接 Agent、项目状态与最近更新的技能。"
+                width="1440"
+                height="900"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              工作台概览：查看 Agent、技能与项目状态。截图使用示例数据。
+            </figcaption>
+          </figure>
+          <noscript
+            ><p class="no-script">
+              还可以<a href="./assets/dashboard.png">查看工作台概览截图</a>。
+            </p></noscript
+          >
+        </div>
+        <div class="agents">
+          <p>在你熟悉的 Agent 之间协作</p>
+          <ul aria-label="支持的 Agent 示例">
+            <li>
+              <img
+                src="./assets/agent-icons/claude_code.svg"
+                alt=""
+                width="24"
+                height="24"
+              />Claude Code
+            </li>
+            <li>
+              <img
+                src="./assets/agent-icons/codex.svg"
+                alt=""
+                width="24"
+                height="24"
+              />Codex
+            </li>
+            <li>
+              <img
+                src="./assets/agent-icons/cursor.png"
+                alt=""
+                width="24"
+                height="24"
+              />Cursor
+            </li>
+            <li>
+              <img
+                src="./assets/agent-icons/opencode.png"
+                alt=""
+                width="24"
+                height="24"
+              />OpenCode
+            </li>
+            <li>
+              <img
+                src="./assets/agent-icons/hermes.png"
+                alt=""
+                width="24"
+                height="24"
+              />Hermes
+            </li>
+          </ul>
+        </div>
       </section>
-      <footer>
-        开发版本 __APP_VERSION__ ·
-        新架构以仓库当前文档为准，已发布安装包的功能请查看对应版本说明。
-      </footer>
+      <section
+        id="features"
+        class="features light-section"
+        aria-labelledby="features-title"
+      >
+        <div class="wrap">
+          <div class="section-heading">
+            <h2 id="features-title">技能多了，<br />管理依然清楚。</h2>
+            <p>
+              从一份 SKILL.md 到多个项目，<br />把内容、用途和部署关系放在一起看。
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article>
+              <div class="feature-icon blue">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" />
+                </svg>
+              </div>
+              <h3>一个技能库，少一些重复</h3>
+              <p>
+                从本地目录或 Git 来源导入
+                Skills，用标签和技能组整理内容。查看文档、检查更新，找到下一次工作需要的能力。
+              </p>
+              <ul class="feature-details">
+                <li>内容与来源一起管理</li>
+                <li>标签筛选与技能组归类</li>
+              </ul>
+            </article>
+            <article>
+              <div class="feature-icon violet">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M3 7h6l2 2h10v11H3V7ZM3 7V4h6l2 3M8 13h8m-8 3h5" />
+                </svg>
+              </div>
+              <h3>每个工作空间，各取所需</h3>
+              <p>
+                分别管理 Agent
+                的全局技能和项目技能。按用途批量添加技能组，查看部署与同步状态，让不同项目保持合适的配置。
+              </p>
+              <ul class="feature-details">
+                <li>全局与项目部署</li>
+                <li>技能组批量添加或移除</li>
+              </ul>
+            </article>
+            <article>
+              <div class="feature-icon teal">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <circle cx="6" cy="5" r="2" />
+                  <circle cx="6" cy="19" r="2" />
+                  <circle cx="18" cy="7" r="2" />
+                  <path d="M6 7v10m12-8v2c0 4-12 0-12 6" />
+                </svg>
+              </div>
+              <h3>本地保存，有备可回</h3>
+              <p>
+                技能与应用状态保存在本机。配置自己的 Git
+                远端备份技能库，按需恢复，并在内容发生冲突时检查差异。
+              </p>
+              <ul class="feature-details">
+                <li>Git 备份与恢复</li>
+                <li>桌面与 CLI 共用核心能力</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section
+        id="workflow"
+        class="workflow wrap"
+        aria-labelledby="workflow-title"
+      >
+        <div class="section-heading">
+          <h2 id="workflow-title">整理一次，<br />用在需要的地方。</h2>
+          <p>导入是收藏能力，部署是选择用途。<br />技能组把两者连接起来。</p>
+        </div>
+        <div
+          class="workflow-map"
+          aria-label="从本地或 Git 导入技能库，按技能组组织，再部署至 Agent 全局或项目工作空间"
+        >
+          <div class="flow-sources">
+            <span>本地 Skills</span><span>Git 仓库</span>
+          </div>
+          <svg class="flow-arrow" aria-hidden="true" viewBox="0 0 40 24">
+            <path d="M0 12h36m-8-7 8 7-8 7" />
+          </svg>
+          <div class="flow-library">
+            <img src="./assets/app-icon.svg" alt="" width="40" height="40" />
+            <div>
+              <strong>你的技能库</strong><span>内容 · 标签 · 来源</span>
+            </div>
+            <div class="flow-groups">
+              <span>开发</span><span>设计</span><span>研究</span>
+            </div>
+            <small>按用途组织技能组</small>
+          </div>
+          <svg class="flow-arrow" aria-hidden="true" viewBox="0 0 40 24">
+            <path d="M0 12h36m-8-7 8 7-8 7" />
+          </svg>
+          <div class="flow-targets">
+            <div>
+              <strong>Agent 全局工作空间</strong><span>常用能力，随时可用</span>
+            </div>
+            <div>
+              <strong>项目工作空间</strong><span>为当前项目选择技能</span>
+            </div>
+          </div>
+        </div>
+        <ol class="workflow-steps">
+          <li>
+            <h3>导入你的 Skills</h3>
+            <p>扫描已有技能，或从 Git 仓库和本地目录导入。</p>
+          </li>
+          <li>
+            <h3>按用途组成技能组</h3>
+            <p>为开发、设计或研究整理各自需要的技能集合。</p>
+          </li>
+          <li>
+            <h3>部署到工作空间</h3>
+            <p>选择 Agent 或项目，添加技能并查看同步状态。</p>
+          </li>
+        </ol>
+      </section>
+      <section
+        id="download"
+        class="download light-section"
+        aria-labelledby="download-title"
+      >
+        <div class="wrap download-grid">
+          <div class="download-intro">
+            <img src="./assets/app-icon.svg" alt="" width="56" height="56" />
+            <h2 id="download-title">给你的 Skills，<br />一个工作台。</h2>
+            <p>选择适合你的平台，在发布页下载对应安装包。</p>
+            <a
+              class="button primary"
+              href="https://github.com/JTBlink/agent-hub/releases"
+              >查看发布与安装包<svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M7 17 17 7M7 7h10v10" /></svg
+            ></a>
+            <p class="download-note">
+              本页对应开发版本 __APP_VERSION__。<br />安装包的可用性与功能以各版本发布说明为准。
+            </p>
+          </div>
+          <div class="install-guide">
+            <ul class="platforms">
+              <li><strong>macOS</strong><span>Universal · .dmg</span></li>
+              <li><strong>Windows</strong><span>安装程序 · .exe</span></li>
+              <li><strong>Linux</strong><span>.AppImage / .deb</span></li>
+            </ul>
+            <div class="quick-start">
+              <h3>从现有技能开始</h3>
+              <p>
+                安装后打开 AgentHub，扫描并导入已有 Skills，再选择需要部署的
+                Agent 或项目。
+              </p>
+              <a href="https://github.com/JTBlink/agent-hub#开发与运行"
+                >需要从源码运行？查看开发指南</a
+              >
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
+    <footer class="site-footer wrap">
+      <a class="brand" href="#"
+        ><img src="./assets/app-icon.svg" alt="" width="28" height="28" /><span
+          >AgentHub</span
+        ></a
+      >
+      <p>本地优先的 AI Agent Skills 工作台</p>
+      <nav aria-label="页脚导航">
+        <a href="https://github.com/JTBlink/agent-hub">源码</a
+        ><a href="https://github.com/JTBlink/agent-hub/blob/main/CHANGELOG.md"
+          >更新日志</a
+        ><a href="https://github.com/JTBlink/agent-hub/blob/main/LICENSE"
+          >MIT License</a
+        >
+      </nav>
+    </footer>
   </body>
 </html>

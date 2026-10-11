@@ -26,6 +26,7 @@ target
 # Node, Vite, Tauri, and frontend build output.
 node_modules/
 dist/
+_site/
 coverage/
 .vite/
 .playwright-cli/
