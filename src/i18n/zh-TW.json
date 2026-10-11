@@ -142,7 +142,7 @@
     "greeting": "你好！",
     "summary": "技能庫共 {{skills}} 個技能 · 已啟用 {{agents}} 個 Agent · {{projects}} 個專案",
     "librarySkills": "技能庫",
-    "syncCoverage": "同步覆蓋",
+    "deployed": "已部署",
     "connectedAgents": "已啟用 Agent",
     "synced": "已同步",
     "notSynced": "未同步",
@@ -377,7 +377,7 @@
     "noSkillGroup": "當前還沒有可用技能組",
     "currentSkillGroupFallback": "當前技能組",
     "skillGroupCount": "{{count}} 個技能組",
-    "syncCoverage": "同步覆蓋",
+    "deployed": "已部署",
     "syncSummary": "已同步 {{synced}} / {{total}}",
     "agentTogglesTitle": "全域工作區",
     "expandAgentToggles": "展開",
@@ -1119,6 +1119,7 @@
     "batchTagScopeNote": "標籤儲存在中央技能庫，改動會影響所有使用這個 Skill 的專案。只屬於本專案的本機 Skill 不會被修改。"
   },
   "skillGroupActions": {
+    "operationDetails": "查看詳情",
     "button": "套用技能組",
     "applyToProject": "將技能組套用到目前專案",
     "applyToGlobal": "將技能組套用到全域工作區",

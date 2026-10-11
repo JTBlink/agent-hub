@@ -68,7 +68,7 @@ export function Dashboard() {
       <div className="grid grid-cols-3 gap-3.5">
         {[
           {
-            href: null,
+            href: "/my-skills",
             title: t("dashboard.librarySkills"),
             value: String(totalSkills),
             icon: Layers,
@@ -76,8 +76,8 @@ export function Dashboard() {
             bg: "bg-accent-bg",
           },
           {
-            href: null,
-            title: t("dashboard.syncCoverage"),
+            href: "/my-skills",
+            title: t("dashboard.deployed"),
             value: coverageLabel,
             icon: syncCardIcon,
             color: syncCardColor,
@@ -108,20 +108,14 @@ export function Dashboard() {
               </div>
             </>
           );
-          const className =
-            "app-panel flex items-center justify-between px-4 py-4 transition-colors hover:border-border";
-          return stat.href ? (
+          return (
             <Link
               key={i}
               to={stat.href}
-              className={`${className} focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent`}
+              className="app-panel flex items-center justify-between px-4 py-4 transition-colors hover:border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             >
               {content}
             </Link>
-          ) : (
-            <div key={i} className={className}>
-              {content}
-            </div>
           );
         })}
       </div>

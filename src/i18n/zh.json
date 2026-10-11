@@ -142,7 +142,7 @@
     "greeting": "你好！",
     "summary": "技能库共 {{skills}} 个技能 · 已启用 {{agents}} 个 Agent · {{projects}} 个项目",
     "librarySkills": "技能库",
-    "syncCoverage": "同步覆盖",
+    "deployed": "已部署",
     "connectedAgents": "已启用 Agent",
     "synced": "已同步",
     "notSynced": "未同步",
@@ -377,7 +377,7 @@
     "noSkillGroup": "当前还没有可用技能组",
     "currentSkillGroupFallback": "当前技能组",
     "skillGroupCount": "{{count}} 个技能组",
-    "syncCoverage": "同步覆盖",
+    "deployed": "已部署",
     "syncSummary": "已同步 {{synced}} / {{total}}",
     "moreAgents": "+{{count}} 个 Agent",
     "syncMissing": "补齐 {{count}}",
@@ -1203,6 +1203,7 @@
     "batchTagScopeNote": "标签保存在中央技能库里，改动会影响所有使用这个 Skill 的项目。只属于本项目的本地 Skill 不会被修改。"
   },
   "skillGroupActions": {
+    "operationDetails": "查看详情",
     "button": "应用技能组",
     "applyToProject": "将技能组应用到当前项目",
     "applyToGlobal": "将技能组应用到全局工作区",
