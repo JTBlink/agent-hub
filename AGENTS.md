@@ -22,7 +22,7 @@
 
 新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。
 
-具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](docs/development/coding-standards.md)。
+具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](.agents/skills/rust-dev/references/coding-standards.md)。
 
 ## 构建、测试与开发命令
 
@@ -57,20 +57,24 @@
 
 ## 提交与变更审查规范
 
-完整的 Git 提交标题、正文、提交前检查和双轴审查要求见 [Git 提交规范](docs/development/commit-conventions.md)。需求状态必须回写 `.scratch/`。
+完整的 Git 提交标题、正文、提交前检查和双轴审查要求见 [Git 提交规范](.agents/skills/rust-dev/references/commit-conventions.md)。需求状态必须回写 `.scratch/`。
 
 每次提交前都必须检查本次变更是否影响用户可见行为、发布流程或兼容性；如有影响，及时在根目录 `CHANGELOG.md` 的 `Unreleased` 或对应版本章节中补充记录。
 
 ## Agent skills
 
+### Project development
+
+在本仓库实现功能、修复缺陷、调整 UI 或审查代码时，使用 [rust-dev](.agents/skills/rust-dev/SKILL.md)，按任务读取其中的代码、UI 和交付规范。项目现行文档与有效 ADR 仍是规范的权威来源。
+
 ### Issue tracker
 
-需求和开发状态使用仓库内 `.scratch/<feature>/` 的 Markdown 文件管理，不依赖 GitHub Issues。参见 `docs/agents/issue-tracker.md`。
+需求和开发状态使用仓库内 `.scratch/<feature>/` 的 Markdown 文件管理，不依赖 GitHub Issues。参见 `.agents/skills/rust-dev/references/issue-tracker.md`。
 
 ### Triage labels
 
-使用仓库默认的 Agent 分诊状态词汇。参见 `docs/agents/triage-labels.md`。
+使用仓库默认的 Agent 分诊状态词汇。参见 `.agents/skills/rust-dev/references/triage-labels.md`。
 
 ### Domain docs
 
-仓库采用单上下文领域文档布局；工作前读取根目录 `CONTEXT.md`（如存在）和相关 ADR。参见 `docs/agents/domain.md`。
+仓库采用单上下文领域文档布局；工作前读取根目录 `CONTEXT.md`（如存在）和相关 ADR。参见 `.agents/skills/rust-dev/references/domain.md`。

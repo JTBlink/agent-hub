@@ -10,7 +10,7 @@ Blocked by: B10
 
 ## Result
 
-- 新增[开发规范](../../../docs/development/coding-standards.md)，覆盖 SOLID、KISS / YAGNI / DRY、模块与契约、状态、错误、数据安全和验证。
+- 新增[开发规范](../../../.agents/skills/rust-dev/references/coding-standards.md)，覆盖 SOLID、KISS / YAGNI / DRY、模块与契约、状态、错误、数据安全和验证。
 - 更新 `AGENTS.md`、文档导航与开发指南；修正 ADR-0006 对已退役接口、安装计划与不存在的 bindings 文件的描述。拆分阈值与渐进治理决策保持不变。
 - 完成下方静态盘点；删除两个未引用的 Vite/React 模板资源，并移除未被调用的前端 `getToolOrder` 封装。未删除后端 command、依赖或兼容分支，未改变用户可见行为、发布流程或兼容性，无需更新 CHANGELOG。
 

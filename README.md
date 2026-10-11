@@ -56,6 +56,6 @@ docs/            当前架构、开发指南、ADR 和第三方来源说明
 
 ## 文档与许可
 
-[文档索引](docs/README.md) · [后续规划与设计](docs/plans/agent-hub.md) · [更新日志](CHANGELOG.md) · [开发指南](docs/development/README.md) · [任务记录](.scratch/skills-manager-integration/status.md)
+[文档索引](docs/README.md) · [后续规划与设计](docs/plans/agent-hub.md) · [更新日志](CHANGELOG.md) · [开发指南](.agents/skills/rust-dev/references/development.md) · [任务记录](.scratch/skills-manager-integration/status.md)
 
 本项目使用 [MIT 许可证](LICENSE)。导入代码的[来源说明与原许可证](docs/reference/skills-manager/README.md)保留；此前架构可通过 Git 历史查阅。
