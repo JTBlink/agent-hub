@@ -101,6 +101,19 @@ export interface SourceSkillDocument {
   revision: string;
 }
 
+export interface SkillFileEntry {
+  relative_path: string;
+  size: number;
+  is_text: boolean;
+}
+
+export interface SkillFileContent {
+  skill_id: string;
+  relative_path: string;
+  content_kind: "text" | "binary" | "too_large";
+  content: string | null;
+}
+
 export type SkillSourceDiffStatus = "added" | "removed" | "modified";
 export type SkillSourceDiffContentKind =
   "text" | "binary" | "too_large" | "permission_only";
@@ -287,6 +300,12 @@ export const getSourceSkillDocument = (skillId: string) =>
 
 export const getSkillSourceDiff = (skillId: string) =>
   invoke<SkillSourceDiff>("get_skill_source_diff", { skillId });
+
+export const getSkillFiles = (skillId: string) =>
+  invoke<SkillFileEntry[]>("get_skill_files", { skillId });
+
+export const readSkillFile = (skillId: string, relativePath: string) =>
+  invoke<SkillFileContent>("read_skill_file", { skillId, relativePath });
 
 export const deleteManagedSkill = (skillId: string) =>
   invoke<void>("delete_managed_skill", { skillId });

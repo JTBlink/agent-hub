@@ -1070,6 +1070,8 @@ pub fn run() {
             commands::skills::get_skill_document,
             commands::skills::get_source_skill_document,
             commands::skills::get_skill_source_diff,
+            commands::skills::get_skill_files,
+            commands::skills::read_skill_file,
             commands::skills::delete_managed_skill,
             commands::skills::delete_managed_skills,
             commands::skills::install_local,

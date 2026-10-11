@@ -622,6 +622,11 @@
       "centralVersion": "中心库副本",
       "localVersion": "本地来源内容",
       "sourceVersion": "远端来源内容"
+    },
+    "fileBrowser": {
+      "binary": "二进制文件 — 请使用外部编辑器打开",
+      "tooLarge": "文件过大，无法预览（{{size}}）",
+      "loadFailed": "加载文件内容失败"
     }
   },
   "install": {

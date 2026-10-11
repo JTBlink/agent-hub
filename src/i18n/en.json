@@ -622,6 +622,11 @@
       "centralVersion": "Central library copy",
       "localVersion": "Local source content",
       "sourceVersion": "Remote source content"
+    },
+    "fileBrowser": {
+      "binary": "Binary file — open in an external editor",
+      "tooLarge": "File too large to preview ({{size}})",
+      "loadFailed": "Failed to load file content"
     }
   },
   "install": {

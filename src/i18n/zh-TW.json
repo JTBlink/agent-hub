@@ -599,6 +599,11 @@
         "too_large": "檔案過大，僅顯示變更摘要",
         "permission_only": "僅執行權限變更"
       }
+    },
+    "fileBrowser": {
+      "binary": "二進位檔案 — 請使用外部編輯器開啟",
+      "tooLarge": "檔案過大，無法預覽（{{size}}）",
+      "loadFailed": "載入檔案內容失敗"
     }
   },
   "install": {
