@@ -20,7 +20,7 @@
 
 ### SOLID 落地规则
 
-SOLID 的具体落地规则统一见[开发规范](../development/coding-standards.md)。当前 Agent 目录规则由 `core/tool_adapters.rs` 管理，前端 bindings 位于 `src/lib/tauri.ts`；需要新抽象时以实际实现与调用方为依据。
+SOLID 的具体落地规则统一见[开发规范](../../.agents/skills/rust-dev/references/coding-standards.md)。当前 Agent 目录规则由 `core/tool_adapters.rs` 管理，前端 bindings 位于 `src/lib/tauri.ts`；需要新抽象时以实际实现与调用方为依据。
 
 ### 复用优先级
 

@@ -2,7 +2,7 @@
 
 本文件记录 AgentHub 的重大产品、架构和兼容性变更。格式参考 [Keep a Changelog](https://keepachangelog.com/)，尚未发布的内容统一放在 `Unreleased`。
 
-## [Unreleased]
+## [0.1.4] - 2026-10-11
 
 ### Changed
 
