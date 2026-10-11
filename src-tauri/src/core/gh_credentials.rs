@@ -53,20 +53,25 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn cli_login_is_read_without_caching_rejected_or_rotated_values() {
-        use std::os::unix::fs::PermissionsExt;
+        use std::os::unix::fs::symlink;
         let temp = tempfile::tempdir().unwrap();
         let executable = temp.path().join("gh");
-        let script = |response: &str| {
-            std::fs::write(&executable, format!("#!/bin/sh\n[ \"$1 $2 $3 $4\" = 'auth token --hostname github.com' ] || exit 3\n{response}\n")).unwrap();
-            std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o700)).unwrap();
-        };
-        script("printf 'fixture-one\\n'");
+        let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gh-auth-token.sh");
+        // Rewriting an executable between spawns can race with concurrent
+        // subprocesses on Linux. Rotate data, never the executable inode.
+        symlink(fixture, &executable).unwrap();
+        let response = temp.path().join("response");
+        std::fs::write(&response, "fixture-one\n").unwrap();
         assert_eq!(read_from(&executable).unwrap().password, "fixture-one");
-        script("printf 'fixture-two\\n'");
+        std::fs::write(&response, "fixture-two\n").unwrap();
         assert_eq!(read_from(&executable).unwrap().password, "fixture-two");
-        script("exit 1");
+        let rejected = temp.path().join("rejected");
+        std::fs::write(&rejected, "").unwrap();
         assert!(read_from(&executable).is_none());
-        script("printf '\\n'");
+        std::fs::remove_file(&rejected).unwrap();
+        std::fs::write(&response, "\n").unwrap();
+        assert!(read_from(&executable).is_none());
+        std::fs::write(&response, "fixture-one\nfixture-two\n").unwrap();
         assert!(read_from(&executable).is_none());
     }
 }

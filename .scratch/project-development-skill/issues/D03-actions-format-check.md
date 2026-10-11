@@ -22,6 +22,7 @@ Blocked by: D02
 - 本地完整格式检查通过；ESLint 无错误，有一条既有 `MySkills.tsx` Hook 依赖警告；前端 144 项测试和生产构建通过。Rust 格式、严格 Clippy 与测试通过（636 通过、8 忽略）。
 - 两个 Skill 均补充 MIT 与 `metadata.version: 1.0.0`，quick_validate 通过；87 个本地 Markdown 链接与个人路径检查通过。
 - 推送后手动 CI 验证待完成；原 v0.1.4 run 与 tag 保留，不移动 tag。
+- 修复提交 `a8a93d3` 已 push；[新 CI](https://github.com/JTBlink/agent-hub/actions/runs/38149970049) 的原格式门禁及前端、Rust 格式和 Clippy 均通过。其后发现 Linux gh fixture 测试失败，交由 D04 继续修复；本任务保留 claimed 直至远端完整验证。
 
 ## Review
 
