@@ -6,7 +6,7 @@
   "homepage": "https://jtblink.github.io/agent-hub/",
   "type": "module",
   "scripts": {
-    "dev": "lsof -ti :1420 | xargs kill 2>/dev/null; sleep 0.5; lsof -ti :1420 | xargs kill -9 2>/dev/null; vite",
+    "dev": "lsof -nP -tiTCP:1420 -sTCP:LISTEN | xargs kill 2>/dev/null; sleep 0.5; lsof -nP -tiTCP:1420 -sTCP:LISTEN | xargs kill -9 2>/dev/null; vite",
     "build": "tsc -b && vite build",
     "app:dev": "node scripts/build.mjs dev",
     "app:build": "node scripts/build.mjs build",

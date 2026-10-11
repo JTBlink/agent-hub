@@ -1,7 +1,5 @@
 pub(crate) use super::skill_deployment::detach_source_refs_from_adoption_target;
-pub use super::skill_deployment::{
-    sync_single_skill_to_tool, sync_single_skill_to_tool_with_force, DeployIntent,
-};
+pub use super::skill_deployment::{sync_single_skill_to_tool, DeployIntent};
 
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};

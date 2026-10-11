@@ -679,7 +679,21 @@ export function MySkills() {
         }
         await refreshManagedSkills();
       } catch (error: unknown) {
-        toast.error(getErrorMessage(error, t("common.error")));
+        if (
+          enabled &&
+          isAppError(error) &&
+          error.kind === "target_conflict" &&
+          error.details?.conflicts?.length
+        ) {
+          setSyncConflict({
+            skillId: skill.id,
+            tool: toolKey,
+            displayName,
+            conflicts: error.details.conflicts,
+          });
+        } else {
+          toast.error(getErrorMessage(error, t("common.error")));
+        }
         await refreshManagedSkills();
       } finally {
         setTogglingTarget(null);
@@ -2435,6 +2449,46 @@ export function MySkills() {
         onClose={cancelMove}
         onConfirm={confirmMove}
       />
+      <ConfirmDialog
+        open={!!syncConflict}
+        title={t("targetConflict.title")}
+        message={t("targetConflict.message")}
+        confirmLabel={t("targetConflict.confirmAction")}
+        tone="warning"
+        onClose={() => setSyncConflict(null)}
+        onConfirm={async () => {
+          if (!syncConflict) return;
+          await api.syncSkillToTool(syncConflict.skillId, syncConflict.tool, true);
+          toast.success(
+            t("mySkills.targetInstalled", {
+              name:
+                skills.find((s) => s.id === syncConflict.skillId)?.name ??
+                syncConflict.skillId,
+              agent: syncConflict.displayName,
+            }),
+          );
+          await refreshManagedSkills();
+          setSyncConflict(null);
+        }}
+      >
+        {syncConflict && (
+          <div className="flex flex-wrap gap-2">
+            {syncConflict.conflicts.map((c) => (
+              <span
+                key={c.path}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-[13px] text-secondary"
+              >
+                {c.path}
+                {c.is_skill && (
+                  <span className="rounded-full bg-accent-dark/20 px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                    Skill
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+      </ConfirmDialog>
       <TagRenameDialog
         open={tagToRename !== null}
         currentName={tagToRename || ""}

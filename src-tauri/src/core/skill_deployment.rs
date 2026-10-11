@@ -85,18 +85,8 @@ pub(crate) fn detach_source_refs_from_adoption_target(
     Ok(())
 }
 
-/// Deploy one skill, preserving unrecorded targets unless explicitly adopted.
-pub fn sync_single_skill_to_tool(
-    store: &SkillStore,
-    skill_id: &str,
-    tool: &str,
-    intent: DeployIntent<'_>,
-) -> Result<(), AppError> {
-    sync_single_skill_to_tool_with_force(store, skill_id, tool, intent, false)
-}
-
 /// Deploy one skill; `force` requires explicit confirmation of replacement.
-pub fn sync_single_skill_to_tool_with_force(
+pub fn sync_single_skill_to_tool(
     store: &SkillStore,
     skill_id: &str,
     tool: &str,
@@ -254,8 +244,9 @@ mod tests {
         };
         store.insert_skill(&skill).unwrap();
 
-        let error = sync_single_skill_to_tool(&store, "demo", "test_agent", DeployIntent::Managed)
-            .unwrap_err();
+        let error =
+            sync_single_skill_to_tool(&store, "demo", "test_agent", DeployIntent::Managed, false)
+                .unwrap_err();
         assert_eq!(error.kind, ErrorKind::TargetConflict);
         let conflicts = error.details.unwrap().conflicts;
         assert_eq!(conflicts.len(), 1);
@@ -271,14 +262,8 @@ mod tests {
             skill.source_ref
         );
 
-        sync_single_skill_to_tool_with_force(
-            &store,
-            "demo",
-            "test_agent",
-            DeployIntent::Managed,
-            true,
-        )
-        .unwrap();
+        sync_single_skill_to_tool(&store, "demo", "test_agent", DeployIntent::Managed, true)
+            .unwrap();
         assert_eq!(
             fs::read_to_string(target.join("SKILL.md")).unwrap(),
             "Library content"
@@ -294,9 +279,14 @@ mod tests {
     fn unknown_tool_is_not_reported_as_a_target_conflict() {
         let tmp = tempdir().unwrap();
         let store = SkillStore::new(&tmp.path().join("test.db")).unwrap();
-        let error =
-            sync_single_skill_to_tool(&store, "missing", "unknown_agent", DeployIntent::Managed)
-                .unwrap_err();
+        let error = sync_single_skill_to_tool(
+            &store,
+            "missing",
+            "unknown_agent",
+            DeployIntent::Managed,
+            false,
+        )
+        .unwrap_err();
         assert_eq!(error.kind, ErrorKind::NotFound);
         assert!(error.details.is_none());
     }
