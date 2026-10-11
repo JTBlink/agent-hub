@@ -45,6 +45,7 @@ import {
   UNTAGGED_FILTER,
 } from "../lib/skillTags";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
+import { SyncFromAgentMenu } from "../components/SyncFromAgentMenu";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import type { WorkspaceConfig } from "./workspaceConfigs";
@@ -1090,6 +1091,18 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             </div>
 
             <div className="app-segmented app-toolbar-segmented shrink-0">
+              <SyncFromAgentMenu
+                currentAgentKey={currentTool.key}
+                tools={installedTools}
+                managedSkills={managedSkills}
+                onComplete={async () => {
+                  await Promise.all([
+                    refreshManagedSkills(),
+                    refreshTools(),
+                    loadLocalSkills(),
+                  ]);
+                }}
+              />
               <button
                 onClick={() => void loadLocalSkills()}
                 disabled={localSkillsLoading}

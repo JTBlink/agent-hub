@@ -1219,6 +1219,13 @@
       "deleteLocalBatchConfirm": "永久刪除 {{agent}} 裡的 {{count}} 個本機 Skill？這些 Skill 只存在於該 Agent 目錄，刪除後無法復原。",
       "deletedLocalBatch": "已刪除 {{count}} 個本機 Skill",
       "deleteLocalBatchFailed": "{{count}} 個本機 Skill 刪除失敗"
+    },
+    "syncFromAgent": {
+      "title": "從其他 Agent 同步",
+      "heading": "同步自",
+      "synced": "已從 {{agent}} 同步 {{count}} 個 Skill",
+      "failed": "{{count}} 個 Skill 同步失敗",
+      "upToDate": "已一致"
     }
   }
 }
