@@ -9,10 +9,8 @@ import {
   FileText,
   Download,
   Upload,
-  RotateCcw,
   Layers,
   X,
-  Loader2,
   Trash2,
   SquareCheck,
   Square,
@@ -39,6 +37,8 @@ import { uploadProjectSkillToGroup } from "../lib/projectSkillUpload";
 import { ProjectSkillConflictPreview } from "../components/ProjectSkillConflictPreview";
 import { ProjectAgentDots } from "../components/ProjectAgentDots";
 import { SkillGroupBar } from "../components/SkillGroupBar";
+import { ProjectSkillCardHeader } from "../components/ProjectSkillCardHeader";
+import { ProjectSkillSyncActions } from "../components/ProjectSkillSyncActions";
 import { ProjectSkillBadges } from "../components/ProjectSkillBadges";
 import { SkillMarkdown } from "../components/SkillMarkdown";
 import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
@@ -1610,14 +1610,6 @@ export function ProjectDetail() {
             const isUpdatingCenter = updatingCenterSkill === skillKey;
             const isUpdatingProject = updatingProjectSkill === skillKey;
             const isToggling = togglingSkill === skillKey;
-            const canUpdateCenter =
-              skill.status === "project_only" ||
-              skill.status === "project_newer" ||
-              skill.status === "diverged";
-            const canUpdateProject =
-              skill.status === "project_newer" ||
-              skill.status === "center_newer" ||
-              skill.status === "diverged";
             const statusMeta = getSyncStatusMeta(t, skill.status);
             const assignedAgents = getAssignedAgents(skill.variants);
 
@@ -1637,10 +1629,11 @@ export function ProjectDetail() {
                       : handleOpenDetail(skill)
                   }
                 >
-                  <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-1.5">
-                    {/* Fixed slot: status dot, or the checkbox in multi-select */}
-                    <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-                      {isMultiSelect ? (
+                  <ProjectSkillCardHeader
+                    title={skill.name}
+                    fileCount={skill.files.length}
+                    leading={
+                      isMultiSelect ? (
                         isSelected ? (
                           <SquareCheck className="h-3.5 w-3.5 text-accent" />
                         ) : (
@@ -1658,21 +1651,22 @@ export function ProjectDetail() {
                           )}
                           title={`${skill.enabledCount}/${skill.totalCount}`}
                         />
-                      )}
-                    </div>
-                    <h3
-                      className="flex-1 truncate text-[14px] font-semibold text-primary"
-                      title={skill.name}
-                    >
-                      {skill.name}
-                    </h3>
-                    {skill.files.length > 0 && (
-                      <span className="flex items-center gap-1 text-[12px] text-faint shrink-0">
-                        <FileText className="w-3 h-3" />
-                        {skill.files.length}
-                      </span>
-                    )}
-                  </div>
+                      )
+                    }
+                    actions={
+                      !isMultiSelect && (
+                        <ProjectSkillSyncActions
+                          status={skill.status}
+                          updatingCenter={isUpdatingCenter}
+                          updatingProject={isUpdatingProject}
+                          onUpdateCenter={() => void handleUpdateCenter(skill)}
+                          onUpdateProject={() =>
+                            void handleUpdateProject(skill)
+                          }
+                        />
+                      )
+                    }
+                  />
 
                   <div className="px-3.5 pb-3">
                     <p className="text-[13px] leading-[18px] text-muted truncate">
@@ -1717,46 +1711,6 @@ export function ProjectDetail() {
                               : null
                           }
                         />
-                        {canUpdateCenter && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateCenter(skill);
-                            }}
-                            disabled={isUpdatingCenter || isUpdatingProject}
-                            className="rounded px-2 py-1 text-[13px] font-medium text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-                            title={t("project.updateCenter")}
-                          >
-                            {isUpdatingCenter ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Upload className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        )}
-                        {canUpdateProject && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateProject(skill);
-                            }}
-                            disabled={isUpdatingCenter || isUpdatingProject}
-                            className="rounded px-2 py-1 text-[13px] font-medium text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-                            title={
-                              skill.status === "project_newer"
-                                ? t("project.resetFromCenter")
-                                : t("project.updateProject")
-                            }
-                          >
-                            {isUpdatingProject ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : skill.status === "project_newer" ? (
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            ) : (
-                              <Download className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        )}
                         {project.supports_skill_toggle ? (
                           <ToggleSwitch
                             checked={skill.enabledCount === skill.totalCount}
@@ -1884,46 +1838,14 @@ export function ProjectDetail() {
                 {!isMultiSelect && (
                   <>
                     <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      {canUpdateCenter && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUpdateCenter(skill);
-                          }}
-                          disabled={isUpdatingCenter || isUpdatingProject}
-                          className="rounded p-0.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-                          title={t("project.updateCenter")}
-                        >
-                          {isUpdatingCenter ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Upload className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                      {canUpdateProject && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUpdateProject(skill);
-                          }}
-                          disabled={isUpdatingCenter || isUpdatingProject}
-                          className="rounded p-0.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-                          title={
-                            skill.status === "project_newer"
-                              ? t("project.resetFromCenter")
-                              : t("project.updateProject")
-                          }
-                        >
-                          {isUpdatingProject ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : skill.status === "project_newer" ? (
-                            <RotateCcw className="h-3.5 w-3.5" />
-                          ) : (
-                            <Download className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
+                      <ProjectSkillSyncActions
+                        variant="list"
+                        status={skill.status}
+                        updatingCenter={isUpdatingCenter}
+                        updatingProject={isUpdatingProject}
+                        onUpdateCenter={() => void handleUpdateCenter(skill)}
+                        onUpdateProject={() => void handleUpdateProject(skill)}
+                      />
                     </div>
                     {project.supports_skill_toggle ? (
                       <ToggleSwitch
