@@ -1,8 +1,5 @@
-import {
-  canRefreshSkill,
-  isLocalSkillSource,
-} from "../lib/skillUpdatePresentation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { isLocalSkillSource } from "../lib/skillUpdatePresentation";
+import { useState, type ReactNode } from "react";
 import {
   Folder,
   ChevronDown,
@@ -14,21 +11,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
 import {
-  getSkillDocument,
-  getSourceSkillDocument,
-  getSkillSourceDiff,
   type ManagedSkill,
   type Project,
-  type SkillDocument,
-  type SourceSkillDocument,
-  type SkillSourceDiff,
   type SkillGroup,
   type SkillToolToggle,
   type ToolInfo,
 } from "../lib/tauri";
-import { SkillSourceDiffViewer } from "./SkillSourceDiffViewer";
+import { SkillContentPanel } from "./SkillContentPanel";
 import { DetailSheet } from "./DetailSheet";
-import { SkillMarkdown } from "./SkillMarkdown";
 import { AgentToggleSection, type AgentToggleItem } from "./AgentToggleSection";
 import { SkillProjectsSection } from "./SkillProjectsSection";
 import { SyncDots } from "./SyncDots";
@@ -62,18 +52,9 @@ export function SkillDetailPanel({
 }: Props) {
   if (!skill) return null;
 
-  const panelKey = [
-    skill.id,
-    skill.updated_at,
-    skill.source_type,
-    skill.source_ref ?? "",
-    skill.source_revision ?? "",
-    skill.remote_revision ?? "",
-  ].join(":");
-
   return (
     <SkillDetailPanelContent
-      key={panelKey}
+      key={skill.id}
       skill={skill}
       sourceInfo={sourceInfo}
       onClose={onClose}
@@ -112,91 +93,7 @@ function SkillDetailPanelContent({
   onProjectsChanged?: () => void;
 }) {
   const { t } = useTranslation();
-  const [doc, setDoc] = useState<SkillDocument | null>(null);
-  const [sourceDoc, setSourceDoc] = useState<SourceSkillDocument | null>(null);
-  const [sourceDiff, setSourceDiff] = useState<SkillSourceDiff | null>(null);
-  const [sourceDiffFailed, setSourceDiffFailed] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [isMetadataExpanded, setIsMetadataExpanded] = useState(false);
-  const [contentTab, setContentTab] = useState<"local" | "diff" | "source">(
-    "local",
-  );
-  const localRequestIdRef = useRef(0);
-  const sourceRequestIdRef = useRef(0);
-  const diffRequestedRef = useRef(false);
-  const skillId = skill.id;
-  const supportsSourceDiff = canRefreshSkill(skill);
-  const [sourceLoading, setSourceLoading] = useState(supportsSourceDiff);
-  const localDocVersion = `${skill.id}:${skill.updated_at}`;
-  const sourceDocVersion = [
-    skill.id,
-    skill.source_type,
-    skill.source_ref ?? "",
-    skill.source_ref_resolved ?? "",
-    skill.source_revision ?? "",
-    skill.remote_revision ?? "",
-  ].join(":");
-
-  useEffect(() => {
-    localRequestIdRef.current += 1;
-    const requestId = localRequestIdRef.current;
-
-    getSkillDocument(skillId)
-      .then((nextDoc) => {
-        if (requestId === localRequestIdRef.current) {
-          setDoc(nextDoc);
-        }
-      })
-      .catch(() => {
-        if (requestId === localRequestIdRef.current) {
-          setDoc(null);
-        }
-      })
-      .finally(() => {
-        if (requestId === localRequestIdRef.current) {
-          setLoading(false);
-        }
-      });
-  }, [skillId, localDocVersion]);
-
-  useEffect(() => {
-    if (!supportsSourceDiff) {
-      return;
-    }
-
-    sourceRequestIdRef.current += 1;
-    const requestId = sourceRequestIdRef.current;
-
-    getSourceSkillDocument(skillId)
-      .then((nextDoc) => {
-        if (requestId === sourceRequestIdRef.current) {
-          setSourceDoc(nextDoc);
-        }
-      })
-      .catch(() => {
-        if (requestId === sourceRequestIdRef.current) {
-          setSourceDoc(null);
-        }
-      })
-      .finally(() => {
-        if (requestId === sourceRequestIdRef.current) {
-          setSourceLoading(false);
-        }
-      });
-  }, [skillId, supportsSourceDiff, sourceDocVersion]);
-
-  // Lazily load the whole-directory diff only when the user opens the Diff
-  // tab. For git/skills.sh skills this clones the repo, so we avoid paying
-  // that cost (and a second clone alongside the source doc) up front.
-  useEffect(() => {
-    if (contentTab !== "diff" || !supportsSourceDiff) return;
-    if (diffRequestedRef.current) return;
-    diffRequestedRef.current = true;
-
-    getSkillSourceDiff(skillId)
-      .then((diff) => setSourceDiff(diff))
-      .catch(() => setSourceDiffFailed(true));
-  }, [contentTab, supportsSourceDiff, skillId]);
 
   const sourceIcon = (type: string) => {
     switch (type) {
@@ -232,16 +129,6 @@ function SkillDetailPanelContent({
     { label: t("mySkills.sourceSubpath"), value: skill.source_subpath },
     { label: t("mySkills.sourceRevision"), value: skill.source_revision },
   ].filter((item) => Boolean(item.value));
-
-  const activeDoc = doc?.skill_id === skill.id ? doc : null;
-  const activeSourceDoc = sourceDoc?.skill_id === skill.id ? sourceDoc : null;
-  const activeSourceDiff =
-    sourceDiff?.skill_id === skill.id ? sourceDiff : null;
-  const sourceDiffLoading =
-    contentTab === "diff" &&
-    supportsSourceDiff &&
-    !activeSourceDiff &&
-    !sourceDiffFailed;
 
   const belongsToGroups = (skillGroups ?? []).filter((g) =>
     skill.skill_group_ids.includes(g.id),
@@ -398,76 +285,7 @@ function SkillDetailPanelContent({
         />
       )}
 
-      {supportsSourceDiff && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {(["local", "diff", "source"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setContentTab(tab)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
-                contentTab === tab
-                  ? "bg-accent text-white"
-                  : "bg-surface-hover text-muted hover:text-secondary",
-              )}
-              disabled={tab === "source" && sourceLoading}
-            >
-              {tab === "local"
-                ? t("mySkills.docTabs.local")
-                : tab === "diff"
-                  ? t("mySkills.docTabs.diff")
-                  : t("mySkills.docTabs.source")}
-            </button>
-          ))}
-          {activeSourceDoc && (
-            <span className="rounded-full border border-border-subtle bg-surface px-2 py-1 text-[12px] text-muted">
-              {activeSourceDoc.source_label} ·{" "}
-              {activeSourceDoc.revision.slice(0, 7)}
-            </span>
-          )}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="mt-12 text-center text-[13px] text-muted">
-          {t("common.loading")}
-        </div>
-      ) : contentTab === "diff" ? (
-        sourceDiffLoading ? (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("common.loading")}
-          </div>
-        ) : activeSourceDiff ? (
-          <SkillSourceDiffViewer entries={activeSourceDiff.entries} />
-        ) : sourceDiffFailed ? (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("mySkills.sourceDiffUnavailable")}
-          </div>
-        ) : (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("common.loading")}
-          </div>
-        )
-      ) : contentTab === "source" ? (
-        sourceLoading ? (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("common.loading")}
-          </div>
-        ) : activeSourceDoc ? (
-          <SkillMarkdown content={activeSourceDoc.content} />
-        ) : (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("mySkills.sourceDiffUnavailable")}
-          </div>
-        )
-      ) : activeDoc ? (
-        <SkillMarkdown content={activeDoc.content} />
-      ) : (
-        <div className="mt-12 text-center text-[13px] text-muted">
-          {t("common.documentMissing")}
-        </div>
-      )}
+      <SkillContentPanel skill={skill} />
     </DetailSheet>
   );
 }

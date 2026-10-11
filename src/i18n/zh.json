@@ -439,7 +439,8 @@
     "docTabs": {
       "local": "本地",
       "diff": "差异",
-      "source": "来源"
+      "source": "来源",
+      "central": "中心"
     },
     "sourceDiffUnavailable": "暂时无法读取来源版本内容",
     "sourceDiff": {
@@ -593,6 +594,17 @@
     "importProvenance": {
       "title": "导入来源",
       "hint": "记录此技能从哪里导入。来源路径的移动或删除不影响技能库副本的使用。"
+    },
+    "contentComparison": {
+      "tabs": "技能内容版本",
+      "refresh": "刷新内容",
+      "retry": "重试",
+      "comparing": "正在比较来源与中心…",
+      "notCompared": "尚未比较，点击差异查看变化",
+      "summary": "{{count}} 个文件有差异 · 新增 {{added}} · 修改 {{modified}} · 删除 {{removed}}",
+      "centralVersion": "中心库副本",
+      "localVersion": "本地来源内容",
+      "sourceVersion": "远端来源内容"
     }
   },
   "install": {

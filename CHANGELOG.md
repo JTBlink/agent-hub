@@ -2,6 +2,12 @@
 
 本文件记录 AgentHub 的重大产品、架构和兼容性变更。格式参考 [Keep a Changelog](https://keepachangelog.com/)，尚未发布的内容统一放在 `Unreleased`。
 
+## [Unreleased]
+
+### Fixed
+
+- 技能详情的本地与中心标签读取各自实际内容，提前显示全目录变化文件总数及新增、修改、删除数量；支持刷新、失败重试和键盘切换，避免旧请求覆盖当前内容。
+
 ## [0.1.4] - 2026-10-11
 
 ### Changed
