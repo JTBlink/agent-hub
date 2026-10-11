@@ -10,6 +10,44 @@
 
 use std::path::{Component, Path, PathBuf};
 
+use super::error::AppError;
+
+pub(crate) fn ensure_safe_skill_relative_path(skill_relative_path: &str) -> Result<(), AppError> {
+    if skill_relative_path.trim().is_empty() {
+        return Err(AppError::invalid_input("Invalid skill directory path"));
+    }
+    let mut saw_component = false;
+    for component in Path::new(skill_relative_path).components() {
+        if !matches!(component, Component::Normal(_)) {
+            return Err(AppError::invalid_input("Invalid skill directory path"));
+        }
+        saw_component = true;
+    }
+    if !saw_component {
+        return Err(AppError::invalid_input("Invalid skill directory path"));
+    }
+    Ok(())
+}
+
+pub(crate) fn ensure_dir_within_root(path: &Path, root: &Path) -> Result<(), AppError> {
+    // First check that the lexical path (before symlink resolution) is under root.
+    // This ensures the link itself lives where expected.
+    let abs_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    let abs_root = if root.is_absolute() {
+        root.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(root)
+    };
+    if !abs_path.starts_with(&abs_root) {
+        return Err(AppError::invalid_input("Invalid skill directory path"));
+    }
+    Ok(())
+}
+
 /// Maximum filesystem name length we'll allow. Matches the lowest common
 /// denominator (most modern filesystems allow 255 bytes).
 const MAX_NAME_LEN: usize = 200;

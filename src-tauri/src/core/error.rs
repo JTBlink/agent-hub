@@ -149,6 +149,11 @@ impl AppError {
         }
     }
 
+    /// Preserve the cause chain of a contextual filesystem failure for the UI.
+    pub fn io_with_context(error: anyhow::Error) -> Self {
+        Self::io(super::log_sanitize::sanitize(&format!("{error:#}")))
+    }
+
     /// A deployment refusal, with the paths that stopped it. Callers that
     /// drive this programmatically (the CLI, and the frontend toast) need the
     /// paths, not a sentence containing them.
@@ -207,6 +212,17 @@ impl From<tauri::Error> for AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn contextual_io_error_includes_the_underlying_filesystem_reason() {
+        let cause = std::io::Error::from(std::io::ErrorKind::NotFound);
+        let error = anyhow::Error::from(cause)
+            .context("Failed to remove existing target <workspace>/skills/demo");
+        let error = AppError::io_with_context(error);
+        assert_eq!(error.kind, ErrorKind::Io);
+        assert!(error.message.contains("Failed to remove existing target"));
+        assert!(error.message.contains("entity not found"));
+    }
 
     #[test]
     fn classify_git_error_detects_cancelled() {
