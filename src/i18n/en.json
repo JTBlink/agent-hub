@@ -1303,6 +1303,13 @@
       "deleteLocalBatchConfirm": "Permanently delete {{count}} local skills from {{agent}}? They exist only in this agent’s folder and cannot be recovered.",
       "deletedLocalBatch": "{{count}} local skills deleted",
       "deleteLocalBatchFailed": "{{count}} local skills failed to delete"
+    },
+    "syncFromAgent": {
+      "title": "Sync from another agent",
+      "heading": "Sync from",
+      "synced": "Synced {{count}} skills from {{agent}}",
+      "failed": "{{count}} skills failed to sync",
+      "upToDate": "Up to date"
     }
   }
 }

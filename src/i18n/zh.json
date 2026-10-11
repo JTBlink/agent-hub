@@ -1303,6 +1303,13 @@
       "deleteLocalBatchConfirm": "永久删除 {{agent}} 里的 {{count}} 个本地 Skill？这些 Skill 只存在于该 Agent 目录，删除后无法恢复。",
       "deletedLocalBatch": "已删除 {{count}} 个本地 Skill",
       "deleteLocalBatchFailed": "{{count}} 个本地 Skill 删除失败"
+    },
+    "syncFromAgent": {
+      "title": "从其他 Agent 同步",
+      "heading": "同步自",
+      "synced": "已从 {{agent}} 同步 {{count}} 个 Skill",
+      "failed": "{{count}} 个 Skill 同步失败",
+      "upToDate": "已一致"
     }
   }
 }
