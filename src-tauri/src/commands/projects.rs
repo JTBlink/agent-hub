@@ -832,7 +832,7 @@ pub async fn import_project_skill_to_center(
     project_id: String,
     skill_relative_path: String,
     agent: String,
-) -> Result<(), AppError> {
+) -> Result<String, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         ensure_safe_skill_relative_path(&skill_relative_path)?;
@@ -885,7 +885,7 @@ pub async fn import_project_skill_to_center(
                     .update_skill_source_ref(&existing.id, &skill.path)
                     .map_err(AppError::db)?;
             }
-            return Ok(());
+            return Ok(existing.id.clone());
         }
 
         let result =
@@ -919,7 +919,7 @@ pub async fn import_project_skill_to_center(
 
         store.insert_skill(&skill_record).map_err(AppError::db)?;
 
-        Ok(())
+        Ok(id)
     })
     .await?
 }
@@ -930,7 +930,7 @@ pub async fn update_project_skill_to_center(
     project_id: String,
     skill_relative_path: String,
     agent: String,
-) -> Result<(), AppError> {
+) -> Result<String, AppError> {
     import_project_skill_to_center(store, project_id, skill_relative_path, agent).await
 }
 
