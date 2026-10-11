@@ -2361,6 +2361,7 @@ export function MySkills() {
         skill={selectedSkill}
         onClose={closeSkillDetail}
         tools={tools}
+        skillGroups={skillGroups}
         toolToggles={toolToggles}
         togglingTool={togglingToolKey}
         onToggleTool={handleToggleSkillTool}

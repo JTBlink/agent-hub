@@ -37,6 +37,8 @@ import {
 import { ToggleSwitch } from "../components/ToggleSwitch";
 import { ProjectAgentDots } from "../components/ProjectAgentDots";
 import { SkillGroupBar } from "../components/SkillGroupBar";
+import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
+import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
 import { SkillMarkdown } from "../components/SkillMarkdown";
 import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
 import {
@@ -579,6 +581,31 @@ export function ProjectDetail() {
     }
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
   }, [groupedSkills]);
+
+  const skillGroupsById = useMemo(() => {
+    const map = new Map<string, (typeof skillGroups)[number]>();
+    for (const g of skillGroups) map.set(g.id, g);
+    return map;
+  }, [skillGroups]);
+
+  const skillGroupsForEntry = useMemo(() => {
+    const managedById = new Map(managedSkills.map((s) => [s.id, s]));
+    const result = new Map<string, (typeof skillGroups)[number][]>();
+    for (const entry of groupedSkills) {
+      const groupIds = new Set<string>();
+      for (const cid of entry.centerSkillIds) {
+        const managed = managedById.get(cid);
+        if (managed) {
+          for (const gid of managed.skill_group_ids) groupIds.add(gid);
+        }
+      }
+      const groups = [...groupIds]
+        .map((gid) => skillGroupsById.get(gid))
+        .filter((g): g is (typeof skillGroups)[number] => !!g);
+      if (groups.length > 0) result.set(entry.id, groups);
+    }
+    return result;
+  }, [groupedSkills, managedSkills, skillGroupsById]);
 
   // Prune tag filters whose pill disappeared (e.g. its last skill was deleted),
   // otherwise a stale filter silently hides everything. An empty skill list
@@ -1677,6 +1704,26 @@ export function ProjectDetail() {
                           {t("project.disabled")}
                         </span>
                       )}
+                      {(skillGroupsForEntry.get(skill.id) ?? []).map((group) => {
+                        const opt = getSkillGroupIconOption(group);
+                        const GIcon = opt.icon;
+                        return (
+                          <span
+                            key={group.id}
+                            className={cn(
+                              "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] font-medium",
+                              opt.activeClass,
+                              opt.colorClass,
+                            )}
+                            title={getSkillGroupDisplayName(group.name, t)}
+                          >
+                            <GIcon className="h-2.5 w-2.5" />
+                            <span className="max-w-[60px] truncate">
+                              {getSkillGroupDisplayName(group.name, t)}
+                            </span>
+                          </span>
+                        );
+                      })}
                     </div>
                     {!isMultiSelect && (
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -1841,6 +1888,26 @@ export function ProjectDetail() {
                       {t("project.disabled")}
                     </span>
                   )}
+                  {(skillGroupsForEntry.get(skill.id) ?? []).map((group) => {
+                    const opt = getSkillGroupIconOption(group);
+                    const GIcon = opt.icon;
+                    return (
+                      <span
+                        key={group.id}
+                        className={cn(
+                          "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] font-medium",
+                          opt.activeClass,
+                          opt.colorClass,
+                        )}
+                        title={getSkillGroupDisplayName(group.name, t)}
+                      >
+                        <GIcon className="h-2.5 w-2.5" />
+                        <span className="max-w-[60px] truncate">
+                          {getSkillGroupDisplayName(group.name, t)}
+                        </span>
+                      </span>
+                    );
+                  })}
                   {skill.files.length > 0 && (
                     <span className="flex items-center gap-1 text-[12px] text-faint">
                       <FileText className="w-3 h-3" />
