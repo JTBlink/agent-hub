@@ -35,10 +35,11 @@ import {
   type AgentToggleItem,
 } from "../components/AgentToggleSection";
 import { ToggleSwitch } from "../components/ToggleSwitch";
+import { uploadProjectSkillToGroup } from "../lib/projectSkillUpload";
+import { ProjectSkillConflictPreview } from "../components/ProjectSkillConflictPreview";
 import { ProjectAgentDots } from "../components/ProjectAgentDots";
 import { SkillGroupBar } from "../components/SkillGroupBar";
-import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
-import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
+import { ProjectSkillBadges } from "../components/ProjectSkillBadges";
 import { SkillMarkdown } from "../components/SkillMarkdown";
 import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
 import {
@@ -192,6 +193,9 @@ export function ProjectDetail() {
   const [centerConflictAgent, setCenterConflictAgent] = useState<string | null>(
     null,
   );
+  const [centerConflictGroup, setCenterConflictGroup] = useState<
+    string | undefined
+  >();
   const [togglingSkill, setTogglingSkill] = useState<string | null>(null);
   const [togglingAgentTarget, setTogglingAgentTarget] = useState<{
     skillKey: string;
@@ -718,6 +722,7 @@ export function ProjectDetail() {
   const pushSkillToCenterAndAlign = async (
     skill: ProjectSkillEntry,
     selectedWinner?: ProjectSkill,
+    targetGroup?: string,
   ): Promise<{ alignFailed: number; conflicting: number }> => {
     if (!id) return { alignFailed: 0, conflicting: 0 };
 
@@ -730,11 +735,7 @@ export function ProjectDetail() {
     if (!skill.variants.some((variant) => variant === winner)) {
       throw new Error("Selected project skill variant is no longer available");
     }
-    await api.updateProjectSkillToCenter(
-      id,
-      winner.relative_path,
-      winner.agent,
-    );
+    await uploadProjectSkillToGroup(id, winner, targetGroup, t);
 
     // Every remaining variant is in_sync, so pulling the freshly written center
     // over it discards nothing — and it keeps a multi-agent group from flipping
@@ -767,6 +768,7 @@ export function ProjectDetail() {
         const variants = skill.variants.filter(
           (variant) => variant.sync_status !== "in_sync",
         );
+        setCenterConflictGroup(undefined);
         setCenterConflict({ skill, variants });
         setCenterConflictAgent(variants[0]?.agent ?? null);
         return;
@@ -804,6 +806,10 @@ export function ProjectDetail() {
       const { alignFailed } = await pushSkillToCenterAndAlign(
         centerConflict.skill,
         winner,
+        centerConflictGroup ??
+          managedSkills.find((skill) => skill.id === winner.center_skill_id)
+            ?.skill_group_ids[0] ??
+          "",
       );
       if (alignFailed > 0) {
         toast.warning(
@@ -1689,44 +1695,14 @@ export function ProjectDetail() {
                     )}
                   </div>
 
-                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-faint px-3.5 py-2.5">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[12px] font-medium",
-                          statusMeta.className,
-                        )}
-                      >
-                        {statusMeta.label}
-                      </span>
-                      {skill.enabledCount === 0 && (
-                        <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[12px] font-medium text-red-600 dark:text-red-300">
-                          {t("project.disabled")}
-                        </span>
-                      )}
-                      {(skillGroupsForEntry.get(skill.id) ?? []).map((group) => {
-                        const opt = getSkillGroupIconOption(group);
-                        const GIcon = opt.icon;
-                        return (
-                          <span
-                            key={group.id}
-                            className={cn(
-                              "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] font-medium",
-                              opt.activeClass,
-                              opt.colorClass,
-                            )}
-                            title={getSkillGroupDisplayName(group.name, t)}
-                          >
-                            <GIcon className="h-2.5 w-2.5" />
-                            <span className="max-w-[60px] truncate">
-                              {getSkillGroupDisplayName(group.name, t)}
-                            </span>
-                          </span>
-                        );
-                      })}
-                    </div>
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2.5 border-t border-border-faint px-3.5 py-2.5">
+                    <ProjectSkillBadges
+                      status={statusMeta}
+                      disabled={skill.enabledCount === 0}
+                      groups={skillGroupsForEntry.get(skill.id) ?? []}
+                    />
                     {!isMultiSelect && (
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
                         <ProjectAgentDots
                           assignedAgents={assignedAgents}
                           targets={exportTargets}
@@ -1875,39 +1851,11 @@ export function ProjectDetail() {
                 )}
 
                 <div className="flex shrink-0 items-center gap-2.5">
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[12px] font-medium",
-                      statusMeta.className,
-                    )}
-                  >
-                    {statusMeta.label}
-                  </span>
-                  {skill.enabledCount === 0 && (
-                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[12px] font-medium text-red-600 dark:text-red-300">
-                      {t("project.disabled")}
-                    </span>
-                  )}
-                  {(skillGroupsForEntry.get(skill.id) ?? []).map((group) => {
-                    const opt = getSkillGroupIconOption(group);
-                    const GIcon = opt.icon;
-                    return (
-                      <span
-                        key={group.id}
-                        className={cn(
-                          "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[11px] font-medium",
-                          opt.activeClass,
-                          opt.colorClass,
-                        )}
-                        title={getSkillGroupDisplayName(group.name, t)}
-                      >
-                        <GIcon className="h-2.5 w-2.5" />
-                        <span className="max-w-[60px] truncate">
-                          {getSkillGroupDisplayName(group.name, t)}
-                        </span>
-                      </span>
-                    );
-                  })}
+                  <ProjectSkillBadges
+                    status={statusMeta}
+                    disabled={skill.enabledCount === 0}
+                    groups={skillGroupsForEntry.get(skill.id) ?? []}
+                  />
                   {skill.files.length > 0 && (
                     <span className="flex items-center gap-1 text-[12px] text-faint">
                       <FileText className="w-3 h-3" />
@@ -2079,6 +2027,10 @@ export function ProjectDetail() {
             projectId={id ?? ""}
             variants={centerConflict.variants}
             selectedAgent={centerConflictAgent}
+            managedSkills={managedSkills}
+            skillGroups={skillGroups}
+            selectedGroup={centerConflictGroup}
+            onSelectGroup={setCenterConflictGroup}
             onSelectAgent={setCenterConflictAgent}
           />
         </ConfirmDialog>
@@ -2104,192 +2056,6 @@ export function ProjectDetail() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function ProjectSkillConflictPreview({
-  projectId,
-  variants,
-  selectedAgent,
-  onSelectAgent,
-}: {
-  projectId: string;
-  variants: ProjectSkill[];
-  selectedAgent: string | null;
-  onSelectAgent: (agent: string) => void;
-}) {
-  const { t } = useTranslation();
-  const [compareAgent, setCompareAgent] = useState<string | null>(null);
-  const [activeFile, setActiveFile] = useState<string | null>(null);
-  const requestKey = [
-    projectId,
-    ...variants.map((variant) => `${variant.agent}:${variant.relative_path}`),
-  ].join("\u0000");
-  const [fileState, setFileState] = useState<{
-    key: string;
-    files: Record<string, Record<string, string>>;
-  } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all(
-      variants.map(async (variant) => {
-        try {
-          const files = await api.getProjectSkillFiles(
-            projectId,
-            variant.relative_path,
-            variant.agent,
-          );
-          return [
-            variant.agent,
-            Object.fromEntries(
-              files.map((file) => [file.filename, file.content]),
-            ),
-          ] as const;
-        } catch {
-          return [variant.agent, {}] as const;
-        }
-      }),
-    ).then((entries) => {
-      if (cancelled) return;
-      setFileState({ key: requestKey, files: Object.fromEntries(entries) });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, requestKey, variants]);
-
-  const loading = fileState?.key !== requestKey;
-  const filesByAgent = fileState?.key === requestKey ? fileState.files : {};
-  const fallbackCompareAgent =
-    variants.find((variant) => variant.agent !== selectedAgent)?.agent ?? null;
-  const effectiveCompareAgent =
-    compareAgent && variants.some((variant) => variant.agent === compareAgent)
-      ? compareAgent
-      : fallbackCompareAgent;
-
-  const selectedVariant = variants.find(
-    (variant) => variant.agent === selectedAgent,
-  );
-  const compareVariant = variants.find(
-    (variant) => variant.agent === effectiveCompareAgent,
-  );
-  const selectedFiles = selectedVariant
-    ? (filesByAgent[selectedVariant.agent] ?? {})
-    : {};
-  const compareFiles = compareVariant
-    ? (filesByAgent[compareVariant.agent] ?? {})
-    : {};
-  const filenames = Array.from(
-    new Set([...Object.keys(selectedFiles), ...Object.keys(compareFiles)]),
-  ).sort();
-  const changedFiles = filenames.filter(
-    (filename) => selectedFiles[filename] !== compareFiles[filename],
-  );
-  const file =
-    activeFile && filenames.includes(activeFile)
-      ? activeFile
-      : (changedFiles[0] ?? filenames[0] ?? null);
-
-  return (
-    <div className="space-y-3">
-      <p className="text-[12px] leading-5 text-muted">
-        {t("project.updateCenterConflictHint")}
-      </p>
-      <div className="space-y-1.5">
-        {variants.map((variant) => (
-          <label
-            key={variant.agent}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-[12px] text-secondary hover:bg-surface-hover"
-          >
-            <input
-              type="radio"
-              name="center-conflict-source"
-              checked={selectedAgent === variant.agent}
-              onChange={() => onSelectAgent(variant.agent)}
-            />
-            <span className="font-medium">{variant.agent_display_name}</span>
-            <span className="ml-auto text-muted">
-              {variant.sync_status === "project_only"
-                ? t("project.syncStatus.projectOnly")
-                : t("project.syncStatus.diverged")}
-            </span>
-          </label>
-        ))}
-      </div>
-      {loading ? (
-        <div className="flex items-center justify-center gap-2 py-4 text-[12px] text-muted">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          {t("common.loading")}
-        </div>
-      ) : selectedVariant && compareVariant ? (
-        <>
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
-            <span className="rounded bg-accent/10 px-2 py-1 text-accent">
-              {t("project.updateCenterSelectedVersion", {
-                agent: selectedVariant.agent_display_name,
-              })}
-            </span>
-            <span>{t("project.updateCenterDiffLabel")}</span>
-            {variants
-              .filter((variant) => variant.agent !== selectedAgent)
-              .map((variant) => (
-                <button
-                  key={variant.agent}
-                  type="button"
-                  onClick={() => setCompareAgent(variant.agent)}
-                  className={cn(
-                    "rounded-full px-2 py-0.5",
-                    compareAgent === variant.agent
-                      ? "bg-accent text-white"
-                      : "bg-surface-hover text-secondary",
-                  )}
-                >
-                  {variant.agent_display_name}
-                </button>
-              ))}
-          </div>
-          {changedFiles.length > 0 ? (
-            <>
-              <div className="flex max-h-20 flex-wrap gap-1 overflow-y-auto">
-                {changedFiles.map((filename) => (
-                  <button
-                    key={filename}
-                    type="button"
-                    onClick={() => setActiveFile(filename)}
-                    className={cn(
-                      "rounded px-2 py-1 font-mono text-[11px]",
-                      file === filename
-                        ? "bg-accent text-white"
-                        : "bg-surface-hover text-secondary",
-                    )}
-                  >
-                    {filename}
-                  </button>
-                ))}
-              </div>
-              {file ? (
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted">
-                    <span className="font-mono">{file}</span>
-                    <span>{t("project.updateCenterDiffLegend")}</span>
-                  </div>
-                  <DocumentDiffViewer
-                    original={compareFiles[file] ?? ""}
-                    updated={selectedFiles[file] ?? ""}
-                    className="max-h-64 overflow-y-auto"
-                  />
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="rounded-lg border border-border-subtle px-3 py-4 text-center text-[12px] text-muted">
-              {t("project.updateCenterNoDiff")}
-            </div>
-          )}
-        </>
-      ) : null}
     </div>
   );
 }

@@ -982,7 +982,7 @@ export const importProjectSkillToCenter = (
   skillRelativePath: string,
   agent: string,
 ) =>
-  invoke<void>("import_project_skill_to_center", {
+  invoke<string>("import_project_skill_to_center", {
     projectId,
     skillRelativePath,
     agent,
@@ -1004,7 +1004,7 @@ export const updateProjectSkillToCenter = (
   skillRelativePath: string,
   agent: string,
 ) =>
-  invoke<void>("update_project_skill_to_center", {
+  invoke<string>("update_project_skill_to_center", {
     projectId,
     skillRelativePath,
     agent,

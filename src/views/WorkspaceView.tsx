@@ -4,13 +4,11 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import {
   ChevronRight,
   Download,
-  FileText,
   Globe,
   LayoutGrid,
   List,
@@ -19,7 +17,6 @@ import {
   RefreshCw,
   Search,
   CircleSlash,
-  Square,
   SquareCheck,
   Trash2,
   Unlink,
@@ -46,6 +43,11 @@ import {
 } from "../lib/skillTags";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { SyncFromAgentMenu } from "../components/SyncFromAgentMenu";
+import { WorkspaceSkillCard } from "../components/WorkspaceSkillCard";
+import {
+  getLocalStatusMeta,
+  getWorkspaceSkillCardStatus,
+} from "../lib/workspaceSkillStatus";
 import { WorkspaceSkillSummary } from "../components/WorkspaceSkillSummary";
 import {
   filterWorkspaceSkills,
@@ -54,222 +56,6 @@ import {
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import type { WorkspaceConfig } from "./workspaceConfigs";
-
-interface WorkspaceSkillCardTag {
-  label: string;
-  className: string;
-}
-
-interface WorkspaceSkillCardStatus {
-  label: string;
-  className: string;
-}
-
-function WorkspaceSkillCard({
-  viewMode,
-  title,
-  description,
-  tags = [],
-  status,
-  fileCount = 0,
-  active = false,
-  actions,
-  actionsHover = false,
-  selectable = false,
-  selected = false,
-  onClick,
-}: {
-  viewMode: "grid" | "list";
-  title: string;
-  description?: string | null;
-  tags?: WorkspaceSkillCardTag[];
-  status: WorkspaceSkillCardStatus;
-  fileCount?: number;
-  active?: boolean;
-  actions?: ReactNode;
-  actionsHover?: boolean;
-  /** Multi-select mode: the leading slot becomes a checkbox and clicks select. */
-  selectable?: boolean;
-  selected?: boolean;
-  onClick: () => void;
-}) {
-  const leadingSlot = selectable ? (
-    selected ? (
-      <SquareCheck className="h-3.5 w-3.5 text-accent" />
-    ) : (
-      <Square className="h-3.5 w-3.5 text-faint" />
-    )
-  ) : (
-    <span
-      className={cn(
-        "h-2 w-2 rounded-full",
-        active
-          ? "bg-accent-light shadow-[0_0_0_3px_var(--color-accent-bg)]"
-          : "bg-surface-active",
-      )}
-    />
-  );
-  if (viewMode === "list") {
-    return (
-      <div
-        className={cn(
-          "app-panel group relative flex cursor-pointer items-center gap-3.5 rounded-xl border-transparent px-3.5 py-3 transition-all hover:border-border hover:bg-surface-hover",
-          selectable && selected && "ring-1 ring-accent border-accent/40",
-        )}
-        onClick={onClick}
-      >
-        <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-          {leadingSlot}
-        </div>
-        <h3
-          className="w-[180px] shrink-0 truncate text-[14px] font-semibold text-secondary group-hover:text-primary"
-          title={title}
-        >
-          {title}
-        </h3>
-        <p className="min-w-0 flex-1 truncate text-[13px] text-muted">
-          {description || "-"}
-        </p>
-        {tags.length > 0 && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={cn(
-                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
-                  tag.className,
-                )}
-              >
-                {tag.label}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="flex shrink-0 items-center gap-2.5">
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-[12px] font-medium",
-              status.className,
-            )}
-          >
-            {status.label}
-          </span>
-          {fileCount > 0 && (
-            <span className="flex items-center gap-1 text-[12px] text-faint">
-              <FileText className="h-3 w-3" />
-              {fileCount}
-            </span>
-          )}
-        </div>
-        {actions && (
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-1",
-              actionsHover &&
-                "opacity-0 transition-opacity group-hover:opacity-100",
-            )}
-          >
-            {actions}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "app-panel group relative flex h-full cursor-pointer flex-col overflow-hidden shadow-card transition-all hover:-translate-y-px hover:border-border hover:shadow-card-hover",
-        selectable && selected && "ring-1 ring-accent border-accent/40",
-      )}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-1.5">
-        <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-          {leadingSlot}
-        </div>
-        <h3
-          className="flex-1 truncate text-[14px] font-semibold text-primary group-hover:text-accent-light"
-          title={title}
-        >
-          {title}
-        </h3>
-        {fileCount > 0 && (
-          <span className="flex shrink-0 items-center gap-1 text-[12px] text-faint">
-            <FileText className="h-3 w-3" />
-            {fileCount}
-          </span>
-        )}
-      </div>
-      <div className="px-3.5 pb-3">
-        <p className="truncate text-[13px] leading-[18px] text-muted">
-          {description || "-"}
-        </p>
-        {tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-                  tag.className,
-                )}
-              >
-                {tag.label}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-faint px-3.5 py-2.5">
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[12px] font-medium",
-            status.className,
-          )}
-        >
-          {status.label}
-        </span>
-        {actions && (
-          <div className="flex shrink-0 items-center gap-1.5">{actions}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function getLocalStatusMeta(
-  t: (key: string) => string,
-  status: ProjectSkill["sync_status"],
-) {
-  switch (status) {
-    case "in_sync":
-      return {
-        label: t("globalWorkspace.localSkills.status.inSync"),
-        className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-      };
-    case "project_newer":
-      return {
-        label: t("globalWorkspace.localSkills.status.localNewer"),
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-      };
-    case "center_newer":
-      return {
-        label: t("globalWorkspace.localSkills.status.centerNewer"),
-        className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-      };
-    case "diverged":
-      return {
-        label: t("globalWorkspace.localSkills.status.diverged"),
-        className: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
-      };
-    default:
-      return {
-        label: t("globalWorkspace.localSkills.status.localOnly"),
-        className: "bg-surface-hover text-muted",
-      };
-  }
-}
 
 export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const { agentKey } = useParams<{ agentKey?: string }>();
@@ -514,6 +300,15 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
           .filter((id): id is string => !!id && installedIds.has(id)),
       ),
     [installedIds, localSkills],
+  );
+
+  const managedSkillById = useMemo(
+    () => new Map(managedSkills.map((skill) => [skill.id, skill])),
+    [managedSkills],
+  );
+  const skillGroupById = useMemo(
+    () => new Map(skillGroups.map((group) => [group.id, group])),
+    [skillGroups],
   );
 
   const visibleLocalSkills = useMemo(
@@ -1336,7 +1131,12 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             )}
           >
             {visibleLocalSkills.map((skill) => {
-              const statusMeta = getLocalStatusMeta(t, skill.sync_status);
+              const statusMeta = getWorkspaceSkillCardStatus(
+                t,
+                skill,
+                managedSkillById,
+                skillGroupById,
+              );
               const isManaged =
                 !!skill.center_skill_id &&
                 managedLocalIds.has(skill.center_skill_id);
