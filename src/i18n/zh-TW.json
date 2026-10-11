@@ -546,6 +546,10 @@
       "switchGroup": "切換技能組",
       "removeFromGroup": "移出分組",
       "movedTo": "已將 {{skill}} 移到「{{group}}」"
+    },
+    "importProvenance": {
+      "title": "匯入來源",
+      "hint": "記錄此技能從哪裡匯入。來源路徑的移動或刪除不影響技能庫副本的使用。"
     }
   },
   "install": {

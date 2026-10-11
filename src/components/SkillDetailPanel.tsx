@@ -1,4 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  canRefreshSkill,
+  isLocalSkillSource,
+} from "../lib/skillUpdatePresentation";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Folder,
   ChevronDown,
@@ -33,6 +37,7 @@ import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
 
 interface Props {
   skill: ManagedSkill | null;
+  sourceInfo?: ReactNode;
   onClose: () => void;
   tools?: ToolInfo[];
   skillGroups?: SkillGroup[];
@@ -53,6 +58,7 @@ export function SkillDetailPanel({
   onToggleTool,
   projects,
   onProjectsChanged,
+  sourceInfo,
 }: Props) {
   if (!skill) return null;
 
@@ -69,6 +75,7 @@ export function SkillDetailPanel({
     <SkillDetailPanelContent
       key={panelKey}
       skill={skill}
+      sourceInfo={sourceInfo}
       onClose={onClose}
       tools={tools}
       skillGroups={skillGroups}
@@ -91,8 +98,10 @@ function SkillDetailPanelContent({
   onToggleTool,
   projects,
   onProjectsChanged,
+  sourceInfo,
 }: {
   skill: ManagedSkill;
+  sourceInfo?: ReactNode;
   onClose: () => void;
   tools?: ToolInfo[];
   skillGroups?: SkillGroup[];
@@ -116,11 +125,7 @@ function SkillDetailPanelContent({
   const sourceRequestIdRef = useRef(0);
   const diffRequestedRef = useRef(false);
   const skillId = skill.id;
-  const supportsSourceDiff =
-    skill.source_type === "git" ||
-    skill.source_type === "skillssh" ||
-    ((skill.source_type === "local" || skill.source_type === "import") &&
-      !!skill.source_ref);
+  const supportsSourceDiff = canRefreshSkill(skill);
   const [sourceLoading, setSourceLoading] = useState(supportsSourceDiff);
   const localDocVersion = `${skill.id}:${skill.updated_at}`;
   const sourceDocVersion = [
@@ -214,7 +219,14 @@ function SkillDetailPanelContent({
       label: t("mySkills.sourceType"),
       value: sourceTypeLabel(skill.source_type),
     },
-    { label: t("mySkills.sourceRef"), value: skill.source_ref },
+    {
+      label: t(
+        isLocalSkillSource(skill)
+          ? "mySkills.importProvenance.title"
+          : "mySkills.sourceRef",
+      ),
+      value: skill.source_ref,
+    },
     { label: t("mySkills.sourceResolved"), value: skill.source_ref_resolved },
     { label: t("mySkills.sourceBranch"), value: skill.source_branch },
     { label: t("mySkills.sourceSubpath"), value: skill.source_subpath },
@@ -368,6 +380,7 @@ function SkillDetailPanelContent({
       meta={meta}
       onClose={onClose}
     >
+      {sourceInfo}
       {toolToggles && onToggleTool && (
         <AgentToggleSection
           items={toggleItems}
