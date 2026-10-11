@@ -170,6 +170,8 @@
     "attentionTitle": "检查管理 Skill 安装路径",
     "attentionBody": "路径中已有文件，但无法确认为由应用管理的 manage-skills，请先检查。",
     "attentionAction": "打开技能库",
+    "sourcePath": "原始来源",
+    "sourceUnknown": "未记录来源",
     "libraryPath": "技能库路径",
     "oldVersion": "旧版 v{{version}}",
     "missing": "未安装",

@@ -170,6 +170,8 @@
     "attentionTitle": "檢查管理 Skill 安裝路徑",
     "attentionBody": "路徑中已有檔案，但無法確認為由應用程式管理的 manage-skills，請先檢查。",
     "attentionAction": "開啟技能庫",
+    "sourcePath": "原始來源",
+    "sourceUnknown": "未記錄來源",
     "libraryPath": "技能庫路徑",
     "oldVersion": "舊版 v{{version}}",
     "missing": "未安裝",

@@ -170,6 +170,8 @@
     "attentionTitle": "Check management skill paths",
     "attentionBody": "A path contains files that cannot be confirmed as an app-managed manage-skills installation.",
     "attentionAction": "Open skill library",
+    "sourcePath": "Original source",
+    "sourceUnknown": "Source not recorded",
     "libraryPath": "Library path",
     "oldVersion": "Old v{{version}}",
     "missing": "Missing",

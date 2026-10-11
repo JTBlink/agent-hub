@@ -81,6 +81,10 @@ export function AgentControlSetupCard({
 
   if (loading || !status || dismissed === null || !mode) return null;
 
+  const source =
+    managedSkills.find((skill) => skill.id === status.library_skill_id)
+      ?.source_ref ?? (mode === "install" ? SKILL_SOURCE : null);
+
   const dismiss = async () => {
     setDismissed(true);
     await api.setSettings(PROMPT_SETTING_KEY, "dismissed").catch(() => {});
@@ -166,11 +170,18 @@ export function AgentControlSetupCard({
             })}
           </p>
 
+          <div className="mt-2 space-y-1 text-[11px] text-faint">
+            <p className="break-all select-text">
+              {t("agentControl.sourcePath")}:{" "}
+              {source || t("agentControl.sourceUnknown")}
+            </p>
+            <p className="break-all select-text">
+              {t("agentControl.libraryPath")}: {status.library.path}
+            </p>
+          </div>
+
           {expanded && (
             <div className="mt-3">
-              <p className="break-all text-[11px] text-faint">
-                {t("agentControl.libraryPath")}: {status.library.path}
-              </p>
               {mode === "attention" &&
                 status.agents
                   .filter(
