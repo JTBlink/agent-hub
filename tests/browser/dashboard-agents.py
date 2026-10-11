@@ -15,7 +15,7 @@ def wait_until(expression, message):
 
 
 def ready():
-    wait_until("Array.from(document.querySelectorAll('a')).some(a=>a.textContent.replace(/\\s/g,'')==='已启用Agent1')",
+    wait_until("document.querySelector('section[aria-label=\"技能与部署概览\"] a[href=\"/settings#agents\"]')?.textContent.includes('1')",
                "enabled Agent card must be a link and only count installed, enabled Agents")
 
 
@@ -33,15 +33,18 @@ try:
     ready()
     nodes = cdp("Accessibility.getFullAXTree")["nodes"]
     node = next(n for n in nodes if n.get("role", {}).get("value") == "link"
-                and "已启用 AGENT" in n.get("name", {}).get("value", ""))
+                and "已启用 Agent" in n.get("name", {}).get("value", ""))
     cdp("DOM.scrollIntoViewIfNeeded", backendNodeId=node["backendDOMNodeId"])
     box = cdp("DOM.getBoxModel", backendNodeId=node["backendDOMNodeId"])["model"]["content"]
     click_at_xy(sum(box[0::2]) / 4, sum(box[1::2]) / 4)
     landed()
     cdp("Page.reload", ignoreCache=True)
     ready()
-    cdp("Input.dispatchKeyEvent", type="keyDown", key="Tab", code="Tab", windowsVirtualKeyCode=9)
-    cdp("Input.dispatchKeyEvent", type="keyUp", key="Tab", code="Tab", windowsVirtualKeyCode=9)
+    for _ in range(20):
+        cdp("Input.dispatchKeyEvent", type="keyDown", key="Tab", code="Tab", windowsVirtualKeyCode=9)
+        cdp("Input.dispatchKeyEvent", type="keyUp", key="Tab", code="Tab", windowsVirtualKeyCode=9)
+        if js("document.activeElement?.getAttribute('href')==='/settings#agents'"):
+            break
     wait_until("document.activeElement?.getAttribute('href')==='/settings#agents'", "Agent link is not keyboard accessible")
     cdp("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
     cdp("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)

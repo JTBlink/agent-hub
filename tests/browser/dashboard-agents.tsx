@@ -43,6 +43,8 @@ Object.assign(window, {
         ].includes(command)
       )
         return [];
+      if (command === "get_skills_directory") return "<workspace>/skills";
+      if (command === "get_backup_directory") return "<workspace>/backup";
       if (command === "get_central_repo_path") return "<workspace>/skills";
       if (command === "check_app_update") return { has_update: false };
       return null;
