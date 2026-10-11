@@ -36,6 +36,7 @@ import { useSkillGroupMembershipActions } from "../hooks/useSkillGroupMembership
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { TagRenameDialog } from "../components/TagRenameDialog";
+import { RenameSkillDialog } from "../components/RenameSkillDialog";
 import { SkillDetailPanel } from "../components/SkillDetailPanel";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import { BatchTagDialog } from "../components/BatchTagDialog";
@@ -233,6 +234,7 @@ export function MySkills() {
   const [tagEditSkillId, setTagEditSkillId] = useState<string | null>(null);
   const [menuSkillId, setMenuSkillId] = useState<string | null>(null);
   const [skillToDelete, setSkillToDelete] = useState<ManagedSkill | null>(null);
+  const [skillToRename, setSkillToRename] = useState<ManagedSkill | null>(null);
   const [tagInput, setTagInput] = useState("");
   const tagInputRef = useRef<HTMLInputElement>(null);
 
@@ -1805,6 +1807,12 @@ export function MySkills() {
                                         ]
                                       : []),
                                     {
+                                      key: "rename",
+                                      label: t("mySkills.renameSkill"),
+                                      icon: <Pencil className="h-3.5 w-3.5" />,
+                                      onSelect: () => setSkillToRename(skill),
+                                    },
+                                    {
                                       key: "delete",
                                       label: t("common.delete"),
                                       icon: <Trash2 className="h-3.5 w-3.5" />,
@@ -2290,6 +2298,12 @@ export function MySkills() {
                                     ]
                                   : []),
                                 {
+                                  key: "rename",
+                                  label: t("mySkills.renameSkill"),
+                                  icon: <Pencil className="h-3.5 w-3.5" />,
+                                  onSelect: () => setSkillToRename(skill),
+                                },
+                                {
                                   key: "delete",
                                   label: t("common.delete"),
                                   icon: <Trash2 className="h-3.5 w-3.5" />,
@@ -2375,6 +2389,17 @@ export function MySkills() {
         onClose={() => setSkillToDelete(null)}
         onConfirm={async () => {
           if (skillToDelete) handleDeleteSkill(skillToDelete);
+        }}
+      />
+      <RenameSkillDialog
+        open={skillToRename !== null}
+        currentName={skillToRename?.name || ""}
+        onClose={() => setSkillToRename(null)}
+        onRename={async (newName) => {
+          if (skillToRename) {
+            await api.renameSkill(skillToRename.id, newName);
+            refreshManagedSkills();
+          }
         }}
       />
       <ConfirmDialog

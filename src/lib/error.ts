@@ -18,6 +18,8 @@ export type ErrorKind = (typeof ERROR_KINDS)[number];
 export interface TargetConflictDetail {
   path: string;
   reason: string;
+  /** The target path already contains a valid skill (has SKILL.md). */
+  is_skill: boolean;
 }
 
 export interface TargetConflictDetails {
