@@ -439,7 +439,8 @@
     "docTabs": {
       "local": "Local",
       "diff": "Diff",
-      "source": "Source"
+      "source": "Source",
+      "central": "Central"
     },
     "sourceDiffUnavailable": "Source content is unavailable right now",
     "sourceDiff": {
@@ -593,6 +594,17 @@
     "importProvenance": {
       "title": "Import origin",
       "hint": "Records where this skill was imported from. Moving or deleting the original path does not affect the library copy."
+    },
+    "contentComparison": {
+      "tabs": "Skill content versions",
+      "refresh": "Refresh content",
+      "retry": "Retry",
+      "comparing": "Comparing source with central library…",
+      "notCompared": "Not compared yet. Open Diff to compare.",
+      "summary": "{{count}} changed files · Added {{added}} · Modified {{modified}} · Removed {{removed}}",
+      "centralVersion": "Central library copy",
+      "localVersion": "Local source content",
+      "sourceVersion": "Remote source content"
     }
   },
   "install": {

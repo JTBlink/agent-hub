@@ -550,6 +550,38 @@
     "importProvenance": {
       "title": "匯入來源",
       "hint": "記錄此技能從哪裡匯入。來源路徑的移動或刪除不影響技能庫副本的使用。"
+    },
+    "docTabs": {
+      "local": "本機",
+      "central": "中心",
+      "diff": "差異",
+      "source": "來源"
+    },
+    "contentComparison": {
+      "tabs": "技能內容版本",
+      "refresh": "重新整理內容",
+      "retry": "重試",
+      "comparing": "正在比較來源與中心…",
+      "notCompared": "尚未比較，點擊差異查看變化",
+      "summary": "{{count}} 個檔案有差異 · 新增 {{added}} · 修改 {{modified}} · 刪除 {{removed}}",
+      "centralVersion": "中心庫副本",
+      "localVersion": "本機來源內容",
+      "sourceVersion": "遠端來源內容"
+    },
+    "sourceDiffUnavailable": "暫時無法讀取來源版本內容",
+    "sourceDiff": {
+      "noChanges": "無差異 —— 來源與中心庫內容一致",
+      "status": {
+        "added": "新增",
+        "removed": "刪除",
+        "modified": "修改"
+      },
+      "execBit": "執行權限 {{before}} → {{after}}",
+      "summary": {
+        "binary": "二進位檔案內容已變更",
+        "too_large": "檔案過大，僅顯示變更摘要",
+        "permission_only": "僅執行權限變更"
+      }
     }
   },
   "install": {
