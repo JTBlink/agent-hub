@@ -142,7 +142,7 @@
     "greeting": "Hello!",
     "summary": "{{skills}} Skills in Library · {{agents}} enabled Agents · {{projects}} Projects",
     "librarySkills": "Library Skills",
-    "syncCoverage": "Sync Coverage",
+    "deployed": "Deployed",
     "connectedAgents": "Enabled Agents",
     "synced": "Synced",
     "notSynced": "Not synced",
@@ -1203,6 +1203,7 @@
     "batchTagScopeNote": "Tags live in the central library, so edits affect every project using these skills. Project-only local skills are left untouched."
   },
   "skillGroupActions": {
+    "operationDetails": "View details",
     "button": "Apply Skill Group",
     "applyToProject": "Apply Skill Group to This Project",
     "applyToGlobal": "Apply Skill Group to Global Workspace",
