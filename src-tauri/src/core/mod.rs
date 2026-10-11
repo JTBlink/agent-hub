@@ -33,6 +33,7 @@ pub mod scenario_service;
 mod shared_library;
 pub(crate) mod shared_skill_index;
 pub mod skill_auto_updater;
+mod skill_deployment;
 pub mod skill_metadata;
 pub mod skill_store;
 pub mod skillssh_api;

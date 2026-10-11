@@ -1227,6 +1227,7 @@
     "addedToast": "Added {{added}} skill-agent item(s), skipped {{skipped}} existing.",
     "removedToast": "Removed {{removed}} skill-agent item(s).",
     "partialFailedToast": "{{count}} operation(s) failed",
+    "partialSkippedToast": "{{count}} operation(s) skipped",
     "nothingToAdd": "No missing skills to add",
     "nothingToRemove": "No matching skills to remove",
     "statusActive": "Active",

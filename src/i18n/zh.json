@@ -1227,6 +1227,7 @@
     "addedToast": "已添加 {{added}} 个 Skill-Agent 项，跳过 {{skipped}} 个已存在项。",
     "removedToast": "已移除 {{removed}} 个 Skill-Agent 项。",
     "partialFailedToast": "{{count}} 个操作失败",
+    "partialSkippedToast": "已跳过 {{count}} 个操作",
     "nothingToAdd": "没有缺失 Skills 可添加",
     "nothingToRemove": "没有匹配 Skills 可移除",
     "statusActive": "已激活",

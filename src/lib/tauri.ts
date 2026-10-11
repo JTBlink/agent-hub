@@ -480,8 +480,8 @@ export const renameSkill = (id: string, newName: string) =>
 
 // ── Sync ──
 
-export const syncSkillToTool = (skillId: string, tool: string) =>
-  invoke<void>("sync_skill_to_tool", { skillId, tool });
+export const syncSkillToTool = (skillId: string, tool: string, force = false) =>
+  invoke<void>("sync_skill_to_tool", { skillId, tool, force });
 
 export const unsyncSkillFromTool = (skillId: string, tool: string) =>
   invoke<void>("unsync_skill_from_tool", { skillId, tool });

@@ -1,3 +1,8 @@
+pub(crate) use super::skill_deployment::detach_source_refs_from_adoption_target;
+pub use super::skill_deployment::{
+    sync_single_skill_to_tool, sync_single_skill_to_tool_with_force, DeployIntent,
+};
+
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -119,7 +124,7 @@ pub(crate) fn deployment_target(
         .unwrap_or_else(|| root.join(target_name))
 }
 
-fn is_skill_path_within_root(path: &Path, root: &Path) -> bool {
+pub(crate) fn is_skill_path_within_root(path: &Path, root: &Path) -> bool {
     path.strip_prefix(root).is_ok_and(|relative| {
         !relative.as_os_str().is_empty()
             && relative
@@ -230,7 +235,10 @@ fn ownership_key(path: &Path, memo: &mut HashMap<PathBuf, PathBuf>) -> PathBuf {
 /// Authorization for a deployment write: a `skill_targets` row claiming this
 /// exact path lets us replace what it recorded, otherwise we may only write
 /// where nothing of the user's would be destroyed (#363).
-fn replace_policy(recorded_mode: Option<&str>, force: bool) -> sync_engine::ReplacePolicy<'_> {
+pub(crate) fn replace_policy(
+    recorded_mode: Option<&str>,
+    force: bool,
+) -> sync_engine::ReplacePolicy<'_> {
     match recorded_mode {
         Some(mode) => sync_engine::ReplacePolicy::Recorded { mode },
         None if force => sync_engine::ReplacePolicy::UserConfirmed,
@@ -791,172 +799,6 @@ pub fn sync_active_scenario_to_tool(store: &SkillStore, tool_key: &str) {
             }
         }
     }
-}
-
-/// Why a caller is writing to an agent's skills directory.
-///
-/// Adoption and stranded-target repair legitimately write over an existing
-/// real directory that has no `skill_targets` row — that directory is the very
-/// thing the user asked us to take over. Ordinary deployment must never do
-/// that, so the two intents cannot share a code path (#363).
-#[derive(Debug, Clone, Copy)]
-pub enum DeployIntent<'a> {
-    /// Ordinary deployment: replace only what our own records vouch for.
-    Managed,
-    /// The user explicitly asked us to take over this scanned skill path.
-    AdoptExisting(&'a Path),
-}
-
-/// Re-point every `source_ref` that names `target` at the referring skill's own
-/// central copy, ahead of an adoption that replaces `target` with a managed
-/// deployment (#425).
-///
-/// An adopted directory stops being an independent copy the moment the
-/// adoption runs: it becomes a link to (or copy of) central that can be
-/// removed at any time — by the agent's own skill management cleaning up what
-/// it does not recognize, or by a later undeploy. A skill whose `source_ref`
-/// still names that directory then fails its update check with
-/// `source_missing` forever, even though the central copy is intact.
-///
-/// The central copy always exists while the skill row does, so re-pointing
-/// keeps the source resolvable; the content-hash comparison against it keeps
-/// reporting `up_to_date`. Matching is by exact string or canonicalized path,
-/// because import records can spell the same directory with mixed separators
-/// than the deployment target computed from the adapter.
-pub(crate) fn detach_source_refs_from_adoption_target(
-    store: &SkillStore,
-    target: &Path,
-) -> Result<(), AppError> {
-    let target_str = target.to_string_lossy().into_owned();
-    // `canonicalize` resolves through symlinks, but a symlinked target is only
-    // unlinked by the replacement below (`remove_classified_target` treats
-    // LinkToSource/ForeignLink as `remove_link`) -- whatever it pointed at
-    // survives untouched. Resolving through the link would re-point the
-    // source_ref of a directory that is still on disk and still the user's
-    // source of truth, and the update check would then compare central to
-    // itself forever. An exact string match still applies: if the source_ref
-    // *is* the link path, that link really is going away.
-    let target_canonical = if std::fs::symlink_metadata(target)
-        .map(|meta| meta.file_type().is_symlink())
-        .unwrap_or(false)
-    {
-        None
-    } else {
-        std::fs::canonicalize(target).ok()
-    };
-    for skill in store.get_all_skills().map_err(AppError::db)? {
-        let Some(source_ref) = skill.source_ref.as_deref() else {
-            continue;
-        };
-        // Already re-pointed by a previous adoption — nothing to do.
-        if source_ref == skill.central_path {
-            continue;
-        }
-        let points_at_target = source_ref == target_str
-            || target_canonical.as_ref().is_some_and(|canonical| {
-                std::fs::canonicalize(source_ref).is_ok_and(|source| &source == canonical)
-            });
-        if points_at_target {
-            store
-                .update_skill_source_ref(&skill.id, &skill.central_path)
-                .map_err(AppError::db)?;
-            log::info!(
-                "adoption: re-pointed source_ref of skill '{}' at its central copy; \
-                 the adopted agent directory is now a deployment, not a source (#425)",
-                skill.name
-            );
-        }
-    }
-    Ok(())
-}
-
-pub fn sync_single_skill_to_tool(
-    store: &SkillStore,
-    skill_id: &str,
-    tool: &str,
-    intent: DeployIntent<'_>,
-) -> Result<(), AppError> {
-    let adapter = tool_adapters::find_adapter_with_store(store, tool)
-        .ok_or_else(|| AppError::not_found(format!("Unknown tool: {}", tool)))?;
-
-    if !adapter.can_deploy() {
-        return Err(AppError::not_found(format!(
-            "{} is not installed",
-            adapter.display_name
-        )));
-    }
-
-    if tool_service::get_disabled_tools(store).contains(&tool.to_string()) {
-        return Err(AppError::invalid_input(format!(
-            "{} is disabled",
-            adapter.display_name
-        )));
-    }
-
-    let skill = store
-        .get_skill_by_id(skill_id)
-        .map_err(AppError::db)?
-        .ok_or_else(|| AppError::not_found("Skill not found"))?;
-
-    let source = PathBuf::from(&skill.central_path);
-    let existing_targets = store.get_targets_for_skill(skill_id).unwrap_or_default();
-    let target = match intent {
-        DeployIntent::AdoptExisting(path) => {
-            let root = adapter.skills_dir();
-            if !is_skill_path_within_root(path, &root) {
-                return Err(AppError::invalid_input(
-                    "Skill path is outside the agent skills directory",
-                ));
-            }
-            path.to_path_buf()
-        }
-        DeployIntent::Managed => deployment_target(
-            &adapter,
-            &sync_engine::target_dir_name(&source, &skill.name),
-            skill_id,
-            &existing_targets,
-        ),
-    };
-    let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
-    let mode = sync_engine::sync_mode_for_tool(tool, configured_mode.as_deref());
-    let recorded_mode = match intent {
-        DeployIntent::AdoptExisting(_) => None,
-        DeployIntent::Managed => existing_targets
-            .iter()
-            .find(|existing| {
-                existing.tool == tool && std::path::Path::new(&existing.target_path) == target
-            })
-            .map(|existing| existing.mode.clone()),
-    };
-    let policy = match intent {
-        DeployIntent::AdoptExisting(_) => sync_engine::ReplacePolicy::UserConfirmed,
-        DeployIntent::Managed => replace_policy(recorded_mode.as_deref(), false),
-    };
-    if matches!(intent, DeployIntent::AdoptExisting(_)) {
-        // The directory at `target` may still be the import source of the very
-        // skill being deployed (or of a sibling record): re-point those at
-        // central BEFORE the replacement, so a failure partway through the
-        // adoption can never leave a dangling source behind (#425).
-        detach_source_refs_from_adoption_target(store, &target)?;
-    }
-    let actual_mode =
-        sync_engine::sync_skill(&source, &target, mode, policy).map_err(AppError::io)?;
-
-    let now = chrono::Utc::now().timestamp_millis();
-    let target_record = SkillTargetRecord {
-        id: uuid::Uuid::new_v4().to_string(),
-        skill_id: skill_id.to_string(),
-        tool: tool.to_string(),
-        target_path: target.to_string_lossy().to_string(),
-        mode: actual_mode.as_str().to_string(),
-        status: "ok".to_string(),
-        synced_at: Some(now),
-        last_error: None,
-        source_hash: skill.content_hash.clone(),
-    };
-
-    store.insert_target(&target_record).map_err(AppError::db)?;
-    Ok(())
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -57,6 +57,7 @@ import type {
   ProjectAgentTarget,
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { SkillDirectoryActions } from "../components/SkillDirectoryActions";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { AgentIcon } from "../components/AgentIcon";
 const projectLastUsedAgentsKey = (projectId: string) =>
@@ -1168,14 +1169,16 @@ export function ProjectDetail() {
               {project.name}
               <span className="app-badge">{groupedSkills.length}</span>
             </h1>
-            <p
-              className="mt-1 truncate text-[12px] leading-5 text-muted"
-              title={compactHomePath(project.path)}
+            <div
+              className="mt-1 flex items-center gap-1.5 text-[12px] leading-5 text-muted"
             >
-              {compactHomePath(project.path)}
-              {groupedSkills.length > 0 &&
-                ` \u00B7 ${enabledCount} / ${groupedSkills.length} ${t("project.enabled")}`}
-            </p>
+              <span className="min-w-0 truncate" title={compactHomePath(project.path)}>
+                {compactHomePath(project.path)}
+                {groupedSkills.length > 0 &&
+                  ` \u00B7 ${enabledCount} / ${groupedSkills.length} ${t("project.enabled")}`}
+              </span>
+              <SkillDirectoryActions path={project.path} compact />
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-[2_1_560px] flex-wrap items-center justify-end gap-2">

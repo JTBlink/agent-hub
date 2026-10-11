@@ -14,6 +14,7 @@ import {
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
 import type { ManagedSkill, SkillGroup } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { summarizeSkillGroupErrors } from "../lib/skillGroupErrors";
 
 export interface SkillGroupBarProps {
   skillGroups: SkillGroup[];
@@ -70,9 +71,8 @@ export function SkillGroupBar({
           s.skill_group_ids.includes(skillGroup.id),
         );
         let added = 0,
-          skipped = 0,
-          failed = 0;
-        const failures: string[] = [];
+          skipped = 0;
+        const failures: unknown[] = [];
         for (const skill of skillGroupSkills) {
           for (const agentKey of agentKeys) {
             if (existsInWorkspace(skill, agentKey)) {
@@ -83,25 +83,27 @@ export function SkillGroupBar({
               await onAddSkill(skill, agentKey);
               added++;
             } catch (e) {
-              failed++;
-              failures.push(getErrorMessage(e, t("common.error")));
+              failures.push(e);
             }
           }
         }
         if (added > 0) {
           toast.success(t("skillGroupActions.addedToast", { added, skipped }));
-        } else if (failed === 0) {
+        } else if (failures.length === 0) {
           toast.info(t("skillGroupActions.nothingToAdd"));
         }
-        if (failed > 0) {
-          toast.error(
-            [
-              t("skillGroupActions.partialFailedToast", { count: failed }),
-              failures[0],
-            ]
-              .filter(Boolean)
-              .join(" — "),
-          );
+        for (const notice of summarizeSkillGroupErrors(
+          failures,
+          t("common.error"),
+        )) {
+          const message = `${t(
+            notice.kind === "conflict"
+              ? "skillGroupActions.partialSkippedToast"
+              : "skillGroupActions.partialFailedToast",
+            { count: notice.count },
+          )} — ${notice.message}`;
+          if (notice.kind === "conflict") toast.warning(message);
+          else toast.error(message);
         }
         await onComplete();
       } catch (error) {
@@ -120,9 +122,8 @@ export function SkillGroupBar({
         const skillGroupSkills = managedSkills.filter((s) =>
           s.skill_group_ids.includes(skillGroup.id),
         );
-        let removed = 0,
-          failed = 0;
-        const failures: string[] = [];
+        let removed = 0;
+        const failures: unknown[] = [];
         for (const skill of skillGroupSkills) {
           for (const agentKey of agentKeys) {
             if (!existsInWorkspace(skill, agentKey)) continue;
@@ -130,25 +131,27 @@ export function SkillGroupBar({
               await onRemoveSkill(skill, agentKey);
               removed++;
             } catch (e) {
-              failed++;
-              failures.push(getErrorMessage(e, t("common.error")));
+              failures.push(e);
             }
           }
         }
         if (removed > 0) {
           toast.success(t("skillGroupActions.removedToast", { removed }));
-        } else if (failed === 0) {
+        } else if (failures.length === 0) {
           toast.info(t("skillGroupActions.nothingToRemove"));
         }
-        if (failed > 0) {
-          toast.error(
-            [
-              t("skillGroupActions.partialFailedToast", { count: failed }),
-              failures[0],
-            ]
-              .filter(Boolean)
-              .join(" — "),
-          );
+        for (const notice of summarizeSkillGroupErrors(
+          failures,
+          t("common.error"),
+        )) {
+          const message = `${t(
+            notice.kind === "conflict"
+              ? "skillGroupActions.partialSkippedToast"
+              : "skillGroupActions.partialFailedToast",
+            { count: notice.count },
+          )} — ${notice.message}`;
+          if (notice.kind === "conflict") toast.warning(message);
+          else toast.error(message);
         }
         await onComplete();
       } catch (error) {
