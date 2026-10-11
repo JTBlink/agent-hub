@@ -368,16 +368,13 @@ export function MySkills() {
     return displayNames;
   }, [skills]);
 
-  const filtered = useMemo(() => {
-    const result = skills.filter((skill) => {
+  const baseFiltered = useMemo(() => {
+    return skills.filter((skill) => {
       const displayName = skillDisplayNames.get(skill.id) || skill.name;
-      const matchesSearch = matchesSkillSearch(
-        skill.name,
-        displayName,
-        skill.description,
-        search,
-      );
-      if (!matchesSearch) return false;
+      if (
+        !matchesSkillSearch(skill.name, displayName, skill.description, search)
+      )
+        return false;
 
       if (sourceFilters.size > 0 && !sourceFilters.has(skill.source_type))
         return false;
@@ -393,6 +390,20 @@ export function MySkills() {
 
       if (viewingUngrouped) return skill.skill_group_ids.length === 0;
 
+      return true;
+    });
+  }, [
+    skills,
+    skillDisplayNames,
+    search,
+    sourceFilters,
+    filterUngrouped,
+    tagFilters,
+    viewingUngrouped,
+  ]);
+
+  const filtered = useMemo(() => {
+    const result = baseFiltered.filter((skill) => {
       if (!viewedSkillGroup) return true;
 
       const enabledInSkillGroup = skill.skill_group_ids.includes(
@@ -404,19 +415,16 @@ export function MySkills() {
     });
 
     result.sort((a, b) => {
-      // Skills with an actionable update stay at the front of the library.
       const aNeedsUpdate = hasAvailableUpdate(a) ? 0 : 1;
       const bNeedsUpdate = hasAvailableUpdate(b) ? 0 : 1;
       if (aNeedsUpdate !== bNeedsUpdate) return aNeedsUpdate - bNeedsUpdate;
 
       if (!viewedSkillGroup) return 0;
 
-      // Keep enabled skills together after the update priority.
       const aEnabled = a.skill_group_ids.includes(viewedSkillGroup.id) ? 0 : 1;
       const bEnabled = b.skill_group_ids.includes(viewedSkillGroup.id) ? 0 : 1;
       if (aEnabled !== bEnabled) return aEnabled - bEnabled;
 
-      // Within the same group, use the custom skill group order.
       const aOrder = skillGroupSkillOrder.indexOf(a.id);
       const bOrder = skillGroupSkillOrder.indexOf(b.id);
       if (aOrder !== -1 && bOrder !== -1) return aOrder - bOrder;
@@ -426,27 +434,20 @@ export function MySkills() {
     });
 
     return result;
-  }, [
-    skills,
-    skillDisplayNames,
-    search,
-    sourceFilters,
-    filterUngrouped,
-    tagFilters,
-    filterMode,
-    viewedSkillGroup,
-    viewingUngrouped,
-    skillGroupSkillOrder,
-  ]);
+  }, [baseFiltered, filterMode, viewedSkillGroup, skillGroupSkillOrder]);
 
   const filterCounts = useMemo(() => {
     if (!viewedSkillGroup)
-      return { all: skills.length, enabled: 0, available: 0 };
-    const enabled = skills.filter((s) =>
+      return { all: baseFiltered.length, enabled: 0, available: 0 };
+    const enabled = baseFiltered.filter((s) =>
       s.skill_group_ids.includes(viewedSkillGroup.id),
     ).length;
-    return { all: skills.length, enabled, available: skills.length - enabled };
-  }, [skills, viewedSkillGroup]);
+    return {
+      all: baseFiltered.length,
+      enabled,
+      available: baseFiltered.length - enabled,
+    };
+  }, [baseFiltered, viewedSkillGroup]);
 
   const ungroupedCount = useMemo(
     () => skills.filter((s) => s.skill_group_ids.length === 0).length,
