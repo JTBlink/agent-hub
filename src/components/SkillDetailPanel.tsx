@@ -18,6 +18,7 @@ import {
   type SkillDocument,
   type SourceSkillDocument,
   type SkillSourceDiff,
+  type SkillGroup,
   type SkillToolToggle,
   type ToolInfo,
 } from "../lib/tauri";
@@ -27,11 +28,14 @@ import { SkillMarkdown } from "./SkillMarkdown";
 import { AgentToggleSection, type AgentToggleItem } from "./AgentToggleSection";
 import { SkillProjectsSection } from "./SkillProjectsSection";
 import { SyncDots } from "./SyncDots";
+import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
+import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
 
 interface Props {
   skill: ManagedSkill | null;
   onClose: () => void;
   tools?: ToolInfo[];
+  skillGroups?: SkillGroup[];
   toolToggles?: SkillToolToggle[] | null;
   togglingTool?: string | null;
   onToggleTool?: (tool: string, enabled: boolean) => void;
@@ -43,6 +47,7 @@ export function SkillDetailPanel({
   skill,
   onClose,
   tools,
+  skillGroups,
   toolToggles,
   togglingTool,
   onToggleTool,
@@ -66,6 +71,7 @@ export function SkillDetailPanel({
       skill={skill}
       onClose={onClose}
       tools={tools}
+      skillGroups={skillGroups}
       toolToggles={toolToggles}
       togglingTool={togglingTool}
       onToggleTool={onToggleTool}
@@ -79,6 +85,7 @@ function SkillDetailPanelContent({
   skill,
   onClose,
   tools,
+  skillGroups,
   toolToggles,
   togglingTool,
   onToggleTool,
@@ -88,6 +95,7 @@ function SkillDetailPanelContent({
   skill: ManagedSkill;
   onClose: () => void;
   tools?: ToolInfo[];
+  skillGroups?: SkillGroup[];
   toolToggles?: SkillToolToggle[] | null;
   togglingTool?: string | null;
   onToggleTool?: (tool: string, enabled: boolean) => void;
@@ -222,6 +230,11 @@ function SkillDetailPanelContent({
     supportsSourceDiff &&
     !activeSourceDiff &&
     !sourceDiffFailed;
+
+  const belongsToGroups = (skillGroups ?? []).filter((g) =>
+    skill.skill_group_ids.includes(g.id),
+  );
+
   const toggleItems: AgentToggleItem[] = (toolToggles ?? []).map((toggle) => ({
     key: toggle.tool,
     displayName: toggle.display_name,
@@ -255,6 +268,30 @@ function SkillDetailPanelContent({
           </>
         )}
       </div>
+      {belongsToGroups.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-faint">
+            {t("sidebar.skillGroups")}
+          </span>
+          {belongsToGroups.map((group) => {
+            const opt = getSkillGroupIconOption(group);
+            const Icon = opt.icon;
+            return (
+              <span
+                key={group.id}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                  opt.activeClass,
+                  opt.colorClass,
+                )}
+              >
+                <Icon className="h-3 w-3" />
+                {getSkillGroupDisplayName(group.name, t)}
+              </span>
+            );
+          })}
+        </div>
+      )}
       <div className="mt-3 flex min-w-0 items-center gap-2 text-[13px] text-muted">
         <Folder className="h-3.5 w-3.5 shrink-0" />
         <span className="font-mono truncate" title={skill.central_path}>
