@@ -10,7 +10,12 @@ export interface SkillGroupOperationError {
 export interface SkillGroupErrorNotice {
   kind: "conflict" | "failure";
   count: number;
-  items: { skillId: string; skillName: string; agentKey: string; message: string }[];
+  items: {
+    skillId: string;
+    skillName: string;
+    agentKey: string;
+    message: string;
+  }[];
 }
 
 /** Keep every affected skill and reason; only ownership conflicts are skips. */

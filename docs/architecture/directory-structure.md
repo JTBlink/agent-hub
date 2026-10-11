@@ -156,10 +156,7 @@ agent-hub/
 ├── docs/                           # 项目文档
 │   ├── product/                    #   产品概览
 │   ├── architecture/               #   架构文档
-│   ├── design/                     #   UI 设计指南
-│   ├── development/                #   开发规范
 │   ├── adr/                        #   架构决策记录
-│   ├── agents/                     #   Agent 协作约定
 │   ├── plans/                      #   规划设计文档
 │   └── reference/                  #   参考资料与来源
 │
@@ -173,6 +170,10 @@ agent-hub/
 │   ├── build-homepage.mjs          #   主页构建
 │   ├── verify-release-bundle.mjs   #   发布包验证
 │   └── run-rust-cli.mjs            #   Rust CLI 运行器
+│
+├── .agents/skills/                 # 项目内部规范，随 Git 共享
+│   ├── rust-dev/                   #   开发、UI、测试与提交规范
+│   └── github/             #   版本发布、Actions 与产物验收
 │
 ├── skills/                         # 内置 Skill
 │   └── manage-skills/SKILL.md      #   技能管理 Skill

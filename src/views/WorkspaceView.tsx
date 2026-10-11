@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import {
   ChevronRight,
@@ -314,7 +308,11 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const visibleLocalSkills = useMemo(
     () =>
       filterWorkspaceSkills(
-        localSkills, search, tagFilters, managedLocalIds, onlyUnmanaged,
+        localSkills,
+        search,
+        tagFilters,
+        managedLocalIds,
+        onlyUnmanaged,
       ),
     [localSkills, search, tagFilters, managedLocalIds, onlyUnmanaged],
   );
@@ -326,9 +324,8 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
 
   const managedLocalCount = useMemo(
     () =>
-      localSkills.filter(
-        (skill) =>
-          isManagedWorkspaceSkill(skill, managedLocalIds),
+      localSkills.filter((skill) =>
+        isManagedWorkspaceSkill(skill, managedLocalIds),
       ).length,
     [localSkills, managedLocalIds],
   );
@@ -349,7 +346,11 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     filtered: visibleLocalSkills,
     getKey: localSkillKey,
     isItemActive: () => true,
-    filterSignal: JSON.stringify([search, [...tagFilters].sort(), onlyUnmanaged]),
+    filterSignal: JSON.stringify([
+      search,
+      [...tagFilters].sort(),
+      onlyUnmanaged,
+    ]),
     scopeSignal: agentKey ?? "",
     escapeEnabled: !batchUnsyncConfirm && !batchDeleteConfirm,
   });
@@ -652,8 +653,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     const canPull =
       skill.sync_status === "center_newer" || skill.sync_status === "diverged";
     const isInSync = skill.sync_status === "in_sync";
-    const isManaged =
-      isManagedWorkspaceSkill(skill, managedLocalIds);
+    const isManaged = isManagedWorkspaceSkill(skill, managedLocalIds);
     const canDeleteLocal = !isManaged && skill.sync_status === "project_only";
     const removing = removingLocalSkillId === skill.relative_path;
     const buttonClassName =

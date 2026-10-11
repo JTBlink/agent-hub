@@ -104,7 +104,7 @@ export async function assembleRelease({
   const changelogPath = resolve(root, "CHANGELOG.md");
   const platformSupportPath = resolve(
     root,
-    ".agents/skills/rust-dev/references/platform-support.md",
+    ".agents/skills/github-cli/references/platform-support.md",
   );
   const changelog = readFileSync(changelogPath, "utf8");
   const platformSupport = readFileSync(platformSupportPath, "utf8");

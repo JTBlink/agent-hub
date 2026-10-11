@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub CLI 工作规范"
+  short_description: "用 gh 分析修复 Actions、验证重跑、管理版本 tag 与 GitHub Release"
+  default_prompt: "使用 $github-cli 分析处理当前仓库 Actions 问题，或按规范完成版本发布。"
