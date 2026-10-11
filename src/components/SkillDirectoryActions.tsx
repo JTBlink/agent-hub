@@ -24,7 +24,13 @@ export function SkillDirectoryActions({
     }
   };
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    <div
+      className={
+        compact
+          ? "flex shrink-0 items-center gap-1"
+          : "flex flex-wrap items-center gap-1"
+      }
+    >
       <button
         type="button"
         disabled={disabled || !path}

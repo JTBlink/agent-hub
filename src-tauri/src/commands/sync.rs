@@ -35,7 +35,7 @@ fn sync_skill_to_tool_internal(
     tool: &str,
     force: bool,
 ) -> Result<(), AppError> {
-    scenario_service::sync_single_skill_to_tool_with_force(
+    scenario_service::sync_single_skill_to_tool(
         store,
         skill_id,
         tool,
