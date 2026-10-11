@@ -272,6 +272,22 @@ pub struct SkillSourceDiffEntryDto {
     pub executable_after: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct SkillFileEntryDto {
+    pub relative_path: String,
+    pub size: u64,
+    pub is_text: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SkillFileContentDto {
+    pub skill_id: String,
+    pub relative_path: String,
+    /// "text" | "binary" | "too_large"
+    pub content_kind: String,
+    pub content: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct InstallSourceMetadata {
     pub source_type: String,
@@ -705,6 +721,117 @@ fn read_skill_document_from_dir(dir: &Path) -> Result<(String, String), AppError
     }
 
     Err(AppError::not_found("No documentation file found"))
+}
+
+const MAX_DISPLAY_FILE_BYTES: usize = 512 * 1024;
+
+const TEXT_PROBE_BYTES: usize = 8192;
+
+fn probe_is_text(path: &Path) -> bool {
+    let Ok(file) = std::fs::File::open(path) else {
+        return false;
+    };
+    use std::io::Read;
+    let mut buf = vec![0u8; TEXT_PROBE_BYTES];
+    let n = match file.take(TEXT_PROBE_BYTES as u64).read(&mut buf) {
+        Ok(n) => n,
+        Err(_) => return false,
+    };
+    !buf[..n].contains(&0) && std::str::from_utf8(&buf[..n]).is_ok()
+}
+
+#[tauri::command]
+pub async fn get_skill_files(
+    skill_id: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<Vec<SkillFileEntryDto>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let skill = store
+            .get_skill_by_id(&skill_id)
+            .map_err(AppError::db)?
+            .ok_or_else(|| AppError::not_found("Skill not found"))?;
+
+        let entries = crate::core::content_hash::list_content_files(Path::new(&skill.central_path));
+        let result = entries
+            .into_iter()
+            .map(|entry| {
+                let size = std::fs::metadata(&entry.path)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
+                let is_text = probe_is_text(&entry.path);
+                SkillFileEntryDto {
+                    relative_path: entry.relative_path,
+                    size,
+                    is_text,
+                }
+            })
+            .collect();
+        Ok(result)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn read_skill_file(
+    skill_id: String,
+    relative_path: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<SkillFileContentDto, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let skill = store
+            .get_skill_by_id(&skill_id)
+            .map_err(AppError::db)?
+            .ok_or_else(|| AppError::not_found("Skill not found"))?;
+
+        // Path-traversal guard: ensure relative_path contains only normal components
+        for component in Path::new(&relative_path).components() {
+            if !matches!(component, std::path::Component::Normal(_)) {
+                return Err(AppError::invalid_input("Invalid file path"));
+            }
+        }
+
+        let central = Path::new(&skill.central_path);
+        let resolved = central.join(&relative_path);
+
+        if !path_guard::is_path_safe(central, &resolved) {
+            return Err(AppError::invalid_input("Invalid file path"));
+        }
+
+        let bytes = std::fs::read(&resolved)?;
+        if bytes.len() > MAX_DISPLAY_FILE_BYTES {
+            return Ok(SkillFileContentDto {
+                skill_id,
+                relative_path,
+                content_kind: "too_large".into(),
+                content: None,
+            });
+        }
+        if bytes.contains(&0) {
+            return Ok(SkillFileContentDto {
+                skill_id,
+                relative_path,
+                content_kind: "binary".into(),
+                content: None,
+            });
+        }
+        match String::from_utf8(bytes) {
+            Ok(text) => Ok(SkillFileContentDto {
+                skill_id,
+                relative_path,
+                content_kind: "text".into(),
+                content: Some(text),
+            }),
+            Err(_) => Ok(SkillFileContentDto {
+                skill_id,
+                relative_path,
+                content_kind: "binary".into(),
+                content: None,
+            }),
+        }
+    })
+    .await?
 }
 
 fn source_label_for_skill(skill: &SkillRecord) -> String {

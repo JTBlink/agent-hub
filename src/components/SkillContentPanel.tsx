@@ -7,6 +7,7 @@ import {
 } from "../hooks/useSkillContent";
 import type { ManagedSkill } from "../lib/tauri";
 import { cn } from "../utils";
+import { SkillFileBrowser } from "./SkillFileBrowser";
 import { SkillMarkdown } from "./SkillMarkdown";
 import { SkillSourceDiffViewer } from "./SkillSourceDiffViewer";
 
@@ -165,7 +166,10 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
         ) : content.tab === "source" && content.source.data ? (
           <SkillMarkdown content={content.source.data.content} />
         ) : content.tab === "central" && content.central.data ? (
-          <SkillMarkdown content={content.central.data.content} />
+          <SkillFileBrowser
+            skillId={skill.id}
+            initialDoc={content.central.data}
+          />
         ) : null}
       </div>
     </section>

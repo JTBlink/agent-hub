@@ -11,11 +11,15 @@ const api = vi.hoisted(() => ({
   document: vi.fn(),
   source: vi.fn(),
   diff: vi.fn(),
+  files: vi.fn(),
+  readFile: vi.fn(),
 }));
 vi.mock("../lib/tauri", () => ({
   getSkillDocument: api.document,
   getSourceSkillDocument: api.source,
   getSkillSourceDiff: api.diff,
+  getSkillFiles: api.files,
+  readSkillFile: api.readFile,
 }));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
@@ -69,8 +73,11 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   api.document.mockResolvedValue({
     skill_id: "demo",
+    filename: "SKILL.md",
     content: "Central document",
+    central_path: "<workspace>/library/demo",
   });
+  api.files.mockResolvedValue([]);
   api.source.mockResolvedValue({
     skill_id: "demo",
     content: "Local source document",
