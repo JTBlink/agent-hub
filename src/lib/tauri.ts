@@ -1140,8 +1140,7 @@ export interface ProjectLibraryStatus {
       agent: string;
       agent_name?: string;
       path: string;
-      reason:
-        "missing" | "link_replaced" | "link_mismatch" | "content_mismatch";
+      reason: "link_replaced" | "link_mismatch" | "content_mismatch";
     }[];
   }[];
   files_to_commit: string[];

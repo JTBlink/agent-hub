@@ -32,7 +32,7 @@ it("explains actual entry mismatches with Agent names and paths", async () => {
         agent: "codex",
         agent_name: "Codex",
         path: ".codex/skills/demo",
-        reason: "missing",
+        reason: "content_mismatch",
       },
     ],
   };
@@ -43,7 +43,7 @@ it("explains actual entry mismatches with Agent names and paths", async () => {
     expect(container.textContent).toContain(
       "Claude Code：原先共享项目技能的链接已变成独立副本",
     );
-    expect(container.textContent).toContain("Codex：未找到该 Agent 的技能文件");
+    expect(container.textContent).toContain("Codex：技能副本与项目版本不同");
     expect(
       container.querySelector('[title=".claude/skills/demo"]'),
     ).not.toBeNull();

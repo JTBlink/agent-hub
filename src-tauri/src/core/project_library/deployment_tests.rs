@@ -62,6 +62,53 @@ fn default_copy_creates_new_copy_without_converting_existing_project_links() {
     assert!(status(&root).unwrap().skills[0].target_issues.is_empty());
 }
 
+#[test]
+fn absent_agents_stay_unassigned_during_refresh_and_explicit_deploy_adds_only_selected_agent() {
+    let tmp = TestProject::new();
+    let skill = fixture(tmp.path());
+    let root = tmp.path().join("project");
+    fs::create_dir(&root).unwrap();
+    let targets: Vec<_> = ["claude_code", "codex", "hermes", "opencode"]
+        .iter()
+        .map(|key| tool_adapters::find_adapter(key).unwrap())
+        .collect();
+    install_with_mode(&root, &skill, &targets, true).unwrap();
+    for target in &targets {
+        fs::remove_dir_all(root.join(target.project_relative_skills_dir()).join("demo")).unwrap();
+    }
+    let report = status(&root).unwrap();
+    assert!(report.skills[0].target_issues.is_empty());
+    assert!(report.skills[0].stale_targets.is_empty());
+    assert!(!report.skills[0].modified);
+    fs::write(
+        root.join(".agents/skills/demo/project.txt"),
+        "Project update",
+    )
+    .unwrap();
+    let report = repair(&root, "demo").unwrap();
+    assert!(!report.skills[0].modified);
+    for target in &targets {
+        assert!(!root
+            .join(target.project_relative_skills_dir())
+            .join("demo")
+            .exists());
+    }
+    deploy(
+        &root,
+        "demo",
+        &[tool_adapters::find_adapter("codex").unwrap()],
+    )
+    .unwrap();
+    assert!(root.join(".codex/skills/demo/project.txt").is_file());
+    for key in ["claude_code", "hermes", "opencode"] {
+        let target = tool_adapters::find_adapter(key).unwrap();
+        assert!(!root
+            .join(target.project_relative_skills_dir())
+            .join("demo")
+            .exists());
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn replaced_project_link_reports_its_cause_and_repair_restores_relative_link() {
