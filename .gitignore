@@ -58,6 +58,13 @@ Thumbs.db
 .claude/*
 !.claude/CLAUDE.md
 !.claude/skills/
-.codex/
+# Share only the two project-relative Codex skill entries.
+# Reopen each parent while keeping local config, caches, and other skills ignored.
+!/.codex/
+/.codex/*
+!/.codex/skills/
+/.codex/skills/*
+!/.codex/skills/github-cli
+!/.codex/skills/rust-dev
 .hermes/
 .opencode/
