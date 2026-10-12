@@ -10,7 +10,7 @@ import {
   type ProjectSkillEntry,
 } from "../lib/projectSkillEntries";
 import { DetailSheet } from "./DetailSheet";
-import { AgentToggleSection, type AgentToggleItem } from "./AgentToggleSection";
+import { AgentToggleInline, type AgentToggleItem } from "./AgentToggleSection";
 import { ProjectAgentDots } from "./ProjectAgentDots";
 import { ProjectSkillSyncActions } from "./ProjectSkillSyncActions";
 import { SkillMarkdown } from "./SkillMarkdown";
@@ -142,15 +142,15 @@ export function ProjectSkillDetailPanel({
         ) : undefined
       }
       meta={meta}
+      headerActions={
+        <AgentToggleInline
+          items={toggleItems}
+          togglingKey={togglingAgent}
+          onToggle={onToggleAgent}
+        />
+      }
       onClose={onClose}
     >
-      <AgentToggleSection
-        items={toggleItems}
-        togglingKey={togglingAgent}
-        onToggle={onToggleAgent}
-        className="mb-4"
-      />
-
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px]">
         <span className="font-medium text-secondary">
           {t("project.comparison.copy")}

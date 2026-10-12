@@ -8,6 +8,7 @@ interface DetailSheetProps {
   open: boolean;
   title: ReactNode;
   titleActions?: ReactNode;
+  headerActions?: ReactNode;
   description?: ReactNode;
   meta?: ReactNode;
   onClose: () => void;
@@ -18,6 +19,7 @@ export function DetailSheet({
   open,
   title,
   titleActions,
+  headerActions,
   description,
   meta,
   onClose,
@@ -43,12 +45,15 @@ export function DetailSheet({
           >
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <button
+              onClick={onClose}
+              className="rounded-md p-1.5 text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-6 scrollbar-hide">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

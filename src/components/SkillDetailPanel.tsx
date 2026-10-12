@@ -19,7 +19,7 @@ import {
 } from "../lib/tauri";
 import { SkillContentPanel } from "./SkillContentPanel";
 import { DetailSheet } from "./DetailSheet";
-import { AgentToggleSection, type AgentToggleItem } from "./AgentToggleSection";
+import { AgentToggleInline, type AgentToggleItem } from "./AgentToggleSection";
 import { SkillProjectsSection } from "./SkillProjectsSection";
 import { SyncDots } from "./SyncDots";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
@@ -265,17 +265,18 @@ function SkillDetailPanelContent({
         ) : undefined
       }
       meta={meta}
+      headerActions={
+        toolToggles && onToggleTool ? (
+          <AgentToggleInline
+            items={toggleItems}
+            togglingKey={togglingTool}
+            onToggle={onToggleTool}
+          />
+        ) : undefined
+      }
       onClose={onClose}
     >
       {sourceInfo}
-      {toolToggles && onToggleTool && (
-        <AgentToggleSection
-          items={toggleItems}
-          togglingKey={togglingTool}
-          onToggle={onToggleTool}
-          className="mb-4"
-        />
-      )}
 
       {projects && projects.length > 0 && (
         <SkillProjectsSection
