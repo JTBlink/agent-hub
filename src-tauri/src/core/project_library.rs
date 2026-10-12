@@ -408,7 +408,8 @@ pub fn is_managed(root: &Path, name: &str) -> Result<bool, AppError> {
 
 /// Read portable state without creating directories or modifying project files.
 pub fn status(root: &Path) -> Result<ProjectLibraryStatus, AppError> {
-    status_inner(root).map_err(AppError::io_with_context)
+    let root = root.canonicalize().map_err(AppError::io)?;
+    status_inner(&root).map_err(AppError::io_with_context)
 }
 
 fn status_inner(root: &Path) -> Result<ProjectLibraryStatus> {

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "skills": {
+    "github-cli": {
+      "id": "35ba7c38-f67d-43a4-820a-636b4447401f",
+      "name": "github-cli",
+      "content_hash": "e6503cfbb6bc46b68ef680c8a0990b9c66954ce3b2a082baf99a4a169325641a",
+      "targets": {
+        "claude_code": ".claude/skills/github-cli"
+      },
+      "source": null,
+      "disabled": false,
+      "disabled_targets": []
+    }
+  }
+}

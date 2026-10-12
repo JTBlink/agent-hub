@@ -413,6 +413,106 @@ fn git_ignore_warnings_include_resources_inside_the_team_skill() {
 }
 
 #[test]
+fn ignored_team_directories_are_reported_once_without_child_path_noise() {
+    let tmp = TestProject::new();
+    let skill = fixture(tmp.path());
+    let root = tmp.path().join("project");
+    fs::create_dir(&root).unwrap();
+    git2::Repository::init(&root).unwrap();
+    fs::write(root.join(".gitignore"), ".claude/\n.agent-hub/\n").unwrap();
+    let report = install(
+        &root,
+        &skill,
+        &[tool_adapters::find_adapter("claude_code").unwrap()],
+    )
+    .unwrap();
+    assert_eq!(
+        report.ignored_paths,
+        [".agent-hub/project-skills.json", ".claude/skills/demo"]
+    );
+    assert_eq!(report.management_files, [MANIFEST]);
+}
+
+#[test]
+fn tracked_team_files_are_not_blocked_by_later_directory_ignore_rules() {
+    let tmp = TestProject::new();
+    let skill = fixture(tmp.path());
+    let root = tmp.path().join("project");
+    fs::create_dir(&root).unwrap();
+    let repo = git2::Repository::init(&root).unwrap();
+    install(
+        &root,
+        &skill,
+        &[tool_adapters::find_adapter("claude_code").unwrap()],
+    )
+    .unwrap();
+    let mut index = repo.index().unwrap();
+    index
+        .add_all(["."], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    index.write().unwrap();
+    fs::write(root.join(".gitignore"), ".claude/\n").unwrap();
+    assert!(status(&root).unwrap().ignored_paths.is_empty());
+    fs::write(root.join(".claude/skills/demo/new.md"), "Team addition").unwrap();
+    assert!(repo
+        .is_path_ignored(Path::new(".claude/skills/demo/new.md"))
+        .unwrap());
+    assert_eq!(
+        status(&root).unwrap().ignored_paths,
+        [".claude/skills/demo"]
+    );
+}
+
+#[test]
+fn team_can_clone_complete_native_skills_without_an_agenthub_manifest() {
+    let tmp = TestProject::new();
+    let skill = fixture(tmp.path());
+    let root = tmp.path().join("project");
+    fs::create_dir(&root).unwrap();
+    let repo = git2::Repository::init(&root).unwrap();
+    fs::write(root.join(".gitignore"), ".agent-hub/\n").unwrap();
+    install(
+        &root,
+        &skill,
+        &[tool_adapters::find_adapter("claude_code").unwrap()],
+    )
+    .unwrap();
+    let mut index = repo.index().unwrap();
+    index
+        .add_all(["."], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    index.write().unwrap();
+    let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
+    let signature = git2::Signature::now("Fixture", "user@example.invalid").unwrap();
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Native skills",
+        &tree,
+        &[],
+    )
+    .unwrap();
+    let cloned = tmp.path().join("new-member");
+    git2::Repository::clone(root.to_str().unwrap(), &cloned).unwrap();
+    fs::remove_dir_all(tmp.path().join("personal")).unwrap();
+    assert!(!cloned.join(MANIFEST).exists());
+    for directory in [".agents/skills/demo", ".claude/skills/demo"] {
+        assert_eq!(
+            fs::read_to_string(cloned.join(directory).join("SKILL.md")).unwrap(),
+            fs::read_to_string(root.join(directory).join("SKILL.md")).unwrap()
+        );
+        assert_eq!(
+            fs::read_to_string(cloned.join(directory).join("scripts/run.sh")).unwrap(),
+            "echo team\n"
+        );
+    }
+    // Reading unmanaged files does not create or implicitly adopt a manifest.
+    assert!(status(&cloned).unwrap().management_files.is_empty());
+    assert!(!cloned.join(MANIFEST).exists());
+}
+
+#[test]
 fn text_line_ending_conversion_does_not_mark_a_clean_team_copy_modified() {
     let tmp = TestProject::new();
     let skill = fixture(tmp.path());
