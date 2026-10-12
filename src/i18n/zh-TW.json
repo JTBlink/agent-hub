@@ -586,6 +586,11 @@
       "sourceVersion": "遠端來源內容"
     },
     "sourceDiffUnavailable": "暫時無法讀取來源版本內容",
+    "fileBrowser": {
+      "binary": "二進位檔案 — 請使用外部編輯器開啟",
+      "tooLarge": "檔案過大，無法預覽（{{size}}）",
+      "loadFailed": "載入檔案內容失敗"
+    },
     "sourceDiff": {
       "noChanges": "無差異 —— 來源與中心庫內容一致",
       "status": {
@@ -599,11 +604,6 @@
         "too_large": "檔案過大，僅顯示變更摘要",
         "permission_only": "僅執行權限變更"
       }
-    },
-    "fileBrowser": {
-      "binary": "二進位檔案 — 請使用外部編輯器開啟",
-      "tooLarge": "檔案過大，無法預覽（{{size}}）",
-      "loadFailed": "載入檔案內容失敗"
     }
   },
   "install": {
@@ -814,8 +814,10 @@
     "repoPathPendingHint": "重新啟動後遷移應用程式資料到 {{path}}；已啟用的共用技能目錄保持不變。",
     "changeDir": "變更目錄",
     "openInFinder": "開啟資料夾",
-    "syncMode": "預設同步模式",
-    "syncModeDesc": "建議使用符號連結，佔用空間極小且修改可即時生效。全域與專案工作區均生效；注意專案裡的符號連結指向本機中央庫，不會隨倉庫帶走。",
+    "globalSyncMode": "全域同步模式",
+    "globalSyncModeDesc": "技能部署到全域 Agent 工作區（~/.claude 等）的方式。建議使用符號連結，佔用空間極小且修改可即時生效。",
+    "projectSyncMode": "專案同步模式",
+    "projectSyncModeDesc": "技能部署到專案目錄的方式。專案建議使用檔案複製——符號連結指向本機中央庫，不會隨倉庫帶走。",
     "symlink": "符號連結",
     "copy": "檔案複製",
     "currentSkillGroup": "當前技能組",
