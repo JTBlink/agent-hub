@@ -25,3 +25,6 @@ Blocked by: none
 
 - 已核实失败原因；完成三平台候选后再处理未发布 tag 与修复 SHA 的冲突。
 - 用户已明确要求“提交 push”“更新 tag”，授权将尚未发布的失败 v0.1.5 更新到本次通过完整候选验证的修复 SHA；操作前仍重新确认不存在 Release、保存旧 tag 并核对远端状态。
+- [首轮修复候选](https://github.com/JTBlink/agent-hub/actions/runs/38260043773) 的完整质量门禁通过；Windows 原生测试在 project_skill_update 的四个用例中失败，均来自 fixture 用只读 File::open 句柄调用 set_times，返回 PermissionDenied。macOS / Linux 的正常构建继续跟踪。
+- fixture 改用 OpenOptions 的可写句柄，保持内容、不截断文件，保留四个失败用例的业务断言；没有修改恢复业务逻辑或跳过 Windows 检查。新 SHA 需重新完成三平台候选。
+- 本地相关 5 个恢复行为测试、Rust 格式与严格 all-targets Clippy 通过。Windows 失败与句柄权限契约一致，参见 [SetFileTime 官方说明](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime)。Standards / Spec 复核：修正 fixture 权限，不改变恢复保护、失败保留与路径防护的测试行为。
