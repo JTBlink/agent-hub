@@ -101,7 +101,8 @@ fn team_project_survives_removing_the_personal_library() {
             "echo team\n"
         );
     }
-    let manifest = fs::read_to_string(project.join(".agent-hub").join("project-skills.json")).unwrap();
+    let manifest =
+        fs::read_to_string(project.join(".agent-hub").join("project-skills.json")).unwrap();
     assert!(!manifest.contains(&tmp.path().to_string_lossy().to_string()));
 }
 
@@ -141,7 +142,9 @@ fn update_refreshes_every_team_copy_but_preserves_project_edits() {
     ];
     install(&root, &skill, &targets).unwrap();
     fs::write(
-        Path::new(&skill.central_path).join("scripts").join("run.sh"),
+        Path::new(&skill.central_path)
+            .join("scripts")
+            .join("run.sh"),
         "echo updated\n",
     )
     .unwrap();
@@ -152,7 +155,9 @@ fn update_refreshes_every_team_copy_but_preserves_project_edits() {
     );
     fs::write(pjoin(&root, ".codex/skills/demo/mine.txt"), "local result").unwrap();
     fs::write(
-        Path::new(&skill.central_path).join("scripts").join("run.sh"),
+        Path::new(&skill.central_path)
+            .join("scripts")
+            .join("run.sh"),
         "echo later\n",
     )
     .unwrap();
@@ -227,9 +232,11 @@ fn adding_another_agent_keeps_the_team_version_and_shared_toggle_keeps_content()
         &[tool_adapters::find_adapter("codex").unwrap()],
     )
     .unwrap();
-    assert!(fs::read_to_string(pjoin(&root, ".codex/skills/demo/SKILL.md"))
-        .unwrap()
-        .contains("Team skill"));
+    assert!(
+        fs::read_to_string(pjoin(&root, ".codex/skills/demo/SKILL.md"))
+            .unwrap()
+            .contains("Team skill")
+    );
     set_enabled(&root, "demo", false).unwrap();
     for directory in [".agents/skills", ".claude/skills", ".codex/skills"] {
         assert!(!root.join(directory).join("demo").exists());
