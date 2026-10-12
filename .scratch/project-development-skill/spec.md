@@ -9,3 +9,5 @@ GitHub skill 最终命名为 `github-cli`，优先通过 `gh` 完成 Actions 故
 后续发布须先验证干净提交及同一 SHA 的三平台安装包候选，通过只读 `release:ready` 后再打 tag；tag 工作流也验证候选证据。将平台测试提前，隔离手动与 tag 的并发组，保持标准免费 Runner 和短期 artifacts，仅默认分支写入 Rust 缓存。github-cli 1.2.0 同步相关流程与重跑约定。用户授权及时提交、push，并跟踪 v0.1.4 当前安装包运行。
 
 用户最新要求：先完成 0.1.4 发布修复，不升级至 0.1.5。固定候选 SHA、保留三平台检查，并确认版本 tag 与产物源码一致；任务：[D06](issues/D06-recover-v014-release.md)。
+
+发布完成后审查并优化 github-cli：保留用户指定版本，处理既有 tag 冲突；共享工作区用不可变 SHA 和明确 run ID 关联证据，复用同 SHA 已有检查，区分已失败 job 与仍运行的 workflow，并说明 release:ready 的实际边界。只更新技能规范、界面元数据和项目记录；应用仍为 0.1.4，不触发新发布。任务：[D07](issues/D07-github-cli-workflow-review.md)。

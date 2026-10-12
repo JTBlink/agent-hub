@@ -7,3 +7,4 @@
 - [D04：稳定 Linux gh 凭据轮换测试](issues/D04-linux-gh-fixture.md)
 - [D05：三平台候选发布门禁与免费资源控制](issues/D05-release-candidate-gate.md)
 - [D06：保持 0.1.4 并处理发布失败](issues/D06-recover-v014-release.md)
+- [D07：优化 GitHub Skill 的版本约束与发布证据](issues/D07-github-cli-workflow-review.md)
