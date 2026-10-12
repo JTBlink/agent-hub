@@ -15,8 +15,8 @@ def wait_until(expression, message):
 
 
 def ready():
-    wait_until("document.querySelector('section[aria-label=\"技能与部署概览\"] a[href=\"/settings#agents\"]')?.textContent.includes('1')",
-               "enabled Agent card must be a link and only count installed, enabled Agents")
+    wait_until("Boolean(document.querySelector('aside a[href=\"/global-workspace/codex\"]')) && Boolean(document.querySelector('aside a[href=\"/settings#agents\"]'))",
+               "Agent panel must retain its enabled Agent and management links")
 
 
 def landed():
@@ -33,7 +33,7 @@ try:
     ready()
     nodes = cdp("Accessibility.getFullAXTree")["nodes"]
     node = next(n for n in nodes if n.get("role", {}).get("value") == "link"
-                and "已启用 Agent" in n.get("name", {}).get("value", ""))
+                and n.get("name", {}).get("value", "") == "管理")
     cdp("DOM.scrollIntoViewIfNeeded", backendNodeId=node["backendDOMNodeId"])
     box = cdp("DOM.getBoxModel", backendNodeId=node["backendDOMNodeId"])["model"]["content"]
     click_at_xy(sum(box[0::2]) / 4, sum(box[1::2]) / 4)
@@ -49,7 +49,7 @@ try:
     cdp("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
     cdp("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
     landed()
-    print("PASS: enabled count; click navigation; keyboard navigation; focused Agent settings")
+    print("PASS: Agent panel; click navigation; keyboard navigation; focused Agent settings")
 finally:
     cdp("Emulation.setFocusEmulationEnabled", enabled=False)
     close_tab()

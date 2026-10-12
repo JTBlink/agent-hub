@@ -94,7 +94,10 @@ const skills: ManagedSkill[] = entries.map(
       status: "ok",
       synced_at: timestamp,
     })),
-    skill_group_ids: [groups[index % 3].id],
+    skill_group_ids:
+      previewParams.has("ungrouped") && index >= 8
+        ? []
+        : [groups[index % 3].id],
     tags: previewParams.has("many-tags")
       ? [tag, ...Array.from({ length: 9 }, (_, i) => `demo-tag-${i + 1}`)]
       : [tag],

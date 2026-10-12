@@ -15,6 +15,8 @@ const app = vi.hoisted(() => ({
   openSkillDetailById: vi.fn(),
   setViewedSkillGroupId: vi.fn(),
   closeSkillDetail: vi.fn(),
+  setViewingUngrouped: vi.fn(),
+  loading: false,
 }));
 vi.mock("../context/AppContext", () => ({
   useApp: () => ({ ...app, tools: [], projects: [] }),
@@ -32,6 +34,8 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
   vi.clearAllMocks();
+  app.managedSkills = [];
+  app.loading = false;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
@@ -62,6 +66,19 @@ async function render() {
   });
 }
 
+function card(title: string) {
+  const buttons = container.querySelectorAll<HTMLButtonElement>(
+    'section[aria-label="技能与部署概览"] button',
+  );
+  const match = [...buttons].find(
+    (button) =>
+      document.getElementById(button.getAttribute("aria-labelledby") ?? "")
+        ?.textContent === title,
+  );
+  if (!match) throw new Error(`Missing overview card: ${title}`);
+  return match;
+}
+
 it("opens the full library undeployed filter without a dialog or a stale group", async () => {
   app.managedSkills = [
     makeSkill(0, true),
@@ -71,9 +88,9 @@ it("opens the full library undeployed filter without a dialog or a stale group",
   const overview = container.querySelector(
     'section[aria-label="技能与部署概览"]',
   )!;
-  expect(overview.textContent).toContain("1/15");
-  const button = overview.querySelector<HTMLButtonElement>("button")!;
-  expect(button.textContent).toContain("未部署 14");
+  expect(overview.textContent).toContain("已部署 1 个 · 覆盖率 7%");
+  const button = card("待部署");
+  expect(button.textContent).toContain("14");
   await act(async () => button.click());
   expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
   expect(app.closeSkillDetail).toHaveBeenCalledOnce();
@@ -85,16 +102,10 @@ it("opens the full library undeployed filter without a dialog or a stale group",
 it("updates the undeployed entry count when deployment data changes", async () => {
   app.managedSkills = [makeSkill(1), makeSkill(2)];
   await render();
-  expect(
-    container.querySelector('section[aria-label="技能与部署概览"] button')!
-      .textContent,
-  ).toContain("未部署 2");
+  expect(card("待部署").textContent).toContain("2");
   app.managedSkills = [makeSkill(1, true), makeSkill(2)];
   await render();
-  expect(
-    container.querySelector('section[aria-label="技能与部署概览"] button')!
-      .textContent,
-  ).toContain("未部署 1");
+  expect(card("待部署").textContent).toContain("1");
   expect(container.querySelector("dialog")).toBeNull();
 });
 
@@ -103,11 +114,68 @@ it.each([{ skills: [] }, { skills: [makeSkill(1, true)] }])(
   async ({ skills }) => {
     app.managedSkills = skills;
     await render();
-    const button = container.querySelector<HTMLButtonElement>(
-      'section[aria-label="技能与部署概览"] button',
-    )!;
-    expect(button.textContent).toContain("未部署 0");
+    const button = card("待部署");
+    expect(button.textContent).toContain("0");
     expect(button.disabled).toBe(true);
     expect(container.querySelector("dialog")).toBeNull();
   },
 );
+
+it("replaces the duplicate Agent overview with an actionable ungrouped count", async () => {
+  app.managedSkills = [
+    { ...makeSkill(1), skill_group_ids: [] },
+    { ...makeSkill(2, true), skill_group_ids: [] },
+    { ...makeSkill(3), skill_group_ids: ["group-a", "group-b"] },
+  ];
+  await render();
+  const overview = container.querySelector(
+    'section[aria-label="技能与部署概览"]',
+  )!;
+  expect(overview.querySelectorAll("button")).toHaveLength(3);
+  expect(overview.textContent).not.toContain("已启用 Agent");
+  expect(card("待分组").textContent).toContain("2");
+  await act(async () => card("待分组").click());
+  expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
+  expect(app.setViewingUngrouped).toHaveBeenCalledWith(true);
+  expect(app.closeSkillDetail).toHaveBeenCalledOnce();
+  expect(container.textContent).toBe("Skill library");
+});
+
+it("refreshes grouping tasks and disables the entry once all skills are grouped", async () => {
+  app.managedSkills = [{ ...makeSkill(1), skill_group_ids: [] }];
+  await render();
+  expect(card("待分组").disabled).toBe(false);
+  app.managedSkills = [makeSkill(1)];
+  await render();
+  expect(card("待分组").disabled).toBe(true);
+  expect(card("待分组").textContent).toContain("当前没有未分组技能");
+});
+
+it("opens the whole library instead of retaining a previous group or detail", async () => {
+  await render();
+  expect(card("技能库").disabled).toBe(false);
+  expect(card("待分组").disabled).toBe(true);
+  expect(container.textContent).not.toContain("NaN");
+  await act(async () => card("技能库").click());
+  expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
+  expect(app.closeSkillDetail).toHaveBeenCalledOnce();
+  expect(app.setViewingUngrouped).not.toHaveBeenCalled();
+  expect(container.textContent).toBe("Skill library");
+});
+
+it("does not present pending counts or allow navigation before data is loaded", async () => {
+  app.loading = true;
+  await render();
+  for (const title of ["技能库", "待部署", "待分组"]) {
+    expect(card(title).disabled).toBe(true);
+    expect(card(title).textContent).toContain("—");
+  }
+  expect(
+    container
+      .querySelector('section[aria-label="技能与部署概览"]')
+      ?.getAttribute("aria-busy"),
+  ).toBe("true");
+  app.loading = false;
+  await render();
+  expect(card("技能库").disabled).toBe(false);
+});
