@@ -3,6 +3,12 @@ use crate::core::{content_hash, skill_store::SkillStore, tool_adapters};
 use std::fs;
 use tempfile::tempdir;
 
+fn pjoin(base: &Path, relative: &str) -> PathBuf {
+    relative
+        .split('/')
+        .fold(base.to_path_buf(), |acc, part| acc.join(part))
+}
+
 // Keep the original copy-mode coverage: linked entry lifecycle is exercised
 // separately in compatibility_tests, including clone and source removal.
 fn install(
@@ -14,14 +20,14 @@ fn install(
 }
 
 pub(super) fn fixture(root: &Path) -> SkillRecord {
-    let source = root.join("personal/demo");
+    let source = root.join("personal").join("demo");
     fs::create_dir_all(source.join("scripts")).unwrap();
     fs::write(
         source.join("SKILL.md"),
         "---\nname: demo\n---\n# Team skill\n",
     )
     .unwrap();
-    fs::write(source.join("scripts/run.sh"), "echo team\n").unwrap();
+    fs::write(source.join("scripts").join("run.sh"), "echo team\n").unwrap();
     let store = SkillStore::new(&root.join("fixture.db")).unwrap();
     store
         .insert_skill(&SkillRecord {
@@ -91,11 +97,11 @@ fn team_project_survives_removing_the_personal_library() {
         let entry = project.join(directory).join("demo");
         assert!(!entry.is_symlink());
         assert_eq!(
-            fs::read_to_string(entry.join("scripts/run.sh")).unwrap(),
+            fs::read_to_string(entry.join("scripts").join("run.sh")).unwrap(),
             "echo team\n"
         );
     }
-    let manifest = fs::read_to_string(project.join(".agent-hub/project-skills.json")).unwrap();
+    let manifest = fs::read_to_string(project.join(".agent-hub").join("project-skills.json")).unwrap();
     assert!(!manifest.contains(&tmp.path().to_string_lossy().to_string()));
 }
 
@@ -135,28 +141,28 @@ fn update_refreshes_every_team_copy_but_preserves_project_edits() {
     ];
     install(&root, &skill, &targets).unwrap();
     fs::write(
-        Path::new(&skill.central_path).join("scripts/run.sh"),
+        Path::new(&skill.central_path).join("scripts").join("run.sh"),
         "echo updated\n",
     )
     .unwrap();
     update(&root, "demo", &skill).unwrap();
     assert_eq!(
-        fs::read_to_string(root.join(".claude/skills/demo/scripts/run.sh")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".claude/skills/demo/scripts/run.sh")).unwrap(),
         "echo updated\n"
     );
-    fs::write(root.join(".codex/skills/demo/mine.txt"), "local result").unwrap();
+    fs::write(pjoin(&root, ".codex/skills/demo/mine.txt"), "local result").unwrap();
     fs::write(
-        Path::new(&skill.central_path).join("scripts/run.sh"),
+        Path::new(&skill.central_path).join("scripts").join("run.sh"),
         "echo later\n",
     )
     .unwrap();
     assert!(update(&root, "demo", &skill).is_err());
     assert_eq!(
-        fs::read_to_string(root.join(".agents/skills/demo/scripts/run.sh")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".agents/skills/demo/scripts/run.sh")).unwrap(),
         "echo updated\n"
     );
     assert_eq!(
-        fs::read_to_string(root.join(".codex/skills/demo/mine.txt")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".codex/skills/demo/mine.txt")).unwrap(),
         "local result"
     );
 }
@@ -170,30 +176,30 @@ fn repair_uses_only_project_content_and_keeps_modified_copies() {
     let target = tool_adapters::find_adapter("claude_code").unwrap();
     install(&root, &skill, &[target]).unwrap();
     fs::remove_dir_all(tmp.path().join("personal")).unwrap();
-    fs::remove_dir_all(root.join(".claude/skills/demo")).unwrap();
+    fs::remove_dir_all(pjoin(&root, ".claude/skills/demo")).unwrap();
     repair(&root, "demo").unwrap();
-    assert!(!root.join(".claude/skills/demo").exists());
+    assert!(!pjoin(&root, ".claude/skills/demo").exists());
     deploy(
         &root,
         "demo",
         &[tool_adapters::find_adapter("claude_code").unwrap()],
     )
     .unwrap();
-    assert!(root.join(".claude/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".claude/skills/demo/SKILL.md").is_file());
     fs::write(
-        root.join(".agents/skills/demo/scripts/run.sh"),
+        pjoin(&root, ".agents/skills/demo/scripts/run.sh"),
         "echo project\n",
     )
     .unwrap();
     repair(&root, "demo").unwrap();
     assert_eq!(
-        fs::read_to_string(root.join(".claude/skills/demo/scripts/run.sh")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".claude/skills/demo/scripts/run.sh")).unwrap(),
         "echo project\n"
     );
-    fs::write(root.join(".claude/skills/demo/.gitignore"), "local\n").unwrap();
+    fs::write(pjoin(&root, ".claude/skills/demo/.gitignore"), "local\n").unwrap();
     assert!(repair(&root, "demo").is_err());
     assert_eq!(
-        fs::read_to_string(root.join(".claude/skills/demo/.gitignore")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".claude/skills/demo/.gitignore")).unwrap(),
         "local\n"
     );
 }
@@ -221,7 +227,7 @@ fn adding_another_agent_keeps_the_team_version_and_shared_toggle_keeps_content()
         &[tool_adapters::find_adapter("codex").unwrap()],
     )
     .unwrap();
-    assert!(fs::read_to_string(root.join(".codex/skills/demo/SKILL.md"))
+    assert!(fs::read_to_string(pjoin(&root, ".codex/skills/demo/SKILL.md"))
         .unwrap()
         .contains("Team skill"));
     set_enabled(&root, "demo", false).unwrap();
@@ -232,11 +238,11 @@ fn adding_another_agent_keeps_the_team_version_and_shared_toggle_keeps_content()
             .is_file());
     }
     set_enabled(&root, "demo", true).unwrap();
-    assert!(root.join(".agents/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".agents/skills/demo/SKILL.md").is_file());
     remove_target(&root, "demo", "claude_code").unwrap();
-    assert!(!root.join(".claude/skills/demo").exists());
-    assert!(root.join(".agents/skills/demo/SKILL.md").is_file());
-    assert!(root.join(".codex/skills/demo/SKILL.md").is_file());
+    assert!(!pjoin(&root, ".claude/skills/demo").exists());
+    assert!(pjoin(&root, ".agents/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".codex/skills/demo/SKILL.md").is_file());
 }
 
 #[test]
@@ -244,17 +250,17 @@ fn corrupted_manifest_and_foreign_target_fail_without_writing_other_targets() {
     let tmp = TestProject::new();
     let skill = fixture(tmp.path());
     let root = tmp.path().join("project");
-    fs::create_dir_all(root.join(".codex/skills/demo")).unwrap();
-    fs::write(root.join(".codex/skills/demo/mine.txt"), "precious").unwrap();
+    fs::create_dir_all(pjoin(&root, ".codex/skills/demo")).unwrap();
+    fs::write(pjoin(&root, ".codex/skills/demo/mine.txt"), "precious").unwrap();
     let targets = [
         tool_adapters::find_adapter("claude_code").unwrap(),
         tool_adapters::find_adapter("codex").unwrap(),
     ];
     assert!(install(&root, &skill, &targets).is_err());
-    assert!(!root.join(".agents/skills/demo").exists());
-    assert!(!root.join(".claude/skills/demo").exists());
+    assert!(!pjoin(&root, ".agents/skills/demo").exists());
+    assert!(!pjoin(&root, ".claude/skills/demo").exists());
     assert_eq!(
-        fs::read_to_string(root.join(".codex/skills/demo/mine.txt")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".codex/skills/demo/mine.txt")).unwrap(),
         "precious"
     );
     fs::create_dir_all(root.join(".agent-hub")).unwrap();
@@ -298,18 +304,18 @@ fn cloned_team_files_can_be_used_and_redeployed_without_personal_state() {
     let cloned = tmp.path().join("new-member");
     git2::Repository::clone(root.to_str().unwrap(), &cloned).unwrap();
     fs::remove_dir_all(tmp.path().join("personal")).unwrap();
-    assert!(cloned.join(".claude/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&cloned, ".claude/skills/demo/SKILL.md").is_file());
     assert!(status(&cloned).unwrap().skills[0].stale_targets.is_empty());
-    fs::remove_dir_all(cloned.join(".claude/skills/demo")).unwrap();
+    fs::remove_dir_all(pjoin(&cloned, ".claude/skills/demo")).unwrap();
     repair(&cloned, "demo").unwrap();
-    assert!(!cloned.join(".claude/skills/demo").exists());
+    assert!(!pjoin(&cloned, ".claude/skills/demo").exists());
     deploy(
         &cloned,
         "demo",
         &[tool_adapters::find_adapter("claude_code").unwrap()],
     )
     .unwrap();
-    assert!(cloned.join(".claude/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&cloned, ".claude/skills/demo/SKILL.md").is_file());
 }
 
 #[cfg(unix)]
@@ -371,7 +377,7 @@ fn failed_publication_restores_every_previous_team_file_and_manifest() {
     }
     update(&root, "demo", &skill).unwrap();
     assert_eq!(
-        fs::read_to_string(root.join(".agents/skills/demo/SKILL.md")).unwrap(),
+        fs::read_to_string(pjoin(&root, ".agents/skills/demo/SKILL.md")).unwrap(),
         "# Updated\n"
     );
 }
@@ -392,12 +398,12 @@ fn dedicated_target_toggle_preserves_other_team_targets() {
     )
     .unwrap();
     set_target_enabled(&root, "demo", "claude_code", false).unwrap();
-    assert!(root.join(".claude/skills-disabled/demo/SKILL.md").is_file());
-    assert!(root.join(".codex/skills/demo/SKILL.md").is_file());
-    assert!(root.join(".agents/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".claude/skills-disabled/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".codex/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".agents/skills/demo/SKILL.md").is_file());
     assert!(status(&root).unwrap().skills[0].stale_targets.is_empty());
     set_target_enabled(&root, "demo", "claude_code", true).unwrap();
-    assert!(root.join(".claude/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".claude/skills/demo/SKILL.md").is_file());
 }
 
 #[test]
@@ -409,7 +415,7 @@ fn nested_custom_target_is_refused_before_any_project_content_is_written() {
     let mut target = tool_adapters::find_adapter("claude_code").unwrap();
     target.project_relative_skills_dir = Some(".agents/skills/demo/scripts".into());
     assert!(install(&root, &skill, &[target]).is_err());
-    assert!(!root.join(".agents/skills/demo").exists());
+    assert!(!pjoin(&root, ".agents/skills/demo").exists());
 }
 
 #[test]
@@ -481,7 +487,7 @@ fn tracked_team_files_are_not_blocked_by_later_directory_ignore_rules() {
     index.write().unwrap();
     fs::write(root.join(".gitignore"), ".claude/\n").unwrap();
     assert!(status(&root).unwrap().ignored_paths.is_empty());
-    fs::write(root.join(".claude/skills/demo/new.md"), "Team addition").unwrap();
+    fs::write(pjoin(&root, ".claude/skills/demo/new.md"), "Team addition").unwrap();
     assert!(repo
         .is_path_ignored(Path::new(".claude/skills/demo/new.md"))
         .unwrap());
@@ -590,20 +596,20 @@ fn redeploy_keeps_disabled_entry_and_shared_toggle_handles_mixed_states() {
     .unwrap();
     set_target_enabled(&root, "demo", "claude_code", false).unwrap();
     deploy(&root, "demo", &[claude]).unwrap();
-    assert!(!root.join(".claude/skills/demo").exists());
-    assert!(root.join(".claude/skills-disabled/demo/SKILL.md").is_file());
+    assert!(!pjoin(&root, ".claude/skills/demo").exists());
+    assert!(pjoin(&root, ".claude/skills-disabled/demo/SKILL.md").is_file());
     set_enabled(&root, "demo", false).unwrap();
-    assert!(root.join(".agents/skills-disabled/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".agents/skills-disabled/demo/SKILL.md").is_file());
     set_enabled(&root, "demo", true).unwrap();
-    assert!(root.join(".claude/skills/demo/SKILL.md").is_file());
-    assert!(root.join(".codex/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".claude/skills/demo/SKILL.md").is_file());
+    assert!(pjoin(&root, ".codex/skills/demo/SKILL.md").is_file());
 }
 
 #[test]
 fn clone_without_git_ignored_empty_directories_is_still_the_same_team_version() {
     let tmp = TestProject::new();
     let skill = fixture(tmp.path());
-    fs::create_dir_all(Path::new(&skill.central_path).join("scripts/cache")).unwrap();
+    fs::create_dir_all(pjoin(Path::new(&skill.central_path), "scripts/cache")).unwrap();
     let root = tmp.path().join("project");
     fs::create_dir(&root).unwrap();
     install(
@@ -612,8 +618,8 @@ fn clone_without_git_ignored_empty_directories_is_still_the_same_team_version() 
         &[tool_adapters::find_adapter("claude_code").unwrap()],
     )
     .unwrap();
-    fs::remove_dir(root.join(".agents/skills/demo/scripts/cache")).unwrap();
-    fs::remove_dir(root.join(".claude/skills/demo/scripts/cache")).unwrap();
+    fs::remove_dir(pjoin(&root, ".agents/skills/demo/scripts/cache")).unwrap();
+    fs::remove_dir(pjoin(&root, ".claude/skills/demo/scripts/cache")).unwrap();
     assert!(!status(&root).unwrap().skills[0].modified);
     update(&root, "demo", &skill).unwrap();
 }
@@ -633,6 +639,6 @@ fn removing_last_team_skill_retains_manifest_in_commit_report() {
     let report = remove(&root, "demo").unwrap();
     assert!(report.skills.is_empty());
     assert!(report.files_to_commit.contains(&manifest::MANIFEST.into()));
-    assert!(!root.join(".agents/skills/demo").exists());
-    assert!(!root.join(".claude/skills/demo").exists());
+    assert!(!pjoin(&root, ".agents/skills/demo").exists());
+    assert!(!pjoin(&root, ".claude/skills/demo").exists());
 }

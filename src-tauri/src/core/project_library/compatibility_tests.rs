@@ -78,7 +78,7 @@ fn installing_existing_project_content_keeps_the_team_version() {
     let tmp = TestProject::new();
     let skill = fixture(tmp.path());
     let root = tmp.path().join("project");
-    let central = root.join(".agents/skills/demo");
+    let central = root.join(".agents").join("skills").join("demo");
     fs::create_dir_all(&central).unwrap();
     fs::write(
         central.join("SKILL.md"),
@@ -107,7 +107,8 @@ fn installing_existing_project_content_keeps_the_team_version() {
         fs::read_to_string(central.join("SKILL.md")).unwrap()
     );
     assert!(Path::new(&skill.central_path)
-        .join("scripts/run.sh")
+        .join("scripts")
+        .join("run.sh")
         .exists());
 }
 
