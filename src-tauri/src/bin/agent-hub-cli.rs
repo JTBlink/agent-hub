@@ -1,5 +1,7 @@
 #[path = "agent-hub-cli/help.rs"]
 mod help;
+#[path = "agent-hub-cli/project.rs"]
+mod project;
 use help::localize_command;
 
 use std::path::{Path, PathBuf};
@@ -44,6 +46,8 @@ struct Cli {
 enum Commands {
     /// 查看或修改中央技能库路径。
     Repo(RepoArgs),
+    /// 管理供团队共享的项目技能库和项目入口。
+    Project(project::ProjectArgs),
     #[command(name = "agents", visible_alias = "tools")]
     /// 列出和配置 Agent 工具适配器。
     Tools(ToolsArgs),
@@ -863,10 +867,17 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         central_repo::set_runtime_skills_dir_override(Some(skills_root.clone()));
     }
 
+    if let Commands::Project(args) = &cli.command {
+        if !args.needs_personal_library() {
+            return project::run(args, None, cli.json);
+        }
+    }
+
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
         Commands::Repo(args) => run_repo(args, &store, cli.json),
+        Commands::Project(args) => project::run(&args, Some(&store), cli.json),
         Commands::Tools(args) => run_tools(args, &store, cli.json),
         Commands::Skills(args) => run_skills(args, &store, cli.json),
         Commands::SkillGroups(args) => run_skill_groups(args, &store, cli.json),

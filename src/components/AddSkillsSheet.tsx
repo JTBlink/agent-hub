@@ -353,14 +353,9 @@ function AddSkillsSheetBody({
     ctx.kind === "project" ? (ctx as ProjectPickerContext) : null;
   const projectNamesReady =
     target.kind !== "project" || dirNameMapError || !dirNameMapLoading;
-  const enabledTargets =
-    target.kind === "project"
-      ? target.exportTargets.filter((tt) => tt.installed && tt.enabled)
-      : [];
-  const inactiveTargets =
-    target.kind === "project"
-      ? target.exportTargets.filter((tt) => !tt.installed || !tt.enabled)
-      : [];
+  const enabledTargets = target.kind === "project" ? target.exportTargets : [];
+  const inactiveTargets: ProjectAgentTarget[] =
+    target.kind === "project" ? [] : [];
 
   const renderAgentIcons = (
     agents: { key: string; display_name: string }[],
@@ -459,7 +454,14 @@ function AddSkillsSheetBody({
         }
       }
       if (ok > 0) {
-        toast.success(t("addFromLibrary.toastInstalled", { count: ok }));
+        toast.success(
+          t(
+            target.kind === "project"
+              ? "projectLibrary.installReady"
+              : "addFromLibrary.toastInstalled",
+            { count: ok },
+          ),
+        );
         setSelectedIds(new Set());
       }
       if (failed > 0) {

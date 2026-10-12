@@ -1125,3 +1125,46 @@ export const getBackupDirectory = () => invoke<string>("get_backup_directory");
 
 export const pickDirectory = (defaultPath?: string) =>
   invoke<string | null>("pick_directory", { defaultPath: defaultPath ?? null });
+
+export interface ProjectLibraryStatus {
+  skills: {
+    name: string;
+    directory: string;
+    modified: boolean;
+    disabled: boolean;
+    targets: string[];
+    stale_targets: string[];
+  }[];
+  files_to_commit: string[];
+  ignored_paths: string[];
+}
+
+export const getProjectLibraryStatus = (projectId: string) =>
+  invoke<ProjectLibraryStatus>("get_project_library_status", { projectId });
+export const repairProjectLibrarySkill = (
+  projectId: string,
+  directory: string,
+) =>
+  invoke<ProjectLibraryStatus>("repair_project_library_skill", {
+    projectId,
+    directory,
+  });
+export const deployProjectLibrarySkill = (
+  projectId: string,
+  directory: string,
+  agents: string[],
+) =>
+  invoke<ProjectLibraryStatus>("deploy_project_library_skill", {
+    projectId,
+    directory,
+    agents,
+  });
+
+export const removeProjectLibrarySkill = (
+  projectId: string,
+  directory: string,
+) =>
+  invoke<ProjectLibraryStatus>("remove_project_library_skill", {
+    projectId,
+    directory,
+  });

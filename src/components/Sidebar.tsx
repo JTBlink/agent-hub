@@ -239,7 +239,6 @@ export function Sidebar() {
 
   const NAV_ITEMS = [
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
-    { name: t("sidebar.mySkills"), path: "/my-skills", icon: Layers },
     { name: t("sidebar.installSkills"), path: "/install", icon: Download },
     { name: t("sidebar.backup"), path: "/backup", icon: CloudUpload },
   ];
@@ -545,22 +544,45 @@ export function Sidebar() {
 
         {/* Scrollable section */}
         <div className="px-2.5 flex-1 overflow-y-auto scrollbar-hide min-h-0">
-          {/* ── SkillGroups ── */}
-          <div className="mb-1.5 px-2.5 flex items-center gap-1">
-            <button
-              onClick={() => setSkillGroupsOpen((v) => !v)}
-              className="flex min-w-0 flex-1 items-center gap-1 text-left outline-none"
-            >
-              {skillGroupsOpen ? (
-                <ChevronDown className="h-3 w-3 shrink-0 text-faint" />
-              ) : (
-                <ChevronRight className="h-3 w-3 shrink-0 text-faint" />
-              )}
-              <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-muted whitespace-nowrap">
-                {t("sidebar.skillGroups")}
-              </span>
-            </button>
-          </div>
+          {/* ── 技能库 (with skill groups as children) ── */}
+          {(() => {
+            const isSkillLibActive = location.pathname === "/my-skills" && !viewedSkillGroup && !viewingUngrouped;
+            return (
+              <div className="mb-1 flex items-center gap-1 px-2.5">
+                <button
+                  onClick={() => setSkillGroupsOpen((v) => !v)}
+                  className="shrink-0 outline-none"
+                >
+                  {skillGroupsOpen ? (
+                    <ChevronDown className="h-3 w-3 text-faint" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 text-faint" />
+                  )}
+                </button>
+                <Link
+                  to="/my-skills"
+                  onClick={() => closeSkillDetail()}
+                  className={cn(
+                    "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-[5px] text-left outline-none transition-colors",
+                    isSkillLibActive
+                      ? "text-accent font-semibold"
+                      : "text-muted hover:text-secondary",
+                  )}
+                >
+                  <Layers className={cn(
+                    "h-3.5 w-3.5 shrink-0",
+                    isSkillLibActive ? "text-accent" : "text-muted",
+                  )} />
+                  <span className="truncate text-[12px] font-semibold tracking-[0.01em] whitespace-nowrap">
+                    {t("sidebar.mySkills")}
+                  </span>
+                  <span className="ml-auto text-[11px] font-medium tabular-nums text-faint">
+                    {managedSkills.length}
+                  </span>
+                </Link>
+              </div>
+            );
+          })()}
           {skillGroupsOpen && (
             <>
               <DragDropContext onDragEnd={handleDragEnd}>
@@ -572,7 +594,7 @@ export function Sidebar() {
                       {...droppableProvided.droppableProps}
                     >
                       {orderedSkillGroups.map((skillGroup, index) => {
-                        const isActive = viewedSkillGroup?.id === skillGroup.id;
+                        const isActive = location.pathname === "/my-skills" && viewedSkillGroup?.id === skillGroup.id;
                         const skillGroupIcon =
                           getSkillGroupIconOption(skillGroup);
                         const SkillGroupIcon = skillGroupIcon.icon;
@@ -695,7 +717,7 @@ export function Sidebar() {
                   }}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 outline-none transition-colors",
-                    viewingUngrouped
+                    viewingUngrouped && location.pathname === "/my-skills"
                       ? "bg-surface-active text-primary"
                       : "text-tertiary hover:text-secondary hover:bg-surface-hover",
                   )}

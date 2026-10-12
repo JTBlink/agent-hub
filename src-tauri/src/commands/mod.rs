@@ -5,6 +5,7 @@ pub mod browse;
 pub mod dialog;
 pub mod discovered_skills;
 pub mod git_backup;
+pub mod project_library;
 pub mod project_skill_diff;
 pub mod projects;
 pub mod scan;
