@@ -100,8 +100,8 @@ export function Preview() {
             {
               key: "claude_code",
               display_name: "Claude Code",
-              enabled: false,
-              installed: false,
+              enabled: true,
+              installed: true,
               is_custom: false,
             },
           ],

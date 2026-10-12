@@ -1,4 +1,5 @@
-import type { ProjectAgentTarget } from "./tauri";
+import { enabledInstalledAgents } from "./agentAvailability";
+import type { ProjectAgentTarget, ToolInfo } from "./tauri";
 
 const PROJECT_EXPORT_AGENT_PRIORITY = [
   "claude_code",
@@ -8,14 +9,25 @@ const PROJECT_EXPORT_AGENT_PRIORITY = [
   "github_copilot",
 ];
 
-// Initial personal suggestion only. Team installation can explicitly select
-// any project adapter, including tools not installed on this computer.
+/** Project addition uses personal enabled tools; adapter support remains broader. */
+export function projectInstallationTargets(
+  targets: ProjectAgentTarget[],
+  tools: Pick<ToolInfo, "key" | "installed" | "enabled">[],
+  linkedWorkspace = false,
+): ProjectAgentTarget[] {
+  if (linkedWorkspace) return targets;
+  const enabled = new Set(
+    enabledInstalledAgents(tools).map((tool) => tool.key),
+  );
+  return targets
+    .filter((target) => enabled.has(target.key))
+    .map((target) => ({ ...target, installed: true, enabled: true }));
+}
+
 export function enabledInstalledAgentKeys(
   targets: ProjectAgentTarget[],
 ): string[] {
-  return targets
-    .filter((target) => target.installed && target.enabled)
-    .map((target) => target.key);
+  return enabledInstalledAgents(targets).map((target) => target.key);
 }
 
 export function getDefaultExportAgents(
@@ -31,11 +43,7 @@ export function getDefaultExportAgents(
     availableKeys.has(key),
   );
   const rest = enabledKeys.filter((key) => !prioritized.includes(key));
-  return enabledKeys.length > 0
-    ? Array.from(new Set([...prioritized, ...rest]))
-    : targets
-        .filter((target) => target.key === "claude_code")
-        .map((target) => target.key);
+  return Array.from(new Set([...prioritized, ...rest]));
 }
 
 /** Project filters follow actual local detection; team installation is separate. */

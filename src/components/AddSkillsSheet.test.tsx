@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
-import type { ManagedSkill } from "../lib/tauri";
+import type { ManagedSkill, ProjectAgentTarget } from "../lib/tauri";
 import { AddSkillsSheet } from "./AddSkillsSheet";
 
 const api = vi.hoisted(() => ({
@@ -70,7 +70,20 @@ afterEach(async () => {
   container.remove();
   vi.unstubAllGlobals();
 });
-async function render(teamSharing = true) {
+const enabledTargets: ProjectAgentTarget[] = [
+  {
+    key: "claude_code",
+    display_name: "Claude Code",
+    enabled: true,
+    installed: true,
+    is_custom: false,
+  },
+];
+async function render(
+  teamSharing = true,
+  exportTargets = enabledTargets,
+  initialSelectedAgents = exportTargets.map((target) => target.key),
+) {
   await act(async () =>
     root.render(
       <AddSkillsSheet
@@ -83,18 +96,10 @@ async function render(teamSharing = true) {
           projectId: "project",
           projectName: "demo-project",
           teamSharing,
-          exportTargets: [
-            {
-              key: "claude_code",
-              display_name: "Claude Code",
-              enabled: false,
-              installed: false,
-              is_custom: false,
-            },
-          ],
+          exportTargets,
           projectSkillDirNamesByAgent: {},
           projectCenterSkillIdsByAgent: {},
-          initialSelectedAgents: ["claude_code"],
+          initialSelectedAgents,
           onPersistLastUsed: vi.fn(),
         }}
       />,
@@ -109,10 +114,10 @@ function button(text: string) {
   return result;
 }
 
-it("shows the project and team sharing effect and deploys to an uninstalled Agent", async () => {
+it("shows the project and team sharing effect and deploys to an enabled Agent", async () => {
   await render();
   expect(document.body.textContent).toContain("添加技能到 demo-project");
-  expect(document.body.textContent).toContain("本机未安装也可选择");
+  expect(document.body.textContent).toContain("从已启用的 Agent 中选择");
   expect(document.body.textContent).toContain("成员无需 AgentHub");
   await act(async () => button("全选技能").click());
   await act(async () => button("添加 2 个").click());
@@ -149,4 +154,56 @@ it("does not promise Git team sharing for linked workspaces", async () => {
   expect(document.body.textContent).toContain("添加技能到 demo-project");
   expect(document.body.textContent).not.toContain("提交 Git 后共享");
   expect(document.body.textContent).not.toContain("团队 Agent");
+});
+
+it("excludes disabled and uninstalled targets even when old selection includes them", async () => {
+  await render(true, [
+    ...enabledTargets,
+    {
+      key: "codex",
+      display_name: "Codex",
+      enabled: false,
+      installed: true,
+      is_custom: false,
+    },
+    {
+      key: "cursor",
+      display_name: "Cursor",
+      enabled: true,
+      installed: false,
+      is_custom: false,
+    },
+  ]);
+  expect(document.querySelector('button[title="Codex"]')).toBeNull();
+  expect(document.querySelector('button[title="Cursor"]')).toBeNull();
+  await act(async () => button("全选技能").click());
+  await act(async () => button("添加 2 个").click());
+  expect(api.exportSkillToProject.mock.calls).toEqual([
+    ["demo", "project", ["claude_code"]],
+    ["other", "project", ["claude_code"]],
+  ]);
+});
+
+it("shows how to enable an Agent and blocks deployment when no target is enabled", async () => {
+  await render(true, [
+    {
+      key: "claude_code",
+      display_name: "Claude Code",
+      enabled: false,
+      installed: true,
+      is_custom: false,
+    },
+  ]);
+  expect(document.body.textContent).toContain("当前没有已启用的 Agent");
+  expect(document.querySelector('button[title="Claude Code"]')).toBeNull();
+  expect(api.exportSkillToProject).not.toHaveBeenCalled();
+});
+
+it("drops a target disabled while the window is open instead of keeping an old selection", async () => {
+  await render();
+  expect(document.querySelector('button[title="Claude Code"]')).not.toBeNull();
+  await render(true, [{ ...enabledTargets[0], enabled: false }]);
+  expect(document.querySelector('button[title="Claude Code"]')).toBeNull();
+  expect(document.body.textContent).toContain("当前没有已启用的 Agent");
+  expect(api.exportSkillToProject).not.toHaveBeenCalled();
 });

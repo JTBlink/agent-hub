@@ -1,3 +1,4 @@
+import { enabledInstalledAgents } from "../lib/agentAvailability";
 import {
   useCallback,
   useEffect,
@@ -83,9 +84,19 @@ function AddSkillsSheetBody({
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);
 
+  const enabledTargets =
+    target.kind === "project"
+      ? enabledInstalledAgents(target.exportTargets)
+      : [];
   const initialAgents =
     target.kind === "project" ? target.initialSelectedAgents : [];
-  const [selectedAgents, setSelectedAgents] = useState<string[]>(initialAgents);
+  const [selectedAgentKeys, setSelectedAgents] =
+    useState<string[]>(initialAgents);
+  const selectedAgents = selectedAgentKeys.filter((key) =>
+    enabledTargets.some((agent) => agent.key === key),
+  );
+  if (selectedAgents.length !== selectedAgentKeys.length)
+    setSelectedAgents(selectedAgents);
 
   const [dirNameMap, setDirNameMap] = useState<Record<string, string>>({});
   const [dirNameMapError, setDirNameMapError] = useState(false);
@@ -347,7 +358,6 @@ function AddSkillsSheetBody({
     ctx.kind === "project" ? (ctx as ProjectPickerContext) : null;
   const projectNamesReady =
     target.kind !== "project" || dirNameMapError || !dirNameMapLoading;
-  const enabledTargets = target.kind === "project" ? target.exportTargets : [];
 
   const renderAgentIcons = (
     agents: { key: string; display_name: string }[],
@@ -536,7 +546,7 @@ function AddSkillsSheetBody({
           <div className="min-w-0 flex-1">
             {enabledTargets.length === 0 ? (
               <span className="inline-flex items-center rounded-full border border-dashed border-border px-2.5 py-1 italic text-muted">
-                {t("addFromLibrary.noTargetSelected")}
+                {t("projectLibrary.noEnabledAgents")}
               </span>
             ) : (
               <div className="flex flex-wrap items-center gap-1.5">

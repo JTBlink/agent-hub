@@ -1,3 +1,4 @@
+import { isEnabledInstalledAgent } from "../lib/agentAvailability";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import {
@@ -117,7 +118,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const installedTools = useMemo(
     () =>
       tools.filter(
-        (t) => t.installed && t.enabled && t.category === config.category,
+        (t) => isEnabledInstalledAgent(t) && t.category === config.category,
       ),
     [tools, config.category],
   );

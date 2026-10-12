@@ -1414,7 +1414,8 @@
   "projectLibrary": {
     "installTitle": "Add skills to {{project}}",
     "teamAgents": "Team Agents:",
-    "teamAgentsHelp": "Choose the Agents your team uses, including those not installed locally.",
+    "teamAgentsHelp": "Choose team targets from your enabled Agents.",
+    "noEnabledAgents": "No Agents are enabled. Enable an Agent in Settings first.",
     "installPlan": "Copy skills into the project and create Agent entries. Commit to Git to share; teammates need no AgentHub.",
     "description": "Commit skills with the project so teammates can pull and use them without installing AgentHub.",
     "installReady": "Added {{count}} project skills; commit the skill directories so teammates can pull and use them",

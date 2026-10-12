@@ -1,3 +1,4 @@
+import { enabledInstalledAgents } from "../lib/agentAvailability";
 import { useEffect, useMemo, useState } from "react";
 import { Square, SquareCheck, X, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -44,19 +45,17 @@ export function BatchSyncAgentDialog({
   }, [open, loading, onClose]);
 
   const rows = useMemo(() => {
-    return tools
-      .filter((tool) => tool.installed && tool.enabled)
-      .map((tool) => {
-        const synced = skills.filter((skill) =>
-          skill.targets.some((target) => target.tool === tool.key),
-        ).length;
-        return {
-          key: tool.key,
-          displayName: tool.display_name,
-          synced,
-          missing: skills.length - synced,
-        };
-      });
+    return enabledInstalledAgents(tools).map((tool) => {
+      const synced = skills.filter((skill) =>
+        skill.targets.some((target) => target.tool === tool.key),
+      ).length;
+      return {
+        key: tool.key,
+        displayName: tool.display_name,
+        synced,
+        missing: skills.length - synced,
+      };
+    });
   }, [tools, skills]);
 
   const pendingCount = useMemo(

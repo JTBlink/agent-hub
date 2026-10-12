@@ -52,6 +52,7 @@ import {
 import {
   detectedProjectAgentFilters,
   getDefaultExportAgents,
+  projectInstallationTargets,
 } from "../lib/exportAgents";
 import { cn, compactHomePath } from "../utils";
 import * as api from "../lib/tauri";
@@ -94,6 +95,7 @@ export function ProjectDetail() {
   const { t } = useTranslation();
   const {
     projects,
+    tools,
     skillGroups,
     managedSkills,
     refreshManagedSkills,
@@ -457,9 +459,18 @@ export function ProjectDetail() {
     [projectSkillGroupVariants],
   );
 
+  const installationTargets = useMemo(
+    () =>
+      projectInstallationTargets(
+        projectAgentTargets,
+        tools,
+        project?.workspace_type === "linked",
+      ),
+    [projectAgentTargets, tools, project?.workspace_type],
+  );
   const selectedExportAgents = useMemo(
-    () => getDefaultExportAgents(exportTargets),
-    [exportTargets],
+    () => getDefaultExportAgents(installationTargets),
+    [installationTargets],
   );
 
   const [lastUsedExportAgents, setLastUsedExportAgents] = useState<
@@ -510,13 +521,15 @@ export function ProjectDetail() {
   );
 
   const initialSheetAgents = useMemo(() => {
-    const availableKeys = new Set(exportTargets.map((target) => target.key));
+    const availableKeys = new Set(
+      installationTargets.map((target) => target.key),
+    );
     if (lastUsedExportAgents && lastUsedExportAgents.length > 0) {
       const filtered = lastUsedExportAgents.filter((k) => availableKeys.has(k));
       if (filtered.length > 0) return filtered;
     }
     return selectedExportAgents.filter((k) => availableKeys.has(k));
-  }, [exportTargets, lastUsedExportAgents, selectedExportAgents]);
+  }, [installationTargets, lastUsedExportAgents, selectedExportAgents]);
 
   const skillGroupBarAgentKeys = useMemo(() => {
     // The real targets load asynchronously; until they arrive `exportTargets`
@@ -1841,7 +1854,7 @@ export function ProjectDetail() {
             projectId: id,
             projectName: project?.name ?? "",
             teamSharing: project.workspace_type !== "linked",
-            exportTargets,
+            exportTargets: installationTargets,
             projectSkillDirNamesByAgent,
             projectCenterSkillIdsByAgent,
             initialSelectedAgents: initialSheetAgents,

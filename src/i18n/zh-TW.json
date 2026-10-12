@@ -1350,7 +1350,8 @@
   "projectLibrary": {
     "installTitle": "新增技能至 {{project}}",
     "teamAgents": "團隊 Agent：",
-    "teamAgentsHelp": "選擇團隊使用的 Agent，本機未安裝也可選擇。",
+    "teamAgentsHelp": "從已啟用的 Agent 中選擇團隊使用的目標。",
+    "noEnabledAgents": "目前沒有已啟用的 Agent，請先到設定中啟用。",
     "installPlan": "複製技能至專案並產生 Agent 入口；提交 Git 後共用，成員無需 AgentHub。",
     "description": "技能隨專案提交 Git，團隊成員拉取即可使用，無需安裝 AgentHub。",
     "installReady": "已新增 {{count}} 個專案技能；提交技能目錄後，團隊成員拉取即可使用",

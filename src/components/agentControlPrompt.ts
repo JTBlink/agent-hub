@@ -1,3 +1,7 @@
+import {
+  enabledInstalledAgents,
+  isEnabledInstalledAgent,
+} from "../lib/agentAvailability";
 import type {
   AgentControlAgentLocation,
   AgentControlStatus,
@@ -15,9 +19,7 @@ export function agentControlMode(
   status: AgentControlStatus,
   dismissed: boolean,
 ): AgentControlMode {
-  const agents = status.agents.filter(
-    (agent) => agent.installed && agent.enabled,
-  );
+  const agents = enabledInstalledAgents(status.agents);
   if (status.library.occupied && !status.library.present) return "attention";
   if (status.library.present && !status.library_skill_id) return "attention";
   if (!status.library.present) return dismissed ? null : "install";
@@ -47,8 +49,7 @@ export function agentControlCandidates(
 ): AgentControlAgentLocation[] {
   return status.agents.filter(
     (agent) =>
-      agent.installed &&
-      agent.enabled &&
+      isEnabledInstalledAgent(agent) &&
       (!agent.occupied || (agent.present && agent.outdated && agent.managed)),
   );
 }
