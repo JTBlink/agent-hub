@@ -47,6 +47,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
 import { writeText as clipboardWriteText } from "@tauri-apps/plugin-clipboard-manager";
@@ -197,6 +198,7 @@ export function Settings() {
   const [autoUpdateLastRun, setAutoUpdateLastRun] = useState<string | null>(
     null,
   );
+  const [appVersion, setAppVersion] = useState("");
   // Agent path editing
   const [editingPathKey, setEditingPathKey] = useState<string | null>(null);
   const [editingPathValue, setEditingPathValue] = useState("");
@@ -350,6 +352,9 @@ export function Settings() {
     api
       .getCentralRepoWarnings()
       .then(setRepoWarnings)
+      .catch(() => {});
+    getVersion()
+      .then(setAppVersion)
       .catch(() => {});
   }, []);
 
@@ -1980,7 +1985,7 @@ export function Settings() {
               </div>
               <div>
                 <h3 className="text-[13px] font-semibold text-primary">
-                  {t("settings.version")}
+                  {t("settings.version", { version: appVersion })}
                 </h3>
                 <p className="text-muted text-[13px]">
                   {t("settings.tagline")}
