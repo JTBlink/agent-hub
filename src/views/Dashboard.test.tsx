@@ -195,8 +195,10 @@ it("opens the newest skill from the redesigned recent list", async () => {
   const recent = container.querySelector(
     'section[aria-labelledby="recent-skills-title"]',
   )!;
-  const rows = recent.querySelectorAll<HTMLButtonElement>("button");
-  expect(rows).toHaveLength(5);
+  const rows = recent.querySelectorAll<HTMLButtonElement>(
+    "#dashboard-recent-skills button",
+  );
+  expect(rows).toHaveLength(3);
   expect(rows[0].textContent).toContain("demo-skill-6");
   expect(rows[0].textContent).toContain("本地");
   expect(rows[0].textContent).toContain("未部署");
@@ -204,6 +206,47 @@ it("opens the newest skill from the redesigned recent list", async () => {
   expect(app.openSkillDetailById).toHaveBeenCalledWith("skill-6");
   expect(container.textContent).toBe("Skill library");
 });
+
+it("expands and collapses recent skills without changing their order or losing detail navigation", async () => {
+  app.managedSkills = Array.from({ length: 7 }, (_, i) => makeSkill(i));
+  await render();
+  const entries = () =>
+    container.querySelectorAll<HTMLButtonElement>(
+      "#dashboard-recent-skills button",
+    );
+  const toggle = container.querySelector<HTMLButtonElement>(
+    'button[aria-controls="dashboard-recent-skills"]',
+  )!;
+  expect(entries()).toHaveLength(3);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(toggle.textContent).toBe("展开另外 2 项");
+  await act(async () => toggle.click());
+  expect(entries()).toHaveLength(5);
+  expect(entries()[4].textContent).toContain("demo-skill-2");
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  await act(async () => toggle.click());
+  expect(entries()).toHaveLength(3);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  await act(async () => toggle.click());
+  await act(async () => entries()[4].click());
+  expect(app.openSkillDetailById).toHaveBeenCalledWith("skill-2");
+});
+
+it.each([0, 3])(
+  "does not offer expansion for %s recent skills",
+  async (count) => {
+    app.managedSkills = Array.from({ length: count }, (_, i) => makeSkill(i));
+    await render();
+    expect(
+      container.querySelector(
+        'button[aria-controls="dashboard-recent-skills"]',
+      ),
+    ).toBeNull();
+    expect(
+      container.querySelectorAll("#dashboard-recent-skills button"),
+    ).toHaveLength(count);
+  },
+);
 
 function project(index: number): Project {
   return {

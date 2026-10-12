@@ -1,4 +1,5 @@
 import { ChevronRight, Layers } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { ManagedSkill, ToolInfo } from "../lib/tauri";
@@ -18,6 +19,8 @@ export function DashboardRecentSkills({
   onOpenLibrary,
 }: DashboardRecentSkillsProps) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const visibleSkills = expanded ? skills : skills.slice(0, 3);
   return (
     <section className="min-w-0" aria-labelledby="recent-skills-title">
       <div className="dashboard-section-heading">
@@ -31,12 +34,13 @@ export function DashboardRecentSkills({
         </Link>
       </div>
       <div
+        id="dashboard-recent-skills"
         className={
           skills.length > 0 ? "dashboard-recent-grid" : "dashboard-recent-list"
         }
       >
         {skills.length > 0 ? (
-          skills.map((skill) => (
+          visibleSkills.map((skill) => (
             <RecentSkillCard
               key={skill.id}
               skill={skill}
@@ -64,6 +68,19 @@ export function DashboardRecentSkills({
           </div>
         )}
       </div>
+      {skills.length > 3 && (
+        <button
+          type="button"
+          className="dashboard-show-more"
+          aria-expanded={expanded}
+          aria-controls="dashboard-recent-skills"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded
+            ? t("dashboard.collapseRecent")
+            : t("dashboard.showMoreRecent", { count: skills.length - 3 })}
+        </button>
+      )}
     </section>
   );
 }

@@ -96,11 +96,12 @@ function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
     <Link
       to={`/${agent.category === "lobster" ? "lobster" : "global"}-workspace/${agent.key}`}
       className="dashboard-workspace-link"
+      title={t("dashboard.openWorkspace")}
     >
       <AgentIcon
         agentKey={agent.key}
         displayName={agent.display_name}
-        className="h-7 w-7 shrink-0"
+        className="h-6 w-6 shrink-0"
       />
       <span className="min-w-0 flex-1">
         <span
@@ -108,9 +109,6 @@ function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
           title={agent.display_name}
         >
           {agent.display_name}
-        </span>
-        <span className="mt-1 block text-xs text-tertiary">
-          {t("dashboard.openWorkspace")}
         </span>
       </span>
       <ChevronRight
