@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
-import type { ManagedSkill } from "../lib/tauri";
+import type { ManagedSkill, Project, ToolInfo } from "../lib/tauri";
 import { Dashboard } from "./Dashboard";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
 import { useLocation } from "react-router-dom";
@@ -17,9 +17,11 @@ const app = vi.hoisted(() => ({
   closeSkillDetail: vi.fn(),
   setViewingUngrouped: vi.fn(),
   loading: false,
+  projects: [] as Project[],
+  tools: [] as ToolInfo[],
 }));
 vi.mock("../context/AppContext", () => ({
-  useApp: () => ({ ...app, tools: [], projects: [] }),
+  useApp: () => app,
 }));
 vi.mock("../components/AgentControlSetupCard", () => ({
   AgentControlSetupCard: () => null,
@@ -36,6 +38,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   app.managedSkills = [];
   app.loading = false;
+  app.projects = [];
+  app.tools = [];
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
@@ -53,6 +57,10 @@ function LibraryDestination() {
   return <p>Skill library{location.search}</p>;
 }
 
+function WorkspaceDestination() {
+  return <p>{useLocation().pathname}</p>;
+}
+
 async function render() {
   await act(async () => {
     root.render(
@@ -60,6 +68,7 @@ async function render() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/my-skills" element={<LibraryDestination />} />
+          <Route path="*" element={<WorkspaceDestination />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -178,4 +187,111 @@ it("does not present pending counts or allow navigation before data is loaded", 
   app.loading = false;
   await render();
   expect(card("技能库").disabled).toBe(false);
+});
+
+it("opens the newest skill from the redesigned recent list", async () => {
+  app.managedSkills = Array.from({ length: 7 }, (_, i) => makeSkill(i));
+  await render();
+  const recent = container.querySelector(
+    'section[aria-labelledby="recent-skills-title"]',
+  )!;
+  const rows = recent.querySelectorAll<HTMLButtonElement>("button");
+  expect(rows).toHaveLength(5);
+  expect(rows[0].textContent).toContain("demo-skill-6");
+  expect(rows[0].textContent).toContain("本地");
+  expect(rows[0].textContent).toContain("未部署");
+  await act(async () => rows[0].click());
+  expect(app.openSkillDetailById).toHaveBeenCalledWith("skill-6");
+  expect(container.textContent).toBe("Skill library");
+});
+
+function project(index: number): Project {
+  return {
+    id: `project-${index}`,
+    name: `demo-project-${index}`,
+    path: `<workspace>/project-${index}`,
+    workspace_type: "project",
+    linked_agent_name: null,
+    supports_skill_toggle: true,
+    sort_order: index,
+    skill_count: index,
+    created_at: 1,
+    updated_at: 1,
+    sync_health: {
+      in_sync: 0,
+      project_newer: 0,
+      center_newer: 0,
+      project_only: 0,
+      diverged: index === 11 ? 2 : 0,
+    },
+  };
+}
+
+function agent(key: string, category: ToolInfo["category"]): ToolInfo {
+  return {
+    key,
+    category,
+    display_name: `Demo ${key}`,
+    installed: true,
+    enabled: true,
+    skills_dir: "<workspace>/skills",
+    is_custom: false,
+    has_path_override: false,
+    project_relative_skills_dir: null,
+    has_project_path_override: false,
+  };
+}
+
+it("switches workspace types and exposes every project with its status and route", async () => {
+  app.tools = [agent("codex", "coding"), agent("hermes", "lobster")];
+  app.projects = Array.from({ length: 12 }, (_, i) => project(i));
+  await render();
+  const scopeButtons = container.querySelectorAll<HTMLButtonElement>(
+    '[role="group"][aria-label="工作空间类型"] button',
+  );
+  expect(scopeButtons[0].getAttribute("aria-pressed")).toBe("true");
+  const entries = container.querySelector("#dashboard-workspace-entries")!;
+  expect(
+    entries.querySelector('a[href="/global-workspace/codex"]'),
+  ).not.toBeNull();
+  expect(
+    entries.querySelector('a[href="/lobster-workspace/hermes"]'),
+  ).not.toBeNull();
+  await act(async () => scopeButtons[1].click());
+  expect(scopeButtons[1].getAttribute("aria-pressed")).toBe("true");
+  expect(entries.querySelectorAll("a")).toHaveLength(12);
+  const last = entries.querySelector<HTMLAnchorElement>(
+    'a[href="/project/project-11"]',
+  )!;
+  expect(last.textContent).toContain("11 个技能");
+  expect(last.textContent).toContain("2 项内容冲突");
+  await act(async () => last.click());
+  expect(container.textContent).toBe("/project/project-11");
+});
+
+it("starts with available projects and preserves the selected type when data refreshes", async () => {
+  app.projects = [project(0)];
+  await render();
+  expect(
+    container.querySelector(
+      '#dashboard-workspace-entries a[href="/project/project-0"]',
+    ),
+  ).not.toBeNull();
+  const scopeButtons = container.querySelectorAll<HTMLButtonElement>(
+    '[role="group"][aria-label="工作空间类型"] button',
+  );
+  await act(async () => scopeButtons[1].click());
+  app.tools = [agent("codex", "coding")];
+  app.projects = [project(0), project(1)];
+  await render();
+  expect(scopeButtons[1].getAttribute("aria-pressed")).toBe("true");
+  expect(
+    container.querySelectorAll("#dashboard-workspace-entries a"),
+  ).toHaveLength(2);
+  await act(async () => scopeButtons[0].click());
+  expect(
+    container.querySelector(
+      '#dashboard-workspace-entries a[href="/global-workspace/codex"]',
+    ),
+  ).not.toBeNull();
 });
