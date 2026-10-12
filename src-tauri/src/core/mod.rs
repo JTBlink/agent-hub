@@ -8,6 +8,7 @@ pub mod content_hash;
 mod credential_cache;
 mod credential_file;
 pub mod crypto;
+pub mod deployment_preferences;
 pub mod error;
 pub mod file_watcher;
 mod gh_credentials;

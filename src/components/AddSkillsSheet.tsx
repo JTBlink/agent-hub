@@ -455,7 +455,7 @@ function AddSkillsSheetBody({
               id,
               target.projectId,
               agents,
-              isTeamProject && copyProjectEntries,
+              isTeamProject && copyProjectEntries ? true : undefined,
             );
             ok++;
             installedIds.add(id);

@@ -80,7 +80,10 @@ pub fn collect_scenario_sync_targets(
     let skills = store
         .get_skills_for_scenario(scenario_id)
         .map_err(AppError::db)?;
-    let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
+    let preference = crate::core::deployment_preferences::Preference::load(
+        store,
+        crate::core::deployment_preferences::Scope::Global,
+    )?;
     let existing_targets = store.get_all_targets().map_err(AppError::db)?;
     let mut targets = Vec::new();
 
@@ -91,7 +94,12 @@ pub fn collect_scenario_sync_targets(
             enabled_deployable_adapters_for_scenario_skill(store, scenario_id, &skill.id)?;
         for adapter in &adapters {
             let target = deployment_target(adapter, &target_name, &skill.id, &existing_targets);
-            let mode = sync_engine::sync_mode_for_tool(&adapter.key, configured_mode.as_deref());
+            let recorded = existing_targets.iter().find(|existing| {
+                existing.skill_id == skill.id
+                    && existing.tool == adapter.key
+                    && Path::new(&existing.target_path) == target
+            });
+            let mode = preference.for_target(recorded.map(|existing| existing.mode.as_str()));
             targets.push(ScenarioSyncTarget {
                 skill_id: skill.id.clone(),
                 skill_name: skill.name.clone(),
@@ -620,7 +628,10 @@ pub fn sync_skill_to_active_scenario(
         if active_id == scenario_id {
             let adapters =
                 enabled_deployable_adapters_for_scenario_skill(store, scenario_id, skill_id)?;
-            let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
+            let preference = crate::core::deployment_preferences::Preference::load(
+                store,
+                crate::core::deployment_preferences::Scope::Global,
+            )?;
             let Ok(Some(skill)) = store.get_skill_by_id(skill_id) else {
                 return Ok(());
             };
@@ -652,8 +663,7 @@ pub fn sync_skill_to_active_scenario(
                     }
                 }
 
-                let mode =
-                    sync_engine::sync_mode_for_tool(&adapter.key, configured_mode.as_deref());
+                let mode = preference.for_target(recorded_mode.as_deref());
                 match sync_engine::sync_skill(
                     &source,
                     &target,
@@ -854,7 +864,10 @@ fn apply_add(
     preflight_only: bool,
     force: bool,
 ) -> Result<(), AppError> {
-    let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
+    let preference = crate::core::deployment_preferences::Preference::load(
+        store,
+        crate::core::deployment_preferences::Scope::Global,
+    )?;
     let disabled = tool_service::get_disabled_tools(store);
 
     let mut adapters: HashMap<String, tool_adapters::ToolAdapter> = HashMap::new();
@@ -902,7 +915,22 @@ fn apply_add(
             plan.push(PlannedPair {
                 skill: skill.clone(),
                 tool_key: tool_key.clone(),
-                mode: sync_engine::sync_mode_for_tool(tool_key, configured_mode.as_deref()),
+                mode: preference.for_target(
+                    existing_targets
+                        .iter()
+                        .find(|existing| {
+                            existing.skill_id == *skill_id
+                                && existing.tool == *tool_key
+                                && Path::new(&existing.target_path)
+                                    == deployment_target(
+                                        adapter,
+                                        &target_name,
+                                        skill_id,
+                                        &existing_targets,
+                                    )
+                        })
+                        .map(|existing| existing.mode.as_str()),
+                ),
                 source: source.clone(),
                 target: deployment_target(adapter, &target_name, skill_id, &existing_targets),
             });

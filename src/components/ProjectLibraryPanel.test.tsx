@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
 import type { ProjectLibraryStatus } from "../lib/tauri";
 import { ProjectLibraryPanel } from "./ProjectLibraryPanel";
+import { useProjectLibrary } from "../hooks/useProjectLibrary";
 
 const api = vi.hoisted(() => ({ status: vi.fn(), repair: vi.fn() }));
 const clipboard = vi.hoisted(() => ({ writeText: vi.fn() }));
@@ -61,14 +62,16 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 async function render(id = "project") {
-  await act(async () =>
-    root.render(
-      <ProjectLibraryPanel
-        projectId={id}
-        refreshKey={null}
-        onChanged={onChanged}
-      />,
-    ),
+  await act(async () => root.render(<TestPanel projectId={id} />));
+}
+function TestPanel({ projectId }: { projectId: string }) {
+  const library = useProjectLibrary(projectId, true, null, onChanged);
+  return (
+    <ProjectLibraryPanel
+      status={library.status}
+      error={library.error}
+      onRetry={library.retry}
+    />
   );
 }
 it("shows team commit paths and warns about ignored resources", async () => {
@@ -91,10 +94,15 @@ it("does not treat an ignored management manifest as a blocked skill delivery", 
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(container.textContent).toContain("不影响团队成员使用技能");
 });
-it("copies only native skill paths and keeps ignored details collapsed", async () => {
+it("copies only native skill paths and directly shows all guidance after one expansion", async () => {
   await render();
-  const warning = container.querySelector('[role="alert"]');
-  expect(warning?.querySelector("details")?.open).toBe(false);
+  expect(container.querySelectorAll("details")).toHaveLength(1);
+  await act(async () => container.querySelector("summary")?.click());
+  expect(container.querySelector("details")?.open).toBe(true);
+  expect(container.querySelectorAll("section")).toHaveLength(2);
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "scripts/run.sh",
+  );
   const button = [...container.querySelectorAll("button")].find((button) =>
     button.textContent?.includes("复制技能路径"),
   );
@@ -103,15 +111,52 @@ it("copies only native skill paths and keeps ignored details collapsed", async (
     ".agents/skills/demo\n.claude/skills/demo",
   );
 });
-it("repairs from project content and reloads the project after completion", async () => {
+it("collapses guidance to one line with warning counts and leaves skill actions off the top", async () => {
   await render();
-  const button = [...container.querySelectorAll("button")].find((button) =>
-    button.textContent?.includes("刷新团队副本"),
+  const details = container.querySelector("details");
+  const summary = details?.querySelector("summary");
+  expect(details?.open).toBe(false);
+  expect(summary?.textContent).toContain("项目技能共享");
+  expect(summary?.textContent).toContain("警告 2");
+  expect(summary?.classList.contains("text-amber-600")).toBe(true);
+  expect(container.textContent).not.toContain("团队入口需要刷新");
+  expect(container.textContent).not.toContain("刷新团队副本");
+  await act(async () => summary?.click());
+  expect(details?.open).toBe(true);
+  expect(api.repair).not.toHaveBeenCalled();
+});
+it("shows the error count while collapsed and retries a failed report", async () => {
+  api.status.mockRejectedValueOnce(new Error("report unavailable"));
+  await render();
+  expect(container.querySelector("details")?.open).toBe(false);
+  expect(container.querySelector("summary")?.textContent).toContain("错误 1");
+  expect(
+    container.querySelector("summary")?.classList.contains("text-danger"),
+  ).toBe(true);
+  await act(async () =>
+    [...container.querySelectorAll("button")]
+      .find((button) => button.textContent === t("common.refresh"))
+      ?.click(),
   );
-  expect(button).toBeDefined();
-  await act(async () => button?.click());
-  expect(api.repair).toHaveBeenCalledExactlyOnceWith("project", "demo");
-  expect(onChanged).toHaveBeenCalledOnce();
+  expect(api.status).toHaveBeenCalledTimes(2);
+  expect(container.querySelector("summary")?.textContent).not.toContain(
+    "错误 1",
+  );
+});
+it("shows both counts and prioritizes error color when warnings and errors coexist", async () => {
+  await act(async () =>
+    root.render(
+      <ProjectLibraryPanel
+        status={report}
+        error="report unavailable"
+        onRetry={() => {}}
+      />,
+    ),
+  );
+  const summary = container.querySelector("summary");
+  expect(summary?.textContent).toContain("警告 2");
+  expect(summary?.textContent).toContain("错误 1");
+  expect(summary?.classList.contains("text-danger")).toBe(true);
 });
 it("does not display a late response for the previously selected project", async () => {
   let resolveOld: (value: ProjectLibraryStatus) => void = () => {};

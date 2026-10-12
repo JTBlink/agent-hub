@@ -40,6 +40,11 @@ pub async fn set_settings(
     value: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
+    if key == crate::core::deployment_preferences::SETTING
+        && !matches!(value.as_str(), "symlink" | "copy")
+    {
+        return Err(AppError::invalid_input("Invalid deployment mode"));
+    }
     let store = store.inner().clone();
     let key_for_store = key.clone();
     let value_for_store = value.clone();

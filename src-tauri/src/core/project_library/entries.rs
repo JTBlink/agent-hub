@@ -58,6 +58,15 @@ pub(super) fn fingerprint_entry(path: &Path) -> Result<Option<String>> {
     fingerprint(path)
 }
 
+/// An absent dedicated entry is not deployed; a broken link is still an entry.
+pub(super) fn is_present(root: &Path, relative: &str) -> Result<bool> {
+    match fs::symlink_metadata(path(root, relative)?) {
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error.into()),
+    }
+}
+
 pub(super) fn link_destination(path: &Path) -> Result<PathBuf> {
     let destination = fs::read_link(path)?;
     Ok(path_guard::normalize(

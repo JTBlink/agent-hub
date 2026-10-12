@@ -15,3 +15,5 @@
 - **备份与同步**：独立 Git 工作区默认位于 `~/.agent-hub/backup`，以 `skills/` 和 `.agent-hub/` 保存可安装 Skill 与同步元数据。凭据单独保存于应用数据目录的 `credentials/`，不进入备份。
 
 SQLite 保存技能、项目、技能组和设置等状态。桌面 commands 和 CLI 共用 `src-tauri/src/core/`；前端通过 `src/lib/tauri.ts` 调用命令。已有自定义库与 CLI 显式目录保持兼容。技能库目录内的有效 Skills 原地登记，直接读取该目录的 Agent 可见全部内容。
+
+- **默认部署方式**：`deployment_mode` 控制新 Agent 入口的链接或复制方式；普通项目中央库始终为实际内容。用户未选择统一值时保留旧全局与链接工作空间设置，已有入口保留记录中的方式。见 ADR-0013。

@@ -147,7 +147,15 @@ impl Publication {
             .directory
             .path()
             .join(format!("link-{}", self.items.len()));
-        let linked = entries::create_link(&target, &link).is_ok();
+        let linked = match entries::create_link(&target, &link) {
+            Ok(()) => true,
+            Err(error) => {
+                log::warn!(
+                    "Unable to create project Skill link for {relative}; using a copy: {error}"
+                );
+                false
+            }
+        };
         self.add(
             root,
             relative,

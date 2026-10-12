@@ -136,8 +136,10 @@ pub fn sync_single_skill_to_tool(
             &existing_targets,
         ),
     };
-    let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
-    let mode = sync_engine::sync_mode_for_tool(tool, configured_mode.as_deref());
+    let preference = crate::core::deployment_preferences::Preference::load(
+        store,
+        crate::core::deployment_preferences::Scope::Global,
+    )?;
     let recorded_mode = match intent {
         DeployIntent::AdoptExisting(_) => None,
         DeployIntent::Managed => existing_targets
@@ -147,6 +149,7 @@ pub fn sync_single_skill_to_tool(
             })
             .map(|existing| existing.mode.clone()),
     };
+    let mode = preference.for_target(recorded_mode.as_deref());
     let policy = match intent {
         DeployIntent::AdoptExisting(_) => sync_engine::ReplacePolicy::UserConfirmed,
         DeployIntent::Managed => replace_policy(recorded_mode.as_deref(), force),

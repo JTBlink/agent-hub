@@ -172,6 +172,13 @@ fn repair_uses_only_project_content_and_keeps_modified_copies() {
     fs::remove_dir_all(tmp.path().join("personal")).unwrap();
     fs::remove_dir_all(root.join(".claude/skills/demo")).unwrap();
     repair(&root, "demo").unwrap();
+    assert!(!root.join(".claude/skills/demo").exists());
+    deploy(
+        &root,
+        "demo",
+        &[tool_adapters::find_adapter("claude_code").unwrap()],
+    )
+    .unwrap();
     assert!(root.join(".claude/skills/demo/SKILL.md").is_file());
     fs::write(
         root.join(".agents/skills/demo/scripts/run.sh"),
@@ -514,11 +521,17 @@ fn team_can_clone_complete_native_skills_without_an_agenthub_manifest() {
     assert!(!cloned.join(MANIFEST).exists());
     for directory in [".agents/skills/demo", ".claude/skills/demo"] {
         assert_eq!(
-            fs::read_to_string(cloned.join(directory).join("SKILL.md")).unwrap(),
-            fs::read_to_string(root.join(directory).join("SKILL.md")).unwrap()
+            fs::read_to_string(cloned.join(directory).join("SKILL.md"))
+                .unwrap()
+                .replace("\r\n", "\n"),
+            fs::read_to_string(root.join(directory).join("SKILL.md"))
+                .unwrap()
+                .replace("\r\n", "\n")
         );
         assert_eq!(
-            fs::read_to_string(cloned.join(directory).join("scripts/run.sh")).unwrap(),
+            fs::read_to_string(cloned.join(directory).join("scripts").join("run.sh"))
+                .unwrap()
+                .replace("\r\n", "\n"),
             "echo team\n"
         );
     }

@@ -65,7 +65,19 @@ pub async fn deploy_project_library_skill(
                     .ok_or_else(|| AppError::not_found(format!("Unknown agent: {key}")))
             })
             .collect::<Result<Vec<_>, _>>()?;
-        project_library::deploy(Path::new(&record.path), &directory, &targets)
+        let preference = crate::core::deployment_preferences::Preference::load(
+            &store,
+            crate::core::deployment_preferences::Scope::Project,
+        )?;
+        project_library::deploy_with_mode(
+            Path::new(&record.path),
+            &directory,
+            &targets,
+            matches!(
+                preference.for_install(None),
+                crate::core::sync_engine::SyncMode::Copy
+            ),
+        )
     })
     .await?
 }

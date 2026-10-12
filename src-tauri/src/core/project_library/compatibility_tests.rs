@@ -4,8 +4,9 @@ use super::{
 };
 use crate::core::tool_adapters;
 
+#[cfg(unix)]
 #[test]
-fn adding_an_agent_to_a_copy_install_keeps_the_selected_copy_strategy() {
+fn new_agent_uses_default_links_while_existing_copy_is_preserved() {
     let tmp = TestProject::new();
     let skill = fixture(tmp.path());
     let root = tmp.path().join("project");
@@ -24,11 +25,12 @@ fn adding_an_agent_to_a_copy_install_keeps_the_selected_copy_strategy() {
     )
     .unwrap();
     assert!(!root.join(".claude/skills/demo").is_symlink());
-    assert!(!root.join(".codex/skills/demo").is_symlink());
+    assert!(root.join(".codex/skills/demo").is_symlink());
     assert!(root.join(".codex/skills/demo/scripts/run.sh").is_file());
-    assert!(manifest::read(&root).unwrap().skills["demo"]
-        .linked_targets
-        .is_empty());
+    assert_eq!(
+        manifest::read(&root).unwrap().skills["demo"].linked_targets,
+        BTreeSet::from(["codex".into()])
+    );
 }
 
 #[test]
@@ -55,7 +57,13 @@ fn installing_existing_project_content_keeps_the_team_version() {
         "Project-only content"
     );
     assert_eq!(
-        fs::read_to_string(root.join(".claude/skills/demo/SKILL.md")).unwrap(),
+        fs::read_to_string(
+            root.join(".claude")
+                .join("skills")
+                .join("demo")
+                .join("SKILL.md")
+        )
+        .unwrap(),
         fs::read_to_string(central.join("SKILL.md")).unwrap()
     );
     assert!(Path::new(&skill.central_path)

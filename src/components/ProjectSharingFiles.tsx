@@ -31,10 +31,10 @@ export function ProjectSharingFiles({ status }: { status: SharingFiles }) {
   return (
     <>
       {shared.length > 0 && (
-        <details className="mt-2">
-          <summary className="cursor-pointer text-accent-light focus-visible:outline focus-visible:outline-2">
+        <section className="mt-3">
+          <h4 className="font-medium text-secondary">
             {t("projectLibrary.commitFiles", { count: shared.length })}
-          </summary>
+          </h4>
           <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto font-mono [overflow-wrap:anywhere]">
             {shared.map((path) => (
               <li key={path}>{path}</li>
@@ -48,29 +48,24 @@ export function ProjectSharingFiles({ status }: { status: SharingFiles }) {
             <Copy className="h-3 w-3" />
             {t("projectLibrary.copyPaths")}
           </button>
-        </details>
+        </section>
       )}
       {ignored.length > 0 && (
         <div role="alert" className="mt-2 text-amber-600 dark:text-amber-400">
           <p>{t("projectLibrary.ignored", { count: ignored.length })}</p>
-          <details className="mt-1">
-            <summary className="cursor-pointer focus-visible:outline focus-visible:outline-2">
-              {t("projectLibrary.ignoredDetails")}
-            </summary>
-            <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto font-mono [overflow-wrap:anywhere]">
-              {ignored.map((path) => (
-                <li key={path}>{path}</li>
-              ))}
-            </ul>
-            <p className="mt-2">{t("projectLibrary.ignoredHelp")}</p>
-          </details>
+          <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto font-mono [overflow-wrap:anywhere]">
+            {ignored.map((path) => (
+              <li key={path}>{path}</li>
+            ))}
+          </ul>
+          <p className="mt-2">{t("projectLibrary.ignoredHelp")}</p>
         </div>
       )}
       {status.management_files.length > 0 && (
-        <details className="mt-2">
-          <summary className="cursor-pointer focus-visible:outline focus-visible:outline-2">
+        <section className="mt-3">
+          <h4 className="font-medium text-secondary">
             {t("projectLibrary.managementFiles")}
-          </summary>
+          </h4>
           <p className="mt-2">{t("projectLibrary.managementHelp")}</p>
           <ul className="mt-2 space-y-1 font-mono [overflow-wrap:anywhere]">
             {status.management_files.map((path) => (
@@ -80,7 +75,7 @@ export function ProjectSharingFiles({ status }: { status: SharingFiles }) {
           {managementIgnored && (
             <p className="mt-2">{t("projectLibrary.managementIgnored")}</p>
           )}
-        </details>
+        </section>
       )}
     </>
   );

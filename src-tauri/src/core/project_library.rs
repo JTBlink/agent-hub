@@ -3,6 +3,7 @@ mod entries;
 mod git;
 mod installation;
 mod manifest;
+mod removal;
 mod transaction;
 
 use anyhow::{bail, Context, Result};
@@ -18,6 +19,7 @@ use super::{
 };
 pub use manifest::LIBRARY as SKILLS_DIRECTORY;
 use manifest::{fingerprint, ProjectEntry, ProjectManifest, ProjectSource, LIBRARY, MANIFEST};
+pub use removal::{remove_target, remove_target_with_adapter};
 use transaction::{ProjectLock, Publication};
 
 #[derive(Serialize)]
@@ -37,6 +39,15 @@ pub struct ProjectLibrarySkill {
     pub disabled: bool,
     pub targets: Vec<String>,
     pub stale_targets: Vec<String>,
+    pub target_issues: Vec<ProjectTargetIssue>,
+}
+
+#[derive(Serialize)]
+pub struct ProjectTargetIssue {
+    pub agent: String,
+    pub agent_name: String,
+    pub path: String,
+    pub reason: &'static str,
 }
 
 /// Install actual content in the project and generate selected team targets.
@@ -73,10 +84,19 @@ pub fn deploy(
     name: &str,
     targets: &[ToolAdapter],
 ) -> Result<ProjectLibraryStatus, AppError> {
+    deploy_with_mode(root, name, targets, false)
+}
+
+pub fn deploy_with_mode(
+    root: &Path,
+    name: &str,
+    targets: &[ToolAdapter],
+    copy: bool,
+) -> Result<ProjectLibraryStatus, AppError> {
     mutate(root, |root, lock| {
         safe_name(name)?;
         let mut manifest = manifest::read(root)?;
-        deploy_unlocked(root, lock, &mut manifest, name, targets, false)
+        deploy_unlocked(root, lock, &mut manifest, name, targets, copy)
     })
 }
 
@@ -138,10 +158,11 @@ fn deploy_unlocked(
             recorded.then_some(entry.content_hash.as_str()),
             Some(&current),
         )?;
-        let linked = !copy
-            && ((!recorded && (entry.targets.is_empty() || !entry.linked_targets.is_empty()))
-                || installation::linked_path(entry, &path)
-                || entries::path(root, &path)?.is_symlink());
+        let linked = if recorded {
+            installation::linked_path(entry, &path) || entries::path(root, &path)?.is_symlink()
+        } else {
+            !copy
+        };
         if linked {
             let created = publication.add_link(
                 root,
@@ -219,7 +240,7 @@ pub fn update(
     })
 }
 
-/// Refresh all recorded team copies from project content. No source download.
+/// Refresh existing team entries from project content, without adding Agents.
 pub fn repair(root: &Path, name: &str) -> Result<ProjectLibraryStatus, AppError> {
     mutate(root, |root, lock| {
         let mut manifest = manifest::read(root)?;
@@ -237,7 +258,7 @@ pub fn repair(root: &Path, name: &str) -> Result<ProjectLibraryStatus, AppError>
         let mut publication = Publication::new(root)?;
         publication.observe(canonical.clone(), Some(current.clone()));
         for path in all_entry_paths(name, entry) {
-            if path == canonical {
+            if path == canonical || !entries::is_present(root, &path)? {
                 continue;
             }
             check_replace(root, &path, Some(&baseline), Some(&current))?;
@@ -397,40 +418,6 @@ pub fn remove(root: &Path, name: &str) -> Result<ProjectLibraryStatus, AppError>
     })
 }
 
-/// Remove one recorded dedicated target. Shared canonical content is retained.
-pub fn remove_target(
-    root: &Path,
-    name: &str,
-    agent: &str,
-) -> Result<ProjectLibraryStatus, AppError> {
-    mutate(root, |root, lock| {
-        let mut manifest = manifest::read(root)?;
-        let entry = manifest
-            .skills
-            .get_mut(name)
-            .context("Project Skill is not managed")?;
-        let Some(path) = entry.targets.get(agent).cloned() else {
-            return Ok(());
-        };
-        if path == format!("{LIBRARY}/{name}") {
-            bail!("Shared project library cannot be removed for one Agent");
-        }
-        let actual = actual_target(
-            &path,
-            entry.disabled || entry.disabled_targets.contains(agent),
-        );
-        check_replace(root, &actual, Some(&entry.content_hash), None)?;
-        entry.targets.remove(agent);
-        entry.disabled_targets.remove(agent);
-        entry.linked_targets.remove(agent);
-        let mut publication = Publication::new(root)?;
-        if !entry.targets.values().any(|remaining| remaining == &path) {
-            publication.add(root, actual, None, Some(&entry.content_hash))?;
-        }
-        publish_manifest(root, lock, publication, &manifest)
-    })
-}
-
 pub fn is_managed(root: &Path, name: &str) -> Result<bool, AppError> {
     manifest::read(root)
         .map(|manifest| manifest.skills.contains_key(name))
@@ -456,16 +443,41 @@ fn status_inner(root: &Path) -> Result<ProjectLibraryStatus> {
         let canonical = canonical_path(directory, entry.disabled);
         let current = fingerprint(&safe_path(root, &canonical)?)?;
         let mut stale = Vec::new();
+        let mut target_issues = Vec::new();
         for (agent, path) in &entry.targets {
             let path = actual_target(
                 path,
                 entry.disabled || entry.disabled_targets.contains(agent),
             );
+            let target = entries::path(root, &path)?;
+            // The actual entry, not historical manifest membership, defines
+            // deployment. Grey/unassigned Agents are a normal state.
+            if !entries::is_present(root, &path)? {
+                continue;
+            }
             let is_linked = entry.linked_targets.contains(agent);
-            if entries::content_fingerprint(root, &path)? != current
-                || (is_linked && !entries::points_to(root, &path, &canonical))
+            let reason = if is_linked && !target.is_symlink() {
+                Some("link_replaced")
+            } else if (is_linked || target.is_symlink())
+                && !entries::points_to(root, &path, &canonical)
             {
+                // Report link drift without reading another project's/personal content.
+                Some("link_mismatch")
+            } else if entries::content_fingerprint(root, &path)? != current {
+                Some("content_mismatch")
+            } else {
+                None
+            };
+            if let Some(reason) = reason {
                 stale.push(agent.clone());
+                target_issues.push(ProjectTargetIssue {
+                    agent: agent.clone(),
+                    agent_name: super::tool_adapters::find_adapter(agent)
+                        .map(|adapter| adapter.display_name)
+                        .unwrap_or_else(|| agent.clone()),
+                    path,
+                    reason,
+                });
             }
         }
         files.extend(all_entry_paths(directory, entry));
@@ -476,6 +488,7 @@ fn status_inner(root: &Path) -> Result<ProjectLibraryStatus> {
             modified: current.as_deref() != Some(&entry.content_hash),
             targets: entry.targets.keys().cloned().collect(),
             stale_targets: stale,
+            target_issues,
         });
     }
     if let Ok(repo) = git2::Repository::discover(root) {
@@ -715,3 +728,9 @@ fn publish_manifest(
 mod compatibility_tests;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod deployment_tests;
+
+#[cfg(test)]
+mod removal_tests;

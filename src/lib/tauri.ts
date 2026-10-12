@@ -1028,13 +1028,13 @@ export const exportSkillToProject = (
   skillId: string,
   projectId: string,
   agents?: string[],
-  copy = false,
+  copy?: boolean,
 ) =>
   invoke<void>("export_skill_to_project", {
     skillId,
     projectId,
     agents: agents ?? null,
-    copy,
+    copy: copy ?? null,
   });
 
 export const updateProjectSkillToCenter = (
@@ -1136,6 +1136,13 @@ export interface ProjectLibraryStatus {
     disabled: boolean;
     targets: string[];
     stale_targets: string[];
+    target_issues?: {
+      agent: string;
+      agent_name?: string;
+      path: string;
+      reason:
+        "missing" | "link_replaced" | "link_mismatch" | "content_mismatch";
+    }[];
   }[];
   files_to_commit: string[];
   management_files: string[];
