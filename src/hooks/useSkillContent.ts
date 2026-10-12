@@ -13,7 +13,7 @@ import {
 
 export type SkillContentTab = "central" | "source" | "diff";
 
-function useContentResource<T>(
+export function useContentResource<T>(
   key: string,
   enabled: boolean,
   load: () => Promise<T>,

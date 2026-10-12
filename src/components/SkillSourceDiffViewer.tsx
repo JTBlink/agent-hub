@@ -1,10 +1,15 @@
 import { useTranslation } from "react-i18next";
+import { reverseSkillDiffEntries } from "../lib/skillDiffPresentation";
 import { cn } from "../utils";
 import { DocumentDiffViewer } from "./DocumentDiffViewer";
-import type { SkillSourceDiffEntry } from "../lib/tauri";
+import type { SkillSourceDiff, SkillSourceDiffEntry } from "../lib/tauri";
 
 interface Props {
   entries: SkillSourceDiffEntry[];
+  comparison: SkillSourceDiff;
+  local: boolean;
+  sourceTitle?: string;
+  sourceOnLeft?: boolean;
   className?: string;
 }
 
@@ -17,8 +22,19 @@ const STATUS_TONE: Record<SkillSourceDiffEntry["status"], string> = {
     "border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
 };
 
-export function SkillSourceDiffViewer({ entries, className }: Props) {
+export function SkillSourceDiffViewer({
+  entries,
+  comparison,
+  local,
+  sourceTitle,
+  sourceOnLeft = false,
+  className,
+}: Props) {
   const { t } = useTranslation();
+  const displayEntries = sourceOnLeft
+    ? reverseSkillDiffEntries(entries)
+    : entries;
+  const sides = sourceOnLeft ? ["source", "central"] : ["central", "source"];
 
   if (entries.length === 0) {
     return (
@@ -37,7 +53,17 @@ export function SkillSourceDiffViewer({ entries, className }: Props) {
 
   return (
     <div className={cn("space-y-4", className)}>
-      {entries.map((entry) => (
+      <p className="text-[12px] text-muted">
+        {t(
+          `mySkills.contentComparison.versionOrder.${comparison.version_comparison ?? "unknown"}`,
+        )}{" "}
+        {t(
+          sourceOnLeft
+            ? "project.comparison.diffLegend"
+            : "mySkills.contentComparison.diffLegend",
+        )}
+      </p>
+      {displayEntries.map((entry) => (
         <div
           key={entry.relative_path}
           className="overflow-hidden rounded-xl border border-border-subtle"
@@ -66,6 +92,61 @@ export function SkillSourceDiffViewer({ entries, className }: Props) {
                   })}
                 </span>
               )}
+          </div>
+
+          <div className="grid grid-cols-2 border-b border-border-subtle bg-bg-secondary">
+            {sides.map((side, index) => {
+              const path =
+                side === "central"
+                  ? comparison.central_path
+                  : comparison.source_path;
+              const version =
+                side === "central"
+                  ? comparison.central_version
+                  : comparison.source_version;
+              const missing =
+                index === 0
+                  ? entry.status === "added"
+                  : entry.status === "removed";
+              return (
+                <div
+                  key={side}
+                  data-diff-side={side}
+                  className="min-w-0 px-3 py-3 first:border-r first:border-border-subtle"
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-secondary">
+                    <span>
+                      {side === "source" && sourceTitle
+                        ? sourceTitle
+                        : t(
+                            `mySkills.contentComparison.${side === "central" ? "centralVersion" : local ? "localVersion" : "sourceVersion"}`,
+                          )}
+                    </span>
+                    <span className="font-mono font-normal text-muted">
+                      {version
+                        ? `v${version.replace(/^v/, "")}`
+                        : t("mySkills.contentComparison.versionMissing")}
+                    </span>
+                    {comparison.version_comparison === `${side}_newer` && (
+                      <span className="rounded-full bg-accent-bg px-2 py-0.5 text-accent-light">
+                        {t("mySkills.contentComparison.newerVersion")}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="mt-1 break-all font-mono text-[11px] text-muted"
+                    title={`${path?.replace(/[\\/]$/, "")}/${entry.relative_path}`}
+                  >
+                    {path?.replace(/[\\/]$/, "")}/{entry.relative_path}
+                  </div>
+                  {missing && (
+                    <div className="mt-1 text-[11px] text-muted">
+                      {t("mySkills.contentComparison.fileMissing")}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {entry.content_kind === "text" ? (

@@ -88,6 +88,11 @@ beforeEach(() => {
     skill_id: "demo",
     source_label: "local",
     revision: "workspace",
+    central_path: "<workspace>/library/demo",
+    source_path: "<workspace>/source/demo",
+    central_version: null,
+    source_version: null,
+    version_comparison: "unknown",
     entries: [entry("references/changed.md")],
   });
   container = document.createElement("div");
@@ -154,7 +159,18 @@ it("shows file differences even when the main documents are identical", async ()
   expect(document.body.textContent).toContain("本地来源内容");
   await click("差异");
   expect(document.body.textContent).toContain("references/changed.md");
-  expect(document.body.textContent).toContain("中心 → 本地");
+  expect(document.body.textContent).not.toContain("中心 → 本地");
+  expect(document.body.textContent).toContain("文件内容对比");
+  expect(document.body.textContent).toContain(
+    "<workspace>/library/demo/references/changed.md",
+  );
+  expect(document.body.textContent).toContain(
+    "<workspace>/source/demo/references/changed.md",
+  );
+  expect(document.body.textContent).toContain("无法确定哪一侧较新");
+  const headers = document.querySelectorAll("[data-diff-side]");
+  expect(headers[0]?.textContent).toContain("中心库副本");
+  expect(headers[1]?.textContent).toContain("本地来源内容");
 });
 
 it("refreshes changed local files while preserving the selected tab across metadata updates", async () => {
@@ -235,4 +251,41 @@ it("keeps the central document usable when the original source is missing", asyn
   );
   expect(api.source).not.toHaveBeenCalled();
   expect(api.diff).not.toHaveBeenCalled();
+});
+
+it("labels a newer declared version beside its directory and marks absent files", async () => {
+  api.diff.mockResolvedValueOnce({
+    central_path: "<workspace>/library/demo",
+    source_path: "<workspace>/source/demo",
+    central_version: "1.0.0",
+    source_version: "1.1.0",
+    version_comparison: "source_newer",
+    entries: [entry("scripts/new.sh", "added"), entry("old.md", "removed")],
+  });
+  await render();
+  await click("差异");
+  expect(document.body.textContent).toContain("来源的声明版本较新");
+  const newer = [...document.querySelectorAll("span")].find(
+    (node) => node.textContent === "较新版本",
+  );
+  expect(newer?.parentElement?.parentElement?.textContent).toContain(
+    "<workspace>/source/demo",
+  );
+  expect(newer?.parentElement?.textContent).toContain("v1.1.0");
+  expect(document.body.textContent).toContain("此侧没有该文件");
+});
+
+it("does not imply a newer version when declared versions match", async () => {
+  api.diff.mockResolvedValueOnce({
+    central_path: "<workspace>/library/demo",
+    source_path: "<workspace>/source/demo",
+    central_version: "1.0.0",
+    source_version: "1.0.0",
+    version_comparison: "same_version",
+    entries: [entry("SKILL.md")],
+  });
+  await render();
+  await click("差异");
+  expect(document.body.textContent).toContain("双方声明版本相同");
+  expect(document.body.textContent).not.toContain("较新版本");
 });

@@ -133,6 +133,12 @@ export interface SkillSourceDiff {
   source_label: string;
   revision: string;
   entries: SkillSourceDiffEntry[];
+  central_path: string;
+  source_path: string;
+  central_version: string | null;
+  source_version: string | null;
+  version_comparison:
+    "central_newer" | "source_newer" | "same_version" | "unknown";
 }
 
 export interface SkillGroup {
@@ -980,6 +986,17 @@ export const getProjectSkillDocument = (
   agent: string,
 ) =>
   invoke<ProjectSkillDocument>("get_project_skill_document", {
+    projectId,
+    skillRelativePath,
+    agent,
+  });
+
+export const getProjectSkillDiff = (
+  projectId: string,
+  skillRelativePath: string,
+  agent: string,
+) =>
+  invoke<SkillSourceDiff>("get_project_skill_diff", {
     projectId,
     skillRelativePath,
     agent,

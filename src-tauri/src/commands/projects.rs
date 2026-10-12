@@ -58,7 +58,7 @@ pub struct ProjectAgentTargetDto {
     pub is_custom: bool,
 }
 
-fn agent_skill_configs(store: &SkillStore) -> Vec<project_scanner::AgentSkillConfig> {
+pub(super) fn agent_skill_configs(store: &SkillStore) -> Vec<project_scanner::AgentSkillConfig> {
     let mut grouped: Vec<(String, Vec<(String, String)>)> = Vec::new();
     for adapter in tool_adapters::all_tool_adapters(store) {
         let project_dir = adapter.project_relative_skills_dir().to_string();
@@ -106,7 +106,7 @@ fn linked_workspace_agent_name(rec: &ProjectRecord) -> String {
         .unwrap_or_else(|| rec.name.clone())
 }
 
-fn read_workspace_skills(
+pub(super) fn read_workspace_skills(
     rec: &ProjectRecord,
     configs: &[project_scanner::AgentSkillConfig],
 ) -> Vec<project_scanner::ProjectSkillInfo> {

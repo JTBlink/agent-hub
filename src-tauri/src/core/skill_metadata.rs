@@ -71,6 +71,7 @@ pub(crate) fn parse_frontmatter(content: &str) -> SkillMeta {
             let version = yaml
                 .get("version")
                 .and_then(|v| v.as_str())
+                .or_else(|| yaml.get("metadata")?.get("version")?.as_str())
                 .map(|s| s.to_string());
             return SkillMeta {
                 name,

@@ -247,30 +247,7 @@ pub struct SourceSkillDocumentDto {
     pub revision: String,
 }
 
-/// Whole-directory diff between the central copy (`original`) and the source
-/// (`updated`), covering the same file scope that drives the update badge so
-/// the diff can never come back empty while the badge says "update available".
-#[derive(Debug, Serialize)]
-pub struct SkillSourceDiffDto {
-    pub skill_id: String,
-    pub source_label: String,
-    pub revision: String,
-    pub entries: Vec<SkillSourceDiffEntryDto>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SkillSourceDiffEntryDto {
-    pub relative_path: String,
-    /// "added" | "removed" | "modified"
-    pub status: String,
-    /// "text" | "binary" | "too_large" | "permission_only"
-    pub content_kind: String,
-    /// Present only when `content_kind == "text"`.
-    pub original_text: Option<String>,
-    pub updated_text: Option<String>,
-    pub executable_before: bool,
-    pub executable_after: bool,
-}
+pub use super::skills_diff_metadata::{SkillSourceDiffDto, SkillSourceDiffEntryDto};
 
 #[derive(Debug, Serialize)]
 pub struct SkillFileEntryDto {
@@ -516,9 +493,9 @@ fn classify_diff_bytes(bytes: Option<Vec<u8>>) -> (&'static str, Option<String>)
 }
 
 /// Diff the whole content scope of two skill directories. `original_dir` is
-/// the central copy (old), `updated_dir` is the source (new). Uses the same
+/// the central copy, `updated_dir` is the compared source. Uses the same
 /// file enumeration as the hash so it reports exactly what flips the badge.
-fn build_source_diff_entries(
+pub(super) fn build_source_diff_entries(
     original_dir: &Path,
     updated_dir: &Path,
 ) -> Vec<SkillSourceDiffEntryDto> {
@@ -639,12 +616,15 @@ pub async fn get_skill_source_diff(
                 return Err(AppError::not_found("Original source path no longer exists"));
             }
             let entries = build_source_diff_entries(&central_dir, &source_dir);
-            return Ok(SkillSourceDiffDto {
+            return Ok(SkillSourceDiffDto::from_directories(
                 skill_id,
                 source_label,
-                revision: "workspace".to_string(),
+                "workspace".to_string(),
+                &central_dir,
+                &source_dir,
+                source_path.clone(),
                 entries,
-            });
+            ));
         }
 
         if !matches!(skill.source_type.as_str(), "git" | "skillssh") {
@@ -680,12 +660,28 @@ pub async fn get_skill_source_diff(
                 git_source.locator_skill_id.as_deref(),
             )?;
             let entries = build_source_diff_entries(&central_dir, &skill_dir);
-            Ok(SkillSourceDiffDto {
+            let relative_dir = skill_dir.strip_prefix(&temp_dir).map_err(|_| {
+                AppError::invalid_input("Resolved skill directory is outside source checkout")
+            })?;
+            let directory = if relative_dir.as_os_str().is_empty() {
+                ".".to_string()
+            } else {
+                relative_dir.to_string_lossy().into_owned()
+            };
+            let source_path = format!(
+                "{} :: {}",
+                crate::core::log_sanitize::sanitize(&git_source.clone_url),
+                directory
+            );
+            Ok(SkillSourceDiffDto::from_directories(
                 skill_id,
                 source_label,
-                revision: remote_revision,
+                remote_revision,
+                &central_dir,
+                &skill_dir,
+                source_path,
                 entries,
-            })
+            ))
         })();
 
         git_fetcher::cleanup_temp(&temp_dir);
@@ -756,9 +752,7 @@ pub async fn get_skill_files(
         let result = entries
             .into_iter()
             .map(|entry| {
-                let size = std::fs::metadata(&entry.path)
-                    .map(|m| m.len())
-                    .unwrap_or(0);
+                let size = std::fs::metadata(&entry.path).map(|m| m.len()).unwrap_or(0);
                 let is_text = probe_is_text(&entry.path);
                 SkillFileEntryDto {
                     relative_path: entry.relative_path,

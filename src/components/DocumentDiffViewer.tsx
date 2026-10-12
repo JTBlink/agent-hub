@@ -307,7 +307,13 @@ export function DocumentDiffViewer({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse">
+            <table className="w-full table-fixed border-collapse">
+              <colgroup>
+                <col className="w-14" />
+                <col style={{ width: "calc(50% - 3.5rem)" }} />
+                <col className="w-14" />
+                <col style={{ width: "calc(50% - 3.5rem)" }} />
+              </colgroup>
               <tbody>
                 {hunk.rows.map((row, index) => (
                   <tr

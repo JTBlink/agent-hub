@@ -84,6 +84,8 @@ agent-hub/
 │   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
 │   │   │   ├── skill_groups.rs     #     技能组管理
 │   │   │   ├── skills.rs           #     技能管理
+│   │   │   ├── skills_diff_metadata.rs # 技能差异目录、声明版本与比较 DTO
+│   │   │   ├── project_skill_diff.rs # 项目 Agent 副本与中心技能的目录差异
 │   │   │   ├── sync.rs             #     同步操作
 │   │   │   ├── git_backup.rs       #     Git 备份
 │   │   │   ├── settings.rs         #     应用设置
