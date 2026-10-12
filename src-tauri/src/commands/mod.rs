@@ -7,6 +7,7 @@ pub mod discovered_skills;
 pub mod git_backup;
 pub mod project_library;
 pub mod project_skill_diff;
+pub mod project_skill_update;
 pub mod projects;
 pub mod scan;
 pub mod settings;

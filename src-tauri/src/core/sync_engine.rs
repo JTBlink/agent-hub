@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
+mod replacement;
+
 /// Refuse to sync when `src` and `dst` overlap in either direction (equal,
 /// dst inside src, or src inside dst). Otherwise the recursive copy walks
 /// into the freshly-created `dst` and produces unbounded nesting (issue #61),
@@ -318,72 +320,7 @@ pub fn sync_skill(
 
     ensure_dst_not_inside_src(source, target)?;
 
-    // Remove exactly what we classified. Passing `state` keeps a directory
-    // that appeared since the check from being swallowed by `remove_dir_all`:
-    // the removal is type-specific, so it fails instead. Errors propagate —
-    // the old `.ok()` could leave the target in place and then create over it.
-    remove_classified_target(target, state)
-        .with_context(|| format!("Failed to remove existing target {:?}", target))?;
-
-    match mode {
-        SyncMode::Symlink => {
-            #[cfg(unix)]
-            {
-                std::os::unix::fs::symlink(source, target).with_context(|| {
-                    format!("Failed to create symlink {:?} -> {:?}", target, source)
-                })?;
-                Ok(SyncMode::Symlink)
-            }
-            #[cfg(windows)]
-            {
-                match std::os::windows::fs::symlink_dir(source, target) {
-                    Ok(()) => Ok(SyncMode::Symlink),
-                    Err(err) => {
-                        // Typical causes: missing SeCreateSymbolicLinkPrivilege,
-                        // Developer Mode disabled, or non-NTFS target volume.
-                        // A directory junction needs no privilege on local NTFS
-                        // volumes and is equivalent for our purposes (issue #126),
-                        // so try that before degrading to a full copy. Junctions
-                        // cannot point at remote/UNC paths (e.g. \\wsl.localhost),
-                        // which is where the copy fallback still applies.
-                        //
-                        // A junction is reported back as `SyncMode::Symlink`:
-                        // std treats mount points as symlinks (`is_symlink()`,
-                        // `read_link`), so freshness checks and removal handle
-                        // it exactly like a real directory symlink.
-                        match junction::create(source, target) {
-                            Ok(()) => {
-                                log::info!(
-                                    "symlink_dir {:?} -> {:?} failed ({err}); created directory junction instead",
-                                    target,
-                                    source
-                                );
-                                Ok(SyncMode::Symlink)
-                            }
-                            Err(junction_err) => {
-                                log::warn!(
-                                    "symlink_dir ({err}) and junction ({junction_err}) both failed for {:?} -> {:?}, falling back to copy",
-                                    target,
-                                    source
-                                );
-                                copy_dir_recursive(source, target)?;
-                                Ok(SyncMode::Copy)
-                            }
-                        }
-                    }
-                }
-            }
-            #[cfg(all(not(unix), not(windows)))]
-            {
-                copy_dir_recursive(source, target)?;
-                Ok(SyncMode::Copy)
-            }
-        }
-        SyncMode::Copy => {
-            copy_dir_recursive(source, target)?;
-            Ok(SyncMode::Copy)
-        }
-    }
+    replacement::replace(source, target, mode, policy, state)
 }
 
 /// Decide whether the existing target is already in the desired state.
@@ -659,6 +596,10 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "sync_engine/replacement_tests.rs"]
+mod replacement_tests;
 
 #[cfg(test)]
 mod tests {

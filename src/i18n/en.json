@@ -1131,6 +1131,7 @@
     "resetFromCenter": "Restore center version",
     "resetFromCenterSuccess": "\"{{name}}\" restored to center version",
     "restoreConfirmTitle": "Confirm overwrite project skill",
+    "restoreConfirmAction": "Confirm overwrite",
     "restoreConfirmMessage": "\"{{name}}\" has local changes or extra files. Restoring the center version may discard them. Continue?",
     "alreadyInCenter": "In Center",
     "syncStatus": {

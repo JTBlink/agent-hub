@@ -26,6 +26,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
+import { useProjectSkillRestore } from "../hooks/useProjectSkillRestore";
+import { ProjectSkillRestoreDialog } from "../components/ProjectSkillRestoreDialog";
 import { useProjectLibrary } from "../hooks/useProjectLibrary";
 import { ProjectSkillCollection } from "../components/ProjectSkillCollection";
 import { useMultiSelect } from "../hooks/useMultiSelect";
@@ -54,7 +56,7 @@ import type {
   ManagedSkill,
   ProjectAgentTarget,
 } from "../lib/tauri";
-import { getErrorKind, getErrorMessage } from "../lib/error";
+import { getErrorMessage } from "../lib/error";
 import { SkillDirectoryActions } from "../components/SkillDirectoryActions";
 import {
   deleteProjectSkillGroup,
@@ -98,11 +100,7 @@ export function ProjectDetail() {
   const [updatingCenterSkill, setUpdatingCenterSkill] = useState<string | null>(
     null,
   );
-  const [updatingProjectSkill, setUpdatingProjectSkill] = useState<
-    string | null
-  >(null);
   const [batchUpdatingCenter, setBatchUpdatingCenter] = useState(false);
-  const [batchUpdatingProject, setBatchUpdatingProject] = useState(false);
   const [centerConflict, setCenterConflict] = useState<{
     skill: ProjectSkillEntry;
     variants: ProjectSkill[];
@@ -122,8 +120,6 @@ export function ProjectDetail() {
   const [deleteTarget, setDeleteTarget] = useState<ProjectSkillEntry | null>(
     null,
   );
-  const [restoreConfirmTarget, setRestoreConfirmTarget] =
-    useState<ProjectSkillEntry | null>(null);
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
   const [batchTagDialogOpen, setBatchTagDialogOpen] = useState(false);
   const [batchAgentMode, setBatchAgentMode] = useState<boolean | null>(null);
@@ -211,6 +207,13 @@ export function ProjectDetail() {
     skills,
     loadSkills,
   );
+  const refreshRestoredSkills = useCallback(async () => {
+    await Promise.all([loadSkills(), refreshProjects()]);
+  }, [loadSkills, refreshProjects]);
+  const restore = useProjectSkillRestore(id, refreshRestoredSkills);
+  const updatingProjectSkill = restore.updatingSkill;
+  const batchUpdatingProject = restore.batchUpdating;
+
   const groupedSkills = useMemo(
     () => groupProjectSkills(skills, projectLibrary.status),
     [skills, projectLibrary.status],
@@ -323,7 +326,10 @@ export function ProjectDetail() {
     ]),
     scopeSignal: id ?? "",
     escapeEnabled:
-      !batchTagDialogOpen && !batchDeleteConfirm && batchAgentMode === null,
+      !restore.confirmation &&
+      !batchTagDialogOpen &&
+      !batchDeleteConfirm &&
+      batchAgentMode === null,
   });
 
   const exportTargets = useMemo(() => {
@@ -682,49 +688,7 @@ export function ProjectDetail() {
     }
   };
 
-  const handleUpdateProject = async (
-    skill: ProjectSkillEntry,
-    force = false,
-  ) => {
-    if (!id) return;
-    setUpdatingProjectSkill(getSkillKey(skill));
-    try {
-      await Promise.all(
-        skill.variants.map((variant) =>
-          api.updateProjectSkillFromCenter(
-            id,
-            variant.relative_path,
-            variant.agent,
-            force,
-          ),
-        ),
-      );
-      if (skill.status === "project_newer") {
-        toast.success(
-          t("project.resetFromCenterSuccess", { name: skill.name }),
-        );
-      } else {
-        toast.success(t("project.updateProjectSuccess", { name: skill.name }));
-      }
-      await Promise.all([loadSkills(), refreshProjects()]);
-    } catch (error: unknown) {
-      if (
-        !force &&
-        getErrorKind(error) === "project_restore_required"
-      ) {
-        setRestoreConfirmTarget(skill);
-      } else {
-        toast.error(
-          t("project.updateProjectFailed", {
-            name: skill.name,
-            reason: getErrorMessage(error, t("common.error")),
-          }),
-        );
-      }
-    } finally {
-      setUpdatingProjectSkill(null);
-    }
-  };
+  const handleUpdateProject = restore.request;
 
   const handleToggleSkill = async (skill: ProjectSkillEntry) => {
     if (!id) return;
@@ -898,44 +862,7 @@ export function ProjectDetail() {
     }
   };
 
-  const handleBatchUpdateProject = async () => {
-    if (!id) return;
-    setBatchUpdatingProject(true);
-    try {
-      let updated = 0;
-      let failed = 0;
-      for (const skill of selectedSkills) {
-        const canUpdateProject =
-          skill.status === "project_newer" ||
-          skill.status === "center_newer" ||
-          skill.status === "diverged";
-        if (!canUpdateProject) continue;
-        try {
-          await Promise.all(
-            skill.variants.map((variant) =>
-              api.updateProjectSkillFromCenter(
-                id,
-                variant.relative_path,
-                variant.agent,
-              ),
-            ),
-          );
-          updated++;
-        } catch {
-          failed++;
-        }
-      }
-      if (updated > 0) {
-        toast.success(t("project.batchUpdatedProject", { count: updated }));
-      }
-      if (failed > 0) {
-        toast.error(t("project.batchUpdateProjectFailed", { count: failed }));
-      }
-      await Promise.all([loadSkills(), refreshProjects()]);
-    } finally {
-      setBatchUpdatingProject(false);
-    }
-  };
+  const handleBatchUpdateProject = () => restore.requestBatch(selectedSkills);
 
   const handleBatchEditTags = async (adds: string[], removes: string[]) => {
     let updated = 0;
@@ -1462,20 +1389,10 @@ export function ProjectDetail() {
         onConfirm={handleDeleteSkill}
       />
 
-      {/* Restore Confirm Dialog */}
-      <ConfirmDialog
-        open={!!restoreConfirmTarget}
-        title={t("project.restoreConfirmTitle")}
-        message={t("project.restoreConfirmMessage", {
-          name: restoreConfirmTarget?.name,
-        })}
-        tone="warning"
-        onClose={() => setRestoreConfirmTarget(null)}
-        onConfirm={async () => {
-          const target = restoreConfirmTarget;
-          setRestoreConfirmTarget(null);
-          if (target) await handleUpdateProject(target, true);
-        }}
+      <ProjectSkillRestoreDialog
+        skills={restore.confirmation?.skills ?? null}
+        onClose={restore.cancel}
+        onConfirm={restore.confirm}
       />
 
       {id && batchAgentMode !== null && (
