@@ -119,3 +119,36 @@ AgentHub 基于 Skills Manager 二次开发，使用 Tauri 2、React、TypeScrip
 [文档索引](docs/README.md) · [后续规划](docs/plans/agent-hub.md) · [架构说明](docs/architecture/overview.md)
 
 本项目使用 [MIT 许可证](LICENSE)。导入代码的[来源说明与原许可证](docs/reference/skills-manager/README.md)保留，此前架构可通过 Git 历史查阅。
+
+## 开源致谢与第三方许可
+
+感谢以下开源项目及其贡献者。AgentHub 基于 Skills Manager 二次开发，并使用以下主要组件：
+
+| 项目                                                                                                                     | 用途                   | 许可证                                                       |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------ |
+| [Skills Manager 来源资料](docs/reference/skills-manager/README.md)                                                       | 原始应用实现与部分资源 | [MIT（保留原始声明）](docs/reference/skills-manager/LICENSE) |
+| [Tauri](https://github.com/tauri-apps/tauri)、[Tauri Plugins](https://github.com/tauri-apps/plugins-workspace)           | 桌面应用框架与系统能力 | MIT 或 Apache-2.0                                            |
+| [React](https://github.com/facebook/react)、[React Router](https://github.com/remix-run/react-router)                    | 界面与路由             | MIT                                                          |
+| [TypeScript](https://github.com/microsoft/TypeScript)                                                                    | 前端类型检查           | Apache-2.0                                                   |
+| [Vite](https://github.com/vitejs/vite)、[Vitest](https://github.com/vitest-dev/vitest)                                   | 前端构建与测试         | MIT                                                          |
+| [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss)、[tailwind-merge](https://github.com/dcastil/tailwind-merge) | 界面样式               | MIT                                                          |
+| [Lucide](https://github.com/lucide-icons/lucide)                                                                         | 界面图标               | ISC（部分继承图标另有 MIT 声明，以原项目许可证为准）         |
+| [dnd-kit](https://github.com/clauderic/dnd-kit)                                                                          | 拖放交互               | MIT                                                          |
+| [hello-pangea/dnd](https://github.com/hello-pangea/dnd)                                                                  | 拖放交互               | Apache-2.0                                                   |
+| [i18next](https://github.com/i18next/i18next)、[react-i18next](https://github.com/i18next/react-i18next)                 | 国际化                 | MIT                                                          |
+| [react-markdown](https://github.com/remarkjs/react-markdown)、[remark-gfm](https://github.com/remarkjs/remark-gfm)       | Markdown 展示          | MIT                                                          |
+| [Serde](https://github.com/serde-rs/serde)、[Reqwest](https://github.com/seanmonstar/reqwest)                            | 序列化与网络请求       | MIT 或 Apache-2.0                                            |
+| [Tokio](https://github.com/tokio-rs/tokio)                                                                               | 异步运行时             | MIT                                                          |
+| [rusqlite](https://github.com/rusqlite/rusqlite)                                                                         | SQLite 数据库访问      | MIT                                                          |
+| [SQLite](https://www.sqlite.org/copyright.html)                                                                          | 本地数据库引擎         | Public Domain（公有领域）                                    |
+| [git2-rs](https://github.com/rust-lang/git2-rs)                                                                          | Git 备份与同步         | MIT 或 Apache-2.0                                            |
+
+本表为主要项目的致谢摘要，不是完整的依赖、版权或许可证清单。直接依赖与具体版本见 [package.json](package.json)、[Cargo.toml](src-tauri/Cargo.toml) 及对应锁文件；传递依赖和随附资源仍适用各自的许可。本项目的 MIT 许可证不替代或重新授权第三方代码、图标、商标及导入的 Skills。复制、修改或再分发时，应按各组件的实际许可证保留版权声明、许可证全文及适用的 NOTICE 等材料；本节不能替代这些要求。许可原文参见 [MIT](https://opensource.org/license/mit) 与 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)。
+
+## 免责声明与权利说明
+
+- **独立项目与品牌归属**：AgentHub 为独立开发项目。文档和界面中的 Claude Code、Codex、Cursor、GitHub 等第三方名称、Logo 与商标归各自权利人所有，仅用于识别兼容工具、服务或说明来源，不表示本项目获得其官方认证、赞助、背书或存在隶属关系。开源代码许可不代表获得相关商标的使用授权。
+- **软件按现状提供**：在适用法律允许的范围内，本软件按“现状”提供，不作适销性、特定用途适用性或不侵权等明示或默示保证；作者与版权持有人的责任限制以 [MIT 许可证](LICENSE) 为准。本说明不排除适用法律规定不得排除的责任。
+- **第三方内容与服务**：用户导入、部署或分享的 Skills、脚本及其他内容仍受其原始许可证和使用条款约束。使用前请确认来源、授权与执行行为；连接 Agent、模型服务或 Git 远端时，应遵守相关服务条款，妥善管理凭据与敏感数据。第三方服务的费用、可用性及其生成内容由相应服务条款约定，本项目不作保证。
+- **备份与操作风险**：部署、覆盖、删除和同步可能修改本地或远端文件。执行前请备份重要数据，检查操作目标及变更内容。
+- **权利反馈**：如认为本项目中的代码、图标、名称或其他资源存在授权或署名问题，请通过[仓库维护者的公开联系方式](https://github.com/JTBlink)提供相关文件路径、权利依据及具体诉求。维护者将核实，并按核实结果补充署名、修正许可说明或移除相关内容。
