@@ -546,7 +546,10 @@ export function Sidebar() {
         <div className="px-2.5 flex-1 overflow-y-auto scrollbar-hide min-h-0">
           {/* ── 技能库 (with skill groups as children) ── */}
           {(() => {
-            const isSkillLibActive = location.pathname === "/my-skills" && !viewedSkillGroup && !viewingUngrouped;
+            const isSkillLibActive =
+              location.pathname === "/my-skills" &&
+              !viewedSkillGroup &&
+              !viewingUngrouped;
             return (
               <div className="mb-1 flex items-center gap-1 px-2.5">
                 <button
@@ -569,10 +572,12 @@ export function Sidebar() {
                       : "text-muted hover:text-secondary",
                   )}
                 >
-                  <Layers className={cn(
-                    "h-3.5 w-3.5 shrink-0",
-                    isSkillLibActive ? "text-accent" : "text-muted",
-                  )} />
+                  <Layers
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0",
+                      isSkillLibActive ? "text-accent" : "text-muted",
+                    )}
+                  />
                   <span className="truncate text-[12px] font-semibold tracking-[0.01em] whitespace-nowrap">
                     {t("sidebar.mySkills")}
                   </span>
@@ -594,7 +599,9 @@ export function Sidebar() {
                       {...droppableProvided.droppableProps}
                     >
                       {orderedSkillGroups.map((skillGroup, index) => {
-                        const isActive = location.pathname === "/my-skills" && viewedSkillGroup?.id === skillGroup.id;
+                        const isActive =
+                          location.pathname === "/my-skills" &&
+                          viewedSkillGroup?.id === skillGroup.id;
                         const skillGroupIcon =
                           getSkillGroupIconOption(skillGroup);
                         const SkillGroupIcon = skillGroupIcon.icon;

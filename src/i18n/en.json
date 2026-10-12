@@ -1108,7 +1108,7 @@
   },
   "project": {
     "comparison": {
-      "diffLegend": "Project copy on the left, library on the right. Red content exists only locally; green content exists only in the library. Added and removed files describe the library relative to the project copy.",
+      "diffLegend": "Compare local changes against the library baseline. Project copy on the left, library on the right. Green + marks local additions; red - marks local deletions. File counts describe local changes relative to the library.",
       "copy": "Project copy",
       "projectVersion": "Project copy"
     },

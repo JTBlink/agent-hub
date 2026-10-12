@@ -1181,6 +1181,7 @@ pub fn run() {
             commands::project_library::repair_project_library_skill,
             commands::project_library::deploy_project_library_skill,
             commands::project_library::remove_project_library_skill,
+            commands::project_library::set_project_library_skill_enabled,
             commands::projects::update_project_skill_to_center,
             commands::projects::update_project_skill_from_center,
             commands::projects::toggle_project_skill,

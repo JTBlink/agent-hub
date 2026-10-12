@@ -54,9 +54,7 @@ export function ProjectSkillBadges({
             }
             className={cn(
               "inline-flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[11px] font-medium",
-              isActive
-                ? "ring-1 ring-accent border-accent"
-                : "",
+              isActive ? "ring-1 ring-accent border-accent" : "",
               option.activeClass,
               option.colorClass,
               onGroupClick && "cursor-pointer hover:opacity-80",

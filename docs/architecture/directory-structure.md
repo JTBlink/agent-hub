@@ -79,6 +79,7 @@ agent-hub/
 │   │   │   ├── mod.rs
 │   │   │   ├── agent_workspace.rs  #     Agent 工作空间管理
 │   │   │   ├── projects.rs         #     项目管理
+│   │   │   ├── project_library.rs  #     项目技能库桌面命令
 │   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
 │   │   │   ├── local_cleanup.rs   #     本机 Agent Skills 预览与批量清理（桌面/CLI 共用）
 │   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
@@ -99,6 +100,8 @@ agent-hub/
 │   │       ├── tool_detection.rs   #     Agent 程序、桌面应用与 IDE 扩展安装检测
 │   │       ├── scanner.rs          #     Agent 目录扫描
 │   │       ├── project_scanner.rs  #     项目扫描器
+│   │       ├── project_library.rs  #     团队项目技能安装、更新、入口修复与启停
+│   │       ├── project_library/   #     可移植清单、文件发布恢复及行为回归
 │   │       ├── sync_engine.rs      #     配置同步引擎
 │   │       ├── sync_metadata.rs    #     同步元数据
 │   │       ├── skill_store.rs      #     技能存储

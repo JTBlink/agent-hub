@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { reverseSkillDiffEntries } from "../lib/skillDiffPresentation";
 import { cn } from "../utils";
 import { DocumentDiffViewer } from "./DocumentDiffViewer";
 import type { SkillSourceDiff, SkillSourceDiffEntry } from "../lib/tauri";
@@ -31,9 +30,6 @@ export function SkillSourceDiffViewer({
   className,
 }: Props) {
   const { t } = useTranslation();
-  const displayEntries = sourceOnLeft
-    ? reverseSkillDiffEntries(entries)
-    : entries;
   const sides = sourceOnLeft ? ["source", "central"] : ["central", "source"];
 
   if (entries.length === 0) {
@@ -54,16 +50,20 @@ export function SkillSourceDiffViewer({
   return (
     <div className={cn("space-y-4", className)}>
       <p className="text-[12px] text-muted">
-        {t(
-          `mySkills.contentComparison.versionOrder.${comparison.version_comparison ?? "unknown"}`,
-        )}{" "}
+        {!sourceOnLeft && (
+          <>
+            {t(
+              `mySkills.contentComparison.versionOrder.${comparison.version_comparison ?? "unknown"}`,
+            )}{" "}
+          </>
+        )}
         {t(
           sourceOnLeft
             ? "project.comparison.diffLegend"
             : "mySkills.contentComparison.diffLegend",
         )}
       </p>
-      {displayEntries.map((entry) => (
+      {entries.map((entry) => (
         <div
           key={entry.relative_path}
           className="overflow-hidden rounded-xl border border-border-subtle"
@@ -95,7 +95,7 @@ export function SkillSourceDiffViewer({
           </div>
 
           <div className="grid grid-cols-2 border-b border-border-subtle bg-bg-secondary">
-            {sides.map((side, index) => {
+            {sides.map((side) => {
               const path =
                 side === "central"
                   ? comparison.central_path
@@ -105,7 +105,7 @@ export function SkillSourceDiffViewer({
                   ? comparison.central_version
                   : comparison.source_version;
               const missing =
-                index === 0
+                side === "central"
                   ? entry.status === "added"
                   : entry.status === "removed";
               return (
@@ -153,6 +153,7 @@ export function SkillSourceDiffViewer({
             <DocumentDiffViewer
               original={entry.original_text ?? ""}
               updated={entry.updated_text ?? ""}
+              updatedOnLeft={sourceOnLeft}
               className="!space-y-0 !rounded-none !border-0"
             />
           ) : (

@@ -1,7 +1,6 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpen, FileText, RefreshCw } from "lucide-react";
-import { reverseSkillDiffEntries } from "../lib/skillDiffPresentation";
 import { cn } from "../utils";
 import type { ProjectAgentTarget } from "../lib/tauri";
 import {
@@ -55,8 +54,7 @@ export function ProjectSkillDetailPanel({
         ? content.center
         : content.local;
   const status = getProjectSkillStatusMeta(t, variant.sync_status);
-  const entries =
-    content.diff.data && reverseSkillDiffEntries(content.diff.data.entries);
+  const entries = content.diff.data?.entries;
   const summary = entries && {
     count: entries.length,
     added: entries.filter((entry) => entry.status === "added").length,

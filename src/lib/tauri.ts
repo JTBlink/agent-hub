@@ -1168,3 +1168,14 @@ export const removeProjectLibrarySkill = (
     projectId,
     directory,
   });
+
+export const setProjectLibrarySkillEnabled = (
+  projectId: string,
+  directory: string,
+  enabled: boolean,
+) =>
+  invoke<ProjectLibraryStatus>("set_project_library_skill_enabled", {
+    projectId,
+    directory,
+    enabled,
+  });
