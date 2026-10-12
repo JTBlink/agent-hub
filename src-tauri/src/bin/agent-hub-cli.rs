@@ -3392,6 +3392,28 @@ mod tests {
         assert!(!nested.contains("Options:"));
     }
 
+    #[test]
+    fn project_status_runs_without_opening_a_personal_library() {
+        let tmp = tempfile::tempdir().unwrap();
+        let matches = cli_command()
+            .try_get_matches_from([
+                "agent-hub-cli",
+                "--json",
+                "project",
+                "--path",
+                tmp.path().to_str().unwrap(),
+                "status",
+            ])
+            .unwrap();
+        let cli = Cli::from_arg_matches(&matches).unwrap();
+        let Commands::Project(args) = &cli.command else {
+            panic!("expected project command")
+        };
+        assert!(!args.needs_personal_library());
+        run(cli).unwrap();
+        assert_eq!(std::fs::read_dir(tmp.path()).unwrap().count(), 0);
+    }
+
     /// An agent has to name the directory that is in the way and say the
     /// contents survived. Flattening the refusal into one sentence is what
     /// made that impossible, so the paths must reach the envelope as data.
