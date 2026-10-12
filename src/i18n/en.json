@@ -1415,12 +1415,11 @@
   "projectLibrary": {
     "entryIssues": {
       "link_replaced": "The link that shared the project skill has become an independent copy.",
-      "missing": "Skill files for this Agent were not found. Add them again.",
       "link_mismatch": "The skill link points elsewhere, so the current project version cannot be verified.",
       "content_mismatch": "The skill copy differs from the project version. Check for edits you need to keep first."
     },
-    "repairHelp": "Restore skill files or links for the listed Agents from the current project version. Independently edited copies are preserved and reported.",
-    "staleHelp": "Agents needing attention: {{agents}}. Skill files may be deleted, links may point elsewhere, or copies may differ from the project version.",
+    "repairHelp": "Update only existing Agent skills to the current project version. Unassigned Agents stay unassigned; independent copy edits are preserved and reported.",
+    "staleHelp": "Agents needing attention: {{agents}}. Existing links point elsewhere or copies differ from the project version. Unassigned Agents need no action.",
     "modifiedHelp": "The project skill has changed. Restoring uses the current project version and preserves independent edits in Agent folders.",
     "installPlanCopy": "Save to the project central library .agents/skills, then create Agent copies. After committing, teammates can use skills without AgentHub.",
     "centralHelp": "Project skills live in .agents/skills and Agent entries use this content. Personal library updates do not automatically change the project version.",
@@ -1450,8 +1449,6 @@
     "stale": "Some Agents need their skill files restored",
     "repair": "Restore Agent skills",
     "repaired": "Agent skills restored; review and commit the project changes",
-    "entryIssuesHelp": "The skill content is still in the project. These Agents have problems using it:",
-    "missing": "Some Agents cannot find this skill",
-    "addMissing": "Add to Agents again"
+    "entryIssuesHelp": "The skill content is still in the project. These assigned Agents have file or link problems:"
   }
 }

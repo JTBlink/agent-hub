@@ -110,38 +110,36 @@ it("disables team refresh while an operation is pending and keeps its skill stat
   expect(container.textContent).toContain("部分 Agent 的技能文件需要处理");
 });
 it.each(["grid", "list"] as const)(
-  "explains missing Agent files and offers to add them again in %s view",
+  "keeps an unassigned Agent grey without a repair prompt in %s view",
   async (viewMode) => {
-    const missing = createTeamStatus();
-    missing.target_issues = [
-      {
-        agent: "codex",
-        agent_name: "Codex",
-        reason: "missing",
-        path: ".codex/skills/demo",
-      },
-    ];
-    missing.targets = ["codex"];
-    missing.stale_targets = ["codex"];
+    const unassigned = createTeamStatus("demo", false);
+    unassigned.targets = ["codex"];
+    unassigned.target_issues = [];
     await render({
       viewMode,
       skills: groupProjectSkills(
-        [createProjectSkill()],
-        createProjectLibraryStatus([missing]),
+        [createProjectSkill({ agent: "cline", agent_display_name: "Cline" })],
+        createProjectLibraryStatus([unassigned]),
       ),
+      targets: [
+        {
+          key: "codex",
+          display_name: "Codex",
+          installed: true,
+          enabled: true,
+          is_custom: false,
+        },
+      ],
     });
-    expect(container.textContent).toContain("部分 Agent 找不到此技能");
-    expect(container.textContent).toContain("项目里的技能内容仍然保留");
-    expect(container.textContent).toContain(
-      "Codex：未找到该 Agent 的技能文件，需要重新添加。",
-    );
-    const button = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="重新添加到 Agent"]',
-    );
-    expect(button).not.toBeNull();
-    await act(async () => button?.click());
-    expect(onRepair).toHaveBeenCalledExactlyOnceWith("demo");
-    expect(onOpenDetail).not.toHaveBeenCalled();
+    expect(container.textContent).not.toContain("部分 Agent");
+    expect(container.textContent).not.toContain("重新添加");
+    expect(
+      container.querySelector('button[aria-label="恢复 Agent 技能"]'),
+    ).toBeNull();
+    expect(
+      container.querySelector('button[title*="Codex · available"]'),
+    ).not.toBeNull();
+    expect(onRepair).not.toHaveBeenCalled();
   },
 );
 it("keeps skill maintenance out of multi-selection controls", async () => {

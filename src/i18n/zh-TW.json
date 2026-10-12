@@ -1351,12 +1351,11 @@
   "projectLibrary": {
     "entryIssues": {
       "link_replaced": "原先共用專案技能的連結已變成獨立副本。",
-      "missing": "未找到該 Agent 的技能檔案，需要重新新增。",
       "link_mismatch": "技能連結指向了其他位置，無法確認使用的是目前專案版本。",
       "content_mismatch": "技能副本與專案版本不同，請先檢查是否有需要保留的修改。"
     },
-    "repairHelp": "使用目前專案版本恢復下列 Agent 的技能檔案或連結；單獨修改過的副本會保留並提示處理。",
-    "staleHelp": "需要處理的 Agent：{{agents}}。技能檔案可能被刪除、連結指向其他位置，或副本與專案版本不同。",
+    "repairHelp": "僅更新已新增的 Agent，讓它們使用目前專案版本；未新增的 Agent 不會自動新增，單獨修改過的副本會保留並提示處理。",
+    "staleHelp": "需要處理的 Agent：{{agents}}。既有連結指向其他位置，或副本與專案版本不同。未新增的 Agent 不需要處理。",
     "modifiedHelp": "專案技能已修改。恢復時會讓 Agent 使用目前專案版本；Agent 目錄裡單獨修改過的內容會保留。",
     "installPlanCopy": "先儲存至 .agents/skills 專案中央技能庫，再產生 Agent 副本；提交後團隊成員無需 AgentHub 即可使用。",
     "centralHelp": "專案技能統一儲存在 .agents/skills，Agent 入口由此產生；專案版本不會隨個人技能庫自動更新。",
@@ -1386,8 +1385,6 @@
     "stale": "部分 Agent 的技能檔案需要處理",
     "repair": "恢復 Agent 技能",
     "repaired": "已恢復 Agent 技能，請檢查並提交專案變更",
-    "entryIssuesHelp": "專案裡的技能內容仍然保留。以下是各 Agent 使用這項技能時遇到的問題：",
-    "missing": "部分 Agent 找不到此技能",
-    "addMissing": "重新新增至 Agent"
+    "entryIssuesHelp": "專案裡的技能內容仍然保留。以下已新增的 Agent 存在檔案或連結問題："
   }
 }

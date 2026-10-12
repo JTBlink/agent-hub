@@ -39,4 +39,4 @@ Git 忽略误报：[B02](issues/B02-ignored-local-artifacts.md)，缓存与本�
 
 旧入口移除：[B03](issues/B03-unrecorded-agent-removal.md)，修复中央技能已管理但旧 Agent 入口未登记时，点击图标提示成功却未移除的问题。
 
-状态说明：[B04](issues/B04-clear-agent-skill-status.md)，直接说明 Agent 找不到技能文件、项目内容仍然保留，以及重新添加的效果。
+状态判断：[B04](issues/B04-clear-agent-skill-status.md)，未添加的灰色 Agent 不显示缺失提示，恢复仅处理已存在的入口。

@@ -267,7 +267,7 @@ fn corrupted_manifest_and_foreign_target_fail_without_writing_other_targets() {
 }
 
 #[test]
-fn cloned_team_files_can_be_used_and_repaired_without_personal_state() {
+fn cloned_team_files_can_be_used_and_redeployed_without_personal_state() {
     let tmp = TestProject::new();
     let skill = fixture(tmp.path());
     let root = tmp.path().join("project");
@@ -302,6 +302,13 @@ fn cloned_team_files_can_be_used_and_repaired_without_personal_state() {
     assert!(status(&cloned).unwrap().skills[0].stale_targets.is_empty());
     fs::remove_dir_all(cloned.join(".claude/skills/demo")).unwrap();
     repair(&cloned, "demo").unwrap();
+    assert!(!cloned.join(".claude/skills/demo").exists());
+    deploy(
+        &cloned,
+        "demo",
+        &[tool_adapters::find_adapter("claude_code").unwrap()],
+    )
+    .unwrap();
     assert!(cloned.join(".claude/skills/demo/SKILL.md").is_file());
 }
 
