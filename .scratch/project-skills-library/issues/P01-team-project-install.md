@@ -24,5 +24,6 @@ Blocked by: none
 
 - 2026-10-12：按用户要求，将项目技能库说明压缩为一行“技能随项目提交 Git，团队成员拉取即可使用。”，同步英文与繁体，移除多段标题和路径说明。
 - 文案改动验证：`npm run build`、`npm test`（165 个测试）、组件 ESLint、三语资源和组件 Prettier 检查通过。全量 `npm run lint` 在未修改的 `SkillFileBrowser.tsx` 中发现 `react-hooks/set-state-in-effect` 错误，`MySkills.tsx` 另有 hook 依赖警告；本次未扩展修改这些文件。
+- 2026-10-12：补充并验证项目库面板回归测试（3 个通过），覆盖 Git 提交路径、忽略资源提示、副本修复及切换项目时的迟到响应；CLI 回归测试通过，确认 `project status` 无需个人技能库且不写入项目。相关 ESLint、Prettier、Rust 格式和 `git diff --check` 通过。
 
 - 用户已授权修改代码及提交、推送。先交付 ADR-0010 的首轮范围；远程固定修订下载与旧项目批量迁移仍保留后续规划。
