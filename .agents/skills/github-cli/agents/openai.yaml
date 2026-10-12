@@ -1,4 +1,4 @@
 interface:
   display_name: "GitHub CLI 工作规范"
-  short_description: "用 gh 修复 Actions、保留指定版本、固定源码并验证三平台发布"
-  default_prompt: "使用 $github-cli 按当前任务范围处理 Actions 或发布，保留指定版本，固定 SHA 并核实三平台候选与正式产物。"
+  short_description: "用 gh 维护 Actions，rebase 保持 main 单线并验证三平台发布"
+  default_prompt: "使用 $github-cli 按任务范围维护 Actions 或发布，临时分支 rebase 后快进合入 main，保留指定版本，以固定 SHA 验证候选并打 tag。"

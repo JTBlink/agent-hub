@@ -26,7 +26,7 @@ export function selectCandidate(runs, sha) {
   );
   if (!candidate) {
     throw new Error(
-      `No successful three-platform Build Installers candidate for ${sha}. Run build-installers.yml on the release branch and wait for completion before tagging.`,
+      `No successful three-platform Build Installers candidate for ${sha}. Run build-installers.yml on main at this SHA and wait for completion before tagging.`,
     );
   }
   return candidate;
