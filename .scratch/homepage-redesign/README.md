@@ -16,5 +16,5 @@
 | D02 应用 Dashboard 美化     | resolved |
 | D03 工作台未部署技能入口    | resolved |
 | D04 首页概览卡片去重        | resolved |
-| D05 工作台视觉与布局        | claimed  |
+| D05 工作台视觉与布局        | resolved |
 | B04 官网发布源与依赖锁文件  | resolved |

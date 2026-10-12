@@ -1,5 +1,5 @@
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D04
 
 # 工作台首页视觉与布局
@@ -32,3 +32,6 @@ Blocked by: D04
 - [浏览器布局回归](../../../tests/browser/dashboard-layout.py) 通过：800 / 960 / 1440px、明暗主题、三语、1.2 倍字号、空状态、12 个项目完整展示、滚轮只滚动主页面、Tab 焦点与 Enter 进入完整未部署列表。[Agent 管理导航回归](../../../tests/browser/dashboard-agents.py) 通过。
 - 官网本地构建在 375 / 1440px 验证新 slogan 无横向溢出；应用及官网截图已目视检查。未执行 Tauri 原生应用验收。
 - Standards：页面组合、SVG、技能与工作空间展示按职责拆分；统计和路由复用原数据，不新增 IPC 或持久化配置。Spec：视觉、布局、文案和统一滚动实现并验证；线上发布结果在部署后补记。
+
+- 实现已提交并推送：`21fcbbd300474f6bc9b6522cd5620e3ebb1d7379`。[官网部署工作流](../../../.github/workflows/deploy-pages.yml) 手动运行 `38278480637` 使用同一 SHA，2026-10-13 构建与部署成功；未触发安装包发布。
+- 线上核验通过：新 slogan 已显示，工作台预览切换可用，实际加载新版 1440×1360 截图。页面源码、文档和工作台截图均完成发布，任务验收结束。
