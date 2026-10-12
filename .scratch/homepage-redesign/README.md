@@ -4,8 +4,11 @@
 
 [D03 未部署技能](issues/D03-undeployed-skills.md)
 
+[B04 官网资源 404 与部署阻塞](issues/B04-pages-source-and-lockfile.md)
+
 | 任务                        | 状态     |
 | --------------------------- | -------- |
 | D01 官网视觉、截图与 README | resolved |
 | D02 应用 Dashboard 美化     | resolved |
 | D03 工作台未部署技能入口    | resolved |
+| B04 官网发布源与依赖锁文件  | claimed  |
