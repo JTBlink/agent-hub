@@ -34,7 +34,9 @@ Blocked by: none
 - 17 项项目库回归覆盖移除个人来源、真实 Git clone、换行和空目录可移植性、隐藏文件修改、资源忽略、自定义嵌套路径拒绝、单入口停用和整体停用、失败原件恢复。
 - `cargo test --manifest-path src-tauri/Cargo.toml`：651 项库测试通过、8 项忽略，8 项 CLI 测试通过；项目状态测试验证不初始化个人库或污染项目。
 - 最终前端全量 172 项测试与生产构建通过；新增项目面板回归覆盖待提交路径、被忽略资源、入口修复和切换项目后的旧请求保护，整项重新启用使用单次项目级操作而非逐 Agent 并发。
-- Rust 全仓库格式、严格 Clippy、改动文件 ESLint、Prettier 和 `git diff --check` 通过。全量 ESLint 的既有 SkillFileBrowser 错误及 MySkills 警告保持记录，未扩大本次修改范围。
+- Rust 全仓库格式、严格 Clippy、改动文件 ESLint、Prettier 和 `git diff --check` 通过。后续发布门禁工作修复 SkillFileBrowser 既有错误后，最终 HEAD 的全量 ESLint 通过，仅保留 MySkills 的既有依赖警告。
 - Standards 复查修正来源读取锁、源目标嵌套、行尾/空目录指纹、稳定项目快照及发布前重检。Spec 复查修正未安装团队目标、无个人库的批量入口、共享可见性、停用状态、资源忽略检查及整项启停竞态；两轴最终无剩余必须修复项。
 - 用户最新要求已落实：顶部 Agent 筛选只显示实际检测到安装的工具；团队安装选择不以本机安装状态限制。
 - Windows/Linux 原生宿主验收未执行；来源固定修订下载、外部 skills CLI 互操作、可选链接与旧项目批量迁移未实现，保留后续规划。
+
+- 最终远程 HEAD `3b593bd` 已核对项目级整项启停和检测 Agent 筛选；生产构建及全量 ESLint 再次通过（0 错误、1 项既有警告）。
