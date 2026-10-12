@@ -1220,13 +1220,12 @@
     "batchAgents": {
       "enable": "按 Agent 啟用",
       "disable": "按 Agent 停用",
-      "enableHint": "已選 {{count}} 個技能。選擇團隊 Agent；專案技能從專案庫補齊入口，舊技能沿用中心庫匯出，停用副本將恢復。",
+      "enableHint": "已選 {{count}} 個技能。從已啟用的 Agent 中選擇；專案技能從專案庫補齊入口，舊技能沿用中心庫匯出，停用副本將恢復。",
       "disableHint": "已選 {{count}} 個技能。專屬目錄僅停用所選入口；共用目錄會共同停用。內容保留，變更隨專案 Git 共用。",
       "agentStatus": "{{active}} / {{total}} 已啟用",
       "enabledOn": "專案已啟用：{{agents}}",
       "none": "無",
       "statusHint": "表示技能位於該 Agent 的專案啟用目錄；實際使用由 Agent 載入。",
-      "noAgents": "沒有已安裝且已啟用的 Agent",
       "completed": "已更新 {{count}} 個 Agent 技能副本",
       "summary": "{{active}} / {{total}} 個技能已在 Agent 中啟用"
     }

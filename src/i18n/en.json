@@ -1284,13 +1284,12 @@
     "batchAgents": {
       "enable": "Enable for agents",
       "disable": "Disable for agents",
-      "enableHint": "{{count}} skills selected. Choose team agents. Project skills use project content; legacy skills use library export. Disabled copies are restored.",
+      "enableHint": "{{count}} skills selected. Choose from enabled agents. Project skills use project content; legacy skills use library export. Disabled copies are restored.",
       "disableHint": "{{count}} skills selected. Dedicated entries are disabled individually; shared directory entries are disabled together. Content is retained and changes travel with project Git.",
       "agentStatus": "{{active}} / {{total}} enabled",
       "enabledOn": "Enabled in project: {{agents}}",
       "none": "None",
       "statusHint": "The skill is in this agent’s enabled project directory; the agent controls loading.",
-      "noAgents": "No installed, enabled agents",
       "completed": "Updated {{count}} agent skill copies",
       "summary": "{{active}} / {{total}} skills enabled for agents"
     }

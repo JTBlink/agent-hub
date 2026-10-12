@@ -9,6 +9,7 @@ import {
 } from "../lib/projectBatchAgents";
 import { getErrorMessage } from "../lib/error";
 import { AgentIcon } from "./AgentIcon";
+import { enabledInstalledAgents } from "../lib/agentAvailability";
 
 export function ProjectBatchAgentDialog({
   projectId,
@@ -26,10 +27,14 @@ export function ProjectBatchAgentDialog({
   onComplete: () => Promise<void>;
 }) {
   const { t } = useTranslation();
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selectedKeys, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  const available = targets;
+  const available = enabledInstalledAgents(targets);
+  const selected = selectedKeys.filter((key) =>
+    available.some((target) => target.key === key),
+  );
+  if (selected.length !== selectedKeys.length) setSelected(selected);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !busy) {
@@ -119,7 +124,7 @@ export function ProjectBatchAgentDialog({
         </p>
         <div className="min-h-0 overflow-y-auto space-y-2">
           {available.length === 0 && (
-            <p className="text-muted">{t("project.batchAgents.noAgents")}</p>
+            <p className="text-muted">{t("projectLibrary.noEnabledAgents")}</p>
           )}
           {available.map((target) => {
             const active = skills.filter((skill) =>
