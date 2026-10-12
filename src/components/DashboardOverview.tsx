@@ -12,6 +12,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 
+import { DashboardLibraryArt } from "./DashboardLibraryArt";
+
 type OverviewScope = "library" | "undeployed" | "ungrouped";
 interface OverviewCard {
   id: OverviewScope;
@@ -23,6 +25,7 @@ interface OverviewCard {
   tone: string;
   iconBackground: string;
   disabled: boolean;
+  coverage?: number;
 }
 
 function overviewCards(
@@ -54,6 +57,7 @@ function overviewCards(
       tone: "text-accent-light",
       iconBackground: "bg-accent-bg",
       disabled: loading,
+      coverage: total > 0 ? ((total - undeployed) / total) * 100 : 0,
     },
     {
       id: "undeployed",
@@ -110,18 +114,20 @@ export function DashboardOverview() {
 
   return (
     <section
-      className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3.5"
+      className="dashboard-overview"
       aria-label={t("dashboard.overview")}
       aria-busy={loading}
     >
-      {cards.map((card) => (
-        <DashboardOverviewCard
-          key={card.id}
-          card={card}
-          loading={loading}
-          onOpen={() => openLibrary(card.id)}
-        />
-      ))}
+      <div className="dashboard-overview-grid">
+        {cards.map((card) => (
+          <DashboardOverviewCard
+            key={card.id}
+            card={card}
+            loading={loading}
+            onOpen={() => openLibrary(card.id)}
+          />
+        ))}
+      </div>
     </section>
   );
 }
@@ -144,35 +150,33 @@ function DashboardOverviewCard({
       disabled={card.disabled}
       aria-labelledby={`dashboard-${card.id}-title`}
       aria-describedby={`dashboard-${card.id}-count dashboard-${card.id}-hint`}
-      className="app-panel group flex min-w-0 flex-col rounded-xl px-5 py-5 text-left transition-colors enabled:hover:border-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-default"
+      className={`dashboard-stat dashboard-stat-${card.id === "library" ? "library" : "task"} group ${card.tone}`}
     >
-      <span className="flex w-full items-center justify-between gap-2">
+      {card.id === "library" && <DashboardLibraryArt />}
+      <span className="dashboard-stat-heading">
         <span
           id={`dashboard-${card.id}-title`}
-          className="min-w-0 text-sm font-medium text-secondary"
+          className="dashboard-stat-title"
         >
           {card.title}
         </span>
-        <span
-          className={`shrink-0 rounded-md p-2 ${card.iconBackground} ${card.tone}`}
-        >
+        <span className={`dashboard-stat-icon ${card.iconBackground}`}>
           <Icon aria-hidden="true" className="h-4 w-4" />
         </span>
       </span>
-      <span
-        id={`dashboard-${card.id}-count`}
-        className="mt-5 text-3xl font-semibold leading-none tracking-tight text-primary tabular-nums"
-      >
+      <span id={`dashboard-${card.id}-count`} className="dashboard-stat-count">
         {loading ? "—" : card.count}
       </span>
-      <span
-        id={`dashboard-${card.id}-hint`}
-        className="mb-4 mt-3 flex-1 text-xs leading-relaxed text-tertiary"
-      >
+      <span id={`dashboard-${card.id}-hint`} className="dashboard-stat-hint">
         {loading ? t("common.loading") : card.hint}
       </span>
+      {card.coverage !== undefined && (
+        <span aria-hidden="true" className="dashboard-coverage">
+          <span style={{ width: `${loading ? 0 : card.coverage}%` }} />
+        </span>
+      )}
       <span
-        className={`flex w-full items-center justify-between gap-2 border-t border-border-subtle pt-3 text-xs ${card.disabled ? "text-muted" : card.tone}`}
+        className={`dashboard-stat-action ${card.disabled ? "text-muted" : card.tone}`}
       >
         {card.action}
         {!card.disabled && (

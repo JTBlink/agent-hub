@@ -6,6 +6,8 @@
 
 [D04 首页卡片去重](issues/D04-overview-cards.md)
 
+[D05 工作台视觉与布局](issues/D05-dashboard-visual-design.md)
+
 [B04 官网资源 404 与部署阻塞](issues/B04-pages-source-and-lockfile.md)
 
 | 任务                        | 状态     |
@@ -14,4 +16,5 @@
 | D02 应用 Dashboard 美化     | resolved |
 | D03 工作台未部署技能入口    | resolved |
 | D04 首页概览卡片去重        | resolved |
+| D05 工作台视觉与布局        | claimed  |
 | B04 官网发布源与依赖锁文件  | resolved |

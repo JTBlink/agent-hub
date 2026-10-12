@@ -103,7 +103,11 @@ const skills: ManagedSkill[] = entries.map(
       : [tag],
   }),
 );
-const projects: Project[] = ["demo-web", "demo-api"].map((name, index) => ({
+const projects: Project[] = (
+  previewParams.has("many-projects")
+    ? Array.from({ length: 12 }, (_, i) => `demo-project-${i + 1}`)
+    : ["demo-web", "demo-api"]
+).map((name, index) => ({
   id: `project-${index}`,
   name,
   path: `~/projects/${name}`,

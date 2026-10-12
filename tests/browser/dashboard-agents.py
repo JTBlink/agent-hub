@@ -15,7 +15,7 @@ def wait_until(expression, message):
 
 
 def ready():
-    wait_until("Boolean(document.querySelector('aside a[href=\"/global-workspace/codex\"]')) && Boolean(document.querySelector('aside a[href=\"/settings#agents\"]'))",
+    wait_until("Boolean(document.querySelector('.dashboard-workspaces a[href=\"/global-workspace/codex\"]')) && Boolean(document.querySelector('.dashboard-workspaces a[href=\"/settings#agents\"]'))",
                "Agent panel must retain its enabled Agent and management links")
 
 

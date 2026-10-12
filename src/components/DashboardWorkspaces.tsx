@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, ChevronRight, FolderOpen, Plus } from "lucide-react";
+import { Bot, ChevronRight, FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "./AgentIcon";
 import type { Project, ToolInfo } from "../lib/tauri";
@@ -8,129 +9,147 @@ interface DashboardWorkspacesProps {
   agents: ToolInfo[];
   projects: Project[];
 }
+type WorkspaceType = "agents" | "projects";
 
 export function DashboardWorkspaces({
   agents,
   projects,
 }: DashboardWorkspacesProps) {
   const { t } = useTranslation();
+  const [selectedType, setSelectedType] = useState<WorkspaceType | null>(null);
+  const type =
+    selectedType ??
+    (agents.length === 0 && projects.length > 0 ? "projects" : "agents");
+  const entries = type === "agents" ? agents : projects;
   return (
-    <aside className="flex min-w-0 flex-col gap-5">
-      <section
-        className="app-panel overflow-hidden"
-        aria-labelledby="dashboard-agents"
+    <section
+      className="dashboard-workspaces"
+      aria-labelledby="dashboard-workspaces-title"
+    >
+      <div className="dashboard-section-heading">
+        <h2 id="dashboard-workspaces-title">{t("dashboard.workspaces")}</h2>
+        <Link
+          to="/settings#agents"
+          className="rounded text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          {t("dashboard.manageAgents")}
+        </Link>
+      </div>
+      <div
+        className="dashboard-workspace-switch"
+        role="group"
+        aria-label={t("dashboard.workspaceTypes")}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-4 py-3.5">
-          <h2
-            id="dashboard-agents"
-            className="flex items-center gap-2 text-sm font-semibold text-primary"
-          >
-            <Bot aria-hidden="true" className="h-4 w-4 text-accent-light" />
-            {t("dashboard.connectedAgents")}
-          </h2>
-          <Link
-            to="/settings#agents"
-            className="rounded text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            {t("dashboard.manageAgents")}
-          </Link>
-        </div>
-        {agents.length > 0 ? (
-          <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto p-4">
-            {agents.map((agent) => (
-              <Link
-                key={agent.key}
-                to={`/${agent.category === "lobster" ? "lobster" : "global"}-workspace/${agent.key}`}
-                className="inline-flex max-w-full items-center gap-2 rounded-md border border-border-subtle bg-background px-2.5 py-2 text-xs text-secondary transition-colors hover:border-accent-border hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-              >
-                <AgentIcon
-                  agentKey={agent.key}
-                  displayName={agent.display_name}
-                  className="h-5 w-5"
-                />
-                <span className="truncate" title={agent.display_name}>
-                  {agent.display_name}
-                </span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="px-4 py-5 text-sm leading-relaxed text-muted">
-            {t("dashboard.noAgents")}
+        <button
+          type="button"
+          aria-pressed={type === "agents"}
+          aria-controls="dashboard-workspace-entries"
+          onClick={() => setSelectedType("agents")}
+        >
+          <Bot aria-hidden="true" className="h-4 w-4" />
+          {t("dashboard.agentWorkspaces")}
+          <span>{agents.length}</span>
+        </button>
+        <button
+          type="button"
+          aria-pressed={type === "projects"}
+          aria-controls="dashboard-workspace-entries"
+          onClick={() => setSelectedType("projects")}
+        >
+          <FolderOpen aria-hidden="true" className="h-4 w-4" />
+          {t("dashboard.projects")}
+          <span>{projects.length}</span>
+        </button>
+      </div>
+      <div
+        id="dashboard-workspace-entries"
+        className="dashboard-workspace-grid"
+        aria-label={t(
+          type === "agents"
+            ? "dashboard.agentWorkspaces"
+            : "dashboard.projects",
+        )}
+      >
+        {entries.length === 0 ? (
+          <p className="dashboard-workspace-empty">
+            {t(
+              type === "agents" ? "dashboard.noAgents" : "dashboard.noProjects",
+            )}
           </p>
-        )}
-      </section>
-      <section
-        className="app-panel overflow-hidden"
-        aria-labelledby="dashboard-projects"
-      >
-        <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3.5">
-          <h2
-            id="dashboard-projects"
-            className="flex items-center gap-2 text-sm font-semibold text-primary"
-          >
-            <FolderOpen
-              aria-hidden="true"
-              className="h-4 w-4 text-accent-light"
-            />
-            {t("dashboard.projects")}
-          </h2>
-          <span className="text-xs tabular-nums text-muted">
-            {projects.length}
-          </span>
-        </div>
-        {projects.length > 0 ? (
-          <ul className="max-h-64 divide-y divide-border-subtle overflow-y-auto">
-            {projects.map((project) => (
-              <li key={project.id}>
-                <Link
-                  to={`/project/${project.id}`}
-                  className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2"
-                >
-                  <FolderOpen
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0 text-muted"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="truncate text-[13px] font-medium text-secondary"
-                      title={project.name}
-                    >
-                      {project.name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      {t("dashboard.projectSkills", {
-                        count: project.skill_count,
-                      })}
-                    </p>
-                  </div>
-                  {project.sync_health.diverged > 0 && (
-                    <span className="rounded bg-danger-bg px-1.5 py-1 text-xs text-danger">
-                      {t("dashboard.conflicts", {
-                        count: project.sync_health.diverged,
-                      })}
-                    </span>
-                  )}
-                  <ChevronRight
-                    aria-hidden="true"
-                    className="h-3.5 w-3.5 shrink-0 text-muted"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
+        ) : type === "agents" ? (
+          agents.map((agent) => (
+            <AgentWorkspaceLink key={agent.key} agent={agent} />
+          ))
         ) : (
-          <div className="flex gap-3 px-4 py-5">
-            <Plus
-              aria-hidden="true"
-              className="mt-0.5 h-4 w-4 shrink-0 text-muted"
-            />
-            <p className="text-sm leading-relaxed text-muted">
-              {t("dashboard.noProjects")}
-            </p>
-          </div>
+          projects.map((project) => (
+            <ProjectWorkspaceLink key={project.id} project={project} />
+          ))
         )}
-      </section>
-    </aside>
+      </div>
+    </section>
+  );
+}
+
+function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
+  const { t } = useTranslation();
+  return (
+    <Link
+      to={`/${agent.category === "lobster" ? "lobster" : "global"}-workspace/${agent.key}`}
+      className="dashboard-workspace-link"
+    >
+      <AgentIcon
+        agentKey={agent.key}
+        displayName={agent.display_name}
+        className="h-7 w-7 shrink-0"
+      />
+      <span className="min-w-0 flex-1">
+        <span
+          className="block truncate text-sm font-medium"
+          title={agent.display_name}
+        >
+          {agent.display_name}
+        </span>
+        <span className="mt-1 block text-xs text-tertiary">
+          {t("dashboard.openWorkspace")}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-muted"
+      />
+    </Link>
+  );
+}
+
+function ProjectWorkspaceLink({ project }: { project: Project }) {
+  const { t } = useTranslation();
+  return (
+    <Link to={`/project/${project.id}`} className="dashboard-workspace-link">
+      <span className="rounded-lg bg-accent-bg p-2 text-accent-light">
+        <FolderOpen aria-hidden="true" className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className="block truncate text-sm font-medium"
+          title={project.name}
+        >
+          {project.name}
+        </span>
+        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-tertiary">
+          {t("dashboard.projectSkills", { count: project.skill_count })}
+          {project.sync_health.diverged > 0 && (
+            <span className="rounded bg-danger-bg px-1.5 py-0.5 text-danger">
+              {t("dashboard.conflicts", {
+                count: project.sync_health.diverged,
+              })}
+            </span>
+          )}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="h-4 w-4 shrink-0 text-muted"
+      />
+    </Link>
   );
 }

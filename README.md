@@ -1,7 +1,7 @@
 <div align="center">
   <img src="src-tauri/icons/app-icon.svg" alt="AgentHub Logo" width="80" />
   <h1>AgentHub</h1>
-  <p><strong>让每个 Agent 用上合适的 Skills。</strong></p>
+  <p><strong>把好用的 Skills，带到每个 Agent。</strong></p>
   <p>本地优先的 AI Agent Skills 工作台，统一整理技能库、技能组与项目部署。</p>
   <p>
     <a href="https://jtblink.github.io/agent-hub/">产品主页</a> ·
@@ -32,7 +32,7 @@ Skills 不必散落在每个工具和项目目录里。AgentHub 集中管理技�
 <details>
   <summary>查看工作台概览</summary>
 
-![AgentHub 工作台：技能统计、部署覆盖与近期动态](docs/images/dashboard.png)
+![AgentHub 工作台：技能库与 SVG 连接插画、待部署及待分组、最近更新技能和工作空间导航](docs/images/dashboard.png)
 
 _当前前端界面，使用示例数据。_
 
