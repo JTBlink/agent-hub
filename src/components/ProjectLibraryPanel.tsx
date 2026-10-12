@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { ProjectSharingFiles } from "./ProjectSharingFiles";
 
 /** Team files remain usable without this UI or a personal Skills database. */
 export function ProjectLibraryPanel({
@@ -65,27 +66,7 @@ export function ProjectLibraryPanel({
           </button>
         </div>
       )}
-      {status && status.files_to_commit.length > 0 && (
-        <details className="mt-2">
-          <summary className="cursor-pointer text-accent-light">
-            {t("projectLibrary.commitFiles", {
-              count: status.files_to_commit.length,
-            })}
-          </summary>
-          <ul className="mt-2 space-y-1 font-mono">
-            {status.files_to_commit.map((path) => (
-              <li key={path}>{path}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      {status && status.ignored_paths.length > 0 && (
-        <p role="alert" className="mt-2 text-amber-600 dark:text-amber-400">
-          {t("projectLibrary.ignored", {
-            paths: status.ignored_paths.join(", "),
-          })}
-        </p>
-      )}
+      {status && <ProjectSharingFiles status={status} />}
       {status?.skills.map(
         (skill) =>
           (skill.modified || skill.stale_targets.length > 0) && (

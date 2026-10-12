@@ -7,10 +7,14 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
 import type { ManagedSkill } from "../lib/tauri";
 import { Dashboard } from "./Dashboard";
+import { makeSkill } from "../../tests/fixtures/managedSkill";
+import { useLocation } from "react-router-dom";
 
 const app = vi.hoisted(() => ({
   managedSkills: [] as ManagedSkill[],
   openSkillDetailById: vi.fn(),
+  setViewedSkillGroupId: vi.fn(),
+  closeSkillDetail: vi.fn(),
 }));
 vi.mock("../context/AppContext", () => ({
   useApp: () => ({ ...app, tools: [], projects: [] }),
@@ -24,65 +28,11 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: i18n.t.bind(i18n) }),
 }));
 
-function makeSkill(index: number, deployed = false): ManagedSkill {
-  return {
-    id: `skill-${index}`,
-    name: `demo-skill-${index}`,
-    description: `Description ${index}`,
-    central_path: `<workspace>/library/demo-skill-${index}`,
-    source_type: "local",
-    source_ref: null,
-    source_ref_resolved: null,
-    source_revision: null,
-    remote_revision: null,
-    updated_at: index,
-    created_at: 1,
-    version: null,
-    source_subpath: null,
-    source_branch: null,
-    source_agent: null,
-    last_checked_at: null,
-    last_check_error: null,
-    enabled: true,
-    status: "active",
-    targets: deployed
-      ? [
-          {
-            id: `target-${index}`,
-            skill_id: `skill-${index}`,
-            tool: "codex",
-            target_path: `<workspace>/agent/demo-skill-${index}`,
-            mode: "symlink",
-            status: "ok",
-            synced_at: 1,
-          },
-        ]
-      : [],
-    update_status: "up_to_date",
-    tags: [],
-    skill_group_ids: ["demo-group"],
-  };
-}
-
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  Object.defineProperties(HTMLDialogElement.prototype, {
-    showModal: {
-      configurable: true,
-      value(this: HTMLDialogElement) {
-        this.open = true;
-      },
-    },
-    close: {
-      configurable: true,
-      value(this: HTMLDialogElement) {
-        this.open = false;
-      },
-    },
-  });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -90,11 +40,14 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
-  Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
-  Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
+function LibraryDestination() {
+  const location = useLocation();
+  return <p>Skill library{location.search}</p>;
+}
 
 async function render() {
   await act(async () => {
@@ -102,14 +55,14 @@ async function render() {
       <MemoryRouter>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/my-skills" element={<p>Skill library</p>} />
+          <Route path="/my-skills" element={<LibraryDestination />} />
         </Routes>
       </MemoryRouter>,
     );
   });
 }
 
-it("lists every undeployed skill beyond recent activity and opens its deployment details", async () => {
+it("opens the full library undeployed filter without a dialog or a stale group", async () => {
   app.managedSkills = [
     makeSkill(0, true),
     ...Array.from({ length: 14 }, (_, i) => makeSkill(i + 1)),
@@ -119,57 +72,42 @@ it("lists every undeployed skill beyond recent activity and opens its deployment
     'section[aria-label="技能与部署概览"]',
   )!;
   expect(overview.textContent).toContain("1/15");
-  const button = overview.querySelector<HTMLButtonElement>(
-    'button[aria-haspopup="dialog"]',
-  )!;
+  const button = overview.querySelector<HTMLButtonElement>("button")!;
   expect(button.textContent).toContain("未部署 14");
   await act(async () => button.click());
-  const dialog = container.querySelector("dialog")!;
-  expect(dialog.open).toBe(true);
-  expect(dialog.querySelectorAll("li")).toHaveLength(14);
-  expect(dialog.textContent).not.toContain("demo-skill-0");
-  const firstSkill = dialog.querySelector<HTMLButtonElement>("li button")!;
-  expect(firstSkill.textContent).toContain("demo-skill-1");
-  await act(async () => firstSkill.click());
-  expect(app.openSkillDetailById).toHaveBeenCalledWith("skill-1");
-  expect(container.textContent).toBe("Skill library");
+  expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
+  expect(app.closeSkillDetail).toHaveBeenCalledOnce();
+  expect(app.openSkillDetailById).not.toHaveBeenCalled();
+  expect(container.textContent).toBe("Skill library?deployment=undeployed");
+  expect(container.querySelector("dialog")).toBeNull();
 });
 
-it("keeps the undeployed list and count current when deployment data changes", async () => {
+it("updates the undeployed entry count when deployment data changes", async () => {
   app.managedSkills = [makeSkill(1), makeSkill(2)];
   await render();
-  await act(async () =>
-    container
-      .querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!
-      .click(),
-  );
+  expect(
+    container.querySelector('section[aria-label="技能与部署概览"] button')!
+      .textContent,
+  ).toContain("未部署 2");
   app.managedSkills = [makeSkill(1, true), makeSkill(2)];
   await render();
-  const dialog = container.querySelector("dialog")!;
-  expect(dialog.open).toBe(true);
-  expect(dialog.querySelectorAll("li")).toHaveLength(1);
-  expect(dialog.textContent).toContain("未部署 1");
-  expect(dialog.textContent).not.toContain("demo-skill-1");
-  await act(async () =>
-    dialog
-      .querySelector<HTMLButtonElement>(
-        'button[aria-label="关闭未部署技能列表"]',
-      )!
-      .click(),
-  );
-  expect(dialog.open).toBe(false);
+  expect(
+    container.querySelector('section[aria-label="技能与部署概览"] button')!
+      .textContent,
+  ).toContain("未部署 1");
+  expect(container.querySelector("dialog")).toBeNull();
 });
 
 it.each([{ skills: [] }, { skills: [makeSkill(1, true)] }])(
-  "disables the list entry when no skills are undeployed",
+  "disables the library entry when no skills are undeployed",
   async ({ skills }) => {
     app.managedSkills = skills;
     await render();
     const button = container.querySelector<HTMLButtonElement>(
-      'button[aria-haspopup="dialog"]',
+      'section[aria-label="技能与部署概览"] button',
     )!;
     expect(button.textContent).toContain("未部署 0");
     expect(button.disabled).toBe(true);
-    expect(container.querySelector("dialog")!.open).toBe(false);
+    expect(container.querySelector("dialog")).toBeNull();
   },
 );

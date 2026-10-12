@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Layers,
@@ -14,13 +14,18 @@ import { useApp } from "../context/AppContext";
 import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
 import { AgentIcon } from "../components/AgentIcon";
 import { DashboardWorkspaces } from "../components/DashboardWorkspaces";
-import { UndeployedSkillsDialog } from "../components/UndeployedSkillsDialog";
 
 export function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { tools, projects, managedSkills, openSkillDetailById } = useApp();
-  const [showUndeployed, setShowUndeployed] = useState(false);
+  const {
+    tools,
+    projects,
+    managedSkills,
+    openSkillDetailById,
+    setViewedSkillGroupId,
+    closeSkillDetail,
+  } = useApp();
   const enabledAgents = useMemo(
     () => tools.filter((tool) => tool.installed && tool.enabled),
     [tools],
@@ -145,9 +150,12 @@ export function Dashboard() {
               {stat.id === "deployment" && (
                 <button
                   type="button"
-                  onClick={() => setShowUndeployed(true)}
+                  onClick={() => {
+                    setViewedSkillGroupId("");
+                    closeSkillDetail();
+                    navigate("/my-skills?deployment=undeployed");
+                  }}
                   disabled={undeployedSkills.length === 0}
-                  aria-haspopup="dialog"
                   className="mx-5 mb-4 flex items-center justify-between gap-2 rounded border-t border-border-subtle pt-3 text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:text-muted disabled:no-underline"
                 >
                   <span>
@@ -282,16 +290,6 @@ export function Dashboard() {
         </section>
         <DashboardWorkspaces agents={enabledAgents} projects={projects} />
       </div>
-      <UndeployedSkillsDialog
-        open={showUndeployed}
-        skills={undeployedSkills}
-        onClose={() => setShowUndeployed(false)}
-        onOpenSkill={(skillId) => {
-          setShowUndeployed(false);
-          openSkillDetailById(skillId);
-          navigate("/my-skills");
-        }}
-      />
     </div>
   );
 }

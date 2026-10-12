@@ -1,4 +1,5 @@
 //! Portable project skills and team deployment, independent of a personal library.
+mod git;
 mod manifest;
 mod transaction;
 
@@ -21,6 +22,8 @@ use transaction::{ProjectLock, Publication};
 pub struct ProjectLibraryStatus {
     pub skills: Vec<ProjectLibrarySkill>,
     pub files_to_commit: Vec<String>,
+    /// Optional for Agent consumption; shared only for AgentHub maintenance.
+    pub management_files: Vec<String>,
     pub ignored_paths: Vec<String>,
 }
 
@@ -411,9 +414,11 @@ pub fn status(root: &Path) -> Result<ProjectLibraryStatus, AppError> {
 fn status_inner(root: &Path) -> Result<ProjectLibraryStatus> {
     let manifest = manifest::read(root)?;
     let mut files = Vec::new();
+    let mut management_files = Vec::new();
     let mut skills = Vec::new();
     if root.join(MANIFEST).is_file() {
         files.push(MANIFEST.into());
+        management_files.push(MANIFEST.into());
     }
     for (directory, entry) in &manifest.skills {
         let canonical = canonical_path(directory, entry.disabled);
@@ -465,49 +470,13 @@ fn status_inner(root: &Path) -> Result<ProjectLibraryStatus> {
     }
     files.sort();
     files.dedup();
-    let ignored_paths = ignored_paths(root, &files);
+    let ignored_paths = git::ignored_paths(root, &files);
     Ok(ProjectLibraryStatus {
         skills,
         files_to_commit: files,
+        management_files,
         ignored_paths,
     })
-}
-
-fn ignored_paths(root: &Path, files: &[String]) -> Vec<String> {
-    let Ok(repo) = git2::Repository::discover(root) else {
-        return Vec::new();
-    };
-    let Some(workdir) = repo.workdir() else {
-        return Vec::new();
-    };
-    let Ok(index) = repo.index() else {
-        return Vec::new();
-    };
-    let mut ignored = Vec::new();
-    for path in files {
-        for entry in walkdir::WalkDir::new(root.join(path))
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            let Ok(relative) = entry.path().strip_prefix(workdir) else {
-                continue;
-            };
-            if index.get_path(relative, 0).is_none()
-                && repo.is_path_ignored(relative).unwrap_or(false)
-            {
-                if let Ok(relative) = entry.path().strip_prefix(root) {
-                    ignored.push(
-                        relative
-                            .to_string_lossy()
-                            .replace(std::path::MAIN_SEPARATOR, "/"),
-                    );
-                }
-            }
-        }
-    }
-    ignored.sort();
-    ignored.dedup();
-    ignored
 }
 
 fn mutate(

@@ -1136,6 +1136,7 @@ export interface ProjectLibraryStatus {
     stale_targets: string[];
   }[];
   files_to_commit: string[];
+  management_files: string[];
   ignored_paths: string[];
 }
 

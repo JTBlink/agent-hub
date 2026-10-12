@@ -8,6 +8,8 @@ import type { ProjectLibraryStatus } from "../lib/tauri";
 import { ProjectLibraryPanel } from "./ProjectLibraryPanel";
 
 const api = vi.hoisted(() => ({ status: vi.fn(), repair: vi.fn() }));
+const clipboard = vi.hoisted(() => ({ writeText: vi.fn() }));
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => clipboard);
 vi.mock("../lib/tauri", () => ({
   getProjectLibraryStatus: api.status,
   repairProjectLibrarySkill: api.repair,
@@ -41,12 +43,14 @@ const report: ProjectLibraryStatus = {
     ".agent-hub/project-skills.json",
   ],
   ignored_paths: [".claude/skills/demo/scripts/run.sh"],
+  management_files: [".agent-hub/project-skills.json"],
 };
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
   api.status.mockResolvedValue(report);
   api.repair.mockResolvedValue(report);
+  clipboard.writeText.mockResolvedValue(undefined);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -70,9 +74,33 @@ async function render(id = "project") {
 it("shows team commit paths and warns about ignored resources", async () => {
   await render();
   expect(container.textContent).toContain("团队成员拉取即可使用");
+  expect(container.textContent).toContain("无需安装 AgentHub");
+  expect(container.textContent).toContain("技能与 Agent 入口（2 个路径）");
+  expect(container.textContent).toContain("AgentHub 管理清单（可选共享）");
   expect(container.textContent).toContain(".agents/skills/demo");
   expect(container.querySelector('[role="alert"]')?.textContent).toContain(
     "scripts/run.sh",
+  );
+});
+it("does not treat an ignored management manifest as a blocked skill delivery", async () => {
+  api.status.mockResolvedValue({
+    ...report,
+    ignored_paths: [".agent-hub/project-skills.json"],
+  });
+  await render();
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  expect(container.textContent).toContain("不影响团队成员使用技能");
+});
+it("copies only native skill paths and keeps ignored details collapsed", async () => {
+  await render();
+  const warning = container.querySelector('[role="alert"]');
+  expect(warning?.querySelector("details")?.open).toBe(false);
+  const button = [...container.querySelectorAll("button")].find((button) =>
+    button.textContent?.includes("复制技能路径"),
+  );
+  await act(async () => button?.click());
+  expect(clipboard.writeText).toHaveBeenCalledExactlyOnceWith(
+    ".agents/skills/demo\n.claude/skills/demo",
   );
 });
 it("repairs from project content and reloads the project after completion", async () => {
@@ -97,6 +125,7 @@ it("does not display a late response for the previously selected project", async
   api.status.mockResolvedValue({
     skills: [],
     files_to_commit: [],
+    management_files: [],
     ignored_paths: [],
   });
   await render("new-project");
