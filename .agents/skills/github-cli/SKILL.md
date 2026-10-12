@@ -3,7 +3,7 @@ name: github-cli
 description: 使用 GitHub CLI（gh）处理项目 GitHub 工作流。分析和修复 Actions 失败、维护 CI/CD、重跑验证、自动创建版本 tag、发布版本或校验 Release 产物时使用。
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # GitHub CLI 工作规范
@@ -16,11 +16,12 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 
 先定位仓库根目录，读取 `AGENTS.md`、`VERSION`、`package.json`、`CHANGELOG.md`、相关 `.scratch/` 任务、发布脚本及实际 `.github/workflows/`。本文规范对应当前仓库；在其他项目使用时，先核实版本来源、远端、工作流和产物，不能照搬应用名、平台矩阵或签名变量。
 
-| 任务                       | 读取资料                                                                                |
-| -------------------------- | --------------------------------------------------------------------------------------- |
-| 准备发布、发版或自动打 tag | [发布流程](references/release-flow.md)                                                  |
-| 新增、修改或审查 Actions   | [Actions 规范](references/actions.md)、[当前 CI/CD](references/ci-cd.md)                |
-| 平台打包、签名与原生验收   | [平台支持](references/platform-support.md)、[发布验收](references/release-checklist.md) |
+| 任务                                | 读取资料                                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| 准备发布、发版或自动打 tag          | [发布流程](references/release-flow.md)                                                  |
+| 新增、修改或审查 Actions            | [Actions 规范](references/actions.md)、[当前 CI/CD](references/ci-cd.md)                |
+| 平台打包、签名与原生验收            | [平台支持](references/platform-support.md)、[发布验收](references/release-checklist.md) |
+| 防止 tag 反复失败、公共仓库免费资源 | [发布前验证与资源控制](references/release-prevention.md)                                |
 
 ## 执行边界
 
@@ -29,6 +30,8 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 - 用户要求正式发布时，连续完成版本同步、必要提交、自动创建版本 tag、推送和发布结果跟踪。已有明确授权不逐步重复询问。
 - 只要求准备发布、候选构建、本地 tag 或规范修改时，停在该范围；普通开发提交不自动发版。
 - tag 必须对应已验证的不可变提交；既有发布 tag 不移动、不强推。只有发布工作流、Release 附件和校验全部成功才能报告正式发布完成。
+- 发布前使用干净提交验证源码完整性，推送发布分支并完成同一 SHA 的手动三平台 Build Installers；`npm run release:ready -- v<version>` 通过后才创建 tag。仅 Linux CI 成功不足以证明 Windows / macOS 可发布。
+- 已有运行仍在进行时先跟踪，不取消正常构建或重复发起；重试必须明确 SHA、事件和失败原因，候选成功后到打 tag 之间不追加提交。
 - 发现文档与实际脚本不符时，明确差异并同步规范；不得将未实现的构建格式、签名或验收写成已支持。
 
 ## 交付证据

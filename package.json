@@ -21,6 +21,7 @@
     "test": "vitest run",
     "release:assemble": "node scripts/assemble-release.mjs",
     "release:verify": "node scripts/verify-release-bundle.mjs",
+    "release:ready": "node scripts/check-release-candidate.mjs",
     "homepage:build": "node scripts/build-homepage.mjs",
     "version:check": "node scripts/check-version.mjs",
     "version:set": "node scripts/set-version.mjs",

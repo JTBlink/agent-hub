@@ -20,6 +20,40 @@ const websiteIndex = readFileSync(
 );
 
 describe("GitHub Actions workflow contract", () => {
+  it("requires the exact commit's installer candidate before tag builds", () => {
+    const preflight = installers.match(
+      /\n  preflight:[\s\S]*?(?=\n  quality:)/,
+    )?.[0];
+    expect(preflight).toContain("actions: read");
+    const gate = preflight.match(
+      /- name: Require a successful candidate[\s\S]*?(?=\n      - name:)/,
+    )?.[0];
+    expect(gate).toContain("github.event_name == 'push'");
+    expect(gate).toContain("startsWith(github.ref, 'refs/tags/v')");
+    expect(gate).toContain(
+      'node scripts/check-release-candidate.mjs "$GITHUB_REF_NAME"',
+    );
+    expect(gate).toContain("GH_TOKEN: ${{ github.token }}");
+  });
+
+  it("runs native tests before installer compilation and keeps tag runs isolated", () => {
+    const build = installers.match(/\n  build:[\s\S]*?(?=\n  package:)/)?.[0];
+    expect(build.indexOf("- name: Run application core tests")).toBeLessThan(
+      build.indexOf("- name: Build unsigned or non-macOS installers"),
+    );
+    expect(build).toContain(
+      "cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    );
+    expect(installers).toContain(
+      "group: installers-${{ github.event_name }}-${{ github.ref }}",
+    );
+    for (const workflow of [installers, ci]) {
+      expect(workflow).toContain(
+        "save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}",
+      );
+    }
+  });
+
   it.each([
     ["Build Installers", installers],
     ["Deploy website", pages],

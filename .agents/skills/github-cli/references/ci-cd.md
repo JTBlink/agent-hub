@@ -50,6 +50,8 @@ Agent 自动创建 tag、幂等检查、推送与失败恢复见 [发布流程](
 
 推送 `v*` tag 会先重新执行格式、lint、前端/Rust 测试和版本一致性校验，再触发全部平台构建。生产签名 Secrets 仅在已启用的 tag preflight 和对应平台 step 中读取；所有质量门禁及矩阵任务成功后才创建 GitHub Release；任一环节失败都不会发布不完整的正式版本。
 
+tag preflight 还会验证同一提交已有成功的手动三平台 Build Installers 候选；发布前运行 `npm run release:ready -- v<version>`，没有候选或 SHA 不同则阻止发布。各平台 Rust core tests 在安装包编译前执行，候选与 tag 的并发组独立。仅默认分支写入 Rust 缓存，平台 artifacts 继续保留 1 天；公共仓库当前标准 Runner 运行分钟免费，存储与 larger Runner 分别计费，详见 [发布前验证与资源控制](release-prevention.md)。
+
 ## 签名与密钥
 
 - tag 发布默认生成未签名包。macOS 需要完整配置 `APPLE_CERTIFICATE`、`APPLE_CERTIFICATE_PASSWORD`、`APPLE_SIGNING_IDENTITY`、`APPLE_ID`、`APPLE_PASSWORD`、`APPLE_TEAM_ID` 六项 Secrets，并将仓库 Variable `ENABLE_APPLE_SIGNING` 设为 `true`；只有 tag 的 macOS step 满足该开关时才读取 Secrets。Tauri 在同一 tag-only step 中使用 Apple ID、应用专用密码和 Team ID 执行 notarization；任一公证凭据缺失时 preflight 失败，不会发布半签名包。
