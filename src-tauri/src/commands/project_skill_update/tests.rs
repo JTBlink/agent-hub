@@ -96,7 +96,10 @@ impl Fixture {
             (source.join("SKILL.md"), 100),
             (target.join("SKILL.md"), 300),
         ] {
-            fs::File::open(file)
+            // Windows requires write access when setting file timestamps.
+            fs::OpenOptions::new()
+                .write(true)
+                .open(file)
                 .unwrap()
                 .set_times(
                     fs::FileTimes::new()
