@@ -6,6 +6,8 @@
 
 范围和状态：[spec.md](spec.md)。本目录只跟踪评审及后续执行，不复制规划正文。
 
+团队友好性优化：[P02](issues/P02-friendly-team-sharing.md)，按 ADR-0011 将原生技能交付与可选 AgentHub 管理清单分开。
+
 ## 当前结果
 
 - 2026-10-12：基于当前 AgentHub 与本地 `skills` CLI 实现生成设计草案。

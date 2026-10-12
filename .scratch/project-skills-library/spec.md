@@ -26,3 +26,7 @@
 首轮范围采用 [ADR-0010](../../docs/adr/0010-project-skills-library.md)。执行任务：[P01](issues/P01-team-project-install.md)。最低交付包含新成员拉取即可使用、项目入口修复及更新安全；来源固定修订下载恢复和旧项目批量迁移保持后续阶段。
 
 首轮使用 AgentHub 项目清单，外部 `skills-lock.json` 互操作和可选链接不在当前实现内。项目筛选遵循用户最新要求，仅显示检测到安装的 Agent；团队部署目标选择与筛选相互独立。
+
+## 团队友好性修订
+
+按 [ADR-0011](../../docs/adr/0011-optional-project-management.md)，团队不强制安装 AgentHub，管理清单可选共享。项目技能与 Agent 原生入口是使用基础；维护者可用 AgentHub 增强来源维护和修改保护。共享面板分开展示交付内容与管理信息，收拢忽略目录提示且保留单个资源诊断。执行任务：[P02](issues/P02-friendly-team-sharing.md)。
