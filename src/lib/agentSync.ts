@@ -1,3 +1,4 @@
+import { isEnabledInstalledAgent } from "./agentAvailability";
 import type { ToolInfo } from "./tauri";
 
 /** Source agents can cross categories; only deployed skills missing here are added. */
@@ -17,7 +18,7 @@ export function getAgentSyncSources<
   );
   return tools
     .filter(
-      (tool) => tool.installed && tool.enabled && tool.key !== currentAgentKey,
+      (tool) => isEnabledInstalledAgent(tool) && tool.key !== currentAgentKey,
     )
     .map((tool) => {
       const sourceSkills = managedSkills.filter((skill) =>

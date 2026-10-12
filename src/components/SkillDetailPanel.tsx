@@ -282,6 +282,7 @@ function SkillDetailPanelContent({
         <SkillProjectsSection
           skill={skill}
           projects={projects}
+          tools={tools ?? []}
           onChanged={onProjectsChanged}
         />
       )}

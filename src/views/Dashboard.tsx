@@ -1,3 +1,4 @@
+import { enabledInstalledAgents } from "../lib/agentAvailability";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -26,10 +27,7 @@ export function Dashboard() {
     setViewedSkillGroupId,
     closeSkillDetail,
   } = useApp();
-  const enabledAgents = useMemo(
-    () => tools.filter((tool) => tool.installed && tool.enabled),
-    [tools],
-  );
+  const enabledAgents = useMemo(() => enabledInstalledAgents(tools), [tools]);
   const undeployedSkills = useMemo(
     () => managedSkills.filter((skill) => skill.targets.length === 0),
     [managedSkills],

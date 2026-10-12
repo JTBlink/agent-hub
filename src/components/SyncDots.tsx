@@ -1,3 +1,4 @@
+import { enabledInstalledAgents } from "../lib/agentAvailability";
 import { useState } from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -57,7 +58,7 @@ export function SyncDots({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const syncedKeys = new Set(skill.targets.map((t) => t.tool));
-  const activeTools = tools.filter((t) => t.installed && t.enabled);
+  const activeTools = enabledInstalledAgents(tools);
   const activeKeys = new Set(activeTools.map((t) => t.key));
 
   const dots: Dot[] = activeTools.map((tool) => ({

@@ -1,3 +1,4 @@
+import { enabledInstalledAgents } from "../lib/agentAvailability";
 import {
   getSkillGroupDisplayName,
   getSkillGroupDisplayDescription,
@@ -99,10 +100,7 @@ export function Sidebar() {
     id: string;
     name: string;
   } | null>(null);
-  const installedTools = useMemo(
-    () => tools.filter((t) => t.installed && t.enabled),
-    [tools],
-  );
+  const installedTools = useMemo(() => enabledInstalledAgents(tools), [tools]);
   const installedCodingTools = useMemo(
     () => installedTools.filter((t) => t.category === "coding"),
     [installedTools],

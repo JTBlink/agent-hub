@@ -1,3 +1,4 @@
+import { isEnabledInstalledAgent } from "../lib/agentAvailability";
 import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -878,7 +879,7 @@ export function Settings() {
     <div
       className={cn(
         "group relative flex h-full flex-col gap-1.5 rounded-xl border px-3.5 py-3 transition-colors",
-        agent.installed && agent.enabled
+        isEnabledInstalledAgent(agent)
           ? "border-border bg-surface"
           : agent.installed
             ? "border-border-subtle bg-surface"
@@ -944,7 +945,7 @@ export function Settings() {
 
         <ToggleSwitch
           className="mt-0.5"
-          checked={agent.installed && agent.enabled}
+          checked={isEnabledInstalledAgent(agent)}
           disabled={!agent.installed}
           loading={togglingTools.has(agent.key)}
           onChange={() => handleToggleTool(agent.key, !agent.enabled)}

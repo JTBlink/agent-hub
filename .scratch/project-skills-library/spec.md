@@ -30,3 +30,7 @@
 ## 团队友好性修订
 
 按 [ADR-0011](../../docs/adr/0011-optional-project-management.md)，团队不强制安装 AgentHub，管理清单可选共享。项目技能与 Agent 原生入口是使用基础；维护者可用 AgentHub 增强来源维护和修改保护。共享面板分开展示交付内容与管理信息，收拢忽略目录提示且保留单个资源诊断。执行任务：[P02](issues/P02-friendly-team-sharing.md)。
+
+## 桌面目标选择修订
+
+用户要求桌面项目添加从已启用 Agent 中选择，按 [ADR-0012](../../docs/adr/0012-enabled-project-agent-selection.md) 使用本机启用状态生成选项并校正默认和历史选择。项目 DTO 的支持能力与本机偏好分开，核心部署和 CLI 保留完整适配器能力。任务：[P05](issues/P05-enabled-team-agents.md)。

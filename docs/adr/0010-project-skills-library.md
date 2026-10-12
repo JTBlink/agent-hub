@@ -2,6 +2,7 @@
 
 - 状态：已接受（2026-10-12）
 - 范围：普通项目；全局与链接工作空间保持原有语义。
+- 桌面目标选择由 [ADR-0012](0012-enabled-project-agent-selection.md) 修订为已安装且已启用的 Agent；核心与 CLI 保留完整适配器能力。
 - 团队清单提交要求由 [ADR-0011](0011-optional-project-management.md) 细化：管理清单可选共享，不影响直接使用技能。
 
 ## 决策

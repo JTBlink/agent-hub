@@ -9,7 +9,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import * as api from "../lib/tauri";
-import type { ManagedSkill, Project, ProjectAgentTarget } from "../lib/tauri";
+import type {
+  ManagedSkill,
+  Project,
+  ProjectAgentTarget,
+  ToolInfo,
+} from "../lib/tauri";
+import { isEnabledInstalledAgent } from "../lib/agentAvailability";
+import { projectInstallationTargets } from "../lib/exportAgents";
 import { cn } from "../utils";
 import { getErrorMessage } from "../lib/error";
 import { AgentIcon } from "./AgentIcon";
@@ -17,6 +24,7 @@ import { AgentIcon } from "./AgentIcon";
 interface Props {
   skill: ManagedSkill;
   projects: Project[];
+  tools: ToolInfo[];
   onChanged?: () => void;
 }
 
@@ -32,7 +40,12 @@ interface RowData {
   error?: string;
 }
 
-export function SkillProjectsSection({ skill, projects, onChanged }: Props) {
+export function SkillProjectsSection({
+  skill,
+  projects,
+  tools,
+  onChanged,
+}: Props) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Record<string, RowData>>({});
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -126,7 +139,7 @@ export function SkillProjectsSection({ skill, projects, onChanged }: Props) {
   ) => {
     if (!row || row.state === "loading") return "loading";
     if (row.state === "error") return "error";
-    if (!target.installed || !target.enabled) return "unavailable";
+    if (!isEnabledInstalledAgent(target)) return "unavailable";
     if (row.installedAgents.includes(target.key)) return "installed";
     if (
       row.dirName &&
@@ -140,7 +153,7 @@ export function SkillProjectsSection({ skill, projects, onChanged }: Props) {
   const handleAdd = async (project: Project, target: ProjectAgentTarget) => {
     const row = rows[project.id];
     if (!row || getAgentState(row, target) !== "available") return;
-    if (!target.installed || !target.enabled) {
+    if (!isEnabledInstalledAgent(target)) {
       toast.error(t("addFromLibrary.errors.noTarget"));
       return;
     }
@@ -249,10 +262,11 @@ export function SkillProjectsSection({ skill, projects, onChanged }: Props) {
       <div className="grid grid-cols-1 gap-1.5 px-3 py-3 md:grid-cols-2">
         {visibleProjects.map((project) => {
           const row = rows[project.id];
-          const activeTargets =
-            row?.targets.filter(
-              (target) => target.installed && target.enabled,
-            ) ?? [];
+          const activeTargets = projectInstallationTargets(
+            row?.targets ?? [],
+            tools,
+            project.workspace_type === "linked",
+          );
           return (
             <div
               key={project.id}
