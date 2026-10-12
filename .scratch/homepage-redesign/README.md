@@ -11,4 +11,4 @@
 | D01 官网视觉、截图与 README | resolved |
 | D02 应用 Dashboard 美化     | resolved |
 | D03 工作台未部署技能入口    | resolved |
-| B04 官网发布源与依赖锁文件  | claimed  |
+| B04 官网发布源与依赖锁文件  | resolved |

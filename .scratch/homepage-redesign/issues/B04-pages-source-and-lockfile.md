@@ -1,5 +1,5 @@
 Type: bug
-Status: claimed
+Status: resolved
 Blocked by: none
 
 # 修复官网资源 404 与部署阻塞
@@ -28,4 +28,8 @@ Blocked by: none
 - 发布源检查的 4 项 CLI 回归测试、主页资源测试与 24 项 workflow 合约通过；真实 Pages 配置为 legacy 时检查明确失败。
 - 网站产物的 1,841 个本地 HTML / CSS 资源引用有效，主页没有桌面 `/src/main.tsx` 入口。lint、相关 Prettier、版本检查与 git diff --check 通过。
 - Standards：只补齐锁定依赖和官网部署门禁，权限沿用最小 pages / contents 读写范围；不更改安装包工作流或既有 tag。
-- Spec：已复现并修复代码及依赖阻塞，线上发布源切换、手动部署和访问回验待完成。
+- Spec：已复现并修复代码及依赖阻塞，线上发布源切换、手动部署和访问回验全部完成。
+- 修复提交 `d17b6b35f67d6dd8be3e803ac0ae25f723622e17` 已 push 到 main；Pages 实际配置已切换为 `build_type: workflow`。旧 source 元数据仍可保留为 main 根目录，检查以 build_type 为准。
+- [官网重新部署](https://github.com/JTBlink/agent-hub/actions/runs/38258461497) 成功，headSha 为上述修复提交；CI 的 npm ci、发布源检查、网站构建与部署全部通过。
+- [产品首页](https://jtblink.github.io/agent-hub/)和[中文文档](https://jtblink.github.io/agent-hub/docs/zh/) HTTP 200；线上 35 个页面 / 资源 URL 全部 HTTP 200，主页展示 0.1.5，不再引用 `/src/main.tsx`。本次仅重新部署官网，没有移动 tag 或重发安装包。
+- 隔离验证 worktree 已移除。可用的浏览器工具未提供 in-app browser，因此线上回验使用实际 HTTP 内容与资源请求；未将浏览器渲染验收记录为通过。
