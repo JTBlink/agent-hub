@@ -4,6 +4,46 @@ use super::{
 };
 use crate::core::tool_adapters;
 
+#[test]
+fn installed_project_links_are_readable_and_use_native_destination_separators() {
+    let tmp = TestProject::new();
+    let skill = fixture(tmp.path());
+    let root = tmp.path().join("project");
+    fs::create_dir(&root).unwrap();
+    let targets: Vec<_> = ["claude_code", "codex", "hermes", "opencode"]
+        .iter()
+        .map(|key| tool_adapters::find_adapter(key).unwrap())
+        .collect();
+    let report = install(&root, &skill, &targets).unwrap();
+    assert!(report.skills[0].target_issues.is_empty());
+    for adapter in &targets {
+        let relative = format!("{}/demo", adapter.project_relative_skills_dir());
+        let target = entries::path(&root, &relative).unwrap();
+        assert_eq!(
+            fs::read(target.join("SKILL.md")).unwrap(),
+            fs::read(
+                root.join(".agents")
+                    .join("skills")
+                    .join("demo")
+                    .join("SKILL.md")
+            )
+            .unwrap()
+        );
+        if target.is_symlink() {
+            let destination = fs::read_link(&target).unwrap();
+            assert!(!destination.is_absolute());
+            #[cfg(windows)]
+            assert!(!destination.to_string_lossy().contains('/'));
+        }
+    }
+    repair(&root, "demo").unwrap();
+    for adapter in &targets {
+        let relative = format!("{}/demo", adapter.project_relative_skills_dir());
+        let target = entries::path(&root, &relative).unwrap();
+        assert!(target.join("SKILL.md").is_file());
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn new_agent_uses_default_links_while_existing_copy_is_preserved() {

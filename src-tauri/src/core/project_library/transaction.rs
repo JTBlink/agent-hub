@@ -136,13 +136,7 @@ impl Publication {
         content: &Path,
         baseline: Option<&str>,
     ) -> Result<bool> {
-        let parent = Path::new(&relative)
-            .parent()
-            .context("Missing target parent")?;
-        let target = PathBuf::from(format!(
-            "{}{canonical}",
-            "../".repeat(parent.components().count())
-        ));
+        let target = entries::project_link_target(&relative, canonical)?;
         let link = self
             .directory
             .path()

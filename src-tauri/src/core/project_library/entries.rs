@@ -19,6 +19,19 @@ fn portable_join(base: &Path, relative: &str) -> PathBuf {
         .fold(base.to_path_buf(), |acc, part| acc.join(part))
 }
 
+/// Link text is consumed by the OS, unlike portable manifest paths. Windows
+/// reparse points require native separators even for a relative destination.
+pub(super) fn project_link_target(relative: &str, canonical: &str) -> Result<PathBuf> {
+    let parent = Path::new(relative)
+        .parent()
+        .context("Missing target parent")?;
+    let mut target = PathBuf::new();
+    for _ in parent.components() {
+        target.push("..");
+    }
+    Ok(portable_join(&target, canonical))
+}
+
 /// Validate the directory entry itself, without following its final component.
 /// Publication only renames/unlinks this component; parent links are forbidden.
 pub(super) fn path(root: &Path, relative: &str) -> Result<PathBuf> {
