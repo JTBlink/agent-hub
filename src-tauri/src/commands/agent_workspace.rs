@@ -628,8 +628,15 @@ fn update_agent_local_skill_from_center(
     ensure_agent_skill_path(&target_path, &skills_root)?;
 
     let source = PathBuf::from(&managed.central_path);
-    let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
-    let mode = sync_engine::sync_mode_for_tool(agent, configured_mode.as_deref());
+    let preference = crate::core::deployment_preferences::Preference::load(
+        store,
+        crate::core::deployment_preferences::Scope::Global,
+    )?;
+    let mode = preference.for_target(Some(if target_path.is_symlink() {
+        "symlink"
+    } else {
+        "copy"
+    }));
     // The replacement below turns the agent's real directory into a deployment
     // of central; any source_ref naming it must be re-pointed first, exactly
     // like an adoption (#425).

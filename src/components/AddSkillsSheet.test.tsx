@@ -122,8 +122,8 @@ it("shows the project and team sharing effect and deploys to an enabled Agent", 
   await act(async () => button("全选技能").click());
   await act(async () => button("添加 2 个").click());
   expect(api.exportSkillToProject.mock.calls).toEqual([
-    ["demo", "project", ["claude_code"], false],
-    ["other", "project", ["claude_code"], false],
+    ["demo", "project", ["claude_code"], undefined],
+    ["other", "project", ["claude_code"], undefined],
   ]);
   expect(onInstalled).toHaveBeenCalledOnce();
   expect(onClose).toHaveBeenCalledOnce();
@@ -145,7 +145,7 @@ it("retains failed skills for retry and does not repeat successful deployments",
     "other",
     "project",
     ["claude_code"],
-    false,
+    undefined,
   );
   expect(onClose).toHaveBeenCalledOnce();
 });
@@ -196,8 +196,8 @@ it("excludes disabled and uninstalled targets even when old selection includes t
   await act(async () => button("全选技能").click());
   await act(async () => button("添加 2 个").click());
   expect(api.exportSkillToProject.mock.calls).toEqual([
-    ["demo", "project", ["claude_code"], false],
-    ["other", "project", ["claude_code"], false],
+    ["demo", "project", ["claude_code"], undefined],
+    ["other", "project", ["claude_code"], undefined],
   ]);
 });
 

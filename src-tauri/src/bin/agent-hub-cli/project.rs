@@ -78,7 +78,19 @@ pub(super) fn run(
             let store =
                 store.ok_or_else(|| anyhow::anyhow!("Personal library required for add"))?;
             let skill = super::resolve_skill(store, reference)?;
-            project_library::install_with_mode(root, &skill, &targets(agents)?, *copy)?
+            let preference = app_lib::core::deployment_preferences::Preference::load(
+                store,
+                app_lib::core::deployment_preferences::Scope::Project,
+            )?;
+            project_library::install_with_mode(
+                root,
+                &skill,
+                &targets(agents)?,
+                matches!(
+                    preference.for_install(copy.then_some(true)),
+                    app_lib::core::sync_engine::SyncMode::Copy
+                ),
+            )?
         }
         ProjectCommand::Deploy { name, agents } => {
             project_library::deploy(root, name, &targets(agents)?)?

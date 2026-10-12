@@ -4,10 +4,17 @@
     "github-cli": {
       "id": "35ba7c38-f67d-43a4-820a-636b4447401f",
       "name": "github-cli",
-      "content_hash": "e6503cfbb6bc46b68ef680c8a0990b9c66954ce3b2a082baf99a4a169325641a",
-      "targets": {
-        "claude_code": ".claude/skills/github-cli"
-      },
+      "content_hash": "6cddf687765cfb9bed6ffd3dfbbf439116d7ee5db0dd33d14e855eb69a95316b",
+      "targets": {},
+      "source": null,
+      "disabled": false,
+      "disabled_targets": []
+    },
+    "rust-dev": {
+      "id": "4e68ae9f-b61b-45ba-8d22-2d3d436d7357",
+      "name": "rust-dev",
+      "content_hash": "100d8f662585e1d900ef63de6d8d49802bcfcab8047a99f3588f1016f66ea68a",
+      "targets": {},
       "source": null,
       "disabled": false,
       "disabled_targets": []

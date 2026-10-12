@@ -1,4 +1,5 @@
 import { isEnabledInstalledAgent } from "../lib/agentAvailability";
+import { DeploymentModeSetting } from "../components/DeploymentModeSetting";
 import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -7,7 +8,6 @@ import {
   RefreshCw,
   Link as LinkIcon,
   Unlink,
-  Copy,
   Settings2,
   Github,
   Globe,
@@ -164,8 +164,6 @@ export function Settings() {
   const { tools, refreshTools } = useApp();
   const [togglingTools, setTogglingTools] = useState<Set<string>>(new Set());
   const { theme, setTheme } = useThemeContext();
-  const [syncMode, setSyncMode] = useState("symlink");
-  const [projectSyncMode, setProjectSyncMode] = useState("symlink");
   const [closeAction, setCloseAction] = useState("");
   const [showTrayIcon, setShowTrayIcon] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -360,12 +358,6 @@ export function Settings() {
   }, []);
 
   useEffect(() => {
-    api.getSettings("sync_mode").then((v) => {
-      if (v) setSyncMode(v);
-    });
-    api.getSettings("project_sync_mode").then((v) => {
-      if (v) setProjectSyncMode(v);
-    });
     api.getSettings("proxy_url").then((v) => {
       setProxyInput(v ?? "");
     });
@@ -472,16 +464,6 @@ export function Settings() {
     } catch {
       toast.error(t("common.error"));
     }
-  };
-
-  const handleSyncModeChange = async (mode: string) => {
-    setSyncMode(mode);
-    await api.setSettings("sync_mode", mode);
-  };
-
-  const handleProjectSyncModeChange = async (mode: string) => {
-    setProjectSyncMode(mode);
-    await api.setSettings("project_sync_mode", mode);
   };
 
   const handleCloseActionChange = async (action: string) => {
@@ -1469,77 +1451,7 @@ export function Settings() {
               </div>
             </div>
 
-            {/* Global sync mode */}
-            <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-[14px] font-semibold text-primary">
-                  {t("settings.globalSyncMode")}
-                </h3>
-                <p className="mt-0.5 text-[12px] text-muted">
-                  {t("settings.globalSyncModeDesc")}
-                </p>
-              </div>
-              <div className="app-segmented flex-wrap bg-background">
-                <button
-                  onClick={() => handleSyncModeChange("symlink")}
-                  className={cn(
-                    segmentedButtonClass,
-                    syncMode === "symlink"
-                      ? "bg-surface-active text-secondary"
-                      : "text-muted hover:text-tertiary",
-                  )}
-                >
-                  <LinkIcon className="w-3 h-3" /> {t("settings.symlink")}
-                </button>
-                <button
-                  onClick={() => handleSyncModeChange("copy")}
-                  className={cn(
-                    segmentedButtonClass,
-                    syncMode === "copy"
-                      ? "bg-surface-active text-secondary"
-                      : "text-muted hover:text-tertiary",
-                  )}
-                >
-                  <Copy className="w-3 h-3" /> {t("settings.copy")}
-                </button>
-              </div>
-            </div>
-
-            {/* Project sync mode */}
-            <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-[14px] font-semibold text-primary">
-                  {t("settings.projectSyncMode")}
-                </h3>
-                <p className="mt-0.5 text-[12px] text-muted">
-                  {t("settings.projectSyncModeDesc")}
-                </p>
-              </div>
-              <div className="app-segmented flex-wrap bg-background">
-                <button
-                  onClick={() => handleProjectSyncModeChange("symlink")}
-                  className={cn(
-                    segmentedButtonClass,
-                    projectSyncMode === "symlink"
-                      ? "bg-surface-active text-secondary"
-                      : "text-muted hover:text-tertiary",
-                  )}
-                >
-                  <LinkIcon className="w-3 h-3" /> {t("settings.symlink")}
-                </button>
-                <button
-                  onClick={() => handleProjectSyncModeChange("copy")}
-                  className={cn(
-                    segmentedButtonClass,
-                    projectSyncMode === "copy"
-                      ? "bg-surface-active text-secondary"
-                      : "text-muted hover:text-tertiary",
-                  )}
-                >
-                  <Copy className="w-3 h-3" /> {t("settings.copy")}
-                </button>
-              </div>
-            </div>
+            <DeploymentModeSetting />
 
             {/* Theme */}
             <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">

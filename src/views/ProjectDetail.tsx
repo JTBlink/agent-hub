@@ -1,7 +1,6 @@
 import { ProjectSkillDetailPanel } from "../components/ProjectSkillDetailPanel";
 import {
-  getProjectSkillStatusMeta as getSyncStatusMeta,
-  getAssignedAgents,
+  groupProjectSkills,
   type ProjectSkillEntry,
 } from "../lib/projectSkillEntries";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -12,14 +11,12 @@ import {
   LayoutGrid,
   List,
   RefreshCw,
-  FileText,
   Download,
   Upload,
   Layers,
   X,
   Trash2,
   SquareCheck,
-  Square,
   Plus,
   CircleSlash,
   CheckCircle2,
@@ -29,20 +26,16 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
+import { useProjectLibrary } from "../hooks/useProjectLibrary";
+import { ProjectSkillCollection } from "../components/ProjectSkillCollection";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import { ProjectBatchAgentDialog } from "../components/ProjectBatchAgentDialog";
-import { ProjectEnabledAgents } from "../components/ProjectEnabledAgents";
 import { BatchTagDialog } from "../components/BatchTagDialog";
-import { ToggleSwitch } from "../components/ToggleSwitch";
 import { uploadProjectSkillToGroup } from "../lib/projectSkillUpload";
 import { ProjectSkillConflictPreview } from "../components/ProjectSkillConflictPreview";
-import { ProjectAgentDots } from "../components/ProjectAgentDots";
 import { SkillGroupBar } from "../components/SkillGroupBar";
-import { ProjectSkillCardHeader } from "../components/ProjectSkillCardHeader";
-import { ProjectSkillSyncActions } from "../components/ProjectSkillSyncActions";
-import { ProjectSkillBadges } from "../components/ProjectSkillBadges";
 import {
   getTagActiveColor,
   getTagColor,
@@ -72,22 +65,6 @@ import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { AgentIcon } from "../components/AgentIcon";
 const projectLastUsedAgentsKey = (projectId: string) =>
   `project_last_used_export_agents:${projectId}`;
-
-function getGroupStatus(variants: ProjectSkill[]): ProjectSkill["sync_status"] {
-  const priority: ProjectSkill["sync_status"][] = [
-    "diverged",
-    "project_newer",
-    "center_newer",
-    "project_only",
-    "in_sync",
-  ];
-  for (const status of priority) {
-    if (variants.some((variant) => variant.sync_status === status)) {
-      return status;
-    }
-  }
-  return "project_only";
-}
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -226,77 +203,16 @@ export function ProjectDetail() {
     }
   }, [project, loading, navigate]);
 
-  const groupedSkills = useMemo<ProjectSkillEntry[]>(() => {
-    const groups = new Map<string, ProjectSkillEntry>();
-    for (const skill of skills) {
-      const key = skill.relative_path.toLowerCase();
-      const existing = groups.get(key);
-      if (existing) {
-        existing.variants.push(skill);
-        existing.enabledCount += skill.enabled ? 1 : 0;
-        existing.totalCount += 1;
-        existing.files = Array.from(
-          new Set([...existing.files, ...skill.files]),
-        ).sort();
-        existing.tags = Array.from(
-          new Set([...existing.tags, ...skill.tags]),
-        ).sort((a, b) => a.localeCompare(b));
-        if (
-          skill.center_skill_id &&
-          !existing.centerSkillIds.includes(skill.center_skill_id)
-        ) {
-          existing.centerSkillIds.push(skill.center_skill_id);
-          existing.centerSkillIds.sort((a, b) => a.localeCompare(b));
-        }
-        if (!existing.description && skill.description) {
-          existing.description = skill.description;
-        }
-        continue;
-      }
-      groups.set(key, {
-        id: key,
-        name: skill.name,
-        dir_name: skill.dir_name,
-        relative_path: skill.relative_path,
-        description: skill.description,
-        files: [...skill.files],
-        variants: [skill],
-        enabledCount: skill.enabled ? 1 : 0,
-        totalCount: 1,
-        primaryVariant: skill,
-        status: skill.sync_status,
-        tags: [...skill.tags].sort((a, b) => a.localeCompare(b)),
-        centerSkillIds: skill.center_skill_id ? [skill.center_skill_id] : [],
-      });
-    }
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        variants: [...group.variants].sort((a, b) =>
-          a.agent_display_name.localeCompare(b.agent_display_name),
-        ),
-        primaryVariant: [...group.variants].sort((a, b) =>
-          a.agent_display_name.localeCompare(b.agent_display_name),
-        )[0],
-        status: getGroupStatus(group.variants),
-      }))
-      .sort((a, b) => {
-        // Put skills that need attention ahead of the clean list. This keeps
-        // project workspaces useful as a review queue while preserving the
-        // stable alphabetical order within each sync state.
-        const statusRank: Record<ProjectSkill["sync_status"], number> = {
-          diverged: 0,
-          project_newer: 1,
-          center_newer: 2,
-          project_only: 3,
-          in_sync: 4,
-        };
-        return (
-          statusRank[a.status] - statusRank[b.status] ||
-          a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-        );
-      });
-  }, [skills]);
+  const projectLibrary = useProjectLibrary(
+    id,
+    !!project && project.workspace_type !== "linked",
+    skills,
+    loadSkills,
+  );
+  const groupedSkills = useMemo(
+    () => groupProjectSkills(skills, projectLibrary.status),
+    [skills, projectLibrary.status],
+  );
 
   const agentFilterOptions = useMemo(
     () => detectedProjectAgentFilters(projectAgentTargets),
@@ -1079,9 +995,9 @@ export function ProjectDetail() {
     <div className="app-page">
       {project.workspace_type !== "linked" && (
         <ProjectLibraryPanel
-          projectId={project.id}
-          refreshKey={skills}
-          onChanged={loadSkills}
+          status={projectLibrary.status}
+          error={projectLibrary.error}
+          onRetry={projectLibrary.retry}
         />
       )}
       <div className="app-page-header flex flex-col gap-2.5 pb-3 pr-2">
@@ -1482,289 +1398,31 @@ export function ProjectDetail() {
           )}
         </div>
       ) : (
-        <div
-          className={cn(
-            "pb-8",
-            viewMode === "grid"
-              ? "grid grid-cols-2 gap-3 lg:grid-cols-3"
-              : "flex flex-col gap-0.5",
-          )}
-        >
-          {filtered.map((skill) => {
-            const skillKey = getSkillKey(skill);
-            const isSelected = selectedIds.has(skillKey);
-            const isUpdatingCenter = updatingCenterSkill === skillKey;
-            const isUpdatingProject = updatingProjectSkill === skillKey;
-            const isToggling = togglingSkill === skillKey;
-            const statusMeta = getSyncStatusMeta(t, skill.status);
-            const assignedAgents = getAssignedAgents(skill.variants);
-
-            if (viewMode === "grid") {
-              return (
-                <div
-                  key={skillKey}
-                  className={cn(
-                    "app-panel group relative flex h-full cursor-pointer flex-col overflow-hidden shadow-card transition-all hover:-translate-y-px hover:border-border hover:shadow-card-hover",
-                    isMultiSelect &&
-                      isSelected &&
-                      "ring-1 ring-accent border-accent/40",
-                  )}
-                  onClick={() =>
-                    isMultiSelect
-                      ? toggleSelect(skillKey)
-                      : handleOpenDetail(skill)
-                  }
-                >
-                  <ProjectSkillCardHeader
-                    title={skill.name}
-                    fileCount={skill.files.length}
-                    leading={
-                      isMultiSelect ? (
-                        isSelected ? (
-                          <SquareCheck className="h-3.5 w-3.5 text-accent" />
-                        ) : (
-                          <Square className="h-3.5 w-3.5 text-faint" />
-                        )
-                      ) : (
-                        <span
-                          className={cn(
-                            "h-2 w-2 rounded-full",
-                            skill.enabledCount === skill.totalCount
-                              ? "bg-accent-light shadow-[0_0_0_3px_var(--color-accent-bg)]"
-                              : skill.enabledCount > 0
-                                ? "bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.15)]"
-                                : "bg-surface-active",
-                          )}
-                          title={`${skill.enabledCount}/${skill.totalCount}`}
-                        />
-                      )
-                    }
-                    actions={
-                      !isMultiSelect && (
-                        <ProjectSkillSyncActions
-                          status={skill.status}
-                          updatingCenter={isUpdatingCenter}
-                          updatingProject={isUpdatingProject}
-                          onUpdateCenter={() => void handleUpdateCenter(skill)}
-                          onUpdateProject={() =>
-                            void handleUpdateProject(skill)
-                          }
-                        />
-                      )
-                    }
-                  />
-
-                  <div className="px-3.5 pb-3">
-                    <ProjectEnabledAgents variants={skill.variants} />
-                    <p className="text-[13px] leading-[18px] text-muted truncate">
-                      {skill.description || "\u2014"}
-                    </p>
-                    {skill.tags.length > 0 && (
-                      <div className="mt-2 flex flex-wrap items-center gap-1">
-                        {skill.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className={cn(
-                              "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-                              getTagColor(tag, allTags),
-                            )}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2.5 border-t border-border-faint px-3.5 py-2.5">
-                    <ProjectSkillBadges
-                      status={statusMeta}
-                      disabled={skill.enabledCount === 0}
-                      groups={skillGroupsForEntry.get(skill.id) ?? []}
-                      activeGroupId={groupFilter}
-                      onGroupClick={handleGroupBadgeClick}
-                    />
-                    {!isMultiSelect && (
-                      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
-                        <ProjectAgentDots
-                          assignedAgents={assignedAgents}
-                          targets={projectAgentTargets}
-                          limit={4}
-                          size="sm"
-                          onToggle={(agentKey, enabled) =>
-                            handleToggleDetailAgent(skill, agentKey, enabled)
-                          }
-                          pendingKey={
-                            togglingAgentTarget?.skillKey === skillKey
-                              ? togglingAgentTarget.agent
-                              : null
-                          }
-                        />
-                        {project.supports_skill_toggle ? (
-                          <ToggleSwitch
-                            checked={skill.enabledCount === skill.totalCount}
-                            loading={isToggling}
-                            onChange={() => handleToggleSkill(skill)}
-                            title={
-                              skill.enabledCount === skill.totalCount
-                                ? t("project.enabled")
-                                : t("project.enableSkill")
-                            }
-                          />
-                        ) : null}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(skill);
-                          }}
-                          className="rounded px-2 py-1 text-muted transition-colors outline-none hover:bg-red-500/10 hover:text-red-500"
-                          title={t("project.deleteSkill")}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-
-            // List view
-            return (
-              <div
-                key={skillKey}
-                className={cn(
-                  "app-panel group flex cursor-pointer items-center gap-3.5 rounded-xl border-transparent px-3.5 py-3 transition-all hover:border-border hover:bg-surface-hover",
-                  isMultiSelect &&
-                    isSelected &&
-                    "ring-1 ring-accent border-accent/40",
-                )}
-                onClick={() =>
-                  isMultiSelect
-                    ? toggleSelect(skillKey)
-                    : handleOpenDetail(skill)
-                }
-              >
-                <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-                  {isMultiSelect ? (
-                    isSelected ? (
-                      <SquareCheck className="h-3.5 w-3.5 text-accent" />
-                    ) : (
-                      <Square className="h-3.5 w-3.5 text-faint" />
-                    )
-                  ) : (
-                    <span
-                      className={cn(
-                        "h-2 w-2 shrink-0 rounded-full",
-                        skill.enabledCount === skill.totalCount
-                          ? "bg-accent-light shadow-[0_0_0_3px_var(--color-accent-bg)]"
-                          : skill.enabledCount > 0
-                            ? "bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.15)]"
-                            : "bg-surface-active",
-                      )}
-                      title={`${skill.enabledCount}/${skill.totalCount}`}
-                    />
-                  )}
-                </div>
-                <h3
-                  className="w-[180px] shrink-0 truncate text-[14px] font-semibold text-secondary"
-                  title={skill.name}
-                >
-                  {skill.name}
-                </h3>
-
-                <p className="min-w-0 flex-1 truncate text-[13px] text-muted">
-                  {skill.description || "\u2014"}
-                </p>
-
-                {skill.tags.length > 0 && (
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {skill.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className={cn(
-                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
-                          getTagColor(tag, allTags),
-                        )}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex shrink-0 items-center gap-2.5">
-                  <ProjectSkillBadges
-                    status={statusMeta}
-                    disabled={skill.enabledCount === 0}
-                    groups={skillGroupsForEntry.get(skill.id) ?? []}
-                  />
-                  {skill.files.length > 0 && (
-                    <span className="flex items-center gap-1 text-[12px] text-faint">
-                      <FileText className="w-3 h-3" />
-                      {skill.files.length}
-                    </span>
-                  )}
-                  <ProjectEnabledAgents variants={skill.variants} />
-                  <ProjectAgentDots
-                    assignedAgents={assignedAgents}
-                    targets={projectAgentTargets}
-                    limit={4}
-                    size="sm"
-                    onToggle={
-                      isMultiSelect
-                        ? undefined
-                        : (agentKey, enabled) =>
-                            handleToggleDetailAgent(skill, agentKey, enabled)
-                    }
-                    pendingKey={
-                      togglingAgentTarget?.skillKey === skillKey
-                        ? togglingAgentTarget.agent
-                        : null
-                    }
-                  />
-                </div>
-
-                {!isMultiSelect && (
-                  <>
-                    <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <ProjectSkillSyncActions
-                        variant="list"
-                        status={skill.status}
-                        updatingCenter={isUpdatingCenter}
-                        updatingProject={isUpdatingProject}
-                        onUpdateCenter={() => void handleUpdateCenter(skill)}
-                        onUpdateProject={() => void handleUpdateProject(skill)}
-                      />
-                    </div>
-                    {project.supports_skill_toggle ? (
-                      <ToggleSwitch
-                        checked={skill.enabledCount === skill.totalCount}
-                        loading={isToggling}
-                        onChange={() => handleToggleSkill(skill)}
-                        title={
-                          skill.enabledCount === skill.totalCount
-                            ? t("project.enabled")
-                            : t("project.enableSkill")
-                        }
-                      />
-                    ) : null}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(skill);
-                      }}
-                      className="shrink-0 rounded p-0.5 text-muted transition-colors hover:bg-red-500/10 hover:text-red-500"
-                      title={t("project.deleteSkill")}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <ProjectSkillCollection
+          skills={filtered}
+          viewMode={viewMode}
+          isMultiSelect={isMultiSelect}
+          selectedIds={selectedIds}
+          updatingCenterSkill={updatingCenterSkill}
+          updatingProjectSkill={updatingProjectSkill}
+          togglingSkill={togglingSkill}
+          togglingAgentTarget={togglingAgentTarget}
+          repairingDirectory={projectLibrary.repairingDirectory}
+          allTags={allTags}
+          skillGroupsForEntry={skillGroupsForEntry}
+          activeGroupId={groupFilter}
+          targets={projectAgentTargets}
+          supportsToggle={project.supports_skill_toggle}
+          onSelect={toggleSelect}
+          onOpenDetail={handleOpenDetail}
+          onUpdateCenter={handleUpdateCenter}
+          onUpdateProject={handleUpdateProject}
+          onGroupClick={handleGroupBadgeClick}
+          onToggleAgent={handleToggleDetailAgent}
+          onToggleSkill={handleToggleSkill}
+          onDelete={setDeleteTarget}
+          onRepair={projectLibrary.repair}
+        />
       )}
 
       {/* Skill Document Detail Panel */}

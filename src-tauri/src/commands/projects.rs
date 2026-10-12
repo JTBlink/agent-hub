@@ -966,7 +966,14 @@ pub async fn export_skill_to_project(
                 Path::new(&project.path),
                 &skill,
                 &targets,
-                copy.unwrap_or(false),
+                matches!(
+                    crate::core::deployment_preferences::Preference::load(
+                        &store,
+                        crate::core::deployment_preferences::Scope::Project,
+                    )?
+                    .for_install(copy),
+                    sync_engine::SyncMode::Copy
+                ),
             )?;
             return Ok(());
         }
@@ -1006,10 +1013,10 @@ pub async fn export_skill_to_project(
             }
         }
 
-        let configured_mode = store
-            .get_setting("project_sync_mode")
-            .map_err(AppError::db)?
-            .or_else(|| store.get_setting("sync_mode").ok().flatten());
+        let preference = crate::core::deployment_preferences::Preference::load(
+            &store,
+            crate::core::deployment_preferences::Scope::Linked,
+        )?;
         // Two agents can resolve to the same project skills root, in which case
         // the second pass would find the directory the first just wrote and
         // refuse it. The artifact is already correct, so skip instead.
@@ -1022,7 +1029,7 @@ pub async fn export_skill_to_project(
                 continue;
             }
             std::fs::create_dir_all(&skills_root)?;
-            let mode = sync_engine::sync_mode_for_tool(agent_key, configured_mode.as_deref());
+            let mode = preference.for_install(copy);
             // NoClobber: the loop above already refused every pre-existing
             // target, so nothing here should need replacing. Belt and braces —
             // `exists()` misses dangling links and is racy against this write.
@@ -1107,11 +1114,15 @@ pub async fn update_project_skill_from_center(
         }
 
         let source = PathBuf::from(&managed.central_path);
-        let configured_mode = store
-            .get_setting("project_sync_mode")
-            .map_err(AppError::db)?
-            .or_else(|| store.get_setting("sync_mode").ok().flatten());
-        let mode = sync_engine::sync_mode_for_tool(&agent, configured_mode.as_deref());
+        let preference = crate::core::deployment_preferences::Preference::load(
+            &store,
+            crate::core::deployment_preferences::Scope::Linked,
+        )?;
+        let mode = preference.for_target(Some(if target_path.is_symlink() {
+            "symlink"
+        } else {
+            "copy"
+        }));
         // UserConfirmed: this intentionally replaces an existing project copy
         // the user chose to update, and project deployments never create
         // `skill_targets` rows, so no record could vouch for it. The
@@ -1211,10 +1222,12 @@ pub async fn delete_project_skill(
             if shared {
                 return Err(AppError::invalid_input("Shared project content is visible to multiple Agents. Use project Skill deletion or shared project disable instead."));
             }
-            crate::core::project_library::remove_target(
+            let adapter = tool_adapters::find_adapter_with_store(&store, &agent)
+                .ok_or_else(|| AppError::not_found(format!("Unknown agent: {agent}")))?;
+            crate::core::project_library::remove_target_with_adapter(
                 Path::new(&record.path),
                 &skill_relative_path,
-                &agent,
+                &adapter,
             )?;
             return Ok(());
         }

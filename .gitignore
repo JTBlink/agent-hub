@@ -55,7 +55,9 @@ Thumbs.db
 /src-tauri/binaries/
 
 # Agent tool local configs (not project code).
-.claude/
+.claude/*
+!.claude/CLAUDE.md
+!.claude/skills/
 .codex/
 .hermes/
 .opencode/

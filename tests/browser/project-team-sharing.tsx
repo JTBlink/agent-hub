@@ -49,6 +49,7 @@ await i18nReady;
 const { AddSkillsSheet } = await import("../../src/components/AddSkillsSheet");
 const { ProjectLibraryPanel } =
   await import("../../src/components/ProjectLibraryPanel");
+const { useProjectLibrary } = await import("../../src/hooks/useProjectLibrary");
 const { Toaster } = await import("sonner");
 const demo: ManagedSkill = {
   id: "demo",
@@ -78,13 +79,19 @@ const demo: ManagedSkill = {
 export function Preview() {
   const [open, setOpen] = useState(true);
   const [refresh, setRefresh] = useState(0);
+  const library = useProjectLibrary(
+    "demo-project",
+    true,
+    refresh,
+    async () => {},
+  );
   return (
     <main className="min-h-screen bg-background p-6 text-primary">
       <h1 className="mb-4 text-lg">demo-project</h1>
       <ProjectLibraryPanel
-        projectId="demo-project"
-        refreshKey={refresh}
-        onChanged={async () => {}}
+        status={library.status}
+        error={library.error}
+        onRetry={library.retry}
       />
       <AddSkillsSheet
         open={open}

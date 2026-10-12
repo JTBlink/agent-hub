@@ -32,3 +32,11 @@
 项目批量启停：[P06](issues/P06-batch-enabled-agent-selection.md)，复用可用目标和统一状态判断。
 
 Git 忽略误报：[B02](issues/B02-ignored-local-artifacts.md)，缓存与本机环境配置不计入技能交付警告，必要脚本及配置模板继续诊断。
+
+共享信息层级：[P07](issues/P07-card-team-refresh.md)，顶部共享说明折叠为一行，技能刷新状态及操作下沉到卡片，需要处理的技能优先。
+
+统一部署默认值与入口诊断：[P08](issues/P08-unified-deployment-mode.md)，新安装共用设置，已有入口保持原方式，并显示每个异常的具体原因。
+
+旧入口移除：[B03](issues/B03-unrecorded-agent-removal.md)，修复中央技能已管理但旧 Agent 入口未登记时，点击图标提示成功却未移除的问题。
+
+状态说明：[B04](issues/B04-clear-agent-skill-status.md)，直接说明 Agent 找不到技能文件、项目内容仍然保留，以及重新添加的效果。
