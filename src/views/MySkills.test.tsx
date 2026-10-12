@@ -33,6 +33,7 @@ const app = vi.hoisted(() => ({
   openSkillDetailById: vi.fn(),
   closeSkillDetail: vi.fn(),
   setViewedSkillGroupId: vi.fn(),
+  setViewingUngrouped: vi.fn(),
   setSkillGroupMembership: vi.fn(),
 }));
 vi.mock("../context/AppContext", () => ({ useApp: () => app }));
@@ -70,6 +71,9 @@ beforeEach(() => {
   app.setViewedSkillGroupId.mockImplementation(() => {
     app.viewedSkillGroup = null;
     app.viewingUngrouped = false;
+  });
+  app.setViewingUngrouped.mockImplementation((value: boolean) => {
+    app.viewingUngrouped = value;
   });
   container = document.createElement("div");
   document.body.append(container);
@@ -177,7 +181,7 @@ it("shows the full undeployed library from the dashboard after clearing the prev
   await render("/");
   await click(
     container.querySelector('section[aria-label="技能与部署概览"]')!,
-    "未部署",
+    "待部署",
   );
   expect(container.querySelector("[data-location]")!.textContent).toBe(
     "/my-skills?deployment=undeployed",
@@ -193,6 +197,36 @@ it("shows the full undeployed library from the dashboard after clearing the prev
   expect(button(container, "更多筛选").textContent).toContain("1");
   await click(container, "Back");
   expect(container.querySelector("[data-location]")!.textContent).toBe("/");
+});
+
+it("opens ungrouped skills from the dashboard and keeps the grouping action available", async () => {
+  app.viewedSkillGroup = makeSkillGroup("old-group", "Old group");
+  app.detailSkillId = null;
+  app.managedSkills = [
+    { ...makeSkill(1), skill_group_ids: [] },
+    { ...makeSkill(2, true), skill_group_ids: [] },
+    makeSkill(3),
+  ];
+  app.skillGroups = [makeSkillGroup("dev", "dev-tools")];
+  await render("/");
+  await click(
+    container.querySelector('section[aria-label="技能与部署概览"]')!,
+    "待分组",
+  );
+  expect(container.querySelector("[data-location]")!.textContent).toBe(
+    "/my-skills",
+  );
+  expect(container.querySelector('[role="status"]')!.textContent).toBe(
+    "显示 2 个技能",
+  );
+  expect(container.textContent).not.toContain("demo-skill-3");
+  await click(container, "加入技能组");
+  await click(document.querySelector('[role="menu"]')!, "dev-tools");
+  expect(app.setSkillGroupMembership).toHaveBeenCalledWith(
+    ["skill-1"],
+    "dev",
+    true,
+  );
 });
 
 it("combines deployment, source and tags and restores the list when filters are cleared", async () => {
