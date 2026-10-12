@@ -1795,7 +1795,7 @@ export function ProjectDetail() {
         <ProjectBatchAgentDialog
           projectId={id}
           skills={selectedSkills}
-          targets={exportTargets}
+          targets={installationTargets}
           enabled={batchAgentMode}
           onClose={() => setBatchAgentMode(null)}
           onComplete={async () => {

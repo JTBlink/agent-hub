@@ -28,3 +28,5 @@
 - 首轮实现已更新产品说明、架构与 CHANGELOG；最终验证和两轴审查见 P01 的 Result。
 
 桌面目标选择：[P05](issues/P05-enabled-team-agents.md)，从已启用 Agent 中选择并统一可用状态判断。
+
+项目批量启停：[P06](issues/P06-batch-enabled-agent-selection.md)，复用可用目标和统一状态判断。
