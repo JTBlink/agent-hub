@@ -38,6 +38,10 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 触发条件：推送 `v*` tag 或手动 `workflow_dispatch`。通过锁定 Node.js 22 和 `npm ci`，校验版本与共享帮助内容，构建并部署对应版本的产品主页和 VitePress 文档站。统一产物为 `_site/`，公开文档位于 `/agent-hub/docs/`；普通主页或文档文件变更不自动部署。
 
+仓库 Settings → Pages → Build and deployment → Source 必须选择 **GitHub Actions**（Pages API 的 `build_type: workflow`）。不要选择从 main 根目录发布：根 `index.html` 是桌面开发入口，会请求未发布的 `/src/main.tsx` 并返回 404。工作流通过 `scripts/check-pages-config.mjs` 在部署前核实真实发布源；API 查询失败或 legacy 模式都阻止发布。修复后从 main 手动运行本工作流并核验线上主页、文档和资源，不为官网修复重建版本 tag。
+
+更新依赖锁文件后，使用 CI 对应的 npm 10 执行干净 `npm ci`；本机 npm 11 的检查不能代替这一步。VitePress 的 DocSearch 依赖可能需要独立的 React 18 peer 依赖，不能用 `--legacy-peer-deps` 绕过锁文件一致性校验。
+
 ## 手动构建
 
 在 GitHub Actions 中运行 `Build Installers` → `Run workflow` 即可手动预编译当前选中的分支。手动运行不需要填写额外参数，平台 artifacts 保留 1 天，只上传各平台候选安装包；汇总目录经过校验，但当前没有汇总 artifact 上传步骤，不创建 GitHub Release，也不读取生产签名 Secrets。Actions artifact 不能永久保存；正式 tag 发布后，上传到 GitHub Release 的安装包和 `CHANGELOG.md` 会持续保留，直到手动删除 Release 或附件。
