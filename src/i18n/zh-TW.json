@@ -1071,6 +1071,8 @@
     "updateProjectSuccess": "「{{name}}」已更新到專案",
     "resetFromCenter": "還原中心版本",
     "resetFromCenterSuccess": "「{{name}}」已還原為中心版本",
+    "restoreConfirmTitle": "確認覆蓋專案技能",
+    "restoreConfirmMessage": "「{{name}}」在專案中有本機改動或額外檔案，還原中心版本可能會遺失這些內容。確定要覆蓋嗎？",
     "alreadyInCenter": "已在中心",
     "syncStatus": {
       "projectOnly": "僅專案",

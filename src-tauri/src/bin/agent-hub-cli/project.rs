@@ -99,7 +99,7 @@ pub(super) fn run(
             let store =
                 store.ok_or_else(|| anyhow::anyhow!("Personal library required for update"))?;
             let skill = super::resolve_skill(store, reference)?;
-            project_library::update(root, name, &skill)?
+            project_library::update(root, name, &skill, false)?
         }
         ProjectCommand::Remove { name } => project_library::remove(root, name)?,
         ProjectCommand::Repair { name } => project_library::repair(root, name)?,

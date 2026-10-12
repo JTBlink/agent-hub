@@ -315,7 +315,7 @@ fn update_failure_restores_broken_staged_link_backups_and_central_contents() {
     )
     .unwrap();
     transaction::FAIL_AFTER.with(|value| value.set(Some(2)));
-    let result = update(&root, "demo", &skill);
+    let result = update(&root, "demo", &skill, false);
     transaction::FAIL_AFTER.with(|value| value.set(None));
     assert!(result.is_err());
     assert!(root.join(".claude/skills/demo").is_symlink());
@@ -324,7 +324,7 @@ fn update_failure_restores_broken_staged_link_backups_and_central_contents() {
         fs::read_to_string(root.join(".claude/skills/demo/scripts/run.sh")).unwrap(),
         "echo team\n"
     );
-    update(&root, "demo", &skill).unwrap();
+    update(&root, "demo", &skill, false).unwrap();
     assert_eq!(
         fs::read_to_string(root.join(".claude/skills/demo/scripts/run.sh")).unwrap(),
         "echo new\n"

@@ -46,6 +46,8 @@ pub enum ErrorKind {
     InvalidInput,
     Cancelled,
     Internal,
+    /// Project content requires explicit consent before a center restore.
+    ProjectRestoreRequired,
     /// A write was refused because the target is not ours to replace. Always
     /// carries `ErrorDetails::TargetConflict`.
     TargetConflict,
@@ -61,6 +63,14 @@ impl AppError {
     pub fn not_found(msg: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::NotFound,
+            message: msg.into(),
+            details: None,
+        }
+    }
+
+    pub fn project_restore_required(msg: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::ProjectRestoreRequired,
             message: msg.into(),
             details: None,
         }

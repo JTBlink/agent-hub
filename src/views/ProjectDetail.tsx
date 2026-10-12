@@ -54,7 +54,7 @@ import type {
   ManagedSkill,
   ProjectAgentTarget,
 } from "../lib/tauri";
-import { getErrorMessage } from "../lib/error";
+import { getErrorKind, getErrorMessage } from "../lib/error";
 import { SkillDirectoryActions } from "../components/SkillDirectoryActions";
 import {
   deleteProjectSkillGroup,
@@ -122,6 +122,8 @@ export function ProjectDetail() {
   const [deleteTarget, setDeleteTarget] = useState<ProjectSkillEntry | null>(
     null,
   );
+  const [restoreConfirmTarget, setRestoreConfirmTarget] =
+    useState<ProjectSkillEntry | null>(null);
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
   const [batchTagDialogOpen, setBatchTagDialogOpen] = useState(false);
   const [batchAgentMode, setBatchAgentMode] = useState<boolean | null>(null);
@@ -680,7 +682,10 @@ export function ProjectDetail() {
     }
   };
 
-  const handleUpdateProject = async (skill: ProjectSkillEntry) => {
+  const handleUpdateProject = async (
+    skill: ProjectSkillEntry,
+    force = false,
+  ) => {
     if (!id) return;
     setUpdatingProjectSkill(getSkillKey(skill));
     try {
@@ -690,6 +695,7 @@ export function ProjectDetail() {
             id,
             variant.relative_path,
             variant.agent,
+            force,
           ),
         ),
       );
@@ -702,12 +708,19 @@ export function ProjectDetail() {
       }
       await Promise.all([loadSkills(), refreshProjects()]);
     } catch (error: unknown) {
-      toast.error(
-        t("project.updateProjectFailed", {
-          name: skill.name,
-          reason: getErrorMessage(error, t("common.error")),
-        }),
-      );
+      if (
+        !force &&
+        getErrorKind(error) === "project_restore_required"
+      ) {
+        setRestoreConfirmTarget(skill);
+      } else {
+        toast.error(
+          t("project.updateProjectFailed", {
+            name: skill.name,
+            reason: getErrorMessage(error, t("common.error")),
+          }),
+        );
+      }
     } finally {
       setUpdatingProjectSkill(null);
     }
@@ -1447,6 +1460,22 @@ export function ProjectDetail() {
         tone="danger"
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteSkill}
+      />
+
+      {/* Restore Confirm Dialog */}
+      <ConfirmDialog
+        open={!!restoreConfirmTarget}
+        title={t("project.restoreConfirmTitle")}
+        message={t("project.restoreConfirmMessage", {
+          name: restoreConfirmTarget?.name,
+        })}
+        tone="warning"
+        onClose={() => setRestoreConfirmTarget(null)}
+        onConfirm={async () => {
+          const target = restoreConfirmTarget;
+          setRestoreConfirmTarget(null);
+          if (target) await handleUpdateProject(target, true);
+        }}
       />
 
       {id && batchAgentMode !== null && (
