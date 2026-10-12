@@ -200,6 +200,7 @@ pub fn update(
     root: &Path,
     name: &str,
     skill: &SkillRecord,
+    force: bool,
 ) -> Result<ProjectLibraryStatus, AppError> {
     mutate(root, |root, lock| {
         safe_name(name)?;
@@ -219,6 +220,28 @@ pub fn update(
         )?;
         let new_hash = fingerprint(&content)?.context("Empty staged project Skill")?;
         let canonical = canonical_path(name, entry.disabled);
+        if !force {
+            let mut all_removals = Vec::new();
+            for path in all_entry_paths(name, entry) {
+                let target = entries::path(root, &path)?;
+                if target.is_dir() && !target.is_symlink() {
+                    if let Ok(removals) =
+                        super::removals::removed_paths(&target, &content)
+                    {
+                        for r in removals {
+                            all_removals.push(format!("{path}/{r}"));
+                        }
+                    }
+                }
+            }
+            if !all_removals.is_empty() {
+                return Err(AppError::project_restore_required(format!(
+                    "Updating from center would remove local files: {}",
+                    all_removals.join(", ")
+                ))
+                .into());
+            }
+        }
         let baseline = entry.content_hash.clone();
         check_replace(root, &canonical, Some(&baseline), Some(&new_hash))?;
         let mut publication = Publication::new(root)?;

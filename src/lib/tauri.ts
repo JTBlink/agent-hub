@@ -1052,11 +1052,13 @@ export const updateProjectSkillFromCenter = (
   projectId: string,
   skillRelativePath: string,
   agent: string,
+  force = false,
 ) =>
   invoke<void>("update_project_skill_from_center", {
     projectId,
     skillRelativePath,
     agent,
+    force,
   });
 
 export const toggleProjectSkill = (

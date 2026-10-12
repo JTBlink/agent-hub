@@ -8,6 +8,7 @@ export const ERROR_KINDS = [
   "invalid_input",
   "cancelled",
   "internal",
+  "project_restore_required",
   "target_conflict",
 ] as const;
 

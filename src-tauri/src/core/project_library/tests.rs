@@ -148,7 +148,7 @@ fn update_refreshes_every_team_copy_but_preserves_project_edits() {
         "echo updated\n",
     )
     .unwrap();
-    update(&root, "demo", &skill).unwrap();
+    update(&root, "demo", &skill, false).unwrap();
     assert_eq!(
         fs::read_to_string(pjoin(&root, ".claude/skills/demo/scripts/run.sh")).unwrap(),
         "echo updated\n"
@@ -161,7 +161,7 @@ fn update_refreshes_every_team_copy_but_preserves_project_edits() {
         "echo later\n",
     )
     .unwrap();
-    assert!(update(&root, "demo", &skill).is_err());
+    assert!(update(&root, "demo", &skill, false).is_err());
     assert_eq!(
         fs::read_to_string(pjoin(&root, ".agents/skills/demo/scripts/run.sh")).unwrap(),
         "echo updated\n"
@@ -367,7 +367,7 @@ fn failed_publication_restores_every_previous_team_file_and_manifest() {
     )
     .unwrap();
     transaction::FAIL_AFTER.with(|value| value.set(Some(1)));
-    let result = update(&root, "demo", &skill);
+    let result = update(&root, "demo", &skill, false);
     transaction::FAIL_AFTER.with(|value| value.set(None));
     assert!(result.is_err());
     assert_eq!(
@@ -382,7 +382,7 @@ fn failed_publication_restores_every_previous_team_file_and_manifest() {
             .unwrap()
             .contains("Team skill"));
     }
-    update(&root, "demo", &skill).unwrap();
+    update(&root, "demo", &skill, false).unwrap();
     assert_eq!(
         fs::read_to_string(pjoin(&root, ".agents/skills/demo/SKILL.md")).unwrap(),
         "# Updated\n"
@@ -628,7 +628,7 @@ fn clone_without_git_ignored_empty_directories_is_still_the_same_team_version() 
     fs::remove_dir(pjoin(&root, ".agents/skills/demo/scripts/cache")).unwrap();
     fs::remove_dir(pjoin(&root, ".claude/skills/demo/scripts/cache")).unwrap();
     assert!(!status(&root).unwrap().skills[0].modified);
-    update(&root, "demo", &skill).unwrap();
+    update(&root, "demo", &skill, false).unwrap();
 }
 
 #[test]

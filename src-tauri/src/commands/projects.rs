@@ -1053,9 +1053,11 @@ pub async fn update_project_skill_from_center(
     project_id: String,
     skill_relative_path: String,
     agent: String,
+    force: Option<bool>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
+        let force = force.unwrap_or(false);
         ensure_safe_skill_relative_path(&skill_relative_path)?;
 
         let record = store
@@ -1084,6 +1086,7 @@ pub async fn update_project_skill_from_center(
                 Path::new(&record.path),
                 &skill_relative_path,
                 managed,
+                force,
             )?;
             return Ok(());
         }
@@ -1091,8 +1094,8 @@ pub async fn update_project_skill_from_center(
 
         // Mirror the global-workspace protection (agent_workspace.rs): never
         // overwrite a project copy that has unsynced local edits (#225 review).
-        if classify_sync_status(skill, Some(managed)) == "project_newer" {
-            return Err(AppError::invalid_input(
+        if !force && classify_sync_status(skill, Some(managed)) == "project_newer" {
+            return Err(AppError::project_restore_required(
                 "Project skill is newer than the Skills Center version",
             ));
         }
@@ -1114,6 +1117,18 @@ pub async fn update_project_skill_from_center(
         }
 
         let source = PathBuf::from(&managed.central_path);
+
+        if !force && target_path.is_dir() {
+            let removals = crate::core::removals::removed_paths(&target_path, &source)
+                .map_err(AppError::io_with_context)?;
+            if !removals.is_empty() {
+                return Err(AppError::project_restore_required(format!(
+                    "Restoring from center would remove local files: {}",
+                    removals.join(", ")
+                )));
+            }
+        }
+
         let preference = crate::core::deployment_preferences::Preference::load(
             &store,
             crate::core::deployment_preferences::Scope::Linked,
