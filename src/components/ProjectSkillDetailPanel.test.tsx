@@ -214,7 +214,7 @@ it("places the project copy on the left and the matched library copy on the righ
   expect(right).not.toContain("project reference");
 });
 
-it("counts a project-only file as absent from the right-hand library", async () => {
+it("counts a project-only file as a local addition relative to the library", async () => {
   api.diff.mockResolvedValueOnce({
     ...diff,
     entries: [
@@ -228,9 +228,76 @@ it("counts a project-only file as absent from the right-hand library", async () 
   });
   await render();
   await click("差异");
-  expect(document.body.textContent).toContain("新增 0");
-  expect(document.body.textContent).toContain("删除 1");
+  expect(document.body.textContent).toContain("新增 1");
+  expect(document.body.textContent).toContain("删除 0");
   const headers = document.querySelectorAll("[data-diff-side]");
   expect(headers[0]?.textContent).not.toContain("此侧没有该文件");
   expect(headers[1]?.textContent).toContain("此侧没有该文件");
+});
+
+it("marks lines added locally with a green plus on the left", async () => {
+  api.diff.mockResolvedValueOnce({
+    ...diff,
+    entries: [
+      {
+        ...diff.entries[0],
+        original_text: "name: demo",
+        updated_text: "name: demo\nlicense: MIT",
+      },
+    ],
+  });
+  await render();
+  await click("差异");
+  const cell = [...document.querySelectorAll("td:nth-child(2)")].find((node) =>
+    node.textContent?.includes("license: MIT"),
+  );
+  expect(cell?.textContent).toContain("+");
+  expect(cell?.className).toContain("bg-[#dafbe1]");
+  expect(document.body.textContent).toContain("@@ +");
+});
+
+it("marks lines deleted locally with a red minus on the right", async () => {
+  api.diff.mockResolvedValueOnce({
+    ...diff,
+    entries: [
+      {
+        ...diff.entries[0],
+        original_text: "name: demo\nold content",
+        updated_text: "name: demo",
+      },
+    ],
+  });
+  await render();
+  await click("差异");
+  const cell = [...document.querySelectorAll("td:nth-child(4)")].find((node) =>
+    node.textContent?.includes("old content"),
+  );
+  expect(cell?.textContent).toContain("-");
+  expect(cell?.className).toContain("bg-[#ffebe9]");
+});
+
+it("counts a center-only file as deleted locally and keeps it on the right", async () => {
+  api.diff.mockResolvedValueOnce({
+    ...diff,
+    entries: [
+      {
+        ...diff.entries[0],
+        status: "removed",
+        original_text: "center-only content",
+        updated_text: null,
+      },
+    ],
+  });
+  await render();
+  await click("差异");
+  expect(document.body.textContent).toContain("新增 0");
+  expect(document.body.textContent).toContain("删除 1");
+  const headers = document.querySelectorAll("[data-diff-side]");
+  expect(headers[0]?.textContent).toContain("此侧没有该文件");
+  expect(headers[1]?.textContent).not.toContain("此侧没有该文件");
+  const right = [...document.querySelectorAll("td:nth-child(4)")].find((node) =>
+    node.textContent?.includes("center-only content"),
+  );
+  expect(right?.textContent).toContain("-");
+  expect(right?.className).toContain("bg-[#ffebe9]");
 });

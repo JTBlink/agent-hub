@@ -31,7 +31,10 @@ function fileIcon(path: string) {
   return isMarkdown(path) ? FileText : FileCode;
 }
 
-function makeInitialContent(skillId: string, doc: SkillDocument): SkillFileContent {
+function makeInitialContent(
+  skillId: string,
+  doc: SkillDocument,
+): SkillFileContent {
   return {
     skill_id: skillId,
     relative_path: doc.filename,
@@ -47,24 +50,29 @@ export function SkillFileBrowser({
 }: SkillFileBrowserProps) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<SkillFileEntry[] | null>(null);
-  const [selectedFile, setSelectedFile] = useState<string>(
-    initialDoc.filename,
-  );
-  const [fileContent, setFileContent] = useState<SkillFileContent>(
-    () => makeInitialContent(skillId, initialDoc),
+  const [selectedFile, setSelectedFile] = useState<string>(initialDoc.filename);
+  const [fileContent, setFileContent] = useState<SkillFileContent>(() =>
+    makeInitialContent(skillId, initialDoc),
   );
   const [loadingContent, setLoadingContent] = useState(false);
   const cacheRef = useRef(new Map<string, SkillFileContent>());
   const requestIdRef = useRef(0);
 
+  const [prevKey, setPrevKey] = useState(() =>
+    JSON.stringify([skillId, initialDoc.filename]),
+  );
+  const currentKey = JSON.stringify([skillId, initialDoc.filename]);
+  if (currentKey !== prevKey) {
+    setPrevKey(currentKey);
+    setSelectedFile(initialDoc.filename);
+    setFileContent(makeInitialContent(skillId, initialDoc));
+    setFiles(null);
+  }
+
   useEffect(() => {
     const initial = makeInitialContent(skillId, initialDoc);
     cacheRef.current = new Map();
     cacheRef.current.set(initialDoc.filename, initial);
-    setSelectedFile(initialDoc.filename);
-    setFileContent(initial);
-    setFiles(null);
-
     getSkillFiles(skillId)
       .then(setFiles)
       .catch(() => setFiles([]));
@@ -111,7 +119,10 @@ export function SkillFileBrowser({
         <div className="mb-4 max-h-32 overflow-y-auto">
           <div className="flex flex-wrap gap-1">
             {groups.map((group) => (
-              <div key={group.dir} className="flex flex-wrap items-center gap-1">
+              <div
+                key={group.dir}
+                className="flex flex-wrap items-center gap-1"
+              >
                 {group.dir && (
                   <span className="ml-1 mr-0.5 text-[11px] text-faint">
                     {group.dir}/
@@ -119,7 +130,8 @@ export function SkillFileBrowser({
                 )}
                 {group.files.map((entry) => {
                   const Icon = fileIcon(entry.relative_path);
-                  const name = entry.relative_path.split("/").pop() ?? entry.relative_path;
+                  const name =
+                    entry.relative_path.split("/").pop() ?? entry.relative_path;
                   return (
                     <button
                       key={entry.relative_path}

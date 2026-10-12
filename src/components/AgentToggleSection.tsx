@@ -1,8 +1,5 @@
-import { useState } from "react";
 import {
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Circle,
   Loader2,
 } from "lucide-react";
@@ -33,13 +30,13 @@ export function AgentToggleSection({
   className,
 }: Props) {
   const { t } = useTranslation();
-  const [showUnavailable, setShowUnavailable] = useState(false);
 
   const availableItems = items.filter((item) => item.isAvailable);
-  const unavailableItems = items.filter((item) => !item.isAvailable);
   const enabledAvailableCount = availableItems.filter(
     (item) => item.enabled,
   ).length;
+
+  if (availableItems.length === 0) return null;
 
   return (
     <div className={cn("rounded-xl border border-border-subtle", className)}>
@@ -58,51 +55,16 @@ export function AgentToggleSection({
           </div>
         </div>
 
-        {availableItems.length > 0 && (
-          <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-3">
-            {availableItems.map((item) => (
-              <AgentToggle
-                key={item.key}
-                item={item}
-                loading={togglingKey === item.key}
-                onToggle={onToggle}
-              />
-            ))}
-          </div>
-        )}
-
-        {unavailableItems.length > 0 && (
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => setShowUnavailable((prev) => !prev)}
-              className="inline-flex items-center gap-1 text-[12px] text-muted transition-colors hover:text-secondary"
-            >
-              {showUnavailable ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-              <span>
-                {t("mySkills.agentUnavailableCount", {
-                  count: unavailableItems.length,
-                })}
-              </span>
-            </button>
-            {showUnavailable && (
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5 md:grid-cols-3">
-                {unavailableItems.map((item) => (
-                  <AgentToggle
-                    key={item.key}
-                    item={item}
-                    loading={togglingKey === item.key}
-                    onToggle={onToggle}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-3">
+          {availableItems.map((item) => (
+            <AgentToggle
+              key={item.key}
+              item={item}
+              loading={togglingKey === item.key}
+              onToggle={onToggle}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

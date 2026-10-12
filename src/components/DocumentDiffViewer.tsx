@@ -4,6 +4,8 @@ import { cn } from "../utils";
 interface DocumentDiffViewerProps {
   original: string;
   updated: string;
+  /** Display the updated copy on the left without reversing old-to-new changes. */
+  updatedOnLeft?: boolean;
   className?: string;
 }
 
@@ -42,8 +44,8 @@ interface DiffHunk {
 const CONTEXT_LINES = 3;
 
 function buildDiffRows(original: string, updated: string): DiffRow[] {
-  const left = original.split("\n");
-  const right = updated.split("\n");
+  const left = original === "" ? [] : original.split("\n");
+  const right = updated === "" ? [] : updated.split("\n");
   const dp = Array.from({ length: left.length + 1 }, () =>
     Array<number>(right.length + 1).fill(0),
   );
@@ -182,8 +184,8 @@ function createHunk(
   };
 }
 
-function cellTone(type: DiffRow["type"], side: "left" | "right") {
-  if (type === "removed" && side === "left") {
+function cellTone(type: DiffRow["type"], version: "original" | "updated") {
+  if (type === "removed" && version === "original") {
     return {
       lineNoClass:
         "bg-[#ffd7d5] text-red-900 dark:bg-[#3c1618] dark:text-red-200",
@@ -192,7 +194,7 @@ function cellTone(type: DiffRow["type"], side: "left" | "right") {
       markerClass: "text-red-700 dark:text-red-300",
     };
   }
-  if (type === "added" && side === "right") {
+  if (type === "added" && version === "updated") {
     return {
       lineNoClass:
         "bg-[#aceebb] text-emerald-900 dark:bg-[#1b4721] dark:text-emerald-200",
@@ -214,16 +216,16 @@ function DiffCell({
   number,
   content,
   type,
-  side,
+  version,
 }: {
   number: number | null;
   content: string;
   type: DiffRow["type"];
-  side: "left" | "right";
+  version: "original" | "updated";
 }) {
-  const tone = cellTone(type, side);
+  const tone = cellTone(type, version);
   const marker =
-    side === "left"
+    version === "original"
       ? type === "removed"
         ? "-"
         : " "
@@ -267,6 +269,7 @@ function DiffCell({
 export function DocumentDiffViewer({
   original,
   updated,
+  updatedOnLeft = false,
   className,
 }: DocumentDiffViewerProps) {
   const rows = useMemo(
@@ -299,10 +302,14 @@ export function DocumentDiffViewer({
         >
           <div className="grid grid-cols-2 border-b border-border-subtle bg-[#ddf4ff] dark:bg-[#0c2d40]">
             <div className="border-r border-border-subtle px-3 py-2 font-mono text-[11px] text-sky-800 dark:text-sky-300">
-              @@ -{hunk.leftStart},{hunk.leftCount}
+              {updatedOnLeft
+                ? `@@ +${hunk.rightStart},${hunk.rightCount}`
+                : `@@ -${hunk.leftStart},${hunk.leftCount}`}
             </div>
             <div className="px-3 py-2 font-mono text-[11px] text-sky-800 dark:text-sky-300">
-              @@ +{hunk.rightStart},{hunk.rightCount}
+              {updatedOnLeft
+                ? `@@ -${hunk.leftStart},${hunk.leftCount}`
+                : `@@ +${hunk.rightStart},${hunk.rightCount}`}
             </div>
           </div>
 
@@ -321,16 +328,20 @@ export function DocumentDiffViewer({
                     className="border-b border-border-subtle/80 last:border-b-0"
                   >
                     <DiffCell
-                      number={row.leftNumber}
-                      content={row.leftContent}
+                      number={updatedOnLeft ? row.rightNumber : row.leftNumber}
+                      content={
+                        updatedOnLeft ? row.rightContent : row.leftContent
+                      }
                       type={row.type}
-                      side="left"
+                      version={updatedOnLeft ? "updated" : "original"}
                     />
                     <DiffCell
-                      number={row.rightNumber}
-                      content={row.rightContent}
+                      number={updatedOnLeft ? row.leftNumber : row.rightNumber}
+                      content={
+                        updatedOnLeft ? row.leftContent : row.rightContent
+                      }
                       type={row.type}
-                      side="right"
+                      version={updatedOnLeft ? "original" : "updated"}
                     />
                   </tr>
                 ))}

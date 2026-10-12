@@ -62,7 +62,10 @@ import type {
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { SkillDirectoryActions } from "../components/SkillDirectoryActions";
-import { deleteProjectSkillGroup } from "../lib/projectLibraryActions";
+import {
+  deleteProjectSkillGroup,
+  toggleProjectSkillGroup,
+} from "../lib/projectLibraryActions";
 import { ProjectLibraryPanel } from "../components/ProjectLibraryPanel";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { AgentIcon } from "../components/AgentIcon";
@@ -786,15 +789,11 @@ export function ProjectDetail() {
     setTogglingSkill(getSkillKey(skill));
     try {
       const nextEnabled = skill.enabledCount !== skill.totalCount;
-      await Promise.all(
-        skill.variants.map((variant) =>
-          api.toggleProjectSkill(
-            id,
-            variant.relative_path,
-            variant.agent,
-            nextEnabled,
-          ),
-        ),
+      await toggleProjectSkillGroup(
+        id,
+        skill.variants,
+        nextEnabled,
+        project?.workspace_type === "linked",
       );
       if (skill.enabledCount === skill.totalCount) {
         toast.success(t("project.skillDisabled", { name: skill.name }));

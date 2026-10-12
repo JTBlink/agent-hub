@@ -83,3 +83,19 @@ pub async fn remove_project_library_skill(
     })
     .await?
 }
+
+/// Whole-project toggle is one operation, not racing per-Agent requests.
+#[tauri::command]
+pub async fn set_project_library_skill_enabled(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    directory: String,
+    enabled: bool,
+) -> Result<ProjectLibraryStatus, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let record = project(&store, &project_id)?;
+        project_library::set_enabled(Path::new(&record.path), &directory, enabled)
+    })
+    .await?
+}
