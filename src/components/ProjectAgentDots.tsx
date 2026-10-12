@@ -15,11 +15,10 @@ function shortLabel(displayName: string, key: string): string {
   return word.slice(0, 2).toUpperCase();
 }
 
-type DotState = "synced" | "available" | "orphan";
+type DotState = "synced" | "available";
 
 interface Props {
   assignedAgents: string[];
-  agentDisplayNames?: Record<string, string>;
   targets: ProjectAgentTarget[];
   limit?: number;
   size?: "sm" | "md";
@@ -35,7 +34,6 @@ interface Props {
 
 export function ProjectAgentDots({
   assignedAgents,
-  agentDisplayNames = {},
   targets,
   limit,
   size = "md",
@@ -46,28 +44,15 @@ export function ProjectAgentDots({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const assignedSet = new Set(assignedAgents);
-  const availableKeys = new Set(targets.map((t) => t.key));
-
-  const dots: { key: string; displayName: string; state: DotState }[] = [];
-
-  for (const target of targets) {
-    dots.push({
+  // Local installation controls these shortcuts, including the overflow count.
+  // Assigned team copies remain intact even when their host is not installed.
+  const dots: { key: string; displayName: string; state: DotState }[] = targets
+    .filter((target) => target.installed)
+    .map((target) => ({
       key: target.key,
       displayName: target.display_name,
       state: assignedSet.has(target.key) ? "synced" : "available",
-    });
-  }
-
-  for (const agentKey of assignedAgents) {
-    if (availableKeys.has(agentKey)) continue;
-    const known = targets.find((t) => t.key === agentKey);
-    dots.push({
-      key: agentKey,
-      displayName:
-        known?.display_name || agentDisplayNames[agentKey] || agentKey,
-      state: "orphan",
-    });
-  }
+    }));
 
   const collapsedDots = typeof limit === "number" ? dots.slice(0, limit) : dots;
   const hiddenCount = dots.length - collapsedDots.length;
@@ -81,27 +66,22 @@ export function ProjectAgentDots({
   const iconStateClass: Record<DotState, string> = {
     synced: "bg-surface",
     available: "bg-surface opacity-45",
-    orphan: "ring-1 ring-inset ring-amber-500/60 bg-surface",
   };
 
   const textStateClass: Record<DotState, string> = {
     synced:
       "border-transparent bg-[var(--color-text-primary)] text-[var(--color-bg)]",
     available: "border border-border-subtle bg-surface-hover text-faint",
-    orphan:
-      "border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400",
   };
 
   const stateTitle: Record<DotState, string> = {
     synced: " · assigned",
     available: " · available",
-    orphan: " · assigned · agent unavailable",
   };
 
   const clickHint: Record<DotState, string> = {
     synced: ` · ${t("project.agentClickRemove")}`,
     available: ` · ${t("project.agentClickAdd")}`,
-    orphan: ` · ${t("project.agentClickRemove")}`,
   };
 
   return (
