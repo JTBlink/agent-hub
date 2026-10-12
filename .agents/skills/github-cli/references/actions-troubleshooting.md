@@ -46,7 +46,7 @@ gh run view <new-run-id> --repo <repo> --json status,conclusion,jobs,url
 
 通常间隔 30–60 秒查询一次，按阶段变化、新错误或必要等待状态报告进展；结合平台耗时和 job timeout 判断，不能仅凭几轮状态未变化判定卡死。手动 CI 成功只证明对应检查通过，不代表版本已经发布。
 
-已有同一 SHA 的 queued / in_progress 安装包候选时先跟踪，不重复触发或取消正常构建。不同 SHA 的旧 run 不包含新修复；修复先 rebase 并快进合入 main，新候选只从 main 触发。当前同 ref 的手动 concurrency 会取消旧 run，因此等待该 ref 的现有候选结束，再重新核对远端 main 与发布 SHA 后触发，不创建独立候选分支。候选三平台成功后才能创建正式 tag；验证入口、源码完整性与免费资源策略见 [发布前验证](release-prevention.md)。同一错误重现即停止盲重试并修复原因；平台 artifacts 保留 1 天，汇总依赖的 artifacts 过期时重建完整矩阵，不能只重跑汇总。
+已有同一 SHA 的 queued / in_progress 安装包候选时先跟踪，不重复触发或取消正常构建。不同 SHA 的旧 run 不包含新修复；修复先 rebase 并快进合入 main，新候选只从 main 触发。当前 concurrency 按事件和 SHA 隔离，运行中的任务受保护；不同 SHA 可独立验证，无需等待旧提交编译完成，也不创建独立候选分支。重试历史 workflow 时先检查其实际 concurrency；仍按 ref 取消旧运行的版本需等待对应任务结束。候选三平台成功后才能创建正式 tag；验证入口、源码完整性与免费资源策略见 [发布前验证](release-prevention.md)。同一错误重现即停止盲重试并修复原因；平台 artifacts 保留 1 天，汇总依赖的 artifacts 过期时重建完整矩阵，不能只重跑汇总。
 
 ## 交付证据
 

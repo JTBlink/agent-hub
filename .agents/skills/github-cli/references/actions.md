@@ -8,12 +8,12 @@
 
 ## 不可变输入与依赖
 
-- preflight 将请求 ref 固定为 commit SHA；后续检查、矩阵、汇总和 Release 全部检出同一 SHA，不能各自读取变化中的分支 HEAD。
+- preflight 检出事件的 `github.sha`，并将其作为不可变提交输出；后续检查、矩阵、汇总和 Release 全部检出同一 SHA，不能各自读取变化中的分支 HEAD。
 - 版本校验在构建前执行，tag 与 `VERSION` 及所有配置一致。质量门禁通过后才构建，全部平台成功后才汇总与发布。
 - tag preflight 必须读取同一 SHA 的成功手动三平台候选，并检查各平台测试 / smoke 与汇总校验；仅 preflight 获得 `actions: read`，候选自身不执行此检查。
 - 前端使用 Node.js 22 和 `npm ci`，Rust stable 配套 rustfmt、Clippy；依赖锁文件必须提交。缓存按平台、工具链与锁文件划分，不以缓存命中代替检查。
-- 工作流 job 设置合理 timeout；矩阵按原生 Runner 构建。非发布候选可取消同 ref 的旧 run，已启动正式 tag run 保留，不因后续手动任务被取消。
-- concurrency group 包含事件和 ref；各平台 core tests 在安装包 release 编译前执行。Rust 缓存只由默认分支写入，保留默认容量，不启用收费 Runner 或扩大存储额度；依据见 [资源控制](release-prevention.md)。
+- 工作流 job 设置合理 timeout；矩阵按原生 Runner 构建。安装包 concurrency group 包含事件和 commit SHA，`cancel-in-progress: false` 保留正常运行的候选与正式发布；main 上的新修复可以独立验证，同 SHA 优先复用已有运行。
+- 各平台 core tests 在安装包 release 编译前执行。Rust 缓存只由默认分支写入，保留默认容量，不启用收费 Runner 或扩大存储额度；依据见 [资源控制](release-prevention.md)。
 - 经项目包装构建入口准备 CLI sidecar，不能直接调用工具跳过约定。核心检查保持格式、lint、测试、类型与前端构建，契约和任务检查按维护的指南同步。
 
 ## 权限、密钥与输入

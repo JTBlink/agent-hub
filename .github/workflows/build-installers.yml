@@ -10,10 +10,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: installers-${{ github.event_name }}-${{ github.ref }}
-  # A second manual run for the same ref supersedes the first one. Published
-  # tag runs remain protected from cancellation once they have started.
-  cancel-in-progress: ${{ github.event_name != 'push' }}
+  group: installers-${{ github.event_name }}-${{ github.sha }}
+  # New revisions can validate while older builds finish. Active candidate
+  # and tag runs are preserved; reuse an existing run for the same SHA.
+  cancel-in-progress: false
 
 jobs:
   preflight:
@@ -30,7 +30,7 @@ jobs:
       - name: Check out requested revision
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.sha }}
 
       - name: Resolve immutable build revision
         id: resolve_ref
