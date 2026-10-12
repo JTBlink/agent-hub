@@ -138,7 +138,7 @@ function SortableSkillItem({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
+      {...(disabled ? {} : attributes)}
       className={cn("h-full", className)}
     >
       {children(handle)}
@@ -1142,16 +1142,18 @@ export function MySkills() {
         </h1>
       </div>
 
-      <SkillGroupContext
-        groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
-        count={
-          viewedSkillGroup
-            ? skills.filter((skill) =>
-                skill.skill_group_ids.includes(viewedSkillGroup.id),
-              ).length
-            : 0
-        }
-      />
+      {viewedSkillGroup && (
+        <SkillGroupContext
+          groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
+          count={
+            viewedSkillGroup
+              ? skills.filter((skill) =>
+                  skill.skill_group_ids.includes(viewedSkillGroup.id),
+                ).length
+              : 0
+          }
+        />
+      )}
 
       <AgentControlSetupCard respectDismissal={false} />
 
@@ -1280,9 +1282,7 @@ export function MySkills() {
         groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
         viewingUngrouped={viewingUngrouped}
         ungrouped={libraryFilters.ungrouped}
-        ungroupedCount={
-          skills.filter((skill) => skill.skill_group_ids.length === 0).length
-        }
+        ungroupedCount={libraryFilters.ungroupedCount}
         onUngroupedChange={() =>
           libraryFilters.setUngrouped((current) => !current)
         }

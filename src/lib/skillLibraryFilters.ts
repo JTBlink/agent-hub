@@ -106,6 +106,19 @@ export function filterSkillLibrary(
   const base = skills.filter((skill) =>
     matchesLibraryMetadata(skill, names, state, viewingUngrouped),
   );
+  const groupCandidates = state.ungrouped
+    ? skills.filter((skill) =>
+        matchesLibraryMetadata(
+          skill,
+          names,
+          { ...state, ungrouped: false },
+          viewingUngrouped,
+        ),
+      )
+    : base;
+  const libraryGroupScope = groupCandidates.filter((skill) =>
+    matchesDeployment(skill, state.deployment),
+  );
   const scope = base.filter((skill) =>
     matchesMembership(skill, state.membership, groupId),
   );
@@ -129,9 +142,12 @@ export function filterSkillLibrary(
       undeployed: scope.length - deployed,
     },
     membershipCounts: {
-      all: membershipScope.length,
+      all: groupId ? membershipScope.length : libraryGroupScope.length,
       enabled,
       available: membershipScope.length - enabled,
     },
+    ungroupedCount: libraryGroupScope.filter(
+      (skill) => skill.skill_group_ids.length === 0,
+    ).length,
   };
 }
