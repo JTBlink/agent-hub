@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { parse } from "yaml";
 
 import { describe, expect, it } from "vitest";
 
@@ -20,6 +21,26 @@ const websiteIndex = readFileSync(
 );
 
 describe("GitHub Actions workflow contract", () => {
+  it("isolates different revisions of main without canceling active installer runs", () => {
+    const workflow = parse(installers);
+    const group = (
+      sha,
+      event_name = "workflow_dispatch",
+      ref = "refs/heads/main",
+    ) =>
+      workflow.concurrency.group.replace(
+        /\$\{\{ github\.(event_name|sha|ref) \}\}/g,
+        (_, key) => ({ sha, event_name, ref })[key],
+      );
+    expect(group("first-revision")).not.toBe(group("fixed-revision"));
+    expect(group("fixed-revision")).toBe(
+      group("fixed-revision", "workflow_dispatch", "refs/tags/v0.1.5"),
+    );
+    expect(group("fixed-revision", "push")).not.toBe(group("fixed-revision"));
+    expect(workflow.concurrency["cancel-in-progress"]).toBe(false);
+    expect(workflow.jobs.preflight.steps[0].with.ref).toBe("${{ github.sha }}");
+  });
+
   it("requires the exact commit's installer candidate before tag builds", () => {
     const preflight = installers.match(
       /\n  preflight:[\s\S]*?(?=\n  quality:)/,
@@ -45,7 +66,7 @@ describe("GitHub Actions workflow contract", () => {
       "cargo test --manifest-path src-tauri/Cargo.toml --locked",
     );
     expect(installers).toContain(
-      "group: installers-${{ github.event_name }}-${{ github.ref }}",
+      "group: installers-${{ github.event_name }}-${{ github.sha }}",
     );
     for (const workflow of [installers, ci]) {
       expect(workflow).toContain(
@@ -120,7 +141,7 @@ describe("GitHub Actions workflow contract", () => {
   it("supports manual and v-tag installer builds", () => {
     expect(installers).toContain("workflow_dispatch:");
     expect(installers).toMatch(/tags:\n\s+- "v\*"/);
-    expect(installers).toContain("ref: ${{ github.ref }}");
+    expect(installers).toContain("ref: ${{ github.sha }}");
     expect(installers).not.toContain("inputs.ref");
     expect(installers).toContain(
       'if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/tags/v* ]]; then',

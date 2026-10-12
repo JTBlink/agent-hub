@@ -30,7 +30,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 | `macos-latest`   | macOS Universal (Apple Silicon + Intel) | `.dmg`              |
 | `ubuntu-24.04`   | Linux x86_64                            | `.AppImage`、`.deb` |
 
-使用 Tauri 官方构建工具生成平台原生包。预检任务先把输入的 branch、tag 或 commit 解析为不可变 commit SHA，后续质量门禁、三平台构建和汇总任务统一检出该 SHA。手动运行会上传各平台 artifacts；汇总任务生成全部安装包、`SHA256SUMS`、`CHANGELOG.md`、版本说明和支持矩阵，并运行 `release:verify` 检查四种安装格式、元数据和每一条校验和。当前 workflow 没有上传汇总 artifact，不能将汇总目录描述为可下载候选。正式 tag 同时创建 GitHub Release。汇总目录中的安装包会扁平化，`SHA256SUMS` 可直接在 Release 附件所在目录校验。
+使用 Tauri 官方构建工具生成平台原生包。预检任务检出事件的 `github.sha`，避免等待 Runner 时 branch / tag 前进导致源码变化；并发组按事件与 SHA 隔离，正常运行不被新候选取消。后续质量门禁、三平台构建和汇总任务统一检出该 SHA。手动运行会上传各平台 artifacts；汇总任务生成全部安装包、`SHA256SUMS`、`CHANGELOG.md`、版本说明和支持矩阵，并运行 `release:verify` 检查四种安装格式、元数据和每一条校验和。当前 workflow 没有上传汇总 artifact，不能将汇总目录描述为可下载候选。正式 tag 同时创建 GitHub Release。汇总目录中的安装包会扁平化，`SHA256SUMS` 可直接在 Release 附件所在目录校验。
 
 平台构建命令统一经过 `scripts/build.mjs` 编排。Unix 使用 `./agent-hub.sh build`，Windows 使用 `agent-hub.bat build`，CI 使用 `npm run app:build -- <Tauri 参数>`；这些入口只在当前平台的原生 Runner 上生成该平台安装包，不能替代 macOS、Windows 和 Linux 之间的交叉编译工具链。
 

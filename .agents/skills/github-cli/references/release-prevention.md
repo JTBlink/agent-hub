@@ -36,7 +36,7 @@ npm run release:ready -- v<version>
 - 默认缓存额度为每仓库 10 GiB；超额付费需要提高缓存限制。保留默认限制，不自动扩大存储额度、修改账户预算或启用付费资源。[计费规则](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
 - Rust 缓存只由默认分支写入，候选和 tag 可读取可用缓存；避免每个 tag 保存一份大型缓存挤掉默认分支缓存。保持按平台、工具链、锁文件隔离，不删除所有缓存解决普通代码失败。[rust-cache 行为](https://github.com/Swatinem/rust-cache)
 - 格式 / lint / 编译检查先于矩阵；各平台 core tests 先于安装包 release 编译。保留完整质量门禁、三平台与 smoke。候选与正式构建仍各执行一次，当前不复用候选安装包发布，避免错误 SHA 或未经签名产物混入 Release。
-- 候选与 tag 使用不同 concurrency group，手动重跑不会取消正式 tag 发布；普通分支提交和 PR 保持不自动运行。
+- 安装包 concurrency group 按事件和 SHA 隔离，`cancel-in-progress: false` 保护正常运行；不同修复 SHA 可并行验证，同 SHA 复用已有候选。手动重跑不会取消正式 tag 发布；普通分支提交和 PR 保持不自动运行。
 
 可用以下只读命令核实当前仓库与存储，不把账户计费权限失败当作额度足够：
 

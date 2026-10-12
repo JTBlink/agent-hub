@@ -22,7 +22,7 @@
 7. 查询同 SHA 的三平台 Build Installers 候选：成功则复用，进行中则跟踪，没有可用候选才确认远端 main 指向该 SHA 并手动运行。全部测试、打包、安装 smoke 和汇总校验通过后，执行 `npm run release:ready -- v<version>`，再在同一 SHA 创建 tag。细节见 [发布前验证](release-prevention.md)。
 8. 最终打 tag 前发布检出干净；tag 指向含版本、说明及本次功能的已验证发布 SHA。新提交需要自己的候选证据；共享主分支继续前进不改变原 SHA 的证据。
 
-共享工作区可能在等待构建期间被其他任务提交。记录仓库、版本、发布 SHA、候选 workflow / event / run ID；使用隔离检出操作，只纳入本次发布范围的提交。当前手动工作流按 ref 触发，不能用 `--ref main` 指定已离开 main 顶端的旧 SHA。触发前核实远端 main，触发后核对 run 的 `headSha` 与 preflight 固定的构建 SHA；不同则不能作为本次候选。main 已变化且原 SHA 没有可用候选时，先核实新增提交符合发布范围，再明确重新选择并验证新 SHA；不能静默换 SHA 或另建候选分支绕过。原 SHA 已有成功候选时仍可在其 detached 检出打 tag。候选和 tag 始终绑定固定 SHA，不按“最新运行”判断。
+共享工作区可能在等待构建期间被其他任务提交。记录仓库、版本、发布 SHA、候选 workflow / event / run ID；使用隔离检出操作，只纳入本次发布范围的提交。当前手动工作流按 ref 触发，不能用 `--ref main` 指定已离开 main 顶端的旧 SHA；运行开始后 preflight 检出事件的 `github.sha`，main 再前进不会改变其源码。触发前核实远端 main，触发后核对 run 的 `headSha` 与 preflight 固定的构建 SHA；不同则不能作为本次候选。main 已变化且原 SHA 没有可用候选时，先核实新增提交符合发布范围，再明确重新选择并验证新 SHA；不能静默换 SHA 或另建候选分支绕过。原 SHA 已有成功候选时仍可在其 detached 检出打 tag。候选和 tag 始终绑定固定 SHA，不按“最新运行”判断。
 
 普通分支 push 不自动执行 CI。发布必须有成功的同 SHA 手动 Build Installers 候选；独立 CI 适用于只需质量诊断的任务，无需和安装包候选重复执行。手动构建只产出候选 artifacts，不创建正式 Release。
 

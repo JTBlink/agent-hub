@@ -28,3 +28,5 @@ Blocked by: none
 - [首轮修复候选](https://github.com/JTBlink/agent-hub/actions/runs/38260043773) 的完整质量门禁通过；Windows 原生测试在 project_skill_update 的四个用例中失败，均来自 fixture 用只读 File::open 句柄调用 set_times，返回 PermissionDenied。macOS / Linux 的正常构建继续跟踪。
 - fixture 改用 OpenOptions 的可写句柄，保持内容、不截断文件，保留四个失败用例的业务断言；没有修改恢复业务逻辑或跳过 Windows 检查。新 SHA 需重新完成三平台候选。
 - 本地相关 5 个恢复行为测试、Rust 格式与严格 all-targets Clippy 通过。Windows 失败与句柄权限契约一致，参见 [SetFileTime 官方说明](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime)。Standards / Spec 复核：修正 fixture 权限，不改变恢复保护、失败保留与路径防护的测试行为。
+- 旧 workflow 按 main ref 分组，会让新修复取消仍在正常编译的旧 macOS；历史 Universal job 耗时约 33 分钟。安装包改为按事件 / SHA 隔离并保护运行中任务，preflight 直接检出事件 SHA，新候选无需另建分支或取消旧构建。github-cli 修正到 1.4.1，同步现行并发与不可变检出规范。
+- 新增并发合约回归：同一 main 的不同提交应属于不同组，同 SHA 复用同组，候选 / tag 分组分离且运行中任务受保护。改动前重现同 ref 分组冲突；改动后发布 / 工作流相关 49 项测试与 lint 通过，随后进一步验证同 SHA 在不同 ref 上仍复用同组，并核对 preflight 检出事件 SHA。
