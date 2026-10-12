@@ -1840,6 +1840,7 @@ export function ProjectDetail() {
             kind: "project",
             projectId: id,
             projectName: project?.name ?? "",
+            teamSharing: project.workspace_type !== "linked",
             exportTargets,
             projectSkillDirNamesByAgent,
             projectCenterSkillIdsByAgent,
