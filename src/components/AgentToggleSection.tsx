@@ -1,8 +1,4 @@
-import {
-  CheckCircle2,
-  Circle,
-  Loader2,
-} from "lucide-react";
+import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
 import { AgentIcon } from "./AgentIcon";
@@ -66,6 +62,53 @@ export function AgentToggleSection({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+export function AgentToggleInline({
+  items,
+  togglingKey,
+  onToggle,
+}: Omit<Props, "className">) {
+  const availableItems = items.filter((item) => item.isAvailable);
+  if (availableItems.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {availableItems.map((item) => {
+        const loading = togglingKey === item.key;
+        const disabled = Boolean(item.disabled || loading);
+        return (
+          <button
+            key={item.key}
+            type="button"
+            title={item.displayName}
+            disabled={disabled}
+            onClick={() => onToggle(item.key, !item.enabled)}
+            className={cn(
+              "relative rounded-md p-0.5 transition-colors",
+              !disabled && "hover:bg-surface-hover",
+              disabled && "opacity-55",
+            )}
+          >
+            <AgentIcon
+              agentKey={item.key}
+              displayName={item.displayName}
+              className={cn(
+                "h-5 w-5 rounded-[3px]",
+                !item.enabled && "opacity-40 grayscale",
+              )}
+            />
+            {loading && (
+              <Loader2 className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 animate-spin text-muted" />
+            )}
+            {!loading && item.enabled && (
+              <span className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border border-bg-secondary bg-emerald-500" />
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
