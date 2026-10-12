@@ -27,3 +27,11 @@ Blocked by: D01
 
 - Standards：原规范迁移后只有一个维护位置；按任务读取，跨 skill 引用明确；发布路径 fixture 覆盖实际汇总读取，幂等 tag 流程不移动已发布版本。
 - Spec：满足项目共享目录、rust-dev 命名、独立 GitHub 发布 Skill、SOLID / UI / Actions 和自动 tag 约定；提交与 push 按用户授权执行。
+
+## 项目入口补充
+
+- 将现有 Claude Code 的 `rust-dev` 和 `github-cli` 项目相对链接随 Git 共享；复用 `.agents/skills` 实际内容。
+- 项目管理清单同步记录 Claude Code 与 Codex 的目标和链接方式，保留原内容指纹、来源与技能启停状态。
+- 验证：管理清单与四个实际相对链接一致，Git 索引及临时 checkout 中入口和 `SKILL.md` 可读取；JSON 格式、隐私和 `git diff --cached --check` 通过。
+- Standards：仅共享项目内相对入口和可移植管理记录，不包含个人路径或凭据。Spec：团队拉取后两个 Agent 可读取同一份已跟踪开发规范。
+- 本次为仓库开发入口维护，不改变产品行为、发布流程或兼容性，无需新增 CHANGELOG 记录；仅生成本地提交。
