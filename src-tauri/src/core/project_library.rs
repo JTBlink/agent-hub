@@ -1,5 +1,6 @@
 //! Portable project skills and team deployment, independent of a personal library.
 mod git;
+mod entries;
 mod manifest;
 mod transaction;
 
@@ -71,6 +72,7 @@ pub fn install(
             source: portable_source(skill),
             disabled: false,
             disabled_targets: BTreeSet::new(),
+            linked_targets: BTreeSet::new(),
             extra: BTreeMap::new(),
         };
         let paths = target_paths(root, &name, targets)?;
@@ -127,6 +129,7 @@ fn deploy_unlocked(
             source: None,
             disabled: false,
             disabled_targets: BTreeSet::new(),
+            linked_targets: BTreeSet::new(),
             extra: BTreeMap::new(),
         });
     if entry.disabled {
@@ -506,21 +509,12 @@ pub(crate) fn safe_name(name: &str) -> Result<()> {
 }
 
 pub(crate) fn safe_path(root: &Path, relative: &str) -> Result<PathBuf> {
-    path_guard::ensure_safe_skill_relative_path(relative)
-        .map_err(|e| anyhow::anyhow!(e.message))?;
-    if relative.contains(['\\', ':']) {
-        bail!("Invalid project relative path");
-    }
-    let target = root.join(relative);
+    let target = entries::path(root, relative)?;
     if !path_guard::is_path_safe(root, &target) {
         bail!("Project path escapes its workspace");
     }
-    // Reject link ancestors even when they resolve inside the project: a
-    // nominal dedicated target may alias canonical and destroy its contents.
-    for ancestor in target.ancestors().take_while(|path| *path != root) {
-        if fs::symlink_metadata(ancestor).is_ok_and(|meta| meta.file_type().is_symlink()) {
-            bail!("Project path contains a symbolic link; import or migrate explicitly");
-        }
+    if target.is_symlink() {
+        bail!("Project path contains a symbolic link; import or migrate explicitly");
     }
     Ok(target)
 }
@@ -531,7 +525,7 @@ fn check_replace(
     baseline: Option<&str>,
     desired: Option<&str>,
 ) -> Result<()> {
-    let current = fingerprint(&safe_path(root, path)?)?;
+    let current = entries::content_fingerprint(root, path)?;
     if current.is_none() || current.as_deref() == desired || current.as_deref() == baseline {
         return Ok(());
     }
@@ -558,8 +552,8 @@ fn target_paths(
         for existing in paths.values() {
             if existing != &path {
                 path_guard::ensure_disjoint_paths(
-                    &safe_path(root, existing)?,
-                    &safe_path(root, &path)?,
+                    &entries::path(root, existing)?,
+                    &entries::path(root, &path)?,
                 )
                 .map_err(|err| anyhow::anyhow!(err.message))?;
             }
@@ -570,13 +564,13 @@ fn target_paths(
 }
 
 pub(crate) fn validate_target(root: &Path, name: &str, path: &str) -> Result<()> {
-    let target = safe_path(root, path)?;
+    let target = entries::path(root, path)?;
     for relative in [
         canonical_path(name, false),
         canonical_path(name, true),
         MANIFEST.into(),
     ] {
-        let reference = safe_path(root, &relative)?;
+        let reference = entries::path(root, &relative)?;
         if reference != target {
             path_guard::ensure_disjoint_paths(&reference, &target)
                 .map_err(|err| anyhow::anyhow!(err.message))?;
@@ -688,3 +682,5 @@ fn publish_manifest(
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod compatibility_tests;
