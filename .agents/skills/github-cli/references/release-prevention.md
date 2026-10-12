@@ -6,12 +6,12 @@
 
 1. 完成版本、说明和 tracker，提交所有构建所需文件；检查 `git status --short`、`git diff --check`，不要纳入无关改动。被忽略的源码也可能不出现在 status 中。
 2. 固定发布 SHA，在临时 detached worktree 检出该提交，核实构建所需文件已提交；本地复现检查时使用 `npm ci` 和锁定依赖。该检出不共享原工作目录的生成文件或未跟踪文件。完整前端 / Rust 门禁可复用同 SHA 成功候选的质量 job，本地重点验证失败点与尚未覆盖的行为，不为同一证据重复全套检查。验证后移除自己创建的 worktree；不能通过清理用户工作区模拟干净检出。
-3. 先查询同 SHA 的手动 `build-installers.yml` 候选，复用成功运行或跟踪现有运行；没有可用候选才推送发布分支并触发。记录触发时 SHA，按 workflow、事件、分支和 SHA 找到 run，等待质量门禁、三平台 core tests、安装启动 smoke 和汇总校验全部通过。普通分支 push 不自动执行；无需同时再跑同一 SHA 的独立 CI。
+3. 先查询同 SHA 的手动 `build-installers.yml` 候选，复用成功运行或跟踪现有运行；没有可用候选才确认远端 main 指向该 SHA，并以 `--ref main` 触发，不创建发布分支。main 变化时按 [发布流程](release-flow.md) 重新核实范围与 SHA。记录触发时 SHA，按 workflow、事件、main 和 SHA 找到 run，核对实际构建 SHA，等待质量门禁、三平台 core tests、安装启动 smoke 和汇总校验全部通过。普通分支 push 不自动执行；无需同时再跑同一 SHA 的独立 CI。
 4. 在干净发布检出执行 `npm run release:ready -- v<version>`。脚本只读 Git / GitHub：核对版本、干净检出、同一 SHA 的成功手动安装包工作流，并检查六个 job、三平台测试与 smoke、汇总校验。无记录、未完成、跳过、SHA 不同、API 错误均不放行。
 5. 重新检查同名 tag 与 Release 后在该 SHA 创建并推送 tag。tag 的 preflight 再运行同一候选检查；新提交必须验证自己的 SHA，不能用上一次绿灯发布。共享分支前进时仍可发布原来已验证的 SHA，前提是它包含本次全部发布内容。
 
 ```bash
-gh workflow run build-installers.yml --repo <owner/repository> --ref <release-branch>
+gh workflow run build-installers.yml --repo <owner/repository> --ref main
 gh run list --repo <owner/repository> --workflow build-installers.yml --event workflow_dispatch --commit <release-sha> --json databaseId,headSha,status,conclusion,url
 npm run release:ready -- v<version>
 ```

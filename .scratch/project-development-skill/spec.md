@@ -11,3 +11,5 @@ GitHub skill 最终命名为 `github-cli`，优先通过 `gh` 完成 Actions 故
 用户最新要求：先完成 0.1.4 发布修复，不升级至 0.1.5。固定候选 SHA、保留三平台检查，并确认版本 tag 与产物源码一致；任务：[D06](issues/D06-recover-v014-release.md)。
 
 发布完成后审查并优化 github-cli：保留用户指定版本，处理既有 tag 冲突；共享工作区用不可变 SHA 和明确 run ID 关联证据，复用同 SHA 已有检查，区分已失败 job 与仍运行的 workflow，并说明 release:ready 的实际边界。只更新技能规范、界面元数据和项目记录；应用仍为 0.1.4，不触发新发布。任务：[D07](issues/D07-github-cli-workflow-review.md)。
+
+用户要求发布不创建分支，分支改动及时 rebase 并快进合入 main，保持单线历史。github-cli 1.4.0 统一 main、固定 SHA、候选与 tag 的发布约定；隔离检查使用 detached worktree，完成后安全清理临时分支。main 前进时重新核实发布范围和候选 SHA，同 ref 候选串行触发以免取消正常构建。本次只更新规范与检查提示，保留其他任务的应用版本改动，不触发发版。任务：[D08](issues/D08-linear-main-release.md)。

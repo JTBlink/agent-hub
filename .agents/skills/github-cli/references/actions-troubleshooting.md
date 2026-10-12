@@ -32,7 +32,7 @@ gh api "repos/<owner/repository>/actions/jobs/<job-id>/logs" > "<temporary-log-f
 | 情况                                     | 行为                                                                                                    |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | 同一 SHA 的暂时故障，无代码变化          | 在用户处理该任务的范围内执行 `gh run rerun <run-id> --repo <repo> --failed`                             |
-| 修复需要新提交                           | 提交并推送指定分支，手动触发新 SHA 的候选 CI / Build Installers；旧 run 重跑仍用旧 SHA，不含修复        |
+| 修复需要新提交                           | 提交修复，安装包候选需快进集成到 main；普通 CI 可在任务分支诊断。新 SHA 触发新运行，旧 run 重跑不含修复 |
 | 正式 tag 构建失败且无 Release            | 同 SHA 临时故障重跑失败任务；修复源码先验证新候选，再按 [发布流程](release-flow.md) 处理版本与 tag 冲突 |
 | 正式 tag 对应源码有问题且 Release 已存在 | 保留旧 tag；验证新提交，按发布流程处理，不擅自改变用户指定版本                                          |
 | 缺少用户管理的 Secrets、证书或权限       | 完成本地可验证工作并报告所缺配置，不虚构凭据、不绕过签名门禁                                            |
@@ -46,7 +46,7 @@ gh run view <new-run-id> --repo <repo> --json status,conclusion,jobs,url
 
 通常间隔 30–60 秒查询一次，按阶段变化、新错误或必要等待状态报告进展；结合平台耗时和 job timeout 判断，不能仅凭几轮状态未变化判定卡死。手动 CI 成功只证明对应检查通过，不代表版本已经发布。
 
-已有同一 SHA 的 queued / in_progress 安装包候选时先跟踪，不重复触发或取消正常构建。不同 SHA 的旧 run 不包含新修复；需要新候选时使用独立分支，当前同 ref 的手动 concurrency 会取消旧 run，不把重复触发当作无害操作。候选三平台成功后才能创建正式 tag；验证入口、源码完整性与免费资源策略见 [发布前验证](release-prevention.md)。同一错误重现即停止盲重试并修复原因；平台 artifacts 保留 1 天，汇总依赖的 artifacts 过期时重建完整矩阵，不能只重跑汇总。
+已有同一 SHA 的 queued / in_progress 安装包候选时先跟踪，不重复触发或取消正常构建。不同 SHA 的旧 run 不包含新修复；修复先 rebase 并快进合入 main，新候选只从 main 触发。当前同 ref 的手动 concurrency 会取消旧 run，因此等待该 ref 的现有候选结束，再重新核对远端 main 与发布 SHA 后触发，不创建独立候选分支。候选三平台成功后才能创建正式 tag；验证入口、源码完整性与免费资源策略见 [发布前验证](release-prevention.md)。同一错误重现即停止盲重试并修复原因；平台 artifacts 保留 1 天，汇总依赖的 artifacts 过期时重建完整矩阵，不能只重跑汇总。
 
 ## 交付证据
 
