@@ -41,3 +41,29 @@ it("disables both actions while upload is running", () => {
   expect(html.match(/disabled=""/g)).toHaveLength(2);
   expect(html).toContain("animate-spin");
 });
+
+it.each(["project_newer", "project_only", "center_newer", "diverged"] as const)(
+  "highlights the available sync direction for %s in cards and lists",
+  (status) => {
+    for (const variant of ["card", "list"] as const) {
+      const html = renderToStaticMarkup(
+        createElement(ProjectSkillSyncActions, {
+          status,
+          variant,
+          updatingCenter: false,
+          updatingProject: false,
+          onUpdateCenter: vi.fn(),
+          onUpdateProject: vi.fn(),
+        }),
+      );
+      const buttons = html.match(/<button[^>]*>/g) ?? [];
+      const highlighted = buttons.filter((button) =>
+        button.includes("text-accent-light"),
+      );
+      expect(highlighted).toHaveLength(1);
+      expect(highlighted[0]).toContain(
+        `aria-label="${status === "project_newer" || status === "project_only" ? "project.updateCenter" : "project.updateProject"}"`,
+      );
+    }
+  },
+);

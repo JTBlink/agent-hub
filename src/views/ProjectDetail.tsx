@@ -1752,6 +1752,10 @@ export function ProjectDetail() {
           projectId={project.id}
           skill={detailSkill}
           targets={exportTargets}
+          updatingCenter={updatingCenterSkill === getSkillKey(detailSkill)}
+          updatingProject={updatingProjectSkill === getSkillKey(detailSkill)}
+          onUpdateCenter={() => void handleUpdateCenter(detailSkill)}
+          onUpdateProject={() => void handleUpdateProject(detailSkill)}
           togglingAgent={
             togglingAgentTarget?.skillKey === getSkillKey(detailSkill)
               ? togglingAgentTarget.agent

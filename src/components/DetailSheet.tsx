@@ -7,6 +7,7 @@ const IS_MACOS = navigator.userAgent.includes("Mac");
 interface DetailSheetProps {
   open: boolean;
   title: ReactNode;
+  titleActions?: ReactNode;
   description?: ReactNode;
   meta?: ReactNode;
   onClose: () => void;
@@ -16,6 +17,7 @@ interface DetailSheetProps {
 export function DetailSheet({
   open,
   title,
+  titleActions,
   description,
   meta,
   onClose,
@@ -49,9 +51,12 @@ export function DetailSheet({
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-6 scrollbar-hide">
-          <h2 className="mb-3 min-w-0 text-[28px] font-semibold leading-tight tracking-tight text-primary">
-            <span className="block">{title}</span>
-          </h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="min-w-0 text-[28px] font-semibold leading-tight tracking-tight text-primary">
+              <span className="block break-words">{title}</span>
+            </h2>
+            {titleActions}
+          </div>
           {description ? (
             <div className="text-[15px] leading-7 text-secondary">
               {description}

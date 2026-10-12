@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ProjectSkill } from "../lib/tauri";
 import { cn } from "../utils";
 
-/** Shared sync controls for the card heading and compact list row. */
+/** Shared sync controls for cards, list rows and the detail heading. */
 export function ProjectSkillSyncActions({
   status,
   updatingCenter,
@@ -28,13 +28,17 @@ export function ProjectSkillSyncActions({
   );
   if (!canUpload && !canPull) return null;
   const busy = updatingCenter || updatingProject;
+  const highlightUpload =
+    status === "project_newer" || status === "project_only";
+  const highlightedClass = "bg-accent-bg text-accent-light";
+  const secondaryClass = "text-muted hover:text-secondary";
   const pullLabel = t(
     status === "project_newer"
       ? "project.resetFromCenter"
       : "project.updateProject",
   );
   const buttonClass =
-    "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-wait disabled:opacity-50";
+    "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-border disabled:cursor-wait disabled:opacity-50";
 
   return (
     <div
@@ -50,7 +54,10 @@ export function ProjectSkillSyncActions({
           aria-label={t("project.updateCenter")}
           title={t("project.updateCenter")}
           disabled={busy}
-          className={cn(buttonClass, "text-accent-light")}
+          className={cn(
+            buttonClass,
+            highlightUpload ? highlightedClass : secondaryClass,
+          )}
           onClick={(event) => {
             event.stopPropagation();
             onUpdateCenter();
@@ -69,7 +76,10 @@ export function ProjectSkillSyncActions({
           aria-label={pullLabel}
           title={pullLabel}
           disabled={busy}
-          className={cn(buttonClass, "text-muted hover:text-secondary")}
+          className={cn(
+            buttonClass,
+            highlightUpload ? secondaryClass : highlightedClass,
+          )}
           onClick={(event) => {
             event.stopPropagation();
             onUpdateProject();

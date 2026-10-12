@@ -12,6 +12,7 @@ import {
 import { DetailSheet } from "./DetailSheet";
 import { AgentToggleSection, type AgentToggleItem } from "./AgentToggleSection";
 import { ProjectAgentDots } from "./ProjectAgentDots";
+import { ProjectSkillSyncActions } from "./ProjectSkillSyncActions";
 import { SkillMarkdown } from "./SkillMarkdown";
 import { SkillSourceDiffViewer } from "./SkillSourceDiffViewer";
 import { useProjectSkillContent } from "../hooks/useProjectSkillContent";
@@ -22,6 +23,10 @@ export function ProjectSkillDetailPanel({
   targets,
   togglingAgent,
   onToggleAgent,
+  updatingCenter,
+  updatingProject,
+  onUpdateCenter,
+  onUpdateProject,
   onClose,
 }: {
   projectId: string;
@@ -29,6 +34,10 @@ export function ProjectSkillDetailPanel({
   targets: ProjectAgentTarget[];
   togglingAgent: string | null;
   onToggleAgent: (agentKey: string, enabled: boolean) => void;
+  updatingCenter: boolean;
+  updatingProject: boolean;
+  onUpdateCenter: () => void;
+  onUpdateProject: () => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -118,6 +127,15 @@ export function ProjectSkillDetailPanel({
     <DetailSheet
       open={true}
       title={skill.name}
+      titleActions={
+        <ProjectSkillSyncActions
+          status={skill.status}
+          updatingCenter={updatingCenter}
+          updatingProject={updatingProject}
+          onUpdateCenter={onUpdateCenter}
+          onUpdateProject={onUpdateProject}
+        />
+      }
       description={
         skill.description ? (
           <p className="line-clamp-3">{skill.description}</p>
