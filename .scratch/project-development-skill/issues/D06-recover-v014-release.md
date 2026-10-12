@@ -23,6 +23,8 @@ Blocked by: none
 - [旧候选](https://github.com/JTBlink/agent-hub/actions/runs/38214635255) 的 Windows 测试实际失败：项目路径拼接产生 InvalidFilename，以及 Git checkout 的 CRLF/LF 文本比较差异。两处已在 `3944415` 修正；该候选随后被取消，旧 SHA 不能通过盲目重跑得到修复。
 - [3944415 候选](https://github.com/JTBlink/agent-hub/actions/runs/38217104466) 因卡片状态文案与测试快照不同失败，`b747bcb` 已完成修订及回归。
 - 正在跟踪 [当前候选](https://github.com/JTBlink/agent-hub/actions/runs/38219181451)，固定 SHA `78a6ea3daf4d17a8ccc49a1b64df3683f6687906`，版本仍为 0.1.4。质量检查已通过，原生三平台验证进行中。工作区其他未提交功能保持独立。
+- 当前候选的 Linux 平台已通过，Windows 仍在 `installing_existing_project_content_keeps_the_team_version` 读取已安装文件时报 InvalidFilename。此前只修改读取路径不足以修复；项目链接生成仍用 `../../.agents/skills/...` 字符串作为 OS 链接目标。
+- 修复从链接生成处入手：目录上行及中央路径均逐组件构造原生 PathBuf，管理清单继续使用可移植路径。新增四个 Agent 的实际文件读取、链接目标原生分隔符和刷新后可读性回归。等待新的原生 Windows 验证，不以 macOS 通过代替。
 
 ## Result
 
