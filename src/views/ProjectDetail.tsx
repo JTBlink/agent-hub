@@ -1566,7 +1566,7 @@ export function ProjectDetail() {
                       <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
                         <ProjectAgentDots
                           assignedAgents={assignedAgents}
-                          targets={exportTargets}
+                          targets={projectAgentTargets}
                           limit={4}
                           size="sm"
                           onToggle={(agentKey, enabled) =>
@@ -1686,7 +1686,7 @@ export function ProjectDetail() {
                   <ProjectEnabledAgents variants={skill.variants} />
                   <ProjectAgentDots
                     assignedAgents={assignedAgents}
-                    targets={exportTargets}
+                    targets={projectAgentTargets}
                     limit={4}
                     size="sm"
                     onToggle={
