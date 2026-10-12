@@ -1173,6 +1173,7 @@ pub fn run() {
             commands::projects::get_project_agent_targets,
             commands::projects::get_project_skills,
             commands::projects::get_project_skill_document,
+            commands::project_skill_diff::get_project_skill_diff,
             commands::projects::get_project_skill_files,
             commands::projects::import_project_skill_to_center,
             commands::projects::export_skill_to_project,

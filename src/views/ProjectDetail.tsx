@@ -1,3 +1,9 @@
+import { ProjectSkillDetailPanel } from "../components/ProjectSkillDetailPanel";
+import {
+  getProjectSkillStatusMeta as getSyncStatusMeta,
+  getAssignedAgents,
+  type ProjectSkillEntry,
+} from "../lib/projectSkillEntries";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -29,11 +35,6 @@ import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import { ProjectBatchAgentDialog } from "../components/ProjectBatchAgentDialog";
 import { ProjectEnabledAgents } from "../components/ProjectEnabledAgents";
 import { BatchTagDialog } from "../components/BatchTagDialog";
-import { DetailSheet } from "../components/DetailSheet";
-import {
-  AgentToggleSection,
-  type AgentToggleItem,
-} from "../components/AgentToggleSection";
 import { ToggleSwitch } from "../components/ToggleSwitch";
 import { uploadProjectSkillToGroup } from "../lib/projectSkillUpload";
 import { ProjectSkillConflictPreview } from "../components/ProjectSkillConflictPreview";
@@ -42,8 +43,6 @@ import { SkillGroupBar } from "../components/SkillGroupBar";
 import { ProjectSkillCardHeader } from "../components/ProjectSkillCardHeader";
 import { ProjectSkillSyncActions } from "../components/ProjectSkillSyncActions";
 import { ProjectSkillBadges } from "../components/ProjectSkillBadges";
-import { SkillMarkdown } from "../components/SkillMarkdown";
-import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
 import {
   getTagActiveColor,
   getTagColor,
@@ -67,71 +66,6 @@ import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { AgentIcon } from "../components/AgentIcon";
 const projectLastUsedAgentsKey = (projectId: string) =>
   `project_last_used_export_agents:${projectId}`;
-
-interface ProjectSkillEntry {
-  id: string;
-  name: string;
-  dir_name: string;
-  relative_path: string;
-  description: string | null;
-  files: string[];
-  variants: ProjectSkill[];
-  enabledCount: number;
-  totalCount: number;
-  primaryVariant: ProjectSkill;
-  status: ProjectSkill["sync_status"];
-  tags: string[];
-  centerSkillIds: string[];
-}
-
-function getSyncStatusMeta(
-  t: (key: string) => string,
-  status: ProjectSkill["sync_status"],
-) {
-  switch (status) {
-    case "in_sync":
-      return {
-        label: t("project.syncStatus.inSync"),
-        className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-      };
-    case "project_newer":
-      return {
-        label: t("project.syncStatus.projectNewer"),
-        className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-      };
-    case "center_newer":
-      return {
-        label: t("project.syncStatus.centerNewer"),
-        className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-      };
-    case "diverged":
-      return {
-        label: t("project.syncStatus.diverged"),
-        className: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
-      };
-    default:
-      return {
-        label: t("project.syncStatus.projectOnly"),
-        className: "bg-surface-hover text-muted",
-      };
-  }
-}
-
-function getAssignedAgents(variants: ProjectSkill[]) {
-  return Array.from(new Set(variants.map((variant) => variant.agent))).sort();
-}
-
-function getAgentDotTargets(variants: ProjectSkill[]) {
-  const seen = new Set<string>();
-  const targets: { key: string; display_name: string }[] = [];
-  for (const v of variants) {
-    if (!seen.has(v.agent)) {
-      seen.add(v.agent);
-      targets.push({ key: v.agent, display_name: v.agent_display_name });
-    }
-  }
-  return targets;
-}
 
 function getGroupStatus(variants: ProjectSkill[]): ProjectSkill["sync_status"] {
   const priority: ProjectSkill["sync_status"][] = [
@@ -176,10 +110,6 @@ export function ProjectDetail() {
   const [detailSkill, setDetailSkill] = useState<ProjectSkillEntry | null>(
     null,
   );
-  const [docContent, setDocContent] = useState<string | null>(null);
-  const [docLoading, setDocLoading] = useState(false);
-  const [centerDocContent, setCenterDocContent] = useState<string | null>(null);
-  const [centerDocLoading, setCenterDocLoading] = useState(false);
   const [updatingCenterSkill, setUpdatingCenterSkill] = useState<string | null>(
     null,
   );
@@ -261,8 +191,6 @@ export function ProjectDetail() {
     setAgentFilters(new Set());
     setTagFilters(new Set());
     setDetailSkill(null);
-    setDocContent(null);
-    setCenterDocContent(null);
   }, [id]);
 
   useEffect(() => {
@@ -386,7 +314,6 @@ export function ProjectDetail() {
       groupedSkills.find((skill) => skill.id === detailSkill.id) ?? null;
     if (!refreshed) {
       setDetailSkill(null);
-      setDocContent(null);
       return;
     }
     if (refreshed !== detailSkill) {
@@ -662,38 +589,8 @@ export function ProjectDetail() {
       ).length,
     [selectedSkills],
   );
-  const handleOpenDetail = async (skill: ProjectSkillEntry) => {
+  const handleOpenDetail = (skill: ProjectSkillEntry) => {
     setDetailSkill(skill);
-    setDocContent(null);
-    setDocLoading(true);
-    setCenterDocContent(null);
-    setCenterDocLoading(false);
-    if (!project || !id) return;
-
-    const centerSkillId =
-      skill.centerSkillIds.length > 0 ? skill.centerSkillIds[0] : null;
-
-    if (centerSkillId) {
-      setCenterDocLoading(true);
-      api
-        .getSkillDocument(centerSkillId)
-        .then((doc) => setCenterDocContent(doc.content))
-        .catch(() => setCenterDocContent(null))
-        .finally(() => setCenterDocLoading(false));
-    }
-
-    try {
-      const doc = await api.getProjectSkillDocument(
-        id,
-        skill.primaryVariant.relative_path,
-        skill.primaryVariant.agent,
-      );
-      setDocContent(doc.content);
-    } catch {
-      setDocContent(null);
-    } finally {
-      setDocLoading(false);
-    }
   };
 
   // Push one variant to the center, then realign the rest from it.
@@ -1815,6 +1712,8 @@ export function ProjectDetail() {
       {/* Skill Document Detail Panel */}
       {detailSkill && project && (
         <ProjectSkillDetailPanel
+          key={getSkillKey(detailSkill)}
+          projectId={project.id}
           skill={detailSkill}
           targets={exportTargets}
           togglingAgent={
@@ -1825,10 +1724,6 @@ export function ProjectDetail() {
           onToggleAgent={(agentKey, enabled) =>
             handleToggleDetailAgent(detailSkill, agentKey, enabled)
           }
-          docContent={docContent}
-          docLoading={docLoading}
-          centerDocContent={centerDocContent}
-          centerDocLoading={centerDocLoading}
           onClose={() => setDetailSkill(null)}
         />
       )}
@@ -1927,180 +1822,5 @@ export function ProjectDetail() {
         />
       )}
     </div>
-  );
-}
-
-function ProjectSkillDetailPanel({
-  skill,
-  targets,
-  togglingAgent,
-  onToggleAgent,
-  docContent,
-  docLoading,
-  centerDocContent,
-  centerDocLoading,
-  onClose,
-}: {
-  skill: ProjectSkillEntry;
-  targets: ProjectAgentTarget[];
-  togglingAgent: string | null;
-  onToggleAgent: (agentKey: string, enabled: boolean) => void;
-  docContent: string | null;
-  docLoading: boolean;
-  centerDocContent: string | null;
-  centerDocLoading: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [contentTab, setContentTab] = useState<"local" | "diff" | "center">(
-    "local",
-  );
-  const supportsCenterDiff = skill.centerSkillIds.length > 0;
-  const toggleItems: AgentToggleItem[] = targets.map((target) => {
-    const variant = skill.variants.find((item) => item.agent === target.key);
-    return {
-      key: target.key,
-      displayName: target.display_name,
-      enabled: Boolean(variant),
-      isAvailable: target.installed && target.enabled,
-      disabled: !variant && (!target.installed || !target.enabled),
-      badgeLabel: !target.installed
-        ? t("mySkills.agentToggleNotInstalled")
-        : !target.enabled
-          ? t("mySkills.agentToggleDisabledGlobally")
-          : variant && !variant.enabled
-            ? t("project.disabled")
-            : null,
-    };
-  });
-  const meta = (
-    <>
-      <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
-        <ProjectAgentDots
-          assignedAgents={getAssignedAgents(skill.variants)}
-          targets={getAgentDotTargets(skill.variants).map((t) => ({
-            key: t.key,
-            display_name: t.display_name,
-            enabled: true,
-            installed: true,
-            is_custom: false,
-          }))}
-        />
-        {skill.tags.length > 0 && (
-          <>
-            <span className="mx-0.5 h-3 w-px bg-border-subtle" />
-            {skill.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-[11px] font-medium text-secondary"
-              >
-                {tag}
-              </span>
-            ))}
-          </>
-        )}
-      </div>
-      <div className="mt-3 flex items-center gap-4 text-[12.5px] text-muted">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-          <span className="font-mono truncate">
-            {skill.primaryVariant.path}
-          </span>
-        </div>
-        {skill.files.length > 0 && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <FileText className="h-3.5 w-3.5" />
-            {skill.files.join(", ")}
-          </div>
-        )}
-      </div>
-    </>
-  );
-
-  return (
-    <DetailSheet
-      open={true}
-      title={skill.name}
-      description={
-        skill.description ? (
-          <p className="line-clamp-3">{skill.description}</p>
-        ) : undefined
-      }
-      meta={meta}
-      onClose={onClose}
-    >
-      <AgentToggleSection
-        items={toggleItems}
-        togglingKey={togglingAgent}
-        onToggle={onToggleAgent}
-        className="mb-4"
-      />
-
-      {supportsCenterDiff && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          {(["local", "diff", "center"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setContentTab(tab)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
-                contentTab === tab
-                  ? "bg-accent text-white"
-                  : "bg-surface-hover text-muted hover:text-secondary",
-              )}
-              disabled={
-                (tab === "diff" || tab === "center") && centerDocLoading
-              }
-            >
-              {tab === "local"
-                ? t("mySkills.docTabs.local")
-                : tab === "diff"
-                  ? t("mySkills.docTabs.diff")
-                  : t("project.docTabs.center")}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {docLoading ? (
-        <div className="mt-12 text-center text-[13px] text-muted">
-          {t("common.loading")}
-        </div>
-      ) : contentTab === "diff" ? (
-        docContent && centerDocContent ? (
-          <DocumentDiffViewer
-            original={docContent}
-            updated={centerDocContent}
-          />
-        ) : centerDocLoading ? (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("common.loading")}
-          </div>
-        ) : (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("mySkills.sourceDiffUnavailable")}
-          </div>
-        )
-      ) : contentTab === "center" ? (
-        centerDocLoading ? (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("common.loading")}
-          </div>
-        ) : centerDocContent ? (
-          <SkillMarkdown content={centerDocContent} />
-        ) : (
-          <div className="mt-12 text-center text-[13px] text-muted">
-            {t("mySkills.sourceDiffUnavailable")}
-          </div>
-        )
-      ) : docContent ? (
-        <SkillMarkdown content={docContent} />
-      ) : (
-        <div className="mt-12 text-center text-[13px] text-muted">
-          {t("common.documentMissing")}
-        </div>
-      )}
-    </DetailSheet>
   );
 }

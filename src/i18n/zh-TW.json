@@ -583,7 +583,18 @@
       "summary": "{{count}} 個檔案有差異 · 新增 {{added}} · 修改 {{modified}} · 刪除 {{removed}}",
       "centralVersion": "中心庫副本",
       "localVersion": "本機來源內容",
-      "sourceVersion": "遠端來源內容"
+      "sourceVersion": "遠端來源內容",
+      "diffTitle": "檔案內容比較",
+      "versionMissing": "未宣告版本",
+      "newerVersion": "較新版本",
+      "fileMissing": "此側沒有該檔案",
+      "diffLegend": "左側為中心庫，右側為來源；紅色表示僅中心庫有的內容，綠色表示僅來源有的內容。",
+      "versionOrder": {
+        "central_newer": "中心庫的宣告版本較新。",
+        "source_newer": "來源的宣告版本較新。",
+        "same_version": "雙方宣告版本相同，內容有差異，無法確定先後。",
+        "unknown": "版本資訊不足，無法確定哪一側較新。"
+      }
     },
     "sourceDiffUnavailable": "暫時無法讀取來源版本內容",
     "fileBrowser": {
@@ -1194,6 +1205,11 @@
       "noAgents": "沒有已安裝且已啟用的 Agent",
       "completed": "已更新 {{count}} 個 Agent 技能副本",
       "summary": "{{active}} / {{total}} 個技能已在 Agent 中啟用"
+    },
+    "comparison": {
+      "diffLegend": "左側為專案本地副本，右側為中心庫；紅色表示僅本地有的內容，綠色表示僅中心庫有的內容。新增、刪除均指中心相對本地的差異。",
+      "copy": "檢視專案副本",
+      "projectVersion": "專案副本"
     }
   },
   "skillGroupActions": {

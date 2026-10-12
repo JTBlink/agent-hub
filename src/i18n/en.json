@@ -626,7 +626,18 @@
       "summary": "{{count}} changed files · Added {{added}} · Modified {{modified}} · Removed {{removed}}",
       "centralVersion": "Central library copy",
       "localVersion": "Local source content",
-      "sourceVersion": "Remote source content"
+      "sourceVersion": "Remote source content",
+      "diffTitle": "File comparison",
+      "versionMissing": "No declared version",
+      "newerVersion": "Newer version",
+      "fileMissing": "File absent on this side",
+      "diffLegend": "Library on the left, source on the right. Red content exists only in the library; green content exists only in the source.",
+      "versionOrder": {
+        "central_newer": "The library has the newer declared version.",
+        "source_newer": "The source has the newer declared version.",
+        "same_version": "Declared versions match, but contents differ; their order is unknown.",
+        "unknown": "Insufficient version information to determine which side is newer."
+      }
     }
   },
   "install": {
@@ -1258,6 +1269,11 @@
       "noAgents": "No installed, enabled agents",
       "completed": "Updated {{count}} agent skill copies",
       "summary": "{{active}} / {{total}} skills enabled for agents"
+    },
+    "comparison": {
+      "diffLegend": "Project copy on the left, library on the right. Red content exists only locally; green content exists only in the library. Added and removed files describe the library relative to the project copy.",
+      "copy": "Project copy",
+      "projectVersion": "Project copy"
     }
   },
   "skillGroupActions": {

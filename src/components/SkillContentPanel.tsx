@@ -132,7 +132,7 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
       >
         <div className="text-[12px] font-medium text-muted">
           {content.tab === "diff"
-            ? `${label("central")} → ${label("source")}`
+            ? t("mySkills.contentComparison.diffTitle")
             : t(
                 content.tab === "central"
                   ? "mySkills.contentComparison.centralVersion"
@@ -161,8 +161,12 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
               {t("mySkills.contentComparison.retry")}
             </button>
           </div>
-        ) : content.tab === "diff" && entries ? (
-          <SkillSourceDiffViewer entries={entries} />
+        ) : content.tab === "diff" && entries && content.diff.data ? (
+          <SkillSourceDiffViewer
+            entries={entries}
+            comparison={content.diff.data}
+            local={content.local}
+          />
         ) : content.tab === "source" && content.source.data ? (
           <SkillMarkdown content={content.source.data.content} />
         ) : content.tab === "central" && content.central.data ? (
