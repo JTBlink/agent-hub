@@ -1183,7 +1183,7 @@ pub fn run() {
             commands::project_library::remove_project_library_skill,
             commands::project_library::set_project_library_skill_enabled,
             commands::projects::update_project_skill_to_center,
-            commands::projects::update_project_skill_from_center,
+            commands::project_skill_update::update_project_skill_from_center,
             commands::projects::toggle_project_skill,
             commands::projects::delete_project_skill,
             commands::projects::slugify_skill_names,

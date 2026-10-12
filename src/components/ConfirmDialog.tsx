@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { X, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -28,25 +28,66 @@ export function ConfirmDialog({
 }: Props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const pending = useRef(false);
+  const panel = useRef<HTMLDivElement>(null);
+  const cancel = useRef<HTMLButtonElement>(null);
+  const closeCallback = useRef(onClose);
+  closeCallback.current = onClose;
+  const titleId = useId();
+  const messageId = useId();
+  const close = () => {
+    if (!pending.current) onClose();
+  };
 
-  // Escape closes the dialog, except while the confirmed action is running.
   useEffect(() => {
-    if (!open || loading) return;
+    if (!open) return;
+    const previousFocus = document.activeElement;
+    cancel.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!pending.current) closeCallback.current();
+      } else if (e.key === "Tab") {
+        const buttons = [
+          ...(panel.current?.querySelectorAll<HTMLButtonElement>(
+            "button:not(:disabled)",
+          ) ?? []),
+        ];
+        const first = buttons[0];
+        const last = buttons.at(-1);
+        if (!first) {
+          e.preventDefault();
+          return;
+        }
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, loading, onClose]);
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+        previousFocus.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
 
   const handleConfirm = async () => {
+    if (pending.current) return;
+    pending.current = true;
     setLoading(true);
     try {
       const confirmed = await onConfirm();
       if (confirmed !== false) onClose();
     } finally {
+      pending.current = false;
       setLoading(false);
     }
   };
@@ -59,23 +100,37 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={close}
       />
-      <div className="relative bg-surface border border-border rounded-xl w-full max-w-sm p-5 shadow-2xl flex flex-col max-h-[calc(85vh/var(--app-scale))]">
+      <div
+        ref={panel}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={messageId}
+        className="relative bg-surface border border-border rounded-xl w-full max-w-sm p-5 shadow-2xl flex flex-col max-h-[calc(85vh/var(--app-scale))]"
+      >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[13px] font-semibold text-primary flex items-center gap-2">
+          <h2
+            id={titleId}
+            className="text-[13px] font-semibold text-primary flex items-center gap-2"
+          >
             <AlertTriangle className="w-4 h-4 text-amber-400" />
             {title || t("common.confirm")}
           </h2>
           <button
-            onClick={onClose}
+            onClick={close}
+            disabled={loading}
+            aria-label={t("common.close")}
             className="text-muted hover:text-secondary p-1 rounded transition-colors outline-none"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p className="text-[13px] text-tertiary mb-5">{message}</p>
+        <p id={messageId} className="text-[13px] text-tertiary mb-5">
+          {message}
+        </p>
         {details && details.length > 0 ? (
           <div className="mb-5 flex flex-wrap gap-2 overflow-y-auto min-h-0">
             {details.map((detail) => (
@@ -95,7 +150,9 @@ export function ConfirmDialog({
 
         <div className="flex justify-end gap-2">
           <button
-            onClick={onClose}
+            ref={cancel}
+            onClick={close}
+            disabled={loading}
             className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
           >
             {t("common.cancel")}

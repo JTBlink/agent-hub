@@ -5,6 +5,8 @@ mod installation;
 mod manifest;
 mod removal;
 mod transaction;
+mod update;
+pub use update::update;
 
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
@@ -193,74 +195,6 @@ fn deploy_unlocked(
     // Existing targets may still use the original baseline. Only repair of
     // every team target can advance the baseline after editing canonical.
     publish_manifest(root, lock, publication, manifest)
-}
-
-/// Update from an explicitly selected personal version, preserving project edits.
-pub fn update(
-    root: &Path,
-    name: &str,
-    skill: &SkillRecord,
-    force: bool,
-) -> Result<ProjectLibraryStatus, AppError> {
-    mutate(root, |root, lock| {
-        safe_name(name)?;
-        let mut manifest = manifest::read(root)?;
-        let entry = manifest
-            .skills
-            .get_mut(name)
-            .context("Project Skill is not managed; import it explicitly first")?;
-        let staged = tempfile::tempdir()?;
-        let content = staged.path().join("content");
-        let _source_lock =
-            super::repo_lock::RepoLock::acquire_foreground("copy project Skill source")?;
-        installer::install_from_local_to_destination(
-            Path::new(&skill.central_path),
-            Some(name),
-            &content,
-        )?;
-        let new_hash = fingerprint(&content)?.context("Empty staged project Skill")?;
-        let canonical = canonical_path(name, entry.disabled);
-        if !force {
-            let mut all_removals = Vec::new();
-            for path in all_entry_paths(name, entry) {
-                let target = entries::path(root, &path)?;
-                if target.is_dir() && !target.is_symlink() {
-                    if let Ok(removals) =
-                        super::removals::removed_paths(&target, &content)
-                    {
-                        for r in removals {
-                            all_removals.push(format!("{path}/{r}"));
-                        }
-                    }
-                }
-            }
-            if !all_removals.is_empty() {
-                return Err(AppError::project_restore_required(format!(
-                    "Updating from center would remove local files: {}",
-                    all_removals.join(", ")
-                ))
-                .into());
-            }
-        }
-        let baseline = entry.content_hash.clone();
-        check_replace(root, &canonical, Some(&baseline), Some(&new_hash))?;
-        let mut publication = Publication::new(root)?;
-        for path in all_entry_paths(name, entry) {
-            check_replace(root, &path, Some(&baseline), Some(&new_hash))?;
-            installation::publish_target(
-                &mut publication,
-                root,
-                entry,
-                path,
-                &canonical,
-                &content,
-                Some(&baseline),
-            )?;
-        }
-        entry.content_hash = new_hash;
-        entry.source = portable_source(skill);
-        publish_manifest(root, lock, publication, &manifest)
-    })
 }
 
 /// Refresh existing team entries from project content, without adding Agents.
@@ -564,7 +498,10 @@ fn mutate(
         action(&root, &lock)?;
         status_inner(&root)
     })();
-    result.map_err(AppError::io_with_context)
+    result.map_err(|error| match error.downcast::<AppError>() {
+        Ok(error) => error,
+        Err(error) => AppError::io_with_context(error),
+    })
 }
 
 pub(crate) fn safe_name(name: &str) -> Result<()> {
@@ -757,3 +694,6 @@ mod deployment_tests;
 
 #[cfg(test)]
 mod removal_tests;
+
+#[cfg(test)]
+mod force_restore_tests;

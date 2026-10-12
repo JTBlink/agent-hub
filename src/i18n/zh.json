@@ -1131,6 +1131,7 @@
     "resetFromCenter": "恢复中心版本",
     "resetFromCenterSuccess": "\"{{name}}\" 已恢复为中心版本",
     "restoreConfirmTitle": "确认覆盖项目技能",
+    "restoreConfirmAction": "确认覆盖",
     "restoreConfirmMessage": "\"{{name}}\" 在项目中有本地改动或额外文件，恢复中心版本可能会丢失这些内容。确定要覆盖吗？",
     "alreadyInCenter": "已在中心",
     "syncStatus": {
