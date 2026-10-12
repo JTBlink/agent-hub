@@ -15,6 +15,7 @@ import zh from "../i18n/zh.json";
 import { MySkills } from "./MySkills";
 import { Dashboard } from "./Dashboard";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
+import { makeSkillGroup } from "../../tests/fixtures/skillGroup";
 
 const app = vi.hoisted(() => ({
   managedSkills: [] as ManagedSkill[],
@@ -32,6 +33,7 @@ const app = vi.hoisted(() => ({
   openSkillDetailById: vi.fn(),
   closeSkillDetail: vi.fn(),
   setViewedSkillGroupId: vi.fn(),
+  setSkillGroupMembership: vi.fn(),
 }));
 vi.mock("../context/AppContext", () => ({ useApp: () => app }));
 vi.mock("../components/AgentControlSetupCard", () => ({
@@ -46,6 +48,7 @@ vi.mock("../lib/tauri", async (importOriginal) => ({
   gitBackupPendingConflicts: async () => [],
   getSettings: async () => null,
   gitBackupStatus: async () => null,
+  setSkillGroupMembership: app.setSkillGroupMembership,
 }));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
@@ -61,6 +64,9 @@ beforeEach(() => {
   app.managedSkills = [makeSkill(1), makeSkill(2, true), makeSkill(3)];
   app.viewedSkillGroup = null;
   app.viewingUngrouped = false;
+  app.skillGroups = [];
+  app.setSkillGroupMembership.mockReset().mockResolvedValue([]);
+  app.refreshManagedSkills.mockReset();
   app.setViewedSkillGroupId.mockImplementation(() => {
     app.viewedSkillGroup = null;
     app.viewingUngrouped = false;
@@ -116,6 +122,41 @@ function button(parent: Element, label: string) {
 async function click(parent: Element, label: string) {
   await act(async () => button(parent, label).click());
 }
+
+it.each(["grid", "list"])(
+  "assigns an ungrouped skill from the %s view and refreshes membership",
+  async (view) => {
+    app.viewingUngrouped = true;
+    app.managedSkills = [{ ...makeSkill(1), skill_group_ids: [] }];
+    app.skillGroups = [makeSkillGroup("dev", "dev-tools")];
+    app.refreshManagedSkills.mockImplementation(async () => {
+      app.managedSkills = [
+        { ...app.managedSkills[0], skill_group_ids: ["dev"] },
+      ];
+    });
+    await render();
+    if (view === "list") {
+      const listButton = container
+        .querySelector("svg.lucide-list")
+        ?.closest("button");
+      expect(listButton).not.toBeNull();
+      await act(async () => listButton?.click());
+    }
+    await click(container, "加入技能组");
+    expect(app.openSkillDetailById).not.toHaveBeenCalled();
+    const menu = document.querySelector('[role="menu"]')!;
+    await click(menu, "dev-tools");
+    expect(app.setSkillGroupMembership).toHaveBeenCalledExactlyOnceWith(
+      ["skill-1"],
+      "dev",
+      true,
+    );
+    expect(app.refreshSkillGroupMembership).toHaveBeenCalledWith("dev");
+    expect(app.refreshManagedSkills).toHaveBeenCalled();
+    await render();
+    expect(container.textContent).not.toContain("demo-skill-1");
+  },
+);
 
 it("shows the full undeployed library from the dashboard after clearing the previous group", async () => {
   app.viewedSkillGroup = {

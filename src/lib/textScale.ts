@@ -10,3 +10,11 @@ export function applyTextSize(size: string) {
   document.documentElement.style.zoom = scale;
   document.documentElement.style.setProperty("--app-scale", scale);
 }
+
+/** Convert viewport coordinates for elements rendered under the app's CSS zoom. */
+export function getAppScale(): number {
+  const scale = Number(
+    document.documentElement.style.getPropertyValue("--app-scale"),
+  );
+  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+}
