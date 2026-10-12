@@ -148,6 +148,8 @@ it("shows the full undeployed library from the dashboard after clearing the prev
     "true",
   );
   expect(container.querySelector("dialog")).toBeNull();
+  expect(container.querySelector('[aria-disabled="true"]')).toBeNull();
+  expect(button(container, "更多筛选").textContent).toContain("1");
   await click(container, "Back");
   expect(container.querySelector("[data-location]")!.textContent).toBe("/");
 });
@@ -161,8 +163,8 @@ it("combines deployment, source and tags and restores the list when filters are 
   };
   app.managedSkills[2] = { ...makeSkill(3), tags: ["docs"] };
   await render();
-  await click(row("部署状态"), "未部署");
   await click(container, "更多筛选");
+  await click(row("部署状态"), "未部署");
   await click(row("来源"), "Git");
   await click(row("标签"), "dev");
   expect(container.querySelector('[role="status"]')!.textContent).toBe(
@@ -192,6 +194,7 @@ it("updates an active undeployed filter when a skill is deployed and keeps a way
   expect(button(row("部署状态"), "未部署").getAttribute("aria-pressed")).toBe(
     "true",
   );
+  await click(container, "更多筛选");
   await click(row("部署状态"), "全部");
   expect(container.querySelector('[role="status"]')!.textContent).toBe(
     "显示 1 个技能",
@@ -223,6 +226,8 @@ it("starts with one filter row and preserves active secondary filters while coll
   const controlsId = expand.getAttribute("aria-controls")!;
   const secondary = document.getElementById(controlsId)!;
   expect(secondary.hidden).toBe(true);
+  expect(secondary.contains(row("部署状态"))).toBe(true);
+  expect(secondary.contains(row("技能组"))).toBe(false);
   expect(expand.getAttribute("aria-expanded")).toBe("false");
   await click(container, "更多筛选");
   expect(secondary.hidden).toBe(false);
@@ -246,6 +251,7 @@ it("removes hidden bulk selections when deployment filtering changes", async () 
   await click(container, "多选");
   await click(container, "全选");
   expect(container.textContent).toContain("已选 3");
+  await click(container, "更多筛选");
   await click(row("部署状态"), "未部署");
   expect(container.textContent).toContain("已选 2");
   expect(container.textContent).not.toContain("已选 3");

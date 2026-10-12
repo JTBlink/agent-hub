@@ -90,7 +90,7 @@ function FilterRow({
     >
       <span
         aria-hidden="true"
-        className="w-16 shrink-0 pt-2 text-[12px] text-muted"
+        className="w-20 shrink-0 whitespace-nowrap pt-2 text-[12px] text-muted"
       >
         {label}
       </span>
@@ -109,10 +109,7 @@ export function SkillLibraryFilterPanel(props: Props) {
   const filtersId = useId();
   const tagsId = useId();
   const secondaryFilterCount =
-    Number(Boolean(props.groupName) && props.membership !== "all") +
-    Number(props.ungrouped) +
-    props.sources.size +
-    props.tags.size;
+    Number(props.deployment !== "all") + props.sources.size + props.tags.size;
   const visibleTags = expanded
     ? props.allTags
     : props.allTags.filter((tag, index) => index < 6 || props.tags.has(tag));
@@ -124,20 +121,47 @@ export function SkillLibraryFilterPanel(props: Props) {
       className="-mt-3 rounded-xl border border-border-subtle bg-surface px-4 py-3"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <FilterRow label={t("mySkills.filterPanel.deployment")}>
-          {(["all", "deployed", "undeployed"] as const).map((mode) => (
+        {props.groupName ? (
+          <FilterRow label={t("sidebar.skillGroups")}>
+            {(["enabled", "all", "available"] as const).map((mode) => (
+              <FilterChoice
+                key={mode}
+                active={props.membership === mode}
+                onClick={() => props.onMembershipChange(mode)}
+              >
+                {t(`mySkills.filters.${mode}`)}
+                <span className="tabular-nums opacity-70">
+                  {props.membershipCounts[mode]}
+                </span>
+              </FilterChoice>
+            ))}
+          </FilterRow>
+        ) : (
+          <FilterRow label={t("sidebar.skillGroups")}>
+            {!props.viewingUngrouped && (
+              <FilterChoice
+                active={!props.ungrouped}
+                onClick={() => props.ungrouped && props.onUngroupedChange()}
+              >
+                {t("mySkills.filterPanel.all")}
+                <span className="tabular-nums opacity-70">
+                  {props.membershipCounts.all}
+                </span>
+              </FilterChoice>
+            )}
             <FilterChoice
-              key={mode}
-              active={props.deployment === mode}
-              onClick={() => props.onDeploymentChange(mode)}
+              active={props.ungrouped || props.viewingUngrouped}
+              onClick={() =>
+                !props.viewingUngrouped && props.onUngroupedChange()
+              }
             >
-              {t(`mySkills.filterPanel.${mode}`)}
+              {t("mySkills.sourceFilter.ungrouped")}
               <span className="tabular-nums opacity-70">
-                {props.deploymentCounts[mode]}
+                {props.ungroupedCount}
               </span>
             </FilterChoice>
-          ))}
-        </FilterRow>
+          </FilterRow>
+        )}
         <div className="ml-auto flex min-h-8 items-center gap-3">
           <span
             role="status"
@@ -188,51 +212,29 @@ export function SkillLibraryFilterPanel(props: Props) {
           )}
         </div>
       </div>
-      {filtersExpanded && props.deployment === "undeployed" && (
-        <p className="mt-1 text-[12px] leading-5 text-muted sm:pl-[76px]">
-          {t("mySkills.filterPanel.undeployedHint")}
-        </p>
-      )}
       <div
         id={filtersId}
         hidden={!filtersExpanded}
         className="mt-2 space-y-1 border-t border-border-subtle pt-2"
       >
-        {props.groupName ? (
-          <FilterRow label={t("sidebar.skillGroups")}>
-            {(["enabled", "all", "available"] as const).map((mode) => (
-              <FilterChoice
-                key={mode}
-                active={props.membership === mode}
-                onClick={() => props.onMembershipChange(mode)}
-              >
-                {t(`mySkills.filters.${mode}`)}
-                <span className="tabular-nums opacity-70">
-                  {props.membershipCounts[mode]}
-                </span>
-              </FilterChoice>
-            ))}
-          </FilterRow>
-        ) : (
-          !props.viewingUngrouped && (
-            <FilterRow label={t("sidebar.skillGroups")}>
-              <FilterChoice
-                active={!props.ungrouped}
-                onClick={() => props.ungrouped && props.onUngroupedChange()}
-              >
-                {t("mySkills.filterPanel.all")}
-              </FilterChoice>
-              <FilterChoice
-                active={props.ungrouped}
-                onClick={props.onUngroupedChange}
-              >
-                {t("mySkills.sourceFilter.ungrouped")}
-                <span className="tabular-nums opacity-70">
-                  {props.ungroupedCount}
-                </span>
-              </FilterChoice>
-            </FilterRow>
-          )
+        <FilterRow label={t("mySkills.filterPanel.deployment")}>
+          {(["all", "deployed", "undeployed"] as const).map((mode) => (
+            <FilterChoice
+              key={mode}
+              active={props.deployment === mode}
+              onClick={() => props.onDeploymentChange(mode)}
+            >
+              {t(`mySkills.filterPanel.${mode}`)}
+              <span className="tabular-nums opacity-70">
+                {props.deploymentCounts[mode]}
+              </span>
+            </FilterChoice>
+          ))}
+        </FilterRow>
+        {props.deployment === "undeployed" && (
+          <p className="mt-1 text-[12px] leading-5 text-muted sm:pl-[92px]">
+            {t("mySkills.filterPanel.undeployedHint")}
+          </p>
         )}
         <FilterRow label={t("mySkills.filterPanel.source")}>
           <FilterChoice
