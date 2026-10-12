@@ -4,6 +4,7 @@
 
 - [后续规划与设计](plans/agent-hub.md)（统一规划入口）
 - [产品概述](product/overview.md)
+- [Skill 推荐与用法指南](product/skill-recommendations.md)
 - [系统架构](architecture/overview.md)
 - [目录与本地数据](architecture/directory-structure.md)
 - [项目开发 Skill](../.agents/skills/rust-dev/SKILL.md)与 [GitHub 发布 Skill](../.agents/skills/github-cli/SKILL.md)
