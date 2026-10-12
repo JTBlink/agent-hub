@@ -32,3 +32,4 @@ Blocked by: none
 - 前端全量 223 项、lint 和生产构建通过；Rust 库 663 项、CLI 8 项通过（8 项忽略），格式与严格 Clippy 通过。全仓库 Prettier、版本一致性、task 索引和 diff 检查通过。
 - Standards：路径校验保留链接祖先与外部来源保护，事务不沿链接写入或删除来源；新安装和入口选项分别下沉独立模块/组件。Spec：实际内容集中到 `.agents/skills`、项目版本优先、团队不依赖个人库或 AgentHub，并通过真实 CLI 的原始案例镜像验收。
 - 未做 Windows/Linux 原生 Agent 宿主加载及新入口控件的人工主题/缩放验收；不承诺 `skills-lock.json` 完整读写互操作，不批量迁移用户其他技能。
+- 修复提交 `09798e4` 已推送 `main`；[远端 CI](https://github.com/JTBlink/agent-hub/actions/runs/38209663039) 成功，Ubuntu 上的格式、前端测试/构建、Rust 格式、严格 Clippy 和 Rust 测试全部通过。
