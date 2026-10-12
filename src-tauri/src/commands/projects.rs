@@ -1012,7 +1012,10 @@ pub async fn export_skill_to_project(
             }
         }
 
-        let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
+        let configured_mode = store
+            .get_setting("project_sync_mode")
+            .map_err(AppError::db)?
+            .or_else(|| store.get_setting("sync_mode").ok().flatten());
         // Two agents can resolve to the same project skills root, in which case
         // the second pass would find the directory the first just wrote and
         // refuse it. The artifact is already correct, so skip instead.
@@ -1096,7 +1099,10 @@ pub async fn update_project_skill_from_center(
         }
 
         let source = PathBuf::from(&managed.central_path);
-        let configured_mode = store.get_setting("sync_mode").map_err(AppError::db)?;
+        let configured_mode = store
+            .get_setting("project_sync_mode")
+            .map_err(AppError::db)?
+            .or_else(|| store.get_setting("sync_mode").ok().flatten());
         let mode = sync_engine::sync_mode_for_tool(&agent, configured_mode.as_deref());
         // UserConfirmed: this intentionally replaces an existing project copy
         // the user chose to update, and project deployments never create

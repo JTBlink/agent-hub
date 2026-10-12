@@ -460,6 +460,11 @@
       "central": "中心"
     },
     "sourceDiffUnavailable": "暂时无法读取来源版本内容",
+    "fileBrowser": {
+      "binary": "二进制文件 — 请使用外部编辑器打开",
+      "tooLarge": "文件过大，无法预览（{{size}}）",
+      "loadFailed": "加载文件内容失败"
+    },
     "sourceDiff": {
       "noChanges": "无差异 —— 来源与中心库内容一致",
       "status": {
@@ -622,11 +627,6 @@
       "centralVersion": "中心库副本",
       "localVersion": "本地来源内容",
       "sourceVersion": "远端来源内容"
-    },
-    "fileBrowser": {
-      "binary": "二进制文件 — 请使用外部编辑器打开",
-      "tooLarge": "文件过大，无法预览（{{size}}）",
-      "loadFailed": "加载文件内容失败"
     }
   },
   "install": {
@@ -839,8 +839,10 @@
     "repoPathPendingHint": "重启后迁移应用数据到 {{path}}；已启用的共享技能目录保持不变。",
     "changeDir": "更改目录",
     "openInFinder": "打开文件夹",
-    "syncMode": "默认同步模式",
-    "syncModeDesc": "推荐使用符号链接，占用空间极小且修改可实时生效。全局与项目工作区均生效；注意项目里的符号链接指向本机中央库，不会随仓库带走。",
+    "globalSyncMode": "全局同步模式",
+    "globalSyncModeDesc": "技能部署到全局 Agent 工作区（~/.claude 等）的方式。推荐使用符号链接，占用空间极小且修改可实时生效。",
+    "projectSyncMode": "项目同步模式",
+    "projectSyncModeDesc": "技能部署到项目目录的方式。项目建议使用文件复制——符号链接指向本机中央库，不会随仓库带走。",
     "symlink": "符号链接",
     "copy": "文件复制",
     "currentSkillGroup": "当前技能组",

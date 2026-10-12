@@ -460,6 +460,11 @@
       "central": "Central"
     },
     "sourceDiffUnavailable": "Source content is unavailable right now",
+    "fileBrowser": {
+      "binary": "Binary file — open in an external editor",
+      "tooLarge": "File too large to preview ({{size}})",
+      "loadFailed": "Failed to load file content"
+    },
     "sourceDiff": {
       "noChanges": "No changes — the source matches the central library",
       "status": {
@@ -622,11 +627,6 @@
       "centralVersion": "Central library copy",
       "localVersion": "Local source content",
       "sourceVersion": "Remote source content"
-    },
-    "fileBrowser": {
-      "binary": "Binary file — open in an external editor",
-      "tooLarge": "File too large to preview ({{size}})",
-      "loadFailed": "Failed to load file content"
     }
   },
   "install": {
@@ -839,8 +839,10 @@
     "repoPathPendingHint": "Restart to move application data to {{path}}. An activated shared Skills directory stays in place.",
     "changeDir": "Change Directory",
     "openInFinder": "Open Folder",
-    "syncMode": "Default Sync Mode",
-    "syncModeDesc": "Symlinks are recommended — minimal disk usage with live updates. Applies to both global and project workspaces; note that symlinks in a project point to this machine's central library and won't travel with the repo.",
+    "globalSyncMode": "Global Sync Mode",
+    "globalSyncModeDesc": "How skills are deployed to global agent workspaces (~/.claude, etc.). Symlinks are recommended — minimal disk usage with live updates.",
+    "projectSyncMode": "Project Sync Mode",
+    "projectSyncModeDesc": "How skills are deployed into project directories. File copy is recommended for projects — symlinks point to this machine's central library and won't travel with the repo.",
     "symlink": "Symlink",
     "copy": "File Copy",
     "currentSkillGroup": "Current Skill Group",
