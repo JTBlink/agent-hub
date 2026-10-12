@@ -11,6 +11,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Join a base path with a forward-slash relative string, splitting each `/`
+/// component so `PathBuf::join` emits the platform separator on every segment.
+fn portable_join(base: &Path, relative: &str) -> PathBuf {
+    relative
+        .split('/')
+        .fold(base.to_path_buf(), |acc, part| acc.join(part))
+}
+
 /// Validate the directory entry itself, without following its final component.
 /// Publication only renames/unlinks this component; parent links are forbidden.
 pub(super) fn path(root: &Path, relative: &str) -> Result<PathBuf> {
@@ -19,7 +27,7 @@ pub(super) fn path(root: &Path, relative: &str) -> Result<PathBuf> {
     if relative.contains(['\\', ':']) {
         bail!("Invalid project relative path");
     }
-    let target = root.join(relative);
+    let target = portable_join(root, relative);
     let parent = target.parent().context("Project entry has no parent")?;
     for ancestor in parent.ancestors().take_while(|path| *path != root) {
         if fs::symlink_metadata(ancestor).is_ok_and(|meta| meta.file_type().is_symlink()) {
@@ -76,7 +84,7 @@ pub(super) fn content_fingerprint(root: &Path, relative: &str) -> Result<Option<
         format!("{LIBRARY}-disabled/{name}"),
     ];
     let destination = link_destination(&entry)?;
-    let canonical = destinations.iter().find(|candidate| root.join(candidate) == destination && relative != candidate.as_str())
+    let canonical = destinations.iter().find(|candidate| portable_join(root, candidate) == destination && relative != candidate.as_str())
         .context("Project Skill link does not point to its project central content; migrate it explicitly")?;
     fingerprint(&super::safe_path(root, canonical)?)
 }
@@ -85,7 +93,7 @@ pub(super) fn points_to(root: &Path, relative: &str, canonical: &str) -> bool {
     path(root, relative)
         .ok()
         .and_then(|path| link_destination(&path).ok())
-        .is_some_and(|destination| destination == root.join(canonical))
+        .is_some_and(|destination| destination == portable_join(root, canonical))
 }
 
 /// Relative project links survive a clone into a different directory.

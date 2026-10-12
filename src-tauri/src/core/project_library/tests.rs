@@ -484,6 +484,7 @@ fn team_can_clone_complete_native_skills_without_an_agenthub_manifest() {
     let root = tmp.path().join("project");
     fs::create_dir(&root).unwrap();
     let repo = git2::Repository::init(&root).unwrap();
+    fs::write(root.join(".gitattributes"), "* text eol=lf\n").unwrap();
     fs::write(root.join(".gitignore"), ".agent-hub/\n").unwrap();
     install(
         &root,
