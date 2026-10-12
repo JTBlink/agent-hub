@@ -13,7 +13,9 @@ pub(super) fn ignored_paths(root: &Path, files: &[String]) -> Vec<String> {
     };
     let mut ignored = BTreeSet::new();
     for path in files {
-        let shared_root = root.join(path);
+        let shared_root = path
+            .split('/')
+            .fold(root.to_path_buf(), |acc, part| acc.join(part));
         for entry in walkdir::WalkDir::new(&shared_root)
             .into_iter()
             .filter_map(Result::ok)

@@ -3,6 +3,14 @@ use std::path::{Path, PathBuf};
 
 use super::{content_hash, skill_metadata};
 
+/// Join a base path with a forward-slash relative string, splitting each `/`
+/// component so `PathBuf::join` emits the platform separator on every segment.
+fn portable_join(base: &Path, relative: &str) -> PathBuf {
+    relative
+        .split('/')
+        .fold(base.to_path_buf(), |acc, part| acc.join(part))
+}
+
 /// Lightweight config describing where an agent keeps project-level skills.
 #[derive(Debug, Clone)]
 pub struct AgentSkillConfig {
@@ -50,8 +58,11 @@ pub fn read_project_skills(
     let mut skills = Vec::new();
 
     for config in agent_configs {
-        let skills_dir = project_path.join(&config.relative_skills_dir);
-        let disabled_dir = project_path.join(format!("{}-disabled", config.relative_skills_dir));
+        let skills_dir = portable_join(project_path, &config.relative_skills_dir);
+        let disabled_dir = portable_join(
+            project_path,
+            &format!("{}-disabled", config.relative_skills_dir),
+        );
 
         read_skills_from_dir(
             &skills_dir,
