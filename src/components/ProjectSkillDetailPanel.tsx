@@ -2,7 +2,6 @@ import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpen, FileText, RefreshCw } from "lucide-react";
 import { cn } from "../utils";
-import type { ProjectAgentTarget } from "../lib/tauri";
 import {
   getProjectSkillStatusMeta,
   getAssignedAgents,
@@ -10,7 +9,6 @@ import {
   type ProjectSkillEntry,
 } from "../lib/projectSkillEntries";
 import { DetailSheet } from "./DetailSheet";
-import { AgentToggleInline, type AgentToggleItem } from "./AgentToggleSection";
 import { ProjectAgentDots } from "./ProjectAgentDots";
 import { ProjectSkillSyncActions } from "./ProjectSkillSyncActions";
 import { SkillMarkdown } from "./SkillMarkdown";
@@ -20,9 +18,6 @@ import { useProjectSkillContent } from "../hooks/useProjectSkillContent";
 export function ProjectSkillDetailPanel({
   projectId,
   skill,
-  targets,
-  togglingAgent,
-  onToggleAgent,
   updatingCenter,
   updatingProject,
   onUpdateCenter,
@@ -31,9 +26,6 @@ export function ProjectSkillDetailPanel({
 }: {
   projectId: string;
   skill: ProjectSkillEntry;
-  targets: ProjectAgentTarget[];
-  togglingAgent: string | null;
-  onToggleAgent: (agentKey: string, enabled: boolean) => void;
   updatingCenter: boolean;
   updatingProject: boolean;
   onUpdateCenter: () => void;
@@ -70,17 +62,6 @@ export function ProjectSkillDetailPanel({
     modified: entries.filter((entry) => entry.status === "modified").length,
     removed: entries.filter((entry) => entry.status === "removed").length,
   };
-  const toggleItems: AgentToggleItem[] = targets.map((target) => {
-    const variant = skill.variants.find((item) => item.agent === target.key);
-    return {
-      key: target.key,
-      displayName: target.display_name,
-      enabled: Boolean(variant),
-      isAvailable: true,
-      disabled: false,
-      badgeLabel: variant && !variant.enabled ? t("project.disabled") : null,
-    };
-  });
   const meta = (
     <>
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
@@ -127,7 +108,7 @@ export function ProjectSkillDetailPanel({
     <DetailSheet
       open={true}
       title={skill.name}
-      titleActions={
+      headerActions={
         <ProjectSkillSyncActions
           status={skill.status}
           updatingCenter={updatingCenter}
@@ -142,13 +123,6 @@ export function ProjectSkillDetailPanel({
         ) : undefined
       }
       meta={meta}
-      headerActions={
-        <AgentToggleInline
-          items={toggleItems}
-          togglingKey={togglingAgent}
-          onToggle={onToggleAgent}
-        />
-      }
       onClose={onClose}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px]">

@@ -404,10 +404,12 @@ fn git_ignore_warnings_include_resources_inside_the_team_skill() {
     .unwrap();
     assert!(report
         .ignored_paths
-        .contains(&".agents/skills/demo/scripts/run.sh".into()));
+        .iter()
+        .any(|p| p.replace('\\', "/") == ".agents/skills/demo/scripts/run.sh"));
     assert!(report
         .ignored_paths
-        .contains(&".claude/skills/demo/scripts/run.sh".into()));
+        .iter()
+        .any(|p| p.replace('\\', "/") == ".claude/skills/demo/scripts/run.sh"));
 }
 
 #[test]
