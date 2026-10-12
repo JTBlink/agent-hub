@@ -873,7 +873,7 @@
     "help": "Help",
     "website": "Website",
     "about": "About",
-    "version": "agent-hub 0.1.3",
+    "version": "agent-hub 0.1.4",
     "tagline": "Cross-platform. Minimal, efficient, seamless multi-skill-group switching.",
     "checkUpdate": "Check for Updates",
     "checking": "Checking…",

@@ -844,7 +844,7 @@
     "help": "說明",
     "website": "官網",
     "about": "關於",
-    "version": "agent-hub 0.1.3",
+    "version": "agent-hub 0.1.4",
     "tagline": "跨平台。極簡、高效、無感多技能組切換。",
     "checkUpdate": "檢查更新",
     "checking": "檢查中…",

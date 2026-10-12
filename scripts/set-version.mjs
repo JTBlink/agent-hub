@@ -58,6 +58,16 @@ export function setVersions({ root = process.cwd(), version }) {
   }
   tauriConfig.version = version;
 
+  const i18nFiles = ["src/i18n/en.json", "src/i18n/zh.json", "src/i18n/zh-TW.json"];
+  for (const relative of i18nFiles) {
+    const i18nPath = resolve(root, relative);
+    const i18nJson = JSON.parse(readFileSync(i18nPath, "utf8"));
+    if (i18nJson.settings?.version) {
+      i18nJson.settings.version = `agent-hub ${version}`;
+      writeFileSync(i18nPath, `${JSON.stringify(i18nJson, null, 2)}\n`);
+    }
+  }
+
   writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
   writeFileSync(sourcePath, `${version}\n`);
   writeFileSync(lockfilePath, `${JSON.stringify(lockfile, null, 2)}\n`);
