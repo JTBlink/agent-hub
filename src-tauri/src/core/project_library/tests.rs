@@ -3,7 +3,17 @@ use crate::core::{content_hash, skill_store::SkillStore, tool_adapters};
 use std::fs;
 use tempfile::tempdir;
 
-fn fixture(root: &Path) -> SkillRecord {
+// Keep the original copy-mode coverage: linked entry lifecycle is exercised
+// separately in compatibility_tests, including clone and source removal.
+fn install(
+    root: &Path,
+    skill: &SkillRecord,
+    targets: &[ToolAdapter],
+) -> Result<ProjectLibraryStatus, AppError> {
+    super::install_with_mode(root, skill, targets, true)
+}
+
+pub(super) fn fixture(root: &Path) -> SkillRecord {
     let source = root.join("personal/demo");
     fs::create_dir_all(source.join("scripts")).unwrap();
     fs::write(
@@ -89,12 +99,12 @@ fn team_project_survives_removing_the_personal_library() {
     assert!(!manifest.contains(&tmp.path().to_string_lossy().to_string()));
 }
 
-struct TestProject {
+pub(super) struct TestProject {
     directory: tempfile::TempDir,
     _guard: std::sync::MutexGuard<'static, ()>,
 }
 impl TestProject {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let guard = crate::core::central_repo::test_base_dir_lock();
         let directory = tempdir().unwrap();
         crate::core::central_repo::set_test_base_dir_override(Some(directory.path().join("state")));
@@ -103,7 +113,7 @@ impl TestProject {
             _guard: guard,
         }
     }
-    fn path(&self) -> &Path {
+    pub(super) fn path(&self) -> &Path {
         self.directory.path()
     }
 }
@@ -402,10 +412,14 @@ fn git_ignore_warnings_include_resources_inside_the_team_skill() {
         &[tool_adapters::find_adapter("claude_code").unwrap()],
     )
     .unwrap();
-    assert!(report
-        .ignored_paths
-        .iter()
-        .any(|p| p.replace('\\', "/") == ".agents/skills/demo/scripts/run.sh"));
+    assert!(
+        report
+            .ignored_paths
+            .iter()
+            .any(|p| p.replace('\\', "/") == ".agents/skills/demo/scripts/run.sh"),
+        "expected .agents/skills/demo/scripts/run.sh in ignored_paths, got: {:?}",
+        report.ignored_paths,
+    );
     assert!(report
         .ignored_paths
         .iter()
