@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ManagedSkill } from "../lib/tauri";
 import { pruneStaleTagFilters } from "../lib/skillTags";
@@ -17,9 +17,28 @@ export function useSkillLibraryFilters(
   order: string[],
 ) {
   const [params, setParams] = useSearchParams();
+  const [resetDeployment, setResetDeployment] = useState(false);
   const value = params.get("deployment");
   const deployment: DeploymentFilter =
-    value === "deployed" || value === "undeployed" ? value : "all";
+    !resetDeployment && (value === "deployed" || value === "undeployed")
+      ? value
+      : "all";
+  if (resetDeployment && !params.has("deployment")) {
+    setResetDeployment(false);
+  }
+  // Synchronize the URL after a scope switch. Local filters reset during render,
+  // so the new group never renders with the previous group's conditions.
+  useEffect(() => {
+    if (!resetDeployment) return;
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("deployment");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [resetDeployment, setParams]);
   const setDeployment = (mode: DeploymentFilter) => {
     setParams(
       (current) => {
@@ -43,7 +62,12 @@ export function useSkillLibraryFilters(
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {
     setPreviousScope(scope);
+    setSearch("");
+    setSources(new Set());
+    setTags(new Set());
+    setUngrouped(false);
     setMembership(groupId && !viewingUngrouped ? "enabled" : "all");
+    setResetDeployment(params.has("deployment"));
   }
 
   // Prune only when the available data changes. A rename can update the chosen
@@ -51,7 +75,7 @@ export function useSkillLibraryFilters(
   const [previousData, setPreviousData] = useState({ skills, allTags });
   if (previousData.skills !== skills || previousData.allTags !== allTags) {
     setPreviousData({ skills, allTags });
-    if (skills.length > 0) {
+    if (skills.length > 0 && previousScope === scope) {
       const cleaned = pruneStaleTagFilters(
         tags,
         [...allTags, ...skills.flatMap((skill) => skill.tags)],
