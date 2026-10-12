@@ -553,8 +553,8 @@ export function MySkills() {
       await Promise.all([
         refreshSkillGroupMembership(toGroupId),
         ...displaced.map((id) => refreshSkillGroupMembership(id)),
+        refreshManagedSkills(),
       ]);
-      refreshManagedSkills();
     },
     [refreshSkillGroupMembership, refreshManagedSkills],
   );
@@ -1753,18 +1753,14 @@ export function MySkills() {
                                   </span>
                                 </>
                               )}
-                              {skill.skill_group_ids.length > 0 && (
-                                <>
-                                  <span className="text-faint">·</span>
-                                  <SkillGroupSwitchMenu
-                                    skill={skill}
-                                    skillGroups={skillGroups}
-                                    groupNameMap={groupNameMap}
-                                    onSwitch={handleSwitchSkillGroup}
-                                    onRemove={handleRemoveFromGroup}
-                                  />
-                                </>
-                              )}
+                              <span className="text-faint">·</span>
+                              <SkillGroupSwitchMenu
+                                skill={skill}
+                                skillGroups={skillGroups}
+                                groupNameMap={groupNameMap}
+                                onSwitch={handleSwitchSkillGroup}
+                                onRemove={handleRemoveFromGroup}
+                              />
                             </div>
                             <SyncDots
                               className="shrink-0"
@@ -1959,16 +1955,14 @@ export function MySkills() {
                               {sourceRefLabel(skill)}
                             </span>
                           )}
-                          {skill.skill_group_ids.length > 0 && (
-                            <SkillGroupSwitchMenu
-                              skill={skill}
-                              skillGroups={skillGroups}
-                              groupNameMap={groupNameMap}
-                              onSwitch={handleSwitchSkillGroup}
-                              onRemove={handleRemoveFromGroup}
-                              fontSize="text-[13px]"
-                            />
-                          )}
+                          <SkillGroupSwitchMenu
+                            skill={skill}
+                            skillGroups={skillGroups}
+                            groupNameMap={groupNameMap}
+                            onSwitch={handleSwitchSkillGroup}
+                            onRemove={handleRemoveFromGroup}
+                            fontSize="text-[13px]"
+                          />
                         </div>
 
                         {!isMultiSelect && (
