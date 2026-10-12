@@ -8,9 +8,8 @@ const PROJECT_EXPORT_AGENT_PRIORITY = [
   "github_copilot",
 ];
 
-// Keys of project agents that can actually receive skills right now: both
-// installed on disk and enabled by the user. Used everywhere export targets
-// are derived so disabled/uninstalled agents never get project-local skills.
+// Initial personal suggestion only. Team installation can explicitly select
+// any project adapter, including tools not installed on this computer.
 export function enabledInstalledAgentKeys(
   targets: ProjectAgentTarget[],
 ): string[] {
@@ -32,5 +31,16 @@ export function getDefaultExportAgents(
     availableKeys.has(key),
   );
   const rest = enabledKeys.filter((key) => !prioritized.includes(key));
-  return Array.from(new Set([...prioritized, ...rest]));
+  return enabledKeys.length > 0
+    ? Array.from(new Set([...prioritized, ...rest]))
+    : targets
+        .filter((target) => target.key === "claude_code")
+        .map((target) => target.key);
+}
+
+/** Project filters follow actual local detection; team installation is separate. */
+export function detectedProjectAgentFilters(targets: ProjectAgentTarget[]) {
+  return targets
+    .filter((target) => target.installed)
+    .map((target) => ({ key: target.key, displayName: target.display_name }));
 }

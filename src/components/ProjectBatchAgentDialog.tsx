@@ -29,9 +29,7 @@ export function ProjectBatchAgentDialog({
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  const available = targets.filter(
-    (target) => target.installed && target.enabled,
-  );
+  const available = targets;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !busy) {

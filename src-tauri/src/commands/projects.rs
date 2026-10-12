@@ -161,21 +161,13 @@ fn project_agent_targets_for_record(
         }];
     }
 
-    let disabled_tools: std::collections::HashSet<String> = store
-        .get_setting("disabled_tools")
-        .ok()
-        .flatten()
-        .and_then(|value| serde_json::from_str::<Vec<String>>(&value).ok())
-        .unwrap_or_default()
-        .into_iter()
-        .collect();
-
     agent_skill_configs(store)
         .into_iter()
         .map(|config| {
             let adapter = tool_adapters::find_adapter_with_store(store, &config.key);
             ProjectAgentTargetDto {
-                enabled: !disabled_tools.contains(&config.key),
+                // Project targets describe team support, independent of personal preferences.
+                enabled: true,
                 installed: adapter.as_ref().map(|a| a.is_installed()).unwrap_or(false),
                 is_custom: adapter.as_ref().map(|a| a.is_custom).unwrap_or(false),
                 key: config.key,
@@ -958,6 +950,21 @@ pub async fn export_skill_to_project(
             .map_err(AppError::db)?
             .ok_or_else(|| AppError::not_found("Skill not found"))?;
 
+        if project.workspace_type != "linked" {
+            let keys = agents
+                .filter(|keys| !keys.is_empty())
+                .unwrap_or_else(|| vec!["claude_code".into()]);
+            let targets = keys
+                .iter()
+                .map(|key| {
+                    tool_adapters::find_adapter_with_store(&store, key)
+                        .ok_or_else(|| AppError::not_found(format!("Unknown agent: {key}")))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            crate::core::project_library::install(Path::new(&project.path), &skill, &targets)?;
+            return Ok(());
+        }
+
         let source = PathBuf::from(&skill.central_path);
         let dir_name = sync_engine::target_dir_name(&source, &skill.name);
         ensure_safe_skill_relative_path(&dir_name)?;
@@ -968,26 +975,7 @@ pub async fn export_skill_to_project(
                 vec!["claude_code".to_string()]
             }
         });
-        let agent_keys = if project.workspace_type == "linked" {
-            requested_agent_keys
-        } else {
-            let available_targets: std::collections::HashSet<String> =
-                project_agent_targets_for_record(&store, &project)
-                    .into_iter()
-                    .filter(|target| target.installed && target.enabled)
-                    .map(|target| target.key)
-                    .collect();
-            let filtered = requested_agent_keys
-                .into_iter()
-                .filter(|key| available_targets.contains(key))
-                .collect::<Vec<_>>();
-            if filtered.is_empty() {
-                return Err(AppError::invalid_input(
-                    "No enabled installed agents selected for this project",
-                ));
-            }
-            filtered
-        };
+        let agent_keys = requested_agent_keys;
 
         for agent_key in &agent_keys {
             let (skills_root, disabled_root) =
@@ -1055,7 +1043,6 @@ pub async fn update_project_skill_from_center(
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let _guard = crate::core::project_skill_mutation::lock_project_skill_mutation()?;
         ensure_safe_skill_relative_path(&skill_relative_path)?;
 
         let record = store
@@ -1073,6 +1060,21 @@ pub async fn update_project_skill_from_center(
         let all_managed = store.get_all_skills().unwrap_or_default();
         let managed = find_best_center_match(skill, &all_managed)
             .ok_or_else(|| AppError::not_found("No matching skill in center"))?;
+
+        if record.workspace_type != "linked"
+            && crate::core::project_library::is_managed(
+                Path::new(&record.path),
+                &skill_relative_path,
+            )?
+        {
+            crate::core::project_library::update(
+                Path::new(&record.path),
+                &skill_relative_path,
+                managed,
+            )?;
+            return Ok(());
+        }
+        let _guard = crate::core::project_skill_mutation::lock_project_skill_mutation()?;
 
         // Mirror the global-workspace protection (agent_workspace.rs): never
         // overwrite a project copy that has unsynced local edits (#225 review).
@@ -1137,6 +1139,34 @@ pub async fn toggle_project_skill(
             .map_err(AppError::db)?
             .ok_or_else(|| AppError::not_found("Workspace not found"))?;
 
+        if record.workspace_type != "linked"
+            && crate::core::project_library::is_managed(
+                Path::new(&record.path),
+                &skill_relative_path,
+            )?
+        {
+            let shared =
+                resolve_agent_skills_roots(&store, &record, &agent).is_some_and(|(root, _)| {
+                    root == Path::new(&record.path)
+                        .join(crate::core::project_library::SKILLS_DIRECTORY)
+                });
+            if shared {
+                crate::core::project_library::set_enabled(
+                    Path::new(&record.path),
+                    &skill_relative_path,
+                    enabled,
+                )?;
+                return Ok(());
+            }
+            crate::core::project_library::set_target_enabled(
+                Path::new(&record.path),
+                &skill_relative_path,
+                &agent,
+                enabled,
+            )?;
+            return Ok(());
+        }
+
         let (skills_dir, disabled_dir) = resolve_agent_skills_roots(&store, &record, &agent)
             .ok_or_else(|| AppError::not_found(format!("Unknown agent: {}", agent)))?;
         let disabled_dir = disabled_dir.ok_or_else(|| {
@@ -1163,6 +1193,25 @@ pub async fn delete_project_skill(
             .get_project_by_id(&project_id)
             .map_err(AppError::db)?
             .ok_or_else(|| AppError::not_found("Workspace not found"))?;
+
+        if record.workspace_type != "linked"
+            && crate::core::project_library::is_managed(
+                Path::new(&record.path),
+                &skill_relative_path,
+            )?
+        {
+            let shared = resolve_agent_skills_roots(&store, &record, &agent)
+                .is_some_and(|(root, _)| root == Path::new(&record.path).join(crate::core::project_library::SKILLS_DIRECTORY));
+            if shared {
+                return Err(AppError::invalid_input("Shared project content is visible to multiple Agents. Use project Skill deletion or shared project disable instead."));
+            }
+            crate::core::project_library::remove_target(
+                Path::new(&record.path),
+                &skill_relative_path,
+                &agent,
+            )?;
+            return Ok(());
+        }
 
         let (skills_root, disabled_root) = resolve_agent_skills_roots(&store, &record, &agent)
             .ok_or_else(|| AppError::not_found(format!("Unknown agent: {}", agent)))?;

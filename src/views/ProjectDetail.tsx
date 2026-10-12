@@ -50,7 +50,7 @@ import {
   UNTAGGED_FILTER,
 } from "../lib/skillTags";
 import {
-  enabledInstalledAgentKeys,
+  detectedProjectAgentFilters,
   getDefaultExportAgents,
 } from "../lib/exportAgents";
 import { cn, compactHomePath } from "../utils";
@@ -62,6 +62,8 @@ import type {
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { SkillDirectoryActions } from "../components/SkillDirectoryActions";
+import { deleteProjectSkillGroup } from "../lib/projectLibraryActions";
+import { ProjectLibraryPanel } from "../components/ProjectLibraryPanel";
 import { AddSkillsSheet } from "../components/AddSkillsSheet";
 import { AgentIcon } from "../components/AgentIcon";
 const projectLastUsedAgentsKey = (projectId: string) =>
@@ -107,6 +109,7 @@ export function ProjectDetail() {
   const [search, setSearch] = useState("");
   const [agentFilters, setAgentFilters] = useState<Set<string>>(new Set());
   const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [detailSkill, setDetailSkill] = useState<ProjectSkillEntry | null>(
     null,
   );
@@ -290,23 +293,10 @@ export function ProjectDetail() {
       });
   }, [skills]);
 
-  const agentFilterOptions = useMemo(() => {
-    const options = new Map<string, string>();
-    for (const target of projectAgentTargets) {
-      if (target.installed && target.enabled) {
-        options.set(target.key, target.display_name);
-      }
-    }
-    for (const skill of skills) {
-      if (!options.has(skill.agent)) {
-        options.set(skill.agent, skill.agent_display_name || skill.agent);
-      }
-    }
-    return [...options.entries()].map(([key, displayName]) => ({
-      key,
-      displayName,
-    }));
-  }, [projectAgentTargets, skills]);
+  const agentFilterOptions = useMemo(
+    () => detectedProjectAgentFilters(projectAgentTargets),
+    [projectAgentTargets],
+  );
 
   useEffect(() => {
     if (!detailSkill) return;
@@ -321,8 +311,26 @@ export function ProjectDetail() {
     }
   }, [detailSkill, groupedSkills]);
 
+  const groupFilterSkillIds = useMemo(() => {
+    if (!groupFilter) return null;
+    const managedById = new Map(managedSkills.map((s) => [s.id, s]));
+    const ids = new Set<string>();
+    for (const entry of groupedSkills) {
+      for (const cid of entry.centerSkillIds) {
+        const managed = managedById.get(cid);
+        if (managed?.skill_group_ids.includes(groupFilter)) {
+          ids.add(entry.id);
+          break;
+        }
+      }
+    }
+    return ids;
+  }, [groupFilter, groupedSkills, managedSkills]);
+
   const filtered = useMemo(() => {
     return groupedSkills.filter((skill) => {
+      if (groupFilterSkillIds && !groupFilterSkillIds.has(skill.id))
+        return false;
       const matchesSearch =
         skill.name.toLowerCase().includes(search.toLowerCase()) ||
         (skill.description || "").toLowerCase().includes(search.toLowerCase());
@@ -343,20 +351,33 @@ export function ProjectDetail() {
       if (filterMode === "disabled") return skill.enabledCount === 0;
       return true;
     });
-  }, [groupedSkills, search, filterMode, agentFilters, tagFilters]);
+  }, [
+    groupedSkills,
+    groupFilterSkillIds,
+    search,
+    filterMode,
+    agentFilters,
+    tagFilters,
+  ]);
 
   const hasActiveFilters =
     search.trim() !== "" ||
     filterMode !== "all" ||
     agentFilters.size > 0 ||
-    tagFilters.size > 0;
+    tagFilters.size > 0 ||
+    groupFilter !== null;
 
   const clearFilters = () => {
     setSearch("");
     setFilterMode("all");
     setAgentFilters(new Set());
     setTagFilters(new Set());
+    setGroupFilter(null);
   };
+
+  const handleGroupBadgeClick = useCallback((groupId: string) => {
+    setGroupFilter((prev) => (prev === groupId ? null : groupId));
+  }, []);
 
   const {
     isMultiSelect,
@@ -486,7 +507,7 @@ export function ProjectDetail() {
   );
 
   const initialSheetAgents = useMemo(() => {
-    const availableKeys = new Set(enabledInstalledAgentKeys(exportTargets));
+    const availableKeys = new Set(exportTargets.map((target) => target.key));
     if (lastUsedExportAgents && lastUsedExportAgents.length > 0) {
       const filtered = lastUsedExportAgents.filter((k) => availableKeys.has(k));
       if (filtered.length > 0) return filtered;
@@ -500,7 +521,7 @@ export function ProjectDetail() {
     // stand-in would deploy to Claude Code alone — the exact failure #400
     // reported — so keep the bar out of the DOM until the targets are real.
     if (projectAgentTargets.length === 0) return [];
-    const availableKeys = new Set(enabledInstalledAgentKeys(exportTargets));
+    const availableKeys = new Set(exportTargets.map((target) => target.key));
     return selectedExportAgents.filter((key) => availableKeys.has(key));
   }, [exportTargets, projectAgentTargets, selectedExportAgents]);
 
@@ -805,13 +826,20 @@ export function ProjectDetail() {
     try {
       if (enabled) {
         const centerSkillId = skill.centerSkillIds[0];
-        if (!centerSkillId) {
+        if (!centerSkillId && project?.workspace_type !== "linked") {
+          await api.deployProjectLibrarySkill(
+            id,
+            skill.variants[0].relative_path,
+            [agentKey],
+          );
+        } else if (centerSkillId) {
+          await api.exportSkillToProject(centerSkillId, id, [agentKey]);
+        } else {
           toast.error(
             t("project.agentAddRequiresCenter", { agent: displayName }),
           );
           return;
         }
-        await api.exportSkillToProject(centerSkillId, id, [agentKey]);
         toast.success(
           t("project.agentAdded", { agent: displayName, name: skill.name }),
         );
@@ -837,10 +865,10 @@ export function ProjectDetail() {
   const handleDeleteSkill = async () => {
     if (!id || !deleteTarget) return;
     try {
-      await Promise.all(
-        deleteTarget.variants.map((variant) =>
-          api.deleteProjectSkill(id, variant.relative_path, variant.agent),
-        ),
+      await deleteProjectSkillGroup(
+        id,
+        deleteTarget.variants,
+        project?.workspace_type === "linked",
       );
       toast.success(t("project.skillDeleted", { name: deleteTarget.name }));
       await Promise.all([loadSkills(), refreshProjects()]);
@@ -855,10 +883,10 @@ export function ProjectDetail() {
     let failed = 0;
     for (const skill of selectedSkills) {
       try {
-        await Promise.all(
-          skill.variants.map((variant) =>
-            api.deleteProjectSkill(id, variant.relative_path, variant.agent),
-          ),
+        await deleteProjectSkillGroup(
+          id,
+          skill.variants,
+          project?.workspace_type === "linked",
         );
         deleted++;
       } catch {
@@ -1033,6 +1061,13 @@ export function ProjectDetail() {
 
   return (
     <div className="app-page">
+      {project.workspace_type !== "linked" && (
+        <ProjectLibraryPanel
+          projectId={project.id}
+          refreshKey={skills}
+          onChanged={loadSkills}
+        />
+      )}
       <div className="app-page-header flex flex-col gap-2.5 pb-3 pr-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-[1_1_260px]">
@@ -1525,6 +1560,8 @@ export function ProjectDetail() {
                       status={statusMeta}
                       disabled={skill.enabledCount === 0}
                       groups={skillGroupsForEntry.get(skill.id) ?? []}
+                      activeGroupId={groupFilter}
+                      onGroupClick={handleGroupBadgeClick}
                     />
                     {!isMultiSelect && (
                       <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">

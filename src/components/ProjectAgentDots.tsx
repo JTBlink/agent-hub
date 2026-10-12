@@ -46,14 +46,11 @@ export function ProjectAgentDots({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const assignedSet = new Set(assignedAgents);
-  const availableKeys = new Set(
-    targets.filter((t) => t.installed && t.enabled).map((t) => t.key),
-  );
+  const availableKeys = new Set(targets.map((t) => t.key));
 
   const dots: { key: string; displayName: string; state: DotState }[] = [];
 
   for (const target of targets) {
-    if (!target.installed || !target.enabled) continue;
     dots.push({
       key: target.key,
       displayName: target.display_name,

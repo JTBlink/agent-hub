@@ -852,7 +852,7 @@
     "openInFinder": "Open Folder",
     "globalSyncMode": "Global Sync Mode",
     "globalSyncModeDesc": "How skills are deployed to global agent workspaces (~/.claude, etc.). Symlinks are recommended — minimal disk usage with live updates.",
-    "projectSyncMode": "Project Sync Mode",
+    "projectSyncMode": "Linked workspace sync mode",
     "projectSyncModeDesc": "How skills are deployed into project directories. File copy is recommended for projects — symlinks point to this machine's central library and won't travel with the repo.",
     "symlink": "Symlink",
     "copy": "File Copy",
@@ -1107,6 +1107,11 @@
     "switched": "Switched to \"{{name}}\""
   },
   "project": {
+    "comparison": {
+      "diffLegend": "Project copy on the left, library on the right. Red content exists only locally; green content exists only in the library. Added and removed files describe the library relative to the project copy.",
+      "copy": "Project copy",
+      "projectVersion": "Project copy"
+    },
     "title": "Project Skills",
     "path": "Project Path",
     "workspaceHint": "Manage local agent skills in this repository and sync them with the Skills Center.",
@@ -1260,8 +1265,8 @@
     "batchAgents": {
       "enable": "Enable for agents",
       "disable": "Disable for agents",
-      "enableHint": "{{count}} skills selected. Choose agents to enable. Missing skills are installed from the library; disabled copies are enabled.",
-      "disableHint": "{{count}} skills selected. Disable existing copies only for the chosen agents. Other agents keep their current state.",
+      "enableHint": "{{count}} skills selected. Choose team agents. Project skills use project content; legacy skills use library export. Disabled copies are restored.",
+      "disableHint": "{{count}} skills selected. Dedicated entries are disabled individually; shared directory entries are disabled together. Content is retained and changes travel with project Git.",
       "agentStatus": "{{active}} / {{total}} enabled",
       "enabledOn": "Enabled in project: {{agents}}",
       "none": "None",
@@ -1269,11 +1274,6 @@
       "noAgents": "No installed, enabled agents",
       "completed": "Updated {{count}} agent skill copies",
       "summary": "{{active}} / {{total}} skills enabled for agents"
-    },
-    "comparison": {
-      "diffLegend": "Project copy on the left, library on the right. Red content exists only locally; green content exists only in the library. Added and removed files describe the library relative to the project copy.",
-      "copy": "Project copy",
-      "projectVersion": "Project copy"
     }
   },
   "skillGroupActions": {
@@ -1391,5 +1391,15 @@
       "failed": "{{count}} skills failed to sync",
       "upToDate": "Up to date"
     }
+  },
+  "projectLibrary": {
+    "description": "Commit skills with the project so teammates can pull and use them.",
+    "installReady": "Added {{count}} project skills; commit project content and team entries to Git",
+    "commitFiles": "Team files ({{count}} paths)",
+    "ignored": "Git ignores these shared paths; teammates may not receive them: {{paths}}",
+    "modified": "Project content changed or is missing",
+    "stale": "Team entries need refreshing",
+    "repair": "Refresh team copies from project library",
+    "repaired": "Team copies refreshed; review and commit the project changes"
   }
 }

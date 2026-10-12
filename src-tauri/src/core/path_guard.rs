@@ -48,6 +48,17 @@ pub(crate) fn ensure_dir_within_root(path: &Path, root: &Path) -> Result<(), App
     Ok(())
 }
 
+/// Refuse equal or nested publication paths. Callers resolve and validate
+/// each path first, so comparisons cannot hide link aliases or `..` segments.
+pub(crate) fn ensure_disjoint_paths(first: &Path, second: &Path) -> Result<(), AppError> {
+    if first.starts_with(second) || second.starts_with(first) {
+        return Err(AppError::invalid_input(
+            "Project source and deployment paths overlap",
+        ));
+    }
+    Ok(())
+}
+
 /// Maximum filesystem name length we'll allow. Matches the lowest common
 /// denominator (most modern filesystems allow 255 bytes).
 const MAX_NAME_LEN: usize = 200;

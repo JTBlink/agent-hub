@@ -8,6 +8,7 @@ import {
 vi.mock("./tauri", () => ({
   exportSkillToProject: vi.fn(),
   toggleProjectSkill: vi.fn(),
+  deployProjectLibrarySkill: vi.fn(),
 }));
 const skill: BatchProjectSkill = {
   name: "demo",
@@ -75,7 +76,10 @@ it("disables only selected existing copies and never installs missing copies", a
   );
   expect(api.exportSkillToProject).not.toHaveBeenCalled();
 });
-it("reports missing library sources and continues with the next skill", async () => {
+it("reports missing project content and continues with the next skill", async () => {
+  vi.mocked(api.deployProjectLibrarySkill).mockRejectedValueOnce(
+    new Error("Requires center"),
+  );
   const result = await applyProjectBatchAgents(
     "project",
     [{ ...skill, centerSkillIds: [] }, skill],
@@ -108,4 +112,21 @@ it("shows enabled agent names without counting disabled copies", () => {
   expect(
     enabledProjectAgentNames([...skill.variants, skill.variants[0]]),
   ).toEqual(["Claude Code"]);
+});
+
+it("adds a missing team target using only the project library", async () => {
+  const result = await applyProjectBatchAgents(
+    "project",
+    [{ ...skill, centerSkillIds: [] }],
+    ["hermes"],
+    true,
+    () => "Requires center",
+  );
+  expect(api.deployProjectLibrarySkill).toHaveBeenCalledExactlyOnceWith(
+    "project",
+    "demo",
+    ["hermes"],
+  );
+  expect(api.exportSkillToProject).not.toHaveBeenCalled();
+  expect(result).toEqual({ changed: 1, errors: [] });
 });

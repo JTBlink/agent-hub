@@ -36,8 +36,17 @@ export async function applyProjectBatchAgents(
       try {
         if (enabled && variants.length === 0) {
           const centerId = skill.centerSkillIds[0];
-          if (!centerId) throw new Error(requiresCenter(agentKey));
-          await api.exportSkillToProject(centerId, projectId, [agentKey]);
+          if (centerId) {
+            await api.exportSkillToProject(centerId, projectId, [agentKey]);
+          } else if (skill.variants[0]) {
+            await api.deployProjectLibrarySkill(
+              projectId,
+              skill.variants[0].relative_path,
+              [agentKey],
+            );
+          } else {
+            throw new Error(requiresCenter(agentKey));
+          }
           changed++;
         } else {
           for (const variant of variants) {

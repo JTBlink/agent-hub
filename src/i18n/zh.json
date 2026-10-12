@@ -852,8 +852,8 @@
     "openInFinder": "打开文件夹",
     "globalSyncMode": "全局同步模式",
     "globalSyncModeDesc": "技能部署到全局 Agent 工作区（~/.claude 等）的方式。推荐使用符号链接，占用空间极小且修改可实时生效。",
-    "projectSyncMode": "项目同步模式",
-    "projectSyncModeDesc": "技能部署到项目目录的方式。项目建议使用文件复制——符号链接指向本机中央库，不会随仓库带走。",
+    "projectSyncMode": "链接工作空间同步模式",
+    "projectSyncModeDesc": "普通项目使用团队技能库与文件副本。此选项仅控制链接工作空间的部署方式。",
     "symlink": "符号链接",
     "copy": "文件复制",
     "currentSkillGroup": "当前技能组",
@@ -1107,6 +1107,11 @@
     "switched": "已切换到 \"{{name}}\""
   },
   "project": {
+    "comparison": {
+      "diffLegend": "左侧为项目本地副本，右侧为中心库；红色表示仅本地有的内容，绿色表示仅中心库有的内容。新增、删除均指中心相对本地的差异。",
+      "copy": "查看项目副本",
+      "projectVersion": "项目副本"
+    },
     "title": "项目 Skills",
     "path": "项目路径",
     "workspaceHint": "管理该仓库中各 Agent 的本地 Skills，并与 Skills 中心双向同步。",
@@ -1260,8 +1265,8 @@
     "batchAgents": {
       "enable": "按 Agent 启用",
       "disable": "按 Agent 停用",
-      "enableHint": "已选 {{count}} 个技能。选择要启用的 Agent；缺失的技能将从中心库安装，已停用的副本将重新启用。",
-      "disableHint": "已选 {{count}} 个技能。仅停用所选 Agent 的现有副本，保留其他 Agent 的状态。",
+      "enableHint": "已选 {{count}} 个技能。选择团队 Agent；项目技能从项目库补齐入口，旧技能沿用中心库导出，停用副本将恢复。",
+      "disableHint": "已选 {{count}} 个技能。专属目录仅停用所选入口；公共目录会共同停用。内容保留，变更随项目 Git 共享。",
       "agentStatus": "{{active}} / {{total}} 已启用",
       "enabledOn": "项目已启用：{{agents}}",
       "none": "无",
@@ -1269,11 +1274,6 @@
       "noAgents": "没有已安装且已启用的 Agent",
       "completed": "已更新 {{count}} 个 Agent 技能副本",
       "summary": "{{active}} / {{total}} 个技能已在 Agent 中启用"
-    },
-    "comparison": {
-      "diffLegend": "左侧为项目本地副本，右侧为中心库；红色表示仅本地有的内容，绿色表示仅中心库有的内容。新增、删除均指中心相对本地的差异。",
-      "copy": "查看项目副本",
-      "projectVersion": "项目副本"
     }
   },
   "skillGroupActions": {
@@ -1391,5 +1391,15 @@
       "failed": "{{count}} 个 Skill 同步失败",
       "upToDate": "已一致"
     }
+  },
+  "projectLibrary": {
+    "description": "技能随项目提交 Git，团队成员拉取即可使用。",
+    "installReady": "已添加 {{count}} 个项目技能；请提交项目内容和团队入口到 Git",
+    "commitFiles": "团队共享文件（{{count}} 个路径）",
+    "ignored": "以下共享路径被 Git 忽略，其他成员可能无法获取：{{paths}}",
+    "modified": "项目内容已修改或缺失",
+    "stale": "团队入口需要刷新",
+    "repair": "从项目库刷新团队副本",
+    "repaired": "团队副本已刷新，请检查并提交项目差异"
   }
 }
