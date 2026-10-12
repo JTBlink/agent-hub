@@ -40,3 +40,7 @@
 按 [ADR-0012](../../docs/adr/0012-project-central-installation.md)，项目中央仓库使用 `.agents/skills` 的实际内容，已有项目版本优先复用。新专属入口默认相对链接、支持复制选项；显式安装可转换指向当前来源的旧中央个人链接，不覆盖其他来源或修改。已有 npx skills 项目相对入口可识别，批量按 Skill 一次生成 Agent 入口。任务：[P04](issues/P04-project-central-install.md)。
 
 “按 Agent 启用/停用”批量窗口同样复用个人可用目标及公共过滤，避免再次展示完整支持列表；目标停用或消失后清理旧选择，两个模式均适用。任务：[P06](issues/P06-batch-enabled-agent-selection.md)。
+
+## Git 忽略诊断修订
+
+共享诊断只提示必要技能内容被忽略的风险。排除 Python 缓存、系统生成文件与本机环境配置（`.env`、`.env.*`、`*.env`），保留 example/sample/template 配置模板、脚本和资料的诊断；不改写 Git 规则，也不改变部署与修改保护指纹。任务：[B02](issues/B02-ignored-local-artifacts.md)。

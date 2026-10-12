@@ -1428,7 +1428,7 @@
     "commitFiles": "Skills and Agent entries ({{count}} paths)",
     "ignored": "Git ignores {{count}} skill paths; teammates may not receive them.",
     "ignoredDetails": "View paths and how to resolve",
-    "ignoredHelp": "Adjust .gitignore or local Git ignore rules to allow these skill paths while keeping other personal settings ignored, then commit the skill content. Ignored parent directories must also be allowed.",
+    "ignoredHelp": "Adjust .gitignore or local Git ignore rules to allow the skill content that needs sharing, then commit it. Keep caches and local environment settings ignored; share example configuration templates instead. Ignored parent directories must also be allowed.",
     "copyPaths": "Copy skill paths",
     "pathsCopied": "Skill paths copied",
     "managementFiles": "AgentHub manifest (optional to share)",

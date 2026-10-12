@@ -21,16 +21,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
-/// Names that reappear the next time the skill runs, so listing them would be
-/// noise rather than information.
-///
-/// Deliberately narrower than `content_hash::is_ignored`, which also drops
-/// `.gitignore`: that one is answering "what counts as skill content", while
-/// this one is answering "would the user miss it". A `.gitignore` they wrote is
-/// worth a mention; a `.pyc` never is.
-fn is_regenerable(name: &str) -> bool {
-    matches!(name, "__pycache__" | ".DS_Store" | "Thumbs.db") || name.ends_with(".pyc")
-}
+// Only generated artifacts are excluded: a user's `.gitignore` is still
+// worth mentioning when a replacement would remove it.
+use super::content_hash::is_regenerable;
 
 /// Paths that exist under `current` but not under `replacement`.
 ///

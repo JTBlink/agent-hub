@@ -30,3 +30,5 @@
 桌面目标选择：[P05](issues/P05-enabled-team-agents.md)，从已启用 Agent 中选择并统一可用状态判断。
 
 项目批量启停：[P06](issues/P06-batch-enabled-agent-selection.md)，复用可用目标和统一状态判断。
+
+Git 忽略误报：[B02](issues/B02-ignored-local-artifacts.md)，缓存与本机环境配置不计入技能交付警告，必要脚本及配置模板继续诊断。
