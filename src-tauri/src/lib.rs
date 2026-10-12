@@ -1122,8 +1122,6 @@ pub fn run() {
             commands::settings::set_settings,
             commands::settings::get_central_repo_path,
             commands::settings::get_skills_directory,
-            commands::settings::get_shared_skills_link_status,
-            commands::settings::set_shared_skills_link,
             commands::settings::get_backup_directory,
             commands::settings::get_central_repo_path_override,
             commands::settings::get_central_repo_pending_path,
