@@ -87,17 +87,113 @@ afterEach(async () => {
   container.remove();
   vi.unstubAllGlobals();
 });
-async function render(nextSkill = skill) {
+async function render(nextSkill = skill, syncProps = {}) {
   const props = {
     projectId: "project-demo",
     skill: nextSkill,
     targets: [],
     togglingAgent: null,
     onToggleAgent: () => {},
+    updatingCenter: false,
+    updatingProject: false,
+    onUpdateCenter: vi.fn(),
+    onUpdateProject: vi.fn(),
     onClose: () => {},
+    ...syncProps,
   };
   await act(async () => root.render(<ProjectSkillDetailPanel {...props} />));
 }
+
+function syncButton(key: string) {
+  return [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+    (button) => button.getAttribute("aria-label") === i18n.t(key),
+  );
+}
+
+it("shows card sync actions beside the detail title and forwards both operations", async () => {
+  const onUpdateCenter = vi.fn();
+  const onUpdateProject = vi.fn();
+  await render(skill, { onUpdateCenter, onUpdateProject });
+  const upload = syncButton("project.updateCenter");
+  const restore = syncButton("project.resetFromCenter");
+  expect(
+    upload?.parentElement?.parentElement?.querySelector("h2")?.textContent,
+  ).toBe("Demo");
+  expect(upload?.className).toContain("text-accent-light");
+  expect(restore?.className).not.toContain("text-accent-light");
+  await act(async () => {
+    upload?.click();
+    restore?.click();
+  });
+  expect(onUpdateCenter).toHaveBeenCalledOnce();
+  expect(onUpdateProject).toHaveBeenCalledOnce();
+});
+
+it.each(["updatingCenter", "updatingProject"])(
+  "blocks both detail sync actions while %s",
+  async (busyProp) => {
+    const onUpdateCenter = vi.fn();
+    const onUpdateProject = vi.fn();
+    await render(skill, { [busyProp]: true, onUpdateCenter, onUpdateProject });
+    const upload = syncButton("project.updateCenter");
+    const restore = syncButton("project.resetFromCenter");
+    expect(upload?.disabled).toBe(true);
+    expect(restore?.disabled).toBe(true);
+    await act(async () => {
+      upload?.click();
+      restore?.click();
+    });
+    expect(onUpdateCenter).not.toHaveBeenCalled();
+    expect(onUpdateProject).not.toHaveBeenCalled();
+  },
+);
+
+it("refreshes the open detail after sync and removes completed actions", async () => {
+  await render();
+  expect(syncButton("project.updateCenter")).toBeDefined();
+  const syncedVariant = { ...variant, sync_status: "in_sync" as const };
+  api.local.mockResolvedValue({ content: "Restored project content" });
+  await render({
+    ...skill,
+    status: "in_sync",
+    primaryVariant: syncedVariant,
+    variants: [syncedVariant],
+  });
+  expect(syncButton("project.updateCenter")).toBeUndefined();
+  expect(syncButton("project.resetFromCenter")).toBeUndefined();
+  expect(document.body.textContent).toContain("Restored project content");
+  expect(document.querySelector("h2")?.textContent).toBe("Demo");
+});
+
+it("uses the card's whole-skill status even while viewing a different Agent copy", async () => {
+  const synced = { ...variant, sync_status: "in_sync" as const };
+  const newerCenter = {
+    ...variant,
+    agent: "codex",
+    agent_display_name: "Codex",
+    sync_status: "center_newer" as const,
+  };
+  await render({
+    ...skill,
+    status: "center_newer",
+    primaryVariant: synced,
+    variants: [synced, newerCenter],
+  });
+  const pull = syncButton("project.updateProject");
+  expect(pull?.className).toContain("text-accent-light");
+  expect(syncButton("project.updateCenter")).toBeUndefined();
+  const select = document.querySelector("select");
+  expect(select?.value).toBe("claude_code");
+  await act(async () => {
+    if (select) {
+      select.value = "codex";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+  expect(syncButton("project.updateProject")?.className).toContain(
+    "text-accent-light",
+  );
+});
 async function click(label: string) {
   const button = [...document.querySelectorAll("button")].find((node) =>
     node.textContent?.trim().startsWith(label),
