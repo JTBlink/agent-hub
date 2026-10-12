@@ -25,7 +25,6 @@ import {
   SquareCheck,
   Square,
   GripVertical,
-  CircleSlash,
   Circle,
   Pencil,
   Share2,
@@ -52,12 +51,7 @@ import { SkillGroupContext } from "../components/SkillGroupContext";
 import { CardActionMenu } from "../components/CardActionMenu";
 import { SkillGroupSwitchMenu } from "../components/SkillGroupSwitchMenu";
 import * as api from "../lib/tauri";
-import {
-  getTagActiveColor,
-  getTagColor,
-  pruneStaleTagFilters,
-  UNTAGGED_FILTER,
-} from "../lib/skillTags";
+import { getTagColor } from "../lib/skillTags";
 import type {
   ManagedSkill,
   ToolInfo,
@@ -65,7 +59,8 @@ import type {
   SkillToolToggle,
 } from "../lib/tauri";
 import { skillLibraryContentKey } from "../lib/skillGroupMembership";
-import { matchesSkillSearch } from "../lib/skillSearch";
+import { useSkillLibraryFilters } from "../hooks/useSkillLibraryFilters";
+import { SkillLibraryFilterPanel } from "../components/SkillLibraryFilterPanel";
 import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
 import { getErrorMessage, isAppError } from "../lib/error";
 import {
@@ -155,10 +150,6 @@ function getToolDisplayName(toolKey: string, tools: ToolInfo[]) {
   return tools.find((tool) => tool.key === toolKey)?.display_name || toolKey;
 }
 
-function centralDirName(skill: ManagedSkill) {
-  return skill.central_path.split(/[\\/]/).filter(Boolean).pop() || skill.name;
-}
-
 function sourceRefLabel(skill: ManagedSkill): string | null {
   const ref = skill.source_ref;
   if (!ref) return null;
@@ -171,10 +162,6 @@ function sourceRefLabel(skill: ManagedSkill): string | null {
     return m ? m[1] : ref;
   }
   return null;
-}
-
-function hasAvailableUpdate(skill: ManagedSkill) {
-  return skill.update_status === "update_available" && canRefreshSkill(skill);
 }
 
 export function MySkills() {
@@ -197,11 +184,6 @@ export function MySkills() {
     refreshProjects,
   } = useApp();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterMode, setFilterMode] = useState<"all" | "enabled" | "available">(
-    viewedSkillGroup ? "enabled" : "all",
-  );
-  const [sourceFilters, setSourceFilters] = useState<Set<string>>(new Set());
-  const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
   const [allTags, setAllTags] = useState<string[]>([]);
   // Tag management from the filter bar (#233): right-click a tag pill to
   // rename (dialog) or delete (confirm). Left-click stays "filter only".
@@ -212,8 +194,6 @@ export function MySkills() {
   } | null>(null);
   const [tagToRename, setTagToRename] = useState<string | null>(null);
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [filterUngrouped, setFilterUngrouped] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const refreshAfterDeleteRef = useRef<number | null>(null);
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState(false);
@@ -273,10 +253,6 @@ export function MySkills() {
       .catch(() => {});
   }, [viewedSkillGroup, skills]);
 
-  useEffect(() => {
-    setFilterMode(viewedSkillGroup && !viewingUngrouped ? "enabled" : "all");
-  }, [viewedSkillGroup?.id, viewingUngrouped]);
-
   // Skills with an unresolved sync conflict get a "needs attention" badge
   // that jumps to the Backup page (merge-engine design §4 UI).
   const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
@@ -300,20 +276,6 @@ export function MySkills() {
     refreshAllTags();
   }, [skills]);
 
-  // Prune tag filters whose pill disappeared (e.g. its last skill was deleted),
-  // otherwise a stale filter silently hides everything. An empty skill list
-  // says nothing about which tags are valid, so wait for one before pruning.
-  // A tag still carried by a loaded skill counts as available even when it is
-  // missing from `allTags`: that list is refetched asynchronously and lags
-  // `skills`, and in that window a rename would otherwise drop the filter that
-  // `replaceTagInFilters` just moved onto the new name.
-  useEffect(() => {
-    if (skills.length === 0) return;
-    const hasUntagged = skills.some((skill) => skill.tags.length === 0);
-    const available = [...allTags, ...skills.flatMap((skill) => skill.tags)];
-    setTagFilters((prev) => pruneStaleTagFilters(prev, available, hasUntagged));
-  }, [allTags, skills]);
-
   // Close the tag context menu on Escape (click-outside is handled by its backdrop).
   useEffect(() => {
     if (!tagMenu) return;
@@ -324,135 +286,23 @@ export function MySkills() {
     return () => window.removeEventListener("keydown", onKey);
   }, [tagMenu]);
 
-  const toggleFilter = (set: Set<string>, value: string): Set<string> => {
-    const next = new Set(set);
-    if (next.has(value)) next.delete(value);
-    else next.add(value);
-    return next;
-  };
-
-  // A filter can outlive the control that set it (the tag row hides itself once
-  // no tag is left), so the empty state carries the way out. `filterMode` is
-  // reset too — its control never hides, but a button labelled "clear filters"
-  // that leaves one of them on is a lie.
-  const hasActiveFilters =
-    search.trim() !== "" ||
-    sourceFilters.size > 0 ||
-    filterUngrouped ||
-    tagFilters.size > 0 ||
-    filterMode !== "all";
-  const clearFilters = () => {
-    setSearch("");
-    setSourceFilters(new Set());
-    setFilterUngrouped(false);
-    setTagFilters(new Set());
-    setFilterMode("all");
-  };
-
-  const skillDisplayNames = useMemo(() => {
-    const nameCounts = new Map<string, number>();
-    for (const skill of skills) {
-      nameCounts.set(skill.name, (nameCounts.get(skill.name) || 0) + 1);
-    }
-
-    const displayNames = new Map<string, string>();
-    for (const skill of skills) {
-      const dirName = centralDirName(skill);
-      displayNames.set(
-        skill.id,
-        (nameCounts.get(skill.name) || 0) > 1 && dirName !== skill.name
-          ? dirName
-          : skill.name,
-      );
-    }
-    return displayNames;
-  }, [skills]);
-
-  const baseFiltered = useMemo(() => {
-    return skills.filter((skill) => {
-      const displayName = skillDisplayNames.get(skill.id) || skill.name;
-      if (
-        !matchesSkillSearch(skill.name, displayName, skill.description, search)
-      )
-        return false;
-
-      if (sourceFilters.size > 0 && !sourceFilters.has(skill.source_type))
-        return false;
-
-      if (filterUngrouped && skill.skill_group_ids.length > 0) return false;
-
-      if (tagFilters.size > 0) {
-        const wantUntagged = tagFilters.has(UNTAGGED_FILTER);
-        const matchUntagged = wantUntagged && skill.tags.length === 0;
-        const matchTag = skill.tags.some((t) => tagFilters.has(t));
-        if (!matchUntagged && !matchTag) return false;
-      }
-
-      if (viewingUngrouped) return skill.skill_group_ids.length === 0;
-
-      return true;
-    });
-  }, [
+  const libraryFilters = useSkillLibraryFilters(
     skills,
-    skillDisplayNames,
-    search,
-    sourceFilters,
-    filterUngrouped,
-    tagFilters,
+    allTags,
+    viewedSkillGroup?.id,
     viewingUngrouped,
-  ]);
-
-  const filtered = useMemo(() => {
-    const result = baseFiltered.filter((skill) => {
-      if (!viewedSkillGroup) return true;
-
-      const enabledInSkillGroup = skill.skill_group_ids.includes(
-        viewedSkillGroup.id,
-      );
-      if (filterMode === "enabled") return enabledInSkillGroup;
-      if (filterMode === "available") return !enabledInSkillGroup;
-      return true;
-    });
-
-    result.sort((a, b) => {
-      const aNeedsUpdate = hasAvailableUpdate(a) ? 0 : 1;
-      const bNeedsUpdate = hasAvailableUpdate(b) ? 0 : 1;
-      if (aNeedsUpdate !== bNeedsUpdate) return aNeedsUpdate - bNeedsUpdate;
-
-      if (!viewedSkillGroup) return 0;
-
-      const aEnabled = a.skill_group_ids.includes(viewedSkillGroup.id) ? 0 : 1;
-      const bEnabled = b.skill_group_ids.includes(viewedSkillGroup.id) ? 0 : 1;
-      if (aEnabled !== bEnabled) return aEnabled - bEnabled;
-
-      const aOrder = skillGroupSkillOrder.indexOf(a.id);
-      const bOrder = skillGroupSkillOrder.indexOf(b.id);
-      if (aOrder !== -1 && bOrder !== -1) return aOrder - bOrder;
-      if (aOrder !== -1) return -1;
-      if (bOrder !== -1) return 1;
-      return a.name.localeCompare(b.name);
-    });
-
-    return result;
-  }, [baseFiltered, filterMode, viewedSkillGroup, skillGroupSkillOrder]);
-
-  const filterCounts = useMemo(() => {
-    if (!viewedSkillGroup)
-      return { all: baseFiltered.length, enabled: 0, available: 0 };
-    const enabled = baseFiltered.filter((s) =>
-      s.skill_group_ids.includes(viewedSkillGroup.id),
-    ).length;
-    return {
-      all: baseFiltered.length,
-      enabled,
-      available: baseFiltered.length - enabled,
-    };
-  }, [baseFiltered, viewedSkillGroup]);
-
-  const ungroupedCount = useMemo(
-    () => skills.filter((s) => s.skill_group_ids.length === 0).length,
-    [skills],
+    skillGroupSkillOrder,
   );
+  const {
+    search,
+    setSearch,
+    tags: tagFilters,
+    setTags: setTagFilters,
+    filtered,
+    displayNames: skillDisplayNames,
+    hasActiveFilters,
+    clearFilters,
+  } = libraryFilters;
 
   const {
     isMultiSelect,
@@ -469,13 +319,7 @@ export function MySkills() {
     getKey: (s) => s.id,
     isItemActive: (s) =>
       viewedSkillGroup ? s.skill_group_ids.includes(viewedSkillGroup.id) : true,
-    filterSignal: JSON.stringify([
-      search,
-      [...sourceFilters].sort(),
-      [...tagFilters].sort(),
-      filterMode,
-      viewedSkillGroup?.id ?? null,
-    ]),
+    filterSignal: libraryFilters.filterSignal,
     escapeEnabled:
       !batchTagDialogOpen && !batchSyncDialogOpen && !batchDeleteConfirm,
   });
@@ -1312,13 +1156,14 @@ export function MySkills() {
       <AgentControlSetupCard respectDismissal={false} />
 
       <div className="app-toolbar">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative w-full min-w-[200px] max-w-[280px]">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="relative w-full min-w-[200px] max-w-[360px]">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label={t("mySkills.searchPlaceholder")}
               placeholder={t("mySkills.searchPlaceholder")}
               className="app-input w-full pl-9 font-medium"
               autoCapitalize="none"
@@ -1326,24 +1171,6 @@ export function MySkills() {
               spellCheck={false}
             />
           </div>
-
-          {viewedSkillGroup && (
-            <div className="app-segmented app-toolbar-segmented shrink-0">
-              {(["enabled", "all", "available"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setFilterMode(mode)}
-                  className={cn(
-                    "app-segmented-button",
-                    filterMode === mode && "app-segmented-button-active",
-                  )}
-                >
-                  {t(`mySkills.filters.${mode}`)}
-                  <span className="ml-1 opacity-60">{filterCounts[mode]}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Keep all library actions in one toolbar so they wrap together. */}
@@ -1443,92 +1270,39 @@ export function MySkills() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 px-1 -mt-2 -mb-3">
-        {(["local", "import", "git", "skillssh"] as const).map((src) => (
-          <button
-            key={src}
-            onClick={() => setSourceFilters(toggleFilter(sourceFilters, src))}
-            className={cn(
-              "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
-              sourceFilters.has(src)
-                ? "bg-accent text-white dark:bg-accent dark:text-white"
-                : "bg-surface-hover text-muted hover:text-secondary",
-            )}
-          >
-            {t(`mySkills.sourceFilter.${src}`)}
-          </button>
-        ))}
-        {skills.some((s) => s.skill_group_ids.length === 0) && (
-          <>
-            <span className="mx-0.5 h-3 w-px bg-border-subtle" />
-            <button
-              onClick={() => setFilterUngrouped((v) => !v)}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
-                filterUngrouped
-                  ? "bg-surface-active text-primary"
-                  : "border border-dashed border-border text-muted hover:text-secondary",
-              )}
-            >
-              <CircleSlash className="h-3 w-3" />
-              {t("mySkills.sourceFilter.ungrouped")}
-              <span className="opacity-60">{ungroupedCount}</span>
-            </button>
-          </>
-        )}
-        {allTags.length > 0 && (
-          <>
-            <span className="mx-0.5 h-3 w-px bg-border-subtle" />
-            {skills.some((s) => s.tags.length === 0) &&
-              (() => {
-                const isActive = tagFilters.has(UNTAGGED_FILTER);
-                return (
-                  <button
-                    onClick={() =>
-                      setTagFilters(toggleFilter(tagFilters, UNTAGGED_FILTER))
-                    }
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
-                      isActive
-                        ? "bg-surface-active text-primary"
-                        : "border border-dashed border-border text-muted hover:text-secondary",
-                    )}
-                    title={t("mySkills.tags.untagged")}
-                  >
-                    <CircleSlash className="h-3 w-3" />
-                    {t("mySkills.tags.untagged")}
-                  </button>
-                );
-              })()}
-            {allTags.map((tag) => {
-              const isActive = tagFilters.has(tag);
-              return (
-                <button
-                  key={tag}
-                  onClick={() => setTagFilters(toggleFilter(tagFilters, tag))}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setTagMenu({
-                      tag,
-                      x: Math.min(e.clientX, window.innerWidth - 160),
-                      y: Math.min(e.clientY, window.innerHeight - 90),
-                    });
-                  }}
-                  title={t("mySkills.tags.manageHint")}
-                  className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
-                    isActive
-                      ? getTagActiveColor(tag, allTags)
-                      : getTagColor(tag, allTags),
-                  )}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </>
-        )}
-      </div>
+      <SkillLibraryFilterPanel
+        deployment={libraryFilters.deployment}
+        deploymentCounts={libraryFilters.deploymentCounts}
+        onDeploymentChange={libraryFilters.setDeployment}
+        membership={libraryFilters.membership}
+        membershipCounts={libraryFilters.membershipCounts}
+        onMembershipChange={libraryFilters.setMembership}
+        groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
+        viewingUngrouped={viewingUngrouped}
+        ungrouped={libraryFilters.ungrouped}
+        ungroupedCount={
+          skills.filter((skill) => skill.skill_group_ids.length === 0).length
+        }
+        onUngroupedChange={() =>
+          libraryFilters.setUngrouped((current) => !current)
+        }
+        sources={libraryFilters.sources}
+        onSourcesChange={libraryFilters.setSources}
+        tags={tagFilters}
+        allTags={allTags}
+        hasUntagged={skills.some((skill) => skill.tags.length === 0)}
+        onTagsChange={setTagFilters}
+        onTagContextMenu={(tag, x, y) =>
+          setTagMenu({
+            tag,
+            x: Math.min(x, window.innerWidth - 160),
+            y: Math.min(y, window.innerHeight - 90),
+          })
+        }
+        resultCount={filtered.length}
+        hasActiveFilters={hasActiveFilters}
+        onClear={clearFilters}
+      />
 
       {isMultiSelect && (
         <MultiSelectToolbar

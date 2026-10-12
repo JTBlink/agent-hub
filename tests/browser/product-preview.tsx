@@ -10,8 +10,9 @@ import type {
 import "../../src/index.css";
 
 // Documentation-only fixture: current product components, synthetic data, no disk access.
-const empty = new URLSearchParams(location.search).has("empty");
-const showUndeployed = new URLSearchParams(location.search).has("undeployed");
+const previewParams = new URLSearchParams(location.search);
+const empty = previewParams.has("empty");
+const showUndeployed = previewParams.has("undeployed");
 const timestamp = 1791676800;
 const groups: SkillGroup[] = ["开发", "设计", "研究"].map((name, index) => ({
   id: `group-${index}`,
@@ -94,7 +95,9 @@ const skills: ManagedSkill[] = entries.map(
       synced_at: timestamp,
     })),
     skill_group_ids: [groups[index % 3].id],
-    tags: [tag],
+    tags: previewParams.has("many-tags")
+      ? [tag, ...Array.from({ length: 9 }, (_, i) => `demo-tag-${i + 1}`)]
+      : [tag],
   }),
 );
 const projects: Project[] = ["demo-web", "demo-api"].map((name, index) => ({
@@ -126,8 +129,9 @@ Object.assign(window, {
           return (
             (
               {
-                language: "zh",
-                theme: "dark",
+                language: previewParams.get("language") ?? "zh",
+                theme: previewParams.get("theme") ?? "dark",
+                text_size: previewParams.get("text-size") ?? "default",
                 agent_control_setup_prompt: "dismissed",
               } as Record<string, string>
             )[args?.key ?? ""] ?? null
@@ -141,7 +145,9 @@ Object.assign(window, {
         case "get_projects":
           return empty ? [] : projects;
         case "get_all_tags":
-          return empty ? [] : ["开发", "设计", "研究"];
+          return empty
+            ? []
+            : [...new Set(skills.flatMap((skill) => skill.tags))];
         case "get_active_skill_group":
         case "get_agent_control_status":
           return null;

@@ -21,6 +21,7 @@ it("re-enables the whole team skill once instead of racing dedicated and shared 
       },
     ],
     files_to_commit: [],
+    management_files: [],
     ignored_paths: [],
   });
   const variant = (agent: string) => ({

@@ -564,7 +564,10 @@ export function Sidebar() {
                 </button>
                 <Link
                   to="/my-skills"
-                  onClick={() => closeSkillDetail()}
+                  onClick={() => {
+                    closeSkillDetail();
+                    setViewedSkillGroupId("");
+                  }}
                   className={cn(
                     "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-[5px] text-left outline-none transition-colors",
                     isSkillLibActive

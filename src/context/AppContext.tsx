@@ -49,6 +49,7 @@ interface AppState {
   refreshManagedSkills: () => Promise<void>;
   refreshSkillGroupMembership: (groupId: string) => Promise<void>;
   refreshProjects: () => Promise<void>;
+  /** An empty ID selects the full library; group IDs select a group. */
   setViewedSkillGroupId: (id: string) => void;
   setViewingUngrouped: (v: boolean) => void;
   applySkillGroupToDefault: (id: string) => Promise<void>;
@@ -75,7 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   >(() => {
     try {
       return (
-        localStorage.getItem(VIEWED_SKILL_GROUP_LS_KEY) ||
+        localStorage.getItem(VIEWED_SKILL_GROUP_LS_KEY) ??
         localStorage.getItem(LEGACY_VIEWED_SKILL_GROUP_LS_KEY)
       );
     } catch {
@@ -240,10 +241,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [refreshManagedSkills, refreshSkillGroups],
   );
 
-  // Resolve viewedSkillGroup: persisted id > activeSkillGroup > first skillGroup.
+  // An explicitly selected full library must survive refresh and startup.
+  // Otherwise resolve persisted id > activeSkillGroup > first skillGroup.
   // Persist whichever resolves so the next launch matches what the user saw.
   const viewedSkillGroup = (() => {
-    if (viewingUngrouped) return null;
+    if (viewingUngrouped || viewedSkillGroupId === "") return null;
     if (viewedSkillGroupId) {
       const found = skillGroups.find((s) => s.id === viewedSkillGroupId);
       if (found) return found;
