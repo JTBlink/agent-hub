@@ -54,6 +54,9 @@ export function ProjectLibraryPanel({
   return (
     <aside className="mb-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 text-[12px] text-muted">
       <p>{t("projectLibrary.description")}</p>
+      <p className="mt-1" title={t("projectLibrary.centralHelp")}>
+        {t("projectLibrary.centralLibrary")} · <code>.agents/skills</code>
+      </p>
       {error && (
         <div role="alert" className="mt-2">
           <span>{error}</span>

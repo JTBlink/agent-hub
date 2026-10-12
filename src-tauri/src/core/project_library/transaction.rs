@@ -9,7 +9,11 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::{manifest::fingerprint, safe_path};
+use super::{
+    entries::{self, fingerprint_entry},
+    manifest::fingerprint,
+    safe_path,
+};
 
 pub struct ProjectLock {
     _file: fs::File,
@@ -88,25 +92,31 @@ impl Publication {
         if self.items.iter().any(|item| item.relative == relative) {
             bail!("Duplicate project publication target");
         }
-        let target = safe_path(root, &relative)?;
+        let target = entries::path(root, &relative)?;
         for item in &self.items {
             crate::core::path_guard::ensure_disjoint_paths(
                 &target,
-                &safe_path(root, &item.relative)?,
+                &entries::path(root, &item.relative)?,
             )
             .map_err(|err| anyhow::anyhow!(err.message))?;
         }
         let staged = self.staged(self.items.len());
         if let Some(source) = source {
-            if source.is_dir() {
+            if source.is_symlink() {
+                entries::create_link(&fs::read_link(source)?, &staged)?;
+            } else if source.is_dir() {
                 copy_project_content(source, &staged)?;
             } else {
                 fs::copy(source, &staged)?;
             }
         }
-        let before = fingerprint(&target)?;
-        let after = fingerprint(&staged)?;
-        if before.is_some() && before.as_deref() != baseline && before != after {
+        let before = fingerprint_entry(&target)?;
+        let after = fingerprint_entry(&staged)?;
+        let matches_baseline = before.as_deref() == baseline
+            || (target.is_symlink()
+                && entries::content_fingerprint(root, &relative)
+                    .is_ok_and(|current| current.as_deref() == baseline));
+        if before.is_some() && !matches_baseline && before != after {
             bail!("Project changed while staging; existing files were preserved: {relative}");
         }
         self.items.push(Item {
@@ -117,9 +127,39 @@ impl Publication {
         Ok(())
     }
 
+    /// Stage a relative link, with a content-copy fallback when unsupported.
+    pub fn add_link(
+        &mut self,
+        root: &Path,
+        relative: String,
+        canonical: &str,
+        content: &Path,
+        baseline: Option<&str>,
+    ) -> Result<bool> {
+        let parent = Path::new(&relative)
+            .parent()
+            .context("Missing target parent")?;
+        let target = PathBuf::from(format!(
+            "{}{canonical}",
+            "../".repeat(parent.components().count())
+        ));
+        let link = self
+            .directory
+            .path()
+            .join(format!("link-{}", self.items.len()));
+        let linked = entries::create_link(&target, &link).is_ok();
+        self.add(
+            root,
+            relative,
+            Some(if linked { &link } else { content }),
+            baseline,
+        )?;
+        Ok(linked)
+    }
+
     pub fn apply(self, root: &Path, lock: &ProjectLock) -> Result<()> {
         for item in &self.items {
-            if fingerprint(&safe_path(root, &item.relative)?)? != item.before {
+            if fingerprint_entry(&entries::path(root, &item.relative)?)? != item.before {
                 bail!("Project changed after preview; retry without overwriting it");
             }
         }
@@ -168,8 +208,8 @@ fn publish(journal: &Journal) -> Result<()> {
             bail!("Injected publication failure");
         }
         check_reads(journal)?;
-        let target = safe_path(&journal.root, &item.relative)?;
-        if fingerprint(&target)? != item.before {
+        let target = entries::path(&journal.root, &item.relative)?;
+        if fingerprint_entry(&target)? != item.before {
             bail!(
                 "Project changed during publication; refusing to overwrite {}",
                 item.relative
@@ -215,11 +255,12 @@ pub fn recover(root: &Path, lock: &ProjectLock) -> Result<()> {
     }
     if !journal.committed {
         for (index, item) in journal.items.iter().enumerate().rev() {
-            let target = safe_path(root, &item.relative)?;
+            let target = entries::path(root, &item.relative)?;
             let backup = journal.staging.join(format!("old-{index}"));
             let staged = journal.staging.join(format!("new-{index}"));
-            let current = fingerprint(&target)?;
-            let started = backup.exists() || (item.before.is_none() && !staged.exists());
+            let current = fingerprint_entry(&target)?;
+            let started = fingerprint_entry(&backup)?.is_some()
+                || (item.before.is_none() && fingerprint_entry(&staged)?.is_none());
             if !started {
                 continue;
             }
@@ -232,8 +273,8 @@ pub fn recover(root: &Path, lock: &ProjectLock) -> Result<()> {
             if current.is_some() {
                 crate::core::sync_engine::remove_target(&target)?;
             }
-            if backup.exists() {
-                if fingerprint(&backup)? != item.before {
+            if fingerprint_entry(&backup)?.is_some() {
+                if fingerprint_entry(&backup)? != item.before {
                     bail!("Recovery original changed; refusing restoration");
                 }
                 fs::rename(backup, target)?;

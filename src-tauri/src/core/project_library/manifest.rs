@@ -33,6 +33,8 @@ pub struct ProjectEntry {
     pub disabled: bool,
     #[serde(default)]
     pub disabled_targets: BTreeSet<String>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub linked_targets: BTreeSet<String>,
     #[serde(flatten)]
     pub extra: BTreeMap<String, serde_json::Value>,
 }

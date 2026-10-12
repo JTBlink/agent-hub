@@ -4,6 +4,7 @@
 - 范围：普通项目；全局与链接工作空间保持原有语义。
 - 桌面目标选择由 [ADR-0012](0012-enabled-project-agent-selection.md) 修订为已安装且已启用的 Agent；核心与 CLI 保留完整适配器能力。
 - 团队清单提交要求由 [ADR-0011](0011-optional-project-management.md) 细化：管理清单可选共享，不影响直接使用技能。
+- 新专属入口的默认模式与已有内容安装由 [ADR-0012](0012-project-central-installation.md) 替代：相对链接优先、复制可选、项目中央版本优先复用。
 
 ## 决策
 

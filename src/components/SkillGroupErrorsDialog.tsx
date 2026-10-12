@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
 import { getErrorMessage } from "../lib/error";
 import type { SkillGroupErrorNotice } from "../lib/skillGroupErrors";
@@ -21,6 +22,35 @@ export function SkillGroupErrorsDialog({
   const titleId = useId();
   const [forcingKey, setForcingKey] = useState<string | null>(null);
   const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
+  const [copying, setCopying] = useState(false);
+
+  const copyDetails = async () => {
+    if (copying) return;
+    setCopying(true);
+    try {
+      const text = notices
+        .map((notice) =>
+          [
+            t(
+              notice.kind === "conflict"
+                ? "skillGroupActions.partialSkippedToast"
+                : "skillGroupActions.partialFailedToast",
+              { count: notice.count },
+            ),
+            ...notice.items.map(
+              (item) => `${item.skillName} · ${item.agentKey}\n${item.message}`,
+            ),
+          ].join("\n\n"),
+        )
+        .join("\n\n");
+      await writeText(text);
+      toast.success(t("skillGroupActions.detailsCopied"));
+    } catch (reason) {
+      toast.error(getErrorMessage(reason, t("skillGroupActions.copyFailed")));
+    } finally {
+      setCopying(false);
+    }
+  };
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -125,7 +155,20 @@ export function SkillGroupErrorsDialog({
           </section>
         ))}
       </div>
-      <form method="dialog" className="mt-4 flex justify-end">
+      <form method="dialog" className="mt-4 flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => void copyDetails()}
+          disabled={copying || notices.length === 0}
+          className="app-button-secondary inline-flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+        >
+          {copying ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
+          {t("skillGroupActions.copyDetails")}
+        </button>
         <button
           disabled={forcingKey !== null}
           className="app-button-primary disabled:opacity-50"

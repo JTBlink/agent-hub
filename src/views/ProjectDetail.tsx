@@ -1048,9 +1048,13 @@ export function ProjectDetail() {
   );
 
   const handleAddSkillGroupSkillToProject = useCallback(
-    async (skill: ManagedSkill, agentKey: string) => {
+    async (skill: ManagedSkill, agentKey: string | string[]) => {
       if (!id) return;
-      await api.exportSkillToProject(skill.id, id, [agentKey]);
+      await api.exportSkillToProject(
+        skill.id,
+        id,
+        Array.isArray(agentKey) ? agentKey : [agentKey],
+      );
     },
     [id],
   );
@@ -1347,6 +1351,11 @@ export function ProjectDetail() {
             statusMode="logical-skill"
             existsInWorkspace={skillGroupSkillExistsInProject}
             onAddSkill={handleAddSkillGroupSkillToProject}
+            onAddSkillToAgents={
+              project.workspace_type !== "linked"
+                ? handleAddSkillGroupSkillToProject
+                : undefined
+            }
             onRemoveSkill={handleRemoveSkillGroupSkillFromProject}
             onComplete={handleSkillGroupActionComplete}
           />

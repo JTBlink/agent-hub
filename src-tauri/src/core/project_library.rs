@@ -1,6 +1,7 @@
 //! Portable project skills and team deployment, independent of a personal library.
-mod git;
 mod entries;
+mod git;
+mod installation;
 mod manifest;
 mod transaction;
 
@@ -45,50 +46,24 @@ pub fn install(
     skill: &SkillRecord,
     targets: &[ToolAdapter],
 ) -> Result<ProjectLibraryStatus, AppError> {
+    install_with_mode(root, skill, targets, false)
+}
+
+/// Import/adopt project central contents; copy mode supports teams without links.
+pub fn install_with_mode(
+    root: &Path,
+    skill: &SkillRecord,
+    targets: &[ToolAdapter],
+    copy: bool,
+) -> Result<ProjectLibraryStatus, AppError> {
     mutate(root, |root, lock| {
         let name = super::sync_engine::target_dir_name(Path::new(&skill.central_path), &skill.name);
         safe_name(&name)?;
         let mut manifest = manifest::read(root)?;
         if manifest.skills.contains_key(&name) {
-            return deploy_unlocked(root, lock, &mut manifest, &name, targets);
+            return deploy_unlocked(root, lock, &mut manifest, &name, targets, copy);
         }
-        let staged = tempfile::tempdir()?;
-        let content = staged.path().join("content");
-        let _source_lock =
-            super::repo_lock::RepoLock::acquire_foreground("copy project Skill source")?;
-        installer::install_from_local_to_destination(
-            Path::new(&skill.central_path),
-            Some(&name),
-            &content,
-        )?;
-        let hash = fingerprint(&content)?.context("Empty staged project Skill")?;
-        let canonical = format!("{LIBRARY}/{name}");
-        check_replace(root, &canonical, None, Some(&hash))?;
-        let mut entry = ProjectEntry {
-            id: uuid::Uuid::new_v4().to_string(),
-            name: skill.name.clone(),
-            content_hash: hash,
-            targets: BTreeMap::new(),
-            source: portable_source(skill),
-            disabled: false,
-            disabled_targets: BTreeSet::new(),
-            linked_targets: BTreeSet::new(),
-            extra: BTreeMap::new(),
-        };
-        let paths = target_paths(root, &name, targets)?;
-        for (agent, path) in &paths {
-            check_replace(root, path, None, Some(&entry.content_hash))?;
-            entry.targets.insert(agent.clone(), path.clone());
-        }
-        let mut publication = Publication::new(root)?;
-        publication.add(root, canonical.clone(), Some(&content), None)?;
-        for path in unique_paths(paths.values()) {
-            if path != canonical {
-                publication.add(root, path, Some(&content), None)?;
-            }
-        }
-        manifest.skills.insert(name, entry);
-        publish_manifest(root, lock, publication, &manifest)
+        installation::install_unlocked(root, lock, skill, targets, &mut manifest, &name, copy)
     })
 }
 
@@ -101,7 +76,7 @@ pub fn deploy(
     mutate(root, |root, lock| {
         safe_name(name)?;
         let mut manifest = manifest::read(root)?;
-        deploy_unlocked(root, lock, &mut manifest, name, targets)
+        deploy_unlocked(root, lock, &mut manifest, name, targets, false)
     })
 }
 
@@ -111,6 +86,7 @@ fn deploy_unlocked(
     manifest: &mut ProjectManifest,
     name: &str,
     targets: &[ToolAdapter],
+    copy: bool,
 ) -> Result<()> {
     let canonical = format!("{LIBRARY}/{name}");
     let content = safe_path(root, &canonical)?;
@@ -155,18 +131,42 @@ fn deploy_unlocked(
             }
         }
         let path = actual_target(&path, disabled);
+        let baseline = entries::fingerprint_entry(&entries::path(root, &path)?)?;
         check_replace(
             root,
             &path,
             recorded.then_some(entry.content_hash.as_str()),
             Some(&current),
         )?;
-        publication.add(
-            root,
-            path,
-            Some(&content),
-            recorded.then_some(entry.content_hash.as_str()),
-        )?;
+        let linked = !copy
+            && ((!recorded && (entry.targets.is_empty() || !entry.linked_targets.is_empty()))
+                || installation::linked_path(entry, &path)
+                || entries::path(root, &path)?.is_symlink());
+        if linked {
+            let created = publication.add_link(
+                root,
+                path.clone(),
+                &canonical,
+                &content,
+                baseline.as_deref(),
+            )?;
+            for (agent, added_path) in &paths {
+                if actual_target(added_path, disabled) == path {
+                    if created {
+                        entry.linked_targets.insert(agent.clone());
+                    } else {
+                        entry.linked_targets.remove(agent);
+                    }
+                }
+            }
+        } else {
+            publication.add(root, path.clone(), Some(&content), baseline.as_deref())?;
+            for (agent, added_path) in &paths {
+                if actual_target(added_path, disabled) == path {
+                    entry.linked_targets.remove(agent);
+                }
+            }
+        }
     }
     entry.targets.extend(paths);
     // Existing targets may still use the original baseline. Only repair of
@@ -198,11 +198,20 @@ pub fn update(
         )?;
         let new_hash = fingerprint(&content)?.context("Empty staged project Skill")?;
         let canonical = canonical_path(name, entry.disabled);
-        check_replace(root, &canonical, Some(&entry.content_hash), Some(&new_hash))?;
+        let baseline = entry.content_hash.clone();
+        check_replace(root, &canonical, Some(&baseline), Some(&new_hash))?;
         let mut publication = Publication::new(root)?;
         for path in all_entry_paths(name, entry) {
-            check_replace(root, &path, Some(&entry.content_hash), Some(&new_hash))?;
-            publication.add(root, path, Some(&content), Some(&entry.content_hash))?;
+            check_replace(root, &path, Some(&baseline), Some(&new_hash))?;
+            installation::publish_target(
+                &mut publication,
+                root,
+                entry,
+                path,
+                &canonical,
+                &content,
+                Some(&baseline),
+            )?;
         }
         entry.content_hash = new_hash;
         entry.source = portable_source(skill);
@@ -219,6 +228,7 @@ pub fn repair(root: &Path, name: &str) -> Result<ProjectLibraryStatus, AppError>
             .get_mut(name)
             .context("Project Skill is not managed")?;
         let canonical = canonical_path(name, entry.disabled);
+        let baseline = entry.content_hash.clone();
         let content = safe_path(root, &canonical)?;
         let current = fingerprint(&content)?
             .context("Project library content missing; restore it from project Git")?;
@@ -230,8 +240,16 @@ pub fn repair(root: &Path, name: &str) -> Result<ProjectLibraryStatus, AppError>
             if path == canonical {
                 continue;
             }
-            check_replace(root, &path, Some(&entry.content_hash), Some(&current))?;
-            publication.add(root, path, Some(&content), Some(&entry.content_hash))?;
+            check_replace(root, &path, Some(&baseline), Some(&current))?;
+            installation::publish_target(
+                &mut publication,
+                root,
+                entry,
+                path,
+                &canonical,
+                &content,
+                Some(&baseline),
+            )?;
         }
         entry.content_hash = current;
         publish_manifest(root, lock, publication, &manifest)
@@ -282,7 +300,15 @@ pub fn set_enabled(
                 continue;
             }
             check_replace(root, &path, None, Some(&current))?;
-            publication.add(root, path, Some(&source), None)?;
+            installation::publish_target(
+                &mut publication,
+                root,
+                entry,
+                path,
+                &canonical_path(name, entry.disabled),
+                &source,
+                None,
+            )?;
         }
         entry.content_hash = current;
         publish_manifest(root, lock, publication, &manifest)
@@ -329,8 +355,9 @@ pub fn set_target_enabled(
         }
         let old = actual_target(&path, disabled);
         let new = actual_target(&path, !enabled);
-        let source = safe_path(root, &old)?;
-        let current = fingerprint(&source)?.context("Team entry missing; repair it first")?;
+        let source = entries::path(root, &old)?;
+        let current = entries::content_fingerprint(root, &old)?
+            .context("Team entry missing; repair it first")?;
         check_replace(root, &new, None, Some(&current))?;
         let mut publication = Publication::new(root)?;
         publication.add(root, old, None, Some(&current))?;
@@ -395,6 +422,7 @@ pub fn remove_target(
         check_replace(root, &actual, Some(&entry.content_hash), None)?;
         entry.targets.remove(agent);
         entry.disabled_targets.remove(agent);
+        entry.linked_targets.remove(agent);
         let mut publication = Publication::new(root)?;
         if !entry.targets.values().any(|remaining| remaining == &path) {
             publication.add(root, actual, None, Some(&entry.content_hash))?;
@@ -433,7 +461,10 @@ fn status_inner(root: &Path) -> Result<ProjectLibraryStatus> {
                 path,
                 entry.disabled || entry.disabled_targets.contains(agent),
             );
-            if fingerprint(&safe_path(root, &path)?)? != current {
+            let is_linked = entry.linked_targets.contains(agent);
+            if entries::content_fingerprint(root, &path)? != current
+                || (is_linked && !entries::points_to(root, &path, &canonical))
+            {
                 stale.push(agent.clone());
             }
         }
@@ -681,6 +712,6 @@ fn publish_manifest(
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod compatibility_tests;
+#[cfg(test)]
+mod tests;

@@ -118,12 +118,12 @@ it("shows the project and team sharing effect and deploys to an enabled Agent", 
   await render();
   expect(document.body.textContent).toContain("添加技能到 demo-project");
   expect(document.body.textContent).toContain("从已启用的 Agent 中选择");
-  expect(document.body.textContent).toContain("成员无需 AgentHub");
+  expect(document.body.textContent).toContain("无需 AgentHub");
   await act(async () => button("全选技能").click());
   await act(async () => button("添加 2 个").click());
   expect(api.exportSkillToProject.mock.calls).toEqual([
-    ["demo", "project", ["claude_code"]],
-    ["other", "project", ["claude_code"]],
+    ["demo", "project", ["claude_code"], false],
+    ["other", "project", ["claude_code"], false],
   ]);
   expect(onInstalled).toHaveBeenCalledOnce();
   expect(onClose).toHaveBeenCalledOnce();
@@ -145,6 +145,7 @@ it("retains failed skills for retry and does not repeat successful deployments",
     "other",
     "project",
     ["claude_code"],
+    false,
   );
   expect(onClose).toHaveBeenCalledOnce();
 });
@@ -154,6 +155,22 @@ it("does not promise Git team sharing for linked workspaces", async () => {
   expect(document.body.textContent).toContain("添加技能到 demo-project");
   expect(document.body.textContent).not.toContain("提交 Git 后共享");
   expect(document.body.textContent).not.toContain("团队 Agent");
+});
+
+it("offers explicit copies for teams without project symlink support", async () => {
+  await render();
+  const copy = document.querySelector<HTMLInputElement>(
+    'input[type="checkbox"]',
+  );
+  expect(copy).not.toBeNull();
+  await act(async () => copy?.click());
+  expect(document.body.textContent).toContain("再生成 Agent 副本");
+  await act(async () => button("全选技能").click());
+  await act(async () => button("添加 2 个").click());
+  expect(api.exportSkillToProject.mock.calls).toEqual([
+    ["demo", "project", ["claude_code"], true],
+    ["other", "project", ["claude_code"], true],
+  ]);
 });
 
 it("excludes disabled and uninstalled targets even when old selection includes them", async () => {
@@ -179,8 +196,8 @@ it("excludes disabled and uninstalled targets even when old selection includes t
   await act(async () => button("全选技能").click());
   await act(async () => button("添加 2 个").click());
   expect(api.exportSkillToProject.mock.calls).toEqual([
-    ["demo", "project", ["claude_code"]],
-    ["other", "project", ["claude_code"]],
+    ["demo", "project", ["claude_code"], false],
+    ["other", "project", ["claude_code"], false],
   ]);
 });
 
