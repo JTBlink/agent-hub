@@ -76,11 +76,11 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
         let project = temp.path().join("project");
-        let local = project.join(if disabled {
-            ".claude/skills-disabled/demo"
+        let local = if disabled {
+            project.join(".claude").join("skills-disabled").join("demo")
         } else {
-            ".claude/skills/demo"
-        });
+            project.join(".claude").join("skills").join("demo")
+        };
         let central = temp.path().join("library/demo");
         for root in [&local, &central] {
             std::fs::create_dir_all(root.join("references")).unwrap();

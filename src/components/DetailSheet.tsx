@@ -7,7 +7,6 @@ const IS_MACOS = navigator.userAgent.includes("Mac");
 interface DetailSheetProps {
   open: boolean;
   title: ReactNode;
-  titleActions?: ReactNode;
   headerActions?: ReactNode;
   description?: ReactNode;
   meta?: ReactNode;
@@ -18,7 +17,6 @@ interface DetailSheetProps {
 export function DetailSheet({
   open,
   title,
-  titleActions,
   headerActions,
   description,
   meta,
@@ -60,7 +58,6 @@ export function DetailSheet({
             <h2 className="min-w-0 text-[28px] font-semibold leading-tight tracking-tight text-primary">
               <span className="block break-words">{title}</span>
             </h2>
-            {titleActions}
           </div>
           {description ? (
             <div className="text-[15px] leading-7 text-secondary">

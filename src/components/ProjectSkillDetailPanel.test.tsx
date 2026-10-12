@@ -91,9 +91,6 @@ async function render(nextSkill = skill, syncProps = {}) {
   const props = {
     projectId: "project-demo",
     skill: nextSkill,
-    targets: [],
-    togglingAgent: null,
-    onToggleAgent: () => {},
     updatingCenter: false,
     updatingProject: false,
     onUpdateCenter: vi.fn(),
@@ -110,15 +107,32 @@ function syncButton(key: string) {
   );
 }
 
-it("shows card sync actions beside the detail title and forwards both operations", async () => {
+it("shows only sync controls before the header close button and forwards both operations", async () => {
   const onUpdateCenter = vi.fn();
   const onUpdateProject = vi.fn();
-  await render(skill, { onUpdateCenter, onUpdateProject });
+  const onClose = vi.fn();
+  await render(skill, { onUpdateCenter, onUpdateProject, onClose });
   const upload = syncButton("project.updateCenter");
   const restore = syncButton("project.resetFromCenter");
+  const close = document.querySelector(".lucide-x")?.closest("button");
+  const header = close?.parentElement?.parentElement;
+  if (!header || !upload || !restore || !close) {
+    throw new Error("Expected sync controls and close button in the header");
+  }
+  expect(header.querySelectorAll("button")).toHaveLength(4);
+  expect(header.querySelector("img")).toBeNull();
+  expect([...header.querySelectorAll("button")].slice(1)).toEqual([
+    upload,
+    restore,
+    close,
+  ]);
+  expect(document.querySelector("h2")?.parentElement?.contains(upload)).toBe(
+    false,
+  );
+  expect(document.querySelector("h2")?.textContent).toBe("Demo");
   expect(
-    upload?.parentElement?.parentElement?.querySelector("h2")?.textContent,
-  ).toBe("Demo");
+    document.querySelector('[title="Claude Code · assigned"] img'),
+  ).not.toBeNull();
   expect(upload?.className).toContain("text-accent-light");
   expect(restore?.className).not.toContain("text-accent-light");
   await act(async () => {
@@ -127,6 +141,9 @@ it("shows card sync actions beside the detail title and forwards both operations
   });
   expect(onUpdateCenter).toHaveBeenCalledOnce();
   expect(onUpdateProject).toHaveBeenCalledOnce();
+  expect(onClose).not.toHaveBeenCalled();
+  await act(async () => close?.click());
+  expect(onClose).toHaveBeenCalledOnce();
 });
 
 it.each(["updatingCenter", "updatingProject"])(

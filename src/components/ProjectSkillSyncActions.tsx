@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ProjectSkill } from "../lib/tauri";
 import { cn } from "../utils";
 
-/** Shared sync controls for cards, list rows and the detail heading. */
+/** Shared sync controls for cards, list rows and the detail header. */
 export function ProjectSkillSyncActions({
   status,
   updatingCenter,

@@ -1751,19 +1751,10 @@ export function ProjectDetail() {
           key={getSkillKey(detailSkill)}
           projectId={project.id}
           skill={detailSkill}
-          targets={exportTargets}
           updatingCenter={updatingCenterSkill === getSkillKey(detailSkill)}
           updatingProject={updatingProjectSkill === getSkillKey(detailSkill)}
           onUpdateCenter={() => void handleUpdateCenter(detailSkill)}
           onUpdateProject={() => void handleUpdateProject(detailSkill)}
-          togglingAgent={
-            togglingAgentTarget?.skillKey === getSkillKey(detailSkill)
-              ? togglingAgentTarget.agent
-              : null
-          }
-          onToggleAgent={(agentKey, enabled) =>
-            handleToggleDetailAgent(detailSkill, agentKey, enabled)
-          }
           onClose={() => setDetailSkill(null)}
         />
       )}

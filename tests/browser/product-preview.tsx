@@ -11,6 +11,7 @@ import "../../src/index.css";
 
 // Documentation-only fixture: current product components, synthetic data, no disk access.
 const empty = new URLSearchParams(location.search).has("empty");
+const showUndeployed = new URLSearchParams(location.search).has("undeployed");
 const timestamp = 1791676800;
 const groups: SkillGroup[] = ["开发", "设计", "研究"].map((name, index) => ({
   id: `group-${index}`,
@@ -80,7 +81,10 @@ const skills: ManagedSkill[] = entries.map(
     created_at: timestamp,
     updated_at: timestamp - index * 60,
     status: "ok",
-    targets: tools.slice(0, (index % 3) + 1).map((tool) => ({
+    targets: (showUndeployed && index >= 5
+      ? []
+      : tools.slice(0, (index % 3) + 1)
+    ).map((tool) => ({
       id: `${index}-${tool.key}`,
       skill_id: `skill-${index}`,
       tool: tool.key,
