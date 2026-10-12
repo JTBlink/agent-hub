@@ -1086,6 +1086,8 @@
     "ctaNoTarget": "请先选择目标 Agent",
     "toastInstalled": "已添加 {{count}} 个 Skill",
     "toastFailed": "有 {{count}} 个 Skill 添加失败",
+    "copyFailures": "复制详情",
+    "failuresCopied": "失败详情已复制",
     "toastAddedToProject": "已将“{{skill}}”添加到 {{project}}",
     "toastRemovedFromProject": "已从 {{project}} 移除“{{skill}}”",
     "add": "添加",
@@ -1410,6 +1412,10 @@
     }
   },
   "projectLibrary": {
+    "installTitle": "添加技能到 {{project}}",
+    "teamAgents": "团队 Agent：",
+    "teamAgentsHelp": "选择团队使用的 Agent，本机未安装也可选择。",
+    "installPlan": "复制技能到项目并生成 Agent 入口；提交 Git 后共享，成员无需 AgentHub。",
     "description": "技能随项目提交 Git，团队成员拉取即可使用，无需安装 AgentHub。",
     "installReady": "已添加 {{count}} 个项目技能；提交技能目录后，团队成员拉取即可使用",
     "commitFiles": "技能与 Agent 入口（{{count}} 个路径）",

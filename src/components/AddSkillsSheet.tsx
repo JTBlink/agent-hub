@@ -8,15 +8,8 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  CircleSlash,
-  Loader2,
-  Search,
-  X,
-} from "lucide-react";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { CheckCircle2, CircleSlash, Loader2, Search, X } from "lucide-react";
 import { cn } from "../utils";
 import * as api from "../lib/tauri";
 import type { ManagedSkill, ProjectAgentTarget } from "../lib/tauri";
@@ -49,6 +42,7 @@ export interface ProjectSheetTarget {
   kind: "project";
   projectId: string;
   projectName: string;
+  teamSharing: boolean;
   exportTargets: ProjectAgentTarget[];
   /** dir/relative_path names already used in the project, keyed by agent */
   projectSkillDirNamesByAgent: Record<string, string[]>;
@@ -81,6 +75,7 @@ function AddSkillsSheetBody({
   onInstalled,
 }: Props) {
   const { t } = useTranslation();
+  const isTeamProject = target.kind === "project" && target.teamSharing;
   const [search, setSearch] = useState("");
   const [tagFilters, setTagFilters] = useState<Set<string>>(new Set());
   const [sourceFilters, setSourceFilters] = useState<Set<string>>(new Set());
@@ -91,7 +86,6 @@ function AddSkillsSheetBody({
   const initialAgents =
     target.kind === "project" ? target.initialSelectedAgents : [];
   const [selectedAgents, setSelectedAgents] = useState<string[]>(initialAgents);
-  const [showInactiveAgents, setShowInactiveAgents] = useState(false);
 
   const [dirNameMap, setDirNameMap] = useState<Record<string, string>>({});
   const [dirNameMapError, setDirNameMapError] = useState(false);
@@ -354,8 +348,6 @@ function AddSkillsSheetBody({
   const projectNamesReady =
     target.kind !== "project" || dirNameMapError || !dirNameMapLoading;
   const enabledTargets = target.kind === "project" ? target.exportTargets : [];
-  const inactiveTargets: ProjectAgentTarget[] =
-    target.kind === "project" ? [] : [];
 
   const renderAgentIcons = (
     agents: { key: string; display_name: string }[],
@@ -421,12 +413,14 @@ function AddSkillsSheetBody({
     let ok = 0;
     let failed = 0;
     const failures: string[] = [];
+    const installedIds = new Set<string>();
     try {
       if (target.kind === "global") {
         for (const id of selectableSelected) {
           try {
             await api.syncSkillToTool(id, target.agentKey);
             ok++;
+            installedIds.add(id);
           } catch (e) {
             failed++;
             failures.push(getErrorMessage(e, t("common.error")));
@@ -447,6 +441,7 @@ function AddSkillsSheetBody({
             if (agents.length === 0) continue;
             await api.exportSkillToProject(id, target.projectId, agents);
             ok++;
+            installedIds.add(id);
           } catch (e) {
             failed++;
             failures.push(getErrorMessage(e, t("common.error")));
@@ -456,26 +451,38 @@ function AddSkillsSheetBody({
       if (ok > 0) {
         toast.success(
           t(
-            target.kind === "project"
+            isTeamProject
               ? "projectLibrary.installReady"
               : "addFromLibrary.toastInstalled",
             { count: ok },
           ),
         );
-        setSelectedIds(new Set());
+        setSelectedIds(
+          (previous) =>
+            new Set([...previous].filter((id) => !installedIds.has(id))),
+        );
       }
       if (failed > 0) {
         // Surface why. A refusal carries the path it protected and what to do
         // about it (#363); collapsing that to a bare count leaves the user with
         // no idea which skill failed or how to resolve it.
         const detail = failures[0];
-        toast.error(
+        const summary =
           failed === 1 && detail
             ? detail
             : [t("addFromLibrary.toastFailed", { count: failed }), detail]
                 .filter(Boolean)
-                .join(" — "),
-        );
+                .join(" — ");
+        toast.error(summary, {
+          action: {
+            label: t("addFromLibrary.copyFailures"),
+            onClick: () => {
+              void writeText(failures.join("\n")).then(() =>
+                toast.success(t("addFromLibrary.failuresCopied")),
+              );
+            },
+          },
+        });
       }
       await onInstalled();
       if (failed === 0) onClose();
@@ -520,7 +527,11 @@ function AddSkillsSheetBody({
       <div className="space-y-2">
         <div className="flex items-start gap-2 text-[12px]">
           <span className="shrink-0 pt-1 text-muted">
-            {t("addFromLibrary.targetLabel")}
+            {t(
+              isTeamProject
+                ? "projectLibrary.teamAgents"
+                : "addFromLibrary.targetLabel",
+            )}
           </span>
           <div className="min-w-0 flex-1">
             {enabledTargets.length === 0 ? (
@@ -582,41 +593,10 @@ function AddSkillsSheetBody({
             </button>
           )}
         </div>
-        {inactiveTargets.length > 0 && (
-          <div className="ml-12">
-            <button
-              type="button"
-              onClick={() => setShowInactiveAgents((prev) => !prev)}
-              className="inline-flex items-center gap-1 text-[12px] text-muted transition-colors hover:text-secondary"
-            >
-              {showInactiveAgents ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-              <span>
-                {t("project.moreAgents", { count: inactiveTargets.length })}
-              </span>
-            </button>
-            {showInactiveAgents && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {inactiveTargets.map((tt) => (
-                  <span
-                    key={tt.key}
-                    title={t("addFromLibrary.tooltip.unavailable")}
-                    className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full border border-border-subtle bg-background py-1 pl-1 pr-2.5 text-[12px] font-medium text-muted opacity-55"
-                  >
-                    <AgentIcon
-                      agentKey={tt.key}
-                      displayName={tt.display_name}
-                      className="h-5 w-5 rounded-full border-0 bg-transparent"
-                    />
-                    <span>{tt.display_name}</span>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+        {isTeamProject && (
+          <p className="text-[12px] text-muted">
+            {t("projectLibrary.teamAgentsHelp")}
+          </p>
         )}
       </div>
     );
@@ -632,13 +612,18 @@ function AddSkillsSheetBody({
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-5 py-4">
           <div className="min-w-0 flex-1">
             <h2 className="text-[14px] font-semibold text-primary">
-              {t("addFromLibrary.title")}
+              {target.kind === "project"
+                ? t("projectLibrary.installTitle", {
+                    project: target.projectName,
+                  })
+                : t("addFromLibrary.title")}
             </h2>
             <div className="mt-2">{targetSummary}</div>
           </div>
           <button
             onClick={onClose}
             disabled={installing}
+            aria-label={t("common.close")}
             className="shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
           >
             <X className="h-4 w-4" />
@@ -763,6 +748,11 @@ function AddSkillsSheetBody({
         </div>
 
         <div className="shrink-0 border-t border-border-subtle bg-bg-secondary px-5 py-3">
+          {isTeamProject && (
+            <p className="mb-2 text-[12px] text-muted">
+              {t("projectLibrary.installPlan")}
+            </p>
+          )}
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="truncate text-[12px] text-muted">
               {selectableSelected.length > 0

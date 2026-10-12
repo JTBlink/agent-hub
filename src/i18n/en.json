@@ -1086,6 +1086,8 @@
     "ctaNoTarget": "Select target agents first",
     "toastInstalled": "{{count}} skill(s) added",
     "toastFailed": "{{count}} skill(s) failed to add",
+    "copyFailures": "Copy details",
+    "failuresCopied": "Failure details copied",
     "toastAddedToProject": "Added \"{{skill}}\" to {{project}}",
     "toastRemovedFromProject": "Removed \"{{skill}}\" from {{project}}",
     "add": "Add",
@@ -1410,6 +1412,10 @@
     }
   },
   "projectLibrary": {
+    "installTitle": "Add skills to {{project}}",
+    "teamAgents": "Team Agents:",
+    "teamAgentsHelp": "Choose the Agents your team uses, including those not installed locally.",
+    "installPlan": "Copy skills into the project and create Agent entries. Commit to Git to share; teammates need no AgentHub.",
     "description": "Commit skills with the project so teammates can pull and use them without installing AgentHub.",
     "installReady": "Added {{count}} project skills; commit the skill directories so teammates can pull and use them",
     "commitFiles": "Skills and Agent entries ({{count}} paths)",
