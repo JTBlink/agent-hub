@@ -22,6 +22,9 @@ enum ProjectCommand {
         reference: String,
         #[arg(long = "agent", required = true)]
         agents: Vec<String>,
+        /// 将 Agent 入口保存为副本，适用于不支持软链接的团队。
+        #[arg(long)]
+        copy: bool,
     },
     /// 从项目技能库为团队添加入口，不读取个人库。
     Deploy {
@@ -67,11 +70,15 @@ pub(super) fn run(
     let root = &args.path;
     let report = match &args.command {
         ProjectCommand::Status => project_library::status(root)?,
-        ProjectCommand::Add { reference, agents } => {
+        ProjectCommand::Add {
+            reference,
+            agents,
+            copy,
+        } => {
             let store =
                 store.ok_or_else(|| anyhow::anyhow!("Personal library required for add"))?;
             let skill = super::resolve_skill(store, reference)?;
-            project_library::install(root, &skill, &targets(agents)?)?
+            project_library::install_with_mode(root, &skill, &targets(agents)?, *copy)?
         }
         ProjectCommand::Deploy { name, agents } => {
             project_library::deploy(root, name, &targets(agents)?)?

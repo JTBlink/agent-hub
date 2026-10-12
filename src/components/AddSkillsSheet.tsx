@@ -28,6 +28,7 @@ import {
 } from "../lib/skillTags";
 import { AgentIcon } from "./AgentIcon";
 import { SkillPickerRow } from "./SkillPickerRow";
+import { ProjectInstallOptions } from "./ProjectInstallOptions";
 
 const SOURCE_PRIORITY = ["local", "import", "git", "skillssh"];
 const VISIBLE_TARGET_ICON_LIMIT = 5;
@@ -83,6 +84,7 @@ function AddSkillsSheetBody({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [anchorId, setAnchorId] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);
+  const [copyProjectEntries, setCopyProjectEntries] = useState(false);
 
   const enabledTargets =
     target.kind === "project"
@@ -449,7 +451,12 @@ function AddSkillsSheetBody({
             if (!skill) continue;
             const agents = targetsToInstall(skill, projectCtx);
             if (agents.length === 0) continue;
-            await api.exportSkillToProject(id, target.projectId, agents);
+            await api.exportSkillToProject(
+              id,
+              target.projectId,
+              agents,
+              isTeamProject && copyProjectEntries,
+            );
             ok++;
             installedIds.add(id);
           } catch (e) {
@@ -759,9 +766,11 @@ function AddSkillsSheetBody({
 
         <div className="shrink-0 border-t border-border-subtle bg-bg-secondary px-5 py-3">
           {isTeamProject && (
-            <p className="mb-2 text-[12px] text-muted">
-              {t("projectLibrary.installPlan")}
-            </p>
+            <ProjectInstallOptions
+              copy={copyProjectEntries}
+              busy={installing}
+              onChange={setCopyProjectEntries}
+            />
           )}
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="truncate text-[12px] text-muted">

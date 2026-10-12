@@ -27,6 +27,11 @@ export interface SkillGroupBarProps {
   agentKeys: string[];
   existsInWorkspace: (skill: ManagedSkill, agentKey: string) => boolean;
   onAddSkill: (skill: ManagedSkill, agentKey: string) => Promise<void>;
+  /** Projects publish the central Skill and all missing entries atomically. */
+  onAddSkillToAgents?: (
+    skill: ManagedSkill,
+    agentKeys: string[],
+  ) => Promise<void>;
   onRemoveSkill: (skill: ManagedSkill, agentKey: string) => Promise<void>;
   onComplete: () => Promise<void>;
   onForceSync?: (skillId: string, agentKey: string) => Promise<void>;
@@ -40,6 +45,7 @@ export function SkillGroupBar({
   agentKeys,
   existsInWorkspace,
   onAddSkill,
+  onAddSkillToAgents,
   onRemoveSkill,
   onComplete,
   onForceSync,
@@ -109,6 +115,25 @@ export function SkillGroupBar({
           skipped = 0;
         const failures: SkillGroupOperationError[] = [];
         for (const skill of skillGroupSkills) {
+          if (onAddSkillToAgents) {
+            const missing = agentKeys.filter(
+              (agent) => !existsInWorkspace(skill, agent),
+            );
+            skipped += agentKeys.length - missing.length;
+            if (missing.length === 0) continue;
+            try {
+              await onAddSkillToAgents(skill, missing);
+              added += missing.length;
+            } catch (error) {
+              failures.push({
+                skillId: skill.id,
+                skillName: skill.name,
+                agentKey: missing.join(", "),
+                error,
+              });
+            }
+            continue;
+          }
           for (const agentKey of agentKeys) {
             if (existsInWorkspace(skill, agentKey)) {
               skipped++;
@@ -145,6 +170,7 @@ export function SkillGroupBar({
       existsInWorkspace,
       managedSkills,
       onAddSkill,
+      onAddSkillToAgents,
       onComplete,
       reportErrors,
       t,

@@ -1296,6 +1296,9 @@
     }
   },
   "skillGroupActions": {
+    "copyDetails": "复制到剪贴板",
+    "detailsCopied": "操作详情已复制",
+    "copyFailed": "复制失败，请重试",
     "operationDetails": "查看详情",
     "overridden": "已覆盖",
     "forceOverride": "覆盖",
@@ -1412,13 +1415,17 @@
     }
   },
   "projectLibrary": {
+    "installPlanCopy": "先保存到 .agents/skills 项目中央仓库，再生成 Agent 副本；提交后团队成员无需 AgentHub 即可使用。",
+    "centralHelp": "项目技能统一保存在 .agents/skills，Agent 入口从这里生成；项目版本不会随个人技能库自动更新。",
+    "centralLibrary": "项目中央技能仓库",
+    "copyEntries": "将 Agent 入口保存为副本（适用于不支持软链接的团队）",
     "installTitle": "添加技能到 {{project}}",
     "teamAgents": "团队 Agent：",
     "teamAgentsHelp": "从已启用的 Agent 中选择团队使用的目标。",
     "noEnabledAgents": "当前没有已启用的 Agent，请先到设置中启用。",
-    "installPlan": "复制技能到项目并生成 Agent 入口；提交 Git 后共享，成员无需 AgentHub。",
+    "installPlan": "先保存到 .agents/skills 项目中央仓库，再生成相对链接入口；提交后团队成员无需 AgentHub 即可使用。",
     "description": "技能随项目提交 Git，团队成员拉取即可使用，无需安装 AgentHub。",
-    "installReady": "已添加 {{count}} 个项目技能；提交技能目录后，团队成员拉取即可使用",
+    "installReady": "已准备 {{count}} 个项目技能；提交项目中央内容和 Agent 入口即可共享",
     "commitFiles": "技能与 Agent 入口（{{count}} 个路径）",
     "ignored": "{{count}} 个技能路径被 Git 忽略，团队成员可能无法获取。",
     "ignoredDetails": "查看路径与处理建议",

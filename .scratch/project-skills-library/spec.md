@@ -34,3 +34,7 @@
 ## 桌面目标选择修订
 
 用户要求桌面项目添加从已启用 Agent 中选择，按 [ADR-0012](../../docs/adr/0012-enabled-project-agent-selection.md) 使用本机启用状态生成选项并校正默认和历史选择。项目 DTO 的支持能力与本机偏好分开，核心部署和 CLI 保留完整适配器能力。任务：[P05](issues/P05-enabled-team-agents.md)。
+
+## 项目中央安装修订
+
+按 [ADR-0012](../../docs/adr/0012-project-central-installation.md)，项目中央仓库使用 `.agents/skills` 的实际内容，已有项目版本优先复用。新专属入口默认相对链接、支持复制选项；显式安装可转换指向当前来源的旧中央个人链接，不覆盖其他来源或修改。已有 npx skills 项目相对入口可识别，批量按 Skill 一次生成 Agent 入口。任务：[P04](issues/P04-project-central-install.md)。

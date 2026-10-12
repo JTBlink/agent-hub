@@ -1296,6 +1296,9 @@
     }
   },
   "skillGroupActions": {
+    "copyDetails": "Copy to clipboard",
+    "detailsCopied": "Operation details copied",
+    "copyFailed": "Could not copy; please try again",
     "operationDetails": "View details",
     "overridden": "Overwritten",
     "forceOverride": "Override",
@@ -1412,13 +1415,17 @@
     }
   },
   "projectLibrary": {
+    "installPlanCopy": "Save to the project central library .agents/skills, then create Agent copies. After committing, teammates can use skills without AgentHub.",
+    "centralHelp": "Project skills live in .agents/skills and Agent entries use this content. Personal library updates do not automatically change the project version.",
+    "centralLibrary": "Project central skills library",
+    "copyEntries": "Save Agent entries as copies (for teams without symlink support)",
     "installTitle": "Add skills to {{project}}",
     "teamAgents": "Team Agents:",
     "teamAgentsHelp": "Choose team targets from your enabled Agents.",
     "noEnabledAgents": "No Agents are enabled. Enable an Agent in Settings first.",
-    "installPlan": "Copy skills into the project and create Agent entries. Commit to Git to share; teammates need no AgentHub.",
+    "installPlan": "Save to the project central library .agents/skills, then create relative Agent links. After committing, teammates can use skills without AgentHub.",
     "description": "Commit skills with the project so teammates can pull and use them without installing AgentHub.",
-    "installReady": "Added {{count}} project skills; commit the skill directories so teammates can pull and use them",
+    "installReady": "Prepared {{count}} project skills; commit central content and Agent entries to share",
     "commitFiles": "Skills and Agent entries ({{count}} paths)",
     "ignored": "Git ignores {{count}} skill paths; teammates may not receive them.",
     "ignoredDetails": "View paths and how to resolve",

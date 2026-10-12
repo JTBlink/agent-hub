@@ -937,6 +937,7 @@ pub async fn export_skill_to_project(
     skill_id: String,
     project_id: String,
     agents: Option<Vec<String>>,
+    copy: Option<bool>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
@@ -961,7 +962,12 @@ pub async fn export_skill_to_project(
                         .ok_or_else(|| AppError::not_found(format!("Unknown agent: {key}")))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            crate::core::project_library::install(Path::new(&project.path), &skill, &targets)?;
+            crate::core::project_library::install_with_mode(
+                Path::new(&project.path),
+                &skill,
+                &targets,
+                copy.unwrap_or(false),
+            )?;
             return Ok(());
         }
 

@@ -1028,11 +1028,13 @@ export const exportSkillToProject = (
   skillId: string,
   projectId: string,
   agents?: string[],
+  copy = false,
 ) =>
   invoke<void>("export_skill_to_project", {
     skillId,
     projectId,
     agents: agents ?? null,
+    copy,
   });
 
 export const updateProjectSkillToCenter = (

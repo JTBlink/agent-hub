@@ -8,6 +8,10 @@
 
 团队友好性优化：[P02](issues/P02-friendly-team-sharing.md)，按 ADR-0011 将原生技能交付与可选 AgentHub 管理清单分开。
 
+批量操作详情复制入口：[P03](issues/P03-copy-operation-details.md)，一次复制全部技能、Agent 和完整错误原因。
+
+项目中央安装与已有技能兼容：[P04](issues/P04-project-central-install.md)，实际内容统一放在 `.agents/skills`，相对入口优先，复制模式可选。
+
 ## 当前结果
 
 - 2026-10-12：基于当前 AgentHub 与本地 `skills` CLI 实现生成设计草案。

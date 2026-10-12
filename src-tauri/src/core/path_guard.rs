@@ -155,7 +155,7 @@ fn resolve_non_existing(path: &Path) -> PathBuf {
 }
 
 /// Resolve `.` and `..` segments without touching the filesystem.
-fn normalize(path: &Path) -> PathBuf {
+pub(crate) fn normalize(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     for comp in path.components() {
         match comp {
