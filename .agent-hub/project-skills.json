@@ -4,7 +4,7 @@
     "github-cli": {
       "id": "35ba7c38-f67d-43a4-820a-636b4447401f",
       "name": "github-cli",
-      "content_hash": "6cddf687765cfb9bed6ffd3dfbbf439116d7ee5db0dd33d14e855eb69a95316b",
+      "content_hash": "825cad0225df2d0f5485a6ee050e04eb82eab0e631239066517cb4ed11c16a7d",
       "targets": {
         "claude_code": ".claude/skills/github-cli",
         "codex": ".codex/skills/github-cli"
