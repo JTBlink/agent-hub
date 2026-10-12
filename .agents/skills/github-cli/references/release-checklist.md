@@ -1,6 +1,7 @@
 # 发布验收
 
 - 当前提交通过开发指南中的格式、lint、测试、版本和构建检查。
+- 质量门禁来自干净发布提交；同一 SHA 的三平台手动候选与 `npm run release:ready -- v<version>` 通过后才创建 tag。
 - Windows、macOS Universal、Linux 原生 Runner 均生成安装包并通过包内 smoke。
 - 安装包包含匹配版本及架构的 `agent-hub-cli`。
 - 干净用户环境首次启动成功，技能库、工作空间、设置和主题切换正常。

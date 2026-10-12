@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: installers-${{ github.ref }}
+  group: installers-${{ github.event_name }}-${{ github.ref }}
   # A second manual run for the same ref supersedes the first one. Published
   # tag runs remain protected from cancellation once they have started.
   cancel-in-progress: ${{ github.event_name != 'push' }}
@@ -20,6 +20,9 @@ jobs:
     name: Validate release metadata
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       resolved_sha: ${{ steps.resolve_ref.outputs.sha }}
       release_tag: ${{ steps.release_metadata.outputs.tag }}
@@ -51,6 +54,12 @@ jobs:
             node scripts/check-version.mjs "$tag"
             echo "tag=$tag" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Require a successful candidate for this release commit
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/check-release-candidate.mjs "$GITHUB_REF_NAME"
 
       - name: Validate Apple signing and notarization configuration
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.ENABLE_APPLE_SIGNING == 'true'
@@ -117,6 +126,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
       - name: Install frontend dependencies
         run: npm ci
@@ -201,9 +211,15 @@ jobs:
         with:
           workspaces: src-tauri
           key: ${{ matrix.artifact }}
+          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
 
       - name: Install frontend dependencies
         run: npm ci
+
+      # Native tests catch platform-specific failures before release compilation.
+      - name: Run application core tests
+        shell: bash
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
 
       - name: Build unsigned or non-macOS installers
         if: github.event_name == 'workflow_dispatch' || runner.os != 'macOS' || vars.ENABLE_APPLE_SIGNING != 'true'
@@ -277,11 +293,6 @@ jobs:
           test -d "$app"
           xcrun stapler validate "$app"
           spctl --assess --type execute --verbose "$app"
-
-      - name: Run application core tests
-        shell: bash
-        run: >-
-          cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Sign Windows installers
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows' && vars.ENABLE_WINDOWS_SIGNING == 'true'

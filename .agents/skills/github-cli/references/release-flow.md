@@ -9,10 +9,11 @@
 3. 执行 `npm run version:set -- <version>` 同步前端、Cargo、Tauri 与锁文件，再执行 `npm run version:check -- v<version>`。
 4. 将正式说明写入 `CHANGELOG.md` 对应版本章节，保留新的 `Unreleased`；同步 tracker。说明与发布提交一致，不提前宣布未完成功能。
 5. 执行 [开发检查](../../rust-dev/references/development.md)，完成 Standards / Spec 审查；发布脚本与 workflow 改动运行相关合约测试。按 [提交规范](../../rust-dev/references/commit-conventions.md) 提交发布内容。
-6. **打 tag 前必须在本地运行 CI 同等质量门禁**——至少 `npm run format:check`、`npm run lint`（零 error）、`npm run test`、`npm run build`，全部通过后再推送 tag。不能依赖远端 CI 作为首次格式 / lint 检查；本地验证失败时修复并重新提交，不推送 tag。
-7. 最终打 tag 前工作区干净；tag 指向含版本、说明及本次功能的已验证发布 SHA。
+6. **打 tag 前在干净发布提交运行 CI 同等质量门禁**，包含开发指南的前端 / Rust 检查。使用临时 detached worktree 检出已提交 SHA，确保本机未提交或被忽略的源码不参与验证；失败时修复、重新提交并验证新 SHA。
+7. 推送发布分支，手动运行三平台 Build Installers；全部测试、打包、安装 smoke 和汇总校验通过后，执行 `npm run release:ready -- v<version>`，再在同一 SHA 创建 tag。细节见 [发布前验证](release-prevention.md)。
+8. 最终打 tag 前工作区干净；tag 指向含版本、说明及本次功能的已验证发布 SHA。验证通过后追加提交会使候选证据失效。
 
-普通分支 push 不自动执行 CI。需要远端候选验证时手动运行 CI 或 Build Installers；手动构建只产出候选 artifacts，不创建正式 Release。
+普通分支 push 不自动执行 CI。发布必须先手动运行 Build Installers；独立 CI 适用于只需质量诊断的任务，无需和安装包候选重复执行。手动构建只产出候选 artifacts，不创建正式 Release。
 
 ## 自动创建与推送
 
@@ -35,6 +36,7 @@ release_version="$(tr -d '[:space:]' < VERSION)"
 release_tag="v${release_version}"
 release_sha="$(git rev-parse HEAD)"
 npm run version:check -- "$release_tag"
+npm run release:ready -- "$release_tag"
 git tag -a "$release_tag" "$release_sha" -m "发布 ${release_tag}"
 git push origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
 ```
@@ -54,7 +56,7 @@ git push origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
 ## 失败与重试
 
 - 推送前检查失败：保留准备结果，修复后继续，不跳过质量门禁。
-- tag 已推送、构建失败但无 Release：先确认远端不存在对应版本的 GitHub Release 且无用户可下载产物。满足条件时可删除远端和本地旧 tag，在修复后的新提交上重建同版本 tag 并推送，触发新一轮构建。执行顺序：`git push origin --delete v<version>` → `git tag -d v<version>` → 修复提交 → 本地质量门禁全部通过 → `git tag v<version>` → `git push origin v<version>`。
+- tag 已推送、构建失败但无 Release：临时故障重跑原失败任务；需要新源码时先完成新 SHA 的候选验证，再用新版本、新 tag 发布。保留既有 tag，不反复删除重建同版本 tag 试错。
 - tag 已推送、构建失败且 Release 已存在：保留 tag，定位失败 job；无代码变更时重新运行原失败 workflow run。手动 Build Installers 不会补建正式 Release。
 - 修复需新提交且 Release 已存在：使用新版本与新 tag，不能移动原 tag。
 - Release 已存在：当前 workflow 跳过发布，不覆盖附件。检查已有产物；缺失或损坏时按用户授权的修复范围处理，不删除重建或反复触发。
