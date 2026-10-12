@@ -30,7 +30,15 @@
     "tauri": "node scripts/primary-app.mjs",
     "cli": "node scripts/run-rust-cli.mjs cli",
     "cli:build": "node scripts/run-rust-cli.mjs build",
-    "cli:install": "node scripts/run-rust-cli.mjs install"
+    "cli:install": "node scripts/run-rust-cli.mjs install",
+    "predev": "npm run docs:generate",
+    "prebuild": "npm run docs:generate",
+    "pretest": "npm run docs:generate",
+    "docs:generate": "node scripts/docs/build-help.mjs",
+    "docs:check": "node scripts/docs/build-help.mjs --check",
+    "docs:build": "npm run docs:generate && vitepress build docs-site",
+    "docs:dev": "npm run docs:generate && vitepress dev docs-site --host 127.0.0.1 --port 4174",
+    "website:build": "npm run homepage:build -- _site/index.html && npm run docs:build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -47,6 +55,7 @@
     "clsx": "^2.1.1",
     "i18next": "^25.8.13",
     "lucide-react": "^0.575.0",
+    "minisearch": "7.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^16.5.4",
@@ -67,14 +76,20 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "github-slugger": "2.0.0",
     "globals": "^16.5.0",
     "jsdom": "^30.1.2",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
+    "remark-parse": "11.0.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.0.0",
     "vite": "^7.3.1",
-    "vitest": "^3.2.4"
+    "vitepress": "1.6.4",
+    "vitest": "^3.2.4",
+    "yaml": "2.8.1"
   }
 }

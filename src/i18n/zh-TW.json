@@ -22,107 +22,38 @@
   },
   "help": {
     "eyebrow": "操作指南",
-    "title": "快速上手 agent-hub",
-    "description": "最快路徑：安裝 Skills → 開啟全域工作區 → 點擊技能組標籤啟用。按 ⌘K 可隨時呼出命令面板。按需使用專案工作區、Git 備份和設定。",
-    "items": {
-      "workflows": {
-        "title": "推薦工作流程",
-        "description": "單一 Agent 用戶：安裝 Skills → 開啟全域工作區 → 點擊技能組標籤啟用，或點 + 新增 Skills 從技能庫挑選並即時切換目標 Agent。多專案用戶：開啟專案工作區，同樣可用技能組標籤或 + 新增 Skills 彈窗為該專案的 Agent 設定 Skills。多機用戶：在設定頁開啟 Git 備份，把中央倉庫在多台裝置間同步。"
-      },
-      "skillGroups": {
-        "title": "技能組",
-        "description": "技能組是按用途整理的一組 Skills，例如「日常開發」。在側邊欄選擇技能組可檢視和編輯成員；在工作區點擊技能組按鈕可批次加入或移除其中的 Skills。全部加入後顯示 ✓，部分加入時顯示數量。修改組內成員不會自動更新既有部署。"
-      },
-      "install": {
-        "title": "安裝 Skills",
-        "description": "支援從本機資料夾、Git 倉庫、壓縮檔或市集匯入。支援批次匯入資料夾中的多個 Skill。"
-      },
-      "sync": {
-        "title": "技能庫",
-        "description": "瀏覽所有已安裝的 Skills，支援批次標籤編輯和依 Agent 同步開關。可依來源或標籤篩選，新增的「未標籤」篩選項可快速找出漏打標籤的 Skills。點擊卡片上的 Agent 圖示即可一鍵為該 Agent 安裝或移除這個 Skill；卡片上恆顯示的刪除按鈕可從中央庫整體移除該 Skill。點擊卡片本身可查看文件、版本歷史和 Agent 同步詳情。"
-      },
-      "global": {
-        "title": "全域工作區",
-        "description": "每個 Agent 都有自己的頁面，列出其全域目錄裡的所有 Skills（包括不是透過 agent-hub 安裝的），與 Agent 實際看到的內容保持一致。點 + 新增 Skills 即可從中央庫挑選，並透過內嵌的 Agent 標籤選擇目標；也可透過「全部 Agents」總覽跨所有已安裝 Agent 統一管理。只存在於某個 Agent 目錄的 Skills 可直接在卡片上刪除。"
-      },
-      "projects": {
-        "title": "專案工作區",
-        "description": "關聯專案後，可以檢視專案內各 Agent 的本地 Skills 目錄、對照中央倉庫，並依需求雙向匯入或匯出。使用技能組標籤啟用技能組，或點 + 新增 Skills 透過多 Agent 目標選擇器從技能庫挑選。"
-      },
-      "backup": {
-        "title": "備份與同步",
-        "description": "在備份頁用 GitHub 登入一次，之後備份自動進行；連接同一儲存庫的多台裝置會自動保持一致。同一技能在兩台裝置被同時修改時會進入「需要處理」，三選一（保留本機 / 使用遠端 / 兩個都保留），每次選擇前都會先建安全快照。密鑰和本機專屬設定永不備份。"
-      },
-      "settings": {
-        "hostManagedUpdate": "請從 agent-hub 發布頁取得新版本。",
-        "hostReleases": "agent-hub 發布頁",
-        "title": "設定",
-        "description": "管理 Agent 路徑與開關、自訂 Agent、拖曳調整 Agent 在全應用中的顯示順序、同步模式、主題字級、語言、網路代理、Git 遠端、AI 搜尋 Key，以及應用更新。可用「匯出日誌」把最近日誌與安裝/移除/更新/同步活動打包成壓縮檔，方便提交 Issue。"
-      }
-    },
     "pageTitle": "說明中心",
-    "pageDescription": "瞭解 agent-hub 的核心功能、操作方式和常見問題。",
-    "quickStart": "快速上手",
-    "features": "功能亮點",
-    "featureItems": {
-      "multiAgent": {
-        "title": "多 Agent 管理",
-        "description": "統一管理 Claude Code、Cursor、Windsurf 等多個 AI Agent 的技能設定，一處安裝、全端同步。"
-      },
-      "skillGroupSwitch": {
-        "title": "技能組一鍵切換",
-        "description": "將常用技能打包成技能組，一鍵切換工作模式——開發、寫作、維運各有專屬技能設定。"
-      },
-      "gitBackup": {
-        "title": "Git 備份與多裝置同步",
-        "description": "透過 GitHub 儲存庫自動備份技能庫，多台裝置連接同一儲存庫即可保持一致，衝突時三選一處理。"
-      },
-      "projectWorkspace": {
-        "title": "專案工作區",
-        "description": "為每個專案關聯獨立的技能目錄，對照中央庫雙向匯入匯出，不同專案可使用不同的技能設定。"
-      },
-      "commandPalette": {
-        "title": "命令面板",
-        "description": "按 ⌘K 隨時呼出，快速跳轉到任意技能、技能組、專案或執行操作，全鍵盤高效工作。"
-      }
-    },
-    "shortcuts": "鍵盤快速鍵",
-    "shortcutItems": {
-      "commandPalette": {
-        "label": "開啟命令面板",
-        "keys": "⌘ K"
-      },
-      "settings": {
-        "label": "開啟設定",
-        "keys": "⌘ ,"
-      },
-      "refresh": {
-        "label": "重新整理資料",
-        "keys": "⌘ R"
-      }
-    },
-    "faq": "常見問題",
-    "faqItems": {
-      "installFail": {
-        "question": "Skill 安裝失敗怎麼辦？",
-        "answer": "請檢查來源路徑是否正確，目錄中是否包含有效的 Skill 入口檔案（如 SKILL.md 或 CLAUDE.md）。如果從 Git 儲存庫安裝，確保網路可達且儲存庫為公開或已設定憑證。可以在設定 → 關於中「匯出日誌」，把 zip 附到 GitHub issue 方便排查。"
-      },
-      "multiDevice": {
-        "question": "如何在多台裝置間同步技能？",
-        "answer": "在備份頁使用 GitHub 登入並連接一個儲存庫，之後備份會自動進行。在其他裝置上連接同一儲存庫即可自動同步。如果同一技能在兩台裝置上同時被修改，會顯示在「需要處理」清單中，可選擇保留本機、使用遠端或兩個都保留。"
-      },
-      "customAgent": {
-        "question": "如何新增自訂 Agent？",
-        "answer": "在設定頁的 Agent 清單中點擊「新增自訂 Agent」，填寫名稱和全域技能目錄路徑。自訂 Agent 和內建 Agent 具有相同的技能管理能力，包括技能組、同步和備份。"
-      },
-      "skillConflict": {
-        "question": "技能衝突或覆蓋怎麼處理？",
-        "answer": "當透過備份同步遇到衝突時，agent-hub 會在操作前自動建立安全快照。你可以選擇保留本機版本、使用遠端版本或兩個都保留（遠端副本會帶後綴重新命名）。安全快照保存在 ~/.agent-hub/recovery 目錄中。"
-      }
-    },
-    "feedback": "回饋與支援",
-    "feedbackDescription": "遇到問題或有功能建議？歡迎在 GitHub Issues 提交回饋。提交前建議先在設定 → 關於中點擊「匯出日誌」，把產生的 zip 檔案附到 issue 中，方便開發者快速定位。",
-    "reportIssue": "回報問題"
+    "pageDescription": "查找操作指南、技能搭配和常見問題，離線也能閱讀。",
+    "version": "適用版本 {{version}}",
+    "since": "自 {{version}} 起",
+    "reviewed": "核驗日期 {{date}}",
+    "offlineAvailable": "隨應用提供的離線文件",
+    "onlineDocs": "線上文件",
+    "searchLabel": "搜尋說明文件",
+    "searchPlaceholder": "搜尋標題、操作步驟或問題…",
+    "clearSearch": "清除搜尋",
+    "categoriesLabel": "文件目錄",
+    "allArticles": "全部文章",
+    "recommendedArticles": "從這裡開始",
+    "browseCategories": "依主題瀏覽",
+    "articleCount": "{{count}} 篇文章",
+    "searchResults": "搜尋結果 · {{count}} 篇",
+    "filterCategory": "分類",
+    "allCategories": "全部分類",
+    "noResults": "沒有找到相符文章，試試較短的關鍵字或其他分類。",
+    "resetFilters": "清除搜尋與篩選",
+    "openOnline": "在瀏覽器開啟",
+    "copyLink": "複製分享連結",
+    "linkCopied": "分享連結已複製",
+    "copyFailed": "複製失敗，請重試。",
+    "openFailed": "無法開啟連結，請檢查預設瀏覽器後重試。",
+    "onThisPage": "本頁目錄",
+    "related": "相關文章",
+    "breadcrumb": "目前位置",
+    "articleNotFound": "這篇文章不存在或尚未提供",
+    "feedbackDescription": "需要回饋？請附應用版本、重現步驟和經檢查的日誌。",
+    "reportIssue": "回報問題",
+    "translationFallback": "本文目前提供簡體中文，翻譯尚未完成。"
   },
   "commandPalette": {
     "placeholder": "跳轉到技能、技能組、專案或操作…",

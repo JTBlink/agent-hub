@@ -22,107 +22,38 @@
   },
   "help": {
     "eyebrow": "操作指南",
-    "title": "快速上手 agent-hub",
-    "description": "最快路径：安装 Skills → 打开全局工作区 → 点击技能组标签激活。按 ⌘K 可随时呼出命令面板。按需使用项目工作区、Git 备份和设置。",
-    "items": {
-      "workflows": {
-        "title": "推荐工作流",
-        "description": "单 Agent 用户：安装 Skills → 打开全局工作区 → 点击技能组标签激活，或点 + 添加 Skills 从技能库挑选并即时切换目标 Agent。多项目用户：打开项目工作区，同样可用技能组标签或 + 添加 Skills 弹层为该项目的 Agent 配置 Skills。多机用户：在设置页开启 Git 备份，把中央仓库在多台设备间同步。"
-      },
-      "skillGroups": {
-        "title": "技能组",
-        "description": "技能组是按用途整理的一组 Skills，例如“日常开发”。在侧边栏选择技能组可查看和编辑成员；在工作区点击技能组按钮可批量添加或移除其中的 Skills。全部添加后显示 ✓，部分添加时显示数量。修改组内成员不会自动更新已有部署。"
-      },
-      "install": {
-        "title": "安装 Skills",
-        "description": "从本地目录、Git 仓库、压缩包或市场导入。支持批量导入文件夹中的多个 Skill。"
-      },
-      "sync": {
-        "title": "技能库",
-        "description": "浏览所有已安装 Skills，支持批量标签编辑和按 Agent 同步开关。可按来源或标签过滤，新增的「未标签」过滤项可快速定位漏打标签的 Skills。点击卡片上的 Agent 图标可一键为该 Agent 安装或移除该 Skill；卡片上始终显示的删除按钮可从中央库整体删除该 Skill。点击卡片本身查看文档、版本历史和 Agent 同步详情。"
-      },
-      "global": {
-        "title": "全局工作区",
-        "description": "每个 Agent 都有自己的页面，列出其全局目录里的所有 Skills（包括不是通过 agent-hub 安装的），与 Agent 实际看到的内容保持一致。点击 + 添加 Skills 从中央库挑选，并通过内嵌的 Agent 标签选择目标；也可通过「全部 Agents」总览跨所有已安装 Agent 统一管理。仅存在于某个 Agent 目录的 Skills 可直接在卡片上删除。"
-      },
-      "projects": {
-        "title": "项目工作区",
-        "description": "关联项目后查看各 Agent 的本地 Skills 目录，对照中央仓库双向导入导出。使用技能组标签激活技能组，或点 + 添加 Skills 通过多 Agent 目标选择器从技能库挑选。"
-      },
-      "backup": {
-        "title": "备份与同步",
-        "description": "在备份页用 GitHub 登录一次，之后备份自动进行；连接同一仓库的多台设备会自动保持一致。同一技能在两台设备被同时修改时会进入「需要处理」，三选一（保留本机 / 使用远端 / 两个都保留），每次选择前都会先建安全快照。密钥和本机专属设置永不备份。"
-      },
-      "settings": {
-        "hostManagedUpdate": "请从 agent-hub 发布页获取新版本。",
-        "hostReleases": "agent-hub 发布页",
-        "title": "设置",
-        "description": "管理 Agent 路径与开关、自定义 Agent、拖拽调整 Agent 在全应用中的显示顺序、同步模式、主题字号、语言、网络代理、Git 远程、AI 搜索 Key，以及应用更新。可用「导出日志」把最近日志与安装/移除/更新/同步活动打包成压缩文件，方便提交 Issue。"
-      }
-    },
     "pageTitle": "帮助中心",
-    "pageDescription": "了解 agent-hub 的核心功能、操作方式和常见问题。",
-    "quickStart": "快速上手",
-    "features": "功能亮点",
-    "featureItems": {
-      "multiAgent": {
-        "title": "多 Agent 管理",
-        "description": "统一管理 Claude Code、Cursor、Windsurf 等多个 AI Agent 的技能配置，一处安装、全端同步。"
-      },
-      "skillGroupSwitch": {
-        "title": "技能组一键切换",
-        "description": "将常用技能打包成技能组，一键切换工作模式——开发、写作、运维各有专属技能配置。"
-      },
-      "gitBackup": {
-        "title": "Git 备份与多设备同步",
-        "description": "通过 GitHub 仓库自动备份技能库，多台设备连接同一仓库即可保持一致，冲突时三选一处理。"
-      },
-      "projectWorkspace": {
-        "title": "项目工作区",
-        "description": "为每个项目关联独立的技能目录，对照中央库双向导入导出，不同项目可使用不同的技能配置。"
-      },
-      "commandPalette": {
-        "title": "命令面板",
-        "description": "按 ⌘K 随时呼出，快速跳转到任意技能、技能组、项目或执行操作，全键盘高效工作。"
-      }
-    },
-    "shortcuts": "键盘快捷键",
-    "shortcutItems": {
-      "commandPalette": {
-        "label": "打开命令面板",
-        "keys": "⌘ K"
-      },
-      "settings": {
-        "label": "打开设置",
-        "keys": "⌘ ,"
-      },
-      "refresh": {
-        "label": "刷新数据",
-        "keys": "⌘ R"
-      }
-    },
-    "faq": "常见问题",
-    "faqItems": {
-      "installFail": {
-        "question": "Skill 安装失败怎么办？",
-        "answer": "请检查来源路径是否正确，目录中是否包含有效的 Skill 入口文件（如 SKILL.md 或 CLAUDE.md）。如果从 Git 仓库安装，确保网络可达且仓库为公开或已配置凭据。可以在设置 → 关于中「导出日志」，把 zip 附到 GitHub issue 方便排查。"
-      },
-      "multiDevice": {
-        "question": "如何在多台设备间同步技能？",
-        "answer": "在备份页使用 GitHub 登录并连接一个仓库，之后备份会自动进行。在其他设备上连接同一仓库即可自动同步。如果同一技能在两台设备上同时被修改，会显示在「需要处理」列表中，可选择保留本机、使用远端或两个都保留。"
-      },
-      "customAgent": {
-        "question": "如何添加自定义 Agent？",
-        "answer": "在设置页的 Agent 列表中点击「添加自定义 Agent」，填写名称和全局技能目录路径。自定义 Agent 和内置 Agent 具有相同的技能管理能力，包括技能组、同步和备份。"
-      },
-      "skillConflict": {
-        "question": "技能冲突或覆盖怎么处理？",
-        "answer": "当通过备份同步遇到冲突时，agent-hub 会在操作前自动建立安全快照。你可以选择保留本机版本、使用远端版本或两个都保留（远端副本会带后缀重命名）。安全快照保存在 ~/.agent-hub/recovery 目录中。"
-      }
-    },
-    "feedback": "反馈与支持",
-    "feedbackDescription": "遇到问题或有功能建议？欢迎在 GitHub Issues 提交反馈。提交前建议先在设置 → 关于中点击「导出日志」，把生成的 zip 文件附到 issue 中，方便开发者快速定位。",
-    "reportIssue": "提交问题"
+    "pageDescription": "查找操作指南、技能搭配和常见问题，离线也能阅读。",
+    "version": "适用版本 {{version}}",
+    "since": "自 {{version}} 起",
+    "reviewed": "核验日期 {{date}}",
+    "offlineAvailable": "随应用提供的离线文档",
+    "onlineDocs": "在线文档",
+    "searchLabel": "搜索帮助文档",
+    "searchPlaceholder": "搜索标题、操作步骤或问题…",
+    "clearSearch": "清除搜索",
+    "categoriesLabel": "文档目录",
+    "allArticles": "全部文章",
+    "recommendedArticles": "从这里开始",
+    "browseCategories": "按主题浏览",
+    "articleCount": "{{count}} 篇文章",
+    "searchResults": "搜索结果 · {{count}} 篇",
+    "filterCategory": "分类",
+    "allCategories": "全部分类",
+    "noResults": "没有找到匹配文章，试试更短的关键词或其他分类。",
+    "resetFilters": "清除搜索与筛选",
+    "openOnline": "在浏览器打开",
+    "copyLink": "复制分享链接",
+    "linkCopied": "分享链接已复制",
+    "copyFailed": "复制失败，请重试。",
+    "openFailed": "无法打开链接，请检查默认浏览器后重试。",
+    "onThisPage": "本页目录",
+    "related": "相关文章",
+    "breadcrumb": "当前位置",
+    "articleNotFound": "这篇文章不存在或尚未提供",
+    "feedbackDescription": "需要反馈？请附应用版本、复现步骤和经检查的日志。",
+    "reportIssue": "反馈问题",
+    "translationFallback": "本文目前提供简体中文，翻译尚未完成。"
   },
   "commandPalette": {
     "placeholder": "跳转到技能、技能组、项目或操作…",

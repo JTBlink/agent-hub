@@ -21,108 +21,39 @@
     "settings": "Settings"
   },
   "help": {
-    "eyebrow": "Guide",
-    "title": "Quick Start for agent-hub",
-    "description": "Fastest path: install skills → open Global Workspace → click a Skill Group pill to activate. Press ⌘K anytime for the command palette. Use Project Workspaces, Git backup, and Settings as needed.",
-    "items": {
-      "workflows": {
-        "title": "Recommended Workflows",
-        "description": "Single-agent: install skills → open Global Workspace → click a Skill Group pill to activate, or hit + Add Skills to pick from your library and toggle target agents inline. Multi-project: open a Project Workspace and use the same Skill Group pills or + Add Skills picker for that project's agents. Multi-machine: turn on Git Backup in Settings to sync your library across devices."
-      },
-      "skillGroups": {
-        "title": "Skill Groups",
-        "description": "Group skills into named skill groups. In any workspace, click a Skill Group pill to instantly activate or deactivate all its skills for the current agent scope. Active skill groups show ✓; partially installed ones show a count. Applying a skill group is a one-time copy — not a live sync."
-      },
-      "install": {
-        "title": "Install Skills",
-        "description": "Import from local folders, Git repositories, archives, or the marketplace. Batch-import multiple skills from a folder at once."
-      },
-      "sync": {
-        "title": "Library",
-        "description": "Browse all installed skills with bulk tag editing and per-agent sync toggles. Filter by source or tag — including an Untagged pill to surface skills missing labels. Click an agent icon on any skill card to install or remove that skill for that agent in one click; the always-visible delete button removes a skill from the central library. Click the card itself to view docs, version history, and agent sync details."
-      },
-      "global": {
-        "title": "Global Workspace",
-        "description": "Each agent gets its own page listing every skill in its global folder — including ones installed outside agent-hub — so the view matches what the agent actually sees. Use + Add Skills to pull from your central library with inline target-agent chips, or use the All Agents overview to manage every installed agent at once. Skills that only exist in an agent folder can be deleted directly from the card."
-      },
-      "projects": {
-        "title": "Project Workspaces",
-        "description": "Link a project to browse per-agent local skill folders, compare with the central library, and import or export changes. Use Skill Group pills to activate skill groups, or open + Add Skills to pick from your library with a multi-agent target picker."
-      },
-      "backup": {
-        "title": "Backup & Sync",
-        "description": "Sign in with GitHub once on the Backup page — backups then run automatically, and devices connected to the same repository stay in sync with each other. If the same skill is edited on two devices, it shows up under \"Needs attention\" with three choices (keep mine / use remote / keep both); a safety snapshot precedes every choice. Secrets and machine-specific settings are never backed up."
-      },
-      "settings": {
-        "hostManagedUpdate": "Get new versions from the agent-hub releases page.",
-        "hostReleases": "agent-hub releases",
-        "title": "Settings",
-        "description": "Manage agent paths and toggles, add custom agents, drag to reorder how agents appear across the app, change sync mode, theme, text size, language, proxy, Git remote, AI search key, and check for app updates. Use Export Logs to bundle recent logs and install/remove/update/sync activity into a single zip when filing an issue."
-      }
-    },
-    "pageTitle": "Help Center",
-    "pageDescription": "Learn about agent-hub's core features, how to use it, and frequently asked questions.",
-    "quickStart": "Quick Start",
-    "features": "Features",
-    "featureItems": {
-      "multiAgent": {
-        "title": "Multi-Agent Management",
-        "description": "Manage skill configurations for multiple AI agents — Claude Code, Cursor, Windsurf, and more — from a single place. Install once, sync everywhere."
-      },
-      "skillGroupSwitch": {
-        "title": "One-Click Skill Group Switching",
-        "description": "Bundle frequently used skills into named groups and switch work modes instantly — development, writing, and ops each get their own configuration."
-      },
-      "gitBackup": {
-        "title": "Git Backup & Multi-Device Sync",
-        "description": "Automatically back up your skill library via a GitHub repository. Connect the same repo on multiple devices to stay in sync; conflicts offer a three-way choice."
-      },
-      "projectWorkspace": {
-        "title": "Project Workspaces",
-        "description": "Link each project to its own skill directory, compare with the central library, and import or export changes. Different projects can have different skill configurations."
-      },
-      "commandPalette": {
-        "title": "Command Palette",
-        "description": "Press ⌘K anytime to jump to any skill, skill group, project, or action — efficient keyboard-driven workflows."
-      }
-    },
-    "shortcuts": "Keyboard Shortcuts",
-    "shortcutItems": {
-      "commandPalette": {
-        "label": "Open Command Palette",
-        "keys": "⌘ K"
-      },
-      "settings": {
-        "label": "Open Settings",
-        "keys": "⌘ ,"
-      },
-      "refresh": {
-        "label": "Refresh Data",
-        "keys": "⌘ R"
-      }
-    },
-    "faq": "FAQ",
-    "faqItems": {
-      "installFail": {
-        "question": "What if a skill fails to install?",
-        "answer": "Check that the source path is correct and that the directory contains a valid skill entry file (e.g. SKILL.md or CLAUDE.md). For Git repositories, make sure the network is reachable and the repo is public or credentials are configured. Use Export Logs in Settings → About and attach the zip to your GitHub issue for easier debugging."
-      },
-      "multiDevice": {
-        "question": "How do I sync skills across devices?",
-        "answer": "Sign in with GitHub on the Backup page and connect a repository. Backups then run automatically. Connect the same repository on other devices to sync. If the same skill is edited on two devices simultaneously, it appears under 'Needs attention' with three choices: keep mine, use remote, or keep both."
-      },
-      "customAgent": {
-        "question": "How do I add a custom agent?",
-        "answer": "In the Settings page under the agent list, click 'Add Custom Agent' and enter a name and global skills directory path. Custom agents have the same skill management capabilities as built-in agents, including skill groups, sync, and backup."
-      },
-      "skillConflict": {
-        "question": "How are skill conflicts handled?",
-        "answer": "When backup sync encounters a conflict, agent-hub automatically creates a safety snapshot before any action. You can choose to keep your local version, use the remote version, or keep both (the remote copy is renamed with a suffix). Safety snapshots are stored in ~/.agent-hub/recovery."
-      }
-    },
-    "feedback": "Feedback & Support",
-    "feedbackDescription": "Found a bug or have a feature request? File an issue on GitHub. Before submitting, use Export Logs in Settings → About to bundle diagnostics as a zip and attach it to the issue for faster resolution.",
-    "reportIssue": "Report Issue"
+    "eyebrow": "Documentation",
+    "pageTitle": "Help center",
+    "pageDescription": "Find guides, workflow ideas and troubleshooting, available offline.",
+    "version": "For version {{version}}",
+    "since": "Since {{version}}",
+    "reviewed": "Reviewed {{date}}",
+    "offlineAvailable": "Documentation included with the app",
+    "onlineDocs": "Online documentation",
+    "searchLabel": "Search help articles",
+    "searchPlaceholder": "Search titles, instructions or problems…",
+    "clearSearch": "Clear search",
+    "categoriesLabel": "Documentation navigation",
+    "allArticles": "All articles",
+    "recommendedArticles": "Start here",
+    "browseCategories": "Browse by topic",
+    "articleCount": "{{count}} articles",
+    "searchResults": "Search results · {{count}} articles",
+    "filterCategory": "Category",
+    "allCategories": "All categories",
+    "noResults": "No matching articles. Try a shorter query or another category.",
+    "resetFilters": "Clear search and filters",
+    "openOnline": "Open in browser",
+    "copyLink": "Copy share link",
+    "linkCopied": "Share link copied",
+    "copyFailed": "Could not copy the link. Please retry.",
+    "openFailed": "Could not open the link. Check your default browser and retry.",
+    "onThisPage": "On this page",
+    "related": "Related articles",
+    "breadcrumb": "Breadcrumb",
+    "articleNotFound": "This article is unavailable",
+    "feedbackDescription": "For feedback, include the app version, steps to reproduce and reviewed logs.",
+    "reportIssue": "Report an issue",
+    "translationFallback": "This article is currently available in Chinese. Translation is not yet available."
   },
   "commandPalette": {
     "placeholder": "Jump to skill, skill group, project, action…",

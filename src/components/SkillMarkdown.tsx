@@ -1,10 +1,11 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "../utils";
 
 interface SkillMarkdownProps {
   content: string;
   className?: string;
+  components?: Components;
 }
 
 function stripMarkdownFrontmatter(content: string) {
@@ -16,7 +17,11 @@ function stripMarkdownFrontmatter(content: string) {
   return content.slice(end + 5).trimStart();
 }
 
-export function SkillMarkdown({ content, className }: SkillMarkdownProps) {
+export function SkillMarkdown({
+  content,
+  className,
+  components,
+}: SkillMarkdownProps) {
   const markdown = stripMarkdownFrontmatter(content);
 
   return (
@@ -193,6 +198,7 @@ export function SkillMarkdown({ content, className }: SkillMarkdownProps) {
               {...props}
             />
           ),
+          ...components,
         }}
       >
         {markdown}

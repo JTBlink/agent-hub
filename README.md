@@ -89,7 +89,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 主页独立于桌面应用，使用静态 HTML、CSS 和少量 JavaScript，无外部字体或运行时依赖。构建会从 `VERSION` 注入版本号，并复制样式、图标和产品截图：
 
 ```bash
-npm run homepage:build
+npm run website:build
 python3 -m http.server 8080 --directory _site
 ```
 
@@ -101,6 +101,8 @@ python3 -m http.server 8080 --directory _site
 src/             React 页面、组件、状态及 Tauri bindings
 src-tauri/       Rust commands、核心逻辑、CLI 与 Tauri 配置
 homepage/        产品主页的静态源文件
+docs/help/       应用帮助与公开文档的共享正文
+docs-site/       VitePress 文档站配置
 public/          前端静态资源与 Agent 图标
 skills/          随项目提供的管理 Skill
 scripts/         开发、验证、版本和发布脚本
@@ -152,3 +154,5 @@ AgentHub 基于 Skills Manager 二次开发，使用 Tauri 2、React、TypeScrip
 - **第三方内容与服务**：用户导入、部署或分享的 Skills、脚本及其他内容仍受其原始许可证和使用条款约束。使用前请确认来源、授权与执行行为；连接 Agent、模型服务或 Git 远端时，应遵守相关服务条款，妥善管理凭据与敏感数据。第三方服务的费用、可用性及其生成内容由相应服务条款约定，本项目不作保证。
 - **备份与操作风险**：部署、覆盖、删除和同步可能修改本地或远端文件。执行前请备份重要数据，检查操作目标及变更内容。
 - **权利反馈**：如认为本项目中的代码、图标、名称或其他资源存在授权或署名问题，请通过[仓库维护者的公开联系方式](https://github.com/JTBlink)提供相关文件路径、权利依据及具体诉求。维护者将核实，并按核实结果补充署名、修正许可说明或移除相关内容。
+
+帮助文档维护见 [共享帮助内容](docs/help/README.md)。本地文档站预览使用 `npm run docs:dev`；应用、测试和构建会自动准备离线文档。

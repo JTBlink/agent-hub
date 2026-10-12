@@ -4,3 +4,9 @@ src-tauri/target/
 src-tauri/gen/
 package-lock.json
 docs/reference/skills-manager/
+
+src/generated/help/
+public/help-assets/
+docs-site/.generated/
+docs-site/.vitepress/cache/
+_site/

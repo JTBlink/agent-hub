@@ -41,6 +41,7 @@ agent-hub/
 │   │   └── ThemeContext.tsx        #   主题上下文
 │   ├── hooks/                      # 自定义 Hooks
 │   │   ├── useLocalSkillManagement.ts # 本地内容读取与删除状态
+│   │   ├── useProjectSkillRestore.ts # 项目恢复确认、批量执行与刷新
 │   │   ├── useMultiSelect.ts       #   多选逻辑
 │   │   ├── useDragWindow.ts        #   窗口拖拽
 │   │   └── useTheme.ts             #   主题切换
@@ -87,6 +88,7 @@ agent-hub/
 │   │   │   ├── skills.rs           #     技能管理
 │   │   │   ├── skills_diff_metadata.rs # 技能差异目录、声明版本与比较 DTO
 │   │   │   ├── project_skill_diff.rs # 项目 Agent 副本与中心技能的目录差异
+│   │   │   ├── project_skill_update.rs # 项目从中心更新与显式强制恢复
 │   │   │   ├── sync.rs             #     同步操作
 │   │   │   ├── git_backup.rs       #     Git 备份
 │   │   │   ├── settings.rs         #     应用设置
@@ -240,3 +242,13 @@ agent-hub/
 库内还包含来源缓存、同步元数据及本地密钥等运行文件，由核心模块管理，不提交到仓库。移动库后，`repo-config.json`、`library.lock`、日志和 CLI 仍使用固定的 `~/.agent-hub`。Windows 对应 `%USERPROFILE%\.agent-hub`。
 
 旧版 `~/.agenthub` 和原管理器的 `~/.skills-manager` 不自动迁入，已有 Agent 原生技能目录保持其工具约定。
+
+## 共享帮助与公开文档
+
+- `docs/help/`：共享 Markdown 正文、资源、分类导航与维护说明；只发布明确选定的帮助内容。
+- `docs-site/.vitepress/`：独立 VitePress 配置，站点构建输出到 `_site/docs/`。
+- `scripts/docs/`：正文/导航校验、链接与锚点解析、双端生成及开发监听。
+- `shared/help-catalog.mjs`、`shared/help-search.mjs`：跨应用与网站的文章语言回退和中文搜索分词规则。
+- `src/lib/help/`：离线文档类型、查找、分享地址与本地搜索。
+- `src/components/help/`：目录、列表、文章与 Markdown 链接适配；`src/views/Help.tsx` 组合帮助路由与搜索状态。
+- `src/generated/help/`、`public/help-assets/`、`docs-site/.generated/`：忽略的构建产物，由内容源重建。
