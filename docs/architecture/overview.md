@@ -13,3 +13,7 @@ agent-hub 使用单个 Tauri 2 桌面应用和 React 前端，业务实现来自
 开发与打包共用 `scripts/primary-app.mjs`：先构建同版本 CLI，再把它作为 sidecar 放入主应用安装包。macOS Universal 的 CLI 同样合并两种架构。
 
 继承代码中仍有超大页面和 Rust 模块，按 [ADR-0006](../adr/0006-file-size-and-reuse-conventions.md) 在后续功能修改时逐步拆分，避免本次主入口切换同时重写核心行为。
+
+## 共享帮助内容
+
+帮助正文位于 `docs/help/`，导航与跨语言文章 id 经 `scripts/docs/` 校验，生成 React 使用的离线文档清单与 VitePress 网站输入。应用渲染复用 `SkillMarkdown`，链接和章节标识来自构建清单；本地搜索与网站共用中文分词规则。网站构建输出到 `_site/docs/`，与原产品首页合并部署到 Pages。生成目录不进入 Git。设计依据见 [ADR-0014](../adr/0014-shared-help-content.md)，新增文章流程见 [维护说明](../help/README.md)。

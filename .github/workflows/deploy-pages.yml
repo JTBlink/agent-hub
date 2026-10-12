@@ -17,14 +17,29 @@ concurrency:
 
 jobs:
   deploy:
-    name: Publish homepage
+    name: Publish homepage and documentation
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install website dependencies
+        run: npm ci
+
+      - name: Validate version and shared documentation
+        run: |
+          npm run version:check
+          npm run docs:check
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -33,9 +48,9 @@ jobs:
         run: |
           mkdir -p _site/assets
           npm run homepage:build -- _site/index.html
-          cp src-tauri/icons/app-icon.svg _site/assets/app-icon.svg
+          npm run docs:build
 
-      - name: Upload homepage artifact
+      - name: Upload website artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site

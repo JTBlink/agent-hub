@@ -6,7 +6,15 @@ import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-  globalIgnores(["dist", "docs/reference/**", "src-tauri/target/**"]),
+  globalIgnores([
+    "dist",
+    "docs/reference/**",
+    "src-tauri/target/**",
+    "src/generated/**",
+    "docs-site/.generated/**",
+    "docs-site/.vitepress/cache/**",
+    "_site/**",
+  ]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [

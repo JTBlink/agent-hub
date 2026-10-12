@@ -7,4 +7,6 @@
 
 - [ADR-0009：共享技能目录与独立应用状态](0009-shared-skills-library.md)
 
+- [ADR-0014：应用帮助与公开文档共享内容](0014-shared-help-content.md)
+
 后续规划统一放在 [docs/plans/agent-hub.md](../plans/agent-hub.md)，确认的重要决策再形成 ADR。

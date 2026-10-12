@@ -66,6 +66,7 @@ function App() {
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/help" element={<Help />} />
+              <Route path="/help/:articleId" element={<Help />} />
             </Route>
           </Routes>
           <CloseActionGuard />

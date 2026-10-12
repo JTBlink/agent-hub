@@ -68,3 +68,9 @@ Thumbs.db
 !/.codex/skills/rust-dev
 .hermes/
 .opencode/
+
+# Help content generated from docs/help.
+/src/generated/help/
+/public/help-assets/
+/docs-site/.generated/
+/docs-site/.vitepress/cache/

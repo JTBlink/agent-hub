@@ -36,7 +36,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ### `deploy-pages.yml`
 
-触发条件：推送 `v*` tag 或手动 `workflow_dispatch`。构建并部署对应版本的主页；普通主页文件变更不自动部署。
+触发条件：推送 `v*` tag 或手动 `workflow_dispatch`。通过锁定 Node.js 22 和 `npm ci`，校验版本与共享帮助内容，构建并部署对应版本的产品主页和 VitePress 文档站。统一产物为 `_site/`，公开文档位于 `/agent-hub/docs/`；普通主页或文档文件变更不自动部署。
 
 ## 手动构建
 

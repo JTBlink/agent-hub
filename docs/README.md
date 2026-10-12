@@ -4,6 +4,7 @@
 
 - [后续规划与设计](plans/agent-hub.md)（统一规划入口）
 - [产品概述](product/overview.md)
+- [帮助内容与维护指南](help/README.md)（应用离线帮助和公开文档站共用）
 - [Skill 推荐与用法指南](product/skill-recommendations.md)
 - [系统架构](architecture/overview.md)
 - [目录与本地数据](architecture/directory-structure.md)

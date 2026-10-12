@@ -92,6 +92,20 @@ describe("GitHub Actions workflow contract", () => {
     expect(pages).toContain("npm run homepage:build -- _site/index.html");
   });
 
+  it("publishes the offline content's documentation site beside the product homepage", () => {
+    expect(pages).toContain("npm ci");
+    expect(pages).toContain("node-version: 22");
+    expect(pages).toContain("npm run docs:check");
+    expect(pages).toContain("npm run docs:build");
+    expect(pages.indexOf("npm ci")).toBeLessThan(
+      pages.indexOf("npm run docs:build"),
+    );
+    expect(pages.indexOf("npm run docs:build")).toBeLessThan(
+      pages.indexOf("actions/upload-pages-artifact"),
+    );
+    expect(websiteIndex).toContain('href="docs/zh/"');
+  });
+
   it("uses official actions backed by the Node.js 24 runtime", () => {
     for (const workflow of [installers, ci]) {
       expect(workflow).not.toContain("actions/checkout@v4");
