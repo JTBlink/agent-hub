@@ -40,7 +40,7 @@ try:
         (800, "dark", "zh-TW", "xlarge", "&undeployed&ungrouped"),
         (960, "light", "zh", "default", "&empty"),
     ]:
-        cdp("Emulation.setDeviceMetricsOverride", width=width, height=1000,
+        cdp("Emulation.setDeviceMetricsOverride", width=width, height=800 if width == 1440 and language == "zh" else 1000,
             deviceScaleFactor=1, mobile=False)
         goto_url(url + f"&theme={theme}&language={language}&text-size={size}" + flags)
         wait_for_load()
@@ -49,9 +49,17 @@ try:
         assert js("[...document.querySelectorAll('.dashboard-overview [id^=dashboard-][id$=-title]')].every(el=>el.closest('button').getBoundingClientRect().right <= innerWidth)"), "overview card clipped"
         assert js("document.querySelector('.dashboard-library-art')?.getAttribute('aria-hidden') === 'true'"), "decorative SVG not hidden"
         assert js("[...document.querySelectorAll('.dashboard-workspace-grid,.dashboard-recent-grid')].every(e=>e.scrollHeight <= e.clientHeight + 1)"), "nested scroll region"
+        if width == 1440 and language == "zh":
+            assert js("document.querySelector('.dashboard-page').parentElement.parentElement.scrollHeight <= document.querySelector('.dashboard-page').parentElement.parentElement.clientHeight + 1"), "default dashboard does not fit the first screen"
+            assert js("document.querySelectorAll('#dashboard-recent-skills button').length === 3"), "recent skills not compact by default"
+            click_named_button("展开另外")
+            wait_until("document.querySelectorAll('#dashboard-recent-skills button').length === 5", "recent expansion did not show all skills")
+            click_named_button("收起近期技能")
+            wait_until("document.querySelectorAll('#dashboard-recent-skills button').length === 3", "recent collapse did not restore compact view")
+            assert js("document.activeElement?.getAttribute('aria-controls') === 'dashboard-recent-skills'"), "collapse lost keyboard focus"
         print("PASS:", width, theme, language, size)
 
-    cdp("Emulation.setDeviceMetricsOverride", width=1440, height=1000,
+    cdp("Emulation.setDeviceMetricsOverride", width=1440, height=700,
         deviceScaleFactor=1, mobile=False)
     goto_url(url + "&theme=dark&language=zh&undeployed&ungrouped&many-projects")
     wait_for_load()
@@ -61,7 +69,7 @@ try:
                "project grid did not show all projects")
     assert js("document.querySelector('#dashboard-workspace-entries').scrollHeight === document.querySelector('#dashboard-workspace-entries').clientHeight"), "project grid scrolls independently"
     before = js("[...document.querySelectorAll('.dashboard-page')][0].parentElement.parentElement.scrollTop")
-    cdp("Input.dispatchMouseEvent", type="mouseWheel", x=750, y=650,
+    cdp("Input.dispatchMouseEvent", type="mouseWheel", x=450, y=520,
         deltaX=0, deltaY=500)
     wait_until(f"document.querySelector('.dashboard-page').parentElement.parentElement.scrollTop > {before}",
                "wheel over projects did not scroll the main page")

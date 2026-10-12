@@ -70,6 +70,8 @@
     }
   },
   "dashboard": {
+    "showMoreRecent": "Show {{count}} more",
+    "collapseRecent": "Show fewer skills",
     "workspaces": "Workspaces",
     "workspaceTypes": "Workspace type",
     "agentWorkspaces": "Agent workspaces",
