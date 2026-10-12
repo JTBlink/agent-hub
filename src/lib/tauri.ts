@@ -1102,10 +1102,6 @@ export const deleteGlobalLocalSkill = (
 
 /** Actual Skills root, separate from application data. */
 export const getSkillsDirectory = () => invoke<string>("get_skills_directory");
-export const getSharedSkillsLinkStatus = () =>
-  invoke<boolean>("get_shared_skills_link_status");
-export const setSharedSkillsLink = (enabled: boolean) =>
-  invoke<void>("set_shared_skills_link", { enabled });
 export const getBackupDirectory = () => invoke<string>("get_backup_directory");
 
 // ── Dialog ──

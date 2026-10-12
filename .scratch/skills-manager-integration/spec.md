@@ -4,7 +4,7 @@
 
 - Skills Manager 的前端与 Rust 核心成为唯一应用，根目录只保留一套依赖和构建入口。
 - 对外名称 agent-hub；保留原 Logo、图标、主题与色调。
-- 技能内容默认位于 `~/.agent-hub/skills`，数据库、配置、日志与 CLI 仍使用 `~/.agent-hub`；技能库内 Skills 原地登记，已有自定义库保持兼容。可选开启 `~/.agents/skills` 软链接指向技能库。
+- 技能内容默认位于 `~/.agent-hub/skills`，数据库、配置、日志与 CLI 仍使用 `~/.agent-hub`；技能库内 Skills 原地登记，已有自定义库保持兼容。技能使用统一通过按 Agent 部署；移除整库共享链接开关，升级不自动删除已有链接。
 - CLI、凭据服务、缓存和同步元数据使用新命名空间；不自动迁入旧库。
 - Unix 开发入口可编译 CLI 并在 Cargo bin 目录创建指向本仓库构建产物的软链接，桌面应用仍按版本复制随包 CLI 到固定路径。执行记录见 [B34](issues/B34-cli-development-symlink.md)。
 - 删除旧宿主代码、嵌套工程和过时文档，保留原许可证及导入清单。
