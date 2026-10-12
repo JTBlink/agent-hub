@@ -1364,7 +1364,7 @@
     "commitFiles": "技能與 Agent 入口（{{count}} 個路徑）",
     "ignored": "{{count}} 個技能路徑被 Git 忽略，團隊成員可能無法取得。",
     "ignoredDetails": "檢視路徑與處理建議",
-    "ignoredHelp": "請調整 .gitignore 或本機 Git 忽略規則，只允許這些技能路徑，保留其他個人設定的忽略規則，再提交技能內容。忽略整個父目錄時，也需要允許父目錄。",
+    "ignoredHelp": "請調整 .gitignore 或本機 Git 忽略規則，只允許需要共用的技能內容，再提交。快取和本機環境設定應保持忽略；需要共用的設定請使用範例模板。忽略整個父目錄時，也需要允許父目錄。",
     "copyPaths": "複製技能路徑",
     "pathsCopied": "技能路徑已複製",
     "managementFiles": "AgentHub 管理清單（選擇性共用）",

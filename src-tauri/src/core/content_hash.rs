@@ -4,21 +4,20 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-const IGNORED: &[&str] = &[
-    ".git",
-    ".DS_Store",
-    "Thumbs.db",
-    ".gitignore",
-    "__pycache__",
-];
+const IGNORED: &[&str] = &[".git", ".gitignore"];
+
+/// Generated caches and OS metadata that need no delivery or removal warning.
+pub(crate) fn is_regenerable(name: &str) -> bool {
+    matches!(name, "__pycache__" | ".DS_Store" | "Thumbs.db") || name.ends_with(".pyc")
+}
 
 /// True for names excluded from a skill's content scope: the exact-match
-/// [`IGNORED`] entries plus compiled-Python artifacts (`*.pyc`). These are
+/// [`IGNORED`] entries plus [`is_regenerable`] artifacts. Python caches are
 /// regenerated whenever a skill's Python scripts run, so without excluding
 /// them a copy-mode deployment would read as permanently "changed" against
 /// the library the first time the skill is used.
 fn is_ignored(name: &str) -> bool {
-    IGNORED.contains(&name) || name.ends_with(".pyc")
+    IGNORED.contains(&name) || is_regenerable(name)
 }
 
 /// Dependency installs (`npm install`, a Python venv) inside a skill. They stay
