@@ -5,19 +5,21 @@
 ## 版本与发布准备
 
 1. 确认用户要求的发布范围、目标分支和实际发布远端；检查 HEAD 与工作区，不静默纳入无关改动。发布授权包含本次版本同步、发布提交、tag 和推送；仅要求普通提交或规范维护时不打 tag。
-2. `VERSION` 为唯一版本来源，tag 为 `v<version>`。使用指定版本；缺少版本时按当前发布约定与变更范围判断，无法确定才询问。预发布版本包含 `-`，CI 标记为 prerelease。
-3. 执行 `npm run version:set -- <version>` 同步前端、Cargo、Tauri 与锁文件，再执行 `npm run version:check -- v<version>`。
+2. `VERSION` 为唯一版本来源，tag 为 `v<version>`。保留用户指定版本，不能因构建失败自动升级；缺少版本时按当前发布约定与变更范围判断，无法确定才询问。预发布版本包含 `-`，CI 标记为 prerelease。
+3. 版本配置已一致时只执行 `npm run version:check -- v<version>`；需要设置或同步时执行 `npm run version:set -- <version>`，再检查前端、Cargo、Tauri 与锁文件。
 4. 将正式说明写入 `CHANGELOG.md` 对应版本章节，保留新的 `Unreleased`；同步 tracker。说明与发布提交一致，不提前宣布未完成功能。
 5. 执行 [开发检查](../../rust-dev/references/development.md)，完成 Standards / Spec 审查；发布脚本与 workflow 改动运行相关合约测试。按 [提交规范](../../rust-dev/references/commit-conventions.md) 提交发布内容。
-6. **打 tag 前在干净发布提交运行 CI 同等质量门禁**，包含开发指南的前端 / Rust 检查。使用临时 detached worktree 检出已提交 SHA，确保本机未提交或被忽略的源码不参与验证；失败时修复、重新提交并验证新 SHA。
-7. 推送发布分支，手动运行三平台 Build Installers；全部测试、打包、安装 smoke 和汇总校验通过后，执行 `npm run release:ready -- v<version>`，再在同一 SHA 创建 tag。细节见 [发布前验证](release-prevention.md)。
-8. 最终打 tag 前工作区干净；tag 指向含版本、说明及本次功能的已验证发布 SHA。验证通过后追加提交会使候选证据失效。
+6. 固定已提交的发布 SHA，在临时 detached worktree 核实源码完整性，并按风险验证失败点及尚未覆盖的检查。本机未提交或被忽略的源码不能参与发布验证；完整前端 / Rust 门禁必须由该 SHA 的干净检出通过，可复用成功候选中的质量 job，无需再重复全套本地检查。
+7. 查询同 SHA 的三平台 Build Installers 候选：成功则复用，进行中则跟踪，没有可用候选才推送发布分支并手动运行。全部测试、打包、安装 smoke 和汇总校验通过后，执行 `npm run release:ready -- v<version>`，再在同一 SHA 创建 tag。细节见 [发布前验证](release-prevention.md)。
+8. 最终打 tag 前发布检出干净；tag 指向含版本、说明及本次功能的已验证发布 SHA。新提交需要自己的候选证据；共享主分支继续前进不改变原 SHA 的证据。
 
-普通分支 push 不自动执行 CI。发布必须先手动运行 Build Installers；独立 CI 适用于只需质量诊断的任务，无需和安装包候选重复执行。手动构建只产出候选 artifacts，不创建正式 Release。
+共享工作区可能在等待构建期间被其他任务提交。记录仓库、版本、发布 SHA、候选 workflow / event / run ID；使用隔离检出操作，只纳入本次发布范围的提交。推送分支前核实它仍指向目标 SHA；已改变时使用独立候选分支，不静默推送新 HEAD。手动触发后核对实际 `headSha`，不同则不能作为本次候选。候选和 tag 始终绑定固定 SHA，不按“最新运行”判断。
+
+普通分支 push 不自动执行 CI。发布必须有成功的同 SHA 手动 Build Installers 候选；独立 CI 适用于只需质量诊断的任务，无需和安装包候选重复执行。手动构建只产出候选 artifacts，不创建正式 Release。
 
 ## 自动创建与推送
 
-先读取 `VERSION` 得到版本 tag，固定当前发布 SHA；检查本地与远端 tag 后按下表决定下一步。远端查询同时检查 tag 对象及解引用目标，兼容 annotated 和 lightweight tag。
+先读取 `VERSION` 得到版本 tag，固定当前发布 SHA；在创建和推送前重新检查本地、远端 tag 与对应 Release，按下表决定下一步。其他发布任务已经创建正确 tag 时复用并跟踪，不竞争发布。远端查询同时检查 tag 对象及解引用目标，兼容 annotated 和 lightweight tag。
 
 | 状态                                                   | 执行行为                                               |
 | ------------------------------------------------------ | ------------------------------------------------------ |
@@ -56,7 +58,13 @@ git push origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
 ## 失败与重试
 
 - 推送前检查失败：保留准备结果，修复后继续，不跳过质量门禁。
-- tag 已推送、构建失败但无 Release：临时故障重跑原失败任务；需要新源码时先完成新 SHA 的候选验证，再用新版本、新 tag 发布。保留既有 tag，不反复删除重建同版本 tag 试错。
+- tag 已推送、构建失败但无 Release：同 SHA 临时故障重跑原失败任务；源码修复先完成新 SHA 的候选验证，再处理下述版本与 tag 冲突，不反复删除重建同版本 tag 试错。
 - tag 已推送、构建失败且 Release 已存在：保留 tag，定位失败 job；无代码变更时重新运行原失败 workflow run。手动 Build Installers 不会补建正式 Release。
-- 修复需新提交且 Release 已存在：使用新版本与新 tag，不能移动原 tag。
+- 修复需新提交且 Release 已存在：保留原 tag 与附件；正式发布修复需要新版本、新 tag。用户要求保持原版本时，完成可验证修复并报告这一冲突，不擅自升级。
 - Release 已存在：当前 workflow 跳过发布，不覆盖附件。检查已有产物；缺失或损坏时按用户授权的修复范围处理，不删除重建或反复触发。
+
+### 指定版本与既有 tag 冲突
+
+默认保留所有既有 tag。用户要求修好原版本，本身不等于授权删除或改写 tag；先交付修复 SHA、成功候选和旧 / 新 SHA 的差异，再说明恢复方案。没有固定版本约束时，可按已授权的发布范围选择新版本；有约束时不能自动改版本绕过冲突。
+
+未发布的失败 tag 只有在用户明确授权重建该 tag 后才可恢复同版本发布：操作前重新确认没有对应 Release（查询失败不能当作不存在），保存旧 tag 对象与解引用 SHA，核实新 SHA 已通过完整候选，限定本次 tag 操作；状态已变化则停止并核实。已发布 tag 不采用此恢复方式。本 skill 不把其他任务删除 tag 的行为当作授权，也不提供自动删 tag 的重试循环。

@@ -1,4 +1,4 @@
 interface:
   display_name: "GitHub CLI 工作规范"
-  short_description: "用 gh 验证三平台候选、防止 tag 失败、控制免费资源并发布安装包"
-  default_prompt: "使用 $github-cli 定位 Actions 失败，在同一提交三平台验证通过后发布，并控制公共仓库免费资源。"
+  short_description: "用 gh 修复 Actions、保留指定版本、固定源码并验证三平台发布"
+  default_prompt: "使用 $github-cli 按当前任务范围处理 Actions 或发布，保留指定版本，固定 SHA 并核实三平台候选与正式产物。"
