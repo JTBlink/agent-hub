@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, BookOpen, ExternalLink, Search } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
