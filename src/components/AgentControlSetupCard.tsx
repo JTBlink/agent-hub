@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Terminal, X } from "lucide-react";
+import { Check, Loader2, Square, Terminal, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -203,6 +203,11 @@ export function AgentControlSetupCard({
                 <>
                   <p className="app-section-title mb-2 mt-3">
                     {t("agentControl.pickAgents")}
+                    {selected.length === 0 && (
+                      <span className="ml-2 text-[11px] font-normal normal-case tracking-normal text-muted">
+                        {t("agentControl.confirmEmpty")}
+                      </span>
+                    )}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {candidates.map((agent) => {
@@ -210,16 +215,23 @@ export function AgentControlSetupCard({
                       return (
                         <button
                           key={agent.key}
+                          type="button"
                           onClick={() => toggle(agent.key)}
                           disabled={busy}
+                          aria-pressed={on}
                           title={agent.path}
-                          className={`rounded-md border px-2.5 py-1 text-left text-[11px] disabled:opacity-50 ${
+                          className={`rounded-md border px-2.5 py-1 text-left text-[11px] transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
                             on
                               ? "border-accent bg-accent-bg text-accent"
-                              : "border-border-subtle bg-surface-active text-muted"
+                              : "border-border-subtle bg-surface text-muted"
                           }`}
                         >
                           <span className="flex items-center gap-1.5 font-medium">
+                            {on ? (
+                              <Check className="h-4 w-4 shrink-0 text-accent" />
+                            ) : (
+                              <Square className="h-4 w-4 shrink-0 text-faint" />
+                            )}
                             <AgentIcon
                               agentKey={agent.key}
                               displayName={agent.display_name}
@@ -255,6 +267,13 @@ export function AgentControlSetupCard({
                 (mode === "update" &&
                   !needsLibraryUpdate &&
                   selected.length === 0)
+              }
+              title={
+                (mode === "deploy" ||
+                  (mode === "update" && !needsLibraryUpdate)) &&
+                selected.length === 0
+                  ? t("agentControl.confirmEmpty")
+                  : undefined
               }
               className="app-button-primary h-[34px] disabled:opacity-50"
             >
