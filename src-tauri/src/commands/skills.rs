@@ -3419,7 +3419,74 @@ pub fn rename_skill_internal(store: &SkillStore, id: &str, new_name: &str) -> Re
     if skill.name == new_name {
         return Ok(());
     }
+
+    let new_slug = skill_metadata::sanitize_skill_name(new_name)
+        .ok_or_else(|| AppError::invalid_input(format!("无效的技能名称：{new_name}")))?;
+
+    let old_central = PathBuf::from(&skill.central_path);
+    let old_dir_name = old_central
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let dir_changed = new_slug != old_dir_name;
+
     sync_metadata::with_repo_lock("rename skill", || {
+        if dir_changed {
+            let new_central = old_central
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(&new_slug);
+
+            if new_central.exists() {
+                anyhow::bail!(
+                    "目标目录已存在：{}",
+                    new_central.display()
+                );
+            }
+
+            let targets = store.get_targets_for_skill(id)?;
+
+            // Remove old deployed targets from disk.
+            for target in &targets {
+                let target_path = Path::new(&target.target_path);
+                let _ = sync_engine::remove_target(target_path);
+            }
+
+            // Rename the central directory.
+            std::fs::rename(&old_central, &new_central)?;
+            store.update_central_path(id, &new_central.to_string_lossy())?;
+
+            // Re-deploy targets with the new directory name.
+            let new_target_name = sync_engine::target_dir_name(&new_central, new_name);
+            for target in &targets {
+                let old_target_path = PathBuf::from(&target.target_path);
+                let new_target_path = old_target_path
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(&new_target_name);
+
+                let mode = sync_engine::sync_mode_for_tool("", Some(&target.mode));
+                let _ = sync_engine::sync_skill(
+                    &new_central,
+                    &new_target_path,
+                    mode,
+                    sync_engine::ReplacePolicy::Recorded {
+                        mode: target.mode.as_str(),
+                    },
+                );
+
+                let now = chrono::Utc::now().timestamp_millis();
+                store.insert_target(&SkillTargetRecord {
+                    target_path: new_target_path.to_string_lossy().to_string(),
+                    synced_at: Some(now),
+                    status: "ok".to_string(),
+                    last_error: None,
+                    source_hash: skill.content_hash.clone(),
+                    ..target.clone()
+                })?;
+            }
+        }
+
         store.rename_skill(id, new_name)?;
         sync_metadata::ensure_skill_metadata_unlocked(store, id)?;
         store.log_audit(
