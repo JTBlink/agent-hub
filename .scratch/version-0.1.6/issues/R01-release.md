@@ -35,3 +35,11 @@ Blocked by: none
 - 已核对基线之后的工作台概览 / 布局 / 项目优先、设置官网入口、官网帮助与日志、侧栏导航和 Skill 自动发布；用户可见变化已归入 0.1.6，纯任务领取及验收提交不另作功能条目。
 - 已提交的最新侧栏截图（0ae4357）归入本次源码和 0.1.6；补齐版本同步条目，移除已包含于上一 tag 的 Skill 1.4.0 重复说明。最终版本保持 0.1.6。
 - 复用已运行的 af5718a / 38335089320 候选以纳入 Skill 1.6.1 的流程整理；其 Windows 认证拒绝测试出现 TCP reset，修复见 [B01](B01-windows-auth-fixture.md)。新增测试修复归入 0.1.6，需新 SHA 候选，旧候选不作新源码的发布证据。
+
+## Verified source and runs
+
+- 固定发布源码：18786b5f37486debc9f3d79f78ac124c08c9ad8f。
+- [候选 38337575413](https://github.com/JTBlink/agent-hub/actions/runs/38337575413) 完整成功，包含质量、三平台 core tests / 安装启动 smoke 和汇总校验；release:ready 通过。
+- annotated tag v0.1.6 已精确推送；tag 对象 b713387899d0594ba2b1883273659affe101d42a，解引用同一发布 SHA。
+- [正式安装包 38340292365](https://github.com/JTBlink/agent-hub/actions/runs/38340292365) 与 [官网部署 38340292402](https://github.com/JTBlink/agent-hub/actions/runs/38340292402) 已触发，等待正式产物和附件验收。
+- 用户新增的 2 分钟监控偏好已生效；Skill 1.6.2 的规范提交 035b90a 独立记录在 Unreleased，不移动 tag 或替换发布源码。

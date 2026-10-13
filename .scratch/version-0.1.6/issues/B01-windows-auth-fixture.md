@@ -1,5 +1,5 @@
 Type: bug
-Status: claimed
+Status: resolved
 Blocked by: none
 
 # Windows 候选认证拒绝测试偶发 TCP reset
@@ -26,3 +26,9 @@ Blocked by: none
 - 新回归在旧关闭方式下失败（ConnectionReset），修复后与原同步用例共 3 项通过；全量 Rust 705 项通过、8 项按既有配置忽略。
 - cargo fmt 全仓检查、全目标严格 Clippy、版本检查、Markdown 格式与 git diff --check 通过。
 - Standards：只调整 cfg(test) 服务、请求日志只保留首行，不记录 Authorization；Spec：认证拒绝响应完整传递，原同步安全语义仍由已有用例验证。Windows 修复回验等待新候选。
+
+## Native result
+
+- 修复提交 18786b5，三平台候选 [38337575413](https://github.com/JTBlink/agent-hub/actions/runs/38337575413) 全部成功；Windows 完整 core tests、安装包编译和安装启动 smoke 通过。
+- macOS Universal、Linux core tests 与安装 smoke、质量及汇总校验也通过，Windows TCP reset 修复已完成原生回验。
+- release:ready 在干净隔离检出通过；annotated v0.1.6 指向同一 SHA，正式发布由 R01 跟踪。
