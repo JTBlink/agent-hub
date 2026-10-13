@@ -140,7 +140,8 @@ export function AppDataDirectorySetting() {
                     className={`${fieldClass} min-w-0 flex-1 font-mono`}
                     autoFocus
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleSaveCentralRepoPath();
+                      if (e.key === "Enter")
+                        void form.save(handleSaveCentralRepoPath);
                       if (e.key === "Escape") {
                         setCentralRepoPathInput(
                           centralRepoPathOverride ?? centralRepoPath,
