@@ -7,3 +7,5 @@
 技能库页应始终能看到需要处理的 `manage-skills` 安装、部署或更新入口，即使首页提示被关闭。技能名搜索容忍一次漏字、错字或多字，输入 `mange` 或 `mange-skills` 能找到 `manage-skills`。
 
 `manage-skills` 依赖桌面应用发布的 CLI bridge。同版本重新构建时，也须核对随包 CLI 与 bridge 内容；若不同则安全重发，以免旧 CLI 因数据库 schema 升级而不能使用。发布失败时取消信任旧 bridge。
+
+部署卡片中的 Agent 必须有明确的可选状态、勾选反馈和键盘焦点。未选择目标时说明需先选择 Agent，选择后启用按钮可用，继续仅部署到用户显式选择的目标。
