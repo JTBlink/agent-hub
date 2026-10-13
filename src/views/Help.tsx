@@ -97,8 +97,8 @@ export function Help() {
           </button>
         )}
       </form>
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[190px_minmax(0,1fr)]">
-        <aside className="rounded-xl border border-border-subtle bg-surface p-3">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="self-start rounded-xl border border-border-subtle bg-surface p-3">
           <button
             type="button"
             aria-expanded={navigationOpen}
@@ -113,7 +113,11 @@ export function Help() {
             id="help-navigation"
             className={`${navigationOpen ? "mt-3 block" : "hidden"} lg:mt-0 lg:block`}
           >
-            <HelpNavigation locale={locale} articleId={article?.id} />
+            <HelpNavigation
+              locale={locale}
+              articleId={article?.id}
+              categoryId={article?.category ?? selectedCategory}
+            />
           </div>
         </aside>
         <main className="min-w-0 rounded-xl border border-border-subtle bg-surface p-4 sm:p-5">

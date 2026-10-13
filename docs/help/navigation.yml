@@ -2,6 +2,9 @@ categories:
   - id: getting-started
     titles: { zh: 快速开始, en: Getting started, zh-TW: 快速開始 }
     articles: [quick-start]
+  - id: recommendations
+    titles: { zh: Skill 使用技巧, en: Skill tips, zh-TW: Skill 使用技巧 }
+    articles: [skill-usage-tips, coding-skills, workflow-recipes, choose-skills]
   - id: guides
     titles: { zh: 使用指南, en: Guides, zh-TW: 使用指南 }
     articles:
@@ -13,9 +16,6 @@ categories:
         backup-sync,
         deployment-modes,
       ]
-  - id: recommendations
-    titles: { zh: 推荐与实践, en: Recommendations, zh-TW: 推薦與實踐 }
-    articles: [choose-skills, workflow-recipes]
   - id: troubleshooting
     titles: { zh: 故障排查, en: Troubleshooting, zh-TW: 疑難排解 }
     articles: [troubleshooting]
@@ -25,4 +25,4 @@ categories:
   - id: migrations
     titles: { zh: 更新与迁移, en: Updates and migration, zh-TW: 更新與遷移 }
     articles: [upgrading]
-featured: [quick-start, project-team-sharing, skill-groups, troubleshooting]
+featured: [skill-usage-tips, coding-skills, quick-start, project-team-sharing]

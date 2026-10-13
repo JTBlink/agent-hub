@@ -94,6 +94,63 @@ async function enterQuery(value: string) {
   });
 }
 
+it("puts Skill tips before guides and lets readers browse the coding collection", async () => {
+  await render();
+  const navigation = container.querySelector('nav[aria-label="文档目录"]');
+  const groups = [...(navigation?.querySelectorAll("h2") ?? [])].map(
+    (heading) => heading.textContent,
+  );
+  expect(groups.slice(0, 3)).toEqual([
+    "快速开始",
+    "Skill 使用技巧",
+    "使用指南",
+  ]);
+  const categoryLink = navigation?.querySelector<HTMLAnchorElement>(
+    'h2 a[href="/help?category=recommendations"]',
+  );
+  expect(categoryLink).not.toBeNull();
+  await act(async () => categoryLink?.click());
+  expect(categoryLink?.getAttribute("aria-current")).toBe("page");
+  expect(container.querySelector("main")?.textContent).toContain(
+    "Coding Skills 推荐集合",
+  );
+  expect(container.querySelector("main")?.textContent).not.toContain(
+    "备份与多设备同步",
+  );
+
+  await clickArticle("coding-skills");
+  const article = container.querySelector("article");
+  expect(article?.textContent).toContain("Coding 基础");
+  expect(article?.textContent).toContain("diagnosing-bugs");
+  expect(
+    navigation
+      ?.querySelector('a[href="/help/coding-skills"]')
+      ?.getAttribute("aria-current"),
+  ).toBe("page");
+  const tips = article?.querySelector<HTMLAnchorElement>(
+    'a[href="/help/skill-usage-tips?lang=zh#skill-%E5%90%8D%E7%A7%B0%E4%B8%8E%E8%B0%83%E7%94%A8%E8%AF%AD%E6%B3%95"]',
+  );
+  expect(tips).not.toBeNull();
+  await act(async () => tips?.click());
+  expect(container.querySelector("article")?.textContent).toContain(
+    "Skill 名称与调用语法",
+  );
+  expect(document.activeElement?.id).toBe("skill-名称与调用语法");
+});
+
+it("finds the coding collection by its community source keyword", async () => {
+  await render();
+  await enterQuery("matt");
+  const result = container.querySelector<HTMLAnchorElement>(
+    'main a[href="/help/coding-skills"]',
+  );
+  expect(result).not.toBeNull();
+  await act(async () => result?.click());
+  expect(container.querySelector("article")?.textContent).toContain(
+    "新功能：从需求走到可验收的实现",
+  );
+});
+
 it("searches article body text and restores browsing after a query with no results", async () => {
   await render();
   await enterQuery("专属设置");
