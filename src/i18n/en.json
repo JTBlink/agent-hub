@@ -180,6 +180,14 @@
       "remoteOnlyDesc": "{{remote}} update(s) were pushed by your other devices. Syncing merges them into this machine — nothing here is uploaded or overwritten.",
       "pendingBothDesc": "Local changes: {{local}} · remote updates: {{remote}}. Syncing merges both per skill — neither side overwrites the other."
     },
+    "changes": {
+      "title": "Files pending backup ({{count}})",
+      "added": "Added",
+      "modified": "Modified",
+      "deleted": "Deleted",
+      "renamed": "Renamed",
+      "conflicted": "Conflict"
+    },
     "actions": {
       "backupNow": "Back Up Now",
       "backupAgain": "Back Up Again",

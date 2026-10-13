@@ -695,12 +695,19 @@ export const logStartupEvent = (label: string, elapsedMs: number) =>
 export type GitUpstreamHealth =
   "healthy" | "no_remote" | "no_upstream" | "unrelated_histories" | "detached";
 
+export interface GitBackupChange {
+  path: string;
+  previous_path: string | null;
+  kind: "added" | "modified" | "deleted" | "renamed" | "conflicted";
+}
+
 export interface GitBackupStatus {
   is_repo: boolean;
   remote_url: string | null;
   branch: string | null;
   has_changes: boolean;
   changed_skill_count: number;
+  changes: GitBackupChange[];
   ahead: number;
   behind: number;
   last_commit: string | null;

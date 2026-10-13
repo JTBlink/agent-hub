@@ -1,4 +1,6 @@
 mod local_state;
+mod status;
+pub use status::{get_status, GitBackupStatus};
 mod restore;
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -21,37 +23,6 @@ fn git_command() -> Command {
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
     cmd
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct GitBackupStatus {
-    /// Whether the skills directory is a git repository
-    pub is_repo: bool,
-    /// The configured remote URL (if any)
-    pub remote_url: Option<String>,
-    /// Current branch name
-    pub branch: Option<String>,
-    /// Whether there are uncommitted changes
-    pub has_changes: bool,
-    /// Number of distinct top-level skill directories with uncommitted changes.
-    /// Drives the "N skills have unbacked changes" status copy; 0 when only
-    /// metadata or root files changed.
-    pub changed_skill_count: u32,
-    /// Number of commits ahead of remote
-    pub ahead: u32,
-    /// Number of commits behind remote
-    pub behind: u32,
-    /// Last commit message
-    pub last_commit: Option<String>,
-    /// Last commit timestamp (ISO 8601)
-    pub last_commit_time: Option<String>,
-    /// Snapshot tag that points at current HEAD (if any)
-    pub current_snapshot_tag: Option<String>,
-    /// Snapshot tag restored most recently (when HEAD is a restore commit)
-    pub restored_from_tag: Option<String>,
-    /// Health of the relationship to the configured remote.
-    /// One of: "healthy", "no_remote", "no_upstream", "unrelated_histories", "detached".
-    pub upstream_health: String,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -179,83 +150,6 @@ fn remote_credential_env(skills_dir: &Path) -> Vec<(String, String)> {
     raw_remote_url(skills_dir)
         .map(|url| git_credentials::credential_env_for_url(&url))
         .unwrap_or_default()
-}
-
-/// Get the current git status of the skills directory.
-pub fn get_status(skills_dir: &Path) -> Result<GitBackupStatus> {
-    if !skills_dir.join(".git").exists() {
-        return Ok(GitBackupStatus {
-            is_repo: false,
-            remote_url: None,
-            branch: None,
-            has_changes: false,
-            changed_skill_count: 0,
-            ahead: 0,
-            behind: 0,
-            last_commit: None,
-            last_commit_time: None,
-            current_snapshot_tag: None,
-            restored_from_tag: None,
-            upstream_health: "no_remote".to_string(),
-        });
-    }
-
-    let remote_url = run_git(skills_dir, &["remote", "get-url", "origin"])
-        .ok()
-        .map(|url| redact_url(&url));
-
-    let branch = run_git(skills_dir, &["rev-parse", "--abbrev-ref", "HEAD"]).ok();
-
-    let porcelain = run_git(skills_dir, &["status", "--porcelain"]).unwrap_or_default();
-    let has_changes = !porcelain.is_empty();
-    let changed_skill_count = count_changed_top_dirs(&porcelain);
-
-    let (ahead, behind) = get_ahead_behind(skills_dir).unwrap_or((0, 0));
-
-    let last_commit = run_git(skills_dir, &["log", "-1", "--format=%s"]).ok();
-
-    let last_commit_time = run_git(skills_dir, &["log", "-1", "--format=%cI"]).ok();
-
-    let current_snapshot_tag = run_git(
-        skills_dir,
-        &[
-            "tag",
-            "--points-at",
-            "HEAD",
-            "--list",
-            "sm-v-*",
-            "--sort=-creatordate",
-        ],
-    )
-    .ok()
-    .and_then(|output| {
-        output
-            .lines()
-            .map(str::trim)
-            .find(|line| !line.is_empty())
-            .map(|line| line.to_string())
-    });
-
-    let restored_from_tag = last_commit
-        .as_deref()
-        .and_then(parse_restored_from_tag_message);
-
-    let upstream_health = detect_upstream_health(skills_dir, remote_url.is_some());
-
-    Ok(GitBackupStatus {
-        is_repo: true,
-        remote_url,
-        branch,
-        has_changes,
-        changed_skill_count,
-        ahead,
-        behind,
-        last_commit,
-        last_commit_time,
-        current_snapshot_tag,
-        restored_from_tag,
-        upstream_health,
-    })
 }
 
 /// Detect how the local repo relates to the configured remote.
@@ -992,32 +886,6 @@ fn ensure_clean_clone_target(skills_dir: &Path) -> Result<()> {
         );
     }
     Ok(())
-}
-
-/// Count distinct top-level directories touched by a `git status --porcelain`
-/// output, skipping dot-entries (`.agent-hub` metadata, `.gitignore`).
-/// This approximates "how many skills have unbacked changes" for the status
-/// copy without needing the DB.
-fn count_changed_top_dirs(porcelain: &str) -> u32 {
-    let mut dirs = std::collections::HashSet::new();
-    for line in porcelain.lines() {
-        if line.len() <= 3 {
-            continue;
-        }
-        // Format: "XY path" or "XY old -> new" (rename); count the new path.
-        let mut path = &line[3..];
-        if let Some((_, renamed)) = path.split_once(" -> ") {
-            path = renamed;
-        }
-        let path = path.trim().trim_matches('"');
-        let path = path.strip_prefix("skills/").unwrap_or(path);
-        let top = path.split('/').next().unwrap_or_default();
-        if top.is_empty() || top.starts_with('.') {
-            continue;
-        }
-        dirs.insert(top.to_string());
-    }
-    dirs.len() as u32
 }
 
 /// Size thresholds from the backup redesign (§3.6): warn on any single skill
@@ -1989,31 +1857,6 @@ mod tests {
             parse_restored_from_tag_message(msg).as_deref(),
             Some("sm-v-20260318-153012-abc1234")
         );
-    }
-
-    // ── count_changed_top_dirs ──
-
-    #[test]
-    fn count_changed_top_dirs_counts_unique_skill_dirs() {
-        let porcelain = " M skill-a/SKILL.md\n?? skill-a/notes.md\n M skill-b/SKILL.md\n";
-        assert_eq!(count_changed_top_dirs(porcelain), 2);
-    }
-
-    #[test]
-    fn count_changed_top_dirs_skips_metadata_and_root_dotfiles() {
-        let porcelain = " M .agent-hub/skills/x.json\n M .gitignore\n";
-        assert_eq!(count_changed_top_dirs(porcelain), 0);
-    }
-
-    #[test]
-    fn count_changed_top_dirs_follows_renames() {
-        let porcelain = "R  old-name/SKILL.md -> new-name/SKILL.md\n";
-        assert_eq!(count_changed_top_dirs(porcelain), 1);
-    }
-
-    #[test]
-    fn count_changed_top_dirs_empty() {
-        assert_eq!(count_changed_top_dirs(""), 0);
     }
 
     // ── #244 acceptance: status stable across a simulated restart ──

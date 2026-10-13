@@ -178,6 +178,14 @@
       "remoteOnlyDesc": "其他设备推送了 {{remote}} 项更新。同步会把它们合并到本机——本机不会上传或覆盖任何内容。",
       "pendingBothDesc": "本地更改：{{local}} · 远端更新：{{remote}}。同步会按技能合并双方的修改——任何一端都不会被覆盖。"
     },
+    "changes": {
+      "title": "未备份的文件（{{count}}）",
+      "added": "新增",
+      "modified": "修改",
+      "deleted": "删除",
+      "renamed": "重命名",
+      "conflicted": "冲突"
+    },
     "actions": {
       "backupNow": "立即备份",
       "backupAgain": "再次备份",
