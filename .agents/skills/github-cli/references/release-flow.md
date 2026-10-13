@@ -1,6 +1,31 @@
 # 版本发布与自动打 tag
 
-项目现有构建脚本不创建 Git tag；自动打 tag 由使用本 skill 的 Agent 在发布任务中执行。CI 职责与签名配置见 [CI/CD](ci-cd.md)，工作流设计见 [Actions 规范](actions.md)。
+用户明确要求正式发布时，使用本 skill 的 Agent 自动串联版本选择、同步、提交、候选验证、tag、正式构建与产物验收。现有 Actions 接收候选 dispatch 和 tag push，版本升级与打 tag 由 Agent 执行；普通 push 不自动发版。CI 职责与签名配置见 [CI/CD](ci-cd.md)，工作流设计见 [Actions 规范](actions.md)。
+
+## 按远端 tag 自动选择版本
+
+先确认这是新的正式发布，还是继续、修复或重跑既有发布。明确指定版本时优先使用该版本；续发任务读取 tracker 已选版本，不重新执行自动升级。仅更新 Skill、提交 push、准备候选或重跑编译不授权发布新版本。
+
+新发布未指定版本时，在仓库根目录运行只读选择脚本；执行前核实实际远端，`origin` 为示例：
+
+```bash
+node .agents/skills/github-cli/scripts/select-release-version.mjs --remote origin
+```
+
+脚本读取 VERSION 和远端 `v*` tags，输出 JSON 中的 `version`、`tag`、`latestTag`、`reason`。远端查询失败直接报错，不能按“没有 tag”处理。按数字比较 SemVer 的 major / minor / patch，不能按字符串、tag 创建时间或最新 Release 排序；annotated tag 的 `^{}` 解引用行不是另一个版本。未发布或构建失败的 tag 也占用版本。稳定版自动选择不使用预发布 tag；当前 VERSION 为预发布时要求明确版本或续发版本，不猜测稳定版转换。
+
+| 当前状态                                       | 新发布自动选择                                     |
+| ---------------------------------------------- | -------------------------------------------------- |
+| 远端没有稳定版 tag                             | 使用当前稳定版 VERSION                             |
+| VERSION 高于最新稳定版 tag，且远端未占用该版本 | 沿用 VERSION，视为已准备版本                       |
+| VERSION 已有 tag，或低于最新稳定版 tag         | 从最新稳定版 tag 升级 patch                        |
+| 用户明确要求 minor / major                     | 从 VERSION 和最新稳定版 tag 的较高版本升级对应级别 |
+| 用户明确指定版本                               | 使用该版本，随后按 tag / Release 冲突规则检查      |
+| 继续、修复或重跑既有发布                       | 使用 tracker 已选版本，不升级                      |
+
+例如 VERSION=0.1.5、远端最新 v0.1.5 时选择 0.1.6；VERSION=0.1.6、最新仍为 v0.1.5 时沿用 0.1.6；VERSION=0.1.4、最新 v0.1.5 时选择 0.1.6。首次没有 tag 时沿用 VERSION。`--bump minor` / `--bump major` 明确选择升级级别；`--version <version>` 保留用户指定版本，`--resume-version <version>` 复用已记录的续发版本，两者均不自动避开冲突。
+
+把选择依据、目标版本和发布范围写入 `.scratch/`，再同步版本文件。版本选定并进入候选验证后固定下来；候选失败或共享 main 前进不会重新选择版本。打 tag 前出现新的同名 tag 时按冲突规则处理，不自动改版本重跑整条流程。
 
 ## main 单线与分支集成
 
@@ -14,7 +39,7 @@
 ## 版本与发布准备
 
 1. 确认用户要求的发布范围和实际发布远端，以 main 为发布主线；检查 HEAD 与工作区，不静默纳入无关改动。发布授权包含本次版本同步、发布提交、tag 和推送；仅要求普通提交或规范维护时不打 tag。
-2. `VERSION` 为唯一版本来源，tag 为 `v<version>`。保留用户指定版本，不能因构建失败自动升级；缺少版本时按当前发布约定与变更范围判断，无法确定才询问。预发布版本包含 `-`，CI 标记为 prerelease。
+2. 按上述规则选择并记录目标版本；`VERSION` 仍为应用版本唯一来源，远端 tag 仅用于决定是否需要更新 VERSION，tag 为 `v<version>`。保留用户指定版本，不能因构建失败自动升级。预发布版本包含 `-`，CI 标记为 prerelease。
 3. 版本配置已一致时只执行 `npm run version:check -- v<version>`；需要设置或同步时执行 `npm run version:set -- <version>`，再检查前端、Cargo、Tauri 与锁文件。
 4. 将正式说明写入 `CHANGELOG.md` 对应版本章节，保留新的 `Unreleased`；同步 tracker。说明与发布提交一致，不提前宣布未完成功能。
 5. 执行 [开发检查](../../rust-dev/references/development.md)，完成 Standards / Spec 审查；发布脚本与 workflow 改动运行相关合约测试。按 [提交规范](../../rust-dev/references/commit-conventions.md) 提交发布内容。
@@ -25,6 +50,15 @@
 共享工作区可能在等待构建期间被其他任务提交。记录仓库、版本、发布 SHA、候选 workflow / event / run ID；使用隔离检出操作，只纳入本次发布范围的提交。当前手动工作流按 ref 触发，不能用 `--ref main` 指定已离开 main 顶端的旧 SHA；运行开始后 preflight 检出事件的 `github.sha`，main 再前进不会改变其源码。触发前核实远端 main，触发后核对 run 的 `headSha` 与 preflight 固定的构建 SHA；不同则不能作为本次候选。main 已变化且原 SHA 没有可用候选时，先核实新增提交符合发布范围，再明确重新选择并验证新 SHA；不能静默换 SHA 或另建候选分支绕过。原 SHA 已有成功候选时仍可在其 detached 检出打 tag。候选和 tag 始终绑定固定 SHA，不按“最新运行”判断。
 
 普通分支 push 不自动执行 CI。发布必须有成功的同 SHA 手动 Build Installers 候选；独立 CI 适用于只需质量诊断的任务，无需和安装包候选重复执行。手动构建只产出候选 artifacts，不创建正式 Release。
+
+正式发布授权下，Agent 自动查询、触发和跟踪候选，无需用户另行说“编译”或“打 tag”：
+
+```bash
+gh workflow run build-installers.yml --repo <owner/repository> --ref main
+gh run list --repo <owner/repository> --workflow build-installers.yml --event workflow_dispatch --commit <release-sha> --json databaseId,headSha,status,conclusion,url
+```
+
+仅在没有可复用运行且远端 main 等于发布 SHA 时触发。全部候选 job 成功并通过 `release:ready` 后，继续下文的 tag 精确推送；用 workflow、push 事件和 SHA 找到正式 run，同时跟踪官网部署。不把手动 candidate dispatch 当作正式发布，不为这套 Agent 流程另建版本升级 workflow 或新增发布 token。
 
 ## 自动创建与推送
 
@@ -63,6 +97,8 @@ git push origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
 - 三个平台任一失败不创建不完整的正式 Release；缺少签名或公证证据不得宣称已经完成。手动构建不读取生产签名 Secrets。
 - 主页由 `deploy-pages.yml` 独立部署，分别报告其结果，不能将主页成功当作安装包发布成功。
 - 成功证据为：远端 tag 与目标 SHA、成功的 Build Installers run、对应 Release 及完整附件。汇报可验证链接、签名状态与 [安装验收](release-checklist.md)；仅有 tag 或 artifacts 不等于正式 Release 完成。
+
+正式 run 成功后，Agent 自动下载对应版本的全部附件到自己创建的临时目录，在该版本的隔离检出中执行 `release:verify`；官网部署单独核验。校验后回写 tracker，清理自己的临时下载与 worktree，再报告完整发布结果。失败时记录版本、SHA、run ID 和恢复入口，下一次“继续发布”复用这些信息。
 
 ## 失败与重试
 
