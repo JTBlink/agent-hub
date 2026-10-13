@@ -730,6 +730,24 @@
     }
   },
   "settings": {
+    "loadFailed": "設定讀取失敗，請重試。",
+    "subtitle": "管理 Agent、技能部署與應用程式偏好",
+    "tabs": {
+      "agents": "Agent",
+      "skills": "技能與部署",
+      "appearance": "外觀與行為",
+      "backup": "備份與網路",
+      "about": "關於與診斷"
+    },
+    "skillStorage": "技能目錄",
+    "backupStorage": "備份儲存庫目錄",
+    "advancedSettings": "進階設定",
+    "helpAndDiagnostics": "說明與診斷",
+    "downloadRelease": "查看說明並下載",
+    "noRelease": "尚無可用的正式版本，可查看發佈頁面。",
+    "updateCheckFailed": "檢查更新失敗，請檢查網路或代理後重試。",
+    "releaseOpenFailed": "無法開啟發佈頁面，請重試。",
+    "hostReleases": "發佈頁面",
     "deploymentMode": "預設部署方式",
     "deploymentModeDesc": "新安裝的 Agent 入口使用符號連結或檔案複製。一般專案連結到專案 .agents/skills；全域和連結工作空間連結到個人技能庫。既有入口保持原方式。",
     "deploymentModeLegacy": "原有設定在各範圍不同，已保留。選擇一種方式後，新安裝將統一使用此預設值。",

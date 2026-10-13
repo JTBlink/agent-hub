@@ -1,0 +1,42 @@
+<!doctype html><html lang="zh"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div>
+<script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AppProvider } from '/src/context/AppContext.tsx';
+import { ThemeProvider } from '/src/context/ThemeContext.tsx';
+import { Layout } from '/src/components/Layout.tsx';
+import { Settings } from '/src/views/Settings.tsx';
+import '/src/index.css';
+const values = { language: 'zh', theme: 'dark', deployment_mode: 'symlink' };
+const tools = [
+ ['claude-code', 'Claude Code', '~/.claude/skills', '.claude/skills'],
+ ['codex', 'Codex', '~/.codex/skills', '.codex/skills'],
+ ['opencode', 'OpenCode', '~/.config/opencode/skills', '.opencode/skills'],
+ ['hermes', 'Hermes Agent', '~/.hermes/skills', '.hermes/skills'],
+].map(([key, display_name, skills_dir, project_relative_skills_dir]) => ({ key, display_name, skills_dir, project_relative_skills_dir, installed:true, enabled:true, is_custom:false, has_path_override:false, has_project_path_override:false, category:'coding' }));
+let id = 0;
+window.__TAURI_INTERNALS__ = {
+ transformCallback: () => ++id, unregisterCallback: () => {},
+ metadata: {currentWindow:{label:'main'}, currentWebview:{label:'main'}},
+ invoke: async (cmd, args={}) => {
+   if (cmd === 'get_settings') return values[args.key] ?? null;
+   if (cmd === 'set_settings') { values[args.key]=args.value; return; }
+   if (cmd === 'get_tool_status') return tools;
+   if (cmd === 'get_central_repo_path') return '~/.agent-hub';
+   if (cmd === 'get_skills_directory') return '~/.agent-hub/skills';
+   if (cmd === 'get_backup_directory') return '~/.agent-hub/backup';
+   if (cmd === 'get_active_skill_group' || cmd === 'check_last_panic' || cmd === 'get_central_repo_path_override' || cmd === 'get_central_repo_pending_path') return null;
+   if (cmd === 'plugin:app|version') return '0.1.6';
+   if (cmd === 'plugin:event|listen') return ++id;
+   if (cmd === 'check_app_update') return {has_update:true,current_version:'0.1.6',latest_version:'0.1.7',release_url:'https://github.com/JTBlink/agent-hub/releases/tag/v0.1.7'};
+   if (cmd === 'plugin:opener|open_url') { window.previewOpenedUrls ??= []; window.previewOpenedUrls.push(args.url); return; }
+   return [];
+ }
+};
+window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: () => {} };
+localStorage.setItem('language','zh'); localStorage.setItem('theme','dark');
+history.replaceState(null,'','/settings#agents');
+const { i18nReady } = await import('/src/i18n/index.ts'); await i18nReady;
+createRoot(document.getElementById('root')).render(React.createElement(ThemeProvider,null,React.createElement(AppProvider,null,React.createElement(BrowserRouter,null,React.createElement(Routes,null,React.createElement(Route,{element:React.createElement(Layout)},React.createElement(Route,{path:'/settings',element:React.createElement(Settings)})))))));
+</script></body></html>
