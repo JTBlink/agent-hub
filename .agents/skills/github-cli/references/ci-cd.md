@@ -48,7 +48,7 @@ GitHub 在本项目只承担 CI/CD 自动化和发布产物承载；需求、任
 
 ## Tag 发布
 
-正式发布时由 Agent 根据远端 tag 自动判断是否升级 VERSION，串联版本同步、提交 push、候选验证、tag、正式构建与下载验收；指定版本和失败续发保持原版本。版本选择、幂等检查与恢复见 [发布流程](release-flow.md)。现有 workflow 不自行升级版本或创建 tag。
+正式发布时由 Agent 根据远端 tag 自动判断是否升级 VERSION，核对上一个正式 tag 到发布 SHA 的提交并自动补全该版本 CHANGELOG，串联版本同步、提交 push、候选验证、tag、正式构建与下载验收；发布期间纳入的修复更新同一版本，指定版本和失败续发保持原版本。版本选择、增量说明、幂等检查与恢复见 [发布流程](release-flow.md)。现有 workflow 不自行升级版本或创建 tag。
 
 版本唯一来源为根目录 `VERSION`，发布 tag 固定为 `v<version>`；版本同步、发布提交和 annotated tag 的完整操作统一维护于 [发布流程](release-flow.md)，不在此重复维护。
 
