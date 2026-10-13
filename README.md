@@ -11,7 +11,7 @@
   </p>
 </div>
 
-![AgentHub 工作台：项目优先导航、技能部署概览与近期技能](docs/images/dashboard.png)
+![AgentHub 工作台：折叠侧栏、项目优先导航、技能部署概览与近期技能](docs/images/dashboard.png)
 
 _当前开发界面，使用示例数据：默认展示项目工作空间，可切换 Agent；右侧查看近期技能。截图生成方式见[截图说明](docs/images/README.md)。_
 
@@ -32,7 +32,7 @@ Skills 不必散落在每个工具和项目目录里。AgentHub 集中管理技�
 <details>
   <summary>查看技能库界面</summary>
 
-![AgentHub 技能库：紧凑筛选栏、技能组、标签与 Agent 部署状态](docs/images/skill-library.png)
+![AgentHub 技能库：全部技能入口、紧凑筛选栏、技能组、标签与 Agent 部署状态](docs/images/skill-library.png)
 
 _技能库的全部视图，展示已部署、待部署与未分组的示例技能。_
 

@@ -37,3 +37,7 @@ Blocked by: none
 ## 中文入口文案
 
 侧边栏首页中文和繁体文案由 Dashboard 改为“工作台”，命令面板复用同一翻译键；同步浏览器回归脚本的入口定位名称。JSON 解析与翻译检查、现有侧边栏测试及 diff 空白检查通过。
+
+## 后续提交
+
+用户在截图更新任务中授权提交 push，已提交原暂存实现：`6044e93`。新截图同步及官网验收由 [D08](../../homepage-redesign/issues/D08-refresh-navigation-screenshots.md) 记录。
