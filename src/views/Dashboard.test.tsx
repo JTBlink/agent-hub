@@ -145,9 +145,9 @@ it("replaces the duplicate Agent overview with an actionable ungrouped count", a
   expect(card("待分组").textContent).toContain("2");
   await act(async () => card("待分组").click());
   expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
-  expect(app.setViewingUngrouped).toHaveBeenCalledWith(true);
+  expect(app.setViewingUngrouped).toHaveBeenCalledWith(false);
   expect(app.closeSkillDetail).toHaveBeenCalledOnce();
-  expect(container.textContent).toBe("Skill library");
+  expect(container.textContent).toBe("Skill library?grouping=ungrouped");
 });
 
 it("refreshes grouping tasks and disables the entry once all skills are grouped", async () => {
@@ -168,7 +168,7 @@ it("opens the whole library instead of retaining a previous group or detail", as
   await act(async () => card("技能库").click());
   expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
   expect(app.closeSkillDetail).toHaveBeenCalledOnce();
-  expect(app.setViewingUngrouped).not.toHaveBeenCalled();
+  expect(app.setViewingUngrouped).toHaveBeenCalledWith(false);
   expect(container.textContent).toBe("Skill library");
 });
 
@@ -203,6 +203,7 @@ it("opens the newest skill from the redesigned recent list", async () => {
   expect(rows[0].textContent).toContain("本地");
   expect(rows[0].textContent).toContain("未部署");
   await act(async () => rows[0].click());
+  expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
   expect(app.openSkillDetailById).toHaveBeenCalledWith("skill-6");
   expect(container.textContent).toBe("Skill library");
 });

@@ -2,13 +2,14 @@ import type { ToolCategory } from "../lib/tauri";
 
 /**
  * Drives a single category of the workspace (coding agents or lobster agents).
- * Most of the per-agent UX is shared across categories; only the top-level
- * page title, the empty state copy, the URL prefix, and the category filter
- * differ.
+ * Per-agent UX is shared across categories. The global overview covers all agents;
+ * the legacy personal-assistant overview and detail routes remain category-scoped.
  */
 export interface WorkspaceConfig {
   category: ToolCategory;
   basePath: string;
+  /** The global overview includes both categories; detail routes keep their category. */
+  allAgentsOverview?: boolean;
   i18nKeys: {
     /** Heading shown on the "all agents" overview page. */
     title: string;
@@ -22,6 +23,7 @@ export interface WorkspaceConfig {
 export const CODING_WORKSPACE_CONFIG: WorkspaceConfig = {
   category: "coding",
   basePath: "/global-workspace",
+  allAgentsOverview: true,
   i18nKeys: {
     title: "globalWorkspace.title",
     noAgents: "globalWorkspace.noAgents",

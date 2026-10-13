@@ -66,6 +66,7 @@ export function Dashboard() {
           skills={recentSkills}
           tools={tools}
           onOpenSkill={(id) => {
+            setViewedSkillGroupId("");
             openSkillDetailById(id);
             navigate("/my-skills");
           }}
