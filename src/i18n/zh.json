@@ -613,6 +613,8 @@
     "browseMarket": "浏览榜单",
     "localInstall": "本地安装",
     "gitInstall": "Git 安装",
+    "recommended": "推荐",
+    "recommendedDesc": "精选高质量 Skill，助你快速上手。",
     "hot": "热门",
     "trending": "趋势",
     "all": "全部",
@@ -635,6 +637,7 @@
     },
     "oneClickInstall": "一键安装",
     "viewOnWeb": "在 skills.sh 查看",
+    "viewOnGithub": "在 GitHub 查看",
     "pagination": {
       "summary": "显示第 {{start}} - {{end}} 项，共 {{total}} 个 Skill",
       "page": "第 {{current}} / {{total}} 页",

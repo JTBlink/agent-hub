@@ -615,6 +615,8 @@
     "browseMarket": "Leaderboard",
     "localInstall": "Local Install",
     "gitInstall": "Git Install",
+    "recommended": "Recommended",
+    "recommendedDesc": "Curated high-quality skills to get you started.",
     "hot": "Hot",
     "trending": "Trending",
     "all": "All Time",
@@ -637,6 +639,7 @@
     },
     "oneClickInstall": "Install",
     "viewOnWeb": "View on skills.sh",
+    "viewOnGithub": "View on GitHub",
     "pagination": {
       "summary": "Showing {{start}} - {{end}} of {{total}} skills",
       "page": "Page {{current}} of {{total}}",
