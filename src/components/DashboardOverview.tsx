@@ -106,9 +106,13 @@ export function DashboardOverview() {
   const openLibrary = (id: OverviewScope) => {
     closeSkillDetail();
     setViewedSkillGroupId("");
-    if (id === "ungrouped") setViewingUngrouped(true);
+    setViewingUngrouped(false);
     navigate(
-      id === "undeployed" ? "/my-skills?deployment=undeployed" : "/my-skills",
+      id === "undeployed"
+        ? "/my-skills?deployment=undeployed"
+        : id === "ungrouped"
+          ? "/my-skills?grouping=ungrouped"
+          : "/my-skills",
     );
   };
 

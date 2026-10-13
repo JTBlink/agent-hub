@@ -8,8 +8,9 @@
     "confirmAction": "覆盖"
   },
   "sidebar": {
-    "dashboard": "Dashboard",
+    "dashboard": "工作台",
     "mySkills": "技能库",
+    "allSkills": "全部技能",
     "globalWorkspace": "全局工作区",
     "lobsterAgents": "龙虾 Agent",
     "installSkills": "安装 Skills",

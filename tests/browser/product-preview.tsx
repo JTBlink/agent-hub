@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { PreviewRouteMarker } from "./PreviewRouteMarker";
 import type {
   ManagedSkill,
   Project,
@@ -160,6 +161,7 @@ Object.assign(window, {
           return null;
         case "get_central_repo_path":
           return "~/.agent-hub/skills";
+        case "get_global_local_skills":
         case "get_central_repo_warnings":
         case "git_backup_pending_conflicts":
           return [];
@@ -189,6 +191,9 @@ const { ThemeProvider } = await import("../../src/context/ThemeContext");
 const { Layout } = await import("../../src/components/Layout");
 const { Dashboard } = await import("../../src/views/Dashboard");
 const { MySkills } = await import("../../src/views/MySkills");
+const { WorkspaceView } = await import("../../src/views/WorkspaceView");
+const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
+  await import("../../src/views/workspaceConfigs");
 const initialRoute =
   new URLSearchParams(location.search).get("view") === "dashboard"
     ? "/"
@@ -197,10 +202,31 @@ createRoot(document.getElementById("root")!).render(
   <MemoryRouter initialEntries={[initialRoute]}>
     <ThemeProvider>
       <AppProvider>
+        <PreviewRouteMarker />
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/my-skills" element={<MySkills />} />
+            <Route
+              path="/global-workspace"
+              element={<WorkspaceView config={CODING_WORKSPACE_CONFIG} />}
+            />
+            <Route
+              path="/global-workspace/:agentKey"
+              element={<WorkspaceView config={CODING_WORKSPACE_CONFIG} />}
+            />
+            <Route
+              path="/lobster-workspace"
+              element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
+            />
+            <Route
+              path="/lobster-workspace/:agentKey"
+              element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
+            />
+            <Route
+              path="/project/:id"
+              element={<div className="app-page">Demo project workspace</div>}
+            />
           </Route>
         </Routes>
       </AppProvider>

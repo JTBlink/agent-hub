@@ -17,28 +17,29 @@ export function useSkillLibraryFilters(
   order: string[],
 ) {
   const [params, setParams] = useSearchParams();
-  const [resetDeployment, setResetDeployment] = useState(false);
+  const [resetUrlFilters, setResetUrlFilters] = useState(false);
   const value = params.get("deployment");
   const deployment: DeploymentFilter =
-    !resetDeployment && (value === "deployed" || value === "undeployed")
+    !resetUrlFilters && (value === "deployed" || value === "undeployed")
       ? value
       : "all";
-  if (resetDeployment && !params.has("deployment")) {
-    setResetDeployment(false);
+  if (resetUrlFilters && !params.has("deployment") && !params.has("grouping")) {
+    setResetUrlFilters(false);
   }
   // Synchronize the URL after a scope switch. Local filters reset during render,
   // so the new group never renders with the previous group's conditions.
   useEffect(() => {
-    if (!resetDeployment) return;
+    if (!resetUrlFilters) return;
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
         next.delete("deployment");
+        next.delete("grouping");
         return next;
       },
       { replace: true },
     );
-  }, [resetDeployment, setParams]);
+  }, [resetUrlFilters, setParams]);
   const setDeployment = (mode: DeploymentFilter) => {
     setParams(
       (current) => {
@@ -53,7 +54,22 @@ export function useSkillLibraryFilters(
   const [search, setSearch] = useState("");
   const [sources, setSources] = useState<Set<string>>(new Set());
   const [tags, setTags] = useState<Set<string>>(new Set());
-  const [ungrouped, setUngrouped] = useState(false);
+  const ungrouped = !resetUrlFilters && params.get("grouping") === "ungrouped";
+  const setUngrouped = (
+    selected: boolean | ((current: boolean) => boolean),
+  ) => {
+    const nextSelected =
+      typeof selected === "function" ? selected(ungrouped) : selected;
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (nextSelected) next.set("grouping", "ungrouped");
+        else next.delete("grouping");
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const [membership, setMembership] = useState<MembershipFilter>(
     groupId ? "enabled" : "all",
   );
@@ -65,9 +81,8 @@ export function useSkillLibraryFilters(
     setSearch("");
     setSources(new Set());
     setTags(new Set());
-    setUngrouped(false);
     setMembership(groupId && !viewingUngrouped ? "enabled" : "all");
-    setResetDeployment(params.has("deployment"));
+    setResetUrlFilters(params.has("deployment") || params.has("grouping"));
   }
 
   // Prune only when the available data changes. A rename can update the chosen
@@ -124,9 +139,16 @@ export function useSkillLibraryFilters(
     setSearch("");
     setSources(new Set());
     setTags(new Set());
-    setUngrouped(false);
     setMembership("all");
-    setDeployment("all");
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("deployment");
+        next.delete("grouping");
+        return next;
+      },
+      { replace: true },
+    );
   };
   return {
     ...result,

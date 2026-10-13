@@ -1,4 +1,7 @@
-import { isEnabledInstalledAgent } from "../lib/agentAvailability";
+import {
+  agentWorkspacePath,
+  installedWorkspaceAgents,
+} from "../lib/workspaceAgents";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import {
@@ -109,18 +112,15 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const needsRedirect =
     !!agentKey && !!requestedTool && requestedTool.category !== config.category;
   const redirectTarget =
-    needsRedirect && requestedTool
-      ? requestedTool.category === "lobster"
-        ? `/lobster-workspace/${requestedTool.key}`
-        : `/global-workspace/${requestedTool.key}`
-      : null;
+    needsRedirect && requestedTool ? agentWorkspacePath(requestedTool) : null;
 
   const installedTools = useMemo(
     () =>
-      tools.filter(
-        (t) => isEnabledInstalledAgent(t) && t.category === config.category,
+      installedWorkspaceAgents(
+        tools,
+        config.allAgentsOverview && !agentKey ? undefined : config.category,
       ),
-    [tools, config.category],
+    [tools, config.category, config.allAgentsOverview, agentKey],
   );
 
   const skillCountByAgent = useMemo(() => {
@@ -152,7 +152,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   );
 
   // SkillGroup actions must target what is actually rendered: a single agent when
-  // `currentTool` resolves, otherwise every installed agent in this category.
+  // `currentTool` resolves, otherwise exactly the agents shown in the overview.
   // Falling back to the raw URL `agentKey` would let a stale deep link (a
   // bookmarked route for a since-disabled or uninstalled agent) mutate the
   // hidden agent while the overview is shown.
@@ -806,7 +806,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             return (
               <button
                 key={tool.key}
-                onClick={() => navigate(`${config.basePath}/${tool.key}`)}
+                onClick={() => navigate(agentWorkspacePath(tool))}
                 className="app-panel group flex items-center gap-3 p-3.5 text-left transition-all hover:border-border hover:bg-surface-hover"
               >
                 <AgentIcon

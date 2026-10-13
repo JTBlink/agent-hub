@@ -1,4 +1,3 @@
-import { enabledInstalledAgents } from "../lib/agentAvailability";
 import {
   getSkillGroupDisplayName,
   getSkillGroupDisplayDescription,
@@ -14,7 +13,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Layers,
-  Globe,
   Download,
   CloudUpload,
   Settings,
@@ -24,8 +22,6 @@ import {
   FolderOpen,
   GripVertical,
   Link2,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -35,9 +31,11 @@ import { CreateSkillGroupDialog } from "./CreateSkillGroupDialog";
 import { RenameSkillGroupDialog } from "./RenameSkillGroupDialog";
 import { AddProjectDialog } from "./AddProjectDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { AgentIcon } from "./AgentIcon";
+import { useSidebarSections } from "../hooks/useSidebarSections";
+import { SidebarSectionHeader } from "./SidebarSectionHeader";
+import { SidebarAgentWorkspaces } from "./SidebarAgentWorkspaces";
 import * as api from "../lib/tauri";
-import type { SyncHealth, ToolCategory, ToolInfo } from "../lib/tauri";
+import type { SyncHealth } from "../lib/tauri";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
 
 function getSyncHealthIndicator(
@@ -100,42 +98,19 @@ export function Sidebar() {
     id: string;
     name: string;
   } | null>(null);
-  const installedTools = useMemo(() => enabledInstalledAgents(tools), [tools]);
-  const installedCodingTools = useMemo(
-    () => installedTools.filter((t) => t.category === "coding"),
-    [installedTools],
-  );
-  const installedLobsterTools = useMemo(
-    () => installedTools.filter((t) => t.category === "lobster"),
-    [installedTools],
-  );
   const ungroupedCount = useMemo(
     () => managedSkills.filter((s) => s.skill_group_ids.length === 0).length,
     [managedSkills],
   );
   const [orderedSkillGroups, setOrderedSkillGroups] = useState(skillGroups);
   const [orderedProjects, setOrderedProjects] = useState(projects);
-  const [orderedCodingTools, setOrderedCodingTools] =
-    useState(installedCodingTools);
-  const [orderedLobsterTools, setOrderedLobsterTools] = useState(
-    installedLobsterTools,
-  );
   const skillGroupReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
   const projectReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const [skillGroupsOpen, setSkillGroupsOpen] = useState(true);
-  const [projectsOpen, setProjectsOpen] = useState(true);
-  const [globalWorkspaceOpen, setGlobalWorkspaceOpen] = useState(true);
-  const [lobsterWorkspaceOpen, setLobsterWorkspaceOpen] = useState(true);
-
-  const globalSkillsByAgent = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const tool of installedTools) {
-      map[tool.key] = managedSkills.filter((skill) =>
-        skill.targets.some((target) => target.tool === tool.key),
-      ).length;
-    }
-    return map;
-  }, [installedTools, managedSkills]);
+  const { expandedSection, toggleSection } = useSidebarSections(
+    location.pathname,
+  );
+  const skillGroupsOpen = expandedSection === "skills";
+  const projectsOpen = expandedSection === "projects";
 
   useEffect(() => {
     setOrderedSkillGroups(skillGroups);
@@ -143,31 +118,6 @@ export function Sidebar() {
   useEffect(() => {
     setOrderedProjects(projects);
   }, [projects]);
-  useEffect(() => {
-    const stored = localStorage.getItem("agent-hub:tool-order");
-    const storedOrder: string[] = stored ? JSON.parse(stored) : [];
-    const sorted = [
-      ...storedOrder.flatMap((key) => {
-        const t = installedCodingTools.find((t) => t.key === key);
-        return t ? [t] : [];
-      }),
-      ...installedCodingTools.filter((t) => !storedOrder.includes(t.key)),
-    ];
-    setOrderedCodingTools(sorted);
-  }, [installedCodingTools]);
-  useEffect(() => {
-    const stored = localStorage.getItem("agent-hub:lobster-tool-order");
-    const storedOrder: string[] = stored ? JSON.parse(stored) : [];
-    const sorted = [
-      ...storedOrder.flatMap((key) => {
-        const t = installedLobsterTools.find((t) => t.key === key);
-        return t ? [t] : [];
-      }),
-      ...installedLobsterTools.filter((t) => !storedOrder.includes(t.key)),
-    ];
-    setOrderedLobsterTools(sorted);
-  }, [installedLobsterTools]);
-
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination || result.destination.index === result.source.index)
       return;
@@ -207,33 +157,6 @@ export function Sidebar() {
         }
       });
   };
-
-  const handleToolDragEnd =
-    (category: ToolCategory) => (result: DropResult) => {
-      if (
-        !result.destination ||
-        result.destination.index === result.source.index
-      )
-        return;
-      const current =
-        category === "lobster" ? orderedLobsterTools : orderedCodingTools;
-      const reordered = [...current];
-      const [moved] = reordered.splice(result.source.index, 1);
-      reordered.splice(result.destination.index, 0, moved);
-      if (category === "lobster") {
-        setOrderedLobsterTools(reordered);
-        localStorage.setItem(
-          "agent-hub:lobster-tool-order",
-          JSON.stringify(reordered.map((t) => t.key)),
-        );
-      } else {
-        setOrderedCodingTools(reordered);
-        localStorage.setItem(
-          "agent-hub:tool-order",
-          JSON.stringify(reordered.map((t) => t.key)),
-        );
-      }
-    };
 
   const NAV_ITEMS = [
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
@@ -323,175 +246,6 @@ export function Sidebar() {
     toast.success(t("project.removed"));
   };
 
-  // Renders one workspace category section (Global Workspace for coding agents,
-  // Lobster Agents for lobster agents). Both sections share identical UX —
-  // collapsible heading, "All Agents" overview entry, and a drag-orderable list.
-  const renderToolGroup = (group: {
-    category: ToolCategory;
-    headingLabel: string;
-    allAgentsLabel: string;
-    emptyLabel: string;
-    basePath: string;
-    droppableId: string;
-    tools: ToolInfo[];
-    isOpen: boolean;
-    onToggle: () => void;
-    hideWhenEmpty: boolean;
-  }) => {
-    if (group.hideWhenEmpty && group.tools.length === 0) return null;
-    return (
-      <>
-        <div className="mb-1.5 px-2.5 flex items-center gap-1">
-          <button
-            onClick={group.onToggle}
-            className="flex min-w-0 flex-1 items-center gap-1 text-left outline-none"
-          >
-            {group.isOpen ? (
-              <ChevronDown className="h-3 w-3 shrink-0 text-faint" />
-            ) : (
-              <ChevronRight className="h-3 w-3 shrink-0 text-faint" />
-            )}
-            <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-muted whitespace-nowrap">
-              {group.headingLabel}
-            </span>
-          </button>
-        </div>
-        {group.isOpen && (
-          <>
-            {/* Pinned overview item */}
-            {(() => {
-              const isActive = location.pathname === group.basePath;
-              return (
-                <Link
-                  to={group.basePath}
-                  className={cn(
-                    "mb-0.5 flex items-center gap-2 px-2.5 py-[7px] rounded-md text-sm transition-colors outline-none",
-                    isActive
-                      ? "bg-surface-active font-medium text-primary"
-                      : "text-tertiary hover:text-secondary hover:bg-surface-hover",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border",
-                      isActive
-                        ? "border-accent/30 bg-accent/10 text-accent"
-                        : "border-border bg-surface text-muted",
-                    )}
-                  >
-                    <Globe className="h-3 w-3" />
-                  </span>
-                  <span className="flex-1 truncate">
-                    {group.allAgentsLabel}
-                  </span>
-                </Link>
-              );
-            })()}
-            {group.tools.length === 0 ? (
-              <p className="px-5 py-1.5 text-[12px] text-faint">
-                {group.emptyLabel}
-              </p>
-            ) : (
-              <DragDropContext onDragEnd={handleToolDragEnd(group.category)}>
-                <Droppable droppableId={group.droppableId}>
-                  {(droppableProvided) => (
-                    <div
-                      className="space-y-0.5"
-                      ref={droppableProvided.innerRef}
-                      {...droppableProvided.droppableProps}
-                    >
-                      {group.tools.map((tool, index) => {
-                        const skillCount = globalSkillsByAgent[tool.key] ?? 0;
-                        const isActive =
-                          location.pathname === `${group.basePath}/${tool.key}`;
-                        return (
-                          <Draggable
-                            key={tool.key}
-                            draggableId={tool.key}
-                            index={index}
-                          >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={cn(
-                                  "group relative flex items-center rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-surface-active"
-                                    : "hover:bg-surface-hover",
-                                )}
-                              >
-                                <button
-                                  onClick={() =>
-                                    navigate(`${group.basePath}/${tool.key}`)
-                                  }
-                                  className={cn(
-                                    "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none",
-                                    isActive
-                                      ? "font-medium text-primary"
-                                      : "text-tertiary group-hover:text-secondary",
-                                  )}
-                                >
-                                  <AgentIcon
-                                    agentKey={tool.key}
-                                    displayName={tool.display_name}
-                                    className={cn(
-                                      "h-[20px] w-[20px] rounded border transition-colors",
-                                      isActive
-                                        ? "border-accent/30 bg-accent/10"
-                                        : "group-hover:border-border",
-                                    )}
-                                  />
-                                  <span className="flex-1 truncate">
-                                    {tool.display_name}
-                                  </span>
-                                  <span className="ml-auto flex h-[18px] w-[32px] shrink-0 items-center justify-end group-hover:hidden">
-                                    {skillCount > 0 && (
-                                      <span
-                                        className={cn(
-                                          "min-w-[18px] rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
-                                          isActive
-                                            ? "bg-accent-bg text-accent-light"
-                                            : "bg-surface-hover text-muted",
-                                        )}
-                                      >
-                                        {skillCount}
-                                      </span>
-                                    )}
-                                  </span>
-                                </button>
-                                <div
-                                  className={cn(
-                                    "absolute right-1 flex items-center rounded-md invisible opacity-0 transition-opacity group-hover:visible group-hover:opacity-100",
-                                    isActive
-                                      ? "bg-surface-active"
-                                      : "bg-surface-hover",
-                                  )}
-                                >
-                                  <div
-                                    {...provided.dragHandleProps}
-                                    className="rounded p-1 text-faint cursor-grab active:cursor-grabbing"
-                                  >
-                                    <GripVertical className="h-3 w-3" />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {droppableProvided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            )}
-          </>
-        )}
-      </>
-    );
-  };
-
   return (
     <>
       <div className="w-[220px] flex-shrink-0 bg-bg-secondary border-r border-border-subtle h-full flex flex-col select-none relative z-10">
@@ -543,54 +297,45 @@ export function Sidebar() {
         {/* Scrollable section */}
         <div className="px-2.5 flex-1 overflow-y-auto scrollbar-hide min-h-0">
           {/* ── 技能库 (with skill groups as children) ── */}
-          {(() => {
-            const isSkillLibActive =
-              location.pathname === "/my-skills" &&
-              !viewedSkillGroup &&
-              !viewingUngrouped;
-            return (
-              <div className="mb-1 flex items-center gap-1 px-2.5">
-                <button
-                  onClick={() => setSkillGroupsOpen((v) => !v)}
-                  className="shrink-0 outline-none"
-                >
-                  {skillGroupsOpen ? (
-                    <ChevronDown className="h-3 w-3 text-faint" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 text-faint" />
-                  )}
-                </button>
-                <Link
-                  to="/my-skills"
-                  onClick={() => {
-                    closeSkillDetail();
-                    setViewedSkillGroupId("");
-                  }}
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 py-[5px] text-left outline-none transition-colors",
-                    isSkillLibActive
-                      ? "text-accent font-semibold"
-                      : "text-muted hover:text-secondary",
-                  )}
-                >
-                  <Layers
-                    className={cn(
-                      "h-3.5 w-3.5 shrink-0",
-                      isSkillLibActive ? "text-accent" : "text-muted",
-                    )}
-                  />
-                  <span className="truncate text-[12px] font-semibold tracking-[0.01em] whitespace-nowrap">
-                    {t("sidebar.mySkills")}
-                  </span>
-                  <span className="ml-auto text-[11px] font-medium tabular-nums text-faint">
-                    {managedSkills.length}
-                  </span>
-                </Link>
-              </div>
-            );
-          })()}
+          <SidebarSectionHeader
+            label={t("sidebar.mySkills")}
+            isOpen={skillGroupsOpen}
+            onToggle={() => toggleSection("skills")}
+            icon={<Layers className="h-3.5 w-3.5 shrink-0" />}
+            count={managedSkills.length}
+          />
           {skillGroupsOpen && (
             <>
+              <Link
+                to="/my-skills"
+                onClick={() => {
+                  closeSkillDetail();
+                  setViewedSkillGroupId("");
+                  setViewingUngrouped(false);
+                }}
+                aria-current={
+                  location.pathname === "/my-skills" &&
+                  !viewedSkillGroup &&
+                  !viewingUngrouped
+                    ? "page"
+                    : undefined
+                }
+                className={cn(
+                  "mb-0.5 flex items-center gap-2 rounded-md px-2.5 py-[7px] text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent",
+                  location.pathname === "/my-skills" &&
+                    !viewedSkillGroup &&
+                    !viewingUngrouped
+                    ? "bg-surface-active font-medium text-primary"
+                    : "text-tertiary hover:text-secondary hover:bg-surface-hover",
+                )}
+              >
+                <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
+                  <Layers className="h-3 w-3" />
+                </span>
+                <span className="flex-1 truncate">
+                  {t("sidebar.allSkills")}
+                </span>
+              </Link>
               <DragDropContext onDragEnd={handleDragEnd}>
                 <Droppable droppableId="skillGroups">
                   {(droppableProvided) => (
@@ -754,60 +499,22 @@ export function Sidebar() {
           {/* Divider */}
           <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
 
-          {renderToolGroup({
-            category: "coding",
-            headingLabel: t("sidebar.globalWorkspace"),
-            allAgentsLabel: t("globalWorkspace.allAgents"),
-            emptyLabel: t("globalWorkspace.noAgents"),
-            basePath: "/global-workspace",
-            droppableId: "global-workspace-tools",
-            tools: orderedCodingTools,
-            isOpen: globalWorkspaceOpen,
-            onToggle: () => setGlobalWorkspaceOpen((v) => !v),
-            // Always show the Global Workspace section (even when empty) so users
-            // with no detected coding agents still see the "All Agents" entry.
-            hideWhenEmpty: false,
-          })}
-
-          {installedLobsterTools.length > 0 && (
-            <>
-              {/* Divider */}
-              <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
-
-              {renderToolGroup({
-                category: "lobster",
-                headingLabel: t("sidebar.lobsterAgents"),
-                allAgentsLabel: t("lobsterWorkspace.allAgents"),
-                emptyLabel: t("lobsterWorkspace.noAgents"),
-                basePath: "/lobster-workspace",
-                droppableId: "lobster-workspace-tools",
-                tools: orderedLobsterTools,
-                isOpen: lobsterWorkspaceOpen,
-                onToggle: () => setLobsterWorkspaceOpen((v) => !v),
-                hideWhenEmpty: true,
-              })}
-            </>
-          )}
+          <SidebarAgentWorkspaces
+            tools={tools}
+            managedSkills={managedSkills}
+            isOpen={expandedSection === "agents"}
+            onToggle={() => toggleSection("agents")}
+          />
 
           {/* Divider */}
           <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
 
           {/* ── Projects ── */}
-          <div className="mb-1.5 px-2.5 flex items-center gap-1">
-            <button
-              onClick={() => setProjectsOpen((v) => !v)}
-              className="flex min-w-0 flex-1 items-center gap-1 text-left outline-none"
-            >
-              {projectsOpen ? (
-                <ChevronDown className="h-3 w-3 shrink-0 text-faint" />
-              ) : (
-                <ChevronRight className="h-3 w-3 shrink-0 text-faint" />
-              )}
-              <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-muted whitespace-nowrap">
-                {t("sidebar.projects")}
-              </span>
-            </button>
-          </div>
+          <SidebarSectionHeader
+            label={t("sidebar.projects")}
+            isOpen={projectsOpen}
+            onToggle={() => toggleSection("projects")}
+          />
           {projectsOpen && (
             <>
               <DragDropContext onDragEnd={handleProjectDragEnd}>

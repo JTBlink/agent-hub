@@ -214,7 +214,7 @@ it("opens ungrouped skills from the dashboard and keeps the grouping action avai
     "待分组",
   );
   expect(container.querySelector("[data-location]")!.textContent).toBe(
-    "/my-skills",
+    "/my-skills?grouping=ungrouped",
   );
   expect(container.querySelector('[role="status"]')!.textContent).toBe(
     "显示 2 个技能",

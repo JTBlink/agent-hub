@@ -52,12 +52,11 @@ async function render(
   skills: ManagedSkill[],
   groupId?: string,
   viewingUngrouped = false,
+  entry = "/my-skills?deployment=undeployed&keep=value",
 ) {
   await act(async () =>
     root.render(
-      <MemoryRouter
-        initialEntries={["/my-skills?deployment=undeployed&keep=value"]}
-      >
+      <MemoryRouter initialEntries={[entry]}>
         <Harness
           skills={skills}
           groupId={groupId}
@@ -133,4 +132,38 @@ it("preserves filters and a direct undeployed entry during refresh within the sa
   expect(filters.deployment).toBe("undeployed");
   expect(container.textContent).toBe("?deployment=undeployed&keep=value");
   expect(filters.filtered.map((skill) => skill.id)).toEqual(["skill-1"]);
+});
+
+it("applies the dashboard grouping query within All Skills and combines other filters", async () => {
+  await render(
+    skills,
+    undefined,
+    false,
+    "/my-skills?grouping=ungrouped&keep=value",
+  );
+  expect(filters.ungrouped).toBe(true);
+  expect(filters.filtered.map((skill) => skill.id)).toEqual(["skill-3"]);
+  await act(async () => filters.setSearch("no-match"));
+  expect(filters.filtered).toHaveLength(0);
+  await act(async () => filters.clearFilters());
+  expect(filters.filtered).toHaveLength(3);
+  expect(container.textContent).toBe("?keep=value");
+});
+
+it("clears both dashboard query filters together and removes them on a group change", async () => {
+  await render(
+    skills,
+    undefined,
+    false,
+    "/my-skills?deployment=undeployed&grouping=ungrouped&keep=value",
+  );
+  expect(filters.filtered.map((skill) => skill.id)).toEqual(["skill-3"]);
+  await act(async () => filters.clearFilters());
+  expect(filters.deployment).toBe("all");
+  expect(filters.ungrouped).toBe(false);
+  expect(container.textContent).toBe("?keep=value");
+  await act(async () => filters.setUngrouped(true));
+  await render(skills, "first");
+  expect(filters.ungrouped).toBe(false);
+  expect(container.textContent).toBe("?keep=value");
 });
