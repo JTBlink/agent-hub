@@ -1,3 +1,4 @@
+import { BackupPendingChanges } from "../components/BackupPendingChanges";
 import { BackupPreferences } from "../components/BackupPreferences";
 import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -1049,6 +1050,7 @@ export function Backup() {
                 )}
               </div>
             </div>
+            <BackupPendingChanges changes={gitStatus?.changes ?? []} />
           </section>
 
           {pendingConflicts.length > 0 && (
