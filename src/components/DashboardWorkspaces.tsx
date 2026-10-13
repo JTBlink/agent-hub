@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, ChevronRight, FolderOpen, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "./AgentIcon";
 import type { Project, ToolInfo } from "../lib/tauri";
+import { touchProjectVisited } from "../lib/tauri";
 
 interface DashboardWorkspacesProps {
   agents: ToolInfo[];
@@ -18,7 +19,12 @@ export function DashboardWorkspaces({
   const { t } = useTranslation();
   const [type, setType] = useState<WorkspaceType>("projects");
   const [query, setQuery] = useState("");
-  const entries = type === "agents" ? agents : projects;
+  const sortedProjects = useMemo(
+    () =>
+      [...projects].sort((a, b) => (b.visited_at ?? 0) - (a.visited_at ?? 0)),
+    [projects],
+  );
+  const entries = type === "agents" ? agents : sortedProjects;
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const matches = (name: string) =>
     name.toLocaleLowerCase().includes(normalizedQuery);
@@ -79,7 +85,7 @@ export function DashboardWorkspaces({
               <AgentWorkspaceLink key={agent.key} agent={agent} />
             ))
         ) : (
-          projects
+          sortedProjects
             .filter((project) => matches(project.name))
             .map((project) => (
               <ProjectWorkspaceLink key={project.id} project={project} />
@@ -195,7 +201,11 @@ function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
 function ProjectWorkspaceLink({ project }: { project: Project }) {
   const { t } = useTranslation();
   return (
-    <Link to={`/project/${project.id}`} className="dashboard-workspace-link">
+    <Link
+      to={`/project/${project.id}`}
+      className="dashboard-workspace-link"
+      onClick={() => void touchProjectVisited(project.id)}
+    >
       <span className="rounded-lg bg-accent-bg p-2 text-accent-light">
         <FolderOpen aria-hidden="true" className="h-5 w-5" />
       </span>

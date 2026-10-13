@@ -200,6 +200,7 @@ export interface Project {
   sync_health: SyncHealth;
   created_at: number;
   updated_at: number;
+  visited_at: number | null;
 }
 
 export interface ProjectAgentTarget {
@@ -941,6 +942,9 @@ export const reorderSkillGroups = (ids: string[]) =>
 
 export const reorderProjects = (ids: string[]) =>
   invoke<void>("reorder_projects", { ids });
+
+export const touchProjectVisited = (id: string) =>
+  invoke<void>("touch_project_visited", { id });
 
 export const getSkillGroupSkillOrder = (skillGroupId: string) =>
   invoke<string[]>("get_skill_group_skill_order", { skillGroupId });

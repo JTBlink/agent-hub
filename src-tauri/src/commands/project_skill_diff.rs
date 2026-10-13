@@ -104,6 +104,7 @@ mod tests {
                 sort_order: 0,
                 created_at: 1,
                 updated_at: 1,
+                visited_at: None,
             })
             .unwrap();
         store

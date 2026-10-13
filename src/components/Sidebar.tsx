@@ -550,9 +550,10 @@ export function Sidebar() {
                                 )}
                               >
                                 <button
-                                  onClick={() =>
-                                    navigate(`/project/${project.id}`)
-                                  }
+                                  onClick={() => {
+                                    void api.touchProjectVisited(project.id);
+                                    navigate(`/project/${project.id}`);
+                                  }}
                                   className={cn(
                                     "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none",
                                     isActive
