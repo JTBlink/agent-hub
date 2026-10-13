@@ -3438,10 +3438,7 @@ pub fn rename_skill_internal(store: &SkillStore, id: &str, new_name: &str) -> Re
                 .join(&new_slug);
 
             if new_central.exists() {
-                anyhow::bail!(
-                    "目标目录已存在：{}",
-                    new_central.display()
-                );
+                anyhow::bail!("目标目录已存在：{}", new_central.display());
             }
 
             let targets = store.get_targets_for_skill(id)?;

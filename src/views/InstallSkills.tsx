@@ -242,9 +242,7 @@ export function InstallSkills() {
     }
   }, [searchParams]);
 
-  const switchTab = (
-    tab: "recommended" | "market" | "local" | "git",
-  ) => {
+  const switchTab = (tab: "recommended" | "market" | "local" | "git") => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -1010,14 +1008,17 @@ export function InstallSkills() {
           <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
             {RECOMMENDED_SKILLS.map((skill) => {
               const sourceRef = `${skill.source}/${skill.skill_id}`;
-              const isInstalled = installedSourceRefs.has(sourceRef) ||
+              const isInstalled =
+                installedSourceRefs.has(sourceRef) ||
                 installedDirNames.has(skill.skill_id.toLowerCase());
               return (
                 <RecommendedSkillCard
                   key={skill.skill_id}
                   skill={skill}
                   isInstalled={isInstalled}
-                  installing={installing === `${skill.source}/${skill.skill_id}`}
+                  installing={
+                    installing === `${skill.source}/${skill.skill_id}`
+                  }
                   onInstall={(rec: RecommendedSkill) =>
                     handleInstallSkillssh({
                       id: `${rec.source}/${rec.skill_id}`,
