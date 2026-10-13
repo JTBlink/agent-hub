@@ -1,5 +1,5 @@
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: W01
 
 # 官网帮助与更新日志入口
@@ -26,4 +26,6 @@ Blocked by: W01
 - [网站生成](../../../scripts/docs/build-help.mjs) 读取根目录 CHANGELOG.md，生成三语路径的版本日志页，注明 Unreleased 是开发变更、英文与繁体回退中文；日志不进入离线帮助文章目录。[文档站配置](../../../docs-site/.vitepress/config.mts) 三语导航新增更新日志。
 - 开发服务器监听 CHANGELOG.md 变化重新生成页面；[维护说明](../../../docs/help/README.md) 补充入口、数据源与发布方式。
 - 相关 3 个文件、17 项测试通过，覆盖源日志更新后网页刷新与离线文章边界；相关 ESLint、Prettier、docs:check、website:build 和差异检查通过。浏览器验证 1440/768/375px 无横向溢出，帮助点击、日志键盘跳转、三语日志与未发布说明、两个下载目标正确。
-- Standards：复用既有 VitePress 阅读与公开文档构建，不维护日志副本；Spec：帮助、站内日志与直达下载均已本地验收。只暂存本任务变更；Pages 线上结果待部署后补记。
+- Standards：复用既有 VitePress 阅读与公开文档构建，不维护日志副本；Spec：帮助、站内日志与直达下载均已本地验收。只暂存本任务变更；Pages 线上已完成验收。
+
+- 实现已提交并 push：`ce3e553fbf051430a648828c6e6a41688dfcbf32`；[Pages 工作流](../../../.github/workflows/deploy-pages.yml) 运行 `38332761038` 使用同一 SHA 并成功。本地按 `/agent-hub/` 生产路径复验帮助到日志导航、CSS、三语与日志响应式；线上浏览器实际点击帮助、站内日志及直达 Releases，通过。三语日志页及其 CSS、脚本、模块资源均 HTTP 200。

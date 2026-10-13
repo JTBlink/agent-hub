@@ -4,4 +4,4 @@
 
 W01：resolved。
 
-[W02 官网帮助与更新日志](issues/W02-public-help-and-changelog.md)：claimed。
+[W02 官网帮助与更新日志](issues/W02-public-help-and-changelog.md)：resolved。
