@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { BookOpen, ExternalLink, Search } from "lucide-react";
+import { ArrowLeft, BookOpen, ExternalLink, Search } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { HelpArticle } from "../components/help/HelpArticle";
@@ -12,6 +12,7 @@ import { FEEDBACK_URL } from "../lib/distribution";
 
 export function Help() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const locale = helpLocale(i18n.resolvedLanguage ?? i18n.language);
   const { articleId } = useParams();
   const [params, setParams] = useSearchParams();
@@ -33,6 +34,16 @@ export function Help() {
   return (
     <div className="app-page">
       <header className="app-page-header">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {t("common.back")}
+          </button>
+        </div>
         <p className="text-[12px] font-semibold text-faint">
           {t("help.eyebrow")}
         </p>
