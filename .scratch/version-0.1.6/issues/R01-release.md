@@ -1,5 +1,5 @@
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: none
 
 # 自动选版并发布 0.1.6
@@ -19,7 +19,7 @@ Blocked by: none
 
 ## Comments
 
-- 候选与正式发布 SHA / run ID 将在实际触发后写入本任务。
+- 发布证据与清理结果见下文；其他任务占用的检出保留，不终止其进程。
 
 ## Preparation
 
@@ -41,5 +41,17 @@ Blocked by: none
 - 固定发布源码：18786b5f37486debc9f3d79f78ac124c08c9ad8f。
 - [候选 38337575413](https://github.com/JTBlink/agent-hub/actions/runs/38337575413) 完整成功，包含质量、三平台 core tests / 安装启动 smoke 和汇总校验；release:ready 通过。
 - annotated tag v0.1.6 已精确推送；tag 对象 b713387899d0594ba2b1883273659affe101d42a，解引用同一发布 SHA。
-- [正式安装包 38340292365](https://github.com/JTBlink/agent-hub/actions/runs/38340292365) 与 [官网部署 38340292402](https://github.com/JTBlink/agent-hub/actions/runs/38340292402) 已触发，等待正式产物和附件验收。
+- [正式安装包 38340292365](https://github.com/JTBlink/agent-hub/actions/runs/38340292365) 与 [官网部署 38340292402](https://github.com/JTBlink/agent-hub/actions/runs/38340292402) 均成功，正式构建和官网使用同一发布 SHA。
 - 用户新增的 2 分钟监控偏好已生效；Skill 1.6.2 的规范提交 035b90a 独立记录在 Unreleased，不移动 tag 或替换发布源码。
+
+## Release acceptance and cleanup
+
+- [正式 Release v0.1.6](https://github.com/JTBlink/agent-hub/releases/tag/v0.1.6) 已公开，非草稿、非预发布，目标源码与 annotated tag 解引用 SHA 一致。
+- 下载全部 8 个附件；`npm run release:verify -- <temporary-download>` 通过，确认 AppImage、deb、macOS universal dmg、Windows x64 setup 四种安装包及 7 个文件的 SHA256SUMS。
+- 额外逐一核对 8 个附件的 GitHub 元数据大小与 SHA-256，全部一致；下载的 CHANGELOG、平台说明与固定发布源码逐字节一致，RELEASE_NOTES 与对应版本章节和平台说明组合一致，公开 Release 正文与附件说明一致。
+- 线上主页显示 0.1.6；主页引用的图标、Agent 图标、截图、帮助、更新日志、脚本和样式共 12 个 URL 均返回 HTTP 200。未单独执行真实浏览器渲染验收。
+- 三平台原生 core tests 和安装启动 smoke 通过。正式签名与 macOS 公证开关未开启，对应检查被跳过；未单独完成三平台干净用户环境下完整 GUI、卸载与真实远端备份 / 恢复验收。
+- 验收结束后，从主仓库核实本次 detached worktree 无未提交内容、源码已包含于远端 main 且无进程占用，普通 `git worktree remove` 成功；本次下载目录和元数据临时文件已一并清理。
+- 另一个旧随机 detached worktree 工作区干净、源码已合入，但仍有 zsh 进程占用；保留该检出，不强制删除、不终止进程。后续发布使用 Skill 1.6.3 规定的固定 `../agent-hub-release` 路径。
+- Standards：固定 SHA、同 SHA 候选与正式运行证据一致，未移动 tag，保留占用目录。Spec：自动选版、版本同步、发布期间 changelog、tag、正式发布、官网和附件验收完成；记录未完成的原生验收边界。
+- 本次仅补充已完成发布的证据和任务状态，不引入用户行为、兼容性或发布流程变化，无需新增 changelog 条目。
