@@ -1,17 +1,19 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { StatusBanner } from "./StatusBanner";
 import { CommandPalette } from "./CommandPalette";
 import { useApp } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { useDragWindow } from "../hooks/useDragWindow";
+import { cn } from "../utils";
 
 export function Layout() {
   const { t } = useTranslation();
   const { appError, refreshAppData } = useApp();
   const onDrag = useDragWindow();
   const navigate = useNavigate();
+  const settingsPage = useLocation().pathname === "/settings";
 
   // Cmd+, to open Settings
   useEffect(() => {
@@ -52,8 +54,18 @@ export function Layout() {
       />
       <Sidebar />
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-5 pb-5 pt-[calc(28px+20px)] scrollbar-hide">
-          <div className="mx-auto flex min-h-full max-w-[1200px] flex-col gap-4">
+        <div
+          className={cn(
+            "min-h-0 flex-1 px-5 pb-5 pt-[calc(28px+20px)] scrollbar-hide",
+            settingsPage ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+          )}
+        >
+          <div
+            className={cn(
+              "mx-auto flex w-full max-w-[1200px] flex-col gap-4",
+              settingsPage ? "min-h-0 flex-1" : "min-h-full",
+            )}
+          >
             {appError ? (
               <StatusBanner
                 compact

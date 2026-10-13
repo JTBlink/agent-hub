@@ -374,8 +374,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return info;
   }, []);
 
-  // Preserve the notification contract for callers. The host-managed backend
-  // returns the current module version locally without contacting a release feed.
+  // Check this application's public stable release feed without blocking startup.
   useEffect(() => {
     if (loading || appUpdateCheckedRef.current) return;
     const timer = setTimeout(() => {
@@ -393,10 +392,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               action: {
                 label: i18n.t("settings.viewUpdate"),
                 onClick: () => {
-                  if (!window.location.pathname.endsWith("/settings")) {
-                    window.history.pushState(null, "", "/settings");
-                    window.dispatchEvent(new PopStateEvent("popstate"));
-                  }
+                  window.history.pushState(null, "", "/settings#about");
+                  window.dispatchEvent(new PopStateEvent("popstate"));
                 },
               },
             },

@@ -760,6 +760,24 @@
     }
   },
   "settings": {
+    "loadFailed": "Could not load settings. Try again.",
+    "subtitle": "Manage agents, skill deployment, and app preferences",
+    "tabs": {
+      "agents": "Agents",
+      "skills": "Skills & deployment",
+      "appearance": "Appearance & behavior",
+      "backup": "Backup & network",
+      "about": "About & diagnostics"
+    },
+    "skillStorage": "Skill directory",
+    "backupStorage": "Backup repository directory",
+    "advancedSettings": "Advanced settings",
+    "helpAndDiagnostics": "Help & diagnostics",
+    "downloadRelease": "Release notes & download",
+    "noRelease": "No stable release is available yet. Visit the releases page.",
+    "updateCheckFailed": "Could not check for updates. Check your network or proxy and try again.",
+    "releaseOpenFailed": "Could not open the release page. Try again.",
+    "hostReleases": "Releases",
     "deploymentMode": "Default deployment mode",
     "deploymentModeDesc": "Use symlinks or file copies for new Agent entries. Project links point to the project’s .agents/skills; global and linked workspaces point to the personal library. Existing entries keep their mode.",
     "deploymentModeLegacy": "Your previous scope settings differ and have been preserved. Choose a mode to use one default for new installations.",

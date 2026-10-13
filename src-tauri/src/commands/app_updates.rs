@@ -1,37 +1,19 @@
-//! Application updates link to the agent-hub release page.
+//! Thin desktop adapter for the application's own stable release check.
 
-#[derive(serde::Serialize)]
-pub struct AppUpdateInfo {
-    pub has_update: bool,
-    pub current_version: String,
-    pub latest_version: String,
-    pub release_url: String,
-}
+use std::sync::Arc;
+use tauri::State;
 
-fn release_info(current_version: String) -> AppUpdateInfo {
-    AppUpdateInfo {
-        has_update: false,
-        latest_version: current_version.clone(),
-        current_version,
-        release_url: "https://github.com/JTBlink/agent-hub/releases".into(),
-    }
-}
+use crate::core::{app_updates, error::AppError, skill_store::SkillStore};
 
-/// Keep the existing notification contract without checking an unrelated release feed.
 #[tauri::command]
-pub fn check_app_update(app: tauri::AppHandle) -> AppUpdateInfo {
-    release_info(app.config().version.clone().unwrap_or_default())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn manual_updates_do_not_offer_an_automatic_install() {
-        let info = release_info("1.40.3".into());
-        assert!(!info.has_update);
-        assert_eq!(info.latest_version, info.current_version);
-        assert!(info.release_url.ends_with("/agent-hub/releases"));
-    }
+pub async fn check_app_update(
+    app: tauri::AppHandle,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<app_updates::AppUpdateInfo, AppError> {
+    let version = app.package_info().version.to_string();
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        app_updates::check_update(&version, store.proxy_url().as_deref())
+    })
+    .await?
 }

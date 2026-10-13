@@ -758,6 +758,24 @@
     }
   },
   "settings": {
+    "loadFailed": "设置读取失败，请重试。",
+    "subtitle": "管理 Agent、技能部署和应用偏好",
+    "tabs": {
+      "agents": "Agent",
+      "skills": "技能与部署",
+      "appearance": "外观与行为",
+      "backup": "备份与网络",
+      "about": "关于与诊断"
+    },
+    "skillStorage": "技能目录",
+    "backupStorage": "备份仓库目录",
+    "advancedSettings": "高级设置",
+    "helpAndDiagnostics": "帮助与诊断",
+    "downloadRelease": "查看说明并下载",
+    "noRelease": "尚无可用的正式版本，可查看发布页面。",
+    "updateCheckFailed": "检查更新失败，请检查网络或代理后重试。",
+    "releaseOpenFailed": "无法打开发布页面，请重试。",
+    "hostReleases": "发布页面",
     "deploymentMode": "默认部署方式",
     "deploymentModeDesc": "新安装的 Agent 入口使用符号链接或文件复制。普通项目链接到项目 .agents/skills；全局和链接工作空间链接到个人技能库。已有入口保持原方式。",
     "deploymentModeLegacy": "原有设置在各范围不同，已保留。选择一种方式后，新安装将统一使用此默认值。",

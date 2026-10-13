@@ -1,4 +1,5 @@
 pub mod app_state;
+pub mod app_updates;
 pub mod audit_log;
 pub mod auto_backup;
 pub mod backup_workspace;
