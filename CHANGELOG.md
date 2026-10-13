@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- GitHub 发布监控默认每 2 分钟查询一次，按 run ID 与源码 SHA 跟踪；主动状态查询和故障诊断可即时检查。
+
 ## [0.1.6] - 2026-10-13
 
 ### Changed
