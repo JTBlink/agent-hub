@@ -110,8 +110,63 @@ pub(super) fn run_sync_blocking(
 mod tests {
     use super::*;
     use std::io::{Read, Write};
-    use std::net::TcpListener;
+    use std::net::{TcpListener, TcpStream};
     use std::sync::Mutex;
+
+    fn reject_authentication(mut socket: TcpStream) -> std::io::Result<Option<String>> {
+        socket.set_read_timeout(Some(std::time::Duration::from_secs(10)))?;
+        let mut headers = Vec::new();
+        let mut chunk = [0; 1024];
+        while !headers.windows(4).any(|bytes| bytes == b"\r\n\r\n") && headers.len() < 16384 {
+            let count = socket.read(&mut chunk)?;
+            if count == 0 {
+                return Ok(None);
+            }
+            headers.extend_from_slice(&chunk[..count]);
+        }
+        // Keep only the request line; never retain Authorization headers.
+        let request = String::from_utf8_lossy(&headers)
+            .lines()
+            .next()
+            .unwrap_or("")
+            .to_owned();
+        socket.write_all(b"HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"fixture\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")?;
+        // Dropping a socket with unread request bytes can send TCP RST and
+        // discard the authentication response, notably on Windows. Send FIN
+        // after the response, then drain until the client closes or times out.
+        socket.shutdown(std::net::Shutdown::Write)?;
+        let _ = std::io::copy(&mut socket, &mut std::io::sink());
+        Ok(Some(request))
+    }
+
+    #[test]
+    fn authentication_fixture_delivers_challenge_without_resetting_request_body() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            reject_authentication(listener.accept().unwrap().0).unwrap()
+        });
+        let mut client = TcpStream::connect(address).unwrap();
+        client
+            .set_read_timeout(Some(std::time::Duration::from_secs(10)))
+            .unwrap();
+        let body = vec![b'x'; 32768];
+        let mut request = format!(
+            "POST /fixture.git/git-upload-pack HTTP/1.1\r\nHost: fixture\r\nContent-Length: {}\r\n\r\n",
+            body.len()
+        )
+        .into_bytes();
+        request.extend_from_slice(&body);
+        client.write_all(&request).unwrap();
+        client.shutdown(std::net::Shutdown::Write).unwrap();
+        let mut response = String::new();
+        let read = client.read_to_string(&mut response);
+        let request_line = server.join().unwrap().unwrap();
+        assert!(read.is_ok(), "authentication response was reset: {read:?}");
+        assert_eq!(request_line, "POST /fixture.git/git-upload-pack HTTP/1.1");
+        assert!(response.starts_with("HTTP/1.1 401 Unauthorized\r\n"));
+        assert!(response.ends_with("\r\n\r\n"));
+    }
 
     #[test]
     fn rejected_fetch_stops_before_push_and_keeps_local_commit() {
@@ -163,31 +218,10 @@ mod tests {
         let server = std::thread::spawn(move || {
             while !thread_stop.load(Ordering::Relaxed) {
                 match listener.accept() {
-                    Ok((mut socket, _)) => {
-                        socket
-                            .set_read_timeout(Some(std::time::Duration::from_secs(10)))
-                            .unwrap();
-                        let mut headers = Vec::new();
-                        let mut chunk = [0; 1024];
-                        while !headers.windows(4).any(|bytes| bytes == b"\r\n\r\n")
-                            && headers.len() < 16384
-                        {
-                            match socket.read(&mut chunk) {
-                                Ok(0) | Err(_) => break,
-                                Ok(count) => headers.extend_from_slice(&chunk[..count]),
-                            }
+                    Ok((socket, _)) => {
+                        if let Some(request) = reject_authentication(socket).unwrap() {
+                            thread_requests.lock().unwrap().push(request);
                         }
-                        if headers.is_empty() {
-                            continue;
-                        }
-                        // Keep only the request line; never retain Authorization headers.
-                        let request = String::from_utf8_lossy(&headers)
-                            .lines()
-                            .next()
-                            .unwrap_or("")
-                            .to_owned();
-                        thread_requests.lock().unwrap().push(request);
-                        let _ = socket.write_all(b"HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"fixture\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
                     }
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                         std::thread::sleep(std::time::Duration::from_millis(5))
