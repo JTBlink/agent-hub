@@ -43,10 +43,15 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { GitImportPanel } from "../components/GitImportPanel";
 import type { GitSelection } from "../components/GitImportPanel";
 import { MarketSkillCard } from "../components/MarketSkillCard";
+import { RecommendedSkillCard } from "../components/RecommendedSkillCard";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import { SourceFilterBar } from "../components/SourceFilterBar";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import { getErrorMessage, getErrorKind } from "../lib/error";
+import {
+  RECOMMENDED_SKILLS,
+  type RecommendedSkill,
+} from "../lib/recommendedSkills";
 
 const MARKET_PAGE_SIZE = 24;
 const MARKET_SEARCH_STEP = 60;
@@ -65,9 +70,9 @@ export function InstallSkills() {
   } = useApp();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"market" | "local" | "git">(
-    "market",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "recommended" | "market" | "local" | "git"
+  >("market");
   const [marketTab, setMarketTab] = useState<"hot" | "trending" | "alltime">(
     "alltime",
   );
@@ -227,12 +232,19 @@ export function InstallSkills() {
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "market" || tab === "local" || tab === "git") {
+    if (
+      tab === "recommended" ||
+      tab === "market" ||
+      tab === "local" ||
+      tab === "git"
+    ) {
       setActiveTab(tab);
     }
   }, [searchParams]);
 
-  const switchTab = (tab: "market" | "local" | "git") => {
+  const switchTab = (
+    tab: "recommended" | "market" | "local" | "git",
+  ) => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -949,6 +961,11 @@ export function InstallSkills() {
         <div className="flex gap-1 border-b border-border-subtle">
           {[
             {
+              id: "recommended" as const,
+              label: t("install.recommended"),
+              icon: Star,
+            },
+            {
               id: "market" as const,
               label: t("install.browseMarket"),
               icon: Box,
@@ -984,6 +1001,38 @@ export function InstallSkills() {
           })}
         </div>
       </div>
+
+      {activeTab === "recommended" && (
+        <div className="animate-in fade-in duration-300">
+          <p className="mb-3 text-[13px] text-muted">
+            {t("install.recommendedDesc")}
+          </p>
+          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+            {RECOMMENDED_SKILLS.map((skill) => {
+              const sourceRef = `${skill.source}/${skill.skill_id}`;
+              const isInstalled = installedSourceRefs.has(sourceRef) ||
+                installedDirNames.has(skill.skill_id.toLowerCase());
+              return (
+                <RecommendedSkillCard
+                  key={skill.skill_id}
+                  skill={skill}
+                  isInstalled={isInstalled}
+                  installing={installing === `${skill.source}/${skill.skill_id}`}
+                  onInstall={(rec: RecommendedSkill) =>
+                    handleInstallSkillssh({
+                      id: `${rec.source}/${rec.skill_id}`,
+                      skill_id: rec.skill_id,
+                      name: rec.name,
+                      source: rec.source,
+                      installs: 0,
+                    })
+                  }
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {activeTab === "market" && (
         <div className="animate-in fade-in duration-300">
