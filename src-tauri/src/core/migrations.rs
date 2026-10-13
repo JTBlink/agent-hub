@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use rusqlite::Connection;
 
 /// Current schema version. Bump this when adding a new migration.
-const LATEST_VERSION: u32 = 10;
+const LATEST_VERSION: u32 = 11;
 
 /// Run all pending migrations on the database.
 ///
@@ -57,6 +57,7 @@ fn migrate_step(conn: &Connection, from_version: u32) -> Result<()> {
         7 => migrate_v7_to_v8(conn),
         8 => migrate_v8_to_v9(conn),
         9 => migrate_v9_to_v10(conn),
+        10 => migrate_v10_to_v11(conn),
         _ => bail!("unknown migration version: {from_version}"),
     }
 }
@@ -345,6 +346,13 @@ fn migrate_v8_to_v9(conn: &Connection) -> Result<()> {
 /// was originally imported from. Existing rows get NULL (unknown origin).
 fn migrate_v9_to_v10(conn: &Connection) -> Result<()> {
     add_column_if_missing(conn, "skills", "source_agent", "TEXT")?;
+    Ok(())
+}
+
+/// v10 → v11: Add `visited_at` to `projects` to track when the user last
+/// navigated into a workspace. Dashboard sorts by this column descending.
+fn migrate_v10_to_v11(conn: &Connection) -> Result<()> {
+    add_column_if_missing(conn, "projects", "visited_at", "INTEGER")?;
     Ok(())
 }
 

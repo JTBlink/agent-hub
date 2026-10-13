@@ -101,6 +101,7 @@ pub struct ProjectRecord {
     pub sort_order: i32,
     pub created_at: i64,
     pub updated_at: i64,
+    pub visited_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1185,9 +1186,9 @@ impl SkillStore {
         conn.execute(
             "INSERT INTO projects (
                 id, name, path, workspace_type, linked_agent_key, linked_agent_name, disabled_path,
-                sort_order, created_at, updated_at
+                sort_order, created_at, updated_at, visited_at
              )
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 project.id,
                 project.name,
@@ -1199,6 +1200,7 @@ impl SkillStore {
                 project.sort_order,
                 project.created_at,
                 project.updated_at,
+                project.visited_at,
             ],
         )?;
         Ok(())
@@ -1208,7 +1210,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, path, workspace_type, linked_agent_key, linked_agent_name, disabled_path,
-                    sort_order, created_at, updated_at
+                    sort_order, created_at, updated_at, visited_at
              FROM projects
              ORDER BY sort_order, created_at",
         )?;
@@ -1224,6 +1226,7 @@ impl SkillStore {
                 sort_order: row.get(7)?,
                 created_at: row.get(8)?,
                 updated_at: row.get(9)?,
+                visited_at: row.get(10)?,
             })
         })?;
         Ok(rows.filter_map(|r| r.ok()).collect())
@@ -1233,7 +1236,7 @@ impl SkillStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, path, workspace_type, linked_agent_key, linked_agent_name, disabled_path,
-                    sort_order, created_at, updated_at
+                    sort_order, created_at, updated_at, visited_at
              FROM projects
              WHERE id = ?1",
         )?;
@@ -1249,6 +1252,7 @@ impl SkillStore {
                 sort_order: row.get(7)?,
                 created_at: row.get(8)?,
                 updated_at: row.get(9)?,
+                visited_at: row.get(10)?,
             })
         })?;
         Ok(rows.next().and_then(|r| r.ok()))
@@ -1257,6 +1261,16 @@ impl SkillStore {
     pub fn delete_project(&self, id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM projects WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn touch_project_visited(&self, id: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = chrono::Utc::now().timestamp_millis();
+        conn.execute(
+            "UPDATE projects SET visited_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
         Ok(())
     }
 

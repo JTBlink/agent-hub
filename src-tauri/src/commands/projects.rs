@@ -34,6 +34,7 @@ pub struct ProjectDto {
     pub sync_health: SyncHealthDto,
     pub created_at: i64,
     pub updated_at: i64,
+    pub visited_at: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -223,6 +224,7 @@ fn project_to_dto(
         sync_health: health,
         created_at: rec.created_at,
         updated_at: rec.updated_at,
+        visited_at: rec.visited_at,
     }
 }
 
@@ -505,6 +507,7 @@ pub async fn add_project(
             sort_order: 0,
             created_at: now,
             updated_at: now,
+            visited_at: None,
         };
 
         store.insert_project(&record).map_err(AppError::db)?;
@@ -581,6 +584,7 @@ pub async fn add_linked_workspace(
             sort_order: 0,
             created_at: now,
             updated_at: now,
+            visited_at: None,
         };
 
         store.insert_project(&record).map_err(AppError::db)?;
@@ -606,6 +610,18 @@ pub async fn reorder_projects(
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || store.reorder_projects(&ids).map_err(AppError::db))
         .await?
+}
+
+#[tauri::command]
+pub async fn touch_project_visited(
+    id: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        store.touch_project_visited(&id).map_err(AppError::db)
+    })
+    .await?
 }
 
 #[tauri::command]
@@ -1406,6 +1422,7 @@ mod tests {
             sort_order: 0,
             created_at: 0,
             updated_at: 0,
+            visited_at: None,
         };
         let configs = vec![
             AgentSkillConfig {

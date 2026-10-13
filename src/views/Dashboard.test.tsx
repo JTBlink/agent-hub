@@ -26,6 +26,10 @@ vi.mock("../context/AppContext", () => ({
 vi.mock("../components/AgentControlSetupCard", () => ({
   AgentControlSetupCard: () => null,
 }));
+vi.mock("../lib/tauri", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/tauri")>();
+  return { ...actual, touchProjectVisited: vi.fn(() => Promise.resolve()) };
+});
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
 vi.mock("react-i18next", () => ({
@@ -261,6 +265,7 @@ function project(index: number): Project {
     skill_count: index,
     created_at: 1,
     updated_at: 1,
+    visited_at: null,
     sync_health: {
       in_sync: 0,
       project_newer: 0,

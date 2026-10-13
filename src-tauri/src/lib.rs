@@ -1207,6 +1207,7 @@ pub fn run() {
             commands::skill_groups::membership::set_skill_group_membership,
             commands::skill_groups::reorder_skill_groups,
             commands::projects::reorder_projects,
+            commands::projects::touch_project_visited,
             commands::skill_groups::get_skill_group_skill_order,
             commands::skill_groups::reorder_skill_group_skills,
         ])

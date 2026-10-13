@@ -75,6 +75,7 @@ impl Fixture {
                 sort_order: 0,
                 created_at: 0,
                 updated_at: 0,
+                visited_at: None,
             })
             .unwrap();
         if managed {

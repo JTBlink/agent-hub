@@ -30,6 +30,7 @@ export function makeProject(): Project {
     skill_count: 0,
     created_at: 1,
     updated_at: 1,
+    visited_at: null,
     sync_health: {
       in_sync: 0,
       project_newer: 0,
