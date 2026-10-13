@@ -64,10 +64,19 @@ try:
     goto_url(url + "&theme=dark&language=zh&undeployed&ungrouped&many-projects")
     wait_for_load()
     ready()
-    click_named_button("项目工作空间")
+    assert js("document.querySelectorAll('.dashboard-workspace-switch button')[0].getAttribute('aria-pressed') === 'true'"), "projects are not the default"
     wait_until("document.querySelectorAll('#dashboard-workspace-entries a').length === 12",
                "project grid did not show all projects")
     assert js("document.querySelector('#dashboard-workspace-entries').scrollHeight === document.querySelector('#dashboard-workspace-entries').clientHeight"), "project grid scrolls independently"
+    node = next(n for n in cdp("Accessibility.getFullAXTree")["nodes"]
+                if n.get("role", {}).get("value") == "searchbox"
+                and n.get("name", {}).get("value") == "搜索工作空间")
+    box = cdp("DOM.getBoxModel", backendNodeId=node["backendDOMNodeId"])["model"]["content"]
+    click_at_xy(sum(box[0::2]) / 4, sum(box[1::2]) / 4)
+    cdp("Input.insertText", text="DEMO-PROJECT-11")
+    wait_until("document.querySelectorAll('#dashboard-workspace-entries a').length === 1", "project search did not filter")
+    click_named_button("清除工作空间搜索")
+    wait_until("document.querySelectorAll('#dashboard-workspace-entries a').length === 12", "clear did not restore projects")
     before = js("[...document.querySelectorAll('.dashboard-page')][0].parentElement.parentElement.scrollTop")
     cdp("Input.dispatchMouseEvent", type="mouseWheel", x=450, y=520,
         deltaX=0, deltaY=500)

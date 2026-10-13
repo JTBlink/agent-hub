@@ -15,6 +15,12 @@ def wait_until(expression, message):
 
 
 def ready():
+    wait_until("Boolean(document.querySelector('.dashboard-workspace-switch'))", "workspace switch did not load")
+    node = next(n for n in cdp("Accessibility.getFullAXTree")["nodes"]
+                if n.get("role", {}).get("value") == "button"
+                and n.get("name", {}).get("value", "").startswith("Agent 工作空间"))
+    box = cdp("DOM.getBoxModel", backendNodeId=node["backendDOMNodeId"])["model"]["content"]
+    click_at_xy(sum(box[0::2]) / 4, sum(box[1::2]) / 4)
     wait_until("Boolean(document.querySelector('.dashboard-workspaces a[href=\"/global-workspace/codex\"]')) && Boolean(document.querySelector('.dashboard-workspaces a[href=\"/settings#agents\"]'))",
                "Agent panel must retain its enabled Agent and management links")
 
@@ -46,7 +52,7 @@ try:
         if js("document.activeElement?.getAttribute('href')==='/settings#agents'"):
             break
     wait_until("document.activeElement?.getAttribute('href')==='/settings#agents'", "Agent link is not keyboard accessible")
-    cdp("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13)
+    cdp("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13, text="\r", unmodifiedText="\r")
     cdp("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
     landed()
     print("PASS: Agent panel; click navigation; keyboard navigation; focused Agent settings")

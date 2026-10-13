@@ -285,7 +285,7 @@ function agent(key: string, category: ToolInfo["category"]): ToolInfo {
   };
 }
 
-it("switches workspace types and exposes every project with its status and route", async () => {
+it("defaults to projects and exposes every project with its status and route", async () => {
   app.tools = [agent("codex", "coding"), agent("hermes", "lobster")];
   app.projects = Array.from({ length: 12 }, (_, i) => project(i));
   await render();
@@ -293,16 +293,10 @@ it("switches workspace types and exposes every project with its status and route
     '[role="group"][aria-label="工作空间类型"] button',
   );
   expect(scopeButtons[0].getAttribute("aria-pressed")).toBe("true");
+  expect(scopeButtons[0].textContent).toContain("项目工作空间");
   const entries = container.querySelector("#dashboard-workspace-entries")!;
-  expect(
-    entries.querySelector('a[href="/global-workspace/codex"]'),
-  ).not.toBeNull();
-  expect(
-    entries.querySelector('a[href="/lobster-workspace/hermes"]'),
-  ).not.toBeNull();
-  await act(async () => scopeButtons[1].click());
-  expect(scopeButtons[1].getAttribute("aria-pressed")).toBe("true");
   expect(entries.querySelectorAll("a")).toHaveLength(12);
+  expect(entries.querySelector('a[href="/global-workspace/codex"]')).toBeNull();
   const last = entries.querySelector<HTMLAnchorElement>(
     'a[href="/project/project-11"]',
   )!;
@@ -312,29 +306,79 @@ it("switches workspace types and exposes every project with its status and route
   expect(container.textContent).toBe("/project/project-11");
 });
 
-it("starts with available projects and preserves the selected type when data refreshes", async () => {
-  app.projects = [project(0)];
+it("keeps the project empty state with enabled Agents and allows switching", async () => {
+  app.tools = [agent("codex", "coding"), agent("hermes", "lobster")];
   await render();
-  expect(
-    container.querySelector(
-      '#dashboard-workspace-entries a[href="/project/project-0"]',
-    ),
-  ).not.toBeNull();
+  const entries = container.querySelector("#dashboard-workspace-entries")!;
+  expect(entries.textContent).toContain("关联项目");
+  expect(entries.querySelectorAll("a")).toHaveLength(0);
   const scopeButtons = container.querySelectorAll<HTMLButtonElement>(
     '[role="group"][aria-label="工作空间类型"] button',
   );
   await act(async () => scopeButtons[1].click());
-  app.tools = [agent("codex", "coding")];
-  app.projects = [project(0), project(1)];
+  expect(
+    entries.querySelector('a[href="/global-workspace/codex"]'),
+  ).not.toBeNull();
+  expect(
+    entries.querySelector('a[href="/lobster-workspace/hermes"]'),
+  ).not.toBeNull();
+  expect(container.querySelector('a[href="/settings#agents"]')).not.toBeNull();
+  app.projects = [project(0)];
   await render();
   expect(scopeButtons[1].getAttribute("aria-pressed")).toBe("true");
+  expect(entries.querySelectorAll("a")).toHaveLength(2);
+});
+
+async function searchWorkspaces(value: string) {
+  const input = container.querySelector<HTMLInputElement>(
+    'input[type="search"]',
+  )!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+it("filters workspace names, clears no matches and resets search on type switch", async () => {
+  app.projects = Array.from({ length: 12 }, (_, i) => project(i));
+  app.tools = [agent("codex", "coding")];
+  await render();
+  const entries = container.querySelector("#dashboard-workspace-entries")!;
+  await searchWorkspaces("  DEMO-PROJECT-11 ");
+  expect(entries.querySelectorAll("a")).toHaveLength(1);
+  expect(entries.textContent).toContain("2 项内容冲突");
+  await searchWorkspaces("missing");
+  expect(entries.querySelectorAll("a")).toHaveLength(0);
+  expect(entries.textContent).toContain("没有匹配的工作空间");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="清除工作空间搜索"]',
+      )!
+      .click(),
+  );
+  expect(entries.querySelectorAll("a")).toHaveLength(12);
+  await searchWorkspaces("missing");
+  await act(async () =>
+    container
+      .querySelectorAll<HTMLButtonElement>(
+        '[role="group"][aria-label="工作空间类型"] button',
+      )[1]
+      .click(),
+  );
   expect(
-    container.querySelectorAll("#dashboard-workspace-entries a"),
-  ).toHaveLength(2);
-  await act(async () => scopeButtons[0].click());
-  expect(
-    container.querySelector(
-      '#dashboard-workspace-entries a[href="/global-workspace/codex"]',
-    ),
+    entries.querySelector('a[href="/global-workspace/codex"]'),
   ).not.toBeNull();
+  expect(container.querySelector('input[type="search"]')).toBeNull();
+  await act(async () =>
+    container
+      .querySelectorAll<HTMLButtonElement>(
+        '[role="group"][aria-label="工作空间类型"] button',
+      )[0]
+      .click(),
+  );
+  expect(entries.querySelectorAll("a")).toHaveLength(12);
 });

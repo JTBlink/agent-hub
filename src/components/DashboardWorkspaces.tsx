@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Bot, ChevronRight, FolderOpen } from "lucide-react";
+import { Bot, ChevronRight, FolderOpen, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "./AgentIcon";
 import type { Project, ToolInfo } from "../lib/tauri";
@@ -16,11 +16,16 @@ export function DashboardWorkspaces({
   projects,
 }: DashboardWorkspacesProps) {
   const { t } = useTranslation();
-  const [selectedType, setSelectedType] = useState<WorkspaceType | null>(null);
-  const type =
-    selectedType ??
-    (agents.length === 0 && projects.length > 0 ? "projects" : "agents");
+  const [type, setType] = useState<WorkspaceType>("projects");
+  const [query, setQuery] = useState("");
   const entries = type === "agents" ? agents : projects;
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const matches = (name: string) =>
+    name.toLocaleLowerCase().includes(normalizedQuery);
+  const switchType = (nextType: WorkspaceType) => {
+    setType(nextType);
+    setQuery("");
+  };
   return (
     <section
       className="dashboard-workspaces"
@@ -28,39 +33,24 @@ export function DashboardWorkspaces({
     >
       <div className="dashboard-section-heading">
         <h2 id="dashboard-workspaces-title">{t("dashboard.workspaces")}</h2>
-        <Link
-          to="/settings#agents"
-          className="rounded text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-        >
-          {t("dashboard.manageAgents")}
-        </Link>
+        {type === "agents" && (
+          <Link
+            to="/settings#agents"
+            className="rounded text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {t("dashboard.manageAgents")}
+          </Link>
+        )}
       </div>
-      <div
-        className="dashboard-workspace-switch"
-        role="group"
-        aria-label={t("dashboard.workspaceTypes")}
-      >
-        <button
-          type="button"
-          aria-pressed={type === "agents"}
-          aria-controls="dashboard-workspace-entries"
-          onClick={() => setSelectedType("agents")}
-        >
-          <Bot aria-hidden="true" className="h-4 w-4" />
-          {t("dashboard.agentWorkspaces")}
-          <span>{agents.length}</span>
-        </button>
-        <button
-          type="button"
-          aria-pressed={type === "projects"}
-          aria-controls="dashboard-workspace-entries"
-          onClick={() => setSelectedType("projects")}
-        >
-          <FolderOpen aria-hidden="true" className="h-4 w-4" />
-          {t("dashboard.projects")}
-          <span>{projects.length}</span>
-        </button>
-      </div>
+      <WorkspaceSwitcher
+        type={type}
+        agentCount={agents.length}
+        projectCount={projects.length}
+        onChange={switchType}
+      />
+      {(entries.length > 4 || query) && (
+        <WorkspaceSearch query={query} onChange={setQuery} />
+      )}
       <div
         id="dashboard-workspace-entries"
         className="dashboard-workspace-grid"
@@ -76,17 +66,100 @@ export function DashboardWorkspaces({
               type === "agents" ? "dashboard.noAgents" : "dashboard.noProjects",
             )}
           </p>
+        ) : !entries.some((entry) =>
+            matches("display_name" in entry ? entry.display_name : entry.name),
+          ) ? (
+          <p className="dashboard-workspace-empty" role="status">
+            {t("dashboard.noWorkspaceMatches")}
+          </p>
         ) : type === "agents" ? (
-          agents.map((agent) => (
-            <AgentWorkspaceLink key={agent.key} agent={agent} />
-          ))
+          agents
+            .filter((agent) => matches(agent.display_name))
+            .map((agent) => (
+              <AgentWorkspaceLink key={agent.key} agent={agent} />
+            ))
         ) : (
-          projects.map((project) => (
-            <ProjectWorkspaceLink key={project.id} project={project} />
-          ))
+          projects
+            .filter((project) => matches(project.name))
+            .map((project) => (
+              <ProjectWorkspaceLink key={project.id} project={project} />
+            ))
         )}
       </div>
     </section>
+  );
+}
+
+function WorkspaceSwitcher({
+  type,
+  agentCount,
+  projectCount,
+  onChange,
+}: {
+  type: WorkspaceType;
+  agentCount: number;
+  projectCount: number;
+  onChange: (type: WorkspaceType) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="dashboard-workspace-switch"
+      role="group"
+      aria-label={t("dashboard.workspaceTypes")}
+    >
+      <button
+        type="button"
+        aria-pressed={type === "projects"}
+        aria-controls="dashboard-workspace-entries"
+        onClick={() => onChange("projects")}
+      >
+        <FolderOpen aria-hidden="true" className="h-4 w-4" />
+        {t("dashboard.projects")}
+        <span>{projectCount}</span>
+      </button>
+      <button
+        type="button"
+        aria-pressed={type === "agents"}
+        aria-controls="dashboard-workspace-entries"
+        onClick={() => onChange("agents")}
+      >
+        <Bot aria-hidden="true" className="h-4 w-4" />
+        {t("dashboard.agentWorkspaces")}
+        <span>{agentCount}</span>
+      </button>
+    </div>
+  );
+}
+
+function WorkspaceSearch({
+  query,
+  onChange,
+}: {
+  query: string;
+  onChange: (query: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="dashboard-workspace-search">
+      <Search aria-hidden="true" className="h-4 w-4 shrink-0" />
+      <input
+        type="search"
+        aria-label={t("dashboard.searchWorkspaces")}
+        placeholder={t("dashboard.searchWorkspaces")}
+        value={query}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {query && (
+        <button
+          type="button"
+          aria-label={t("dashboard.clearWorkspaceSearch")}
+          onClick={() => onChange("")}
+        >
+          <X aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
+    </div>
   );
 }
 

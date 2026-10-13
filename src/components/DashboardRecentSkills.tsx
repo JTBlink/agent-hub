@@ -150,7 +150,7 @@ function RecentSkillCard({
         </span>
       </span>
       <span className="dashboard-skill-action">
-        {t("dashboard.viewSkillDetail")}
+        <span className="sr-only">{t("dashboard.viewSkillDetail")}</span>
         <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
       </span>
     </button>

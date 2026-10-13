@@ -70,6 +70,9 @@
     }
   },
   "dashboard": {
+    "searchWorkspaces": "Search workspaces",
+    "clearWorkspaceSearch": "Clear workspace search",
+    "noWorkspaceMatches": "No matching workspaces. Try another name or clear the search.",
     "showMoreRecent": "Show {{count}} more",
     "collapseRecent": "Show fewer skills",
     "workspaces": "Workspaces",

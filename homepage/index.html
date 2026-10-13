@@ -66,20 +66,20 @@
               <button
                 type="button"
                 class="preview-button selected"
-                data-preview="library"
-                aria-controls="preview-library"
+                data-preview="dashboard"
+                aria-controls="preview-dashboard"
                 aria-pressed="true"
               >
-                技能库
+                工作台概览
               </button>
               <button
                 type="button"
                 class="preview-button"
-                data-preview="dashboard"
-                aria-controls="preview-dashboard"
+                data-preview="library"
+                aria-controls="preview-library"
                 aria-pressed="false"
               >
-                工作台概览
+                技能库
               </button>
             </div>
             <span class="preview-hint"
@@ -87,35 +87,35 @@
               Skills，由你掌控</span
             >
           </div>
-          <figure id="preview-library" class="product-preview">
+          <figure id="preview-library" class="product-preview" hidden>
             <a href="./assets/skill-library.png" aria-label="查看技能库完整截图"
               ><img
                 src="./assets/skill-library.png"
-                alt="AgentHub 深色技能库界面：侧栏列出技能组、Agent 与项目，主区域展示技能描述、标签和部署状态。"
-                width="1440"
-                height="900"
-                fetchpriority="high"
-            /></a>
-            <figcaption>
-              技能库：集中整理内容、标签与部署状态。截图使用示例数据。
-            </figcaption>
-          </figure>
-          <figure id="preview-dashboard" class="product-preview" hidden>
-            <a href="./assets/dashboard.png" aria-label="查看工作台概览完整截图"
-              ><img
-                src="./assets/dashboard.png"
-                alt="AgentHub 工作台概览：技能库与连接插画、待部署和待分组入口、最近更新技能与 Agent 和项目导航。"
+                alt="AgentHub 深色技能库界面：新版紧凑筛选栏、技能组、标签、未分组入口与 Agent 部署状态。"
                 width="1440"
                 height="900"
                 loading="lazy"
             /></a>
             <figcaption>
-              工作台概览：查看 Agent、技能与项目状态。截图使用示例数据。
+              技能库：按技能组、标签与部署状态整理技能。截图使用示例数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-dashboard" class="product-preview">
+            <a href="./assets/dashboard.png" aria-label="查看工作台概览完整截图"
+              ><img
+                src="./assets/dashboard.png"
+                alt="AgentHub 工作台概览：默认项目工作空间，可切换 Agent；上方技能部署概览与 SVG 连接插画，右侧紧凑近期技能列表。"
+                width="1440"
+                height="900"
+                fetchpriority="high"
+            /></a>
+            <figcaption>
+              工作台：从项目开始，查看技能部署与近期更新。截图使用示例数据。
             </figcaption>
           </figure>
           <noscript
             ><p class="no-script">
-              还可以<a href="./assets/dashboard.png">查看工作台概览截图</a>。
+              还可以<a href="./assets/skill-library.png">查看技能库截图</a>。
             </p></noscript
           >
         </div>
