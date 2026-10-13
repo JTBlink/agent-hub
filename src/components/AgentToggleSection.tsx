@@ -71,23 +71,28 @@ export function AgentToggleInline({
   togglingKey,
   onToggle,
 }: Omit<Props, "className">) {
+  const { t } = useTranslation();
   const availableItems = items.filter((item) => item.isAvailable);
   if (availableItems.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex flex-wrap items-center gap-0.5">
       {availableItems.map((item) => {
         const loading = togglingKey === item.key;
-        const disabled = Boolean(item.disabled || loading);
+        const disabled = Boolean(item.disabled || togglingKey);
+        const label = `${item.displayName} · ${t(item.enabled ? "mySkills.targetClickUninstall" : "mySkills.targetClickInstall")}`;
         return (
           <button
             key={item.key}
             type="button"
-            title={item.displayName}
+            title={label}
+            aria-label={label}
+            aria-pressed={item.enabled}
+            aria-busy={loading}
             disabled={disabled}
             onClick={() => onToggle(item.key, !item.enabled)}
             className={cn(
-              "relative rounded-md p-0.5 transition-colors",
+              "relative rounded-md p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
               !disabled && "hover:bg-surface-hover",
               disabled && "opacity-55",
             )}

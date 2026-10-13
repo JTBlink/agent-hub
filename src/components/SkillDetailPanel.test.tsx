@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
-import type { ManagedSkill, SkillSourceDiffEntry } from "../lib/tauri";
+import type {
+  ManagedSkill,
+  SkillSourceDiffEntry,
+  ToolInfo,
+} from "../lib/tauri";
 import { SkillDetailPanel } from "./SkillDetailPanel";
 
 const api = vi.hoisted(() => ({
@@ -13,6 +17,10 @@ const api = vi.hoisted(() => ({
   diff: vi.fn(),
   files: vi.fn(),
   readFile: vi.fn(),
+  openVscode: vi.fn(),
+}));
+vi.mock("../lib/openInVscode", () => ({
+  openDirectoryInVscode: api.openVscode,
 }));
 vi.mock("../lib/tauri", () => ({
   getSkillDocument: api.document,
@@ -105,9 +113,14 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function render(nextSkill = skill) {
+async function render(
+  nextSkill = skill,
+  props: Partial<ComponentProps<typeof SkillDetailPanel>> = {},
+) {
   await act(async () => {
-    root.render(<SkillDetailPanel skill={nextSkill} onClose={() => {}} />);
+    root.render(
+      <SkillDetailPanel skill={nextSkill} onClose={() => {}} {...props} />,
+    );
   });
 }
 async function click(text: string) {
@@ -128,6 +141,67 @@ it("switches local and central tabs to their actual documents", async () => {
   expect(document.querySelector("article")?.textContent).toBe(
     "Central document",
   );
+});
+
+const tool: ToolInfo = {
+  key: "claude_code",
+  display_name: "Claude Code",
+  installed: true,
+  enabled: true,
+  skills_dir: "<workspace>/agent/skills",
+  is_custom: false,
+  has_path_override: false,
+  project_relative_skills_dir: null,
+  has_project_path_override: false,
+  category: "coding",
+};
+
+it("keeps one interactive agent row below the title and forwards group toggles", async () => {
+  const onToggleTool = vi.fn();
+  const props = {
+    tools: [tool],
+    toolToggles: [
+      {
+        tool: tool.key,
+        display_name: tool.display_name,
+        installed: true,
+        globally_enabled: true,
+        enabled: true,
+      },
+    ],
+    onToggleTool,
+  };
+  await render(skill, props);
+  const button = document.querySelector<HTMLButtonElement>(
+    '[aria-pressed="true"]',
+  );
+  expect(button?.getAttribute("aria-label")).toBe("Claude Code · 点击卸载");
+  const close = document.querySelector(".lucide-x")?.closest("button");
+  expect(close?.parentElement?.parentElement?.querySelector("img")).toBeNull();
+  expect(document.querySelectorAll('img[src*="claude"]')).toHaveLength(1);
+  await act(async () => button?.click());
+  expect(onToggleTool).toHaveBeenCalledWith("claude_code", false);
+  await render(skill, { ...props, togglingTool: "claude_code" });
+  expect(
+    document.querySelector<HTMLButtonElement>('[aria-busy="true"]')?.disabled,
+  ).toBe(true);
+});
+
+it("supports deployment from all skills without a selected group", async () => {
+  const onToggleTarget = vi.fn();
+  await render(skill, { tools: [tool], onToggleTarget });
+  const button = document.querySelector<HTMLButtonElement>(
+    '[aria-label="Claude Code · 点击安装"]',
+  );
+  expect(button).not.toBeNull();
+  await act(async () => button?.click());
+  expect(onToggleTarget).toHaveBeenCalledWith("claude_code", true);
+});
+
+it("opens the library copy in VS Code through the common launcher", async () => {
+  await render();
+  await click("在 VS Code 中打开");
+  expect(api.openVscode).toHaveBeenCalledWith(skill.central_path);
 });
 
 it("loads directory changes before opening the diff tab", async () => {

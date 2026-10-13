@@ -71,12 +71,12 @@
 
 ### Issue tracker
 
-需求和开发状态使用仓库内 `.scratch/<feature>/` 的 Markdown 文件管理，不依赖 GitHub Issues。参见 `.agents/skills/rust-dev/references/issue-tracker.md`。
+Issues live in GitHub Issues (uses `gh` CLI). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-使用仓库默认的 Agent 分诊状态词汇。参见 `.agents/skills/rust-dev/references/triage-labels.md`。
+Uses the default five canonical triage labels. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-仓库采用单上下文领域文档布局；工作前读取根目录 `CONTEXT.md`（如存在）和相关 ADR。参见 `.agents/skills/rust-dev/references/domain.md`。
+Single-context layout; read `GLOSSARY.md` (if present) and relevant ADRs before working. See `docs/agents/domain.md`.

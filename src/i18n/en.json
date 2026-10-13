@@ -992,6 +992,8 @@
     "remember": "Remember my choice for next time"
   },
   "common": {
+    "copyPath": "Copy path",
+    "pathCopied": "Path copied",
     "loading": "Loading...",
     "error": "Something went wrong",
     "requestFailed": "Request failed",

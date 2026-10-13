@@ -11,6 +11,10 @@ const api = vi.hoisted(() => ({
   diff: vi.fn(),
   local: vi.fn(),
   central: vi.fn(),
+  openVscode: vi.fn(),
+}));
+vi.mock("../lib/openInVscode", () => ({
+  openDirectoryInVscode: api.openVscode,
 }));
 vi.mock("../lib/tauri", () => ({
   getProjectSkillDiff: api.diff,
@@ -106,6 +110,12 @@ function syncButton(key: string) {
     (button) => button.getAttribute("aria-label") === i18n.t(key),
   );
 }
+
+it("opens the selected project copy in VS Code through the common launcher", async () => {
+  await render();
+  await act(async () => syncButton("install.scan.openInVscode")?.click());
+  expect(api.openVscode).toHaveBeenCalledWith(variant.path);
+});
 
 it("shows only sync controls before the header close button and forwards both operations", async () => {
   const onUpdateCenter = vi.fn();

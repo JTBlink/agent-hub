@@ -938,6 +938,8 @@
     "gitErrorCredentialMissing": "Git 未能取得登入憑證。GitHub 備份請點擊「重新連接 GitHub」；其他遠端請設定相應憑證。"
   },
   "common": {
+    "copyPath": "複製路徑",
+    "pathCopied": "路徑已複製",
     "loading": "載入中...",
     "error": "出錯了",
     "requestFailed": "請求失敗",

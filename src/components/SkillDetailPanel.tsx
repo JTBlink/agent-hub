@@ -22,6 +22,8 @@ import { DetailSheet } from "./DetailSheet";
 import { AgentToggleInline, type AgentToggleItem } from "./AgentToggleSection";
 import { SkillProjectsSection } from "./SkillProjectsSection";
 import { SyncDots } from "./SyncDots";
+import { SkillDirectoryActions } from "./SkillDirectoryActions";
+import { CopyPathButton } from "./CopyPathButton";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
 import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
 
@@ -34,6 +36,8 @@ interface Props {
   toolToggles?: SkillToolToggle[] | null;
   togglingTool?: string | null;
   onToggleTool?: (tool: string, enabled: boolean) => void;
+  onToggleTarget?: (tool: string, enabled: boolean) => void;
+  pendingTargetKey?: string | null;
   projects?: Project[];
   onProjectsChanged?: () => void;
 }
@@ -46,6 +50,8 @@ export function SkillDetailPanel({
   toolToggles,
   togglingTool,
   onToggleTool,
+  onToggleTarget,
+  pendingTargetKey,
   projects,
   onProjectsChanged,
   sourceInfo,
@@ -63,6 +69,8 @@ export function SkillDetailPanel({
       toolToggles={toolToggles}
       togglingTool={togglingTool}
       onToggleTool={onToggleTool}
+      onToggleTarget={onToggleTarget}
+      pendingTargetKey={pendingTargetKey}
       projects={projects}
       onProjectsChanged={onProjectsChanged}
     />
@@ -77,6 +85,8 @@ function SkillDetailPanelContent({
   toolToggles,
   togglingTool,
   onToggleTool,
+  onToggleTarget,
+  pendingTargetKey,
   projects,
   onProjectsChanged,
   sourceInfo,
@@ -89,6 +99,8 @@ function SkillDetailPanelContent({
   toolToggles?: SkillToolToggle[] | null;
   togglingTool?: string | null;
   onToggleTool?: (tool: string, enabled: boolean) => void;
+  onToggleTarget?: (tool: string, enabled: boolean) => void;
+  pendingTargetKey?: string | null;
   projects?: Project[];
   onProjectsChanged?: () => void;
 }) {
@@ -150,9 +162,22 @@ function SkillDetailPanelContent({
   const meta = (
     <>
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
-        {tools && (
-          <SyncDots skill={skill} tools={tools} size="sm" includeOrphan />
-        )}
+        {toolToggles && onToggleTool ? (
+          <AgentToggleInline
+            items={toggleItems}
+            togglingKey={togglingTool}
+            onToggle={onToggleTool}
+          />
+        ) : tools ? (
+          <SyncDots
+            skill={skill}
+            tools={tools}
+            size="sm"
+            includeOrphan
+            onToggle={onToggleTarget}
+            pendingKey={pendingTargetKey}
+          />
+        ) : null}
         {skill.tags.length > 0 && (
           <>
             {tools && <span className="mx-0.5 h-3 w-px bg-border-subtle" />}
@@ -191,11 +216,15 @@ function SkillDetailPanelContent({
           })}
         </div>
       )}
-      <div className="mt-3 flex min-w-0 items-center gap-2 text-[13px] text-muted">
-        <Folder className="h-3.5 w-3.5 shrink-0" />
-        <span className="font-mono truncate" title={skill.central_path}>
-          {skill.central_path}
-        </span>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Folder className="h-3.5 w-3.5 shrink-0" />
+          <span className="font-mono truncate" title={skill.central_path}>
+            {skill.central_path}
+          </span>
+          <CopyPathButton path={skill.central_path} />
+        </div>
+        <SkillDirectoryActions path={skill.central_path} />
       </div>
       {metadataItems.length > 0 && (
         <div className="mt-4 rounded-xl border border-border-subtle bg-surface/70">
@@ -265,15 +294,6 @@ function SkillDetailPanelContent({
         ) : undefined
       }
       meta={meta}
-      headerActions={
-        toolToggles && onToggleTool ? (
-          <AgentToggleInline
-            items={toggleItems}
-            togglingKey={togglingTool}
-            onToggle={onToggleTool}
-          />
-        ) : undefined
-      }
       onClose={onClose}
     >
       {sourceInfo}

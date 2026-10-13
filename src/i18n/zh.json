@@ -990,6 +990,8 @@
     "remember": "记住我的选择，下次不再提示"
   },
   "common": {
+    "copyPath": "复制路径",
+    "pathCopied": "路径已复制",
     "loading": "加载中...",
     "error": "出错了",
     "requestFailed": "请求失败",

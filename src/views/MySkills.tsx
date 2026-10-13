@@ -2070,6 +2070,15 @@ export function MySkills() {
         toolToggles={toolToggles}
         togglingTool={togglingToolKey}
         onToggleTool={handleToggleSkillTool}
+        onToggleTarget={(tool, enabled) => {
+          if (selectedSkill)
+            void handleToggleSkillTarget(selectedSkill, tool, enabled);
+        }}
+        pendingTargetKey={
+          togglingTarget?.skillId === selectedSkill?.id
+            ? togglingTarget?.tool
+            : null
+        }
         projects={projects}
         onProjectsChanged={refreshProjects}
       />
