@@ -58,7 +58,7 @@ import { cn, compactHomePath } from "../utils";
 import { useSectionAnchor } from "../hooks/useSectionAnchor";
 import { useApp } from "../context/AppContext";
 import { useThemeContext } from "../context/ThemeContext";
-import { PROJECT_URL, FEEDBACK_URL } from "../lib/distribution";
+import { PROJECT_URL, FEEDBACK_URL, WEBSITE_URL } from "../lib/distribution";
 import { ModuleReleaseLink } from "../components/ModuleReleaseLink";
 import { AgentIcon } from "../components/AgentIcon";
 import { ToggleSwitch } from "../components/ToggleSwitch";
@@ -213,8 +213,6 @@ export function Settings() {
   const [customProjectPath, setCustomProjectPath] = useState("");
   const [addingCustom, setAddingCustom] = useState(false);
   const [showMoreAgents, setShowMoreAgents] = useState(false);
-
-  const WEBSITE_URL = `${PROJECT_URL}#readme`;
 
   const startEditPath = useCallback((key: string, currentPath: string) => {
     setEditingPathKey(key);
