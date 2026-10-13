@@ -1,5 +1,5 @@
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: none
 
 # 根据远端 tag 自动选版并连续发布
@@ -21,3 +21,5 @@ Blocked by: none
 - github-cli 1.5.0 增加只读选版脚本：数字 SemVer 比较、annotated / lightweight 去重、稳定版与预发布区分、明确版本与失败续发；同步入口、界面元数据、流程和 CI/CD 文档。
 - 4 个测试文件、62 项测试通过，包含 21 项选版行为用例；真实远端查询为 VERSION=0.1.5、最新 v0.1.5，选出 0.1.6。
 - 用户授权提交 push 后发版，后续版本发布记录见 [0.1.6 发布任务](../../version-0.1.6/issues/R01-release.md)。
+
+- Skill 更新已提交 push（48b0d72）；元数据、界面、19 个本地引用、ESLint、Prettier 与差异检查通过。Standards：版本来源和现有 Actions 保持一致；Spec：远端 tag 判定、固定版本续发及完整自动发布已落地，实际版本验收由独立发布任务记录。

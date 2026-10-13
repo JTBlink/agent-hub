@@ -20,3 +20,10 @@ Blocked by: none
 ## Comments
 
 - 候选与正式发布 SHA / run ID 将在实际触发后写入本任务。
+
+## Preparation
+
+- Skill 提交：48b0d72，已 push main。
+- 隔离检出中同步六个版本文件为 0.1.6，归档已提交 main 的 Unreleased 说明，保留新的 Unreleased。
+- Node.js 22.23.3 / npm 10.9.8 干净 npm ci 通过；全仓 Prettier、ESLint、403 项测试、TypeScript / Vite 前端构建、官网与文档构建、版本和任务检查通过。Rust 门禁与三平台原生安装验收由同 SHA 候选执行。
+- 版本固定为 0.1.6；尚未创建 tag，先等待候选完整验证。
