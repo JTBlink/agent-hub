@@ -1,5 +1,5 @@
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D05
 
 # 减少工作台首页滚动
@@ -29,3 +29,5 @@ Blocked by: D05
 - `npm test`：69 个文件、338 项通过；`npm run lint`、`npm run build`、Prettier、`git diff --check` 通过。截图更新后的官网构建和资源测试通过。
 - 浏览器验证明暗主题、三语、960 / 800px 窄窗口与 1.2 倍字号、空状态、展开/收起与焦点、12 项目完整网格和主页面滚轮、Tab/Enter 导航；新截图已目视检查。未执行 Tauri 原生应用验收。
 - Standards：复用原数据、路由和主题，展开是局部界面状态；Spec：首屏密度提升，更多内容仍可访问，无内层滚动。截图线上同步结果随后补记。
+
+- 实现已提交并推送：`6c8c00eb97e36eaa7bd791141f364d9368e3da06`；官网部署运行 `38324896137` 使用同一 SHA 并成功，线上预览已加载新版 1440×900 紧凑截图，验收完成。
