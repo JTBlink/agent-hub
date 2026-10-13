@@ -70,6 +70,9 @@
     }
   },
   "dashboard": {
+    "searchWorkspaces": "搜索工作空间",
+    "clearWorkspaceSearch": "清除工作空间搜索",
+    "noWorkspaceMatches": "没有匹配的工作空间，请换个名称或清除搜索。",
     "showMoreRecent": "展开另外 {{count}} 项",
     "collapseRecent": "收起近期技能",
     "workspaces": "工作空间",

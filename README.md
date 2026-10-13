@@ -11,9 +11,9 @@
   </p>
 </div>
 
-![AgentHub 技能库：技能组、标签与 Agent 部署状态](docs/images/skill-library.png)
+![AgentHub 工作台：项目优先导航、技能部署概览与近期技能](docs/images/dashboard.png)
 
-_当前前端界面的示例数据截图，展示技能库、技能组、Agent 与项目入口。截图生成方式见[截图说明](docs/images/README.md)。_
+_当前开发界面，使用示例数据：默认展示项目工作空间，可切换 Agent；右侧查看近期技能。截图生成方式见[截图说明](docs/images/README.md)。_
 
 ## 一个工作台，管理你的 Skills
 
@@ -30,11 +30,11 @@ Skills 不必散落在每个工具和项目目录里。AgentHub 集中管理技�
 导入技能库、加入技能组和部署到工作空间是不同操作：先收藏内容，再组织用途，最后选择需要使用这些技能的 Agent 或项目。修改组内成员不会自动更新已有部署。
 
 <details>
-  <summary>查看工作台概览</summary>
+  <summary>查看技能库界面</summary>
 
-![AgentHub 工作台：技能库与 SVG 连接插画、待部署及待分组、最近更新技能和工作空间导航](docs/images/dashboard.png)
+![AgentHub 技能库：紧凑筛选栏、技能组、标签与 Agent 部署状态](docs/images/skill-library.png)
 
-_当前前端界面，使用示例数据。_
+_技能库的全部视图，展示已部署、待部署与未分组的示例技能。_
 
 </details>
 

@@ -1,4 +1,4 @@
-/* The catalog anchors the page; smaller tasks and workspace links support it. */
+/* Projects are the main workspace; catalog activity supports navigation. */
 .dashboard-page {
   container: dashboard / inline-size;
   gap: 1rem;
@@ -240,7 +240,10 @@
 .dashboard-recent-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 0.85rem;
+  gap: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 1rem;
+  background: var(--color-surface);
 }
 
 .dashboard-skill-card {
@@ -250,14 +253,23 @@
   column-gap: 0.75rem;
   row-gap: 0;
   min-width: 0;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 1rem;
-  background: var(--color-surface);
-  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: transparent;
+  padding: 0.75rem;
   text-align: left;
   transition:
     background-color 150ms,
     border-color 150ms;
+}
+
+.dashboard-skill-card:first-child {
+  border-radius: 1rem 1rem 0 0;
+}
+
+.dashboard-skill-card:last-child {
+  border-bottom: 0;
+  border-radius: 0 0 1rem 1rem;
 }
 
 .dashboard-skill-card:hover {
@@ -267,13 +279,13 @@
 
 .dashboard-skill-card:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 
 .dashboard-skill-description {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   overflow: hidden;
   margin-top: 0.4rem;
   color: var(--color-text-tertiary);
@@ -309,6 +321,10 @@
 
 .dashboard-workspaces {
   min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 1rem;
+  background: var(--color-bg-secondary);
 }
 
 .dashboard-workspace-switch {
@@ -356,6 +372,55 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: 0.75rem;
+}
+
+.dashboard-workspace-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 0.75rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.6rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface);
+}
+
+.dashboard-workspace-search:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.dashboard-workspace-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+.dashboard-workspace-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.dashboard-workspace-search button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.6rem;
+}
+
+.dashboard-workspace-search button:hover {
+  background: var(--color-surface-hover);
+}
+
+.dashboard-workspace-search button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -3px;
 }
 
 .dashboard-workspace-link {
@@ -502,7 +567,7 @@
 
 @container dashboard (min-width: 840px) {
   .dashboard-content {
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   }
 }
 
