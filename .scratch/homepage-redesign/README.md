@@ -25,5 +25,5 @@
 | D05 工作台视觉与布局        | resolved |
 | D06 减少首页滚动            | resolved |
 | D07 项目优先与截图同步      | resolved |
-| D08 侧栏改版截图            | claimed  |
+| D08 侧栏改版截图            | resolved |
 | B04 官网发布源与依赖锁文件  | resolved |

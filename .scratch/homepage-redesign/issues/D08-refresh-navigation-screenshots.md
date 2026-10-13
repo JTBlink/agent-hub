@@ -1,5 +1,5 @@
 Type: task
-Status: claimed
+Status: resolved
 Blocked by: D07
 
 # 同步侧栏改版后的产品截图
@@ -23,4 +23,6 @@ Blocked by: D07
 - [源图与截图说明](../../../docs/images/README.md) 更新为当前侧栏样式：中文工作台、技能库“全部技能”入口、活动页面单组展开。两张图使用同一套 12 技能 / 5 Agent / 2 项目的合成数据、默认项目视图、1440×900 深色中文界面；已目视检查，无个人信息和加载状态。
 - [README](../../../README.md) 与 [官网](../../../homepage/index.html) 继续共用两张源图，更新替代文本和截图操作说明，不添加副本。
 - `npm run website:build`、官网资源测试、Prettier 与差异检查通过；两张 PNG 均为 1440×900，构建副本逐字节匹配源图。截图预览验证当前路由、数据与字体加载完成，无横向溢出。
-- Standards：复用现有当前组件与固定数据，不读取本机库；Spec：新侧栏样式与源图一致，README 和官网引用同步。Pages 发布与线上图片核对随后补记。
+- Standards：复用现有当前组件与固定数据，不读取本机库；Spec：新侧栏样式与源图一致，README 和官网引用同步。Pages 发布与线上图片核对已完成。
+
+- 截图已提交并 push：`0ae4357426cffca0e00e5eda90ea78dcdc8cf5c9`；[官网部署](../../../.github/workflows/deploy-pages.yml) 运行 `38334367200` 对应同一 SHA 并成功。GitHub README、两张源图、线上 PNG 和 HTML 均逐字节核对一致；真实线上浏览器验证两图加载、更新说明与预览切换。
