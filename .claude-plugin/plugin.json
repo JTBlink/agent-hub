@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "agent-hub-skills",
+  "version": "0.1.6",
+  "description": "AgentHub public skills — agent workflow and productivity tools.",
+  "author": {
+    "name": "JTStudio",
+    "url": "https://jtblink.github.io/agent-hub/"
+  },
+  "homepage": "https://jtblink.github.io/agent-hub/",
+  "repository": "https://github.com/JTBlink/agent-hub",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "agent",
+    "productivity",
+    "workflow"
+  ],
+  "skills": [
+    "./skills/productivity/manage-skills"
+  ]
+}
