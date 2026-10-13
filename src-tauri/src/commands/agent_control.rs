@@ -11,7 +11,7 @@ use crate::core::{
 };
 
 const SKILL_NAME: &str = "manage-skills";
-const BUNDLED_SKILL: &str = include_str!("../../../skills/manage-skills/SKILL.md");
+const BUNDLED_SKILL: &str = include_str!("../../../skills/productivity/manage-skills/SKILL.md");
 
 #[derive(Debug, Serialize)]
 pub struct SkillLocation {

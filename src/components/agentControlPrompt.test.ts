@@ -12,7 +12,7 @@ const status = (): AgentControlStatus => ({
   library_source_type: "git",
   library_update_available: false,
   library: {
-    path: "<workspace>/skills/manage-skills",
+    path: "<workspace>/skills/productivity/manage-skills",
     present: true,
     occupied: true,
     version: "1.1.1",
