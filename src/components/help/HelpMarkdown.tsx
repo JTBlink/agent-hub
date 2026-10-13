@@ -9,10 +9,19 @@ import { SkillMarkdown } from "../SkillMarkdown";
 
 export function HelpMarkdown({ article }: { article: HelpArticle }) {
   const { t } = useTranslation();
+  // ReactMarkdown encodes Unicode in URLs before passing them to renderers.
+  const encodedLinks = Object.fromEntries(
+    Object.entries(article.links).map(([href, link]) => [
+      encodeURI(href),
+      link,
+    ]),
+  );
   const components: Components = {
     h1: () => null,
     a: ({ href, children }) => {
-      const link = href ? article.links[href] : undefined;
+      const link = href
+        ? (article.links[href] ?? encodedLinks[href])
+        : undefined;
       if (link?.kind === "article")
         return (
           <Link

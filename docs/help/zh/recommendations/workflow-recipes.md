@@ -4,7 +4,7 @@ title: 按任务搭配 Skills
 description: 以技能组组织开发、审查、发布和团队引导。
 since: "0.1.4"
 tags: ["工作流", "推荐", "技能组"]
-related: ["skill-groups", "choose-skills"]
+related: ["coding-skills", "skill-usage-tips", "skill-groups", "choose-skills"]
 reviewed: "2026-10-12"
 ---
 
@@ -15,6 +15,8 @@ reviewed: "2026-10-12"
 ## 日常开发
 
 组合项目开发规范、代码审查和提交约定。项目相关规范放在项目技能库，个人通用习惯按需全局部署。
+
+具体技能名称、matt 系列推荐集合与调用提示词见 [Coding Skills 推荐集合](coding-skills.md)；部署和调用步骤见 [Skill 使用技巧](skill-usage-tips.md)。
 
 ## 代码审查
 
