@@ -42,7 +42,7 @@ gh run list --repo <repo> --workflow ci.yml --branch <branch> --event workflow_d
 gh run view <new-run-id> --repo <repo> --json status,conclusion,jobs,url
 ```
 
-通常间隔 30–60 秒查询一次，按阶段变化、新错误或必要等待状态报告进展；结合平台耗时和 job timeout 判断，不能仅凭几轮状态未变化判定卡死。手动 CI 成功只证明对应检查通过，不代表版本已经发布。
+正常运行默认每 2 分钟（120 秒）查询一次，绑定本次 run ID 和发布 SHA，不按“最新运行”替换监控目标。用户主动询问状态、已收到失败 / 完成通知或正在诊断具体失败步骤时，可即时检查；普通编译等待不加密轮询，也不重复启动构建。按阶段变化、新错误或必要等待状态报告进展；结合平台耗时和 job timeout 判断，不能仅凭几轮状态未变化判定卡死。手动 CI 成功只证明对应检查通过，不代表版本已经发布。
 
 候选复用、新 SHA 验证和正式 tag 冲突统一按 [版本发布流程](release-flow.md) 处理。重试历史 workflow 时先检查其实际 concurrency；仍按 ref 取消旧运行的版本需等待对应任务结束。平台 artifacts 保留 1 天，汇总依赖的 artifacts 过期时重建完整矩阵，不能只重跑汇总。相同错误再次出现即调查修复，不盲目重试。
 

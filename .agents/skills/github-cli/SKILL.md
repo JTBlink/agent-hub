@@ -3,7 +3,7 @@ name: github-cli
 description: 使用 GitHub CLI（gh）处理项目 GitHub 工作流。分析和修复 Actions 失败、维护 main 单线集成与 CI/CD；正式发布时根据远端 tag 选版、按提交范围更新 changelog、验证候选、打 tag 并验收 Release。
 license: MIT
 metadata:
-  version: "1.6.1"
+  version: "1.6.2"
 ---
 
 # GitHub CLI 工作规范
