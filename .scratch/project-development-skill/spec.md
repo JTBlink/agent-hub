@@ -17,3 +17,5 @@ GitHub skill 最终命名为 `github-cli`，优先通过 `gh` 完成 Actions 故
 用户要求更新 Skill，使正式发布时自动根据远端 tag 决定是否升级版本，再连续完成提交 push、同 SHA 候选、tag 和 Release 验收。github-cli 1.5.0 默认 patch，已准备的更高未打 tag 版本直接沿用；指定版本和失败续发保持原版本。先提交 push 技能更新，再按新规则发布已提交 main，保留其他任务未提交改动。现有 Actions 不增加版本升级入口。任务：[D09](issues/D09-automatic-version-release.md)。
 
 用户在 0.1.6 准备期间补充要求：正式发布自动核对上一个 tag 至发布 SHA 的实际变更，完善该版本 CHANGELOG；发布期间纳入的改动更新同一版本，不重复升级或留在 Unreleased。github-cli 1.6.0 同步版本说明、SHA 重验证与线上附件一致性规范。0.1.6 尚未打 tag，按新规范补齐说明并重新验证新 SHA。任务：[D10](issues/D10-release-changelog.md)。
+
+发布参考资料收敛为一个按步骤执行的发布流程，合并发布前验证与验收清单；工作流配置、Actions 维护和故障诊断各保留自己的职责，避免重复维护发布规则。保留自动版本选择、更新日志维护、同 SHA 候选门禁与产物验收要求。github-cli 1.6.1 与 rust-dev 1.0.1 删除相互引用，分别包含自身任务所需规则，可独立执行。任务：[D11](issues/D11-consolidate-release-docs.md)。

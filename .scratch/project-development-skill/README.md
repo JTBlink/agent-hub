@@ -11,3 +11,4 @@
 - [D08：main 单线集成与无分支发布](issues/D08-linear-main-release.md)
 - [D09：根据远端 tag 自动选版并连续发布](issues/D09-automatic-version-release.md)
 - [D10：发布期间自动维护版本更新日志](issues/D10-release-changelog.md)
+- [D11：合并并精简 GitHub 发布参考文档](issues/D11-consolidate-release-docs.md)

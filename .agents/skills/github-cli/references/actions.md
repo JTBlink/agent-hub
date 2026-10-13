@@ -13,7 +13,7 @@
 - tag preflight 必须读取同一 SHA 的成功手动三平台候选，并检查各平台测试 / smoke 与汇总校验；仅 preflight 获得 `actions: read`，候选自身不执行此检查。
 - 前端使用 Node.js 22 和 `npm ci`，Rust stable 配套 rustfmt、Clippy；依赖锁文件必须提交。缓存按平台、工具链与锁文件划分，不以缓存命中代替检查。
 - 工作流 job 设置合理 timeout；矩阵按原生 Runner 构建。安装包 concurrency group 包含事件和 commit SHA，`cancel-in-progress: false` 保留正常运行的候选与正式发布；main 上的新修复可以独立验证，同 SHA 优先复用已有运行。
-- 各平台 core tests 在安装包 release 编译前执行。Rust 缓存只由默认分支写入，保留默认容量，不启用收费 Runner 或扩大存储额度；依据见 [资源控制](release-prevention.md)。
+- 各平台 core tests 在安装包 release 编译前执行。Rust 缓存只由默认分支写入，保留默认容量，不启用收费 Runner 或扩大存储额度。
 - 经项目包装构建入口准备 CLI sidecar，不能直接调用工具跳过约定。核心检查保持格式、lint、测试、类型与前端构建，契约和任务检查按维护的指南同步。
 
 ## 权限、密钥与输入
@@ -34,3 +34,7 @@
 ## 修改后验证
 
 运行与修改相关的 `scripts/workflow-contract.test.mjs`、构建、版本、assemble 和 verify 测试，检查 YAML、`needs`、表达式、shell 与权限范围。仅文字调整可检查引用及文档一致性；实际 workflow 行为变化需要合约测试，原生安装与签名仍依赖对应平台证据。
+
+## 资源控制
+
+保持标准 Runner、默认缓存限额和短期 artifacts；不上传完整 target 或重复汇总，不自动增加账户预算、存储额度或启用付费 Runner。长期安装包保存在 Release。资源策略变化时先核实 [Runner 规格](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) 与 [Actions 计费](https://docs.github.com/en/billing/concepts/product-billing/github-actions)，不把运行分钟与存储费用混为一谈。

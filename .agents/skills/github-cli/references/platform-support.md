@@ -10,7 +10,7 @@
 
 ## 本地数据
 
-默认数据集中在 `~/.agent-hub`，Windows 对应 `%USERPROFILE%\.agent-hub`。数据库为 `library/agent-hub.db`，日志在 `logs/`，配套 CLI 在 `bin/`。详细规则见[目录结构](../../../../docs/architecture/directory-structure.md)。
+默认数据集中在 `~/.agent-hub`，Windows 对应 `%USERPROFILE%\.agent-hub`。数据库为 `library/agent-hub.db`，日志在 `logs/`，配套 CLI 在 `bin/`。
 
 旧版 `~/.agenthub` 和原管理器 `~/.skills-manager` 不自动迁入。卸载应用不主动删除本地数据。
 
