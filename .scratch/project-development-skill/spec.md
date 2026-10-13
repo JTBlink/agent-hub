@@ -20,4 +20,6 @@ GitHub skill 最终命名为 `github-cli`，优先通过 `gh` 完成 Actions 故
 
 用户指定正常构建监控每 2 分钟查询一次。github-cli 1.6.2 更新默认轮询间隔，保留主动状态查询与故障诊断的即时检查；当前发布监控立即采用，文档偏好更新独立记录，不改变已经固定并正在验证的安装包源码。任务：[D12](issues/D12-monitor-interval.md)。
 
+用户要求固定发布验证 worktree 名称。github-cli 1.6.3 统一使用仓库同级的 `agent-hub-release`，候选、tag 与附件验收共用；续发核实归属、状态与占用后复用，验收完成后安全移除。当前旧随机目录仍有进程使用，保留至本次验收结束，不迁移正在运行的任务。任务：[D13](issues/D13-fixed-release-worktree.md)。
+
 发布参考资料收敛为一个按步骤执行的发布流程，合并发布前验证与验收清单；工作流配置、Actions 维护和故障诊断各保留自己的职责，避免重复维护发布规则。保留自动版本选择、更新日志维护、同 SHA 候选门禁与产物验收要求。github-cli 1.6.1 与 rust-dev 1.0.1 删除相互引用，分别包含自身任务所需规则，可独立执行。任务：[D11](issues/D11-consolidate-release-docs.md)。

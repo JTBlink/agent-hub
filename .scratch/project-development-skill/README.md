@@ -12,4 +12,5 @@
 - [D09：根据远端 tag 自动选版并连续发布](issues/D09-automatic-version-release.md)
 - [D10：发布期间自动维护版本更新日志](issues/D10-release-changelog.md)
 - [D12：发布监控每两分钟查询](issues/D12-monitor-interval.md)
+- [D13：固定发布验证 worktree 名称](issues/D13-fixed-release-worktree.md)
 - [D11：合并并精简 GitHub 发布参考文档](issues/D11-consolidate-release-docs.md)
