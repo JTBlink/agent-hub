@@ -1,9 +1,9 @@
 ---
 name: github-cli
-description: 使用 GitHub CLI（gh）处理项目 GitHub 工作流。分析和修复 Actions 失败、维护 main 单线集成与 CI/CD；正式发布时根据远端 tag 自动选择版本、验证候选、打 tag、推送并验收 Release。
+description: 使用 GitHub CLI（gh）处理项目 GitHub 工作流。分析和修复 Actions 失败、维护 main 单线集成与 CI/CD；正式发布时根据远端 tag 选版、按提交范围更新 changelog、验证候选、打 tag 并验收 Release。
 license: MIT
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
 ---
 
 # GitHub CLI 工作规范
@@ -30,6 +30,7 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 - 用户要求正式发布时，自动执行完整流程：根据远端 tag 选择版本 → 同步版本与更新日志 → 提交并 push main → 验证同 SHA 三平台候选 → release:ready → annotated tag 与精确推送 → 跟踪正式安装包和官网 → 下载并校验 Release 附件。已有明确授权不逐步重复询问，不停在仅提交、tag 或触发构建。
 - 只要求准备发布、候选构建、本地 tag 或规范修改时，停在该范围；普通开发提交不自动发版。
 - 新发布未指定版本时，运行 [版本选择脚本](scripts/select-release-version.mjs)，按远端稳定版 tag 和 VERSION 判断是否升级，默认 patch；已准备且未占用的更高版本直接沿用。指定版本优先；继续、修复、重跑发布沿用 tracker 已选版本，失败不再次升级。版本选择与示例见 [发布流程](references/release-flow.md)。
+- 发布时自动核对上一个正式发布 tag 到固定发布 SHA 的提交与实际 diff，补全目标版本的 CHANGELOG，不仅搬运 Unreleased。发布期间纳入本次源码的修复与发布流程变化归入该版本；范围以 tag 源码为准，版本说明更新后重新固定并验证 SHA。具体增量规则见 [发布流程](references/release-flow.md#自动维护发布更新日志)。
 - tag 必须对应已验证的不可变提交；既有发布 tag 不移动、不强推。只有发布工作流、Release 附件和校验全部成功才能报告正式发布完成。
 - 本仓库保持 main 单线历史：临时工作分支及时 rebase 到最新 main，以 `merge --ff-only` 集成并清理；发布使用 main、固定 SHA 和 tag，不创建 release / 候选分支。具体集成与清理条件见发布流程。
 - 发布前使用干净提交验证源码完整性，推送 main 并完成同一 SHA 的手动三平台 Build Installers；`npm run release:ready -- v<version>` 通过后才创建 tag。仅 Linux CI 成功不足以证明 Windows / macOS 可发布。

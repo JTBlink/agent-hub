@@ -9,5 +9,6 @@
 - Logo、安装包图标、应用名和发布链接均属于 agent-hub。
 - 已配置测试远端时，验证备份、恢复、冲突流程；无远端时不声称已验证。
 - CHANGELOG、平台矩阵与 `.scratch/` 记录实际结果，汇总安装包及 SHA256SUMS 校验通过。
+- 自动核对上一个正式 tag 到发布 SHA 的用户可见变更，发布期间纳入的修复已归入目标版本；Release 正文、CHANGELOG 和 RELEASE_NOTES 与该版本源码一致。
 
 单台 macOS 本地验证不代表 Windows、Linux 或 Universal 安装验收完成。

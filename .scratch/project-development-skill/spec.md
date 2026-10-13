@@ -15,3 +15,5 @@ GitHub skill 最终命名为 `github-cli`，优先通过 `gh` 完成 Actions 故
 用户要求发布不创建分支，分支改动及时 rebase 并快进合入 main，保持单线历史。github-cli 1.4.0 统一 main、固定 SHA、候选与 tag 的发布约定；隔离检查使用 detached worktree，完成后安全清理临时分支。main 前进时重新核实发布范围和候选 SHA，同 ref 候选串行触发以免取消正常构建。本次只更新规范与检查提示，保留其他任务的应用版本改动，不触发发版。任务：[D08](issues/D08-linear-main-release.md)。
 
 用户要求更新 Skill，使正式发布时自动根据远端 tag 决定是否升级版本，再连续完成提交 push、同 SHA 候选、tag 和 Release 验收。github-cli 1.5.0 默认 patch，已准备的更高未打 tag 版本直接沿用；指定版本和失败续发保持原版本。先提交 push 技能更新，再按新规则发布已提交 main，保留其他任务未提交改动。现有 Actions 不增加版本升级入口。任务：[D09](issues/D09-automatic-version-release.md)。
+
+用户在 0.1.6 准备期间补充要求：正式发布自动核对上一个 tag 至发布 SHA 的实际变更，完善该版本 CHANGELOG；发布期间纳入的改动更新同一版本，不重复升级或留在 Unreleased。github-cli 1.6.0 同步版本说明、SHA 重验证与线上附件一致性规范。0.1.6 尚未打 tag，按新规范补齐说明并重新验证新 SHA。任务：[D10](issues/D10-release-changelog.md)。

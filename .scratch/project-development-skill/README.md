@@ -10,3 +10,4 @@
 - [D07：优化 GitHub Skill 的版本约束与发布证据](issues/D07-github-cli-workflow-review.md)
 - [D08：main 单线集成与无分支发布](issues/D08-linear-main-release.md)
 - [D09：根据远端 tag 自动选版并连续发布](issues/D09-automatic-version-release.md)
+- [D10：发布期间自动维护版本更新日志](issues/D10-release-changelog.md)

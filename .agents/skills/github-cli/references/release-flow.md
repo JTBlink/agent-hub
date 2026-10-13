@@ -27,6 +27,26 @@ node .agents/skills/github-cli/scripts/select-release-version.mjs --remote origi
 
 把选择依据、目标版本和发布范围写入 `.scratch/`，再同步版本文件。版本选定并进入候选验证后固定下来；候选失败或共享 main 前进不会重新选择版本。打 tag 前出现新的同名 tag 时按冲突规则处理，不自动改版本重跑整条流程。
 
+## 自动维护发布更新日志
+
+发布授权包含自动整理根目录 CHANGELOG，无需用户另行要求。先确定上一个已正式发布且位于本次源码历史中的 tag，核对其解引用 SHA 与祖先关系；无上一正式版本时按首次发布范围整理。不能用失败 / 未发布 tag、其他分支的最高版本或更新日志中的标题替代真实发布基线。
+
+```bash
+git merge-base --is-ancestor <previous-release-tag> <release-sha>
+git log --reverse --format='%h %s' <previous-release-tag>..<release-sha>
+git diff --stat <previous-release-tag>..<release-sha>
+```
+
+在 tracker 记录基线 tag、检查过的提交范围和目标版本。结合实际 diff、已有 Unreleased 与任务结果整理用户可见条目，按 Added / Changed / Fixed / Removed 等现有分类归档。补齐漏记的功能、缺陷修复、兼容性及发布流程变化，合并重复说明；不机械复制全部 commit 标题，也不把领取任务、验收记录或纯格式改动写成新功能。不得把未完成任务描述为已交付。
+
+- 首次准备目标版本：将属于本次源码的 Unreleased 内容迁入 `## [<version>] - <date>`，保留新的 Unreleased，并核对基线之后的提交是否遗漏。
+- 发布期间修复、增加或调整本次发布内容：自动更新同一版本章节，不重复创建章节、不再次升级。例如仍在准备 0.1.6 时，新增且纳入发布 SHA 的修复写入 0.1.6，而不是遗留在 Unreleased。
+- 说明与源码一起提交，重新固定 SHA 后再触发或复用该 SHA 的候选。候选已通过后新增 CHANGELOG 或代码提交，旧候选不能验证新 SHA；必须重新完成门禁。
+- 共享 main 后续提交、未提交改动及下一版内容，只有明确纳入本次发布并重新验证时才归入该版本。已固定 tag 的说明不能包含 tag 源码以外的改动；这些变化继续放在 Unreleased。
+- tag 与 Release 已发布后保持源码和附件不变。后续源码修复进入下一版本；发现历史说明错误时按事实更正文档，不移动 tag，也不声称已有附件包含更正后的内容。
+
+打 tag 前再次核对最终 SHA 的提交范围、版本章节和重复条目。`release:assemble` 从该 SHA 读取 CHANGELOG 生成 RELEASE_NOTES；发布后核对 Release 正文及下载的 CHANGELOG、RELEASE_NOTES 与该版本一致，不能只确认本地文件已修改。
+
 ## main 单线与分支集成
 
 本仓库发布直接使用 main、固定 commit SHA 与版本 tag，不创建 `release/*` 或独立候选分支。隔离验证使用 `git worktree add --detach <temporary-directory> <release-sha>`，完成后移除自己创建的 worktree。
@@ -41,7 +61,7 @@ node .agents/skills/github-cli/scripts/select-release-version.mjs --remote origi
 1. 确认用户要求的发布范围和实际发布远端，以 main 为发布主线；检查 HEAD 与工作区，不静默纳入无关改动。发布授权包含本次版本同步、发布提交、tag 和推送；仅要求普通提交或规范维护时不打 tag。
 2. 按上述规则选择并记录目标版本；`VERSION` 仍为应用版本唯一来源，远端 tag 仅用于决定是否需要更新 VERSION，tag 为 `v<version>`。保留用户指定版本，不能因构建失败自动升级。预发布版本包含 `-`，CI 标记为 prerelease。
 3. 版本配置已一致时只执行 `npm run version:check -- v<version>`；需要设置或同步时执行 `npm run version:set -- <version>`，再检查前端、Cargo、Tauri 与锁文件。
-4. 将正式说明写入 `CHANGELOG.md` 对应版本章节，保留新的 `Unreleased`；同步 tracker。说明与发布提交一致，不提前宣布未完成功能。
+4. 按上述增量规则自动核对提交范围并补全 `CHANGELOG.md` 对应版本章节，保留新的 `Unreleased`；同步 tracker。发布期间纳入的修复及时更新同一版本，说明与发布提交一致，不提前宣布未完成功能。
 5. 执行 [开发检查](../../rust-dev/references/development.md)，完成 Standards / Spec 审查；发布脚本与 workflow 改动运行相关合约测试。按 [提交规范](../../rust-dev/references/commit-conventions.md) 提交发布内容。
 6. 固定已提交的发布 SHA，在临时 detached worktree 核实源码完整性，并按风险验证失败点及尚未覆盖的检查。本机未提交或被忽略的源码不能参与发布验证；完整前端 / Rust 门禁必须由该 SHA 的干净检出通过，可复用成功候选中的质量 job，无需再重复全套本地检查。
 7. 查询同 SHA 的三平台 Build Installers 候选：成功则复用，进行中则跟踪，没有可用候选才确认远端 main 指向该 SHA 并手动运行。全部测试、打包、安装 smoke 和汇总校验通过后，执行 `npm run release:ready -- v<version>`，再在同一 SHA 创建 tag。细节见 [发布前验证](release-prevention.md)。
