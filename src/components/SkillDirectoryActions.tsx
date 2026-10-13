@@ -1,9 +1,9 @@
 import { Code2, FolderOpen } from "lucide-react";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getErrorMessage } from "../lib/error";
-import { vscodeDirectoryUrl } from "../lib/skillDirectory";
+import { openDirectoryInVscode } from "../lib/openInVscode";
 
 export function SkillDirectoryActions({
   path,
@@ -17,7 +17,7 @@ export function SkillDirectoryActions({
   const { t } = useTranslation();
   const open = async (editor: boolean) => {
     try {
-      if (editor) await openUrl(vscodeDirectoryUrl(path));
+      if (editor) await openDirectoryInVscode(path);
       else await openPath(path);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, t("common.error")));

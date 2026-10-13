@@ -9,6 +9,8 @@ import {
   type ProjectSkillEntry,
 } from "../lib/projectSkillEntries";
 import { DetailSheet } from "./DetailSheet";
+import { SkillDirectoryActions } from "./SkillDirectoryActions";
+import { CopyPathButton } from "./CopyPathButton";
 import { ProjectAgentDots } from "./ProjectAgentDots";
 import { ProjectSkillSyncActions } from "./ProjectSkillSyncActions";
 import { SkillMarkdown } from "./SkillMarkdown";
@@ -89,10 +91,13 @@ export function ProjectSkillDetailPanel({
           </>
         )}
       </div>
-      <div className="mt-3 flex items-center gap-4 text-[12.5px] text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-[12.5px] text-muted">
         <div className="flex min-w-0 items-center gap-1.5">
           <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-          <span className="font-mono truncate">{variant.path}</span>
+          <span className="font-mono truncate" title={variant.path}>
+            {variant.path}
+          </span>
+          <CopyPathButton path={variant.path} />
         </div>
         {skill.files.length > 0 && (
           <div className="flex shrink-0 items-center gap-1.5">
@@ -100,6 +105,7 @@ export function ProjectSkillDetailPanel({
             {skill.files.join(", ")}
           </div>
         )}
+        <SkillDirectoryActions path={variant.path} />
       </div>
     </>
   );

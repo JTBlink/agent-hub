@@ -2,6 +2,7 @@ import { FileText, Link2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { compactHomePath } from "../utils";
 import { SkillDirectoryActions } from "./SkillDirectoryActions";
+import { CopyPathButton } from "./CopyPathButton";
 import type { LocalSkillSelection } from "../lib/localSkillScan";
 
 export function LocalSkillLocation({
@@ -36,6 +37,7 @@ export function LocalSkillLocation({
           <code className="min-w-0 break-all text-[12px] text-muted">
             {compactHomePath(location.found_path)}
           </code>
+          <CopyPathButton path={location.found_path} disabled={busy} />
         </div>
         {location.resolved_path && (
           <div className="mt-1 min-w-0 break-all pl-5 text-[11px] text-tertiary">

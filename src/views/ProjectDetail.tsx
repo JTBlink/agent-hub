@@ -58,6 +58,7 @@ import type {
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { SkillDirectoryActions } from "../components/SkillDirectoryActions";
+import { CopyPathButton } from "../components/CopyPathButton";
 import {
   deleteProjectSkillGroup,
   toggleProjectSkillGroup,
@@ -954,9 +955,13 @@ export function ProjectDetail() {
                 title={compactHomePath(project.path)}
               >
                 {compactHomePath(project.path)}
-                {groupedSkills.length > 0 &&
-                  ` \u00B7 ${t("project.batchAgents.summary", { active: enabledCount, total: groupedSkills.length })}`}
               </span>
+              <CopyPathButton path={project.path} />
+              {groupedSkills.length > 0 && (
+                <span className="min-w-0 truncate">
+                  {`\u00B7 ${t("project.batchAgents.summary", { active: enabledCount, total: groupedSkills.length })}`}
+                </span>
+              )}
               <SkillDirectoryActions path={project.path} compact />
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SkillDirectoryActions } from "./SkillDirectoryActions";
+import { CopyPathButton } from "./CopyPathButton";
 import { toast } from "sonner";
 import { getSkillsDirectory, getBackupDirectory } from "../lib/tauri";
 import { compactHomePath } from "../utils";
@@ -39,9 +40,12 @@ export function SkillsDirectorySetting({
               : "settings.skillsDirectoryHint",
           )}
         </p>
-        <code className="mt-1 block break-all text-[12px] text-secondary">
-          {compactHomePath(path)}
-        </code>
+        <div className="mt-1 flex items-center gap-1.5">
+          <code className="min-w-0 break-all text-[12px] text-secondary">
+            {compactHomePath(path)}
+          </code>
+          <CopyPathButton path={path} />
+        </div>
       </div>
       <SkillDirectoryActions path={path} />
     </div>
