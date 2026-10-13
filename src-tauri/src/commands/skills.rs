@@ -3488,6 +3488,19 @@ pub fn rename_skill_internal(store: &SkillStore, id: &str, new_name: &str) -> Re
         }
 
         store.rename_skill(id, new_name)?;
+
+        // Update the SKILL.md frontmatter `name:` so the metadata scanner
+        // does not revert the display name on the next refresh cycle.
+        let final_central = if dir_changed {
+            old_central
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .join(&new_slug)
+        } else {
+            old_central.clone()
+        };
+        skill_metadata::update_skill_md_name(&final_central, new_name);
+
         sync_metadata::ensure_skill_metadata_unlocked(store, id)?;
         store.log_audit(
             AuditDraft::new("rename")

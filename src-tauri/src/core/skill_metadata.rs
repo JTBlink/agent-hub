@@ -179,6 +179,60 @@ pub fn infer_skill_name(dir: &Path) -> String {
         .unwrap_or_else(|| "unknown-skill".to_string())
 }
 
+/// Rewrite the `name:` field inside the SKILL.md frontmatter to `new_name`.
+/// Returns `true` if the file was updated, `false` if no SKILL.md or no
+/// frontmatter `name` field was found.
+pub fn update_skill_md_name(dir: &Path, new_name: &str) -> bool {
+    for candidate in SKILL_DIR_MARKERS {
+        let Some(content) = read_named_file_exact(dir, candidate) else {
+            continue;
+        };
+        let trimmed = content.trim_start();
+        if !trimmed.starts_with("---") {
+            continue;
+        }
+        let rest = &trimmed[3..];
+        let Some(end) = rest.find("---") else {
+            continue;
+        };
+        let fm_start = content.find("---").unwrap();
+        let fm_body_start = fm_start + 3;
+        let fm_body_end = fm_body_start + end;
+        let fm_body = &content[fm_body_start..fm_body_end];
+        let mut updated_lines = Vec::new();
+        let mut found = false;
+        for line in fm_body.lines() {
+            let stripped = line.trim_start();
+            if stripped.starts_with("name:") && !found {
+                // Preserve leading whitespace.
+                let indent = &line[..line.len() - stripped.len()];
+                updated_lines.push(format!("{indent}name: {new_name}"));
+                found = true;
+            } else {
+                updated_lines.push(line.to_string());
+            }
+        }
+        if !found {
+            continue;
+        }
+        // Preserve original trailing newline in the frontmatter body.
+        let trailing = if fm_body.ends_with('\n') { "\n" } else { "" };
+        let new_body = updated_lines.join("\n") + trailing;
+        let new_content = format!(
+            "{}{}{}",
+            &content[..fm_body_start],
+            new_body,
+            &content[fm_body_end..],
+        );
+        // Resolve file path case-exactly (the candidate name may differ).
+        let file_path = dir.join(candidate);
+        if std::fs::write(&file_path, new_content).is_ok() {
+            return true;
+        }
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
