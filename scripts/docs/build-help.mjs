@@ -26,7 +26,7 @@ function copyHelpAssets(root, target, assets) {
     cpSync(asset, output);
   }
 }
-function writeWebsite(root, catalog, pages, assets) {
+function writeWebsite(root, catalog, pages, assets, changelog) {
   const directory = join(root, "docs-site/.generated");
   rmSync(directory, { recursive: true, force: true });
   copyHelpAssets(root, join(directory, "assets"), assets);
@@ -36,6 +36,16 @@ function writeWebsite(root, catalog, pages, assets) {
     "# AgentHub 帮助中心\n\n[中文](zh/index.md) · [English](en/index.md) · [繁體中文](zh-TW/index.md)\n",
   );
   for (const locale of locales) {
+    const changelogNotice =
+      locale === "en"
+        ? "> The changelog is currently available in Chinese. Unreleased entries describe development changes, not released packages.\n\n"
+        : locale === "zh-TW"
+          ? "> 更新日誌目前提供簡體中文。Unreleased 是開發中的變更，尚未包含在已發布的安裝包中。\n\n"
+          : "> Unreleased 是开发中的变更，尚未包含在已发布的安装包中。\n\n";
+    write(
+      join(directory, locale, "changelog.md"),
+      `---\noutline: [2, 3]\neditLink: false\nprev: false\nnext: false\n---\n${changelog.replace(/^(# .+\r?\n)/, `$1\n${changelogNotice}`)}`,
+    );
     const list = catalog.navigation.categories.map((category) => {
       const entries = category.articles.map((id) => {
         const article = findHelpArticle(catalog.articles, id, locale);
@@ -82,6 +92,7 @@ function writeWebsite(root, catalog, pages, assets) {
 /** Validate the public content boundary before replacing any generated artifacts. */
 export function buildHelp(root, { checkOnly = false } = {}) {
   const source = join(root, "docs/help");
+  const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   const version = readFileSync(join(root, "VERSION"), "utf8").trim();
   if (!/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(version))
     throw new Error("Invalid application VERSION");
@@ -191,7 +202,7 @@ export function buildHelp(root, { checkOnly = false } = {}) {
     const assetDirectory = join(root, "public/help-assets");
     rmSync(assetDirectory, { recursive: true, force: true });
     copyHelpAssets(root, assetDirectory, assets);
-    writeWebsite(root, catalog, pages, assets);
+    writeWebsite(root, catalog, pages, assets, changelog);
   }
   return catalog;
 }

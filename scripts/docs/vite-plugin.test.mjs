@@ -17,6 +17,7 @@ it("resolves the offline catalog on a direct Vite start with no generated files"
   mkdirSync(join(root, "docs/help/zh"), { recursive: true });
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "VERSION"), "0.1.4\n");
+  writeFileSync(join(root, "CHANGELOG.md"), "# 更新日志\n\n## [Unreleased]\n");
   writeFileSync(
     join(root, "package.json"),
     JSON.stringify({

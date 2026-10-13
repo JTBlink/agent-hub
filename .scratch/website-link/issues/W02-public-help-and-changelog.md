@@ -14,6 +14,16 @@ Blocked by: W01
 - 更新日志由当前 CHANGELOG.md 构建，明确含未发布变更；帮助站可在三种界面语言下访问日志，正文未翻译时注明中文回退。
 - 移动布局、键盘、链接、构建与相关测试通过；按本次会话授权提交 push 并验证 Pages。
 
+- 顶部与首屏下载直接进入用户指定 GitHub Releases，不触发页内滚动。
+
 ## Comments
 
 - 保留当前工作区其他侧栏导航修改，只暂存本任务文件及独立 changelog 增量。
+
+## Result
+
+- [官网](../../../homepage/index.html) 主导航与页脚增加帮助和更新日志入口，首屏使用“帮助中心”；顶部与首屏下载直接进入用户指定 GitHub Releases，保留平台说明区。
+- [网站生成](../../../scripts/docs/build-help.mjs) 读取根目录 CHANGELOG.md，生成三语路径的版本日志页，注明 Unreleased 是开发变更、英文与繁体回退中文；日志不进入离线帮助文章目录。[文档站配置](../../../docs-site/.vitepress/config.mts) 三语导航新增更新日志。
+- 开发服务器监听 CHANGELOG.md 变化重新生成页面；[维护说明](../../../docs/help/README.md) 补充入口、数据源与发布方式。
+- 相关 3 个文件、17 项测试通过，覆盖源日志更新后网页刷新与离线文章边界；相关 ESLint、Prettier、docs:check、website:build 和差异检查通过。浏览器验证 1440/768/375px 无横向溢出，帮助点击、日志键盘跳转、三语日志与未发布说明、两个下载目标正确。
+- Standards：复用既有 VitePress 阅读与公开文档构建，不维护日志副本；Spec：帮助、站内日志与直达下载均已本地验收。只暂存本任务变更；Pages 线上结果待部署后补记。

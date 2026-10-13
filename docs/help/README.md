@@ -55,3 +55,9 @@ related: [project-team-sharing]
 应用开发、测试和生产构建自动准备文档；直接启动 Vite 时也会在解析应用模块前生成离线文档。开发服务器监听内容变更并重新生成；如果调整网站导航或分类配置，请重启网站开发服务器，使站点配置重新读取导航。
 
 `src/generated/help/`、`public/help-assets/` 和 `docs-site/.generated/` 是可重建目录，不提交、不手动编辑。新增文章不需要修改 React 页面；新增分类只需配置其三语标题和成员。
+
+## 官网更新日志
+
+官网主导航与页脚提供帮助、更新日志入口。更新日志网页位于 `docs/zh/changelog.html`，构建时直接读取根目录 `CHANGELOG.md`，保留版本章节并说明 `Unreleased` 是尚未发布的开发变更；英文与繁体界面明确提示正文回退简体中文。日志不进入桌面离线帮助文章目录，无需在帮助导航 YAML 中重复维护。
+
+修改更新日志后执行 `npm run website:build` 并按既有 Pages 流程部署；文档开发服务器会监听日志变化并刷新生成页。官网顶部与首屏下载按钮直接进入 GitHub Releases。
