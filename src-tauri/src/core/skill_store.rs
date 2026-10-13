@@ -354,6 +354,17 @@ impl SkillStore {
         Ok(())
     }
 
+    pub fn update_central_path(&self, id: &str, new_path: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = chrono::Utc::now().timestamp_millis();
+        let changed = conn.execute(
+            "UPDATE skills SET central_path = ?1, updated_at = ?2 WHERE id = ?3",
+            params![new_path, now, id],
+        )?;
+        anyhow::ensure!(changed > 0, "skill not found: {id}");
+        Ok(())
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn update_skill_after_install(
         &self,
