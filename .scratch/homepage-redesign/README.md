@@ -22,5 +22,5 @@
 | D04 首页概览卡片去重        | resolved |
 | D05 工作台视觉与布局        | resolved |
 | D06 减少首页滚动            | resolved |
-| D07 项目优先与截图同步      | claimed  |
+| D07 项目优先与截图同步      | resolved |
 | B04 官网发布源与依赖锁文件  | resolved |
