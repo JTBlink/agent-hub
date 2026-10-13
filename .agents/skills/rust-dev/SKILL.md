@@ -3,7 +3,7 @@ name: rust-dev
 description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、模块边界、测试、兼容性和提交要求。
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # 项目开发规范
@@ -30,10 +30,9 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 | Logo、平台图标与导出               | [图标规范](references/icon-assets.md)                                                                                   |
 | 测试、审查与收尾                   | [交付规范](references/delivery.md)、[提交规范](references/commit-conventions.md)                                        |
 | 需求、状态与领域文档               | [Issue tracker](references/issue-tracker.md)、[分诊状态](references/triage-labels.md)、[领域文档](references/domain.md) |
-| GitHub 发布与 Actions              | 切换到 [github-cli](../github-cli/SKILL.md)                                                                             |
 | GitHub Device Flow、凭据与授权品牌 | [OAuth 维护](references/github-oauth-setup.md)                                                                          |
 
-只读当前任务所需资料。普通开发不触发发布；版本、tag、Actions 与 Release 的规范由 `github-cli` 统一维护。
+只读当前任务所需资料；本 skill 独立执行开发任务，普通开发不触发发布，版本 tag、Actions 与 Release 不属于本技能范围。
 
 ## 执行与交付
 

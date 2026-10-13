@@ -35,4 +35,4 @@ git diff --check
 - 当前会话已授权提交时执行领取与交付提交，否则保留本地记录；不能因此停止已经授权的实现。
 - Git 提交格式、正文、隐私与 Standards / Spec 两轴审查统一遵循 [提交规范](commit-conventions.md)，不重复维护另一份要求。
 - 每次收尾检查用户可见行为、发布流程或兼容性变化，必要时更新 `CHANGELOG.md`。
-- 版本同步、tag、GitHub Actions 与 Release 使用 [github-cli](../../github-cli/SKILL.md)。普通开发不自动触发发布。
+- 本技能交付范围为开发、检查与已授权的提交；普通开发不自动触发 tag、Actions 或 Release。

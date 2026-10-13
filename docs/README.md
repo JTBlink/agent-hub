@@ -11,7 +11,7 @@
 - [项目开发 Skill](../.agents/skills/rust-dev/SKILL.md)与 [GitHub 发布 Skill](../.agents/skills/github-cli/SKILL.md)
 - [视觉规范](../.agents/skills/rust-dev/references/ui-guidelines.md)与[图标](../.agents/skills/rust-dev/references/icon-assets.md)
 - [开发指南](../.agents/skills/rust-dev/references/development.md)与[开发规范](../.agents/skills/rust-dev/references/coding-standards.md)
-- [CI/CD](../.agents/skills/github-cli/references/ci-cd.md)、[平台支持](../.agents/skills/github-cli/references/platform-support.md)及[发布验收](../.agents/skills/github-cli/references/release-checklist.md)
+- [CI/CD 配置](../.agents/skills/github-cli/references/ci-cd.md)、[平台支持](../.agents/skills/github-cli/references/platform-support.md)及[版本发布流程](../.agents/skills/github-cli/references/release-flow.md)
 - [提交规范](../.agents/skills/rust-dev/references/commit-conventions.md)
 - [GitHub OAuth App 注册与品牌维护](../.agents/skills/rust-dev/references/github-oauth-setup.md)
 - [ADR 索引](adr/README.md)
