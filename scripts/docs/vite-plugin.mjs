@@ -11,10 +11,15 @@ export function helpContentPlugin(root) {
     },
     configureServer(server) {
       const source = join(root, "docs/help");
-      server.watcher.add(source);
+      const changelog = join(root, "CHANGELOG.md");
+      server.watcher.add([source, changelog]);
       let pending;
       const regenerate = (path) => {
-        if (!path.startsWith(`${source}/`) && !path.startsWith(`${source}\\`))
+        if (
+          path !== changelog &&
+          !path.startsWith(`${source}/`) &&
+          !path.startsWith(`${source}\\`)
+        )
           return;
         clearTimeout(pending);
         pending = setTimeout(() => {

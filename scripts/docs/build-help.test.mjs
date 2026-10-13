@@ -18,6 +18,10 @@ function fixture() {
   mkdirSync(join(root, "docs/help/zh/guides"), { recursive: true });
   writeFileSync(join(root, "VERSION"), "0.1.4\n");
   writeFileSync(
+    join(root, "CHANGELOG.md"),
+    "# 更新日志\n\n## [Unreleased]\n\n开发变更。\n",
+  );
+  writeFileSync(
     join(root, "package.json"),
     JSON.stringify({ homepage: "https://example.invalid/agent-hub/" }),
   );
@@ -36,6 +40,34 @@ afterEach(() =>
     .splice(0)
     .forEach((root) => rmSync(root, { recursive: true, force: true })),
 );
+
+it("publishes the source changelog in every website locale and refreshes it without adding offline articles", () => {
+  const root = fixture();
+  const initial = buildHelp(root);
+  expect(initial.articles.map((article) => article.id)).toEqual(["first"]);
+  for (const locale of ["zh", "en", "zh-TW"]) {
+    const page = readFileSync(
+      join(root, "docs-site/.generated", locale, "changelog.md"),
+      "utf8",
+    );
+    expect(page).toContain("## [Unreleased]");
+    expect(page).toContain("开发变更。");
+  }
+  expect(
+    readFileSync(join(root, "docs-site/.generated/en/changelog.md"), "utf8"),
+  ).toContain("available in Chinese");
+  writeFileSync(
+    join(root, "CHANGELOG.md"),
+    "# 更新日志\n\n## [0.1.4]\n\n发布变更。\n",
+  );
+  buildHelp(root);
+  const updated = readFileSync(
+    join(root, "docs-site/.generated/zh/changelog.md"),
+    "utf8",
+  );
+  expect(updated).toContain("发布变更。");
+  expect(updated).not.toContain("开发变更。");
+});
 
 it("publishes one Markdown article as both offline content and a stable website page", () => {
   const root = fixture();

@@ -6,6 +6,8 @@
 
 ### Changed
 
+- 官网新增帮助和站内更新日志入口，日志正文自动读取 CHANGELOG.md；顶部和首屏下载直接进入 GitHub Releases。
+
 - 设置页“官网”入口改为产品主页 `https://jtblink.github.io/agent-hub/`。
 
 - 工作台默认展示项目工作空间，加宽项目导航并将近期技能合并为紧凑列表；工作空间较多时支持名称搜索与清除，更新 README 与官网产品截图。

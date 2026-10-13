@@ -18,6 +18,7 @@ const labels = {
     title: "帮助中心",
     search: "搜索文档",
     back: "返回产品首页",
+    changelog: "更新日志",
   },
   en: {
     label: "English",
@@ -25,6 +26,7 @@ const labels = {
     title: "Help center",
     search: "Search documentation",
     back: "Product home",
+    changelog: "Changelog",
   },
   "zh-TW": {
     label: "繁體中文",
@@ -32,6 +34,7 @@ const labels = {
     title: "說明中心",
     search: "搜尋文件",
     back: "產品首頁",
+    changelog: "更新日誌",
   },
 };
 
@@ -55,6 +58,7 @@ export default defineConfig({
         themeConfig: {
           nav: [
             { text: text.title, link: `/${locale}/` },
+            { text: text.changelog, link: `/${locale}/changelog` },
             { text: text.back, link: new URL("../", catalog.siteUrl).href },
           ],
           sidebar: catalog.navigation.categories.map(
