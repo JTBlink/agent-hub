@@ -29,10 +29,25 @@ node .agents/skills/github-cli/scripts/select-release-version.mjs --remote <remo
 
 ## 3. 验证同一 SHA 的候选
 
-在隔离检出中核实所有源码已提交，避免本机未跟踪或被忽略的文件影响验证：
+发布验证 worktree 固定为仓库同级的 `agent-hub-release`，候选验证、tag 操作和附件验收共用这一目录，不再使用随机临时 worktree。路径从仓库根目录解析，不依赖当前 shell 所在目录；在 tracker 中用相对路径记录位置和固定 SHA。
+
+从主仓库解析固定路径：
 
 ```bash
-git worktree add --detach <temporary-checkout> <release-sha>
+release_checkout="$(dirname "$(git rev-parse --show-toplevel)")/agent-hub-release"
+```
+
+先检查 `git worktree list --porcelain`、目录归属、工作区状态和进程占用。目录不存在且无遗留注册时创建：
+
+```bash
+git worktree add --detach "$release_checkout" <release-sha>
+```
+
+已存在时，仅复用属于当前仓库、无未提交或未跟踪内容且无人使用的 detached worktree；SHA 相同则直接使用，SHA 不同则在核实发布范围后执行 `git -C "$release_checkout" checkout --detach <release-sha>`。被忽略的构建产物也需核实，避免污染新 SHA 的验证。目录归属不符、有待保留内容或正在使用时保留现场并说明占用，不覆盖目录、不另建随机 worktree。旧随机目录仍在验收时先完成该任务，再安全清理，后续发布使用固定目录。
+
+在隔离检出中核实所有源码已提交，避免本机未跟踪或被忽略的文件影响验证；从主仓库查询同 SHA 的候选：
+
+```bash
 gh run list --repo <repo> --workflow build-installers.yml --event workflow_dispatch --commit <release-sha> --json databaseId,headSha,status,conclusion,url
 ```
 
@@ -42,9 +57,10 @@ gh run list --repo <repo> --workflow build-installers.yml --event workflow_dispa
 gh workflow run build-installers.yml --repo <repo> --ref main
 ```
 
-记录 run ID，核对实际构建 SHA，等待质量检查、三平台 core tests、安装启动 smoke 和汇总校验全部成功。在上述干净检出目录执行：
+记录 run ID，核对实际构建 SHA，等待质量检查、三平台 core tests、安装启动 smoke 和汇总校验全部成功。在上述干净检出目录执行后续发布验证、tag 操作与附件校验：
 
 ```bash
+cd "$release_checkout"
 npm run release:ready -- v<version>
 ```
 
@@ -98,7 +114,7 @@ npm run release:verify -- <temporary-download>
 
 - 确认四种安装格式、SHA256SUMS、CHANGELOG、PLATFORM_SUPPORT、RELEASE_NOTES 完整；Release 正文与下载的版本说明对应发布源码。
 - 在各平台干净用户环境验证首次启动、技能库、工作空间、设置、主题、品牌图标与卸载；确认 CLI 版本和架构、本地数据路径。涉及备份改动且有测试远端时验证备份、恢复与冲突。未完成的原生验收如实列出。
-- 回写 tracker：版本、tag、解引用 SHA、候选与正式 run、Release 链接、附件校验、签名及官网结果。清理自己的下载目录和 worktree。
+- 回写 tracker：版本、tag、解引用 SHA、候选与正式 run、Release 链接、附件校验、签名及官网结果。验收完成后退出发布目录，确认工作区干净且无人使用，再从主仓库执行 `git worktree remove "$release_checkout"`，清理自己的下载目录；失败续发时保留固定 worktree 并记录状态，下次在同一路径复用。
 
 正式安装包工作流成功、Release 存在且附件校验通过，才可报告发布完成；只有 tag 或候选 artifacts 不算完成。
 
