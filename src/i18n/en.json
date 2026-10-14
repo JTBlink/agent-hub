@@ -186,7 +186,15 @@
       "modified": "Modified",
       "deleted": "Deleted",
       "renamed": "Renamed",
-      "conflicted": "Conflict"
+      "conflicted": "Conflict",
+      "viewDiff": "View Diff",
+      "diffTitle": "File Diff",
+      "backToBackup": "Back to Backup",
+      "binaryFile": "Binary file — diff not available",
+      "tooLarge": "File too large (over 1 MB) — diff not available",
+      "fileDeleted": "File deleted",
+      "fileAdded": "New file",
+      "noContent": "No content changes"
     },
     "actions": {
       "backupNow": "Back Up Now",

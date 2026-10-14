@@ -112,6 +112,18 @@ pub async fn git_backup_status(
 }
 
 #[tauri::command]
+pub async fn git_backup_file_diff(
+    path: String,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<git_backup::GitBackupFileDiff, AppError> {
+    let store = store.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        backup_workspace::file_diff(&store, &path).map_err(AppError::git)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn git_backup_init(store: State<'_, Arc<SkillStore>>) -> Result<(), AppError> {
     let store = store.inner().clone();
     tokio::task::spawn_blocking(move || {

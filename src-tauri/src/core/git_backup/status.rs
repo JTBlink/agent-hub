@@ -141,30 +141,7 @@ fn pending_changes(
     ahead: u32,
     upstream_health: &str,
 ) -> Result<Vec<GitBackupChange>> {
-    let head = match repo.head() {
-        Ok(head) => Some(head.peel_to_commit()?),
-        Err(error)
-            if matches!(
-                error.code(),
-                git2::ErrorCode::UnbornBranch | git2::ErrorCode::NotFound
-            ) =>
-        {
-            None
-        }
-        Err(error) => return Err(error.into()),
-    };
-    let baseline = if upstream_health == "no_upstream" {
-        None // A first upload must include all existing files.
-    } else if ahead > 0 {
-        let head = head.as_ref().context("Backup HEAD is missing")?;
-        let upstream = repo.revparse_single("@{upstream}")?.peel_to_commit()?;
-        Some(
-            repo.find_commit(repo.merge_base(head.id(), upstream.id())?)?
-                .tree()?,
-        )
-    } else {
-        head.map(|head| head.tree()).transpose()?
-    };
+    let baseline = resolve_baseline(repo, ahead, upstream_health)?;
     let mut options = git2::DiffOptions::new();
     options
         .include_untracked(true)
@@ -207,6 +184,118 @@ fn pending_changes(
     }
     changes.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(changes)
+}
+
+const MAX_DIFF_SIZE: usize = 1_048_576; // 1 MiB
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct GitBackupFileDiff {
+    pub path: String,
+    pub status: BackupChangeKind,
+    /// "text" | "binary" | "too_large"
+    pub content_kind: String,
+    pub original_text: Option<String>,
+    pub updated_text: Option<String>,
+}
+
+fn resolve_baseline<'a>(
+    repo: &'a git2::Repository,
+    ahead: u32,
+    upstream_health: &str,
+) -> Result<Option<git2::Tree<'a>>> {
+    let head = match repo.head() {
+        Ok(head) => Some(head.peel_to_commit()?),
+        Err(error)
+            if matches!(
+                error.code(),
+                git2::ErrorCode::UnbornBranch | git2::ErrorCode::NotFound
+            ) =>
+        {
+            None
+        }
+        Err(error) => return Err(error.into()),
+    };
+    if upstream_health == "no_upstream" {
+        Ok(None)
+    } else if ahead > 0 {
+        let head = head.as_ref().context("Backup HEAD is missing")?;
+        let upstream = repo.revparse_single("@{upstream}")?.peel_to_commit()?;
+        Ok(Some(
+            repo.find_commit(repo.merge_base(head.id(), upstream.id())?)?
+                .tree()?,
+        ))
+    } else {
+        Ok(head.map(|h| h.tree()).transpose()?)
+    }
+}
+
+pub fn get_file_diff(skills_dir: &Path, file_path: &str) -> Result<GitBackupFileDiff> {
+    let repo = git2::Repository::open(skills_dir).context("Cannot read backup repository")?;
+    let (ahead, _) = get_ahead_behind(skills_dir).unwrap_or((0, 0));
+    let upstream_health = detect_upstream_health(skills_dir, false);
+    let baseline = resolve_baseline(&repo, ahead, &upstream_health)?;
+
+    let original_blob = baseline.as_ref().and_then(|tree| {
+        tree.get_path(Path::new(file_path))
+            .ok()
+            .and_then(|entry| entry.to_object(&repo).ok())
+            .and_then(|obj| obj.into_blob().ok())
+    });
+
+    let workdir_path = skills_dir.join(file_path);
+    let workdir_content = std::fs::read(&workdir_path).ok();
+
+    let is_binary = |data: &[u8]| data.contains(&0);
+
+    let orig_binary = original_blob.as_ref().is_some_and(|b| is_binary(b.content()));
+    let work_binary = workdir_content.as_ref().is_some_and(|c| is_binary(c));
+    if orig_binary || work_binary {
+        let status = if original_blob.is_none() {
+            BackupChangeKind::Added
+        } else if workdir_content.is_none() {
+            BackupChangeKind::Deleted
+        } else {
+            BackupChangeKind::Modified
+        };
+        return Ok(GitBackupFileDiff {
+            path: file_path.to_string(),
+            status,
+            content_kind: "binary".to_string(),
+            original_text: None,
+            updated_text: None,
+        });
+    }
+
+    let orig_size = original_blob.as_ref().map_or(0, |b| b.content().len());
+    let work_size = workdir_content.as_ref().map_or(0, |c| c.len());
+    if orig_size > MAX_DIFF_SIZE || work_size > MAX_DIFF_SIZE {
+        return Ok(GitBackupFileDiff {
+            path: file_path.to_string(),
+            status: BackupChangeKind::Modified,
+            content_kind: "too_large".to_string(),
+            original_text: None,
+            updated_text: None,
+        });
+    }
+
+    let original_text = original_blob.map(|b| String::from_utf8_lossy(b.content()).into_owned());
+    let updated_text = workdir_content.map(|c| String::from_utf8_lossy(&c).into_owned());
+
+    let status = if original_text.is_none() {
+        BackupChangeKind::Added
+    } else if updated_text.is_none() {
+        BackupChangeKind::Deleted
+    } else {
+        BackupChangeKind::Modified
+    };
+
+    Ok(GitBackupFileDiff {
+        path: file_path.to_string(),
+        status,
+        content_kind: "text".to_string(),
+        original_text,
+        updated_text,
+    })
 }
 
 fn count_changed_skills(changes: &[GitBackupChange]) -> u32 {

@@ -16,6 +16,7 @@ import { InstallSkills } from "./views/InstallSkills";
 import { Settings } from "./views/Settings";
 import { ProjectDetail } from "./views/ProjectDetail";
 import { Backup } from "./views/Backup";
+import BackupDiff from "./views/BackupDiff";
 import { Help } from "./views/Help";
 
 function ThemedToaster() {
@@ -63,6 +64,7 @@ function App() {
               />
               <Route path="/install" element={<InstallSkills />} />
               <Route path="/backup" element={<Backup />} />
+              <Route path="/backup/diff" element={<BackupDiff />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/help" element={<Help />} />

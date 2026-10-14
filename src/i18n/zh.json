@@ -184,7 +184,15 @@
       "modified": "修改",
       "deleted": "删除",
       "renamed": "重命名",
-      "conflicted": "冲突"
+      "conflicted": "冲突",
+      "viewDiff": "查看差异",
+      "diffTitle": "文件差异",
+      "backToBackup": "返回备份",
+      "binaryFile": "二进制文件，无法显示差异",
+      "tooLarge": "文件过大（超过 1MB），无法显示差异",
+      "fileDeleted": "文件已删除",
+      "fileAdded": "新增文件",
+      "noContent": "无内容变更"
     },
     "actions": {
       "backupNow": "立即备份",

@@ -54,6 +54,13 @@ pub fn status(store: &SkillStore) -> Result<git_backup::GitBackupStatus> {
     run(store, "backup status", git_backup::get_status)
 }
 
+pub fn file_diff(store: &SkillStore, path: &str) -> Result<git_backup::GitBackupFileDiff> {
+    let path = path.to_string();
+    run(store, "backup file diff", move |root| {
+        git_backup::get_file_diff(root, &path)
+    })
+}
+
 pub fn initialize(store: &SkillStore) -> Result<()> {
     run(store, "backup init", |root| {
         if root.join(".git").exists() {
