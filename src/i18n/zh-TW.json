@@ -192,7 +192,8 @@
       "tooLarge": "檔案過大（超過 1MB），無法顯示差異",
       "fileDeleted": "檔案已刪除",
       "fileAdded": "新增檔案",
-      "noContent": "無內容變更"
+      "noContent": "無內容變更",
+      "selectFile": "選擇左側檔案檢視差異"
     },
     "actions": {
       "backupNow": "立即備份",
