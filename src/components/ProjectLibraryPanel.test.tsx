@@ -94,6 +94,23 @@ it("does not treat an ignored management manifest as a blocked skill delivery", 
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(container.textContent).toContain("不影响团队成员使用技能");
 });
+it("does not count a changed management record as a warning when Agent entries are current", async () => {
+  api.status.mockResolvedValue({
+    ...report,
+    ignored_paths: [],
+    skills: report.skills.map((skill) => ({
+      ...skill,
+      modified: true,
+      stale_targets: [],
+      target_issues: [],
+    })),
+  });
+  await render();
+  expect(container.querySelector("summary")?.textContent).not.toContain("警告");
+  expect(
+    container.querySelector("summary")?.classList.contains("text-amber-600"),
+  ).toBe(false);
+});
 it("copies only native skill paths and directly shows all guidance after one expansion", async () => {
   await render();
   expect(container.querySelectorAll("details")).toHaveLength(1);

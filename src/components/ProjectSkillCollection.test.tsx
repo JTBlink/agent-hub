@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
+import en from "../i18n/en.json";
+import zhTW from "../i18n/zh-TW.json";
 import {
   createProjectLibraryStatus,
   createProjectSkill,
@@ -13,7 +15,14 @@ import { groupProjectSkills } from "../lib/projectSkillEntries";
 import { ProjectSkillCollection } from "./ProjectSkillCollection";
 
 const i18n = createInstance();
-await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
+await i18n.init({
+  lng: "zh",
+  resources: {
+    zh: { translation: zh },
+    en: { translation: en },
+    "zh-TW": { translation: zhTW },
+  },
+});
 const t = i18n.t.bind(i18n);
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
 let container: HTMLDivElement;
@@ -30,7 +39,8 @@ const skills = groupProjectSkills(
   ],
   createProjectLibraryStatus([createTeamStatus()]),
 );
-beforeEach(() => {
+beforeEach(async () => {
+  await i18n.changeLanguage("zh");
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
   container = document.createElement("div");
@@ -76,6 +86,58 @@ async function render(
     ),
   );
 }
+it.each(["grid", "list"] as const)(
+  "does not offer Agent restoration for a changed record with current entries in %s view",
+  async (viewMode) => {
+    const current = { ...createTeamStatus("demo", false), modified: true };
+    for (const [locale, label] of [
+      ["zh", "与个人技能库一致"],
+      ["en", "Matches personal library"],
+      ["zh-TW", "與個人技能庫一致"],
+    ]) {
+      await i18n.changeLanguage(locale);
+      await render({
+        viewMode,
+        skills: groupProjectSkills(
+          [createProjectSkill()],
+          createProjectLibraryStatus([current]),
+        ),
+      });
+      expect(container.textContent).toContain(label);
+      expect(container.textContent).not.toContain(t("projectLibrary.modified"));
+      expect(container.textContent).not.toContain(
+        t("projectLibrary.modifiedHelp"),
+      );
+      expect(
+        container.querySelector(
+          `button[aria-label="${t("projectLibrary.repair")}"]`,
+        ),
+      ).toBeNull();
+    }
+    expect(onRepair).not.toHaveBeenCalled();
+  },
+);
+it.each(["grid", "list"] as const)(
+  "still restores actual Agent issues when project content has changed in %s view",
+  async (viewMode) => {
+    await render({
+      viewMode,
+      skills: groupProjectSkills(
+        [createProjectSkill()],
+        createProjectLibraryStatus([{ ...createTeamStatus(), modified: true }]),
+      ),
+    });
+    expect(container.textContent).toContain("部分 Agent 的技能文件需要处理");
+    expect(container.textContent).toContain("相对上次管理记录有变更");
+    const button = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="恢复 Agent 技能"]',
+    );
+    expect(button).not.toBeNull();
+    await act(async () => button?.click());
+    expect(onRepair).toHaveBeenCalledExactlyOnceWith("demo");
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  },
+);
 it.each(["grid", "list"] as const)(
   "shows refresh on the matching skill in %s view without opening details",
   async (viewMode) => {

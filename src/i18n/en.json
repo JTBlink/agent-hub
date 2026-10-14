@@ -1189,7 +1189,7 @@
     "alreadyInCenter": "In Center",
     "syncStatus": {
       "projectOnly": "Project only",
-      "inSync": "In sync",
+      "inSync": "Matches personal library",
       "projectNewer": "Project newer",
       "centerNewer": "Center newer",
       "diverged": "Diverged"
@@ -1407,7 +1407,7 @@
     },
     "repairHelp": "Update only existing Agent skills to the current project version. Unassigned Agents stay unassigned; independent copy edits are preserved and reported.",
     "staleHelp": "Agents needing attention: {{agents}}. Existing links point elsewhere or copies differ from the project version. Unassigned Agents need no action.",
-    "modifiedHelp": "The project skill has changed. Restoring uses the current project version and preserves independent edits in Agent folders.",
+    "modifiedHelp": "Project content has changed since the last management record. Restoring uses the current project version and preserves independent edits in Agent folders.",
     "installPlanCopy": "Save to the project central library .agents/skills, then create Agent copies. After committing, teammates can use skills without AgentHub.",
     "centralHelp": "Project skills live in .agents/skills and Agent entries use this content. Personal library updates do not automatically change the project version.",
     "centralLibrary": "Project central skills library",

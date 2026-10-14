@@ -1187,7 +1187,7 @@
     "alreadyInCenter": "已在中心",
     "syncStatus": {
       "projectOnly": "仅项目",
-      "inSync": "与中心一致",
+      "inSync": "与个人技能库一致",
       "projectNewer": "项目较新",
       "centerNewer": "中心较新",
       "diverged": "已分叉"
@@ -1405,7 +1405,7 @@
     },
     "repairHelp": "仅更新已添加的 Agent，让它们使用当前项目版本；未添加的 Agent 不会自动添加，单独修改过的副本会保留并提示处理。",
     "staleHelp": "需要处理的 Agent：{{agents}}。已有链接指向其他位置，或副本与项目版本不同。未添加的 Agent 不需要处理。",
-    "modifiedHelp": "项目技能已修改。恢复时会让 Agent 使用当前项目版本；Agent 目录里单独修改过的内容会保留。",
+    "modifiedHelp": "项目内容相对上次管理记录有变更。恢复使用当前项目版本；Agent 目录里单独修改过的内容会保留。",
     "installPlanCopy": "先保存到 .agents/skills 项目中央仓库，再生成 Agent 副本；提交后团队成员无需 AgentHub 即可使用。",
     "centralHelp": "项目技能统一保存在 .agents/skills，Agent 入口从这里生成；项目版本不会随个人技能库自动更新。",
     "centralLibrary": "项目中央技能仓库",
