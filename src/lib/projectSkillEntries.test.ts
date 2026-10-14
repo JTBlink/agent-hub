@@ -4,7 +4,7 @@ import {
   createProjectSkill,
   createTeamStatus,
 } from "../../tests/fixtures/projectSkill";
-import { groupProjectSkills } from "./projectSkillEntries";
+import { groupProjectSkills, needsTeamRefresh } from "./projectSkillEntries";
 
 it("associates team maintenance by directory rather than duplicate display names", () => {
   const team = createTeamStatus("managed");
@@ -46,7 +46,7 @@ it("puts skills needing updates or team refresh ahead of ordinary skills", () =>
   ]);
 });
 
-it("returns refreshed skills to their normal position and also prioritizes modified project contents", () => {
+it("keeps modified project contents in normal order when Agent entries are current", () => {
   const skills = [
     createProjectSkill({ name: "alpha", relative_path: "alpha" }),
     createProjectSkill({ name: "zulu", relative_path: "zulu" }),
@@ -57,12 +57,24 @@ it("returns refreshed skills to their normal position and also prioritizes modif
       skills,
       createProjectLibraryStatus([{ ...team, modified: true }]),
     ).map((skill) => skill.id),
-  ).toEqual(["zulu", "alpha"]);
+  ).toEqual(["alpha", "zulu"]);
   expect(
     groupProjectSkills(skills, createProjectLibraryStatus([team])).map(
       (skill) => skill.id,
     ),
   ).toEqual(["alpha", "zulu"]);
+});
+
+it("requires team refresh only for actual Agent entry issues", () => {
+  expect(needsTeamRefresh(undefined)).toBe(false);
+  expect(needsTeamRefresh(createTeamStatus("demo", false))).toBe(false);
+  expect(
+    needsTeamRefresh({ ...createTeamStatus("demo", false), modified: true }),
+  ).toBe(false);
+  expect(needsTeamRefresh(createTeamStatus())).toBe(true);
+  expect(needsTeamRefresh({ ...createTeamStatus(), modified: true })).toBe(
+    true,
+  );
 });
 
 it("preserves grouped agent variants, tags, files and sync priority without mutating the scan", () => {

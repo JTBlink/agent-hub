@@ -85,7 +85,9 @@ function getGroupStatus(variants: ProjectSkill[]): ProjectSkill["sync_status"] {
 export function needsTeamRefresh(
   status: ProjectLibraryStatus["skills"][number] | undefined,
 ) {
-  return !!status && (status.modified || status.stale_targets.length > 0);
+  // A changed management baseline does not mean Agent entries are stale:
+  // links already read the current project content.
+  return !!status && status.stale_targets.length > 0;
 }
 
 function needsAttention(skill: ProjectSkillEntry) {

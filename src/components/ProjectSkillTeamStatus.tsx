@@ -20,11 +20,7 @@ export function ProjectSkillTeamStatus({
   if (!status || !needsTeamRefresh(status)) return null;
   return (
     <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-accent-bg px-2 py-1.5 text-[12px] text-accent-light">
-      <span>
-        {t(
-          status.modified ? "projectLibrary.modified" : "projectLibrary.stale",
-        )}
-      </span>
+      <span>{t("projectLibrary.stale")}</span>
       {onRepair && (
         <button
           type="button"
