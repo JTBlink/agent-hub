@@ -193,7 +193,9 @@
       "fileDeleted": "文件已删除",
       "fileAdded": "新增文件",
       "noContent": "无内容变更",
-      "selectFile": "选择左侧文件查看差异"
+      "selectFile": "选择左侧文件查看差异",
+      "originalVersion": "原始版本",
+      "currentVersion": "当前版本"
     },
     "actions": {
       "backupNow": "立即备份",

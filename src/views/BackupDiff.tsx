@@ -303,24 +303,40 @@ export default function BackupDiff() {
 
           {diff && !diffLoading && (
             <>
-              <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-1.5">
-                <span
-                  className={cn(
-                    "text-[11px] font-semibold",
-                    KIND_TONE[diff.status] ?? "",
-                  )}
-                >
-                  {KIND_LETTER[diff.status] ?? "?"}
-                </span>
-                <span
-                  className="min-w-0 flex-1 truncate font-mono text-[12px] text-secondary"
-                  title={diff.path}
-                >
-                  {diff.path}
-                </span>
-                <span className="shrink-0 rounded bg-surface-active px-1.5 py-0.5 text-[11px] text-muted">
-                  {t(`backup.changes.${diff.status}`)}
-                </span>
+              <div className="grid shrink-0 grid-cols-2 border-b border-border-subtle bg-surface">
+                <div className="flex items-center gap-2 border-r border-border-subtle px-3 py-1.5">
+                  <span
+                    className={cn(
+                      "shrink-0 text-[11px] font-semibold",
+                      KIND_TONE[diff.status] ?? "",
+                    )}
+                  >
+                    {KIND_LETTER[diff.status] ?? "?"}
+                  </span>
+                  <span className="shrink-0 text-[11px] font-medium text-muted">
+                    {t("backup.changes.originalVersion")}
+                  </span>
+                  <span
+                    className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-secondary"
+                    title={diff.path}
+                  >
+                    {diff.path}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="shrink-0 text-[11px] font-medium text-muted">
+                    {t("backup.changes.currentVersion")}
+                  </span>
+                  <span
+                    className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-secondary"
+                    title={diff.path}
+                  >
+                    {diff.path}
+                  </span>
+                  <span className="shrink-0 rounded bg-surface-active px-1.5 py-0.5 text-[11px] text-muted">
+                    {t(`backup.changes.${diff.status}`)}
+                  </span>
+                </div>
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto">
