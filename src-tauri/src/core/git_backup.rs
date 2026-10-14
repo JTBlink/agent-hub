@@ -1,6 +1,6 @@
 mod local_state;
 mod status;
-pub use status::{get_status, GitBackupStatus};
+pub use status::{get_file_diff, get_status, GitBackupFileDiff, GitBackupStatus};
 mod restore;
 use anyhow::{Context, Result};
 use chrono::Utc;

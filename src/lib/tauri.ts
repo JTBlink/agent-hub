@@ -717,6 +717,14 @@ export interface GitBackupStatus {
   upstream_health: GitUpstreamHealth;
 }
 
+export interface GitBackupFileDiff {
+  path: string;
+  status: "added" | "modified" | "deleted" | "renamed" | "conflicted";
+  content_kind: "text" | "binary" | "too_large";
+  original_text: string | null;
+  updated_text: string | null;
+}
+
 export interface GitBackupVersion {
   tag: string;
   commit: string;
@@ -736,6 +744,9 @@ export interface GitBackupSizeReport {
 
 export const gitBackupStatus = () =>
   invoke<GitBackupStatus>("git_backup_status");
+
+export const gitBackupFileDiff = (path: string) =>
+  invoke<GitBackupFileDiff>("git_backup_file_diff", { path });
 
 export const gitBackupFetch = () => invoke<void>("git_backup_fetch");
 

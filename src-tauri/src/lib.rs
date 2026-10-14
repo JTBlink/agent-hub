@@ -1142,6 +1142,7 @@ pub fn run() {
             // Git Backup
             commands::git_backup::git_backup_fetch,
             commands::git_backup::git_backup_status,
+            commands::git_backup::git_backup_file_diff,
             commands::git_backup::git_backup_init,
             commands::git_backup::git_backup_set_remote,
             commands::git_backup::github_backup_connect,

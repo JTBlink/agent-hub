@@ -1,4 +1,6 @@
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ChevronRight } from "lucide-react";
 import type { GitBackupChange } from "../lib/tauri";
 
 export function BackupPendingChanges({
@@ -7,6 +9,7 @@ export function BackupPendingChanges({
   changes: GitBackupChange[];
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   if (changes.length === 0) return null;
 
   const title = t("backup.changes.title", { count: changes.length });
@@ -21,7 +24,22 @@ export function BackupPendingChanges({
         {changes.map((change) => (
           <li
             key={change.path}
-            className="flex items-start gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0"
+            role="button"
+            tabIndex={0}
+            className="flex cursor-pointer items-start gap-3 border-b border-border-subtle px-3 py-2 transition-colors last:border-b-0 hover:bg-surface-hover"
+            onClick={() =>
+              navigate(
+                `/backup/diff?path=${encodeURIComponent(change.path)}`,
+              )
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                navigate(
+                  `/backup/diff?path=${encodeURIComponent(change.path)}`,
+                );
+              }
+            }}
           >
             <span className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-[12px] text-secondary">
               {change.previous_path && (
@@ -35,6 +53,7 @@ export function BackupPendingChanges({
             <span className="shrink-0 rounded bg-surface-active px-1.5 py-0.5 text-[11px] text-tertiary">
               {t(`backup.changes.${change.kind}`)}
             </span>
+            <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
           </li>
         ))}
       </ul>
