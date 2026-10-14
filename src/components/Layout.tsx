@@ -13,7 +13,9 @@ export function Layout() {
   const { appError, refreshAppData } = useApp();
   const onDrag = useDragWindow();
   const navigate = useNavigate();
-  const settingsPage = useLocation().pathname === "/settings";
+  const pathname = useLocation().pathname;
+  const fullHeightPage =
+    pathname === "/settings" || pathname === "/backup/diff";
 
   // Cmd+, to open Settings
   useEffect(() => {
@@ -57,13 +59,13 @@ export function Layout() {
         <div
           className={cn(
             "min-h-0 flex-1 px-5 pb-5 pt-[calc(28px+20px)] scrollbar-hide",
-            settingsPage ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+            fullHeightPage ? "flex flex-col overflow-hidden" : "overflow-y-auto",
           )}
         >
           <div
             className={cn(
               "mx-auto flex w-full max-w-[1200px] flex-col gap-4",
-              settingsPage ? "min-h-0 flex-1" : "min-h-full",
+              fullHeightPage ? "min-h-0 flex-1" : "min-h-full",
             )}
           >
             {appError ? (

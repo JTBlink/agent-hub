@@ -17,7 +17,7 @@ export function BackupPendingChanges({
       <button
         type="button"
         className="inline-flex w-full items-center gap-2 rounded-md border border-border-subtle bg-surface px-3 py-2 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-        onClick={() => navigate("/backup/diff")}
+        onClick={() => navigate("/backup/diff", { state: { changes } })}
       >
         <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />
         <span className="flex-1 text-left">

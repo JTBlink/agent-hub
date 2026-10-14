@@ -54,10 +54,11 @@ pub fn status(store: &SkillStore) -> Result<git_backup::GitBackupStatus> {
     run(store, "backup status", git_backup::get_status)
 }
 
-pub fn file_diff(store: &SkillStore, path: &str) -> Result<git_backup::GitBackupFileDiff> {
+pub fn file_diff(path: &str) -> Result<git_backup::GitBackupFileDiff> {
+    let root = repo_dir();
     let path = path.to_string();
-    run(store, "backup file diff", move |root| {
-        git_backup::get_file_diff(root, &path)
+    git_backup::with_repo_lock("backup file diff", move || {
+        git_backup::get_file_diff(&root, &path)
     })
 }
 
