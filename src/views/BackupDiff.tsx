@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -58,6 +58,17 @@ function buildTree(changes: GitBackupChange[]): TreeNode {
     node.change = change;
   }
   return root;
+}
+
+function collectDirs(changes: GitBackupChange[]): Set<string> {
+  const dirs = new Set<string>();
+  for (const change of changes) {
+    const parts = change.path.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      dirs.add(parts.slice(0, i).join("/"));
+    }
+  }
+  return dirs;
 }
 
 function FileTreeNode({
@@ -152,33 +163,38 @@ function FileTreeNode({
 export default function BackupDiff() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [changes, setChanges] = useState<GitBackupChange[]>([]);
+  const passedChanges = (location.state as { changes?: GitBackupChange[] })
+    ?.changes;
+
+  const [changes, setChanges] = useState<GitBackupChange[]>(
+    passedChanges ?? [],
+  );
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [diff, setDiff] = useState<GitBackupFileDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
+  const [pageLoading, setPageLoading] = useState(!passedChanges);
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() =>
+    collectDirs(passedChanges ?? []),
+  );
 
   useEffect(() => {
+    if (passedChanges && passedChanges.length > 0) {
+      setSelectedPath(passedChanges[0].path);
+      return;
+    }
     gitBackupStatus()
       .then((status) => {
         setChanges(status.changes);
-        const allDirs = new Set<string>();
-        for (const change of status.changes) {
-          const parts = change.path.split("/");
-          for (let i = 1; i < parts.length; i++) {
-            allDirs.add(parts.slice(0, i).join("/"));
-          }
-        }
-        setExpandedDirs(allDirs);
+        setExpandedDirs(collectDirs(status.changes));
         if (status.changes.length > 0) {
           setSelectedPath(status.changes[0].path);
         }
       })
       .finally(() => setPageLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedPath) {
@@ -222,68 +238,72 @@ export default function BackupDiff() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-border-subtle px-4 py-2">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-          onClick={() => navigate("/backup")}
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          {t("backup.changes.backToBackup")}
-        </button>
-        <h1 className="text-[14px] font-semibold text-primary">
-          {t("backup.changes.diffTitle")}
-        </h1>
-        <span className="rounded-full bg-surface-active px-2 py-0.5 text-[11px] text-muted">
-          {changes.length}
-        </span>
+    <div className="flex h-full flex-col overflow-hidden">
+      <header className="shrink-0 border-b border-border-subtle px-4 py-2">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={() => navigate("/backup")}
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {t("backup.changes.backToBackup")}
+          </button>
+          <h1 className="text-[14px] font-semibold text-primary">
+            {t("backup.changes.diffTitle")}
+          </h1>
+          <span className="rounded-full bg-surface-active px-2 py-0.5 text-[11px] text-muted">
+            {changes.length}
+          </span>
+        </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left: file tree */}
-        <div className="w-64 shrink-0 overflow-y-auto border-r border-border-subtle bg-bg-secondary py-1">
-          {sortedRootChildren.map((child) => (
-            <FileTreeNode
-              key={child.fullPath}
-              node={child}
-              depth={0}
-              selectedPath={selectedPath}
-              onSelect={setSelectedPath}
-              expandedDirs={expandedDirs}
-              onToggleDir={onToggleDir}
-            />
-          ))}
-          {changes.length === 0 && (
-            <div className="px-3 py-4 text-center text-[12px] text-muted">
-              {t("backup.changes.noContent")}
-            </div>
-          )}
+        <div className="flex w-64 shrink-0 flex-col border-r border-border-subtle bg-bg-secondary">
+          <div className="min-h-0 flex-1 overflow-y-auto py-1">
+            {sortedRootChildren.map((child) => (
+              <FileTreeNode
+                key={child.fullPath}
+                node={child}
+                depth={0}
+                selectedPath={selectedPath}
+                onSelect={setSelectedPath}
+                expandedDirs={expandedDirs}
+                onToggleDir={onToggleDir}
+              />
+            ))}
+            {changes.length === 0 && (
+              <div className="px-3 py-4 text-center text-[12px] text-muted">
+                {t("backup.changes.noContent")}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right: diff viewer */}
-        <div className="min-w-0 flex-1 overflow-y-auto">
-          {!selectedPath && (
-            <div className="flex h-full items-center justify-center text-[13px] text-muted">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {!selectedPath && !diffLoading && (
+            <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
               {t("backup.changes.selectFile")}
             </div>
           )}
 
           {diffLoading && (
-            <div className="flex h-full items-center justify-center text-[13px] text-muted">
+            <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
               Loading…
             </div>
           )}
 
-          {diffError && (
+          {diffError && !diffLoading && (
             <div className="m-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
               {diffError}
             </div>
           )}
 
           {diff && !diffLoading && (
-            <div className="flex h-full flex-col">
-              <div className="flex items-center gap-2 border-b border-border-subtle bg-surface px-3 py-1.5">
+            <>
+              <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-surface px-3 py-1.5">
                 <span
                   className={cn(
                     "text-[11px] font-semibold",
@@ -320,7 +340,7 @@ export default function BackupDiff() {
                   </div>
                 )}
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
