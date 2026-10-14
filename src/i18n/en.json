@@ -195,7 +195,9 @@
       "fileDeleted": "File deleted",
       "fileAdded": "New file",
       "noContent": "No content changes",
-      "selectFile": "Select a file on the left to view its diff"
+      "selectFile": "Select a file on the left to view its diff",
+      "originalVersion": "Original",
+      "currentVersion": "Current"
     },
     "actions": {
       "backupNow": "Back Up Now",
