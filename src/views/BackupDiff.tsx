@@ -8,10 +8,7 @@ import {
   File,
   Folder,
 } from "lucide-react";
-import {
-  gitBackupStatus,
-  gitBackupFileDiff,
-} from "../lib/tauri";
+import { gitBackupStatus, gitBackupFileDiff } from "../lib/tauri";
 import type { GitBackupChange, GitBackupFileDiff } from "../lib/tauri";
 import { DocumentDiffViewer } from "../components/DocumentDiffViewer";
 import { cn } from "../utils";

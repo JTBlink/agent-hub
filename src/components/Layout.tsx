@@ -59,7 +59,9 @@ export function Layout() {
         <div
           className={cn(
             "min-h-0 flex-1 px-5 pb-5 pt-[calc(28px+20px)] scrollbar-hide",
-            fullHeightPage ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+            fullHeightPage
+              ? "flex flex-col overflow-hidden"
+              : "overflow-y-auto",
           )}
         >
           <div
