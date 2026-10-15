@@ -247,7 +247,9 @@ pub fn get_file_diff(skills_dir: &Path, file_path: &str) -> Result<GitBackupFile
 
     let is_binary = |data: &[u8]| data.contains(&0);
 
-    let orig_binary = original_blob.as_ref().is_some_and(|b| is_binary(b.content()));
+    let orig_binary = original_blob
+        .as_ref()
+        .is_some_and(|b| is_binary(b.content()));
     let work_binary = workdir_content.as_ref().is_some_and(|c| is_binary(c));
     if orig_binary || work_binary {
         let status = if original_blob.is_none() {
