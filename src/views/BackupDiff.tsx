@@ -7,6 +7,7 @@ import {
   ChevronDown,
   File,
   Folder,
+  RefreshCw,
 } from "lucide-react";
 import { gitBackupStatus, gitBackupFileDiff } from "../lib/tauri";
 import type { GitBackupChange, GitBackupFileDiff } from "../lib/tauri";
@@ -175,29 +176,54 @@ export default function BackupDiff() {
   const [diffLoading, setDiffLoading] = useState(!!passedChanges?.[0]?.path);
   const [diffError, setDiffError] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(!passedChanges);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [diffVersion, setDiffVersion] = useState(0);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() =>
     collectDirs(passedChanges ?? []),
   );
 
-  const selectFile = useCallback((path: string) => {
-    setSelectedPath(path);
-    setDiff(null);
-    setDiffLoading(true);
-    setDiffError(null);
-  }, []);
+  const selectFile = useCallback(
+    (path: string) => {
+      // Repeated selection preserves the current request or result.
+      if (path === selectedPath) return;
+      setSelectedPath(path);
+      setDiff(null);
+      setDiffLoading(true);
+      setDiffError(null);
+    },
+    [selectedPath],
+  );
 
   useEffect(() => {
-    if (passedChanges) return;
+    if (passedChanges && refreshVersion === 0) return;
+    let cancelled = false;
     gitBackupStatus()
       .then((status) => {
+        if (cancelled) return;
         setChanges(status.changes);
         setExpandedDirs(collectDirs(status.changes));
-        if (status.changes.length > 0) {
-          selectFile(status.changes[0].path);
-        }
+        setSelectedPath((current) =>
+          status.changes.some((change) => change.path === current)
+            ? current
+            : (status.changes[0]?.path ?? null),
+        );
+        setDiff(null);
+        setDiffError(null);
+        setDiffLoading(status.changes.length > 0);
+        // Re-read content even when the selected path has not changed.
+        setDiffVersion((version) => version + 1);
       })
-      .finally(() => setPageLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch((err) => {
+        if (!cancelled) setPageError(String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setPageLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [passedChanges, refreshVersion]);
 
   useEffect(() => {
     if (!selectedPath) return;
@@ -215,7 +241,15 @@ export default function BackupDiff() {
     return () => {
       cancelled = true;
     };
-  }, [selectedPath]);
+  }, [selectedPath, diffVersion]);
+
+  const refreshing = pageLoading || diffLoading;
+  const refresh = () => {
+    if (refreshing) return;
+    setPageError(null);
+    setPageLoading(true);
+    setRefreshVersion((version) => version + 1);
+  };
 
   const tree = useMemo(() => buildTree(changes), [changes]);
 
@@ -237,14 +271,6 @@ export default function BackupDiff() {
     });
   }, [tree]);
 
-  if (pageLoading) {
-    return (
-      <div className="flex h-full items-center justify-center text-[13px] text-muted">
-        Loading…
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <header className="shrink-0 border-b border-border-subtle px-4 py-2">
@@ -263,8 +289,29 @@ export default function BackupDiff() {
           <span className="rounded-full bg-surface-active px-2 py-0.5 text-[11px] text-muted">
             {changes.length}
           </span>
+          <button
+            type="button"
+            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60"
+            onClick={refresh}
+            disabled={refreshing}
+            aria-busy={refreshing}
+          >
+            <RefreshCw
+              className={cn("h-3.5 w-3.5", refreshing && "animate-spin")}
+            />
+            {t("backup.changes.refresh")}
+          </button>
         </div>
       </header>
+
+      {pageError && (
+        <div
+          role="alert"
+          className="shrink-0 bg-danger-bg px-4 py-2 text-[12px] text-danger"
+        >
+          {pageError}
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left: file tree */}
@@ -281,7 +328,7 @@ export default function BackupDiff() {
                 onToggleDir={onToggleDir}
               />
             ))}
-            {changes.length === 0 && (
+            {changes.length === 0 && !pageLoading && !pageError && (
               <div className="px-3 py-4 text-center text-[12px] text-muted">
                 {t("backup.changes.noContent")}
               </div>
@@ -291,13 +338,13 @@ export default function BackupDiff() {
 
         {/* Right: diff viewer */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {!selectedPath && !diffLoading && (
+          {!selectedPath && !diffLoading && !pageLoading && (
             <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
               {t("backup.changes.selectFile")}
             </div>
           )}
 
-          {diffLoading && (
+          {(diffLoading || (pageLoading && !selectedPath)) && (
             <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
               Loading…
             </div>

@@ -187,6 +187,7 @@
       "conflicted": "冲突",
       "viewDiff": "查看差异",
       "diffTitle": "文件差异",
+      "refresh": "刷新",
       "backToBackup": "返回备份",
       "binaryFile": "二进制文件，无法显示差异",
       "tooLarge": "文件过大（超过 1MB），无法显示差异",
