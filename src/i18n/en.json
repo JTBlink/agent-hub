@@ -189,6 +189,7 @@
       "conflicted": "Conflict",
       "viewDiff": "View Diff",
       "diffTitle": "File Diff",
+      "refresh": "Refresh",
       "backToBackup": "Back to Backup",
       "binaryFile": "Binary file — diff not available",
       "tooLarge": "File too large (over 1 MB) — diff not available",
