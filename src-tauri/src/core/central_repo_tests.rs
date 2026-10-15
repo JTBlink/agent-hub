@@ -413,6 +413,7 @@ fn external_base_dir_lives_under_default_base_external() {
 
 #[test]
 fn external_base_dir_is_stable_for_same_path() {
+    let _guard = test_base_dir_lock();
     let a = external_base_dir(Path::new("/tmp/some/my-skills"));
     let b = external_base_dir(Path::new("/tmp/some/my-skills"));
     assert_eq!(a, b);
@@ -420,6 +421,7 @@ fn external_base_dir_is_stable_for_same_path() {
 
 #[test]
 fn external_base_dir_differs_for_different_paths() {
+    let _guard = test_base_dir_lock();
     let a = external_base_dir(Path::new("/tmp/one/my-skills"));
     let b = external_base_dir(Path::new("/tmp/two/my-skills"));
     assert_ne!(a, b);
@@ -427,6 +429,7 @@ fn external_base_dir_differs_for_different_paths() {
 
 #[test]
 fn external_base_dir_does_not_pollute_skills_root_or_its_parent() {
+    let _guard = test_base_dir_lock();
     let skills_root = Path::new("/tmp/external-test/my-skills");
     let dir = external_base_dir(skills_root);
     assert!(!dir.starts_with(skills_root));
