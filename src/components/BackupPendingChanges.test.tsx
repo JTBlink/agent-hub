@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
@@ -28,51 +29,26 @@ afterEach(async () => {
 });
 async function render(changes: GitBackupChange[]) {
   await act(async () =>
-    root.render(<BackupPendingChanges changes={changes} />),
+    root.render(
+      <MemoryRouter>
+        <BackupPendingChanges changes={changes} />
+      </MemoryRouter>,
+    ),
   );
 }
 
-it("shows full file paths and change kinds including both rename paths", async () => {
+it("shows a diff button with file count when there are unbackuped changes", async () => {
   await render([
-    { path: "skills/新 技能/说明.md", previous_path: null, kind: "added" },
     { path: "skills/demo/SKILL.md", previous_path: null, kind: "modified" },
-    { path: "skills/deleted/SKILL.md", previous_path: null, kind: "deleted" },
-    {
-      path: "skills/new/SKILL.md",
-      previous_path: "skills/old/SKILL.md",
-      kind: "renamed",
-    },
-    { path: ".agent-hub/state.json", previous_path: null, kind: "conflicted" },
+    { path: "skills/new/SKILL.md", previous_path: null, kind: "added" },
   ]);
-  const list = container.querySelector("ul");
-  expect(list?.getAttribute("aria-label")).toBe("未备份的文件（5）");
-  expect(list?.tabIndex).toBe(0);
-  const rows = Array.from(
-    container.querySelectorAll("li"),
-    (row) => row.textContent,
-  );
-  expect(rows).toEqual([
-    "skills/新 技能/说明.md新增",
-    "skills/demo/SKILL.md修改",
-    "skills/deleted/SKILL.md删除",
-    "skills/old/SKILL.md → skills/new/SKILL.md重命名",
-    ".agent-hub/state.json冲突",
-  ]);
+  const button = container.querySelector("button");
+  expect(button).not.toBeNull();
+  expect(button?.textContent).toContain("2");
 });
 
-it("keeps every file visible in a long list and removes the list when backed up", async () => {
-  const changes: GitBackupChange[] = Array.from(
-    { length: 150 },
-    (_, index) => ({
-      path: `skills/demo/file-${index}.md`,
-      previous_path: null,
-      kind: "modified",
-    }),
-  );
-  await render(changes);
-  expect(container.querySelectorAll("li")).toHaveLength(150);
-  expect(container.textContent).toContain("file-149.md");
+it("renders nothing when there are no changes", async () => {
   await render([]);
   expect(container.textContent).toBe("");
-  expect(container.querySelector("ul")).toBeNull();
+  expect(container.querySelector("button")).toBeNull();
 });
