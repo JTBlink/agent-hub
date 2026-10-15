@@ -112,13 +112,9 @@ pub async fn git_backup_status(
 }
 
 #[tauri::command]
-pub async fn git_backup_file_diff(
-    path: String,
-) -> Result<git_backup::GitBackupFileDiff, AppError> {
-    tokio::task::spawn_blocking(move || {
-        backup_workspace::file_diff(&path).map_err(AppError::git)
-    })
-    .await?
+pub async fn git_backup_file_diff(path: String) -> Result<git_backup::GitBackupFileDiff, AppError> {
+    tokio::task::spawn_blocking(move || backup_workspace::file_diff(&path).map_err(AppError::git))
+        .await?
 }
 
 #[tauri::command]
