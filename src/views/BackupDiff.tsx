@@ -168,42 +168,53 @@ export default function BackupDiff() {
   const [changes, setChanges] = useState<GitBackupChange[]>(
     passedChanges ?? [],
   );
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(
+    passedChanges?.[0]?.path ?? null,
+  );
   const [diff, setDiff] = useState<GitBackupFileDiff | null>(null);
-  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffLoading, setDiffLoading] = useState(!!passedChanges?.[0]?.path);
   const [diffError, setDiffError] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(!passedChanges);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() =>
     collectDirs(passedChanges ?? []),
   );
 
+  const selectFile = useCallback((path: string) => {
+    setSelectedPath(path);
+    setDiff(null);
+    setDiffLoading(true);
+    setDiffError(null);
+  }, []);
+
   useEffect(() => {
-    if (passedChanges && passedChanges.length > 0) {
-      setSelectedPath(passedChanges[0].path);
-      return;
-    }
+    if (passedChanges) return;
     gitBackupStatus()
       .then((status) => {
         setChanges(status.changes);
         setExpandedDirs(collectDirs(status.changes));
         if (status.changes.length > 0) {
-          setSelectedPath(status.changes[0].path);
+          selectFile(status.changes[0].path);
         }
       })
       .finally(() => setPageLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selectedPath) {
-      setDiff(null);
-      return;
-    }
-    setDiffLoading(true);
-    setDiffError(null);
+    if (!selectedPath) return;
+    let cancelled = false;
     gitBackupFileDiff(selectedPath)
-      .then(setDiff)
-      .catch((err) => setDiffError(String(err)))
-      .finally(() => setDiffLoading(false));
+      .then((d) => {
+        if (!cancelled) setDiff(d);
+      })
+      .catch((err) => {
+        if (!cancelled) setDiffError(String(err));
+      })
+      .finally(() => {
+        if (!cancelled) setDiffLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPath]);
 
   const tree = useMemo(() => buildTree(changes), [changes]);
@@ -265,7 +276,7 @@ export default function BackupDiff() {
                 node={child}
                 depth={0}
                 selectedPath={selectedPath}
-                onSelect={setSelectedPath}
+                onSelect={selectFile}
                 expandedDirs={expandedDirs}
                 onToggleDir={onToggleDir}
               />
@@ -298,7 +309,7 @@ export default function BackupDiff() {
             </div>
           )}
 
-          {diff && !diffLoading && (
+          {selectedPath && diff && !diffLoading && (
             <>
               <div className="grid shrink-0 grid-cols-2 border-b border-border-subtle bg-surface">
                 <div className="flex items-center gap-2 border-r border-border-subtle px-3 py-1.5">
