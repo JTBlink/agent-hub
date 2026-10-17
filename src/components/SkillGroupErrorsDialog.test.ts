@@ -76,7 +76,8 @@ it("offers overwrite for each target conflict while keeping ordinary failures re
       onComplete: vi.fn(),
     }),
   );
-  expect(html.match(/skillGroupActions.forceOverride/g)).toHaveLength(2);
+  expect(html.match(/skillGroupActions.forceOverride(?!All)/g)).toHaveLength(2);
+  expect(html.match(/skillGroupActions.forceOverrideAll/g)).toHaveLength(1);
   expect(html).toContain("browser · hermes");
   expect(html).toContain("reviewer · codex");
   expect(html).toContain("Database unavailable");
@@ -101,4 +102,31 @@ it("does not offer overwrite without a deployment handler", () => {
     createElement(SkillGroupErrorsDialog, { notices, onClose: vi.fn() }),
   );
   expect(html).not.toContain("skillGroupActions.forceOverride");
+});
+
+it("shows override-all even when only one conflict exists", () => {
+  const notices = summarizeSkillGroupErrors(
+    [
+      {
+        skillId: "browser",
+        skillName: "browser",
+        agentKey: "hermes",
+        error: {
+          kind: "target_conflict",
+          message: "Existing content preserved",
+        },
+      },
+    ],
+    "Unexpected error",
+  );
+  const html = renderToStaticMarkup(
+    createElement(SkillGroupErrorsDialog, {
+      notices,
+      onClose: vi.fn(),
+      onForceSync: vi.fn(),
+      onComplete: vi.fn(),
+    }),
+  );
+  expect(html).toContain("skillGroupActions.forceOverride");
+  expect(html.match(/skillGroupActions.forceOverrideAll/g)).toHaveLength(1);
 });

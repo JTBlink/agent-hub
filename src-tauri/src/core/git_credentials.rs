@@ -19,7 +19,8 @@ const KEYRING_SERVICE: &str = "agent-hub-git-backup";
 
 /// Debug binaries are ad-hoc signed on macOS. Their code signature changes on
 /// every rebuild, so background reads can repeatedly trigger a Keychain ACL
-/// prompt. Keep background access off in development unless explicitly opted in.
+/// prompt. Keep legacy Keychain migration off in development unless explicitly opted in.
+/// Local credential files and gh authentication do not need this opt-in.
 pub fn background_access_enabled() -> bool {
     #[cfg(debug_assertions)]
     {
@@ -137,7 +138,7 @@ pub fn store_credential(host: &str, cred: &RemoteCredential) -> Result<()> {
 
 pub fn load_credential(host: &str) -> Result<Option<RemoteCredential>> {
     credential_cache().read(&cache_key(host), || {
-        load_persistent(host, || {
+        load_persistent(host, background_access_enabled(), || {
             // One-time migration only. Subsequent processes read the local file;
             // repeated syncs in this process use the memory cache.
             let value = match keyring_entry(host)?.get_password() {
@@ -156,10 +157,16 @@ pub fn load_credential(host: &str) -> Result<Option<RemoteCredential>> {
 
 fn load_persistent(
     host: &str,
+    allow_legacy: bool,
     legacy: impl FnOnce() -> Result<Option<RemoteCredential>>,
 ) -> Result<Option<RemoteCredential>> {
     if let Some(value) = super::credential_file::read(host)? {
         return Ok(value);
+    }
+    // Skipping a migration must not persist a logout marker: a later signed
+    // build (or explicit opt-in) still needs to recover the old credential.
+    if !allow_legacy {
+        return Ok(None);
     }
     let value = legacy()?;
     super::credential_file::write(host, value.as_ref())?;
@@ -320,6 +327,43 @@ pub(crate) fn use_mock_keyring() {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn local_credentials_work_without_legacy_keychain_access() {
+        let _lock = central_repo::test_base_dir_lock();
+        let tmp = tempfile::tempdir().unwrap();
+        central_repo::set_test_base_dir_override(Some(tmp.path().to_owned()));
+        struct Reset;
+        impl Drop for Reset {
+            fn drop(&mut self) {
+                central_repo::set_test_base_dir_override(None);
+            }
+        }
+        let _reset = Reset;
+        assert_eq!(
+            load_persistent("example.invalid", false, || panic!(
+                "legacy Keychain accessed"
+            ))
+            .unwrap(),
+            None
+        );
+        assert_eq!(
+            super::super::credential_file::read("example.invalid").unwrap(),
+            None
+        );
+        let credential = RemoteCredential {
+            username: "fixture".into(),
+            password: "fixture-password".into(),
+        };
+        super::super::credential_file::write("example.invalid", Some(&credential)).unwrap();
+        assert_eq!(
+            load_persistent("example.invalid", false, || panic!(
+                "local credential ignored"
+            ))
+            .unwrap(),
+            Some(credential)
+        );
+    }
+
+    #[test]
     fn persisted_credentials_skip_keychain_after_restart_and_logout() {
         let _lock = central_repo::test_base_dir_lock();
         let tmp = tempfile::tempdir().unwrap();
@@ -329,19 +373,20 @@ mod tests {
             password: "fixture-password".into(),
         };
         assert_eq!(
-            load_persistent("example.invalid", || Ok(Some(credential.clone()))).unwrap(),
+            load_persistent("example.invalid", true, || Ok(Some(credential.clone()))).unwrap(),
             Some(credential.clone())
         );
         for _ in 0..3 {
             // Bypass memory to simulate fresh processes / development rebuilds.
             assert_eq!(
-                load_persistent("example.invalid", || panic!("keychain read repeated")).unwrap(),
+                load_persistent("example.invalid", true, || panic!("keychain read repeated"))
+                    .unwrap(),
                 Some(credential.clone())
             );
         }
         delete_credential("example.invalid").unwrap();
         assert_eq!(
-            load_persistent("example.invalid", || panic!(
+            load_persistent("example.invalid", true, || panic!(
                 "legacy credential resurrected after logout"
             ))
             .unwrap(),

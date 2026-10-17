@@ -29,7 +29,6 @@ const SETTING_ENABLED: &str = "backup_auto_enabled";
 /// clears it, so the Backup page failure card survives navigation/restart.
 pub const SETTING_LAST_ERROR: &str = "backup_last_auto_error";
 const EVENT_COMPLETED: &str = "backup-auto-completed";
-const AUTO_COMMIT_MESSAGE: &str = "auto backup";
 
 /// Trailing debounce after the last central-repo change (§3.4 分钟级防抖).
 const DEBOUNCE: Duration = Duration::from_secs(120);
@@ -40,13 +39,6 @@ const POLL_INTERVAL: Duration = Duration::from_secs(15);
 const INITIAL_DELAY: Duration = Duration::from_secs(90);
 /// Cap for the exponential retry backoff after failed rounds: 2^5 × 2min ≈ 1h.
 const MAX_BACKOFF_SHIFT: u32 = 5;
-
-/// Tauri's debug binary is ad-hoc signed on macOS. Each rebuild gets a new
-/// code signature, so background keychain access would ask for permission
-/// again. Developers can still exercise these paths explicitly by opting in.
-fn debug_auto_backup_enabled() -> bool {
-    super::git_credentials::background_access_enabled()
-}
 
 static DIRTY: AtomicBool = AtomicBool::new(false);
 static LAST_CHANGE_MS: AtomicI64 = AtomicI64::new(0);
@@ -99,42 +91,48 @@ pub(crate) enum Outcome {
 }
 
 pub fn start<R: Runtime>(app: AppHandle<R>, store: Arc<SkillStore>) {
-    if !debug_auto_backup_enabled() {
-        log::info!(
-            "auto backup: disabled for debug builds; set AGENT_HUB_DEV_KEYCHAIN=1 to opt in"
-        );
-        return;
-    }
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(INITIAL_DELAY).await;
-        // Startup round: push whatever the exit-time commit captured. Backdate
-        // the change stamp so the round is due on the first tick.
-        LAST_CHANGE_MS.store(
-            chrono::Utc::now().timestamp_millis() - DEBOUNCE.as_millis() as i64,
-            Ordering::Release,
-        );
-        DIRTY.store(true, Ordering::Release);
+    tauri::async_runtime::spawn(run_scheduler(
+        store,
+        move |store, outcome| handle_outcome(&app, store, outcome),
+        INITIAL_DELAY,
+        POLL_INTERVAL,
+    ));
+}
 
-        loop {
-            let now_ms = chrono::Utc::now().timestamp_millis();
-            if is_due(
-                DIRTY.load(Ordering::Acquire),
-                LAST_CHANGE_MS.load(Ordering::Acquire),
-                now_ms,
-                CONSECUTIVE_FAILURES.load(Ordering::Acquire),
-            ) {
-                DIRTY.store(false, Ordering::Release);
-                let store_for_round = store.clone();
-                let outcome = tauri::async_runtime::spawn_blocking(move || {
-                    run_round_blocking(&store_for_round)
-                })
-                .await
-                .unwrap_or_else(|e| Outcome::Failed(format!("join error: {e}")));
-                handle_outcome(&app, &store, outcome);
-            }
-            tokio::time::sleep(POLL_INTERVAL).await;
+/// Runs independently of the UI so background startup and actual uploads can
+/// be verified together against an isolated library and local Git remote.
+async fn run_scheduler(
+    store: Arc<SkillStore>,
+    on_outcome: impl Fn(&SkillStore, Outcome) + Send + 'static,
+    initial_delay: Duration,
+    poll_interval: Duration,
+) {
+    tokio::time::sleep(initial_delay).await;
+    // Startup round also uploads the previous session's exit-time commit.
+    LAST_CHANGE_MS.store(
+        chrono::Utc::now().timestamp_millis() - DEBOUNCE.as_millis() as i64,
+        Ordering::Release,
+    );
+    DIRTY.store(true, Ordering::Release);
+
+    loop {
+        let now_ms = chrono::Utc::now().timestamp_millis();
+        if is_due(
+            DIRTY.load(Ordering::Acquire),
+            LAST_CHANGE_MS.load(Ordering::Acquire),
+            now_ms,
+            CONSECUTIVE_FAILURES.load(Ordering::Acquire),
+        ) {
+            DIRTY.store(false, Ordering::Release);
+            let store_for_round = store.clone();
+            let outcome =
+                tauri::async_runtime::spawn_blocking(move || run_round_blocking(&store_for_round))
+                    .await
+                    .unwrap_or_else(|e| Outcome::Failed(format!("join error: {e}")));
+            on_outcome(&store, outcome);
         }
-    });
+        tokio::time::sleep(poll_interval).await;
+    }
 }
 
 #[derive(Serialize, Clone)]
@@ -293,7 +291,7 @@ fn run_prepared_round(store: &SkillStore, skills_dir: &std::path::Path) -> Outco
     let mut committed = false;
     match git_backup::has_uncommitted_changes(skills_dir) {
         Ok(true) => {
-            if let Err(e) = git_backup::commit_all_unlocked(skills_dir, AUTO_COMMIT_MESSAGE) {
+            if let Err(e) = git_backup::commit_all_auto_unlocked(skills_dir) {
                 return Outcome::Failed(format!("{e:#}"));
             }
             committed = true;
@@ -387,7 +385,7 @@ pub fn commit_on_exit(store: &SkillStore) {
     }
     match git_backup::has_uncommitted_changes(&skills_dir) {
         Ok(true) => {
-            if let Err(e) = git_backup::commit_all_unlocked(&skills_dir, AUTO_COMMIT_MESSAGE) {
+            if let Err(e) = git_backup::commit_all_auto_unlocked(&skills_dir) {
                 log::warn!("auto backup on exit: commit failed: {e:#}");
             } else {
                 log::info!("auto backup on exit: committed pending changes");
@@ -436,7 +434,7 @@ mod tests {
     struct TestEnv {
         _lock: std::sync::MutexGuard<'static, ()>,
         _tmp: tempfile::TempDir,
-        store: SkillStore,
+        store: Arc<SkillStore>,
         skills_dir: std::path::PathBuf,
         repo_dir: std::path::PathBuf,
         remote: std::path::PathBuf,
@@ -480,7 +478,7 @@ mod tests {
         central_repo::set_test_base_dir_override(Some(base.clone()));
         let skills_dir = central_repo::skills_dir();
         std::fs::create_dir_all(&skills_dir).unwrap();
-        let store = SkillStore::new(&base.join("test.db")).unwrap();
+        let store = Arc::new(SkillStore::new(&base.join("test.db")).unwrap());
 
         let remote = tmp.path().join("remote.git");
         let out = std::process::Command::new("git")
@@ -506,6 +504,40 @@ mod tests {
     }
 
     #[test]
+    fn enabled_background_scheduler_uploads_pending_changes() {
+        let env = test_env();
+        std::fs::create_dir_all(env.skills_dir.join("demo")).unwrap();
+        std::fs::write(env.skills_dir.join("demo/SKILL.md"), "pending edit").unwrap();
+        let store = env.store.clone();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(async {
+            let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+            let task = tokio::spawn(run_scheduler(
+                store,
+                move |_, outcome| {
+                    let _ = tx.send(outcome);
+                },
+                Duration::from_millis(1),
+                Duration::from_millis(1),
+            ));
+            let outcome = tokio::time::timeout(Duration::from_secs(10), rx.recv()).await;
+            task.abort();
+            assert_eq!(outcome.unwrap(), Some(Outcome::BackedUp));
+        });
+        assert_eq!(
+            git_out(&env.remote, &["show", "main:skills/demo/SKILL.md"]),
+            "pending edit"
+        );
+        assert_eq!(
+            git_out(&env.remote, &["rev-parse", "main"]),
+            git_out(&env.repo_dir, &["rev-parse", "HEAD"])
+        );
+    }
+
+    #[test]
     fn round_commits_and_pushes_without_snapshot_tag() {
         let env = test_env();
         std::fs::create_dir_all(env.skills_dir.join("skill-a")).unwrap();
@@ -518,11 +550,11 @@ mod tests {
         let remote_head = git_out(&env.remote, &["rev-parse", "main"]);
         let local_head = git_out(&env.repo_dir, &["rev-parse", "HEAD"]);
         assert_eq!(remote_head, local_head);
-        assert_eq!(
-            git_out(&env.repo_dir, &["log", "-1", "--format=%s"]),
-            AUTO_COMMIT_MESSAGE
+        let commit_msg = git_out(&env.repo_dir, &["log", "-1", "--format=%s"]);
+        assert!(
+            commit_msg.starts_with("auto backup"),
+            "unexpected commit message: {commit_msg}"
         );
-        // …and §3.4 holds: automatic backups never mint a snapshot tag.
         assert_eq!(git_out(&env.repo_dir, &["tag", "--list", "sm-v-*"]), "");
 
         // A second round with nothing new is a no-op.
@@ -716,11 +748,11 @@ mod tests {
         commit_on_exit(&env.store);
 
         assert!(!git_backup::has_uncommitted_changes(&env.repo_dir).unwrap());
-        assert_eq!(
-            git_out(&env.repo_dir, &["log", "-1", "--format=%s"]),
-            AUTO_COMMIT_MESSAGE
+        let commit_msg = git_out(&env.repo_dir, &["log", "-1", "--format=%s"]);
+        assert!(
+            commit_msg.starts_with("auto backup"),
+            "unexpected commit message: {commit_msg}"
         );
-        // Exit-time save is local only; the push belongs to the next launch.
         assert_eq!(git_out(&env.remote, &["rev-parse", "main"]), remote_before);
     }
 }

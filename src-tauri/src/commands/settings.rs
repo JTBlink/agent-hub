@@ -52,6 +52,11 @@ pub async fn set_settings(
         store
             .set_setting(&key_for_store, &value_for_store)
             .map_err(AppError::db)?;
+        if key_for_store == "backup_auto_enabled" {
+            // A disabled startup round may have consumed the pending flag.
+            // Re-arm when the preference changes so enabling needs no file edit.
+            crate::core::auto_backup::notify_central_change();
+        }
         if key_for_store == crate::core::git_auth_source::SETTING_USE_GH {
             crate::core::git_auth_source::set_preference(Some(&value_for_store));
         }

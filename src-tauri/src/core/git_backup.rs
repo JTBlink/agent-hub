@@ -394,6 +394,77 @@ pub(crate) fn commit_all_unlocked(skills_dir: &Path, message: &str) -> Result<()
     Ok(())
 }
 
+const AUTO_COMMIT_MAX_NAMES: usize = 5;
+
+pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
+    let mut skills = std::collections::BTreeSet::new();
+    let mut has_metadata = false;
+    for line in porcelain.lines() {
+        let entry = line.get(3..).unwrap_or("").trim();
+        if entry.is_empty() {
+            continue;
+        }
+        let path = entry.split(" -> ").last().unwrap_or(entry);
+        if let Some(rest) = path.strip_prefix("skills/") {
+            if let Some((name, _)) = rest.split_once('/') {
+                if !name.starts_with('.') {
+                    skills.insert(name.to_string());
+                    continue;
+                }
+            }
+        }
+        has_metadata = true;
+    }
+    if skills.is_empty() && !has_metadata {
+        return "auto backup".to_string();
+    }
+    let mut parts: Vec<&str> = skills.iter().map(|s| s.as_str()).collect();
+    let overflow = if parts.len() > AUTO_COMMIT_MAX_NAMES {
+        let n = parts.len() - AUTO_COMMIT_MAX_NAMES;
+        parts.truncate(AUTO_COMMIT_MAX_NAMES);
+        Some(n)
+    } else {
+        None
+    };
+    if has_metadata {
+        parts.push("metadata");
+    }
+    let mut msg = format!("auto backup: {}", parts.join(", "));
+    if let Some(n) = overflow {
+        msg.push_str(&format!(" (+{n} more)"));
+    }
+    msg
+}
+
+pub(crate) fn commit_all_auto_unlocked(skills_dir: &Path) -> Result<()> {
+    ensure_repo(skills_dir)?;
+    ensure_gitignore(skills_dir)?;
+    if let Err(e) = untrack_python_artifacts(skills_dir) {
+        log::warn!("backup: could not untrack compiled-Python artifacts (continuing): {e:#}");
+    }
+    remove_tmp_metadata_files(skills_dir);
+    if let Err(e) = apply_oversized_exclusions(skills_dir, SKILL_SIZE_LIMIT_BYTES) {
+        log::warn!("backup size: exclusion scan failed (continuing): {e:#}");
+    }
+    protocol::ensure_protocol_file(skills_dir)?;
+
+    run_git_checked(skills_dir, &["add", "-A"])?;
+
+    let status = run_git(skills_dir, &["status", "--porcelain"])?;
+    if status.is_empty() {
+        log::info!("git commit: working tree clean, nothing to commit");
+        anyhow::bail!("Nothing to commit");
+    }
+
+    let message = build_auto_commit_message(&status);
+    run_git_checked(
+        skills_dir,
+        &["commit", "-m", &protocol::app_commit_message(&message)],
+    )?;
+    log::info!("git commit: {message}");
+    Ok(())
+}
+
 /// Delete `refs/agent-hub/*` copies that a mirror / push-all style
 /// operation uploaded to the remote (merge-engine design §11-2). The app's
 /// own push never sends them; this cleans up after manual advanced git use.
@@ -1440,6 +1511,85 @@ mod tests {
         assert_eq!(
             redact_url("git@github.com:acme/repo.git"),
             "git@github.com:acme/repo.git"
+        );
+    }
+
+    // ── build_auto_commit_message ──
+
+    #[test]
+    fn auto_msg_single_skill() {
+        let porcelain = " M skills/my-tool/SKILL.md\n";
+        assert_eq!(build_auto_commit_message(porcelain), "auto backup: my-tool");
+    }
+
+    #[test]
+    fn auto_msg_multiple_skills_sorted() {
+        let porcelain = " M skills/zeta/SKILL.md\n M skills/alpha/notes.md\n";
+        assert_eq!(
+            build_auto_commit_message(porcelain),
+            "auto backup: alpha, zeta"
+        );
+    }
+
+    #[test]
+    fn auto_msg_skill_plus_metadata() {
+        let porcelain = " M skills/demo/SKILL.md\n M .agent-hub/state.json\n";
+        assert_eq!(
+            build_auto_commit_message(porcelain),
+            "auto backup: demo, metadata"
+        );
+    }
+
+    #[test]
+    fn auto_msg_overflow_truncates() {
+        let porcelain = (1..=7)
+            .map(|i| format!(" M skills/s{i}/SKILL.md"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert_eq!(
+            build_auto_commit_message(&porcelain),
+            "auto backup: s1, s2, s3, s4, s5 (+2 more)"
+        );
+    }
+
+    #[test]
+    fn auto_msg_metadata_only() {
+        let porcelain = " M .agent-hub/state.json\n";
+        assert_eq!(
+            build_auto_commit_message(porcelain),
+            "auto backup: metadata"
+        );
+    }
+
+    #[test]
+    fn auto_msg_empty_porcelain_fallback() {
+        assert_eq!(build_auto_commit_message(""), "auto backup");
+    }
+
+    #[test]
+    fn auto_msg_added_and_deleted() {
+        let porcelain = "?? skills/new-one/SKILL.md\n D skills/old/SKILL.md\n";
+        assert_eq!(
+            build_auto_commit_message(porcelain),
+            "auto backup: new-one, old"
+        );
+    }
+
+    #[test]
+    fn auto_msg_rename_arrow() {
+        let porcelain = "R  skills/old-name/SKILL.md -> skills/new-name/SKILL.md\n";
+        assert_eq!(
+            build_auto_commit_message(porcelain),
+            "auto backup: new-name"
+        );
+    }
+
+    #[test]
+    fn auto_msg_dot_prefix_skill_excluded() {
+        let porcelain = " M skills/.hidden/data.json\n M skills/visible/SKILL.md\n";
+        assert_eq!(
+            build_auto_commit_message(porcelain),
+            "auto backup: visible, metadata"
         );
     }
 

@@ -77,9 +77,9 @@ it("groups existing settings and retains an unsaved proxy across tabs and locale
   await act(async () => tabs()[1].click());
   expect(visiblePanel().textContent).toContain("默认部署方式");
   expect(visiblePanel().textContent).toContain("Skill 自动更新");
-  expect(visiblePanel().textContent).not.toContain("备份仓库目录");
+  expect(visiblePanel().textContent).not.toContain("本地同步仓库");
   await act(async () => tabs()[3].click());
-  expect(visiblePanel().textContent).toContain("备份仓库目录");
+  expect(visiblePanel().textContent).toContain("本地同步仓库");
   expect(visiblePanel().querySelector("details")?.open).toBe(false);
   const proxy = visiblePanel().querySelector<HTMLInputElement>(
     'input[placeholder*="7890"]',

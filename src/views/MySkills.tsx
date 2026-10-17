@@ -1012,7 +1012,7 @@ export function MySkills() {
     if (gitStatus.upstream_health === "no_upstream") {
       return "pending_changes";
     }
-    if (gitStatus.has_changes || gitStatus.ahead > 0 || gitStatus.behind > 0) {
+    if (gitStatus.changes.length > 0 || gitStatus.ahead > 0 || gitStatus.behind > 0) {
       return "pending_changes";
     }
     return "up_to_date";
