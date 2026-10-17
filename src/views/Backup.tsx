@@ -317,7 +317,7 @@ export function Backup() {
       return "needs_fix";
     }
     if (gitStatus.upstream_health === "no_upstream") return "pending_changes";
-    if (gitStatus.has_changes || gitStatus.ahead > 0 || gitStatus.behind > 0)
+    if (gitStatus.changes.length > 0 || gitStatus.ahead > 0 || gitStatus.behind > 0)
       return "pending_changes";
     return "up_to_date";
   }, [gitStatus, remoteConfig]);
@@ -364,13 +364,11 @@ export function Backup() {
         // Three distinct situations wear this state; naming them precisely
         // matters because "back up" reads as push-only and makes users fear
         // overwriting the remote when only remote updates exist.
-        const localCount = Math.max(
-          gitStatus?.ahead ?? 0,
-          gitStatus?.has_changes ? 1 : 0,
-        );
+        const hasLocalChanges =
+          (gitStatus?.changes.length ?? 0) > 0 || (gitStatus?.ahead ?? 0) > 0;
         const remoteCount = gitStatus?.behind ?? 0;
-        const remoteOnly = remoteCount > 0 && localCount === 0;
-        const both = remoteCount > 0 && localCount > 0;
+        const remoteOnly = remoteCount > 0 && !hasLocalChanges;
+        const both = remoteCount > 0 && hasLocalChanges;
         return {
           icon: remoteOnly ? RefreshCw : Upload,
           title: remoteOnly
@@ -380,17 +378,15 @@ export function Backup() {
             ? t("backup.status.remoteOnlyDesc", { remote: remoteCount })
             : both
               ? t("backup.status.pendingBothDesc", {
-                  local: localCount,
+                  files: gitStatus?.changes.length ?? 0,
+                  commits: gitStatus?.ahead ?? 0,
                   remote: remoteCount,
                 })
-              : (gitStatus?.changed_skill_count ?? 0) > 0
-                ? t("backup.status.pendingSkills", {
-                    count: gitStatus?.changed_skill_count,
-                  })
-                : t("backup.status.pendingDesc", {
-                    local: localCount,
-                    remote: remoteCount,
-                  }),
+              : t("backup.status.pendingDesc", {
+                  files: gitStatus?.changes.length ?? 0,
+                  commits: gitStatus?.ahead ?? 0,
+                  remote: remoteCount,
+                }),
           className: "border-amber-500/40 bg-amber-500/10",
           iconClassName: "text-amber-600 dark:text-amber-400",
         };

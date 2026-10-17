@@ -20,9 +20,11 @@ export function SkillGroupErrorsDialog({
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const forcingRef = useRef(false);
   const [forcingKey, setForcingKey] = useState<string | null>(null);
   const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
   const [copying, setCopying] = useState(false);
+  const [forcingAll, setForcingAll] = useState(false);
 
   const copyDetails = async () => {
     if (copying) return;
@@ -60,22 +62,38 @@ export function SkillGroupErrorsDialog({
     } else if (notices.length === 0 && dialog?.open) dialog.close();
   }, [notices]);
 
+  const unresolvedConflicts = notices
+    .filter((notice) => notice.kind === "conflict")
+    .flatMap((notice) => notice.items)
+    .filter((item) => !resolvedKeys.has(`${item.skillId}:${item.agentKey}`));
+  const busy = forcingKey !== null || forcingAll;
+
   const handleForceOverride = useCallback(
-    async (skillId: string, agentKey: string) => {
-      if (!onForceSync || forcingKey !== null) return;
-      const key = `${skillId}:${agentKey}`;
-      setForcingKey(key);
+    async (items: { skillId: string; agentKey: string }[], all = false) => {
+      if (!onForceSync || forcingRef.current || items.length === 0) return;
+      forcingRef.current = true;
+      setForcingAll(all);
       try {
-        await onForceSync(skillId, agentKey);
-        setResolvedKeys((prev) => new Set(prev).add(key));
+        for (const { skillId, agentKey } of items) {
+          const key = `${skillId}:${agentKey}`;
+          setForcingKey(key);
+          try {
+            await onForceSync(skillId, agentKey);
+            setResolvedKeys((prev) => new Set(prev).add(key));
+          } catch (error) {
+            toast.error(getErrorMessage(error, t("common.error")));
+          }
+        }
         await onComplete?.();
-      } catch (e) {
-        toast.error(getErrorMessage(e, t("common.error")));
+      } catch (error) {
+        toast.error(getErrorMessage(error, t("common.error")));
       } finally {
+        forcingRef.current = false;
         setForcingKey(null);
+        setForcingAll(false);
       }
     },
-    [onForceSync, onComplete, forcingKey, t],
+    [onForceSync, onComplete, t],
   );
 
   return (
@@ -84,7 +102,7 @@ export function SkillGroupErrorsDialog({
       aria-labelledby={titleId}
       onClose={onClose}
       onCancel={(event) => {
-        if (forcingKey !== null) event.preventDefault();
+        if (forcingRef.current) event.preventDefault();
       }}
       className="m-auto w-[calc(100%-2rem)] max-w-xl rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
     >
@@ -126,13 +144,8 @@ export function SkillGroupErrorsDialog({
                         !resolved && (
                           <button
                             type="button"
-                            onClick={() =>
-                              void handleForceOverride(
-                                item.skillId,
-                                item.agentKey,
-                              )
-                            }
-                            disabled={forcingKey !== null}
+                            onClick={() => void handleForceOverride([item])}
+                            disabled={busy}
                             className="shrink-0 rounded-md border border-amber-400/50 bg-amber-500/8 px-2.5 py-1 text-[12px] font-medium text-amber-600 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
                           >
                             {forcing ? (
@@ -169,8 +182,26 @@ export function SkillGroupErrorsDialog({
           )}
           {t("skillGroupActions.copyDetails")}
         </button>
+
+        {onForceSync && (unresolvedConflicts.length > 0 || forcingAll) && (
+          <button
+            type="button"
+            onClick={() => void handleForceOverride(unresolvedConflicts, true)}
+            disabled={busy}
+            aria-busy={forcingAll}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-400/50 bg-amber-500/8 px-3 py-1.5 text-[12px] font-medium text-amber-600 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
+          >
+            {forcingAll && (
+              <Loader2
+                aria-hidden="true"
+                className="h-3.5 w-3.5 animate-spin"
+              />
+            )}
+            {t("skillGroupActions.forceOverrideAll")}
+          </button>
+        )}
         <button
-          disabled={forcingKey !== null}
+          disabled={busy}
           className="app-button-primary disabled:opacity-50"
         >
           {t("common.confirm")}

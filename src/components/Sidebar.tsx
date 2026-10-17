@@ -14,7 +14,7 @@ import {
   LayoutDashboard,
   Layers,
   Download,
-  CloudUpload,
+  RefreshCw,
   Settings,
   Plus,
   Pencil,
@@ -161,7 +161,7 @@ export function Sidebar() {
   const NAV_ITEMS = [
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
     { name: t("sidebar.installSkills"), path: "/install", icon: Download },
-    { name: t("sidebar.backup"), path: "/backup", icon: CloudUpload },
+    { name: t("sidebar.backup"), path: "/backup", icon: RefreshCw },
   ];
 
   const handleSwitchSkillGroup = (id: string) => {
