@@ -4,4 +4,4 @@
 
 | Skill                                   | 描述                              |
 | --------------------------------------- | --------------------------------- |
-| [manage-skills](manage-skills/SKILL.md) | 通过 agent-hub-cli 管理共享技能库 |
+| [agent-hub-cli](agent-hub-cli/SKILL.md) | 通过 agent-hub-cli 管理共享技能库 |

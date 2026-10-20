@@ -25,7 +25,7 @@ publish_cli_bridge() {
   version="${version_output##* }"
 
   # Remove the stamp before staging so a failed update can never leave the old
-  # bridge looking trusted to manage-skills.
+  # bridge looking trusted to agent-hub-cli.
   rm -f "${stamp_path}"
   rm -f "${staged_path}"
   if ! cp "${binary}" "${staged_path}"; then

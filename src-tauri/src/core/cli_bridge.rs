@@ -9,7 +9,7 @@
 //! macOS PATH at all, and Windows reserves symlink creation for administrators.
 //!
 //! So the app maintains its own copy at a fixed, predictable path instead, and
-//! the `manage-skills` skill looks there first. A copy, not a symlink: an
+//! the `agent-hub-cli` skill looks there first. A copy, not a symlink: an
 //! AppImage is mounted at a temporary path, and a `.app` the user drags
 //! elsewhere would leave a dangling link.
 //!

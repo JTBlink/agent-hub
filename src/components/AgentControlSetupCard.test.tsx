@@ -16,7 +16,7 @@ const api = vi.hoisted(() => ({
   sync: vi.fn(),
   refresh: vi.fn(),
 }));
-const skill = { ...makeSkill(1), name: "manage-skills" };
+const skill = { ...makeSkill(1), name: "agent-hub-cli" };
 vi.mock("../context/AppContext", () => ({
   useApp: () => ({
     tools: [],
@@ -46,7 +46,7 @@ const status: AgentControlStatus = {
   library_source_type: "git",
   library_update_available: false,
   library: {
-    path: "/workspace/skills/manage-skills",
+    path: "/workspace/skills/agent-hub-cli",
     present: true,
     occupied: true,
     version: "1.1.1",
@@ -58,7 +58,7 @@ const status: AgentControlStatus = {
     installed: true,
     enabled: true,
     managed: false,
-    path: `/workspace/${key}/skills/manage-skills`,
+    path: `/workspace/${key}/skills/agent-hub-cli`,
     present: false,
     occupied: false,
     version: null,

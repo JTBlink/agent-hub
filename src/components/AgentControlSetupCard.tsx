@@ -18,7 +18,7 @@ import {
 const PROMPT_SETTING_KEY = "agent_control_setup_prompt";
 
 /** The library skill that teaches an agent to drive agent-hub. */
-const SKILL_NAME = "manage-skills";
+const SKILL_NAME = "agent-hub-cli";
 const SKILL_SOURCE = MANAGE_SKILLS_SOURCE;
 
 /**
@@ -57,7 +57,7 @@ export function AgentControlSetupCard({
 
   useEffect(() => {
     void refreshStatus().catch((error) => {
-      console.error("Failed to inspect manage-skills paths:", error);
+      console.error("Failed to inspect agent-hub-cli paths:", error);
     });
   }, [refreshStatus, managedSkills, tools]);
 

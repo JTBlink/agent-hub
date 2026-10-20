@@ -12,7 +12,7 @@ const status = (): AgentControlStatus => ({
   library_source_type: "git",
   library_update_available: false,
   library: {
-    path: "<workspace>/skills/productivity/manage-skills",
+    path: "<workspace>/skills/productivity/agent-hub-cli",
     present: true,
     occupied: true,
     version: "1.1.1",
@@ -25,7 +25,7 @@ const status = (): AgentControlStatus => ({
       installed: true,
       enabled: true,
       managed: true,
-      path: "~/.../manage-skills",
+      path: "~/.../agent-hub-cli",
       present: true,
       occupied: true,
       version: "1.1.1",
