@@ -6,7 +6,7 @@
 
 ```bash
 # 通过 agent-hub-cli
-agent-hub-cli skills install https://github.com/JTBlink/agent-hub/tree/main/skills/productivity/manage-skills
+agent-hub-cli skills install https://github.com/JTBlink/agent-hub/tree/main/skills/productivity/agent-hub-cli
 
 # 通过 Claude Code plugin（需已添加 marketplace）
 claude plugin install agent-hub-skills
@@ -20,7 +20,7 @@ claude plugin install agent-hub-skills
 
 | Skill                                                | 描述                              |
 | ---------------------------------------------------- | --------------------------------- |
-| [manage-skills](productivity/manage-skills/SKILL.md) | 通过 agent-hub-cli 管理共享技能库 |
+| [agent-hub-cli](productivity/agent-hub-cli/SKILL.md) | 通过 agent-hub-cli 管理共享技能库 |
 
 ### [Engineering](engineering/)
 

@@ -195,7 +195,7 @@ agent-hub/
 │   └── github/             #   版本发布、Actions 与产物验收
 │
 ├── skills/                         # 内置 Skill
-│   └── manage-skills/SKILL.md      #   技能管理 Skill
+│   └── agent-hub-cli/SKILL.md      #   技能管理 Skill
 │
 ├── public/                         # 前端静态资源
 │   ├── agent-icons/                #   Agent 图标库（50+）

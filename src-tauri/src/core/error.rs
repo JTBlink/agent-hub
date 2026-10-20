@@ -20,7 +20,7 @@ pub struct AppError {
 /// The paths a deployment refused to write, because they belong to someone
 /// else (#363). Nothing at them was touched. Carried only by
 /// `ErrorKind::TargetConflict`, which is what says how to read them — the ways
-/// out are documented once, in the `manage-skills` skill, not repeated here on
+/// out are documented once, in the `agent-hub-cli` skill, not repeated here on
 /// every error.
 #[derive(Debug, Serialize)]
 pub struct ErrorDetails {

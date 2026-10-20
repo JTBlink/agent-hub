@@ -11,8 +11,8 @@ export interface RecommendedSkill {
 
 export const RECOMMENDED_SKILLS: RecommendedSkill[] = [
   {
-    skill_id: "manage-skills",
-    name: "manage-skills",
+    skill_id: "agent-hub-cli",
+    name: "agent-hub-cli",
     source: "JTBlink/agent-hub",
     description:
       "通过 agent-hub-cli 管理共享技能库——安装、更新、部署、技能组、标签与多 Agent 同步。",

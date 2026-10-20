@@ -10,8 +10,8 @@ use crate::core::{
     sync_engine, tool_adapters, tool_service,
 };
 
-const SKILL_NAME: &str = "manage-skills";
-const BUNDLED_SKILL: &str = include_str!("../../../skills/productivity/manage-skills/SKILL.md");
+const SKILL_NAME: &str = "agent-hub-cli";
+const BUNDLED_SKILL: &str = include_str!("../../../skills/productivity/agent-hub-cli/SKILL.md");
 
 #[derive(Debug, Serialize)]
 pub struct SkillLocation {
@@ -71,7 +71,7 @@ fn inspect(store: &SkillStore) -> Result<AgentControlStatus, AppError> {
     let bundled_version = skill_metadata::parse_frontmatter(BUNDLED_SKILL)
         .version
         .and_then(|value| Version::parse(&value).ok())
-        .ok_or_else(|| AppError::internal("Bundled manage-skills has no valid version"))?;
+        .ok_or_else(|| AppError::internal("Bundled agent-hub-cli has no valid version"))?;
     let skills = store.get_all_skills().map_err(AppError::db)?;
     let skill = skills.iter().find(|skill| skill.name == SKILL_NAME);
     let library_path = skill
@@ -144,7 +144,7 @@ mod tests {
         std::fs::create_dir(&path).unwrap();
         std::fs::write(
             path.join("SKILL.md"),
-            "---\nname: manage-skills\nversion: 1.0.0\n---\n",
+            "---\nname: agent-hub-cli\nversion: 1.0.0\n---\n",
         )
         .unwrap();
         let installed = inspect_location(&path, &bundled);
@@ -153,7 +153,7 @@ mod tests {
 
         std::fs::write(
             path.join("SKILL.md"),
-            format!("---\nname: manage-skills\nversion: {bundled}\n---\n"),
+            format!("---\nname: agent-hub-cli\nversion: {bundled}\n---\n"),
         )
         .unwrap();
         assert!(!inspect_location(&path, &bundled).outdated);

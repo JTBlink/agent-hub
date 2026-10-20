@@ -11,5 +11,5 @@
   "repository": "https://github.com/JTBlink/agent-hub",
   "license": "MIT",
   "keywords": ["skills", "agent", "productivity", "workflow"],
-  "skills": ["./skills/productivity/manage-skills"]
+  "skills": ["./skills/productivity/agent-hub-cli"]
 }

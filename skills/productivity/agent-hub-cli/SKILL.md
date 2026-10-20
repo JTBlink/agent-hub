@@ -1,6 +1,7 @@
 ---
-name: manage-skills
-version: 1.1.1
+name: agent-hub-cli
+metadata:
+  version: "1.1.2"
 description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
