@@ -46,6 +46,7 @@ agent-hub/
 │   ├── hooks/                      # 自定义 Hooks
 │   │   ├── useLocalSkillManagement.ts # 本地内容读取与删除状态
 │   │   ├── useGitRepositories.ts  #   仓库目录持久化、并发状态与安装请求
+│   │   ├── useWorkspaceSkills.ts #   工作空间扫描、数量与技能组存在状态刷新
 │   │   ├── useProjectSkillRestore.ts # 项目恢复确认、批量执行与刷新
 │   │   ├── useMultiSelect.ts       #   多选逻辑
 │   │   ├── useDragWindow.ts        #   窗口拖拽

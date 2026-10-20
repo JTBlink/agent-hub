@@ -52,6 +52,7 @@ import {
   isManagedWorkspaceSkill,
 } from "../lib/workspaceSkills";
 import { useMultiSelect } from "../hooks/useMultiSelect";
+import { useWorkspaceSkills } from "../hooks/useWorkspaceSkills";
 import { MultiSelectToolbar } from "../components/MultiSelectToolbar";
 import type { WorkspaceConfig } from "./workspaceConfigs";
 
@@ -64,6 +65,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     managedSkills,
     skillGroups,
     refreshManagedSkills,
+    refreshSkillGroups,
     refreshTools,
   } = useApp();
 
@@ -75,8 +77,6 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   const [removingLocalSkillId, setRemovingLocalSkillId] = useState<
     string | null
   >(null);
-  const [localSkills, setLocalSkills] = useState<ProjectSkill[]>([]);
-  const [localSkillsLoading, setLocalSkillsLoading] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<string | null>(null);
   const [localDetailSkill, setLocalDetailSkill] = useState<ProjectSkill | null>(
     null,
@@ -133,16 +133,6 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     return map;
   }, [installedTools, managedSkills]);
 
-  // Overview cards should reflect each agent's ACTUAL on-disk skill count —
-  // including skills installed outside agent-hub — to match the per-agent
-  // detail badge. The managed-only count above reads 0 for an agent whose
-  // skills all live on disk but were never imported (#287). We fill this from a
-  // per-agent scan and fall back to the managed count until it resolves.
-  const [localCountByAgent, setLocalCountByAgent] = useState<
-    Record<string, number>
-  >({});
-  const overviewCountsRef = useRef(0);
-
   const currentTool = useMemo(
     () =>
       agentKey
@@ -162,83 +152,16 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
   );
   const currentToolKey = currentTool?.key ?? null;
 
-  const localSkillsRequestRef = useRef(0);
-  const loadLocalSkills = useCallback(async () => {
-    const requestId = ++localSkillsRequestRef.current;
-    if (!currentToolKey) {
-      setLocalSkills([]);
-      return;
-    }
-    setLocalSkillsLoading(true);
-    try {
-      const skills = await api.getGlobalLocalSkills(currentToolKey);
-      if (localSkillsRequestRef.current === requestId) setLocalSkills(skills);
-    } catch (error: unknown) {
-      if (localSkillsRequestRef.current === requestId) {
-        toast.error(getErrorMessage(error, t("common.error")));
-        setLocalSkills([]);
-      }
-    } finally {
-      if (localSkillsRequestRef.current === requestId)
-        setLocalSkillsLoading(false);
-    }
-  }, [currentToolKey, t]);
-
-  const loadedAgentKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!currentToolKey) {
-      loadedAgentKeyRef.current = null;
-      setLocalSkills([]);
-      return;
-    }
-    if (loadedAgentKeyRef.current === currentToolKey) return;
-    loadedAgentKeyRef.current = currentToolKey;
-    void loadLocalSkills();
-    return () => {
-      localSkillsRequestRef.current += 1;
-      loadedAgentKeyRef.current = null;
-    };
-  }, [currentToolKey, loadLocalSkills]);
-
-  // Load real on-disk skill counts for every installed agent while the overview
-  // is shown (#287). Scoped to the overview (currentToolKey === null); the
-  // detail view derives its own count from `localSkills`.
-  useEffect(() => {
-    if (currentToolKey) return;
-    if (installedTools.length === 0) {
-      setLocalCountByAgent({});
-      return;
-    }
-    const requestId = ++overviewCountsRef.current;
-    void (async () => {
-      const entries = await Promise.all(
-        installedTools.map(async (tool) => {
-          try {
-            const skills = await api.getGlobalLocalSkills(tool.key);
-            return [tool.key, skills.length] as const;
-          } catch {
-            // Keep the managed-count fallback for an agent that fails to scan.
-            return [tool.key, null] as const;
-          }
-        }),
-      );
-      if (overviewCountsRef.current !== requestId) return;
-      // Rebuild the map from this scan's results (don't merge into the previous
-      // map): agents whose scan failed are omitted so they fall back to the
-      // managed count rather than showing a stale value, and counts for agents
-      // no longer installed are dropped.
-      const next: Record<string, number> = {};
-      for (const [key, count] of entries) {
-        if (count !== null) next[key] = count;
-      }
-      setLocalCountByAgent(next);
-    })();
-    // Depend on the managedSkills array reference (not just its length): a
-    // target-only enable/disable or an externally added unmanaged skill changes
-    // on-disk presence without changing the managed count, but still produces a
-    // fresh array via refreshManagedSkills (the file watcher triggers it), so
-    // the overview counts re-scan and stay accurate (#287).
-  }, [currentToolKey, installedTools, managedSkills]);
+  const {
+    skillsByAgent,
+    loading: localSkillsLoading,
+    refresh: loadLocalSkills,
+    existsInWorkspace: existsInGlobal,
+  } = useWorkspaceSkills(skillGroupBarAgentKeys, currentToolKey, managedSkills);
+  const localSkills = useMemo(
+    () => (currentToolKey ? (skillsByAgent[currentToolKey] ?? []) : []),
+    [currentToolKey, skillsByAgent],
+  );
 
   useEffect(() => {
     localDetailRequestRef.current += 1;
@@ -272,7 +195,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
 
   // Prune tag filters whose pill disappeared (e.g. its last skill was deleted),
   // otherwise a stale filter silently hides everything. An empty list is also
-  // what a failed load and the overview leave behind (`setLocalSkills([])`), and
+  // what a failed load and the overview leave behind, and
   // that says nothing about which tags are valid — wait for a real list.
   useEffect(() => {
     if (localSkills.length === 0) return;
@@ -609,12 +532,6 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     [currentTool],
   );
 
-  const existsInGlobal = useCallback(
-    (skill: ManagedSkill, agentK: string) =>
-      skill.targets.some((target) => target.tool === agentK),
-    [],
-  );
-
   const handleSkillGroupAdd = useCallback(
     async (skill: ManagedSkill, agentK: string) => {
       await api.syncSkillToTool(skill.id, agentK);
@@ -638,11 +555,12 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
 
   const handleSkillGroupComplete = useCallback(async () => {
     await Promise.all([
+      refreshSkillGroups(),
       refreshManagedSkills(),
       refreshTools(),
       loadLocalSkills(),
     ]);
-  }, [loadLocalSkills, refreshManagedSkills, refreshTools]);
+  }, [loadLocalSkills, refreshManagedSkills, refreshSkillGroups, refreshTools]);
 
   const renderLocalSkillActions = (
     skill: ProjectSkill,
@@ -802,7 +720,9 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {installedTools.map((tool) => {
             const count =
-              localCountByAgent[tool.key] ?? skillCountByAgent[tool.key] ?? 0;
+              skillsByAgent[tool.key]?.length ??
+              skillCountByAgent[tool.key] ??
+              0;
             return (
               <button
                 key={tool.key}
@@ -896,7 +816,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                 }}
               />
               <button
-                onClick={() => void loadLocalSkills()}
+                onClick={() => void handleSkillGroupComplete()}
                 disabled={localSkillsLoading}
                 className="rounded-md p-2 text-muted transition-colors outline-none hover:text-tertiary disabled:opacity-50"
                 title={t("settings.refresh")}
