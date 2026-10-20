@@ -1,7 +1,9 @@
 use crate::core::central_repo;
 use crate::core::git_credentials;
 use crate::core::skill_metadata;
+mod cache_cleanup;
 use anyhow::{bail, Context, Result};
+pub use cache_cleanup::clear_repository_cache;
 use fs2::FileExt;
 use git2::{Direction, Repository};
 use sha2::{Digest, Sha256};
@@ -1255,6 +1257,7 @@ fn normalize_url(url: &str) -> (String, Option<String>, Option<String>) {
     // Already a full URL
     if trimmed.starts_with("http://")
         || trimmed.starts_with("https://")
+        || trimmed.starts_with("ssh://")
         || trimmed.starts_with("git@")
     {
         if let Some((clone_url, branch, subpath)) = parse_github_tree_url(trimmed) {
@@ -1653,6 +1656,30 @@ mod tests {
         assert_eq!(parsed.clone_url, "git@github.com:acme/skills.git");
         assert_eq!(parsed.branch, None);
         assert_eq!(parsed.subpath, None);
+    }
+
+    #[test]
+    fn preserves_generic_repository_urls() {
+        for url in [
+            "https://git.example.invalid/team/skills.git",
+            "http://git.example.invalid:8080/team/skills.git",
+            "git@git.example.invalid:team/skills.git",
+            "ssh://git@git.example.invalid:11022/team/skills.git",
+            "ssh://git@git.example.invalid/team/subgroup/skills.git",
+            "ssh://git@git.example.invalid:11022/team/skills",
+            "ssh://git@git.example.invalid/team/skills/tree/main/tools",
+        ] {
+            validate_git_url(url).unwrap();
+            let parsed = parse_git_source(&format!("  {url}  "));
+            assert_eq!(parsed.original_url, url);
+            assert_eq!(parsed.clone_url, url);
+            assert_eq!(parsed.branch, None);
+            assert_eq!(parsed.subpath, None);
+            let resolved = parse_git_source_resolved(url, None);
+            assert_eq!(resolved.clone_url, url);
+            assert_eq!(resolved.branch, None);
+            assert_eq!(resolved.subpath, None);
+        }
     }
 
     #[test]

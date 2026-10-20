@@ -16,6 +16,7 @@ mod gh_credentials;
 pub mod git2_engine;
 pub(crate) mod git_auth_source;
 pub mod git_backup;
+pub mod git_catalog;
 pub mod git_credentials;
 pub(crate) mod git_failure;
 pub mod git_fetcher;

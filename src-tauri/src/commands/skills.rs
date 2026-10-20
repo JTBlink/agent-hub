@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::State;
 use walkdir::WalkDir;
+pub(crate) mod repository_install;
 
 use crate::core::{
     audit_log::AuditDraft,
@@ -286,13 +287,7 @@ pub struct GitSkillSource {
     pub locator_skill_id: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize)]
-pub struct GitSkillPreview {
-    /// Path relative to the resolved scan root, using `/` separators. Stable key.
-    pub rel_path: String,
-    pub name: String,
-    pub description: Option<String>,
-}
+pub use crate::core::git_catalog::{skill_rel_key, GitSkillPreview};
 
 #[derive(Debug, serde::Serialize)]
 pub struct GitPreviewResult {
@@ -304,6 +299,8 @@ pub struct GitPreviewResult {
 pub struct SkillInstallItem {
     pub rel_path: String,
     pub name: String,
+    #[serde(default)]
+    pub overwrite_skill_id: Option<String>,
 }
 
 struct CancelRegistrationGuard {
@@ -1436,23 +1433,7 @@ pub async fn preview_git_install(
 
             let skills: Vec<GitSkillPreview> = dirs
                 .iter()
-                .map(|dir| {
-                    let meta = skill_metadata::parse_skill_md(dir);
-                    let rel_path = skill_rel_key(&skill_dir, dir);
-                    let basename = dir
-                        .file_name()
-                        .map(|n| n.to_string_lossy().to_string())
-                        .unwrap_or_else(|| rel_path.clone());
-                    let name = meta
-                        .name
-                        .filter(|s| !s.trim().is_empty())
-                        .unwrap_or_else(|| basename.clone());
-                    GitSkillPreview {
-                        rel_path,
-                        name,
-                        description: meta.description,
-                    }
-                })
+                .map(|dir| crate::core::git_catalog::preview_skill(&temp_dir, &skill_dir, dir))
                 .collect();
 
             Ok(GitPreviewResult {
@@ -1485,6 +1466,7 @@ pub async fn confirm_git_install(
             if items.is_empty() {
                 return Ok(());
             }
+            repository_install::validate_overwrite_targets(&items)?;
 
             let parsed = git_fetcher::parse_git_source_resolved(&repo_url, proxy_url.as_deref());
             let skill_dir = resolve_skill_dir(&temp_path, parsed.subpath.as_deref(), None)?;
@@ -1505,8 +1487,6 @@ pub async fn confirm_git_install(
                 } else {
                     Some(custom_name)
                 };
-                let result =
-                    installer::install_from_git_dir(dir, install_name).map_err(AppError::io)?;
                 let subpath = git_fetcher::relative_subpath(&temp_path, dir);
                 let metadata = InstallSourceMetadata {
                     source_type: "git".to_string(),
@@ -1519,7 +1499,13 @@ pub async fn confirm_git_install(
                     remote_revision: Some(revision.clone()),
                     update_status: "up_to_date".to_string(),
                 };
-                store_installed_skill_unlocked(&store, &result, &metadata, None)?;
+                if let Some(skill_id) = item.overwrite_skill_id.as_deref() {
+                    repository_install::overwrite_skill_unlocked(&store, skill_id, dir, &metadata)?;
+                } else {
+                    let result =
+                        installer::install_from_git_dir(dir, install_name).map_err(AppError::io)?;
+                    store_installed_skill_unlocked(&store, &result, &metadata, None)?;
+                }
             }
             Ok(())
         })();
@@ -3068,19 +3054,6 @@ pub fn collect_git_skill_dirs(skill_dir: &Path) -> Vec<PathBuf> {
     dirs
 }
 
-/// Stable identifier for a discovered skill within a preview/confirm cycle.
-/// Uses forward slashes regardless of platform so the frontend sees consistent keys.
-pub fn skill_rel_key(skill_dir: &Path, dir: &Path) -> String {
-    let rel = dir.strip_prefix(skill_dir).unwrap_or(dir);
-    if rel.as_os_str().is_empty() {
-        dir.file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_default()
-    } else {
-        rel.to_string_lossy().replace('\\', "/")
-    }
-}
-
 /// Validate and canonicalize a temp directory path used by the git preview/install flow.
 /// Returns the canonicalized path if it passes security checks.
 pub fn validate_clone_temp_path(temp_dir: &str) -> Result<PathBuf, AppError> {
@@ -3666,6 +3639,7 @@ fn remove_path_if_exists(path: &Path) -> Result<(), AppError> {
 
 #[cfg(test)]
 mod tests {
+    mod repository_overwrite;
     use super::*;
     use std::fs;
     use tempfile::{tempdir, TempDir};

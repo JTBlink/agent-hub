@@ -39,3 +39,10 @@ export function makeSkill(index: number, deployed = false): ManagedSkill {
     skill_group_ids: ["demo-group"],
   };
 }
+
+/** A complete installed Skill fixture with explicit provenance overrides. */
+export function createManagedSkill(
+  overrides: Partial<ManagedSkill> = {},
+): ManagedSkill {
+  return { ...makeSkill(1), source_type: "git", ...overrides };
+}
