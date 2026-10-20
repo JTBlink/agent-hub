@@ -5,12 +5,15 @@ import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
+import en from "../i18n/en.json";
+import zhTW from "../i18n/zh-TW.json";
+import { makeSkillGroup } from "../../tests/fixtures/skillGroup";
 import type { SkillGroup } from "../lib/tauri";
 import { makeTool, makeProject } from "../../tests/fixtures/workspace";
 import { Sidebar } from "./Sidebar";
 
 const app = vi.hoisted(() => ({
-  skillGroups: [],
+  skillGroups: [] as SkillGroup[],
   managedSkills: [],
   projects: [],
   tools: [],
@@ -26,15 +29,24 @@ const app = vi.hoisted(() => ({
 }));
 vi.mock("../context/AppContext", () => ({ useApp: () => app }));
 const i18n = createInstance();
-await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
+await i18n.init({
+  lng: "zh",
+  resources: {
+    zh: { translation: zh },
+    en: { translation: en },
+    "zh-TW": { translation: zhTW },
+  },
+});
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: i18n.t.bind(i18n) }),
 }));
 
 let root: Root;
 let container: HTMLDivElement;
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await i18n.changeLanguage("zh");
+  app.skillGroups = [];
   localStorage.clear();
   app.viewedSkillGroup = null;
   app.viewingUngrouped = false;
@@ -161,3 +173,137 @@ it("uses the library title solely to toggle and All Skills to clear both group f
   expect(app.setViewingUngrouped).toHaveBeenCalledWith(false);
   expect(expanded()).toEqual(["技能库0"]);
 });
+
+function groups(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    ...makeSkillGroup(`group-${i}`, `Group ${i}`),
+    skill_count: i + 1,
+  }));
+}
+function more() {
+  return container.querySelector<HTMLButtonElement>(
+    "button[aria-controls][aria-expanded]",
+  )!;
+}
+function groupOrder() {
+  return [
+    ...container.querySelectorAll(
+      '[data-rfd-droppable-id="skillGroups"] [data-rfd-draggable-id]',
+    ),
+  ].map((row) => row.getAttribute("data-rfd-draggable-id"));
+}
+
+it.each([0, 5, 6, 13])(
+  "shows five common groups with More only when needed (%i groups)",
+  async (count) => {
+    app.skillGroups = groups(count);
+    await render("/my-skills");
+    expect(groupOrder()).toEqual(
+      app.skillGroups.slice(0, 5).map((group) => group.id),
+    );
+    expect(Boolean(more())).toBe(count > 5);
+    if (count > 5) expect(more().textContent).toBe(`更多...${count}`);
+  },
+);
+
+it.each(["zh", "en", "zh-TW"])(
+  "expands the same sidebar list and collapses it with focus preserved in %s",
+  async (language) => {
+    await i18n.changeLanguage(language);
+    app.skillGroups = groups(8);
+    await render("/my-skills");
+    const trigger = more();
+    expect(trigger.textContent).toBe(`${i18n.t("sidebar.moreGroups")}8`);
+    trigger.focus();
+    await click(trigger);
+    expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
+    expect(container.querySelector('[role="dialog"], dialog')).toBeNull();
+    expect(more()).toBe(trigger);
+    expect(more().getAttribute("aria-expanded")).toBe("true");
+    expect(
+      document
+        .getElementById(more().getAttribute("aria-controls")!)
+        ?.getAttribute("data-rfd-droppable-id"),
+    ).toBe("skillGroups");
+    expect(more().textContent).toBe(`${i18n.t("sidebar.lessGroups")}8`);
+    expect(document.activeElement).toBe(trigger);
+    await click(trigger);
+    expect(groupOrder()).toEqual(
+      app.skillGroups.slice(0, 5).map((group) => group.id),
+    );
+    expect(more().getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
+  },
+);
+
+it("keeps the selected extra group visible when collapsed without duplicating or reordering it", async () => {
+  app.skillGroups = groups(8);
+  app.viewedSkillGroup = app.skillGroups[7];
+  await render("/my-skills");
+  expect(button("Group 78").getAttribute("aria-current")).toBe("page");
+  expect(groupOrder()).toEqual(groups(5).map((group) => group.id));
+  await click(more());
+  expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
+  expect(
+    [...container.querySelectorAll("button")].filter(
+      (item) => item.textContent === "Group 78",
+    ),
+  ).toHaveLength(1);
+  await click(more());
+  expect(button("Group 78").getAttribute("aria-current")).toBe("page");
+  app.viewedSkillGroup = null;
+  await render("/my-skills");
+  expect(container.textContent).not.toContain("Group 7");
+});
+
+it("switches to an expanded group without navigating on More or changing common order", async () => {
+  app.skillGroups = groups(8);
+  await render("/settings");
+  await click(button("技能库0"));
+  await click(more());
+  expect(container.querySelector("output")?.textContent).toBe("/settings");
+  expect(app.setViewedSkillGroupId).not.toHaveBeenCalled();
+  await click(button("Group 78"));
+  expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("group-7");
+  expect(app.setViewingUngrouped).toHaveBeenCalledWith(false);
+  expect(app.closeSkillDetail).toHaveBeenCalledOnce();
+  expect(container.querySelector("output")?.textContent).toBe("/my-skills");
+  expect(more().getAttribute("aria-expanded")).toBe("true");
+  await click(more());
+  expect(groupOrder()).toEqual(groups(5).map((group) => group.id));
+});
+
+it("updates expanded rows and removes More when the group count falls to five", async () => {
+  app.skillGroups = groups(8);
+  await render("/my-skills");
+  await click(more());
+  app.skillGroups = app.skillGroups.slice(0, 5);
+  await render("/my-skills");
+  expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
+  expect(more()).toBeNull();
+  expect(container.textContent).not.toContain("Group 7");
+});
+
+it.each(["edit", "delete", "create"])(
+  "keeps %s available after expanding the sidebar",
+  async (action) => {
+    app.skillGroups = groups(8);
+    await render("/my-skills");
+    await click(more());
+    const target =
+      action === "create"
+        ? button("新建技能组")
+        : container.querySelector<HTMLButtonElement>(
+            `[aria-label="${action === "edit" ? "编辑" : "删除"} Group 7"]`,
+          )!;
+    await click(target);
+    if (action === "delete")
+      expect(
+        container.querySelector('[role="alertdialog"]')?.textContent,
+      ).toContain("Group 7");
+    else
+      expect(container.querySelector<HTMLInputElement>("input")?.value).toBe(
+        action === "edit" ? "Group 7" : "",
+      );
+  },
+);
