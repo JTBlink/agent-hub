@@ -15,7 +15,21 @@ const previewParams = new URLSearchParams(location.search);
 const empty = previewParams.has("empty");
 const showUndeployed = previewParams.has("undeployed");
 const timestamp = 1791676800;
-const groups: SkillGroup[] = ["开发", "设计", "研究"].map((name, index) => ({
+const groupNames = ["开发", "设计", "研究"];
+if (previewParams.has("many-groups"))
+  groupNames.push(
+    "自动化",
+    "文档",
+    "数据",
+    "测试",
+    "运维",
+    "工具",
+    "写作",
+    "协作",
+    "效率",
+    "归档",
+  );
+let groups: SkillGroup[] = groupNames.map((name, index) => ({
   id: `group-${index}`,
   name,
   description: null,
@@ -131,7 +145,10 @@ Object.assign(window, {
   __TAURI_INTERNALS__: {
     transformCallback: () => 1,
     unregisterCallback: () => {},
-    invoke: async (command: string, args?: { key?: string; id?: string }) => {
+    invoke: async (
+      command: string,
+      args?: { key?: string; id?: string; ids?: string[] },
+    ) => {
       switch (command) {
         case "get_settings":
           return (
@@ -148,6 +165,13 @@ Object.assign(window, {
           return empty ? [] : tools;
         case "get_skill_groups":
           return empty ? [] : groups;
+        case "reorder_skill_groups": {
+          const order = new Map(args?.ids?.map((id, index) => [id, index]));
+          groups = [...groups].sort(
+            (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+          );
+          return null;
+        }
         case "get_managed_skills":
           return empty ? [] : skills;
         case "get_projects":

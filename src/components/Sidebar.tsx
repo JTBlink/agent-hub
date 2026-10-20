@@ -1,8 +1,4 @@
-import {
-  getSkillGroupDisplayName,
-  getSkillGroupDisplayDescription,
-} from "../lib/skillGroupDisplay";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -12,12 +8,10 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  Layers,
   Download,
   RefreshCw,
   Settings,
   Plus,
-  Pencil,
   Trash2,
   FolderOpen,
   GripVertical,
@@ -27,8 +21,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "../utils";
 import { useApp } from "../context/AppContext";
-import { CreateSkillGroupDialog } from "./CreateSkillGroupDialog";
-import { RenameSkillGroupDialog } from "./RenameSkillGroupDialog";
 import { AddProjectDialog } from "./AddProjectDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useSidebarSections } from "../hooks/useSidebarSections";
@@ -36,7 +28,7 @@ import { SidebarSectionHeader } from "./SidebarSectionHeader";
 import { SidebarAgentWorkspaces } from "./SidebarAgentWorkspaces";
 import * as api from "../lib/tauri";
 import type { SyncHealth } from "../lib/tauri";
-import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
+import { SidebarSkillGroups } from "./SidebarSkillGroups";
 
 function getSyncHealthIndicator(
   health: SyncHealth,
@@ -67,77 +59,23 @@ export function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    skillGroups,
-    viewedSkillGroup,
-    setViewedSkillGroupId,
-    viewingUngrouped,
-    setViewingUngrouped,
-    closeSkillDetail,
-    refreshSkillGroups,
-    refreshManagedSkills,
-    projects,
-    refreshProjects,
-    tools,
-    managedSkills,
-    appUpdate,
-  } = useApp();
-  const [showCreate, setShowCreate] = useState(false);
+  const { projects, refreshProjects, tools, managedSkills, appUpdate } =
+    useApp();
   const [showAddProject, setShowAddProject] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<{
-    id: string;
-    name: string;
-    icon?: string | null;
-    description?: string | null;
-  } | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
   const [deleteProjectTarget, setDeleteProjectTarget] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  const ungroupedCount = useMemo(
-    () => managedSkills.filter((s) => s.skill_group_ids.length === 0).length,
-    [managedSkills],
-  );
-  const [orderedSkillGroups, setOrderedSkillGroups] = useState(skillGroups);
   const [orderedProjects, setOrderedProjects] = useState(projects);
-  const skillGroupReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
   const projectReorderQueueRef = useRef<Promise<void>>(Promise.resolve());
   const { expandedSection, toggleSection } = useSidebarSections(
     location.pathname,
   );
-  const skillGroupsOpen = expandedSection === "skills";
   const projectsOpen = expandedSection === "projects";
 
   useEffect(() => {
-    setOrderedSkillGroups(skillGroups);
-  }, [skillGroups]);
-  useEffect(() => {
     setOrderedProjects(projects);
   }, [projects]);
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination || result.destination.index === result.source.index)
-      return;
-    const reordered = [...orderedSkillGroups];
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    setOrderedSkillGroups(reordered);
-
-    skillGroupReorderQueueRef.current = skillGroupReorderQueueRef.current
-      .catch(() => undefined)
-      .then(async () => {
-        try {
-          await api.reorderSkillGroups(reordered.map((s) => s.id));
-        } catch {
-          await refreshSkillGroups();
-          toast.error(t("common.error"));
-        }
-      });
-  };
-
   const handleProjectDragEnd = (result: DropResult) => {
     if (!result.destination || result.destination.index === result.source.index)
       return;
@@ -163,78 +101,6 @@ export function Sidebar() {
     { name: t("sidebar.installSkills"), path: "/install", icon: Download },
     { name: t("sidebar.backup"), path: "/backup", icon: RefreshCw },
   ];
-
-  const handleSwitchSkillGroup = (id: string) => {
-    closeSkillDetail();
-    setViewedSkillGroupId(id);
-    if (location.pathname !== "/my-skills") {
-      navigate("/my-skills");
-    }
-  };
-
-  const handleCreateSkillGroup = async (
-    name: string,
-    description?: string,
-    icon?: string,
-  ) => {
-    await api.createSkillGroup(name, description, icon);
-    await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
-    if (location.pathname === "/settings") {
-      navigate("/my-skills");
-    }
-    toast.success(t("skillGroup.created"));
-  };
-
-  const handleRenameSkillGroup = async (
-    newName: string,
-    icon?: string,
-    description?: string,
-  ) => {
-    if (!renameTarget) return;
-    const skillGroup = skillGroups.find((s) => s.id === renameTarget.id);
-    if (!skillGroup) return;
-    await api.updateSkillGroup(
-      renameTarget.id,
-      newName,
-      description,
-      icon || skillGroup.icon || undefined,
-    );
-    await refreshSkillGroups();
-    toast.success(t("skillGroup.updated"));
-  };
-
-  const handleDeleteSkillGroup = async () => {
-    if (!deleteTarget) return;
-    await api.deleteSkillGroup(deleteTarget.id);
-    await Promise.all([refreshSkillGroups(), refreshManagedSkills()]);
-    if (location.pathname === "/settings") {
-      navigate("/my-skills");
-    }
-    toast.success(t("skillGroup.deleted"));
-  };
-
-  const handleRenameClick = (
-    event: React.MouseEvent,
-    skillGroup: {
-      id: string;
-      name: string;
-      icon?: string | null;
-      description?: string | null;
-    },
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setRenameTarget(skillGroup);
-  };
-
-  const handleDeleteClick = (
-    event: React.MouseEvent,
-    skillGroup: { id: string; name: string },
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setDeleteTarget(skillGroup);
-  };
 
   const handleDeleteProject = async () => {
     if (!deleteProjectTarget) return;
@@ -296,205 +162,10 @@ export function Sidebar() {
 
         {/* Scrollable section */}
         <div className="px-2.5 flex-1 overflow-y-auto scrollbar-hide min-h-0">
-          {/* ── 技能库 (with skill groups as children) ── */}
-          <SidebarSectionHeader
-            label={t("sidebar.mySkills")}
-            isOpen={skillGroupsOpen}
+          <SidebarSkillGroups
+            isOpen={expandedSection === "skills"}
             onToggle={() => toggleSection("skills")}
-            icon={<Layers className="h-3.5 w-3.5 shrink-0" />}
-            count={managedSkills.length}
           />
-          {skillGroupsOpen && (
-            <>
-              <Link
-                to="/my-skills"
-                onClick={() => {
-                  closeSkillDetail();
-                  setViewedSkillGroupId("");
-                  setViewingUngrouped(false);
-                }}
-                aria-current={
-                  location.pathname === "/my-skills" &&
-                  !viewedSkillGroup &&
-                  !viewingUngrouped
-                    ? "page"
-                    : undefined
-                }
-                className={cn(
-                  "mb-0.5 flex items-center gap-2 rounded-md px-2.5 py-[7px] text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent",
-                  location.pathname === "/my-skills" &&
-                    !viewedSkillGroup &&
-                    !viewingUngrouped
-                    ? "bg-surface-active font-medium text-primary"
-                    : "text-tertiary hover:text-secondary hover:bg-surface-hover",
-                )}
-              >
-                <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
-                  <Layers className="h-3 w-3" />
-                </span>
-                <span className="flex-1 truncate">
-                  {t("sidebar.allSkills")}
-                </span>
-              </Link>
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <Droppable droppableId="skillGroups">
-                  {(droppableProvided) => (
-                    <div
-                      className="space-y-0.5"
-                      ref={droppableProvided.innerRef}
-                      {...droppableProvided.droppableProps}
-                    >
-                      {orderedSkillGroups.map((skillGroup, index) => {
-                        const isActive =
-                          location.pathname === "/my-skills" &&
-                          viewedSkillGroup?.id === skillGroup.id;
-                        const skillGroupIcon =
-                          getSkillGroupIconOption(skillGroup);
-                        const SkillGroupIcon = skillGroupIcon.icon;
-                        return (
-                          <Draggable
-                            key={skillGroup.id}
-                            draggableId={skillGroup.id}
-                            index={index}
-                          >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={cn(
-                                  "group relative flex items-center rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-surface-active"
-                                    : "hover:bg-surface-hover",
-                                )}
-                              >
-                                <button
-                                  onClick={() =>
-                                    handleSwitchSkillGroup(skillGroup.id)
-                                  }
-                                  title={
-                                    getSkillGroupDisplayDescription(
-                                      skillGroup,
-                                      t,
-                                    ) || undefined
-                                  }
-                                  className={cn(
-                                    "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none",
-                                    isActive
-                                      ? "font-medium text-primary"
-                                      : "text-tertiary group-hover:text-secondary",
-                                  )}
-                                >
-                                  <span
-                                    className={cn(
-                                      "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border",
-                                      isActive
-                                        ? `${skillGroupIcon.activeClass} ${skillGroupIcon.colorClass}`
-                                        : "border-border bg-surface text-muted group-hover:border-border group-hover:text-tertiary",
-                                    )}
-                                  >
-                                    <SkillGroupIcon className="h-3 w-3" />
-                                  </span>
-                                  <span className="flex-1 truncate">
-                                    {getSkillGroupDisplayName(
-                                      skillGroup.name,
-                                      t,
-                                    )}
-                                  </span>
-                                  <span className="ml-auto flex h-[18px] w-[32px] shrink-0 items-center justify-end group-hover:hidden">
-                                    {skillGroup.skill_count > 0 && (
-                                      <span
-                                        className={cn(
-                                          "min-w-[18px] rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
-                                          isActive
-                                            ? "bg-accent-bg text-accent-light"
-                                            : "bg-surface-hover text-muted",
-                                        )}
-                                      >
-                                        {skillGroup.skill_count}
-                                      </span>
-                                    )}
-                                  </span>
-                                </button>
-                                <div
-                                  className={cn(
-                                    "absolute right-1 flex items-center rounded-md invisible opacity-0 transition-opacity group-hover:visible group-hover:opacity-100",
-                                    isActive
-                                      ? "bg-surface-active"
-                                      : "bg-surface-hover",
-                                  )}
-                                >
-                                  <div
-                                    {...provided.dragHandleProps}
-                                    className="rounded p-1 text-faint cursor-grab active:cursor-grabbing"
-                                  >
-                                    <GripVertical className="h-3 w-3" />
-                                  </div>
-                                  <button
-                                    onClick={(event) =>
-                                      handleRenameClick(event, skillGroup)
-                                    }
-                                    className="rounded p-1 text-faint transition hover:text-secondary"
-                                    title={t("common.edit")}
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={(event) =>
-                                      handleDeleteClick(event, skillGroup)
-                                    }
-                                    className="rounded p-1 text-faint transition hover:text-red-400"
-                                    title={t("common.delete")}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {droppableProvided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </DragDropContext>
-              {ungroupedCount > 0 && (
-                <button
-                  onClick={() => {
-                    closeSkillDetail();
-                    setViewingUngrouped(true);
-                    if (location.pathname !== "/my-skills") {
-                      navigate("/my-skills");
-                    }
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 outline-none transition-colors",
-                    viewingUngrouped && location.pathname === "/my-skills"
-                      ? "bg-surface-active text-primary"
-                      : "text-tertiary hover:text-secondary hover:bg-surface-hover",
-                  )}
-                >
-                  <span className="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
-                    <Layers className="h-3 w-3" />
-                  </span>
-                  <span className="flex-1 truncate">
-                    {t("mySkills.sourceFilter.ungrouped")}
-                  </span>
-                  <span className="min-w-[18px] rounded-full bg-surface-hover px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums text-muted">
-                    {ungroupedCount}
-                  </span>
-                </button>
-              )}
-              <button
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-2.5 py-[7px] mt-1 rounded-md text-sm text-muted hover:text-secondary hover:bg-surface-hover transition-colors w-full outline-none"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {t("sidebar.newSkillGroup")}
-              </button>
-            </>
-          )}
 
           {/* Divider */}
           <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
@@ -684,30 +355,6 @@ export function Sidebar() {
           </Link>
         </div>
       </div>
-
-      <CreateSkillGroupDialog
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onCreate={handleCreateSkillGroup}
-      />
-
-      <RenameSkillGroupDialog
-        open={renameTarget !== null}
-        currentName={renameTarget?.name || ""}
-        currentIcon={renameTarget?.icon}
-        currentDescription={renameTarget?.description}
-        onClose={() => setRenameTarget(null)}
-        onRename={handleRenameSkillGroup}
-      />
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        message={t("skillGroup.deleteConfirm", {
-          name: getSkillGroupDisplayName(deleteTarget?.name || "", t),
-        })}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDeleteSkillGroup}
-      />
 
       <AddProjectDialog
         open={showAddProject}
