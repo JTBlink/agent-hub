@@ -31,6 +31,10 @@ agent-hub/
 │   │   ├── LocalSkillsPanel.tsx   #   本地扫描列表、筛选与导入
 │   │   ├── LocalSkillCleanup.tsx  #   按 Agent 预览、确认清理与失败反馈
 │   │   ├── LocalSkillLocation.tsx #   目录操作、适用 Agent 与软链接指示
+│   │   ├── GitImportPanel.tsx     #   远程/本地 Git 仓库切换、管理与缓存清理
+│   │   ├── GitRepositorySkills.tsx #  Skill 搜索、筛选、详情与覆盖安装确认
+│   │   ├── GitSkillCard.tsx       #   仓库 Skill 卡片与安装状态
+│   │   ├── GitBrowserDialog.tsx   #   Git 浏览器原生模态框与焦点恢复
 │   │   ├── SkillsDirectorySetting.tsx # 技能路径展示与打开目录
 │   │   ├── SkillMarkdown.tsx       #   技能 Markdown 渲染
 │   │   ├── SkillSourceDiffViewer.tsx  # 技能源码 Diff
@@ -41,6 +45,7 @@ agent-hub/
 │   │   └── ThemeContext.tsx        #   主题上下文
 │   ├── hooks/                      # 自定义 Hooks
 │   │   ├── useLocalSkillManagement.ts # 本地内容读取与删除状态
+│   │   ├── useGitRepositories.ts  #   仓库目录持久化、并发状态与安装请求
 │   │   ├── useProjectSkillRestore.ts # 项目恢复确认、批量执行与刷新
 │   │   ├── useMultiSelect.ts       #   多选逻辑
 │   │   ├── useDragWindow.ts        #   窗口拖拽
@@ -50,6 +55,7 @@ agent-hub/
 │   │   ├── tauri.ts                #   Tauri IPC 封装
 │   │   ├── error.ts                #   错误处理
 │   │   ├── gitErrors.ts            #   Git 错误映射
+│   │   ├── gitRepositories.ts      #   仓库标识、目录设置与安装来源匹配
 │   │   ├── distribution.ts         #   分发逻辑
 │   │   ├── exportAgents.ts         #   Agent 导出
 │   │   ├── agentIcons.ts           #   Agent 图标映射
@@ -86,6 +92,9 @@ agent-hub/
 │   │   │   ├── discovered_skills.rs #    扫描副本内容读取与安全删除
 │   │   │   ├── skill_groups.rs     #     技能组管理
 │   │   │   ├── skills.rs           #     技能管理
+│   │   │   ├── skills/repository_install.rs # 按已有 Skill ID 暂存、覆盖及部署刷新
+│   │   │   ├── skills/tests/repository_overwrite.rs # 覆盖身份保留与安全边界回归
+│   │   │   ├── git_repositories.rs #     本地仓库读取/安装与远程缓存清理 IPC
 │   │   │   ├── skills_diff_metadata.rs # 技能差异目录、声明版本与比较 DTO
 │   │   │   ├── project_skill_diff.rs # 项目 Agent 副本与中心技能的目录差异
 │   │   │   ├── project_skill_update.rs # 项目从中心更新与显式强制恢复
@@ -119,6 +128,8 @@ agent-hub/
 │   │       ├── git_backup/         #     分阶段克隆恢复与应用状态排除
 │   │       ├── git2_engine.rs      #     libgit2 引擎封装
 │   │       ├── git_fetcher.rs      #     Git 远程拉取
+│   │       ├── git_fetcher/cache_cleanup.rs # 使用文件锁清理远程克隆缓存
+│   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端
 │   │       ├── credential_cache.rs #     进程内钥匙串读取缓存与并发合并

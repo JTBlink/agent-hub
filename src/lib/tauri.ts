@@ -348,6 +348,8 @@ export const installGit = (repoUrl: string, name?: string) =>
 export interface GitSkillPreview {
   /** Path relative to the resolved scan root, using `/` separators. Stable key. */
   rel_path: string;
+  /** Path relative to the repository root, independent of the scan root. */
+  repo_path: string;
   name: string;
   description: string | null;
 }
@@ -360,10 +362,33 @@ export interface GitPreviewResult {
 export interface SkillInstallItem {
   rel_path: string;
   name: string;
+  overwrite_skill_id?: string;
 }
 
 export const previewGitInstall = (repoUrl: string) =>
   invoke<GitPreviewResult>("preview_git_install", { repoUrl });
+
+export const previewLocalGitRepository = (path: string) =>
+  invoke<{ path: string; skills: GitSkillPreview[] }>(
+    "preview_local_git_repository",
+    { path },
+  );
+
+export const installLocalGitSkill = (
+  path: string,
+  repoPath: string,
+  name: string,
+  overwriteSkillId?: string,
+) =>
+  invoke<void>("install_local_git_skill", {
+    path,
+    repoPath,
+    name,
+    overwriteSkillId: overwriteSkillId ?? null,
+  });
+
+export const clearGitRepositoryCache = (repoUrl: string) =>
+  invoke<void>("clear_git_repository_cache", { repoUrl });
 
 export const confirmGitInstall = (
   repoUrl: string,
