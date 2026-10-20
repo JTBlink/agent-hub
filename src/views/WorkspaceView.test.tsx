@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
 import { createProjectSkill } from "../../tests/fixtures/projectSkill";
@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 const t = (key: string, options?: { count?: number }) =>
   options?.count === undefined ? key : `${key}:${options.count}`;
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
+vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("../lib/tauri", () => ({ getGlobalLocalSkills: mocks.scan }));
 vi.mock("../context/AppContext", () => ({ useApp: () => app }));
 vi.mock("../components/AddSkillsSheet", () => ({ AddSkillsSheet: () => null }));
@@ -83,6 +84,7 @@ async function render(agent = "codex") {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={[`/global-workspace/${agent}`]}>
+        <Navigation />
         <Routes>
           <Route
             path="/global-workspace/"
@@ -97,6 +99,25 @@ async function render(agent = "codex") {
     ),
   );
 }
+function Navigation() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <button
+        data-agent="claude_code"
+        onClick={() => navigate("/global-workspace/claude_code")}
+      >
+        Open another Agent
+      </button>
+      <button
+        data-agent="codex"
+        onClick={() => navigate("/global-workspace/codex")}
+      >
+        Open Codex
+      </button>
+    </>
+  );
+}
 function group() {
   return container.querySelector('button[title="Demo"]')!;
 }
@@ -106,18 +127,25 @@ it("counts actual workspace copies instead of stale deployment records", async (
   expect(group().textContent).toBe("Demo1/2");
 });
 
-it("refreshes group presence and cards after a library notification with unchanged skill count", async () => {
+it("does not rescan for library notifications or equivalent Agent objects", async () => {
   await render();
   mocks.scan.mockResolvedValue([local(1), local(2)]);
   app.managedSkills = skills.map((skill) => ({ ...skill }));
+  app.tools = app.tools.map((tool) => ({ ...tool }));
   await render();
-  expect(mocks.scan).toHaveBeenCalledTimes(2);
-  expect(group().textContent).toBe("Demo");
-  expect(container.querySelectorAll("h3")).toHaveLength(2);
+  expect(mocks.scan).toHaveBeenCalledTimes(1);
+  expect(group().textContent).toBe("Demo1/2");
+  expect(container.querySelectorAll("h3")).toHaveLength(1);
 });
 
 it("refreshes group membership as well as skills when the toolbar is refreshed", async () => {
   await render();
+  mocks.refreshSkills.mockImplementationOnce(async () => {
+    app.managedSkills = [...skills];
+  });
+  mocks.refreshTools.mockImplementationOnce(async () => {
+    app.tools = app.tools.map((tool) => ({ ...tool }));
+  });
   await act(async () =>
     (
       container.querySelector(
@@ -127,6 +155,7 @@ it("refreshes group membership as well as skills when the toolbar is refreshed",
   );
   expect(mocks.refreshGroups).toHaveBeenCalledTimes(1);
   expect(mocks.refreshSkills).toHaveBeenCalledTimes(1);
+  expect(mocks.scan).toHaveBeenCalledTimes(2);
 });
 
 it("recognizes a verified local copy even before deployment records catch up", async () => {
@@ -143,14 +172,17 @@ it("shares real scan results between overview counts and group status", async ()
   );
   mocks.scan.mockResolvedValue([local(1), local(2)]);
   app.managedSkills = [...skills];
+  app.tools = app.tools.map((tool) => ({ ...tool }));
   await render("");
-  expect(group().textContent).toBe("Demo");
-  expect(container.querySelector(".app-panel")?.textContent).toContain(
-    "skillCount:2",
-  );
+  expect(mocks.scan).toHaveBeenCalledTimes(1);
+  expect(group().textContent).toBe("Demo1/2");
 });
 
 it("does not let an older scan undo a newer group status", async () => {
+  app.tools = [
+    ...app.tools,
+    { ...tool, key: "claude_code", display_name: "Claude Code" },
+  ];
   let resolveOld!: (value: ReturnType<typeof local>[]) => void;
   mocks.scan.mockReturnValueOnce(
     new Promise((resolve) => {
@@ -158,8 +190,11 @@ it("does not let an older scan undo a newer group status", async () => {
     }),
   );
   await render();
-  app.managedSkills = [...skills];
-  await render();
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('[data-agent="claude_code"]')!
+      .click(),
+  );
   expect(group().textContent).toBe("Demo1/2");
   await act(async () => resolveOld([local(1), local(2)]));
   expect(group().textContent).toBe("Demo1/2");
@@ -171,8 +206,76 @@ it("treats failed scans as unknown and a successful empty scan as absent", async
   await render();
   expect(group().querySelector(".lucide-check")).not.toBeNull();
   mocks.scan.mockResolvedValue([]);
-  app.managedSkills = [...skills];
-  await render();
+  await act(async () => refreshButton().click());
   expect(group().querySelector(".lucide-check")).toBeNull();
   expect(group().textContent).toBe("Demo");
+});
+
+function refreshButton() {
+  const button = container.querySelector<HTMLButtonElement>(
+    'button[title="settings.refresh"]',
+  );
+  if (!button) throw new Error("Refresh button missing");
+  return button;
+}
+
+it("keeps existing cards visible while an explicit refresh is pending", async () => {
+  await render();
+  const heading = container.querySelector("h3");
+  let finish!: (value: ReturnType<typeof local>[]) => void;
+  mocks.scan.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  await act(async () => refreshButton().click());
+  expect(container.querySelectorAll("h3")).toHaveLength(1);
+  expect(container.querySelector("h3")).toBe(heading);
+  await act(async () => finish([local(1), local(2)]));
+  expect(container.querySelectorAll("h3")).toHaveLength(2);
+  expect(group().textContent).toBe("Demo");
+});
+
+it("updates group membership from context without scanning the directory again", async () => {
+  await render();
+  app.managedSkills = [skills[0], { ...skills[1], skill_group_ids: [] }];
+  await render();
+  expect(group().textContent).toBe("Demo");
+  expect(group().querySelector(".lucide-check")).not.toBeNull();
+  expect(mocks.scan).toHaveBeenCalledTimes(1);
+});
+
+it("scans once per Agent page switch, including returning to an earlier Agent", async () => {
+  app.tools = [
+    ...app.tools,
+    { ...tool, key: "claude_code", display_name: "Claude Code" },
+  ];
+  await render();
+  expect(mocks.scan.mock.calls).toEqual([["codex"]]);
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('[data-agent="claude_code"]')!
+      .click(),
+  );
+  app.managedSkills = [...skills];
+  app.tools = app.tools.map((tool) => ({ ...tool }));
+  await render();
+  expect(mocks.scan.mock.calls).toEqual([["codex"], ["claude_code"]]);
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('[data-agent="codex"]')!.click(),
+  );
+  expect(mocks.scan.mock.calls).toEqual([
+    ["codex"],
+    ["claude_code"],
+    ["codex"],
+  ]);
+});
+
+it("retains the visible snapshot after a failed refresh", async () => {
+  await render();
+  mocks.scan.mockRejectedValueOnce(new Error("scan unavailable"));
+  await act(async () => refreshButton().click());
+  expect(container.querySelectorAll("h3")).toHaveLength(1);
+  expect(group().textContent).toBe("Demo1/2");
+  expect(refreshButton().disabled).toBe(false);
 });

@@ -157,7 +157,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     loading: localSkillsLoading,
     refresh: loadLocalSkills,
     existsInWorkspace: existsInGlobal,
-  } = useWorkspaceSkills(skillGroupBarAgentKeys, currentToolKey, managedSkills);
+  } = useWorkspaceSkills(skillGroupBarAgentKeys, currentToolKey);
   const localSkills = useMemo(
     () => (currentToolKey ? (skillsByAgent[currentToolKey] ?? []) : []),
     [currentToolKey, skillsByAgent],
@@ -970,7 +970,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
         )}
       </div>
 
-      {localSkillsLoading ? (
+      {localSkillsLoading && !Object.hasOwn(skillsByAgent, currentTool.key) ? (
         <div className="flex items-center gap-2 py-4 text-[13px] text-muted">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           {t("common.loading")}

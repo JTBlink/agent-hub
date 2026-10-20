@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import i18n from "../i18n";
 import { getErrorMessage } from "../lib/error";
 import {
   getGlobalLocalSkills,
@@ -12,9 +12,10 @@ import {
 export function useWorkspaceSkills(
   agentKeys: string[],
   currentAgent: string | null,
-  managedSkills: ManagedSkill[],
 ) {
-  const { t } = useTranslation();
+  // Context refreshes create new Tool objects and arrays. Only a different
+  // visible Agent scope should automatically trigger another directory scan.
+  const scope = JSON.stringify([...agentKeys].sort());
   const [skillsByAgent, setSkillsByAgent] = useState<
     Record<string, ProjectSkill[]>
   >({});
@@ -24,13 +25,14 @@ export function useWorkspaceSkills(
   const refresh = useCallback(async () => {
     const request = ++requestRef.current;
     setLoading(true);
+    const agents: string[] = JSON.parse(scope);
     const results = await Promise.all(
-      agentKeys.map(async (agent) => {
+      agents.map(async (agent) => {
         try {
           return [agent, await getGlobalLocalSkills(agent)] as const;
         } catch (error) {
           if (requestRef.current === request && agent === currentAgent) {
-            toast.error(getErrorMessage(error, t("common.error")));
+            toast.error(getErrorMessage(error, i18n.t("common.error")));
           }
           return [agent, null] as const;
         }
@@ -39,13 +41,14 @@ export function useWorkspaceSkills(
     if (requestRef.current !== request) return;
     const next: Record<string, ProjectSkill[]> = {};
     for (const [agent, skills] of results) {
-      // A failed scan is unknown, not an empty directory: use deployment records
-      // as fallback rather than treating every group as absent.
+      // A failed scan must not replace a valid snapshot with an empty directory.
       if (skills !== null) next[agent] = skills;
     }
-    setSkillsByAgent(next);
+    // Failed refreshes retain the last successful snapshot. Before a first
+    // successful scan, presence still falls back to deployment records.
+    setSkillsByAgent((previous) => ({ ...previous, ...next }));
     setLoading(false);
-  }, [agentKeys, currentAgent, t]);
+  }, [scope, currentAgent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,10 +59,7 @@ export function useWorkspaceSkills(
       cancelled = true;
       requestRef.current += 1;
     };
-    // File watcher and membership refreshes supply a new array even when the
-    // count is unchanged. Rescan on every such notification, including copies
-    // installed or removed outside the app.
-  }, [refresh, managedSkills]);
+  }, [refresh]);
 
   const installedIdsByAgent = useMemo(
     () =>
