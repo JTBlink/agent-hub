@@ -551,7 +551,7 @@ fn target_paths(
         if directory.is_empty() {
             bail!("Agent has no project Skills directory");
         }
-        let path = format!("{directory}/{name}");
+        let path = entries::target_path(root, &format!("{directory}/{name}"))?;
         validate_target(root, name, &path)?;
         for existing in paths.values() {
             if existing != &path {
@@ -697,3 +697,6 @@ mod removal_tests;
 
 #[cfg(test)]
 mod force_restore_tests;
+
+#[cfg(test)]
+mod directory_alias_tests;

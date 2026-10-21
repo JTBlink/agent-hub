@@ -73,9 +73,17 @@ pub fn read(root: &Path) -> Result<ProjectManifest> {
             manifest.version
         );
     }
-    for (name, entry) in &manifest.skills {
+    for (name, entry) in &mut manifest.skills {
         super::safe_name(name)?;
-        for target in entry.targets.values() {
+        for (agent, target) in &mut entry.targets {
+            let resolved = super::entries::target_path(root, target)?;
+            if resolved != *target {
+                if entry.disabled || entry.disabled_targets.contains(agent) {
+                    bail!("Disabled Agent directory now shares the project library; restore its dedicated directory before changing it");
+                }
+                entry.linked_targets.remove(agent);
+                *target = resolved;
+            }
             super::validate_target(root, name, target)?;
             if !target.ends_with(&format!("/{name}")) {
                 bail!("Invalid project deployment target");
