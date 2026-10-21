@@ -42,3 +42,5 @@ Git 忽略误报：[B02](issues/B02-ignored-local-artifacts.md)，缓存与本�
 状态判断：[B04](issues/B04-clear-agent-skill-status.md)，未添加的灰色 Agent 不显示缺失提示，恢复仅处理已存在的入口。
 
 比较对象：[B05](issues/B05-distinguish-status-comparisons.md)，区分个人技能库内容比较与项目管理记录变化，仅实际 Agent 入口异常提示恢复。
+
+共享目录链接兼容：[B06](issues/B06-shared-directory-alias.md)，项目安装复用指向项目中央目录的 Agent 目录链接。

@@ -53,6 +53,39 @@ pub(super) fn path(root: &Path, relative: &str) -> Result<PathBuf> {
     Ok(target)
 }
 
+/// Treat an Agent directory alias to the project library as a public target.
+/// Only this exact shared directory is accepted. Publications still use the
+/// physical, link-free central path, so no directory link is replaced or followed.
+pub(super) fn target_path(root: &Path, relative: &str) -> Result<String> {
+    path_guard::ensure_safe_skill_relative_path(relative)
+        .map_err(|err| anyhow::anyhow!(err.message))?;
+    let parent = Path::new(relative)
+        .parent()
+        .context("Project target has no parent")?;
+    let parent_relative = parent
+        .to_str()
+        .context("Invalid project target directory")?;
+    let directory = path(root, parent_relative)?;
+    if directory.is_symlink() {
+        let library = super::safe_path(root, LIBRARY)?;
+        let destination = directory
+            .canonicalize()
+            .or_else(|_| link_destination(&directory))?;
+        let expected = library.canonicalize().unwrap_or(library);
+        if destination == expected {
+            let name = Path::new(relative)
+                .file_name()
+                .context("Missing Skill name")?;
+            return Ok(format!(
+                "{LIBRARY}/{}",
+                name.to_str().context("Invalid Skill name")?
+            ));
+        }
+    }
+    path(root, relative)?;
+    Ok(relative.into())
+}
+
 /// Hash the link text itself for publication/recovery; never follow a link.
 pub(super) fn fingerprint_entry(path: &Path) -> Result<Option<String>> {
     if fs::symlink_metadata(path).is_ok_and(|meta| meta.file_type().is_symlink()) {
