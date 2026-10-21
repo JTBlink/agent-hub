@@ -363,3 +363,56 @@ it("does not imply a newer version when declared versions match", async () => {
   expect(document.body.textContent).toContain("双方声明版本相同");
   expect(document.body.textContent).not.toContain("较新版本");
 });
+
+it("keeps the full description and known version visible before expanding source details", async () => {
+  const description =
+    "First line\nSecond line\nThird line\nLast line of the description";
+  await render({ ...skill, description, version: "2.3.0" });
+  const paragraph = [...document.querySelectorAll("p")].find(
+    (item) => item.textContent === description,
+  );
+  expect(paragraph).toBeDefined();
+  expect(paragraph?.className).not.toContain("line-clamp");
+  expect(document.body.textContent).toContain("版本2.3.0");
+  expect(
+    document
+      .querySelector('[aria-controls="skill-source-metadata"]')
+      ?.getAttribute("aria-expanded"),
+  ).toBe("false");
+});
+
+it("shows each document's summary, version and extra metadata when switching copies", async () => {
+  api.document.mockResolvedValueOnce({
+    skill_id: "demo",
+    filename: "SKILL.md",
+    central_path: skill.central_path,
+    content:
+      '---\nsummary: Central summary\nmetadata:\n  version: "1.0.0"\nlicense: MIT\ncustom-field: Keep this value\nconstructor: Custom constructor info\n---\nCentral body',
+  });
+  api.source.mockResolvedValueOnce({
+    skill_id: "demo",
+    content: '---\nsummary: Local summary\nversion: "2.0.0"\n---\nLocal body',
+  });
+  await render();
+  const metadata = () => document.querySelector('[aria-label="技能信息"]');
+  expect(metadata()?.textContent).toContain("摘要Central summary");
+  expect(metadata()?.textContent).toContain("版本1.0.0");
+  expect(metadata()?.textContent).toContain("许可证MIT");
+  expect(metadata()?.textContent).toContain("custom-fieldKeep this value");
+  expect(metadata()?.textContent).toContain(
+    "constructorCustom constructor info",
+  );
+  await click("本地");
+  expect(metadata()?.textContent).toContain("摘要Local summary");
+  expect(metadata()?.textContent).toContain("版本2.0.0");
+  expect(document.querySelector("article")?.textContent).not.toContain(
+    "Central summary",
+  );
+  await click("中心");
+  expect(metadata()?.textContent).toContain("摘要Central summary");
+});
+
+it("does not add a version placeholder for unversioned skills", async () => {
+  await render({ ...skill, version: null });
+  expect(document.body.textContent).not.toContain("版本");
+});

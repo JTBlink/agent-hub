@@ -5,3 +5,5 @@
 复制路径图标见 [D02](issues/D02-copy-path.md)。
 
 复制图标位置调整见 [D03](issues/D03-copy-path-position.md)。
+
+摘要与元信息保留见 [D04](issues/D04-preserve-metadata.md)。

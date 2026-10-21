@@ -331,6 +331,15 @@
     "hint": "之后随时可以在侧边栏的「云端同步」页连接仓库或恢复技能库。"
   },
   "mySkills": {
+    "documentMetadata": {
+      "title": "技能信息",
+      "name": "名称",
+      "description": "描述",
+      "summary": "摘要",
+      "license": "许可证",
+      "author": "作者",
+      "compatibility": "兼容性"
+    },
     "title": "技能库",
     "applyToDefault": "应用技能组",
     "applied": "已应用",
