@@ -333,6 +333,15 @@
     "hint": "You can connect a repository or restore your skill library at any time from Cloud Sync in the sidebar."
   },
   "mySkills": {
+    "documentMetadata": {
+      "title": "Skill information",
+      "name": "Name",
+      "description": "Description",
+      "summary": "Summary",
+      "license": "License",
+      "author": "Author",
+      "compatibility": "Compatibility"
+    },
     "title": "Library",
     "applyToDefault": "Apply Skill Group",
     "applied": "Applied",

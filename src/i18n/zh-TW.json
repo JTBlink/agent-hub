@@ -331,6 +331,15 @@
     "hint": "之後隨時可以在側邊欄的「雲端同步」頁連接儲存庫或還原技能庫。"
   },
   "mySkills": {
+    "documentMetadata": {
+      "title": "技能資訊",
+      "name": "名稱",
+      "description": "描述",
+      "summary": "摘要",
+      "license": "授權條款",
+      "author": "作者",
+      "compatibility": "相容性"
+    },
     "title": "技能庫",
     "applyToDefault": "套用技能組",
     "applied": "已套用",

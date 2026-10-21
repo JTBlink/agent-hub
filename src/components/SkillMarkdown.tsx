@@ -1,6 +1,8 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "../utils";
+import { parseSkillDocument } from "../lib/skillDocument";
+import { SkillDocumentMetadata } from "./SkillDocumentMetadata";
 
 interface SkillMarkdownProps {
   content: string;
@@ -8,21 +10,12 @@ interface SkillMarkdownProps {
   components?: Components;
 }
 
-function stripMarkdownFrontmatter(content: string) {
-  if (!content.startsWith("---\n")) return content;
-
-  const end = content.indexOf("\n---\n", 4);
-  if (end === -1) return content;
-
-  return content.slice(end + 5).trimStart();
-}
-
 export function SkillMarkdown({
   content,
   className,
   components,
 }: SkillMarkdownProps) {
-  const markdown = stripMarkdownFrontmatter(content);
+  const { body, fields, rawMetadata } = parseSkillDocument(content);
 
   return (
     <article
@@ -31,6 +24,7 @@ export function SkillMarkdown({
         className,
       )}
     >
+      <SkillDocumentMetadata fields={fields} rawMetadata={rawMetadata} />
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -201,7 +195,7 @@ export function SkillMarkdown({
           ...components,
         }}
       >
-        {markdown}
+        {body}
       </ReactMarkdown>
     </article>
   );

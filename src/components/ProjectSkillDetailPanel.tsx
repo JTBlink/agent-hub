@@ -125,7 +125,7 @@ export function ProjectSkillDetailPanel({
       }
       description={
         skill.description ? (
-          <p className="line-clamp-3">{skill.description}</p>
+          <p className="whitespace-pre-wrap break-words">{skill.description}</p>
         ) : undefined
       }
       meta={meta}

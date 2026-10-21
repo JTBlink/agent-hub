@@ -162,6 +162,12 @@ function SkillDetailPanelContent({
   const meta = (
     <>
       <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
+        {skill.version?.trim() && (
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-surface-hover px-2 py-0.5 text-[12px] text-secondary">
+            {t("dashboard.version")}
+            <span className="break-all font-mono">{skill.version}</span>
+          </span>
+        )}
         {toolToggles && onToggleTool ? (
           <AgentToggleInline
             items={toggleItems}
@@ -290,7 +296,7 @@ function SkillDetailPanelContent({
       title={skill.name}
       description={
         skill.description ? (
-          <p className="line-clamp-3">{skill.description}</p>
+          <p className="whitespace-pre-wrap break-words">{skill.description}</p>
         ) : undefined
       }
       meta={meta}
