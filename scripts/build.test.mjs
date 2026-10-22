@@ -34,7 +34,7 @@ describe("build command orchestrator", () => {
     const calls = [];
     const runner = fakeRunner(0, calls);
 
-    expect(runCommand("test", [], { runner })).toBe(0);
+    expect(runCommand("test", [], { runner, cleanup: () => 0 })).toBe(0);
     expect(calls.at(-1).args).toEqual([
       "test",
       "--manifest-path",
@@ -49,6 +49,32 @@ describe("build command orchestrator", () => {
     expect(runCommand("test", [], { runner })).toBe(1);
     expect(calls).toHaveLength(1);
     expect(calls[0].command).toMatch(/where\.exe|sh/);
+  });
+
+  it("forwards prune preview and rejects unknown cleanup options", () => {
+    const calls = [];
+    const cleanup = (options) => {
+      calls.push(options);
+      return 0;
+    };
+    expect(runCommand("prune", ["--dry-run"], { cleanup })).toBe(0);
+    expect(calls).toEqual([{ dryRun: true }]);
+    expect(runCommand("prune", ["--all"], { cleanup })).toBe(1);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not clean after a failed Rust test run", () => {
+    let cleaned = false;
+    const runner = (command) => ({ status: command === "cargo" ? 17 : 0 });
+    expect(
+      runCommand("test", [], {
+        runner,
+        cleanup: () => {
+          cleaned = true;
+        },
+      }),
+    ).toBe(17);
+    expect(cleaned).toBe(false);
   });
 
   it("rejects unknown commands and documents the stable interface", () => {

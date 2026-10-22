@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { ROOT_DIR, run, runNpm } from "./build.mjs";
+import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
 export function requestedTarget(args, host) {
   const option = args.find((arg) => arg.startsWith("--target="));
@@ -23,7 +24,7 @@ export function prepareCli(
   runner = spawnSync,
   filesystem = { copyFileSync, mkdirSync },
 ) {
-  const targetDir = resolve(ROOT_DIR, "src-tauri/target");
+  const targetDir = cargoTargetDir();
   const output = resolve(ROOT_DIR, "src-tauri/binaries");
   const profile = release ? "release" : "debug";
   const suffix = target.includes("windows") ? ".exe" : "";
@@ -83,8 +84,12 @@ export function main(
   args = process.argv.slice(2),
   runner = spawnSync,
   prepare = prepareCli,
+  cleanup = cleanupBuildCache,
 ) {
   const command = args[0];
+  const before = Date.now();
+  const build =
+    command === "build" && !args.includes("--help") && !args.includes("-h");
   if (
     ["dev", "build"].includes(command) &&
     !args.includes("--help") &&
@@ -106,11 +111,13 @@ export function main(
     if (command === "dev")
       args.push("--config", "src-tauri/tauri.dev.conf.json");
   }
-  return run(
+  const status = run(
     process.execPath,
     [resolve(ROOT_DIR, "node_modules/@tauri-apps/cli/tauri.js"), ...args],
     runner,
   );
+  if (status === 0 && build) cleanup({ before });
+  return status;
 }
 
 if (

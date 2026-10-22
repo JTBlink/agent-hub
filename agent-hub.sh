@@ -82,6 +82,7 @@ install_cli() {
   fi
 
   cargo "${cargo_args[@]}"
+  CARGO_TARGET_DIR="${ROOT_DIR}/src-tauri/target" node "${ROOT_DIR}/scripts/build-cache.mjs" || true
   if [[ ! -x "${binary}" ]]; then
     echo "构建完成但未找到 CLI: ${binary}" >&2
     return 1

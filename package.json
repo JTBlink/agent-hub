@@ -11,6 +11,7 @@
     "app:dev": "node scripts/build.mjs dev",
     "app:build": "node scripts/build.mjs build",
     "app:clean": "node scripts/build.mjs clean",
+    "app:prune": "node scripts/build.mjs prune",
     "app:release": "node scripts/build.mjs release",
     "app:test": "node scripts/build.mjs test",
     "app:lint": "node scripts/build.mjs lint",
