@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
 function canRun(command, args = ["--version"]) {
   const result = spawnSync(command, args, { stdio: "ignore" });
@@ -49,7 +50,7 @@ const cargoArgs =
   mode === "cli"
     ? ["run", "--quiet", ...baseArgs, "--", ...extraArgs]
     : mode === "build"
-      ? ["build", ...baseArgs]
+      ? ["build", ...baseArgs, ...extraArgs]
       : mode === "install"
         ? [
             "install",
@@ -59,6 +60,7 @@ const cargoArgs =
             "agent-hub-cli",
             "--locked",
             "--force",
+            ...extraArgs,
           ]
         : null;
 
@@ -67,6 +69,7 @@ if (!cargoArgs) {
   process.exit(2);
 }
 
+const before = Date.now();
 const result = spawnSync(cargo, cargoArgs, {
   stdio: "inherit",
   env: {
@@ -80,4 +83,16 @@ if (result.error) {
   process.exit(1);
 }
 
-process.exit(result.status ?? 1);
+const status = result.status ?? 1;
+if (status === 0 && mode !== "cli") {
+  const targetIndex = extraArgs.indexOf("--target-dir");
+  const targetOption = extraArgs.find((arg) => arg.startsWith("--target-dir="));
+  cleanupBuildCache({
+    before,
+    targetDir:
+      targetOption?.slice(13) ??
+      (targetIndex >= 0 ? extraArgs[targetIndex + 1] : undefined) ??
+      cargoTargetDir(),
+  });
+}
+process.exit(status);

@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
 export const ROOT_DIR = resolve(fileURLToPath(new URL("..", import.meta.url)));
 export const isWindows = process.platform === "win32";
@@ -14,6 +15,7 @@ export function usage() {
   dev       启动 Tauri + React 开发模式
   build     编译当前平台安装包
   clean     清理 Tauri/Cargo 构建缓存
+  prune     清理历史构建与安装包，保留最新产物和共享依赖（支持 --dry-run）
   release   打包发布产物并生成 SHA256SUMS
   test      运行前端和 Rust 测试
   lint      运行 ESLint 和 Cargo Clippy
@@ -94,13 +96,14 @@ function runClean(args, runner, remove = rmSync) {
     runner,
   );
   if (status === 0) return 0;
-  const targetDir = resolve(ROOT_DIR, "src-tauri", "target");
+  const targetDir = cargoTargetDir();
   if (existsSync(targetDir))
     remove(targetDir, { recursive: true, force: true });
   return 0;
 }
 
-function runTest(args, runner) {
+function runTest(args, runner, cleanup) {
+  const before = Date.now();
   if (!requireCargo(runner)) return 1;
   let status = runNpm(["run", "test", ...args], runner);
   if (status === 0)
@@ -109,6 +112,7 @@ function runTest(args, runner) {
       ["test", "--manifest-path", "src-tauri/Cargo.toml"],
       runner,
     );
+  if (status === 0) cleanup({ before });
   return status;
 }
 
@@ -160,7 +164,7 @@ function printVersion() {
 export function runCommand(
   command,
   args,
-  { runner = spawnSync, remove = rmSync } = {},
+  { runner = spawnSync, remove = rmSync, cleanup = cleanupBuildCache } = {},
 ) {
   switch (command) {
     case "dev":
@@ -169,10 +173,13 @@ export function runCommand(
       return runNpm(["run", "tauri", "--", "build", ...args], runner);
     case "clean":
       return runClean(args, runner, remove);
+    case "prune":
+      if (args.some((arg) => arg !== "--dry-run")) return 1;
+      return cleanup({ dryRun: args.includes("--dry-run") });
     case "release":
       return runRelease(args, runner);
     case "test":
-      return runTest(args, runner);
+      return runTest(args, runner, cleanup);
     case "lint":
       return runLint(runner);
     case "version":

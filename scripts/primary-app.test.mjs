@@ -2,6 +2,46 @@ import { describe, it, expect } from "vitest";
 import { main, prepareCli, requestedTarget } from "./primary-app.mjs";
 
 describe("primary application packaging", () => {
+  it.each([0, 17])(
+    "cleans only after successful packaging (status=%s)",
+    (status) => {
+      const events = [];
+      const runner = (command, args) => {
+        if (command === "rustc")
+          return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+        if (args.some((arg) => arg.endsWith("tauri.js"))) {
+          events.push("package");
+          return { status };
+        }
+        return { status: 0 };
+      };
+      expect(
+        main(
+          ["build"],
+          runner,
+          () => 0,
+          () => events.push("cleanup"),
+        ),
+      ).toBe(status);
+      expect(events).toEqual(
+        status === 0 ? ["package", "cleanup"] : ["package"],
+      );
+    },
+  );
+  it.each(["dev", "--help"])("does not clean during %s", (command) => {
+    const events = [];
+    const runner = () => ({
+      status: 0,
+      stdout: "host: aarch64-apple-darwin\n",
+    });
+    main(
+      [command],
+      runner,
+      () => 0,
+      () => events.push("cleanup"),
+    );
+    expect(events).toEqual([]);
+  });
   it("honors explicit target syntax", () => {
     expect(
       requestedTarget(["build", "--target=universal-apple-darwin"], "host"),
