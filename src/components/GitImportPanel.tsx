@@ -428,6 +428,10 @@ export function GitImportPanel({
                   : []
               }
               onInstall={(items) => browser.install(active.id, items)}
+              onSync={(path, skillId, approval) =>
+                browser.syncToRepository(active.id, path, skillId, approval)
+              }
+              onRefresh={() => void browser.refresh(active.id)}
               onOpenInstalled={onOpenInstalled}
             />
           ) : (

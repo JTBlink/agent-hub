@@ -1,4 +1,4 @@
-use crate::core::skill_metadata;
+use crate::core::{skill_metadata, skill_versions::compare_versions};
 use serde::Serialize;
 use std::path::Path;
 
@@ -59,20 +59,6 @@ impl SkillSourceDiffDto {
             version_comparison: version_comparison.to_string(),
             entries,
         }
-    }
-}
-
-fn compare_versions(central: Option<&str>, source: Option<&str>) -> &'static str {
-    let parse = |value: Option<&str>| {
-        value.and_then(|v| semver::Version::parse(v.trim().trim_start_matches('v')).ok())
-    };
-    match (parse(central), parse(source)) {
-        (Some(left), Some(right)) => match left.cmp_precedence(&right) {
-            std::cmp::Ordering::Greater => "central_newer",
-            std::cmp::Ordering::Less => "source_newer",
-            std::cmp::Ordering::Equal => "same_version",
-        },
-        _ => "unknown",
     }
 }
 

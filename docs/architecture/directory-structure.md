@@ -31,6 +31,7 @@ agent-hub/
 │   │   ├── LocalSkillsPanel.tsx   #   本地扫描列表、筛选与导入
 │   │   ├── LocalSkillCleanup.tsx  #   按 Agent 预览、确认清理与失败反馈
 │   │   ├── LocalSkillLocation.tsx #   目录操作、适用 Agent 与软链接指示
+│   │   ├── GitSkillSyncDialog.tsx #   新版写回本地仓库的预览、确认与重试
 │   │   ├── GitImportPanel.tsx     #   远程/本地 Git 仓库切换、管理与缓存清理
 │   │   ├── GitRepositorySkills.tsx #  Skill 搜索、筛选、详情与覆盖安装确认
 │   │   ├── GitSkillCard.tsx       #   仓库 Skill 卡片与安装状态
@@ -120,6 +121,7 @@ agent-hub/
 │   │       ├── skill_rename.rs     #     原地改名、部署迁移与失败恢复
 │   │       ├── skill_store/rename.rs #   改名与部署记录的原子提交
 │   │       ├── skill_metadata.rs   #     技能元信息
+│   │       ├── skill_versions.rs   #     技能声明版本比较与更新优先级
 │   │       ├── skill_auto_updater.rs #   技能自动更新
 │   │       ├── skillssh_api.rs     #     技能仓库 API
 │   │       ├── installer.rs        #     技能安装器
@@ -132,6 +134,7 @@ agent-hub/
 │   │       ├── git2_engine.rs      #     libgit2 引擎封装
 │   │       ├── git_fetcher.rs      #     Git 远程拉取
 │   │       ├── git_fetcher/cache_cleanup.rs # 使用文件锁清理远程克隆缓存
+│   │       ├── git_skill_sync.rs   #     本地仓库写回预览、内容确认与失败恢复
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端

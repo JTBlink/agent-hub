@@ -44,6 +44,7 @@ export function useGitRepositories(onChanged: () => Promise<unknown>) {
   const saveVersion = useRef(0);
   const saveQueue = useRef(Promise.resolve());
   const requests = useRef(new Set<string>());
+  const migratedCatalogs = useRef(new Set<string>());
   const installBusy = useRef(false);
   const addBusy = useRef(false);
   const clearBusy = useRef(false);
@@ -216,6 +217,96 @@ export function useGitRepositories(onChanged: () => Promise<unknown>) {
     } finally {
       addBusy.current = false;
       if (mounted.current) setAdding(false);
+    }
+  };
+
+  useEffect(() => {
+    const active = library.repositories.find(
+      (repo) => repo.id === library.activeId,
+    );
+    if (
+      ready &&
+      !installing &&
+      !clearing &&
+      active?.skills.some((skill) => skill.version === undefined) &&
+      !requests.current.has(active.id) &&
+      !migratedCatalogs.current.has(active.id)
+    ) {
+      migratedCatalogs.current.add(active.id);
+      void refresh(active.id);
+    }
+  }, [ready, library, refresh, installing, clearing]);
+
+  const syncToRepository = async (
+    id: string,
+    repoPath: string,
+    skillId: string,
+    approval?: api.LocalSkillSyncApproval,
+  ): Promise<api.LocalSkillSyncPlan> => {
+    const repo = current.current.repositories.find((item) => item.id === id);
+    if (
+      !repo ||
+      repo.kind !== "local" ||
+      installBusy.current ||
+      requests.current.has(id) ||
+      clearBusy.current
+    )
+      throw new Error(i18next.t("install.gitBrowser.working"));
+    installBusy.current = true;
+    requests.current.add(id);
+    setInstalling({ repositoryId: id, paths: [repoPath], cloning: false });
+    try {
+      const result = await api.syncLocalGitSkill(
+        repo.url,
+        repoPath,
+        skillId,
+        approval,
+      );
+      if (result.applied) {
+        if (mounted.current)
+          commit((previous) => ({
+            ...previous,
+            repositories: previous.repositories.map((item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    skills: item.skills.map((skill) =>
+                      skill.repo_path === repoPath
+                        ? { ...skill, version: result.library_version }
+                        : skill,
+                    ),
+                  }
+                : item,
+            ),
+          }));
+        // Re-read the actual working tree, updating both persisted catalog and open details.
+        try {
+          const preview = await api.previewLocalGitRepository(repo.url);
+          if (mounted.current)
+            commit((previous) => ({
+              ...previous,
+              repositories: previous.repositories.map((item) =>
+                item.id === id
+                  ? { ...item, skills: preview.skills, refreshedAt: Date.now() }
+                  : item,
+              ),
+            }));
+          await changed.current();
+        } catch (error) {
+          if (mounted.current)
+            setErrors((previous) => ({
+              ...previous,
+              [id]: `${i18next.t("install.gitBrowser.syncAppliedRefreshFailed")}: ${getErrorMessage(error, i18next.t("common.error"))}`,
+            }));
+        }
+        if (mounted.current)
+          toast.success(i18next.t("install.gitBrowser.syncSuccess"));
+      }
+      return result;
+    } finally {
+      installBusy.current = false;
+      requests.current.delete(id);
+      if (mounted.current) setInstalling(null);
     }
   };
 
@@ -414,6 +505,7 @@ export function useGitRepositories(onChanged: () => Promise<unknown>) {
     remove,
     refresh,
     install,
+    syncToRepository,
     clearCache,
     retrySave: () => persist(current.current),
     select: (id: string) =>

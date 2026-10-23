@@ -43,3 +43,24 @@ pub async fn clear_git_repository_cache(repo_url: String) -> Result<(), AppError
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn sync_local_git_skill(
+    path: String,
+    repo_path: String,
+    skill_id: String,
+    approval: Option<crate::core::git_skill_sync::LocalSkillSyncApproval>,
+    store: State<'_, Arc<SkillStore>>,
+) -> Result<crate::core::git_skill_sync::LocalSkillSyncPlan, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::core::git_skill_sync::sync_to_local_repository(
+            &store,
+            &PathBuf::from(path),
+            &repo_path,
+            &skill_id,
+            approval,
+        )
+    })
+    .await?
+}

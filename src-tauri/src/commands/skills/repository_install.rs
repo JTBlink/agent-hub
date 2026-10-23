@@ -13,6 +13,11 @@ pub(crate) fn overwrite_skill_unlocked(
         .map_err(AppError::db)?
         .ok_or_else(|| AppError::not_found("Skill to overwrite no longer exists"))?;
     let destination = Path::new(&skill.central_path);
+    if crate::core::skill_versions::compare_directories(destination, source) == "central_newer" {
+        return Err(AppError::invalid_input(
+            "Repository version is older than the installed Skill; sync the newer Skill to a local repository instead",
+        ));
+    }
     let library = central_repo::skills_dir();
     if destination == library
         || !sync_engine::is_library_entry(destination)

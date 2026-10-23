@@ -18,6 +18,7 @@ vi.mock("../lib/tauri", () => ({
   cancelGitPreview: vi.fn(),
   cancelInstall: vi.fn(),
   installLocalGitSkill: vi.fn(),
+  syncLocalGitSkill: vi.fn(),
   clearGitRepositoryCache: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/event", () => ({
@@ -30,6 +31,7 @@ const skill = {
   repo_path: "skills/demo",
   name: "Demo",
   description: null,
+  version: null,
 };
 const first = {
   ...createGitRepository("https://git.example.invalid/team/first.git"),
@@ -88,6 +90,7 @@ beforeEach(() => {
   vi.mocked(api.cancelGitPreview).mockResolvedValue(undefined);
   vi.mocked(api.cancelInstall).mockResolvedValue(true);
   vi.mocked(api.installLocalGitSkill).mockReset().mockResolvedValue(undefined);
+  vi.mocked(api.syncLocalGitSkill).mockReset();
   vi.mocked(api.clearGitRepositoryCache)
     .mockReset()
     .mockResolvedValue(undefined);
@@ -95,6 +98,40 @@ beforeEach(() => {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
+});
+
+it("keeps a successful repository sync applied when catalog refresh fails", async () => {
+  await render();
+  const approval = {
+    library_hash: "new",
+    repository_hash: "old",
+    removed_paths: [],
+  };
+  vi.mocked(api.syncLocalGitSkill).mockResolvedValue({
+    library_version: "0.2.0",
+    repository_version: "0.1.1",
+    approval,
+    applied: true,
+  });
+  vi.mocked(api.previewLocalGitRepository).mockRejectedValueOnce(
+    new Error("unavailable"),
+  );
+  let result: api.LocalSkillSyncPlan | undefined;
+  await act(async () => {
+    result = await controller.syncToRepository(
+      local.id,
+      skill.repo_path,
+      "installed",
+      approval,
+    );
+  });
+  expect(result?.applied).toBe(true);
+  expect(controller.installing).toBeNull();
+  expect(
+    controller.repositories.find((repo) => repo.id === local.id)?.skills[0]
+      .version,
+  ).toBe("0.2.0");
+  expect(controller.errors[local.id]).toContain("unavailable");
 });
 afterEach(async () => {
   await act(async () => root.unmount());

@@ -19,6 +19,7 @@ vi.mock("../lib/tauri", () => ({
   cancelGitPreview: vi.fn(),
   cancelInstall: vi.fn(),
   installLocalGitSkill: vi.fn(),
+  syncLocalGitSkill: vi.fn(),
   clearGitRepositoryCache: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/event", () => ({
@@ -50,12 +51,14 @@ const alpha = {
   repo_path: "skills/alpha",
   name: "Alpha",
   description: "First skill",
+  version: null,
 };
 const beta = {
   rel_path: "beta",
   repo_path: "skills/beta",
   name: "Beta",
   description: "Second skill",
+  version: null,
 };
 const first = {
   ...createGitRepository("https://git.example.invalid/team/skills.git", "Team"),
@@ -232,7 +235,7 @@ it("offers confirmed overwrite for a same-name Skill and never installs a second
   );
 });
 
-it("shows an older repository version on cards and warns before confirming a downgrade", async () => {
+it("blocks installing an older remote version and points to a local working tree", async () => {
   const old = { ...alpha, version: "0.2.1" };
   vi.mocked(api.getSettings).mockResolvedValue(
     JSON.stringify({
@@ -240,56 +243,116 @@ it("shows an older repository version on cards and warns before confirming a dow
       activeId: first.id,
     }),
   );
-  vi.mocked(api.previewGitInstall).mockResolvedValue({
-    temp_dir: "<temp>/preview",
-    skills: [old],
-  });
   await render([{ ...installed, version: "0.3.0" }]);
-  const card = container.querySelector("article");
-  expect(card?.textContent).toContain("仓库版本较旧");
-  expect(card?.textContent).toContain("0.2.1");
-  expect(card?.textContent).toContain("0.3.0");
-  await click("Alpha");
-  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+  expect(container.querySelector("article")?.textContent).toContain(
     "仓库版本较旧",
   );
-  await click("覆盖安装");
-  const warning = container.querySelector('dialog[open] [role="alert"]');
-  expect(warning?.textContent).toContain("降级");
-  expect(warning?.textContent).toContain("0.3.0");
-  expect(warning?.textContent).toContain("0.2.1");
-  expect(api.confirmGitInstall).not.toHaveBeenCalled();
-  await click("确认覆盖安装");
-  expect(api.confirmGitInstall).toHaveBeenCalledWith(
-    first.url,
-    "<temp>/preview",
-    [
-      {
-        rel_path: old.rel_path,
-        name: installed.name,
-        overwrite_skill_id: installed.id,
-      },
-    ],
+  await click("Alpha");
+  expect(button("同步新版到仓库").disabled).toBe(true);
+  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+    "本地工作目录",
   );
+  expect(container.querySelector("dialog[open]")?.textContent).not.toContain(
+    "覆盖安装",
+  );
+  expect(api.confirmGitInstall).not.toHaveBeenCalled();
 });
 
-it("refreshes a legacy catalog before inferring version order", async () => {
-  await render([{ ...installed, version: "0.3.0" }]);
-  expect(container.querySelector("article")?.textContent).toContain(
-    "刷新仓库以读取版本",
+it("syncs a newer installed Skill to a local repository and updates the open details", async () => {
+  const old = { ...alpha, version: "0.1.1" };
+  const repo = {
+    ...createGitRepository("/projects/skills", "Local", "local"),
+    skills: [old],
+    refreshedAt: 1,
+  };
+  vi.mocked(api.getSettings).mockResolvedValue(
+    JSON.stringify({ repositories: [repo], activeId: repo.id }),
+  );
+  const plan = {
+    library_version: "0.2.0",
+    repository_version: "0.1.1",
+    approval: {
+      library_hash: "new",
+      repository_hash: "old",
+      removed_paths: ["obsolete.txt"],
+    },
+    applied: false,
+  };
+  vi.mocked(api.syncLocalGitSkill)
+    .mockResolvedValueOnce(plan)
+    .mockResolvedValueOnce({ ...plan, applied: true });
+  vi.mocked(api.previewLocalGitRepository).mockResolvedValue({
+    path: repo.url,
+    skills: [{ ...alpha, version: "0.2.0" }],
+  });
+  await render([
+    {
+      ...installed,
+      name: alpha.name,
+      version: "0.2.0",
+      source_type: "local",
+      source_ref: `${repo.url}/${alpha.repo_path}`,
+    },
+  ]);
+  await click("Alpha");
+  await click("同步新版到仓库");
+  expect(api.syncLocalGitSkill).toHaveBeenLastCalledWith(
+    repo.url,
+    alpha.repo_path,
+    installed.id,
+    undefined,
+  );
+  expect(container.textContent).toContain("obsolete.txt");
+  await click("确认同步到仓库");
+  expect(api.syncLocalGitSkill).toHaveBeenLastCalledWith(
+    repo.url,
+    alpha.repo_path,
+    installed.id,
+    plan.approval,
+  );
+  expect(api.installLocalGitSkill).not.toHaveBeenCalled();
+  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+    "仓库 0.2.0",
   );
   expect(container.textContent).not.toContain("仓库版本较旧");
-  vi.mocked(api.previewGitInstall).mockResolvedValue({
-    temp_dir: "<temp>/preview",
-    skills: [{ ...alpha, version: "0.4.0" }],
-  });
-  await click("刷新");
-  expect(container.querySelector("article")?.textContent).toContain(
-    "仓库有较新版本",
-  );
+  expect(changed).toHaveBeenCalledOnce();
 });
 
-it("requires another confirmation when the repository version changes before overwrite", async () => {
+it("automatically reads legacy versions and refreshes details already open during the request", async () => {
+  const legacy = { ...alpha, version: undefined };
+  vi.mocked(api.getSettings).mockResolvedValue(
+    JSON.stringify({
+      repositories: [{ ...first, skills: [legacy] }],
+      activeId: first.id,
+    }),
+  );
+  let finish!: (value: api.GitPreviewResult) => void;
+  vi.mocked(api.previewGitInstall).mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  await render([{ ...installed, version: "0.3.0" }]);
+  await click("Alpha");
+  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+    "刷新仓库以读取版本",
+  );
+  await act(async () =>
+    finish({
+      temp_dir: "<temp>/preview",
+      skills: [{ ...alpha, version: "0.4.0" }],
+    }),
+  );
+  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+    "仓库 0.4.0",
+  );
+  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+    "仓库有较新版本",
+  );
+  expect(container.textContent).not.toContain("刷新仓库以读取版本");
+});
+
+it("disables a pending overwrite when refreshing reveals an older version", async () => {
   vi.mocked(api.getSettings).mockResolvedValue(
     JSON.stringify({
       repositories: [{ ...first, skills: [{ ...alpha, version: "0.3.0" }] }],
@@ -305,11 +368,7 @@ it("requires another confirmation when the repository version changes before ove
   await click("覆盖安装");
   await click("确认覆盖安装");
   expect(api.confirmGitInstall).not.toHaveBeenCalled();
-  expect(
-    container.querySelector('dialog[open] [role="alert"]')?.textContent,
-  ).toContain("0.2.0");
-  await click("确认覆盖安装");
-  expect(api.confirmGitInstall).toHaveBeenCalledOnce();
+  expect(button("确认覆盖安装").disabled).toBe(true);
 });
 
 it("clears batch selection when switching repositories with colliding Skill keys", async () => {

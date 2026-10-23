@@ -376,6 +376,32 @@ export const previewLocalGitRepository = (path: string) =>
     { path },
   );
 
+export interface LocalSkillSyncApproval {
+  library_hash: string;
+  repository_hash: string;
+  removed_paths: string[];
+}
+
+export interface LocalSkillSyncPlan {
+  library_version: string | null;
+  repository_version: string | null;
+  approval: LocalSkillSyncApproval;
+  applied: boolean;
+}
+
+export const syncLocalGitSkill = (
+  path: string,
+  repoPath: string,
+  skillId: string,
+  approval?: LocalSkillSyncApproval,
+) =>
+  invoke<LocalSkillSyncPlan>("sync_local_git_skill", {
+    path,
+    repoPath,
+    skillId,
+    approval,
+  });
+
 export const installLocalGitSkill = (
   path: string,
   repoPath: string,
