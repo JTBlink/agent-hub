@@ -1,6 +1,6 @@
 [package]
 name = "agent-hub"
-version = "0.1.9"
+version = "0.1.10"
 description = "agent-hub - AI Agent Skills Workspace"
 license = "MIT"
 edition = "2021"
