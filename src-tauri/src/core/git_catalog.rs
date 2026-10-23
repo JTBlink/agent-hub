@@ -10,6 +10,7 @@ pub struct GitSkillPreview {
     pub repo_path: String,
     pub name: String,
     pub description: Option<String>,
+    pub version: Option<String>,
 }
 
 /// Stable preview/confirm key, including when the scan root is itself a skill.
@@ -42,6 +43,7 @@ pub fn preview_skill(repo_root: &Path, scan_root: &Path, dir: &Path) -> GitSkill
             .filter(|name| !name.trim().is_empty())
             .unwrap_or(fallback),
         description: meta.description,
+        version: meta.version,
     }
 }
 
@@ -116,7 +118,7 @@ mod tests {
         fs::create_dir_all(&skill).unwrap();
         fs::write(
             skill.join("SKILL.md"),
-            "---\nname: Demo\ndescription: Example\n---\n",
+            "---\nname: Demo\ndescription: Example\nmetadata:\n  version: '1.2.3'\n---\n",
         )
         .unwrap();
         let preview = preview_skill(repo.path(), &scan, &skill);
@@ -124,6 +126,7 @@ mod tests {
         assert_eq!(preview.repo_path, "skills/category/demo");
         assert_eq!(preview.name, "Demo");
         assert_eq!(preview.description.as_deref(), Some("Example"));
+        assert_eq!(preview.version.as_deref(), Some("1.2.3"));
     }
 
     #[test]

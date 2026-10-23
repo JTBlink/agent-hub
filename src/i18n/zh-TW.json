@@ -712,6 +712,13 @@
     "gitReinstall": "重新安裝並更新",
     "installClone": "安裝並複製",
     "gitBrowser": {
+      "repositoryVersion": "倉庫 {{version}}",
+      "installedVersion": "已安裝 {{version}}",
+      "repositoryOlder": "倉庫版本較舊",
+      "repositoryNewer": "倉庫有較新版本",
+      "versionRefreshNeeded": "重新整理倉庫以讀取版本",
+      "downgradeWarning": "覆蓋安裝會將 {{installed}} 降級為倉庫版本 {{repository}}，並覆蓋現有內容。",
+      "versionNotDeclared": "未宣告版本",
       "duplicateOverwrite": "同一個已安裝技能只能選取一個儲存庫版本進行覆寫，請調整選取項目。",
       "overwriteTarget": "覆寫已有技能：{{name}}",
       "overwriteConfirmation": "將以目前儲存庫內容取代以下已有技能，並更新來源。標籤、技能組和部署關係會保留，已部署的複製副本會同步更新；現有內容與本機修改會被覆寫。",

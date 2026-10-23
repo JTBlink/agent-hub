@@ -10,11 +10,13 @@ import {
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
 import type { GitSkillPreview } from "../lib/tauri";
+import { GitSkillVersionInfo } from "./GitSkillVersionInfo";
 
 export function GitSkillCard({
   skill,
   source,
   installed,
+  installedVersion,
   otherSource,
   busy,
   disabled,
@@ -27,6 +29,7 @@ export function GitSkillCard({
   skill: GitSkillPreview;
   source: string;
   installed: boolean;
+  installedVersion?: string | null;
   otherSource: boolean;
   busy: boolean;
   disabled: boolean;
@@ -137,6 +140,11 @@ export function GitSkillCard({
           </span>
         )}
       </div>
+      <GitSkillVersionInfo
+        repositoryVersion={skill.version}
+        installedVersion={installedVersion}
+        installed={installed}
+      />
       <p
         title={skill.repo_path || "/"}
         className="truncate text-[12px] text-muted"

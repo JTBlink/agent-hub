@@ -80,7 +80,10 @@ function isPreview(value: unknown): value is GitSkillPreview {
     typeof value.rel_path === "string" &&
     typeof value.repo_path === "string" &&
     typeof value.name === "string" &&
-    (value.description === null || typeof value.description === "string")
+    (value.description === null || typeof value.description === "string") &&
+    (value.version === undefined ||
+      value.version === null ||
+      typeof value.version === "string")
   );
 }
 

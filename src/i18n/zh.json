@@ -731,6 +731,13 @@
     "onlyThisContributor": "仅看该贡献者",
     "installClone": "克隆并预览",
     "gitBrowser": {
+      "repositoryVersion": "仓库 {{version}}",
+      "installedVersion": "已安装 {{version}}",
+      "repositoryOlder": "仓库版本较旧",
+      "repositoryNewer": "仓库有较新版本",
+      "versionRefreshNeeded": "刷新仓库以读取版本",
+      "downgradeWarning": "覆盖安装会将 {{installed}} 降级为仓库版本 {{repository}}，并覆盖现有内容。",
+      "versionNotDeclared": "未声明版本",
       "duplicateOverwrite": "同一个已安装技能只能选择一个仓库版本进行覆盖，请调整选择。",
       "overwriteTarget": "覆盖已有技能：{{name}}",
       "overwriteConfirmation": "将用当前仓库内容替换以下已有技能，并更新来源。标签、技能组和部署关系会保留，已部署的复制副本会同步更新；现有内容及本地修改会被覆盖。",
