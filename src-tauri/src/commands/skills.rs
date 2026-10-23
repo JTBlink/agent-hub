@@ -2015,41 +2015,44 @@ pub async fn detach_local_skill_source(
 ) -> Result<ManagedSkillDto, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let skill = store
-            .get_skill_by_id(&skill_id)
-            .map_err(AppError::db)?
-            .ok_or_else(|| AppError::not_found("Skill not found"))?;
-
-        if !matches!(skill.source_type.as_str(), "local" | "import") {
-            return Err(AppError::invalid_input(
-                "Only local skills can detach source paths",
-            ));
-        }
-
-        {
-            let _lock = RepoLock::acquire_foreground("detach local skill").map_err(AppError::db)?;
-            store
-                .update_skill_after_reinstall(
-                    &skill.id,
-                    &skill.name,
-                    skill.description.as_deref(),
-                    &skill.source_type,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    skill.content_hash.as_deref(),
-                    "local_only",
-                )
-                .map_err(AppError::db)?;
-            sync_metadata::write_all_from_db_unlocked(&store).map_err(AppError::db)?;
-        }
-
+        detach_local_skill_source_internal(&store, &skill_id)?;
         managed_skill_by_id(&store, &skill_id)
     })
     .await?
+}
+
+/// Keep the managed library copy and its identity, without an external source.
+pub fn detach_local_skill_source_internal(
+    store: &SkillStore,
+    skill_id: &str,
+) -> Result<(), AppError> {
+    let _lock = RepoLock::acquire_foreground("detach local skill").map_err(AppError::db)?;
+    let skill = store
+        .get_skill_by_id(skill_id)
+        .map_err(AppError::db)?
+        .ok_or_else(|| AppError::not_found("Skill not found"))?;
+    if !matches!(skill.source_type.as_str(), "local" | "import") {
+        return Err(AppError::invalid_input(
+            "Only local skills can detach source paths",
+        ));
+    }
+    store
+        .update_skill_after_reinstall(
+            &skill.id,
+            &skill.name,
+            skill.description.as_deref(),
+            &skill.source_type,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            skill.content_hash.as_deref(),
+            "local_only",
+        )
+        .map_err(AppError::db)?;
+    sync_metadata::write_all_from_db_unlocked(store).map_err(AppError::db)
 }
 
 fn managed_skill_to_dto(
@@ -3381,105 +3384,8 @@ pub async fn rename_skill(
 }
 
 pub fn rename_skill_internal(store: &SkillStore, id: &str, new_name: &str) -> Result<(), AppError> {
-    let new_name = new_name.trim();
-    if new_name.is_empty() {
-        return Err(AppError::invalid_input("技能名称不能为空"));
-    }
-    let skill = store
-        .get_skill_by_id(id)
-        .map_err(AppError::db)?
-        .ok_or_else(|| AppError::not_found(format!("技能不存在：{id}")))?;
-    if skill.name == new_name {
-        return Ok(());
-    }
-
-    let new_slug = skill_metadata::sanitize_skill_name(new_name)
-        .ok_or_else(|| AppError::invalid_input(format!("无效的技能名称：{new_name}")))?;
-
-    let old_central = PathBuf::from(&skill.central_path);
-    let old_dir_name = old_central
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default();
-    let dir_changed = new_slug != old_dir_name;
-
-    sync_metadata::with_repo_lock("rename skill", || {
-        if dir_changed {
-            let new_central = old_central
-                .parent()
-                .unwrap_or_else(|| Path::new("."))
-                .join(&new_slug);
-
-            if new_central.exists() {
-                anyhow::bail!("目标目录已存在：{}", new_central.display());
-            }
-
-            let targets = store.get_targets_for_skill(id)?;
-
-            // Remove old deployed targets from disk.
-            for target in &targets {
-                let target_path = Path::new(&target.target_path);
-                let _ = sync_engine::remove_target(target_path);
-            }
-
-            // Rename the central directory.
-            std::fs::rename(&old_central, &new_central)?;
-            store.update_central_path(id, &new_central.to_string_lossy())?;
-
-            // Re-deploy targets with the new directory name.
-            let new_target_name = sync_engine::target_dir_name(&new_central, new_name);
-            for target in &targets {
-                let old_target_path = PathBuf::from(&target.target_path);
-                let new_target_path = old_target_path
-                    .parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .join(&new_target_name);
-
-                let mode = sync_engine::sync_mode_for_tool("", Some(&target.mode));
-                let _ = sync_engine::sync_skill(
-                    &new_central,
-                    &new_target_path,
-                    mode,
-                    sync_engine::ReplacePolicy::Recorded {
-                        mode: target.mode.as_str(),
-                    },
-                );
-
-                let now = chrono::Utc::now().timestamp_millis();
-                store.insert_target(&SkillTargetRecord {
-                    target_path: new_target_path.to_string_lossy().to_string(),
-                    synced_at: Some(now),
-                    status: "ok".to_string(),
-                    last_error: None,
-                    source_hash: skill.content_hash.clone(),
-                    ..target.clone()
-                })?;
-            }
-        }
-
-        store.rename_skill(id, new_name)?;
-
-        // Update the SKILL.md frontmatter `name:` so the metadata scanner
-        // does not revert the display name on the next refresh cycle.
-        let final_central = if dir_changed {
-            old_central
-                .parent()
-                .unwrap_or_else(|| Path::new("."))
-                .join(&new_slug)
-        } else {
-            old_central.clone()
-        };
-        skill_metadata::update_skill_md_name(&final_central, new_name);
-
-        sync_metadata::ensure_skill_metadata_unlocked(store, id)?;
-        store.log_audit(
-            AuditDraft::new("rename")
-                .skill(id.to_string(), new_name.to_string())
-                .ok(),
-        );
-        Ok(())
-    })
-    .map_err(AppError::db)
+    crate::core::skill_rename::rename_skill(store, id, new_name)
+        .map_err(|error| AppError::io(format!("{error:#}")))
 }
 
 #[tauri::command]
@@ -3639,6 +3545,7 @@ fn remove_path_if_exists(path: &Path) -> Result<(), AppError> {
 
 #[cfg(test)]
 mod tests {
+    mod rename;
     mod repository_overwrite;
     use super::*;
     use std::fs;

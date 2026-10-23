@@ -1,4 +1,5 @@
 mod membership;
+mod rename;
 
 use anyhow::Result;
 use rusqlite::{params, Connection};

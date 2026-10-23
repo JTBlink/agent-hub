@@ -182,7 +182,7 @@ pub fn infer_skill_name(dir: &Path) -> String {
 /// Rewrite the `name:` field inside the SKILL.md frontmatter to `new_name`.
 /// Returns `true` if the file was updated, `false` if no SKILL.md or no
 /// frontmatter `name` field was found.
-pub fn update_skill_md_name(dir: &Path, new_name: &str) -> bool {
+pub fn update_skill_md_name(dir: &Path, new_name: &str) -> anyhow::Result<bool> {
     for candidate in SKILL_DIR_MARKERS {
         let Some(content) = read_named_file_exact(dir, candidate) else {
             continue;
@@ -203,10 +203,11 @@ pub fn update_skill_md_name(dir: &Path, new_name: &str) -> bool {
         let mut found = false;
         for line in fm_body.lines() {
             let stripped = line.trim_start();
-            if stripped.starts_with("name:") && !found {
+            if line.starts_with("name:") && !found {
                 // Preserve leading whitespace.
                 let indent = &line[..line.len() - stripped.len()];
-                updated_lines.push(format!("{indent}name: {new_name}"));
+                let quoted_name = serde_json::to_string(new_name)?;
+                updated_lines.push(format!("{indent}name: {quoted_name}"));
                 found = true;
             } else {
                 updated_lines.push(line.to_string());
@@ -226,11 +227,10 @@ pub fn update_skill_md_name(dir: &Path, new_name: &str) -> bool {
         );
         // Resolve file path case-exactly (the candidate name may differ).
         let file_path = dir.join(candidate);
-        if std::fs::write(&file_path, new_content).is_ok() {
-            return true;
-        }
+        std::fs::write(&file_path, new_content)?;
+        return Ok(true);
     }
-    false
+    Ok(false)
 }
 
 #[cfg(test)]
