@@ -346,7 +346,7 @@ pub(crate) fn is_library_entry(path: &Path) -> bool {
             .is_some_and(|parent| parent.starts_with(&root))
 }
 
-fn uses_library_directly(source: &Path, target: &Path) -> bool {
+pub(crate) fn uses_library_directly(source: &Path, target: &Path) -> bool {
     is_library_entry(target)
         && source.is_dir()
         && source
