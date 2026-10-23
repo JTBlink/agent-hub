@@ -1,5 +1,144 @@
 use super::*;
+use crate::core::git_skill_sync::sync_to_local_repository;
 use crate::core::skill_store::ScenarioRecord;
+
+#[test]
+fn sync_newer_library_to_repository_requires_approval_and_preserves_library_identity() {
+    let repo = test_repo();
+    let central = write_skill_dir("demo");
+    fs::write(
+        central.join("SKILL.md"),
+        "---\nname: demo\nversion: 0.2.0\n---\nnew",
+    )
+    .unwrap();
+    fs::write(central.join("new.txt"), "new resource").unwrap();
+    let record = sample_skill("existing", "demo", &central);
+    repo.store.insert_skill(&record).unwrap();
+    let working = tempdir().unwrap();
+    git2::Repository::init(working.path()).unwrap();
+    let target = working.path().join("skills/demo");
+    fs::create_dir_all(&target).unwrap();
+    fs::write(
+        target.join("SKILL.md"),
+        "---\nname: demo\nversion: 0.1.1\n---\nold",
+    )
+    .unwrap();
+    fs::write(target.join("obsolete.txt"), "old resource").unwrap();
+    fs::write(working.path().join("unrelated.txt"), "keep").unwrap();
+    let plan =
+        sync_to_local_repository(&repo.store, working.path(), "skills/demo", "existing", None)
+            .unwrap();
+    assert!(!plan.applied);
+    assert_eq!(plan.approval.removed_paths, vec!["obsolete.txt"]);
+    assert!(target.join("obsolete.txt").exists());
+    assert_eq!(plan.library_version.as_deref(), Some("0.2.0"));
+    let applied = sync_to_local_repository(
+        &repo.store,
+        working.path(),
+        "skills/demo",
+        "existing",
+        Some(plan.approval),
+    )
+    .unwrap();
+    assert!(applied.applied);
+    assert!(!target.join("obsolete.txt").exists());
+    assert_eq!(
+        fs::read(target.join("SKILL.md")).unwrap(),
+        fs::read(central.join("SKILL.md")).unwrap()
+    );
+    assert_eq!(
+        fs::read_to_string(target.join("new.txt")).unwrap(),
+        "new resource"
+    );
+    assert!(working.path().join(".git").is_dir());
+    assert_eq!(
+        fs::read_to_string(working.path().join("unrelated.txt")).unwrap(),
+        "keep"
+    );
+    let after = repo.store.get_skill_by_id("existing").unwrap().unwrap();
+    assert_eq!(after.source_ref, record.source_ref);
+    assert_eq!(after.central_path, record.central_path);
+    assert_eq!(after.updated_at, record.updated_at);
+    assert_eq!(fs::read_dir(target.parent().unwrap()).unwrap().count(), 1);
+    assert_eq!(
+        crate::core::git_catalog::scan_local_repository(working.path())
+            .unwrap()
+            .skills[0]
+            .version
+            .as_deref(),
+        Some("0.2.0")
+    );
+    assert!(repository_install::overwrite_local_skill(&repo.store, "existing", &target).is_ok());
+}
+
+#[test]
+fn sync_rejects_changed_content_equal_or_unknown_versions_and_repository_root() {
+    let repo = test_repo();
+    let central = write_skill_dir("demo");
+    fs::write(
+        central.join("SKILL.md"),
+        "---\nname: demo\nversion: 0.2.0\n---\nnew",
+    )
+    .unwrap();
+    repo.store
+        .insert_skill(&sample_skill("existing", "demo", &central))
+        .unwrap();
+    let working = tempdir().unwrap();
+    git2::Repository::init(working.path()).unwrap();
+    let target = working.path().join("demo");
+    fs::create_dir(&target).unwrap();
+    fs::write(
+        target.join("SKILL.md"),
+        "---\nname: demo\nversion: 0.1.1\n---\nold",
+    )
+    .unwrap();
+    assert!(repository_install::overwrite_local_skill(&repo.store, "existing", &target).is_err());
+    let plan =
+        sync_to_local_repository(&repo.store, working.path(), "demo", "existing", None).unwrap();
+    fs::write(target.join("local-change.txt"), "keep edit").unwrap();
+    assert!(sync_to_local_repository(
+        &repo.store,
+        working.path(),
+        "demo",
+        "existing",
+        Some(plan.approval)
+    )
+    .is_err());
+    assert!(target.join("local-change.txt").exists());
+    let plan =
+        sync_to_local_repository(&repo.store, working.path(), "demo", "existing", None).unwrap();
+    fs::write(central.join("new-change.txt"), "newer edit").unwrap();
+    assert!(sync_to_local_repository(
+        &repo.store,
+        working.path(),
+        "demo",
+        "existing",
+        Some(plan.approval)
+    )
+    .is_err());
+    for version in ["0.2.0", "0.3.0", "unknown"] {
+        fs::write(
+            target.join("SKILL.md"),
+            format!("---\nname: demo\nversion: {version}\n---\n"),
+        )
+        .unwrap();
+        assert!(
+            sync_to_local_repository(&repo.store, working.path(), "demo", "existing", None)
+                .is_err()
+        );
+    }
+    fs::write(
+        working.path().join("SKILL.md"),
+        "---\nversion: 0.1.1\n---\n",
+    )
+    .unwrap();
+    assert!(sync_to_local_repository(&repo.store, working.path(), "", "existing", None).is_err());
+    assert!(
+        sync_to_local_repository(&repo.store, working.path(), "../outside", "existing", None)
+            .is_err()
+    );
+    assert!(working.path().join(".git").exists());
+}
 
 #[test]
 fn overwrite_replaces_contents_in_place_and_preserves_identity_groups_tags_and_deployments() {
@@ -187,4 +326,30 @@ fn remote_overwrite_updates_provenance_without_allocating_a_duplicate() {
             .overwrite_skill_id
             .is_none()
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn sync_refuses_repository_symlink_escape_without_touching_external_files() {
+    let repo = test_repo();
+    let central = write_skill_dir("demo");
+    fs::write(central.join("SKILL.md"), "---\nversion: 0.2.0\n---\n").unwrap();
+    repo.store
+        .insert_skill(&sample_skill("existing", "demo", &central))
+        .unwrap();
+    let working = tempdir().unwrap();
+    git2::Repository::init(working.path()).unwrap();
+    let external = tempdir().unwrap();
+    fs::write(
+        external.path().join("SKILL.md"),
+        "---\nversion: 0.1.1\n---\nkeep",
+    )
+    .unwrap();
+    std::os::unix::fs::symlink(external.path(), working.path().join("escape")).unwrap();
+    assert!(
+        sync_to_local_repository(&repo.store, working.path(), "escape", "existing", None).is_err()
+    );
+    assert!(fs::read_to_string(external.path().join("SKILL.md"))
+        .unwrap()
+        .ends_with("keep"));
 }

@@ -1,12 +1,25 @@
 import { useMemo, useState } from "react";
-import { DownloadCloud, Search, SquareCheck } from "lucide-react";
+import {
+  DownloadCloud,
+  Search,
+  SquareCheck,
+  UploadCloud,
+  RefreshCw,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useMultiSelect } from "../hooks/useMultiSelect";
 import {
   gitSkillInstallation,
   type GitRepository,
 } from "../lib/gitRepositories";
-import type { GitSkillPreview, ManagedSkill } from "../lib/tauri";
+import type {
+  GitSkillPreview,
+  ManagedSkill,
+  LocalSkillSyncApproval,
+  LocalSkillSyncPlan,
+} from "../lib/tauri";
+import { compareDeclaredSkillVersions } from "../lib/skillVersions";
+import { GitSkillSyncDialog } from "./GitSkillSyncDialog";
 import type { GitInstallSelection } from "../hooks/useGitRepositories";
 import { GitSkillCard } from "./GitSkillCard";
 import { GitBrowserDialog } from "./GitBrowserDialog";
@@ -20,6 +33,8 @@ export function GitRepositorySkills({
   disabled,
   onInstall,
   onOpenInstalled,
+  onSync,
+  onRefresh,
 }: {
   repository: GitRepository;
   managedSkills: ManagedSkill[];
@@ -27,11 +42,24 @@ export function GitRepositorySkills({
   disabled: boolean;
   onInstall: (items: GitInstallSelection[]) => Promise<boolean>;
   onOpenInstalled: (id: string) => void;
+  onSync: (
+    repoPath: string,
+    skillId: string,
+    approval?: LocalSkillSyncApproval,
+  ) => Promise<LocalSkillSyncPlan>;
+  onRefresh: () => void;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
-  const [detail, setDetail] = useState<GitSkillPreview | null>(null);
+  const [detailPath, setDetailPath] = useState<string | null>(null);
+  const detail =
+    repository.skills.find((skill) => skill.repo_path === detailPath) ?? null;
+  const setDetail = (skill: GitSkillPreview | null) =>
+    setDetailPath(skill?.repo_path ?? null);
+  const [sync, setSync] = useState<{ path: string; skillId: string } | null>(
+    null,
+  );
   const [plan, setPlan] = useState<GitInstallSelection[] | null>(null);
   const installed = useMemo(
     () =>
@@ -54,12 +82,14 @@ export function GitRepositorySkills({
         (status === "installed") === !!installed.get(skill.repo_path))
     );
   });
-  const available = repository.skills.filter(
-    (skill) => !installed.get(skill.repo_path)?.fromCurrentRepository,
-  );
-  const selectable = filtered.filter(
-    (skill) => !installed.get(skill.repo_path)?.fromCurrentRepository,
-  );
+  const canInstall = (skill: GitSkillPreview) =>
+    !installed.get(skill.repo_path)?.fromCurrentRepository &&
+    compareDeclaredSkillVersions(
+      installed.get(skill.repo_path)?.skill.version,
+      skill.version,
+    ) !== "central_newer";
+  const available = repository.skills.filter(canInstall);
+  const selectable = filtered.filter(canInstall);
   const multi = useMultiSelect({
     items: available,
     filtered: selectable,
@@ -71,6 +101,17 @@ export function GitRepositorySkills({
   });
 
   const requestInstall = (skills: GitSkillPreview[]) => {
+    // Never turn a known newer library copy into a downgrade, including in batches.
+    if (
+      skills.some(
+        (skill) =>
+          compareDeclaredSkillVersions(
+            installed.get(skill.repo_path)?.skill.version,
+            skill.version,
+          ) === "central_newer",
+      )
+    )
+      return;
     const selections = skills.map((skill) => {
       const existing = installed.get(skill.repo_path);
       return {
@@ -95,6 +136,20 @@ export function GitRepositorySkills({
     ? installed.get(detail.repo_path)
     : undefined;
   const overwriting = plan?.some((item) => !!item.overwrite_skill_id) ?? false;
+  const repositoryOlder =
+    detail &&
+    compareDeclaredSkillVersions(
+      detailInstallation?.skill.version,
+      detail.version,
+    ) === "central_newer";
+  const planDowngrades = plan?.some(
+    (item) =>
+      compareDeclaredSkillVersions(
+        installed.get(item.repo_path)?.skill.version,
+        repository.skills.find((skill) => skill.repo_path === item.repo_path)
+          ?.version,
+      ) === "central_newer",
+  );
 
   return (
     <div className="space-y-3">
@@ -202,7 +257,7 @@ export function GitRepositorySkills({
               }
               busy={busyPaths.includes(skill.repo_path)}
               disabled={disabled}
-              selecting={multi.isMultiSelect}
+              selecting={multi.isMultiSelect && canInstall(skill)}
               selected={multi.selectedIds.has(skill.repo_path)}
               onSelect={() => multi.toggleSelect(skill.repo_path)}
               onInstall={() => requestInstall([skill])}
@@ -253,20 +308,48 @@ export function GitRepositorySkills({
                 {t("install.gitBrowser.openInstalled")}
               </button>
             )}
+            {repositoryOlder && repository.kind === "remote" && (
+              <p className="w-full text-[12px] text-muted">
+                {t("install.gitBrowser.syncRemoteHint")}
+              </p>
+            )}
             <button
               type="button"
-              disabled={disabled}
+              disabled={
+                disabled || (!!repositoryOlder && repository.kind !== "local")
+              }
               className="app-button-primary"
               onClick={() => {
-                requestInstall([detail]);
-                setDetail(null);
+                if (detail.version === undefined) {
+                  onRefresh();
+                  return;
+                }
+                if (repositoryOlder && detailInstallation)
+                  setSync({
+                    path: detail.repo_path,
+                    skillId: detailInstallation.skill.id,
+                  });
+                else {
+                  requestInstall([detail]);
+                  setDetail(null);
+                }
               }}
             >
-              <DownloadCloud aria-hidden="true" className="h-3.5 w-3.5" />
+              {repositoryOlder ? (
+                <UploadCloud aria-hidden="true" className="h-3.5 w-3.5" />
+              ) : detail.version === undefined ? (
+                <RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
+              ) : (
+                <DownloadCloud aria-hidden="true" className="h-3.5 w-3.5" />
+              )}
               {t(
-                detailInstallation
-                  ? "install.gitBrowser.overwriteInstall"
-                  : "install.oneClickInstall",
+                detail.version === undefined
+                  ? "install.gitBrowser.refresh"
+                  : repositoryOlder
+                    ? "install.gitBrowser.syncToRepository"
+                    : detailInstallation
+                      ? "install.gitBrowser.overwriteInstall"
+                      : "install.oneClickInstall",
               )}
             </button>
           </div>
@@ -292,6 +375,7 @@ export function GitRepositorySkills({
           <form
             onSubmit={(event) => {
               event.preventDefault();
+              if (planDowngrades) return;
               void onInstall(plan).then((success) => {
                 if (success) {
                   setPlan(null);
@@ -363,7 +447,11 @@ export function GitRepositorySkills({
               </button>
               <button
                 type="submit"
-                disabled={disabled || plan.some((item) => !item.name.trim())}
+                disabled={
+                  disabled ||
+                  planDowngrades ||
+                  plan.some((item) => !item.name.trim())
+                }
                 className="app-button-primary"
               >
                 {t(
@@ -375,6 +463,13 @@ export function GitRepositorySkills({
             </div>
           </form>
         </GitBrowserDialog>
+      )}
+      {sync && (
+        <GitSkillSyncDialog
+          target={`${repository.url}/${sync.path}`}
+          onSync={(approval) => onSync(sync.path, sync.skillId, approval)}
+          onClose={() => setSync(null)}
+        />
       )}
     </div>
   );

@@ -1081,6 +1081,7 @@ pub fn run() {
             commands::skills::preview_git_install,
             commands::git_repositories::preview_local_git_repository,
             commands::git_repositories::install_local_git_skill,
+            commands::git_repositories::sync_local_git_skill,
             commands::git_repositories::clear_git_repository_cache,
             commands::skills::confirm_git_install,
             commands::skills::cancel_git_preview,
