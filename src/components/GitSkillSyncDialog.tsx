@@ -19,13 +19,16 @@ export function GitSkillSyncDialog({
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const sync = useRef(onSync);
+  const preview = useRef<Promise<LocalSkillSyncPlan> | null>(null);
   useEffect(() => {
     sync.current = onSync;
   }, [onSync]);
   useEffect(() => {
     let active = true;
-    void sync
-      .current()
+    // StrictMode replays effects. Share the read-only preview so its second
+    // subscription does not race the first request's operation lock.
+    preview.current ??= sync.current();
+    void preview.current
       .then((value) => {
         if (active) setPlan(value);
       })
@@ -92,6 +95,7 @@ export function GitSkillSyncDialog({
             onClick={() => {
               setError(null);
               setPlan(null);
+              preview.current = null;
               setBusy(true);
               setAttempt((value) => value + 1);
             }}
