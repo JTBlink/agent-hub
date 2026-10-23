@@ -113,10 +113,17 @@ fn rename_preserves_external_source_and_retargets_links() {
 
     let new = central_repo::skills_dir().join("new-skill");
     assert!(fs::symlink_metadata(old_target).is_err());
-    assert_eq!(
-        targets.path().join("new-skill").canonicalize().unwrap(),
-        new.canonicalize().unwrap()
-    );
+    let target = targets.path().join("new-skill");
+    let record = &repo.store.get_targets_for_skill(&skill.id).unwrap()[0];
+    if record.mode == "symlink" {
+        assert_eq!(target.canonicalize().unwrap(), new.canonicalize().unwrap());
+    } else {
+        // Windows may fall back to a copy when link creation is unavailable.
+        assert_eq!(
+            skill_metadata::parse_skill_md(&target).name.as_deref(),
+            Some("new-skill")
+        );
+    }
     assert_eq!(
         repo.store
             .get_skill_by_id(&skill.id)
@@ -207,6 +214,9 @@ fn rename_preserves_a_directory_that_replaced_a_recorded_link() {
         .unwrap();
     let targets = tempdir().unwrap();
     let old_target = deploy(&repo, &central, targets.path(), "codex", "symlink");
+    if repo.store.get_targets_for_skill("skill-id").unwrap()[0].mode != "symlink" {
+        return; // This host cannot create links; copy deployments are covered separately.
+    }
     sync_engine::remove_target(&old_target).unwrap();
     fs::create_dir(&old_target).unwrap();
     fs::write(old_target.join("keep.txt"), "user content").unwrap();
