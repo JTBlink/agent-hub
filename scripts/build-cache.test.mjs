@@ -49,6 +49,10 @@ function fingerprint(
     JSON.stringify({ profile: mode, features, rustflags: [], config: 1 }),
   );
   file(path, "0123456789abcdef", time);
+  // Directory mtimes participate in the concurrent-write guard too. Use the
+  // fixture's historical time instead of a fractional real-time mtime that
+  // can fall after Date.now() within the same millisecond on Linux.
+  utimesSync(dirname(path), time, time);
 }
 
 // Rust archives on macOS use BSD extended names; GNU uses a string table.
