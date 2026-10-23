@@ -114,6 +114,8 @@ mod tests {
     use std::sync::Mutex;
 
     fn reject_authentication(mut socket: TcpStream) -> std::io::Result<Option<String>> {
+        // Accepted sockets may inherit the nonblocking listener mode on Windows.
+        socket.set_nonblocking(false)?;
         socket.set_read_timeout(Some(std::time::Duration::from_secs(10)))?;
         let mut headers = Vec::new();
         let mut chunk = [0; 1024];
@@ -143,10 +145,18 @@ mod tests {
     fn authentication_fixture_delivers_challenge_without_resetting_request_body() {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
+        let (ready, connected) = std::sync::mpsc::channel();
         let server = std::thread::spawn(move || {
-            reject_authentication(listener.accept().unwrap().0).unwrap()
+            let socket = listener.accept().unwrap().0;
+            socket.set_nonblocking(true).unwrap();
+            ready.send(()).unwrap();
+            reject_authentication(socket).unwrap()
         });
         let mut client = TcpStream::connect(address).unwrap();
+        connected.recv().unwrap();
+        // Leave a window with no request bytes, reproducing accepted sockets
+        // that inherit a Windows nonblocking listener's mode.
+        std::thread::sleep(std::time::Duration::from_millis(20));
         client
             .set_read_timeout(Some(std::time::Duration::from_secs(10)))
             .unwrap();
