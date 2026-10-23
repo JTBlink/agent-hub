@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -112,15 +112,19 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-async function render(skills: api.ManagedSkill[] = [installed]) {
+async function render(
+  skills: api.ManagedSkill[] = [installed],
+  strict = false,
+) {
+  const panel = (
+    <GitImportPanel
+      managedSkills={skills}
+      onChanged={changed}
+      onOpenInstalled={openInstalled}
+    />
+  );
   await act(async () =>
-    root.render(
-      <GitImportPanel
-        managedSkills={skills}
-        onChanged={changed}
-        onOpenInstalled={openInstalled}
-      />,
-    ),
+    root.render(strict ? <StrictMode>{panel}</StrictMode> : panel),
   );
 }
 function button(text: string) {
@@ -285,15 +289,18 @@ it("syncs a newer installed Skill to a local repository and updates the open det
     path: repo.url,
     skills: [{ ...alpha, version: "0.2.0" }],
   });
-  await render([
-    {
-      ...installed,
-      name: alpha.name,
-      version: "0.2.0",
-      source_type: "local",
-      source_ref: `${repo.url}/${alpha.repo_path}`,
-    },
-  ]);
+  await render(
+    [
+      {
+        ...installed,
+        name: alpha.name,
+        version: "0.2.0",
+        source_type: "local",
+        source_ref: `${repo.url}/${alpha.repo_path}`,
+      },
+    ],
+    true,
+  );
   await click("Alpha");
   await click("同步新版到仓库");
   expect(api.syncLocalGitSkill).toHaveBeenLastCalledWith(
@@ -303,6 +310,7 @@ it("syncs a newer installed Skill to a local repository and updates the open det
     undefined,
   );
   expect(container.textContent).toContain("obsolete.txt");
+  expect(api.syncLocalGitSkill).toHaveBeenCalledOnce();
   await click("确认同步到仓库");
   expect(api.syncLocalGitSkill).toHaveBeenLastCalledWith(
     repo.url,
