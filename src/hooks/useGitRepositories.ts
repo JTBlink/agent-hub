@@ -304,6 +304,11 @@ export function useGitRepositories(onChanged: () => Promise<unknown>) {
         );
         if (!fresh)
           throw new Error(i18next.t("install.gitBrowser.catalogChanged"));
+        const shown = repo.skills.find(
+          (item) => item.repo_path === selection.repo_path,
+        );
+        if (selection.overwrite_skill_id && fresh.version !== shown?.version)
+          throw new Error(i18next.t("install.gitBrowser.catalogChanged"));
         return {
           rel_path: fresh.rel_path,
           name: selection.name,

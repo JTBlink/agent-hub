@@ -11,6 +11,7 @@ import type { GitInstallSelection } from "../hooks/useGitRepositories";
 import { GitSkillCard } from "./GitSkillCard";
 import { GitBrowserDialog } from "./GitBrowserDialog";
 import { MultiSelectToolbar } from "./MultiSelectToolbar";
+import { GitSkillVersionInfo } from "./GitSkillVersionInfo";
 
 export function GitRepositorySkills({
   repository,
@@ -195,6 +196,7 @@ export function GitRepositorySkills({
               skill={skill}
               source={repository.name}
               installed={!!installed.get(skill.repo_path)}
+              installedVersion={installed.get(skill.repo_path)?.skill.version}
               otherSource={
                 installed.get(skill.repo_path)?.fromCurrentRepository === false
               }
@@ -214,6 +216,11 @@ export function GitRepositorySkills({
           <p className="whitespace-pre-wrap break-words text-[13px] leading-6 text-secondary">
             {detail.description || t("install.gitBrowser.noDescription")}
           </p>
+          <GitSkillVersionInfo
+            repositoryVersion={detail.version}
+            installedVersion={detailInstallation?.skill.version}
+            installed={!!detailInstallation}
+          />
           <dl className="mt-4 space-y-2 break-all text-[12px] text-muted">
             <div>
               <dt className="font-medium text-tertiary">
@@ -330,6 +337,18 @@ export function GitRepositorySkills({
                       })}
                     </span>
                   )}
+                  <GitSkillVersionInfo
+                    repositoryVersion={
+                      repository.skills.find(
+                        (skill) => skill.repo_path === item.repo_path,
+                      )?.version
+                    }
+                    installedVersion={
+                      installed.get(item.repo_path)?.skill.version
+                    }
+                    installed={!!item.overwrite_skill_id}
+                    confirmOverwrite
+                  />
                 </label>
               ))}
             </div>

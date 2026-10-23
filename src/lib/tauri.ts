@@ -352,6 +352,8 @@ export interface GitSkillPreview {
   repo_path: string;
   name: string;
   description: string | null;
+  /** Absent in catalogs saved by older app versions; refresh to read it. */
+  version?: string | null;
 }
 
 export interface GitPreviewResult {

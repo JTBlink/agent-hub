@@ -69,6 +69,16 @@ describe("Git repository library", () => {
       ),
     ).toThrow();
     expect(parseGitRepositoryLibrary(null).repositories).toEqual([]);
+    expect(() =>
+      parseGitRepositoryLibrary(
+        JSON.stringify({
+          repositories: [
+            { ...repo, skills: [{ ...preview, version: 3 }], refreshedAt: 1 },
+          ],
+          activeId: repo.id,
+        }),
+      ),
+    ).toThrow();
   });
 
   it("matches exact repository and path even when names are changed or collide", () => {

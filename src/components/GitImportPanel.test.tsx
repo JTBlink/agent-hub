@@ -232,6 +232,86 @@ it("offers confirmed overwrite for a same-name Skill and never installs a second
   );
 });
 
+it("shows an older repository version on cards and warns before confirming a downgrade", async () => {
+  const old = { ...alpha, version: "0.2.1" };
+  vi.mocked(api.getSettings).mockResolvedValue(
+    JSON.stringify({
+      repositories: [{ ...first, skills: [old] }],
+      activeId: first.id,
+    }),
+  );
+  vi.mocked(api.previewGitInstall).mockResolvedValue({
+    temp_dir: "<temp>/preview",
+    skills: [old],
+  });
+  await render([{ ...installed, version: "0.3.0" }]);
+  const card = container.querySelector("article");
+  expect(card?.textContent).toContain("仓库版本较旧");
+  expect(card?.textContent).toContain("0.2.1");
+  expect(card?.textContent).toContain("0.3.0");
+  await click("Alpha");
+  expect(container.querySelector("dialog[open]")?.textContent).toContain(
+    "仓库版本较旧",
+  );
+  await click("覆盖安装");
+  const warning = container.querySelector('dialog[open] [role="alert"]');
+  expect(warning?.textContent).toContain("降级");
+  expect(warning?.textContent).toContain("0.3.0");
+  expect(warning?.textContent).toContain("0.2.1");
+  expect(api.confirmGitInstall).not.toHaveBeenCalled();
+  await click("确认覆盖安装");
+  expect(api.confirmGitInstall).toHaveBeenCalledWith(
+    first.url,
+    "<temp>/preview",
+    [
+      {
+        rel_path: old.rel_path,
+        name: installed.name,
+        overwrite_skill_id: installed.id,
+      },
+    ],
+  );
+});
+
+it("refreshes a legacy catalog before inferring version order", async () => {
+  await render([{ ...installed, version: "0.3.0" }]);
+  expect(container.querySelector("article")?.textContent).toContain(
+    "刷新仓库以读取版本",
+  );
+  expect(container.textContent).not.toContain("仓库版本较旧");
+  vi.mocked(api.previewGitInstall).mockResolvedValue({
+    temp_dir: "<temp>/preview",
+    skills: [{ ...alpha, version: "0.4.0" }],
+  });
+  await click("刷新");
+  expect(container.querySelector("article")?.textContent).toContain(
+    "仓库有较新版本",
+  );
+});
+
+it("requires another confirmation when the repository version changes before overwrite", async () => {
+  vi.mocked(api.getSettings).mockResolvedValue(
+    JSON.stringify({
+      repositories: [{ ...first, skills: [{ ...alpha, version: "0.3.0" }] }],
+      activeId: first.id,
+    }),
+  );
+  vi.mocked(api.previewGitInstall).mockResolvedValue({
+    temp_dir: "<temp>/preview",
+    skills: [{ ...alpha, version: "0.2.0" }],
+  });
+  await render([{ ...installed, version: "0.3.0" }]);
+  await click("Alpha");
+  await click("覆盖安装");
+  await click("确认覆盖安装");
+  expect(api.confirmGitInstall).not.toHaveBeenCalled();
+  expect(
+    container.querySelector('dialog[open] [role="alert"]')?.textContent,
+  ).toContain("0.2.0");
+  await click("确认覆盖安装");
+  expect(api.confirmGitInstall).toHaveBeenCalledOnce();
+});
+
 it("clears batch selection when switching repositories with colliding Skill keys", async () => {
   await render();
   await click("批量选择");
