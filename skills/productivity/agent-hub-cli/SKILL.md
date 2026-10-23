@@ -1,8 +1,8 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.1.2"
-description: Manage the user's shared agent-skill library via agent-hub-cli — install, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
+  version: "1.2.0"
+description: Manage the user's shared agent-skill library via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
 ## Before doing anything
@@ -138,6 +138,40 @@ Internally, skill groups are still stored as scenarios for backward-compatible G
 4. Otherwise → error; pass `--local` / `--git` / `--skillssh` to disambiguate
 
 **Always verify after install** with `skills list` or `skills show <name>` so you can confirm the skill landed and report the skill group / sync state back to the user.
+
+## Rename and maintain an existing skill
+
+```bash
+"$SM" --json skills rename old-skill new-skill
+"$SM" --json skills show new-skill
+"$SM" --json skills status new-skill
+```
+
+Use `skills rename` for an existing managed skill. It moves the central directory,
+updates the SKILL.md frontmatter name and existing deployments, and preserves the
+skill ID, tags, group membership and source association. It creates no source
+copy. Verify that the ID is unchanged and the old deployment paths are gone.
+Do not implement a rename by copying to `local-sources`, installing again and
+removing the old skill: reinstalling creates a different identity and leaves a
+second source to maintain. If the installed CLI lacks this command, update the
+app/CLI before proceeding with the rename.
+
+A separate external development source stays at its original path. For later
+content changes, edit that source and run `skills update`; a rename does not
+rename the external project or rewrite arbitrary references inside documents.
+For a skill maintained directly in the central library, keep one authoritative
+content directory. If a former staging directory is still registered as a local
+source, detach that association explicitly:
+
+```bash
+"$SM" --json skills detach-source <skill>
+```
+
+This keeps the central content, ID and deployments and only clears the local
+source association. It leaves source files in place. Remove an obsolete staging
+directory only when its provenance and contents have been checked and its
+removal is within the user's request; preserve unique content in a recovery
+archive. Do not detach a real external source merely because its version is older.
 
 ## Search
 

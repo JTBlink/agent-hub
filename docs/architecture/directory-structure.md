@@ -117,6 +117,8 @@ agent-hub/
 │   │       ├── sync_engine.rs      #     配置同步引擎
 │   │       ├── sync_metadata.rs    #     同步元数据
 │   │       ├── skill_store.rs      #     技能存储
+│   │       ├── skill_rename.rs     #     原地改名、部署迁移与失败恢复
+│   │       ├── skill_store/rename.rs #   改名与部署记录的原子提交
 │   │       ├── skill_metadata.rs   #     技能元信息
 │   │       ├── skill_auto_updater.rs #   技能自动更新
 │   │       ├── skillssh_api.rs     #     技能仓库 API

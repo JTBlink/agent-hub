@@ -297,12 +297,20 @@ enum SkillsCommand {
         #[arg(long)]
         dry_run: bool,
     },
-    /// 重命名技能的显示名称。
+    /// 原地重命名技能、中央目录和部署入口，保留 ID、标签和技能组。
+    #[command(
+        long_about = "原地重命名已有技能，保留原 ID、标签、技能组和来源关系。\n移动中央目录、更新 SKILL.md 名称并刷新已有部署；不会创建来源副本。\n用法示例：agent-hub-cli skills rename old-skill new-skill"
+    )]
     Rename {
         /// 技能 ID、名称、目录名或中央路径。
         reference: String,
         /// 新名称。
         name: String,
+    },
+    /// 解除本地来源关联，保留中央内容和部署，不删除来源文件。
+    DetachSource {
+        /// 技能 ID、名称、目录名或中央路径。
+        reference: String,
     },
     /// 添加、移除、重命名或列出技能标签。
     Tag(TagArgs),
@@ -1185,6 +1193,11 @@ fn run_skills(args: SkillsArgs, store: &SkillStore, json: bool) -> anyhow::Resul
                 },
                 json,
             );
+        }
+        SkillsCommand::DetachSource { reference } => {
+            let skill = resolve_skill(store, &reference)?;
+            cmd::detach_local_skill_source_internal(store, &skill.id).map_err(map_app_err)?;
+            print_json(&serde_json::json!({"ok": true, "skill_id": skill.id}), json);
         }
         SkillsCommand::Tag(args) => run_tag(args, store, json)?,
     }
