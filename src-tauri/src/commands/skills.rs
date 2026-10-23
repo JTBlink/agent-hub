@@ -3384,8 +3384,12 @@ pub async fn rename_skill(
 }
 
 pub fn rename_skill_internal(store: &SkillStore, id: &str, new_name: &str) -> Result<(), AppError> {
-    crate::core::skill_rename::rename_skill(store, id, new_name)
-        .map_err(|error| AppError::io(format!("{error:#}")))
+    crate::core::skill_rename::rename_skill(store, id, new_name).map_err(|error| {
+        match error.downcast::<AppError>() {
+            Ok(error) => error,
+            Err(error) => AppError::io(format!("{error:#}")),
+        }
+    })
 }
 
 #[tauri::command]

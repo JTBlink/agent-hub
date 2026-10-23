@@ -8,7 +8,9 @@ use std::{
 
 use super::{
     audit_log::AuditDraft,
-    central_repo, content_hash, path_guard,
+    central_repo, content_hash,
+    error::AppError,
+    path_guard,
     repo_lock::RepoLock,
     skill_metadata,
     skill_store::{SkillRecord, SkillStore, SkillTargetRecord},
@@ -29,11 +31,14 @@ struct Deployment {
 pub fn rename_skill(store: &SkillStore, id: &str, new_name: &str) -> Result<()> {
     let name = new_name.trim();
     if name.is_empty() || name.chars().any(char::is_control) {
-        bail!("技能名称不能为空或包含控制字符");
+        return Err(AppError::invalid_input("技能名称不能为空或包含控制字符").into());
     }
-    let slug = skill_metadata::sanitize_skill_name(name).context("无效的技能名称")?;
+    let slug = skill_metadata::sanitize_skill_name(name)
+        .ok_or_else(|| AppError::invalid_input("无效的技能名称"))?;
     let _lock = RepoLock::acquire_foreground("rename skill")?;
-    let mut skill = store.get_skill_by_id(id)?.context("技能不存在")?;
+    let mut skill = store
+        .get_skill_by_id(id)?
+        .ok_or_else(|| AppError::not_found("技能不存在"))?;
     if skill.name == name {
         return sync_metadata::ensure_skill_metadata_unlocked(store, id);
     }

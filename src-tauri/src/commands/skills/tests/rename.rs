@@ -297,7 +297,10 @@ fn rename_quotes_yaml_names_and_refuses_control_characters() {
     repo.store
         .insert_skill(&sample_skill("skill-id", "old-skill", &central))
         .unwrap();
-    assert!(rename_skill_internal(&repo.store, "skill-id", "new\nname").is_err());
+    let invalid = rename_skill_internal(&repo.store, "skill-id", "new\nname").unwrap_err();
+    assert_eq!(invalid.kind, crate::core::error::ErrorKind::InvalidInput);
+    let missing = rename_skill_internal(&repo.store, "missing-id", "valid-name").unwrap_err();
+    assert_eq!(missing.kind, crate::core::error::ErrorKind::NotFound);
     assert!(central.exists());
 
     rename_skill_internal(&repo.store, "skill-id", "New: # skill").unwrap();
