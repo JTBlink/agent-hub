@@ -364,3 +364,84 @@ fn rename_keeps_a_source_alias_to_the_library_from_becoming_a_missing_source() {
     );
     assert!(!alias.exists());
 }
+
+#[cfg(unix)]
+#[test]
+fn rename_preserves_multiple_direct_readers_and_a_linked_library_directory() {
+    let repo = test_repo();
+    let central = write_skill_dir("old-skill");
+    repo.store
+        .insert_skill(&sample_skill("skill-id", "old-skill", &central))
+        .unwrap();
+    let shared = tempdir().unwrap();
+    let alias = shared.path().join("skills");
+    std::os::unix::fs::symlink(central_repo::skills_dir(), &alias).unwrap();
+    for (tool, path) in [
+        ("first", central.clone()),
+        ("second", central.clone()),
+        ("linked", alias.join("old-skill")),
+    ] {
+        repo.store
+            .insert_target(&SkillTargetRecord {
+                id: tool.into(),
+                skill_id: "skill-id".into(),
+                tool: tool.into(),
+                target_path: path.to_string_lossy().into_owned(),
+                mode: "copy".into(),
+                status: "ok".into(),
+                synced_at: Some(1),
+                last_error: None,
+                source_hash: None,
+            })
+            .unwrap();
+    }
+
+    rename_skill_internal(&repo.store, "skill-id", "new-skill").unwrap();
+
+    let new = central_repo::skills_dir().join("new-skill");
+    let targets = repo.store.get_targets_for_skill("skill-id").unwrap();
+    assert_eq!(targets.len(), 3);
+    assert!(targets.iter().all(
+        |record| Path::new(&record.target_path).canonicalize().unwrap()
+            == new.canonicalize().unwrap()
+    ));
+    assert!(targets
+        .iter()
+        .any(|record| record.target_path == alias.join("new-skill").to_string_lossy()));
+    assert!(fs::symlink_metadata(&alias)
+        .unwrap()
+        .file_type()
+        .is_symlink());
+    assert!(!central.exists());
+    assert_eq!(repo.store.get_all_skills().unwrap().len(), 1);
+}
+
+#[test]
+fn rename_reports_the_preserved_id_when_metadata_needs_a_retry() {
+    let repo = test_repo();
+    let central = write_skill_dir("old-skill");
+    repo.store
+        .insert_skill(&sample_skill("skill-id", "old-skill", &central))
+        .unwrap();
+    let blocked = sync_metadata::metadata_dir().join("schema.json");
+    fs::create_dir_all(&blocked).unwrap();
+
+    let error = rename_skill_internal(&repo.store, "skill-id", "new-skill").unwrap_err();
+
+    assert!(error.message.contains("技能已改名"));
+    assert!(error.message.contains("skill-id"));
+    assert_eq!(
+        repo.store
+            .get_skill_by_id("skill-id")
+            .unwrap()
+            .unwrap()
+            .name,
+        "new-skill"
+    );
+    fs::remove_dir(&blocked).unwrap();
+    rename_skill_internal(&repo.store, "skill-id", "new-skill").unwrap();
+    assert!(!central.exists());
+    assert!(sync_metadata::metadata_dir()
+        .join("skills/skill-id.json")
+        .exists());
+}

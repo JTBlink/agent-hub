@@ -87,8 +87,9 @@ pub fn rename_skill(store: &SkillStore, id: &str, new_name: &str) -> Result<()> 
     }
     // DB is committed. Metadata failure is reported, and retrying the same name
     // above repairs it without repeating filesystem mutations.
-    sync_metadata::ensure_skill_metadata_unlocked(store, id)
-        .context("技能已改名，备份元数据未写入；请重试同一改名命令")?;
+    sync_metadata::ensure_skill_metadata_unlocked(store, id).with_context(|| {
+        format!("技能已改名，备份元数据未写入；请使用技能 ID {id} 和新名称重试")
+    })?;
     store.log_audit(AuditDraft::new("rename").skill(id, name).ok());
     Ok(())
 }
@@ -104,14 +105,10 @@ fn plan_deployments(
     let mut plans = Vec::new();
     for record in store.get_targets_for_skill(&skill.id)? {
         let target = PathBuf::from(&record.target_path);
-        let direct = target == old;
-        let destination = if direct {
-            new.to_owned()
-        } else {
-            let parent = target.parent().context("部署目录没有父目录")?;
-            parent.join(new.file_name().context("无效的技能目录")?)
-        };
-        if !destinations.insert(destination.clone()) {
+        let direct = sync_engine::uses_library_directly(old, &target);
+        let parent = target.parent().context("部署目录没有父目录")?;
+        let destination = parent.join(new.file_name().context("无效的技能目录")?);
+        if !direct && !destinations.insert(destination.clone()) {
             bail!("多个部署记录指向同一改名目标");
         }
         if !direct {
@@ -131,7 +128,9 @@ fn plan_deployments(
             }
         }
         if all_targets.iter().any(|other| {
-            other.id != record.id && other.target_path == destination.to_string_lossy()
+            other.id != record.id
+                && other.target_path == destination.to_string_lossy()
+                && !(direct && other.skill_id == skill.id)
         }) {
             bail!("改名后的部署目标已被其他记录使用");
         }
