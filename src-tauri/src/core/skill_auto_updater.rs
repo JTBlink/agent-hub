@@ -213,6 +213,7 @@ fn run_round_blocking(store: &SkillStore) -> Result<(), String> {
                         result.pending_removals.len()
                     );
                 }
+                Ok(result) if result.skill.update_status == "central_newer" => held_back += 1,
                 Ok(_) => updated += 1,
                 Err(err) => {
                     failed += 1;

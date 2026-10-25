@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { canRefreshSkill, skillUpdateBadge } from "./skillUpdatePresentation";
+import {
+  canApplySkillSource,
+  canRefreshSkill,
+  skillRefreshMessage,
+  skillUpdateBadge,
+} from "./skillUpdatePresentation";
 it("does not report missing import provenance as a skill error", () => {
   expect(
     skillUpdateBadge({ update_status: "source_missing" }, (key) => key),
@@ -9,6 +14,19 @@ it("keeps real update errors visible", () => {
   const badge = skillUpdateBadge({ update_status: "error" }, (key) => key);
   expect(badge?.label).toBe("mySkills.updateStatus.error");
   expect(badge?.className).toContain("red");
+});
+it("keeps the newer library version visible and allows comparing without offering a downgrade", () => {
+  const skill = {
+    source_type: "local",
+    source_ref: "~/imports/demo",
+    update_status: "central_newer",
+  };
+  expect(skillUpdateBadge(skill, (key) => key)?.label).toBe(
+    "mySkills.updateStatus.centralNewer",
+  );
+  expect(canRefreshSkill(skill)).toBe(true);
+  expect(canApplySkillSource(skill)).toBe(false);
+  expect(skillRefreshMessage(skill)).toBe("mySkills.updateActions.keptNewer");
 });
 it("hides reimport and source diff for unavailable import paths", () => {
   for (const source_type of ["local", "import"]) {

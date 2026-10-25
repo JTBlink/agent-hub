@@ -501,9 +501,11 @@
       "available": "可更新",
       "error": "检查失败",
       "localOnly": "本地来源",
+      "centralNewer": "库版本较新",
       "sourceMissing": "原路径丢失"
     },
     "updateActions": {
+      "keptNewer": "已保留技能库中的高版本，未使用旧来源覆盖。",
       "check": "检查",
       "checkAll": "检查全部",
       "checkedAll": "已检查全部 Skill 更新",

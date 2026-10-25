@@ -99,6 +99,32 @@ function LocationControls() {
   );
 }
 
+it.each(["grid", "list"])(
+  "shows the newer library version without an update action in %s view",
+  async (viewMode) => {
+    app.managedSkills = [
+      {
+        ...makeSkill(1),
+        source_ref: "~/imports/demo",
+        update_status: "central_newer",
+        version: "0.2.0",
+      },
+    ];
+    await render();
+    if (viewMode === "list") {
+      const list = container.querySelector(".lucide-list")?.closest("button");
+      if (!list) throw new Error("Missing list view button");
+      await act(async () => list.click());
+    }
+    expect(container.textContent).toContain("库版本较新");
+    expect(
+      [...container.querySelectorAll("button")].some(
+        (button) => button.textContent?.trim() === "更新",
+      ),
+    ).toBe(false);
+  },
+);
+
 async function render(route = "/my-skills") {
   await act(async () =>
     root.render(

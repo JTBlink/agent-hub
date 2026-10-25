@@ -503,9 +503,11 @@
       "available": "Update available",
       "error": "Check failed",
       "localOnly": "Local source",
+      "centralNewer": "Library is newer",
       "sourceMissing": "Source missing"
     },
     "updateActions": {
+      "keptNewer": "Kept the newer library version; the older source was not applied.",
       "check": "Check",
       "checkAll": "Check All",
       "checkedAll": "Checked all skill updates",

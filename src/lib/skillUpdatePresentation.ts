@@ -14,6 +14,12 @@ export function skillUpdateBadge(
   skill: Pick<ManagedSkill, "update_status">,
   t: (key: string) => string,
 ) {
+  if (skill.update_status === "central_newer") {
+    return {
+      label: t("mySkills.updateStatus.centralNewer"),
+      className: "bg-accent/10 text-accent-light",
+    };
+  }
   if (skill.update_status === "update_available") {
     return {
       label: "Update",
@@ -37,4 +43,21 @@ export function canRefreshSkill(skill: UpdateSkill) {
       !!skill.source_ref &&
       skill.update_status !== "source_missing")
   );
+}
+
+/** Comparing with the source remains available when applying it would downgrade. */
+export function canApplySkillSource(skill: UpdateSkill) {
+  return skill.update_status !== "central_newer" && canRefreshSkill(skill);
+}
+
+export function skillRefreshMessage(
+  skill: Pick<ManagedSkill, "update_status" | "source_type">,
+  changed = true,
+) {
+  if (skill.update_status === "central_newer")
+    return "mySkills.updateActions.keptNewer";
+  if (isLocalSkillSource(skill)) return "mySkills.updateActions.reimported";
+  return changed
+    ? "mySkills.updateActions.updated"
+    : "mySkills.updateActions.alreadyUpToDate";
 }

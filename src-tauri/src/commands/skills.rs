@@ -1,3 +1,6 @@
+use super::skills_update_policy::{
+    display_update_status, local_source_status, preserve_newer_library,
+};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -1882,6 +1885,9 @@ pub async fn batch_update_skills(
                         Ok(result) if !result.pending_removals.is_empty() => {
                             held_back.push(skill.name.clone());
                         }
+                        Ok(result) if result.skill.update_status == "central_newer" => {
+                            unchanged += 1
+                        }
                         Ok(_) => refreshed += 1,
                         Err(err) => failed.push(format!("{}: {}", skill.name, err.message)),
                     }
@@ -2083,6 +2089,7 @@ fn managed_skill_to_dto(
     // the fresh value). Keep `name` on the DB value to avoid drift with
     // sync target directory names.
     let metadata = skill_metadata::parse_skill_md(Path::new(&skill.central_path));
+    let update_status = display_update_status(&skill, metadata.version.as_deref());
     let description = metadata
         .description
         .filter(|s| !s.trim().is_empty())
@@ -2102,7 +2109,7 @@ fn managed_skill_to_dto(
         source_revision: skill.source_revision,
         source_agent: skill.source_agent,
         remote_revision: skill.remote_revision,
-        update_status: skill.update_status,
+        update_status,
         last_checked_at: skill.last_checked_at,
         last_check_error: skill.last_check_error,
         central_path: skill.central_path,
@@ -2201,6 +2208,12 @@ pub fn update_git_skill_internal(
         let content_changed = skill.content_hash.as_deref() != Some(new_hash.as_str());
         let source_subpath = git_fetcher::relative_subpath(&temp_dir, &skill_dir);
         let _lock = RepoLock::acquire_foreground("update installed skill").map_err(AppError::db)?;
+
+        if preserve_newer_library(store, &skill, &skill_dir, Some(&remote_revision))? {
+            return Ok(UpdateOutcome::Applied {
+                content_changed: false,
+            });
+        }
 
         // Stage first, then compare. The tree that lands in the library is the
         // installer's output, not the raw checkout — it drops `.git` and every
@@ -2631,6 +2644,9 @@ pub fn reimport_local_skill_internal(
                 })
                 .map_err(AppError::io)?;
         let staged_guard = StagedPathGuard::new(&staged_path, true);
+        if preserve_newer_library(store, &skill, &staged_path, None)? {
+            return Ok((Vec::new(), None));
+        }
 
         // Same replacement, same guard. Re-importing is explicit about the
         // *source*, not about discarding whatever has accumulated in the
@@ -2855,6 +2871,12 @@ pub fn check_skill_update_internal_with_remote(
             match remote_result {
                 Ok(remote_revision) => {
                     let update_status = match skill.source_revision.as_deref() {
+                        _ if skill.update_status == "central_newer"
+                            && skill.remote_revision.as_deref()
+                                == Some(remote_revision.as_str()) =>
+                        {
+                            "central_newer"
+                        }
                         Some(current) if current == remote_revision => "up_to_date",
                         Some(_) => "update_available",
                         None => "unknown",
@@ -2911,52 +2933,6 @@ pub fn check_skill_update_internal_with_remote(
     }
 
     managed_skill_by_id(store, skill_id)
-}
-
-/// Classify a `local`/`import` skill against its freshly hashed source.
-fn local_source_status(
-    skill: &SkillRecord,
-    source: &Path,
-    live_hash: &str,
-) -> (&'static str, Option<String>) {
-    match skill.content_hash.as_deref() {
-        None => ("local_only", None),
-        Some(stored) if stored == live_hash => ("up_to_date", None),
-        // The byte hashes disagree. Before offering an update, rule out the one
-        // difference that is not one — see [`differs_only_by_line_endings`].
-        Some(_) if differs_only_by_line_endings(source, Path::new(&skill.central_path)) => {
-            ("up_to_date", None)
-        }
-        Some(_) => ("update_available", None),
-    }
-}
-
-/// True when the original source and the library copy hold the same content in
-/// two line-ending encodings, and nothing else.
-///
-/// A `local`/`import` skill is checked by hashing the user's own source path,
-/// which is theirs to keep however they like — commonly a git working tree.
-/// Git for Windows defaults to `core.autocrlf=true`, so on a Windows + macOS
-/// pair the same checkout is CRLF on one machine and LF on the other while the
-/// library copy (our own byte copy, or a copy synced from the other machine)
-/// keeps the other encoding. Byte hashes then disagree forever and the skill
-/// sits at "update available"; re-importing rewrites the library in the local
-/// encoding, the other machine sees *its* copy drift, and the two devices push
-/// the same skill back and forth. Nothing changed, so nothing should be offered.
-///
-/// Deliberately compares the two live trees rather than the stored hash: the
-/// stored hash answers "what did we install?", and the question here is "do
-/// these two directories differ right now?". Any failure to read either side
-/// answers `false`, leaving the byte-hash verdict standing — this may only ever
-/// suppress a false update, never assert sameness it could not establish.
-fn differs_only_by_line_endings(source: &Path, central: &Path) -> bool {
-    let (Ok(source_hash), Ok(central_hash)) = (
-        installer::hash_local_source_eol_insensitive(source),
-        crate::core::content_hash::hash_directory_eol_insensitive(central),
-    ) else {
-        return false;
-    };
-    source_hash == central_hash
 }
 
 fn should_skip_update_check(
@@ -4619,4 +4595,5 @@ mod tests {
         );
         assert!(repo.store.get_targets_for_skill("s1").unwrap().is_empty());
     }
+    include!("skills_version_tests.rs");
 }

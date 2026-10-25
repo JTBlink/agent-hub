@@ -1,5 +1,6 @@
 import {
-  canRefreshSkill,
+  canApplySkillSource,
+  skillRefreshMessage,
   skillUpdateBadge,
 } from "../lib/skillUpdatePresentation";
 import { SkillImportProvenance } from "../components/SkillImportProvenance";
@@ -832,7 +833,7 @@ export function MySkills() {
           });
           return;
         }
-        toast.success(t("mySkills.updateActions.reimported"));
+        toast.success(t(skillRefreshMessage(result.skill)));
       } else {
         const result = await api.updateSkill(skill.id, approvedRemovals);
         // Nothing was changed: the update would have taken away files the new
@@ -846,9 +847,9 @@ export function MySkills() {
           return;
         }
         if (result.content_changed) {
-          toast.success(t("mySkills.updateActions.updated"));
+          toast.success(t(skillRefreshMessage(result.skill, true)));
         } else {
-          toast.info(t("mySkills.updateActions.alreadyUpToDate"));
+          toast.info(t(skillRefreshMessage(result.skill, false)));
         }
       }
       await refreshManagedSkills();
@@ -1076,7 +1077,7 @@ export function MySkills() {
     }
   };
 
-  const canRefresh = canRefreshSkill;
+  const canRefresh = canApplySkillSource;
 
   const anyRefreshableSelected = useMemo(
     () =>

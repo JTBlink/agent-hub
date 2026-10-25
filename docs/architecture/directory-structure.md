@@ -98,6 +98,8 @@ agent-hub/
 │   │   │   ├── skills/tests/repository_overwrite.rs # 覆盖身份保留与安全边界回归
 │   │   │   ├── git_repositories.rs #     本地仓库读取/安装与远程缓存清理 IPC
 │   │   │   ├── skills_diff_metadata.rs # 技能差异目录、声明版本与比较 DTO
+│   │   │   ├── skills_update_policy.rs # 来源更新状态与禁止版本降级
+│   │   │   ├── skills_version_tests.rs # 来源更新版本优先级回归测试
 │   │   │   ├── project_skill_diff.rs # 项目 Agent 副本与中心技能的目录差异
 │   │   │   ├── project_skill_update.rs # 项目从中心更新与显式强制恢复
 │   │   │   ├── sync.rs             #     同步操作

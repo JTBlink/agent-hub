@@ -15,6 +15,7 @@ pub mod settings;
 pub mod skill_groups;
 pub mod skills;
 mod skills_diff_metadata;
+mod skills_update_policy;
 pub mod sync;
 pub mod tools;
 

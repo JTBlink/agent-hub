@@ -464,9 +464,11 @@
       "available": "可更新",
       "error": "檢查失敗",
       "localOnly": "本機來源",
+      "centralNewer": "技能庫版本較新",
       "sourceMissing": "原路徑遺失"
     },
     "updateActions": {
+      "keptNewer": "已保留技能庫中的較新版本，未以舊來源覆寫。",
       "check": "檢查",
       "checkAll": "檢查全部",
       "checkedAll": "已檢查全部 Skill 更新",

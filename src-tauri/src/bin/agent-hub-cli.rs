@@ -2010,7 +2010,8 @@ fn run_update(
                         skill_id: skill.id.clone(),
                         name: skill.name.clone(),
                         source_type: skill.source_type.clone(),
-                        refreshed: r.pending_removals.is_empty(),
+                        refreshed: r.pending_removals.is_empty()
+                            && r.skill.update_status != "central_newer",
                         error: None,
                         held_back_removals: r
                             .pending_removals
