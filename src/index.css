@@ -99,6 +99,10 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-accent-border bg-accent-dark px-4 py-2.5 text-[13px] font-medium text-white transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  .app-button-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-md p-2 text-muted transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
   .app-button-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-[13px] font-medium text-secondary transition-colors outline-none hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50;
   }

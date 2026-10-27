@@ -1,3 +1,4 @@
+import { ThemedSelect } from "./ThemedSelect";
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -99,7 +100,7 @@ export function GitImportPanel({
         />
         <label className="min-w-0 flex-1 basis-44">
           <span className="sr-only">{t("install.gitBrowser.repository")}</span>
-          <select
+          <ThemedSelect
             value={active?.id ?? ""}
             disabled={!active || browser.adding}
             onChange={(event) => {
@@ -121,7 +122,7 @@ export function GitImportPanel({
                   : ""}
               </option>
             ))}
-          </select>
+          </ThemedSelect>
         </label>
         <button
           type="button"
@@ -238,7 +239,7 @@ export function GitImportPanel({
             {form !== "rename" && (
               <label className="block text-[13px] text-tertiary">
                 {t("install.gitBrowser.sourceType")}
-                <select
+                <ThemedSelect
                   value={kind}
                   onChange={(event) => {
                     setKind(
@@ -253,7 +254,7 @@ export function GitImportPanel({
                     {t("install.gitBrowser.remote")}
                   </option>
                   <option value="local">{t("install.gitBrowser.local")}</option>
-                </select>
+                </ThemedSelect>
               </label>
             )}
             <div className="grid gap-3 md:grid-cols-2">

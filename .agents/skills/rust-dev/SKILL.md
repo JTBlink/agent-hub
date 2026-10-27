@@ -26,7 +26,7 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | 开发环境、构建与 CLI               | [开发指南](references/development.md)                                                                                   |
 | Rust、前端逻辑、契约、持久化与重构 | [开发规范：SOLID 与模块边界](references/coding-standards.md)                                                            |
-| 页面、交互、样式与文案             | [UI 规范](references/ui-guidelines.md)；涉及代码同时读开发规范                                                          |
+| 页面、交互、样式与文案             | [UI 规范](references/ui-guidelines.md)与[组件规范](references/component-guidelines.md)；涉及代码同时读开发规范          |
 | Logo、平台图标与导出               | [图标规范](references/icon-assets.md)                                                                                   |
 | 测试、审查与收尾                   | [交付规范](references/delivery.md)、[提交规范](references/commit-conventions.md)                                        |
 | 需求、状态与领域文档               | [Issue tracker](references/issue-tracker.md)、[分诊状态](references/triage-labels.md)、[领域文档](references/domain.md) |

@@ -1,3 +1,4 @@
+import { ThemedSelect } from "./ThemedSelect";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpen, FileText, RefreshCw } from "lucide-react";
@@ -136,7 +137,7 @@ export function ProjectSkillDetailPanel({
           {t("project.comparison.copy")}
         </span>
         {skill.variants.length > 1 ? (
-          <select
+          <ThemedSelect
             aria-label={t("project.comparison.copy")}
             value={variant.agent}
             onChange={(event) => setSelectedAgent(event.target.value)}
@@ -148,7 +149,7 @@ export function ProjectSkillDetailPanel({
                 {getProjectSkillStatusMeta(t, item.sync_status).label}
               </option>
             ))}
-          </select>
+          </ThemedSelect>
         ) : (
           <span className="text-secondary">{variant.agent_display_name}</span>
         )}

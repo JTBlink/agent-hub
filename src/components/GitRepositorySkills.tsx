@@ -1,3 +1,4 @@
+import { ThemedSelect } from "./ThemedSelect";
 import { useMemo, useState } from "react";
 import {
   DownloadCloud,
@@ -168,7 +169,7 @@ export function GitRepositorySkills({
             className="app-input w-full pl-9"
           />
         </label>
-        <select
+        <ThemedSelect
           aria-label={t("install.gitBrowser.status")}
           value={status}
           onChange={(event) => setStatus(event.target.value)}
@@ -177,7 +178,7 @@ export function GitRepositorySkills({
           <option value="all">{t("install.gitBrowser.all")}</option>
           <option value="available">{t("install.gitBrowser.available")}</option>
           <option value="installed">{t("install.installed")}</option>
-        </select>
+        </ThemedSelect>
         <button
           type="button"
           disabled={disabled || available.length === 0}

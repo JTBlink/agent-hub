@@ -1,3 +1,4 @@
+import { ThemedSelect } from "./ThemedSelect";
 import { useState } from "react";
 import { BrushCleaning, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -107,7 +108,7 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
               <span className="mb-1 block">
                 {t("install.scan.cleanupAgent")}
               </span>
-              <select
+              <ThemedSelect
                 className="app-input w-full"
                 disabled={loading}
                 value={agent}
@@ -120,7 +121,7 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
                     {key}
                   </option>
                 ))}
-              </select>
+              </ThemedSelect>
             </label>
             <ul className="max-h-56 overflow-y-auto space-y-2 text-[13px]">
               {selected.map((entry) => (

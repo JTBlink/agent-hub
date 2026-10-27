@@ -1,3 +1,4 @@
+import { ThemedSelect } from "../ThemedSelect";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -43,7 +44,7 @@ export function HelpSearchResults({ locale }: { locale: HelpLocale }) {
       </h2>
       <label className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-muted">
         {t("help.filterCategory")}
-        <select
+        <ThemedSelect
           aria-label={t("help.filterCategory")}
           className="rounded-lg border border-border bg-background px-2 py-1 text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
           value={category}
@@ -63,7 +64,7 @@ export function HelpSearchResults({ locale }: { locale: HelpLocale }) {
               {item.titles[locale]}
             </option>
           ))}
-        </select>
+        </ThemedSelect>
       </label>
       {results.length ? (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
