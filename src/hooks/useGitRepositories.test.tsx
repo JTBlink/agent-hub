@@ -373,3 +373,35 @@ it("cleans up a delayed clone after unmount instead of saving a stale response",
   expect(api.cancelGitPreview).toHaveBeenCalledWith("<temp>/late");
   expect(api.setSettings).not.toHaveBeenCalled();
 });
+
+it("persists live preview versions even if refreshing library metadata fails", async () => {
+  await render();
+  const plan: api.LocalSkillSyncPlan = {
+    library_version: "0.2.0",
+    repository_version: "0.2.0",
+    approval: null,
+    applied: false,
+  };
+  vi.mocked(api.syncLocalGitSkill).mockResolvedValue(plan);
+  changed.mockRejectedValueOnce(new Error("library refresh failed"));
+  let result: api.LocalSkillSyncPlan | undefined;
+  await act(async () => {
+    result = await controller.syncToRepository(
+      local.id,
+      skill.repo_path,
+      "installed",
+    );
+  });
+  expect(result).toEqual(plan);
+  expect(
+    controller.repositories.find((repo) => repo.id === local.id)?.skills[0]
+      .version,
+  ).toBe("0.2.0");
+  const saved = JSON.parse(vi.mocked(api.setSettings).mock.lastCall![1]);
+  expect(
+    saved.repositories.find((repo: { id: string }) => repo.id === local.id)
+      .skills[0].version,
+  ).toBe("0.2.0");
+  expect(controller.errors[local.id]).toContain("library refresh failed");
+  expect(controller.installing).toBeNull();
+});

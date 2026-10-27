@@ -311,6 +311,7 @@ it("syncs a newer installed Skill to a local repository and updates the open det
   );
   expect(container.textContent).toContain("obsolete.txt");
   expect(api.syncLocalGitSkill).toHaveBeenCalledOnce();
+  expect(changed).toHaveBeenCalledOnce();
   await click("确认同步到仓库");
   expect(api.syncLocalGitSkill).toHaveBeenLastCalledWith(
     repo.url,
@@ -323,7 +324,7 @@ it("syncs a newer installed Skill to a local repository and updates the open det
     "仓库 0.2.0",
   );
   expect(container.textContent).not.toContain("仓库版本较旧");
-  expect(changed).toHaveBeenCalledOnce();
+  expect(changed).toHaveBeenCalledTimes(2);
 });
 
 it("automatically reads legacy versions and refreshes details already open during the request", async () => {
@@ -424,4 +425,75 @@ it("confirms clone-cache cleanup and keeps the repository entry and installed Sk
   expect(container.querySelector("select")?.textContent).toContain("Team");
   expect(container.querySelectorAll("article")).toHaveLength(0);
   expect(changed).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["0.2.0", "版本相同，无需同步"],
+  ["0.3.0", "仓库版本较新，不能用技能库版本覆盖"],
+  [null, "无法比较声明版本，未修改仓库"],
+])(
+  "refreshes a stale catalog and explains a blocked sync for live version %s",
+  async (version, message) => {
+    const repo = {
+      ...createGitRepository("/projects/skills", "Local", "local"),
+      skills: [{ ...alpha, version: "0.1.1" }],
+      refreshedAt: 1,
+    };
+    vi.mocked(api.getSettings).mockResolvedValue(
+      JSON.stringify({ repositories: [repo], activeId: repo.id }),
+    );
+    vi.mocked(api.syncLocalGitSkill).mockResolvedValue({
+      library_version: "0.2.0",
+      repository_version: version,
+      approval: null,
+      applied: false,
+    });
+    await render([{ ...installed, name: alpha.name, version: "0.2.0" }], true);
+    await click("Alpha");
+    await click("同步新版到仓库");
+    expect(container.textContent).toContain(message);
+    expect(container.textContent).toContain(`仓库 ${version ?? "未声明版本"}`);
+    expect(button("确认同步到仓库").disabled).toBe(true);
+    expect(container.textContent).not.toContain("仓库版本较旧");
+    expect(api.syncLocalGitSkill).toHaveBeenCalledOnce();
+    expect(changed).toHaveBeenCalledOnce();
+    expect(api.installLocalGitSkill).not.toHaveBeenCalled();
+  },
+);
+
+it("shows the live blocked state if the repository catches up after confirmation", async () => {
+  const repo = {
+    ...createGitRepository("/projects/skills", "Local", "local"),
+    skills: [{ ...alpha, version: "0.1.1" }],
+    refreshedAt: 1,
+  };
+  vi.mocked(api.getSettings).mockResolvedValue(
+    JSON.stringify({ repositories: [repo], activeId: repo.id }),
+  );
+  const approval = {
+    library_hash: "new",
+    repository_hash: "old",
+    removed_paths: [],
+  };
+  vi.mocked(api.syncLocalGitSkill)
+    .mockResolvedValueOnce({
+      library_version: "0.2.0",
+      repository_version: "0.1.1",
+      approval,
+      applied: false,
+    })
+    .mockResolvedValueOnce({
+      library_version: "0.2.0",
+      repository_version: "0.2.0",
+      approval: null,
+      applied: false,
+    });
+  await render([{ ...installed, name: alpha.name, version: "0.2.0" }]);
+  await click("Alpha");
+  await click("同步新版到仓库");
+  await click("确认同步到仓库");
+  expect(container.textContent).toContain("版本相同，无需同步");
+  expect(button("确认同步到仓库").disabled).toBe(true);
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  expect(api.syncLocalGitSkill).toHaveBeenCalledTimes(2);
 });

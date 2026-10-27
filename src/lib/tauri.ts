@@ -385,7 +385,8 @@ export interface LocalSkillSyncApproval {
 export interface LocalSkillSyncPlan {
   library_version: string | null;
   repository_version: string | null;
-  approval: LocalSkillSyncApproval;
+  /** Null when the live versions do not allow syncing the library copy. */
+  approval: LocalSkillSyncApproval | null;
   applied: boolean;
 }
 

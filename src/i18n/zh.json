@@ -741,6 +741,11 @@
       "syncAppliedRefreshFailed": "文件已同步，状态刷新失败，请刷新仓库",
       "syncToRepository": "同步新版到仓库",
       "syncDescription": "将技能库中的新版写入所选本地仓库目录，替换该技能的内容。完成后请在仓库中查看改动并提交。",
+      "syncUnavailable": {
+        "same_version": "版本相同，无需同步。未修改仓库内容。",
+        "source_newer": "仓库版本较新，不能用技能库版本覆盖。未修改仓库内容。",
+        "unknown": "无法比较声明版本，未修改仓库。请检查双方 SKILL.md 中的版本。"
+      },
       "syncVersions": "仓库 {{before}} → {{after}}",
       "syncRemovals": "以下仓库文件或目录将被移除：",
       "confirmSync": "确认同步到仓库",

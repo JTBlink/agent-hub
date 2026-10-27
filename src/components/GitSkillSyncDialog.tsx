@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LocalSkillSyncApproval, LocalSkillSyncPlan } from "../lib/tauri";
+import { compareDeclaredSkillVersions } from "../lib/skillVersions";
 import { getErrorMessage } from "../lib/error";
 import { GitBrowserDialog } from "./GitBrowserDialog";
 
@@ -42,6 +43,12 @@ export function GitSkillSyncDialog({
       active = false;
     };
   }, [attempt, t]);
+  const comparison = plan
+    ? compareDeclaredSkillVersions(
+        plan.library_version,
+        plan.repository_version,
+      )
+    : null;
   return (
     <GitBrowserDialog
       title={t("install.gitBrowser.syncToRepository")}
@@ -61,12 +68,24 @@ export function GitSkillSyncDialog({
       {plan && (
         <>
           <p className="text-[13px] text-secondary">
-            {t("install.gitBrowser.syncVersions", {
-              before: plan.repository_version,
-              after: plan.library_version,
+            {t("install.gitBrowser.repositoryVersion", {
+              version:
+                plan.repository_version ||
+                t("install.gitBrowser.versionNotDeclared"),
+            })}
+            {" · "}
+            {t("install.gitBrowser.installedVersion", {
+              version:
+                plan.library_version ||
+                t("install.gitBrowser.versionNotDeclared"),
             })}
           </p>
-          {plan.approval.removed_paths.length > 0 && (
+          {!plan.approval && (
+            <p role="status" className="mt-3 text-[13px] text-secondary">
+              {t(`install.gitBrowser.syncUnavailable.${comparison}`)}
+            </p>
+          )}
+          {plan.approval && plan.approval.removed_paths.length > 0 && (
             <div className="mt-3 text-[13px] text-danger">
               <p>{t("install.gitBrowser.syncRemovals")}</p>
               <ul className="max-h-40 list-disc overflow-auto break-all pl-5">
@@ -105,14 +124,15 @@ export function GitSkillSyncDialog({
         ) : (
           <button
             type="button"
-            disabled={busy || !plan}
+            disabled={busy || !plan?.approval}
             className="app-button-primary"
             onClick={() => {
-              if (!plan) return;
+              if (!plan?.approval) return;
               setBusy(true);
               void onSync(plan.approval)
                 .then((result) => {
                   if (result.applied) onClose();
+                  else setPlan(result);
                 })
                 .catch((cause: unknown) =>
                   setError(getErrorMessage(cause, t("common.error"))),

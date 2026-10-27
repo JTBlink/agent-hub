@@ -722,6 +722,11 @@
       "syncAppliedRefreshFailed": "檔案已同步，狀態重新整理失敗，請重新整理倉庫",
       "syncToRepository": "同步新版到倉庫",
       "syncDescription": "將技能庫中的新版寫入所選本機倉庫目錄，替換該技能的內容。完成後請在倉庫中查看改動並提交。",
+      "syncUnavailable": {
+        "same_version": "版本相同，無需同步。未修改倉庫內容。",
+        "source_newer": "倉庫版本較新，不能用技能庫版本覆蓋。未修改倉庫內容。",
+        "unknown": "無法比較宣告版本，未修改倉庫。請檢查雙方 SKILL.md 中的版本。"
+      },
       "syncVersions": "倉庫 {{before}} → {{after}}",
       "syncRemovals": "以下倉庫檔案或目錄將被移除：",
       "confirmSync": "確認同步到倉庫",

@@ -29,7 +29,10 @@ fn sync_newer_library_to_repository_requires_approval_and_preserves_library_iden
         sync_to_local_repository(&repo.store, working.path(), "skills/demo", "existing", None)
             .unwrap();
     assert!(!plan.applied);
-    assert_eq!(plan.approval.removed_paths, vec!["obsolete.txt"]);
+    assert_eq!(
+        plan.approval.as_ref().unwrap().removed_paths,
+        vec!["obsolete.txt"]
+    );
     assert!(target.join("obsolete.txt").exists());
     assert_eq!(plan.library_version.as_deref(), Some("0.2.0"));
     let applied = sync_to_local_repository(
@@ -37,7 +40,7 @@ fn sync_newer_library_to_repository_requires_approval_and_preserves_library_iden
         working.path(),
         "skills/demo",
         "existing",
-        Some(plan.approval),
+        plan.approval,
     )
     .unwrap();
     assert!(applied.applied);
@@ -72,7 +75,7 @@ fn sync_newer_library_to_repository_requires_approval_and_preserves_library_iden
 }
 
 #[test]
-fn sync_rejects_changed_content_equal_or_unknown_versions_and_repository_root() {
+fn sync_rejects_changed_content_and_previews_ineligible_versions_without_writing() {
     let repo = test_repo();
     let central = write_skill_dir("demo");
     fs::write(
@@ -101,7 +104,7 @@ fn sync_rejects_changed_content_equal_or_unknown_versions_and_repository_root() 
         working.path(),
         "demo",
         "existing",
-        Some(plan.approval)
+        plan.approval
     )
     .is_err());
     assert!(target.join("local-change.txt").exists());
@@ -113,19 +116,36 @@ fn sync_rejects_changed_content_equal_or_unknown_versions_and_repository_root() 
         working.path(),
         "demo",
         "existing",
-        Some(plan.approval)
+        plan.approval
     )
     .is_err());
+    let approval = sync_to_local_repository(&repo.store, working.path(), "demo", "existing", None)
+        .unwrap()
+        .approval;
     for version in ["0.2.0", "0.3.0", "unknown"] {
         fs::write(
             target.join("SKILL.md"),
             format!("---\nname: demo\nversion: {version}\n---\n"),
         )
         .unwrap();
-        assert!(
-            sync_to_local_repository(&repo.store, working.path(), "demo", "existing", None)
-                .is_err()
-        );
+        let original = fs::read(target.join("SKILL.md")).unwrap();
+        let plan = sync_to_local_repository(&repo.store, working.path(), "demo", "existing", None)
+            .unwrap();
+        assert_eq!(plan.library_version.as_deref(), Some("0.2.0"));
+        assert_eq!(plan.repository_version.as_deref(), Some(version));
+        assert!(plan.approval.is_none());
+        assert!(!plan.applied);
+        let blocked = sync_to_local_repository(
+            &repo.store,
+            working.path(),
+            "demo",
+            "existing",
+            approval.clone(),
+        )
+        .unwrap();
+        assert!(!blocked.applied);
+        assert!(blocked.approval.is_none());
+        assert_eq!(fs::read(target.join("SKILL.md")).unwrap(), original);
     }
     fs::write(
         working.path().join("SKILL.md"),

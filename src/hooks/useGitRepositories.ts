@@ -262,23 +262,39 @@ export function useGitRepositories(onChanged: () => Promise<unknown>) {
         skillId,
         approval,
       );
+      // Preview reads live versions too; replace the stale catalog that offered sync.
+      if (mounted.current)
+        commit((previous) => ({
+          ...previous,
+          repositories: previous.repositories.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  skills: item.skills.map((skill) =>
+                    skill.repo_path === repoPath
+                      ? {
+                          ...skill,
+                          version: result.applied
+                            ? result.library_version
+                            : result.repository_version,
+                        }
+                      : skill,
+                  ),
+                }
+              : item,
+          ),
+        }));
+      if (!result.applied) {
+        // Refresh library metadata as well if it was the cached side that changed.
+        await changed.current().catch((error: unknown) => {
+          if (mounted.current)
+            setErrors((previous) => ({
+              ...previous,
+              [id]: getErrorMessage(error, i18next.t("common.error")),
+            }));
+        });
+      }
       if (result.applied) {
-        if (mounted.current)
-          commit((previous) => ({
-            ...previous,
-            repositories: previous.repositories.map((item) =>
-              item.id === id
-                ? {
-                    ...item,
-                    skills: item.skills.map((skill) =>
-                      skill.repo_path === repoPath
-                        ? { ...skill, version: result.library_version }
-                        : skill,
-                    ),
-                  }
-                : item,
-            ),
-          }));
         // Re-read the actual working tree, updating both persisted catalog and open details.
         try {
           const preview = await api.previewLocalGitRepository(repo.url);

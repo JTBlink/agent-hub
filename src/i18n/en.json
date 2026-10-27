@@ -743,6 +743,11 @@
       "syncAppliedRefreshFailed": "Files synced, but status refresh failed. Refresh the repository",
       "syncToRepository": "Sync newer version to repository",
       "syncDescription": "Replace this Skill in the selected local repository with the newer library copy. Review and commit the changes in the repository afterward.",
+      "syncUnavailable": {
+        "same_version": "Both declared versions are equal. No sync is needed; repository files were not changed.",
+        "source_newer": "The repository version is newer and cannot be replaced by the library version. Repository files were not changed.",
+        "unknown": "Declared versions cannot be compared. Repository files were not changed. Check the version in both SKILL.md files."
+      },
       "syncVersions": "Repository {{before}} → {{after}}",
       "syncRemovals": "These repository files or directories will be removed:",
       "confirmSync": "Confirm sync to repository",
