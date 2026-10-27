@@ -41,6 +41,10 @@ def cleanup_files(directory, retention_days):
         with os.scandir(parent) as entries:
             for entry in entries:
                 metadata = entry.stat(follow_symlinks=False)
+                # Windows DirEntry.stat leaves st_dev at zero. Read complete
+                # metadata without following links before enforcing the volume boundary.
+                if metadata.st_dev == 0:
+                    metadata = Path(entry.path).lstat()
                 if is_link(metadata) or metadata.st_dev != root.st_dev:
                     continue
                 if stat.S_ISDIR(metadata.st_mode):

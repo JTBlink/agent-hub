@@ -21,17 +21,53 @@ mod tests {
             )
             .unwrap();
     }
-    fn run(workspace: &Path) -> std::process::Output {
+    fn script(workspace: &Path) -> std::path::PathBuf {
         let file = workspace.join("cleanup.py");
         fs::write(&file, include_str!("builtin/disk-cleanup/disk-cleanup.py")).unwrap();
-        std::process::Command::new(
+        file
+    }
+    fn python_command(workspace: &Path) -> std::process::Command {
+        let mut command = std::process::Command::new(
             crate::core::automation::native::python_runtime()
                 .expect("Python 3 is required to test bundled Python scripts"),
-        )
-        .arg(file)
-        .current_dir(workspace)
-        .output()
-        .unwrap()
+        );
+        command.current_dir(workspace);
+        command
+    }
+    fn run(workspace: &Path) -> std::process::Output {
+        python_command(workspace)
+            .arg(script(workspace))
+            .output()
+            .unwrap()
+    }
+
+    #[test]
+    fn clears_expired_files_when_directory_entries_have_no_device_id() {
+        let root = tempfile::tempdir().unwrap();
+        for directory in ["tmp", "logs"] {
+            let target = root.path().join(directory);
+            fs::create_dir_all(target.join("nested")).unwrap();
+            old_file(&target.join("expired.log"));
+            old_file(&target.join("nested/expired.log"));
+            fs::write(target.join("recent.log"), "keep").unwrap();
+        }
+        let output = python_command(root.path())
+            .arg("-c")
+            .arg(include_str!("fixtures/zero_device_entries.py"))
+            .arg(script(root.path()))
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        for directory in ["tmp", "logs"] {
+            let target = root.path().join(directory);
+            assert!(!target.join("expired.log").exists());
+            assert!(!target.join("nested/expired.log").exists());
+            assert!(target.join("recent.log").is_file());
+        }
     }
 
     #[test]
