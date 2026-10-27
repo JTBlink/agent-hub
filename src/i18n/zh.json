@@ -75,6 +75,7 @@
       "unknown": "创建者未知"
     },
     "originFilter": "任务创建者",
+    "allOrigins": "全部创建者",
     "allSources": "全部调度器",
     "shownCount": "显示 {{count}} 个任务",
     "create": "新建自动化",
@@ -116,7 +117,9 @@
     "resumeBeforeRun": "Hermes 任务需先恢复计划，才能手动运行。",
     "everyMinutes": "每 {{count}} 分钟",
     "workdirPlaceholder": "留空自动创建任务工作目录",
-    "defaultWorkdir": "默认：~/.agent-hub/automations/<任务 ID>/workspace，每个任务独立。",
+    "defaultWorkdir": "默认：~/.agent-hub/automations/<任务 ID>/workspace，每个任务独立；系统任务脚本保存在工作目录中。",
+    "scriptFiles": "脚本文件（{{count}}）",
+    "scriptFilesHint": "脚本会保存在工作目录下的对应模板文件夹中。可在这里或直接编辑文件定制；保存后随任务定义自动备份。需要 Python 3。",
     "useTemplate": "使用模板",
     "backToEditor": "返回编辑",
     "templateHint": "选择模板后，可继续修改命令、目录和日程。创建前不会注册或执行任务。",

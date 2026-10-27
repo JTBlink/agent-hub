@@ -104,15 +104,15 @@ beforeEach(() => {
       shell: "sh",
       templates: [
         {
-          id: "disk-check",
-          title: "磁盘空间检查",
-          description: "每小时检查可用空间",
+          id: "disk-cleanup",
+          title: "清理磁盘缓存",
+          description: "每天清理过期临时文件和日志，并检查磁盘空间",
           draft: {
-            name: "磁盘空间检查",
+            name: "清理磁盘缓存",
             provider: "system",
             content: "df -h .",
             workdir: null,
-            schedule: { kind: "interval", minutes: 60 },
+            schedule: { kind: "daily", hour: 3, minute: 0, weekdays: false },
             enabled: true,
           },
         },
@@ -187,6 +187,7 @@ it("hides built-in maintenance by default and reveals it with a filter switch", 
     hermes_installed: true,
   });
   await render();
+  await select("任务创建者", "all");
   const toggle = container.querySelector<HTMLButtonElement>(
     '[role="switch"][aria-label="隐藏系统内置任务"]',
   )!;
@@ -214,6 +215,7 @@ it("explains an empty filtered list when only built-in tasks exist", async () =>
     hermes_installed: false,
   });
   await render();
+  await select("任务创建者", "all");
   expect(container.textContent).toContain("已隐藏 1 个系统内置任务");
   expect(container.textContent).toContain("没有符合筛选条件的任务");
   expect(container.textContent).not.toContain("未发现自动化任务");
@@ -235,6 +237,7 @@ it("shows a friendly name in the list and keeps searchable identifiers in detail
     hermes_installed: false,
   });
   await render();
+  await select("任务创建者", "all");
   expect(container.querySelector("tbody")?.textContent).toContain(
     "Demo Updater",
   );
@@ -264,6 +267,7 @@ it("shows a friendly name in the list and keeps searchable identifiers in detail
 
 it("aggregates system and Hermes tasks and filters by source and status", async () => {
   await render();
+  await select("任务创建者", "all");
   expect(api.getAutomationOverview).toHaveBeenCalledOnce();
   expect(api.getAutomationOverview).toHaveBeenCalledWith("zh");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
@@ -290,7 +294,7 @@ it("hides the Hermes entry unless executable installation evidence is present", 
   });
   await render();
   expect(
-    [...container.querySelectorAll('[aria-label="任务来源"] button')].map(
+    [...container.querySelectorAll('select[aria-label="任务来源"] option')].map(
       (node) => node.textContent,
     ),
   ).toEqual(["全部调度器", "系统任务"]);
@@ -309,6 +313,7 @@ it("shows source failures alongside available tasks and refreshes the catalog", 
     hermes_installed: true,
   });
   await render();
+  await select("任务创建者", "all");
   expect(container.querySelector('[role="alert"]')?.textContent).toContain(
     "invalid JSON",
   );
@@ -320,6 +325,7 @@ it("shows source failures alongside available tasks and refreshes the catalog", 
 
 it("opens Orca-style prompt and schedule details with unknown execution data", async () => {
   await render();
+  await select("任务创建者", "all");
   await click("仓库审计");
   expect(container.querySelector("h1")?.textContent).toBe(hermes.name);
   const overview = container.querySelector('[role="tabpanel"]')!;
@@ -341,6 +347,7 @@ it("opens Orca-style prompt and schedule details with unknown execution data", a
 
 it("searches task content and preserves tasks when refresh fails", async () => {
   await render();
+  await select("任务创建者", "all");
   const search = container.querySelector("input")!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(
@@ -396,6 +403,7 @@ it("falls back to a generic icon if an application icon cannot be decoded", asyn
     hermes_installed: false,
   });
   await render();
+  await select("任务创建者", "all");
   const image = container.querySelector("tbody img")!;
   await act(async () => image.dispatchEvent(new Event("error")));
   expect(container.querySelector("tbody img")).toBeNull();
@@ -416,6 +424,7 @@ it("reloads localized names and ignores the old language response", async () => 
       hermes_installed: false,
     });
   await render();
+  await select("任务创建者", "all");
   await act(async () => {
     await i18n.changeLanguage("en");
     root.render(
@@ -451,10 +460,7 @@ async function select(label: string, value: string) {
   });
 }
 async function chooseSource(value: "all" | "system" | "hermes") {
-  const button = container.querySelector<HTMLButtonElement>(
-    `[aria-label="任务来源"] button[value="${value}"]`,
-  )!;
-  await act(async () => button.click());
+  await select("任务来源", value);
 }
 async function input(label: string, value: string) {
   const node = container.querySelector<HTMLInputElement | HTMLTextAreaElement>(
@@ -481,20 +487,18 @@ it("keeps list filters on return and supports direct task links and missing task
   await render("/automation?task=missing");
   expect(container.textContent).toContain("任务已移除或当前不可用");
   await ariaClick("返回自动化列表");
+  await select("任务创建者", "all");
   await chooseSource("hermes");
   await click(hermes.name);
   await ariaClick("返回自动化列表");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(
-    container
-      .querySelector<HTMLButtonElement>(
-        '[aria-label="任务来源"] button[value="hermes"]',
-      )!
-      .getAttribute("aria-pressed"),
-  ).toBe("true");
+    container.querySelector<HTMLSelectElement>('select[aria-label="任务来源"]')!
+      .value,
+  ).toBe("hermes");
 });
 
-it("uses explicit ownership for the AgentHub filter rather than the job name", async () => {
+it("defaults to AgentHub ownership and lets users reveal other creators", async () => {
   vi.mocked(api.getAutomationOverview).mockResolvedValue({
     tasks: [
       { ...native, name: "AgentHub-looking external job" },
@@ -504,15 +508,42 @@ it("uses explicit ownership for the AgentHub filter rather than the job name", a
     hermes_installed: true,
   });
   await render();
-  await act(async () =>
-    container
-      .querySelectorAll<HTMLButtonElement>(
-        '[aria-label="任务创建者"] button',
-      )[1]
-      .click(),
-  );
+  expect(
+    container.querySelector<HTMLSelectElement>(
+      'select[aria-label="任务创建者"]',
+    )!.value,
+  ).toBe("agent_hub");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(container.querySelector("tbody")?.textContent).toContain(hermes.name);
+  expect(container.querySelector("tbody")?.textContent).not.toContain(
+    "AgentHub-looking external job",
+  );
+  await select("任务创建者", "all");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
+  await select("任务创建者", "external");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
+  await click("刷新");
+  expect(
+    container.querySelector<HTMLSelectElement>(
+      'select[aria-label="任务创建者"]',
+    )!.value,
+  ).toBe("external");
+  expect(container.querySelector("tbody")?.textContent).toContain(
+    "AgentHub-looking external job",
+  );
+});
+
+it("keeps the AgentHub default when only external tasks are available", async () => {
+  await render();
+  expect(
+    container.querySelector<HTMLSelectElement>(
+      'select[aria-label="任务创建者"]',
+    )!.value,
+  ).toBe("agent_hub");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(0);
+  expect(container.textContent).toContain("没有符合筛选条件的任务");
+  await select("任务创建者", "all");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
 });
 
 it("creates a manual command task with the shared DTO without running it on save", async () => {
@@ -569,6 +600,7 @@ it("manual run requests are separate from saving and keep the original schedule"
     hermes_installed: true,
   });
   await render();
+  await select("任务创建者", "all");
   await ariaClick("立即运行 仓库审计");
   expect(api.runAutomation).toHaveBeenCalledWith(hermes.id);
   expect(api.saveAutomation).not.toHaveBeenCalled();
@@ -607,6 +639,7 @@ it("prevents repeat triggers while a manual request is pending and reports failu
     }),
   );
   await render();
+  await select("任务创建者", "all");
   await ariaClick("立即运行 仓库审计");
   expect(
     container.querySelector<HTMLButtonElement>(
@@ -628,10 +661,10 @@ it("fills a template without creating or running until the explicit create actio
   await render();
   await click("新建自动化");
   await click("使用模板");
-  await ariaClick("磁盘空间检查");
+  await ariaClick("清理磁盘缓存");
   expect(
     container.querySelector<HTMLInputElement>('[aria-label="名称"]')!.value,
-  ).toBe("磁盘空间检查");
+  ).toBe("清理磁盘缓存");
   expect(container.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
     "df -h .",
   );
@@ -646,9 +679,9 @@ it("fills a template without creating or running until the explicit create actio
     null,
     null,
     expect.objectContaining({
-      name: "磁盘空间检查",
+      name: "清理磁盘缓存",
       workdir: null,
-      schedule: { kind: "interval", minutes: 60 },
+      schedule: { kind: "daily", hour: 3, minute: 0, weekdays: false },
     }),
   );
 });
@@ -839,19 +872,25 @@ it("keeps displayed output and focus while a refresh is pending", async () => {
 });
 
 it("fills a scheduled cleanup template and lets the user choose manual execution before saving", async () => {
-  const content =
-    "RETENTION_DAYS=7\nTARGET='./tmp'\nprintf 'cleanup fixture only\\n'";
+  const content = "python3 './disk-cleanup/disk-cleanup.py'";
+  const files = [
+    {
+      path: "disk-cleanup/disk-cleanup.py",
+      content: "TEMP_RETENTION_DAYS = 7\nLOG_RETENTION_DAYS = 30\n",
+    },
+  ];
   vi.mocked(api.getAutomationTemplates).mockResolvedValue({
     shell: "sh",
     templates: [
       {
-        id: "temp-cleanup",
-        title: "临时文件定时清理",
-        description: "只清理工作目录 tmp 中超过 7 天的文件。",
+        id: "disk-cleanup",
+        title: "清理磁盘缓存",
+        description: "清理工作目录 tmp 中超过 7 天、logs 中超过 30 天的文件。",
         draft: {
-          name: "临时文件定时清理",
+          name: "清理磁盘缓存",
           provider: "system",
           content,
+          files,
           workdir: null,
           schedule: { kind: "daily", hour: 3, minute: 0, weekdays: false },
           enabled: true,
@@ -862,7 +901,7 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
   await render();
   await click("新建自动化");
   await click("使用模板");
-  await ariaClick("临时文件定时清理");
+  await ariaClick("清理磁盘缓存");
   expect(container.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
     content,
   );
@@ -874,6 +913,16 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
   const schedule = container.querySelector<HTMLSelectElement>(
     'select[aria-label="日程"]',
   )!;
+  const script = container.querySelector<HTMLTextAreaElement>(
+    'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
+  )!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      "value",
+    )!.set!.call(script, "TEMP_RETENTION_DAYS = 14\nLOG_RETENTION_DAYS = 60\n");
+    script.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   await act(async () => {
     schedule.value = "manual";
     schedule.dispatchEvent(new Event("change", { bubbles: true }));
@@ -886,7 +935,16 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
   expect(api.saveAutomation).toHaveBeenCalledWith(
     null,
     null,
-    expect.objectContaining({ content, schedule: { kind: "manual" } }),
+    expect.objectContaining({
+      content,
+      files: [
+        {
+          path: "disk-cleanup/disk-cleanup.py",
+          content: "TEMP_RETENTION_DAYS = 14\nLOG_RETENTION_DAYS = 60\n",
+        },
+      ],
+      schedule: { kind: "manual" },
+    }),
   );
   expect(api.runAutomation).not.toHaveBeenCalled();
 });
@@ -960,7 +1018,7 @@ it("labels Hermes result files as saved output instead of inventing execution st
   expect(panel.textContent).not.toContain("结束时间");
 });
 
-it("offers a visible Hermes filter that combines with creator filters", async () => {
+it("combines scheduler and creator dropdowns without duplicating filter controls", async () => {
   const ownedHermes = {
     ...hermes,
     id: "agent_hub:hermes-audit",
@@ -973,22 +1031,17 @@ it("offers a visible Hermes filter that combines with creator filters", async ()
     hermes_installed: true,
   });
   await render();
-  const group = container.querySelector('[aria-label="任务来源"]')!;
+  await select("任务创建者", "all");
+  const group = container.querySelector('select[aria-label="任务来源"]')!;
   expect(
-    [...group.querySelectorAll("button")].map((node) => node.textContent),
+    [...group.querySelectorAll("option")].map((node) => node.textContent),
   ).toEqual(["全部调度器", "系统任务", "Hermes"]);
   await chooseSource("hermes");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
-  const origin = (value: string) =>
-    [
-      ...container.querySelectorAll<HTMLButtonElement>(
-        '[aria-label="任务创建者"] button',
-      ),
-    ].find((node) => node.textContent?.startsWith(value))!;
-  await act(async () => origin("其他来源").click());
+  await select("任务创建者", "external");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(container.querySelector("tbody")?.textContent).toContain(hermes.name);
-  await act(async () => origin("AgentHub 创建").click());
+  await select("任务创建者", "agent_hub");
   expect(container.querySelector("tbody")?.textContent).toContain(
     ownedHermes.name,
   );

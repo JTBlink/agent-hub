@@ -1,0 +1,26 @@
+{
+  "id": "repository-audit",
+  "provider": "hermes",
+  "title": {
+    "en": "Weekday repository audit",
+    "zh": "工作日仓库审计",
+    "zh-TW": "工作日儲存庫稽核"
+  },
+  "description": {
+    "en": "Ask Hermes to inspect repository health and suggest follow-up work.",
+    "zh": "让 Hermes 检查仓库状态，汇总问题与后续建议。",
+    "zh-TW": "讓 Hermes 檢查儲存庫狀態，彙整問題與後續建議。"
+  },
+  "prompt": {
+    "en": "Inspect this repository: dependencies, failing tests, lint/type errors and risky open changes. Summarize evidence and recommend next actions. Report findings without changing files.",
+    "zh": "检查当前仓库的依赖更新、失败测试、lint/类型检查状态和有风险的未提交改动。汇总证据与问题，给出下一步建议，只报告结果，不修改文件。",
+    "zh-TW": "檢查目前儲存庫的相依更新、失敗測試、lint/型別檢查狀態與有風險的未提交變更。彙整證據與問題，提供下一步建議，只報告結果，不修改檔案。"
+  },
+  "schedule": {
+    "kind": "daily",
+    "hour": 9,
+    "minute": 0,
+    "weekdays": true
+  },
+  "scripts": []
+}

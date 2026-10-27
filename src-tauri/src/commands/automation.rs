@@ -7,9 +7,19 @@ use crate::core::{
 pub async fn get_automation_overview(
     locale: Option<String>,
 ) -> Result<AutomationOverview, AppError> {
-    tauri::async_runtime::spawn_blocking(move || automation::overview(locale.as_deref()))
-        .await
-        .map_err(Into::into)
+    tauri::async_runtime::spawn_blocking(move || {
+        let script_error = automation::sync_workspace_scripts().err();
+        let mut report = automation::overview(locale.as_deref());
+        if let Some(error) = script_error {
+            report.issues.push(automation::SourceIssue {
+                source: "agent_hub".into(),
+                message: format!("Cannot synchronize automation scripts: {error}"),
+            });
+        }
+        report
+    })
+    .await
+    .map_err(Into::into)
 }
 
 #[tauri::command]

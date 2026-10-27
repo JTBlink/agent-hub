@@ -113,6 +113,12 @@ fn draft(file: &std::path::Path) -> anyhow::Result<AutomationDraft> {
 }
 
 pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
+    if matches!(
+        args.command,
+        AutomationCommand::List { .. } | AutomationCommand::Show { .. }
+    ) {
+        automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
+    }
     match &args.command {
         AutomationCommand::List {
             source,

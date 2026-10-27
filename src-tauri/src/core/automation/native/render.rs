@@ -30,7 +30,15 @@ fn unit(value: &str) -> String {
     )
 }
 
-pub(super) fn scripts(dir: &Path, draft: &AutomationDraft) -> Result<PathBuf, String> {
+pub(super) fn scripts(
+    dir: &Path,
+    draft: &AutomationDraft,
+    id: &str,
+    replace: bool,
+) -> Result<PathBuf, String> {
+    let mut draft = draft.clone();
+    draft.validate()?;
+    let draft = &draft;
     for name in ["command.sh", "command.ps1", "run.sh", "run.ps1", "runs"] {
         let path = dir.join(name);
         if path.is_symlink() {
@@ -43,21 +51,8 @@ pub(super) fn scripts(dir: &Path, draft: &AutomationDraft) -> Result<PathBuf, St
         .clone()
         .or_else(|| dirs::home_dir().map(|p| p.to_string_lossy().into_owned()))
         .ok_or("Cannot resolve working directory")?;
-    let payload = dir.join(if cfg!(windows) {
-        "command.ps1"
-    } else {
-        "command.sh"
-    });
+    let payload = super::payload::write(dir, draft, id, replace)?;
     let wrapper = dir.join(if cfg!(windows) { "run.ps1" } else { "run.sh" });
-    let content = if cfg!(windows) {
-        format!(
-            "\u{feff}$ErrorActionPreference = 'Stop'\n{}\n",
-            draft.content
-        )
-    } else {
-        draft.content.clone()
-    };
-    store::write(&payload, content.as_bytes())?;
     let script = if cfg!(windows) {
         super::run_script::powershell_script(dir, &workdir, &payload)
     } else {
@@ -169,6 +164,7 @@ mod tests {
             id: format!("agent_hub:{}", uuid::Uuid::new_v4()),
             revision: 1,
             draft: AutomationDraft {
+                files: Vec::new(),
                 name: "Audit & test".into(),
                 provider: super::super::super::definition::Provider::System,
                 content: "exit 7".into(),
@@ -226,7 +222,7 @@ mod tests {
         let dir = root.path().join("demo ' quoted");
         let mut task = task(Schedule::Manual);
         task.draft.content = "printf 'first line\n'\nprintf 'second line\n'\nexit 7".into();
-        let script = scripts(&dir, &task.draft).unwrap();
+        let script = scripts(&dir, &task.draft, &task.id, true).unwrap();
         assert!(!dir.join("started").exists());
         let output = std::process::Command::new("/bin/sh")
             .arg(script)

@@ -1,5 +1,5 @@
 //! Invalidate automation views on real definition/start/completion changes.
-//! No polling of OS schedulers and no writes or execution-history storage.
+//! Script edits update portable definitions; runtime output stays local.
 use super::{hermes, native, store, AutomationOverview, Provider};
 use crate::core::path_guard::is_path_safe;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -22,6 +22,16 @@ fn paths(root: &Path) -> HashSet<PathBuf> {
             let dir = native::directory(root, &record);
             if is_path_safe(root, &dir) {
                 paths.insert(dir);
+                if let Some(workdir) = record.draft.workdir {
+                    for file in &record.draft.files {
+                        if let Some(parent) = Path::new(&workdir).join(&file.path).parent() {
+                            if is_path_safe(Path::new(&workdir), parent) && !parent.is_symlink() {
+                                paths.insert(parent.to_path_buf());
+                            }
+                        }
+                    }
+                    paths.insert(PathBuf::from(workdir));
+                }
             }
         }
     }
@@ -53,6 +63,14 @@ fn relevant(event: &Event, root: &Path, watched: &HashSet<PathBuf>) -> bool {
             Some("tasks.json") => parent == root,
             Some("started" | "exit") => parent.parent() == Some(root),
             Some("jobs.json") => parent != root,
+            Some(name) if name.ends_with(".py") => true,
+            Some(name) => name
+                .strip_prefix("agent-hub-")
+                .and_then(|name| {
+                    name.strip_suffix(".sh")
+                        .or_else(|| name.strip_suffix(".ps1"))
+                })
+                .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok()),
             _ => false,
         }
     })
@@ -75,6 +93,9 @@ pub(crate) fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
         };
         let root = store::root();
         let root = root.canonicalize().unwrap_or(root);
+        if let Err(error) = super::sync_workspace_scripts() {
+            log::warn!("Cannot synchronize automation scripts: {error}");
+        }
         super::managed::upgrade_runners();
         let mut watched = HashSet::new();
         let mut rescan_at = Instant::now();
@@ -112,6 +133,9 @@ pub(crate) fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
             // Coalesce marker writes and allow the short-lived wrapper to exit.
             if changed_at.is_some_and(|at| at.elapsed() >= Duration::from_millis(400)) {
                 changed_at = None;
+                if let Err(error) = super::sync_workspace_scripts() {
+                    log::warn!("Cannot synchronize automation scripts: {error}");
+                }
                 super::managed::upgrade_runners();
                 let _ = app.emit(EVENT, ());
             }
@@ -136,11 +160,15 @@ mod tests {
             task.join("started"),
             task.join("exit"),
             hermes.join("jobs.json"),
+            task.join("agent-hub-11111111-1111-4111-8111-111111111111.sh"),
+            task.join("agent-hub-11111111-1111-4111-8111-111111111111.ps1"),
+            task.join("disk-cleanup.py"),
         ] {
             assert!(relevant(&event(path), root, &watched));
         }
         for path in [
             task.join("output.log"),
+            task.join("agent-hub-not-a-task.sh"),
             task.join("workspace/artifact"),
             root.join(".lock"),
             PathBuf::from("/outside/jobs.json"),

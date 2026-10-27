@@ -2,10 +2,9 @@ import { ThemedSelect } from "./ThemedSelect";
 import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { RefObject } from "react";
-import type { AutomationTask, AutomationTaskOrigin } from "../lib/tauri";
+import type { AutomationTaskOrigin } from "../lib/tauri";
 import type { AutomationSourceFilter } from "../lib/automation";
 import { ToggleSwitch } from "./ToggleSwitch";
-import { cn } from "../utils";
 
 export type AutomationOriginFilter = "all" | AutomationTaskOrigin;
 export function AutomationToolbar({
@@ -20,7 +19,6 @@ export function AutomationToolbar({
   hideBuiltin,
   onToggleBuiltin,
   hermesInstalled,
-  tasks,
   shown,
   hiddenCount,
   searchRef,
@@ -36,7 +34,6 @@ export function AutomationToolbar({
   hideBuiltin: boolean;
   onToggleBuiltin: () => void;
   hermesInstalled: boolean;
-  tasks: AutomationTask[];
   shown: number;
   hiddenCount: number;
   searchRef: RefObject<HTMLInputElement | null>;
@@ -48,68 +45,7 @@ export function AutomationToolbar({
     : ["all", "system"];
   return (
     <div className="space-y-4">
-      <div
-        role="group"
-        aria-label={t("automation.originFilter")}
-        className="flex flex-wrap gap-5 border-b border-border-subtle"
-      >
-        {origins.map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={origin === value}
-            onClick={() => onOrigin(value)}
-            className={cn(
-              "inline-flex items-center gap-2 border-b-2 px-1 pb-3 text-[13px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
-              origin === value
-                ? "border-accent text-primary"
-                : "border-transparent text-muted hover:text-primary",
-            )}
-          >
-            {t(
-              value === "all"
-                ? "automation.filters.all"
-                : `automation.origins.${value}`,
-            )}
-            <span className="rounded bg-surface-active px-1.5 text-[11px] tabular-nums text-muted">
-              {value === "all"
-                ? tasks.length
-                : tasks.filter((task) => task.origin === value).length}
-            </span>
-          </button>
-        ))}
-      </div>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex max-w-full flex-wrap items-center gap-2">
-          <span className="text-[12px] text-muted">
-            {t("automation.scheduler")}
-          </span>
-          <div
-            role="group"
-            aria-label={t("automation.sourceFilter")}
-            className="app-segmented inline-flex max-w-full flex-wrap"
-          >
-            {sources.map((value) => (
-              <button
-                key={value}
-                type="button"
-                value={value}
-                aria-pressed={source === value}
-                onClick={() => onSource(value)}
-                className={cn(
-                  "app-segmented-button focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
-                  source === value && "app-segmented-button-active",
-                )}
-              >
-                {t(
-                  value === "all"
-                    ? "automation.allSources"
-                    : `automation.filters.${value}`,
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
         <label className="relative min-w-0 flex-1 basis-64">
           <Search
             aria-hidden="true"
@@ -125,6 +61,44 @@ export function AutomationToolbar({
             className="app-input w-full pl-9"
           />
         </label>
+        <ThemedSelect
+          value={origin}
+          onChange={(e) => {
+            const value = origins.find((option) => option === e.target.value);
+            if (value) onOrigin(value);
+          }}
+          aria-label={t("automation.originFilter")}
+          className="app-input"
+        >
+          {origins.map((value) => (
+            <option key={value} value={value}>
+              {t(
+                value === "all"
+                  ? "automation.allOrigins"
+                  : `automation.origins.${value}`,
+              )}
+            </option>
+          ))}
+        </ThemedSelect>
+        <ThemedSelect
+          value={source}
+          onChange={(e) => {
+            const value = sources.find((option) => option === e.target.value);
+            if (value) onSource(value);
+          }}
+          aria-label={t("automation.sourceFilter")}
+          className="app-input"
+        >
+          {sources.map((value) => (
+            <option key={value} value={value}>
+              {t(
+                value === "all"
+                  ? "automation.allSources"
+                  : `automation.filters.${value}`,
+              )}
+            </option>
+          ))}
+        </ThemedSelect>
         <ThemedSelect
           value={status}
           onChange={(e) => onStatus(e.target.value)}

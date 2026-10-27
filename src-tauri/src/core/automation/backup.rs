@@ -1,5 +1,6 @@
 //! Portable definitions share the existing Git metadata namespace. Runtime
-//! registrations, generated scripts, claims, logs and workspaces never enter Git.
+//! registrations, wrappers, claims, logs and unrelated workspace files stay local.
+//! Customized script contents travel in the portable task definition.
 use super::{
     definition::{valid_id, AutomationDraft},
     store, workspace,
@@ -64,6 +65,7 @@ pub(crate) fn flush(metadata: &Path) -> Result<(), String> {
     flush_from(&store::root(), metadata)
 }
 fn flush_from(root: &Path, metadata: &Path) -> Result<(), String> {
+    super::script_sync::sync_at(root)?;
     if !root.join("tasks.json").exists() {
         return Ok(());
     }
@@ -228,6 +230,10 @@ mod tests {
             id: id.clone(),
             revision: 1,
             draft: AutomationDraft {
+                files: vec![super::super::AutomationScriptFile {
+                    path: "bundle/main.py".into(),
+                    content: "print('original')".into(),
+                }],
                 name: "Audit".into(),
                 provider: super::super::Provider::System,
                 content: "printf original".into(),
@@ -239,7 +245,21 @@ mod tests {
             identifier: "local-only".into(),
             location: "<runtime>".into(),
         };
+        let workspace = temporary.path().join("workspace");
+        std::fs::create_dir(&workspace).unwrap();
+        record.draft.workdir = Some(workspace.to_string_lossy().into_owned());
+        record.source = super::super::native::source().into();
+        let (identifier, location) = super::super::native::paths(&runtime, &record).unwrap();
+        record.identifier = identifier;
+        record.location = location.to_string_lossy().into_owned();
         store::save(&runtime, vec![record.clone()]).unwrap();
+        let script = super::super::native::payload::write(
+            &super::super::native::directory(&runtime, &record),
+            &record.draft,
+            &record.id,
+            true,
+        )
+        .unwrap();
         std::fs::write(runtime.join("output.log"), "private runtime output").unwrap();
         let history = runtime
             .join(id.trim_start_matches("agent_hub:"))
@@ -270,13 +290,29 @@ mod tests {
             "runtime evidence does not enqueue definition backups"
         );
         let tag = backup_workspace::commit(&db, "task snapshot").unwrap();
-        record.draft.content = "printf changed".into();
-        record.revision += 1;
-        store::save(&runtime, vec![record.clone()]).unwrap();
+        std::fs::write(&script, "printf changed").unwrap();
+        std::fs::write(
+            workspace.join("bundle/main.py"),
+            "print('customized script')",
+        )
+        .unwrap();
+        super::super::script_sync::sync_at(&runtime).unwrap();
         assert_eq!(
             auto_backup::run_round_blocking(&db),
             auto_backup::Outcome::BackedUp
         );
+        let updated_tree = remote
+            .find_reference(&format!("refs/heads/{branch}"))
+            .unwrap()
+            .peel_to_tree()
+            .unwrap();
+        let blob = remote
+            .find_blob(updated_tree.get_path(Path::new(&path)).unwrap().id())
+            .unwrap();
+        let saved: AutomationBackup = serde_json::from_slice(blob.content()).unwrap();
+        assert_eq!(saved.draft.content, "printf changed");
+        assert_eq!(saved.draft.files[0].content, "print('customized script')");
+        assert_eq!(std::fs::read_to_string(&script).unwrap(), "printf changed");
         backup_workspace::restore(&db, &tag).unwrap();
         assert_eq!(list().unwrap()[0].draft.content, "printf original");
         assert_eq!(
@@ -310,6 +346,7 @@ mod tests {
         std::fs::create_dir(&root).unwrap();
         let id = format!("agent_hub:{}", uuid::Uuid::new_v4());
         let draft = AutomationDraft {
+            files: Vec::new(),
             name: "Audit".into(),
             provider: super::super::Provider::System,
             content: "printf test".into(),
@@ -357,6 +394,7 @@ mod tests {
         let target = temp.path().join("target");
         let id = format!("agent_hub:{}", uuid::Uuid::new_v4());
         let draft = AutomationDraft {
+            files: Vec::new(),
             name: "Audit".into(),
             provider: super::super::Provider::System,
             content: "exit 99".into(),

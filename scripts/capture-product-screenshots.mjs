@@ -29,6 +29,7 @@ const shots = [
   ["automation.png", ""],
   ["automation-hermes.png", "&automation-state=hermes"],
   ["automation-create.png", "&automation-state=editor"],
+  ["automation-cleanup.png", "&automation-state=cleanup-editor"],
   ["automation-detail.png", "&task=hermes%3Aaudit"],
   [
     "automation-execution.png",

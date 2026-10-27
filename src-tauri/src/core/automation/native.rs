@@ -6,8 +6,23 @@ use super::{
     store,
 };
 use std::path::{Path, PathBuf};
+pub(super) mod bundle_files;
+pub(super) mod payload;
 mod render;
 mod run_script;
+
+pub(super) fn python_runtime() -> Result<PathBuf, String> {
+    for name in ["python3", "python"] {
+        if let Some(path) = super::super::tool_detection::find_command(name) {
+            if read_command(&path.to_string_lossy(), &["--version"])
+                .is_ok_and(|version| version.trim().starts_with("Python 3."))
+            {
+                return Ok(path);
+            }
+        }
+    }
+    Err("Python 3 is required for bundled automation scripts; install Python 3 and restart AgentHub".into())
+}
 
 pub(super) fn source() -> &'static str {
     if cfg!(target_os = "macos") {
@@ -55,9 +70,12 @@ pub(super) fn apply(root: &Path, task: &ManagedAutomation) -> Result<(), String>
         return Err("Wait for the current run to finish before editing".into());
     }
     let dir = checked_directory(root, task)?;
+    if !task.draft.files.is_empty() {
+        python_runtime()?;
+    }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     super::super::path_guard::ensure_dir_within_root(&dir, root).map_err(|e| e.to_string())?;
-    let wrapper = render::scripts(&dir, &task.draft)?;
+    let wrapper = render::scripts(&dir, &task.draft, &task.id, true)?;
     let (identifier, location) = paths(root, task)?;
     if cfg!(target_os = "macos") {
         let domain = format!("gui/{}", uid()?);
@@ -238,7 +256,7 @@ fn uid() -> Result<String, String> {
 /// Upgrade an owned standalone runner without changing its schedule.
 pub(super) fn refresh_runner(root: &Path, task: &ManagedAutomation) -> Result<(), String> {
     let dir = checked_directory(root, task)?;
-    render::scripts(&dir, &task.draft).map(|_| ())
+    render::scripts(&dir, &task.draft, &task.id, false).map(|_| ())
 }
 pub(super) fn needs_upgrade(root: &Path, task: &ManagedAutomation) -> bool {
     let wrapper = directory(root, task).join(if cfg!(windows) { "run.ps1" } else { "run.sh" });

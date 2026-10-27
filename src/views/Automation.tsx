@@ -54,7 +54,7 @@ export function Automation() {
   const [source, setSource] = useState<AutomationSourceFilter>("all");
   const [status, setStatus] = useState("all");
   const [hideBuiltin, setHideBuiltin] = useState(true);
-  const [origin, setOrigin] = useState<AutomationOriginFilter>("all");
+  const [origin, setOrigin] = useState<AutomationOriginFilter>("agent_hub");
   const [editor, setEditor] = useState<AutomationTask | "create" | null>(null);
   const [removing, setRemoving] = useState<AutomationTask | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -310,7 +310,6 @@ export function Automation() {
         hideBuiltin={hideBuiltin}
         onToggleBuiltin={() => setHideBuiltin((value) => !value)}
         hermesInstalled={data?.hermes_installed ?? false}
-        tasks={baseTasks}
         shown={tasks.length}
         hiddenCount={hiddenCount}
         searchRef={search}

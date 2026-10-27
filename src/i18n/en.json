@@ -75,6 +75,7 @@
       "unknown": "Unknown creator"
     },
     "originFilter": "Task creator",
+    "allOrigins": "All creators",
     "allSources": "All schedulers",
     "shownCount": "Showing {{count}} tasks",
     "create": "New automation",
@@ -116,7 +117,9 @@
     "resumeBeforeRun": "Resume the Hermes schedule before running this task.",
     "everyMinutes": "Every {{count}} minutes",
     "workdirPlaceholder": "Leave empty for a task workspace",
-    "defaultWorkdir": "Default: ~/.agent-hub/automations/<task ID>/workspace, isolated for each task.",
+    "defaultWorkdir": "Default: ~/.agent-hub/automations/<task ID>/workspace, isolated per task. System task scripts are saved in the working directory.",
+    "scriptFiles": "Script files ({{count}})",
+    "scriptFilesHint": "Scripts are saved in their template folder inside the working directory. Customize them here or edit the files directly; changes join task definition backups. Requires Python 3.",
     "useTemplate": "Use template",
     "backToEditor": "Back to editor",
     "templateHint": "Choose a template, then adjust its command, directory and schedule. Nothing is registered or run until you create the task.",

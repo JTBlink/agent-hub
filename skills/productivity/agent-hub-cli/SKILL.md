@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
 description: Manage the user's shared agent-skill library and local automation tasks via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -133,7 +133,32 @@ or `create --file task.json` for a definition. `edit <id> --file task.json
 working directory is provisioned under `~/.agent-hub/automations/<task-id>/workspace`;
 an explicit existing directory is preserved. Saving does not add an immediate
 run. Task definitions join the existing Git auto-backup flow; runtime logs,
-registrations, and workspace files stay local.
+registrations, wrappers, and other workspace files stay local.
+
+To configure a starter before registration, export its `draft` from `templates`
+to `task.json`, set the existing absolute `workdir` and desired `schedule`, then
+use `create --file task.json`. For an existing task, read `show`, edit its
+`definition` as `task.json`, and pass the returned `revision` to `edit`. Never
+pass the entire `show` response as a draft. `pause`, `resume`, and `remove` use
+the same exact task ID; use `runs` and `logs --run` to inspect an execution.
+
+System tasks keep their payload file in the working directory as
+`agent-hub-<task UUID>.sh` (`.ps1` on Windows). Bundled system templates are
+individual folders containing a `template.json` manifest and one or more Python
+scripts. They are embedded into both the desktop and CLI binaries. Creating a
+task copies the declared `files` (relative `path` plus `content`) into matching
+folders inside its workspace. The execution command directly invokes the Python
+entry point, e.g. `python3 ./disk-cleanup/disk-cleanup.py`; Python 3 is required.
+Users can expand Script files in the editor, edit `files` through CLI JSON, or
+customize the files directly; refresh and run preserve their contents.
+The app watches script edits and queues their contents in the existing Git
+auto-backup flow, alongside the task definition. CLI list/show and mutations
+reconcile file edits and advance the revision; re-read before editing a stale
+draft. Backup also reconciles current script contents. Runtime wrappers, logs,
+and unrelated workspace files are excluded. Deleting a task preserves its
+workspace and script. Git synchronization restores only dormant definitions;
+creating a restored copy materializes its own script without overwriting an
+existing task.
 
 ```bash
 "$SM" --json automations backups
@@ -495,8 +520,9 @@ without `--run`, logs reads the latest output. System tasks retain the latest
 particular execution succeeded. Records and logs are local only and excluded
 from Git sync/backups. JSON output is bounded to the last 256 KiB.
 
-Cleanup starters `temp-cleanup` (daily 03:00, files older than 7 days in `tmp`)
-and `log-cleanup` (daily 03:30, files older than 30 days in `logs`) target only
-named children of the selected working directory. Inspect the definition and
-choose a working directory before creating; retain directories and skip links.
+The `disk-cleanup` starter (daily 03:00) removes files older than 7 days in
+`tmp` and 30 days in `logs`, and reports disk space before and after cleanup.
+It targets only named children of the selected working directory. Inspect the
+definition and choose a working directory before creating; retain directories
+and skip links.
 A missing target is a no-op. Schedules and retention days are editable.

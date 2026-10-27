@@ -75,6 +75,7 @@
       "unknown": "建立者未知"
     },
     "originFilter": "任務建立者",
+    "allOrigins": "全部建立者",
     "allSources": "全部排程器",
     "shownCount": "顯示 {{count}} 個任務",
     "create": "新增自動化",
@@ -116,7 +117,9 @@
     "resumeBeforeRun": "Hermes 任務需先恢復排程，才能手動執行。",
     "everyMinutes": "每 {{count}} 分鐘",
     "workdirPlaceholder": "留空自動建立任務工作目錄",
-    "defaultWorkdir": "預設：~/.agent-hub/automations/<任務 ID>/workspace，每個任務獨立。",
+    "defaultWorkdir": "預設：~/.agent-hub/automations/<任務 ID>/workspace，每個任務獨立；系統任務腳本儲存在工作目錄中。",
+    "scriptFiles": "腳本檔案（{{count}}）",
+    "scriptFilesHint": "腳本儲存在工作目錄下對應的範本資料夾中。可在此處或直接編輯檔案自訂；儲存後隨任務定義自動備份。需要 Python 3。",
     "useTemplate": "使用範本",
     "backToEditor": "返回編輯",
     "templateHint": "選擇範本後，可繼續修改命令、目錄與排程。建立前不會註冊或執行任務。",

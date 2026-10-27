@@ -22,7 +22,9 @@ mod linux;
 mod managed;
 mod native;
 mod process;
+mod script_sync;
 mod store;
+pub use script_sync::sync_workspace_scripts;
 mod templates;
 mod workspace;
 pub use backup::{shell as command_shell, AutomationBackup};
@@ -33,7 +35,9 @@ pub(crate) fn watch_dir() -> std::path::PathBuf {
 pub(crate) fn has_pending_backup() -> bool {
     backup::needs_export()
 }
-pub use definition::{AutomationDraft, ManagedAutomation, Provider, Schedule};
+pub use definition::{
+    AutomationDraft, AutomationScriptFile, ManagedAutomation, Provider, Schedule,
+};
 pub use managed::{remove, run, save};
 #[cfg(any(windows, test))]
 mod windows;

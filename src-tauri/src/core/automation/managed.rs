@@ -148,6 +148,10 @@ pub fn save(
     mut draft: AutomationDraft,
 ) -> Result<String, String> {
     draft.validate()?;
+    // An explicit edit can repair an invalid workspace script.
+    if let Err(error) = super::sync_workspace_scripts() {
+        log::warn!("Cannot synchronize automation scripts before saving: {error}");
+    }
     let root = store::root();
     let _lock = store::Lock::acquire(&root)?;
     let mut records = store::load(&root)?;
@@ -275,6 +279,7 @@ fn transition(
 
 /// Requests a single native/Hermes execution. The recurring schedule is untouched.
 pub fn run(id: &str) -> Result<(), String> {
+    super::sync_workspace_scripts()?;
     let root = store::root();
     let _lock = store::Lock::acquire(&root)?;
     let task = find(id)?;
@@ -393,6 +398,7 @@ mod tests {
     fn only_exact_registered_provider_and_scope_claim_ownership() {
         let dir = tempfile::tempdir().unwrap();
         let draft = AutomationDraft {
+            files: Vec::new(),
             name: "Audit".into(),
             provider: Provider::System,
             content: "exit 0".into(),

@@ -64,6 +64,13 @@ pub enum Provider {
 /// only by an explicit run or the selected scheduler, never while saving.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
+pub struct AutomationScriptFile {
+    pub path: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct AutomationDraft {
     pub name: String,
     pub provider: Provider,
@@ -71,10 +78,33 @@ pub struct AutomationDraft {
     pub workdir: Option<String>,
     pub schedule: Schedule,
     pub enabled: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<AutomationScriptFile>,
 }
 
 impl AutomationDraft {
     pub(super) fn validate(&mut self) -> Result<(), String> {
+        let mut paths = std::collections::HashSet::new();
+        let mut total = self.content.len();
+        for file in &self.files {
+            super::super::path_guard::ensure_safe_skill_relative_path(&file.path)
+                .map_err(|e| e.to_string())?;
+            if file.path.contains(['\\', ':'])
+                || !file.path.ends_with(".py")
+                || !paths.insert(&file.path)
+                || file.content.trim().is_empty()
+                || file.content.contains('\0')
+            {
+                return Err("Template scripts require unique relative .py paths and nonempty UTF-8 contents".into());
+            }
+            total = total.saturating_add(file.content.len());
+        }
+        if self.files.len() > 32
+            || total > 65536
+            || (self.provider == Provider::Hermes && !self.files.is_empty())
+        {
+            return Err("System template scripts must total at most 64 KiB across 32 files".into());
+        }
         self.name = self.name.trim().into();
         if self.name.is_empty() || self.name.len() > 200 || self.name.chars().any(char::is_control)
         {
@@ -135,8 +165,34 @@ pub(super) fn valid_id(id: &str) -> bool {
 mod tests {
     use super::*;
     #[test]
+    fn legacy_drafts_default_to_no_files_and_template_paths_are_validated() {
+        let mut draft: AutomationDraft = serde_json::from_value(serde_json::json!({"name":"Cleanup","provider":"system","content":"python3 bundle/main.py","workdir":null,"schedule":{"kind":"manual"},"enabled":false})).unwrap();
+        assert!(draft.files.is_empty());
+        for path in [
+            "../outside.py",
+            "/absolute.py",
+            "bundle/../../outside.py",
+            "bundle\\outside.py",
+            "C:outside.py",
+        ] {
+            draft.files = vec![AutomationScriptFile {
+                path: path.into(),
+                content: "print('test')".into(),
+            }];
+            assert!(draft.validate().is_err(), "{path}");
+        }
+        draft.files = vec![AutomationScriptFile {
+            path: "bundle/main.py".into(),
+            content: "print('test')".into(),
+        }];
+        assert!(draft.validate().is_ok());
+        draft.files.push(draft.files[0].clone());
+        assert!(draft.validate().is_err());
+    }
+    #[test]
     fn validates_schedules_and_rejects_missing_directories_without_running_commands() {
         let mut draft = AutomationDraft {
+            files: Vec::new(),
             name: "Audit".into(),
             provider: Provider::System,
             content: "exit 99".into(),

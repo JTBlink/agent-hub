@@ -1,4 +1,7 @@
 import React from "react";
+import workspaceCheckScript from "../../src-tauri/src/core/automation/templates/builtin/workspace-check/workspace-check.py?raw";
+import gitStatusScript from "../../src-tauri/src/core/automation/templates/builtin/git-status/git-status.py?raw";
+import diskCleanupScript from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/disk-cleanup.py?raw";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PreviewRouteMarker } from "./PreviewRouteMarker";
@@ -364,22 +367,40 @@ Object.assign(window, {
                 draft: {
                   name: "工作目录检查",
                   provider: "system",
-                  content: "pwd\nls -la",
+                  content: "python3 './workspace-check/workspace-check.py'",
+                  files: [
+                    {
+                      path: "workspace-check/workspace-check.py",
+                      content: workspaceCheckScript,
+                    },
+                  ],
                   workdir: null,
                   schedule: { kind: "manual" },
                   enabled: true,
                 },
               },
               {
-                id: "disk-check",
-                title: "磁盘空间检查",
-                description: "每小时检查可用磁盘空间。",
+                id: "disk-cleanup",
+                title: "清理磁盘缓存",
+                description:
+                  "每天 03:00 清理工作目录 tmp 中超过 7 天、logs 中超过 30 天的文件，并查看磁盘空间。保留目录并跳过链接，创建前请选择工作目录。",
                 draft: {
-                  name: "磁盘空间检查",
+                  name: "清理磁盘缓存",
                   provider: "system",
-                  content: "df -h .",
+                  content: "python3 './disk-cleanup/disk-cleanup.py'",
+                  files: [
+                    {
+                      path: "disk-cleanup/disk-cleanup.py",
+                      content: diskCleanupScript,
+                    },
+                  ],
                   workdir: null,
-                  schedule: { kind: "interval", minutes: 60 },
+                  schedule: {
+                    kind: "daily",
+                    hour: 3,
+                    minute: 0,
+                    weekdays: false,
+                  },
                   enabled: true,
                 },
               },
@@ -390,53 +411,19 @@ Object.assign(window, {
                 draft: {
                   name: "Git 工作区状态",
                   provider: "system",
-                  content: "git status --short\ngit log -5 --oneline",
+                  content: "python3 './git-status/git-status.py'",
+                  files: [
+                    {
+                      path: "git-status/git-status.py",
+                      content: gitStatusScript,
+                    },
+                  ],
                   workdir: null,
                   schedule: {
                     kind: "daily",
                     hour: 17,
                     minute: 0,
                     weekdays: true,
-                  },
-                  enabled: true,
-                },
-              },
-              {
-                id: "temp-cleanup",
-                title: "临时文件定时清理",
-                description:
-                  "每天 03:00 清理工作目录 tmp 子目录中超过 7 天的文件，保留目录并跳过符号链接。创建前请选择工作目录。",
-                draft: {
-                  name: "临时文件定时清理",
-                  provider: "system",
-                  content:
-                    'set -eu\nRETENTION_DAYS=7\nTARGET=\'./tmp\'\nif [ -L "$TARGET" ]; then\n  printf \'Cleanup target must not be a symbolic link.\\n\' >&2\n  exit 1\nfi\nif [ ! -e "$TARGET" ]; then\n  printf \'No cleanup directory: %s\\n\' "$TARGET"\n  exit 0\nfi\nif [ ! -d "$TARGET" ]; then\n  printf \'Cleanup target must be a directory.\\n\' >&2\n  exit 1\nfi\nfind -P "$TARGET" -xdev -type f -mmin +"$((RETENTION_DAYS * 24 * 60))" -print -exec rm -f -- {} +\nprintf \'Cleanup completed: %s (files older than %s days)\\n\' "$TARGET" "$RETENTION_DAYS"\n',
-                  workdir: null,
-                  schedule: {
-                    kind: "daily",
-                    hour: 3,
-                    minute: 0,
-                    weekdays: false,
-                  },
-                  enabled: true,
-                },
-              },
-              {
-                id: "log-cleanup",
-                title: "过期日志定时清理",
-                description:
-                  "每天 03:30 清理工作目录 logs 子目录中超过 30 天的文件，保留目录并跳过符号链接。创建前请选择工作目录。",
-                draft: {
-                  name: "过期日志定时清理",
-                  provider: "system",
-                  content:
-                    'set -eu\nRETENTION_DAYS=30\nTARGET=\'./logs\'\nif [ -L "$TARGET" ]; then\n  printf \'Cleanup target must not be a symbolic link.\\n\' >&2\n  exit 1\nfi\nif [ ! -e "$TARGET" ]; then\n  printf \'No cleanup directory: %s\\n\' "$TARGET"\n  exit 0\nfi\nif [ ! -d "$TARGET" ]; then\n  printf \'Cleanup target must be a directory.\\n\' >&2\n  exit 1\nfi\nfind -P "$TARGET" -xdev -type f -mmin +"$((RETENTION_DAYS * 24 * 60))" -print -exec rm -f -- {} +\nprintf \'Cleanup completed: %s (files older than %s days)\\n\' "$TARGET" "$RETENTION_DAYS"\n',
-                  workdir: null,
-                  schedule: {
-                    kind: "daily",
-                    hour: 3,
-                    minute: 30,
-                    weekdays: false,
                   },
                   enabled: true,
                 },
@@ -695,12 +682,24 @@ if (automationState) {
       return;
     }
     if (automationState === "hermes") {
-      const filter = await waitFor(() =>
-        document.querySelector<HTMLElement>(
-          '[aria-label="任务来源"] button[value="hermes"]',
+      const creator = await waitFor(() =>
+        document.querySelector<HTMLSelectElement>(
+          'select[aria-label="任务创建者"]',
         ),
       );
-      filter.click();
+      if (creator instanceof HTMLSelectElement) {
+        creator.value = "all";
+        creator.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const filter = await waitFor(() =>
+        document.querySelector<HTMLSelectElement>(
+          'select[aria-label="任务来源"]',
+        ),
+      );
+      if (filter instanceof HTMLSelectElement) {
+        filter.value = "hermes";
+        filter.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       return;
     }
     if (automationState === "menu") {
@@ -729,10 +728,12 @@ if (automationState) {
     templates.click();
     const audit = await waitFor(() =>
       document.querySelector<HTMLElement>(
-        'button[aria-label="工作日仓库审计"]',
+        automationState === "cleanup-editor"
+          ? 'button[aria-label="清理磁盘缓存"]'
+          : 'button[aria-label="工作日仓库审计"]',
       ),
     );
-    if (automationState === "editor") {
+    if (automationState === "editor" || automationState === "cleanup-editor") {
       audit.click();
       if (previewParams.has("capture"))
         setTimeout(() => {

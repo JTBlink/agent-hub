@@ -191,6 +191,7 @@ pub(super) fn draft(task: &AutomationTask) -> AutomationDraft {
         task.name.clone()
     };
     AutomationDraft {
+        files: Vec::new(),
         name,
         provider: super::definition::Provider::Hermes,
         content: task.prompt.clone().unwrap_or_default(),
@@ -208,6 +209,7 @@ mod tests {
     #[test]
     fn prompts_and_names_are_literal_arguments_and_existing_fields_are_not_reset() {
         let draft = AutomationDraft {
+            files: Vec::new(),
             name: "Audit $(ignored)".into(),
             provider: super::super::definition::Provider::Hermes,
             content: "Inspect\n$(literal)".into(),

@@ -1,7 +1,7 @@
 //! Standalone current-user runners persist bounded history without a running UI.
 use super::render::{ps, shell};
 use std::path::Path;
-pub(super) const VERSION: &str = "AgentHub execution history v1";
+pub(super) const VERSION: &str = "AgentHub workspace scripts v2";
 
 pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path) -> String {
     format!(
@@ -124,6 +124,7 @@ mod tests {
             std::fs::write(dir.join(name), value).unwrap();
         }
         let mut draft = AutomationDraft {
+            files: Vec::new(),
             name: "Audit".into(),
             provider: Provider::System,
             content: "printf 'first run'".into(),
@@ -133,7 +134,13 @@ mod tests {
         };
         for content in ["printf 'first run'", "printf 'second run'; exit 3"] {
             draft.content = content.into();
-            let wrapper = super::super::render::scripts(&dir, &draft).unwrap();
+            let wrapper = super::super::render::scripts(
+                &dir,
+                &draft,
+                "agent_hub:11111111-1111-4111-8111-111111111111",
+                true,
+            )
+            .unwrap();
             let _ = std::process::Command::new("/bin/sh")
                 .arg(wrapper)
                 .status()

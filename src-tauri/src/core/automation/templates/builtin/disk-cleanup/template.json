@@ -1,0 +1,22 @@
+{
+  "id": "disk-cleanup",
+  "title": {
+    "en": "Clear disk cache",
+    "zh": "清理磁盘缓存",
+    "zh-TW": "清理磁碟快取"
+  },
+  "description": {
+    "en": "Daily at 03:00: clear files older than 7 days from tmp and 30 days from logs, and report disk space. Choose a working directory. Requires Python 3.",
+    "zh": "每天 03:00 清理工作目录 tmp 中超过 7 天、logs 中超过 30 天的文件，并查看磁盘空间。保留目录并跳过链接，创建前请选择工作目录。需要 Python 3。",
+    "zh-TW": "每天 03:00 清理工作目錄 tmp 中超過 7 天、logs 中超過 30 天的檔案，並查看磁碟空間。保留目錄並略過連結，建立前請選擇工作目錄。需要 Python 3。"
+  },
+  "schedule": {
+    "kind": "daily",
+    "hour": 3,
+    "minute": 0,
+    "weekdays": false
+  },
+  "entrypoint": "disk-cleanup.py",
+  "scripts": ["disk-cleanup.py"],
+  "provider": "system"
+}

@@ -11,7 +11,12 @@ export type AutomationSchedule =
   | { kind: "interval"; minutes: number }
   | { kind: "daily"; hour: number; minute: number; weekdays: boolean }
   | { kind: "custom"; expression: string };
+export interface AutomationScriptFile {
+  path: string;
+  content: string;
+}
 export interface AutomationDraft {
+  files?: AutomationScriptFile[];
   name: string;
   provider: "system" | "hermes";
   content: string;

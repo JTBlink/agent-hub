@@ -1,5 +1,6 @@
 import { ThemedSelect } from "./ThemedSelect";
 import { useEffect, useRef, useState } from "react";
+import { AutomationScriptFilesEditor } from "./AutomationScriptFilesEditor";
 import { AutomationTemplatePicker } from "./AutomationTemplatePicker";
 import { X, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -198,7 +199,14 @@ export function AutomationEditor({
                   className="w-full border-0 bg-transparent text-2xl font-semibold tracking-tight text-primary outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent"
                 />
               </label>
-              <label className="flex min-h-[280px] flex-1 flex-col gap-2 md:min-h-[430px]">
+              <label
+                className={cn(
+                  "flex flex-col gap-2",
+                  draft.files?.length
+                    ? "min-h-[130px]"
+                    : "min-h-[280px] flex-1 md:min-h-[430px]",
+                )}
+              >
                 <span className="text-[12px] font-medium text-muted">
                   {t(
                     draft.provider === "system"
@@ -223,11 +231,17 @@ export function AutomationEditor({
                       : "automation.promptPlaceholder",
                   )}
                   className={cn(
-                    "app-input min-h-[240px] w-full flex-1 resize-y p-4 leading-7",
+                    "app-input w-full flex-1 resize-y p-4 leading-7",
+                    draft.files?.length ? "min-h-[100px]" : "min-h-[240px]",
                     draft.provider === "system" && "font-mono text-[12px]",
                   )}
                 />
               </label>
+              <AutomationScriptFilesEditor
+                files={draft.files ?? []}
+                disabled={busy}
+                onChange={(files) => update({ files })}
+              />
               <p className="text-[12px] leading-6 text-muted">
                 {t(
                   draft.provider === "system"
@@ -251,6 +265,7 @@ export function AutomationEditor({
                   disabled={busy || !!task}
                   onChange={(e) =>
                     update({
+                      files: e.target.value === "hermes" ? [] : draft.files,
                       provider:
                         e.target.value === "hermes" ? "hermes" : "system",
                       schedule:

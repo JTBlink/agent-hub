@@ -58,6 +58,7 @@ mod tests {
     use super::*;
     fn draft() -> AutomationDraft {
         AutomationDraft {
+            files: Vec::new(),
             name: "Audit".into(),
             provider: super::super::Provider::System,
             content: "exit 0".into(),
