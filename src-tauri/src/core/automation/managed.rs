@@ -292,7 +292,7 @@ pub fn run(id: &str) -> Result<(), String> {
             .find(|r| r.id == id)
             .ok_or("Missing creation record")?;
         verify(&root, &record)?;
-        native::run(&record)
+        native::run(&root, &record)
     }
 }
 
@@ -331,6 +331,33 @@ pub fn remove(id: &str) -> Result<(), String> {
             .map_err(|e| format!("Task deleted; cannot remove its scripts and output: {e}"))?;
     }
     Ok(())
+}
+
+/// Migrate idle owned runners; active jobs are retried on their completion event.
+pub(crate) fn upgrade_runners() {
+    let root = store::root();
+    if !root.join("tasks.json").is_file() {
+        return;
+    }
+    let Ok(_lock) = store::Lock::acquire(&root) else {
+        return;
+    };
+    let Ok(records) = store::load(&root) else {
+        return;
+    };
+    for record in records
+        .into_iter()
+        .filter(|record| record.draft.provider == Provider::System)
+    {
+        if verify(&root, &record).is_ok()
+            && native::needs_upgrade(&root, &record)
+            && native::state(&record) == Some(false)
+        {
+            if let Err(error) = native::refresh_runner(&root, &record) {
+                log::warn!("Cannot upgrade automation runner: {error}");
+            }
+        }
+    }
 }
 
 #[cfg(test)]

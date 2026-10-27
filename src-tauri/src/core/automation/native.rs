@@ -7,6 +7,7 @@ use super::{
 };
 use std::path::{Path, PathBuf};
 mod render;
+mod run_script;
 
 pub(super) fn source() -> &'static str {
     if cfg!(target_os = "macos") {
@@ -53,7 +54,7 @@ pub(super) fn apply(root: &Path, task: &ManagedAutomation) -> Result<(), String>
     if is_running(task) {
         return Err("Wait for the current run to finish before editing".into());
     }
-    let dir = directory(root, task);
+    let dir = checked_directory(root, task)?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     super::super::path_guard::ensure_dir_within_root(&dir, root).map_err(|e| e.to_string())?;
     let wrapper = render::scripts(&dir, &task.draft)?;
@@ -130,10 +131,11 @@ pub(super) fn apply(root: &Path, task: &ManagedAutomation) -> Result<(), String>
     Ok(())
 }
 
-pub(super) fn run(task: &ManagedAutomation) -> Result<(), String> {
+pub(super) fn run(root: &Path, task: &ManagedAutomation) -> Result<(), String> {
     if is_running(task) {
         return Err("This task is already running".into());
     }
+    refresh_runner(root, task)?;
     if cfg!(target_os = "macos") {
         read_command(
             "/bin/launchctl",
@@ -231,4 +233,22 @@ pub(super) fn remove(root: &Path, task: &ManagedAutomation) -> Result<(), String
 
 fn uid() -> Result<String, String> {
     read_command("/usr/bin/id", &["-u"]).map(|s| s.trim().to_owned())
+}
+
+/// Upgrade an owned standalone runner without changing its schedule.
+pub(super) fn refresh_runner(root: &Path, task: &ManagedAutomation) -> Result<(), String> {
+    let dir = checked_directory(root, task)?;
+    render::scripts(&dir, &task.draft).map(|_| ())
+}
+pub(super) fn needs_upgrade(root: &Path, task: &ManagedAutomation) -> bool {
+    let wrapper = directory(root, task).join(if cfg!(windows) { "run.ps1" } else { "run.sh" });
+    std::fs::read_to_string(wrapper).is_ok_and(|script| !script.contains(run_script::VERSION))
+}
+
+fn checked_directory(root: &Path, task: &ManagedAutomation) -> Result<PathBuf, String> {
+    let dir = directory(root, task);
+    if !crate::core::path_guard::is_path_safe(root, &dir) || dir.is_symlink() {
+        return Err("Automation runner is outside its storage directory".into());
+    }
+    Ok(dir)
 }

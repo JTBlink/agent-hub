@@ -133,13 +133,32 @@
     "waitToSave": "任務仍在執行，請待結束後再次儲存。目前修改已保留。",
     "execution": {
       "output": "目前 / 最近一次輸出",
-      "noHistory": "不累積儲存執行記錄",
       "outputFailed": "無法讀取輸出",
       "unsupported": "此來源未提供可讀取的執行輸出。",
       "noOutput": "尚無輸出。執行任務後重新整理檢視。",
       "hermesNote": "這裡僅讀取 Hermes 最近儲存的結果檔案，可能來自上一次執行。檔案存在不代表目前執行成功；結果檔案由 Hermes 管理。",
       "truncated": "輸出較大，僅顯示末尾 256 KiB。",
       "emptyOutput": "任務未產生輸出。"
+    },
+    "history": {
+      "title": "執行記錄",
+      "savedResults": "已儲存結果",
+      "back": "返回執行記錄",
+      "localOnly": "僅儲存在本機，不納入同步備份",
+      "loadFailed": "無法讀取執行記錄",
+      "hermesNote": "Hermes 結果依檔案儲存時間顯示，沿用 Hermes 時區。檔案存在不代表執行成功，保留策略由 Hermes 管理。",
+      "startedAt": "開始時間",
+      "finishedAt": "結束時間",
+      "savedAt": "儲存時間",
+      "exitCode": "結束代碼",
+      "saved": "已儲存",
+      "viewOutput": "檢視輸出",
+      "viewRun": "檢視 {{time}} 的執行結果",
+      "output": "執行輸出",
+      "unavailable": "該記錄已被清理，請返回執行記錄。",
+      "unsupported": "此來源未提供可讀取的執行記錄。",
+      "empty": "尚無執行記錄。執行任務後，可在此檢視每次執行的狀態與日誌。舊版任務僅能保留尚未覆寫的最近一次記錄。",
+      "retention": "系統任務在本機保留最近 100 次執行記錄；Hermes 結果由 Hermes 管理。"
     }
   },
   "app": {

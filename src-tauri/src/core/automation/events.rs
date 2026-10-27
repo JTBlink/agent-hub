@@ -75,6 +75,7 @@ pub(crate) fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
         };
         let root = store::root();
         let root = root.canonicalize().unwrap_or(root);
+        super::managed::upgrade_runners();
         let mut watched = HashSet::new();
         let mut rescan_at = Instant::now();
         let mut changed_at = None;
@@ -111,6 +112,7 @@ pub(crate) fn start<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
             // Coalesce marker writes and allow the short-lived wrapper to exit.
             if changed_at.is_some_and(|at| at.elapsed() >= Duration::from_millis(400)) {
                 changed_at = None;
+                super::managed::upgrade_runners();
                 let _ = app.emit(EVENT, ());
             }
         }

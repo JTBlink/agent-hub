@@ -401,6 +401,46 @@ Object.assign(window, {
                   enabled: true,
                 },
               },
+              {
+                id: "temp-cleanup",
+                title: "临时文件定时清理",
+                description:
+                  "每天 03:00 清理工作目录 tmp 子目录中超过 7 天的文件，保留目录并跳过符号链接。创建前请选择工作目录。",
+                draft: {
+                  name: "临时文件定时清理",
+                  provider: "system",
+                  content:
+                    'set -eu\nRETENTION_DAYS=7\nTARGET=\'./tmp\'\nif [ -L "$TARGET" ]; then\n  printf \'Cleanup target must not be a symbolic link.\\n\' >&2\n  exit 1\nfi\nif [ ! -e "$TARGET" ]; then\n  printf \'No cleanup directory: %s\\n\' "$TARGET"\n  exit 0\nfi\nif [ ! -d "$TARGET" ]; then\n  printf \'Cleanup target must be a directory.\\n\' >&2\n  exit 1\nfi\nfind -P "$TARGET" -xdev -type f -mmin +"$((RETENTION_DAYS * 24 * 60))" -print -exec rm -f -- {} +\nprintf \'Cleanup completed: %s (files older than %s days)\\n\' "$TARGET" "$RETENTION_DAYS"\n',
+                  workdir: null,
+                  schedule: {
+                    kind: "daily",
+                    hour: 3,
+                    minute: 0,
+                    weekdays: false,
+                  },
+                  enabled: true,
+                },
+              },
+              {
+                id: "log-cleanup",
+                title: "过期日志定时清理",
+                description:
+                  "每天 03:30 清理工作目录 logs 子目录中超过 30 天的文件，保留目录并跳过符号链接。创建前请选择工作目录。",
+                draft: {
+                  name: "过期日志定时清理",
+                  provider: "system",
+                  content:
+                    'set -eu\nRETENTION_DAYS=30\nTARGET=\'./logs\'\nif [ -L "$TARGET" ]; then\n  printf \'Cleanup target must not be a symbolic link.\\n\' >&2\n  exit 1\nfi\nif [ ! -e "$TARGET" ]; then\n  printf \'No cleanup directory: %s\\n\' "$TARGET"\n  exit 0\nfi\nif [ ! -d "$TARGET" ]; then\n  printf \'Cleanup target must be a directory.\\n\' >&2\n  exit 1\nfi\nfind -P "$TARGET" -xdev -type f -mmin +"$((RETENTION_DAYS * 24 * 60))" -print -exec rm -f -- {} +\nprintf \'Cleanup completed: %s (files older than %s days)\\n\' "$TARGET" "$RETENTION_DAYS"\n',
+                  workdir: null,
+                  schedule: {
+                    kind: "daily",
+                    hour: 3,
+                    minute: 30,
+                    weekdays: false,
+                  },
+                  enabled: true,
+                },
+              },
               ...(!previewParams.has("no-hermes")
                 ? [
                     {
@@ -462,6 +502,37 @@ Object.assign(window, {
               },
             },
           ];
+        case "get_automation_history":
+          return {
+            kind: "executions",
+            limited: false,
+            runs: [
+              {
+                id: "20261027T010000Z-101",
+                started_at: "2026-10-27T01:00:00Z",
+                finished_at: "2026-10-27T01:00:02Z",
+                status: "completed",
+                exit_code: 0,
+                has_output: true,
+              },
+              {
+                id: "20261026T010000Z-102",
+                started_at: "2026-10-26T01:00:00Z",
+                finished_at: "2026-10-26T01:00:03Z",
+                status: "error",
+                exit_code: 1,
+                has_output: true,
+              },
+              {
+                id: "20261025T010000Z-103",
+                started_at: "2026-10-25T01:00:00Z",
+                finished_at: "2026-10-25T01:00:01Z",
+                status: "completed",
+                exit_code: 0,
+                has_output: true,
+              },
+            ],
+          };
         case "get_automation_output":
           return {
             available: true,
@@ -603,13 +674,24 @@ if (automationState) {
     throw new Error("Documentation preview state did not become ready");
   };
   void (async () => {
-    if (automationState === "execution") {
+    if (
+      automationState === "execution" ||
+      automationState === "execution-output"
+    ) {
       const tab = await waitFor(() =>
         document.querySelector("h1")?.textContent === automationTasks[0].name
           ? document.querySelector<HTMLElement>("#automation-detail-tab-runs")
           : null,
       );
       tab.click();
+      if (automationState === "execution-output") {
+        const record = await waitFor(() =>
+          document.querySelector<HTMLElement>(
+            'button[data-run-id="20261027T010000Z-101"]',
+          ),
+        );
+        record.click();
+      }
       return;
     }
     if (automationState === "menu") {

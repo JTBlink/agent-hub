@@ -1,4 +1,4 @@
-//! Read the current/latest provider output without storing execution history.
+//! Bounded provider output reads shared by latest output and local history.
 use super::{hermes_manage, managed, native, store, Provider};
 use crate::core::path_guard::is_path_safe;
 use serde::Serialize;
@@ -16,7 +16,7 @@ pub struct AutomationRunOutput {
     pub available: bool,
     pub kind: String,
 }
-fn checked(root: &Path, path: &Path) -> Result<(), String> {
+pub(super) fn checked(root: &Path, path: &Path) -> Result<(), String> {
     if !is_path_safe(root, path)
         || fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink())
     {
@@ -24,7 +24,7 @@ fn checked(root: &Path, path: &Path) -> Result<(), String> {
     }
     Ok(())
 }
-fn latest_hermes(root: &Path, id: &str) -> Result<Option<PathBuf>, String> {
+pub(super) fn hermes_outputs(root: &Path, id: &str) -> Result<Vec<PathBuf>, String> {
     if id.is_empty() || id == "." || id == ".." || id.contains(['/', '\\', ':']) {
         return Err("Invalid Hermes job ID".into());
     }
@@ -32,10 +32,10 @@ fn latest_hermes(root: &Path, id: &str) -> Result<Option<PathBuf>, String> {
     checked(root, &dir)?;
     let entries = match fs::read_dir(&dir) {
         Ok(entries) => entries,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(vec![]),
         Err(e) => return Err(e.to_string()),
     };
-    let mut newest: Option<PathBuf> = None;
+    let mut outputs = Vec::new();
     for (count, entry) in entries.enumerate() {
         if count >= 10000 {
             return Err("Too many Hermes output files".into());
@@ -50,11 +50,28 @@ fn latest_hermes(root: &Path, id: &str) -> Result<Option<PathBuf>, String> {
             continue;
         }
         checked(root, &path)?;
-        if path.is_file() && newest.as_ref().map_or(true, |old| path > *old) {
-            newest = Some(path);
+        if path.is_file() {
+            outputs.push(path);
         }
     }
-    Ok(newest)
+    outputs.sort_by(|a, b| b.cmp(a));
+    Ok(outputs)
+}
+fn latest_hermes(root: &Path, id: &str) -> Result<Option<PathBuf>, String> {
+    Ok(hermes_outputs(root, id)?.into_iter().next())
+}
+pub(super) fn native_directory(task: &super::AutomationTask) -> Result<Option<PathBuf>, String> {
+    let root = store::root();
+    let record = store::load(&root)?
+        .into_iter()
+        .find(|r| r.id == task.id && r.draft.provider == Provider::System);
+    let Some(record) = record else {
+        return Ok(None);
+    };
+    managed::verify(&root, &record)?;
+    let dir = native::directory(&root, &record);
+    checked(&root, &dir)?;
+    Ok(Some(dir))
 }
 /// Resolve exact task ownership and scope; callers cannot supply a log path.
 pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
@@ -68,15 +85,9 @@ pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
         (root, path, "hermes")
     } else {
         let root = store::root();
-        let record = store::load(&root)?
-            .into_iter()
-            .find(|r| r.id == id && r.draft.provider == Provider::System);
-        if let Some(record) = record {
-            managed::verify(&root, &record)?;
-            let directory = native::directory(&root, &record);
-            checked(&root, &directory)?;
-            let path = directory.join("output.log");
-            checked(&root, &path)?;
+        if let Some(dir) = native_directory(&task)? {
+            let path = dir.join("output.log");
+            checked(&dir, &path)?;
             (root, Some(path), "system")
         } else {
             (root, None, "unsupported")
@@ -104,7 +115,7 @@ pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
         }),
     }
 }
-fn read_output(root: &Path, path: &Path) -> Result<AutomationRunOutput, String> {
+pub(super) fn read_output(root: &Path, path: &Path) -> Result<AutomationRunOutput, String> {
     checked(root, path)?;
     if !fs::metadata(path).map_err(|e| e.to_string())?.is_file() {
         return Err("Execution output is not a regular file".into());

@@ -241,6 +241,12 @@ mod tests {
         };
         store::save(&runtime, vec![record.clone()]).unwrap();
         std::fs::write(runtime.join("output.log"), "private runtime output").unwrap();
+        let history = runtime
+            .join(id.trim_start_matches("agent_hub:"))
+            .join("runs/20261027T010000Z-123");
+        std::fs::create_dir_all(&history).unwrap();
+        std::fs::write(history.join("output.log"), "private run content").unwrap();
+        std::fs::write(history.join("exit"), "0").unwrap();
         assert_eq!(
             auto_backup::run_round_blocking(&db),
             auto_backup::Outcome::BackedUp
@@ -255,6 +261,14 @@ mod tests {
         assert!(tree.get_path(Path::new(&path)).is_ok());
         assert!(tree.get_path(Path::new("output.log")).is_err());
         assert!(tree.get_path(Path::new("tasks.json")).is_err());
+        assert!(tree.get_path(Path::new("runs")).is_err());
+        assert!(tree
+            .get_path(Path::new(id.trim_start_matches("agent_hub:")))
+            .is_err());
+        assert!(
+            !needs_export(),
+            "runtime evidence does not enqueue definition backups"
+        );
         let tag = backup_workspace::commit(&db, "task snapshot").unwrap();
         record.draft.content = "printf changed".into();
         record.revision += 1;

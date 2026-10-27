@@ -39,8 +39,14 @@ enum AutomationCommand {
     },
     /// 查看完整定义、创建者、日程和执行状态。
     Show { id: String },
-    /// 读取当前或最近一次输出，不累积执行记录。
-    Logs { id: String },
+    /// 查看本机保存的执行记录；不触发任务或 Git 备份。
+    Runs { id: String },
+    /// 读取最近输出或 --run 指定的执行日志。
+    Logs {
+        id: String,
+        #[arg(long)]
+        run: Option<String>,
+    },
     /// 从 JSON 定义创建原生系统任务或 Hermes 任务。
     Create {
         #[arg(
@@ -172,8 +178,16 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
                 &automation::backup::restore(id, *apply).map_err(anyhow::Error::msg)?
             )?
         ),
-        AutomationCommand::Logs { id } => {
-            let output = automation::output(id).map_err(anyhow::Error::msg)?;
+        AutomationCommand::Runs { id } => println!(
+            "{}",
+            serde_json::to_string_pretty(&automation::history(id).map_err(anyhow::Error::msg)?)?
+        ),
+        AutomationCommand::Logs { id, run } => {
+            let output = match run {
+                Some(run) => automation::run_output(id, run),
+                None => automation::output(id),
+            }
+            .map_err(anyhow::Error::msg)?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&output)?);
             } else {

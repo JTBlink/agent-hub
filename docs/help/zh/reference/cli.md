@@ -37,9 +37,12 @@ agent-hub-cli --json automations list
 agent-hub-cli automations list --origin agent-hub --source system
 agent-hub-cli automations list --show-system
 agent-hub-cli --json automations show '<task-id>'
-agent-hub-cli --json automations logs '<task-id>'
+agent-hub-cli --json automations runs '<task-id>'
+agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 agent-hub-cli --json automations templates
 agent-hub-cli automations create --template workspace-check
+agent-hub-cli automations create --template temp-cleanup
+agent-hub-cli automations create --template log-cleanup
 agent-hub-cli automations create --file task.json
 agent-hub-cli automations edit '<task-id>' --file task.json --revision 1
 agent-hub-cli automations run '<task-id>'
@@ -90,4 +93,6 @@ agent-hub-cli --json automations restore '<backup-id>' --apply
 
 第一条列出 Git 同步的任务定义，第二条预览已暂停的副本；第三条显式创建副本。GUI 在“新建自动化 → 使用模板 → Git 备份”中检查并新建。同步和恢复 Git 内容不会自动注册、执行或覆盖本机任务；Shell 不兼容的命令需先转换。
 
-`automations logs <ID>` 读取当前或最近一次输出，不累积执行历史。系统任务输出每次覆盖，Hermes 读取已有的最近结果文件；结果文件存在不代表当前运行成功。`--json` 返回 `available`、`kind`、`content` 和 `truncated`，大文件只返回末尾 256 KiB。读取操作不创建记录、不触发任务，执行日志不进入 Git 备份。
+`automations runs <ID>` 查看本机保存的执行记录，`automations logs <ID> --run <执行 ID>` 查看指定记录输出；不带 `--run` 兼容读取最近输出。系统任务默认保留最近 100 次；旧版仅能保留尚未覆盖的一次，升级后开始逐次记录。Hermes 读取已有结果文件，保留由 Hermes 管理，不把结果文件存在当作执行成功。日志 `--json` 返回 `available`、`kind`、`content` 和 `truncated`，大文件只返回末尾 256 KiB。执行记录和日志仅保存在本机，不参与 Git 同步备份。
+
+清理模板 `temp-cleanup` 默认每天 03:00 删除工作目录 `tmp` 子目录中超过 7 天的文件；`log-cleanup` 默认每天 03:30 删除 `logs` 中超过 30 天的文件。仅删除普通文件，保留目录并跳过符号链接／Windows junction；目标不存在时不做操作。请在创建前选定工作目录、检查模板命令并按需修改保留天数与日程。工作目录留空仍使用任务独立目录，不自动清理系统或用户主目录。可在 GUI 改为“仅手动触发”，也可在创建后立即运行一次。

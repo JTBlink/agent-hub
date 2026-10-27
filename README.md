@@ -41,7 +41,7 @@ _技能库的全部视图，展示已部署、待部署与未分组的示例技�
 
 ## 自动化与 Agent 触发
 
-在“自动化”中汇总本机系统与 Hermes 定时任务，系统内置任务默认隐藏。列表区分“AgentHub 创建”和其他来源；Hermes 入口仅在本机安装后显示。使用内置模板快速填写任务，创建后可编辑、暂停/恢复或立即运行。
+在“自动化”中汇总本机系统与 Hermes 定时任务，系统内置任务默认隐藏。列表区分“AgentHub 创建”和其他来源；Hermes 入口仅在本机安装后显示。使用内置模板快速填写任务，创建后可编辑、暂停/恢复或立即运行。清理模板支持每天 03:00 清理 `tmp` 中超过 7 天的文件、每天 03:30 清理 `logs` 中超过 30 天的文件；仅作用于所选工作目录的对应子目录，保留目录并跳过符号链接，时间、命令和保留天数均可调整。
 
 命令任务使用当前用户的原生调度器：macOS launchd、Linux systemd timer、Windows 任务计划程序；Hermes 任务由 Hermes 调度。关闭 AgentHub 后计划继续保留，执行需要用户会话或对应调度服务运行。
 
@@ -56,9 +56,11 @@ _技能库的全部视图，展示已部署、待部署与未分组的示例技�
 
 ![自动化详情：概述、最近运行与立即运行操作](docs/images/automation-detail.png)
 
-“执行”页签查看当前／最近一次状态与输出，不累积保存历史执行记录。系统输出每次覆盖；Hermes 读取已有结果文件，其文件保留由 Hermes 管理。任务变化和窗口恢复焦点时在后台更新状态，保留当前日志；运行期间可打开编辑，保存时重新检查任务是否已结束。
+“执行”页签按次展示开始／结束时间、状态、退出码和日志，点击记录查看单次结果。系统任务在本机保留最近 100 次执行记录；Hermes 读取已有结果文件，其文件保留由 Hermes 管理。执行记录和日志不参与 Git 同步备份。任务变化和窗口恢复焦点时在后台更新状态，保留当前日志；运行期间可打开编辑，保存时重新检查任务是否已结束。
 
-![自动化执行：最近状态与命令输出，无历史记录存储](docs/images/automation-execution.png)
+![自动化执行：本机记录与单次日志，不参与同步备份](docs/images/automation-execution.png)
+
+![单次执行结果：时间、状态、退出码和输出](docs/images/automation-run-output.png)
 
 </details>
 
@@ -74,7 +76,8 @@ agent-hub-cli automations create --template workspace-check
 agent-hub-cli --json automations list --origin agent-hub
 agent-hub-cli --json automations run '<task-id>'
 agent-hub-cli --json automations show '<task-id>'
-agent-hub-cli --json automations logs '<task-id>'
+agent-hub-cli --json automations runs '<task-id>'
+agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 ```
 
 `run` 返回“已请求运行”，实际结果以任务执行状态为准。完整参数和 JSON 定义见 [CLI 说明](docs/help/zh/reference/cli.md)。

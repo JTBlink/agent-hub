@@ -45,6 +45,7 @@ export function AutomationTaskDetail({
 }) {
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<(typeof tabs)[number]>("overview");
+  const [runCount, setRunCount] = useState<number | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     const container = heading.current?.closest(".overflow-y-auto");
@@ -148,6 +149,11 @@ export function AutomationTaskDetail({
               )}
             >
               {t(`automation.detailTabs.${value}`)}
+              {value === "runs" && runCount !== null && (
+                <span className="ml-1.5 text-[11px] text-muted">
+                  {runCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -293,6 +299,7 @@ export function AutomationTaskDetail({
                 key={task.id}
                 task={task}
                 refreshKey={refreshKey}
+                onCount={setRunCount}
               />
             )}
           </div>

@@ -118,10 +118,45 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
         output["content"].as_str().unwrap().trim(),
         "automation test"
     );
-    assert!(
-        !dir.join("runs").exists(),
-        "reading output does not create execution history"
+    let history = success(cli(&root, &["runs", &cleanup.id]));
+    assert_eq!(history["runs"].as_array().unwrap().len(), 1);
+    let first_run = history["runs"][0]["id"].as_str().unwrap().to_owned();
+    assert_eq!(
+        success(cli(&root, &["logs", &cleanup.id, "--run", &first_run]))["content"]
+            .as_str()
+            .unwrap()
+            .trim(),
+        "automation test"
     );
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+    while success(cli(&root, &["show", &cleanup.id]))["status"] == "running" {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    success(cli(&root, &["run", &cleanup.id]));
+    let history = loop {
+        let history = success(cli(&root, &["runs", &cleanup.id]));
+        if history["runs"].as_array().unwrap().len() == 2 && history["runs"][0]["exit_code"] == 0 {
+            break history;
+        }
+        assert!(std::time::Instant::now() < deadline, "second run completed");
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    };
+    assert_ne!(first_run, history["runs"][0]["id"].as_str().unwrap());
+    assert_eq!(
+        success(cli(&root, &["logs", &cleanup.id, "--run", &first_run]))["content"]
+            .as_str()
+            .unwrap()
+            .trim(),
+        "automation test"
+    );
+    assert!(!cli(&root, &["logs", &cleanup.id, "--run", "../outside"])
+        .status
+        .success());
+    while success(cli(&root, &["show", &cleanup.id]))["status"] == "running" {
+        assert!(std::time::Instant::now() < deadline);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
     success(cli(&root, &["remove", &cleanup.id]));
     assert!(
         !dir.exists(),

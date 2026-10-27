@@ -60,9 +60,22 @@ pub async fn get_automation_templates(
 #[tauri::command]
 pub async fn get_automation_output(
     id: String,
+    run_id: Option<String>,
 ) -> Result<automation::AutomationRunOutput, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        automation::output(&id).map_err(AppError::invalid_input)
+        match run_id {
+            Some(run) => automation::run_output(&id, &run),
+            None => automation::output(&id),
+        }
+        .map_err(AppError::invalid_input)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn get_automation_history(id: String) -> Result<automation::AutomationHistory, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        automation::history(&id).map_err(AppError::invalid_input)
     })
     .await?
 }

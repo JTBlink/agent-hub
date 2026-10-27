@@ -55,8 +55,26 @@ export interface AutomationRunOutput {
   available: boolean;
   kind: "system" | "hermes" | "unsupported";
 }
-export const getAutomationOutput = (id: string) =>
-  invoke<AutomationRunOutput>("get_automation_output", { id });
+export const getAutomationOutput = (id: string, runId?: string) =>
+  invoke<AutomationRunOutput>("get_automation_output", {
+    id,
+    runId: runId ?? null,
+  });
+export interface AutomationRun {
+  id: string;
+  started_at: string | null;
+  finished_at: string | null;
+  status: "running" | "completed" | "error" | "unknown";
+  exit_code: number | null;
+  has_output: boolean;
+}
+export interface AutomationHistory {
+  runs: AutomationRun[];
+  kind: "executions" | "hermes_outputs" | "unsupported";
+  limited: boolean;
+}
+export const getAutomationHistory = (id: string) =>
+  invoke<AutomationHistory>("get_automation_history", { id });
 
 export const onAutomationChanged = (listener: () => void) =>
   listen("automations-changed", listener);

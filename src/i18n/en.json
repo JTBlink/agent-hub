@@ -133,13 +133,32 @@
     "waitToSave": "The task is still running. Save again after it finishes. Your changes are preserved.",
     "execution": {
       "output": "Current / latest output",
-      "noHistory": "Execution history is not accumulated",
       "outputFailed": "Could not read output",
       "unsupported": "This source does not provide readable execution output.",
       "noOutput": "No output yet. Run the task and refresh to check.",
       "hermesNote": "This is the latest result file saved by Hermes and may belong to an earlier run. Its presence does not imply the current run succeeded. Hermes manages these files.",
       "truncated": "Showing the last 256 KiB of a larger output.",
       "emptyOutput": "The task produced no output."
+    },
+    "history": {
+      "title": "Execution history",
+      "savedResults": "Saved results",
+      "back": "Back to execution history",
+      "localOnly": "Local only · excluded from sync and backups",
+      "loadFailed": "Could not read execution history",
+      "hermesNote": "Hermes results use file save times in the Hermes timezone. A saved file does not imply success. Hermes manages their retention.",
+      "startedAt": "Started",
+      "finishedAt": "Finished",
+      "savedAt": "Saved at",
+      "exitCode": "Exit code",
+      "saved": "Saved",
+      "viewOutput": "View output",
+      "viewRun": "View execution result from {{time}}",
+      "output": "Execution output",
+      "unavailable": "This record has been removed. Return to execution history.",
+      "unsupported": "This source does not provide readable execution records.",
+      "empty": "No execution records yet. Run the task to view its status and logs here. Older tasks can only retain their most recent unoverwritten record.",
+      "retention": "System tasks retain the latest 100 runs locally. Hermes manages its result files."
     }
   },
   "app": {

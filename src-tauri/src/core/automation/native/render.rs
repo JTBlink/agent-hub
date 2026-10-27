@@ -4,10 +4,10 @@ use super::super::{
 };
 use std::path::{Path, PathBuf};
 
-fn shell(value: &str) -> String {
+pub(super) fn shell(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
-fn ps(value: &str) -> String {
+pub(super) fn ps(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
 }
 fn xml(value: &str) -> String {
@@ -31,6 +31,12 @@ fn unit(value: &str) -> String {
 }
 
 pub(super) fn scripts(dir: &Path, draft: &AutomationDraft) -> Result<PathBuf, String> {
+    for name in ["command.sh", "command.ps1", "run.sh", "run.ps1", "runs"] {
+        let path = dir.join(name);
+        if path.is_symlink() {
+            return Err("Automation runner paths cannot be symbolic links".into());
+        }
+    }
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let workdir = draft
         .workdir
@@ -53,9 +59,9 @@ pub(super) fn scripts(dir: &Path, draft: &AutomationDraft) -> Result<PathBuf, St
     };
     store::write(&payload, content.as_bytes())?;
     let script = if cfg!(windows) {
-        format!("\u{feff}$ErrorActionPreference = 'Stop'\nSet-Location -LiteralPath {}\nRemove-Item -LiteralPath {} -ErrorAction SilentlyContinue\n[IO.File]::WriteAllText({}, [DateTime]::UtcNow.ToString('o'))\n$global:LASTEXITCODE = 0\n$code = 0\ntry {{ & {} *> {}; if ($LASTEXITCODE) {{ $code = $LASTEXITCODE }} }} catch {{ $_ | Out-File -LiteralPath {} -Append; $code = 1 }}\n[IO.File]::WriteAllText({}, [string]$code)\nexit $code\n", ps(&workdir), ps(&dir.join("exit").to_string_lossy()), ps(&dir.join("started").to_string_lossy()), ps(&payload.to_string_lossy()), ps(&dir.join("output.log").to_string_lossy()), ps(&dir.join("output.log").to_string_lossy()), ps(&dir.join("exit").to_string_lossy()))
+        super::run_script::powershell_script(dir, &workdir, &payload)
     } else {
-        format!("#!/bin/sh\numask 077\nexec >{} 2>&1\nrm -f {}\ndate -u '+%Y-%m-%dT%H:%M:%SZ' >{}\nfinish() {{ code=$?; printf \"%s\\n\" \"$code\" >{}; trap - 0; exit \"$code\"; }}\ntrap finish 0\ncd {} || exit 1\nexport PATH={}\n/bin/sh {}\n", shell(&dir.join("output.log").to_string_lossy()), shell(&dir.join("exit").to_string_lossy()), shell(&dir.join("started").to_string_lossy()), shell(&dir.join("exit").to_string_lossy()), shell(&workdir), shell(&std::env::var("PATH").unwrap_or_else(|_| "/usr/local/bin:/usr/bin:/bin".into())), shell(&payload.to_string_lossy()))
+        super::run_script::shell_script(dir, &workdir, &payload)
     };
     store::write(&wrapper, script.as_bytes())?;
     Ok(wrapper)

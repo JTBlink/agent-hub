@@ -1054,6 +1054,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::automation::get_automation_overview,
             commands::automation::get_automation_output,
+            commands::automation::get_automation_history,
             commands::automation::save_automation,
             commands::automation::run_automation,
             commands::automation::remove_automation,

@@ -17,6 +17,7 @@ vi.mock("../lib/tauri", () => ({
   getAutomationBackups: vi.fn(),
   getAutomationOutput: vi.fn(),
   onAutomationChanged: vi.fn(),
+  getAutomationHistory: vi.fn(),
 }));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
@@ -118,6 +119,22 @@ beforeEach(() => {
       ],
     });
   vi.mocked(api.getAutomationBackups).mockReset().mockResolvedValue([]);
+  vi.mocked(api.getAutomationHistory)
+    .mockReset()
+    .mockResolvedValue({
+      kind: "executions",
+      limited: false,
+      runs: [
+        {
+          id: "legacy",
+          started_at: "2026-10-27T01:00:00Z",
+          finished_at: "2026-10-27T01:00:02Z",
+          status: "completed",
+          exit_code: 0,
+          has_output: true,
+        },
+      ],
+    });
   vi.mocked(api.getAutomationOutput).mockReset().mockResolvedValue({
     content: "test output",
     truncated: false,
@@ -753,14 +770,19 @@ it("allows editing a running task and refreshes its finished state automatically
   ).toBe(false);
 });
 
-it("shows the latest output without a history list and supports retry on a failed read", async () => {
+it("opens a saved run and supports retry on a failed output read", async () => {
   vi.mocked(api.getAutomationOutput).mockRejectedValue(
     new Error("output unavailable"),
   );
   await render("/automation?task=hermes%3Aaudit");
   await click("执行");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('button[data-run-id="legacy"]')!
+      .click(),
+  );
   expect(container.textContent).toContain("output unavailable");
-  expect(container.textContent).toContain("不累积保存执行记录");
+  expect(container.textContent).toContain("仅保存在本机，不参与同步备份");
   vi.mocked(api.getAutomationOutput).mockResolvedValue({
     content: "disk check passed",
     truncated: false,
@@ -769,13 +791,18 @@ it("shows the latest output without a history list and supports retry on a faile
   });
   await click("重试");
   expect(container.textContent).toContain("disk check passed");
-  expect(api.getAutomationOutput).toHaveBeenLastCalledWith(hermes.id);
+  expect(api.getAutomationOutput).toHaveBeenLastCalledWith(hermes.id, "legacy");
   expect(container.textContent).not.toContain("output unavailable");
 });
 
 it("keeps displayed output and focus while a refresh is pending", async () => {
   await render("/automation?task=hermes%3Aaudit");
   await click("执行");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('button[data-run-id="legacy"]')!
+      .click(),
+  );
   expect(container.textContent).toContain("test output");
   let resolve!: (output: api.AutomationRunOutput) => void;
   vi.mocked(api.getAutomationOutput).mockReturnValue(
@@ -800,4 +827,126 @@ it("keeps displayed output and focus while a refresh is pending", async () => {
   expect(
     container.querySelector("#automation-detail-panel-runs pre")?.textContent,
   ).toBe("updated output");
+});
+
+it("fills a scheduled cleanup template and lets the user choose manual execution before saving", async () => {
+  const content =
+    "RETENTION_DAYS=7\nTARGET='./tmp'\nprintf 'cleanup fixture only\\n'";
+  vi.mocked(api.getAutomationTemplates).mockResolvedValue({
+    shell: "sh",
+    templates: [
+      {
+        id: "temp-cleanup",
+        title: "临时文件定时清理",
+        description: "只清理工作目录 tmp 中超过 7 天的文件。",
+        draft: {
+          name: "临时文件定时清理",
+          provider: "system",
+          content,
+          workdir: null,
+          schedule: { kind: "daily", hour: 3, minute: 0, weekdays: false },
+          enabled: true,
+        },
+      },
+    ],
+  });
+  await render();
+  await click("新建自动化");
+  await click("使用模板");
+  await ariaClick("临时文件定时清理");
+  expect(container.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
+    content,
+  );
+  expect(
+    container.querySelector<HTMLInputElement>('input[type="time"]')!.value,
+  ).toBe("03:00");
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.runAutomation).not.toHaveBeenCalled();
+  const schedule = container.querySelector<HTMLSelectElement>(
+    'select[aria-label="日程"]',
+  )!;
+  await act(async () => {
+    schedule.value = "manual";
+    schedule.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    null,
+    null,
+    expect.objectContaining({ content, schedule: { kind: "manual" } }),
+  );
+  expect(api.runAutomation).not.toHaveBeenCalled();
+});
+
+it("keeps separate saved run outputs when switching between execution records", async () => {
+  const run = {
+    started_at: "2026-10-27T01:00:00Z",
+    finished_at: "2026-10-27T01:00:02Z",
+    status: "completed" as const,
+    exit_code: 0,
+    has_output: true,
+  };
+  vi.mocked(api.getAutomationHistory).mockResolvedValue({
+    kind: "executions",
+    limited: false,
+    runs: [
+      { ...run, id: "new" },
+      { ...run, id: "old", exit_code: 7, status: "error" },
+    ],
+  });
+  vi.mocked(api.getAutomationOutput).mockImplementation(async (_task, id) => ({
+    content: id === "new" ? "new output" : "old failure",
+    available: true,
+    kind: "system",
+    truncated: false,
+  }));
+  await render("/automation?task=hermes%3Aaudit");
+  await click("执行");
+  expect(container.querySelectorAll("button[data-run-id]")).toHaveLength(2);
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('button[data-run-id="new"]')!
+      .click(),
+  );
+  expect(container.textContent).toContain("new output");
+  await click("返回执行记录");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('button[data-run-id="old"]')!
+      .click(),
+  );
+  expect(container.textContent).toContain("old failure");
+  expect(container.textContent).not.toContain("new output");
+  expect(api.getAutomationOutput).toHaveBeenLastCalledWith(hermes.id, "old");
+});
+
+it("labels Hermes result files as saved output instead of inventing execution status", async () => {
+  vi.mocked(api.getAutomationHistory).mockResolvedValue({
+    kind: "hermes_outputs",
+    limited: false,
+    runs: [
+      {
+        id: "2026-10-27_09-00-00.md",
+        started_at: null,
+        finished_at: "2026-10-27 09:00:00",
+        status: "unknown",
+        exit_code: null,
+        has_output: true,
+      },
+    ],
+  });
+  await render("/automation?task=hermes%3Aaudit");
+  await click("执行");
+  expect(container.textContent).toContain("文件存在不代表执行成功");
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>("button[data-run-id]")!.click(),
+  );
+  const panel = container.querySelector("#automation-detail-panel-runs")!;
+  expect(panel.textContent).toContain("已保存");
+  expect(panel.textContent).not.toContain("退出码");
+  expect(panel.textContent).not.toContain("结束时间");
 });

@@ -133,13 +133,32 @@
     "waitToSave": "任务仍在运行，请待结束后再次保存。当前修改已保留。",
     "execution": {
       "output": "当前 / 最近一次输出",
-      "noHistory": "不累积保存执行记录",
       "outputFailed": "无法读取输出",
       "unsupported": "此来源未提供可读取的执行输出。",
       "noOutput": "暂无输出。运行任务后刷新查看。",
       "hermesNote": "这里只读取 Hermes 最近保存的结果文件，可能来自上一次运行。文件存在不代表当前运行成功；结果文件由 Hermes 管理。",
       "truncated": "输出较大，仅展示末尾 256 KiB。",
       "emptyOutput": "任务未产生输出。"
+    },
+    "history": {
+      "title": "执行记录",
+      "savedResults": "已保存结果",
+      "back": "返回执行记录",
+      "localOnly": "仅保存在本机，不参与同步备份",
+      "loadFailed": "无法读取执行记录",
+      "hermesNote": "Hermes 结果按文件保存时间展示，沿用 Hermes 时区。文件存在不代表执行成功，保留策略由 Hermes 管理。",
+      "startedAt": "开始时间",
+      "finishedAt": "结束时间",
+      "savedAt": "保存时间",
+      "exitCode": "退出码",
+      "saved": "已保存",
+      "viewOutput": "查看输出",
+      "viewRun": "查看 {{time}} 的执行结果",
+      "output": "执行输出",
+      "unavailable": "该记录已被清理，请返回执行记录。",
+      "unsupported": "此来源未提供可读取的执行记录。",
+      "empty": "暂无执行记录。运行任务后，可在此查看每次执行的状态与日志。旧版任务仅能保留尚未覆盖的最近一次记录。",
+      "retention": "系统任务在本机保留最近 100 次执行记录；Hermes 结果由 Hermes 管理。"
     }
   },
   "app": {
