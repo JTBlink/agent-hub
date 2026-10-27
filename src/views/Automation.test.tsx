@@ -15,6 +15,8 @@ vi.mock("../lib/tauri", () => ({
   removeAutomation: vi.fn(),
   getAutomationTemplates: vi.fn(),
   getAutomationBackups: vi.fn(),
+  getAutomationOutput: vi.fn(),
+  onAutomationChanged: vi.fn(),
 }));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
@@ -82,6 +84,9 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(api.onAutomationChanged)
+    .mockReset()
+    .mockResolvedValue(() => {});
   vi.mocked(api.getAutomationOverview)
     .mockReset()
     .mockResolvedValue({
@@ -113,6 +118,12 @@ beforeEach(() => {
       ],
     });
   vi.mocked(api.getAutomationBackups).mockReset().mockResolvedValue([]);
+  vi.mocked(api.getAutomationOutput).mockReset().mockResolvedValue({
+    content: "test output",
+    truncated: false,
+    available: true,
+    kind: "system",
+  });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -121,6 +132,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 async function render(path = "/automation") {
   await act(async () =>
@@ -695,4 +707,97 @@ it("shows an empty backup state when only uninstalled Hermes definitions are ava
   await click("Git 备份");
   expect(container.textContent).toContain("暂无可用模板");
   expect(container.querySelector('button[aria-label="仓库审计"]')).toBeNull();
+});
+
+it("allows editing a running task and refreshes its finished state automatically", async () => {
+  vi.useFakeTimers();
+  const task = {
+    ...hermes,
+    source: "launchd" as const,
+    origin: "agent_hub" as const,
+    status: "running" as const,
+    definition: {
+      ...hermes.definition!,
+      provider: "system" as const,
+      enabled: true,
+    },
+  };
+  const overview = { tasks: [task], issues: [], hermes_installed: false };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue(overview);
+  await render("/automation?task=hermes%3Aaudit");
+  const edit = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="编辑自动化"]',
+  )!;
+  expect(edit.disabled).toBe(false);
+  await act(async () => edit.click());
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  expect(document.body.textContent).toContain("可修改任务配置");
+  await click("取消");
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    ...overview,
+    tasks: [{ ...task, status: "active", last_result: "0" }],
+  });
+  await act(async () => {
+    const change = vi.mocked(api.onAutomationChanged).mock.calls.at(-1)![0];
+    change();
+    await vi.advanceTimersByTimeAsync(200);
+  });
+  expect(api.getAutomationOverview).toHaveBeenCalledTimes(2);
+  await act(async () => vi.advanceTimersByTimeAsync(12000));
+  expect(api.getAutomationOverview).toHaveBeenCalledTimes(2);
+  expect(container.textContent).toContain("执行成功");
+  expect(
+    container.querySelector<HTMLButtonElement>(
+      'button[aria-label="立即运行 仓库审计"]',
+    )!.disabled,
+  ).toBe(false);
+});
+
+it("shows the latest output without a history list and supports retry on a failed read", async () => {
+  vi.mocked(api.getAutomationOutput).mockRejectedValue(
+    new Error("output unavailable"),
+  );
+  await render("/automation?task=hermes%3Aaudit");
+  await click("执行");
+  expect(container.textContent).toContain("output unavailable");
+  expect(container.textContent).toContain("不累积保存执行记录");
+  vi.mocked(api.getAutomationOutput).mockResolvedValue({
+    content: "disk check passed",
+    truncated: false,
+    available: true,
+    kind: "system",
+  });
+  await click("重试");
+  expect(container.textContent).toContain("disk check passed");
+  expect(api.getAutomationOutput).toHaveBeenLastCalledWith(hermes.id);
+  expect(container.textContent).not.toContain("output unavailable");
+});
+
+it("keeps displayed output and focus while a refresh is pending", async () => {
+  await render("/automation?task=hermes%3Aaudit");
+  await click("执行");
+  expect(container.textContent).toContain("test output");
+  let resolve!: (output: api.AutomationRunOutput) => void;
+  vi.mocked(api.getAutomationOutput).mockReturnValue(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  button("刷新").focus();
+  await click("刷新");
+  expect(
+    container.querySelector("#automation-detail-panel-runs pre")?.textContent,
+  ).toBe("test output");
+  expect(document.activeElement).toBe(button("刷新"));
+  await act(async () =>
+    resolve({
+      content: "updated output",
+      truncated: false,
+      available: true,
+      kind: "system",
+    }),
+  );
+  expect(
+    container.querySelector("#automation-detail-panel-runs pre")?.textContent,
+  ).toBe("updated output");
 });

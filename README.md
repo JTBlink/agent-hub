@@ -56,6 +56,10 @@ _技能库的全部视图，展示已部署、待部署与未分组的示例技�
 
 ![自动化详情：概述、最近运行与立即运行操作](docs/images/automation-detail.png)
 
+“执行”页签查看当前／最近一次状态与输出，不累积保存历史执行记录。系统输出每次覆盖；Hermes 读取已有结果文件，其文件保留由 Hermes 管理。任务变化和窗口恢复焦点时在后台更新状态，保留当前日志；运行期间可打开编辑，保存时重新检查任务是否已结束。
+
+![自动化执行：最近状态与命令输出，无历史记录存储](docs/images/automation-execution.png)
+
 </details>
 
 _截图均来自合成数据预览，不读取本机任务、账号或个人目录。_
@@ -70,6 +74,7 @@ agent-hub-cli automations create --template workspace-check
 agent-hub-cli --json automations list --origin agent-hub
 agent-hub-cli --json automations run '<task-id>'
 agent-hub-cli --json automations show '<task-id>'
+agent-hub-cli --json automations logs '<task-id>'
 ```
 
 `run` 返回“已请求运行”，实际结果以任务执行状态为准。完整参数和 JSON 定义见 [CLI 说明](docs/help/zh/reference/cli.md)。

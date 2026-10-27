@@ -116,7 +116,13 @@ export function AutomationEditor({
         workdir: draft.workdir?.trim() || null,
       });
     } catch (cause) {
-      setError(getErrorMessage(cause, t("automation.saveFailed")));
+      setError(
+        getErrorMessage(cause, "").includes(
+          "Wait for the current run to finish",
+        )
+          ? t("automation.waitToSave")
+          : getErrorMessage(cause, t("automation.saveFailed")),
+      );
     } finally {
       pending.current = false;
       setBusy(false);
@@ -378,6 +384,11 @@ export function AutomationEditor({
                   onChange={() => update({ enabled: !draft.enabled })}
                 />
               </div>
+              {task?.status === "running" && (
+                <p role="status" className="text-[12px] leading-6 text-muted">
+                  {t("automation.editRunning")}
+                </p>
+              )}
               <p className="text-[12px] leading-6 text-muted">
                 {t("automation.nativeHelp")}
               </p>

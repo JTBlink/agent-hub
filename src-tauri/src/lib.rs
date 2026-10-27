@@ -974,6 +974,7 @@ pub fn run() {
 
             let step = Instant::now();
             core::file_watcher::start_file_watcher(app.handle().clone(), store_for_setup.clone());
+            core::automation::start_change_events(app.handle().clone());
             log::info!(
                 "startup: start_file_watcher done in {} ms",
                 step.elapsed().as_millis()
@@ -1052,6 +1053,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::automation::get_automation_overview,
+            commands::automation::get_automation_output,
             commands::automation::save_automation,
             commands::automation::run_automation,
             commands::automation::remove_automation,

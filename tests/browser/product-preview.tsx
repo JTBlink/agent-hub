@@ -120,6 +120,8 @@ automationTasks[0] = {
   ...automationTasks[0],
   id: "agent_hub:11111111-1111-4111-8111-111111111111",
   origin: "agent_hub",
+  last_run: "2026-10-27T09:00:00+08:00",
+  last_result: "0",
   can_edit: true,
   can_run: true,
   revision: 1,
@@ -460,6 +462,14 @@ Object.assign(window, {
               },
             },
           ];
+        case "get_automation_output":
+          return {
+            available: true,
+            kind: "system",
+            truncated: false,
+            content:
+              "[09:00:00] 开始检查项目工作目录\n[09:00:01] 已完成文件检查：128 个文件\n[09:00:02] 备份完成，未发现错误\n",
+          };
         case "get_automation_overview":
           return {
             tasks: previewParams.has("no-hermes")
@@ -593,6 +603,15 @@ if (automationState) {
     throw new Error("Documentation preview state did not become ready");
   };
   void (async () => {
+    if (automationState === "execution") {
+      const tab = await waitFor(() =>
+        document.querySelector("h1")?.textContent === automationTasks[0].name
+          ? document.querySelector<HTMLElement>("#automation-detail-tab-runs")
+          : null,
+      );
+      tab.click();
+      return;
+    }
     if (automationState === "menu") {
       const trigger = await waitFor(() =>
         document.querySelector<HTMLElement>(

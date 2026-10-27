@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
 description: Manage the user's shared agent-skill library and local automation tasks via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -116,6 +116,7 @@ scheduler files or Hermes jobs.json as a fallback.
 "$SM" --json automations list --origin agent-hub
 "$SM" --json automations show '<task-id>'
 "$SM" --json automations run '<task-id>'
+"$SM" --json automations logs '<task-id>'
 ```
 
 Resolve the exact ID from `list`, then inspect the command/prompt and working
@@ -486,3 +487,9 @@ Report which skills actually refreshed (`refreshed: true` in the JSON) vs which 
 - **No active skill group** only affects legacy `skills sync` / `skill-groups apply`; additive deploy commands do not require one.
 - **Adopted skills can't be `update`d from git** → `npx skills add` and manual `git clone` don't leave source metadata, so adopt has to treat them as `local`. Re-point them with `skills set-source`. Do **not** reach for `adopt --git-url` here: adopt only ever creates new library entries, and it fails _late_ — `--dry-run` returns `ok: true` with the skill sitting in `skipped`, and only the real run errors with `--git-url requires exactly one adoptable skill, found 0`. Do **not** remove-then-reinstall either — that drops the skill id, and with it the tags, skill group membership and every per-agent deployment.
 - Use `--dry-run` before bulk remove, tag delete, skill group delete, deploy, or undeploy operations. Use `check` before `update`.
+
+`automations logs <task-id>` reads current/latest provider output without creating
+execution history. System output is overwritten each run; Hermes manages its own
+result files. A Hermes result may belong to an earlier run and is not evidence
+that the requested execution succeeded. JSON includes `available`, `kind`,
+`content`, and `truncated`; output is limited to the last 256 KiB.

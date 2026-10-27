@@ -47,7 +47,7 @@ export function Automation() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data, loading, error, refresh } = useAutomationOverview(
+  const { data, loading, error, refresh, generation } = useAutomationOverview(
     i18n.resolvedLanguage ?? i18n.language,
   );
   const [query, setQuery] = useState("");
@@ -254,6 +254,7 @@ export function Automation() {
     return (
       <>
         <AutomationTaskDetail
+          refreshKey={generation}
           key={selectedId}
           task={selected}
           loading={loading}

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export type AutomationSource =
   "launchd" | "cron" | "systemd" | "windows" | "hermes";
@@ -48,6 +49,18 @@ export interface AutomationOverview {
 }
 export const getAutomationOverview = (locale?: string) =>
   invoke<AutomationOverview>("get_automation_overview", { locale });
+export interface AutomationRunOutput {
+  content: string;
+  truncated: boolean;
+  available: boolean;
+  kind: "system" | "hermes" | "unsupported";
+}
+export const getAutomationOutput = (id: string) =>
+  invoke<AutomationRunOutput>("get_automation_output", { id });
+
+export const onAutomationChanged = (listener: () => void) =>
+  listen("automations-changed", listener);
+
 export interface AutomationTemplate {
   id: string;
   title: string;

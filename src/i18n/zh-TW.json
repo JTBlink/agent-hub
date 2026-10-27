@@ -63,7 +63,8 @@
     "backToList": "返回自動化列表",
     "detailTabs": {
       "overview": "概述",
-      "technical": "技術資訊"
+      "technical": "技術資訊",
+      "runs": "執行"
     },
     "scheduleSummary": "排程概覽",
     "runSummary": "最近執行",
@@ -85,7 +86,7 @@
     "resume": "恢復排程",
     "remove": "刪除自動化",
     "removeConfirm": "刪除「{{name}}」？任務將從排程器移除，後續不會自動執行。",
-    "runRequested": "已要求執行，請重新整理查看狀態。排程設定保持不變。",
+    "runRequested": "已要求執行，狀態將自動更新。排程設定保持不變。",
     "saved": "自動化已儲存。",
     "saveFailed": "儲存失敗，請檢查設定後重試。",
     "actionFailed": "操作失敗，請重新整理任務狀態後重試。",
@@ -127,7 +128,19 @@
     "backupTemplateHint": "從備份新增副本，預設暫停，不覆蓋本機既有任務。",
     "noBackupTemplates": "暫無可用範本。Git 同步後的任務定義會顯示在此。",
     "otherShell": "此備份使用另一種 Shell，請先轉換命令再建立。",
-    "pausedSaveHint": "儲存為暫停狀態，不會依排程自動執行。"
+    "pausedSaveHint": "儲存為暫停狀態，不會依排程自動執行。",
+    "editRunning": "可修改任務設定。儲存時會重新檢查執行狀態；若任務仍在執行，請待結束後儲存，目前輸入會保留。",
+    "waitToSave": "任務仍在執行，請待結束後再次儲存。目前修改已保留。",
+    "execution": {
+      "output": "目前 / 最近一次輸出",
+      "noHistory": "不累積儲存執行記錄",
+      "outputFailed": "無法讀取輸出",
+      "unsupported": "此來源未提供可讀取的執行輸出。",
+      "noOutput": "尚無輸出。執行任務後重新整理檢視。",
+      "hermesNote": "這裡僅讀取 Hermes 最近儲存的結果檔案，可能來自上一次執行。檔案存在不代表目前執行成功；結果檔案由 Hermes 管理。",
+      "truncated": "輸出較大，僅顯示末尾 256 KiB。",
+      "emptyOutput": "任務未產生輸出。"
+    }
   },
   "app": {
     "name": "agent-hub"

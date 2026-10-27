@@ -63,7 +63,8 @@
     "backToList": "返回自动化列表",
     "detailTabs": {
       "overview": "概述",
-      "technical": "技术信息"
+      "technical": "技术信息",
+      "runs": "执行"
     },
     "scheduleSummary": "日程概览",
     "runSummary": "最近运行",
@@ -85,7 +86,7 @@
     "resume": "恢复计划",
     "remove": "删除自动化",
     "removeConfirm": "删除“{{name}}”？任务将从调度器移除，后续不会自动运行。",
-    "runRequested": "已请求运行，请刷新查看执行状态。日程配置保持不变。",
+    "runRequested": "已请求运行，执行状态将自动更新。日程配置保持不变。",
     "saved": "自动化已保存。",
     "saveFailed": "保存失败，请检查配置后重试。",
     "actionFailed": "操作失败，请刷新任务状态后重试。",
@@ -127,7 +128,19 @@
     "backupTemplateHint": "从备份新建副本，默认暂停，不覆盖本机已有任务。",
     "noBackupTemplates": "暂无可用模板。Git 同步后的任务定义会显示在这里。",
     "otherShell": "此备份使用另一种 Shell，请先转换命令后再创建。",
-    "pausedSaveHint": "保存为暂停状态，不会按日程自动运行。"
+    "pausedSaveHint": "保存为暂停状态，不会按日程自动运行。",
+    "editRunning": "可修改任务配置。保存时会重新检查执行状态；若任务仍在运行，请待结束后保存，当前输入会保留。",
+    "waitToSave": "任务仍在运行，请待结束后再次保存。当前修改已保留。",
+    "execution": {
+      "output": "当前 / 最近一次输出",
+      "noHistory": "不累积保存执行记录",
+      "outputFailed": "无法读取输出",
+      "unsupported": "此来源未提供可读取的执行输出。",
+      "noOutput": "暂无输出。运行任务后刷新查看。",
+      "hermesNote": "这里只读取 Hermes 最近保存的结果文件，可能来自上一次运行。文件存在不代表当前运行成功；结果文件由 Hermes 管理。",
+      "truncated": "输出较大，仅展示末尾 256 KiB。",
+      "emptyOutput": "任务未产生输出。"
+    }
   },
   "app": {
     "name": "agent-hub"

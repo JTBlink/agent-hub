@@ -111,6 +111,17 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
         workspace.join("ran-from.txt").is_file(),
         "the scheduler executes inside the provisioned directory"
     );
+    let output = success(cli(&root, &["logs", &cleanup.id]));
+    assert_eq!(output["available"], true);
+    assert_eq!(output["kind"], "system");
+    assert_eq!(
+        output["content"].as_str().unwrap().trim(),
+        "automation test"
+    );
+    assert!(
+        !dir.join("runs").exists(),
+        "reading output does not create execution history"
+    );
     success(cli(&root, &["remove", &cleanup.id]));
     assert!(
         !dir.exists(),

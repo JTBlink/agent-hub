@@ -27,7 +27,7 @@ export function AutomationTaskActions({
     task.source === "hermes" &&
     ["paused", "completed", "error"].includes(task.status);
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex max-w-full shrink-0 flex-wrap items-center gap-1.5">
       {task.can_run && (
         <button
           type="button"
@@ -55,13 +55,14 @@ export function AutomationTaskActions({
         <>
           <button
             type="button"
-            disabled={blocked}
+            disabled={busy}
             onClick={onEdit}
             aria-label={t("automation.edit")}
             title={t("automation.edit")}
-            className="app-button-ghost rounded-md hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent p-2"
+            className="app-button-secondary"
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+            {t("automation.edit")}
           </button>
           {task.definition?.schedule.kind !== "manual" && (
             <button

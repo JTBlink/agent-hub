@@ -39,6 +39,8 @@ enum AutomationCommand {
     },
     /// 查看完整定义、创建者、日程和执行状态。
     Show { id: String },
+    /// 读取当前或最近一次输出，不累积执行记录。
+    Logs { id: String },
     /// 从 JSON 定义创建原生系统任务或 Hermes 任务。
     Create {
         #[arg(
@@ -170,6 +172,17 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
                 &automation::backup::restore(id, *apply).map_err(anyhow::Error::msg)?
             )?
         ),
+        AutomationCommand::Logs { id } => {
+            let output = automation::output(id).map_err(anyhow::Error::msg)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&output)?);
+            } else {
+                if output.truncated {
+                    eprintln!("Showing the last 256 KiB");
+                }
+                print!("{}", output.content);
+            }
+        }
         AutomationCommand::Show { id } => println!("{}", serde_json::to_string_pretty(&task(id)?)?),
         AutomationCommand::Create {
             file,

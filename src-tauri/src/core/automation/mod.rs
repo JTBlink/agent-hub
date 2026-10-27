@@ -5,7 +5,11 @@ pub mod backup;
 #[cfg(any(unix, test))]
 mod cron;
 mod definition;
+mod events;
 mod hermes;
+pub(crate) use events::start as start_change_events;
+mod output;
+pub use output::{output, AutomationRunOutput};
 mod hermes_manage;
 #[cfg(any(target_os = "macos", test))]
 mod launchd;

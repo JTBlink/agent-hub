@@ -24,7 +24,7 @@ fn native_record(
     Ok(record)
 }
 
-fn verify(root: &Path, record: &ManagedAutomation) -> Result<(), String> {
+pub(super) fn verify(root: &Path, record: &ManagedAutomation) -> Result<(), String> {
     if record.draft.provider == Provider::System {
         let expected = native_record(
             root,
@@ -132,7 +132,7 @@ fn runtime(task: &mut AutomationTask, directory: &Path) {
     }
 }
 
-fn find(id: &str) -> Result<AutomationTask, String> {
+pub(super) fn find(id: &str) -> Result<AutomationTask, String> {
     super::overview(None)
         .tasks
         .into_iter()

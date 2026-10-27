@@ -37,6 +37,7 @@ agent-hub-cli --json automations list
 agent-hub-cli automations list --origin agent-hub --source system
 agent-hub-cli automations list --show-system
 agent-hub-cli --json automations show '<task-id>'
+agent-hub-cli --json automations logs '<task-id>'
 agent-hub-cli --json automations templates
 agent-hub-cli automations create --template workspace-check
 agent-hub-cli automations create --file task.json
@@ -88,3 +89,5 @@ agent-hub-cli --json automations restore '<backup-id>' --apply
 ```
 
 第一条列出 Git 同步的任务定义，第二条预览已暂停的副本；第三条显式创建副本。GUI 在“新建自动化 → 使用模板 → Git 备份”中检查并新建。同步和恢复 Git 内容不会自动注册、执行或覆盖本机任务；Shell 不兼容的命令需先转换。
+
+`automations logs <ID>` 读取当前或最近一次输出，不累积执行历史。系统任务输出每次覆盖，Hermes 读取已有的最近结果文件；结果文件存在不代表当前运行成功。`--json` 返回 `available`、`kind`、`content` 和 `truncated`，大文件只返回末尾 256 KiB。读取操作不创建记录、不触发任务，执行日志不进入 Git 备份。

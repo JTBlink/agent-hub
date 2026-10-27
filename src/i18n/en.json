@@ -63,7 +63,8 @@
     "backToList": "Back to automations",
     "detailTabs": {
       "overview": "Overview",
-      "technical": "Technical details"
+      "technical": "Technical details",
+      "runs": "Runs"
     },
     "scheduleSummary": "Schedule overview",
     "runSummary": "Latest run",
@@ -85,7 +86,7 @@
     "resume": "Resume schedule",
     "remove": "Delete automation",
     "removeConfirm": "Delete “{{name}}”? The task will be removed from its scheduler and will no longer run automatically.",
-    "runRequested": "Run requested. Refresh to check execution status. The schedule configuration is unchanged.",
+    "runRequested": "Run requested. Execution status will update automatically. The schedule is unchanged.",
     "saved": "Automation saved.",
     "saveFailed": "Could not save. Check the configuration and retry.",
     "actionFailed": "Action failed. Refresh task status before retrying.",
@@ -127,7 +128,19 @@
     "backupTemplateHint": "Create a paused copy from backup. Existing local tasks are preserved.",
     "noBackupTemplates": "No templates available. Synced task definitions appear here.",
     "otherShell": "This backup uses another shell. Convert its command before creating a task.",
-    "pausedSaveHint": "Saved paused. Scheduled runs will stay off."
+    "pausedSaveHint": "Saved paused. Scheduled runs will stay off.",
+    "editRunning": "You can edit the configuration. Saving checks the current execution state; if it is still running, wait until it finishes and save again. Your changes are preserved.",
+    "waitToSave": "The task is still running. Save again after it finishes. Your changes are preserved.",
+    "execution": {
+      "output": "Current / latest output",
+      "noHistory": "Execution history is not accumulated",
+      "outputFailed": "Could not read output",
+      "unsupported": "This source does not provide readable execution output.",
+      "noOutput": "No output yet. Run the task and refresh to check.",
+      "hermesNote": "This is the latest result file saved by Hermes and may belong to an earlier run. Its presence does not imply the current run succeeded. Hermes manages these files.",
+      "truncated": "Showing the last 256 KiB of a larger output.",
+      "emptyOutput": "The task produced no output."
+    }
   },
   "app": {
     "name": "agent-hub"

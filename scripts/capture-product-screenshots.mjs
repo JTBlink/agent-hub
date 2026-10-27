@@ -29,6 +29,10 @@ const shots = [
   ["automation.png", ""],
   ["automation-create.png", "&automation-state=editor"],
   ["automation-detail.png", "&task=hermes%3Aaudit"],
+  [
+    "automation-execution.png",
+    "&task=agent_hub%3A11111111-1111-4111-8111-111111111111&automation-state=execution",
+  ],
   ["automation-templates.png", "&automation-state=templates"],
   ["automation-menu.png", "&automation-state=menu"],
 ];

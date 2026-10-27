@@ -56,3 +56,13 @@ pub async fn get_automation_templates(
         .await
         .map_err(Into::into)
 }
+
+#[tauri::command]
+pub async fn get_automation_output(
+    id: String,
+) -> Result<automation::AutomationRunOutput, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        automation::output(&id).map_err(AppError::invalid_input)
+    })
+    .await?
+}

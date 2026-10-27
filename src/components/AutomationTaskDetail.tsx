@@ -9,7 +9,9 @@ import { AutomationOriginBadge } from "./AutomationOriginBadge";
 import { CopyPathButton } from "./CopyPathButton";
 import { cn } from "../utils";
 
-const tabs = ["overview", "technical"] as const;
+import { AutomationExecution } from "./AutomationExecution";
+
+const tabs = ["overview", "runs", "technical"] as const;
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
@@ -24,6 +26,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 export function AutomationTaskDetail({
   task,
+  refreshKey,
   loading,
   readFailed,
   onBack,
@@ -32,6 +35,7 @@ export function AutomationTaskDetail({
   actions,
 }: {
   task: AutomationTask | undefined;
+  refreshKey: number;
   loading: boolean;
   readFailed: boolean;
   onBack: () => void;
@@ -54,9 +58,12 @@ export function AutomationTaskDetail({
       : task?.definition?.schedule.kind === "manual"
         ? t("automation.schedules.manual")
         : automationTime(task?.next_run ?? null, i18n.language) || unknown;
-  const lastResult = ["ok", "0"].includes(task?.last_result ?? "")
-    ? t("automation.runSucceeded")
-    : task?.last_result || unknown;
+  const lastResult =
+    task?.status === "running"
+      ? t("automation.states.running")
+      : ["ok", "0"].includes(task?.last_result ?? "")
+        ? t("automation.runSucceeded")
+        : task?.last_result || unknown;
   const technicalFields: { key: string; value: string; copy?: boolean }[] = task
     ? [
         ...(task.identifier
@@ -146,7 +153,7 @@ export function AutomationTaskDetail({
         </div>
       </div>
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border-subtle pb-5">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div className="flex min-w-0 flex-1 basis-[320px] items-start gap-3">
           {task && (
             <AutomationTaskIcon task={task} className="mt-0.5 h-10 w-10" />
           )}
@@ -174,7 +181,7 @@ export function AutomationTaskDetail({
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           {actions}
           <button
             type="button"
@@ -271,6 +278,22 @@ export function AutomationTaskDetail({
               <p className="py-3 text-[13px] text-muted">
                 {t("automation.noContent")}
               </p>
+            )}
+          </div>
+          <div
+            role="tabpanel"
+            id="automation-detail-panel-runs"
+            aria-labelledby="automation-detail-tab-runs"
+            hidden={tab !== "runs"}
+            tabIndex={0}
+            className="outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            {tab === "runs" && (
+              <AutomationExecution
+                key={task.id}
+                task={task}
+                refreshKey={refreshKey}
+              />
             )}
           </div>
           <div
