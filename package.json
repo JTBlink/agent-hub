@@ -1,7 +1,7 @@
 {
   "name": "agent-hub",
   "private": true,
-  "version": "0.1.11",
+  "version": "0.1.12",
   "license": "MIT",
   "homepage": "https://jtblink.github.io/agent-hub/",
   "type": "module",
