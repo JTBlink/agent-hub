@@ -94,6 +94,16 @@ function button(name: string) {
 async function click(element: HTMLElement) {
   await act(async () => element.click());
 }
+
+it("provides a permanent automation entry independent of installed agents", async () => {
+  await render();
+  const link = container.querySelector<HTMLAnchorElement>(
+    'a[href="/automation"]',
+  )!;
+  expect(link.textContent).toBe("自动化");
+  await click(link);
+  expect(container.querySelector("output")?.textContent).toBe("/automation");
+});
 function expanded() {
   return [...container.querySelectorAll('[aria-expanded="true"]')].map(
     (element) => element.textContent,

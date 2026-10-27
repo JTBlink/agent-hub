@@ -1,7 +1,7 @@
 import { enabledInstalledAgents } from "../lib/agentAvailability";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, CalendarClock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
@@ -42,6 +42,13 @@ export function Dashboard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2.5">
+          <Link
+            to="/automation"
+            className="app-button-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            <CalendarClock aria-hidden="true" className="h-4 w-4" />
+            {t("automation.title")}
+          </Link>
           <Link
             to="/install?tab=local"
             className="app-button-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"

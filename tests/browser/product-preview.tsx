@@ -7,11 +7,170 @@ import type {
   Project,
   SkillGroup,
   ToolInfo,
+  AutomationTask,
+  AutomationDraft,
 } from "../../src/lib/tauri";
 import "../../src/index.css";
 
 // Documentation-only fixture: current product components, synthetic data, no disk access.
 const previewParams = new URLSearchParams(location.search);
+if (previewParams.has("capture")) {
+  const style = document.createElement("style");
+  style.textContent =
+    "*,*::before,*::after{transition:none!important;animation:none!important}";
+  document.head.append(style);
+}
+const automationTasks: AutomationTask[] = [
+  {
+    id: "launchd:backup",
+    name: "每日项目备份",
+    identifier: null,
+    bundle_id: null,
+    icon: null,
+    source: "launchd",
+    origin: "external",
+    can_edit: false,
+    can_run: false,
+    definition: null,
+    revision: null,
+    is_builtin: false,
+    schedule: "Hour=18 Minute=0",
+    project: "~/projects/demo-web",
+    status: "active",
+    next_run: null,
+    last_run: null,
+    last_result: null,
+    command: "/bin/sh ~/scripts/backup.sh",
+    prompt: null,
+    location: "~/Library/LaunchAgents/org.example.backup.plist",
+  },
+  {
+    id: "hermes:audit",
+    name: "工作日仓库审计",
+    identifier: null,
+    bundle_id: null,
+    icon: null,
+    source: "hermes",
+    origin: "external",
+    can_edit: false,
+    can_run: false,
+    definition: null,
+    revision: null,
+    is_builtin: false,
+    schedule: "0 9 * * 1-5",
+    project: "~/projects/demo-web",
+    status: "active",
+    next_run: "2026-10-28T09:00:00+08:00",
+    last_run: "2026-10-27T09:00:00+08:00",
+    last_result: "ok",
+    command: null,
+    prompt:
+      "检查仓库运行状况、依赖更新、失败的测试与 lint/类型检查状态。汇总发现的问题，并建议下一步行动。",
+    location: "~/.hermes/cron/jobs.json",
+  },
+  {
+    id: "hermes:health",
+    name: "项目健康检查",
+    identifier: null,
+    bundle_id: null,
+    icon: null,
+    source: "hermes",
+    origin: "external",
+    can_edit: false,
+    can_run: false,
+    definition: null,
+    revision: null,
+    is_builtin: false,
+    schedule: "@every 30m",
+    project: "~/projects/demo-api",
+    status: "paused",
+    next_run: null,
+    last_run: "2026-10-26T14:30:00+08:00",
+    last_result: "ok",
+    command: null,
+    prompt: "检查项目健康状况并生成简明报告。",
+    location: "~/.hermes/cron/jobs.json",
+  },
+  {
+    id: "cron:cleanup",
+    name: "清理临时构建产物",
+    identifier: null,
+    bundle_id: null,
+    icon: null,
+    source: "cron",
+    origin: "external",
+    can_edit: false,
+    can_run: false,
+    definition: null,
+    revision: null,
+    is_builtin: false,
+    schedule: "0 2 * * 0",
+    project: null,
+    status: "unknown",
+    next_run: null,
+    last_run: null,
+    last_result: null,
+    command: "/bin/sh ~/scripts/cleanup.sh",
+    prompt: null,
+    location: "crontab",
+  },
+];
+// Explicit synthetic creation record for previewing AgentHub ownership.
+automationTasks[0] = {
+  ...automationTasks[0],
+  id: "agent_hub:11111111-1111-4111-8111-111111111111",
+  origin: "agent_hub",
+  can_edit: true,
+  can_run: true,
+  revision: 1,
+  definition: {
+    name: "每日项目备份",
+    provider: "system",
+    content: "/bin/sh ~/scripts/backup.sh",
+    workdir: "~/projects/demo-web",
+    schedule: { kind: "daily", hour: 18, minute: 0, weekdays: false },
+    enabled: true,
+  },
+};
+for (const task of automationTasks.filter((task) => task.source === "hermes")) {
+  task.can_edit = true;
+  task.can_run = true;
+  task.definition = {
+    name: task.name,
+    provider: "hermes",
+    content: task.prompt ?? "",
+    workdir: task.project,
+    schedule: { kind: "custom", expression: task.schedule },
+    enabled: task.status !== "paused",
+  };
+}
+automationTasks.push({
+  ...automationTasks[0],
+  id: "launchd:demo-updater",
+  origin: "external",
+  can_edit: false,
+  can_run: false,
+  definition: null,
+  revision: null,
+  name: "示例输入法",
+  identifier: "org.example.DemoUpdater.wake",
+  bundle_id: "org.example.DemoUpdater",
+  icon: "/icons/32x32.png",
+  location: "~/Library/LaunchAgents/org.example.DemoUpdater.wake.plist",
+});
+automationTasks.push({
+  ...automationTasks[0],
+  id: "launchd:builtin",
+  origin: "external",
+  can_edit: false,
+  can_run: false,
+  definition: null,
+  revision: null,
+  name: "System Maintenance",
+  identifier: "com.apple.maintenance",
+  is_builtin: true,
+  location: "/System/Library/LaunchDaemons/com.apple.maintenance.plist",
+});
 const empty = previewParams.has("empty");
 const showUndeployed = previewParams.has("undeployed");
 const timestamp = 1791676800;
@@ -147,9 +306,168 @@ Object.assign(window, {
     unregisterCallback: () => {},
     invoke: async (
       command: string,
-      args?: { key?: string; id?: string; ids?: string[] },
+      args?: {
+        key?: string;
+        id?: string;
+        ids?: string[];
+        draft?: AutomationDraft;
+      },
     ) => {
       switch (command) {
+        case "run_automation":
+          return;
+        case "save_automation": {
+          const draft = args?.draft;
+          if (!draft) throw new Error("Missing automation definition");
+          const id =
+            args?.id ?? "agent_hub:22222222-2222-4222-8222-222222222222";
+          const index = automationTasks.findIndex((task) => task.id === id);
+          const task: AutomationTask = {
+            ...automationTasks[0],
+            id,
+            name: draft.name,
+            definition: draft,
+            revision:
+              (index >= 0 ? (automationTasks[index].revision ?? 0) : 0) + 1,
+            source: draft.provider === "hermes" ? "hermes" : "launchd",
+            origin: "agent_hub",
+            can_edit: true,
+            can_run: true,
+            status: draft.enabled ? "active" : "paused",
+            command: draft.provider === "system" ? draft.content : null,
+            prompt: draft.provider === "hermes" ? draft.content : null,
+            project: draft.workdir,
+            schedule:
+              draft.schedule.kind === "manual" ? "manual" : "0 9 * * 1-5",
+          };
+          if (index >= 0) automationTasks[index] = task;
+          else automationTasks.push(task);
+          return id;
+        }
+        case "remove_automation": {
+          const index = automationTasks.findIndex(
+            (task) => task.id === args?.id,
+          );
+          if (index >= 0) automationTasks.splice(index, 1);
+          return;
+        }
+        case "get_automation_templates":
+          return {
+            shell: "sh",
+            templates: [
+              {
+                id: "workspace-check",
+                title: "工作目录检查",
+                description: "查看当前目录和文件，按需手动触发。",
+                draft: {
+                  name: "工作目录检查",
+                  provider: "system",
+                  content: "pwd\nls -la",
+                  workdir: null,
+                  schedule: { kind: "manual" },
+                  enabled: true,
+                },
+              },
+              {
+                id: "disk-check",
+                title: "磁盘空间检查",
+                description: "每小时检查可用磁盘空间。",
+                draft: {
+                  name: "磁盘空间检查",
+                  provider: "system",
+                  content: "df -h .",
+                  workdir: null,
+                  schedule: { kind: "interval", minutes: 60 },
+                  enabled: true,
+                },
+              },
+              {
+                id: "git-status",
+                title: "Git 工作区状态",
+                description: "工作日查看改动与最近提交，请指定 Git 工作目录。",
+                draft: {
+                  name: "Git 工作区状态",
+                  provider: "system",
+                  content: "git status --short\ngit log -5 --oneline",
+                  workdir: null,
+                  schedule: {
+                    kind: "daily",
+                    hour: 17,
+                    minute: 0,
+                    weekdays: true,
+                  },
+                  enabled: true,
+                },
+              },
+              ...(!previewParams.has("no-hermes")
+                ? [
+                    {
+                      id: "repository-audit",
+                      title: "工作日仓库审计",
+                      description:
+                        "让 Hermes 检查仓库状态，汇总问题与后续建议。",
+                      draft: {
+                        name: "工作日仓库审计",
+                        provider: "hermes",
+                        content:
+                          "检查当前仓库的依赖更新、失败测试、lint/类型检查状态和有风险的未提交改动。汇总证据与问题，给出下一步建议，只报告结果，不修改文件。",
+                        workdir: null,
+                        schedule: {
+                          kind: "daily",
+                          hour: 9,
+                          minute: 0,
+                          weekdays: true,
+                        },
+                        enabled: true,
+                      },
+                    },
+                    {
+                      id: "daily-summary",
+                      title: "每日项目摘要",
+                      description: "让 Hermes 汇总项目近期活动与待办建议。",
+                      draft: {
+                        name: "每日项目摘要",
+                        provider: "hermes",
+                        content:
+                          "阅读工作目录中的最近提交、当前改动和项目记录，生成简短的每日摘要：已完成事项、风险与后续建议。不要修改文件。",
+                        workdir: null,
+                        schedule: {
+                          kind: "daily",
+                          hour: 18,
+                          minute: 0,
+                          weekdays: false,
+                        },
+                        enabled: true,
+                      },
+                    },
+                  ]
+                : []),
+            ],
+          };
+        case "get_automation_backups":
+          return [
+            {
+              schema_version: 1,
+              id: "agent_hub:33333333-3333-4333-8333-333333333333",
+              shell: "sh",
+              draft: {
+                name: "备份中的目录检查",
+                provider: "system",
+                content: "pwd\nls -la",
+                workdir: null,
+                schedule: { kind: "manual" },
+                enabled: true,
+              },
+            },
+          ];
+        case "get_automation_overview":
+          return {
+            tasks: previewParams.has("no-hermes")
+              ? automationTasks.filter((task) => task.source !== "hermes")
+              : automationTasks,
+            issues: [],
+            hermes_installed: !previewParams.has("no-hermes"),
+          };
         case "get_settings":
           return (
             (
@@ -214,6 +532,7 @@ const { AppProvider } = await import("../../src/context/AppContext");
 const { ThemeProvider } = await import("../../src/context/ThemeContext");
 const { Layout } = await import("../../src/components/Layout");
 const { Dashboard } = await import("../../src/views/Dashboard");
+const { Automation } = await import("../../src/views/Automation");
 const { MySkills } = await import("../../src/views/MySkills");
 const { WorkspaceView } = await import("../../src/views/WorkspaceView");
 const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
@@ -221,7 +540,9 @@ const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
 const initialRoute =
   new URLSearchParams(location.search).get("view") === "dashboard"
     ? "/"
-    : "/my-skills";
+    : previewParams.get("view") === "automation"
+      ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
+      : "/my-skills";
 createRoot(document.getElementById("root")!).render(
   <MemoryRouter initialEntries={[initialRoute]}>
     <ThemeProvider>
@@ -230,6 +551,7 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/automation" element={<Automation />} />
             <Route path="/my-skills" element={<MySkills />} />
             <Route
               path="/global-workspace"
@@ -257,3 +579,56 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </MemoryRouter>,
 );
+
+// Optional deterministic documentation states. Only clicks fixture components;
+// the preview IPC above never touches files or launches commands.
+const automationState = previewParams.get("automation-state");
+if (automationState) {
+  const waitFor = async (selector: () => HTMLElement | null) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const element = selector();
+      if (element) return element;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    throw new Error("Documentation preview state did not become ready");
+  };
+  void (async () => {
+    if (automationState === "menu") {
+      const trigger = await waitFor(() =>
+        document.querySelector<HTMLElement>(
+          'button[role="combobox"][aria-label="任务来源"]',
+        ),
+      );
+      trigger.click();
+      return;
+    }
+    const create = await waitFor(
+      () =>
+        [...document.querySelectorAll("button")].find(
+          (node) => node.textContent === "新建自动化",
+        ) ?? null,
+    );
+    create.click();
+    if (automationState === "create") return;
+    const templates = await waitFor(
+      () =>
+        [...document.querySelectorAll("button")].find(
+          (node) => node.textContent === "使用模板",
+        ) ?? null,
+    );
+    templates.click();
+    const audit = await waitFor(() =>
+      document.querySelector<HTMLElement>(
+        'button[aria-label="工作日仓库审计"]',
+      ),
+    );
+    if (automationState === "editor") {
+      audit.click();
+      if (previewParams.has("capture"))
+        setTimeout(() => {
+          if (document.activeElement instanceof HTMLElement)
+            document.activeElement.blur();
+        }, 100);
+    }
+  })();
+}

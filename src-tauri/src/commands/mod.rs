@@ -1,6 +1,7 @@
 pub mod agent_control;
 pub mod agent_workspace;
 pub mod app_updates;
+pub mod automation;
 pub mod browse;
 pub mod dialog;
 pub mod discovered_skills;

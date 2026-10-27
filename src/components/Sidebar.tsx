@@ -16,6 +16,7 @@ import {
   FolderOpen,
   GripVertical,
   Link2,
+  CalendarClock,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -100,6 +101,7 @@ export function Sidebar() {
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
     { name: t("sidebar.installSkills"), path: "/install", icon: Download },
     { name: t("sidebar.backup"), path: "/backup", icon: RefreshCw },
+    { name: t("automation.title"), path: "/automation", icon: CalendarClock },
   ];
 
   const handleDeleteProject = async () => {

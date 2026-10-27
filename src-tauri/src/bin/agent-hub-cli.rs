@@ -1,3 +1,5 @@
+#[path = "agent-hub-cli/automation.rs"]
+mod automation;
 #[path = "agent-hub-cli/help.rs"]
 mod help;
 #[path = "agent-hub-cli/project.rs"]
@@ -44,6 +46,8 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 汇总、创建、编辑和手动运行自动化任务。
+    Automations(automation::AutomationArgs),
     /// 查看或修改中央技能库路径。
     Repo(RepoArgs),
     /// 管理供团队共享的项目技能库和项目入口。
@@ -869,6 +873,10 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if matches!(&cli.command, Commands::Automations(_)) && cli.skills_root.is_some() {
+        bail!("Automations do not use the skills repository; use AGENT_HUB_AUTOMATION_HOME for an isolated automation directory");
+    }
+
     if let Some(skills_root) = &cli.skills_root {
         let base = central_repo::external_base_dir(skills_root);
         central_repo::set_runtime_base_dir_override(Some(base));
@@ -881,6 +889,10 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
     }
 
+    if let Commands::Automations(args) = &cli.command {
+        return automation::run(args, cli.json);
+    }
+
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
@@ -891,6 +903,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         Commands::SkillGroups(args) => run_skill_groups(args, &store, cli.json),
         Commands::Git(args) => run_git(args, &store, cli.skills_root.is_some(), cli.json),
         Commands::Help { .. } => unreachable!("handled before opening the store"),
+        Commands::Automations(_) => unreachable!("handled before opening the store"),
     }
 }
 

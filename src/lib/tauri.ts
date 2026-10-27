@@ -1,5 +1,83 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export type AutomationSource =
+  "launchd" | "cron" | "systemd" | "windows" | "hermes";
+export type AutomationTaskStatus =
+  "active" | "running" | "paused" | "completed" | "error" | "unknown";
+export type AutomationTaskOrigin = "agent_hub" | "external" | "unknown";
+export type AutomationSchedule =
+  | { kind: "manual" }
+  | { kind: "interval"; minutes: number }
+  | { kind: "daily"; hour: number; minute: number; weekdays: boolean }
+  | { kind: "custom"; expression: string };
+export interface AutomationDraft {
+  name: string;
+  provider: "system" | "hermes";
+  content: string;
+  workdir: string | null;
+  schedule: AutomationSchedule;
+  enabled: boolean;
+}
+export interface AutomationTask {
+  id: string;
+  name: string;
+  identifier: string | null;
+  bundle_id: string | null;
+  icon: string | null;
+  source: AutomationSource;
+  origin: AutomationTaskOrigin;
+  can_edit: boolean;
+  can_run: boolean;
+  definition: AutomationDraft | null;
+  revision: number | null;
+  is_builtin: boolean;
+  schedule: string;
+  project: string | null;
+  next_run: string | null;
+  last_run: string | null;
+  status: AutomationTaskStatus;
+  last_result: string | null;
+  command: string | null;
+  prompt: string | null;
+  location: string;
+}
+export interface AutomationOverview {
+  tasks: AutomationTask[];
+  issues: { source: AutomationSource | "agent_hub"; message: string }[];
+  hermes_installed: boolean;
+}
+export const getAutomationOverview = (locale?: string) =>
+  invoke<AutomationOverview>("get_automation_overview", { locale });
+export interface AutomationTemplate {
+  id: string;
+  title: string;
+  description: string;
+  draft: AutomationDraft;
+}
+export interface AutomationCatalog {
+  shell: "sh" | "powershell";
+  templates: AutomationTemplate[];
+}
+export interface AutomationBackup {
+  schema_version: number;
+  id: string;
+  shell: "sh" | "powershell";
+  draft: AutomationDraft;
+}
+export const getAutomationTemplates = (locale: string) =>
+  invoke<AutomationCatalog>("get_automation_templates", { locale });
+export const getAutomationBackups = () =>
+  invoke<AutomationBackup[]>("get_automation_backups");
+export const saveAutomation = (
+  id: string | null,
+  revision: number | null,
+  draft: AutomationDraft,
+) => invoke<string>("save_automation", { id, revision, draft });
+export const runAutomation = (id: string) =>
+  invoke<void>("run_automation", { id });
+export const removeAutomation = (id: string) =>
+  invoke<void>("remove_automation", { id });
+
 // ── Types ──
 
 export type ToolCategory = "coding" | "lobster";

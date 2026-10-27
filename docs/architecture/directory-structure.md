@@ -9,6 +9,7 @@ agent-hub/
 ├── src/                            # React/TypeScript 前端
 │   ├── views/                      # 页面视图
 │   │   ├── Dashboard.tsx           #   仪表盘主页
+│   │   ├── Automation.tsx          #   本机系统与 Hermes 自动化列表及页面导航
 │   │   ├── WorkspaceView.tsx       #   工作空间视图
 │   │   ├── ProjectDetail.tsx       #   项目详情
 │   │   ├── Settings.tsx            #   设置页
@@ -137,6 +138,7 @@ agent-hub/
 │   │       ├── git_fetcher.rs      #     Git 远程拉取
 │   │       ├── git_fetcher/cache_cleanup.rs # 使用文件锁清理远程克隆缓存
 │   │       ├── git_skill_sync.rs   #     本地仓库写回预览、内容确认与失败恢复
+│   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及创建记录
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端

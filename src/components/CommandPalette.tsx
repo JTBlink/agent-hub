@@ -10,6 +10,7 @@ import {
   Folder,
   Home,
   ArrowRight,
+  CalendarClock,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
@@ -154,6 +155,13 @@ export function CommandPalette() {
       }));
 
     const actionDefs: PaletteItem[] = [
+      {
+        id: "action:automation",
+        kind: "action",
+        label: t("automation.title"),
+        icon: <CalendarClock className="h-3.5 w-3.5" />,
+        run: () => navigate("/automation"),
+      },
       {
         id: "action:dashboard",
         kind: "action",

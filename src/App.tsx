@@ -18,6 +18,7 @@ import { ProjectDetail } from "./views/ProjectDetail";
 import { Backup } from "./views/Backup";
 import BackupDiff from "./views/BackupDiff";
 import { Help } from "./views/Help";
+import { Automation } from "./views/Automation";
 
 function ThemedToaster() {
   const { resolvedTheme } = useThemeContext();
@@ -63,6 +64,7 @@ function App() {
                 element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
               />
               <Route path="/install" element={<InstallSkills />} />
+              <Route path="/automation" element={<Automation />} />
               <Route path="/backup" element={<Backup />} />
               <Route path="/backup/diff" element={<BackupDiff />} />
               <Route path="/project/:id" element={<ProjectDetail />} />

@@ -1,6 +1,6 @@
 # 产品截图
 
-`skill-library.png` 与 `dashboard.png` 来自当前 React 产品组件，使用固定的示例技能、Agent、项目与路径，不读取本机数据库，也不包含个人信息。截图展示开发版本界面，已发布安装包可能有所不同。
+`skill-library.png`、`dashboard.png` 与 `automation*.png` 来自当前 React 产品组件，使用固定的示例技能、Agent、项目与路径，不读取本机数据库，也不包含个人信息。截图展示开发版本界面，已发布安装包可能有所不同。
 
 ## 当前截图
 
@@ -20,3 +20,21 @@
 截图页直接复用 `Layout`、`MySkills`、`Dashboard` 和应用上下文，只在 Tauri 调用边界注入示例数据。它仅用于文档截图，不包含完整的写入与文件操作能力。
 
 README 与官网默认展示工作台，技能库可展开或切换查看。主页构建将这两张图片复制至输出目录的 `assets/`，README 直接引用这里的源图片。更新源图片即可同步这两个展示入口，无需维护截图副本。
+
+## 自动化截图
+
+所有截图可由下方脚本统一更新。自动化截图同样来自 `tests/browser/product-preview.tsx` 的合成数据，复用实际列表、创建、模板、详情和菜单组件。任务名、命令、提示词、项目与目录均为示例，不读取真实任务或账号；不采用真实用户截图后遮挡信息的方式。
+
+- `automation.png`：创建者、调度器、状态及系统内置过滤，列表行的手动触发。
+- `automation-create.png`：从合成 Hermes 模板填入的创建表单，默认独立工作目录提示。
+- `automation-detail.png`：示例仓库审计任务详情与立即运行入口。
+- `automation-templates.png`：系统与 Hermes 模板，支持从 Git 备份新建。
+- `automation-menu.png`：实际打开的主题下拉菜单，验证弹出面板沿用应用主题。
+
+复用本机 Vite 后执行：
+
+```bash
+node scripts/capture-product-screenshots.mjs
+```
+
+脚本只允许本地预览来源，以隔离的临时 Chromium profile 捕获 1440×900、1 倍像素密度的 PNG，结束后清理 profile，不读取日常浏览器数据。可通过 `AGENT_HUB_SCREENSHOT_BROWSER` 指定浏览器执行文件，通过 `AGENT_HUB_PREVIEW_ORIGIN` 指定本地开发端口。拍摄后检查加载、错误与菜单打开状态，并检查示例内容及个人信息。

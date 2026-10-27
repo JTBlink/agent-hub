@@ -1,8 +1,8 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.2.0"
-description: Manage the user's shared agent-skill library via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
+  version: "1.3.0"
+description: Manage the user's shared agent-skill library and local automation tasks via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
 ## Before doing anything
@@ -103,6 +103,46 @@ Keep these three states separate:
 - **Deployment**: `skills deploy/undeploy` and `skill-groups deploy/undeploy` control what an agent can actually see.
 
 Internally, skill groups are still stored as scenarios for backward-compatible Git Backup. The CLI and UI call them skill groups.
+
+## Automation tasks and manual triggers
+
+Use this workflow when the user wants an Agent to create, inspect, schedule, or
+manually trigger a local automation. First check `automations --help`; an older
+CLI may lack this feature. Update the matching app/CLI rather than editing
+scheduler files or Hermes jobs.json as a fallback.
+
+```bash
+"$SM" --json automations templates
+"$SM" --json automations list --origin agent-hub
+"$SM" --json automations show '<task-id>'
+"$SM" --json automations run '<task-id>'
+```
+
+Resolve the exact ID from `list`, then inspect the command/prompt and working
+directory with `show` before running the user-selected task. Use `can_run` and
+`can_edit`; existing external system jobs are read-only. Running returns
+`state=requested`, which is not execution success. Read a fresh `show` result
+and distinguish its latest run from an older result; do not repeatedly trigger
+a task because status has not updated yet. Paused or terminal Hermes tasks need
+an explicit resume/repair before running.
+
+Use `create --template <template-id>` for the platform-correct built-in starters,
+or `create --file task.json` for a definition. `edit <id> --file task.json
+--revision <revision>` protects managed tasks from stale edits. An omitted
+working directory is provisioned under `~/.agent-hub/automations/<task-id>/workspace`;
+an explicit existing directory is preserved. Saving does not add an immediate
+run. Task definitions join the existing Git auto-backup flow; runtime logs,
+registrations, and workspace files stay local.
+
+```bash
+"$SM" --json automations backups
+"$SM" --json automations restore '<backup-id>'
+```
+
+`restore` previews a paused copy. Use `--apply` only when the user wants that
+copy registered locally; Git sync itself must not activate tasks or overwrite
+an existing local schedule. GUI users can inspect the same definitions via
+New automation → Use template → Git backups.
 
 ## Install
 

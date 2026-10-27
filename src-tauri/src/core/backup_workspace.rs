@@ -301,6 +301,7 @@ pub(crate) fn prepare_unlocked(store: &SkillStore) -> Result<()> {
         git_backup::ensure_no_interrupted_git_operation(&root)?;
     }
     super::shared_skill_index::register_missing(store)?;
+    super::automation::backup::flush(&sync_metadata::metadata_dir()).map_err(anyhow::Error::msg)?;
     sync_metadata::write_all_from_db_unlocked(store)?;
     let live = central_repo::skills_dir();
     let before = files::snapshot(&live)?;
@@ -336,6 +337,7 @@ pub(crate) fn prepare_unlocked(store: &SkillStore) -> Result<()> {
 }
 
 fn project_metadata(source: &Path, target: &Path, exporting: bool) -> Result<()> {
+    super::automation::backup::project(source, target).map_err(anyhow::Error::msg)?;
     // Only portable schema/records, never sync protocol files or local state.
     for name in ["schema.json", "skills", "scenarios", "scenario-skills"] {
         files::remove(&target.join(name))?;
@@ -394,13 +396,18 @@ pub(crate) fn finish_unlocked(store: &SkillStore) -> Result<()> {
         &stage.path().join(".agent-hub"),
         false,
     )?;
-    let metadata_changed = ["schema.json", "skills", "scenarios", "scenario-skills"]
-        .iter()
-        .try_fold(false, |changed, name| -> Result<bool> {
-            Ok(changed
-                || files::fingerprint(&stage.path().join(".agent-hub").join(name))?
-                    != files::fingerprint(&journal.live_root.join(".agent-hub").join(name))?)
-        })?;
+    let metadata_changed = super::automation::backup::differs(
+        &stage.path().join(".agent-hub"),
+        &journal.live_root.join(".agent-hub"),
+    )
+    .map_err(anyhow::Error::msg)?
+        || ["schema.json", "skills", "scenarios", "scenario-skills"]
+            .iter()
+            .try_fold(false, |changed, name| -> Result<bool> {
+                Ok(changed
+                    || files::fingerprint(&stage.path().join(".agent-hub").join(name))?
+                        != files::fingerprint(&journal.live_root.join(".agent-hub").join(name))?)
+            })?;
     if changed.is_empty() && !metadata_changed {
         fs::remove_file(journal_path())?;
         return Ok(());
@@ -456,6 +463,11 @@ pub(crate) fn finish_unlocked(store: &SkillStore) -> Result<()> {
         }
     }
     crate::commands::git_backup::reconcile_skills_index_unlocked(store)?;
+    super::automation::backup::project(
+        &stage.path().join(".agent-hub"),
+        &journal.live_root.join(".agent-hub"),
+    )
+    .map_err(anyhow::Error::msg)?;
     fs::remove_file(journal_path())?;
     Ok(())
 }

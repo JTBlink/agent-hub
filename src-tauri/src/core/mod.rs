@@ -2,6 +2,7 @@ pub mod app_state;
 pub mod app_updates;
 pub mod audit_log;
 pub mod auto_backup;
+pub mod automation;
 pub mod backup_workspace;
 pub mod central_repo;
 pub mod cli_bridge;

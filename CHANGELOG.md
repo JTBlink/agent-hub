@@ -6,7 +6,15 @@
 
 ### Changed
 
+- 应用内单选菜单统一主题、键盘、嵌套 Escape、portal 与文字缩放定位，项目开发 Skill 补充 UI/组件规范。
 - 需求、规格与任务统一迁移至 GitHub Issues，按版本关联 Milestones；自动同步分诊状态及发布归属，清理本地任务记录、旧提交约定与 CI 任务索引检查。
+
+### Added
+
+- 新增「自动化」入口，汇总 macOS、Windows、Linux 系统任务及已安装 Hermes，支持创建者、来源、状态与搜索筛选，默认隐藏系统内置任务。
+- 支持自动化创建、编辑、暂停/恢复、删除和手动运行；系统命令使用用户级原生调度器，桌面端与 `automations` CLI 共用核心逻辑，Agent 可通过 CLI 触发。
+- 提供系统与 Hermes 模板快速创建、Git 任务定义自动备份与暂停副本恢复；未指定工作目录时创建 `~/.agent-hub/automations/<任务 ID>/workspace`，保留显式目录及工作区文件。
+- 自动化采用 Orca 风格的独立详情和左右分栏表单，展示应用本地化名称、图标和创建者标记；技术标识移至详情。更新 README、CLI Skill 与脱敏产品截图。
 
 ### Fixed
 

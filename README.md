@@ -24,7 +24,8 @@ Skills 不必散落在每个工具和项目目录里。AgentHub 集中管理技�
 | 技能库       | 从本地目录或 Git 来源导入，查看内容与来源、检查更新、用标签筛选。 |
 | 技能组       | 按开发、设计、研究等用途整理集合，向工作空间批量添加或移除技能。  |
 | Agent 与项目 | 分别管理全局和项目技能，查看部署关系与同步状态。                  |
-| Git 备份     | 配置自己的 Git 远端，备份、恢复技能库并处理同步冲突。             |
+| Git 备份     | 配置自己的 Git 远端，备份技能库与自动化任务定义，处理同步冲突。   |
+| 自动化       | 管理系统与 Hermes 任务，使用模板创建、编辑日程、手动运行。        |
 | 桌面与 CLI   | 使用桌面工作台、托盘或命令行；共用同一套 Rust 核心。              |
 
 导入技能库、加入技能组和部署到工作空间是不同操作：先收藏内容，再组织用途，最后选择需要使用这些技能的 Agent 或项目。修改组内成员不会自动更新已有部署。
@@ -37,6 +38,41 @@ Skills 不必散落在每个工具和项目目录里。AgentHub 集中管理技�
 _技能库的全部视图，展示已部署、待部署与未分组的示例技能。_
 
 </details>
+
+## 自动化与 Agent 触发
+
+在“自动化”中汇总本机系统与 Hermes 定时任务，系统内置任务默认隐藏。列表区分“AgentHub 创建”和其他来源；Hermes 入口仅在本机安装后显示。使用内置模板快速填写任务，创建后可编辑、暂停/恢复或立即运行。
+
+命令任务使用当前用户的原生调度器：macOS launchd、Linux systemd timer、Windows 任务计划程序；Hermes 任务由 Hermes 调度。关闭 AgentHub 后计划继续保留，执行需要用户会话或对应调度服务运行。
+
+![自动化列表：创建者筛选、日程、执行状态和手动运行入口](docs/images/automation.png)
+
+<details>
+  <summary>查看模板、创建与详情页面</summary>
+
+![自动化模板：系统命令与 Hermes 示例](docs/images/automation-templates.png)
+
+![创建自动化：提示词、工作目录与日程设置](docs/images/automation-create.png)
+
+![自动化详情：概述、最近运行与立即运行操作](docs/images/automation-detail.png)
+
+</details>
+
+_截图均来自合成数据预览，不读取本机任务、账号或个人目录。_
+
+工作目录留空时，自动创建 `~/.agent-hub/automations/<任务 ID>/workspace`；显式指定时沿用所选目录。AgentHub 创建的任务定义随现有 Git 自动备份同步，执行脚本、运行日志和工作目录文件保存在本机。从备份新建时先检查配置，副本默认暂停，保留现有本机任务。
+
+Agent 可直接使用同一套 CLI，无需打开页面：
+
+```bash
+agent-hub-cli --json automations templates
+agent-hub-cli automations create --template workspace-check
+agent-hub-cli --json automations list --origin agent-hub
+agent-hub-cli --json automations run '<task-id>'
+agent-hub-cli --json automations show '<task-id>'
+```
+
+`run` 返回“已请求运行”，实际结果以任务执行状态为准。完整参数和 JSON 定义见 [CLI 说明](docs/help/zh/reference/cli.md)。
 
 ## 安装与开始使用
 
@@ -51,11 +87,14 @@ _技能库的全部视图，展示已部署、待部署与未分组的示例技�
 1. 打开 AgentHub，扫描并导入已有 Skills，或从本地目录、Git 仓库导入。
 2. 用标签和技能组整理内容，选择要启用的 Agent。
 3. 在全局或项目工作空间中部署所需技能，查看同步状态。
-4. 按需设置 Git 远端，为技能库建立备份。
+4. 按需设置 Git 远端，为技能库与自动化任务定义建立备份。
+5. 在自动化中使用模板创建任务，或通过 CLI/Agent 手动触发。
 
 ## 数据存放
 
 技能内容默认位于 `~/.agent-hub/skills`，可在设置中移动技能库。应用数据库、配置、日志与配套 CLI 保存在 `~/.agent-hub/`，包括 `library/agent-hub.db`、`repo-config.json` 和 `bin/agent-hub-cli`。
+
+自动化的本机注册记录与执行脚本位于系统应用数据目录的 `com.jtstudio.agenthub/automations` 下，默认任务工作目录位于 `~/.agent-hub/automations/`。删除任务保留工作目录中的文件。
 
 可在设置中创建 `~/.agents/skills` 软链接，供其他 AI 工具发现技能。Git 备份默认位于 `~/.agent-hub/backup`；凭据单独保存，不进入技能备份。详见[目录结构](docs/architecture/directory-structure.md)。
 

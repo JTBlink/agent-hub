@@ -306,6 +306,8 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
         // the window closes (the loop ticks at least every 500ms, so the flush
         // below needs no extra timer).
         let mut pending_emit = false;
+        let automation_root = super::automation::watch_dir();
+        let mut automation_watched = false;
 
         let emit_now = |last_emit: &mut Instant| {
             if let Err(err) = app.emit(APP_FS_CHANGED_EVENT, ()) {
@@ -316,6 +318,18 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
         };
 
         loop {
+            // Watch only this app's registry directory, without descending into
+            // execution output or user workspaces. CLI edits use atomic rename.
+            if !automation_watched && automation_root.is_absolute() {
+                match std::fs::create_dir_all(&automation_root).and_then(|()| {
+                    watcher
+                        .watch(&automation_root, RecursiveMode::NonRecursive)
+                        .map_err(std::io::Error::other)
+                }) {
+                    Ok(()) => automation_watched = true,
+                    Err(error) => log::debug!("Cannot watch automation definitions: {error}"),
+                }
+            }
             if last_sync.elapsed() >= WATCH_RESCAN_INTERVAL {
                 let changed = sync_watch_set(&mut watcher, &mut watched, &store);
                 // No path information here, so a mute window classifies as
@@ -340,11 +354,22 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
 
             match rx.recv_timeout(Duration::from_millis(500)) {
                 Ok(Ok(event)) => {
+                    let automation_event = event.paths.iter().any(|path| {
+                        path == &automation_root || path == &automation_root.join("tasks.json")
+                    });
+                    if automation_event && super::automation::has_pending_backup() {
+                        super::auto_backup::notify_central_change();
+                    }
                     if touches_central_repo(&event) {
                         super::auto_backup::notify_central_change();
                     }
                     match decide_emit(
-                        should_emit(&event),
+                        should_emit(&event)
+                            && (automation_event
+                                || event
+                                    .paths
+                                    .iter()
+                                    .any(|path| !path.starts_with(&automation_root))),
                         classify_event_paths(&event.paths),
                         last_emit.elapsed() < WATCH_EMIT_DEBOUNCE,
                     ) {

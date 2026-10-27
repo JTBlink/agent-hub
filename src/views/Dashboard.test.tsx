@@ -92,6 +92,16 @@ function card(title: string) {
   return match;
 }
 
+it("opens the automation overview from the dashboard", async () => {
+  await render();
+  const link = container.querySelector<HTMLAnchorElement>(
+    'a[href="/automation"]',
+  )!;
+  expect(link.textContent).toBe("自动化");
+  await act(async () => link.click());
+  expect(container.textContent).toBe("/automation");
+});
+
 it("opens the full library undeployed filter without a dialog or a stale group", async () => {
   app.managedSkills = [
     makeSkill(0, true),
