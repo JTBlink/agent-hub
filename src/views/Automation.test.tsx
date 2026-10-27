@@ -200,7 +200,7 @@ it("hides built-in maintenance by default and reveals it with a filter switch", 
   );
   await act(async () => toggle.click());
   expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
-  await select("任务来源", "hermes");
+  await chooseSource("hermes");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(container.textContent).not.toContain("已隐藏");
   await click("刷新");
@@ -267,10 +267,10 @@ it("aggregates system and Hermes tasks and filters by source and status", async 
   expect(api.getAutomationOverview).toHaveBeenCalledOnce();
   expect(api.getAutomationOverview).toHaveBeenCalledWith("zh");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
-  await select("任务来源", "hermes");
+  await chooseSource("hermes");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(container.querySelector("tbody")?.textContent).toContain("仓库审计");
-  await select("任务来源", "system");
+  await chooseSource("system");
   expect(container.querySelector("tbody")?.textContent).toContain("系统备份");
   const statusSelect = container.querySelector<HTMLSelectElement>(
     '[aria-label="任务状态"]',
@@ -290,7 +290,7 @@ it("hides the Hermes entry unless executable installation evidence is present", 
   });
   await render();
   expect(
-    [...container.querySelectorAll('[aria-label="任务来源"] option')].map(
+    [...container.querySelectorAll('[aria-label="任务来源"] button')].map(
       (node) => node.textContent,
     ),
   ).toEqual(["全部调度器", "系统任务"]);
@@ -450,6 +450,12 @@ async function select(label: string, value: string) {
     node.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
+async function chooseSource(value: "all" | "system" | "hermes") {
+  const button = container.querySelector<HTMLButtonElement>(
+    `[aria-label="任务来源"] button[value="${value}"]`,
+  )!;
+  await act(async () => button.click());
+}
 async function input(label: string, value: string) {
   const node = container.querySelector<HTMLInputElement | HTMLTextAreaElement>(
     `[aria-label="${label}"]`,
@@ -475,14 +481,17 @@ it("keeps list filters on return and supports direct task links and missing task
   await render("/automation?task=missing");
   expect(container.textContent).toContain("任务已移除或当前不可用");
   await ariaClick("返回自动化列表");
-  await select("任务来源", "hermes");
+  await chooseSource("hermes");
   await click(hermes.name);
   await ariaClick("返回自动化列表");
   expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
   expect(
-    container.querySelector<HTMLSelectElement>('[aria-label="任务来源"]')!
-      .value,
-  ).toBe("hermes");
+    container
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="任务来源"] button[value="hermes"]',
+      )!
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
 });
 
 it("uses explicit ownership for the AgentHub filter rather than the job name", async () => {
@@ -949,4 +958,45 @@ it("labels Hermes result files as saved output instead of inventing execution st
   expect(panel.textContent).toContain("已保存");
   expect(panel.textContent).not.toContain("退出码");
   expect(panel.textContent).not.toContain("结束时间");
+});
+
+it("offers a visible Hermes filter that combines with creator filters", async () => {
+  const ownedHermes = {
+    ...hermes,
+    id: "agent_hub:hermes-audit",
+    name: "托管审计",
+    origin: "agent_hub" as const,
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [native, hermes, ownedHermes],
+    issues: [],
+    hermes_installed: true,
+  });
+  await render();
+  const group = container.querySelector('[aria-label="任务来源"]')!;
+  expect(
+    [...group.querySelectorAll("button")].map((node) => node.textContent),
+  ).toEqual(["全部调度器", "系统任务", "Hermes"]);
+  await chooseSource("hermes");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
+  const origin = (value: string) =>
+    [
+      ...container.querySelectorAll<HTMLButtonElement>(
+        '[aria-label="任务创建者"] button',
+      ),
+    ].find((node) => node.textContent?.startsWith(value))!;
+  await act(async () => origin("其他来源").click());
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(container.querySelector("tbody")?.textContent).toContain(hermes.name);
+  await act(async () => origin("AgentHub 创建").click());
+  expect(container.querySelector("tbody")?.textContent).toContain(
+    ownedHermes.name,
+  );
+  await chooseSource("system");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(0);
+  await chooseSource("all");
+  expect(container.querySelectorAll("tbody tr")).toHaveLength(1);
+  expect(container.querySelector("tbody")?.textContent).toContain(
+    ownedHermes.name,
+  );
 });

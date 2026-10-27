@@ -27,6 +27,7 @@ const shots = [
   ["dashboard.png", "&undeployed&ungrouped"],
   ["skill-library.png", "&undeployed&ungrouped"],
   ["automation.png", ""],
+  ["automation-hermes.png", "&automation-state=hermes"],
   ["automation-create.png", "&automation-state=editor"],
   ["automation-detail.png", "&task=hermes%3Aaudit"],
   [

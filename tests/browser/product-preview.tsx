@@ -694,10 +694,19 @@ if (automationState) {
       }
       return;
     }
+    if (automationState === "hermes") {
+      const filter = await waitFor(() =>
+        document.querySelector<HTMLElement>(
+          '[aria-label="任务来源"] button[value="hermes"]',
+        ),
+      );
+      filter.click();
+      return;
+    }
     if (automationState === "menu") {
       const trigger = await waitFor(() =>
         document.querySelector<HTMLElement>(
-          'button[role="combobox"][aria-label="任务来源"]',
+          'button[role="combobox"][aria-label="任务状态"]',
         ),
       );
       trigger.click();

@@ -43,6 +43,9 @@ export function AutomationToolbar({
 }) {
   const { t } = useTranslation();
   const origins = ["all", "agent_hub", "external"] as const;
+  const sources: AutomationSourceFilter[] = hermesInstalled
+    ? ["all", "system", "hermes"]
+    : ["all", "system"];
   return (
     <div className="space-y-4">
       <div
@@ -77,6 +80,36 @@ export function AutomationToolbar({
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-3">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
+          <span className="text-[12px] text-muted">
+            {t("automation.scheduler")}
+          </span>
+          <div
+            role="group"
+            aria-label={t("automation.sourceFilter")}
+            className="app-segmented inline-flex max-w-full flex-wrap"
+          >
+            {sources.map((value) => (
+              <button
+                key={value}
+                type="button"
+                value={value}
+                aria-pressed={source === value}
+                onClick={() => onSource(value)}
+                className={cn(
+                  "app-segmented-button focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  source === value && "app-segmented-button-active",
+                )}
+              >
+                {t(
+                  value === "all"
+                    ? "automation.allSources"
+                    : `automation.filters.${value}`,
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="relative min-w-0 flex-1 basis-64">
           <Search
             aria-hidden="true"
@@ -92,24 +125,6 @@ export function AutomationToolbar({
             className="app-input w-full pl-9"
           />
         </label>
-        <ThemedSelect
-          value={source}
-          onChange={(e) =>
-            onSource(
-              e.target.value === "hermes"
-                ? "hermes"
-                : e.target.value === "system"
-                  ? "system"
-                  : "all",
-            )
-          }
-          aria-label={t("automation.sourceFilter")}
-          className="app-input"
-        >
-          <option value="all">{t("automation.allSources")}</option>
-          <option value="system">{t("automation.filters.system")}</option>
-          {hermesInstalled && <option value="hermes">Hermes</option>}
-        </ThemedSelect>
         <ThemedSelect
           value={status}
           onChange={(e) => onStatus(e.target.value)}
