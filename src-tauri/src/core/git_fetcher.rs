@@ -2,12 +2,12 @@ use crate::core::central_repo;
 use crate::core::git_credentials;
 use crate::core::skill_metadata;
 mod cache_cleanup;
+mod cache_lock;
 use anyhow::{bail, Context, Result};
 pub use cache_cleanup::clear_repository_cache;
-use fs2::FileExt;
+use cache_lock::{lock_repo_cache, RepoCacheLock};
 use git2::{Direction, Repository};
 use sha2::{Digest, Sha256};
-use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{ChildStderr, Command, Stdio};
@@ -140,10 +140,6 @@ fn repo_cache_dir_for(url: &str, sparse: bool) -> PathBuf {
 /// ordinary machine, the oldest untouched for four months.
 const REPO_CACHE_LIMIT_BYTES: u64 = 1024 * 1024 * 1024;
 
-struct RepoCacheLock {
-    _file: File,
-}
-
 /// Delete least-recently-used cache slots until the cache is back under the limit.
 ///
 /// Called only where a slot is about to be cloned fresh. Refreshing an existing
@@ -192,19 +188,9 @@ fn prune_cache_root(root: &Path, keep: &Path, limit: u64) {
         if path == keep {
             continue;
         }
-        let lock_path = path.with_extension("lock");
-        let Ok(file) = OpenOptions::new()
-            .create(true)
-            .read(true)
-            .write(true)
-            .truncate(false)
-            .open(&lock_path)
-        else {
+        let Ok(_lock) = RepoCacheLock::try_acquire(&path) else {
             continue;
         };
-        if file.try_lock_exclusive().is_err() {
-            continue;
-        }
         if std::fs::remove_dir_all(&path).is_ok() {
             log::info!("pruned repo cache slot {}", path.display());
             total = total.saturating_sub(size);
@@ -236,34 +222,6 @@ fn slot_stats(dir: &Path) -> (u64, std::time::SystemTime) {
         }
     }
     (size, newest)
-}
-
-fn lock_repo_cache(
-    cached_dir: &Path,
-    on_progress: &Option<ProgressCallback>,
-) -> Result<RepoCacheLock> {
-    if let Some(parent) = cached_dir.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-
-    let lock_path = cached_dir.with_extension("lock");
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(&lock_path)
-        .with_context(|| format!("Failed to open repo cache lock {}", lock_path.display()))?;
-
-    // Try non-blocking first; if contended, surface a progress message before blocking.
-    if file.try_lock_exclusive().is_err() {
-        if let Some(cb) = on_progress {
-            cb("Waiting for another install of this repository to finish…");
-        }
-        file.lock_exclusive()
-            .with_context(|| format!("Failed to lock repo cache {}", lock_path.display()))?;
-    }
-    Ok(RepoCacheLock { _file: file })
 }
 
 fn materialize_cached_repo(cached: &Path, cancel: Option<&Arc<AtomicBool>>) -> Result<PathBuf> {
@@ -2593,7 +2551,7 @@ mod tests {
         fs::create_dir_all(&deep).unwrap();
         let blob = deep.join("pack");
         fs::write(&blob, vec![b'x'; bytes]).unwrap();
-        File::options()
+        std::fs::File::options()
             .write(true)
             .open(&blob)
             .unwrap()

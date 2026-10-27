@@ -20,15 +20,10 @@ fn clear_cache_slots(slots: &[PathBuf]) -> Result<()> {
         if !parent.exists() {
             continue;
         }
-        let file = OpenOptions::new()
-            .create(true)
-            .truncate(false)
-            .read(true)
-            .write(true)
-            .open(slot.with_extension("lock"))?;
-        file.try_lock_exclusive()
-            .context("Repository cache is in use; try again after the operation finishes")?;
-        locks.push(file);
+        locks.push(
+            RepoCacheLock::try_acquire(slot)
+                .context("Repository cache is in use; try again after the operation finishes")?,
+        );
     }
     for slot in slots {
         match std::fs::symlink_metadata(slot) {

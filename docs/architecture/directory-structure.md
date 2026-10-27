@@ -137,6 +137,7 @@ agent-hub/
 │   │       ├── git2_engine.rs      #     libgit2 引擎封装
 │   │       ├── git_fetcher.rs      #     Git 远程拉取
 │   │       ├── git_fetcher/cache_cleanup.rs # 使用文件锁清理远程克隆缓存
+│   │       ├── git_fetcher/cache_lock.rs # 缓存操作共享锁及显式释放
 │   │       ├── git_skill_sync.rs   #     本地仓库写回预览、内容确认与失败恢复
 │   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及创建记录
 │   │       │   └── templates/builtin/ #   每模板独立文件夹：template.json + 一个或多个 Python 脚本，编译嵌入
