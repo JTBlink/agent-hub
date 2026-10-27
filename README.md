@@ -107,7 +107,7 @@ public/          前端静态资源与 Agent 图标
 skills/          随项目提供的管理 Skill
 scripts/         开发、验证、版本和发布脚本
 docs/            产品文档、架构、ADR 与界面截图
-.scratch/        仓库内需求与开发状态
+docs/agents/     GitHub Issues、Milestones 与工程技能配置
 ```
 
 ## 架构与许可

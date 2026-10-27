@@ -9,4 +9,6 @@
 
 - [ADR-0014：应用帮助与公开文档共享内容](0014-shared-help-content.md)
 
+- [ADR-0015：使用 GitHub Issues 与 Milestones 管理任务](0015-github-issues-tracker.md)
+
 后续规划统一放在 [docs/plans/agent-hub.md](../plans/agent-hub.md)，确认的重要决策再形成 ADR。

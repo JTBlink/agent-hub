@@ -292,7 +292,6 @@ describe("GitHub Actions workflow contract", () => {
   });
 
   it("keeps the full quality gate for tag and manual runs", () => {
-    expect(ci).toContain("npm run tasks:check");
     for (const command of [
       "npm run format:check",
       "npm run lint",

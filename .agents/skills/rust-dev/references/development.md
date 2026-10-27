@@ -31,4 +31,4 @@ Rust 单元测试使用临时目录；需要网络仓库的 tag 测试默认忽�
 
 本地默认数据位于 `~/.agent-hub`，不自动迁移其他应用数据。不要把运行数据、截图中的个人信息或访问令牌提交到仓库。
 
-前端、桌面端和 CLI 共用根版本；使用 `npm run version:set -- <version>` 更新。提交遵循[提交规范](commit-conventions.md)，任务状态回写 `.scratch/`。普通开发不创建 tag 或发布 Release。
+前端、桌面端和 CLI 共用根版本；使用 `npm run version:set -- <version>` 更新。提交遵循[提交规范](commit-conventions.md)，任务状态和里程碑回写 GitHub Issues。普通开发不创建 tag 或发布 Release。

@@ -22,4 +22,4 @@
 
 ## 验证
 
-覆盖旧个人链接转换、项目版本复用、原生相对链接、来源保护、更新与启停、移除、失败恢复和无清单的 Git clone；保留复制模式回归。任务记录：[P04](../../.scratch/project-skills-library/issues/P04-project-central-install.md)。
+覆盖旧个人链接转换、项目版本复用、原生相对链接、来源保护、更新与启停、移除、失败恢复和无清单的 Git clone；保留复制模式回归。任务记录：[P04](https://github.com/JTBlink/agent-hub/issues/132)。

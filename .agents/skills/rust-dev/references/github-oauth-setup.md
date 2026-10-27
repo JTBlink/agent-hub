@@ -93,7 +93,7 @@ npm run tasks:check
 git diff --check
 ```
 
-更新 CHANGELOG 与 [B15 任务记录](../../../../.scratch/skills-manager-integration/issues/B15-github-oauth-branding.md)，同步任务索引并进行 Standards / Spec 审查。提交前检查新增内容是否包含个人身份信息或凭证，采用 [中文提交规范](commit-conventions.md) 生成本地提交。
+更新 CHANGELOG 与 [B15 任务记录](https://github.com/JTBlink/agent-hub/issues/173)，同步 Issue 状态与里程碑并进行 Standards / Spec 审查。提交前检查新增内容是否包含个人身份信息或凭证，采用 [中文提交规范](commit-conventions.md) 生成本地提交。
 
 ## 本地凭据缓存与 macOS 授权
 

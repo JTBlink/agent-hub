@@ -191,7 +191,7 @@ agent-hub/
 │   ├── assemble-release.mjs        #   发布产物组装
 │   ├── set-version.mjs             #   版本号设置
 │   ├── check-version.mjs           #   版本号校验
-│   ├── check-task-status.mjs       #   任务状态检查
+│   ├── issue-metadata.mjs          #   Issue 状态与里程碑同步
 │   ├── primary-app.mjs             #   主应用切换
 │   ├── build-homepage.mjs          #   主页构建
 │   ├── verify-release-bundle.mjs   #   发布包验证
@@ -212,11 +212,10 @@ agent-hub/
 │   └── index.html
 │
 ├── .github/workflows/              # CI/CD
+│   ├── issue-metadata.yml          #   Issue 状态与里程碑同步
 │   ├── ci.yml                      #   持续集成
 │   ├── build-installers.yml        #   跨平台安装包构建
 │   └── deploy-pages.yml            #   主页部署
-│
-├── .scratch/                       # 需求 tracker（仓库内 Issue）
 │
 ├── CLAUDE.md                       # Agent 协作指南（本文件映射至 AGENTS.md）
 ├── AGENTS.md                       # 仓库贡献指南

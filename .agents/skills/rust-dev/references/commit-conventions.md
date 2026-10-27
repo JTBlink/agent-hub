@@ -1,6 +1,6 @@
 # Git 提交规范
 
-本仓库的提交说明统一使用中文，提交内容应与 `.scratch/` 任务记录保持可追溯。
+本仓库的提交说明统一使用中文，提交内容应与 GitHub Issue 保持可追溯。
 
 ## 提交标题
 
@@ -22,10 +22,10 @@ docs(security): 更新配置安全策略文档
 
 ## 提交正文
 
-涉及任务的提交正文必须包含对应 tracker 文件链接或路径，例如：
+涉及任务的提交正文必须包含对应 Issue 编号或链接；交付并关闭任务用 `Closes #<number>`，关联尚未完成的工作用 `Refs #<number>`，例如：
 
 ```text
-关联：.scratch/skills-manager-integration/issues/B10-primary-application.md
+Refs #<number>
 ```
 
 正文应简要说明：
@@ -37,7 +37,7 @@ docs(security): 更新配置安全策略文档
 示例：
 
 ```text
-关联：.scratch/skills-manager-integration/issues/B10-primary-application.md
+Refs #<number>
 
 修复 Linux 安装包 smoke 测试的本地路径解析，并在原生 Runner
 执行配置扫描、原子写入和 SQLite migration 验证。
@@ -48,7 +48,7 @@ docs(security): 更新配置安全策略文档
 ## 提交前检查
 
 - 检查用户可见行为、发布流程和兼容性是否需要更新 `CHANGELOG.md` 的 `Unreleased`。
-- 检查任务状态、依赖和结果是否已回写 `.scratch/`。
+- 检查 Issue 状态、依赖、验证结果和 Milestone 是否已同步。
 - 运行与改动相关的测试、格式检查、lint 和构建命令，并把结果写入正文。
 - 清理真实用户名、邮箱、令牌和个人绝对路径；示例路径使用 `~/...` 或 `<workspace>`。
 - 提交后确认工作区干净，远程 CI 结果与本地验证一致。

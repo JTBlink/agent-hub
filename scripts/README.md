@@ -31,7 +31,7 @@ node scripts/verify-release-bundle.mjs <bundle-dir>
 
 ### 任务状态
 
-`check-task-status.mjs` 校验 `.scratch/skills-manager-integration/` 中任务和状态汇总，可传入其他 tracker 目录作为参数。
+`issue-metadata.mjs` 同步 GitHub Issue 的分诊标签、目标里程碑和发布归属；由 `issue-metadata.yml` 调用。任务状态使用 GitHub 原生状态，不再校验仓库内任务索引。
 
 ## 测试
 

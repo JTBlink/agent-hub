@@ -1,4 +1,4 @@
 interface:
   display_name: "项目开发规范"
-  short_description: "项目内部 Rust、Tauri 与前端开发、SOLID、UI、测试和提交规范"
+  short_description: "项目 Rust、Tauri 与前端开发、GitHub Issue 交付和提交规范"
   default_prompt: "使用 $rust-dev 按当前项目规范完成开发、UI 调整或代码审查任务。"

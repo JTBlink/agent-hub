@@ -1,15 +1,15 @@
-# Triage Labels
+# Triage labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+五个分诊角色直接映射到同名 GitHub label：
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+| Canonical role    | GitHub label      | 含义                                |
+| ----------------- | ----------------- | ----------------------------------- |
+| `needs-triage`    | `needs-triage`    | 等待判断范围和优先级                |
+| `needs-info`      | `needs-info`      | 等待补充信息                        |
+| `ready-for-agent` | `ready-for-agent` | 规格完整，依赖解除后可由 Agent 领取 |
+| `ready-for-human` | `ready-for-human` | 需要人工执行                        |
+| `wontfix`         | `wontfix`         | 已决定不实施                        |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
+Issue 的开放或关闭状态由 GitHub 原生 state 管理，负责人通过 assignee 表示；阻塞由依赖计算。完成任务关闭 Issue 并移除待处理标签，不增加本地 `claimed`、`resolved` 状态或重复标签。
 
-Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
+自动同步行为与里程碑规则见 [issue-tracker.md](issue-tracker.md)。

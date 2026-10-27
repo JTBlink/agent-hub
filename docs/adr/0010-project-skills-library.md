@@ -22,4 +22,4 @@
 
 项目公共目录对读取它的宿主共同可见，不宣称逐 Agent 隔离。项目启停是团队文件变更；个人 Agent 启用设置不更改团队内容。
 
-详见[方案](../plans/agent-hub.md#项目技能库与团队协作方案)和[执行记录](../../.scratch/project-skills-library/spec.md)。
+详见[方案](../plans/agent-hub.md#项目技能库与团队协作方案)和[执行记录](https://github.com/JTBlink/agent-hub/issues/30)。

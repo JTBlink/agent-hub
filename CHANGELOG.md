@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 需求、规格与任务统一迁移至 GitHub Issues，按版本关联 Milestones；自动同步分诊状态及发布归属，清理本地任务记录、旧提交约定与 CI 任务索引检查。
+
 ## [0.1.11] - 2026-10-25
 
 ### Fixed
@@ -413,7 +417,7 @@
 - 确定配置文件格式感知最小 patch、checksum 乐观锁、原子替换、备份回滚和敏感数据策略，并记录 ADR-0003。
 - 确定 Agent 官方作用域优先级、canonical workspace 身份和 Skill 多来源冲突规则，并记录 ADR-0004。
 - 完成配置中心与 Skills 中心三变体交互原型，确定工作台入口和统一变更计划确认流。
-- 确定仓库内 `.scratch/` Markdown 文件为正式需求与开发状态系统；GitHub 仅用于 CI/CD、安装包和 Release。
+- 当时使用仓库内 Markdown 管理需求与开发状态；后续已统一迁移至 GitHub Issues 和 Milestones。
 - 增加工作空间 command：规范化目录、拒绝符号链接、登记/移除/重扫，并只读发现工作空间配置、Skills 和 Agent 指令文件。
 - 增加统一诊断 command 和诊断中心，按严重程度、Agent 与作用域过滤，并为每条问题提供影响和恢复建议。
 

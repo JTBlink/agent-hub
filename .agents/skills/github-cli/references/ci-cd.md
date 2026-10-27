@@ -1,6 +1,6 @@
 # 当前 CI/CD 配置
 
-本文记录工作流与环境配置；版本选择、提交、候选、tag 和验收统一见 [版本发布流程](release-flow.md)。GitHub 负责构建与发布，需求状态保存在 `.scratch/`。
+本文记录工作流与环境配置；版本选择、提交、候选、tag 和验收统一见 [版本发布流程](release-flow.md)。GitHub 负责构建与发布，需求、状态与版本归属保存在 Issues 和 Milestones。
 
 ## 工作流
 
@@ -10,7 +10,7 @@
 | `build-installers.yml` | `workflow_dispatch` 或 `v*` tag push | 手动运行生成平台候选；tag 运行创建 Release |
 | `deploy-pages.yml`     | `workflow_dispatch` 或 `v*` tag push | 部署主页和文档站                           |
 
-普通分支 push / PR 不自动运行。现有 workflow 不升级版本或创建 tag。
+普通分支 push / PR 不自动运行构建。`issue-metadata.yml` 在 Issue、发布事件或手动调用时同步标签和里程碑，只授予 `contents: read` 与 `issues: write`；安装包 package job 发布成功后也直接同步里程碑，额外授予该 job `issues: write`。现有 workflow 不升级应用版本或创建 tag。
 
 ### 安装包构建
 

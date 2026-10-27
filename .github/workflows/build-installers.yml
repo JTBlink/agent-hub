@@ -331,6 +331,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+      issues: write
 
     steps:
       - name: Check out requested revision
@@ -394,3 +395,9 @@ jobs:
           fail_on_unmatched_files: true
           body_path: release-assets/RELEASE_NOTES.md
           prerelease: ${{ contains(needs.preflight.outputs.release_tag, '-') }}
+
+      - name: Synchronize published release milestone
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        run: node scripts/issue-metadata.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

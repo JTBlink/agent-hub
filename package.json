@@ -27,7 +27,6 @@
     "version:check": "node scripts/check-version.mjs",
     "version:set": "node scripts/set-version.mjs",
     "version:sync": "node scripts/set-version.mjs",
-    "tasks:check": "node scripts/check-task-status.mjs",
     "tauri": "node scripts/primary-app.mjs",
     "cli": "node scripts/run-rust-cli.mjs cli",
     "cli:build": "node scripts/run-rust-cli.mjs build",

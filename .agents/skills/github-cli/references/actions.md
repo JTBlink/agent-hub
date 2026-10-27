@@ -4,7 +4,7 @@
 
 - 发布用 `push.tags: ["v*"]`，候选构建和诊断用 `workflow_dispatch`。当前 `ci.yml` 仅手动触发；tag 的完整质量门禁在 `build-installers.yml` 中，避免重复执行。普通分支 push / PR 不自动运行，不在仅提交 push 后声称 CI 已执行。
 - 修改触发策略时同步当前 CI/CD 文档、相关 workflow 合约测试及 changelog，不为普通重构擅自扩大发布权限或增加自动部署。
-- GitHub 是 CI/CD 与 Release 产物平台；需求与状态由仓库 `.scratch/` 管理。
+- GitHub 同时承载 Issues、Milestones、CI/CD 与 Release；任务元数据自动化只更新 Issue 和里程碑，不触发安装包构建。
 
 ## 不可变输入与依赖
 

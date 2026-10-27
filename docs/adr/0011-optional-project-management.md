@@ -19,4 +19,4 @@
 - 桌面共享列表不将清单计入技能交付路径；CLI 保留 `files_to_commit`，新增 `management_files` 标识可选管理信息。
 - 回归覆盖不提交清单的真实 Git clone、忽略目录聚合、内部资源忽略、已跟踪文件及新增文件诊断。
 
-参见[产品说明](../product/local-skills-management.md#项目安装与团队共用)和[任务记录](../../.scratch/project-skills-library/issues/P02-friendly-team-sharing.md)。
+参见[产品说明](../product/local-skills-management.md#项目安装与团队共用)和[任务记录](https://github.com/JTBlink/agent-hub/issues/130)。

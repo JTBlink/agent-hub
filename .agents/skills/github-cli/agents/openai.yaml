@@ -1,4 +1,4 @@
 interface:
   display_name: "GitHub CLI 工作规范"
-  short_description: "按 tag 选版、补齐 changelog，验证候选并发布"
+  short_description: "按 tag 选版、验证候选并发布，同步 Issue 与版本里程碑"
   default_prompt: "使用 $github-cli 按任务范围维护 Actions 或发布；正式发布时根据远端 tag 选版，核对提交范围并补齐该版本 changelog，固定 SHA 验证候选，提交 push、打 tag 并验收 Release；指定版本和失败重试保持原版本，main 保持单线。"

@@ -3,7 +3,7 @@ name: github-cli
 description: 使用 GitHub CLI（gh）处理项目 GitHub 工作流。分析和修复 Actions 失败、维护 main 单线集成与 CI/CD；正式发布时根据远端 tag 选版、按提交范围更新 changelog、验证候选、打 tag 并验收 Release。
 license: MIT
 metadata:
-  version: "1.6.3"
+  version: "1.7.0"
 ---
 
 # GitHub CLI 工作规范
@@ -14,7 +14,7 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 
 ## 上下文与资料
 
-先定位仓库根目录，读取 `AGENTS.md` 和相关 `.scratch/` 任务。发布时核对 `VERSION`、`package.json`、`CHANGELOG.md` 与发布脚本；Actions 任务读取对应实际 workflow。本文规范对应当前仓库；在其他项目使用时，先核实版本来源、远端、工作流和产物，不能照搬应用名、平台矩阵或签名变量。
+先定位仓库根目录，读取 `AGENTS.md` 和相关 GitHub Issue 任务。发布时核对 `VERSION`、`package.json`、`CHANGELOG.md` 与发布脚本；Actions 任务读取对应实际 workflow。本文规范对应当前仓库；在其他项目使用时，先核实版本来源、远端、工作流和产物，不能照搬应用名、平台矩阵或签名变量。
 
 | 任务                                | 读取资料                                                                      |
 | ----------------------------------- | ----------------------------------------------------------------------------- |
@@ -32,4 +32,4 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 
 ## 交付证据
 
-回写 `.scratch/`、实际影响对应的 changelog 和必要平台说明。工作流变更需提供相关合约测试结果；发布需报告版本、tag、解引用 commit SHA、候选与正式 Actions / Release 链接、附件校验与签名状态以及未完成的原生验收。仅修改规范时验证结构、链接和实现一致性，不触发发布构建。
+回写对应 GitHub Issue 与里程碑、实际影响对应的 changelog 和必要平台说明。工作流变更需提供相关合约测试结果；发布需报告版本、tag、解引用 commit SHA、候选与正式 Actions / Release 链接、附件校验与签名状态以及未完成的原生验收。仅修改规范时验证结构、链接和实现一致性，不触发发布构建。

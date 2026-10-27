@@ -4,7 +4,7 @@
 
 ## 项目结构与模块组织
 
-本仓库是 AgentHub（AI Agent 工作空间管理器）的 Tauri 2 + React 工程。`src/` 存放 React/TypeScript 前端，`src-tauri/` 存放 Rust 桌面端和 Tauri 配置，`docs/` 存放产品与架构文档，`.scratch/` 是仓库内需求 tracker。GitHub 仅用于 Actions 持续集成、跨平台安装包构建和发布产物，不作为需求或项目状态数据库。
+本仓库是 AgentHub（AI Agent 工作空间管理器）的 Tauri 2 + React 工程。`src/` 存放 React/TypeScript 前端，`src-tauri/` 存放 Rust 桌面端和 Tauri 配置，`docs/` 存放产品与架构文档，GitHub Issues 是规格、任务、依赖、讨论和状态的唯一来源；GitHub 同时承载 Actions、安装包与 Release。
 
 完整的代码目录树与每个文件的职责说明见 [目录结构](docs/architecture/directory-structure.md)。以下是顶层模块概览：
 
@@ -19,7 +19,7 @@
 - `.agents/skills/rust-dev/`：随仓库共享的项目内部开发、UI、测试与提交规范。
 - `.agents/skills/github-cli/`：GitHub 版本发布、自动 tag、Actions 与产物验收规范。
 - `docs/`：产品、架构与 ADR；后续规划统一放在 `docs/plans/agent-hub.md`。
-- `.scratch/<feature>/`：存放可提交的规格、任务、依赖和开发状态；它是本仓库的正式 Issue tracker。
+- `docs/agents/`：工程技能的 Issue tracker、分诊标签和领域文档入口；任务按版本关联 GitHub Milestones。
 - `.github/workflows/`：CI、跨平台安装包构建和主页部署。
 
 新增代码遵循 [ADR-0006：文件体量、模块拆分与代码复用规范](docs/adr/0006-file-size-and-reuse-conventions.md)：页面文件超过 600 行、Rust 模块超过 800 行必须拆分；优先复用领域类型、路径解析、扫描器、bindings 和展示纯函数，禁止复制 Agent 路径、安全校验或诊断文案。
@@ -59,7 +59,7 @@
 
 ## 提交与变更审查规范
 
-完整的 Git 提交标题、正文、提交前检查和双轴审查要求见 [Git 提交规范](.agents/skills/rust-dev/references/commit-conventions.md)。需求状态必须回写 `.scratch/`。
+完整的 Git 提交标题、正文、提交前检查和双轴审查要求见 [Git 提交规范](.agents/skills/rust-dev/references/commit-conventions.md)。需求状态、验证结果和版本里程碑必须及时回写对应 GitHub Issue。
 
 每次提交前都必须检查本次变更是否影响用户可见行为、发布流程或兼容性；如有影响，及时在根目录 `CHANGELOG.md` 的 `Unreleased` 或对应版本章节中补充记录。
 
@@ -67,11 +67,11 @@
 
 ### Project development
 
-在本仓库开发、调整 UI 或审查时，使用 [rust-dev](.agents/skills/rust-dev/SKILL.md)。发布版本或维护 GitHub Actions 时，使用 [github-cli](.agents/skills/github-cli/SKILL.md)。规范原文集中维护于这两个项目级 Skill；领域上下文、架构文档和有效 ADR 保留原位。
+在本仓库开发、调整 UI 或审查时，使用 [rust-dev](.agents/skills/rust-dev/SKILL.md)。发布版本或维护 GitHub Actions 时，使用 [github-cli](.agents/skills/github-cli/SKILL.md)。开发与发布规范集中维护于这两个项目级 Skill；工程技能共享的任务、标签与领域文档规则见 `docs/agents/`。领域上下文、架构文档和有效 ADR 保留原位。
 
 ### Issue tracker
 
-Issues live in GitHub Issues (uses `gh` CLI). See `docs/agents/issue-tracker.md`.
+Issues and specs live in GitHub Issues (uses `gh` CLI), grouped by release milestones. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -79,4 +79,4 @@ Uses the default five canonical triage labels. See `docs/agents/triage-labels.md
 
 ### Domain docs
 
-Single-context layout; read `GLOSSARY.md` (if present) and relevant ADRs before working. See `docs/agents/domain.md`.
+Single-context layout; read `CONTEXT.md`, `GLOSSARY.md` (if present), and relevant ADRs before working. See `docs/agents/domain.md`.

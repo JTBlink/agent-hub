@@ -14,7 +14,7 @@ node .agents/skills/github-cli/scripts/select-release-version.mjs --remote <remo
 - 指定版本优先；明确要求 minor / major 时使用 `--bump minor` / `--bump major`。当前 VERSION 为预发布版本时需明确目标版本。
 - 继续或修复发布时，沿用 tracker 中的版本。失败 tag 也占用版本；远端查询失败立即停止。
 
-把目标版本、选版依据和发布范围写入 `.scratch/`。后续失败不重新升级版本。
+把目标版本、选版依据和发布范围写入对应 GitHub Issue 并关联目标里程碑。后续失败不重新升级版本。
 
 ## 2. 准备并提交发布内容
 
@@ -23,7 +23,7 @@ node .agents/skills/github-cli/scripts/select-release-version.mjs --remote <remo
 3. 自动核对上一个正式发布 tag 到本次提交的实际 diff、Unreleased 和任务结果，补齐 CHANGELOG 的目标版本章节，合并重复条目并保留 Unreleased。基线 tag 必须已发布且是本次提交的祖先；首次发布按全部发布内容整理。
 4. 发布期间纳入的修复更新同一版本章节；未纳入本次源码的变化留在 Unreleased。说明与源码一起提交；任何新增提交都需要重新固定 SHA、验证候选。
 5. 检查本次改动与需求是否一致；文档检查结构、引用和隐私，执行 `git diff --check`。workflow 改动运行 `npm test -- scripts/workflow-contract.test.mjs`，发布脚本改动运行对应测试；完整前端 / Rust 检查由第 3 步候选执行。
-6. 用中文 Conventional Commits 标题提交，正文写明 tracker 路径、变更与验证结果；不提交个人信息、凭据或本机绝对路径。推送 main，确认远端包含发布内容后记录完整发布 SHA。
+6. 用中文 Conventional Commits 标题提交，正文写明 Issue 编号或链接、变更与验证结果；不提交个人信息、凭据或本机绝对路径。推送 main，确认远端包含发布内容后记录完整发布 SHA。
 
 集成完成后，只清理自己创建且无人使用的 worktree 与分支。本地分支用 `git branch -d`；删除远端分支前确认无独有改动，并用预期 SHA 的 lease 防止误删已前进的分支。
 

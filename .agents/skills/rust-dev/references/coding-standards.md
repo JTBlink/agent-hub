@@ -59,4 +59,4 @@
 - 缺陷修复添加能重现问题的回归测试。纯转换用单元测试；跨 command、SQLite 或文件系统边界用对应集成测试。避免只重复实现细节的测试。
 - 修改前确认调用方、序列化字段、持久化数据和平台差异；删除旧分支前查引用并验证用户数据和已发布版本的兼容性。不可仅凭 `legacy`、`deprecated`、`allow(dead_code)` 或文件行数判定可删。
 - 运行与改动相关的 `npm run lint`、`npm test`、`npm run build`、`cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`、`cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` 和 `cargo test --manifest-path src-tauri/Cargo.toml`；提交前检查 `git diff --check`。文档改动至少验证引用链接、格式和 tracker 状态。
-- 任务状态写入 `.scratch/`，用户可见行为、发布流程或兼容性变化写入 `CHANGELOG.md`。提交与审查遵循[提交规范](commit-conventions.md)。
+- 任务状态和里程碑及时回写 GitHub Issues，用户可见行为、发布流程或兼容性变化写入 `CHANGELOG.md`。提交与审查遵循[提交规范](commit-conventions.md)。

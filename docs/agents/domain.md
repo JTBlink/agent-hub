@@ -1,36 +1,19 @@
-# Domain Docs
+# Domain docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+本仓库采用单上下文布局：根目录 `CONTEXT.md` 保存当前领域上下文，`GLOSSARY.md`（如果存在）保存术语，`docs/adr/` 保存已接受决策。Tauri 与 React 共用同一领域，不拆成多个上下文。
 
-## Before exploring, read these
+## 开始工作前
 
-- **`GLOSSARY.md`** at the repo root, or
-- **`GLOSSARY-MAP.md`** at the repo root if it exists: it points at one `GLOSSARY.md` per context. Read each one relevant to the topic.
-- **`docs/adr/`**: read ADRs that touch the area you're about to work in.
+读取 `CONTEXT.md`、存在的 `GLOSSARY.md` 和与任务有关的 ADR。可选术语文件缺失时直接继续，由领域建模技能在术语实际明确时按需建立，不预先创建空文件。
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
+Issue 标题、测试名称、代码模型和设计说明采用领域文档中的术语。术语存在歧义时先澄清并更新领域文档；与有效 ADR 冲突时明确指出，通过新的 ADR 替代旧决策，不能静默覆盖。
 
-## File structure
+## 文档职责
 
-Single-context repo:
+- `CONTEXT.md` 与 `GLOSSARY.md`：当前领域语义。
+- `docs/adr/`：已接受的架构决策。
+- `docs/plans/agent-hub.md`：后续规划与设计。
+- `docs/architecture/`：当前实现。
+- GitHub Issues / Milestones：执行规格、依赖、讨论、进度、验证与版本归属。
 
-```
-/
-├── GLOSSARY.md
-├── docs/adr/
-│   ├── 0001-...md
-│   └── 0002-...md
-└── src/
-```
-
-## Use the glossary's vocabulary
-
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `GLOSSARY.md`. Don't drift to synonyms the glossary explicitly avoids.
-
-If the concept you need isn't in the glossary yet, that's a signal: either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
-
-## Flag ADR conflicts
-
-If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
-
-> _Contradicts ADR-0007, but worth reopening because..._
+任务记录通过链接引用规划和决策，避免重复维护正文。
