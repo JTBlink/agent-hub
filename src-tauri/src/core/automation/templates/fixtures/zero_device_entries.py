@@ -30,6 +30,8 @@ def zero_device_scandir(path):
         yield [ZeroDeviceEntry(entry) for entry in entries]
 
 
+script = sys.argv[1]
+sys.argv = [script, *sys.argv[2:]]
 with patch("os.scandir", zero_device_scandir):
-    runpy.run_path(sys.argv[1], run_name="__main__")
+    runpy.run_path(script, run_name="__main__")
 

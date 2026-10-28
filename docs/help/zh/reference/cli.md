@@ -96,7 +96,35 @@ agent-hub-cli --json automations restore '<backup-id>' --apply
 
 `automations runs <ID>` 查看本机保存的执行记录，`automations logs <ID> --run <执行 ID>` 查看指定记录输出；不带 `--run` 兼容读取最近输出。系统任务默认保留最近 100 次；旧版仅能保留尚未覆盖的一次，升级后开始逐次记录。Hermes 读取已有结果文件，保留由 Hermes 管理，不把结果文件存在当作执行成功。日志 `--json` 返回 `available`、`kind`、`content` 和 `truncated`，大文件只返回末尾 256 KiB。执行记录和日志仅保存在本机，不参与 Git 同步备份。
 
-「清理磁盘缓存」模板 `disk-cleanup` 默认每天 03:00 清理工作目录 `tmp` 中超过 7 天和 `logs` 中超过 30 天的文件，并显示清理前后的磁盘空间。仅删除普通文件，保留目录并跳过符号链接／Windows junction；目标不存在时不做操作。请在创建前选定工作目录、检查模板命令并按需修改保留天数与日程。工作目录留空仍使用任务独立目录，不自动清理系统或用户主目录。可在 GUI 改为“仅手动触发”，也可在创建后立即运行一次。
+「清理磁盘缓存」模板 `disk-cleanup` 默认每天 03:00 清理工作目录 `tmp` 中超过 7 天和 `logs` 中超过 30 天的文件，同时清理 Homebrew、pip、npm 和 `~/.cache/npm-hermes` 的下载缓存（保留 `_npx` 工具安装文件）。用户缓存按最近修改／访问时间保留 30 天，npm 临时缓存保留 7 天。仅扫描明确定义的缓存子目录，不遍历整个用户目录或缓存根目录；浏览器缓存、uv 环境、下载与文档目录、项目构建目录不在默认规则中。保留目录，跳过符号链接／junction、硬链接和锁文件；目标不存在时跳过，单项读取失败不会阻断其他目录。
+
+清理前后分别以 GiB／MiB 展示总容量、已用、可用与使用率，汇总扫描／候选／删除数量和文件大小，并单列磁盘可用空间差值。日志与最终总结使用中文，按清理项列出结果；预览显示预计删除量，工具清理保留原始输出，不将无法确认的文件数和大小计入总量。删除文件大小不等同于实际回收空间，其他进程也可能影响可用空间变化。没有匹配文件时明确报告“无可清理项”。
+
+可在任务工作目录中先预览（不会删除文件）：
+
+```bash
+python3 ./disk-cleanup/disk-cleanup.py --dry-run
+python3 ./disk-cleanup/disk-cleanup.py --dry-run --workspace-only
+```
+
+`--workspace-only` 只应用任务目录规则；在脚本中设置 `ENABLE_USER_CACHE_CLEANUP = False` 也可长期关闭用户缓存清理。创建和保存不会额外执行一次。
+
+更大的缓存通过参数显式启用；可组合使用，`--workspace-only` 与这些选项互斥。先执行带 `--dry-run` 的命令检查范围，确认后移除此参数：
+
+```bash
+# 仅清理 Chrome/Edge 的过期 Cache 与 Code Cache，保留账户、Cookies 和 Storage
+python3 ./disk-cleanup/disk-cleanup.py --dry-run --browser-cache
+# 清理可信任的 AgentHub 源码历史构建，复用项目工具并保留最新构建及共享依赖
+python3 ./disk-cleanup/disk-cleanup.py --dry-run --agent-hub-project ~/projects/agent-hub
+# 额外清理指定 Cargo target 中超过 7 天未使用的增量编译缓存；不清理 deps
+python3 ./disk-cleanup/disk-cleanup.py --dry-run --rust-target ~/projects/demo/target
+# 工具深度清理：uv 仅离线清理无引用缓存，Homebrew 不自动更新
+python3 ./disk-cleanup/disk-cleanup.py --dry-run --uv-prune --brew-cleanup
+```
+
+实际清理时检测到 Chrome／Edge 仍运行会跳过浏览器缓存，检测到 cargo／rustc 编译会跳过构建清理；无法检查进程时该项失败并保留数据。uv 没有无副作用预览，因此在 `--dry-run` 下明确跳过。工具缺失会跳过，执行失败会在总结中报告并返回非零退出码，不阻断后续清理项。第三方工具原始输出可能仍为英文。
+
+脚本顶部的保留天数和 `EXTRA_CACHE_RULES` 可定制。浏览器／下载工具缓存按最近修改和访问时间保留，构建增量缓存默认保留 7 天。不会自动删除 Downloads、浏览器账户数据、Codex 更新暂存、Playwright 浏览器版本、uv 环境或 Rust 工具链；这些内容需要各自工具或人工确认引用关系。
 
 ### 用 CLI 配置和修改清理任务
 
@@ -119,4 +147,4 @@ agent-hub-cli --json automations runs '<task-id>'
 agent-hub-cli automations logs '<task-id>'
 ```
 
-在 `disk-cleanup/disk-cleanup.py` 中修改 `TEMP_RETENTION_DAYS`／`LOG_RETENTION_DAYS` 可分别调整两类文件的保留天数；`CLEANUP_RULES` 定义工作目录下要清理的子目录。执行命令只负责调用脚本。修改日程不影响手动触发入口；`pause`／`resume` 控制后续计划，`remove` 删除任务。
+在 `disk-cleanup/disk-cleanup.py` 中修改 `TEMP_RETENTION_DAYS`／`LOG_RETENTION_DAYS` 可分别调整两类文件的保留天数；`CLEANUP_RULES` 定义工作目录下要清理的子目录；`USER_CACHE_RETENTION_DAYS` 控制用户下载缓存的保留期，`EXTRA_CACHE_RULES` 可追加明确的缓存子目录。执行命令只负责调用脚本。修改日程不影响手动触发入口；`pause`／`resume` 控制后续计划，`remove` 删除任务。

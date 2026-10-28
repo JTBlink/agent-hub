@@ -73,6 +73,16 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
         .unwrap()["draft"]
         .clone();
     draft["workdir"] = json!(workspace);
+    // The native scheduler inherits the real home directory. Keep this smoke
+    // task confined to its temporary workspace rather than user download caches.
+    for script in draft["files"].as_array_mut().unwrap() {
+        if script["path"] == "disk-cleanup/disk-cleanup.py" {
+            script["content"] = json!(script["content"].as_str().unwrap().replace(
+                "ENABLE_USER_CACHE_CLEANUP = True",
+                "ENABLE_USER_CACHE_CLEANUP = False",
+            ));
+        }
+    }
     draft["schedule"] = json!({"kind":"manual"});
     draft["enabled"] = json!(false);
     draft["files"]
@@ -92,7 +102,11 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     let file = workspace.join("disk-cleanup/disk-cleanup.py");
     let content = std::fs::read_to_string(&file)
         .unwrap()
-        .replace("TEMP_RETENTION_DAYS = 7", "TEMP_RETENTION_DAYS = 14");
+        .replace("TEMP_RETENTION_DAYS = 7", "TEMP_RETENTION_DAYS = 14")
+        .replace(
+            "ENABLE_USER_CACHE_CLEANUP = True",
+            "ENABLE_USER_CACHE_CLEANUP = False",
+        );
     std::fs::write(&file, content).unwrap();
     std::fs::write(workspace.join("disk-cleanup/helper.py"), "VALUE = 2\n").unwrap();
     let retained = workspace.join("tmp/ten-days-old.tmp");
@@ -139,7 +153,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     assert!(success(cli(&root, &["logs", &cleanup.id]))["content"]
         .as_str()
         .unwrap()
-        .contains("Disk space after cleanup:"));
+        .contains("清理后磁盘空间："));
 }
 impl Drop for Cleanup<'_> {
     fn drop(&mut self) {

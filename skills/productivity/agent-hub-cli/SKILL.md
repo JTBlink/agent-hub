@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
 description: Manage the user's shared agent-skill library and local automation tasks via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -520,9 +520,28 @@ without `--run`, logs reads the latest output. System tasks retain the latest
 particular execution succeeded. Records and logs are local only and excluded
 from Git sync/backups. JSON output is bounded to the last 256 KiB.
 
-The `disk-cleanup` starter (daily 03:00) removes files older than 7 days in
-`tmp` and 30 days in `logs`, and reports disk space before and after cleanup.
-It targets only named children of the selected working directory. Inspect the
-definition and choose a working directory before creating; retain directories
-and skip links.
-A missing target is a no-op. Schedules and retention days are editable.
+The `disk-cleanup` starter (daily 03:00) clears expired workspace `tmp` (7 days)
+and `logs` (30 days), plus explicitly listed Homebrew/pip/npm/npm-hermes download caches.
+User download caches retain files modified or accessed in the last 30 days;
+npm temporary files keep 7 days. It excludes browser caches, uv environments,
+user documents, and project build directories. Directories, links/junctions,
+hardlinks, and lock files are preserved. A missing target is a no-op.
+
+Run `python3 ./disk-cleanup/disk-cleanup.py --dry-run` from the task workspace
+to preview; use `--workspace-only` or set `ENABLE_USER_CACHE_CLEANUP = False`
+to restrict the scope. The script reports GiB/MiB disk usage before/after,
+candidate and removed file counts/sizes, and actual free-space change. Deleted
+file sizes are distinct from measured reclaimed space. Inspect the definition
+before creating; schedules, retention days, and explicit cache rules are editable.
+
+Logs and the per-rule final summary are in Chinese. Optional flags:
+`--browser-cache` (expired Chrome/Edge Cache and Code Cache, skips running browsers),
+`--rust-target <project>/target` (7-day incremental cache, skips active compilers),
+`--agent-hub-project <trusted-source>` (existing project prune tool keeps latest builds),
+`--uv-prune` (offline native pruning), `--brew-cleanup` (30-day download pruning,
+no automatic update). These flags are incompatible with `--workspace-only`.
+`--dry-run` never executes uv pruning because uv has no side-effect-free preview.
+External tool results remain separate from counted file deletions in the summary;
+failures return nonzero and do not prevent later tools. Tool output may be English.
+Do not add generic Downloads, browser data, updater staging, Playwright runtimes,
+or Rust toolchains to automatic rules.

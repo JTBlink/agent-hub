@@ -37,8 +37,42 @@ mod tests {
     fn run(workspace: &Path) -> std::process::Output {
         python_command(workspace)
             .arg(script(workspace))
+            .arg("--workspace-only")
             .output()
             .unwrap()
+    }
+
+    #[test]
+    fn optional_cache_permissions_warn_but_real_failures_keep_nonzero_exit() {
+        let root = tempfile::tempdir().unwrap();
+        let output = python_command(root.path())
+            .arg("-c")
+            .arg(include_str!("fixtures/cleanup_permissions.py"))
+            .arg(script(root.path()))
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    #[test]
+    fn user_cache_profiles_formatting_preview_and_safety_use_isolated_trees() {
+        let root = tempfile::tempdir().unwrap();
+        let output = python_command(root.path())
+            .arg("-c")
+            .arg(include_str!("fixtures/disk_cleanup_checks.py"))
+            .arg(script(root.path()))
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 
     #[test]
@@ -55,6 +89,7 @@ mod tests {
             .arg("-c")
             .arg(include_str!("fixtures/zero_device_entries.py"))
             .arg(script(root.path()))
+            .arg("--workspace-only")
             .output()
             .unwrap();
         assert!(
@@ -94,8 +129,8 @@ mod tests {
             String::from_utf8_lossy(&output.stderr)
         );
         let report = String::from_utf8_lossy(&output.stdout);
-        assert!(report.contains("Disk space before cleanup:"));
-        assert!(report.contains("Disk space after cleanup:"));
+        assert!(report.contains("清理前磁盘空间："));
+        assert!(report.contains("清理后磁盘空间："));
         for directory in ["tmp", "logs"] {
             let target = root.path().join(directory);
             assert!(!target.join("old ' quoted.tmp").exists());
