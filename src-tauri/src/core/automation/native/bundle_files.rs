@@ -123,6 +123,43 @@ mod tests {
     use super::*;
     use crate::core::automation::{Provider, Schedule};
     #[test]
+    fn complete_cleanup_bundle_roundtrips_modules_config_and_readme() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("runtime");
+        let workspace = temp.path().join("workspace");
+        fs::create_dir_all(&workspace).unwrap();
+        let mut draft = crate::core::automation::templates(Some("en"))
+            .templates
+            .into_iter()
+            .find(|template| template.id == "disk-cleanup")
+            .unwrap()
+            .draft;
+        draft.workdir = Some(workspace.to_string_lossy().into_owned());
+        draft.validate().unwrap();
+        let id = format!("agent_hub:{}", uuid::Uuid::new_v4());
+        let dir = root.join(id.trim_start_matches("agent_hub:"));
+        write(&dir, &draft, &id, false).unwrap();
+        let record = ManagedAutomation {
+            id,
+            revision: 1,
+            draft: draft.clone(),
+            source: "test".into(),
+            identifier: "test".into(),
+            location: String::new(),
+        };
+        assert_eq!(read(&record).unwrap(), draft.files);
+        assert!(workspace.join("disk-cleanup/cleanup_actions.py").is_file());
+        let config = draft
+            .files
+            .iter()
+            .find(|file| file.path.ends_with("cleanup-config.json"))
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&config.content).unwrap()["notify"],
+            true
+        );
+    }
+    #[test]
     fn refuses_unmanaged_files_and_linked_template_directories() {
         let temp = tempfile::tempdir().unwrap();
         let runtime = temp

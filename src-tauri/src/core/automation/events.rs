@@ -64,7 +64,7 @@ fn relevant(event: &Event, root: &Path, watched: &HashSet<PathBuf>) -> bool {
             Some("started" | "exit") => parent.parent() == Some(root),
             Some("jobs.json") => parent != root,
             Some(name)
-                if [".py", ".sh", ".ps1"]
+                if [".py", ".sh", ".ps1", ".json", ".md"]
                     .iter()
                     .any(|extension| name.ends_with(extension)) =>
             {
@@ -162,6 +162,8 @@ mod tests {
             task.join("agent-hub-11111111-1111-4111-8111-111111111111.sh"),
             task.join("agent-hub-11111111-1111-4111-8111-111111111111.ps1"),
             task.join("disk-cleanup.py"),
+            task.join("cleanup-config.json"),
+            task.join("README.md"),
             task.join("run.sh"),
             task.join("run-2.ps1"),
         ] {

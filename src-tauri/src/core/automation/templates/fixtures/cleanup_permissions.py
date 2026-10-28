@@ -2,6 +2,7 @@
 import contextlib
 import errno
 import io
+import json
 import os
 from pathlib import Path
 import runpy
@@ -11,7 +12,10 @@ import time
 import unittest
 from unittest.mock import patch
 
-script = runpy.run_path(sys.argv[1], run_name="cleanup_permission_test")
+script_path = Path(sys.argv[1])
+script = runpy.run_path(str(script_path), run_name="cleanup_permission_test")
+import cleanup_files as files
+import cleanup_config as config
 
 
 class PermissionChecks(unittest.TestCase):
@@ -28,7 +32,12 @@ class PermissionChecks(unittest.TestCase):
                 path.write_text("fixture")
                 old = time.time() - 90 * 86400
                 os.utime(path, (old, old))
-            original_metadata = script["entry_metadata"]
+            original_metadata = files.entry_metadata
+            settings = config.load_config(script_path.with_name("cleanup-config.json"))
+            for key in ("agent_caches", "browser_cache", "uv_prune", "brew_cleanup", "updater_cache", "notify", "detect_workspace_builds"):
+                settings[key] = False
+            config_path = workspace / "isolated.json"
+            config_path.write_text(json.dumps(settings))
             original_scan = os.scandir
             original_unlink = Path.unlink
 
@@ -53,10 +62,9 @@ class PermissionChecks(unittest.TestCase):
             try:
                 os.chdir(workspace)
                 with patch.object(Path, "home", return_value=home), patch.dict(namespace, {
-                    "entry_metadata": metadata,
-                    "user_cache_rules": lambda: [("Fixture downloads", cache.parent, "downloads", 30)],
+                    "user_cache_rules": lambda **_kwargs: [("Fixture downloads", cache.parent, "downloads", 30)],
                     "agent_cache_rules": lambda _days: [],
-                }), patch.object(os, "scandir", scan), patch.object(Path, "unlink", unlink), patch.object(sys, "argv", ["cleanup.py"] + (["--workspace-only"] if workspace_only else [])), contextlib.redirect_stdout(output):
+                }), patch.object(files, "entry_metadata", metadata), patch.object(os, "scandir", scan), patch.object(Path, "unlink", unlink), patch.object(sys, "argv", ["cleanup.py", "--config", str(config_path)] + (["--workspace-only"] if workspace_only else [])), contextlib.redirect_stdout(output):
                     status = script["main"]()
                 return status, output.getvalue(), (target / "allowed.tmp").exists(), (target / "protected.tmp").exists()
             finally:

@@ -94,14 +94,14 @@ impl AutomationDraft {
             super::super::path_guard::ensure_safe_skill_relative_path(&file.path)
                 .map_err(|e| e.to_string())?;
             if file.path.contains(['\\', ':'])
-                || ![".py", ".sh", ".ps1"]
+                || ![".py", ".sh", ".ps1", ".json", ".md"]
                     .iter()
                     .any(|extension| file.path.ends_with(extension))
                 || !paths.insert(&file.path)
                 || file.content.trim().is_empty()
                 || file.content.contains('\0')
             {
-                return Err("Task scripts require unique relative .py, .sh or .ps1 paths and nonempty UTF-8 contents".into());
+                return Err("Task files require unique relative .py, .sh, .ps1, .json or .md paths and nonempty UTF-8 contents".into());
             }
             total = total.saturating_add(file.content.len());
         }
@@ -191,6 +191,17 @@ mod tests {
             path: "bundle/main.py".into(),
             content: "print('test')".into(),
         }];
+        assert!(draft.validate().is_ok());
+        draft.files.extend([
+            AutomationScriptFile {
+                path: "bundle/cleanup-config.json".into(),
+                content: "{\"notify\":false}".into(),
+            },
+            AutomationScriptFile {
+                path: "bundle/README.md".into(),
+                content: "# Usage".into(),
+            },
+        ]);
         assert!(draft.validate().is_ok());
         draft.files.push(draft.files[0].clone());
         assert!(draft.validate().is_err());

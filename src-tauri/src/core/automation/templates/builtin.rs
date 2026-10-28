@@ -29,6 +29,38 @@ struct Manifest {
 
 type Bundle = (&'static str, &'static [(&'static str, &'static str)]);
 
+pub(super) const DISK_CLEANUP_FILES: &[(&str, &str)] = &[
+    (
+        "disk-cleanup.py",
+        include_str!("builtin/disk-cleanup/disk-cleanup.py"),
+    ),
+    (
+        "cleanup_config.py",
+        include_str!("builtin/disk-cleanup/cleanup_config.py"),
+    ),
+    (
+        "cleanup_files.py",
+        include_str!("builtin/disk-cleanup/cleanup_files.py"),
+    ),
+    (
+        "cleanup_rules.py",
+        include_str!("builtin/disk-cleanup/cleanup_rules.py"),
+    ),
+    (
+        "cleanup_actions.py",
+        include_str!("builtin/disk-cleanup/cleanup_actions.py"),
+    ),
+    (
+        "cleanup_report.py",
+        include_str!("builtin/disk-cleanup/cleanup_report.py"),
+    ),
+    (
+        "cleanup-config.json",
+        include_str!("builtin/disk-cleanup/cleanup-config.json"),
+    ),
+    ("README.md", include_str!("builtin/disk-cleanup/README.md")),
+];
+
 const BUNDLES: &[Bundle] = &[
     (
         include_str!("builtin/workspace-check/template.json"),
@@ -39,10 +71,7 @@ const BUNDLES: &[Bundle] = &[
     ),
     (
         include_str!("builtin/disk-cleanup/template.json"),
-        &[(
-            "disk-cleanup.py",
-            include_str!("builtin/disk-cleanup/disk-cleanup.py"),
-        )],
+        DISK_CLEANUP_FILES,
     ),
     (
         include_str!("builtin/git-status/template.json"),

@@ -6,9 +6,9 @@
     "zh-TW": "清理磁碟快取"
   },
   "description": {
-    "en": "Daily at 03:00: clean expired workspace tmp/logs and Homebrew, pip, npm and npm-hermes downloads. Keeps user downloads for 30 days and Agent caches/diagnostic logs for 7 days; preserves conversations. Optional browser/build/uv/Homebrew cleanup, --dry-run preview and a Chinese summary. Requires Python 3.",
-    "zh": "每天 03:00 清理过期 tmp／logs 和 Homebrew、pip、npm、npm-hermes 下载缓存，保留近 30 天使用的下载缓存；Agent 缓存与诊断日志保留 7 天，保留历史对话。可选浏览器、构建产物、uv 与 Homebrew 深度清理，支持 --dry-run 预览，输出中文清理总结。需要 Python 3。",
-    "zh-TW": "每天 03:00 清理過期 tmp／logs 和 Homebrew、pip、npm、npm-hermes 下載快取，保留近 30 天使用的下載快取；Agent 快取與診斷日誌保留 7 天，保留歷史對話。可選瀏覽器、建置產物、uv 與 Homebrew 深度清理，支援 --dry-run 預覽，輸出中文清理總結。需要 Python 3。"
+    "en": "Daily cache cleanup with a JSON configuration, modular scripts and Chinese summaries. Agent/download caches keep 7 days; optional project paths retain latest builds. Safely prunes uv/Homebrew, exited-browser caches and confirmed installed updates. Desktop notification supported. Requires Python 3.",
+    "zh": "每天清理过期缓存：Agent／下载缓存默认保留 7 天；按配置项目清理历史构建、过期增量缓存，并清理 uv／Homebrew、已退出浏览器缓存和确认已安装的旧更新包。多文件脚本与独立 JSON 配置，中文总结，支持桌面通知与预览。需要 Python 3。",
+    "zh-TW": "每天清理過期快取：Agent／下載快取預設保留 7 天；按設定專案清理歷史建置、過期增量快取，並清理 uv／Homebrew、已退出瀏覽器快取和確認已安裝的舊更新套件。多檔案腳本與獨立 JSON 設定，中文總結，支援桌面通知與預覽。需要 Python 3。"
   },
   "schedule": {
     "kind": "daily",
@@ -17,6 +17,15 @@
     "weekdays": false
   },
   "entrypoint": "disk-cleanup.py",
-  "scripts": ["disk-cleanup.py"],
+  "scripts": [
+    "disk-cleanup.py",
+    "cleanup_config.py",
+    "cleanup_files.py",
+    "cleanup_rules.py",
+    "cleanup_actions.py",
+    "cleanup_report.py",
+    "cleanup-config.json",
+    "README.md"
+  ],
   "provider": "system"
 }

@@ -1,0 +1,20 @@
+{
+  "workspace_tmp_days": 7,
+  "workspace_log_days": 30,
+  "download_days": 7,
+  "agent_days": 7,
+  "browser_days": 7,
+  "incremental_days": 7,
+  "updater_days": 7,
+  "user_caches": true,
+  "agent_caches": true,
+  "browser_cache": true,
+  "uv_prune": true,
+  "brew_cleanup": true,
+  "updater_cache": true,
+  "notify": true,
+  "detect_workspace_builds": true,
+  "agent_hub_projects": [],
+  "rust_targets": [],
+  "extra_cache_rules": []
+}

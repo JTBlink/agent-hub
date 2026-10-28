@@ -74,9 +74,11 @@ mod tests {
             .find(|t| t.id == "disk-cleanup")
             .unwrap();
         assert_eq!(cleanup.title, "清理磁盘缓存");
-        assert!(cleanup.draft.files[0]
-            .content
-            .contains("FILE_ATTRIBUTE_REPARSE_POINT"));
+        assert!(cleanup
+            .draft
+            .files
+            .iter()
+            .any(|file| file.content.contains("FILE_ATTRIBUTE_REPARSE_POINT")));
         assert_eq!(
             catalog("zh-TW", false, "sh")
                 .templates

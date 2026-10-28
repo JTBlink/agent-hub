@@ -55,9 +55,18 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
             "sh './run.sh'"
         }
     );
-    assert_eq!(draft.files.len(), 2);
-    assert!(draft.files[1].content.contains("disk-cleanup.py"));
-    assert!(draft.files[0].content.contains("TEMP_RETENTION_DAYS"));
+    assert_eq!(draft.files.len(), 9);
+    assert!(draft
+        .files
+        .last()
+        .unwrap()
+        .content
+        .contains("disk-cleanup.py"));
+    assert!(draft
+        .files
+        .iter()
+        .any(|file| file.path == "disk-cleanup/cleanup-config.json"));
+    assert!(draft.files[0].content.contains("parse_options"));
     assert_eq!(std::fs::read_dir(temporary.path()).unwrap().count(), 0);
 }
 struct Cleanup<'a> {
@@ -81,14 +90,24 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
         .unwrap()["draft"]
         .clone();
     draft["workdir"] = json!(workspace);
-    // The native scheduler inherits the real home directory. Keep this smoke
-    // task confined to its temporary workspace rather than user download caches.
-    for script in draft["files"].as_array_mut().unwrap() {
-        if script["path"] == "disk-cleanup/disk-cleanup.py" {
-            script["content"] = json!(script["content"].as_str().unwrap().replace(
-                "ENABLE_USER_CACHE_CLEANUP = True",
-                "ENABLE_USER_CACHE_CLEANUP = False",
-            ));
+    // Keep the opt-in native smoke task confined to its workspace, with no notification.
+    for file in draft["files"].as_array_mut().unwrap() {
+        if file["path"] == "disk-cleanup/cleanup-config.json" {
+            let mut config: Value =
+                serde_json::from_str(file["content"].as_str().unwrap()).unwrap();
+            for key in [
+                "user_caches",
+                "agent_caches",
+                "browser_cache",
+                "uv_prune",
+                "brew_cleanup",
+                "updater_cache",
+                "notify",
+                "detect_workspace_builds",
+            ] {
+                config[key] = json!(false);
+            }
+            file["content"] = json!(serde_json::to_string_pretty(&config).unwrap());
         }
     }
     draft["schedule"] = json!({"kind":"manual"});
@@ -107,15 +126,19 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
         root: &root,
         id: created["id"].as_str().unwrap().into(),
     };
-    let file = workspace.join("disk-cleanup/disk-cleanup.py");
-    let content = std::fs::read_to_string(&file)
-        .unwrap()
-        .replace("TEMP_RETENTION_DAYS = 7", "TEMP_RETENTION_DAYS = 14")
-        .replace(
-            "ENABLE_USER_CACHE_CLEANUP = True",
-            "ENABLE_USER_CACHE_CLEANUP = False",
-        );
-    std::fs::write(&file, content).unwrap();
+    let file = workspace.join("disk-cleanup/cleanup-config.json");
+    let content = std::fs::read_to_string(&file).unwrap();
+    let (marker, body) = content.split_once('\n').unwrap();
+    let mut config: Value = serde_json::from_str(body).unwrap();
+    config["workspace_tmp_days"] = json!(14);
+    std::fs::write(
+        &file,
+        format!(
+            "{marker}\n{}",
+            serde_json::to_string_pretty(&config).unwrap()
+        ),
+    )
+    .unwrap();
     std::fs::write(workspace.join("disk-cleanup/helper.py"), "VALUE = 2\n").unwrap();
     let retained = workspace.join("tmp/ten-days-old.tmp");
     std::fs::write(&retained, "keep after customization").unwrap();
@@ -143,21 +166,24 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     assert!(retained.is_file(), "the customized 14-day rule is used");
     let task = success(cli(&root, &["show", &cleanup.id]));
     assert_eq!(task["revision"], 2);
-    assert!(task["definition"]["files"][1]["content"]
-        .as_str()
-        .unwrap()
-        .contains("disk-cleanup.py"));
-    assert!(task["definition"]["files"][0]["content"]
-        .as_str()
-        .unwrap()
-        .contains("TEMP_RETENTION_DAYS = 14"));
-    assert_eq!(task["definition"]["files"][2]["content"], "VALUE = 2\n");
+    let files = task["definition"]["files"].as_array().unwrap();
+    assert!(files
+        .iter()
+        .any(|file| file["path"] == "disk-cleanup/cleanup-config.json"
+            && file["content"]
+                .as_str()
+                .unwrap()
+                .contains("\"workspace_tmp_days\": 14")));
+    assert!(files
+        .iter()
+        .any(|file| file["path"] == "disk-cleanup/helper.py" && file["content"] == "VALUE = 2\n"));
     let registry: Value =
         serde_json::from_slice(&std::fs::read(root.join("tasks.json")).unwrap()).unwrap();
-    assert_eq!(
-        registry["pending_backup"][&cleanup.id]["files"][2]["content"],
-        "VALUE = 2\n"
-    );
+    assert!(registry["pending_backup"][&cleanup.id]["files"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|file| file["path"] == "disk-cleanup/helper.py" && file["content"] == "VALUE = 2\n"));
     assert!(success(cli(&root, &["logs", &cleanup.id]))["content"]
         .as_str()
         .unwrap()
