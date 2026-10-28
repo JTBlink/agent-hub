@@ -894,6 +894,7 @@ export interface GitBackupFileDiff {
 }
 
 export interface GitBackupVersion {
+  /** Restore reference: a snapshot tag or a full Git commit ID. */
   tag: string;
   commit: string;
   message: string;

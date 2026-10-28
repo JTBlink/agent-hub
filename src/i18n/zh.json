@@ -340,8 +340,8 @@
       "pending": "有待同步的更改",
       "pendingDesc": "待上传文件：{{files}} · 待上传提交：{{commits}} · 云端提交：{{remote}}。",
       "synced": "已同步",
-      "syncedDesc": "与上次获取的云端版本一致。当前版本快照：{{when}}。",
-      "noSnapshot": "暂无快照",
+      "syncedDesc": "与上次获取的云端版本一致。当前备份版本：{{when}}。",
+      "noSnapshot": "暂无备份版本",
       "failed": "同步失败",
       "pendingSkills": "有 {{count}} 个技能的更改尚未同步。",
       "remoteOnly": "其他设备有更新",
@@ -439,9 +439,10 @@
     },
     "history": {
       "snapshotTime": "快照：{{time}}",
+      "backupTime": "备份：{{time}}",
       "commitTime": "提交：{{time}}",
-      "title": "历史快照",
-      "empty": "暂无历史快照。有待上传更改时，手动同步会创建快照；自动同步只保存提交。"
+      "title": "历史版本",
+      "empty": "暂无历史版本。自动备份提交和手动快照会显示在这里。"
     },
     "scope": {
       "title": "同步范围",
@@ -480,7 +481,7 @@
     "summary": {
       "title": "技能库概览",
       "skills": "技能",
-      "snapshots": "快照"
+      "snapshots": "历史版本"
     },
     "credentialsMigrated": "访问令牌已从备份地址转移到本地凭据文件，不进入备份。",
     "restoreSafetyPoint": "恢复前的状态已保存为备份点 {{tag}}，可随时从历史中恢复。"
@@ -592,13 +593,13 @@
     "gitInlineRemoteOnly": "仅远程有更新",
     "gitInlineLocalOnly": "仅本地有改动",
     "gitInlineConflict": "Git · 有合并冲突，需处理",
-    "gitSnapshots": "快照",
-    "gitVersionHistory": "快照",
-    "gitVersionLoading": "快照加载中…",
-    "gitVersionEmpty": "还没有快照，先执行同步即可生成。",
+    "gitSnapshots": "历史版本",
+    "gitVersionHistory": "历史版本",
+    "gitVersionLoading": "版本加载中…",
+    "gitVersionEmpty": "还没有备份版本。自动备份或手动同步后会显示在这里。",
     "gitVersionRestore": "恢复",
     "gitVersionRestoring": "恢复中…",
-    "gitVersionRestoreTitle": "恢复到快照版本",
+    "gitVersionRestoreTitle": "恢复历史版本",
     "gitVersionRestoreConfirm": "确定恢复到 {{tag}} 吗？会生成一条新的恢复提交，原历史会保留。",
     "gitVersionRestoreSuccess": "已恢复到 {{tag}}",
     "gitVersionRestoreNeedSync": "当前仅本地恢复，如需同步到远程请再执行“同步到 Git”。",

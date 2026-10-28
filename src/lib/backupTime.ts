@@ -21,7 +21,34 @@ export function formatDateTime(iso: string, timeZone?: string): string {
 
 export function displaySnapshotLabel(tag: string, timeZone?: string): string {
   const date = snapshotDate(tag);
-  return date ? formatDateTime(date.toISOString(), timeZone) : tag;
+  return date
+    ? formatDateTime(date.toISOString(), timeZone)
+    : /^[a-f\d]{40}$/i.test(tag)
+      ? tag.slice(0, 8)
+      : tag;
+}
+
+export function backupVersionLabel(
+  version: { tag: string; committed_at: string },
+  timeZone?: string,
+): string {
+  return snapshotDate(version.tag)
+    ? displaySnapshotLabel(version.tag, timeZone)
+    : version.committed_at
+      ? formatDateTime(version.committed_at, timeZone)
+      : displaySnapshotLabel(version.tag, timeZone);
+}
+
+export function currentBackupWhen(
+  status: {
+    current_snapshot_tag: string | null;
+    last_commit_time: string | null;
+  } | null,
+): string | null {
+  return (
+    formatSnapshotWhen(status?.current_snapshot_tag ?? null) ??
+    (status?.last_commit_time ? formatDateTime(status.last_commit_time) : null)
+  );
 }
 
 export function formatSnapshotWhen(tag: string | null): string | null {

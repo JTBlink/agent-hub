@@ -342,8 +342,8 @@
       "pending": "Changes waiting to sync",
       "pendingDesc": "Files to upload: {{files}} · Commits to upload: {{commits}} · Cloud commits: {{remote}}.",
       "synced": "Synced",
-      "syncedDesc": "Matches the last fetched cloud version. Current version snapshot: {{when}}.",
-      "noSnapshot": "no snapshot yet",
+      "syncedDesc": "Matches the last fetched cloud version. Current backup version: {{when}}.",
+      "noSnapshot": "No backup version yet",
       "failed": "Sync failed",
       "pendingSkills": "{{count}} skills have changes waiting to sync.",
       "remoteOnly": "Updates from your other devices",
@@ -441,9 +441,10 @@
     },
     "history": {
       "snapshotTime": "Snapshot: {{time}}",
+      "backupTime": "Backup: {{time}}",
       "commitTime": "Commit: {{time}}",
-      "title": "Snapshot history",
-      "empty": "No snapshots yet. Manual sync creates a snapshot when uploading changes; automatic sync only saves commits."
+      "title": "Version history",
+      "empty": "No version history yet. Automatic backup commits and manual snapshots appear here."
     },
     "scope": {
       "title": "Sync scope",
@@ -482,7 +483,7 @@
     "summary": {
       "title": "Library Summary",
       "skills": "Skills",
-      "snapshots": "Snapshots"
+      "snapshots": "Version history"
     },
     "credentialsMigrated": "The access token was moved from the backup URL to the local credential store, excluded from backups.",
     "restoreSafetyPoint": "Your previous state was saved as snapshot {{tag}} — you can restore it from the history at any time."
@@ -594,13 +595,13 @@
     "gitInlineRemoteOnly": "Remote has updates",
     "gitInlineLocalOnly": "Local changes pending",
     "gitInlineConflict": "Git · Merge conflict — needs resolution",
-    "gitSnapshots": "Snapshots",
-    "gitVersionHistory": "Snapshots",
-    "gitVersionLoading": "Loading snapshots…",
-    "gitVersionEmpty": "No snapshots yet. Run Sync to create one.",
+    "gitSnapshots": "Version history",
+    "gitVersionHistory": "Version history",
+    "gitVersionLoading": "Loading versions…",
+    "gitVersionEmpty": "No backup versions yet. Automatic backups and manual syncs appear here.",
     "gitVersionRestore": "Restore",
     "gitVersionRestoring": "Restoring…",
-    "gitVersionRestoreTitle": "Restore Snapshot",
+    "gitVersionRestoreTitle": "Restore version",
     "gitVersionRestoreConfirm": "Restore skill library to {{tag}}? This creates a new restore commit and keeps current history.",
     "gitVersionRestoreSuccess": "Restored to {{tag}}",
     "gitVersionRestoreNeedSync": "Restore is local for now. Run Sync to Git to share it with remote.",

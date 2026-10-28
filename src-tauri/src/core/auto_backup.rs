@@ -556,6 +556,9 @@ mod tests {
             "unexpected commit message: {commit_msg}"
         );
         assert_eq!(git_out(&env.repo_dir, &["tag", "--list", "sm-v-*"]), "");
+        let history = git_backup::list_snapshot_versions(&env.repo_dir, Some(50)).unwrap();
+        assert_eq!(history.first().map(|version| version.tag.as_str()), Some(local_head.as_str()),
+            "a successful automatic backup must appear in restorable history even without a snapshot tag");
 
         // A second round with nothing new is a no-op.
         assert_eq!(run_round_blocking(&env.store), Outcome::UpToDate);

@@ -340,8 +340,8 @@
       "pending": "有待同步的變更",
       "pendingDesc": "待上傳檔案：{{files}} · 待上傳提交：{{commits}} · 雲端提交：{{remote}}。",
       "synced": "已同步",
-      "syncedDesc": "與上次取得的雲端版本一致。目前版本快照：{{when}}。",
-      "noSnapshot": "暫無快照",
+      "syncedDesc": "與上次取得的雲端版本一致。目前備份版本：{{when}}。",
+      "noSnapshot": "暫無備份版本",
       "failed": "同步失敗",
       "pendingSkills": "有 {{count}} 個技能的變更尚未同步。",
       "remoteOnly": "其他裝置有更新",
@@ -439,9 +439,10 @@
     },
     "history": {
       "snapshotTime": "快照：{{time}}",
+      "backupTime": "備份：{{time}}",
       "commitTime": "提交：{{time}}",
-      "title": "歷史快照",
-      "empty": "暫無歷史快照。有待上傳變更時，手動同步會建立快照；自動同步只儲存提交。"
+      "title": "歷史版本",
+      "empty": "暫無歷史版本。自動備份提交與手動快照會顯示在此處。"
     },
     "scope": {
       "title": "同步範圍",
@@ -480,7 +481,7 @@
     "summary": {
       "title": "技能庫概覽",
       "skills": "技能",
-      "snapshots": "快照"
+      "snapshots": "歷史版本"
     },
     "credentialsMigrated": "存取權杖已從備份位址轉移到本機憑證檔案，不進入備份。",
     "restoreSafetyPoint": "還原前的狀態已儲存為備份點 {{tag}}，可隨時從歷史中還原。"
@@ -594,13 +595,13 @@
     "gitInlineRemoteOnly": "僅遠端有更新",
     "gitInlineLocalOnly": "僅本機有變更",
     "gitInlineConflict": "Git · 有合併衝突，需處理",
-    "gitSnapshots": "快照",
-    "gitVersionHistory": "快照",
-    "gitVersionLoading": "快照載入中…",
-    "gitVersionEmpty": "還沒有快照，先執行同步即可產生。",
+    "gitSnapshots": "歷史版本",
+    "gitVersionHistory": "歷史版本",
+    "gitVersionLoading": "版本載入中…",
+    "gitVersionEmpty": "還沒有備份版本。自動備份或手動同步後會顯示在此處。",
     "gitVersionRestore": "還原",
     "gitVersionRestoring": "還原中…",
-    "gitVersionRestoreTitle": "還原到快照版本",
+    "gitVersionRestoreTitle": "還原歷史版本",
     "gitVersionRestoreConfirm": "確定還原到 {{tag}} 嗎？會產生一筆新的還原提交，原歷史會保留。",
     "gitVersionRestoreSuccess": "已還原到 {{tag}}",
     "gitVersionRestoreNeedSync": "當前僅本機還原，如需同步到遠端請再執行「同步到 Git」。",

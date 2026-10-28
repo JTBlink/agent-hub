@@ -4,6 +4,8 @@ import {
   formatDateTime,
   formatSnapshotWhen,
   snapshotDate,
+  backupVersionLabel,
+  currentBackupWhen,
 } from "./backupTime";
 
 describe("backup timestamps", () => {
@@ -53,5 +55,23 @@ describe("backup timestamps", () => {
     }
     expect(formatSnapshotWhen(null)).toBeNull();
     expect(formatDateTime("invalid")).toBe("invalid");
+  });
+  it("uses commit time for automatic backups and snapshot time for tagged versions", () => {
+    const commit = "a".repeat(40);
+    const committed_at = "2026-10-28T04:17:35Z";
+    expect(backupVersionLabel({ tag: commit, committed_at })).toBe(
+      formatDateTime(committed_at),
+    );
+    expect(backupVersionLabel({ tag, committed_at })).toBe(
+      displaySnapshotLabel(tag),
+    );
+    expect(displaySnapshotLabel(commit)).toBe("aaaaaaaa");
+    expect(
+      currentBackupWhen({
+        current_snapshot_tag: null,
+        last_commit_time: committed_at,
+      }),
+    ).toBe(formatDateTime(committed_at));
+    expect(currentBackupWhen(null)).toBeNull();
   });
 });

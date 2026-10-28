@@ -1,4 +1,6 @@
+mod history;
 mod local_state;
+pub use history::list_snapshot_versions;
 mod status;
 pub use status::{get_file_diff, get_status, GitBackupFileDiff, GitBackupStatus};
 mod restore;
@@ -27,7 +29,7 @@ fn git_command() -> Command {
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct GitBackupVersion {
-    /// Snapshot tag name (e.g. sm-v-20260318-153012-abc1234)
+    /// Restore reference: snapshot tag, or full commit ID for automatic backups.
     pub tag: String,
     /// Commit SHA this snapshot points to (short)
     pub commit: String,
@@ -784,50 +786,6 @@ pub(crate) fn create_snapshot_tag_unlocked(skills_dir: &Path) -> Result<String> 
     Ok(tag)
 }
 
-/// List snapshot versions, newest first.
-pub fn list_snapshot_versions(
-    skills_dir: &Path,
-    limit: Option<usize>,
-) -> Result<Vec<GitBackupVersion>> {
-    ensure_repo(skills_dir)?;
-    let tags = run_git(
-        skills_dir,
-        &["tag", "--list", "sm-v-*", "--sort=-creatordate"],
-    )?;
-    if tags.trim().is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let max = limit.unwrap_or(30);
-    let mut versions = Vec::new();
-    for tag in tags.lines().take(max) {
-        let commit = run_git(skills_dir, &["rev-list", "-n", "1", tag]).unwrap_or_default();
-        let short_commit = if commit.len() > 8 {
-            commit[..8].to_string()
-        } else {
-            commit.clone()
-        };
-        // Author, date and message in one call; message last because it is
-        // the only field that could contain the separator.
-        let line = run_git(skills_dir, &["log", "-1", "--format=%an%x1f%cI%x1f%s", tag])
-            .unwrap_or_default();
-        let mut parts = line.splitn(3, '\u{1f}');
-        let author = parts.next().unwrap_or_default().to_string();
-        let committed_at = parts.next().unwrap_or_default().to_string();
-        let message = parts.next().unwrap_or_default().to_string();
-
-        versions.push(GitBackupVersion {
-            tag: tag.to_string(),
-            commit: short_commit,
-            message,
-            committed_at,
-            author,
-        });
-    }
-
-    Ok(versions)
-}
-
 /// Restore skills files to a snapshot tag by creating a new restore commit.
 /// Returns the safety-point tag capturing the pre-restore state.
 #[allow(dead_code)]
@@ -839,13 +797,7 @@ pub fn restore_snapshot_version(skills_dir: &Path, tag: &str) -> Result<String> 
 pub(crate) fn restore_snapshot_version_unlocked(skills_dir: &Path, tag: &str) -> Result<String> {
     ensure_repo(skills_dir)?;
 
-    if !tag.starts_with("sm-v-") {
-        anyhow::bail!("Invalid snapshot tag");
-    }
-    run_git_checked(
-        skills_dir,
-        &["rev-parse", "-q", "--verify", &format!("refs/tags/{tag}")],
-    )?;
+    let target = history::restore_target(skills_dir, tag)?;
 
     log::info!("git restore: switching skills library to {tag}");
 
@@ -861,7 +813,7 @@ pub(crate) fn restore_snapshot_version_unlocked(skills_dir: &Path, tag: &str) ->
     let restore_result: Result<()> = (|| {
         // Align working tree + index to snapshot tree exactly (including deletions),
         // then commit as a forward change.
-        run_git_checked(skills_dir, &["read-tree", "--reset", "-u", tag])?;
+        run_git_checked(skills_dir, &["read-tree", "--reset", "-u", &target])?;
 
         // Sticky protocol marker (§6): a pre-protocol snapshot self-heals on
         // the restore commit instead of resurrecting a marker-less tree.
@@ -1464,7 +1416,7 @@ fn redact_url(url: &str) -> String {
 fn parse_restored_from_tag_message(message: &str) -> Option<String> {
     let prefix = "restore: switch skills library to ";
     let tag = message.strip_prefix(prefix)?.trim();
-    if tag.starts_with("sm-v-") {
+    if tag.starts_with("sm-v-") || history::is_commit_reference(tag) {
         Some(tag.to_string())
     } else {
         None
