@@ -1,7 +1,7 @@
 //! Standalone current-user runners persist bounded history without a running UI.
 use super::render::{ps, shell};
 use std::path::Path;
-pub(super) const VERSION: &str = "AgentHub workspace scripts v2";
+pub(super) const VERSION: &str = "AgentHub workspace scripts v3";
 
 pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path) -> String {
     format!(

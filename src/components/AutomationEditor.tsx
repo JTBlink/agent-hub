@@ -1,6 +1,7 @@
 import { ThemedSelect } from "./ThemedSelect";
 import { useEffect, useRef, useState } from "react";
 import { AutomationScriptFilesEditor } from "./AutomationScriptFilesEditor";
+import { AutomationWorkdirField } from "./AutomationWorkdirField";
 import { AutomationTemplatePicker } from "./AutomationTemplatePicker";
 import { X, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -281,21 +282,11 @@ export function AutomationEditor({
                   {hermesInstalled && <option value="hermes">Hermes</option>}
                 </ThemedSelect>
               </label>
-              <label className="block space-y-2">
-                <span className="text-[12px] font-medium text-muted">
-                  {t("automation.workdir")}
-                </span>
-                <input
-                  value={draft.workdir ?? ""}
-                  onChange={(e) => update({ workdir: e.target.value })}
-                  placeholder={t("automation.workdirPlaceholder")}
-                  aria-label={t("automation.workdir")}
-                  className="app-input w-full"
-                />
-                <span className="block break-words text-[11px] leading-5 text-muted">
-                  {t("automation.defaultWorkdir")}
-                </span>
-              </label>
+              <AutomationWorkdirField
+                value={draft.workdir}
+                disabled={busy}
+                onChange={(workdir) => update({ workdir })}
+              />
               <div className="space-y-3">
                 <label className="block space-y-2">
                   <span className="text-[12px] font-medium text-muted">

@@ -7,6 +7,11 @@ import * as api from "../lib/tauri";
 import zh from "../i18n/zh.json";
 import { MemoryRouter } from "react-router-dom";
 import { Automation } from "./Automation";
+import { open } from "@tauri-apps/plugin-dialog";
+import { openDirectoryInVscode } from "../lib/openInVscode";
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
+vi.mock("../lib/openInVscode", () => ({ openDirectoryInVscode: vi.fn() }));
 
 vi.mock("../lib/tauri", () => ({
   getAutomationOverview: vi.fn(),
@@ -84,6 +89,8 @@ const hermes: api.AutomationTask = {
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
+  vi.mocked(open).mockReset().mockResolvedValue(null);
+  vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.mocked(api.onAutomationChanged)
     .mockReset()
@@ -568,6 +575,70 @@ it("creates a manual command task with the shared DTO without running it on save
   });
   expect(api.runAutomation).not.toHaveBeenCalled();
   expect(container.querySelector('[role="dialog"]')).toBeNull();
+});
+
+it("chooses a working directory, opens it in VS Code and saves the selected path", async () => {
+  vi.mocked(open).mockResolvedValue("/workspace/清理缓存 #demo");
+  await render();
+  await click("新建自动化");
+  expect(
+    container.querySelector<HTMLButtonElement>(
+      '[aria-label="在 VS Code 中打开"]',
+    )!.disabled,
+  ).toBe(true);
+  await ariaClick("选择工作目录");
+  expect(open).toHaveBeenCalledWith({
+    directory: true,
+    multiple: false,
+    title: "选择工作目录",
+  });
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="工作目录"]')!.value,
+  ).toBe("/workspace/清理缓存 #demo");
+  await ariaClick("在 VS Code 中打开");
+  expect(openDirectoryInVscode).toHaveBeenCalledWith(
+    "/workspace/清理缓存 #demo",
+  );
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.runAutomation).not.toHaveBeenCalled();
+  await input("名称", "检查");
+  await input("执行命令", "exit 0");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    null,
+    null,
+    expect.objectContaining({ workdir: "/workspace/清理缓存 #demo" }),
+  );
+});
+
+it("keeps the entered workdir on picker cancellation or launch failure and allows retry", async () => {
+  await render();
+  await click("新建自动化");
+  await input("工作目录", "/workspace/demo");
+  await ariaClick("选择工作目录");
+  expect(open).toHaveBeenCalledWith(
+    expect.objectContaining({ defaultPath: "/workspace/demo" }),
+  );
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="工作目录"]')!.value,
+  ).toBe("/workspace/demo");
+  vi.mocked(openDirectoryInVscode).mockRejectedValueOnce(
+    new Error("VS Code unavailable"),
+  );
+  await ariaClick("在 VS Code 中打开");
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "VS Code unavailable",
+  );
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="工作目录"]')!.value,
+  ).toBe("/workspace/demo");
+  await ariaClick("在 VS Code 中打开");
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  expect(api.saveAutomation).not.toHaveBeenCalled();
 });
 
 it("preserves editor content and retry controls after save failure", async () => {

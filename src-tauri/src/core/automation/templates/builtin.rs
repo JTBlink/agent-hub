@@ -109,19 +109,23 @@ pub(super) fn templates(locale: &str, hermes: bool, shell: &str) -> Vec<Automati
             } else {
                 command
             };
+            let mut draft = AutomationDraft {
+                name: title.clone(),
+                provider: manifest.provider,
+                content: command,
+                files,
+                workdir: None,
+                schedule: manifest.schedule,
+                enabled: true,
+            };
+            if draft.provider == Provider::System {
+                super::super::native::shell_entry::wrap(&mut draft, shell);
+            }
             Some(AutomationTemplate {
                 id: manifest.id,
                 title: title.clone(),
                 description: manifest.description.get(locale),
-                draft: AutomationDraft {
-                    name: title,
-                    provider: manifest.provider,
-                    content: command,
-                    files,
-                    workdir: None,
-                    schedule: manifest.schedule,
-                    enabled: true,
-                },
+                draft,
             })
         })
         .collect()

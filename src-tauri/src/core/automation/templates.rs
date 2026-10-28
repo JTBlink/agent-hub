@@ -54,8 +54,12 @@ mod tests {
         assert_eq!(windows.templates.len(), 3);
         assert!(windows.templates[0]
             .draft
+            .files
+            .last()
+            .unwrap()
             .content
             .contains("workspace-check.py"));
+        assert_eq!(windows.templates[0].draft.content, "& './run.ps1'");
         assert_eq!(windows.templates[0].title, "工作目录检查");
         assert!(windows
             .templates
@@ -63,6 +67,7 @@ mod tests {
             .all(|t| t.draft.provider == Provider::System));
         let unix = catalog("en", true, "sh");
         assert_eq!(unix.templates.len(), 5);
+        assert_eq!(unix.templates[0].draft.content, "sh './run.sh'");
         let cleanup = windows
             .templates
             .iter()

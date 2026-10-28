@@ -10,6 +10,7 @@ pub(super) mod bundle_files;
 pub(super) mod payload;
 mod render;
 mod run_script;
+pub(super) mod shell_entry;
 
 pub(super) fn python_runtime() -> Result<PathBuf, String> {
     for name in ["python3", "python"] {
@@ -70,7 +71,12 @@ pub(super) fn apply(root: &Path, task: &ManagedAutomation) -> Result<(), String>
         return Err("Wait for the current run to finish before editing".into());
     }
     let dir = checked_directory(root, task)?;
-    if !task.draft.files.is_empty() {
+    if task
+        .draft
+        .files
+        .iter()
+        .any(|file| file.path.ends_with(".py"))
+    {
         python_runtime()?;
     }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -259,6 +265,9 @@ pub(super) fn refresh_runner(root: &Path, task: &ManagedAutomation) -> Result<()
     render::scripts(&dir, &task.draft, &task.id, false).map(|_| ())
 }
 pub(super) fn needs_upgrade(root: &Path, task: &ManagedAutomation) -> bool {
+    if task.draft.workdir.is_some() && shell_entry::entry(&task.draft).is_none() {
+        return true;
+    }
     let wrapper = directory(root, task).join(if cfg!(windows) { "run.ps1" } else { "run.sh" });
     std::fs::read_to_string(wrapper).is_ok_and(|script| !script.contains(run_script::VERSION))
 }

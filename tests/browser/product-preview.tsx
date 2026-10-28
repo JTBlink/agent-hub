@@ -1,6 +1,7 @@
 import React from "react";
 import workspaceCheckScript from "../../src-tauri/src/core/automation/templates/builtin/workspace-check/workspace-check.py?raw";
 import gitStatusScript from "../../src-tauri/src/core/automation/templates/builtin/git-status/git-status.py?raw";
+import diskCleanupManifest from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/template.json";
 import diskCleanupScript from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/disk-cleanup.py?raw";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -367,11 +368,15 @@ Object.assign(window, {
                 draft: {
                   name: "工作目录检查",
                   provider: "system",
-                  content: "python3 './workspace-check/workspace-check.py'",
+                  content: "sh './run.sh'",
                   files: [
                     {
                       path: "workspace-check/workspace-check.py",
                       content: workspaceCheckScript,
+                    },
+                    {
+                      path: "run.sh",
+                      content: "python3 './workspace-check/workspace-check.py'",
                     },
                   ],
                   workdir: null,
@@ -382,16 +387,19 @@ Object.assign(window, {
               {
                 id: "disk-cleanup",
                 title: "清理磁盘缓存",
-                description:
-                  "每天 03:00 清理工作目录 tmp 中超过 7 天、logs 中超过 30 天的文件，并查看磁盘空间。保留目录并跳过链接，创建前请选择工作目录。",
+                description: diskCleanupManifest.description.zh,
                 draft: {
                   name: "清理磁盘缓存",
                   provider: "system",
-                  content: "python3 './disk-cleanup/disk-cleanup.py'",
+                  content: "sh './run.sh'",
                   files: [
                     {
                       path: "disk-cleanup/disk-cleanup.py",
                       content: diskCleanupScript,
+                    },
+                    {
+                      path: "run.sh",
+                      content: "python3 './disk-cleanup/disk-cleanup.py'",
                     },
                   ],
                   workdir: null,
@@ -411,11 +419,15 @@ Object.assign(window, {
                 draft: {
                   name: "Git 工作区状态",
                   provider: "system",
-                  content: "python3 './git-status/git-status.py'",
+                  content: "sh './run.sh'",
                   files: [
                     {
                       path: "git-status/git-status.py",
                       content: gitStatusScript,
+                    },
+                    {
+                      path: "run.sh",
+                      content: "python3 './git-status/git-status.py'",
                     },
                   ],
                   workdir: null,

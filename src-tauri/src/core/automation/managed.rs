@@ -207,6 +207,10 @@ pub fn save(
         .map(str::to_owned)
         .unwrap_or_else(|| format!("agent_hub:{}", uuid::Uuid::new_v4()));
     super::workspace::ensure(&mut draft, &id, "")?;
+    if draft.provider == Provider::System {
+        native::shell_entry::prepare(&mut draft, &id, old.as_ref())?;
+        draft.validate()?;
+    }
     if draft.provider == Provider::Hermes {
         let (identifier, location) = hermes_manage::create(&draft)?;
         records.push(ManagedAutomation {
@@ -241,6 +245,11 @@ pub fn save(
             }
             store::save(&root, records)
         })?;
+        if let Err(error) =
+            native::payload::archive_legacy(&native::directory(&root, &next), &next.draft, &next.id)
+        {
+            log::warn!("Cannot archive legacy automation script: {error}");
+        }
     }
     Ok(id)
 }
@@ -280,6 +289,7 @@ fn transition(
 /// Requests a single native/Hermes execution. The recurring schedule is untouched.
 pub fn run(id: &str) -> Result<(), String> {
     super::sync_workspace_scripts()?;
+    upgrade_runners();
     let root = store::root();
     let _lock = store::Lock::acquire(&root)?;
     let task = find(id)?;
@@ -347,20 +357,57 @@ pub(crate) fn upgrade_runners() {
     let Ok(_lock) = store::Lock::acquire(&root) else {
         return;
     };
-    let Ok(records) = store::load(&root) else {
+    let Ok(mut records) = store::load(&root) else {
         return;
     };
-    for record in records
-        .into_iter()
-        .filter(|record| record.draft.provider == Provider::System)
-    {
-        if verify(&root, &record).is_ok()
-            && native::needs_upgrade(&root, &record)
-            && native::state(&record) == Some(false)
+    for index in 0..records.len() {
+        let old = records[index].clone();
+        if old.draft.provider != Provider::System
+            || verify(&root, &old).is_err()
+            || !native::needs_upgrade(&root, &old)
+            || native::state(&old) != Some(false)
         {
-            if let Err(error) = native::refresh_runner(&root, &record) {
-                log::warn!("Cannot upgrade automation runner: {error}");
+            continue;
+        }
+        let result = (|| {
+            let mut next = old.clone();
+            let normalized = if next.draft.workdir.is_some() {
+                native::shell_entry::prepare(&mut next.draft, &next.id, Some(&old))?
+            } else {
+                false
+            };
+            next.draft.validate()?;
+            if normalized {
+                next.revision = next
+                    .revision
+                    .checked_add(1)
+                    .ok_or("Automation revision exhausted")?;
             }
+            let mut updated = records.clone();
+            updated[index] = next.clone();
+            transition(
+                || native::refresh_runner(&root, &next),
+                || {
+                    if normalized {
+                        store::save(&root, updated.clone())
+                    } else {
+                        Ok(())
+                    }
+                },
+                || native::refresh_runner(&root, &old),
+            )?;
+            records = updated;
+            if let Err(error) = native::payload::archive_legacy(
+                &native::directory(&root, &next),
+                &next.draft,
+                &next.id,
+            ) {
+                log::warn!("Cannot archive legacy automation script: {error}");
+            }
+            Ok::<_, String>(())
+        })();
+        if let Err(error) = result {
+            log::warn!("Cannot upgrade automation runner: {error}");
         }
     }
 }

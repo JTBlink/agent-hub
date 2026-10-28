@@ -15,6 +15,13 @@ pub(super) fn path(dir: &Path, draft: &AutomationDraft, id: &str) -> Result<Path
     if !valid_id(id) {
         return Err("Invalid automation script ID".into());
     }
+    if let Some(entry) = super::shell_entry::entry(draft) {
+        let workspace = draft
+            .workdir
+            .as_deref()
+            .ok_or("Missing automation workspace")?;
+        return super::bundle_files::path(workspace, &entry.path, false);
+    }
     let extension = if cfg!(windows) { "ps1" } else { "sh" };
     match &draft.workdir {
         Some(workdir) => {
@@ -62,6 +69,10 @@ pub(in crate::core::automation) fn write(
     id: &str,
     replace: bool,
 ) -> Result<PathBuf, String> {
+    if super::shell_entry::entry(draft).is_some() {
+        super::bundle_files::write(dir, draft, id, replace)?;
+        return path(dir, draft, id);
+    }
     let path = path(dir, draft, id)?;
     let previous = read_file(&path)?;
     if previous.is_some() && !replace {
@@ -95,6 +106,9 @@ pub(in crate::core::automation) fn read(
     root: &Path,
     record: &ManagedAutomation,
 ) -> Result<Option<String>, String> {
+    if super::shell_entry::entry(&record.draft).is_some() {
+        return Ok(None);
+    }
     if record.draft.workdir.is_none() {
         return Ok(None);
     }
@@ -105,6 +119,51 @@ pub(in crate::core::automation) fn read(
             .unwrap_or(text)
             .to_owned()
     }))
+}
+
+/// Called after the new runner and its definition are durable. Retain the old
+/// body in internal data before removing its long filename from the workspace.
+pub(in crate::core::automation) fn archive_legacy(
+    dir: &Path,
+    draft: &AutomationDraft,
+    id: &str,
+) -> Result<(), String> {
+    let Some(entry) = super::shell_entry::entry(draft) else {
+        return Ok(());
+    };
+    if !valid_id(id) {
+        return Err("Invalid automation script ID".into());
+    }
+    let Some(workspace) = &draft.workdir else {
+        return Ok(());
+    };
+    let extension = if cfg!(windows) { "ps1" } else { "sh" };
+    let old = Path::new(workspace).join(format!(
+        "agent-hub-{}.{}",
+        id.trim_start_matches("agent_hub:"),
+        extension
+    ));
+    let Some(text) = read_file(&old)? else {
+        return Ok(());
+    };
+    let body = text.trim_start_matches('\u{feff}');
+    if body.strip_prefix(&header(id)).unwrap_or(body) != entry.content {
+        return Err("Legacy automation script changed; its file was preserved".into());
+    }
+    let archive = dir.join(format!("previous-command.{extension}"));
+    match read_file(&archive)? {
+        Some(previous) if previous != text => {
+            return Err(
+                "Previous automation script archive is occupied; legacy file was preserved".into(),
+            )
+        }
+        Some(_) => {}
+        None => store::write(&archive, text.as_bytes())?,
+    }
+    if read_file(&old)?.as_deref() == Some(&text) {
+        fs::remove_file(old).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

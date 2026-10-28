@@ -63,14 +63,13 @@ fn relevant(event: &Event, root: &Path, watched: &HashSet<PathBuf>) -> bool {
             Some("tasks.json") => parent == root,
             Some("started" | "exit") => parent.parent() == Some(root),
             Some("jobs.json") => parent != root,
-            Some(name) if name.ends_with(".py") => true,
-            Some(name) => name
-                .strip_prefix("agent-hub-")
-                .and_then(|name| {
-                    name.strip_suffix(".sh")
-                        .or_else(|| name.strip_suffix(".ps1"))
-                })
-                .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok()),
+            Some(name)
+                if [".py", ".sh", ".ps1"]
+                    .iter()
+                    .any(|extension| name.ends_with(extension)) =>
+            {
+                true
+            }
             _ => false,
         }
     })
@@ -163,12 +162,13 @@ mod tests {
             task.join("agent-hub-11111111-1111-4111-8111-111111111111.sh"),
             task.join("agent-hub-11111111-1111-4111-8111-111111111111.ps1"),
             task.join("disk-cleanup.py"),
+            task.join("run.sh"),
+            task.join("run-2.ps1"),
         ] {
             assert!(relevant(&event(path), root, &watched));
         }
         for path in [
             task.join("output.log"),
-            task.join("agent-hub-not-a-task.sh"),
             task.join("workspace/artifact"),
             root.join(".lock"),
             PathBuf::from("/outside/jobs.json"),

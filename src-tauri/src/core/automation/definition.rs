@@ -85,17 +85,23 @@ pub struct AutomationDraft {
 impl AutomationDraft {
     pub(super) fn validate(&mut self) -> Result<(), String> {
         let mut paths = std::collections::HashSet::new();
-        let mut total = self.content.len();
+        let mut total = if super::native::shell_entry::entry(self).is_some() {
+            0
+        } else {
+            self.content.len()
+        };
         for file in &self.files {
             super::super::path_guard::ensure_safe_skill_relative_path(&file.path)
                 .map_err(|e| e.to_string())?;
             if file.path.contains(['\\', ':'])
-                || !file.path.ends_with(".py")
+                || ![".py", ".sh", ".ps1"]
+                    .iter()
+                    .any(|extension| file.path.ends_with(extension))
                 || !paths.insert(&file.path)
                 || file.content.trim().is_empty()
                 || file.content.contains('\0')
             {
-                return Err("Template scripts require unique relative .py paths and nonempty UTF-8 contents".into());
+                return Err("Task scripts require unique relative .py, .sh or .ps1 paths and nonempty UTF-8 contents".into());
             }
             total = total.saturating_add(file.content.len());
         }
@@ -187,6 +193,18 @@ mod tests {
         }];
         assert!(draft.validate().is_ok());
         draft.files.push(draft.files[0].clone());
+        assert!(draft.validate().is_err());
+    }
+    #[test]
+    fn shell_entry_keeps_the_full_64_kib_script_budget() {
+        let mut draft: AutomationDraft = serde_json::from_value(serde_json::json!({
+            "name": "Audit", "provider": "system", "content": "sh './run.sh'", "workdir": null,
+            "schedule": {"kind":"manual"}, "enabled": false,
+            "files": [{"path":"run.sh", "content":"x".repeat(65536)}]
+        }))
+        .unwrap();
+        assert!(draft.validate().is_ok());
+        draft.files[0].content.push('x');
         assert!(draft.validate().is_err());
     }
     #[test]

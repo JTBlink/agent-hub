@@ -130,8 +130,11 @@ an explicit resume/repair before running.
 Use `create --template <template-id>` for the platform-correct built-in starters,
 or `create --file task.json` for a definition. `edit <id> --file task.json
 --revision <revision>` protects managed tasks from stale edits. An omitted
-working directory is provisioned under `~/.agent-hub/automations/<task-id>/workspace`;
-an explicit existing directory is preserved. Saving does not add an immediate
+working directory is provisioned under `~/.agent-hub/automations/<task-name>/`;
+occupied names receive numeric suffixes (`-2`, `-3`, etc.). The association
+with the task ID stays in internal task data. Reusing the default workspace or
+renaming the task preserves its allocated path. Explicit directories and
+existing UUID-based workspaces are preserved. Saving does not add an immediate
 run. Task definitions join the existing Git auto-backup flow; runtime logs,
 registrations, wrappers, and other workspace files stay local.
 
@@ -142,13 +145,17 @@ use `create --file task.json`. For an existing task, read `show`, edit its
 pass the entire `show` response as a draft. `pause`, `resume`, and `remove` use
 the same exact task ID; use `runs` and `logs --run` to inspect an execution.
 
-System tasks keep their payload file in the working directory as
-`agent-hub-<task UUID>.sh` (`.ps1` on Windows). Bundled system templates are
+System tasks execute a short shell entry in the working directory:
+`sh './run.sh'` (`& './run.ps1'` on Windows). Occupied names receive numeric
+suffixes such as `run-2.sh`; existing files are never adopted by name alone.
+The entry's body is included in `files`, so edit that file to change its
+command. Legacy inline `content` is normalized into this shell entry on save.
+Bundled system templates are
 individual folders containing a `template.json` manifest and one or more Python
 scripts. They are embedded into both the desktop and CLI binaries. Creating a
 task copies the declared `files` (relative `path` plus `content`) into matching
-folders inside its workspace. The execution command directly invokes the Python
-entry point, e.g. `python3 ./disk-cleanup/disk-cleanup.py`; Python 3 is required.
+folders inside its workspace. The scheduled shell entry invokes the Python
+script, e.g. `python3 ./disk-cleanup/disk-cleanup.py`; Python 3 is required.
 Users can expand Script files in the editor, edit `files` through CLI JSON, or
 customize the files directly; refresh and run preserve their contents.
 The app watches script edits and queues their contents in the existing Git

@@ -68,9 +68,9 @@ agent-hub-cli automations remove '<task-id>'
 }
 ```
 
-`workdir` 省略或为 `null` 时，会自动创建 `~/.agent-hub/automations/<任务 ID>/workspace` 作为该任务的独立工作目录；显式填写时保留指定目录。删除任务不会删除工作目录中的文件。
+`workdir` 省略或为 `null` 时，会自动创建 `~/.agent-hub/automations/<任务名称>/` 作为该任务的独立工作目录；同名或已有目录会使用 `-2`、`-3` 等后缀区分，不占用已有内容。目录分配记录保存在内部任务数据中，重复分配或修改任务名称不重命名目录。显式填写时保留指定目录，旧版本的 UUID 工作目录也保持原路径。删除任务不会删除工作目录中的文件。
 
-系统任务脚本位于工作目录中的 `agent-hub-<任务 UUID>.sh`（Windows 为 `.ps1`），多个任务共用目录时使用各自文件名。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置。创建时将声明的脚本复制到工作目录下对应模板文件夹，如 `disk-cleanup/disk-cleanup.py`；执行命令直接调用脚本，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存这些脚本，可在 GUI 展开“脚本文件”或通过 CLI 修改。可直接编辑脚本，或使用 GUI／CLI 修改 `content`；手动触发和计划执行读取该文件，运行前不会用模板覆盖定制内容。删除任务保留工作目录及脚本文件。
+系统任务统一执行工作目录下的短名 Shell 入口：`sh './run.sh'`（Windows 为 `& './run.ps1'`），名称已占用时使用 `run-2.sh` 等后缀，保留已有文件。定时和手动运行触发同一个入口。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置；Shell 入口再调用对应 Python 脚本，如 `disk-cleanup/disk-cleanup.py`，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存 Shell 入口和 Python 脚本，可在 GUI 展开“脚本文件”、通过 CLI 或直接编辑文件定制。旧格式内联 `content` 保存时会转为 Shell 入口的正文。运行前不会用模板覆盖定制内容；旧长文件名迁移成功后将原内容保存在内部任务目录，目录中的用户文件不移动。删除任务保留工作目录及脚本文件。
 
 `provider` 为 `system` 时，内容是 macOS/Linux 的 `/bin/sh` 命令或 Windows PowerShell 命令。任务写入当前用户的系统原生调度器，关闭 AgentHub 后仍可按计划执行；需要用户保持登录，Linux 可另行配置用户服务 linger。支持每天、工作日、固定分钟间隔（`{"kind":"interval","minutes":60}`）和仅手动触发（`{"kind":"manual"}`）。保存不会额外触发一次运行，手动运行不修改日程配置。
 

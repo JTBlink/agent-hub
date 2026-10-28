@@ -47,8 +47,16 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
             weekdays: false
         }
     );
-    assert!(draft.content.contains("disk-cleanup.py"));
-    assert_eq!(draft.files.len(), 1);
+    assert_eq!(
+        draft.content,
+        if cfg!(windows) {
+            "& './run.ps1'"
+        } else {
+            "sh './run.sh'"
+        }
+    );
+    assert_eq!(draft.files.len(), 2);
+    assert!(draft.files[1].content.contains("disk-cleanup.py"));
     assert!(draft.files[0].content.contains("TEMP_RETENTION_DAYS"));
     assert_eq!(std::fs::read_dir(temporary.path()).unwrap().count(), 0);
 }
@@ -135,7 +143,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     assert!(retained.is_file(), "the customized 14-day rule is used");
     let task = success(cli(&root, &["show", &cleanup.id]));
     assert_eq!(task["revision"], 2);
-    assert!(task["definition"]["content"]
+    assert!(task["definition"]["files"][1]["content"]
         .as_str()
         .unwrap()
         .contains("disk-cleanup.py"));
@@ -143,11 +151,11 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
         .as_str()
         .unwrap()
         .contains("TEMP_RETENTION_DAYS = 14"));
-    assert_eq!(task["definition"]["files"][1]["content"], "VALUE = 2\n");
+    assert_eq!(task["definition"]["files"][2]["content"], "VALUE = 2\n");
     let registry: Value =
         serde_json::from_slice(&std::fs::read(root.join("tasks.json")).unwrap()).unwrap();
     assert_eq!(
-        registry["pending_backup"][&cleanup.id]["files"][1]["content"],
+        registry["pending_backup"][&cleanup.id]["files"][2]["content"],
         "VALUE = 2\n"
     );
     assert!(success(cli(&root, &["logs", &cleanup.id]))["content"]
@@ -180,16 +188,9 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
         id: created["id"].as_str().unwrap().into(),
     };
     let dir = root.join(cleanup.id.trim_start_matches("agent_hub:"));
-    let workspace = root
-        .join("workspaces")
-        .join(cleanup.id.trim_start_matches("agent_hub:"))
-        .join("workspace");
+    let workspace = root.join("workspaces").join("Automation smoke test");
     assert!(workspace.is_dir(), "omitted workdir is provisioned on save");
-    let script = workspace.join(format!(
-        "agent-hub-{}.{}",
-        cleanup.id.trim_start_matches("agent_hub:"),
-        if cfg!(windows) { "ps1" } else { "sh" }
-    ));
+    let script = workspace.join(if cfg!(windows) { "run.ps1" } else { "run.sh" });
     assert!(
         script.is_file(),
         "the command script lives in the task workspace"
@@ -318,7 +319,18 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
     success(cli(&root, &["run", &cleanup.id]));
     let customized = success(cli(&root, &["show", &cleanup.id]));
     assert_eq!(customized["revision"], 6);
-    assert_eq!(customized["definition"]["content"], custom_content);
+    assert_eq!(
+        customized["definition"]["content"],
+        if cfg!(windows) {
+            "& './run.ps1'"
+        } else {
+            "sh './run.sh'"
+        }
+    );
+    assert_eq!(
+        customized["definition"]["files"][0]["content"],
+        custom_content
+    );
     assert_eq!(std::fs::read_to_string(&script).unwrap(), custom_content);
     assert!(!cli(
         &root,
@@ -353,7 +365,7 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
     let registry: Value =
         serde_json::from_slice(&std::fs::read(root.join("tasks.json")).unwrap()).unwrap();
     assert_eq!(
-        registry["pending_backup"][&cleanup.id]["content"],
+        registry["pending_backup"][&cleanup.id]["files"][0]["content"],
         custom_content
     );
     assert_eq!(

@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-fn path(workdir: &str, relative: &str, create: bool) -> Result<PathBuf, String> {
+pub(super) fn path(workdir: &str, relative: &str, create: bool) -> Result<PathBuf, String> {
     crate::core::path_guard::ensure_safe_skill_relative_path(relative)
         .map_err(|e| e.to_string())?;
     if relative.contains(['\\', ':']) {
@@ -80,7 +80,16 @@ pub(super) fn write(
         if previous.is_some() && !replace {
             continue;
         }
-        let content = format!("{}{}", header(id), file.content);
+        let content = format!(
+            "{}{}{}",
+            if file.path.ends_with(".ps1") {
+                "\u{feff}"
+            } else {
+                ""
+            },
+            header(id),
+            file.content
+        );
         if previous.as_deref() != Some(&content) {
             store::write(&path, content.as_bytes())?;
         }
