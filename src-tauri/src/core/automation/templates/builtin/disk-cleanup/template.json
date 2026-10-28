@@ -6,9 +6,9 @@
     "zh-TW": "清理磁碟快取"
   },
   "description": {
-    "en": "Daily at 03:00: clean expired workspace tmp/logs and Homebrew, pip, npm and npm-hermes downloads. Keeps recently used user cache files for 30 days. Optional browser/build/uv/Homebrew cleanup, --dry-run preview and a Chinese summary. Requires Python 3.",
-    "zh": "每天 03:00 清理过期 tmp／logs 和 Homebrew、pip、npm、npm-hermes 下载缓存，保留近 30 天使用的用户缓存。可选浏览器、构建产物、uv 与 Homebrew 深度清理，支持 --dry-run 预览，输出中文清理总结。需要 Python 3。",
-    "zh-TW": "每天 03:00 清理過期 tmp／logs 和 Homebrew、pip、npm、npm-hermes 下載快取，保留近 30 天使用的使用者快取。可選瀏覽器、建置產物、uv 與 Homebrew 深度清理，支援 --dry-run 預覽，輸出中文清理總結。需要 Python 3。"
+    "en": "Daily at 03:00: clean expired workspace tmp/logs and Homebrew, pip, npm and npm-hermes downloads. Keeps user downloads for 30 days and Agent caches/diagnostic logs for 7 days; preserves conversations. Optional browser/build/uv/Homebrew cleanup, --dry-run preview and a Chinese summary. Requires Python 3.",
+    "zh": "每天 03:00 清理过期 tmp／logs 和 Homebrew、pip、npm、npm-hermes 下载缓存，保留近 30 天使用的下载缓存；Agent 缓存与诊断日志保留 7 天，保留历史对话。可选浏览器、构建产物、uv 与 Homebrew 深度清理，支持 --dry-run 预览，输出中文清理总结。需要 Python 3。",
+    "zh-TW": "每天 03:00 清理過期 tmp／logs 和 Homebrew、pip、npm、npm-hermes 下載快取，保留近 30 天使用的下載快取；Agent 快取與診斷日誌保留 7 天，保留歷史對話。可選瀏覽器、建置產物、uv 與 Homebrew 深度清理，支援 --dry-run 預覽，輸出中文清理總結。需要 Python 3。"
   },
   "schedule": {
     "kind": "daily",

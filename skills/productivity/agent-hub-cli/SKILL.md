@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.7.0"
+  version: "1.8.0"
 description: Manage the user's shared agent-skill library and local automation tasks via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -545,3 +545,13 @@ External tool results remain separate from counted file deletions in the summary
 failures return nonzero and do not prevent later tools. Tool output may be English.
 Do not add generic Downloads, browser data, updater staging, Playwright runtimes,
 or Rust toolchains to automatic rules.
+
+Agent caches, Shell snapshots and diagnostic logs are cleaned by default after
+7 days (Codex, Claude Code, Hermes and OpenCode). Cache files use the later of
+access/modification time; logs use modification time. Preserve conversations,
+archived sessions, session databases, settings, credentials, skills and snapshots.
+`--agent-cache-days <positive-days>` customizes retention; `--skip-agent-cache`
+skips these rules. `--workspace-only`, `ENABLE_USER_CACHE_CLEANUP = False` and
+`ENABLE_AGENT_CACHE_CLEANUP = False` also disable Agent cleanup. Respect
+`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `HERMES_HOME` and `XDG_DATA_HOME` within the
+user home; never scan the whole Agent root or follow links. Preview first.

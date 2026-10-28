@@ -27,8 +27,16 @@ class CleanupChecks(unittest.TestCase):
         os.chdir(self.workspace)
         self.home_patch = patch.object(Path, "home", return_value=self.home)
         self.home_patch.start()
+        self.environment_patch = patch.dict(os.environ, {
+            "CODEX_HOME": str(self.home / ".codex"),
+            "CLAUDE_CONFIG_DIR": str(self.home / ".claude"),
+            "HERMES_HOME": str(self.home / ".hermes"),
+            "XDG_DATA_HOME": str(self.home / ".local/share"),
+        })
+        self.environment_patch.start()
 
     def tearDown(self):
+        self.environment_patch.stop()
         self.home_patch.stop()
         os.chdir(self.previous)
         self.temporary.cleanup()
@@ -243,6 +251,90 @@ class CleanupChecks(unittest.TestCase):
         self.assertEqual(calls[0][2]["cwd"], project)
         self.assertEqual(calls[0][2]["env"]["CARGO_TARGET_DIR"], str(project / "src-tauri/target"))
         self.assertIn("未计入下方文件统计", output)
+
+    def test_agent_defaults_remove_eight_day_records_and_keep_recent_cache_and_conversations(self):
+        old = []
+        recent = []
+        for _, root, child, days, protect_access in script["agent_cache_rules"]():
+            self.assertEqual(days, 7)
+            old.append(self.old(root / child / "expired.log", age=8))
+            recent.append(self.old(root / child / "recent.log", age=6))
+            if protect_access:
+                recent.append(self.old(root / child / "recently-used.cache", age=8, access_age=1))
+        protected = [self.old(self.home / path, age=90) for path in [
+            ".codex/sessions/keep.jsonl", ".codex/archived_sessions/keep.jsonl",
+            ".codex/auth.json", ".codex/history.jsonl", ".codex/state.sqlite",
+            ".codex/skills/demo/SKILL.md", ".claude/projects/demo/keep.jsonl",
+            ".claude/file-history/demo/keep", ".claude/settings.json",
+            ".hermes/sessions/keep.json", ".hermes/state.db", ".hermes/memories/keep.md",
+            ".local/share/opencode/opencode.db", ".local/share/opencode/storage/session/keep.json",
+            ".local/share/opencode/snapshot/keep", ".cache/opencode/node_modules/keep.js",
+        ]]
+        status, output = self.run_main()
+        self.assertEqual(status, 0, output)
+        self.assertTrue(all(not p.exists() for p in old))
+        self.assertTrue(all(p.exists() for p in recent + protected))
+        self.assertIn("Codex 诊断日志：已删除 1 个文件", output)
+        self.assertIn("Hermes 运行日志：已删除 1 个文件", output)
+        self.assertIn("保留 7 天", output)
+
+    def test_agent_preview_and_disable_switches_do_not_delete_records(self):
+        expired = self.old(self.home / ".hermes/logs/expired.log", age=8)
+        for arguments in [("--dry-run",), ("--skip-agent-cache",), ("--workspace-only",)]:
+            status, output = self.run_main(*arguments)
+            self.assertEqual(status, 0, output)
+            self.assertTrue(expired.exists())
+            if "--dry-run" in arguments:
+                self.assertIn("Hermes 运行日志：预计删除 1 个文件", output)
+            else:
+                self.assertNotIn("Hermes 运行日志", output)
+        with patch.dict(script["main"].__globals__, {"ENABLE_USER_CACHE_CLEANUP": False}):
+            self.assertEqual(self.run_main()[0], 0)
+        self.assertTrue(expired.exists())
+        with patch.dict(script["main"].__globals__, {"ENABLE_AGENT_CACHE_CLEANUP": False}):
+            self.assertEqual(self.run_main()[0], 0)
+        self.assertTrue(expired.exists())
+
+    def test_agent_retention_uses_write_time_for_logs_and_is_customizable(self):
+        log = self.old(self.home / ".codex/log/read-recently.log", age=8, access_age=1)
+        old = self.old(self.home / ".codex/log/expired.log", age=15)
+        status, output = self.run_main("--agent-cache-days", "14")
+        self.assertEqual(status, 0, output)
+        self.assertTrue(log.exists())
+        self.assertFalse(old.exists())
+        self.assertIn("保留 14 天", output)
+        self.assertEqual(self.run_main()[0], 0)
+        self.assertFalse(log.exists())
+        for days in ("0", "-1", "1.5"):
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                self.run_main("--agent-cache-days", days)
+
+    def test_custom_agent_homes_are_used_without_falling_back_to_default(self):
+        root = self.home / "custom codex"
+        custom = self.old(root / "log/expired.log", age=8)
+        default = self.old(self.home / ".codex/log/keep.log", age=8)
+        with patch.dict(os.environ, {"CODEX_HOME": str(root)}):
+            status, output = self.run_main()
+        self.assertEqual(status, 0, output)
+        self.assertFalse(custom.exists())
+        self.assertTrue(default.exists())
+        outside = self.old(self.root / "outside/log/keep.log", age=8)
+        with patch.dict(os.environ, {"CODEX_HOME": str(outside.parent.parent)}):
+            status, output = self.run_main()
+        self.assertEqual(status, 1)
+        self.assertTrue(outside.exists())
+        self.assertIn("缓存根目录必须位于当前用户主目录内", output)
+
+    @unittest.skipUnless(os.name != "nt", "Unix links fixture")
+    def test_linked_agent_root_is_rejected_but_other_agent_rules_continue(self):
+        outside = self.old(self.root / "outside/log/keep.log", age=8)
+        (self.home / ".codex").symlink_to(outside.parent.parent, target_is_directory=True)
+        expired = self.old(self.home / ".hermes/logs/expired.log", age=8)
+        status, output = self.run_main()
+        self.assertEqual(status, 1)
+        self.assertTrue(outside.exists())
+        self.assertFalse(expired.exists())
+        self.assertIn("缓存规则失败： Codex", output)
 
 
 unittest.main(argv=["disk-cleanup-tests"])

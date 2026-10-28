@@ -109,6 +109,28 @@ python3 ./disk-cleanup/disk-cleanup.py --dry-run --workspace-only
 
 `--workspace-only` 只应用任务目录规则；在脚本中设置 `ENABLE_USER_CACHE_CLEANUP = False` 也可长期关闭用户缓存清理。创建和保存不会额外执行一次。
 
+Agent 缓存和诊断记录默认随计划清理，保留 7 天，逐项结果纳入中文总结：
+
+| Agent       | 默认清理目录（相对各自数据根目录）                  |
+| ----------- | --------------------------------------------------- |
+| Codex       | `cache`、`tmp`、`shell_snapshots`、`log`            |
+| Claude Code | `debug`、`shell-snapshots`、`session-env`           |
+| Hermes      | `cache`、`logs`                                     |
+| OpenCode    | `~/.local/share/opencode/log`，支持 `XDG_DATA_HOME` |
+
+缓存和 Shell 快照按最近访问／修改时间保留，诊断日志按最后修改时间保留；缺失目录跳过。支持 `CODEX_HOME`、`CLAUDE_CONFIG_DIR`、`HERMES_HOME` 自定义数据根目录，但必须位于用户主目录内且不是链接。保留配置、登录凭据、技能、历史对话、会话数据库与 OpenCode 快照；不扫描整个 Agent 根目录。
+
+```bash
+# 预览默认 7 天的 Agent 清理规则
+python3 ./disk-cleanup/disk-cleanup.py --dry-run
+# 将 Agent 缓存和日志的保留期改为 14 天（不影响下载缓存规则）
+python3 ./disk-cleanup/disk-cleanup.py --dry-run --agent-cache-days 14
+# 本次跳过 Agent 清理
+python3 ./disk-cleanup/disk-cleanup.py --skip-agent-cache
+```
+
+可在脚本顶部设置 `AGENT_CACHE_RETENTION_DAYS` 或 `ENABLE_AGENT_CACHE_CLEANUP = False` 定制长期策略。`--workspace-only` 和 `ENABLE_USER_CACHE_CLEANUP = False` 都会跳过 Agent 清理；修改脚本本身不会立即删除文件，下次手动或计划运行才执行。
+
 更大的缓存通过参数显式启用；可组合使用，`--workspace-only` 与这些选项互斥。先执行带 `--dry-run` 的命令检查范围，确认后移除此参数：
 
 ```bash

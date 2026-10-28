@@ -1,6 +1,7 @@
 """清理过期文件和指定的可再生缓存，最后输出中文清理总结。
 
 默认清理工作目录 tmp/logs 及过期下载缓存，保留近 30 天使用的用户缓存。
+Agent 缓存、Shell 快照与诊断日志默认保留 7 天，历史对话不在清理范围。
 用 --dry-run 只预览；--workspace-only 仅清理任务工作目录。
 浏览器、构建产物和工具深度清理需通过参数启用，不扫描整个主目录。
 """
@@ -16,7 +17,9 @@ import time
 TEMP_RETENTION_DAYS = 7
 LOG_RETENTION_DAYS = 30
 USER_CACHE_RETENTION_DAYS = 30
+AGENT_CACHE_RETENTION_DAYS = 7
 ENABLE_USER_CACHE_CLEANUP = True
+ENABLE_AGENT_CACHE_CLEANUP = True
 CLEANUP_RULES = [("tmp", TEMP_RETENTION_DAYS), ("logs", LOG_RETENTION_DAYS)]
 # Optional extra cache rules: (label, cache root, child directory, retention days).
 # Cache roots must be inside the current user's home; links are never followed.
@@ -69,6 +72,28 @@ def user_cache_rules(platform=None):
         ("npm-hermes 下载缓存", home / ".cache/npm-hermes/_cacache", "content-v2", USER_CACHE_RETENTION_DAYS),
         ("npm-hermes 临时缓存", home / ".cache/npm-hermes/_cacache", "tmp", TEMP_RETENTION_DAYS),
         *EXTRA_CACHE_RULES,
+    ]
+
+
+def agent_cache_rules(days=AGENT_CACHE_RETENTION_DAYS):
+    """只列出可再生缓存及诊断目录，不遍历 Agent 根目录或会话数据库。"""
+    home = Path.home()
+    codex = Path(os.environ.get("CODEX_HOME", home / ".codex")).expanduser()
+    claude = Path(os.environ.get("CLAUDE_CONFIG_DIR", home / ".claude")).expanduser()
+    hermes = Path(os.environ.get("HERMES_HOME", home / ".hermes")).expanduser()
+    data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share")).expanduser()
+    # 第五项：缓存按最近访问/修改保留，诊断日志按最后修改时间保留。
+    return [
+        ("Codex 缓存", codex, "cache", days, True),
+        ("Codex 临时文件", codex, "tmp", days, True),
+        ("Codex Shell 快照", codex, "shell_snapshots", days, True),
+        ("Codex 诊断日志", codex, "log", days, False),
+        ("Claude Code 调试日志", claude, "debug", days, False),
+        ("Claude Code Shell 快照", claude, "shell-snapshots", days, True),
+        ("Claude Code 临时环境", claude, "session-env", days, True),
+        ("Hermes 缓存", hermes, "cache", days, True),
+        ("Hermes 运行日志", hermes, "logs", days, False),
+        ("OpenCode 运行日志", data / "opencode", "log", days, False),
     ]
 
 
@@ -371,12 +396,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="仅预览，不删除文件，也不运行无预览能力的清理工具")
     parser.add_argument("--workspace-only", action="store_true", help="仅应用任务工作目录规则，与其他清理选项互斥")
+    parser.add_argument("--skip-agent-cache", action="store_true", help="跳过 Agent 缓存、Shell 快照和诊断日志")
+    parser.add_argument("--agent-cache-days", type=int, default=AGENT_CACHE_RETENTION_DAYS, metavar="天数", help="Agent 缓存与日志保留天数，默认 7 天；必须为正整数")
     parser.add_argument("--browser-cache", action="store_true", help="清理 Chrome/Edge 过期网页和代码缓存；实际清理前须退出浏览器")
     parser.add_argument("--rust-target", action="append", default=[], metavar="目录", help="清理指定 Cargo target 的过期 incremental 缓存，可重复指定；保留近 7 天文件")
     parser.add_argument("--agent-hub-project", action="append", default=[], metavar="源码目录", help="调用可信任的 AgentHub 源码内清理工具，保留最新构建；可重复指定")
     parser.add_argument("--uv-prune", action="store_true", help="用 uv 离线清理无引用缓存；预览模式不执行")
     parser.add_argument("--brew-cleanup", action="store_true", help="用 Homebrew 清理历史版本及超过 30 天的下载，不自动更新")
     args = parser.parse_args()
+    if args.agent_cache_days < 1:
+        parser.error("--agent-cache-days 必须为正整数。")
     if args.workspace_only and (args.browser_cache or args.rust_target or args.agent_hub_project or args.uv_prune or args.brew_cleanup):
         parser.error("--workspace-only 不能与其他可选清理项一起使用。")
     start = time.monotonic()
@@ -388,9 +417,9 @@ def main():
     tools = []
 
     def apply_rules(rules):
-        for label, root, child, days in rules:
+        for label, root, child, days, *options in rules:
             try:
-                result = report_target(label, cache_target(root, child), days, args.dry_run, protect_access=True, skip_permission_denied=True)
+                result = report_target(label, cache_target(root, child), days, args.dry_run, protect_access=options[0] if options else True, skip_permission_denied=True)
                 records.append((label, result))
                 for key in total:
                     total[key] += result[key]
@@ -411,6 +440,8 @@ def main():
             print("工作目录规则失败：", directory, str(error).replace(str(Path.home()), "~"))
     if ENABLE_USER_CACHE_CLEANUP and not args.workspace_only:
         apply_rules(user_cache_rules())
+        if ENABLE_AGENT_CACHE_CLEANUP and not args.skip_agent_cache:
+            apply_rules(agent_cache_rules(args.agent_cache_days))
     try:
         tools = optional_cleanup(args, apply_rules)
     except (OSError, ValueError, subprocess.SubprocessError) as error:

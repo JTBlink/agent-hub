@@ -55,6 +55,7 @@ class PermissionChecks(unittest.TestCase):
                 with patch.object(Path, "home", return_value=home), patch.dict(namespace, {
                     "entry_metadata": metadata,
                     "user_cache_rules": lambda: [("Fixture downloads", cache.parent, "downloads", 30)],
+                    "agent_cache_rules": lambda _days: [],
                 }), patch.object(os, "scandir", scan), patch.object(Path, "unlink", unlink), patch.object(sys, "argv", ["cleanup.py"] + (["--workspace-only"] if workspace_only else [])), contextlib.redirect_stdout(output):
                     status = script["main"]()
                 return status, output.getvalue(), (target / "allowed.tmp").exists(), (target / "protected.tmp").exists()
