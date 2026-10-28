@@ -159,7 +159,7 @@ export function AutomationExecution({
               )}
             </dl>
             <AutomationRunOutputPanel
-              key={selected.id}
+              key={`${task.id}:${selected.id}`}
               taskId={task.id}
               run={selected}
               refreshKey={refreshKey}

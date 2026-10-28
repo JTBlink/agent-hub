@@ -137,6 +137,8 @@
     "editRunning": "You can edit the configuration. Saving checks the current execution state; if it is still running, wait until it finishes and save again. Your changes are preserved.",
     "waitToSave": "The task is still running. Save again after it finishes. Your changes are preserved.",
     "execution": {
+      "copyOutput": "Copy output",
+      "outputCopied": "Execution output copied",
       "output": "Current / latest output",
       "outputFailed": "Could not read output",
       "unsupported": "This source does not provide readable execution output.",

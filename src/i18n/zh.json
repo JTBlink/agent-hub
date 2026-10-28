@@ -137,6 +137,8 @@
     "editRunning": "可修改任务配置。保存时会重新检查执行状态；若任务仍在运行，请待结束后保存，当前输入会保留。",
     "waitToSave": "任务仍在运行，请待结束后再次保存。当前修改已保留。",
     "execution": {
+      "copyOutput": "复制输出",
+      "outputCopied": "执行输出已复制",
       "output": "当前 / 最近一次输出",
       "outputFailed": "无法读取输出",
       "unsupported": "此来源未提供可读取的执行输出。",

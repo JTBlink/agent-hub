@@ -137,6 +137,8 @@
     "editRunning": "可修改任務設定。儲存時會重新檢查執行狀態；若任務仍在執行，請待結束後儲存，目前輸入會保留。",
     "waitToSave": "任務仍在執行，請待結束後再次儲存。目前修改已保留。",
     "execution": {
+      "copyOutput": "複製輸出",
+      "outputCopied": "執行輸出已複製",
       "output": "目前 / 最近一次輸出",
       "outputFailed": "無法讀取輸出",
       "unsupported": "此來源未提供可讀取的執行輸出。",

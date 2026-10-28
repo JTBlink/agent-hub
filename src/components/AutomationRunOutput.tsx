@@ -7,6 +7,7 @@ import {
   type AutomationRunOutput,
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { CopyTextButton } from "./CopyTextButton";
 
 export function AutomationRunOutputPanel({
   taskId,
@@ -58,9 +59,18 @@ export function AutomationRunOutputPanel({
   const output = result?.output;
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-border-subtle bg-surface">
-      <h3 className="border-b border-border-subtle px-5 py-3 text-[13px] font-semibold text-secondary">
-        {t("automation.history.output")}
-      </h3>
+      <header className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
+        <h3 className="text-[13px] font-semibold text-secondary">
+          {t("automation.history.output")}
+        </h3>
+        <CopyTextButton
+          text={output?.content ?? ""}
+          disabled={!run.has_output || !output?.available}
+          label={t("automation.execution.copyOutput")}
+          copiedMessage={t("automation.execution.outputCopied")}
+          className="app-button-ghost h-8 w-8 justify-center p-2 hover:bg-surface-hover"
+        />
+      </header>
       {result?.error !== undefined && (
         <div role="alert" className="space-y-3 p-5 text-[12px] text-danger">
           <p>
