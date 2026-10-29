@@ -165,7 +165,13 @@ export function AutomationAgentField({
                     agent: next,
                     ...("agent" in parsed && next === parsed.agent
                       ? {}
-                      : { arguments: [] }),
+                      : {
+                          arguments:
+                            next === "codex"
+                              ? ["--dangerously-bypass-approvals-and-sandbox"]
+                              : [],
+                          extra_arguments: "",
+                        }),
                   },
                   null,
                   2,

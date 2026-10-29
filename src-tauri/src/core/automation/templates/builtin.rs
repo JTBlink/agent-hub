@@ -56,7 +56,7 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
         files: vec![
             AutomationScriptFile { path: "agent-task/agent.py".into(), content: include_str!("builtin/herdr-agent.py").into() },
             AutomationScriptFile { path: "agent-task/prompt.md".into(), content: String::new() },
-            AutomationScriptFile { path: "agent-task/herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[],\"title\":\"AgentHub task\"}\n".into() },
+            AutomationScriptFile { path: "agent-task/herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[\"--dangerously-bypass-approvals-and-sandbox\"],\"title\":\"AgentHub task\"}\n".into() },
         ],
     };
     super::super::native::shell_entry::wrap(&mut draft, shell);

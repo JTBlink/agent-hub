@@ -74,7 +74,7 @@ enum AutomationCommand {
         #[arg(long)]
         apply: bool,
     },
-    /// 更新任务；外部系统任务只读，外部 Hermes 任务可编辑。
+    /// 更新任务；支持当前用户的常见 launchd 定时任务和 Hermes 任务。
     Edit {
         id: String,
         #[arg(long)]
@@ -85,7 +85,7 @@ enum AutomationCommand {
     },
     /// 手动触发一次；不更改日程配置，也不等待执行结束。
     Run { id: String },
-    /// 暂停后续计划；系统任务仍可手动运行，Hermes 需先恢复。
+    /// 暂停后续计划；AgentHub 系统任务仍可手动运行，其他来源需先恢复。
     Pause { id: String },
     /// 恢复计划运行。
     Resume { id: String },

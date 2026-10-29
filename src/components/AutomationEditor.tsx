@@ -2,6 +2,7 @@ import { ThemedSelect } from "./ThemedSelect";
 import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
+import { AutomationHerdrFields } from "./AutomationHerdrFields";
 import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
 import { AutomationProjectField } from "./AutomationProjectField";
@@ -263,44 +264,11 @@ export function AutomationEditor({
                     {t("automation.advanced")}
                   </summary>
                   <div className="mt-4 space-y-4">
-                    {herdrConfig && (
-                      <label className="block space-y-2">
-                        <span className="text-[12px] font-medium text-muted">
-                          {t("automation.herdrSession")}
-                        </span>
-                        <input
-                          className="app-input w-full"
-                          aria-label={t("automation.herdrSession")}
-                          disabled={busy}
-                          value={
-                            "session" in herdrConfig.value &&
-                            typeof herdrConfig.value.session === "string"
-                              ? herdrConfig.value.session
-                              : "default"
-                          }
-                          onChange={(event) =>
-                            update({
-                              files: draft.files?.map((file) =>
-                                file.path === herdrConfig.file.path
-                                  ? {
-                                      ...file,
-                                      content:
-                                        JSON.stringify(
-                                          {
-                                            ...herdrConfig.value,
-                                            session: event.target.value,
-                                          },
-                                          null,
-                                          2,
-                                        ) + "\n",
-                                    }
-                                  : file,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                    )}
+                    <AutomationHerdrFields
+                      draft={draft}
+                      disabled={busy || selectingAgent}
+                      onChange={update}
+                    />
                     <AutomationWorkdirField
                       kind="scriptDir"
                       value={draft.script_dir ?? null}

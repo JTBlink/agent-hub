@@ -789,7 +789,50 @@ it("edits an agent prompt directly in the unified layout with a one-line launche
     JSON.parse(
       saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
     ),
-  ).toEqual({ agent: "claude", session: "default", arguments: [] });
+  ).toEqual({
+    agent: "claude",
+    session: "default",
+    arguments: [],
+    extra_arguments: "",
+  });
+});
+
+it("saves extra agent arguments from advanced settings and resets them when switching agents", async () => {
+  await render();
+  await click("新建自动化");
+  await input("名称", "自定义巡检");
+  await select("智能体（可选）", "claude");
+  await input("额外的智能体参数", "--model another-model");
+  await select("智能体（可选）", "codex");
+  expect(
+    container.querySelector<HTMLTextAreaElement>(
+      '[aria-label="额外的智能体参数"]',
+    )!.value,
+  ).toBe("");
+  await input(
+    "额外的智能体参数",
+    "-m model-id -c 'name=\"value with spaces\"'",
+  );
+  await input("Herdr 会话", "scheduled");
+  await input("提示词", "检查项目，只报告问题。");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  const saved = vi.mocked(api.saveAutomation).mock.calls[0][2];
+  expect(
+    JSON.parse(
+      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
+    ),
+  ).toEqual(
+    expect.objectContaining({
+      agent: "codex",
+      session: "scheduled",
+      arguments: ["--dangerously-bypass-approvals-and-sandbox"],
+      extra_arguments: "-m model-id -c 'name=\"value with spaces\"'",
+    }),
+  );
 });
 
 it("offers the same installed agents and order as the global workspace and preserves both inputs", async () => {

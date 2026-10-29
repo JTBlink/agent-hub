@@ -1,6 +1,6 @@
 {
   "session": "default",
   "agent": "codex",
-  "arguments": ["--sandbox", "workspace-write"],
+  "arguments": ["--dangerously-bypass-approvals-and-sandbox"],
   "title": "MR 处理"
 }

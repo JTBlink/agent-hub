@@ -1,6 +1,6 @@
 {
   "session": "default",
   "agent": "codex",
-  "arguments": ["--sandbox", "read-only"],
+  "arguments": ["--dangerously-bypass-approvals-and-sandbox"],
   "title": "Agent 代码巡检"
 }
