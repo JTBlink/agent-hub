@@ -1,7 +1,7 @@
 use super::definition::{valid_id, AutomationDraft, ManagedAutomation};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::{
     fs::{File, OpenOptions},
     io::Write,
@@ -17,6 +17,8 @@ pub(super) struct Registry {
     pub backup_initialized: bool,
     #[serde(default)]
     pub pending_backup: BTreeMap<String, Option<AutomationDraft>>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub removal_pending: BTreeSet<String>,
 }
 
 pub(super) fn root() -> PathBuf {
@@ -73,6 +75,9 @@ pub(super) fn read_registry(root: &Path) -> Result<Registry, String> {
             return Err("Invalid or duplicate managed automation ID".into());
         }
     }
+    if registry.removal_pending.iter().any(|id| !ids.contains(id)) {
+        return Err("Pending removal has no managed task record".into());
+    }
     Ok(registry)
 }
 
@@ -98,6 +103,9 @@ pub(super) fn save(root: &Path, tasks: Vec<ManagedAutomation>) -> Result<(), Str
         }
     }
     registry.tasks = tasks;
+    registry
+        .removal_pending
+        .retain(|id| registry.tasks.iter().any(|task| &task.id == id));
     registry.backup_initialized = true;
     write_registry(root, &registry)?;
     #[cfg(not(test))]

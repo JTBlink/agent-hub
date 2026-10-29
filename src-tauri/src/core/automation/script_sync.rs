@@ -11,11 +11,14 @@ pub(super) fn sync_at(root: &Path) -> Result<(), String> {
         return Ok(());
     }
     let _lock = store::Lock::acquire(root)?;
-    let mut records = store::load(root)?;
+    let registry = store::read_registry(root)?;
+    let mut records = registry.tasks;
     let mut changed = false;
     let mut errors = Vec::new();
     for record in records.iter_mut().filter(|record| {
-        record.draft.provider == Provider::System && record.draft.workdir.is_some()
+        record.draft.provider == Provider::System
+            && record.draft.workdir.is_some()
+            && !registry.removal_pending.contains(&record.id)
     }) {
         let result = (|| {
             managed::verify(root, record)?;

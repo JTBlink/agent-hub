@@ -23,6 +23,27 @@ pub(super) fn is_default(value: &str, id: &str) -> bool {
     is_default_at(&workspace_root(), &store::root(), value, id)
 }
 
+/// Ownership comes from the allocation record or the exact legacy task path.
+pub(super) fn owned_directories_at(
+    root: &Path,
+    state: &Path,
+    record: &super::ManagedAutomation,
+) -> Result<Vec<PathBuf>, String> {
+    let mut directories: Vec<_> = assigned(root, state, &record.id, &record.location)?
+        .into_iter()
+        .collect();
+    let legacy = root.join(key(&record.id, ""));
+    if record
+        .draft
+        .workdir
+        .as_deref()
+        .is_some_and(|path| Path::new(path) == legacy.join("workspace"))
+    {
+        directories.push(legacy);
+    }
+    Ok(directories)
+}
+
 fn key(id: &str, scope: &str) -> String {
     if valid_id(id) {
         id.trim_start_matches("agent_hub:").to_string()
@@ -46,7 +67,24 @@ fn assignment(state: &Path, id: &str, scope: &str) -> PathBuf {
 
 fn assigned(root: &Path, state: &Path, id: &str, scope: &str) -> Result<Option<PathBuf>, String> {
     use std::io::Read;
-    let file = match std::fs::File::open(assignment(state, id, scope)) {
+    let record = assignment(state, id, scope);
+    for path in [
+        state,
+        record.parent().ok_or("Missing assignment parent")?,
+        &record,
+    ] {
+        match std::fs::symlink_metadata(path) {
+            Ok(metadata) if super::super::path_guard::is_link_or_reparse_point(&metadata) => {
+                return Err(
+                    "Automation workspace ownership records cannot be links or junctions".into(),
+                );
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(format!("Cannot inspect workspace ownership: {error}")),
+        }
+    }
+    let file = match std::fs::File::open(record) {
         Ok(file) => file,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(e) => return Err(format!("Cannot read automation workspace assignment: {e}")),
@@ -65,7 +103,10 @@ fn assigned(root: &Path, state: &Path, id: &str, scope: &str) -> Result<Option<P
 }
 
 fn check_directory(directory: &Path, root: &Path) -> Result<(), String> {
-    if directory.is_symlink() || !super::super::path_guard::is_path_safe(root, directory) {
+    let linked = std::fs::symlink_metadata(directory)
+        .map(|metadata| super::super::path_guard::is_link_or_reparse_point(&metadata))
+        .map_err(|error| error.to_string())?;
+    if linked || !super::super::path_guard::is_path_safe(root, directory) {
         return Err("Automation workspace must be a directory inside its managed root".into());
     }
     Ok(())

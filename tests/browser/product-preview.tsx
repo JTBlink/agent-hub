@@ -673,6 +673,19 @@ if (automationState) {
     throw new Error("Documentation preview state did not become ready");
   };
   void (async () => {
+    if (automationState === "remove" || automationState === "remove-checked") {
+      const remove = await waitFor(() =>
+        document.querySelector<HTMLButtonElement>('[aria-label="删除自动化"]'),
+      );
+      remove.click();
+      const checkbox = await waitFor(() =>
+        document.querySelector<HTMLInputElement>(
+          '[role="alertdialog"] input[type="checkbox"]',
+        ),
+      );
+      if (automationState === "remove-checked") checkbox.click();
+      return;
+    }
     if (
       automationState === "execution" ||
       automationState === "execution-output"

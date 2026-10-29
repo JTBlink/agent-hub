@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.9.0"
+  version: "1.10.0"
 description: Manage the user's shared agent-skill library and local automation tasks via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -162,8 +162,11 @@ The app watches script edits and queues their contents in the existing Git
 auto-backup flow, alongside the task definition. CLI list/show and mutations
 reconcile file edits and advance the revision; re-read before editing a stale
 draft. Backup also reconciles current script contents. Runtime wrappers, logs,
-and unrelated workspace files are excluded. Deleting a task preserves its
-workspace and script. Git synchronization restores only dormant definitions;
+and unrelated workspace files are excluded. `automations remove <id>` preserves
+local data by default; add `--delete-local-data` to clean assigned/legacy
+workspaces and AgentHub run records. Custom/shared directories remain. Failed
+cleanup stays retryable; retry removal without editing or running the pending
+task. Git synchronization restores only dormant definitions;
 creating a restored copy materializes its own script without overwriting an
 existing task.
 

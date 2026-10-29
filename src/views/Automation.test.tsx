@@ -1124,3 +1124,120 @@ it("combines scheduler and creator dropdowns without duplicating filter controls
     ownedHermes.name,
   );
 });
+
+const removable: api.AutomationTask = {
+  ...hermes,
+  id: "agent_hub:11111111-1111-4111-8111-111111111111",
+  origin: "agent_hub",
+  name: "清理磁盘缓存",
+  source: "launchd",
+  prompt: null,
+  command: "exit 0",
+  definition: {
+    name: "清理磁盘缓存",
+    provider: "system",
+    content: "exit 0",
+    workdir: "<workspace>",
+    schedule: { kind: "manual" },
+    enabled: false,
+  },
+};
+async function openRemoval(task = removable) {
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [task],
+    issues: [],
+    hermes_installed: true,
+  });
+  await render(`/automation?task=${encodeURIComponent(task.id)}`);
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('[aria-label="删除自动化"]')!
+      .click(),
+  );
+}
+
+it("preserves local task data unless the removal checkbox is explicitly selected", async () => {
+  await openRemoval();
+  const dialog = container.querySelector('[role="alertdialog"]')!;
+  const checkbox = dialog.querySelector<HTMLInputElement>(
+    'input[type="checkbox"]',
+  )!;
+  expect(checkbox.checked).toBe(false);
+  expect(dialog.textContent).toContain("自定义或其他任务使用的目录会保留");
+  expect(document.activeElement?.textContent).toBe("取消");
+  await click("删除");
+  expect(api.removeAutomation).toHaveBeenCalledWith(removable.id, false);
+  expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+});
+
+it("keeps the cleanup choice and deletion error in the dialog so it can be retried", async () => {
+  vi.mocked(api.removeAutomation).mockRejectedValueOnce(
+    new Error("cleanup permission denied"),
+  );
+  await openRemoval();
+  await act(async () =>
+    container
+      .querySelector<HTMLInputElement>(
+        '[role="alertdialog"] input[type="checkbox"]',
+      )!
+      .click(),
+  );
+  await click("删除");
+  const dialog = container.querySelector('[role="alertdialog"]')!;
+  expect(dialog.querySelector('[role="alert"]')?.textContent).toContain(
+    "cleanup permission denied",
+  );
+  expect(
+    dialog.querySelector<HTMLInputElement>('input[type="checkbox"]')!.checked,
+  ).toBe(true);
+  await click("删除");
+  expect(api.removeAutomation).toHaveBeenNthCalledWith(2, removable.id, true);
+  expect(container.querySelector('[role="alertdialog"]')).toBeNull();
+});
+
+it("resets the cleanup checkbox after cancellation and prevents duplicate pending deletion", async () => {
+  await openRemoval();
+  await act(async () =>
+    container
+      .querySelector<HTMLInputElement>(
+        '[role="alertdialog"] input[type="checkbox"]',
+      )!
+      .click(),
+  );
+  await click("取消");
+  expect(api.removeAutomation).not.toHaveBeenCalled();
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('[aria-label="删除自动化"]')!
+      .click(),
+  );
+  const checkbox = container.querySelector<HTMLInputElement>(
+    '[role="alertdialog"] input[type="checkbox"]',
+  )!;
+  expect(checkbox.checked).toBe(false);
+  let finish: (() => void) | undefined;
+  vi.mocked(api.removeAutomation).mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await click("删除");
+  expect(checkbox.disabled).toBe(true);
+  expect(api.removeAutomation).toHaveBeenCalledTimes(1);
+  expect(
+    container.querySelector<HTMLButtonElement>(
+      '[role="alertdialog"] button:last-child',
+    )!.disabled,
+  ).toBe(true);
+  await act(async () => finish?.());
+});
+
+it("does not offer local data cleanup for unowned Hermes tasks", async () => {
+  await openRemoval(hermes);
+  expect(
+    container.querySelector('[role="alertdialog"] input[type="checkbox"]'),
+  ).toBeNull();
+  await click("删除");
+  expect(api.removeAutomation).toHaveBeenCalledWith(hermes.id, false);
+});

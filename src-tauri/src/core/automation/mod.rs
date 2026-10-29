@@ -19,6 +19,7 @@ mod launchd;
 mod launchd_names;
 #[cfg(any(target_os = "linux", test))]
 mod linux;
+mod local_data;
 mod managed;
 mod native;
 mod process;
@@ -38,7 +39,7 @@ pub(crate) fn has_pending_backup() -> bool {
 pub use definition::{
     AutomationDraft, AutomationScriptFile, ManagedAutomation, Provider, Schedule,
 };
-pub use managed::{remove, run, save};
+pub use managed::{remove, remove_with_local_data, run, save};
 #[cfg(any(windows, test))]
 mod windows;
 

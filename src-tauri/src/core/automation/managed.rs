@@ -49,8 +49,8 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             task.can_edit = task.prompt.is_some();
         }
     }
-    let records = match store::load(root) {
-        Ok(records) => records,
+    let registry = match store::read_registry(root) {
+        Ok(registry) => registry,
         Err(error) => {
             for task in &mut report.tasks {
                 task.origin = TaskOrigin::Unknown;
@@ -62,7 +62,8 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             return;
         }
     };
-    for record in records {
+    for record in registry.tasks {
+        let removal_pending = registry.removal_pending.contains(&record.id);
         if let Err(error) = verify(root, &record) {
             report.issue("agent_hub", error);
             continue;
@@ -72,7 +73,7 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
                 && task.identifier.as_deref() == Some(&record.identifier)
                 && task.location == record.location
         });
-        if record.draft.provider == Provider::Hermes && index.is_none() {
+        if record.draft.provider == Provider::Hermes && index.is_none() && !removal_pending {
             // A task removed in Hermes is not resurrected from cached metadata.
             continue;
         }
@@ -109,6 +110,13 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
                 None if record.draft.enabled => task.status = "unknown".into(),
                 _ => {}
             }
+        }
+        if removal_pending {
+            task.status = "error".into();
+            task.can_run = false;
+            task.name = record.draft.name.clone();
+            task.definition = Some(record.draft);
+            task.revision = Some(record.revision);
         }
         report.tasks.push(task);
     }
@@ -154,7 +162,11 @@ pub fn save(
     }
     let root = store::root();
     let _lock = store::Lock::acquire(&root)?;
-    let mut records = store::load(&root)?;
+    let registry = store::read_registry(&root)?;
+    if id.is_some_and(|id| registry.removal_pending.contains(id)) {
+        return Err("Task removal is pending; retry deletion before editing".into());
+    }
+    let mut records = registry.tasks;
     let old_index = id.and_then(|id| records.iter().position(|r| r.id == id));
     let old = old_index.map(|i| records[i].clone());
     if let Some(id) = id {
@@ -292,6 +304,9 @@ pub fn run(id: &str) -> Result<(), String> {
     upgrade_runners();
     let root = store::root();
     let _lock = store::Lock::acquire(&root)?;
+    if store::read_registry(&root)?.removal_pending.contains(id) {
+        return Err("Task removal is pending; retry deletion before running".into());
+    }
     let task = find(id)?;
     if !task.can_run {
         return Err("Manual runs are available for AgentHub tasks and Hermes tasks".into());
@@ -311,41 +326,86 @@ pub fn run(id: &str) -> Result<(), String> {
     }
 }
 
+/// Remove a task while preserving its local files by default.
 pub fn remove(id: &str) -> Result<(), String> {
+    remove_with_local_data(id, false)
+}
+
+/// Optional cleanup is restricted to assigned/legacy workspaces and internal data.
+pub fn remove_with_local_data(id: &str, delete_local_data: bool) -> Result<(), String> {
     let root = store::root();
     let _lock = store::Lock::acquire(&root)?;
-    let mut records = store::load(&root)?;
-    let task = find(id)?;
-    if !task.can_edit {
-        return Err("This existing system task is read-only".into());
+    let mut registry = store::read_registry(&root)?;
+    let record = registry.tasks.iter().find(|record| record.id == id);
+    if delete_local_data && record.is_none() {
+        return Err("Local-data cleanup requires an AgentHub creation record".into());
     }
-    if task.status == "running" {
-        return Err("Wait for the current run to finish before deleting".into());
-    }
-    let mut directory = None;
-    if task.source == "hermes" {
-        hermes_manage::action_at(
-            &hermes_manage::root_for(&task)?,
-            "remove",
-            task.identifier.as_deref().ok_or("Missing Hermes ID")?,
-        )?;
-    } else {
-        let record = records
-            .iter()
-            .find(|r| r.id == id)
-            .ok_or("Missing creation record")?;
+    if let Some(record) = record {
         verify(&root, record)?;
-        native::remove(&root, record)?;
-        directory = Some(native::directory(&root, record));
     }
-    records.retain(|r| r.id != id);
-    store::save(&root, records)
-        .map_err(|e| format!("Scheduler task removed; metadata cleanup failed: {e}"))?;
-    if let Some(directory) = directory.filter(|path| path.exists()) {
-        std::fs::remove_dir_all(directory)
-            .map_err(|e| format!("Task deleted; cannot remove its scripts and output: {e}"))?;
+    let report = super::overview(None);
+    let cleanup = if delete_local_data {
+        Some(
+            super::local_data::Cleanup::plan(
+                &root,
+                &super::workspace::workspace_root(),
+                record.ok_or("Missing creation record")?,
+                &registry.tasks,
+            )?
+            .protect_workspaces(
+                report
+                    .tasks
+                    .iter()
+                    .filter(|task| task.id != id)
+                    .filter_map(|task| task.project.as_ref().map(std::path::PathBuf::from)),
+            ),
+        )
+    } else {
+        None
+    };
+    if !registry.removal_pending.contains(id) {
+        let task = report
+            .tasks
+            .into_iter()
+            .find(|task| task.id == id)
+            .ok_or("Task not found; refresh the automation list")?;
+        if !task.can_edit {
+            return Err("This existing system task is read-only".into());
+        }
+        if task.status == "running" {
+            return Err("Wait for the current run to finish before deleting".into());
+        }
+        if task.source == "hermes" {
+            hermes_manage::action_at(
+                &hermes_manage::root_for(&task)?,
+                "remove",
+                task.identifier.as_deref().ok_or("Missing Hermes ID")?,
+            )?;
+        } else {
+            native::remove(&root, record.ok_or("Missing creation record")?)?;
+        }
+        if record.is_some() {
+            registry.removal_pending.insert(id.into());
+            store::write_registry(&root, &registry).map_err(|error| {
+                format!("Scheduler task removed; cannot persist cleanup state: {error}")
+            })?;
+        }
     }
-    Ok(())
+    finish_removal(&root, id, registry.tasks, cleanup)
+}
+
+fn finish_removal(
+    root: &Path,
+    id: &str,
+    mut records: Vec<ManagedAutomation>,
+    cleanup: Option<super::local_data::Cleanup>,
+) -> Result<(), String> {
+    if let Some(cleanup) = cleanup {
+        cleanup.remove()?;
+    }
+    records.retain(|record| record.id != id);
+    store::save(root, records)
+        .map_err(|error| format!("Scheduler task removed; metadata cleanup failed: {error}"))
 }
 
 /// Migrate idle owned runners; active jobs are retried on their completion event.
@@ -357,12 +417,14 @@ pub(crate) fn upgrade_runners() {
     let Ok(_lock) = store::Lock::acquire(&root) else {
         return;
     };
-    let Ok(mut records) = store::load(&root) else {
+    let Ok(registry) = store::read_registry(&root) else {
         return;
     };
+    let mut records = registry.tasks;
     for index in 0..records.len() {
         let old = records[index].clone();
-        if old.draft.provider != Provider::System
+        if registry.removal_pending.contains(&old.id)
+            || old.draft.provider != Provider::System
             || verify(&root, &old).is_err()
             || !native::needs_upgrade(&root, &old)
             || native::state(&old) != Some(false)
@@ -415,6 +477,83 @@ pub(crate) fn upgrade_runners() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unchecked_removal_preserves_local_data_and_queues_definition_deletion() {
+        let case = super::super::local_data::tests::Fixture::new();
+        store::save(&case.state, vec![case.record.clone()]).unwrap();
+        finish_removal(
+            &case.state,
+            &case.record.id,
+            vec![case.record.clone()],
+            None,
+        )
+        .unwrap();
+        assert!(case.workspace.join("result.txt").exists());
+        assert!(native::directory(&case.state, &case.record).exists());
+        let registry = store::read_registry(&case.state).unwrap();
+        assert!(registry.tasks.is_empty());
+        assert_eq!(registry.pending_backup.get(&case.record.id), Some(&None));
+    }
+
+    #[test]
+    fn cleanup_failure_preserves_pending_record_and_successful_retry_removes_it() {
+        let case = super::super::local_data::tests::Fixture::new();
+        store::save(&case.state, vec![case.record.clone()]).unwrap();
+        let mut registry = store::read_registry(&case.state).unwrap();
+        registry.removal_pending.insert(case.record.id.clone());
+        store::write_registry(&case.state, &registry).unwrap();
+        let cleanup = super::super::local_data::Cleanup::plan(
+            &case.state,
+            &case.root,
+            &case.record,
+            &registry.tasks,
+        )
+        .unwrap();
+        std::fs::remove_dir_all(&case.workspace).unwrap();
+        std::fs::write(&case.workspace, "unexpected file").unwrap();
+        assert!(
+            finish_removal(&case.state, &case.record.id, registry.tasks, Some(cleanup)).is_err()
+        );
+        let registry = store::read_registry(&case.state).unwrap();
+        assert_eq!(registry.tasks.len(), 1);
+        assert!(registry.removal_pending.contains(&case.record.id));
+        std::fs::remove_file(&case.workspace).unwrap();
+        std::fs::create_dir(&case.workspace).unwrap();
+        let cleanup = super::super::local_data::Cleanup::plan(
+            &case.state,
+            &case.root,
+            &case.record,
+            &registry.tasks,
+        )
+        .unwrap();
+        finish_removal(&case.state, &case.record.id, registry.tasks, Some(cleanup)).unwrap();
+        let registry = store::read_registry(&case.state).unwrap();
+        assert!(registry.tasks.is_empty() && registry.removal_pending.is_empty());
+        assert!(!case.workspace.exists());
+    }
+
+    #[test]
+    fn pending_hermes_removal_stays_visible_for_retry_when_provider_record_is_gone() {
+        let mut case = super::super::local_data::tests::Fixture::new();
+        case.record.draft.provider = Provider::Hermes;
+        case.record.source = "hermes".into();
+        store::save(&case.state, vec![case.record.clone()]).unwrap();
+        let mut registry = store::read_registry(&case.state).unwrap();
+        registry.removal_pending.insert(case.record.id.clone());
+        store::write_registry(&case.state, &registry).unwrap();
+        let mut report = AutomationOverview::default();
+        merge(&mut report, &case.state);
+        let task = report
+            .tasks
+            .iter()
+            .find(|task| task.id == case.record.id)
+            .unwrap();
+        assert!(task.can_edit && !task.can_run);
+        assert_eq!(task.status, "error");
+        super::super::script_sync::sync_at(&case.state).unwrap();
+        assert_eq!(store::load(&case.state).unwrap()[0].revision, 1);
+    }
+
     #[test]
     fn persistence_failure_rolls_back_the_scheduler_and_surfaces_rollback_failure() {
         let rolled_back = std::cell::Cell::new(false);

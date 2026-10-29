@@ -90,7 +90,12 @@ enum AutomationCommand {
     /// 恢复计划运行。
     Resume { id: String },
     /// 删除受支持的任务和创建记录。
-    Remove { id: String },
+    Remove {
+        id: String,
+        /// 同时清理 AgentHub 自动工作目录和本地记录，保留自定义及共享目录。
+        #[arg(long)]
+        delete_local_data: bool,
+    },
 }
 
 fn task(id: &str) -> anyhow::Result<automation::AutomationTask> {
@@ -245,8 +250,12 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
             automation::save(Some(id), task.revision, draft).map_err(anyhow::Error::msg)?;
             result(json, id, "saved");
         }
-        AutomationCommand::Remove { id } => {
-            automation::remove(id).map_err(anyhow::Error::msg)?;
+        AutomationCommand::Remove {
+            id,
+            delete_local_data,
+        } => {
+            automation::remove_with_local_data(id, *delete_local_data)
+                .map_err(anyhow::Error::msg)?;
             result(json, id, "removed");
         }
     }
@@ -283,6 +292,7 @@ mod tests {
         .is_ok());
         assert!(Cli::try_parse_from(["cli", "create", "--file", "task.json"]).is_ok());
         assert!(Cli::try_parse_from(["cli", "run", "exact-id"]).is_ok());
+        assert!(Cli::try_parse_from(["cli", "remove", "exact-id", "--delete-local-data"]).is_ok());
         assert!(Cli::try_parse_from(["cli", "create", "--template", "workspace-check"]).is_ok());
         assert!(Cli::try_parse_from([
             "cli",

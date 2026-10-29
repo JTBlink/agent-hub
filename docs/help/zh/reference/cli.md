@@ -48,6 +48,8 @@ agent-hub-cli automations run '<task-id>'
 agent-hub-cli automations pause '<task-id>'
 agent-hub-cli automations resume '<task-id>'
 agent-hub-cli automations remove '<task-id>'
+# 同时清理归属该任务的本地数据；自定义／共享目录保留
+agent-hub-cli automations remove '<task-id>' --delete-local-data
 ```
 
 `task.json` 与桌面表单使用同一份任务定义：
@@ -68,9 +70,9 @@ agent-hub-cli automations remove '<task-id>'
 }
 ```
 
-`workdir` 省略或为 `null` 时，会自动创建 `~/.agent-hub/automations/<任务名称>/` 作为该任务的独立工作目录；同名或已有目录会使用 `-2`、`-3` 等后缀区分，不占用已有内容。目录分配记录保存在内部任务数据中，重复分配或修改任务名称不重命名目录。显式填写时保留指定目录，旧版本的 UUID 工作目录也保持原路径。删除任务不会删除工作目录中的文件。
+`workdir` 省略或为 `null` 时，会自动创建 `~/.agent-hub/automations/<任务名称>/` 作为该任务的独立工作目录；同名或已有目录会使用 `-2`、`-3` 等后缀区分，不占用已有内容。目录分配记录保存在内部任务数据中，重复分配或修改任务名称不重命名目录。显式填写时保留指定目录，旧版本的 UUID 工作目录也保持原路径。删除任务默认保留本地文件；确认框可勾选“同时删除本地任务数据”，清理可确认归属的自动工作目录（兼容旧 UUID 目录）和 AgentHub 执行记录，自定义及共享目录保留。
 
-系统任务统一执行工作目录下的短名 Shell 入口：`sh './run.sh'`（Windows 为 `& './run.ps1'`），名称已占用时使用 `run-2.sh` 等后缀，保留已有文件。定时和手动运行触发同一个入口。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置；Shell 入口再调用对应 Python 脚本，如 `disk-cleanup/disk-cleanup.py`，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存 Shell 入口和 Python 脚本，可在 GUI 展开“脚本文件”、通过 CLI 或直接编辑文件定制。旧格式内联 `content` 保存时会转为 Shell 入口的正文。运行前不会用模板覆盖定制内容；旧长文件名迁移成功后将原内容保存在内部任务目录，目录中的用户文件不移动。删除任务保留工作目录及脚本文件。
+系统任务统一执行工作目录下的短名 Shell 入口：`sh './run.sh'`（Windows 为 `& './run.ps1'`），名称已占用时使用 `run-2.sh` 等后缀，保留已有文件。定时和手动运行触发同一个入口。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置；Shell 入口再调用对应 Python 脚本，如 `disk-cleanup/disk-cleanup.py`，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存 Shell 入口和 Python 脚本，可在 GUI 展开“脚本文件”、通过 CLI 或直接编辑文件定制。旧格式内联 `content` 保存时会转为 Shell 入口的正文。运行前不会用模板覆盖定制内容；旧长文件名迁移成功后将原内容保存在内部任务目录，目录中的用户文件不移动。未选择清理本地数据时保留工作目录、脚本与执行记录。
 
 `provider` 为 `system` 时，内容是 macOS/Linux 的 `/bin/sh` 命令或 Windows PowerShell 命令。任务写入当前用户的系统原生调度器，关闭 AgentHub 后仍可按计划执行；需要用户保持登录，Linux 可另行配置用户服务 linger。支持每天、工作日、固定分钟间隔（`{"kind":"interval","minutes":60}`）和仅手动触发（`{"kind":"manual"}`）。保存不会额外触发一次运行，手动运行不修改日程配置。
 

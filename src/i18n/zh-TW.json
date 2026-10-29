@@ -87,6 +87,8 @@
     "resume": "恢復排程",
     "remove": "刪除自動化",
     "removeConfirm": "刪除「{{name}}」？任務將從排程器移除，後續不會自動執行。",
+    "deleteLocalData": "同時刪除本機任務資料",
+    "deleteLocalDataHelp": "清除此任務自動建立的工作目錄（含腳本、設定和產出）及 AgentHub 儲存的執行記錄。自訂或其他任務使用的目錄會保留。刪除後無法復原；不勾選則保留本機檔案。",
     "runRequested": "已要求執行，狀態將自動更新。排程設定保持不變。",
     "saved": "自動化已儲存。",
     "saveFailed": "儲存失敗，請檢查設定後重試。",

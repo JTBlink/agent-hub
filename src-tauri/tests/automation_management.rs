@@ -408,14 +408,11 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
         assert!(std::time::Instant::now() < deadline);
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
-    success(cli(&root, &["remove", &cleanup.id]));
+    success(cli(&root, &["remove", &cleanup.id, "--delete-local-data"]));
+    assert!(!dir.exists(), "opt-in deletion removes runtime records");
     assert!(
-        !dir.exists(),
-        "deleting removes runtime wrappers and output"
-    );
-    assert!(
-        script.is_file(),
-        "workspace scripts and user files are preserved on deletion"
+        !workspace.exists(),
+        "opt-in deletion removes the assigned workspace"
     );
     assert!(!cli(&root, &["show", &cleanup.id]).status.success());
 }

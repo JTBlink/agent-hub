@@ -87,6 +87,8 @@
     "resume": "恢复计划",
     "remove": "删除自动化",
     "removeConfirm": "删除“{{name}}”？任务将从调度器移除，后续不会自动运行。",
+    "deleteLocalData": "同时删除本地任务数据",
+    "deleteLocalDataHelp": "清理此任务自动创建的工作目录（含脚本、配置和产出）及 AgentHub 保存的执行记录。自定义或其他任务使用的目录会保留。删除后无法恢复；不勾选则保留本地文件。",
     "runRequested": "已请求运行，执行状态将自动更新。日程配置保持不变。",
     "saved": "自动化已保存。",
     "saveFailed": "保存失败，请检查配置后重试。",

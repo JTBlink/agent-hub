@@ -110,18 +110,13 @@ pub(super) fn run(task: &AutomationTask) -> Result<(), String> {
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
     super::super::path_guard::ensure_dir_within_root(&directory, &super::store::root())
         .map_err(|e| e.to_string())?;
-    use sha2::{Digest, Sha256};
-    let name = format!(
-        "{:x}.log",
-        Sha256::digest(format!(
-            "{}:{}",
-            task.location,
-            task.identifier.as_deref().unwrap_or("")
-        ))
-    );
     let output = tempfile::NamedTempFile::new_in(&directory)
         .map_err(|e| e.to_string())?
-        .persist(directory.join(name))
+        .persist(run_log_path(
+            &super::store::root(),
+            &task.location,
+            task.identifier.as_deref().unwrap_or(""),
+        ))
         .map_err(|e| e.to_string())?;
     let mut command = std::process::Command::new(executable);
     command
@@ -150,6 +145,14 @@ pub(super) fn run(task: &AutomationTask) -> Result<(), String> {
         let _ = child.wait();
     });
     Ok(())
+}
+
+pub(super) fn run_log_path(root: &std::path::Path, location: &str, identifier: &str) -> PathBuf {
+    use sha2::{Digest, Sha256};
+    root.join("hermes-runs").join(format!(
+        "{:x}.log",
+        Sha256::digest(format!("{location}:{identifier}"))
+    ))
 }
 
 pub(super) fn root_for(task: &AutomationTask) -> Result<PathBuf, String> {

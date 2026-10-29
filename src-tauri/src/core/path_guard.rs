@@ -12,6 +12,18 @@ use std::path::{Component, Path, PathBuf};
 
 use super::error::AppError;
 
+/// Directory links and Windows reparse points are unsafe deletion boundaries.
+pub(crate) fn is_link_or_reparse_point(metadata: &std::fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        if metadata.file_attributes() & 0x400 != 0 {
+            return true;
+        }
+    }
+    metadata.file_type().is_symlink()
+}
+
 pub(crate) fn ensure_safe_skill_relative_path(skill_relative_path: &str) -> Result<(), AppError> {
     if skill_relative_path.trim().is_empty() {
         return Err(AppError::invalid_input("Invalid skill directory path"));

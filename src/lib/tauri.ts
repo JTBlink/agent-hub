@@ -111,8 +111,8 @@ export const saveAutomation = (
 ) => invoke<string>("save_automation", { id, revision, draft });
 export const runAutomation = (id: string) =>
   invoke<void>("run_automation", { id });
-export const removeAutomation = (id: string) =>
-  invoke<void>("remove_automation", { id });
+export const removeAutomation = (id: string, deleteLocalData = false) =>
+  invoke<void>("remove_automation", { id, deleteLocalData });
 
 // ── Types ──
 

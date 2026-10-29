@@ -13,7 +13,7 @@ import {
 import { AutomationOriginBadge } from "../components/AutomationOriginBadge";
 import { AutomationEditor } from "../components/AutomationEditor";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { AutomationRemoveDialog } from "../components/AutomationRemoveDialog";
 import {
   saveAutomation,
   runAutomation,
@@ -196,7 +196,7 @@ export function Automation() {
   const feedback = (
     <>
       <AutomationReadFeedback error={error} issues={data?.issues ?? []} />
-      {actionError && (
+      {actionError && !removing && (
         <p
           role="alert"
           className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-[13px] text-danger"
@@ -222,20 +222,21 @@ export function Automation() {
           onSave={save}
         />
       )}
-      <ConfirmDialog
-        open={!!removing}
-        title={t("automation.remove")}
-        message={t("automation.removeConfirm", { name: removing?.name })}
-        onClose={() => setRemoving(null)}
-        onConfirm={async () => {
-          if (!removing) return false;
-          const success = await perform(removing, () =>
-            removeAutomation(removing.id),
-          );
-          if (success && selectedId) backToList();
-          if (!success) return false;
-        }}
-      />
+      {removing && (
+        <AutomationRemoveDialog
+          task={removing}
+          busy={busyId !== null}
+          error={actionError}
+          onClose={() => setRemoving(null)}
+          onConfirm={async (deleteLocalData) => {
+            const success = await perform(removing, () =>
+              removeAutomation(removing.id, deleteLocalData),
+            );
+            if (success && selectedId) backToList();
+            if (!success) return false;
+          }}
+        />
+      )}
     </>
   );
   const actions = (task: AutomationTask, compact = false) => (
@@ -247,7 +248,10 @@ export function Automation() {
       onRun={() => run(task)}
       onEdit={() => setEditor(task)}
       onToggle={() => toggle(task)}
-      onRemove={() => setRemoving(task)}
+      onRemove={() => {
+        setActionError(null);
+        setRemoving(task);
+      }}
     />
   );
   if (selectedId)

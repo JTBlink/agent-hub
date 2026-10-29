@@ -87,6 +87,8 @@
     "resume": "Resume schedule",
     "remove": "Delete automation",
     "removeConfirm": "Delete “{{name}}”? The task will be removed from its scheduler and will no longer run automatically.",
+    "deleteLocalData": "Also delete local task data",
+    "deleteLocalDataHelp": "Remove this task’s automatically created workspace, including scripts, configuration and outputs, and execution records saved by AgentHub. Custom directories and directories used by other tasks are kept. This cannot be undone. Leave unchecked to keep local files.",
     "runRequested": "Run requested. Execution status will update automatically. The schedule is unchanged.",
     "saved": "Automation saved.",
     "saveFailed": "Could not save. Check the configuration and retry.",

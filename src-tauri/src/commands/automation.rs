@@ -43,9 +43,13 @@ pub async fn run_automation(id: String) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub async fn remove_automation(id: String) -> Result<(), AppError> {
+pub async fn remove_automation(
+    id: String,
+    delete_local_data: Option<bool>,
+) -> Result<(), AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        automation::remove(&id).map_err(AppError::invalid_input)
+        automation::remove_with_local_data(&id, delete_local_data.unwrap_or(false))
+            .map_err(AppError::invalid_input)
     })
     .await?
 }
