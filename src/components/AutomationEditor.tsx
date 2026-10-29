@@ -2,7 +2,6 @@ import { ThemedSelect } from "./ThemedSelect";
 import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
-import { AutomationHerdrFields } from "./AutomationHerdrFields";
 import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
 import { AutomationProjectField } from "./AutomationProjectField";
@@ -261,14 +260,9 @@ export function AutomationEditor({
               {draft.provider === "system" && !externalNative && (
                 <details className="border-t border-border-subtle pt-4">
                   <summary className="cursor-pointer text-[12px] font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
-                    {t("automation.advanced")}
+                    {t("automation.scriptDir")}
                   </summary>
                   <div className="mt-4 space-y-4">
-                    <AutomationHerdrFields
-                      draft={draft}
-                      disabled={busy || selectingAgent}
-                      onChange={update}
-                    />
                     <AutomationWorkdirField
                       kind="scriptDir"
                       value={draft.script_dir ?? null}

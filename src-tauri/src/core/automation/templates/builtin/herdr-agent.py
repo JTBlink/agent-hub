@@ -7,6 +7,7 @@ import shutil
 import shlex
 import subprocess
 import sys
+import time
 import uuid
 
 HERE = Path(__file__).resolve().parent
@@ -78,7 +79,7 @@ def previous_agent(invoke, previous, session, cwd):
     raise HerdrError("原 Herdr 面板仍存在但 Agent 已退出，请检查该面板后处理 .herdr-run.json。")
 
 
-def verify_previous_agent(agent, previous, cwd):
+def verify_agent_identity(agent, previous, cwd):
     prefix = "ah-" + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + "-"
     name = agent.get("name", "")
     expected = previous.get("agent_name")
@@ -86,6 +87,10 @@ def verify_previous_agent(agent, previous, cwd):
     actual_cwd = agent.get("foreground_cwd") or agent.get("cwd")
     if not owned or (actual_cwd and Path(actual_cwd).resolve() != cwd):
         raise HerdrError("原面板的 Agent 或项目已更换，请检查后处理 .herdr-run.json。")
+
+
+def verify_previous_agent(agent, previous, cwd):
+    verify_agent_identity(agent, previous, cwd)
     if agent["agent_status"] not in ("idle", "done"):
         raise HerdrError("原 Agent 状态已变化，保留面板且不发起新任务。")
 
@@ -112,6 +117,38 @@ def create_task_pane(invoke, previous, agent, session, cwd, title):
                        "--cwd", str(cwd), "--label", title, "--no-focus"])["root_pane"]
     return invoke(["workspace", "create", "--cwd", str(cwd),
                    "--label", cwd.name, "--no-focus"])["root_pane"]
+
+
+def wait_for_result(invoke, name, baseline_seq):
+    deadline = time.monotonic() + 1800
+    observed_activity = False
+    last_status = None
+    while time.monotonic() < deadline:
+        agent = invoke(["agent", "get", name])["agent"]
+        status = agent["agent_status"]
+        observed_activity = observed_activity or status in ("working", "blocked")
+        completed = (agent.get("completion_seq") or 0) > baseline_seq
+        if status != last_status:
+            description = {"unknown": "状态识别中", "working": "正在执行",
+                           "blocked": "等待输入", "idle": "等待执行结果", "done": "已结束"}.get(status, status)
+            print(f"Herdr 任务进行中：{description}。", flush=True)
+            last_status = status
+        if status == "blocked" or (status in ("idle", "done") and (observed_activity or completed)):
+            return {"agent": agent}
+        time.sleep(2)
+    raise HerdrError("等待 Herdr 任务结果超时；会话已保留，请在 Herdr 查看进展。", "timeout")
+
+
+def finish_result(invoke, state, result, target):
+    status = result["agent"]["agent_status"]
+    state["phase"] = "completed" if status in ("idle", "done") else "attention"
+    save_state(state)
+    # Scrolling application history is only safe once the agent is idle.
+    source = ["--source", "recent-unwrapped", "--lines", "160"] if state["phase"] == "completed" else ["--source", "visible"]
+    output = invoke(["agent", "read", target, *source], text_output=True)
+    print(output, flush=True)
+    print(f"Herdr 会话状态：{status}。请在 Herdr 查看任务结果；会话就绪不代表验证已通过。")
+    return 0 if state["phase"] == "completed" else 1
 
 
 def main():
@@ -152,10 +189,22 @@ def main():
         previous = json.loads(STATE.read_text(encoding="utf-8"))
     agent = previous_agent(invoke, previous, session, cwd)
     if agent:
+        verify_agent_identity(agent, previous, cwd)
         status = agent["agent_status"]
         if status == "working":
             print(f"上次 Herdr 任务仍在运行：{previous['pane']}；跳过本次触发，不排队或重复发起。", flush=True)
             return 0
+        if status == "unknown":
+            target = previous.get("agent_name") or previous["pane"]
+            print(f"保留上次 Herdr 会话 {previous['pane']}，继续等待状态与结果；不重复投递。", flush=True)
+            result = wait_for_result(invoke, target, previous.get("completion_seq") or 0)
+            return finish_result(invoke, previous, result, target)
+        if previous.get("phase") == "attention" and status == "done" and (
+            (agent.get("completion_seq") or 0) > (previous.get("completion_seq") or 0)
+        ):
+            verify_previous_agent(agent, previous, cwd)
+            print("上次 Herdr Agent 已完成，仅收回已有结果；本次不重复投递。", flush=True)
+            return finish_result(invoke, previous, {"agent": agent}, previous["pane"])
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
@@ -169,30 +218,29 @@ def main():
         verify_previous_agent(invoke(["agent", "get", previous["pane"]])["agent"], previous, cwd)
         invoke(["pane", "close", previous["pane"]])
     print(f"Herdr 会话 {session}，Agent {name}，面板 {pane}。", flush=True)
-    invoke(["agent", "start", name, "--kind", kind, "--pane", pane,
-            "--timeout", "30000", *(["--", *extra] if extra else [])])
+    started = invoke(["agent", "start", name, "--kind", kind, "--pane", pane,
+                      "--timeout", "30000", *(["--", *extra] if extra else [])])
     # Persist before submission: timeout does not prove the prompt was not delivered.
     state["phase"] = "submitted"
+    state["completion_seq"] = started.get("agent", {}).get("completion_seq") or 0
     save_state(state)
     try:
-        result = invoke(["agent", "prompt", name, prompt, "--wait", "--timeout", "1800000"], 1810)
+        try:
+            invoke(["agent", "prompt", name, prompt])
+        except HerdrError as error:
+            if error.code != "agent_prompt_stalled":
+                raise
+            print("Herdr 已投递提示词，正在等待 Agent 状态更新；不会重复投递。", flush=True)
+        result = wait_for_result(invoke, name, state["completion_seq"])
     except (HerdrError, subprocess.TimeoutExpired):
         state["phase"] = "attention"
         save_state(state)
         raise
-    status = result["agent"]["agent_status"]
-    state["phase"] = "completed" if status in ("idle", "done") else "attention"
-    save_state(state)
-    # Scrolling application history is only safe once the agent is idle.
-    source = ["--source", "recent-unwrapped", "--lines", "160"] if state["phase"] == "completed" else ["--source", "visible"]
-    output = invoke(["agent", "read", name, *source], text_output=True)
-    print(output, flush=True)
-    print(f"Herdr 会话状态：{status}。请在 Herdr 查看任务结果；会话就绪不代表验证已通过。")
-    return 0 if state["phase"] == "completed" else 1
+    return finish_result(invoke, state, result, name)
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
     except (HerdrError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
-        sys.exit(f"Herdr 任务未完成：{error}。保留现有会话，不自动重发或回答审批。")
+        sys.exit(f"Herdr 任务未完成：{str(error).rstrip('。')}。保留现有会话，不自动重发或回答审批。")

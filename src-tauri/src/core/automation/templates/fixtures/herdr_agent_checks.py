@@ -36,10 +36,12 @@ class HerdrChecks(unittest.TestCase):
     def execute(self, missing=False, running=True, status='done', previous='done', failure=None,
                 output='Synthetic Herdr result', read_failure=None, config=None,
                 missing_agent=False, pane_exists=False, lookup_failure=None,
-                replacement_name=None, previous_after=None, pane_failure=None):
+                replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None):
         if config is not None:
             CONFIG.write_text(json.dumps(config), encoding='utf-8')
+        previous_name = json.loads(STATE.read_text()).get('agent_name', OLD_NAME) if STATE.exists() else OLD_NAME
         lookups = 0
+        observed = iter(progress or ['working', status])
 
         def error(args, code):
             return subprocess.CompletedProcess(args, 1, '', json.dumps({'error': {'code': code, 'message': code}}))
@@ -58,16 +60,22 @@ class HerdrChecks(unittest.TestCase):
                 elif command[:2] == ['tab', 'create']:
                     payload = {'result': {'root_pane': {'pane_id': 'w-test:p-test', 'workspace_id': 'w-test', 'tab_id': 'w-test:t-task'}}}
                 elif command[:2] == ['agent', 'start']:
-                    payload = {'result': {'agent': {'agent_status': 'idle'}}}
+                    payload = {'result': {'agent': {'agent_status': 'idle', 'completion_seq': 1}}}
                 elif command[:2] == ['agent', 'prompt']:
                     if failure:
                         return subprocess.CompletedProcess(args, 1, '', json.dumps({'error': {'code': failure, 'message': 'delivery uncertain'}}))
                     payload = {'result': {'agent': {'agent_status': status}}}
                 elif command[:2] == ['agent', 'get']:
-                    lookups += 1
-                    if lookup_failure or missing_agent:
-                        return error(args, lookup_failure or 'agent_not_found')
-                    payload = {'result': {'agent': {'agent_status': previous_after if lookups > 1 and previous_after else previous, 'name': replacement_name or OLD_NAME, 'cwd': str(PROJECT)}}}
+                    if command[2].startswith('w-test:') and lookups < (2 if previous != 'unknown' else 1):
+                        lookups += 1
+                        if lookup_failure or missing_agent:
+                            return error(args, lookup_failure or 'agent_not_found')
+                        payload = {'result': {'agent': {'agent_status': previous_after if lookups > 1 and previous_after else previous, 'name': replacement_name or previous_name, 'cwd': str(PROJECT)}}}
+                        if previous_completion is not None:
+                            payload['result']['agent']['completion_seq'] = previous_completion
+                    else:
+                        current = next(observed)
+                        payload = {'result': {'agent': {'agent_status': current, 'completion_seq': 2 if current == 'done' else 1}}}
                 elif command[:2] == ['pane', 'get']:
                     if not pane_exists:
                         return error(args, 'pane_not_found')
@@ -88,7 +96,7 @@ class HerdrChecks(unittest.TestCase):
         with patch('shutil.which', return_value=None if missing else 'herdr'):
             with patch('subprocess.run', side_effect=run):
                 with patch('pathlib.Path.cwd', return_value=PROJECT):
-                    with self.assertRaises(SystemExit) as result, redirect_stdout(self.output):
+                    with self.assertRaises(SystemExit) as result, redirect_stdout(self.output), patch('time.sleep'):
                         runpy.run_path(str(SCRIPT), run_name='__main__')
         return result.exception.code
 
@@ -136,7 +144,7 @@ class HerdrChecks(unittest.TestCase):
                 STATE.write_text(json.dumps({'session': 'default', 'pane': 'w-test:p-test',
                                              'cwd': str(PROJECT), 'phase': 'completed'}))
                 self.calls = []
-                self.assertEqual(self.execute(previous=status), 1)
+                self.assertEqual(self.execute(previous=status), 1 if status == 'blocked' else 0)
                 self.assertFalse(any('prompt' in args or 'create' in args for args, _ in self.calls))
 
     def test_terminal_output_is_preserved_as_plain_text(self):
@@ -235,8 +243,37 @@ class HerdrChecks(unittest.TestCase):
                 self.assertIsInstance(self.execute(config={'agent': 'codex', 'extra_arguments': value}), str)
                 self.assertFalse(self.calls)
 
+    def test_unknown_startup_keeps_observing_until_completion_without_resubmission(self):
+        self.assertEqual(self.execute(progress=['unknown', 'unknown', 'working', 'done']), 0)
+        self.assertIn('状态识别中', self.output.getvalue())
+        prompts = [args for args, _ in self.calls if 'prompt' in args]
+        self.assertEqual(len(prompts), 1)
+        self.assertNotIn('--wait', prompts[0])
+        self.assertEqual(json.loads(STATE.read_text())['phase'], 'completed')
+
+    def test_legacy_five_second_stall_continues_observing_the_same_agent(self):
+        self.assertEqual(self.execute(failure='agent_prompt_stalled', progress=['unknown', 'working', 'done']), 0)
+        self.assertEqual(sum('prompt' in args for args, _ in self.calls), 1)
+        self.assertIn('不会重复投递', self.output.getvalue())
+
+    def test_initial_idle_is_not_mistaken_for_task_completion(self):
+        self.assertEqual(self.execute(progress=['idle', 'unknown', 'working', 'done']), 0)
+        gets = [args for args, _ in self.calls if 'get' in args]
+        self.assertEqual(len(gets), 4)
+
+    def test_fast_completion_is_detected_by_completion_sequence(self):
+        self.assertEqual(self.execute(progress=['done']), 0)
+        self.assertEqual(sum('get' in args for args, _ in self.calls), 1)
+
+    def test_previously_uncertain_run_recovers_completed_result_without_new_prompt(self):
+        self.save_previous('attention')
+        self.assertEqual(self.execute(previous='done', previous_completion=2), 0)
+        self.assertFalse(any('prompt' in args or 'create' in args or 'split' in args for args, _ in self.calls))
+        self.assertIn('仅收回已有结果', self.output.getvalue())
+        self.assertEqual(json.loads(STATE.read_text())['phase'], 'completed')
+
     def test_uncertain_delivery_requires_attention_and_is_not_retried(self):
-        self.assertIsInstance(self.execute(failure='agent_prompt_stalled'), str)
+        self.assertIsInstance(self.execute(failure='timeout'), str)
         self.assertEqual(json.loads(STATE.read_text())['phase'], 'attention')
         self.calls = []
         self.assertEqual(self.execute(previous='idle'), 1)

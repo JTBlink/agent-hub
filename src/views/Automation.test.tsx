@@ -802,6 +802,20 @@ it("saves extra agent arguments from advanced settings and resets them when swit
   await click("新建自动化");
   await input("名称", "自定义巡检");
   await select("智能体（可选）", "claude");
+  const argumentsField = container.querySelector<HTMLTextAreaElement>(
+    '[aria-label="额外的智能体参数"]',
+  )!;
+  const agentGroup = argumentsField.closest("details")!.parentElement!;
+  expect(
+    agentGroup.contains(
+      container.querySelector('select[aria-label="智能体（可选）"]'),
+    ),
+  ).toBe(true);
+  expect(
+    agentGroup.contains(
+      container.querySelector('select[aria-label="项目工作区"]'),
+    ),
+  ).toBe(false);
   await input("额外的智能体参数", "--model another-model");
   await select("智能体（可选）", "codex");
   expect(

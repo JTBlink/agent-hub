@@ -15,6 +15,7 @@ import {
 import { automationHerdrConfig, automationPromptFile } from "../lib/automation";
 import { getErrorMessage } from "../lib/error";
 import { ThemedSelect } from "./ThemedSelect";
+import { AutomationHerdrFields } from "./AutomationHerdrFields";
 
 type Execution = Pick<AutomationDraft, "provider" | "content" | "files">;
 const execution = ({
@@ -256,6 +257,20 @@ export function AutomationAgentField({
             : "automation.noAgentHelp",
         )}
       </p>
+      {config && (
+        <details className="pt-2">
+          <summary className="cursor-pointer text-[12px] font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
+            {t("automation.advanced")}
+          </summary>
+          <div className="mt-4 space-y-4">
+            <AutomationHerdrFields
+              draft={draft}
+              disabled={disabled || pending}
+              onChange={onChange}
+            />
+          </div>
+        </details>
+      )}
     </div>
   );
 }
