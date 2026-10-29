@@ -35,21 +35,17 @@ pub(in crate::core::automation) fn prepare(
     id: &str,
     old: Option<&ManagedAutomation>,
 ) -> Result<bool, String> {
-    let workspace = Path::new(
-        draft
-            .workdir
-            .as_deref()
-            .ok_or("Missing automation workspace")?,
-    );
+    let paths_changed = draft.script_dir.is_some() && make_bundle_paths_absolute(draft);
+    let workspace = Path::new(draft.scripts_dir().ok_or("Missing automation workspace")?);
     let current = entry(draft).cloned();
     if current
         .as_ref()
         .is_some_and(|file| available(workspace, &file.path, id, old))
     {
-        return Ok(false);
+        return Ok(paths_changed);
     }
     let old_entry = old
-        .filter(|old| old.draft.workdir == draft.workdir)
+        .filter(|old| old.draft.scripts_dir() == draft.scripts_dir())
         .and_then(|old| entry(&old.draft))
         .filter(|file| available(workspace, &file.path, id, old));
     let path = if let Some(file) = old_entry {
@@ -86,7 +82,36 @@ pub(in crate::core::automation) fn prepare(
         });
     }
     draft.content = command(&path);
+    if draft.script_dir.is_some() {
+        make_bundle_paths_absolute(draft);
+    }
     Ok(true)
+}
+
+fn make_bundle_paths_absolute(draft: &mut AutomationDraft) -> bool {
+    let paths: Vec<_> = draft.files.iter().map(|file| file.path.clone()).collect();
+    let Some(entry) = entry(draft).map(|file| file.path.clone()) else {
+        return false;
+    };
+    let Some(script) = draft.files.iter_mut().find(|file| file.path == entry) else {
+        return false;
+    };
+    // Upgrade only the generated, single-command Python launcher; preserve custom scripts.
+    if script.content.contains(['\n', '\r']) {
+        return false;
+    }
+    for path in paths.iter().filter(|path| path.ends_with(".py")) {
+        if let Some(prefix) = script.content.strip_suffix(&format!(" './{path}'")) {
+            let root = if script.path.ends_with(".ps1") {
+                "$env:AGENT_HUB_SCRIPT_DIR"
+            } else {
+                "$AGENT_HUB_SCRIPT_DIR"
+            };
+            script.content = format!("{prefix} \"{root}/{path}\"");
+            return true;
+        }
+    }
+    false
 }
 
 fn available(workspace: &Path, path: &str, id: &str, old: Option<&ManagedAutomation>) -> bool {
@@ -105,8 +130,7 @@ fn available(workspace: &Path, path: &str, id: &str, old: Option<&ManagedAutomat
                 .starts_with(&super::payload::header(id))
         }) || old.is_some_and(|old| {
             old.draft
-                .workdir
-                .as_deref()
+                .scripts_dir()
                 .is_some_and(|dir| Path::new(dir) == workspace)
                 && old.draft.files.iter().any(|file| file.path == path)
         })
@@ -122,6 +146,7 @@ mod tests {
             name: "Audit".into(),
             provider: Provider::System,
             content: "printf original".into(),
+            script_dir: None,
             workdir: Some(workspace.to_string_lossy().into_owned()),
             schedule: Schedule::Manual,
             enabled: false,

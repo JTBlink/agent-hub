@@ -22,7 +22,7 @@ fn paths(root: &Path) -> HashSet<PathBuf> {
             let dir = native::directory(root, &record);
             if is_path_safe(root, &dir) {
                 paths.insert(dir);
-                if let Some(workdir) = record.draft.workdir {
+                if let Some(workdir) = record.draft.scripts_dir() {
                     for file in &record.draft.files {
                         if let Some(parent) = Path::new(&workdir).join(&file.path).parent() {
                             if is_path_safe(Path::new(&workdir), parent) && !parent.is_symlink() {

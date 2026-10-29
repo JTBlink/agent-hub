@@ -11,6 +11,28 @@ pub(super) fn ensure(draft: &mut AutomationDraft, id: &str, scope: &str) -> Resu
     ensure_at(&root, &store::root(), draft, id, scope)
 }
 
+pub(super) fn ensure_scripts(draft: &mut AutomationDraft, id: &str) -> Result<(), String> {
+    let mut storage = draft.clone();
+    storage.workdir = draft.script_dir.clone();
+    ensure(&mut storage, id, "")?;
+    draft.script_dir = storage.workdir;
+    Ok(())
+}
+
+/// Old native tasks used their execution directory to store scripts as well.
+pub(super) fn separate(draft: &mut AutomationDraft, id: &str) {
+    if draft.provider == super::Provider::System && draft.script_dir.is_none() {
+        draft.script_dir = draft.workdir.clone();
+        if draft
+            .workdir
+            .as_deref()
+            .is_some_and(|path| is_default(path, id))
+        {
+            draft.workdir = None;
+        }
+    }
+}
+
 pub(super) fn workspace_root() -> PathBuf {
     if std::env::var_os("AGENT_HUB_AUTOMATION_HOME").is_some() {
         store::root().join("workspaces")
@@ -35,8 +57,7 @@ pub(super) fn owned_directories_at(
     let legacy = root.join(key(&record.id, ""));
     if record
         .draft
-        .workdir
-        .as_deref()
+        .scripts_dir()
         .is_some_and(|path| Path::new(path) == legacy.join("workspace"))
     {
         directories.push(legacy);
@@ -190,6 +211,7 @@ mod tests {
             name: "Audit".into(),
             provider: super::super::Provider::System,
             content: "exit 0".into(),
+            script_dir: None,
             workdir: None,
             schedule: super::super::Schedule::Manual,
             enabled: true,

@@ -1,7 +1,10 @@
 import { ThemedSelect } from "./ThemedSelect";
 import { useEffect, useRef, useState } from "react";
-import { AutomationScriptFilesEditor } from "./AutomationScriptFilesEditor";
+import { AutomationTaskContent } from "./AutomationTaskContent";
+import { AutomationAgentField } from "./AutomationAgentField";
+import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
+import { AutomationProjectField } from "./AutomationProjectField";
 import { AutomationTemplatePicker } from "./AutomationTemplatePicker";
 import { X, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -12,15 +15,16 @@ import type {
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { ToggleSwitch } from "./ToggleSwitch";
-import { cn } from "../utils";
 
 export function AutomationEditor({
   task,
+  restoreBackup = false,
   hermesInstalled,
   onClose,
   onSave,
 }: {
   task?: AutomationTask;
+  restoreBackup?: boolean;
   hermesInstalled: boolean;
   onClose: () => void;
   onSave: (draft: AutomationDraft) => Promise<void>;
@@ -33,11 +37,15 @@ export function AutomationEditor({
       content: "",
       workdir: null,
       schedule: { kind: "daily", hour: 9, minute: 0, weekdays: true },
-      enabled: true,
+      enabled: !restoreBackup,
     },
   );
   const [busy, setBusy] = useState(false);
-  const [choosingTemplate, setChoosingTemplate] = useState(false);
+  const [selectingAgent, setSelectingAgent] = useState(false);
+  const [inactivePrompt, setInactivePrompt] = useState("");
+  const [picker, setPicker] = useState<"builtin" | "backup" | null>(
+    restoreBackup ? "backup" : null,
+  );
   const [error, setError] = useState<string | null>(null);
   const pending = useRef(false);
   const panel = useRef<HTMLFormElement>(null);
@@ -83,31 +91,41 @@ export function AutomationEditor({
     };
   }, []);
   useEffect(() => {
-    if (!choosingTemplate) name.current?.focus();
-  }, [choosingTemplate]);
+    if (picker)
+      panel.current
+        ?.querySelector<HTMLButtonElement>("section button")
+        ?.focus();
+    else name.current?.focus();
+  }, [picker]);
   const update = (value: Partial<AutomationDraft>) =>
     setDraft((previous) => ({ ...previous, ...value }));
+  const externalNative =
+    !!task && task.origin !== "agent_hub" && task.source !== "hermes";
   const schedule = draft.schedule;
+  const herdrConfig = automationHerdrConfig(draft);
+  const promptFile = automationPromptFile(draft);
   const mode =
     schedule.kind === "daily" && schedule.weekdays ? "weekdays" : schedule.kind;
   const changeMode = (mode: string) => {
     const schedule: AutomationSchedule =
-      mode === "interval"
-        ? { kind: "interval", minutes: 60 }
-        : mode === "manual"
-          ? { kind: "manual" }
-          : mode === "custom"
-            ? { kind: "custom", expression: "0 9 * * 1-5" }
-            : {
-                kind: "daily",
-                hour: 9,
-                minute: 0,
-                weekdays: mode === "weekdays",
-              };
+      mode === "hourly"
+        ? { kind: "hourly", minute: 15 }
+        : mode === "interval"
+          ? { kind: "interval", minutes: 60 }
+          : mode === "manual"
+            ? { kind: "manual" }
+            : mode === "custom"
+              ? { kind: "custom", expression: "0 9 * * 1-5" }
+              : {
+                  kind: "daily",
+                  hour: 9,
+                  minute: 0,
+                  weekdays: mode === "weekdays",
+                };
     update({ schedule });
   };
   const submit = async () => {
-    if (pending.current) return;
+    if (pending.current || picker !== null) return;
     pending.current = true;
     setBusy(true);
     setError(null);
@@ -116,6 +134,7 @@ export function AutomationEditor({
         ...draft,
         name: draft.name.trim(),
         workdir: draft.workdir?.trim() || null,
+        script_dir: draft.script_dir?.trim() || null,
       });
     } catch (cause) {
       setError(
@@ -148,14 +167,20 @@ export function AutomationEditor({
             id="automation-editor-title"
             className="text-[15px] font-semibold text-primary"
           >
-            {t(task ? "automation.edit" : "automation.create")}
+            {t(
+              task
+                ? "automation.edit"
+                : restoreBackup
+                  ? "automation.restoreBackup"
+                  : "automation.create",
+            )}
           </h2>
           <div className="flex items-center gap-3">
-            {!task && (
+            {!task && !picker && (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => setChoosingTemplate((value) => !value)}
+                onClick={() => setPicker("builtin")}
                 className="app-button-secondary focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <Sparkles className="h-4 w-4" />
@@ -173,14 +198,15 @@ export function AutomationEditor({
             </button>
           </div>
         </header>
-        {choosingTemplate ? (
+        {picker ? (
           <AutomationTemplatePicker
+            source={picker}
             hermesInstalled={hermesInstalled}
-            onBack={() => setChoosingTemplate(false)}
+            onBack={() => (picker === "backup" ? onClose() : setPicker(null))}
             onChoose={(value) => {
               setDraft(value);
               setError(null);
-              setChoosingTemplate(false);
+              setPicker(null);
             }}
           />
         ) : (
@@ -200,93 +226,90 @@ export function AutomationEditor({
                   className="w-full border-0 bg-transparent text-2xl font-semibold tracking-tight text-primary outline-none placeholder:text-faint focus-visible:ring-2 focus-visible:ring-accent"
                 />
               </label>
-              <label
-                className={cn(
-                  "flex flex-col gap-2",
-                  draft.files?.length
-                    ? "min-h-[130px]"
-                    : "min-h-[280px] flex-1 md:min-h-[430px]",
-                )}
-              >
-                <span className="text-[12px] font-medium text-muted">
-                  {t(
-                    draft.provider === "system"
-                      ? "automation.command"
-                      : "automation.prompt",
-                  )}
-                </span>
-                <textarea
-                  required
-                  value={draft.content}
-                  disabled={busy}
-                  maxLength={65536}
-                  onChange={(e) => update({ content: e.target.value })}
-                  aria-label={t(
-                    draft.provider === "system"
-                      ? "automation.command"
-                      : "automation.prompt",
-                  )}
-                  placeholder={t(
-                    draft.provider === "system"
-                      ? "automation.commandPlaceholder"
-                      : "automation.promptPlaceholder",
-                  )}
-                  className={cn(
-                    "app-input w-full flex-1 resize-y p-4 leading-7",
-                    draft.files?.length ? "min-h-[100px]" : "min-h-[240px]",
-                    draft.provider === "system" && "font-mono text-[12px]",
-                  )}
-                />
-              </label>
-              <AutomationScriptFilesEditor
-                files={draft.files ?? []}
-                disabled={busy}
-                onChange={(files) => update({ files })}
+              <AutomationTaskContent
+                draft={draft}
+                busy={busy || selectingAgent}
+                inactivePrompt={inactivePrompt}
+                onChange={update}
               />
-              <p className="text-[12px] leading-6 text-muted">
-                {t(
-                  draft.provider === "system"
-                    ? "automation.commandHelp"
-                    : "automation.hermesHelp",
-                )}
-              </p>
             </div>
             <fieldset
               disabled={busy}
               className="min-w-0 space-y-6 border-t border-border-subtle bg-bg-secondary p-6 md:border-l md:border-t-0"
             >
-              <label className="block space-y-2">
-                <span className="text-[12px] font-medium text-muted">
-                  {t("automation.scheduler")}
-                </span>
-                <ThemedSelect
-                  className="app-input w-full"
-                  aria-label={t("automation.scheduler")}
-                  value={draft.provider}
-                  disabled={busy || !!task}
-                  onChange={(e) =>
-                    update({
-                      files: e.target.value === "hermes" ? [] : draft.files,
-                      provider:
-                        e.target.value === "hermes" ? "hermes" : "system",
-                      schedule:
-                        draft.schedule.kind === "manual"
-                          ? { kind: "interval", minutes: 60 }
-                          : draft.schedule,
-                    })
-                  }
-                >
-                  <option value="system">
-                    {t("automation.filters.system")}
-                  </option>
-                  {hermesInstalled && <option value="hermes">Hermes</option>}
-                </ThemedSelect>
-              </label>
-              <AutomationWorkdirField
+              <AutomationAgentField
+                draft={draft}
+                disabled={busy || externalNative}
+                providerLocked={!!task}
+                onPendingChange={setSelectingAgent}
+                onInactivePromptChange={setInactivePrompt}
+                onChange={update}
+              />
+              {draft.files?.some(
+                (file) => file.path === "network-reset/setup.sh",
+              ) && (
+                <p className="rounded-lg border border-border-subtle bg-surface p-3 text-[12px] leading-6 text-secondary">
+                  {t("automation.networkSetupHelp")}
+                </p>
+              )}
+              <AutomationProjectField
                 value={draft.workdir}
                 disabled={busy}
                 onChange={(workdir) => update({ workdir })}
               />
+              {draft.provider === "system" && !externalNative && (
+                <details className="border-t border-border-subtle pt-4">
+                  <summary className="cursor-pointer text-[12px] font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
+                    {t("automation.advanced")}
+                  </summary>
+                  <div className="mt-4 space-y-4">
+                    {herdrConfig && (
+                      <label className="block space-y-2">
+                        <span className="text-[12px] font-medium text-muted">
+                          {t("automation.herdrSession")}
+                        </span>
+                        <input
+                          className="app-input w-full"
+                          aria-label={t("automation.herdrSession")}
+                          disabled={busy}
+                          value={
+                            "session" in herdrConfig.value &&
+                            typeof herdrConfig.value.session === "string"
+                              ? herdrConfig.value.session
+                              : "default"
+                          }
+                          onChange={(event) =>
+                            update({
+                              files: draft.files?.map((file) =>
+                                file.path === herdrConfig.file.path
+                                  ? {
+                                      ...file,
+                                      content:
+                                        JSON.stringify(
+                                          {
+                                            ...herdrConfig.value,
+                                            session: event.target.value,
+                                          },
+                                          null,
+                                          2,
+                                        ) + "\n",
+                                    }
+                                  : file,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    )}
+                    <AutomationWorkdirField
+                      kind="scriptDir"
+                      value={draft.script_dir ?? null}
+                      disabled={busy}
+                      onChange={(script_dir) => update({ script_dir })}
+                    />
+                  </div>
+                </details>
+              )}
               <div className="space-y-3">
                 <label className="block space-y-2">
                   <span className="text-[12px] font-medium text-muted">
@@ -301,9 +324,12 @@ export function AutomationEditor({
                     {[
                       "weekdays",
                       "daily",
+                      "hourly",
                       "interval",
                       ...(draft.provider === "system"
-                        ? ["manual"]
+                        ? externalNative
+                          ? []
+                          : ["manual"]
                         : ["custom"]),
                     ].map((value) => (
                       <option key={value} value={value}>
@@ -356,6 +382,30 @@ export function AutomationEditor({
                     />
                   </label>
                 )}
+                {schedule.kind === "hourly" && (
+                  <label className="block space-y-2">
+                    <span className="text-[12px] font-medium text-muted">
+                      {t("automation.hourlyMinute")}
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={59}
+                      required
+                      value={schedule.minute}
+                      aria-label={t("automation.hourlyMinute")}
+                      onChange={(event) =>
+                        update({
+                          schedule: {
+                            kind: "hourly",
+                            minute: Number(event.target.value),
+                          },
+                        })
+                      }
+                      className="app-input w-full"
+                    />
+                  </label>
+                )}
                 {schedule.kind === "custom" && (
                   <label className="block space-y-2">
                     <span className="text-[12px] font-medium text-muted">
@@ -396,7 +446,11 @@ export function AutomationEditor({
                 </p>
               )}
               <p className="text-[12px] leading-6 text-muted">
-                {t("automation.nativeHelp")}
+                {t(
+                  herdrConfig
+                    ? "automation.herdrScheduleHelp"
+                    : "automation.nativeHelp",
+                )}
               </p>
             </fieldset>
           </div>
@@ -430,9 +484,11 @@ export function AutomationEditor({
               type="submit"
               disabled={
                 busy ||
-                choosingTemplate ||
+                selectingAgent ||
+                picker !== null ||
                 !draft.name.trim() ||
-                !draft.content.trim()
+                !draft.content.trim() ||
+                (!!promptFile && !promptFile.content.trim())
               }
               className="app-button-primary focus-visible:ring-2 focus-visible:ring-accent"
             >

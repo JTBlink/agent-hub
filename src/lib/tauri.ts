@@ -9,6 +9,7 @@ export type AutomationTaskOrigin = "agent_hub" | "external" | "unknown";
 export type AutomationSchedule =
   | { kind: "manual" }
   | { kind: "interval"; minutes: number }
+  | { kind: "hourly"; minute: number }
   | { kind: "daily"; hour: number; minute: number; weekdays: boolean }
   | { kind: "custom"; expression: string };
 export interface AutomationScriptFile {
@@ -16,6 +17,7 @@ export interface AutomationScriptFile {
   content: string;
 }
 export interface AutomationDraft {
+  script_dir?: string | null;
   files?: AutomationScriptFile[];
   name: string;
   provider: "system" | "hermes";
@@ -91,6 +93,7 @@ export interface AutomationTemplate {
   draft: AutomationDraft;
 }
 export interface AutomationCatalog {
+  agent_starter?: AutomationDraft;
   shell: "sh" | "powershell";
   templates: AutomationTemplate[];
 }

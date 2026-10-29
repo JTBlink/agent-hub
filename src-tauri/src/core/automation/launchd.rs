@@ -19,6 +19,14 @@ pub(super) fn collect(report: &mut AutomationOverview, locale: &str) {
         return;
     };
     let user = home.join("Library/LaunchAgents");
+    let management = read_command("/usr/bin/id", &["-u"])
+        .ok()
+        .and_then(|uid| uid.trim().parse::<u32>().ok())
+        .and_then(|uid| {
+            read_command("/bin/launchctl", &["print-disabled", &format!("gui/{uid}")])
+                .ok()
+                .map(|text| (uid, super::external_launchd::disabled(&text)))
+        });
     let directories = [
         user.clone(),
         "/Library/LaunchAgents".into(),
@@ -54,7 +62,7 @@ pub(super) fn collect(report: &mut AutomationOverview, locale: &str) {
                     serde_json::to_value(value).map_err(|e| e.to_string())
                 }) {
                 Ok(value) => {
-                    if let Some(task) = parse(
+                    if let Some(mut task) = parse(
                         &value,
                         &path.to_string_lossy(),
                         if directory == user
@@ -66,6 +74,13 @@ pub(super) fn collect(report: &mut AutomationOverview, locale: &str) {
                         },
                         &mut names,
                     ) {
+                        if directory == user {
+                            if let Some((uid, overrides)) = &management {
+                                super::external_launchd::decorate(
+                                    &mut task, &user, *uid, overrides,
+                                );
+                            }
+                        }
                         report.tasks.push(task);
                     }
                 }
@@ -75,7 +90,7 @@ pub(super) fn collect(report: &mut AutomationOverview, locale: &str) {
     }
 }
 
-fn runtime(text: &str) -> HashMap<String, (bool, String)> {
+pub(super) fn runtime(text: &str) -> HashMap<String, (bool, String)> {
     text.lines()
         .filter_map(|line| {
             let fields: Vec<_> = line.split_whitespace().collect();

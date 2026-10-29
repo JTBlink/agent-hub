@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Sparkles, Terminal, Bot } from "lucide-react";
+import { ChevronLeft, RotateCcw, Sparkles, Terminal, Bot } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   getAutomationBackups,
@@ -9,16 +9,21 @@ import {
   type AutomationCatalog,
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
-import { cn } from "../utils";
+import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
 
-const load = (locale: string) =>
-  Promise.allSettled([getAutomationTemplates(locale), getAutomationBackups()]);
+const load = (locale: string, source: "builtin" | "backup") =>
+  Promise.allSettled([
+    getAutomationTemplates(locale),
+    source === "backup" ? getAutomationBackups() : Promise.resolve([]),
+  ]);
 
 export function AutomationTemplatePicker({
+  source = "builtin",
   hermesInstalled,
   onChoose,
   onBack,
 }: {
+  source?: "builtin" | "backup";
   hermesInstalled: boolean;
   onChoose: (draft: AutomationDraft) => void;
   onBack: () => void;
@@ -30,15 +35,18 @@ export function AutomationTemplatePicker({
   const [errors, setErrors] = useState<string[]>([]);
   const [settled, setSettled] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useState<"builtin" | "backup">("builtin");
+  const title = t(
+    source === "backup" ? "automation.restoreBackup" : "automation.useTemplate",
+  );
+  const requestKey = `${locale}:${source}`;
   const request = useRef<{
-    locale: string;
+    key: string;
     promise: ReturnType<typeof load>;
   } | null>(null);
   useEffect(() => {
     let active = true;
-    if (!request.current || request.current.locale !== locale)
-      request.current = { locale, promise: load(locale) };
+    if (!request.current || request.current.key !== requestKey)
+      request.current = { key: requestKey, promise: load(locale, source) };
     void request.current.promise.then(([templates, saved]) => {
       if (!active) return;
       setCatalog(templates.status === "fulfilled" ? templates.value : null);
@@ -50,15 +58,15 @@ export function AutomationTemplatePicker({
             : [],
         ),
       );
-      setSettled(locale);
+      setSettled(requestKey);
     });
     return () => {
       active = false;
     };
-  }, [locale, attempt]);
-  const loading = settled !== locale;
+  }, [locale, source, requestKey, attempt]);
+  const loading = settled !== requestKey;
   const cards =
-    tab === "builtin"
+    source === "builtin"
       ? (catalog?.templates ?? []).map((template) => ({
           id: template.id,
           title: template.title,
@@ -80,7 +88,7 @@ export function AutomationTemplatePicker({
   );
   return (
     <section
-      aria-label={t("automation.useTemplate")}
+      aria-label={title}
       className="min-h-0 space-y-5 overflow-y-auto p-6 md:p-8"
     >
       <button
@@ -89,36 +97,28 @@ export function AutomationTemplatePicker({
         className="inline-flex items-center gap-1.5 rounded text-[13px] text-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ChevronLeft className="h-4 w-4" />
-        {t("automation.backToEditor")}
+        {t(
+          source === "backup"
+            ? "automation.backToList"
+            : "automation.backToEditor",
+        )}
       </button>
       <div>
         <h3 className="flex items-center gap-2 text-xl font-semibold text-primary">
-          <Sparkles className="h-5 w-5 text-accent-light" />
-          {t("automation.useTemplate")}
+          {source === "backup" ? (
+            <RotateCcw className="h-5 w-5 text-accent-light" />
+          ) : (
+            <Sparkles className="h-5 w-5 text-accent-light" />
+          )}
+          {title}
         </h3>
         <p className="mt-2 text-[12px] leading-6 text-muted">
-          {t("automation.templateHint")}
+          {t(
+            source === "backup"
+              ? "automation.backupSourceHelp"
+              : "automation.templateHint",
+          )}
         </p>
-      </div>
-      <div
-        role="group"
-        aria-label={t("automation.templateSource")}
-        className="app-segmented inline-flex"
-      >
-        {(["builtin", "backup"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={tab === value}
-            onClick={() => setTab(value)}
-            className={cn(
-              "app-segmented-button focus-visible:ring-2 focus-visible:ring-accent",
-              tab === value && "app-segmented-button-active",
-            )}
-          >
-            {t(`automation.templateSources.${value}`)}
-          </button>
-        ))}
       </div>
       {!!errors.length && (
         <div role="alert" className="text-[12px] text-danger">
@@ -153,7 +153,8 @@ export function AutomationTemplatePicker({
               className="flex min-w-0 flex-col items-start gap-2 rounded-lg border border-border-subtle bg-surface p-4 text-left hover:border-accent-border hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="flex items-center gap-2 text-[13px] font-medium text-primary">
-                {card.draft.provider === "hermes" ? (
+                {card.draft.provider === "hermes" ||
+                automationPromptFile(card.draft) ? (
                   <Bot className="h-4 w-4 text-accent-light" />
                 ) : (
                   <Terminal className="h-4 w-4 text-accent-light" />
@@ -164,15 +165,21 @@ export function AutomationTemplatePicker({
                 {card.disabled ? t("automation.otherShell") : card.description}
               </span>
               <span className="mt-auto pt-1 text-[11px] text-muted">
-                {card.draft.provider === "hermes"
-                  ? "Hermes"
-                  : t("automation.filters.system")}
+                {automationHerdrConfig(card.draft)
+                  ? "Herdr"
+                  : card.draft.provider === "hermes"
+                    ? "Hermes"
+                    : t("automation.filters.system")}
               </span>
             </button>
           ))}
           {!visibleCards.length && (
             <p className="py-4 text-[13px] text-muted">
-              {t("automation.noBackupTemplates")}
+              {t(
+                source === "backup"
+                  ? "automation.noBackupTemplates"
+                  : "automation.noTemplates",
+              )}
             </p>
           )}
         </div>

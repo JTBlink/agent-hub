@@ -1,0 +1,6 @@
+{
+  "session": "default",
+  "agent": "codex",
+  "arguments": ["--sandbox", "workspace-write"],
+  "title": "Issue 处理"
+}

@@ -88,11 +88,16 @@ impl Cleanup {
             if let Some(path) = &other.draft.workdir {
                 protected.push(PathBuf::from(path));
             }
+            if let Some(path) = &other.draft.script_dir {
+                protected.push(PathBuf::from(path));
+            }
             protected.extend(workspace::owned_directories_at(workspaces, state, other)?);
         }
         // Even a manually selected path inside internal state must survive.
         if let Some(path) = record.draft.workdir.as_ref().map(PathBuf::from) {
-            if !owned.iter().any(|directory| is_path_safe(directory, &path)) {
+            if record.draft.script_dir.is_some()
+                || !owned.iter().any(|directory| is_path_safe(directory, &path))
+            {
                 protected.push(path);
             }
         }

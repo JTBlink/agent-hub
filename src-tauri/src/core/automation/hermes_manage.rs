@@ -198,6 +198,7 @@ pub(super) fn draft(task: &AutomationTask) -> AutomationDraft {
         name,
         provider: super::definition::Provider::Hermes,
         content: task.prompt.clone().unwrap_or_default(),
+        script_dir: None,
         workdir: task.project.clone(),
         schedule: Schedule::Custom {
             expression: task.schedule.clone(),
@@ -216,6 +217,7 @@ mod tests {
             name: "Audit $(ignored)".into(),
             provider: super::super::definition::Provider::Hermes,
             content: "Inspect\n$(literal)".into(),
+            script_dir: None,
             workdir: None,
             schedule: Schedule::Interval { minutes: 10 },
             enabled: true,

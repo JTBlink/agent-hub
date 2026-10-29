@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Clock3, RefreshCw, Plus, ChevronRight } from "lucide-react";
+import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAutomationOverview } from "../hooks/useAutomationOverview";
 import { AutomationTaskDetail } from "../components/AutomationTaskDetail";
@@ -12,9 +12,12 @@ import {
 } from "../components/AutomationToolbar";
 import { AutomationOriginBadge } from "../components/AutomationOriginBadge";
 import { AutomationEditor } from "../components/AutomationEditor";
+import { CardActionMenu } from "../components/CardActionMenu";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
 import { AutomationRemoveDialog } from "../components/AutomationRemoveDialog";
 import {
+  getProjects,
+  type Project,
   saveAutomation,
   runAutomation,
   removeAutomation,
@@ -24,6 +27,7 @@ import {
 import { getErrorMessage } from "../lib/error";
 import { AutomationTaskIcon } from "../components/AutomationTaskIcon";
 import {
+  automationProjectName,
   automationTime,
   automationSchedule,
   filterAutomationTasks,
@@ -50,12 +54,29 @@ export function Automation() {
   const { data, loading, error, refresh, generation } = useAutomationOverview(
     i18n.resolvedLanguage ?? i18n.language,
   );
+  const [projects, setProjects] = useState<Project[]>([]);
+  useEffect(() => {
+    let active = true;
+    void getProjects().then(
+      (value) => {
+        if (active) setProjects(value);
+      },
+      () => {
+        /* Directory names remain available when the project list cannot be read. */
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [generation]);
   const [query, setQuery] = useState("");
   const [source, setSource] = useState<AutomationSourceFilter>("all");
   const [status, setStatus] = useState("all");
   const [hideBuiltin, setHideBuiltin] = useState(true);
   const [origin, setOrigin] = useState<AutomationOriginFilter>("agent_hub");
-  const [editor, setEditor] = useState<AutomationTask | "create" | null>(null);
+  const [editor, setEditor] = useState<
+    AutomationTask | "create" | "restore" | null
+  >(null);
   const [removing, setRemoving] = useState<AutomationTask | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -115,6 +136,7 @@ export function Automation() {
     currentSource,
     status,
     hideBuiltin,
+    projects,
   );
   const tasks = baseTasks.filter(
     (task) => origin === "all" || task.origin === origin,
@@ -126,6 +148,7 @@ export function Automation() {
         currentSource,
         status,
         false,
+        projects,
       ).filter(
         (task) =>
           task.is_builtin && (origin === "all" || task.origin === origin),
@@ -181,7 +204,7 @@ export function Automation() {
       );
   };
   const save = async (draft: AutomationDraft) => {
-    const task = editor !== "create" ? editor : null;
+    const task = typeof editor === "object" ? editor : null;
     const id = await saveAutomation(
       task?.id ?? null,
       task?.revision ?? null,
@@ -215,8 +238,9 @@ export function Automation() {
     <>
       {editor && (
         <AutomationEditor
-          key={editor === "create" ? "create" : editor.id}
-          task={editor === "create" ? undefined : editor}
+          key={typeof editor === "string" ? editor : editor.id}
+          task={typeof editor === "string" ? undefined : editor}
+          restoreBackup={editor === "restore"}
           hermesInstalled={data?.hermes_installed ?? false}
           onClose={() => setEditor(null)}
           onSave={save}
@@ -261,6 +285,10 @@ export function Automation() {
           refreshKey={generation}
           key={selectedId}
           task={selected}
+          projectName={automationProjectName(
+            selected?.project ?? null,
+            projects,
+          )}
           loading={loading}
           readFailed={error !== null || !!data?.issues.length}
           onBack={backToList}
@@ -300,6 +328,18 @@ export function Automation() {
             <Plus aria-hidden="true" className="h-4 w-4" />
             {t("automation.create")}
           </button>
+          <CardActionMenu
+            label={t("automation.more")}
+            className="[&>button]:h-9 [&>button]:w-9"
+            actions={[
+              {
+                key: "restore",
+                label: t("automation.restoreBackup"),
+                icon: <RotateCcw className="h-3.5 w-3.5" />,
+                onSelect: () => setEditor("restore"),
+              },
+            ]}
+          />
         </div>
       </header>
       <AutomationToolbar
@@ -370,7 +410,7 @@ export function Automation() {
                   className="max-w-[130px] truncate px-4 py-4 text-tertiary"
                   title={task.project ?? undefined}
                 >
-                  {task.project || "—"}
+                  {automationProjectName(task.project, projects) || "—"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-4 text-tertiary">
                   {t("automation.localHost")}

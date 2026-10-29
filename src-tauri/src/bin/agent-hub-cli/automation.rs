@@ -220,10 +220,7 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
                 let id = template
                     .as_deref()
                     .ok_or_else(|| anyhow::anyhow!("Choose --file or --template"))?;
-                automation::templates(Some(locale))
-                    .templates
-                    .into_iter()
-                    .find(|t| t.id == id)
+                automation::template(id, Some(locale))
                     .ok_or_else(|| {
                         anyhow::anyhow!("Template not found or its provider is not installed")
                     })?

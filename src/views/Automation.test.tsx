@@ -14,6 +14,8 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
 vi.mock("../lib/openInVscode", () => ({ openDirectoryInVscode: vi.fn() }));
 
 vi.mock("../lib/tauri", () => ({
+  getProjects: vi.fn(),
+  getToolStatus: vi.fn(),
   getAutomationOverview: vi.fn(),
   saveAutomation: vi.fn(),
   runAutomation: vi.fn(),
@@ -88,7 +90,28 @@ const hermes: api.AutomationTask = {
 };
 let root: Root;
 let container: HTMLDivElement;
+const localTools: api.ToolInfo[] = [
+  ["claude_code", "Claude Code"],
+  ["codex", "Codex"],
+  ["opencode", "OpenCode"],
+  ["hermes", "Hermes Agent"],
+].map(([key, display_name]) => ({
+  key,
+  display_name,
+  installed: true,
+  enabled: true,
+  is_custom: false,
+  skills_dir: "<skills>",
+  has_path_override: false,
+  has_project_path_override: false,
+  project_relative_skills_dir: null,
+  category: key === "hermes" ? "lobster" : "coding",
+}));
 beforeEach(() => {
+  localStorage.removeItem("agent-hub:tool-order");
+  localStorage.removeItem("agent-hub:lobster-tool-order");
+  vi.mocked(api.getToolStatus).mockReset().mockResolvedValue(localTools);
+  vi.mocked(api.getProjects).mockReset().mockResolvedValue([]);
   vi.mocked(open).mockReset().mockResolvedValue(null);
   vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -109,6 +132,26 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({
       shell: "sh",
+      agent_starter: {
+        name: "",
+        provider: "system",
+        content: "sh './run.sh'",
+        workdir: null,
+        schedule: { kind: "daily", hour: 9, minute: 0, weekdays: true },
+        enabled: true,
+        files: [
+          { path: "agent-task/prompt.md", content: "" },
+          {
+            path: "agent-task/herdr.json",
+            content: JSON.stringify({
+              agent: "codex",
+              session: "default",
+              arguments: [],
+            }),
+          },
+          { path: "run.sh", content: "python3 agent.py" },
+        ],
+      },
       templates: [
         {
           id: "disk-cleanup",
@@ -294,6 +337,9 @@ it("aggregates system and Hermes tasks and filters by source and status", async 
 });
 
 it("hides the Hermes entry unless executable installation evidence is present", async () => {
+  vi.mocked(api.getToolStatus).mockResolvedValue(
+    localTools.filter((tool) => tool.key !== "hermes"),
+  );
   vi.mocked(api.getAutomationOverview).mockResolvedValue({
     tasks: [native],
     issues: [],
@@ -307,10 +353,12 @@ it("hides the Hermes entry unless executable installation evidence is present", 
   ).toEqual(["全部调度器", "系统任务"]);
   await click("新建自动化");
   expect(
-    [...container.querySelectorAll('[aria-label="调度器"] option')].map(
-      (node) => node.textContent,
-    ),
-  ).toEqual(["系统任务"]);
+    [
+      ...container.querySelectorAll(
+        'select[aria-label="智能体（可选）"] option',
+      ),
+    ].map((node) => node.textContent),
+  ).toEqual(["不使用智能体", "Claude Code", "Codex", "OpenCode"]);
 });
 
 it("shows source failures alongside available tasks and refreshes the catalog", async () => {
@@ -567,6 +615,7 @@ it("creates a manual command task with the shared DTO without running it on save
   );
   expect(api.saveAutomation).toHaveBeenCalledWith(null, null, {
     name: "手动检查",
+    script_dir: null,
     provider: "system",
     content: "printf test",
     workdir: null,
@@ -586,14 +635,16 @@ it("chooses a working directory, opens it in VS Code and saves the selected path
       '[aria-label="在 VS Code 中打开"]',
     )!.disabled,
   ).toBe(true);
-  await ariaClick("选择工作目录");
+  await ariaClick("选择项目工作区目录");
   expect(open).toHaveBeenCalledWith({
     directory: true,
     multiple: false,
-    title: "选择工作目录",
+    title: "选择项目工作区目录",
   });
   expect(
-    container.querySelector<HTMLInputElement>('[aria-label="工作目录"]')!.value,
+    container.querySelector<HTMLInputElement>(
+      'select[aria-label="项目工作区"]',
+    )!.value,
   ).toBe("/workspace/清理缓存 #demo");
   await ariaClick("在 VS Code 中打开");
   expect(openDirectoryInVscode).toHaveBeenCalledWith(
@@ -615,16 +666,251 @@ it("chooses a working directory, opens it in VS Code and saves the selected path
   );
 });
 
+it("selects a registered project without moving scripts and saves both directories", async () => {
+  vi.mocked(api.getProjects).mockResolvedValue([
+    {
+      id: "review-project",
+      name: "review-project",
+      path: "/workspace/review-project",
+      workspace_type: "project",
+      linked_agent_name: null,
+      supports_skill_toggle: true,
+      sort_order: 0,
+      skill_count: 0,
+      created_at: 1,
+      updated_at: 1,
+      visited_at: null,
+      sync_health: {
+        in_sync: 0,
+        project_newer: 0,
+        center_newer: 0,
+        diverged: 0,
+        project_only: 0,
+      },
+    },
+  ]);
+  await render();
+  await click("新建自动化");
+  await input("名称", "Agent 巡检");
+  await input("执行命令", "sh ./run.sh");
+  await input("脚本目录", "/workspace/task-scripts");
+  await select("项目工作区", "/workspace/review-project");
+  expect(
+    container.querySelector<HTMLInputElement>(
+      'select[aria-label="项目工作区"]',
+    )!.value,
+  ).toBe("/workspace/review-project");
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="脚本目录"]')!.value,
+  ).toBe("/workspace/task-scripts");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    null,
+    null,
+    expect.objectContaining({
+      script_dir: "/workspace/task-scripts",
+      workdir: "/workspace/review-project",
+    }),
+  );
+});
+
+it("edits an agent prompt directly in the unified layout with a one-line launcher", async () => {
+  vi.mocked(api.getAutomationTemplates).mockResolvedValue({
+    shell: "sh",
+    templates: [
+      {
+        id: "agent-maintenance",
+        title: "每小时维护检查（Herdr）",
+        description: "Herdr 维护任务",
+        draft: {
+          name: "每小时维护检查（Herdr）",
+          provider: "system",
+          content: "sh './run.sh'",
+          workdir: null,
+          schedule: { kind: "hourly", minute: 15 },
+          enabled: true,
+          files: [
+            {
+              path: "agent-maintenance/prompt.md",
+              content: "检查项目，只报告问题",
+            },
+            {
+              path: "agent-maintenance/herdr.json",
+              content: JSON.stringify({
+                agent: "codex",
+                session: "default",
+                arguments: ["--sandbox", "read-only"],
+              }),
+            },
+            { path: "run.sh", content: "python3 agent.py" },
+          ],
+        },
+      },
+    ],
+  });
+  await render();
+  await click("新建自动化");
+  await click("使用模板");
+  await ariaClick("每小时维护检查（Herdr）");
+  const prompt =
+    container.querySelector<HTMLTextAreaElement>('[aria-label="提示词"]')!;
+  expect(prompt.value).toBe("检查项目，只报告问题");
+  expect(
+    container.querySelectorAll('[aria-label="agent-maintenance/prompt.md"]'),
+  ).toHaveLength(0);
+  expect(
+    container.querySelector<HTMLTextAreaElement>('[aria-label="执行命令"]')!
+      .rows,
+  ).toBe(1);
+  expect(
+    container.querySelector('[aria-label="执行命令"]')!.closest("details"),
+  ).toBeNull();
+  await input("提示词", "");
+  expect(button("创建").disabled).toBe(true);
+  await input("提示词", "只检查失败的验证，保留所有文件。");
+  await input("每小时的第几分钟", "27");
+  await select("智能体（可选）", "claude");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  const saved = vi.mocked(api.saveAutomation).mock.calls[0][2];
+  expect(saved.content).toBe("sh './run.sh'");
+  expect(saved.schedule).toEqual({ kind: "hourly", minute: 27 });
+  expect(
+    saved.files?.find((file) => file.path.endsWith("prompt.md"))?.content,
+  ).toBe("只检查失败的验证，保留所有文件。");
+  expect(
+    JSON.parse(
+      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
+    ),
+  ).toEqual({ agent: "claude", session: "default", arguments: [] });
+});
+
+it("offers the same installed agents and order as the global workspace and preserves both inputs", async () => {
+  localStorage.setItem(
+    "agent-hub:tool-order",
+    JSON.stringify(["opencode", "claude_code", "codex"]),
+  );
+  vi.mocked(api.getToolStatus).mockResolvedValue([
+    ...localTools,
+    {
+      ...localTools[1],
+      key: "gemini_cli",
+      display_name: "Gemini CLI",
+      installed: false,
+    },
+    { ...localTools[1], key: "windsurf", display_name: "Windsurf" },
+  ]);
+  await render();
+  await click("新建自动化");
+  expect(
+    [
+      ...container.querySelectorAll(
+        'select[aria-label="智能体（可选）"] option',
+      ),
+    ].map((node) => node.textContent),
+  ).toEqual([
+    "不使用智能体",
+    "OpenCode",
+    "Claude Code",
+    "Codex",
+    "Hermes Agent",
+  ]);
+  const prompt =
+    container.querySelector<HTMLTextAreaElement>('[aria-label="提示词"]')!;
+  expect(prompt.disabled).toBe(true);
+  await input("名称", "自定义任务");
+  await input("执行命令", "printf original-command");
+  await select("智能体（可选）", "codex");
+  expect(prompt.disabled).toBe(false);
+  await input("提示词", "检查当前项目，不修改文件。");
+  await select("智能体（可选）", "");
+  expect(
+    container.querySelector<HTMLTextAreaElement>('[aria-label="执行命令"]')!
+      .value,
+  ).toBe("printf original-command");
+  expect(prompt.value).toBe("检查当前项目，不修改文件。");
+  expect(prompt.disabled).toBe(true);
+  await select("智能体（可选）", "opencode");
+  expect(prompt.value).toBe("检查当前项目，不修改文件。");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  const saved = vi.mocked(api.saveAutomation).mock.calls[0][2];
+  expect(saved.provider).toBe("system");
+  expect(saved.name).toBe("自定义任务");
+  expect(
+    JSON.parse(
+      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
+    ).agent,
+  ).toBe("opencode");
+});
+
+it("launches a newly selected Hermes Agent through Herdr rather than changing its scheduler", async () => {
+  await render();
+  await click("新建自动化");
+  await input("名称", "Hermes 检查");
+  await select("智能体（可选）", "hermes");
+  await input("提示词", "检查项目状态。");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  const saved = vi.mocked(api.saveAutomation).mock.calls[0][2];
+  expect(saved.provider).toBe("system");
+  expect(
+    JSON.parse(
+      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
+    ).agent,
+  ).toBe("hermes");
+});
+
+it("keeps directory input usable when the project list fails and retries loading", async () => {
+  vi.mocked(api.getProjects).mockRejectedValue(
+    new Error("Projects unavailable"),
+  );
+  await render();
+  await click("新建自动化");
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "Projects unavailable",
+  );
+  vi.mocked(open).mockResolvedValueOnce("/workspace/custom-project");
+  await ariaClick("选择项目工作区目录");
+  vi.mocked(api.getProjects).mockResolvedValue([]);
+  const retry = container.querySelector<HTMLButtonElement>(
+    '[role="alert"] button',
+  )!;
+  await act(async () => retry.click());
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  expect(
+    container.querySelector<HTMLInputElement>(
+      'select[aria-label="项目工作区"]',
+    )!.value,
+  ).toBe("/workspace/custom-project");
+});
+
 it("keeps the entered workdir on picker cancellation or launch failure and allows retry", async () => {
   await render();
   await click("新建自动化");
-  await input("工作目录", "/workspace/demo");
-  await ariaClick("选择工作目录");
+  vi.mocked(open).mockResolvedValueOnce("/workspace/demo");
+  await ariaClick("选择项目工作区目录");
+  await ariaClick("选择项目工作区目录");
   expect(open).toHaveBeenCalledWith(
     expect.objectContaining({ defaultPath: "/workspace/demo" }),
   );
   expect(
-    container.querySelector<HTMLInputElement>('[aria-label="工作目录"]')!.value,
+    container.querySelector<HTMLInputElement>(
+      'select[aria-label="项目工作区"]',
+    )!.value,
   ).toBe("/workspace/demo");
   vi.mocked(openDirectoryInVscode).mockRejectedValueOnce(
     new Error("VS Code unavailable"),
@@ -634,7 +920,9 @@ it("keeps the entered workdir on picker cancellation or launch failure and allow
     "VS Code unavailable",
   );
   expect(
-    container.querySelector<HTMLInputElement>('[aria-label="工作目录"]')!.value,
+    container.querySelector<HTMLInputElement>(
+      'select[aria-label="项目工作区"]',
+    )!.value,
   ).toBe("/workspace/demo");
   await ariaClick("在 VS Code 中打开");
   expect(container.querySelector('[role="alert"]')).toBeNull();
@@ -728,10 +1016,21 @@ it("prevents repeat triggers while a manual request is pending and reports failu
   ).toBe(false);
 });
 
+async function openBackupRestore() {
+  await ariaClick("更多操作");
+  const restore =
+    document.querySelector<HTMLButtonElement>('[role="menuitem"]')!;
+  expect(restore.textContent).toBe("从备份恢复");
+  await act(async () => restore.click());
+}
+
 it("fills a template without creating or running until the explicit create action", async () => {
   await render();
   await click("新建自动化");
   await click("使用模板");
+  expect(container.querySelector('[aria-label="模板来源"]')).toBeNull();
+  expect(container.textContent).not.toContain("任务备份");
+  expect(api.getAutomationBackups).not.toHaveBeenCalled();
   await ariaClick("清理磁盘缓存");
   expect(
     container.querySelector<HTMLInputElement>('[aria-label="名称"]')!.value,
@@ -773,9 +1072,12 @@ it("restored templates create paused copies and preserve existing task IDs", asy
     },
   ]);
   await render();
-  await click("新建自动化");
-  await click("使用模板");
-  await click("Git 备份");
+  await openBackupRestore();
+  expect(container.querySelector("h2")?.textContent).toBe("从备份恢复");
+  expect(container.textContent).toContain("这里保存的是自动化任务配置");
+  expect(container.textContent).not.toContain("内置模板");
+  expect(container.querySelector('[aria-label="清理磁盘缓存"]')).toBeNull();
+  expect(api.saveAutomation).not.toHaveBeenCalled();
   await ariaClick("备份检查");
   expect(container.textContent).toContain("保存为暂停状态");
   await act(async () =>
@@ -790,6 +1092,71 @@ it("restored templates create paused copies and preserve existing task IDs", asy
   );
   expect(api.runAutomation).not.toHaveBeenCalled();
 });
+
+it("cancels backup recovery and restores focus without creating a task", async () => {
+  await render();
+  const trigger = container.querySelector<HTMLButtonElement>(
+    '[aria-label="更多操作"]',
+  )!;
+  await act(async () => {
+    trigger.focus();
+    trigger.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+  });
+  const item = document.querySelector<HTMLButtonElement>('[role="menuitem"]')!;
+  expect(document.activeElement).toBe(item);
+  await act(async () =>
+    item.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    ),
+  );
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+  await openBackupRestore();
+  expect(
+    container.querySelector('button[type="submit"]:disabled'),
+  ).not.toBeNull();
+  await click("返回自动化列表");
+  expect(container.querySelector('[role="dialog"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.runAutomation).not.toHaveBeenCalled();
+});
+
+it("retries backup reads and prevents restoring incompatible shell definitions", async () => {
+  vi.mocked(api.getAutomationBackups)
+    .mockRejectedValueOnce(new Error("backup unavailable"))
+    .mockResolvedValueOnce([
+      {
+        schema_version: 1,
+        id: "agent_hub:11111111-1111-4111-8111-111111111111",
+        shell: "powershell",
+        draft: {
+          ...hermes.definition!,
+          name: "其他平台任务",
+          provider: "system",
+        },
+      },
+    ]);
+  await render();
+  await openBackupRestore();
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "backup unavailable",
+  );
+  await act(async () => {
+    container
+      .querySelector<HTMLButtonElement>('[role="alert"] button')!
+      .click();
+  });
+  expect(container.querySelector('[role="alert"]')).toBeNull();
+  expect(
+    container.querySelector<HTMLButtonElement>('[aria-label="其他平台任务"]')!
+      .disabled,
+  ).toBe(true);
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+});
+
 it("Escape dismisses the themed menu before closing its parent editor", async () => {
   await render();
   await click("新建自动化");
@@ -832,10 +1199,8 @@ it("shows an empty backup state when only uninstalled Hermes definitions are ava
     },
   ]);
   await render();
-  await click("新建自动化");
-  await click("使用模板");
-  await click("Git 备份");
-  expect(container.textContent).toContain("暂无可用模板");
+  await openBackupRestore();
+  expect(container.textContent).toContain("暂无可恢复的任务配置");
   expect(container.querySelector('button[aria-label="仓库审计"]')).toBeNull();
 });
 
@@ -984,6 +1349,12 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
   const schedule = container.querySelector<HTMLSelectElement>(
     'select[aria-label="日程"]',
   )!;
+  expect(
+    container.querySelector(
+      'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
+    ),
+  ).toBeNull();
+  await ariaClick("disk-cleanup/disk-cleanup.py");
   const script = container.querySelector<HTMLTextAreaElement>(
     'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
   )!;
@@ -1240,4 +1611,109 @@ it("does not offer local data cleanup for unowned Hermes tasks", async () => {
   ).toBeNull();
   await click("删除");
   expect(api.removeAutomation).toHaveBeenCalledWith(hermes.id, false);
+});
+
+it("prefers the registered workspace name in the list, search and detail while retaining its path", async () => {
+  const path = "/workspace/repository-folder";
+  vi.mocked(api.getProjects).mockResolvedValue([
+    {
+      id: "demo",
+      name: "项目工作区 Demo",
+      path,
+      workspace_type: "project",
+      linked_agent_name: null,
+      supports_skill_toggle: true,
+      sort_order: 0,
+      skill_count: 0,
+      created_at: 1,
+      updated_at: 1,
+      visited_at: null,
+      sync_health: {
+        in_sync: 0,
+        project_newer: 0,
+        center_newer: 0,
+        diverged: 0,
+        project_only: 0,
+      },
+    },
+  ]);
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [{ ...native, project: path + "/", origin: "agent_hub" }],
+    issues: [],
+    hermes_installed: false,
+  });
+  await render();
+  const cell = [...container.querySelectorAll("td")].find(
+    (node) => node.title === path + "/",
+  )!;
+  expect(cell.textContent).toBe("项目工作区 Demo");
+  await input(i18n.t("automation.search"), "项目工作区 Demo");
+  expect(container.querySelector("tbody")!.textContent).toContain(native.name);
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('[data-automation-id="cron:audit"]')!
+      .click(),
+  );
+  expect(container.querySelector("header p[title]")?.textContent).toBe(
+    "项目工作区 Demo",
+  );
+  expect(
+    container.querySelector("header p[title]")?.getAttribute("title"),
+  ).toBe(path + "/");
+});
+
+it("falls back to the final directory name if workspaces cannot be loaded", async () => {
+  vi.mocked(api.getProjects).mockRejectedValue(new Error("unavailable"));
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [{ ...native, project: "C:\\projects\\demo", origin: "agent_hub" }],
+    issues: [],
+    hermes_installed: false,
+  });
+  await render();
+  expect(
+    [...container.querySelectorAll("td")].find(
+      (node) => node.title === "C:\\projects\\demo",
+    )?.textContent,
+  ).toBe("demo");
+});
+
+it("allows an editable external LaunchAgent to save in place and delete without local file cleanup", async () => {
+  const external: api.AutomationTask = {
+    ...native,
+    id: "launchd:/workspace/audit.plist",
+    source: "launchd",
+    can_edit: true,
+    can_run: true,
+    revision: 42,
+    definition: {
+      ...hermes.definition!,
+      name: native.name,
+      provider: "system",
+      content: "sh '/workspace/start.sh'",
+      schedule: { kind: "interval", minutes: 10 },
+      enabled: true,
+    },
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [external],
+    issues: [],
+    hermes_installed: false,
+  });
+  vi.mocked(api.saveAutomation).mockResolvedValue(external.id);
+  await render("/automation?task=" + encodeURIComponent(external.id));
+  await click("编辑自动化");
+  expect(
+    container.querySelector('select[aria-label="日程"] option[value="manual"]'),
+  ).toBeNull();
+  await input("执行命令", "sh '/workspace/new-start.sh'");
+  await click("保存");
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    external.id,
+    42,
+    expect.objectContaining({ content: "sh '/workspace/new-start.sh'" }),
+  );
+  await ariaClick("删除自动化");
+  expect(container.textContent).not.toContain("同时删除本地任务数据");
+  await click("删除");
+  expect(api.removeAutomation).toHaveBeenCalledWith(external.id, false);
 });

@@ -74,11 +74,16 @@ export function ThemedSelect({
   children,
   className,
   leadingIcon,
+  optionIcon,
   ...props
 }: Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
   "value" | "multiple" | "size"
-> & { value: string; leadingIcon?: ReactNode }) {
+> & {
+  value: string;
+  leadingIcon?: ReactNode;
+  optionIcon?: (value: string) => ReactNode;
+}) {
   const options = optionsFrom(children);
   const [position, setPosition] = useState<{
     left: number;
@@ -301,6 +306,7 @@ export function ThemedSelect({
                     <Check aria-hidden="true" className="h-3.5 w-3.5" />
                   )}
                 </span>
+                {optionIcon?.(option.value)}
                 <span className="min-w-0 break-words">{option.label}</span>
               </button>
             ))}

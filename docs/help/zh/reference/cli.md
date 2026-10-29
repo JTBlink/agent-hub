@@ -40,7 +40,6 @@ agent-hub-cli --json automations show '<task-id>'
 agent-hub-cli --json automations runs '<task-id>'
 agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 agent-hub-cli --json automations templates
-agent-hub-cli automations create --template workspace-check
 agent-hub-cli automations create --template disk-cleanup
 agent-hub-cli automations create --file task.json
 agent-hub-cli automations edit '<task-id>' --file task.json --revision 1
@@ -60,6 +59,7 @@ agent-hub-cli automations remove '<task-id>' --delete-local-data
   "provider": "system",
   "content": "printf 'check complete\\n'",
   "workdir": null,
+  "script_dir": null,
   "schedule": {
     "kind": "daily",
     "hour": 9,
@@ -70,21 +70,23 @@ agent-hub-cli automations remove '<task-id>' --delete-local-data
 }
 ```
 
-`workdir` 省略或为 `null` 时，会自动创建 `~/.agent-hub/automations/<任务名称>/` 作为该任务的独立工作目录；同名或已有目录会使用 `-2`、`-3` 等后缀区分，不占用已有内容。目录分配记录保存在内部任务数据中，重复分配或修改任务名称不重命名目录。显式填写时保留指定目录，旧版本的 UUID 工作目录也保持原路径。删除任务默认保留本地文件；确认框可勾选“同时删除本地任务数据”，清理可确认归属的自动工作目录（兼容旧 UUID 目录）和 AgentHub 执行记录，自定义及共享目录保留。
+`script_dir` 省略或为 `null` 时，会自动创建 `~/.agent-hub/automations/<任务名称>/` 作为该任务的独立脚本目录；同名或已有目录会使用 `-2`、`-3` 等后缀区分，不占用已有内容。目录分配记录保存在内部任务数据中，重复分配或修改任务名称不重命名目录。显式填写时保留指定目录，旧版本的 UUID 工作目录也保持原路径。删除任务默认保留本地文件；确认框可勾选“同时删除本地任务数据”，清理可确认归属的自动工作目录（兼容旧 UUID 目录）和 AgentHub 执行记录，自定义及共享目录保留。
 
-系统任务统一执行工作目录下的短名 Shell 入口：`sh './run.sh'`（Windows 为 `& './run.ps1'`），名称已占用时使用 `run-2.sh` 等后缀，保留已有文件。定时和手动运行触发同一个入口。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置；Shell 入口再调用对应 Python 脚本，如 `disk-cleanup/disk-cleanup.py`，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存 Shell 入口和 Python 脚本，可在 GUI 展开“脚本文件”、通过 CLI 或直接编辑文件定制。旧格式内联 `content` 保存时会转为 Shell 入口的正文。运行前不会用模板覆盖定制内容；旧长文件名迁移成功后将原内容保存在内部任务目录，目录中的用户文件不移动。未选择清理本地数据时保留工作目录、脚本与执行记录。
+`workdir` 是执行目录，对应桌面的“项目工作区”；选择项目后任务自动切到项目目录，留空则在脚本目录执行。脚本不会复制进项目，切换项目不改变 `script_dir`。旧定义没有 `script_dir` 时保留原目录保存脚本，编辑保存后分开管理。
+
+系统任务统一执行脚本目录下的短名 Shell 入口：`sh './run.sh'`（Windows 为 `& './run.ps1'`），名称已占用时使用 `run-2.sh` 等后缀，保留已有文件。定时和手动运行触发同一个入口。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置；Shell 入口再调用对应 Python 脚本，如 `disk-cleanup/disk-cleanup.py`，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存 Shell 入口和 Python 脚本，可在 GUI 展开“脚本文件”、通过 CLI 或直接编辑文件定制。旧格式内联 `content` 保存时会转为 Shell 入口的正文。运行前不会用模板覆盖定制内容；旧长文件名迁移成功后将原内容保存在内部任务目录，目录中的用户文件不移动。未选择清理本地数据时保留工作目录、脚本与执行记录。
 
 `provider` 为 `system` 时，内容是 macOS/Linux 的 `/bin/sh` 命令或 Windows PowerShell 命令。任务写入当前用户的系统原生调度器，关闭 AgentHub 后仍可按计划执行；需要用户保持登录，Linux 可另行配置用户服务 linger。支持每天、工作日、固定分钟间隔（`{"kind":"interval","minutes":60}`）和仅手动触发（`{"kind":"manual"}`）。保存不会额外触发一次运行，手动运行不修改日程配置。
 
 `provider` 为 `hermes` 时，`content` 是提示词，除每日/间隔日程外还支持 `{"kind":"custom","expression":"0 9 * * 1-5"}`。本机须已安装 Hermes，计划运行还需要其调度服务运行。暂停或终态的 Hermes 任务需先恢复后才能手动运行。`run` 返回“已请求”而非“执行成功”，实际结果在 Hermes 中记录。
 
-只有 AgentHub 创建的系统任务可以编辑；已有 Hermes 提示词任务通过 Hermes CLI 编辑，其他系统任务提供只读详情。`--revision` 防止覆盖另一端刚保存的版本；省略时使用本次读取的版本。
+AgentHub 创建的系统任务与当前用户支持的 launchd 定时任务可编辑；已有 Hermes 提示词任务通过 Hermes CLI 编辑，其他系统任务提供只读详情。外部 launchd 任务在原位置管理，不复制或删除其业务脚本，保留环境及日志配置。`--revision` 防止覆盖另一端刚保存的版本；省略时使用本次读取的版本。
 
-创建记录保存在系统应用数据目录的 `com.jtstudio.agenthub/automations` 下：macOS 为 `~/Library/Application Support/`，Linux 通常为 `~/.local/share/`，Windows 为 `%LOCALAPPDATA%`。这些记录不随技能库移动。需要隔离运行时，可设置绝对路径环境变量 `AGENT_HUB_AUTOMATION_HOME`（隔离模式的默认工作目录也放在该目录的 `workspaces` 下）；此命令不使用技能库的 `--skills-root`。
+创建记录保存在系统应用数据目录的 `com.jtstudio.agenthub/automations` 下：macOS 为 `~/Library/Application Support/`，Linux 通常为 `~/.local/share/`，Windows 为 `%LOCALAPPDATA%`。这些记录不随技能库移动。需要隔离运行时，可设置绝对路径环境变量 `AGENT_HUB_AUTOMATION_HOME`（隔离模式的默认脚本目录也放在该目录的 `workspaces` 下）；此命令不使用技能库的 `--skills-root`。
 
 ## Agent 与自动备份
 
-Agent 可读取 `automations templates` 获取当前平台的命令和已安装 Hermes 模板，用 `create --template <模板 ID>` 快速创建。`--json automations list` 返回精确任务 ID，随后使用 `run <ID>` 手动触发，`show <ID>` 查看实际运行时间与结果；“requested” 仅表示请求成功。不要根据旧的 `last_result` 宣称本次运行完成，也不要因查询暂未更新就重复触发。
+Agent 可读取 `automations templates` 获取项目巡检、MR 处理、Issue 处理和清理磁盘缓存四个核心模板，用 `create --template <模板 ID>` 快速创建。智能体和普通命令也可直接自定义；旧模板 ID 保留显式 CLI 兼容。`--json automations list` 返回精确任务 ID，随后使用 `run <ID>` 手动触发，`show <ID>` 查看实际运行时间与结果；“requested” 仅表示请求成功。不要根据旧的 `last_result` 宣称本次运行完成，也不要因查询暂未更新就重复触发。
 
 创建、编辑、启停与删除会将任务定义变更加入持久待备份队列。应用运行、已有 Git 远端且自动备份开启时，沿用现有防抖、提交与推送流程；CLI 的修改也能被应用检测。直接编辑工作目录脚本时，应用通过文件事件同步脚本内容并增加任务版本，沿用相同的备份流程；CLI 查询或修改任务时也会同步已定制内容。应用关闭时的修改在下次启动或手动 Git 备份时处理。备份保存脚本内容与任务定义，不同步日志、执行记录和其他工作目录文件。读取失败或内容无效会报告错误，避免把旧内容当作本次脚本备份。立即运行及日志更新不会产生任务配置备份。
 
@@ -94,7 +96,7 @@ agent-hub-cli --json automations restore '<backup-id>'
 agent-hub-cli --json automations restore '<backup-id>' --apply
 ```
 
-第一条列出 Git 同步的任务定义，第二条预览已暂停的副本；第三条显式创建副本。GUI 在“新建自动化 → 使用模板 → Git 备份”中检查并新建。同步和恢复 Git 内容不会自动注册、执行或覆盖本机任务；Shell 不兼容的命令需先转换。
+第一条列出 Git 同步的任务定义，第二条预览已暂停的副本；第三条显式创建副本。GUI 在“自动化 → 更多操作 → 从备份恢复”中检查并新建。同步和恢复 Git 内容不会自动注册、执行或覆盖本机任务；Shell 不兼容的命令需先转换。
 
 `automations runs <ID>` 查看本机保存的执行记录，`automations logs <ID> --run <执行 ID>` 查看指定记录输出；不带 `--run` 兼容读取最近输出。系统任务默认保留最近 100 次；旧版仅能保留尚未覆盖的一次，升级后开始逐次记录。Hermes 读取已有结果文件，保留由 Hermes 管理，不把结果文件存在当作执行成功。日志 `--json` 返回 `available`、`kind`、`content` 和 `truncated`，大文件只返回末尾 256 KiB。执行记录和日志仅保存在本机，不参与 Git 同步备份。
 

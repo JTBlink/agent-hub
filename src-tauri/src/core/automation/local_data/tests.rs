@@ -29,6 +29,7 @@ impl Fixture {
                 name: "Audit".into(),
                 provider: Provider::System,
                 content: "exit 0".into(),
+                script_dir: None,
                 workdir: Some(workspace.to_string_lossy().into_owned()),
                 schedule: Schedule::Manual,
                 enabled: false,
@@ -68,6 +69,22 @@ fn removes_assigned_workspace_and_runtime_without_guessing_other_folder_names() 
     assert!(!native::directory(&case.state, &case.record).exists());
     assert!(unrelated.join("keep.txt").is_file());
     assert!(case.root.is_dir());
+}
+
+#[test]
+fn separate_execution_project_is_kept_when_owned_scripts_are_deleted() {
+    let mut case = Fixture::new();
+    let project = case.root.join("project");
+    fs::create_dir(&project).unwrap();
+    fs::write(project.join("source.txt"), "keep project").unwrap();
+    case.record.draft.script_dir = Some(case.workspace.to_string_lossy().into_owned());
+    case.record.draft.workdir = Some(project.to_string_lossy().into_owned());
+    case.plan(std::slice::from_ref(&case.record))
+        .unwrap()
+        .remove()
+        .unwrap();
+    assert!(project.join("source.txt").is_file());
+    assert!(!case.workspace.exists());
 }
 
 #[test]

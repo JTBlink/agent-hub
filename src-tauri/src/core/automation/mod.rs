@@ -12,6 +12,8 @@ pub(crate) use events::start as start_change_events;
 pub use history::{history, run_output, AutomationHistory, AutomationRun};
 mod output;
 pub use output::{output, AutomationRunOutput};
+#[cfg(target_os = "macos")]
+mod external_launchd;
 mod hermes_manage;
 #[cfg(any(target_os = "macos", test))]
 mod launchd;
@@ -29,7 +31,7 @@ pub use script_sync::sync_workspace_scripts;
 mod templates;
 mod workspace;
 pub use backup::{shell as command_shell, AutomationBackup};
-pub use templates::{templates, AutomationCatalog};
+pub use templates::{template, templates, AutomationCatalog};
 pub(crate) fn watch_dir() -> std::path::PathBuf {
     store::root()
 }

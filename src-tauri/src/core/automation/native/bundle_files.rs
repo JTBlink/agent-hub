@@ -57,12 +57,11 @@ pub(super) fn write(
         return Ok(());
     }
     let workspace = draft
-        .workdir
-        .as_deref()
+        .scripts_dir()
         .ok_or("Template scripts require a task working directory")?;
     let old = store::load(dir.parent().ok_or("Missing automation directory")?)?
         .into_iter()
-        .find(|record| record.id == id && record.draft.workdir == draft.workdir);
+        .find(|record| record.id == id && record.draft.scripts_dir() == draft.scripts_dir());
     for file in &draft.files {
         let path = path(workspace, &file.path, true)?;
         let previous = read_file(&path)?;
@@ -104,8 +103,7 @@ pub(in crate::core::automation) fn read(
     for file in &mut files {
         let workspace = record
             .draft
-            .workdir
-            .as_deref()
+            .scripts_dir()
             .ok_or("Missing template working directory")?;
         if let Some(content) = read_file(&path(workspace, &file.path, false)?)? {
             let content = content.trim_start_matches('﻿');
@@ -178,6 +176,7 @@ mod tests {
                 path: "bundle/main.py".into(),
                 content: "print('template')".into(),
             }],
+            script_dir: None,
             workdir: Some(workspace.to_string_lossy().into_owned()),
             schedule: Schedule::Manual,
             enabled: false,

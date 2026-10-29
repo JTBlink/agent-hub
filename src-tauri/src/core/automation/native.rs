@@ -7,6 +7,8 @@ use super::{
 };
 use std::path::{Path, PathBuf};
 pub(super) mod bundle_files;
+#[cfg(all(test, unix))]
+mod execution_directory;
 pub(super) mod payload;
 mod render;
 mod run_script;
@@ -265,7 +267,7 @@ pub(super) fn refresh_runner(root: &Path, task: &ManagedAutomation) -> Result<()
     render::scripts(&dir, &task.draft, &task.id, false).map(|_| ())
 }
 pub(super) fn needs_upgrade(root: &Path, task: &ManagedAutomation) -> bool {
-    if task.draft.workdir.is_some() && shell_entry::entry(&task.draft).is_none() {
+    if task.draft.scripts_dir().is_some() && shell_entry::entry(&task.draft).is_none() {
         return true;
     }
     let wrapper = directory(root, task).join(if cfg!(windows) { "run.ps1" } else { "run.sh" });

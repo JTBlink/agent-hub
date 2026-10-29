@@ -1,8 +1,21 @@
+import networkManifest from "../../src-tauri/src/core/automation/templates/builtin/network-reset/template.json";
+import networkLauncher from "../../src-tauri/src/core/automation/templates/builtin/network-reset/network-reset.py?raw";
+import networkSetup from "../../src-tauri/src/core/automation/templates/builtin/network-reset/setup.sh?raw";
+import networkReset from "../../src-tauri/src/core/automation/templates/builtin/network-reset/reset.sh?raw";
+import networkReadme from "../../src-tauri/src/core/automation/templates/builtin/network-reset/README.md?raw";
+import maintenanceManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/template.json";
+import mrManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/template.json";
+import mrPrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/prompt.md?raw";
+import mrConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/herdr.json?raw";
+import issueManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/template.json";
+import issuePrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/prompt.md?raw";
+import issueConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/herdr.json?raw";
 import React from "react";
-import workspaceCheckScript from "../../src-tauri/src/core/automation/templates/builtin/workspace-check/workspace-check.py?raw";
-import gitStatusScript from "../../src-tauri/src/core/automation/templates/builtin/git-status/git-status.py?raw";
 import diskCleanupManifest from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/template.json";
 import diskCleanupScript from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/disk-cleanup.py?raw";
+import herdrScript from "../../src-tauri/src/core/automation/templates/builtin/herdr-agent.py?raw";
+import maintenancePrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/prompt.md?raw";
+import maintenanceConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/herdr.json?raw";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PreviewRouteMarker } from "./PreviewRouteMarker";
@@ -13,8 +26,41 @@ import type {
   ToolInfo,
   AutomationTask,
   AutomationDraft,
+  AutomationTemplate,
 } from "../../src/lib/tauri";
 import "../../src/index.css";
+
+const previewAgentTemplates: AutomationTemplate[] = [
+  {
+    manifest: maintenanceManifest,
+    prompt: maintenancePrompt,
+    config: maintenanceConfig,
+  },
+  { manifest: mrManifest, prompt: mrPrompt, config: mrConfig },
+  { manifest: issueManifest, prompt: issuePrompt, config: issueConfig },
+].map(({ manifest, prompt, config }) => ({
+  id: manifest.id,
+  title: manifest.title.zh,
+  description: manifest.description.zh,
+  draft: {
+    name: manifest.title.zh,
+    provider: "system",
+    content: "sh './run.sh'",
+    workdir: null,
+    script_dir: null,
+    schedule: { kind: "hourly", minute: manifest.schedule.minute },
+    enabled: true,
+    files: [
+      { path: `${manifest.id}/agent.py`, content: herdrScript },
+      { path: `${manifest.id}/prompt.md`, content: prompt },
+      { path: `${manifest.id}/herdr.json`, content: config },
+      {
+        path: "run.sh",
+        content: `python3 "$AGENT_HUB_SCRIPT_DIR/${manifest.id}/agent.py"`,
+      },
+    ],
+  },
+}));
 
 // Documentation-only fixture: current product components, synthetic data, no disk access.
 const previewParams = new URLSearchParams(location.search);
@@ -361,27 +407,37 @@ Object.assign(window, {
           return {
             shell: "sh",
             templates: [
+              ...previewAgentTemplates,
               {
-                id: "workspace-check",
-                title: "工作目录检查",
-                description: "查看当前目录和文件，按需手动触发。",
+                id: networkManifest.id,
+                title: networkManifest.title.zh,
+                description: networkManifest.description.zh,
                 draft: {
-                  name: "工作目录检查",
+                  name: networkManifest.title.zh,
                   provider: "system",
                   content: "sh './run.sh'",
+                  workdir: null,
+                  schedule: {
+                    kind: "daily",
+                    hour: 7,
+                    minute: 0,
+                    weekdays: false,
+                  },
+                  enabled: false,
                   files: [
                     {
-                      path: "workspace-check/workspace-check.py",
-                      content: workspaceCheckScript,
+                      path: "network-reset/network-reset.py",
+                      content: networkLauncher,
                     },
+                    { path: "network-reset/setup.sh", content: networkSetup },
+                    { path: "network-reset/reset.sh", content: networkReset },
+                    { path: "network-reset/README.md", content: networkReadme },
                     {
                       path: "run.sh",
-                      content: "python3 './workspace-check/workspace-check.py'",
+                      content:
+                        'python3 "$AGENT_HUB_SCRIPT_DIR/network-reset/network-reset.py"',
                     },
                   ],
-                  workdir: null,
-                  schedule: { kind: "manual" },
-                  enabled: true,
                 },
               },
               {
@@ -412,77 +468,6 @@ Object.assign(window, {
                   enabled: true,
                 },
               },
-              {
-                id: "git-status",
-                title: "Git 工作区状态",
-                description: "工作日查看改动与最近提交，请指定 Git 工作目录。",
-                draft: {
-                  name: "Git 工作区状态",
-                  provider: "system",
-                  content: "sh './run.sh'",
-                  files: [
-                    {
-                      path: "git-status/git-status.py",
-                      content: gitStatusScript,
-                    },
-                    {
-                      path: "run.sh",
-                      content: "python3 './git-status/git-status.py'",
-                    },
-                  ],
-                  workdir: null,
-                  schedule: {
-                    kind: "daily",
-                    hour: 17,
-                    minute: 0,
-                    weekdays: true,
-                  },
-                  enabled: true,
-                },
-              },
-              ...(!previewParams.has("no-hermes")
-                ? [
-                    {
-                      id: "repository-audit",
-                      title: "工作日仓库审计",
-                      description:
-                        "让 Hermes 检查仓库状态，汇总问题与后续建议。",
-                      draft: {
-                        name: "工作日仓库审计",
-                        provider: "hermes",
-                        content:
-                          "检查当前仓库的依赖更新、失败测试、lint/类型检查状态和有风险的未提交改动。汇总证据与问题，给出下一步建议，只报告结果，不修改文件。",
-                        workdir: null,
-                        schedule: {
-                          kind: "daily",
-                          hour: 9,
-                          minute: 0,
-                          weekdays: true,
-                        },
-                        enabled: true,
-                      },
-                    },
-                    {
-                      id: "daily-summary",
-                      title: "每日项目摘要",
-                      description: "让 Hermes 汇总项目近期活动与待办建议。",
-                      draft: {
-                        name: "每日项目摘要",
-                        provider: "hermes",
-                        content:
-                          "阅读工作目录中的最近提交、当前改动和项目记录，生成简短的每日摘要：已完成事项、风险与后续建议。不要修改文件。",
-                        workdir: null,
-                        schedule: {
-                          kind: "daily",
-                          hour: 18,
-                          minute: 0,
-                          weekdays: false,
-                        },
-                        enabled: true,
-                      },
-                    },
-                  ]
-                : []),
             ],
           };
         case "get_automation_backups":
@@ -753,13 +738,43 @@ if (automationState) {
     templates.click();
     const audit = await waitFor(() =>
       document.querySelector<HTMLElement>(
-        automationState === "cleanup-editor"
-          ? 'button[aria-label="清理磁盘缓存"]'
-          : 'button[aria-label="工作日仓库审计"]',
+        automationState === "network-editor"
+          ? 'button[aria-label="定时重置网络"]'
+          : automationState === "cleanup-editor"
+            ? 'button[aria-label="清理磁盘缓存"]'
+            : automationState === "herdr-editor"
+              ? 'button[aria-label="项目巡检"]'
+              : 'button[aria-label="项目巡检"]',
       ),
     );
-    if (automationState === "editor" || automationState === "cleanup-editor") {
+    if (
+      automationState === "network-editor" ||
+      automationState === "editor" ||
+      automationState === "cleanup-editor" ||
+      automationState === "herdr-editor"
+    ) {
       audit.click();
+      if (automationState === "herdr-editor") {
+        const project = await waitFor(() =>
+          document.querySelector<HTMLSelectElement>(
+            'select[aria-label="项目工作区"]',
+          ),
+        );
+        await waitFor(() => (project.options.length > 1 ? project : null));
+        project.value = project.options[1].value;
+        project.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (previewParams.has("script-files")) {
+        const summary = await waitFor(
+          () =>
+            [...document.querySelectorAll("summary")].find((node) =>
+              node.textContent?.startsWith("脚本文件"),
+            ) ?? null,
+        );
+        const details = summary.parentElement as HTMLDetailsElement;
+        details.open = true;
+        summary.scrollIntoView({ block: "center" });
+      }
       if (previewParams.has("capture"))
         setTimeout(() => {
           if (document.activeElement instanceof HTMLElement)

@@ -10,6 +10,9 @@ pub enum Schedule {
     Interval {
         minutes: u32,
     },
+    Hourly {
+        minute: u8,
+    },
     Daily {
         hour: u8,
         minute: u8,
@@ -30,6 +33,7 @@ impl Schedule {
             Self::Interval { minutes } if !(1..=525600).contains(minutes) => {
                 Err("Interval must be between 1 and 525600 minutes".into())
             }
+            Self::Hourly { minute } if *minute > 59 => Err("Invalid minute of hour".into()),
             Self::Daily { hour, minute, .. } if *hour > 23 || *minute > 59 => {
                 Err("Invalid local time".into())
             }
@@ -41,6 +45,7 @@ impl Schedule {
             Self::Manual => "manual".into(),
             Self::Custom { expression } => expression.clone(),
             Self::Interval { minutes } => format!("every {minutes}m"),
+            Self::Hourly { minute } => format!("{minute} * * * *"),
             Self::Daily {
                 hour,
                 minute,
@@ -76,6 +81,9 @@ pub struct AutomationDraft {
     pub provider: Provider,
     pub content: String,
     pub workdir: Option<String>,
+    /// Script storage is independent of the directory in which the task runs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_dir: Option<String>,
     pub schedule: Schedule,
     pub enabled: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -83,6 +91,10 @@ pub struct AutomationDraft {
 }
 
 impl AutomationDraft {
+    pub(super) fn scripts_dir(&self) -> Option<&str> {
+        self.script_dir.as_deref().or(self.workdir.as_deref())
+    }
+
     pub(super) fn validate(&mut self) -> Result<(), String> {
         let mut paths = std::collections::HashSet::new();
         let mut total = if super::native::shell_entry::entry(self).is_some() {
@@ -131,22 +143,24 @@ impl AutomationDraft {
                 "Hermes requires a recurring schedule; use pause and Run now for manual use".into(),
             );
         }
-        if let Some(dir) = &self.workdir {
-            if dir.is_empty() {
-                self.workdir = None;
-                return Ok(());
+        for directory in [&mut self.workdir, &mut self.script_dir] {
+            if let Some(dir) = directory.as_ref() {
+                if dir.is_empty() {
+                    *directory = None;
+                    continue;
+                }
+                let path = if dir == "~" || dir.starts_with("~/") {
+                    dirs::home_dir()
+                        .ok_or("Cannot resolve home")?
+                        .join(dir.strip_prefix("~/").unwrap_or(""))
+                } else {
+                    dir.into()
+                };
+                if !path.is_absolute() || !path.is_dir() {
+                    return Err("Working directory must be an existing absolute directory".into());
+                }
+                *directory = Some(path.to_string_lossy().into_owned());
             }
-            let path = if dir == "~" || dir.starts_with("~/") {
-                dirs::home_dir()
-                    .ok_or("Cannot resolve home")?
-                    .join(dir.strip_prefix("~/").unwrap_or(""))
-            } else {
-                dir.into()
-            };
-            if !path.is_absolute() || !path.is_dir() {
-                return Err("Working directory must be an existing absolute directory".into());
-            }
-            self.workdir = Some(path.to_string_lossy().into_owned());
         }
         Ok(())
     }
@@ -174,6 +188,7 @@ mod tests {
     fn legacy_drafts_default_to_no_files_and_template_paths_are_validated() {
         let mut draft: AutomationDraft = serde_json::from_value(serde_json::json!({"name":"Cleanup","provider":"system","content":"python3 bundle/main.py","workdir":null,"schedule":{"kind":"manual"},"enabled":false})).unwrap();
         assert!(draft.files.is_empty());
+        assert!(draft.script_dir.is_none());
         for path in [
             "../outside.py",
             "/absolute.py",
@@ -207,6 +222,12 @@ mod tests {
         assert!(draft.validate().is_err());
     }
     #[test]
+    fn hourly_schedules_validate_the_minute_and_preserve_cron_semantics() {
+        assert!(Schedule::Hourly { minute: 59 }.validate().is_ok());
+        assert!(Schedule::Hourly { minute: 60 }.validate().is_err());
+        assert_eq!(Schedule::Hourly { minute: 15 }.display(), "15 * * * *");
+    }
+    #[test]
     fn shell_entry_keeps_the_full_64_kib_script_budget() {
         let mut draft: AutomationDraft = serde_json::from_value(serde_json::json!({
             "name": "Audit", "provider": "system", "content": "sh './run.sh'", "workdir": null,
@@ -225,6 +246,7 @@ mod tests {
             name: "Audit".into(),
             provider: Provider::System,
             content: "exit 99".into(),
+            script_dir: None,
             workdir: None,
             schedule: Schedule::Interval { minutes: 0 },
             enabled: true,
@@ -237,6 +259,9 @@ mod tests {
         };
         assert!(draft.validate().is_ok());
         draft.workdir = Some("relative/path".into());
+        assert!(draft.validate().is_err());
+        draft.workdir = None;
+        draft.script_dir = Some("relative/scripts".into());
         assert!(draft.validate().is_err());
         assert!(!valid_id("agent_hub:../../other"));
     }

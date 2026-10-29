@@ -37,8 +37,15 @@ fn filename(id: &str) -> Result<String, String> {
 }
 
 fn portable(id: &str, mut draft: AutomationDraft) -> AutomationBackup {
+    if let Some(path) = &draft.script_dir {
+        draft.script_dir = if workspace::is_default(path, id) {
+            None
+        } else {
+            Some(portable_path(path))
+        };
+    }
     if let Some(path) = &draft.workdir {
-        draft.workdir = if workspace::is_default(path, id) {
+        draft.workdir = if draft.script_dir.is_none() && workspace::is_default(path, id) {
             None
         } else {
             dirs::home_dir()
@@ -56,6 +63,17 @@ fn portable(id: &str, mut draft: AutomationDraft) -> AutomationBackup {
         shell: shell().into(),
         draft,
     }
+}
+
+fn portable_path(path: &str) -> String {
+    dirs::home_dir()
+        .and_then(|home| {
+            Path::new(path)
+                .strip_prefix(home)
+                .ok()
+                .map(|relative| format!("~/{}", relative.to_string_lossy().replace('\\', "/")))
+        })
+        .unwrap_or_else(|| path.into())
 }
 
 /// RepoLock is held by backup_workspace; acquire the automation lock second.
@@ -237,6 +255,7 @@ mod tests {
                 name: "Audit".into(),
                 provider: super::super::Provider::System,
                 content: "printf original".into(),
+                script_dir: None,
                 workdir: None,
                 schedule: super::super::Schedule::Manual,
                 enabled: false,
@@ -350,6 +369,7 @@ mod tests {
             name: "Audit".into(),
             provider: super::super::Provider::System,
             content: "printf test".into(),
+            script_dir: None,
             workdir: None,
             schedule: super::super::Schedule::Manual,
             enabled: true,
@@ -398,6 +418,7 @@ mod tests {
             name: "Audit".into(),
             provider: super::super::Provider::System,
             content: "exit 99".into(),
+            script_dir: None,
             workdir: None,
             schedule: super::super::Schedule::Manual,
             enabled: true,

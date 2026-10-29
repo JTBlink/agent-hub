@@ -1,0 +1,6 @@
+{
+  "session": "default",
+  "agent": "codex",
+  "arguments": ["--sandbox", "read-only"],
+  "title": "Agent 代码巡检"
+}

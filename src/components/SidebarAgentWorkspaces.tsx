@@ -12,18 +12,15 @@ import { cn } from "../utils";
 import type { ManagedSkill, ToolInfo } from "../lib/tauri";
 import {
   agentWorkspacePath,
-  installedWorkspaceAgents,
+  orderedWorkspaceAgents,
+  WORKSPACE_AGENT_ORDER_KEYS,
 } from "../lib/workspaceAgents";
-import {
-  applyAgentOrder,
-  readAgentOrder,
-  reorderSidebarAgents,
-} from "../lib/sidebarAgentOrder";
+import { readAgentOrder, reorderSidebarAgents } from "../lib/sidebarAgentOrder";
 import { SidebarSectionHeader } from "./SidebarSectionHeader";
 import { AgentIcon } from "./AgentIcon";
 
-const CODING_ORDER_KEY = "agent-hub:tool-order";
-const LOBSTER_ORDER_KEY = "agent-hub:lobster-tool-order";
+const CODING_ORDER_KEY = WORKSPACE_AGENT_ORDER_KEYS.coding;
+const LOBSTER_ORDER_KEY = WORKSPACE_AGENT_ORDER_KEYS.lobster;
 
 export function SidebarAgentWorkspaces({
   tools,
@@ -46,16 +43,7 @@ export function SidebarAgentWorkspaces({
     readAgentOrder(LOBSTER_ORDER_KEY),
   );
   const orderedTools = useMemo(
-    () => [
-      ...applyAgentOrder(
-        installedWorkspaceAgents(tools, "coding"),
-        codingOrder,
-      ),
-      ...applyAgentOrder(
-        installedWorkspaceAgents(tools, "lobster"),
-        lobsterOrder,
-      ),
-    ],
+    () => orderedWorkspaceAgents(tools, codingOrder, lobsterOrder),
     [tools, codingOrder, lobsterOrder],
   );
   const globalSkillsByAgent = useMemo(

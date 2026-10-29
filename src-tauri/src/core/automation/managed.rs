@@ -96,7 +96,16 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             task.schedule = record.draft.schedule.display();
             task.project = record.draft.workdir.clone();
             task.command = Some(record.draft.content.clone());
-            task.definition = Some(record.draft.clone());
+            task.prompt = record
+                .draft
+                .files
+                .iter()
+                .find(|file| file.path == "prompt.md" || file.path.ends_with("/prompt.md"))
+                .map(|file| file.content.clone());
+            let mut definition = record.draft.clone();
+            super::workspace::separate(&mut definition, &record.id);
+            task.project = definition.workdir.clone();
+            task.definition = Some(definition);
             if !record.draft.enabled {
                 task.status = "paused".into();
                 task.next_run = None;
@@ -149,7 +158,7 @@ pub(super) fn find(id: &str) -> Result<AutomationTask, String> {
 }
 
 /// Create or update an automation. Native jobs are always current-user jobs;
-/// external system jobs cannot be edited by supplying their displayed IDs.
+/// supported current-user external LaunchAgents are edited in their original scope.
 pub fn save(
     id: Option<&str>,
     revision: Option<u64>,
@@ -179,6 +188,10 @@ pub fn save(
         }
         if task.status == "running" {
             return Err("Wait for the current run to finish before editing".into());
+        }
+        #[cfg(target_os = "macos")]
+        if task.source == "launchd" && old.is_none() {
+            return super::external_launchd::save(&task, revision, &draft);
         }
         if task.source == "hermes" {
             if draft.provider != Provider::Hermes {
@@ -218,7 +231,16 @@ pub fn save(
     let id = id
         .map(str::to_owned)
         .unwrap_or_else(|| format!("agent_hub:{}", uuid::Uuid::new_v4()));
-    super::workspace::ensure(&mut draft, &id, "")?;
+    if draft.provider == Provider::System {
+        if draft.script_dir.is_none() {
+            draft.script_dir = old
+                .as_ref()
+                .and_then(|record| record.draft.scripts_dir().map(str::to_owned));
+        }
+        super::workspace::ensure_scripts(&mut draft, &id)?;
+    } else {
+        super::workspace::ensure(&mut draft, &id, "")?;
+    }
     if draft.provider == Provider::System {
         native::shell_entry::prepare(&mut draft, &id, old.as_ref())?;
         draft.validate()?;
@@ -314,6 +336,10 @@ pub fn run(id: &str) -> Result<(), String> {
     if task.status == "running" {
         return Err("This task is already running".into());
     }
+    #[cfg(target_os = "macos")]
+    if task.source == "launchd" && task.origin == TaskOrigin::External {
+        return super::external_launchd::run(&task);
+    }
     if task.source == "hermes" {
         hermes_manage::run(&task)
     } else {
@@ -375,6 +401,10 @@ pub fn remove_with_local_data(id: &str, delete_local_data: bool) -> Result<(), S
         if task.status == "running" {
             return Err("Wait for the current run to finish before deleting".into());
         }
+        #[cfg(target_os = "macos")]
+        if task.source == "launchd" && record.is_none() {
+            return super::external_launchd::remove(&task);
+        }
         if task.source == "hermes" {
             hermes_manage::action_at(
                 &hermes_manage::root_for(&task)?,
@@ -433,7 +463,7 @@ pub(crate) fn upgrade_runners() {
         }
         let result = (|| {
             let mut next = old.clone();
-            let normalized = if next.draft.workdir.is_some() {
+            let normalized = if next.draft.scripts_dir().is_some() {
                 native::shell_entry::prepare(&mut next.draft, &next.id, Some(&old))?
             } else {
                 false
@@ -588,6 +618,7 @@ mod tests {
             name: "Audit".into(),
             provider: Provider::System,
             content: "exit 0".into(),
+            script_dir: None,
             workdir: None,
             schedule: Schedule::Manual,
             enabled: true,

@@ -1,9 +1,9 @@
 //! Standalone current-user runners persist bounded history without a running UI.
 use super::render::{ps, shell};
 use std::path::Path;
-pub(super) const VERSION: &str = "AgentHub workspace scripts v3";
+pub(super) const VERSION: &str = "AgentHub workspace scripts v4";
 
-pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path) -> String {
+pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path, scripts_dir: &str) -> String {
     format!(
         r#"#!/bin/sh
 # {version}
@@ -45,18 +45,25 @@ finish() {{
 trap finish 0
 cd {workdir} || exit 1
 export PATH={path}
+export AGENT_HUB_SCRIPT_DIR={scripts_dir}
 /bin/sh {payload}
 "#,
         version = VERSION,
         base = shell(&dir.to_string_lossy()),
         workdir = shell(workdir),
+        scripts_dir = shell(scripts_dir),
         path =
             shell(&std::env::var("PATH").unwrap_or_else(|_| "/usr/local/bin:/usr/bin:/bin".into())),
         payload = shell(&payload.to_string_lossy())
     )
 }
 
-pub(super) fn powershell_script(dir: &Path, workdir: &str, payload: &Path) -> String {
+pub(super) fn powershell_script(
+    dir: &Path,
+    workdir: &str,
+    payload: &Path,
+    scripts_dir: &str,
+) -> String {
     format!(
         r#"{bom}# {version}
 $ErrorActionPreference = 'Stop'
@@ -83,6 +90,7 @@ $global:LASTEXITCODE = 0
 $code = 0
 try {{
   Set-Location -LiteralPath {workdir}
+  $env:AGENT_HUB_SCRIPT_DIR = {scripts_dir}
   & {payload} *> $log
   if ($LASTEXITCODE) {{ $code = $LASTEXITCODE }}
 }} catch {{ $_ | Out-File -LiteralPath $log -Append; $code = 1 }}
@@ -103,6 +111,7 @@ exit $code
         version = VERSION,
         base = ps(&dir.to_string_lossy()),
         workdir = ps(workdir),
+        scripts_dir = ps(scripts_dir),
         payload = ps(&payload.to_string_lossy())
     )
 }
@@ -128,6 +137,7 @@ mod tests {
             name: "Audit".into(),
             provider: Provider::System,
             content: "printf 'first run'".into(),
+            script_dir: None,
             workdir: Some(temp.path().to_string_lossy().into_owned()),
             schedule: Schedule::Manual,
             enabled: true,
@@ -186,7 +196,12 @@ mod tests {
         let wrapper = temp.path().join("run.sh");
         std::fs::write(
             &wrapper,
-            shell_script(temp.path(), &temp.path().to_string_lossy(), &payload),
+            shell_script(
+                temp.path(),
+                &temp.path().to_string_lossy(),
+                &payload,
+                &temp.path().to_string_lossy(),
+            ),
         )
         .unwrap();
         assert!(std::process::Command::new("/bin/sh")

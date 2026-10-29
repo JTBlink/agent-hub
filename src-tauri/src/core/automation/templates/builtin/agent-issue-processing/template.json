@@ -1,0 +1,20 @@
+{
+  "id": "agent-issue-processing",
+  "title": {
+    "zh": "Issue 处理",
+    "zh-TW": "Issue 處理",
+    "en": "Issue processing"
+  },
+  "description": {
+    "zh": "领取一个可执行 Issue，完成实现和验证，提交关联草稿 MR/PR。",
+    "zh-TW": "領取一個可執行 Issue，完成實作和驗證，提交關聯草稿 MR/PR。",
+    "en": "Claim one ready Issue, implement and validate it, then open a linked draft MR/PR."
+  },
+  "schedule": {
+    "kind": "hourly",
+    "minute": 45
+  },
+  "provider": "system",
+  "entrypoint": "agent.py",
+  "scripts": ["agent.py", "prompt.md", "herdr.json", "README.md"]
+}

@@ -26,6 +26,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 export function AutomationTaskDetail({
   task,
+  projectName,
   refreshKey,
   loading,
   readFailed,
@@ -35,6 +36,7 @@ export function AutomationTaskDetail({
   actions,
 }: {
   task: AutomationTask | undefined;
+  projectName: string | null;
   refreshKey: number;
   loading: boolean;
   readFailed: boolean;
@@ -181,8 +183,11 @@ export function AutomationTaskDetail({
               )}
             </div>
             {task && (
-              <p className="mt-1.5 break-all text-[13px] leading-6 text-muted">
-                {task.project || t("automation.noProject")}
+              <p
+                title={task.project ?? undefined}
+                className="mt-1.5 break-all text-[13px] leading-6 text-muted"
+              >
+                {projectName || t("automation.noProject")}
               </p>
             )}
           </div>

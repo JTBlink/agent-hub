@@ -5,15 +5,23 @@ import { homeDir, join } from "@tauri-apps/api/path";
 import { useTranslation } from "react-i18next";
 import { getErrorMessage } from "../lib/error";
 import { openDirectoryInVscode } from "../lib/openInVscode";
+import { ThemedSelect } from "./ThemedSelect";
+import type { Project } from "../lib/tauri";
 
 export function AutomationWorkdirField({
   value,
   disabled,
   onChange,
+  kind = "workdir",
+  projects = [],
+  projectsLoading = false,
 }: {
   value: string | null;
   disabled: boolean;
   onChange: (value: string) => void;
+  kind?: "workdir" | "scriptDir" | "projectWorkspace";
+  projects?: Project[];
+  projectsLoading?: boolean;
 }) {
   const { t } = useTranslation();
   const inputId = useId();
@@ -28,6 +36,12 @@ export function AutomationWorkdirField({
     };
   }, []);
   const path = value?.trim() ?? "";
+  const chooseLabel =
+    kind === "scriptDir"
+      ? "automation.chooseScriptDir"
+      : kind === "projectWorkspace"
+        ? "automation.chooseProjectWorkspace"
+        : "automation.chooseWorkdir";
   const launch = async (action: "choose" | "edit") => {
     if (disabled || pending.current) return;
     pending.current = true;
@@ -42,7 +56,7 @@ export function AutomationWorkdirField({
         const selected = await open({
           directory: true,
           multiple: false,
-          title: t("automation.chooseWorkdir"),
+          title: t(chooseLabel),
           ...(resolved ? { defaultPath: resolved } : {}),
         });
         if (mounted.current && typeof selected === "string") onChange(selected);
@@ -62,7 +76,7 @@ export function AutomationWorkdirField({
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
         <label htmlFor={inputId} className="text-[12px] font-medium text-muted">
-          {t("automation.workdir")}
+          {t(`automation.${kind}`)}
         </label>
         <button
           type="button"
@@ -72,7 +86,11 @@ export function AutomationWorkdirField({
               ? "install.scan.openInVscode"
               : "automation.openWorkdirAfterSave",
           )}
-          aria-label={t("install.scan.openInVscode")}
+          aria-label={t(
+            kind === "scriptDir"
+              ? "automation.openScriptDir"
+              : "install.scan.openInVscode",
+          )}
           className="app-button-ghost flex h-6 w-6 shrink-0 items-center justify-center rounded p-1 text-muted hover:bg-surface-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
           onClick={() => void launch("edit")}
         >
@@ -83,26 +101,68 @@ export function AutomationWorkdirField({
           )}
         </button>
       </div>
-      <div className="relative">
-        <input
-          id={inputId}
-          value={value ?? ""}
-          disabled={disabled || action !== null}
-          onChange={(event) => {
-            setError(null);
-            onChange(event.target.value);
-          }}
-          placeholder={t("automation.workdirPlaceholder")}
-          aria-label={t("automation.workdir")}
-          title={path || undefined}
-          className="app-input w-full min-w-0 pr-11"
-        />
-        <div className="absolute bottom-0 right-1 flex gap-0.5">
+      <div
+        className={
+          kind === "projectWorkspace" ? "flex items-center gap-1" : "relative"
+        }
+      >
+        {kind === "projectWorkspace" ? (
+          <ThemedSelect
+            id={inputId}
+            value={path}
+            disabled={disabled || action !== null || projectsLoading}
+            aria-label={t("automation.projectWorkspace")}
+            onChange={(event) => {
+              setError(null);
+              onChange(event.target.value);
+            }}
+            className="app-input w-full min-w-0"
+          >
+            <option value="">
+              {t(
+                projectsLoading ? "common.loading" : "automation.chooseProject",
+              )}
+            </option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.path}>
+                {project.name}
+              </option>
+            ))}
+            {path && !projects.some((project) => project.path === path) && (
+              <option value={path}>{path}</option>
+            )}
+          </ThemedSelect>
+        ) : (
+          <input
+            id={inputId}
+            value={value ?? ""}
+            disabled={disabled || action !== null}
+            onChange={(event) => {
+              setError(null);
+              onChange(event.target.value);
+            }}
+            placeholder={t(
+              kind === "scriptDir"
+                ? "automation.scriptDirPlaceholder"
+                : "automation.workdirPlaceholder",
+            )}
+            aria-label={t(`automation.${kind}`)}
+            title={path || undefined}
+            className="app-input w-full min-w-0 pr-11"
+          />
+        )}
+        <div
+          className={
+            kind === "projectWorkspace"
+              ? "shrink-0"
+              : "absolute bottom-0 right-1 flex gap-0.5"
+          }
+        >
           <button
             type="button"
             disabled={disabled || action !== null}
-            title={t("automation.chooseWorkdir")}
-            aria-label={t("automation.chooseWorkdir")}
+            title={t(chooseLabel)}
+            aria-label={t(chooseLabel)}
             className={buttonClass}
             onClick={() => void launch("choose")}
           >
@@ -114,13 +174,27 @@ export function AutomationWorkdirField({
           </button>
         </div>
       </div>
+      {kind === "projectWorkspace" && path && (
+        <p
+          className="break-all text-[11px] leading-5 text-secondary"
+          title={path}
+        >
+          {path}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-[11px] text-danger">
           {error}
         </p>
       )}
       <p className="break-words text-[11px] leading-5 text-muted">
-        {t("automation.defaultWorkdir")}
+        {t(
+          kind === "scriptDir"
+            ? "automation.defaultScriptDir"
+            : kind === "projectWorkspace"
+              ? "automation.projectWorkspaceHelp"
+              : "automation.defaultWorkdir",
+        )}
       </p>
     </div>
   );

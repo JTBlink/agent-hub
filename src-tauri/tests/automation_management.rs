@@ -28,6 +28,28 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
     let temporary = tempfile::tempdir().unwrap();
     let catalog = success(cli(temporary.path(), &["templates", "--locale", "zh"]));
     let templates = catalog["templates"].as_array().unwrap();
+    assert_eq!(
+        templates
+            .iter()
+            .map(|item| item["id"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        if cfg!(target_os = "macos") {
+            vec![
+                "agent-maintenance",
+                "agent-mr-processing",
+                "agent-issue-processing",
+                "disk-cleanup",
+                "network-reset",
+            ]
+        } else {
+            vec![
+                "agent-maintenance",
+                "agent-mr-processing",
+                "agent-issue-processing",
+                "disk-cleanup",
+            ]
+        }
+    );
     assert!(!templates.iter().any(|t| matches!(
         t["id"].as_str(),
         Some("disk-check" | "temp-cleanup" | "log-cleanup")

@@ -1,0 +1,11 @@
+# Issue 自动处理（Herdr）
+
+每小时第 45 分钟，通过 Herdr 发起交互式 Agent。选择项目工作区后，Herdr 中的 Agent 直接在该目录启动。提示词可在主编辑区修改，脚本目录独立保存。
+
+需安装 Python 3、Herdr CLI 和相应 Agent，并完成平台登录。在 `herdr.json` 中配置已有且运行中的 Herdr 会话（默认为 `default`）。AgentHub 负责定时，Herdr 承载 Agent；关闭 AgentHub 后系统计划仍然有效，但 Herdr 服务须保持运行。
+
+每次创建新的 Agent 会话，不抢占焦点；任务标签页保留供检查。上次仍在工作、等待审批或状态不明时，不重复提交。超时或投递不明确时保留面板，在 Herdr 检查后才可清除脚本目录的 `.herdr-run.json` 重新发起；不自动回答确认框。运行记录保存 Herdr 面板标识及可读取的输出；Agent 就绪不代表任务或验证成功。
+
+此模板可修改代码、推送任务分支和创建草稿 MR/PR；创建前应检查提示词的授权范围。不自动合并、关闭 Issue 或发布。
+
+`herdr.json` 的 `agent` 使用 Herdr 支持的类型；界面按本机检测结果，与全局工作区保持相同的名称、图标和排序（包括 OpenCode、Hermes Agent 等）。`arguments` 是传给该 Agent 的参数数组。更换 Agent 时应使用其对应参数。没有运行中的目标会话时只报告错误，不创建或重启 Herdr 服务。

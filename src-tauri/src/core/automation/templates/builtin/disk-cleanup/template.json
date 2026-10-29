@@ -6,9 +6,9 @@
     "zh-TW": "清理磁碟快取"
   },
   "description": {
-    "en": "Daily cache cleanup with a JSON configuration, modular scripts and Chinese summaries. Agent/download caches keep 7 days; optional project paths retain latest builds. Safely prunes uv/Homebrew, exited-browser caches and confirmed installed updates. Desktop notification supported. Requires Python 3.",
-    "zh": "每天清理过期缓存：Agent／下载缓存默认保留 7 天；按配置项目清理历史构建、过期增量缓存，并清理 uv／Homebrew、已退出浏览器缓存和确认已安装的旧更新包。多文件脚本与独立 JSON 配置，中文总结，支持桌面通知与预览。需要 Python 3。",
-    "zh-TW": "每天清理過期快取：Agent／下載快取預設保留 7 天；按設定專案清理歷史建置、過期增量快取，並清理 uv／Homebrew、已退出瀏覽器快取和確認已安裝的舊更新套件。多檔案腳本與獨立 JSON 設定，中文總結，支援桌面通知與預覽。需要 Python 3。"
+    "zh": "按保留期清理过期缓存，保留配置与正在使用的数据。支持预览，需要 Python 3。",
+    "zh-TW": "依保留期清理過期快取，保留設定與使用中的資料。支援預覽，需要 Python 3。",
+    "en": "Clear expired caches while preserving configuration and active data. Supports preview; requires Python 3."
   },
   "schedule": {
     "kind": "daily",

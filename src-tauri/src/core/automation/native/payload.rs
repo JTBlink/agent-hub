@@ -16,14 +16,11 @@ pub(super) fn path(dir: &Path, draft: &AutomationDraft, id: &str) -> Result<Path
         return Err("Invalid automation script ID".into());
     }
     if let Some(entry) = super::shell_entry::entry(draft) {
-        let workspace = draft
-            .workdir
-            .as_deref()
-            .ok_or("Missing automation workspace")?;
+        let workspace = draft.scripts_dir().ok_or("Missing automation workspace")?;
         return super::bundle_files::path(workspace, &entry.path, false);
     }
     let extension = if cfg!(windows) { "ps1" } else { "sh" };
-    match &draft.workdir {
+    match draft.scripts_dir() {
         Some(workdir) => {
             let workspace = Path::new(workdir);
             if !workspace.is_absolute() || !workspace.is_dir() {
@@ -81,11 +78,11 @@ pub(in crate::core::automation) fn write(
     }
     let marker = header(id);
     if let Some(previous) = &previous {
-        let owned = draft.workdir.is_none()
+        let owned = draft.scripts_dir().is_none()
             || previous.trim_start_matches('\u{feff}').starts_with(&marker)
             || store::load(dir.parent().ok_or("Missing automation storage directory")?)?
                 .iter()
-                .any(|record| record.id == id && record.draft.workdir == draft.workdir);
+                .any(|record| record.id == id && record.draft.scripts_dir() == draft.scripts_dir());
         if !owned {
             return Err("Automation script path is occupied by an unmanaged file; choose another working directory".into());
         }
@@ -109,7 +106,7 @@ pub(in crate::core::automation) fn read(
     if super::shell_entry::entry(&record.draft).is_some() {
         return Ok(None);
     }
-    if record.draft.workdir.is_none() {
+    if record.draft.scripts_dir().is_none() {
         return Ok(None);
     }
     let path = path(&super::directory(root, record), &record.draft, &record.id)?;
@@ -134,7 +131,7 @@ pub(in crate::core::automation) fn archive_legacy(
     if !valid_id(id) {
         return Err("Invalid automation script ID".into());
     }
-    let Some(workspace) = &draft.workdir else {
+    let Some(workspace) = draft.scripts_dir() else {
         return Ok(());
     };
     let extension = if cfg!(windows) { "ps1" } else { "sh" };
@@ -177,6 +174,7 @@ mod tests {
             name: "Cleanup".into(),
             provider: Provider::System,
             content: "printf original".into(),
+            script_dir: None,
             workdir: Some(workspace.to_string_lossy().into_owned()),
             schedule: Schedule::Manual,
             enabled: true,

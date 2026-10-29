@@ -17,7 +17,7 @@ pub(super) fn sync_at(root: &Path) -> Result<(), String> {
     let mut errors = Vec::new();
     for record in records.iter_mut().filter(|record| {
         record.draft.provider == Provider::System
-            && record.draft.workdir.is_some()
+            && record.draft.scripts_dir().is_some()
             && !registry.removal_pending.contains(&record.id)
     }) {
         let result = (|| {
@@ -82,6 +82,7 @@ mod tests {
                 name: "Cleanup".into(),
                 provider: Provider::System,
                 content: "exit 0".into(),
+                script_dir: None,
                 workdir: Some(workspace.to_string_lossy().into_owned()),
                 schedule: Schedule::Manual,
                 enabled: false,
