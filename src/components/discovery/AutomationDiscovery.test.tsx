@@ -206,6 +206,24 @@ it("shows the pinned Git revision, keeps partial errors, and installs its snapsh
   expect(api.previewGitAutomationPackages).toHaveBeenCalledTimes(1);
 });
 
+it("explains Git recognition and reveals the same manifest used by the documented example", async () => {
+  await render("git");
+  expect(host.textContent).toContain("每个任务目录必须有 task.json");
+  expect(host.textContent).toContain("只扫描 automations/");
+  expect(
+    host.querySelector('pre[aria-label="推荐的任务仓库目录结构"]')?.textContent,
+  ).toContain("scripts/");
+  const details = host.querySelector("details")!;
+  expect(details.open).toBe(false);
+  await act(async () => details.querySelector("summary")!.click());
+  expect(details.open).toBe(true);
+  const manifest = JSON.parse(details.querySelector("code")!.textContent!);
+  expect(manifest.schema_version).toBe(1);
+  expect(manifest.files).toEqual(["scripts/run.sh"]);
+  expect(details.textContent).toContain("Example task completed");
+  expect(host.textContent).toContain("目前仅支持 GitHub 的 tree 链接");
+  expect(api.previewGitAutomationPackages).not.toHaveBeenCalled();
+});
 it("ignores a local picker result after changing sources", async () => {
   let resolve: (value: string) => void = () => {};
   vi.mocked(open).mockReturnValue(

@@ -14,6 +14,7 @@ import { getErrorMessage } from "../../lib/error";
 import { AutomationPackageCard } from "./AutomationPackageCard";
 import { AutomationInstaller } from "./AutomationInstaller";
 import { StatusBanner } from "../StatusBanner";
+import { AutomationGitFormatHelp } from "./AutomationGitFormatHelp";
 import { useAutomationOverview } from "../../hooks/useAutomationOverview";
 
 export function AutomationDiscovery({
@@ -257,6 +258,7 @@ export function AutomationDiscovery({
           <p className="text-[12px] leading-6 text-muted">
             {t("discovery.gitDescription")}
           </p>
+          <AutomationGitFormatHelp />
           <label className="block space-y-1.5">
             <span className="text-[12px] text-muted">
               {t("discovery.repository")}

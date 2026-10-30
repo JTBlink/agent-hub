@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>AgentHub · 发现入口设计</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08101f;
+      --side: #0c172a;
+      --surface: #111d35;
+      --raised: #152440;
+      --line: #263b57;
+      --text: #e9f0fc;
+      --sub: #b3c0d5;
+      --muted: #8293ad;
+      --accent: #168bff;
+      --action: #0873d4;
+      --accent-bg: #112d4b;
+      --green: #56d7b7;
+      --green-bg: #103b38;
+      --scrim: #020812b8;
+      font:
+        14px/1.65 -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "PingFang SC",
+        sans-serif;
+    }
+    [data-theme="light"] {
+      color-scheme: light;
+      --bg: #f5f7fc;
+      --side: #eef2f9;
+      --surface: #fff;
+      --raised: #edf3fc;
+      --line: #cfdaeb;
+      --text: #182944;
+      --sub: #415674;
+      --muted: #5c708c;
+      --accent: #0676e6;
+      --action: #086fce;
+      --accent-bg: #e4f0ff;
+      --green: #137860;
+      --green-bg: #e6f7ef;
+      --scrim: #17243e70;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    button,
+    input {
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+      color: inherit;
+      border: 0;
+      background: none;
+    }
+    button:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 4px;
+    }
+    svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .shell {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 226px;
+      flex-shrink: 0;
+      background: var(--side);
+      border-right: 1px solid var(--line);
+      padding: 25px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 23px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 12px;
+      font-size: 21px;
+      font-weight: 650;
+      letter-spacing: -0.5px;
+    }
+    .brand img {
+      width: 30px;
+      height: 30px;
+    }
+    .nav {
+      display: grid;
+      gap: 7px;
+    }
+    .nav button {
+      padding: 12px 15px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      text-align: left;
+      border-radius: 8px;
+      color: var(--sub);
+    }
+    .nav button.active {
+      background: #223854;
+      color: var(--text);
+    }
+    [data-theme="light"] .nav button.active {
+      background: #d9e8fc;
+    }
+    .nav button.active svg {
+      color: var(--accent);
+    }
+    .nav button:hover {
+      background: var(--raised);
+    }
+    .divider {
+      height: 1px;
+      background: var(--line);
+      margin: 1px 9px;
+    }
+    .nav-caption {
+      padding: 0 15px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .side-bottom {
+      margin-top: auto;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 12px;
+    }
+    .side-bottom button {
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      color: var(--sub);
+      padding: 8px 0;
+    }
+    .main {
+      min-width: 0;
+      flex: 1;
+      padding: 35px 38px 45px;
+    }
+    .heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .heading h1 {
+      margin: 0 0 4px;
+      font-size: 25px;
+      letter-spacing: -0.5px;
+    }
+    .heading p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 13px;
+    }
+    .preview-tag {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      padding: 3px 9px;
+    }
+    .kind-tabs {
+      display: flex;
+      gap: 32px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 24px;
+    }
+    .kind-tabs button {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 0 2px 15px;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      margin-bottom: -1px;
+    }
+    .kind-tabs button[aria-selected="true"] {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .sources {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .sources button {
+      font-size: 13px;
+      border-radius: 7px;
+      padding: 7px 13px;
+      color: var(--sub);
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    .sources button.active {
+      background: var(--accent-bg);
+      color: var(--accent);
+    }
+    .sources button:hover {
+      background: var(--raised);
+    }
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      width: 260px;
+      color: var(--muted);
+    }
+    .search:focus-within {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .search input {
+      background: none;
+      border: 0;
+      outline: none;
+      min-width: 0;
+      width: 100%;
+      font-size: 12px;
+      color: var(--text);
+    }
+    .intro {
+      margin: 0 0 23px;
+      color: var(--sub);
+      font-size: 13px;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin: 0 0 16px;
+    }
+    .section-title h2 {
+      font-size: 15px;
+      margin: 0;
+    }
+    .section-title span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 21px;
+      display: flex;
+      flex-direction: column;
+      min-height: 292px;
+      transition: border-color 0.15s;
+    }
+    .card:hover {
+      border-color: #45668a;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-bottom: 15px;
+    }
+    .card-head h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .task-icon {
+      height: 37px;
+      width: 37px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--accent-bg);
+      color: var(--accent);
+    }
+    .task-icon.green {
+      color: var(--green);
+      background: var(--green-bg);
+    }
+    .card p {
+      font-size: 13px;
+      color: var(--sub);
+      margin: 0 0 18px;
+      line-height: 1.8;
+      min-height: 48px;
+    }
+    .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 19px;
+    }
+    .tag {
+      font-size: 11px;
+      border: 1px solid var(--line);
+      padding: 2px 7px;
+      border-radius: 5px;
+      color: var(--sub);
+      white-space: nowrap;
+    }
+    .tag.notice {
+      color: #edc67d;
+      border-color: #665033;
+      background: #332b1c;
+    }
+    [data-theme="light"] .tag.notice {
+      color: #7e4a0d;
+      background: #fff5da;
+    }
+    .card-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .card-bottom {
+      border-top: 1px solid var(--line);
+      padding-top: 16px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .version {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .primary,
+    .secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 35px;
+      border-radius: 7px;
+      padding: 6px 13px;
+      font-size: 12px;
+      font-weight: 550;
+    }
+    .primary {
+      background: var(--action);
+      color: white;
+    }
+    .primary:hover {
+      filter: brightness(1.12);
+    }
+    .secondary {
+      border: 1px solid var(--line);
+      background: var(--raised);
+      color: var(--sub);
+    }
+    .installed {
+      font-size: 11px;
+      color: var(--green);
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .installed svg {
+      width: 14px;
+      height: 14px;
+    }
+    .help {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 15px 17px;
+      margin-top: 22px;
+      background: var(--surface);
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .help svg {
+      color: var(--accent);
+      margin-top: 2px;
+    }
+    .hint-link {
+      color: var(--accent);
+      padding: 0;
+    }
+    .catalog-note {
+      margin-top: 34px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .empty {
+      padding: 40px;
+      text-align: center;
+      background: var(--surface);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+    }
+    .empty h2 {
+      font-size: 17px;
+    }
+    .empty p {
+      color: var(--sub);
+      font-size: 13px;
+    }
+    .code-tree {
+      font:
+        12px/1.85 ui-monospace,
+        SFMono-Regular,
+        monospace;
+      white-space: pre;
+      text-align: left;
+      max-width: 550px;
+      margin: 22px auto;
+      color: var(--sub);
+      background: var(--bg);
+      padding: 20px;
+      border-radius: 9px;
+    }
+    .url-row {
+      display: flex;
+      gap: 10px;
+      max-width: 720px;
+      margin: 24px auto;
+    }
+    .url-row input,
+    .field input {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 7px;
+      padding: 10px 12px;
+      min-width: 0;
+      width: 100%;
+      font-size: 13px;
+    }
+    .empty .primary {
+      margin: 8px 0;
+    }
+    dialog {
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: 0;
+      border-radius: 16px;
+      width: min(850px, calc(100% - 32px));
+      max-height: 90vh;
+      box-shadow: 0 28px 100px #0007;
+    }
+    dialog::backdrop {
+      background: var(--scrim);
+      backdrop-filter: blur(5px);
+    }
+    .modal-header {
+      padding: 22px 27px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      font-size: 18px;
+      margin: 0;
+    }
+    .modal-header p {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 3px 0 0;
+    }
+    .close {
+      height: 32px;
+      width: 32px;
+      border-radius: 6px;
+      color: var(--muted);
+    }
+    .steps {
+      display: flex;
+      padding: 18px 27px;
+      gap: 18px;
+      background: var(--raised);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .step {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .step b {
+      font-size: 11px;
+      border: 1px solid var(--line);
+      width: 21px;
+      height: 21px;
+      text-align: center;
+      border-radius: 50%;
+    }
+    .step.active {
+      color: var(--accent);
+    }
+    .step.active b {
+      background: var(--accent-bg);
+      border-color: var(--accent);
+    }
+    .modal-content {
+      padding: 24px 27px;
+      max-height: 53vh;
+      overflow: auto;
+    }
+    .modal-content h3 {
+      font-size: 14px;
+      margin: 0 0 13px;
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 26px;
+    }
+    .overview-grid p {
+      font-size: 13px;
+      color: var(--sub);
+    }
+    .overview-grid dl {
+      font-size: 12px;
+      display: grid;
+      grid-template-columns: 65px 1fr;
+      gap: 10px;
+      margin: 18px 0;
+    }
+    .overview-grid dt {
+      color: var(--muted);
+    }
+    .overview-grid dd {
+      margin: 0;
+      color: var(--sub);
+    }
+    .file-preview {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      font:
+        12px/2 ui-monospace,
+        monospace;
+      color: var(--sub);
+      white-space: pre-line;
+    }
+    .field {
+      margin-bottom: 19px;
+    }
+    .field label {
+      font-size: 12px;
+      font-weight: 550;
+      display: block;
+      margin-bottom: 7px;
+    }
+    .field small {
+      font-size: 11px;
+      color: var(--muted);
+      display: block;
+      margin-top: 6px;
+    }
+    .schedule-row {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+    .schedule-row button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 13px;
+      font-size: 12px;
+    }
+    .schedule-row button.selected {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .schedule-row input {
+      width: 110px;
+      margin-left: 4px;
+    }
+    .pause-notice {
+      display: flex;
+      gap: 12px;
+      background: var(--accent-bg);
+      padding: 14px;
+      border-radius: 8px;
+      color: var(--sub);
+      font-size: 12px;
+    }
+    .pause-notice strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .modal-footer {
+      padding: 17px 27px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-footer span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .footer-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .success {
+      padding: 30px 10px;
+      text-align: center;
+    }
+    .success-icon {
+      width: 57px;
+      height: 57px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--green-bg);
+      color: var(--green);
+      margin: 0 auto 15px;
+    }
+    .success-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+    .success h3 {
+      font-size: 20px;
+      margin-bottom: 7px;
+    }
+    .success p {
+      font-size: 13px;
+      color: var(--sub);
+    }
+    .toast {
+      position: fixed;
+      bottom: 26px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 11px 18px;
+      background: var(--raised);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--sub);
+      font-size: 12px;
+      box-shadow: 0 10px 30px #0003;
+      z-index: 10;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .skip {
+      position: absolute;
+      left: 250px;
+      top: -50px;
+      background: var(--surface);
+      padding: 5px;
+      color: var(--accent);
+    }
+    .skip:focus {
+      top: 10px;
+    }
+    @media (max-width: 1180px) {
+      .cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .main {
+        padding: 30px 27px;
+      }
+      .sidebar {
+        width: 205px;
+      }
+      .toolbar {
+        flex-wrap: wrap;
+      }
+      .search {
+        flex: 1;
+        min-width: 220px;
+      }
+      .sources {
+        flex: 1;
+      }
+    }
+    @media (max-width: 730px) {
+      .sidebar {
+        display: none;
+      }
+      .main {
+        padding: 24px 18px;
+      }
+      .cards {
+        grid-template-columns: 1fr;
+      }
+      .overview-grid {
+        grid-template-columns: 1fr;
+      }
+      .steps {
+        gap: 10px;
+      }
+      .step {
+        font-size: 11px;
+      }
+      .modal-header,
+      .modal-content,
+      .modal-footer {
+        padding: 17px;
+      }
+      .modal-footer span {
+        display: none;
+      }
+      .catalog-note {
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
+  </style>
+  <a href="#main" class="skip">跳到主要内容</a>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../../src-tauri/icons/app-icon.svg" alt="" />agent-hub
+      </div>
+      <nav class="nav" aria-label="主导航">
+        <button onclick="notice('工作台保留当前结构')" data-icon="grid">
+          工作台</button
+        ><button class="active" data-icon="download">安装</button
+        ><button onclick="notice('云端同步保留当前结构')" data-icon="sync">
+          云端同步</button
+        ><button
+          onclick="notice('安装后的任务在「自动化」页配置、启停和查看结果')"
+          data-icon="clock"
+        >
+          自动化
+        </button>
+      </nav>
+      <div class="divider"></div>
+      <div class="nav-caption"><span>技能库</span><span>12</span></div>
+      <nav class="nav">
+        <button
+          data-icon="box"
+          onclick="notice('已安装 Skills 在技能库中管理')"
+        >
+          全部技能</button
+        ><button data-icon="folder" onclick="notice('技能组维持现有管理方式')">
+          dev-tools
+        </button>
+      </nav>
+      <div class="side-bottom">
+        <button id="theme" data-icon="sun">切换明暗主题</button
+        ><span>独立任务 · 统一安装入口</span>
+      </div>
+    </aside>
+    <main class="main" id="main">
+      <header class="heading">
+        <div>
+          <h1>发现</h1>
+          <p>扩展你的 Agent 工作空间</p>
+        </div>
+        <span class="preview-tag">交互设计稿</span>
+      </header>
+      <div class="kind-tabs" role="tablist" aria-label="安装内容类型">
+        <button
+          id="tab-skills"
+          role="tab"
+          aria-controls="panel"
+          aria-selected="false"
+          tabindex="-1"
+          onclick="changeKind('skills')"
+          data-icon="box"
+        >
+          Skills</button
+        ><button
+          id="tab-automations"
+          role="tab"
+          aria-controls="panel"
+          aria-selected="true"
+          tabindex="0"
+          onclick="changeKind('automations')"
+          data-icon="clock"
+        >
+          自动化任务
+        </button>
+      </div>
+      <section id="panel" role="tabpanel" aria-labelledby="tab-automations">
+        <div class="toolbar">
+          <div class="sources" id="sources"></div>
+          <label class="search"
+            ><span data-icon="search"></span
+            ><input
+              id="search"
+              placeholder="搜索名称、用途或来源"
+              aria-label="搜索安装内容"
+              oninput="
+                renderContent();
+                showEmptyResults();
+              "
+          /></label>
+        </div>
+        <div id="content"></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="installer" aria-labelledby="dialog-title">
+    <div class="modal-header">
+      <div>
+        <h2 id="dialog-title">安装自动化任务</h2>
+        <p id="dialog-subtitle"></p>
+      </div>
+      <button
+        class="close"
+        aria-label="关闭安装窗口"
+        onclick="closeInstaller()"
+        data-icon="x"
+      ></button>
+    </div>
+    <div class="steps" id="steps"></div>
+    <div id="modal-content" class="modal-content"></div>
+    <div class="modal-footer">
+      <span id="footer-hint">只安装所选任务，项目中的文件会保留</span>
+      <div class="footer-buttons" id="modal-actions"></div>
+    </div>
+  </dialog>
+  <div id="toast" role="status" class="toast hidden"></div>
+  <script>
+    const paths = {
+      clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+      box: '<path d="m12 3 9 5v9l-9 5-9-5V8zM3 8l9 5 9-5M12 13v9"/>',
+      grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+      download: '<path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/>',
+      sync: '<path d="M20 7a9 9 0 0 0-15-2L3 8m0-5v5h5M4 17a9 9 0 0 0 15 2l2-3m0 5v-5h-5"/>',
+      folder:
+        '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+      git: '<circle cx="6" cy="5" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="19" r="3"/><path d="M6 8v8m12-7c0 6-12 2-12 7"/>',
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',
+      search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+      check: '<path d="m5 12 4 4L19 6"/>',
+      x: '<path d="m6 6 12 12M6 18 18 6"/>',
+      info: '<circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-10v.1"/>',
+      drive:
+        '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 13h18M7 16h.1M11 16h.1"/>',
+      star: '<path d="m12 3 2.8 5.7L21 9.6 16.5 14l1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/>',
+    };
+    function icon(name) {
+      return (
+        '<svg aria-hidden="true" viewBox="0 0 24 24">' +
+        (paths[name] || paths.box) +
+        "</svg>"
+      );
+    }
+    function icons() {
+      document.querySelectorAll("[data-icon]").forEach((el) => {
+        if (!el.querySelector("svg"))
+          el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon));
+      });
+    }
+    let formDraft = null;
+    let kind = "automations",
+      source = { skills: "recommended", automations: "recommended" },
+      query = { skills: "", automations: "" },
+      step = 0,
+      selected = 0,
+      trigger = null,
+      timer = null;
+    const tasks = [
+      {
+        name: "项目巡检",
+        desc: "检查近期变更、失败验证与卡住的工作，汇总值得关注的问题。",
+        icon: "clock",
+        tags: ["智能体任务", "每天 09:00", "需要 Herdr"],
+        source: "内置 · AgentHub",
+        installed: false,
+        files:
+          "项目巡检/\n├── task.json\n├── prompt.md\n├── herdr.json\n├── README.md\n└── scripts/\n    ├── run.sh\n    └── agent.py",
+      },
+      {
+        name: "清理磁盘缓存",
+        desc: "按保留规则清理过期缓存与日志，运行前可以先预览清理范围。",
+        icon: "drive",
+        tags: ["命令任务", "每天 03:00", "跨平台"],
+        source: "内置 · AgentHub",
+        installed: true,
+        files:
+          "清理磁盘缓存/\n├── task.json\n├── README.md\n└── scripts/\n    ├── run.sh\n    ├── cleanup.py\n    └── cleanup-config.json",
+      },
+      {
+        name: "定时重置网络",
+        desc: "按计划短暂关闭指定网络服务后恢复，适合定期维护本机网络。",
+        icon: "sync",
+        tags: ["命令任务", "每天 07:00", "需管理员授权"],
+        source: "内置 · AgentHub · macOS",
+        installed: false,
+        files:
+          "定时重置网络/\n├── task.json\n├── README.md\n└── scripts/\n    ├── run.sh\n    └── network-reset.py",
+      },
+    ];
+    function notice(text) {
+      let t = document.querySelector("#toast");
+      t.textContent = text;
+      t.classList.remove("hidden");
+      clearTimeout(timer);
+      timer = setTimeout(() => t.classList.add("hidden"), 3600);
+    }
+    function changeKind(value) {
+      query[kind] = document.querySelector("#search").value;
+      kind = value;
+      for (let k of ["skills", "automations"]) {
+        let t = document.querySelector("#tab-" + k);
+        t.setAttribute("aria-selected", k === kind);
+        t.tabIndex = k === kind ? 0 : -1;
+      }
+      document
+        .querySelector("#panel")
+        .setAttribute("aria-labelledby", "tab-" + kind);
+      document.querySelector("#search").value = query[kind];
+      renderSources();
+      renderContent();
+      location.hash = kind + "/" + source[kind];
+    }
+    function renderSources() {
+      let entries = [
+        ["recommended", "推荐", "star"],
+        ...(kind === "skills" ? [["market", "浏览榜单", "box"]] : []),
+        ["local", "本地安装", "folder"],
+        ["git", "Git 安装", "git"],
+      ];
+      document.querySelector("#sources").innerHTML = entries
+        .map(
+          ([key, label, i]) =>
+            '<button class="' +
+            (source[kind] === key ? "active" : "") +
+            '" aria-pressed="' +
+            (source[kind] === key) +
+            '" onclick="chooseSource(\'' +
+            key +
+            "')\">" +
+            icon(i) +
+            label +
+            "</button>",
+        )
+        .join("");
+    }
+    function chooseSource(value) {
+      source[kind] = value;
+      renderSources();
+      renderContent();
+      location.hash = kind + "/" + value;
+    }
+    function renderContent() {
+      const el = document.querySelector("#content"),
+        mode = source[kind],
+        q = document.querySelector("#search").value.toLowerCase();
+      if (mode === "local") {
+        el.innerHTML =
+          '<p class="intro">' +
+          (kind === "automations"
+            ? "从目录或 JSON 文件安装任务包，预览后配置本机项目与日程。"
+            : "从本地目录安装 Skill。") +
+          '</p><div class="empty">' +
+          icon("folder") +
+          "<h2>选择" +
+          (kind === "automations" ? "自动化任务包" : "Skill 目录") +
+          "</h2><p>" +
+          (kind === "automations"
+            ? "通过 task.json 识别任务，脚本与提示词随目录一起分发。"
+            : "通过 SKILL.md 识别技能。") +
+          '</p><button class="primary" onclick="' +
+          (kind === "automations"
+            ? "openInstaller(0,this)"
+            : "notice('Skills 保留现有本地安装流程')") +
+          '">预览示例' +
+          (kind === "automations" ? "任务包" : "Skill") +
+          "</button>" +
+          (kind === "automations"
+            ? '<div class="code-tree">daily-project-review/\n├── task.json\n├── README.md\n├── prompt.md\n├── herdr.json\n└── scripts/\n    ├── run.sh\n    └── agent.py</div><p>任务的本机状态、依赖和日志在安装后独立生成。</p>'
+            : "") +
+          "</div>";
+        return;
+      }
+      if (mode === "git") {
+        el.innerHTML =
+          '<p class="intro">从 Git 仓库选择' +
+          (kind === "automations" ? "自动化任务" : "Skills") +
+          '，固定所选版本后安装。</p><div class="empty"><h2>从 Git 安装</h2><p>支持一个仓库包含多个独立' +
+          (kind === "automations" ? "任务包" : "Skill") +
+          '。</p><div class="url-row"><input aria-label="Git 仓库地址" value="https://example.invalid/team/automations.git"><button class="primary" onclick="' +
+          (kind === "automations"
+            ? "openInstaller(0,this)"
+            : "notice('Skills 保留现有 Git 安装流程')") +
+          '">预览目录</button></div></div>';
+        return;
+      }
+      if (kind === "skills") {
+        el.innerHTML =
+          '<p class="intro">精选高质量 Skill，安装后部署到你使用的 Agent。</p><div class="section-title"><h2>' +
+          (mode === "market" ? "浏览榜单" : "推荐 Skills") +
+          '</h2></div><div class="cards"><article class="card"><div class="card-head"><span class="task-icon">' +
+          icon("box") +
+          '</span><h3>agent-hub-cli</h3></div><p>管理共享技能库：安装、更新、部署、技能组与多 Agent 同步。</p><div class="tags"><span class="tag">Agent 工作流</span><span class="tag">跨平台</span></div><div class="card-meta">内置 · AgentHub</div><div class="card-bottom"><span class="installed">' +
+          icon("check") +
+          ' 已安装</span><button class="secondary" onclick="notice(\'Skills 继续在技能库中管理\')">查看技能</button></div></article></div>';
+        return;
+      }
+      let visible = tasks
+        .map((t, i) => ({ ...t, i }))
+        .filter((t) => (t.name + t.desc + t.source).toLowerCase().includes(q));
+      el.innerHTML =
+        '<p class="intro">安装可复用的自动化任务，配置项目与日程后启用。</p><div class="section-title"><h2>推荐任务</h2><span>' +
+        visible.length +
+        ' 个任务</span></div><div class="cards">' +
+        visible
+          .map(
+            (t) =>
+              '<article class="card"><div class="card-head"><span class="task-icon ' +
+              (t.i === 0 ? "green" : "") +
+              '">' +
+              icon(t.icon) +
+              "</span><h3>" +
+              t.name +
+              "</h3></div><p>" +
+              t.desc +
+              '</p><div class="tags">' +
+              t.tags
+                .map(
+                  (tag, index) =>
+                    '<span class="tag ' +
+                    (t.i === 2 && index === 2 ? "notice" : "") +
+                    '">' +
+                    tag +
+                    "</span>",
+                )
+                .join("") +
+              '</div><div class="card-meta">' +
+              t.source +
+              '</div><div class="card-bottom">' +
+              (t.installed
+                ? '<span class="installed">' +
+                  icon("check") +
+                  " 已安装 · 已暂停</span>"
+                : '<span class="version">v1.0.0</span>') +
+              '<button class="' +
+              (t.installed ? "secondary" : "primary") +
+              '" onclick="' +
+              (t.installed
+                ? "notice('在「自动化」页查看、启用或卸载此任务')"
+                : "openInstaller(" + t.i + ",this)") +
+              '">' +
+              (t.installed ? "管理任务" : "安装任务") +
+              "</button></div></article>",
+          )
+          .join("") +
+        '</div><div class="help">' +
+        icon("info") +
+        '<div>安装后默认暂停。你可以先查看脚本、检查本机设置，再到「自动化」页启用日程。<br><button class="hint-link" onclick="chooseSource(\'local\')">了解任务包目录结构</button></div></div><div class="catalog-note"><span>Skills 与自动化任务分别安装、更新和管理</span><span>任务包可通过本地目录或 Git 仓库共享</span></div>';
+    }
+    function showEmptyResults() {
+      if (
+        kind === "automations" &&
+        source[kind] === "recommended" &&
+        !document.querySelector(".card")
+      ) {
+        document.querySelector(".cards").innerHTML =
+          '<div class="empty"><h2>未找到匹配的任务</h2><p>试试其他名称或用途关键词。</p></div>';
+      }
+    }
+    function openInstaller(index, button) {
+      selected = index;
+      formDraft = {
+        name: tasks[index].name,
+        project: "~/projects/demo",
+        frequency: "每天",
+        time: "09:00",
+      };
+      step = 0;
+      trigger = button;
+      document.querySelector("#dialog-subtitle").textContent =
+        tasks[index].name + " · v1.0.0 · " + tasks[index].source;
+      renderInstaller();
+      document.querySelector("#installer").showModal();
+    }
+    function closeInstaller() {
+      document.querySelector("#installer").close();
+      (trigger && trigger.isConnected
+        ? trigger
+        : document.querySelector("#tab-" + kind)
+      ).focus();
+    }
+    function renderInstaller() {
+      document.querySelector("#steps").innerHTML = [
+        "任务预览",
+        "本机配置",
+        "安装结果",
+      ]
+        .map(
+          (s, i) =>
+            '<span class="step ' +
+            (i === step ? "active" : "") +
+            '"><b>' +
+            (i + 1) +
+            "</b>" +
+            s +
+            "</span>",
+        )
+        .join("");
+      let t = tasks[selected],
+        content = document.querySelector("#modal-content"),
+        actions = document.querySelector("#modal-actions");
+      if (step === 0) {
+        content.innerHTML =
+          '<div class="overview-grid"><div><h3>这项任务会做什么</h3><p>' +
+          t.desc +
+          "</p><dl><dt>运行方式</dt><dd>" +
+          t.tags[0] +
+          "</dd><dt>默认日程</dt><dd>" +
+          t.tags[1] +
+          "</dd><dt>依赖与权限</dt><dd>" +
+          (selected === 0
+            ? "Python 3、Herdr 和所选 Agent"
+            : selected === 2
+              ? "macOS，需要系统管理员授权"
+              : "Python 3，使用独立环境") +
+          '</dd></dl><p>本机项目与运行历史不随任务包分发。</p></div><div><h3>任务包内容</h3><div class="file-preview">' +
+          t.files +
+          "</div></div></div>";
+        actions.innerHTML =
+          '<button class="secondary" onclick="closeInstaller()">取消</button><button class="primary" onclick="goStep(1)">下一步：本机配置</button>';
+      } else if (step === 1) {
+        content.innerHTML =
+          '<div class="field"><label for="task-name">任务名称</label><input id="task-name" required value="' +
+          escapeAttribute(formDraft.name) +
+          '"></div><div class="field"><label for="project">项目工作区</label><input id="project" required value="' +
+          escapeAttribute(formDraft.project) +
+          '"><small>任务在这个项目中执行，脚本保存在独立的任务目录。</small></div><div class="field"><label>日程</label><div class="schedule-row"><button class="selected" aria-pressed="true" onclick="schedule(this)">每天</button><button aria-pressed="false" onclick="schedule(this)">工作日</button><button aria-pressed="false" onclick="schedule(this)">仅手动</button><input type="time" aria-label="执行时间" value="09:00"></div></div><div class="pause-notice">' +
+          icon("info") +
+          "<div><strong>安装后保持暂停</strong>准备独立依赖并注册任务，不立即执行。确认设置后，可在「自动化」页启用计划。" +
+          (selected === 2 ? "<br>安装权限入口时，系统将请求管理员授权。" : "") +
+          "</div></div>";
+        actions.innerHTML =
+          '<button class="secondary" onclick="saveDraft();goStep(0)">上一步</button><button class="primary" onclick="completeInstall()">安装并保持暂停</button>';
+      } else {
+        content.innerHTML =
+          '<div class="success"><div class="success-icon">' +
+          icon("check") +
+          "</div><h3>已安装，计划已暂停</h3><p>" +
+          escapeAttribute(formDraft.name) +
+          " 已准备就绪。<br>前往「自动化」检查设置、手动运行或启用日程。</p></div>";
+        actions.innerHTML =
+          '<button class="secondary" onclick="closeInstaller()">完成</button><button class="primary" onclick="closeInstaller();notice(\'安装结果转入「自动化」管理页，默认保留暂停状态\')">查看任务</button>';
+      }
+    }
+    function escapeAttribute(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll('\"', "&quot;")
+        .replaceAll("<", "&lt;");
+    }
+    function saveDraft() {
+      if (step !== 1) return;
+      formDraft.name = document.querySelector("#task-name").value;
+      formDraft.project = document.querySelector("#project").value;
+      formDraft.time = document.querySelector("[type=time]").value;
+      formDraft.frequency = document.querySelector(
+        ".schedule-row button.selected",
+      ).textContent;
+    }
+    function goStep(value) {
+      step = value;
+      renderInstaller();
+      if (step === 1) {
+        for (let b of document.querySelectorAll(".schedule-row button")) {
+          let active = b.textContent === formDraft.frequency;
+          b.classList.toggle("selected", active);
+          b.setAttribute("aria-pressed", active);
+        }
+        document.querySelector("[type=time]").value = formDraft.time;
+        document.querySelector("[type=time]").disabled =
+          formDraft.frequency === "仅手动";
+        document.querySelector("#task-name").focus();
+      }
+    }
+    function schedule(button) {
+      for (let b of button.parentElement.querySelectorAll("button")) {
+        b.classList.toggle("selected", b === button);
+        b.setAttribute("aria-pressed", b === button);
+      }
+      document.querySelector("[type=time]").disabled =
+        button.textContent === "仅手动";
+    }
+    function completeInstall() {
+      for (let input of document.querySelectorAll(".field input")) {
+        if (!input.disabled && !input.reportValidity()) return;
+      }
+      saveDraft();
+      document.querySelector("#modal-actions").innerHTML =
+        '<button class="primary" disabled aria-busy="true">正在准备独立任务…</button>';
+      document.querySelector("#footer-hint").setAttribute("role", "status");
+      document.querySelector("#footer-hint").textContent =
+        "设计演示：准备依赖与注册任务";
+      setTimeout(() => {
+        tasks[selected].installed = true;
+        step = 2;
+        renderInstaller();
+        document.querySelector("#footer-hint").textContent =
+          "交互演示完成，未创建真实任务";
+        renderContent();
+      }, 500);
+    }
+    document.querySelector(".kind-tabs").addEventListener("keydown", (e) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      e.preventDefault();
+      let next =
+        e.key === "Home"
+          ? "skills"
+          : e.key === "End"
+            ? "automations"
+            : kind === "skills"
+              ? "automations"
+              : "skills";
+      changeKind(next);
+      document.querySelector("#tab-" + next).focus();
+    });
+    document.querySelector("#theme").onclick = () => {
+      document.documentElement.dataset.theme =
+        document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    };
+    document.querySelector("#installer").addEventListener("close", () => {
+      (trigger && trigger.isConnected
+        ? trigger
+        : document.querySelector("#tab-" + kind)
+      ).focus();
+    });
+    renderSources();
+    renderContent();
+    icons();
+    const previewParams = new URLSearchParams(location.search);
+    if (previewParams.get("theme") === "light")
+      document.documentElement.dataset.theme = "light";
+    if (previewParams.get("view") === "config") {
+      openInstaller(0, null);
+      goStep(1);
+    }
+    if (previewParams.get("view") === "local") chooseSource("local");
+  </script>
+</html>

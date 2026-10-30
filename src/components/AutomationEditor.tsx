@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
 import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
+import { externalAutomationScriptDirectory } from "../lib/automationScriptDirectory";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
 import { AutomationProjectField } from "./AutomationProjectField";
 import { AutomationTemplatePicker } from "./AutomationTemplatePicker";
@@ -60,6 +61,12 @@ export function AutomationEditor({
     name.current?.focus();
     const keydown = (event: KeyboardEvent) => {
       if (leaving.current) return;
+      // A native child modal owns keyboard navigation and Escape until closed.
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest("dialog[open]")
+      )
+        return;
       if (
         event.key === "Escape" &&
         event.target instanceof HTMLElement &&
@@ -118,6 +125,9 @@ export function AutomationEditor({
   const externalNative =
     !!task && task.origin !== "agent_hub" && task.source !== "hermes";
   const schedule = draft.schedule;
+  const scriptDir = externalNative
+    ? externalAutomationScriptDirectory(draft.content, draft.workdir)
+    : (draft.script_dir ?? task?.definition?.workdir ?? null);
   const herdrConfig = automationHerdrConfig(draft);
   const promptFile = automationPromptFile(draft);
   const submit = async () => {
@@ -224,6 +234,9 @@ export function AutomationEditor({
               </label>
               <AutomationTaskContent
                 draft={draft}
+                scriptDirectory={
+                  task?.definition?.script_dir ?? task?.definition?.workdir
+                }
                 busy={busy || selectingAgent}
                 inactivePrompt={inactivePrompt}
                 onChange={update}
@@ -255,22 +268,21 @@ export function AutomationEditor({
                 disabled={busy}
                 onChange={(workdir) => update({ workdir })}
               />
-              {draft.provider === "system" && !externalNative && (
-                <details className="border-t border-border-subtle pt-4">
-                  <summary className="cursor-pointer text-[12px] font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
-                    {t("automation.scriptDir")}
-                  </summary>
-                  <div className="mt-4 space-y-4">
-                    <AutomationWorkdirField
-                      kind="scriptDir"
-                      value={draft.script_dir ?? null}
-                      readOnly={!task || !!task.installation}
-                      disabled={busy}
-                      onChange={(script_dir) => update({ script_dir })}
-                    />
-                  </div>
-                </details>
-              )}
+              {draft.provider === "system" &&
+                (!externalNative || scriptDir) && (
+                  <AutomationWorkdirField
+                    kind="scriptDir"
+                    value={scriptDir}
+                    readOnly={externalNative || !task || !!task.installation}
+                    helpText={
+                      externalNative
+                        ? t("automation.externalScriptDirHelp")
+                        : undefined
+                    }
+                    disabled={busy}
+                    onChange={(script_dir) => update({ script_dir })}
+                  />
+                )}
               <AutomationScheduleInput
                 schedule={schedule}
                 provider={draft.provider}

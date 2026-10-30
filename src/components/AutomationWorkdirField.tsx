@@ -16,6 +16,7 @@ export function AutomationWorkdirField({
   projects = [],
   projectsLoading = false,
   readOnly = false,
+  helpText,
 }: {
   value: string | null;
   disabled: boolean;
@@ -24,6 +25,7 @@ export function AutomationWorkdirField({
   projects?: Project[];
   projectsLoading?: boolean;
   readOnly?: boolean;
+  helpText?: string;
 }) {
   const { t } = useTranslation();
   const inputId = useId();
@@ -194,13 +196,14 @@ export function AutomationWorkdirField({
         </p>
       )}
       <p className="break-words text-[11px] leading-5 text-muted">
-        {t(
-          kind === "scriptDir"
-            ? "automation.defaultScriptDir"
-            : kind === "projectWorkspace"
-              ? "automation.projectWorkspaceHelp"
-              : "automation.defaultWorkdir",
-        )}
+        {helpText ??
+          t(
+            kind === "scriptDir"
+              ? "automation.defaultScriptDir"
+              : kind === "projectWorkspace"
+                ? "automation.projectWorkspaceHelp"
+                : "automation.defaultWorkdir",
+          )}
       </p>
     </div>
   );

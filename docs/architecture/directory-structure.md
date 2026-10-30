@@ -23,6 +23,8 @@ agent-hub/
 │   │   ├── CommandPalette.tsx      #   命令面板
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗
+│   │   ├── file-reader/            #   通用文件阅读器、弹窗壳、目录树与文本内容区
+│   │   ├── MarkdownContent.tsx     #   通用 Markdown 正文渲染
 │   │   ├── StatusBanner.tsx        #   状态横幅
 │   │   ├── SkillGroupBar.tsx        #   技能组切换栏
 │   │   ├── AgentIcon.tsx           #   Agent 图标

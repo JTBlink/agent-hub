@@ -8,10 +8,13 @@ import zh from "../i18n/zh.json";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { Automation } from "./Automation";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openDirectoryInVscode } from "../lib/openInVscode";
+import { openDirectoryInVscode, openFileInVscode } from "../lib/openInVscode";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(), save: vi.fn() }));
-vi.mock("../lib/openInVscode", () => ({ openDirectoryInVscode: vi.fn() }));
+vi.mock("../lib/openInVscode", () => ({
+  openDirectoryInVscode: vi.fn(),
+  openFileInVscode: vi.fn(),
+}));
 
 vi.mock("../lib/tauri", () => ({
   getProjects: vi.fn(),
@@ -119,6 +122,7 @@ beforeEach(() => {
   vi.mocked(api.getProjects).mockReset().mockResolvedValue([]);
   vi.mocked(open).mockReset().mockResolvedValue(null);
   vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
+  vi.mocked(openFileInVscode).mockReset().mockResolvedValue();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.mocked(api.onAutomationChanged)
     .mockReset()
@@ -734,6 +738,17 @@ it("selects a registered project without moving scripts and saves both directori
   expect(
     container.querySelector<HTMLInputElement>('[aria-label="脚本目录"]')!.value,
   ).toBe("/workspace/task-scripts");
+  expect(
+    container.querySelector('[aria-label="脚本目录"]')!.closest("details"),
+  ).toBeNull();
+  await ariaClick("在 VS Code 中打开脚本目录");
+  expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
+    "/workspace/task-scripts",
+  );
+  await ariaClick("在 VS Code 中打开");
+  expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
+    "/workspace/review-project",
+  );
   await act(async () =>
     container
       .querySelector("form")!
@@ -748,6 +763,61 @@ it("selects a registered project without moving scripts and saves both directori
     }),
   );
 });
+
+it.each([undefined, "/workspace/scripts"])(
+  "opens saved script directories independently of project edits (%s)",
+  async (script_dir) => {
+    const task: api.AutomationTask = {
+      ...native,
+      origin: "agent_hub",
+      can_edit: true,
+      definition: {
+        ...hermes.definition!,
+        provider: "system",
+        content: "sh './run.sh'",
+        script_dir,
+        workdir: "/workspace/legacy-scripts",
+        files: [{ path: "scripts/run.sh", content: "echo check" }],
+      },
+    };
+    vi.mocked(api.getAutomationOverview).mockResolvedValue({
+      tasks: [task],
+      issues: [],
+      hermes_installed: false,
+    });
+    await render("/automation?task=" + encodeURIComponent(task.id));
+    await click("编辑自动化");
+    vi.mocked(open).mockResolvedValueOnce("/workspace/another-project");
+    expect(container.textContent).not.toContain("从执行命令识别脚本目录");
+    await ariaClick("选择项目工作区目录");
+    vi.mocked(openDirectoryInVscode).mockRejectedValueOnce(
+      new Error("VS Code unavailable"),
+    );
+    await ariaClick("在 VS Code 中打开脚本目录");
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "VS Code unavailable",
+    );
+    await ariaClick("在 VS Code 中打开脚本目录");
+    expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
+      script_dir ?? "/workspace/legacy-scripts",
+    );
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(api.saveAutomation).not.toHaveBeenCalled();
+    expect(api.runAutomation).not.toHaveBeenCalled();
+    await click("打开文件阅读器");
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          'dialog [aria-label="在 VS Code 中打开"]',
+        )!
+        .click(),
+    );
+    expect(openFileInVscode).toHaveBeenLastCalledWith(
+      script_dir ?? "/workspace/legacy-scripts",
+      "scripts/run.sh",
+    );
+  },
+);
 
 it("edits an agent prompt directly in the unified layout with a one-line launcher", async () => {
   vi.mocked(api.getAutomationTemplates).mockResolvedValue({
@@ -1454,8 +1524,15 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
       'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
     ),
   ).toBeNull();
-  await ariaClick("disk-cleanup/disk-cleanup.py");
-  const script = container.querySelector<HTMLTextAreaElement>(
+  await click("打开文件阅读器");
+  await act(async () =>
+    document
+      .querySelector<HTMLButtonElement>(
+        'dialog button[aria-label="disk-cleanup/disk-cleanup.py"]',
+      )!
+      .click(),
+  );
+  const script = document.querySelector<HTMLTextAreaElement>(
     'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
   )!;
   await act(async () => {
@@ -1465,6 +1542,21 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
     )!.set!.call(script, "TEMP_RETENTION_DAYS = 14\nLOG_RETENTION_DAYS = 60\n");
     script.dispatchEvent(new Event("input", { bubbles: true }));
   });
+  // Escape belongs to the native reader, not the underlying automation editor.
+  await act(async () => {
+    script.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    document
+      .querySelector("dialog")!
+      .dispatchEvent(new Event("cancel", { cancelable: true }));
+  });
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(container.querySelector("form")).not.toBeNull();
   await act(async () => {
     schedule.value = "manual";
     schedule.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1803,15 +1895,29 @@ it("allows an editable external LaunchAgent to save in place and delete without 
   vi.mocked(api.saveAutomation).mockResolvedValue(external.id);
   await render("/automation?task=" + encodeURIComponent(external.id));
   await click("编辑自动化");
+  const scriptDirectory = container.querySelector<HTMLInputElement>(
+    '[aria-label="脚本目录"]',
+  )!;
+  expect(scriptDirectory.value).toBe("/workspace");
+  expect(scriptDirectory.readOnly).toBe(true);
+  expect(scriptDirectory.closest("details")).toBeNull();
+  expect(container.querySelector('[aria-label="选择脚本目录"]')).toBeNull();
+  await ariaClick("在 VS Code 中打开脚本目录");
+  expect(openDirectoryInVscode).toHaveBeenLastCalledWith("/workspace");
   expect(
     container.querySelector('select[aria-label="日程"] option[value="manual"]'),
   ).toBeNull();
-  await input("执行命令", "sh '/workspace/new-start.sh'");
+  await input("执行命令", "sh '/workspace/other/new-start.sh'");
+  await ariaClick("在 VS Code 中打开脚本目录");
+  expect(openDirectoryInVscode).toHaveBeenLastCalledWith("/workspace/other");
   await click("保存");
   expect(api.saveAutomation).toHaveBeenCalledWith(
     external.id,
     42,
-    expect.objectContaining({ content: "sh '/workspace/new-start.sh'" }),
+    expect.objectContaining({
+      content: "sh '/workspace/other/new-start.sh'",
+      script_dir: null,
+    }),
   );
   await ariaClick("删除自动化");
   expect(container.textContent).not.toContain("同时删除本地任务数据");

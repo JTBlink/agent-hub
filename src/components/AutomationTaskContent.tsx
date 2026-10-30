@@ -7,11 +7,13 @@ export function AutomationTaskContent({
   draft,
   busy,
   inactivePrompt = "",
+  scriptDirectory,
   onChange,
 }: {
   draft: AutomationDraft;
   busy: boolean;
   inactivePrompt?: string;
+  scriptDirectory?: string | null;
   onChange: (value: Partial<AutomationDraft>) => void;
 }) {
   const { t } = useTranslation();
@@ -80,6 +82,7 @@ export function AutomationTaskContent({
         )}
       </p>
       <AutomationScriptFilesEditor
+        scriptDirectory={scriptDirectory}
         files={(draft.files ?? []).filter(
           (file) => file.path !== promptFile?.path,
         )}
