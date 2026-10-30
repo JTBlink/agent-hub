@@ -1,5 +1,10 @@
 {
   "automation": {
+    "fromDiscovery": "Install from Discover",
+    "leaveForDiscoveryTitle": "Go to Discover?",
+    "leaveForDiscoveryMessage": "Your changes have not been saved. Going to Discover closes this form. Continue?",
+    "cloudBackupHelp": "AgentHub tasks, including installed tasks, back up scripts, prompts, dependency declarations and schedules through Cloud Sync. Restore creates an uninstalled copy; configure its local project before installing.",
+    "cloudBackupAction": "Cloud Sync",
     "hideBuiltin": "Hide built-in system tasks",
     "builtinHidden": "{{count}} built-in system tasks hidden",
     "runSucceeded": "Succeeded",
@@ -507,10 +512,12 @@
     "scope": {
       "title": "Sync scope",
       "included": {
+        "automations": "Automation packages: task.json, scripts, prompts, dependency declarations and schedules",
         "skills": "Skills and their files",
         "metadata": "Tags, skill groups, skill group membership, and per-agent skill toggles"
       },
       "excluded": {
+        "automationLocal": "Automation project bindings, installation receipts, private environments and run history",
         "secrets": "API keys, tokens, and proxy credentials",
         "local": "Machine-specific paths, app settings, and local agent setup"
       },
@@ -1776,6 +1783,12 @@
     "searchTasks": "Search task names or purposes",
     "builtin": "Built-in · AgentHub",
     "installNamed": "Install {{name}}",
+    "reinstallNamed": "Reinstall {{name}}",
+    "reinstall": "Installed; click to reinstall",
+    "overwriteTitle": "Overwrite an automation with the same name?",
+    "overwriteMessage": "“{{name}}” already exists. Replace the selected task’s scripts, dependencies, project and schedule, keeping its identity and run history. The task will be paused. Cancel to choose another name.",
+    "overwriteConfirm": "Overwrite and install",
+    "cannotOverwrite": "This task cannot be replaced now (read-only, running, different scheduler or pending installation). Resolve the existing task or choose another name.",
     "requiresAdmin": "Requires macOS administrator authorization",
     "requirements": "Dependencies",
     "noExtraDependencies": "No extra dependencies",

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "Daily project summary",
+    "provider": "hermes",
+    "content": "Review recent commits, current changes and project notes in this working directory. Write a short daily summary of progress, risks and suggested next steps. Do not change files.",
+    "workdir": null,
+    "schedule": {
+      "kind": "daily",
+      "hour": 18,
+      "minute": 0,
+      "weekdays": false
+    },
+    "enabled": false
+  },
+  "files": ["README.md"],
+  "dependencies": []
+}

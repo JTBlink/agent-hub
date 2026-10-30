@@ -12,7 +12,7 @@
 - **安装 / 部署**：将库内 Skill 按目标工具规则关联到指定工作空间；不等同于把来源导入技能库。
 - **技能组（Skill Group）**：按用途命名的 Skill 集合，用于向工作空间批量添加或移除技能；修改组内成员不会自动更新已有部署。中文界面使用”技能组”，英文界面使用”Skill Group”，代码层使用 `skill_group` / `SkillGroup`，数据库层保留 `scenario`，CLI 顶层命令使用 `skill-groups`，并兼容 `presets` 与 `scenarios` 别名。
 - **来源**：Skill 的远程 Git 仓库或本地目录；来源修订用于检查内容更新。
-- **备份与同步**：独立 Git 工作区默认位于 `~/.agent-hub/backup`，以 `skills/` 和 `.agent-hub/` 保存可安装 Skill 与同步元数据。凭据单独保存于应用数据目录的 `credentials/`，不进入备份。
+- **备份与同步**：独立 Git 工作区默认位于 `~/.agent-hub/backup`，以 `skills/`、`automations/` 和 `.agent-hub/` 保存可安装 Skill、自动化任务包与同步元数据。凭据单独保存于应用数据目录的 `credentials/`，不进入备份。
 
 SQLite 保存技能、项目、技能组和设置等状态。桌面 commands 和 CLI 共用 `src-tauri/src/core/`；前端通过 `src/lib/tauri.ts` 调用命令。已有自定义库与 CLI 显式目录保持兼容。技能库目录内的有效 Skills 原地登记，直接读取该目录的 Agent 可见全部内容。
 

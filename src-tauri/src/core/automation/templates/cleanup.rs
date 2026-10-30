@@ -28,7 +28,7 @@ mod tests {
         }
         fs::write(
             &file,
-            include_str!("builtin/disk-cleanup/scripts/disk-cleanup.py"),
+            include_str!("../../../../../automations/system/disk-cleanup/scripts/disk-cleanup.py"),
         )
         .unwrap();
         file

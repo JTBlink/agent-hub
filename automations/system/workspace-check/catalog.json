@@ -1,0 +1,15 @@
+{
+  "id": "workspace-check",
+  "title": {
+    "en": "Workspace check",
+    "zh": "工作目录检查",
+    "zh-TW": "工作目錄檢查"
+  },
+  "description": {
+    "en": "Inspect the current directory and files. Run manually.",
+    "zh": "查看当前目录和文件，按需手动触发。",
+    "zh-TW": "查看目前目錄和檔案，按需手動觸發。"
+  },
+  "entrypoint": "scripts/workspace-check.py",
+  "default_enabled": true
+}

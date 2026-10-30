@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "Reset network on schedule",
+    "provider": "system",
+    "content": "sh './scripts/run.sh'",
+    "workdir": null,
+    "schedule": {
+      "kind": "daily",
+      "hour": 7,
+      "minute": 0,
+      "weekdays": false
+    },
+    "enabled": false
+  },
+  "files": [
+    "scripts/network-reset.py",
+    "scripts/setup.sh",
+    "scripts/reset.sh",
+    "README.md",
+    "scripts/run.sh"
+  ],
+  "dependencies": [
+    {
+      "kind": "python",
+      "packages": []
+    }
+  ]
+}

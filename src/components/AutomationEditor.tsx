@@ -11,6 +11,8 @@ import { useTranslation } from "react-i18next";
 import type { AutomationDraft, AutomationTask } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { ToggleSwitch } from "./ToggleSwitch";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useNavigate } from "react-router-dom";
 
 export function AutomationEditor({
   task,
@@ -26,6 +28,7 @@ export function AutomationEditor({
   onSave: (draft: AutomationDraft) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<AutomationDraft>(
     task?.definition ?? {
       name: "",
@@ -36,10 +39,14 @@ export function AutomationEditor({
       enabled: !restoreBackup,
     },
   );
+  const initialDraft = useRef(draft);
+  const [leavingForDiscovery, setLeavingForDiscovery] = useState(false);
+  const leaving = useRef(false);
+  leaving.current = leavingForDiscovery;
   const [busy, setBusy] = useState(false);
   const [selectingAgent, setSelectingAgent] = useState(false);
   const [inactivePrompt, setInactivePrompt] = useState("");
-  const [picker, setPicker] = useState<"builtin" | "backup" | null>(
+  const [picker, setPicker] = useState<"backup" | null>(
     restoreBackup ? "backup" : null,
   );
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +59,7 @@ export function AutomationEditor({
     const previous = document.activeElement;
     name.current?.focus();
     const keydown = (event: KeyboardEvent) => {
+      if (leaving.current) return;
       if (
         event.key === "Escape" &&
         event.target instanceof HTMLElement &&
@@ -93,6 +101,18 @@ export function AutomationEditor({
         ?.focus();
     else name.current?.focus();
   }, [picker]);
+  const openDiscovery = () => {
+    onClose();
+    navigate("/discover?type=automations&automationSource=recommended");
+  };
+  const discover = () => {
+    if (
+      JSON.stringify(draft) !== JSON.stringify(initialDraft.current) ||
+      inactivePrompt
+    )
+      setLeavingForDiscovery(true);
+    else openDiscovery();
+  };
   const update = (value: Partial<AutomationDraft>) =>
     setDraft((previous) => ({ ...previous, ...value }));
   const externalNative =
@@ -156,11 +176,11 @@ export function AutomationEditor({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => setPicker("builtin")}
+                onClick={discover}
                 className="app-button-secondary focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <Sparkles className="h-4 w-4" />
-                {t("automation.useTemplate")}
+                {t("automation.fromDiscovery")}
               </button>
             )}
             <button
@@ -178,7 +198,7 @@ export function AutomationEditor({
           <AutomationTemplatePicker
             source={picker}
             hermesInstalled={hermesInstalled}
-            onBack={() => (picker === "backup" ? onClose() : setPicker(null))}
+            onBack={onClose}
             onChoose={(value) => {
               setDraft(value);
               setError(null);
@@ -326,6 +346,15 @@ export function AutomationEditor({
           </div>
         </footer>
       </form>
+      <ConfirmDialog
+        open={leavingForDiscovery}
+        title={t("automation.leaveForDiscoveryTitle")}
+        message={t("automation.leaveForDiscoveryMessage")}
+        confirmLabel={t("automation.fromDiscovery")}
+        tone="warning"
+        onClose={() => setLeavingForDiscovery(false)}
+        onConfirm={async () => openDiscovery()}
+      />
     </div>
   );
 }

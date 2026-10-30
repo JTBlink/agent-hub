@@ -1,5 +1,10 @@
 {
   "automation": {
+    "fromDiscovery": "從發現安裝",
+    "leaveForDiscoveryTitle": "前往發現頁？",
+    "leaveForDiscoveryMessage": "目前填寫的內容尚未儲存，前往發現頁會關閉此表單。是否繼續？",
+    "cloudBackupHelp": "AgentHub 建立的任務（含已安裝任務）的腳本、提示詞、相依宣告與排程會隨雲端同步備份。還原時建立未安裝副本，重新設定本機專案後安裝。",
+    "cloudBackupAction": "雲端同步",
     "hideBuiltin": "隱藏系統內建任務",
     "builtinHidden": "已隱藏 {{count}} 個系統內建任務",
     "runSucceeded": "執行成功",
@@ -505,10 +510,12 @@
     "scope": {
       "title": "同步範圍",
       "included": {
+        "automations": "自動化任務套件：task.json、腳本、提示詞、相依宣告與排程",
         "skills": "技能檔案及目錄",
         "metadata": "標籤、技能組、技能組成員關係和每個 Agent 的技能開關"
       },
       "excluded": {
+        "automationLocal": "自動化的本機專案綁定、安裝回條、私有環境與執行記錄",
         "secrets": "API key、token 和代理憑證",
         "local": "本機路徑、應用設定和本機 Agent 連接"
       },
@@ -1719,6 +1726,12 @@
     "searchTasks": "搜尋任務名稱或用途",
     "builtin": "內建 · AgentHub",
     "installNamed": "安裝 {{name}}",
+    "reinstallNamed": "重新安裝 {{name}}",
+    "reinstall": "已安裝，點擊重新安裝",
+    "overwriteTitle": "覆蓋同名自動化任務？",
+    "overwriteMessage": "任務「{{name}}」已存在。確認後將替換所選任務的腳本、相依套件、專案與排程設定，保留任務識別碼和執行記錄，並保持暫停。取消後可修改名稱另行安裝。",
+    "overwriteConfirm": "確認覆蓋安裝",
+    "cannotOverwrite": "此任務暫不能覆蓋（唯讀、正在執行、排程器不同或安裝狀態待處理）。請處理原任務或修改新任務名稱。",
     "requiresAdmin": "需要 macOS 管理員授權",
     "requirements": "相依項目",
     "noExtraDependencies": "無額外相依項目",

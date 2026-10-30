@@ -14,6 +14,7 @@ import { getErrorMessage } from "../../lib/error";
 import { AutomationPackageCard } from "./AutomationPackageCard";
 import { AutomationInstaller } from "./AutomationInstaller";
 import { StatusBanner } from "../StatusBanner";
+import { useAutomationOverview } from "../../hooks/useAutomationOverview";
 
 export function AutomationDiscovery({
   source,
@@ -24,6 +25,14 @@ export function AutomationDiscovery({
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
+  const overview = useAutomationOverview(locale);
+  const refreshOverview = overview.refresh;
+  const [installedIds, setInstalledIds] = useState<Record<string, string>>({});
+  const wasActive = useRef(active);
+  useEffect(() => {
+    if (active && !wasActive.current) refreshOverview();
+    wasActive.current = active;
+  }, [active, refreshOverview]);
   const [catalog, setCatalog] = useState<AutomationCatalog | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
@@ -153,6 +162,16 @@ export function AutomationDiscovery({
   return (
     <div className="space-y-4 pb-8">
       <p className="text-[13px] text-muted">{t("discovery.taskDescription")}</p>
+      {overview.error && (
+        <StatusBanner
+          compact
+          tone="danger"
+          title={t("automation.loadFailed")}
+          description={overview.error}
+          actionLabel={t("common.retry")}
+          onAction={overview.refresh}
+        />
+      )}
       {source === "recommended" && (
         <>
           <label className="relative block max-w-xl">
@@ -307,6 +326,17 @@ export function AutomationDiscovery({
             <AutomationPackageCard
               key={`${task.title}-${index}`}
               task={task}
+              installed={
+                !!overview.data?.tasks.some(
+                  (existing) =>
+                    existing.origin === "agent_hub" &&
+                    (existing.name.trim() === task.draft.name.trim() ||
+                      existing.id ===
+                        installedIds[`${task.source}:${task.title}`]) &&
+                    (existing.installation === "installed" ||
+                      (!existing.installation && existing.can_run)),
+                )
+              }
               onInstall={() => setSelected(task)}
             />
           ))}
@@ -329,6 +359,13 @@ export function AutomationDiscovery({
       {selected && (
         <AutomationInstaller
           task={selected}
+          onInstalled={(id) => {
+            setInstalledIds((previous) => ({
+              ...previous,
+              [`${selected.source}:${selected.title}`]: id,
+            }));
+            overview.refresh();
+          }}
           onClose={() => setSelected(null)}
         />
       )}

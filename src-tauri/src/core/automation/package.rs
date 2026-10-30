@@ -18,6 +18,7 @@ pub(super) use exchange::normalize;
 pub use exchange::{
     export_package, import_definition, import_package, preview_package, AutomationPackage,
 };
+pub(crate) use exchange::{read_backup_directory, write_backup_directory};
 pub(super) use lifecycle::remove;
 pub use lifecycle::{install, uninstall};
 pub use migration::migrate;

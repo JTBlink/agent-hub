@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "Workspace check",
+    "provider": "system",
+    "content": "sh './scripts/run.sh'",
+    "workdir": null,
+    "schedule": {
+      "kind": "manual"
+    },
+    "enabled": false
+  },
+  "files": ["scripts/workspace-check.py", "scripts/run.sh", "README.md"],
+  "dependencies": [
+    {
+      "kind": "python",
+      "packages": []
+    }
+  ]
+}

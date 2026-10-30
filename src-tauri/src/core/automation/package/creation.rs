@@ -58,13 +58,11 @@ pub(super) fn create_identity(
         });
     }
     super::dependencies::validate(&dependencies)?;
-    if draft
-        .files
+    if draft.files.iter().any(|file| {
+        file.content == include_str!("../../../../../automations/_shared/herdr-agent.py")
+    }) && !dependencies
         .iter()
-        .any(|file| file.content == include_str!("../templates/builtin/herdr-agent.py"))
-        && !dependencies
-            .iter()
-            .any(|dependency| matches!(dependency, Dependency::Command { name } if name == "herdr"))
+        .any(|dependency| matches!(dependency, Dependency::Command { name } if name == "herdr"))
     {
         dependencies.push(Dependency::Command {
             name: "herdr".into(),

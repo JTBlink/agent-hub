@@ -13,7 +13,19 @@ use std::{
 };
 
 const LAYOUT: &str = ".agent-hub/backup-layout.json";
-const README: &str = "# Skills\n\nInstall all or selected skills with:\n\n```sh\nnpx skills@latest add <repository-url>\nnpx skills@latest add <repository-url> --skill <skill-name>\n```\n\nSkills are in `skills/`, each with its original `SKILL.md` and supporting files.\n`.agent-hub/` contains portable AgentHub sync metadata.\nPrivate repositories require Git access on the installing machine.\n";
+const LEGACY_README: &str = "# Skills\n\nInstall all or selected skills with:\n\n```sh\nnpx skills@latest add <repository-url>\nnpx skills@latest add <repository-url> --skill <skill-name>\n```\n\nSkills are in `skills/`, each with its original `SKILL.md` and supporting files.\n`.agent-hub/` contains portable AgentHub sync metadata.\nPrivate repositories require Git access on the installing machine.\n";
+const README: &str = "# AgentHub backup\n\n- `skills/`: installable Skills with `SKILL.md` and supporting files.\n- `automations/`: installable task directories with `task.json`, scripts and prompts.\n- `.agent-hub/`: portable sync metadata.\n\nInstall Skills with `npx skills@latest add <repository-url>`. Preview automation packages through AgentHub Discover → Automations → Git install. Restored tasks require local configuration and installation before use.\n\nCredentials, installation receipts, private environments and run history stay on the original device. Private repositories require Git access on the installing machine.\n";
+
+fn write_readme(root: &Path) -> Result<()> {
+    let path = root.join("README.md");
+    match fs::read_to_string(&path) {
+        Ok(contents) if contents == LEGACY_README => fs::write(path, README)?,
+        Ok(_) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => fs::write(path, README)?,
+        Err(error) => return Err(error.into()),
+    }
+    Ok(())
+}
 
 /// Local backup Git repository; respects isolated app/CLI roots.
 pub fn repo_dir() -> PathBuf {
@@ -217,6 +229,7 @@ pub(crate) fn normalize_layout(root: &Path) -> Result<()> {
         bail!("Linked backup layout is not supported");
     }
     if root.join(LAYOUT).is_file() {
+        write_readme(root)?;
         return Ok(());
     }
     let metadata = root.join(".agent-hub/skills");
@@ -236,6 +249,7 @@ pub(crate) fn normalize_layout(root: &Path) -> Result<()> {
         fs::create_dir(&content)?;
         let names: Vec<_> = files::names(root)?
             .into_iter()
+            .filter(|name| name != "automations")
             .filter(|name| files::content_name(name))
             .collect();
         for name in &names {
@@ -260,9 +274,7 @@ pub(crate) fn normalize_layout(root: &Path) -> Result<()> {
     }
     fs::create_dir_all(root.join(".agent-hub"))?;
     fs::write(root.join(LAYOUT), b"{\"version\":1}\n")?;
-    if !root.join("README.md").exists() {
-        fs::write(root.join("README.md"), README)?;
-    }
+    write_readme(root)?;
     Ok(())
 }
 
@@ -337,7 +349,19 @@ pub(crate) fn prepare_unlocked(store: &SkillStore) -> Result<()> {
 }
 
 fn project_metadata(source: &Path, target: &Path, exporting: bool) -> Result<()> {
-    super::automation::backup::project(source, target).map_err(anyhow::Error::msg)?;
+    if exporting {
+        super::automation::backup::repository::export(
+            source,
+            target.parent().context("Missing backup root")?,
+        )
+    } else {
+        super::automation::backup::repository::import(
+            source.parent().context("Missing backup root")?,
+            target,
+        )
+        .map(|_| ())
+    }
+    .map_err(anyhow::Error::msg)?;
     // Only portable schema/records, never sync protocol files or local state.
     for name in ["schema.json", "skills", "scenarios", "scenario-skills"] {
         files::remove(&target.join(name))?;

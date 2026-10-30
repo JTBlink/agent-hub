@@ -29,8 +29,16 @@ pub(super) fn validate_path(path: &str) -> Result<(), String> {
 
 impl AutomationPackage {
     pub(super) fn validate(&mut self) -> Result<(), String> {
-        if self.schema_version != 1 || self.shell != super::super::command_shell() {
+        self.validate_portable()?;
+        if self.shell != super::super::command_shell() {
             return Err("Unsupported package version or shell for this computer".into());
+        }
+        Ok(())
+    }
+
+    fn validate_portable(&mut self) -> Result<(), String> {
+        if self.schema_version != 1 || !["sh", "powershell"].contains(&self.shell.as_str()) {
+            return Err("Unsupported task package version or shell".into());
         }
         if self.draft.script_dir.is_some() || self.draft.workdir.is_some() {
             return Err("Portable tasks cannot contain local script or project directories".into());
@@ -66,6 +74,10 @@ impl AutomationPackage {
 
 /// Preview only reads declared files; no extraction, setup hook or registration.
 pub fn preview_package(source: &Path) -> Result<AutomationPackage, String> {
+    read_package(source, true)
+}
+
+fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, String> {
     let manifest_file = !source.is_dir()
         && super::storage::json::<serde_json::Value>(source)?
             .get("files")
@@ -106,9 +118,84 @@ pub fn preview_package(source: &Path) -> Result<AutomationPackage, String> {
     } else {
         super::storage::json(source)?
     };
-    package.validate()?;
+    if native_shell {
+        package.validate()?;
+    } else {
+        package.validate_portable()?;
+    }
     package.draft.enabled = false;
     Ok(package)
+}
+
+/// Cloud repositories use the same independent directory format as discovery.
+/// Stable identity is portable; local receipts, bindings and runtime files are not.
+pub(crate) fn write_backup_directory(
+    backup: &super::super::backup::AutomationBackup,
+    target: &Path,
+) -> Result<(), String> {
+    if !valid_id(&backup.id) {
+        return Err("Invalid automation backup ID".into());
+    }
+    let mut draft = backup.draft.clone();
+    draft.workdir = None;
+    draft.script_dir = None;
+    draft.enabled = false;
+    let options = draft.package_options.take().unwrap_or(PackageOptions {
+        dependencies: vec![],
+        hermes: None,
+    });
+    if draft.provider == super::super::Provider::System {
+        if super::super::native::shell_entry::entry(&draft).is_none() {
+            super::super::native::shell_entry::wrap(&mut draft, &backup.shell);
+        }
+        normalize(&mut draft);
+    }
+    let mut package = AutomationPackage {
+        schema_version: 1,
+        shell: backup.shell.clone(),
+        draft,
+        dependencies: options.dependencies,
+        hermes: options.hermes,
+    };
+    package.validate_portable()?;
+    std::fs::create_dir(target).map_err(|e| e.to_string())?;
+    let mut manifest = Manifest {
+        schema_version: 1,
+        instance_id: backup.id.clone(),
+        shell: package.shell,
+        draft: package.draft,
+        files: vec![],
+        dependencies: package.dependencies,
+        hermes: package.hermes,
+    };
+    for file in std::mem::take(&mut manifest.draft.files) {
+        let path = target.join(&file.path);
+        std::fs::create_dir_all(path.parent().ok_or("Missing script parent")?)
+            .map_err(|e| e.to_string())?;
+        store::write(&path, file.content.as_bytes())?;
+        manifest.files.push(file.path);
+    }
+    json_write(&target.join("task.json"), &manifest)
+}
+
+pub(crate) fn read_backup_directory(
+    source: &Path,
+) -> Result<super::super::backup::AutomationBackup, String> {
+    let manifest: Manifest = super::storage::json(&source.join("task.json"))?;
+    if !valid_id(&manifest.instance_id) {
+        return Err("Invalid automation backup identity".into());
+    }
+    let mut package = read_package(source, false)?;
+    package.draft.package_options = Some(PackageOptions {
+        dependencies: package.dependencies,
+        hermes: package.hermes,
+    });
+    Ok(super::super::backup::AutomationBackup {
+        schema_version: 1,
+        id: manifest.instance_id,
+        shell: package.shell,
+        draft: package.draft,
+    })
 }
 
 /// Import allocates a new identity and remains uninstalled until install is requested.

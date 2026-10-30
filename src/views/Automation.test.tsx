@@ -5,7 +5,7 @@ import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "../lib/tauri";
 import zh from "../i18n/zh.json";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { Automation } from "./Automation";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openDirectoryInVscode } from "../lib/openInVscode";
@@ -213,12 +213,31 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
+function CurrentLocation() {
+  return (
+    <output data-current-location>
+      {useLocation().pathname + useLocation().search}
+    </output>
+  );
+}
+async function recommendationsAsBackups() {
+  const catalog = await api.getAutomationTemplates("zh");
+  vi.mocked(api.getAutomationBackups).mockResolvedValue(
+    catalog.templates.map((template) => ({
+      schema_version: 1,
+      id: template.id,
+      shell: catalog.shell,
+      draft: template.draft,
+    })),
+  );
+}
 async function render(path = "/automation") {
   await act(async () =>
     root.render(
       <StrictMode>
         <MemoryRouter initialEntries={[path]}>
           <Automation />
+          <CurrentLocation />
         </MemoryRouter>
       </StrictMode>,
     ),
@@ -764,9 +783,9 @@ it("edits an agent prompt directly in the unified layout with a one-line launche
       },
     ],
   });
+  await recommendationsAsBackups();
   await render();
-  await click("新建自动化");
-  await click("使用模板");
+  await openBackupRestore();
   await ariaClick("每小时维护检查（Herdr）");
   const prompt =
     container.querySelector<HTMLTextAreaElement>('[aria-label="提示词"]')!;
@@ -1093,37 +1112,48 @@ async function openBackupRestore() {
   await act(async () => restore.click());
 }
 
-it("fills a template without creating or running until the explicit create action", async () => {
+it("routes a blank new task to recommended discovery without creating anything", async () => {
   await render();
   await click("新建自动化");
-  await click("使用模板");
-  expect(container.querySelector('[aria-label="模板来源"]')).toBeNull();
-  expect(container.textContent).not.toContain("任务备份");
-  expect(api.getAutomationBackups).not.toHaveBeenCalled();
-  await ariaClick("清理磁盘缓存");
-  expect(
-    container.querySelector<HTMLInputElement>('[aria-label="名称"]')!.value,
-  ).toBe("清理磁盘缓存");
-  expect(container.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
-    "df -h .",
+  await click("从发现安装");
+  expect(container.querySelector("[data-current-location]")?.textContent).toBe(
+    "/discover?type=automations&automationSource=recommended",
   );
+  expect(container.querySelector("form")).toBeNull();
   expect(api.saveAutomation).not.toHaveBeenCalled();
   expect(api.runAutomation).not.toHaveBeenCalled();
-  await act(async () =>
-    container
-      .querySelector("form")!
-      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
-  );
-  expect(api.saveAutomation).toHaveBeenCalledWith(
-    null,
-    null,
-    expect.objectContaining({
-      name: "清理磁盘缓存",
-      workdir: null,
-      schedule: { kind: "daily", hour: 3, minute: 0, weekdays: false },
-    }),
-  );
+  expect(api.getAutomationBackups).not.toHaveBeenCalled();
 });
+it("retains a draft when cancelling navigation to discovery and leaves only after confirmation", async () => {
+  await render();
+  await click("新建自动化");
+  await input("名称", "Unsaved task");
+  await click("从发现安装");
+  expect(
+    container.querySelector('[role="alertdialog"]')?.textContent,
+  ).toContain("尚未保存");
+  const cancel = [
+    ...container.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((node) => node.textContent === "取消")!;
+  await act(async () => cancel.click());
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="名称"]')?.value,
+  ).toBe("Unsaved task");
+  await click("从发现安装");
+  const confirm = [
+    ...container.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((node) => node.textContent === "从发现安装")!;
+  await act(async () => confirm.click());
+  expect(
+    container.querySelector("[data-current-location]")?.textContent,
+  ).toContain("/discover?type=automations");
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+});
+
 it("restored templates create uninstalled copies and preserve existing task IDs", async () => {
   vi.mocked(api.getAutomationBackups).mockResolvedValue([
     {
@@ -1404,9 +1434,9 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
       },
     ],
   });
+  await recommendationsAsBackups();
   await render();
-  await click("新建自动化");
-  await click("使用模板");
+  await openBackupRestore();
   await ariaClick("清理磁盘缓存");
   expect(container.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
     content,
@@ -1457,6 +1487,7 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
       ],
       schedule: { kind: "manual" },
     }),
+    false,
   );
   expect(api.runAutomation).not.toHaveBeenCalled();
 });

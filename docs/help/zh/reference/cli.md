@@ -74,7 +74,7 @@ agent-hub-cli automations remove '<task-id>' --delete-local-data
 
 `workdir` 是执行目录，对应桌面的“项目工作区”；选择项目后任务自动切到项目目录，留空则在脚本目录执行。脚本不会复制进项目，切换项目不改变 `script_dir`。旧定义没有 `script_dir` 时保留原目录保存脚本，编辑保存后分开管理。
 
-系统任务统一执行脚本目录下的短名 Shell 入口：`sh './run.sh'`（Windows 为 `& './run.ps1'`），名称已占用时使用 `run-2.sh` 等后缀，保留已有文件。定时和手动运行触发同一个入口。预装系统模板的每个文件夹包含 `template.json` 与一个或多个 `.py` 文件，随软件和 CLI 内置；Shell 入口再调用对应 Python 脚本，如 `disk-cleanup/disk-cleanup.py`，需安装 Python 3。`task.json` 的 `files` 数组以相对路径和内容保存 Shell 入口和 Python 脚本，可在 GUI 展开“脚本文件”、通过 CLI 或直接编辑文件定制。旧格式内联 `content` 保存时会转为 Shell 入口的正文。运行前不会用模板覆盖定制内容；旧长文件名迁移成功后将原内容保存在内部任务目录，目录中的用户文件不移动。未选择清理本地数据时保留工作目录、脚本与执行记录。
+系统任务执行独立任务包内的 Shell 入口，定时和手动运行共用同一份脚本。项目根目录 `automations/` 保存可直接安装的任务包，`task.json` 声明实际脚本、提示词、配置、日程与依赖；可从发现页或 CLI 直接安装。GUI、CLI 和外部编辑器的脚本修改随任务定义进入云端备份，云端同样使用 `automations/<任务名>--<稳定标识>/`。本机项目绑定、安装回执、私有环境和执行记录不上传，恢复后需重新配置并安装。
 
 `provider` 为 `system` 时，内容是 macOS/Linux 的 `/bin/sh` 命令或 Windows PowerShell 命令。任务写入当前用户的系统原生调度器，关闭 AgentHub 后仍可按计划执行；需要用户保持登录，Linux 可另行配置用户服务 linger。支持每天、工作日、固定分钟间隔（`{"kind":"interval","minutes":60}`）和仅手动触发（`{"kind":"manual"}`）。保存不会额外触发一次运行，手动运行不修改日程配置。
 

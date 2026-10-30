@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "Weekday repository audit",
+    "provider": "hermes",
+    "content": "Inspect this repository: dependencies, failing tests, lint/type errors and risky open changes. Summarize evidence and recommend next actions. Report findings without changing files.",
+    "workdir": null,
+    "schedule": {
+      "kind": "daily",
+      "hour": 9,
+      "minute": 0,
+      "weekdays": true
+    },
+    "enabled": false
+  },
+  "files": ["README.md"],
+  "dependencies": []
+}

@@ -16,6 +16,7 @@ import { CardActionMenu } from "../components/CardActionMenu";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
 import { AutomationRemoveDialog } from "../components/AutomationRemoveDialog";
 import { AutomationImportDialog } from "../components/AutomationImportDialog";
+import { AutomationBackupNotice } from "../components/AutomationBackupNotice";
 import { save as chooseExportFile } from "@tauri-apps/plugin-dialog";
 import {
   getProjects,
@@ -381,6 +382,7 @@ export function Automation() {
           />
         </div>
       </header>
+      <AutomationBackupNotice />
       <AutomationToolbar
         query={query}
         onQuery={setQuery}

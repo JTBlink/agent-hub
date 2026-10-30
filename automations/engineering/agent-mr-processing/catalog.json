@@ -1,0 +1,15 @@
+{
+  "id": "agent-mr-processing",
+  "title": {
+    "zh": "MR 处理",
+    "zh-TW": "MR 處理",
+    "en": "MR / PR processing"
+  },
+  "description": {
+    "zh": "处理一个待办 MR/PR，修复评审反馈或 CI 问题，验证后更新原分支。",
+    "zh-TW": "處理一個待辦 MR/PR，修復評審或 CI 問題，驗證後更新原分支。",
+    "en": "Fix review feedback or CI failures for one eligible MR/PR, validate and update its branch."
+  },
+  "entrypoint": "scripts/agent.py",
+  "default_enabled": true
+}

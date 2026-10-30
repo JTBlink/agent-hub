@@ -1,21 +1,26 @@
-import networkManifest from "../../src-tauri/src/core/automation/templates/builtin/network-reset/task.json";
-import networkLauncher from "../../src-tauri/src/core/automation/templates/builtin/network-reset/scripts/network-reset.py?raw";
-import networkSetup from "../../src-tauri/src/core/automation/templates/builtin/network-reset/scripts/setup.sh?raw";
-import networkReset from "../../src-tauri/src/core/automation/templates/builtin/network-reset/scripts/reset.sh?raw";
-import networkReadme from "../../src-tauri/src/core/automation/templates/builtin/network-reset/README.md?raw";
-import maintenanceManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/task.json";
-import mrManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/task.json";
-import mrPrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/prompt.md?raw";
-import mrConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/herdr.json?raw";
-import issueManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/task.json";
-import issuePrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/prompt.md?raw";
-import issueConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/herdr.json?raw";
+import networkManifestCatalog from "../../automations/system/network-reset/catalog.json";
+import diskCleanupManifestPackage from "../../automations/system/disk-cleanup/task.json";
+import issueManifestPackage from "../../automations/engineering/agent-issue-processing/task.json";
+import mrManifestPackage from "../../automations/engineering/agent-mr-processing/task.json";
+import maintenanceManifestPackage from "../../automations/engineering/agent-maintenance/task.json";
+import networkManifestPackage from "../../automations/system/network-reset/task.json";
+import networkLauncher from "../../automations/system/network-reset/scripts/network-reset.py?raw";
+import networkSetup from "../../automations/system/network-reset/scripts/setup.sh?raw";
+import networkReset from "../../automations/system/network-reset/scripts/reset.sh?raw";
+import networkReadme from "../../automations/system/network-reset/README.md?raw";
+import maintenanceManifestCatalog from "../../automations/engineering/agent-maintenance/catalog.json";
+import mrManifestCatalog from "../../automations/engineering/agent-mr-processing/catalog.json";
+import mrPrompt from "../../automations/engineering/agent-mr-processing/prompt.md?raw";
+import mrConfig from "../../automations/engineering/agent-mr-processing/herdr.json?raw";
+import issueManifestCatalog from "../../automations/engineering/agent-issue-processing/catalog.json";
+import issuePrompt from "../../automations/engineering/agent-issue-processing/prompt.md?raw";
+import issueConfig from "../../automations/engineering/agent-issue-processing/herdr.json?raw";
 import React from "react";
-import diskCleanupManifest from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/task.json";
-import diskCleanupScript from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/scripts/disk-cleanup.py?raw";
-import herdrScript from "../../src-tauri/src/core/automation/templates/builtin/herdr-agent.py?raw";
-import maintenancePrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/prompt.md?raw";
-import maintenanceConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/herdr.json?raw";
+import diskCleanupManifestCatalog from "../../automations/system/disk-cleanup/catalog.json";
+import diskCleanupScript from "../../automations/system/disk-cleanup/scripts/disk-cleanup.py?raw";
+import herdrScript from "../../automations/_shared/herdr-agent.py?raw";
+import maintenancePrompt from "../../automations/engineering/agent-maintenance/prompt.md?raw";
+import maintenanceConfig from "../../automations/engineering/agent-maintenance/herdr.json?raw";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { PreviewRouteMarker } from "./PreviewRouteMarker";
@@ -30,6 +35,23 @@ import type {
 } from "../../src/lib/tauri";
 import "../../src/index.css";
 
+const networkManifest = {
+  ...networkManifestCatalog,
+  ...networkManifestPackage.draft,
+};
+const maintenanceManifest = {
+  ...maintenanceManifestCatalog,
+  ...maintenanceManifestPackage.draft,
+};
+const mrManifest = { ...mrManifestCatalog, ...mrManifestPackage.draft };
+const issueManifest = {
+  ...issueManifestCatalog,
+  ...issueManifestPackage.draft,
+};
+const diskCleanupManifest = {
+  ...diskCleanupManifestCatalog,
+  ...diskCleanupManifestPackage.draft,
+};
 const previewAgentTemplates: AutomationTemplate[] = [
   {
     manifest: maintenanceManifest,
@@ -472,22 +494,17 @@ Object.assign(window, {
               },
             ],
           };
-        case "get_automation_backups":
-          return [
-            {
-              schema_version: 1,
-              id: "agent_hub:33333333-3333-4333-8333-333333333333",
-              shell: "sh",
-              draft: {
-                name: "备份中的目录检查",
-                provider: "system",
-                content: "pwd\nls -la",
-                workdir: null,
-                schedule: { kind: "manual" },
-                enabled: true,
-              },
-            },
-          ];
+        case "get_automation_backups": {
+          const { getAutomationTemplates } =
+            await import("../../src/lib/tauri");
+          const catalog = await getAutomationTemplates("zh");
+          return catalog.templates.map((template) => ({
+            schema_version: 1,
+            id: template.id,
+            shell: catalog.shell,
+            draft: template.draft,
+          }));
+        }
         case "get_automation_history":
           return {
             kind: "executions",
@@ -735,15 +752,20 @@ if (automationState) {
           (node) => node.textContent === "新建自动化",
         ) ?? null,
     );
-    create.click();
-    if (automationState === "create") return;
-    const templates = await waitFor(
-      () =>
-        [...document.querySelectorAll("button")].find(
-          (node) => node.textContent === "使用模板",
-        ) ?? null,
+    if (automationState === "create") {
+      create.click();
+      return;
+    }
+    const more = await waitFor(() =>
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="更多操作"]',
+      ),
     );
-    templates.click();
+    more.click();
+    const restore = await waitFor(() =>
+      document.querySelector<HTMLButtonElement>('[role="menuitem"]'),
+    );
+    restore.click();
     const audit = await waitFor(() =>
       document.querySelector<HTMLElement>(
         automationState === "network-editor"

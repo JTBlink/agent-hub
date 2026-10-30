@@ -1,0 +1,15 @@
+{
+  "id": "agent-maintenance",
+  "title": {
+    "zh": "项目巡检",
+    "zh-TW": "專案巡檢",
+    "en": "Project check"
+  },
+  "description": {
+    "zh": "检查近期变更、失败验证和卡住的工作，只报告需要处理的问题。",
+    "zh-TW": "檢查近期變更、失敗驗證和卡住的工作，只報告需處理的問題。",
+    "en": "Check recent changes, failed validation and stalled work. Report actionable findings only."
+  },
+  "entrypoint": "scripts/agent.py",
+  "default_enabled": true
+}

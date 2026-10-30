@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "Agent code review (Herdr)",
+    "provider": "system",
+    "content": "sh './scripts/run.sh'",
+    "workdir": null,
+    "schedule": {
+      "kind": "daily",
+      "hour": 9,
+      "minute": 0,
+      "weekdays": true
+    },
+    "enabled": false
+  },
+  "files": [
+    "scripts/agent-code-review.py",
+    "prompt.md",
+    "herdr.json",
+    "README.md",
+    "scripts/run.sh"
+  ],
+  "dependencies": [
+    {
+      "kind": "python",
+      "packages": []
+    },
+    {
+      "kind": "command",
+      "name": "herdr"
+    }
+  ]
+}

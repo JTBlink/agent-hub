@@ -431,3 +431,89 @@ fn active_claim_prevents_uninstall_and_keeps_the_installed_task_usable() {
     assert_eq!(receipt(&record).unwrap().state, "installed");
     assert!(!scheduler.calls.iter().any(|call| call == "remove"));
 }
+
+#[test]
+fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled_copies() {
+    use crate::core::{auto_backup, backup_workspace, central_repo, skill_store::SkillStore};
+    let _guard = central_repo::test_base_dir_lock();
+    let temp = tempfile::tempdir().unwrap();
+    central_repo::set_test_base_dir_override(Some(temp.path().join("app")));
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            central_repo::set_test_base_dir_override(None);
+        }
+    }
+    let _reset = Reset;
+    std::fs::create_dir_all(central_repo::base_dir()).unwrap();
+    let db = SkillStore::new(&central_repo::db_path()).unwrap();
+    backup_workspace::initialize(&db).unwrap();
+    let remote_path = temp.path().join("remote.git");
+    let remote = git2::Repository::init_bare(&remote_path).unwrap();
+    let repository = git2::Repository::open(backup_workspace::repo_dir()).unwrap();
+    repository
+        .remote("origin", remote_path.to_str().unwrap())
+        .unwrap();
+    let state = store::root();
+    let mut definition = draft();
+    definition.enabled = true;
+    definition.workdir = Some(temp.path().to_string_lossy().into_owned());
+    let id = lifecycle::create(&state, definition, Vec::new(), false).unwrap();
+    let original = find(&state, &id).unwrap();
+    let local = directory(&original).unwrap();
+    let mut scheduler = Scheduler::default();
+    lifecycle::install_using(&state, &original, &mut scheduler).unwrap();
+    fs_write(&local.join(".local/private.env"), "private-credentials");
+    fs_write(&local.join(".local/output.log"), "private-execution-output");
+    assert_eq!(
+        auto_backup::run_round_blocking(&db),
+        auto_backup::Outcome::BackedUp
+    );
+    let branch = repository.head().unwrap().shorthand().unwrap().to_string();
+    let tree = remote
+        .find_reference(&format!("refs/heads/{branch}"))
+        .unwrap()
+        .peel_to_tree()
+        .unwrap();
+    let relative = format!("automations/Audit--{}", id.trim_start_matches("agent_hub:"));
+    assert!(tree
+        .get_path(Path::new(&format!("{relative}/task.json")))
+        .is_ok());
+    assert!(tree
+        .get_path(Path::new(&format!("{relative}/.local")))
+        .is_err());
+    assert!(tree
+        .get_path(Path::new(&format!(
+            ".agent-hub/automation-{}.json",
+            id.trim_start_matches("agent_hub:")
+        )))
+        .is_err());
+    let public = backup_workspace::repo_dir().join(&relative);
+    let preview = preview_package(&public).unwrap();
+    let serialized = serde_json::to_string(&preview).unwrap();
+    assert!(!serialized.contains("private-credentials"));
+    assert!(!serialized.contains("private-execution-output"));
+    assert!(!serialized.contains(&temp.path().to_string_lossy().to_string()));
+    assert!(!preview.draft.enabled);
+    let entry = super::super::native::shell_entry::entry(&original.draft).unwrap();
+    fs_write(&local.join(&entry.path), "echo customized");
+    assert_eq!(
+        auto_backup::run_round_blocking(&db),
+        auto_backup::Outcome::BackedUp
+    );
+    assert!(preview_package(&public)
+        .unwrap()
+        .draft
+        .files
+        .iter()
+        .any(|f| f.content == "echo customized"));
+    let restored = super::super::backup::restore(&id, true).unwrap();
+    assert_ne!(restored.id, id);
+    let copy = find(&state, &restored.id).unwrap();
+    assert_eq!(receipt(&copy).unwrap().state, "uninstalled");
+    assert!(!copy.draft.enabled && copy.draft.workdir.is_none());
+    assert_eq!(
+        receipt(&find(&state, &id).unwrap()).unwrap().state,
+        "installed"
+    );
+}

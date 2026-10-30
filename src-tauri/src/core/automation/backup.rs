@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};
 
 const PREFIX: &str = "automation-";
+pub(crate) mod repository;
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct AutomationBackup {
@@ -176,9 +177,16 @@ fn read(metadata: &Path) -> Result<BTreeMap<String, AutomationBackup>, String> {
 /// it never registers, edits, deletes, or runs a local scheduler task.
 pub(crate) fn project(source: &Path, target: &Path) -> Result<bool, String> {
     let records = read(source)?;
+    project_records(&records, target)
+}
+
+fn project_records(
+    records: &BTreeMap<String, AutomationBackup>,
+    target: &Path,
+) -> Result<bool, String> {
     let previous = read(target)?;
     let mut changed = false;
-    for (name, record) in &records {
+    for (name, record) in records {
         let bytes =
             super::super::sync_metadata::canonical_json_bytes(record).map_err(|e| e.to_string())?;
         changed |= write_changed(&target.join(name), &bytes)?;
@@ -305,7 +313,8 @@ mod tests {
             .unwrap()
             .peel_to_tree()
             .unwrap();
-        let path = format!(".agent-hub/{}", filename(&id).unwrap());
+        let directory = format!("automations/Audit--{}", id.trim_start_matches("agent_hub:"));
+        let path = format!("{directory}/task.json");
         assert!(tree.get_path(Path::new(&path)).is_ok());
         assert!(tree.get_path(Path::new("output.log")).is_err());
         assert!(tree.get_path(Path::new("tasks.json")).is_err());
@@ -334,24 +343,50 @@ mod tests {
             .unwrap()
             .peel_to_tree()
             .unwrap();
+        let script_name = if cfg!(windows) { "run.ps1" } else { "run.sh" };
         let blob = remote
-            .find_blob(updated_tree.get_path(Path::new(&path)).unwrap().id())
+            .find_blob(
+                updated_tree
+                    .get_path(Path::new(&format!("{directory}/scripts/{script_name}")))
+                    .unwrap()
+                    .id(),
+            )
             .unwrap();
-        let saved: AutomationBackup = serde_json::from_slice(blob.content()).unwrap();
-        assert_eq!(saved.draft.content, "printf changed");
-        assert_eq!(saved.draft.files[0].content, "print('customized script')");
+        assert_eq!(
+            std::str::from_utf8(blob.content()).unwrap(),
+            "printf changed"
+        );
+        let helper = remote
+            .find_blob(
+                updated_tree
+                    .get_path(Path::new(&format!("{directory}/scripts/main.py")))
+                    .unwrap()
+                    .id(),
+            )
+            .unwrap();
+        assert_eq!(
+            std::str::from_utf8(helper.content()).unwrap(),
+            "print('customized script')"
+        );
         assert_eq!(std::fs::read_to_string(&script).unwrap(), "printf changed");
         backup_workspace::restore(&db, &tag).unwrap();
-        assert_eq!(list().unwrap()[0].draft.content, "printf original");
+        assert!(list().unwrap()[0]
+            .draft
+            .files
+            .iter()
+            .any(|f| f.content == "printf original"));
         assert_eq!(
             store::load(&runtime).unwrap()[0].draft.content,
             "printf changed",
             "restoring Git must not edit local schedulers"
         );
         flush(&super::super::super::sync_metadata::metadata_dir()).unwrap();
-        assert_eq!(
-            list().unwrap()[0].draft.content,
-            "printf original",
+        assert!(
+            list().unwrap()[0]
+                .draft
+                .files
+                .iter()
+                .any(|f| f.content == "printf original"),
             "a later projection must retain the restored definition"
         );
         store::save(&runtime, vec![]).unwrap();

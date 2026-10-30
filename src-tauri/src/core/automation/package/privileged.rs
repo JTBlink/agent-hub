@@ -4,8 +4,9 @@ use super::*;
 use base64::Engine;
 
 const NETWORK_ENTRY: &str =
-    include_str!("../templates/builtin/network-reset/scripts/network-reset.py");
-const RESET: &str = include_str!("../templates/builtin/network-reset/scripts/reset.sh");
+    include_str!("../../../../../automations/system/network-reset/scripts/network-reset.py");
+const RESET: &str =
+    include_str!("../../../../../automations/system/network-reset/scripts/reset.sh");
 
 fn supported(record: &ManagedAutomation) -> bool {
     record

@@ -1,4 +1,4 @@
-import { Bot, Plus, SquareTerminal } from "lucide-react";
+import { Bot, Check, Plus, SquareTerminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationInstallSource } from "../../lib/automationDiscovery";
 import { automationRequirements } from "../../lib/automationDiscovery";
@@ -11,9 +11,11 @@ import {
 export function AutomationPackageCard({
   task,
   onInstall,
+  installed = false,
 }: {
   task: AutomationInstallSource;
   onInstall: () => void;
+  installed?: boolean;
 }) {
   const { t } = useTranslation();
   const agent =
@@ -41,17 +43,31 @@ export function AutomationPackageCard({
         <button
           type="button"
           onClick={onInstall}
-          aria-label={t("discovery.installNamed", { name: task.title })}
-          title={t("automation.installPackage")}
+          aria-label={t(
+            installed ? "discovery.reinstallNamed" : "discovery.installNamed",
+            { name: task.title },
+          )}
+          title={t(
+            installed ? "discovery.reinstall" : "automation.installPackage",
+          )}
           className="shrink-0 rounded-[5px] border border-accent-border bg-accent-dark p-1 text-white hover:bg-accent focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+          {installed ? (
+            <Check aria-hidden="true" className="h-3.5 w-3.5" />
+          ) : (
+            <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+          )}
         </button>
       </div>
       <p className="text-[12px] leading-relaxed text-muted">
         {task.description}
       </p>
       <div className="flex flex-wrap items-center gap-1">
+        {installed && (
+          <span className="text-[12px] text-accent-light">
+            {t("automation.installStates.installed")}
+          </span>
+        )}
         <span
           title={task.source}
           className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-[13px] font-medium leading-4 text-accent-light"

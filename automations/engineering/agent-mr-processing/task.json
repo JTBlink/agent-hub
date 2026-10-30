@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "MR / PR processing",
+    "provider": "system",
+    "content": "sh './scripts/run.sh'",
+    "workdir": null,
+    "schedule": {
+      "kind": "hourly",
+      "minute": 30
+    },
+    "enabled": false
+  },
+  "files": [
+    "scripts/agent.py",
+    "prompt.md",
+    "herdr.json",
+    "README.md",
+    "scripts/run.sh"
+  ],
+  "dependencies": [
+    {
+      "kind": "python",
+      "packages": []
+    },
+    {
+      "kind": "command",
+      "name": "herdr"
+    }
+  ]
+}

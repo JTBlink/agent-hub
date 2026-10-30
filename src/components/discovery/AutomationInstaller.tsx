@@ -8,19 +8,36 @@ import { automationRequirements } from "../../lib/automationDiscovery";
 import { formatAutomationSchedule } from "../../lib/automation";
 import {
   importAutomationPackage,
+  getAutomationOverview,
   saveAutomation,
   setAutomationInstallation,
+  type AutomationTask,
 } from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
 import { AutomationProjectField } from "../AutomationProjectField";
 import { AutomationScheduleInput } from "../AutomationScheduleInput";
+import { ConfirmDialog } from "../ConfirmDialog";
+
+function canReplace(task: AutomationTask, provider: string) {
+  return (
+    task.origin === "agent_hub" &&
+    task.can_edit &&
+    task.revision !== null &&
+    task.definition?.provider === provider &&
+    task.status !== "running" &&
+    (!task.installation ||
+      ["installed", "uninstalled"].includes(task.installation))
+  );
+}
 
 export function AutomationInstaller({
   task,
   onClose,
+  onInstalled,
 }: {
   task: AutomationInstallSource;
   onClose: () => void;
+  onInstalled: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -35,6 +52,8 @@ export function AutomationInstaller({
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<AutomationTask[]>([]);
+  const [replacementId, setReplacementId] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const pending = useRef(false);
   const alive = useRef(true);
@@ -62,8 +81,10 @@ export function AutomationInstaller({
     onClose();
     navigate(`/automation?task=${encodeURIComponent(instanceId ?? "")}`);
   };
-  const install = async () => {
-    if (pending.current) return;
+  const install = async (
+    replacement?: AutomationTask,
+  ): Promise<void | false> => {
+    if (pending.current) return false;
     pending.current = true;
     setBusy(true);
     setError(null);
@@ -78,19 +99,57 @@ export function AutomationInstaller({
           workdir: null,
           script_dir: null,
         };
-        id = task.package
-          ? await importAutomationPackage(
-              { ...task.package, draft: intent },
+        if (!replacement) {
+          // Read at submission time too: another window may have created the name.
+          const overview = await getAutomationOverview();
+          const matches = overview.tasks.filter(
+            (existing) => existing.name.trim() === intent.name,
+          );
+          if (matches.length) {
+            if (alive.current) {
+              setConflicts(matches);
+              setReplacementId(
+                matches.find((existing) => canReplace(existing, draft.provider))
+                  ?.id ?? "",
+              );
+            }
+            return false;
+          }
+        }
+        id = replacement
+          ? await saveAutomation(replacement.id, replacement.revision, {
+              ...intent,
               workdir,
-            )
-          : await saveAutomation(null, null, { ...intent, workdir }, false);
+              script_dir: replacement.definition?.script_dir,
+              package_options: task.package
+                ? {
+                    dependencies: task.package.dependencies,
+                    hermes: task.package.hermes,
+                  }
+                : (intent.package_options ?? {
+                    dependencies: [],
+                    hermes: null,
+                  }),
+            })
+          : task.package
+            ? await importAutomationPackage(
+                { ...task.package, draft: intent },
+                workdir,
+              )
+            : await saveAutomation(null, null, { ...intent, workdir }, false);
         if (alive.current) setInstanceId(id);
       }
-      await setAutomationInstallation(id, true);
-      if (alive.current) setStep(2);
+      // Legacy managed tasks are registered by save; packages have a separate lifecycle.
+      if (!replacement || replacement.installation)
+        await setAutomationInstallation(id, true);
+      if (alive.current) {
+        setStep(2);
+        onInstalled(id);
+      }
     } catch (cause) {
       if (alive.current)
         setError(getErrorMessage(cause, t("automation.actionFailed")));
+      return false;
     } finally {
       pending.current = false;
       if (alive.current) setBusy(false);
@@ -325,6 +384,54 @@ export function AutomationInstaller({
           </div>
         </footer>
       </form>
+      <ConfirmDialog
+        open={conflicts.length > 0}
+        title={t("discovery.overwriteTitle")}
+        message={t("discovery.overwriteMessage", { name: draft.name.trim() })}
+        confirmLabel={t("discovery.overwriteConfirm")}
+        confirmDisabled={!replacementId}
+        tone="warning"
+        onClose={() => setConflicts([])}
+        onConfirm={async () => {
+          const replacement = conflicts.find(
+            (existing) => existing.id === replacementId,
+          );
+          if (!replacement || !canReplace(replacement, draft.provider))
+            return false;
+          return install(replacement);
+        }}
+      >
+        <div className="space-y-3 text-[12px] text-secondary">
+          {conflicts.map((existing) => (
+            <label
+              key={existing.id}
+              className="flex items-start gap-2 break-all"
+            >
+              <input
+                type="radio"
+                name="replacement-task"
+                value={existing.id}
+                checked={existing.id === replacementId}
+                disabled={busy || !canReplace(existing, draft.provider)}
+                onChange={() => setReplacementId(existing.id)}
+              />
+              <span>
+                {existing.name} · {existing.project || existing.location}
+                {!canReplace(existing, draft.provider) && (
+                  <span className="block text-muted">
+                    {t("discovery.cannotOverwrite")}
+                  </span>
+                )}
+              </span>
+            </label>
+          ))}
+          {error && (
+            <p role="alert" className="text-danger">
+              {error}
+            </p>
+          )}
+        </div>
+      </ConfirmDialog>
     </dialog>,
     document.body,
   );

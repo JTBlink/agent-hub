@@ -23,6 +23,8 @@ vi.mock("../../lib/tauri", () => ({
   importAutomationPackage: vi.fn(),
   saveAutomation: vi.fn(),
   setAutomationInstallation: vi.fn(),
+  getAutomationOverview: vi.fn(),
+  onAutomationChanged: vi.fn(),
 }));
 const draft: api.AutomationDraft = {
   name: "Example task",
@@ -73,6 +75,12 @@ beforeEach(() => {
     ],
   });
   vi.mocked(api.getProjects).mockResolvedValue([]);
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [],
+    issues: [],
+    hermes_installed: false,
+  });
+  vi.mocked(api.onAutomationChanged).mockResolvedValue(() => {});
   vi.mocked(api.previewAutomationPackage).mockResolvedValue(taskPackage);
   vi.mocked(api.importAutomationPackage).mockResolvedValue("agent_hub:example");
   vi.mocked(api.saveAutomation).mockResolvedValue("agent_hub:example");
@@ -236,4 +244,231 @@ it("does not leak source errors or block a different source behind a pending pre
   expect(api.previewAutomationPackage).toHaveBeenCalledTimes(1);
   await act(async () => rejectGit(new Error("Stale Git failure")));
   expect(document.body.textContent).not.toContain("Stale Git failure");
+});
+
+function existingTask(
+  overrides: Partial<api.AutomationTask> = {},
+): api.AutomationTask {
+  return {
+    id: "agent_hub:existing",
+    name: draft.name,
+    identifier: null,
+    bundle_id: null,
+    icon: null,
+    source: "launchd",
+    origin: "agent_hub",
+    can_edit: true,
+    can_run: true,
+    definition: { ...draft, script_dir: "~/automations/example" },
+    revision: 7,
+    installation: "installed",
+    is_builtin: false,
+    schedule: "daily",
+    project: null,
+    next_run: null,
+    last_run: null,
+    status: "paused",
+    last_result: null,
+    command: draft.content,
+    prompt: null,
+    location: "~/automations/example",
+    ...overrides,
+  };
+}
+function setOverview(tasks: api.AutomationTask[]) {
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks,
+    issues: [],
+    hermes_installed: false,
+  });
+}
+it("refreshes installed cards after installation and when revisiting a source", async () => {
+  vi.mocked(api.setAutomationInstallation).mockImplementation(async () => {
+    setOverview([
+      existingTask({ id: "agent_hub:example", name: "Custom task" }),
+    ]);
+  });
+  await render("recommended");
+  await click("安装 Example task");
+  await submit();
+  await input(
+    document.querySelector<HTMLInputElement>('[name="task-name"]')!,
+    "Custom task",
+  );
+  await submit();
+  expect(host.querySelector("article")?.textContent).toContain("已安装");
+  await click("关闭");
+  await render("local");
+  await render("recommended");
+  expect(
+    host.querySelector('[aria-label="重新安装 Example task"]'),
+  ).not.toBeNull();
+});
+it("updates installed state on external task changes, including uninstall", async () => {
+  setOverview([existingTask()]);
+  await render("recommended");
+  expect(host.querySelector("article")?.textContent).toContain("已安装");
+  vi.useFakeTimers();
+  try {
+    setOverview([
+      existingTask({ installation: "uninstalled", can_run: false }),
+    ]);
+    await act(async () => {
+      vi.mocked(api.onAutomationChanged).mock.calls.at(-1)![0]();
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(host.querySelector("article")?.textContent).not.toContain("已安装");
+    expect(
+      host.querySelector('[aria-label="安装 Example task"]'),
+    ).not.toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("checks names at submission, cancels without writing, and allows a different name", async () => {
+  await render("recommended");
+  setOverview([existingTask()]);
+  await click("安装 Example task");
+  await submit();
+  await submit();
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "覆盖同名自动化任务",
+  );
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.setAutomationInstallation).not.toHaveBeenCalled();
+  await act(async () => {
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[role="alertdialog"] button',
+      ),
+    ]
+      .find((button) => button.textContent === "取消")!
+      .click();
+  });
+  await input(
+    document.querySelector<HTMLInputElement>('[name="task-name"]')!,
+    "Other task",
+  );
+  await submit();
+  expect(api.saveAutomation).toHaveBeenCalledExactlyOnceWith(
+    null,
+    null,
+    expect.objectContaining({ name: "Other task" }),
+    false,
+  );
+});
+it("overwrites the selected identity only after confirmation and preserves imported requirements", async () => {
+  setOverview([existingTask()]);
+  vi.mocked(open).mockResolvedValue("/tmp/example-task.json");
+  await render("local");
+  await click("选择 JSON 文件");
+  await submit();
+  await submit();
+  expect(api.importAutomationPackage).not.toHaveBeenCalled();
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  vi.mocked(api.saveAutomation).mockResolvedValue("agent_hub:existing");
+  await click("确认覆盖安装");
+  expect(api.saveAutomation).toHaveBeenCalledExactlyOnceWith(
+    "agent_hub:existing",
+    7,
+    expect.objectContaining({
+      enabled: false,
+      script_dir: "~/automations/example",
+      workdir: null,
+      package_options: {
+        dependencies: taskPackage.dependencies,
+        hermes: undefined,
+      },
+    }),
+  );
+  expect(api.setAutomationInstallation).toHaveBeenCalledExactlyOnceWith(
+    "agent_hub:existing",
+    true,
+  );
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  expect(document.querySelector("dialog")?.textContent).toContain(
+    "已安装，计划已暂停",
+  );
+});
+it("keeps overwrite failures reviewable and retries without creating a duplicate", async () => {
+  setOverview([existingTask()]);
+  vi.mocked(api.saveAutomation).mockRejectedValueOnce(
+    new Error("Task changed; refresh before saving"),
+  );
+  await render("recommended");
+  await click("重新安装 Example task");
+  await submit();
+  await submit();
+  await click("确认覆盖安装");
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "Task changed",
+  );
+  expect(api.setAutomationInstallation).not.toHaveBeenCalled();
+  vi.mocked(api.saveAutomation).mockResolvedValue("agent_hub:existing");
+  await click("确认覆盖安装");
+  expect(api.saveAutomation).toHaveBeenCalledTimes(2);
+  expect(
+    vi
+      .mocked(api.saveAutomation)
+      .mock.calls.every(([id]) => id === "agent_hub:existing"),
+  ).toBe(true);
+});
+it("never silently picks from multiple same-name tasks", async () => {
+  setOverview([
+    existingTask(),
+    existingTask({
+      id: "agent_hub:other",
+      revision: 9,
+      project: "~/projects/demo",
+    }),
+  ]);
+  await render("recommended");
+  await click("重新安装 Example task");
+  await submit();
+  await submit();
+  await act(async () =>
+    document
+      .querySelector<HTMLInputElement>('input[value="agent_hub:other"]')!
+      .click(),
+  );
+  await click("确认覆盖安装");
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    "agent_hub:other",
+    9,
+    expect.objectContaining({ enabled: false }),
+  );
+});
+it.each([
+  { origin: "external" as const, can_edit: false },
+  { status: "running" as const },
+  { installation: "install_failed" },
+  { definition: { ...draft, provider: "hermes" as const } },
+])("blocks unsafe same-name replacement: %j", async (overrides) => {
+  setOverview([existingTask(overrides)]);
+  await render("local");
+  vi.mocked(open).mockResolvedValue("/tmp/example-task.json");
+  await click("选择 JSON 文件");
+  await submit();
+  await submit();
+  const confirm = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((button) => button.textContent === "确认覆盖安装")!;
+  expect(confirm.disabled).toBe(true);
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.importAutomationPackage).not.toHaveBeenCalled();
+});
+it("does not create a task if the fresh name check fails", async () => {
+  await render("recommended");
+  await click("安装 Example task");
+  await submit();
+  vi.mocked(api.getAutomationOverview).mockRejectedValue(
+    new Error("Cannot read tasks"),
+  );
+  await submit();
+  expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+    "Cannot read tasks",
+  );
+  expect(api.saveAutomation).not.toHaveBeenCalled();
 });

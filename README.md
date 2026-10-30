@@ -70,7 +70,7 @@ _技能库的全部视图，展示已部署、待部署与未分组的示例技�
 
 _截图均来自合成数据预览，不读取本机任务、账号或个人目录。_
 
-工作目录留空时，自动创建 `~/.agent-hub/automations/<任务 ID>/workspace`；显式指定时沿用所选目录。每个预装系统模板以独立文件夹内置到软件，包含 `template.json` 与一个或多个 Python 脚本。创建任务后，脚本复制到工作目录下的对应模板文件夹，执行命令直接调用 `.py` 文件（需要 Python 3）；支持 GUI、CLI 或直接编辑文件定制。系统命令自身保存在工作目录中的 `agent-hub-<任务 UUID>.sh`（Windows 为 `.ps1`）。脚本修改随任务定义进入现有 Git 自动备份；执行包装器、日志和其他工作目录文件保留在本机。从备份新建时先检查配置，副本默认暂停，保留现有本机任务。
+自动化任务包与管理 Skill 分别位于项目根目录的 [`automations/`](automations/README.md) 和 `skills/`。每个任务以标准 `task.json`、实际脚本及提示词独立分发；通过「发现 → 自动化任务」从推荐、本地或 Git 安装，安装后默认暂停，同名覆盖需确认。本机任务目录默认位于 `~/.agent-hub/automations/<任务名称>/`，项目工作区单独绑定。已安装任务同样参与云端自动／手动备份，云端使用 `automations/<任务名>--<稳定标识>/` 的相同包结构；私有环境、安装回执和运行记录留在本机，恢复为未安装副本。
 
 Agent 可直接使用同一套 CLI，无需打开页面：
 
@@ -156,6 +156,7 @@ docs/help/       应用帮助与公开文档的共享正文
 docs-site/       VitePress 文档站配置
 public/          前端静态资源与 Agent 图标
 skills/          随项目提供的管理 Skill
+automations/     可直接安装的自动化任务包，与云端备份使用相同结构
 scripts/         开发、验证、版本和发布脚本
 docs/            产品文档、架构、ADR 与界面截图
 docs/agents/     GitHub Issues、Milestones 与工程技能配置

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "shell": "sh",
+  "draft": {
+    "name": "Clear disk cache",
+    "provider": "system",
+    "content": "sh './scripts/run.sh'",
+    "workdir": null,
+    "schedule": {
+      "kind": "daily",
+      "hour": 3,
+      "minute": 0,
+      "weekdays": false
+    },
+    "enabled": false
+  },
+  "files": [
+    "scripts/disk-cleanup.py",
+    "scripts/cleanup_config.py",
+    "scripts/cleanup_files.py",
+    "scripts/cleanup_rules.py",
+    "scripts/cleanup_actions.py",
+    "scripts/cleanup_report.py",
+    "scripts/cleanup-config.json",
+    "README.md",
+    "scripts/run.sh"
+  ],
+  "dependencies": [
+    {
+      "kind": "python",
+      "packages": []
+    }
+  ]
+}

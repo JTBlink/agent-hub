@@ -1,0 +1,15 @@
+{
+  "id": "disk-cleanup",
+  "title": {
+    "en": "Clear disk cache",
+    "zh": "清理磁盘缓存",
+    "zh-TW": "清理磁碟快取"
+  },
+  "description": {
+    "zh": "按保留期清理过期缓存，保留配置与正在使用的数据。支持预览，需要 Python 3。",
+    "zh-TW": "依保留期清理過期快取，保留設定與使用中的資料。支援預覽，需要 Python 3。",
+    "en": "Clear expired caches while preserving configuration and active data. Supports preview; requires Python 3."
+  },
+  "entrypoint": "scripts/disk-cleanup.py",
+  "default_enabled": true
+}

@@ -1,0 +1,15 @@
+{
+  "id": "agent-code-review",
+  "title": {
+    "en": "Agent code review (Herdr)",
+    "zh": "Agent 代码巡检（Herdr）",
+    "zh-TW": "Agent 程式碼巡檢（Herdr）"
+  },
+  "description": {
+    "en": "Read-only review of recent commits in an interactive Herdr Codex session at 09:00 on weekdays. Choose a project workspace; requires Python 3 and a running Herdr session.",
+    "zh": "工作日 09:00 通过 Herdr 中的 Codex 只读巡检最近一天的提交。选择项目工作区，可直接编辑提示词，结果见 Herdr 与运行记录。",
+    "zh-TW": "工作日 09:00 透過 Herdr 的 Codex 唯讀巡檢近期提交，可直接編輯提示詞。"
+  },
+  "entrypoint": "scripts/agent-code-review.py",
+  "default_enabled": true
+}

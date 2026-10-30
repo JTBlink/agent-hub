@@ -140,7 +140,7 @@ agent-hub/
 │   │       ├── git_fetcher/cache_lock.rs # 缓存操作共享锁及显式释放
 │   │       ├── git_skill_sync.rs   #     本地仓库写回预览、内容确认与失败恢复
 │   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及独立任务包
-│   │       │   └── templates/builtin/ #   每模板独立文件夹：task.json、scripts/ 与根目录提示词／说明，编译嵌入
+│   │       │   └── templates/       #   从根目录 automations/ 编译嵌入推荐目录与跨平台入口
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端
@@ -205,6 +205,7 @@ agent-hub/
 │   ├── rust-dev/                   #   开发、UI、测试与提交规范
 │   └── github/             #   版本发布、Actions 与产物验收
 │
+├── automations/                    # 可独立安装的真实任务包：task.json、scripts/、提示词和配置
 ├── skills/                         # 内置 Skill
 │   └── agent-hub-cli/SKILL.md      #   技能管理 Skill
 │
@@ -243,6 +244,7 @@ agent-hub/
 | `src-tauri/src/bin/`             | agent-hub-cli 入口                 |
 | `src-tauri/icons/`               | 原 agent-hub Logo 与平台图标       |
 | `public/`                        | 前端静态资源                       |
+| `automations/`                   | 可发现、可分发的自动化任务包       |
 | `skills/`                        | 内置管理 Skill                     |
 | `docs/reference/skills-manager/` | 导入来源清单与原许可证             |
 

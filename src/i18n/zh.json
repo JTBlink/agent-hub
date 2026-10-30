@@ -1,5 +1,10 @@
 {
   "automation": {
+    "fromDiscovery": "从发现安装",
+    "leaveForDiscoveryTitle": "前往发现页？",
+    "leaveForDiscoveryMessage": "当前填写的内容尚未保存，前往发现页会关闭此表单。是否继续？",
+    "cloudBackupHelp": "AgentHub 创建的任务（含已安装任务）的脚本、提示词、依赖声明与日程随云端同步备份。恢复时新建未安装副本，重新配置本机项目后安装。",
+    "cloudBackupAction": "云端同步",
     "hideBuiltin": "隐藏系统内置任务",
     "builtinHidden": "已隐藏 {{count}} 个系统内置任务",
     "runSucceeded": "执行成功",
@@ -505,10 +510,12 @@
     "scope": {
       "title": "同步范围",
       "included": {
+        "automations": "自动化任务包：task.json、脚本、提示词、依赖声明与日程",
         "skills": "技能文件及目录",
         "metadata": "标签、技能组、技能组成员关系和每 Agent 的技能开关"
       },
       "excluded": {
+        "automationLocal": "自动化的本机项目绑定、安装回执、私有环境及运行记录",
         "secrets": "API key、token 和代理凭证",
         "local": "本机路径、应用设置和本机 Agent 接线"
       },
@@ -1774,6 +1781,12 @@
     "searchTasks": "搜索任务名称或用途",
     "builtin": "内置 · AgentHub",
     "installNamed": "安装 {{name}}",
+    "reinstallNamed": "重新安装 {{name}}",
+    "reinstall": "已安装，点击重新安装",
+    "overwriteTitle": "覆盖同名自动化任务？",
+    "overwriteMessage": "任务「{{name}}」已存在。确认后将替换所选任务的脚本、依赖、项目与日程配置，保留任务标识和运行记录，并保持暂停。取消后可修改名称另行安装。",
+    "overwriteConfirm": "确认覆盖安装",
+    "cannotOverwrite": "此任务暂不能覆盖（只读、正在运行、调度器不同或安装状态待处理）。请处理原任务或修改新任务名称。",
     "requiresAdmin": "需要 macOS 管理员授权",
     "requirements": "依赖",
     "noExtraDependencies": "无额外依赖",
