@@ -70,7 +70,7 @@ _技能库的全部视图，展示已部署、待部署与未分组的示例技�
 
 _截图均来自合成数据预览，不读取本机任务、账号或个人目录。_
 
-自动化任务包与管理 Skill 分别位于项目根目录的 [`automations/`](automations/README.md) 和 `skills/`。每个任务以标准 `task.json`、实际脚本及提示词独立分发；通过「发现 → 自动化任务」从推荐、本地或 Git 安装，安装后默认暂停，同名覆盖需确认。本机任务目录默认位于 `~/.agent-hub/automations/<任务名称>/`，项目工作区单独绑定。已安装任务同样参与云端自动／手动备份，云端使用 `automations/<任务名>--<稳定标识>/` 的相同包结构；私有环境、安装回执和运行记录留在本机，恢复为未安装副本。
+自动化任务包与管理 Skill 分别位于项目根目录的 [`automations/`](automations/README.md) 和 `skills/`。每个任务以标准 `task.json`、实际脚本及提示词独立分发；通过「发现 → 自动化任务」从推荐、本地或 Git 安装，安装后默认暂停，同名覆盖需确认。本机任务目录默认位于 `~/.agent-hub/automations/<英文目录名>/`，项目工作区单独绑定。已安装任务同样参与云端自动／手动备份，云端使用 `automations/<英文目录名>/` 的相同包结构；私有环境、安装回执和运行记录留在本机，恢复为未安装副本。
 
 Agent 可直接使用同一套 CLI，无需打开页面：
 
@@ -106,7 +106,7 @@ agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 
 技能内容默认位于 `~/.agent-hub/skills`，可在设置中移动技能库。应用数据库、配置、日志与配套 CLI 保存在 `~/.agent-hub/`，包括 `library/agent-hub.db`、`repo-config.json` 和 `bin/agent-hub-cli`。
 
-自动化的本机注册记录、执行包装器和日志位于系统应用数据目录的 `com.jtstudio.agenthub/automations` 下，任务脚本保存在工作目录中，默认位于 `~/.agent-hub/automations/<任务 ID>/workspace`。删除任务保留工作目录中的文件。
+自动化的本机注册记录、执行包装器和日志位于系统应用数据目录的 `com.jtstudio.agenthub/automations` 下，任务脚本保存在工作目录中，新任务默认位于 `~/.agent-hub/automations/<英文目录名>/`，旧 UUID 工作目录保持兼容。删除任务保留工作目录中的文件。
 
 可在设置中创建 `~/.agents/skills` 软链接，供其他 AI 工具发现技能。Git 备份默认位于 `~/.agent-hub/backup`；凭据单独保存，不进入技能备份。详见[目录结构](docs/architecture/directory-structure.md)。
 

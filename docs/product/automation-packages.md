@@ -59,7 +59,7 @@ Agent 模板的 `prompt.md`、`herdr.json` 和 `README.md` 位于包根，执行
 
 项目根目录 `automations/` 与 `skills/` 并列，存放真实可安装任务，按 engineering、system、hermes 分类。`task.json` 使用标准可移植清单，脚本和提示词以实际文件存在；应用推荐内容编译嵌入自同一目录，`catalog.json` 仅保存多语言介绍与平台适配信息。
 
-云端仓库同样以 `skills/`、`automations/` 和 `.agent-hub/` 分开保存。自动化位于 `automations/<任务名>--<稳定标识>/`，包含 `task.json`、`scripts/` 与声明的根目录文件；已安装和未安装的 AgentHub 任务均参与现有自动／手动云端备份。旧 `.agent-hub/automation-*.json` 仍可读取，下次备份转换为目录包，不保留两份权威内容。
+云端仓库同样以 `skills/`、`automations/` 和 `.agent-hub/` 分开保存。自动化位于 `automations/<英文目录名>/`，包含 `task.json`、`scripts/` 与声明的根目录文件；稳定身份保存在 `task.json` 内，普通目录不再追加 UUID；同名或大小写、Unicode 等价、文件名清理冲突时使用 `-2`、`-3` 等简短后缀避让。已安装和未安装的 AgentHub 任务均参与现有自动／手动云端备份。旧 `.agent-hub/automation-*.json` 仍可读取，旧的任务名加 UUID 目录同样继续可读，下次备份改为英文目录名；不改动本机目录、任务 ID 或日程，不保留两份权威内容。
 
 本机项目绑定、安装回执、凭据、私有环境和运行记录不进入包。同步只导入定义；在自动化页「更多操作 → 从备份恢复」创建未安装副本，重新选择本机项目后安装。新建页「从发现安装」跳转至推荐任务；有未保存内容时先确认再离开。
 
@@ -72,3 +72,15 @@ Agent 模板的 `prompt.md`、`herdr.json` 和 `README.md` 位于包根，执行
 - `revision`：本机配置的并发编辑修订号，保存时递增；改项目、日程或脚本不会自动提升 `version`。
 
 发现页展示可用版本，已安装同名任务的已知版本较低时提示“有新版本”；未知版本不推断可升级关系。覆盖确认逐项展示当前版本和目标版本，同版本重装或回退仍需显式确认。Git commit 用于固定下载内容，独立于任务发布版本；版本号不代表内容校验或来源身份。
+
+## 英文任务目录
+
+任务显示名称可以使用中文，本机与云端目录使用同一套英文 ASCII 命名规则：内置任务从多语言目录元数据解析固定标识（例如“MR 处理”对应 `agent-mr-processing`）；自定义名称转换为小写 ASCII 名称，无法生成名称时使用 `task`。重名依次加 `-2`、`-3`，不覆盖已有文件。已分配的 ASCII 目录不随显示名称修改而移动。
+
+旧中文目录不会在只读列表中自动移动。显式迁移时，先卸载调度与任务私有环境，再移动目录并递增配置修订号，最后重新安装。稳定 ID、显示名称、日程、任务版本、脚本和历史保留；私有 Python 环境在新目录重新准备。其他任务引用该目录、任务正在运行或卸载未完成时拒绝迁移；中断可回滚后重试。
+
+```sh
+agent-hub-cli automations uninstall <task-id>
+agent-hub-cli automations migrate <task-id>
+agent-hub-cli automations install <task-id>
+```

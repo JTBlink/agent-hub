@@ -9,6 +9,7 @@ mod lifecycle;
 mod migration;
 mod privileged;
 mod registration;
+mod relocation;
 mod storage;
 #[cfg(test)]
 mod tests;

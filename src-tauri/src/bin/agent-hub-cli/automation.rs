@@ -45,7 +45,7 @@ enum AutomationCommand {
     Install { id: String },
     /// 撤销调度并卸载私有环境，保留任务内容和运行记录。
     Uninstall { id: String },
-    /// 将旧系统任务迁移为独立任务包，保留任务 ID、日程和原脚本。
+    /// 迁移旧系统任务或规范已卸载包的中文目录；保留任务 ID、日程和原脚本。
     Migrate { id: String },
     /// 汇总本机任务；默认隐藏操作系统内置任务。
     List {

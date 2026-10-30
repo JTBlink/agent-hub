@@ -172,6 +172,21 @@ const BUNDLES: &[Bundle] = &[
 ])
 ];
 
+/// Resolve localized built-in display names to their stable English catalog ID.
+pub(in crate::core::automation) fn directory_slug(name: &str) -> Option<String> {
+    BUNDLES.iter().find_map(|(catalog, _, _)| {
+        let catalog: Manifest = serde_json::from_str(catalog).ok()?;
+        [
+            catalog.id.as_str(),
+            &catalog.title.en,
+            &catalog.title.zh,
+            &catalog.title.tw,
+        ]
+        .contains(&name.trim())
+        .then_some(catalog.id)
+    })
+}
+
 pub(super) fn templates(locale: &str, hermes: bool, shell: &str) -> Vec<AutomationTemplate> {
     let mut all = all_templates(locale, hermes, shell);
     [

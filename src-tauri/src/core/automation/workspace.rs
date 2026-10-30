@@ -168,12 +168,28 @@ fn ensure_at(
     Ok(())
 }
 
-pub(super) fn allocate(root: &Path, name: &str) -> Result<PathBuf, String> {
-    let name = super::super::path_guard::sanitize_name(name);
+/// Portable task-directory spelling, shared by local allocation and backups.
+pub(super) fn directory_name(name: &str) -> String {
+    let source = super::templates::directory_slug(name).unwrap_or_else(|| name.into());
+    let mut name = String::new();
+    let mut separator = false;
+    for ch in source.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '.' {
+            if separator && !name.is_empty() {
+                name.push('-');
+            }
+            name.push(ch.to_ascii_lowercase());
+            separator = false;
+        } else {
+            separator = true;
+        }
+    }
+    let name = name.trim_matches(['.', '-']);
+    let name = super::super::path_guard::sanitize_name(if name.is_empty() { "task" } else { name });
     // Windows device names are reserved even with extensions. Use the same
     // portable spelling on every platform, including for restored tasks.
     let stem = name.split('.').next().unwrap_or("").to_ascii_uppercase();
-    let name = if matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+    if matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
         || ["COM", "LPT"].iter().any(|prefix| {
             stem.strip_prefix(prefix).is_some_and(|suffix| {
                 matches!(
@@ -181,11 +197,16 @@ pub(super) fn allocate(root: &Path, name: &str) -> Result<PathBuf, String> {
                     "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³"
                 )
             })
-        }) {
+        })
+    {
         format!("task-{name}")
     } else {
         name
-    };
+    }
+}
+
+pub(super) fn allocate(root: &Path, name: &str) -> Result<PathBuf, String> {
+    let name = directory_name(name);
     (1..=10000)
         .find_map(|number| {
             let candidate = root.join(if number == 1 {
@@ -209,13 +230,29 @@ mod tests {
         AutomationDraft {
             package_options: None,
             files: Vec::new(),
-            name: "Audit".into(),
+            name: "audit".into(),
             provider: super::super::Provider::System,
             content: "exit 0".into(),
             script_dir: None,
             workdir: None,
             schedule: super::super::Schedule::Manual,
             enabled: true,
+        }
+    }
+    #[test]
+    fn localized_task_names_use_portable_english_directory_slugs() {
+        for (name, expected) in [
+            ("MR 处理", "agent-mr-processing"),
+            ("MR / PR processing", "agent-mr-processing"),
+            ("项目巡检", "agent-maintenance"),
+            ("定时重置网络", "network-reset"),
+            ("自定义任务", "task"),
+            ("My 自定义 Task", "my-task"),
+            ("../../", "task"),
+            ("CON.txt", "task-con.txt"),
+        ] {
+            assert_eq!(directory_name(name), expected);
+            assert!(directory_name(name).is_ascii());
         }
     }
     #[test]
@@ -228,7 +265,7 @@ mod tests {
         ensure_at(&root, &state, &mut first, &id, "").unwrap();
         let first_path = Path::new(first.workdir.as_ref().unwrap());
         assert!(first_path.is_dir());
-        assert_eq!(first_path.file_name().unwrap(), "Audit");
+        assert_eq!(first_path.file_name().unwrap(), "audit");
         assert!(!first_path
             .to_string_lossy()
             .contains(id.trim_start_matches("agent_hub:")));
@@ -255,7 +292,7 @@ mod tests {
             Path::new(second.workdir.as_ref().unwrap())
                 .file_name()
                 .unwrap(),
-            "Audit-2"
+            "audit-2"
         );
         assert!(is_default_at(
             &root,
@@ -300,13 +337,13 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let state = temp.path().join("state");
         let root = temp.path().join("workspaces");
-        std::fs::create_dir_all(root.join("Audit")).unwrap();
-        std::fs::write(root.join("Audit/keep.txt"), "keep").unwrap();
+        std::fs::create_dir_all(root.join("audit")).unwrap();
+        std::fs::write(root.join("audit/keep.txt"), "keep").unwrap();
         let mut task = draft();
         ensure_at(&root, &state, &mut task, "first", "").unwrap();
-        assert_eq!(task.workdir.as_deref(), root.join("Audit-2").to_str());
+        assert_eq!(task.workdir.as_deref(), root.join("audit-2").to_str());
         assert_eq!(
-            std::fs::read_to_string(root.join("Audit/keep.txt")).unwrap(),
+            std::fs::read_to_string(root.join("audit/keep.txt")).unwrap(),
             "keep"
         );
         let mut task = draft();
@@ -314,7 +351,7 @@ mod tests {
         ensure_at(&root, &state, &mut task, "second", "").unwrap();
         let path = Path::new(task.workdir.as_deref().unwrap());
         assert_eq!(path.parent(), Some(root.as_path()));
-        assert_eq!(path.file_name().unwrap(), "磁盘清理");
+        assert_eq!(path.file_name().unwrap(), "task");
         assert_eq!(
             allocate(&root, "con.txt").unwrap(),
             root.join("task-con.txt")
@@ -355,12 +392,12 @@ mod tests {
         let outside = temp.path().join("outside");
         std::fs::create_dir_all(&root).unwrap();
         std::fs::create_dir(&outside).unwrap();
-        std::os::unix::fs::symlink(&outside, root.join("Audit")).unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("audit")).unwrap();
         let mut task = draft();
         ensure_at(&root, &state, &mut task, "first", "").unwrap();
-        assert_eq!(task.workdir.as_deref(), root.join("Audit-2").to_str());
-        std::fs::remove_dir(root.join("Audit-2")).unwrap();
-        std::os::unix::fs::symlink(&outside, root.join("Audit-2")).unwrap();
+        assert_eq!(task.workdir.as_deref(), root.join("audit-2").to_str());
+        std::fs::remove_dir(root.join("audit-2")).unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("audit-2")).unwrap();
         assert!(ensure_at(&root, &state, &mut draft(), "first", "").is_err());
         assert!(std::fs::read_dir(&outside).unwrap().next().is_none());
     }

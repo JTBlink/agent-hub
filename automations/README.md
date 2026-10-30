@@ -25,4 +25,4 @@ agent-hub-cli automations import --path ./automations/system/disk-cleanup --inst
 
 Herdr 任务各自携带完整运行脚本，可以单独安装。公共运行脚本的维护源为 `_shared/herdr-agent.py`，分发副本由一致性测试检查；修改运行脚本时同步这些副本。
 
-云端备份使用相同的 `automations/<任务名>--<稳定标识>/task.json`、`scripts/` 与根目录正文结构。仅保存可移植定义，项目绑定、安装回执、私有环境及执行记录留在本机；恢复不会自动安装或启动任务。
+云端备份使用相同的 `automations/<英文目录名>/task.json`、`scripts/` 与根目录正文结构。仅保存可移植定义，项目绑定、安装回执、私有环境及执行记录留在本机；恢复不会自动安装或启动任务。

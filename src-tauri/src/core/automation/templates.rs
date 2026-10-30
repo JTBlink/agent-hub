@@ -3,6 +3,7 @@ use serde::Serialize;
 #[cfg(test)]
 mod agent_code_review;
 mod builtin;
+pub(super) use builtin::directory_slug;
 #[cfg(test)]
 mod cleanup;
 #[cfg(all(test, target_os = "macos"))]

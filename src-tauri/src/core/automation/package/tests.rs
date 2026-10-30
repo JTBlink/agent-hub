@@ -480,7 +480,7 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
         .unwrap()
         .peel_to_tree()
         .unwrap();
-    let relative = format!("automations/Audit--{}", id.trim_start_matches("agent_hub:"));
+    let relative = "automations/audit";
     assert!(tree
         .get_path(Path::new(&format!("{relative}/task.json")))
         .is_ok());
@@ -493,7 +493,7 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
             id.trim_start_matches("agent_hub:")
         )))
         .is_err());
-    let public = backup_workspace::repo_dir().join(&relative);
+    let public = backup_workspace::repo_dir().join(relative);
     let preview = preview_package(&public).unwrap();
     assert_eq!(preview.version.as_deref(), Some("1.2.3"));
     let serialized = serde_json::to_string(&preview).unwrap();

@@ -18,7 +18,7 @@ pub(super) fn migrate_using(
     scheduler: &mut dyn super::registration::Registration,
 ) -> Result<String, String> {
     let Some(old) = store::legacy_task(state, id)? else {
-        return find(state, id).map(|_| id.to_owned());
+        return super::relocation::migrate(state, id);
     };
     managed::verify(state, &old)?;
     if old.draft.provider != Provider::System {

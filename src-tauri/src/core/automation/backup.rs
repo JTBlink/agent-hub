@@ -313,7 +313,7 @@ mod tests {
             .unwrap()
             .peel_to_tree()
             .unwrap();
-        let directory = format!("automations/Audit--{}", id.trim_start_matches("agent_hub:"));
+        let directory = "automations/audit";
         let path = format!("{directory}/task.json");
         assert!(tree.get_path(Path::new(&path)).is_ok());
         assert!(tree.get_path(Path::new("output.log")).is_err());
