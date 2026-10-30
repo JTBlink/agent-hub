@@ -125,7 +125,7 @@
     "openWorkdirAfterSave": "Choose a directory or save the task to open it in VS Code",
     "scriptFiles": "Script files ({{count}})",
     "closeFile": "Close file preview",
-    "networkSetupHelp": "In the script directory, run sudo /bin/bash network-reset/setup.sh once with administrator permission, then enable the schedule.",
+    "networkSetupHelp": "Installing this template requests system administrator authorization for its private network helper. The schedule starts paused. Uninstalling removes only this task’s helper.",
     "scriptFilesHint": "Files live in a separate script directory. Select a file to view or edit it.",
     "useTemplate": "Use template",
     "backToEditor": "Back to editor",
@@ -133,7 +133,7 @@
     "more": "More actions",
     "restoreBackup": "Restore from backup",
     "noTemplates": "No templates are available.",
-    "backupTemplateHint": "Create a paused copy from backup. Existing local tasks are preserved.",
+    "backupTemplateHint": "Create an uninstalled copy from backup. Existing local tasks are preserved.",
     "noBackupTemplates": "No task backups are available.",
     "otherShell": "This backup uses another shell. Convert its command before creating a task.",
     "pausedSaveHint": "Saved paused. Scheduled runs will stay off.",
@@ -200,7 +200,27 @@
     "inactivePromptHelp": "Select an agent to run a prompt in the project workspace, or leave it unset to run only the command.",
     "hermesCommand": "Managed by the native Hermes task",
     "agentUnavailable": "Not installed or enabled",
-    "backupSourceHelp": "Saved automation configurations. Select one to edit it, then save as a new paused copy."
+    "backupSourceHelp": "Saved automation configurations. Select one to edit it, then save as a new paused copy.",
+    "importPackage": "Import task",
+    "importPackageHelp": "Preview a task package and import it as a new, uninstalled task. Local paths, credentials and history stay on the source computer.",
+    "importFile": "Choose JSON file",
+    "importFolder": "Choose task folder",
+    "packageFileCount": "{{count}} declared files",
+    "installPackage": "Install task",
+    "uninstallPackage": "Uninstall task",
+    "exportPackage": "Export task",
+    "migratePackage": "Migrate to task package",
+    "installStates": {
+      "uninstalled": "Not installed",
+      "installed": "Installed",
+      "installing": "Installing",
+      "install_failed": "Installation failed",
+      "uninstalling": "Uninstalling",
+      "uninstall_failed": "Uninstallation failed",
+      "updating": "Updating",
+      "update_failed": "Update failed"
+    },
+    "uninstalledSaveHint": "Saved as an uninstalled task. Install it after reviewing local settings."
   },
   "app": {
     "name": "agent-hub"

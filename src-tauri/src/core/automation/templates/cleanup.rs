@@ -24,9 +24,13 @@ mod tests {
     fn script(workspace: &Path) -> std::path::PathBuf {
         let file = workspace.join("cleanup.py");
         for (name, content) in super::super::builtin::DISK_CLEANUP_FILES {
-            fs::write(workspace.join(name), content).unwrap();
+            fs::write(workspace.join(name.rsplit('/').next().unwrap()), content).unwrap();
         }
-        fs::write(&file, include_str!("builtin/disk-cleanup/disk-cleanup.py")).unwrap();
+        fs::write(
+            &file,
+            include_str!("builtin/disk-cleanup/scripts/disk-cleanup.py"),
+        )
+        .unwrap();
         file
     }
     fn python_command(workspace: &Path) -> std::process::Command {

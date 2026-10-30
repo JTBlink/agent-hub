@@ -16,15 +16,15 @@
     "minute": 0,
     "weekdays": false
   },
-  "entrypoint": "disk-cleanup.py",
+  "entrypoint": "scripts/disk-cleanup.py",
   "scripts": [
-    "disk-cleanup.py",
-    "cleanup_config.py",
-    "cleanup_files.py",
-    "cleanup_rules.py",
-    "cleanup_actions.py",
-    "cleanup_report.py",
-    "cleanup-config.json",
+    "scripts/disk-cleanup.py",
+    "scripts/cleanup_config.py",
+    "scripts/cleanup_files.py",
+    "scripts/cleanup_rules.py",
+    "scripts/cleanup_actions.py",
+    "scripts/cleanup_report.py",
+    "scripts/cleanup-config.json",
     "README.md"
   ],
   "provider": "system"

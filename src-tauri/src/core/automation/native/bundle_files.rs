@@ -6,7 +6,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub(super) fn path(workdir: &str, relative: &str, create: bool) -> Result<PathBuf, String> {
+pub(in crate::core::automation) fn path(
+    workdir: &str,
+    relative: &str,
+    create: bool,
+) -> Result<PathBuf, String> {
     crate::core::path_guard::ensure_safe_skill_relative_path(relative)
         .map_err(|e| e.to_string())?;
     if relative.contains(['\\', ':']) {
@@ -62,6 +66,9 @@ pub(super) fn write(
     let old = store::load(dir.parent().ok_or("Missing automation directory")?)?
         .into_iter()
         .find(|record| record.id == id && record.draft.scripts_dir() == draft.scripts_dir());
+    let package = old
+        .as_ref()
+        .is_some_and(|r| super::super::package::directory(r).is_some());
     for file in &draft.files {
         let path = path(workspace, &file.path, true)?;
         let previous = read_file(&path)?;
@@ -79,16 +86,20 @@ pub(super) fn write(
         if previous.is_some() && !replace {
             continue;
         }
-        let content = format!(
-            "{}{}{}",
-            if file.path.ends_with(".ps1") {
-                "\u{feff}"
-            } else {
-                ""
-            },
-            header(id),
-            file.content
-        );
+        let content = if package {
+            file.content.clone()
+        } else {
+            format!(
+                "{}{}{}",
+                if file.path.ends_with(".ps1") {
+                    "\u{feff}"
+                } else {
+                    ""
+                },
+                header(id),
+                file.content
+            )
+        };
         if previous.as_deref() != Some(&content) {
             store::write(&path, content.as_bytes())?;
         }
@@ -146,7 +157,7 @@ mod tests {
             location: String::new(),
         };
         assert_eq!(read(&record).unwrap(), draft.files);
-        assert!(workspace.join("disk-cleanup/cleanup_actions.py").is_file());
+        assert!(workspace.join("scripts/cleanup_actions.py").is_file());
         let config = draft
             .files
             .iter()
@@ -169,6 +180,7 @@ mod tests {
         fs::create_dir_all(workspace.join("bundle")).unwrap();
         fs::create_dir(&outside).unwrap();
         let draft = AutomationDraft {
+            package_options: None,
             name: "Template".into(),
             provider: Provider::System,
             content: "python3 bundle/main.py".into(),

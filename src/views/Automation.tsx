@@ -15,12 +15,17 @@ import { AutomationEditor } from "../components/AutomationEditor";
 import { CardActionMenu } from "../components/CardActionMenu";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
 import { AutomationRemoveDialog } from "../components/AutomationRemoveDialog";
+import { AutomationImportDialog } from "../components/AutomationImportDialog";
+import { save as chooseExportFile } from "@tauri-apps/plugin-dialog";
 import {
   getProjects,
   type Project,
   saveAutomation,
   runAutomation,
   removeAutomation,
+  setAutomationInstallation,
+  exportAutomationPackage,
+  migrateAutomationPackage,
   type AutomationTask,
   type AutomationDraft,
 } from "../lib/tauri";
@@ -47,6 +52,7 @@ const columns = [
 ] as const;
 
 export function Automation() {
+  const [importing, setImporting] = useState(false);
   const { t, i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -205,11 +211,10 @@ export function Automation() {
   };
   const save = async (draft: AutomationDraft) => {
     const task = typeof editor === "object" ? editor : null;
-    const id = await saveAutomation(
-      task?.id ?? null,
-      task?.revision ?? null,
-      draft,
-    );
+    const id =
+      editor === "restore"
+        ? await saveAutomation(null, null, draft, false)
+        : await saveAutomation(task?.id ?? null, task?.revision ?? null, draft);
     setEditor(null);
     setActionError(null);
     setNotice(t("automation.saved"));
@@ -236,6 +241,15 @@ export function Automation() {
   );
   const overlays = (
     <>
+      {importing && (
+        <AutomationImportDialog
+          onClose={() => setImporting(false)}
+          onImported={(id) => {
+            refresh();
+            openTask(id);
+          }}
+        />
+      )}
       {editor && (
         <AutomationEditor
           key={typeof editor === "string" ? editor : editor.id}
@@ -276,6 +290,24 @@ export function Automation() {
         setActionError(null);
         setRemoving(task);
       }}
+      onInstall={(installed) => {
+        void perform(task, () => setAutomationInstallation(task.id, installed));
+      }}
+      onExport={() => {
+        void perform(task, async () => {
+          const path = await chooseExportFile({
+            defaultPath: "automation.json",
+            filters: [{ name: "JSON", extensions: ["json"] }],
+          });
+          if (path) await exportAutomationPackage(task.id, path);
+        });
+      }}
+      onMigrate={() => {
+        void perform(task, async () => {
+          const id = await migrateAutomationPackage(task.id);
+          openTask(id);
+        });
+      }}
     />
   );
   if (selectedId)
@@ -308,6 +340,13 @@ export function Automation() {
           <p className="app-page-subtitle">{t("automation.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setImporting(true)}
+            className="app-button-secondary"
+          >
+            {t("automation.importPackage")}
+          </button>
           <button
             type="button"
             onClick={refresh}
@@ -394,6 +433,11 @@ export function Automation() {
                     <AutomationTaskIcon task={task} className="h-7 w-7" />
                     <span className="min-w-0">
                       <span className="block truncate">{task.name}</span>
+                      {task.installation && (
+                        <span className="block text-[11px] font-normal text-muted">
+                          {t(`automation.installStates.${task.installation}`)}
+                        </span>
+                      )}
                       {task.origin !== "external" && (
                         <AutomationOriginBadge origin={task.origin} />
                       )}

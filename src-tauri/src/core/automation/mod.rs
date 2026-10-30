@@ -24,6 +24,7 @@ mod linux;
 mod local_data;
 mod managed;
 mod native;
+pub mod package;
 mod process;
 mod script_sync;
 mod store;
@@ -68,6 +69,7 @@ pub struct AutomationTask {
     pub can_run: bool,
     pub definition: Option<AutomationDraft>,
     pub revision: Option<u64>,
+    pub installation: Option<String>,
     /// Known operating-system maintenance jobs; retained so the UI can reveal them.
     pub is_builtin: bool,
     pub schedule: String,
@@ -95,6 +97,7 @@ impl AutomationTask {
             can_run: source == "hermes",
             definition: None,
             revision: None,
+            installation: None,
             is_builtin: false,
             location,
             schedule: String::new(),

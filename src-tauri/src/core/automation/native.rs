@@ -65,6 +65,9 @@ pub(super) fn paths(root: &Path, task: &ManagedAutomation) -> Result<(String, Pa
 }
 
 pub(super) fn directory(root: &Path, task: &ManagedAutomation) -> PathBuf {
+    if let Some(path) = super::package::directory(task) {
+        return path.join(".local");
+    }
     root.join(task.id.trim_start_matches("agent_hub:"))
 }
 
@@ -82,7 +85,9 @@ pub(super) fn apply(root: &Path, task: &ManagedAutomation) -> Result<(), String>
         python_runtime()?;
     }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    super::super::path_guard::ensure_dir_within_root(&dir, root).map_err(|e| e.to_string())?;
+    if super::package::directory(task).is_none() {
+        super::super::path_guard::ensure_dir_within_root(&dir, root).map_err(|e| e.to_string())?;
+    }
     let wrapper = render::scripts(&dir, &task.draft, &task.id, true)?;
     let (identifier, location) = paths(root, task)?;
     if cfg!(target_os = "macos") {
@@ -275,6 +280,9 @@ pub(super) fn needs_upgrade(root: &Path, task: &ManagedAutomation) -> bool {
 }
 
 fn checked_directory(root: &Path, task: &ManagedAutomation) -> Result<PathBuf, String> {
+    if super::package::directory(task).is_some() {
+        return super::package::checked(root, task).map(|path| path.join(".local"));
+    }
     let dir = directory(root, task);
     if !crate::core::path_guard::is_path_safe(root, &dir) || dir.is_symlink() {
         return Err("Automation runner is outside its storage directory".into());

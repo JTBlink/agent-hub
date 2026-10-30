@@ -37,6 +37,10 @@ fn filename(id: &str) -> Result<String, String> {
 }
 
 fn portable(id: &str, mut draft: AutomationDraft) -> AutomationBackup {
+    if super::package::is_package_draft(&draft) {
+        draft.script_dir = None;
+        draft.workdir = None;
+    }
     if let Some(path) = &draft.script_dir {
         draft.script_dir = if workspace::is_default(path, id) {
             None
@@ -84,7 +88,8 @@ pub(crate) fn flush(metadata: &Path) -> Result<(), String> {
 }
 fn flush_from(root: &Path, metadata: &Path) -> Result<(), String> {
     super::script_sync::sync_at(root)?;
-    if !root.join("tasks.json").exists() {
+    let snapshot = store::read_registry(root)?;
+    if snapshot.tasks.is_empty() && snapshot.pending_backup.is_empty() {
         return Ok(());
     }
     let _lock = store::Lock::acquire(root)?;
@@ -197,13 +202,15 @@ fn write_changed(path: &Path, bytes: &[u8]) -> Result<bool, String> {
     Ok(true)
 }
 
-/// Explicit restore creates a paused copy. This never overwrites a local task.
+/// Explicit restore creates an uninstalled copy. This never overwrites a local task.
 pub fn restore(id: &str, apply: bool) -> Result<AutomationBackup, String> {
     let mut record = list()?
         .into_iter()
         .find(|record| record.id == id)
         .ok_or("Automation backup not found")?;
     record.draft.enabled = false;
+    record.draft.script_dir = None;
+    record.draft.workdir = None;
     if apply {
         if record.draft.provider == super::Provider::System && record.shell != shell() {
             return Err(
@@ -211,7 +218,8 @@ pub fn restore(id: &str, apply: bool) -> Result<AutomationBackup, String> {
                     .into(),
             );
         }
-        record.id = super::save(None, None, record.draft.clone())?;
+        record.draft.script_dir = None;
+        record.id = super::package::create_uninstalled(record.draft.clone())?;
     }
     Ok(record)
 }
@@ -248,6 +256,7 @@ mod tests {
             id: id.clone(),
             revision: 1,
             draft: AutomationDraft {
+                package_options: None,
                 files: vec![super::super::AutomationScriptFile {
                     path: "bundle/main.py".into(),
                     content: "print('original')".into(),
@@ -365,6 +374,7 @@ mod tests {
         std::fs::create_dir(&root).unwrap();
         let id = format!("agent_hub:{}", uuid::Uuid::new_v4());
         let draft = AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit".into(),
             provider: super::super::Provider::System,
@@ -414,6 +424,7 @@ mod tests {
         let target = temp.path().join("target");
         let id = format!("agent_hub:{}", uuid::Uuid::new_v4());
         let draft = AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit".into(),
             provider: super::super::Provider::System,

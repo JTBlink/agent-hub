@@ -13,10 +13,10 @@
 ## 使用
 
 ```bash
-python3 ./disk-cleanup/disk-cleanup.py --dry-run
-python3 ./disk-cleanup/disk-cleanup.py
-python3 ./disk-cleanup/disk-cleanup.py --skip-notify
-python3 ./disk-cleanup/disk-cleanup.py --config ./disk-cleanup/cleanup-config.json --notify
+python3 ./scripts/disk-cleanup.py --dry-run
+python3 ./scripts/disk-cleanup.py
+python3 ./scripts/disk-cleanup.py --skip-notify
+python3 ./scripts/disk-cleanup.py --config ./scripts/cleanup-config.json --notify
 ```
 
 默认 7 天保留下载缓存、Agent 缓存／日志、浏览器缓存和 Rust 增量缓存。工作目录日志保留 30 天。浏览器仍运行或检测到 cargo／rustc 时跳过对应规则。默认运行 `uv cache prune --offline`（没有无副作用预览，预览时跳过）和关闭自动更新的 `brew cleanup`；不强制删除正在使用的依赖。工具缺失、通知失败不导致整个任务失败，真实清理错误返回非零退出码。
@@ -27,4 +27,4 @@ python3 ./disk-cleanup/disk-cleanup.py --config ./disk-cleanup/cleanup-config.js
 
 实际清理结束默认请求桌面通知；macOS 使用 osascript，Linux 使用 notify-send，Windows 使用 PowerShell Toast（失败时回退到系统托盘通知）。`--skip-notify` 或配置 `notify: false` 可关闭；预览不通知。通知被系统拒绝、缺少桌面会话或工具未安装时仍保留完整命令行总结。第三方工具输出可能为英文。Windows/Linux 需在对应桌面环境验证通知权限。
 
-AgentHub 安装时会给文件添加归属标记；配置加载器只识别受控的首行标记并读取其后的 JSON。直接编辑配置时保留标记；GUI／CLI 任务定义中的配置正文是标准 JSON。模块、配置均通过模板声明一起分发、记录和备份，不能仅复制入口文件。
+独立任务包保存标准 JSON 配置；旧任务配置加载器继续兼容原有归属标记。模块、配置均通过模板声明一起分发、记录和备份，不能仅复制入口文件。

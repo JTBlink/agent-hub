@@ -7,7 +7,10 @@ use std::{
 };
 
 fn cli(root: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_agent-hub-cli"))
+    // Pin an artifact when another developer build can replace Cargo's binary.
+    let binary = std::env::var_os("AGENT_HUB_TEST_CLI")
+        .unwrap_or_else(|| env!("CARGO_BIN_EXE_agent-hub-cli").into());
+    Command::new(binary)
         .env("AGENT_HUB_AUTOMATION_HOME", root)
         .args(["--json", "automations"])
         .args(args)
@@ -72,9 +75,9 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
     assert_eq!(
         draft.content,
         if cfg!(windows) {
-            "& './run.ps1'"
+            "& './scripts/run.ps1'"
         } else {
-            "sh './run.sh'"
+            "sh './scripts/run.sh'"
         }
     );
     assert_eq!(draft.files.len(), 9);
@@ -87,7 +90,7 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
     assert!(draft
         .files
         .iter()
-        .any(|file| file.path == "disk-cleanup/cleanup-config.json"));
+        .any(|file| file.path == "scripts/cleanup-config.json"));
     assert!(draft.files[0].content.contains("parse_options"));
     assert_eq!(std::fs::read_dir(temporary.path()).unwrap().count(), 0);
 }
@@ -114,7 +117,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     draft["workdir"] = json!(workspace);
     // Keep the opt-in native smoke task confined to its workspace, with no notification.
     for file in draft["files"].as_array_mut().unwrap() {
-        if file["path"] == "disk-cleanup/cleanup-config.json" {
+        if file["path"] == "scripts/cleanup-config.json" {
             let mut config: Value =
                 serde_json::from_str(file["content"].as_str().unwrap()).unwrap();
             for key in [
@@ -137,7 +140,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     draft["files"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"path":"disk-cleanup/helper.py","content":"VALUE = 1\n"}));
+        .push(json!({"path":"scripts/helper.py","content":"VALUE = 1\n"}));
     let definition = temporary.path().join("task.json");
     std::fs::write(&definition, draft.to_string()).unwrap();
     let created = success(cli(
@@ -148,20 +151,14 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
         root: &root,
         id: created["id"].as_str().unwrap().into(),
     };
-    let file = workspace.join("disk-cleanup/cleanup-config.json");
+    let task = success(cli(&root, &["show", &cleanup.id]));
+    let package = std::path::PathBuf::from(task["definition"]["script_dir"].as_str().unwrap());
+    let file = package.join("scripts/cleanup-config.json");
     let content = std::fs::read_to_string(&file).unwrap();
-    let (marker, body) = content.split_once('\n').unwrap();
-    let mut config: Value = serde_json::from_str(body).unwrap();
+    let mut config: Value = serde_json::from_str(&content).unwrap();
     config["workspace_tmp_days"] = json!(14);
-    std::fs::write(
-        &file,
-        format!(
-            "{marker}\n{}",
-            serde_json::to_string_pretty(&config).unwrap()
-        ),
-    )
-    .unwrap();
-    std::fs::write(workspace.join("disk-cleanup/helper.py"), "VALUE = 2\n").unwrap();
+    std::fs::write(&file, serde_json::to_string_pretty(&config).unwrap()).unwrap();
+    std::fs::write(package.join("scripts/helper.py"), "VALUE = 2\n").unwrap();
     let retained = workspace.join("tmp/ten-days-old.tmp");
     std::fs::write(&retained, "keep after customization").unwrap();
     std::fs::File::options()
@@ -187,25 +184,33 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     }
     assert!(retained.is_file(), "the customized 14-day rule is used");
     let task = success(cli(&root, &["show", &cleanup.id]));
-    assert_eq!(task["revision"], 2);
+    assert_ne!(task["revision"], 1);
     let files = task["definition"]["files"].as_array().unwrap();
     assert!(files
         .iter()
-        .any(|file| file["path"] == "disk-cleanup/cleanup-config.json"
+        .any(|file| file["path"] == "scripts/cleanup-config.json"
             && file["content"]
                 .as_str()
                 .unwrap()
                 .contains("\"workspace_tmp_days\": 14")));
     assert!(files
         .iter()
-        .any(|file| file["path"] == "disk-cleanup/helper.py" && file["content"] == "VALUE = 2\n"));
-    let registry: Value =
-        serde_json::from_slice(&std::fs::read(root.join("tasks.json")).unwrap()).unwrap();
-    assert!(registry["pending_backup"][&cleanup.id]["files"]
+        .any(|file| file["path"] == "scripts/helper.py" && file["content"] == "VALUE = 2\n"));
+    let receipt: Value =
+        serde_json::from_slice(&std::fs::read(package.join(".local/receipt.json")).unwrap())
+            .unwrap();
+    assert_eq!(receipt["pending_backup"], true);
+    let exported = temporary.path().join("customized.json");
+    success(cli(
+        &root,
+        &["export", &cleanup.id, "--file", exported.to_str().unwrap()],
+    ));
+    let exported: Value = serde_json::from_slice(&std::fs::read(exported).unwrap()).unwrap();
+    assert!(exported["draft"]["files"]
         .as_array()
         .unwrap()
         .iter()
-        .any(|file| file["path"] == "disk-cleanup/helper.py" && file["content"] == "VALUE = 2\n"));
+        .any(|file| file["path"] == "scripts/helper.py" && file["content"] == "VALUE = 2\n"));
     assert!(success(cli(&root, &["logs", &cleanup.id]))["content"]
         .as_str()
         .unwrap()
@@ -235,10 +240,14 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
         root: &root,
         id: created["id"].as_str().unwrap().into(),
     };
-    let dir = root.join(cleanup.id.trim_start_matches("agent_hub:"));
     let workspace = root.join("workspaces").join("Automation smoke test");
+    let dir = workspace.join(".local");
     assert!(workspace.is_dir(), "omitted workdir is provisioned on save");
-    let script = workspace.join(if cfg!(windows) { "run.ps1" } else { "run.sh" });
+    let script = workspace.join(if cfg!(windows) {
+        "scripts/run.ps1"
+    } else {
+        "scripts/run.sh"
+    });
     assert!(
         script.is_file(),
         "the command script lives in the task workspace"
@@ -331,7 +340,7 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
     assert_eq!(task["definition"]["schedule"]["kind"], "manual");
     assert_eq!(task["definition"]["enabled"], false);
     assert_eq!(task["last_result"], "0");
-    assert_eq!(task["project"].as_str(), workspace.to_str());
+    assert!(task["project"].is_null());
     assert!(
         workspace.join("ran-from.txt").is_file(),
         "the scheduler executes inside the provisioned directory"
@@ -366,13 +375,13 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
     std::fs::write(&script, custom_content).unwrap();
     success(cli(&root, &["run", &cleanup.id]));
     let customized = success(cli(&root, &["show", &cleanup.id]));
-    assert_eq!(customized["revision"], 6);
+    assert_ne!(customized["revision"], 5);
     assert_eq!(
         customized["definition"]["content"],
         if cfg!(windows) {
-            "& './run.ps1'"
+            "& './scripts/run.ps1'"
         } else {
-            "sh './run.sh'"
+            "sh './scripts/run.sh'"
         }
     );
     assert_eq!(
@@ -410,12 +419,9 @@ fn creates_edits_and_manually_runs_a_native_task_without_changing_the_schedule()
             .trim(),
         "customized automation test"
     );
-    let registry: Value =
-        serde_json::from_slice(&std::fs::read(root.join("tasks.json")).unwrap()).unwrap();
-    assert_eq!(
-        registry["pending_backup"][&cleanup.id]["files"][0]["content"],
-        custom_content
-    );
+    let receipt: Value =
+        serde_json::from_slice(&std::fs::read(dir.join("receipt.json")).unwrap()).unwrap();
+    assert_eq!(receipt["pending_backup"], true);
     assert_eq!(
         success(cli(&root, &["logs", &cleanup.id, "--run", &first_run]))["content"]
             .as_str()

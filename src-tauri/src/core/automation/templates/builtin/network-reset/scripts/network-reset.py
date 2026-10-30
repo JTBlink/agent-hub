@@ -1,9 +1,20 @@
 """Invoke the administrator-installed, argument-free network reset runner."""
 from pathlib import Path
 import subprocess
+import json
+import os
+import re
 import sys
 
-RUNNER = Path("/Library/PrivilegedHelperTools/agent-hub-network-reset/run")
+ROOT = Path("/Library/PrivilegedHelperTools/agent-hub-network-reset")
+RUNNER = ROOT / "run"  # Legacy tasks retain their administrator-installed entry.
+TASK = Path(os.environ.get("AGENT_HUB_TASK_DIR", str(Path(__file__).resolve().parent.parent)))
+try:
+    identity = json.loads((TASK / "task.json").read_text())["instance_id"]
+    if re.fullmatch(r"agent_hub:[0-9a-fA-F-]{36}", identity):
+        RUNNER = ROOT / identity.removeprefix("agent_hub:") / "run"
+except (OSError, ValueError, KeyError, TypeError):
+    pass
 
 
 def main():
@@ -15,7 +26,7 @@ def main():
     if len(sys.argv) != 1:
         raise SystemExit("仅支持 --dry-run 预览参数。")
     if not RUNNER.is_file():
-        raise SystemExit("请先在脚本目录执行 sudo /bin/bash network-reset/setup.sh，完成后再启用计划。")
+        raise SystemExit("请先在 AgentHub 安装此任务；旧任务可执行 sudo /bin/bash scripts/setup.sh，完成后再启用计划。")
     result = subprocess.run(["/usr/bin/sudo", "-n", str(RUNNER)], check=False)
     if result.returncode:
         raise SystemExit("网络重置失败；检查运行日志，必要时重新执行 setup.sh。")

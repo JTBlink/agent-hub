@@ -16,7 +16,9 @@
     "minute": 0,
     "weekdays": true
   },
-  "entrypoint": "git-status.py",
-  "scripts": ["git-status.py"],
+  "entrypoint": "scripts/git-status.py",
+  "scripts": [
+    "scripts/git-status.py"
+  ],
   "provider": "system"
 }

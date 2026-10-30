@@ -26,6 +26,7 @@ impl Fixture {
             id,
             revision: 1,
             draft: AutomationDraft {
+                package_options: None,
                 name: "Audit".into(),
                 provider: Provider::System,
                 content: "exit 0".into(),

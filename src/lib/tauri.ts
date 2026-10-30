@@ -17,6 +17,10 @@ export interface AutomationScriptFile {
   content: string;
 }
 export interface AutomationDraft {
+  package_options?: {
+    dependencies: AutomationPackage["dependencies"];
+    hermes?: AutomationPackage["hermes"];
+  } | null;
   script_dir?: string | null;
   files?: AutomationScriptFile[];
   name: string;
@@ -38,6 +42,7 @@ export interface AutomationTask {
   can_run: boolean;
   definition: AutomationDraft | null;
   revision: number | null;
+  installation?: string | null;
   is_builtin: boolean;
   schedule: string;
   project: string | null;
@@ -111,11 +116,42 @@ export const saveAutomation = (
   id: string | null,
   revision: number | null,
   draft: AutomationDraft,
-) => invoke<string>("save_automation", { id, revision, draft });
+  install = true,
+) => invoke<string>("save_automation", { id, revision, draft, install });
 export const runAutomation = (id: string) =>
   invoke<void>("run_automation", { id });
 export const removeAutomation = (id: string, deleteLocalData = false) =>
   invoke<void>("remove_automation", { id, deleteLocalData });
+
+export interface AutomationPackage {
+  schema_version: number;
+  shell: "sh" | "powershell";
+  draft: AutomationDraft;
+  dependencies: (
+    { kind: "command"; name: string } | { kind: "python"; packages: string[] }
+  )[];
+  hermes?: {
+    script: string | null;
+    monitor_script: string | null;
+    no_agent: boolean;
+  } | null;
+}
+export const previewAutomationPackage = (path: string) =>
+  invoke<AutomationPackage>("preview_automation_package", { path });
+export const importAutomationPackage = (
+  taskPackage: AutomationPackage,
+  workdir: string | null,
+) =>
+  invoke<string>("import_automation_package", {
+    package: taskPackage,
+    workdir,
+  });
+export const exportAutomationPackage = (id: string, path: string) =>
+  invoke<void>("export_automation_package", { id, path });
+export const setAutomationInstallation = (id: string, installed: boolean) =>
+  invoke<void>("set_automation_installation", { id, installed });
+export const migrateAutomationPackage = (id: string) =>
+  invoke<string>("migrate_automation_package", { id });
 
 // ── Types ──
 

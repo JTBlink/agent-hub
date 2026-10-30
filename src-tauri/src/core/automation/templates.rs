@@ -64,6 +64,18 @@ fn catalog(locale: &str, hermes: bool, shell: &str) -> AutomationCatalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn new_template_launchers_resolve_python_from_the_task_environment() {
+        for shell in ["sh", "powershell"] {
+            let templates = catalog("en", false, shell).templates;
+            for template in templates {
+                let entry =
+                    crate::core::automation::native::shell_entry::entry(&template.draft).unwrap();
+                assert!(entry.content.contains("AGENT_HUB_PYTHON"));
+                assert!(!entry.content.contains("/bin/python"));
+            }
+        }
+    }
     use crate::core::automation::Provider;
     #[test]
     fn catalog_keeps_core_scenarios_with_short_prompts_and_legacy_cli_ids() {
@@ -96,7 +108,7 @@ mod tests {
                 .draft
                 .files
                 .iter()
-                .find(|file| file.path.ends_with("/prompt.md"))
+                .find(|file| file.path == "prompt.md" || file.path.ends_with("/prompt.md"))
             {
                 assert!(prompt.content.trim().chars().count() <= 160, "{}", item.id);
             }
@@ -126,7 +138,7 @@ mod tests {
             draft
                 .files
                 .iter_mut()
-                .find(|file| file.path.ends_with("/prompt.md"))
+                .find(|file| file.path == "prompt.md" || file.path.ends_with("/prompt.md"))
                 .unwrap()
                 .content = "Check this project".into();
             draft.validate().unwrap();
@@ -134,7 +146,7 @@ mod tests {
             assert!(draft
                 .files
                 .iter()
-                .any(|file| file.path.ends_with("/herdr.json")));
+                .any(|file| file.path == "herdr.json" || file.path.ends_with("/herdr.json")));
         }
     }
     #[test]
@@ -147,8 +159,8 @@ mod tests {
             .last()
             .unwrap()
             .content
-            .contains("agent-maintenance/agent.py"));
-        assert_eq!(windows.templates[0].draft.content, "& './run.ps1'");
+            .contains("scripts/agent.py"));
+        assert_eq!(windows.templates[0].draft.content, "& './scripts/run.ps1'");
         assert_eq!(windows.templates[0].title, "项目巡检");
         assert!(windows
             .templates
@@ -159,7 +171,7 @@ mod tests {
             unix.templates.len(),
             if cfg!(target_os = "macos") { 5 } else { 4 }
         );
-        assert_eq!(unix.templates[0].draft.content, "sh './run.sh'");
+        assert_eq!(unix.templates[0].draft.content, "sh './scripts/run.sh'");
         let cleanup = windows
             .templates
             .iter()

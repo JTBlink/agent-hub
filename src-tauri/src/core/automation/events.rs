@@ -20,7 +20,7 @@ fn paths(root: &Path) -> HashSet<PathBuf> {
             .filter(|r| r.draft.provider == Provider::System)
         {
             let dir = native::directory(root, &record);
-            if is_path_safe(root, &dir) {
+            if is_path_safe(root, &dir) || super::package::checked(root, &record).is_ok() {
                 paths.insert(dir);
                 if let Some(workdir) = record.draft.scripts_dir() {
                     for file in &record.draft.files {
@@ -61,7 +61,10 @@ fn relevant(event: &Event, root: &Path, watched: &HashSet<PathBuf>) -> bool {
         }
         match path.file_name().and_then(|name| name.to_str()) {
             Some("tasks.json") => parent == root,
-            Some("started" | "exit") => parent.parent() == Some(root),
+            Some("started" | "exit") => {
+                parent.parent() == Some(root)
+                    || parent.file_name().is_some_and(|name| name == ".local")
+            }
             Some("jobs.json") => parent != root,
             Some(name)
                 if [".py", ".sh", ".ps1", ".json", ".md"]

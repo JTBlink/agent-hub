@@ -15,6 +15,15 @@ pub(super) fn command(
     args: &[&str],
     env: &[(&str, &str)],
 ) -> Result<String, String> {
+    command_with_timeout(program, args, env, 15)
+}
+
+pub(super) fn command_with_timeout(
+    program: &str,
+    args: &[&str],
+    env: &[(&str, &str)],
+    timeout_seconds: u64,
+) -> Result<String, String> {
     let mut stdout = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut stderr = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut command = Command::new(program);
@@ -35,7 +44,7 @@ pub(super) fn command(
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
-            Ok(None) if started.elapsed() < Duration::from_secs(15) => {
+            Ok(None) if started.elapsed() < Duration::from_secs(timeout_seconds) => {
                 std::thread::sleep(Duration::from_millis(30))
             }
             result => {

@@ -170,6 +170,7 @@ mod tests {
 
     fn draft(workspace: &Path) -> AutomationDraft {
         AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Cleanup".into(),
             provider: Provider::System,

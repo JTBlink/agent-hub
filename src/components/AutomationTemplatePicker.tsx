@@ -78,7 +78,12 @@ export function AutomationTemplatePicker({
           id: backup.id,
           title: backup.draft.name,
           description: t("automation.backupTemplateHint"),
-          draft: { ...backup.draft, enabled: false },
+          draft: {
+            ...backup.draft,
+            script_dir: null,
+            workdir: null,
+            enabled: false,
+          },
           disabled:
             backup.draft.provider === "system" &&
             backup.shell !== catalog?.shell,

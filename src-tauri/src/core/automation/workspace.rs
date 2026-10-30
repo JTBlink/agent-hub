@@ -168,7 +168,7 @@ fn ensure_at(
     Ok(())
 }
 
-fn allocate(root: &Path, name: &str) -> Result<PathBuf, String> {
+pub(super) fn allocate(root: &Path, name: &str) -> Result<PathBuf, String> {
     let name = super::super::path_guard::sanitize_name(name);
     // Windows device names are reserved even with extensions. Use the same
     // portable spelling on every platform, including for restored tasks.
@@ -207,6 +207,7 @@ mod tests {
     use super::*;
     fn draft() -> AutomationDraft {
         AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit".into(),
             provider: super::super::Provider::System,

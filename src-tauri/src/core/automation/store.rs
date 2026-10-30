@@ -19,6 +19,8 @@ pub(super) struct Registry {
     pub pending_backup: BTreeMap<String, Option<AutomationDraft>>,
     #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
     pub removal_pending: BTreeSet<String>,
+    #[serde(skip)]
+    pub issues: Vec<String>,
 }
 
 pub(super) fn root() -> PathBuf {
@@ -43,6 +45,74 @@ pub(super) fn load(root: &Path) -> Result<Vec<ManagedAutomation>, String> {
 }
 
 pub(super) fn read_registry(root: &Path) -> Result<Registry, String> {
+    if root.join("task.json").is_file() {
+        return Ok(Registry {
+            version: 1,
+            tasks: vec![super::package::read(root)?],
+            ..Default::default()
+        });
+    }
+    let (packages, mut issues) = super::package::discover(root);
+    let mut registry = match read_legacy(root) {
+        Ok(registry) => registry,
+        Err(error) if !packages.is_empty() => {
+            issues.push(format!("Legacy creation records are damaged: {error}"));
+            Registry {
+                version: 1,
+                ..Default::default()
+            }
+        }
+        Err(error) => return Err(error),
+    };
+    if !root.join("tasks.json").exists() && !packages.is_empty() {
+        registry.backup_initialized = true;
+    }
+    for record in packages {
+        if registry.tasks.iter().any(|r| r.id == record.id) {
+            issues.push(format!(
+                "Task instance conflicts with legacy record: {}",
+                record.id
+            ));
+            continue;
+        }
+        let receipt = match super::package::receipt(&record) {
+            Ok(receipt) => receipt,
+            Err(error) => {
+                issues.push(format!("{}: {error}", record.draft.name));
+                continue;
+            }
+        };
+        if receipt.pending_backup || record.revision != receipt.revision {
+            registry
+                .pending_backup
+                .insert(record.id.clone(), Some(record.draft.clone()));
+        }
+        if receipt.removal_pending {
+            registry.removal_pending.insert(record.id.clone());
+        }
+        registry.tasks.push(record);
+    }
+    if let Ok(entries) = std::fs::read_dir(root.join("deletions")) {
+        for entry in entries {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let Some(id) = entry
+                .file_name()
+                .to_str()
+                .and_then(|s| s.strip_suffix(".json"))
+                .map(|s| format!("agent_hub:{s}"))
+            else {
+                continue;
+            };
+            if valid_id(&id) && !registry.tasks.iter().any(|r| r.id == id) {
+                registry.pending_backup.insert(id, None);
+            }
+        }
+    }
+    registry.issues.extend(issues);
+    Ok(registry)
+}
+
+fn read_legacy(root: &Path) -> Result<Registry, String> {
     if !root.is_absolute() {
         return Err("Cannot resolve an absolute automation data directory; set AGENT_HUB_AUTOMATION_HOME to an absolute path".into());
     }
@@ -81,6 +151,36 @@ pub(super) fn read_registry(root: &Path) -> Result<Registry, String> {
     Ok(registry)
 }
 
+pub(super) fn legacy_task(root: &Path, id: &str) -> Result<Option<ManagedAutomation>, String> {
+    Ok(read_legacy(root)?
+        .tasks
+        .into_iter()
+        .find(|task| task.id == id))
+}
+
+pub(super) fn retire_legacy(root: &Path, id: &str) -> Result<(), String> {
+    let _lock = Lock::acquire(root)?;
+    let mut registry = read_legacy(root)?;
+    registry.tasks.retain(|record| record.id != id);
+    registry.pending_backup.remove(id);
+    registry.removal_pending.remove(id);
+    write(
+        &root.join("tasks.json"),
+        &serde_json::to_vec_pretty(&registry).map_err(|e| e.to_string())?,
+    )
+}
+
+pub(super) fn restore_legacy(root: &Path, record: &ManagedAutomation) -> Result<(), String> {
+    let _lock = Lock::acquire(root)?;
+    let mut registry = read_legacy(root)?;
+    registry.tasks.retain(|old| old.id != record.id);
+    registry.tasks.push(record.clone());
+    write(
+        &root.join("tasks.json"),
+        &serde_json::to_vec_pretty(&registry).map_err(|e| e.to_string())?,
+    )
+}
+
 pub(super) fn save(root: &Path, tasks: Vec<ManagedAutomation>) -> Result<(), String> {
     let mut registry = read_registry(root)?;
     for task in &tasks {
@@ -114,11 +214,70 @@ pub(super) fn save(root: &Path, tasks: Vec<ManagedAutomation>) -> Result<(), Str
 }
 
 pub(super) fn write_registry(root: &Path, registry: &Registry) -> Result<(), String> {
-    let data = serde_json::to_vec_pretty(registry).map_err(|e| e.to_string())?;
+    // Keep the released storage format for old tasks. New definitions remain
+    // authoritative in their own packages, even when tasks.json is missing.
+    let mut legacy = read_legacy(root)?;
+    legacy.tasks.clear();
+    legacy.pending_backup.clear();
+    legacy.removal_pending.clear();
+    legacy.backup_initialized = registry.backup_initialized;
+    for record in &registry.tasks {
+        if super::package::directory(record).is_some() {
+            let _lock = super::package::lock(root, &record.id)?;
+            super::package::checked(root, record)?;
+            let current = super::package::read(
+                &super::package::directory(record).ok_or("Missing task package")?,
+            )?;
+            if current.revision != record.revision || current.draft != record.draft {
+                return Err("Task package changed during metadata update; retry".into());
+            }
+            let mut receipt = super::package::receipt(record)?;
+            receipt.revision = record.revision;
+            receipt.fingerprint = super::package::storage_fingerprint(&record.draft)?;
+            receipt.pending_backup = registry.pending_backup.contains_key(&record.id);
+            super::package::write_receipt(record, &receipt)?;
+        } else {
+            legacy.tasks.push(record.clone());
+            if registry.removal_pending.contains(&record.id) {
+                legacy.removal_pending.insert(record.id.clone());
+            }
+        }
+    }
+    for (id, draft) in &registry.pending_backup {
+        if !registry
+            .tasks
+            .iter()
+            .any(|r| r.id == *id && super::package::directory(r).is_some())
+        {
+            legacy.pending_backup.insert(id.clone(), draft.clone());
+        }
+    }
+    let data = serde_json::to_vec_pretty(&legacy).map_err(|e| e.to_string())?;
     if data.len() > MAX_REGISTRY_BYTES {
         return Err("Automation registry exceeds 16 MiB; existing tasks were preserved".into());
     }
-    write(&root.join("tasks.json"), &data)
+    if !legacy.tasks.is_empty()
+        || !legacy.pending_backup.is_empty()
+        || root.join("tasks.json").exists()
+    {
+        write(&root.join("tasks.json"), &data)?;
+    }
+    if let Ok(entries) = std::fs::read_dir(root.join("deletions")) {
+        for entry in entries {
+            let entry = entry.map_err(|e| e.to_string())?;
+            if let Some(id) = entry
+                .file_name()
+                .to_str()
+                .and_then(|s| s.strip_suffix(".json"))
+                .map(|s| format!("agent_hub:{s}"))
+            {
+                if valid_id(&id) && !registry.pending_backup.contains_key(&id) {
+                    std::fs::remove_file(entry.path()).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Atomic replacement preserves the old definition if writing fails.

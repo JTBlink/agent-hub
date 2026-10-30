@@ -32,105 +32,111 @@ struct Manifest {
 type Bundle = (&'static str, &'static [(&'static str, &'static str)]);
 
 pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
-    let runtime = super::super::native::python_runtime().unwrap_or_else(|_| {
-        if cfg!(windows) {
-            "python".into()
-        } else {
-            "python3".into()
-        }
-    });
+    let runtime = if shell == "powershell" {
+        "python"
+    } else {
+        "python3"
+    };
     let content = if shell == "powershell" {
         format!(
-            "& '{}' \"$env:AGENT_HUB_SCRIPT_DIR/agent-task/agent.py\"",
-            runtime.to_string_lossy().replace('\'', "''")
+            "if (!$env:AGENT_HUB_PYTHON) {{ $env:AGENT_HUB_PYTHON = '{}' }}; & $env:AGENT_HUB_PYTHON \"$env:AGENT_HUB_SCRIPT_DIR/scripts/agent.py\"",
+            runtime
         )
     } else {
         format!(
-            "'{}' \"$AGENT_HUB_SCRIPT_DIR/agent-task/agent.py\"",
-            runtime.to_string_lossy().replace('\'', "'\\''")
+            "\"${{AGENT_HUB_PYTHON:-{}}}\" \"$AGENT_HUB_SCRIPT_DIR/scripts/agent.py\"",
+            runtime
         )
     };
     let mut draft = AutomationDraft {
+    package_options: None,
         name: String::new(), provider: Provider::System, content,
         workdir: None, script_dir: None, schedule: Schedule::Daily { hour: 9, minute: 0, weekdays: true }, enabled: true,
         files: vec![
-            AutomationScriptFile { path: "agent-task/agent.py".into(), content: include_str!("builtin/herdr-agent.py").into() },
-            AutomationScriptFile { path: "agent-task/prompt.md".into(), content: String::new() },
-            AutomationScriptFile { path: "agent-task/herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[\"--dangerously-bypass-approvals-and-sandbox\"],\"title\":\"AgentHub task\"}\n".into() },
+            AutomationScriptFile { path: "scripts/agent.py".into(), content: include_str!("builtin/herdr-agent.py").into() },
+            AutomationScriptFile { path: "prompt.md".into(), content: String::new() },
+            AutomationScriptFile { path: "herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[\"--dangerously-bypass-approvals-and-sandbox\"],\"title\":\"AgentHub task\"}\n".into() },
         ],
     };
     super::super::native::shell_entry::wrap(&mut draft, shell);
+    super::super::package::normalize(&mut draft);
     draft
 }
 
 pub(super) const DISK_CLEANUP_FILES: &[(&str, &str)] = &[
     (
-        "disk-cleanup.py",
-        include_str!("builtin/disk-cleanup/disk-cleanup.py"),
+        "scripts/disk-cleanup.py",
+        include_str!("builtin/disk-cleanup/scripts/disk-cleanup.py"),
     ),
     (
-        "cleanup_config.py",
-        include_str!("builtin/disk-cleanup/cleanup_config.py"),
+        "scripts/cleanup_config.py",
+        include_str!("builtin/disk-cleanup/scripts/cleanup_config.py"),
     ),
     (
-        "cleanup_files.py",
-        include_str!("builtin/disk-cleanup/cleanup_files.py"),
+        "scripts/cleanup_files.py",
+        include_str!("builtin/disk-cleanup/scripts/cleanup_files.py"),
     ),
     (
-        "cleanup_rules.py",
-        include_str!("builtin/disk-cleanup/cleanup_rules.py"),
+        "scripts/cleanup_rules.py",
+        include_str!("builtin/disk-cleanup/scripts/cleanup_rules.py"),
     ),
     (
-        "cleanup_actions.py",
-        include_str!("builtin/disk-cleanup/cleanup_actions.py"),
+        "scripts/cleanup_actions.py",
+        include_str!("builtin/disk-cleanup/scripts/cleanup_actions.py"),
     ),
     (
-        "cleanup_report.py",
-        include_str!("builtin/disk-cleanup/cleanup_report.py"),
+        "scripts/cleanup_report.py",
+        include_str!("builtin/disk-cleanup/scripts/cleanup_report.py"),
     ),
     (
-        "cleanup-config.json",
-        include_str!("builtin/disk-cleanup/cleanup-config.json"),
+        "scripts/cleanup-config.json",
+        include_str!("builtin/disk-cleanup/scripts/cleanup-config.json"),
     ),
     ("README.md", include_str!("builtin/disk-cleanup/README.md")),
 ];
 
 const BUNDLES: &[Bundle] = &[
     (
-        include_str!("builtin/network-reset/template.json"),
+        include_str!("builtin/network-reset/task.json"),
         &[
             (
-                "network-reset.py",
-                include_str!("builtin/network-reset/network-reset.py"),
+                "scripts/network-reset.py",
+                include_str!("builtin/network-reset/scripts/network-reset.py"),
             ),
-            ("setup.sh", include_str!("builtin/network-reset/setup.sh")),
-            ("reset.sh", include_str!("builtin/network-reset/reset.sh")),
+            (
+                "scripts/setup.sh",
+                include_str!("builtin/network-reset/scripts/setup.sh"),
+            ),
+            (
+                "scripts/reset.sh",
+                include_str!("builtin/network-reset/scripts/reset.sh"),
+            ),
             ("README.md", include_str!("builtin/network-reset/README.md")),
         ],
     ),
     (
-        include_str!("builtin/workspace-check/template.json"),
+        include_str!("builtin/workspace-check/task.json"),
         &[(
-            "workspace-check.py",
-            include_str!("builtin/workspace-check/workspace-check.py"),
+            "scripts/workspace-check.py",
+            include_str!("builtin/workspace-check/scripts/workspace-check.py"),
         )],
     ),
     (
-        include_str!("builtin/disk-cleanup/template.json"),
+        include_str!("builtin/disk-cleanup/task.json"),
         DISK_CLEANUP_FILES,
     ),
     (
-        include_str!("builtin/git-status/template.json"),
+        include_str!("builtin/git-status/task.json"),
         &[(
-            "git-status.py",
-            include_str!("builtin/git-status/git-status.py"),
+            "scripts/git-status.py",
+            include_str!("builtin/git-status/scripts/git-status.py"),
         )],
     ),
     (
-        include_str!("builtin/agent-code-review/template.json"),
+        include_str!("builtin/agent-code-review/task.json"),
         &[
             (
-                "agent-code-review.py",
+                "scripts/agent-code-review.py",
                 include_str!("builtin/herdr-agent.py"),
             ),
             (
@@ -148,9 +154,9 @@ const BUNDLES: &[Bundle] = &[
         ],
     ),
     (
-        include_str!("builtin/agent-maintenance/template.json"),
+        include_str!("builtin/agent-maintenance/task.json"),
         &[
-            ("agent.py", include_str!("builtin/herdr-agent.py")),
+            ("scripts/agent.py", include_str!("builtin/herdr-agent.py")),
             (
                 "prompt.md",
                 include_str!("builtin/agent-maintenance/prompt.md"),
@@ -166,9 +172,9 @@ const BUNDLES: &[Bundle] = &[
         ],
     ),
     (
-        include_str!("builtin/agent-mr-processing/template.json"),
+        include_str!("builtin/agent-mr-processing/task.json"),
         &[
-            ("agent.py", include_str!("builtin/herdr-agent.py")),
+            ("scripts/agent.py", include_str!("builtin/herdr-agent.py")),
             (
                 "prompt.md",
                 include_str!("builtin/agent-mr-processing/prompt.md"),
@@ -184,9 +190,9 @@ const BUNDLES: &[Bundle] = &[
         ],
     ),
     (
-        include_str!("builtin/agent-issue-processing/template.json"),
+        include_str!("builtin/agent-issue-processing/task.json"),
         &[
-            ("agent.py", include_str!("builtin/herdr-agent.py")),
+            ("scripts/agent.py", include_str!("builtin/herdr-agent.py")),
             (
                 "prompt.md",
                 include_str!("builtin/agent-issue-processing/prompt.md"),
@@ -201,8 +207,8 @@ const BUNDLES: &[Bundle] = &[
             ),
         ],
     ),
-    (include_str!("builtin/repository-audit/template.json"), &[]),
-    (include_str!("builtin/daily-summary/template.json"), &[]),
+    (include_str!("builtin/repository-audit/task.json"), &[]),
+    (include_str!("builtin/daily-summary/task.json"), &[]),
 ];
 
 pub(super) fn templates(locale: &str, hermes: bool, shell: &str) -> Vec<AutomationTemplate> {
@@ -224,9 +230,11 @@ pub(super) fn templates(locale: &str, hermes: bool, shell: &str) -> Vec<Automati
 }
 
 pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<AutomationTemplate> {
-    let runtime = super::super::native::python_runtime().unwrap_or_else(|_| {
-        std::path::PathBuf::from(if cfg!(windows) { "python" } else { "python3" })
-    });
+    let runtime = if shell == "powershell" {
+        "python"
+    } else {
+        "python3"
+    };
     BUNDLES
         .iter()
         .filter_map(|(manifest, scripts)| {
@@ -241,21 +249,17 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
                 return None;
             }
             let title = manifest.title.get(locale);
-            let path = format!(
-                "{}/{}",
-                manifest.id,
-                manifest.entrypoint.as_deref().unwrap_or_default()
-            );
+            let path = manifest.entrypoint.as_deref().unwrap_or_default();
             let command = if shell == "powershell" {
                 format!(
-                    "& '{}' \"$env:AGENT_HUB_SCRIPT_DIR/{}\"",
-                    runtime.to_string_lossy().replace('\'', "''"),
+                    "if (!$env:AGENT_HUB_PYTHON) {{ $env:AGENT_HUB_PYTHON = '{}' }}; & $env:AGENT_HUB_PYTHON \"$env:AGENT_HUB_SCRIPT_DIR/{}\"",
+                    runtime,
                     path
                 )
             } else {
                 format!(
-                    "'{}' \"$AGENT_HUB_SCRIPT_DIR/{}\"",
-                    runtime.to_string_lossy().replace('\'', "'\\''"),
+                    "\"${{AGENT_HUB_PYTHON:-{}}}\" \"$AGENT_HUB_SCRIPT_DIR/{}\"",
+                    runtime,
                     path
                 )
             };
@@ -269,7 +273,7 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
                         .expect("every template script is embedded")
                         .1;
                     AutomationScriptFile {
-                        path: format!("{}/{}", manifest.id, name),
+                        path: name,
                         content: content.into(),
                     }
                 })
@@ -283,6 +287,7 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
                 command
             };
             let mut draft = AutomationDraft {
+    package_options: None,
                 name: title.clone(),
                 provider: manifest.provider,
                 content: command,
@@ -295,6 +300,7 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
             if draft.provider == Provider::System {
                 super::super::native::shell_entry::wrap(&mut draft, shell);
             }
+            if draft.provider == Provider::System { super::super::package::normalize(&mut draft); }
             Some(AutomationTemplate {
                 id: manifest.id,
                 title: title.clone(),

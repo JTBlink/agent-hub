@@ -143,6 +143,7 @@ fn draft(value: &Value, name: &str, enabled: bool) -> Option<AutomationDraft> {
         return None;
     }
     Some(AutomationDraft {
+        package_options: None,
         name: name.into(),
         provider: Provider::System,
         content: command(value)?,

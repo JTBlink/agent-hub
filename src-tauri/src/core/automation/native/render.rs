@@ -189,6 +189,7 @@ mod tests {
             id: format!("agent_hub:{}", uuid::Uuid::new_v4()),
             revision: 1,
             draft: AutomationDraft {
+                package_options: None,
                 files: Vec::new(),
                 name: "Audit & test".into(),
                 provider: super::super::super::definition::Provider::System,

@@ -125,7 +125,7 @@
     "openWorkdirAfterSave": "選擇目錄或儲存任務後，可在 VS Code 中開啟",
     "scriptFiles": "腳本檔案（{{count}}）",
     "closeFile": "關閉檔案預覽",
-    "networkSetupHelp": "網路重設需先在腳本目錄執行 sudo /bin/bash network-reset/setup.sh；完成管理員安裝後再啟用排程。",
+    "networkSetupHelp": "安裝此範本時，系統將請求管理員授權，為目前任務安裝獨立的網路重設入口。排程預設暫停；解除安裝時只移除此任務的權限入口。",
     "scriptFilesHint": "腳本儲存在獨立目錄中，點選檔案查看或編輯。",
     "useTemplate": "使用範本",
     "backToEditor": "返回編輯",
@@ -133,7 +133,7 @@
     "more": "更多操作",
     "restoreBackup": "從備份恢復",
     "noTemplates": "尚無可用範本。",
-    "backupTemplateHint": "從備份新增副本，預設暫停，不覆蓋本機既有任務。",
+    "backupTemplateHint": "從備份新增未安裝副本，不覆蓋本機既有任務。",
     "noBackupTemplates": "尚無可恢復的任務設定。",
     "otherShell": "此備份使用另一種 Shell，請先轉換命令再建立。",
     "pausedSaveHint": "儲存為暫停狀態，不會依排程自動執行。",
@@ -200,7 +200,27 @@
     "inactivePromptHelp": "選擇智慧體後會在專案工作區執行提示詞；不選擇時僅執行命令。",
     "hermesCommand": "由 Hermes 原生任務執行",
     "agentUnavailable": "未安裝或未啟用",
-    "backupSourceHelp": "這裡儲存的是自動化任務設定。選取後可編輯，儲存時建立預設暫停的副本。"
+    "backupSourceHelp": "這裡儲存的是自動化任務設定。選取後可編輯，儲存時建立預設暫停的副本。",
+    "importPackage": "匯入任務",
+    "importPackageHelp": "預覽任務包並匯入為新的未安裝任務。本機路徑、憑證與執行歷史不隨包匯入。",
+    "importFile": "選擇 JSON 檔案",
+    "importFolder": "選擇任務目錄",
+    "packageFileCount": "包含 {{count}} 個宣告檔案",
+    "installPackage": "安裝任務",
+    "uninstallPackage": "解除安裝任務",
+    "exportPackage": "匯出任務",
+    "migratePackage": "遷移為獨立任務包",
+    "installStates": {
+      "uninstalled": "未安裝",
+      "installed": "已安裝",
+      "installing": "安裝中",
+      "install_failed": "安裝失敗",
+      "uninstalling": "解除安裝中",
+      "uninstall_failed": "解除安裝失敗",
+      "updating": "更新中",
+      "update_failed": "更新失敗"
+    },
+    "uninstalledSaveHint": "儲存為未安裝任務。確認本機設定後，再安裝並啟用排程。"
   },
   "app": {
     "name": "agent-hub"

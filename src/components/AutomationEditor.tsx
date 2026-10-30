@@ -246,7 +246,9 @@ export function AutomationEditor({
                 onChange={update}
               />
               {draft.files?.some(
-                (file) => file.path === "network-reset/setup.sh",
+                (file) =>
+                  file.path === "network-reset/setup.sh" ||
+                  file.path === "scripts/setup.sh",
               ) && (
                 <p className="rounded-lg border border-border-subtle bg-surface p-3 text-[12px] leading-6 text-secondary">
                   {t("automation.networkSetupHelp")}
@@ -266,6 +268,7 @@ export function AutomationEditor({
                     <AutomationWorkdirField
                       kind="scriptDir"
                       value={draft.script_dir ?? null}
+                      readOnly={!task || !!task.installation}
                       disabled={busy}
                       onChange={(script_dir) => update({ script_dir })}
                     />
@@ -425,11 +428,13 @@ export function AutomationEditor({
               </p>
             ) : (
               t(
-                schedule.kind === "manual"
-                  ? "automation.manualSaveHint"
-                  : !draft.enabled
-                    ? "automation.pausedSaveHint"
-                    : "automation.saveHint",
+                restoreBackup
+                  ? "automation.uninstalledSaveHint"
+                  : schedule.kind === "manual"
+                    ? "automation.manualSaveHint"
+                    : !draft.enabled
+                      ? "automation.pausedSaveHint"
+                      : "automation.saveHint",
               )
             )}
           </div>

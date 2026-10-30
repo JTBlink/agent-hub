@@ -35,6 +35,23 @@ pub(super) fn collect(report: &mut AutomationOverview) {
     }
 }
 
+pub(super) fn at(root: &Path) -> Result<Vec<AutomationTask>, String> {
+    let path = root.join("cron/jobs.json");
+    match std::fs::metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(error.to_string()),
+        Ok(metadata) if !metadata.is_file() || metadata.len() > 16 * 1024 * 1024 => {
+            return Err("Invalid Hermes task store".into())
+        }
+        Ok(_) => {}
+    }
+    parse(
+        &std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
+        "bound-profile",
+        &path.to_string_lossy(),
+    )
+}
+
 fn read_store(root: &Path, profile: &str, report: &mut AutomationOverview) {
     let path = root.join("cron/jobs.json");
     match std::fs::read_to_string(&path) {
@@ -96,7 +113,11 @@ fn parse(input: &str, profile: &str, location: &str) -> Result<Vec<AutomationTas
             task.next_run = text(job, &["next_run_at"]);
             task.last_run = text(job, &["last_run_at"]);
             let state = text(job, &["state"]).unwrap_or_default();
+            let claimed = ["fire_claim", "run_claim"]
+                .iter()
+                .any(|key| job.get(key).is_some_and(Value::is_object));
             task.status = match state.as_str() {
+                _ if claimed => "running",
                 "completed" => "completed",
                 "error" => "error",
                 _ if job["enabled"].as_bool() == Some(false) => "paused",
@@ -117,6 +138,17 @@ fn parse(input: &str, profile: &str, location: &str) -> Result<Vec<AutomationTas
             Ok(task)
         })
         .collect()
+}
+
+#[cfg(test)]
+mod claim_tests {
+    #[test]
+    fn native_execution_claims_remain_running_even_after_future_runs_are_paused() {
+        let tasks = super::parse(r#"{"jobs":[{"id":"active","enabled":true,"fire_claim":{"by":"worker"}},{"id":"paused","enabled":false,"run_claim":{"by":"worker"}},{"id":"idle","enabled":true,"fire_claim":null}]}"#, "default", "<profile>/cron/jobs.json").unwrap();
+        assert_eq!(tasks[0].status, "running");
+        assert_eq!(tasks[1].status, "running");
+        assert_eq!(tasks[2].status, "active");
+    }
 }
 
 #[cfg(test)]

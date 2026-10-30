@@ -24,6 +24,29 @@ enum Origin {
 
 #[derive(Subcommand, Debug)]
 enum AutomationCommand {
+    /// 导入独立任务包或目录；默认未安装，--install 注册为暂停任务。
+    Import {
+        #[arg(long)]
+        path: PathBuf,
+        #[arg(long)]
+        workdir: Option<String>,
+        #[arg(long)]
+        preview: bool,
+        #[arg(long, conflicts_with = "preview")]
+        install: bool,
+    },
+    /// 导出可移植 JSON 包，不包含项目路径、凭据或运行历史。
+    Export {
+        id: String,
+        #[arg(long)]
+        file: PathBuf,
+    },
+    /// 自动检查依赖并安装已导入／已卸载任务的调度。
+    Install { id: String },
+    /// 撤销调度并卸载私有环境，保留任务内容和运行记录。
+    Uninstall { id: String },
+    /// 将旧系统任务迁移为独立任务包，保留任务 ID、日程和原脚本。
+    Migrate { id: String },
     /// 汇总本机任务；默认隐藏操作系统内置任务。
     List {
         #[arg(long, value_enum, default_value = "all")]
@@ -68,7 +91,7 @@ enum AutomationCommand {
     },
     /// 查看 Git 备份中的任务定义；不触发调度。
     Backups,
-    /// 预览备份；--apply 显式创建已暂停的副本，不覆盖本机任务。
+    /// 预览备份；--apply 显式创建未安装的副本，不覆盖本机任务。
     Restore {
         id: String,
         #[arg(long)]
@@ -125,6 +148,48 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
         automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
     }
     match &args.command {
+        AutomationCommand::Import {
+            path,
+            workdir,
+            preview,
+            install,
+        } => {
+            if *preview {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(
+                        &automation::package::preview_package(path).map_err(anyhow::Error::msg)?
+                    )?
+                );
+            } else {
+                let id = automation::package::import_package(path, workdir.clone())
+                    .map_err(anyhow::Error::msg)?;
+                if *install {
+                    automation::package::install(&id).map_err(anyhow::Error::msg)?;
+                }
+                result(
+                    json,
+                    &id,
+                    if *install { "installed" } else { "uninstalled" },
+                );
+            }
+        }
+        AutomationCommand::Export { id, file } => {
+            automation::package::export_package(id, file).map_err(anyhow::Error::msg)?;
+            result(json, id, "exported");
+        }
+        AutomationCommand::Install { id } => {
+            automation::package::install(id).map_err(anyhow::Error::msg)?;
+            result(json, id, "installed");
+        }
+        AutomationCommand::Uninstall { id } => {
+            automation::package::uninstall(id).map_err(anyhow::Error::msg)?;
+            result(json, id, "uninstalled");
+        }
+        AutomationCommand::Migrate { id } => {
+            let new_id = automation::package::migrate(id).map_err(anyhow::Error::msg)?;
+            result(json, &new_id, "uninstalled");
+        }
         AutomationCommand::List {
             source,
             origin,

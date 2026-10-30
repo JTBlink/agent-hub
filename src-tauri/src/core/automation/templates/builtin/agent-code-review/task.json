@@ -17,6 +17,11 @@
     "weekdays": true
   },
   "provider": "system",
-  "entrypoint": "agent-code-review.py",
-  "scripts": ["agent-code-review.py", "prompt.md", "herdr.json", "README.md"]
+  "entrypoint": "scripts/agent-code-review.py",
+  "scripts": [
+    "scripts/agent-code-review.py",
+    "prompt.md",
+    "herdr.json",
+    "README.md"
+  ]
 }

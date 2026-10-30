@@ -4,7 +4,7 @@ use super::{
 };
 use std::path::Path;
 
-fn native_record(
+pub(super) fn native_record(
     root: &Path,
     id: String,
     draft: AutomationDraft,
@@ -62,6 +62,9 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             return;
         }
     };
+    for error in &registry.issues {
+        report.issue("agent_hub", error.clone());
+    }
     for record in registry.tasks {
         let removal_pending = registry.removal_pending.contains(&record.id);
         if let Err(error) = verify(root, &record) {
@@ -73,7 +76,12 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
                 && task.identifier.as_deref() == Some(&record.identifier)
                 && task.location == record.location
         });
-        if record.draft.provider == Provider::Hermes && index.is_none() && !removal_pending {
+        let installation = super::package::state(&record);
+        if record.draft.provider == Provider::Hermes
+            && index.is_none()
+            && !removal_pending
+            && installation.is_none()
+        {
             // A task removed in Hermes is not resurrected from cached metadata.
             continue;
         }
@@ -90,6 +98,13 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
         task.can_edit = true;
         task.can_run = true;
         task.revision = Some(record.revision);
+        task.installation = installation.clone();
+        if installation.is_some() {
+            task.definition = Some(record.draft.clone());
+            task.name = record.draft.name.clone();
+            task.project = record.draft.workdir.clone();
+            task.schedule = record.draft.schedule.display();
+        }
         if record.draft.provider == Provider::System {
             task.name = record.draft.name.clone();
             task.identifier = Some(record.identifier.clone());
@@ -124,8 +139,25 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             task.status = "error".into();
             task.can_run = false;
             task.name = record.draft.name.clone();
-            task.definition = Some(record.draft);
+            task.definition = Some(record.draft.clone());
             task.revision = Some(record.revision);
+        }
+        if let Some(installation) = installation {
+            if installation != "installed" {
+                task.can_run = false;
+                task.status = if installation == "uninstalled" {
+                    "paused"
+                } else {
+                    "error"
+                }
+                .into();
+                task.next_run = None;
+            }
+            if let Ok(receipt) = super::package::receipt(&record) {
+                if receipt.error.is_some() {
+                    task.last_result = receipt.error;
+                }
+            }
         }
         report.tasks.push(task);
     }
@@ -165,6 +197,14 @@ pub fn save(
     mut draft: AutomationDraft,
 ) -> Result<String, String> {
     draft.validate()?;
+    if id.is_none() || id.is_some_and(|id| super::package::find(&store::root(), id).is_ok()) {
+        if let Some(id) = id {
+            if store::legacy_task(&store::root(), id)?.is_some() {
+                return Err("Task migration is pending; retry migration before editing".into());
+            }
+        }
+        return super::package::save(id, revision, draft);
+    }
     // An explicit edit can repair an invalid workspace script.
     if let Err(error) = super::sync_workspace_scripts() {
         log::warn!("Cannot synchronize automation scripts before saving: {error}");
@@ -325,6 +365,21 @@ pub fn run(id: &str) -> Result<(), String> {
     super::sync_workspace_scripts()?;
     upgrade_runners();
     let root = store::root();
+    let package = super::package::find(&root, id).ok();
+    if package.is_some() && store::legacy_task(&root, id)?.is_some() {
+        return Err("Task migration is pending; finish migration before running".into());
+    }
+    let _task_lock = if package.is_some() {
+        Some(super::package::lock(&root, id)?)
+    } else {
+        None
+    };
+    if package
+        .as_ref()
+        .is_some_and(|r| super::package::state(r).as_deref() != Some("installed"))
+    {
+        return Err("Install the task successfully before running it".into());
+    }
     let _lock = store::Lock::acquire(&root)?;
     if store::read_registry(&root)?.removal_pending.contains(id) {
         return Err("Task removal is pending; retry deletion before running".into());
@@ -360,6 +415,9 @@ pub fn remove(id: &str) -> Result<(), String> {
 /// Optional cleanup is restricted to assigned/legacy workspaces and internal data.
 pub fn remove_with_local_data(id: &str, delete_local_data: bool) -> Result<(), String> {
     let root = store::root();
+    if super::package::find(&root, id).is_ok() {
+        return super::package::remove(id, delete_local_data);
+    }
     let _lock = store::Lock::acquire(&root)?;
     let mut registry = store::read_registry(&root)?;
     let record = registry.tasks.iter().find(|record| record.id == id);
@@ -453,7 +511,8 @@ pub(crate) fn upgrade_runners() {
     let mut records = registry.tasks;
     for index in 0..records.len() {
         let old = records[index].clone();
-        if registry.removal_pending.contains(&old.id)
+        if super::package::find(&root, &old.id).is_ok()
+            || registry.removal_pending.contains(&old.id)
             || old.draft.provider != Provider::System
             || verify(&root, &old).is_err()
             || !native::needs_upgrade(&root, &old)
@@ -614,6 +673,7 @@ mod tests {
     fn only_exact_registered_provider_and_scope_claim_ownership() {
         let dir = tempfile::tempdir().unwrap();
         let draft = AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit".into(),
             provider: Provider::System,

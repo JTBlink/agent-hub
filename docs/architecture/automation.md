@@ -2,6 +2,40 @@
 
 桌面页面与 `agent-hub-cli automations` 共用 `core::automation`。原生系统任务与 Hermes 各自调度，应用不增加依赖桌面窗口存活的轮询调度器。
 
+## 独立任务包
+
+按 [ADR-0016](../adr/0016-independent-automation-packages.md)，新建、模板和导入统一使用独立包；下文旧 `tasks.json`、自定义脚本目录和旧 runner 的处理作为兼容路径，不用于存放新包的唯一内容。
+
+```text
+~/.agent-hub/automations/<allocated-task-name>/
+├── task.json
+├── scripts/                 # 包括 run.sh 或 run.ps1
+├── prompt.md                # Agent 任务
+├── herdr.json               # Herdr 任务
+├── README.md
+└── .local/
+    ├── binding.json         # 本机项目绑定
+    ├── receipt.json         # 安装状态、调度身份、错误和备份状态
+    ├── operation.json       # 更新过程中存在的恢复 journal
+    ├── env/                 # 按依赖版本组合分配的私有环境
+    ├── state/
+    └── runs/<run-id>/
+```
+
+显式 `AGENT_HUB_AUTOMATION_HOME` 下的包位于该根的 `workspaces/`。`package/storage` 逐包读取，正文不在清单中重复保存；`AutomationDraft.files` 和 `package_options` 是 GUI、CLI 和备份的即时快照。内容及绑定变化使 `revision` 失效。旧全局文件损坏时仍展示可读包，并报告兼容记录错误，不覆盖损坏文件。
+
+`package/lifecycle` 编排安装、更新、卸载和删除；`registration` 提供原生与 Hermes 适配。依赖、权限安装、交换格式和迁移各有独立模块。任务锁位于系统应用数据目录的 `operations/<uuid>/`，在包删除前后保持相同身份；新包操作不持有全局长锁。运行入口通过 `.local/run.claim` 领取并检查 `ready`，卸载先撤掉 `ready` 再检查运行领取。
+
+创建自动完成普通安装；导入先预览并生成新 ID，默认未安装。安装准备私有 Python 环境、检查外部命令并注册暂停调度，持久回执后才启用。Python 依赖使用确定版本及按版本组合隔离的环境，不修改全局安装。安装失败保留回执供重试或卸载；卸载保留正文、项目和历史，撤销调度及任务拥有的资源。网络重置通过系统管理员授权安装 UUID 独立的权限入口；不执行导入包中的任意安装钩子，也不认领旧的无回执权限资源。
+
+删除默认保留包文件并标记不再管理；选择清理本地数据时复查项目和其他任务引用，末尾清理及备份删除意图保存在内部 `deletions/` journal。更新通过 `.local/operation.json` 保留旧内容和回执，进程中断后可恢复。显式 `migrate` 保留原任务 ID 和日程，原脚本和项目保留；切换失败回滚并可重试。
+
+导出为包含声明正文及依赖的单个 JSON，去掉实例身份、本机绑定和 `.local`。导入支持 JSON、包目录及其清单，只读取声明文件；GUI 提交预览对象，避免预览后源文件变化。备份恢复同样默认未安装。用法及格式见[任务包说明](../product/automation-packages.md)。
+
+Hermes 包的 `hermes.script` / `hermes.monitor_script` 指向已声明的 `scripts/` 文件；适配器核实 CLI 能力，在 `<profile>/scripts/agent-hub-<uuid>/` 创建实际桥接文件并保存回执。创建使用位置参数，先用远期间隔日程获取 ID 并暂停，再编辑为真实日程。结果不明时禁止重复创建，明确提示核对并卸载重试。Hermes 自己的集中定义及运行历史仍由其管理。
+
+## 兼容路径与原有模块
+
 | 模块                                                           | 职责                                                                |
 | -------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `definition.rs`                                                | 跨端输入、日程、创建记录与输入校验                                  |

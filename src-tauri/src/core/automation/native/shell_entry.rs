@@ -2,7 +2,7 @@
 use super::super::{AutomationDraft, AutomationScriptFile, ManagedAutomation};
 use std::path::Path;
 
-pub(super) fn command(path: &str) -> String {
+pub(in crate::core::automation) fn command(path: &str) -> String {
     if path.ends_with(".ps1") {
         format!("& {}", super::render::ps(&format!("./{path}")))
     } else {
@@ -143,6 +143,7 @@ mod tests {
     use crate::core::automation::{Provider, Schedule};
     fn draft(workspace: &Path) -> AutomationDraft {
         AutomationDraft {
+            package_options: None,
             name: "Audit".into(),
             provider: Provider::System,
             content: "printf original".into(),

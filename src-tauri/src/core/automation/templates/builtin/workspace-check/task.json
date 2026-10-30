@@ -13,7 +13,9 @@
   "schedule": {
     "kind": "manual"
   },
-  "entrypoint": "workspace-check.py",
-  "scripts": ["workspace-check.py"],
+  "entrypoint": "scripts/workspace-check.py",
+  "scripts": [
+    "scripts/workspace-check.py"
+  ],
   "provider": "system"
 }

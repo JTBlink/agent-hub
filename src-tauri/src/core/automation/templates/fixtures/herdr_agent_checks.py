@@ -14,10 +14,12 @@ SCRIPT = Path(sys.argv.pop()).resolve()
 HERE = SCRIPT.parent
 PROJECT = HERE.parent / 'selected-project'
 PROJECT.mkdir(exist_ok=True)
-PROMPT = HERE / 'prompt.md'
+TASK = HERE.parent if HERE.name == 'scripts' else HERE
+PROMPT = TASK / 'prompt.md'
 ORIGINAL = PROMPT.read_text(encoding='utf-8')
-STATE = HERE / '.herdr-run.json'
-CONFIG = HERE / 'herdr.json'
+STATE = TASK / '.local/state/.herdr-run.json' if HERE.name == 'scripts' else HERE / '.herdr-run.json'
+STATE.parent.mkdir(parents=True, exist_ok=True)
+CONFIG = TASK / 'herdr.json'
 ORIGINAL_CONFIG = CONFIG.read_text(encoding='utf-8')
 OLD_NAME = 'ah-' + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + '-previous'
 

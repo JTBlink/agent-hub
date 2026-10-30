@@ -1,7 +1,7 @@
 //! Standalone current-user runners persist bounded history without a running UI.
 use super::render::{ps, shell};
 use std::path::Path;
-pub(super) const VERSION: &str = "AgentHub workspace scripts v4";
+pub(super) const VERSION: &str = "AgentHub workspace scripts v5";
 
 pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path, scripts_dir: &str) -> String {
     format!(
@@ -9,6 +9,11 @@ pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path, scripts_di
 # {version}
 umask 077
 base={base}
+if [ -f "$base/managed" ]; then
+  mkdir "$base/run.claim" 2>/dev/null || exit 0
+  if [ ! -f "$base/ready" ]; then rmdir "$base/run.claim"; exit 0; fi
+  trap 'rmdir "$base/run.claim" 2>/dev/null' 0
+fi
 mkdir -p "$base/runs" || exit 1
 if [ ! -f "$base/current-run" ] && [ -f "$base/started" ]; then
   mkdir -p "$base/runs/legacy" || exit 1
@@ -39,6 +44,7 @@ finish() {{
     if [ "$count" -gt 100 ] && [ "$name" != "$run" ]; then rm -rf -- "$stale"; fi
   done
   cp "$record/exit" "$base/exit"
+  [ ! -f "$base/managed" ] || rmdir "$base/run.claim" 2>/dev/null
   trap - 0
   exit "$code"
 }}
@@ -46,6 +52,16 @@ trap finish 0
 cd {workdir} || exit 1
 export PATH={path}
 export AGENT_HUB_SCRIPT_DIR={scripts_dir}
+if [ -f "$base/managed" ]; then
+  export AGENT_HUB_TASK_DIR={scripts_dir}
+  export AGENT_HUB_STATE_DIR="$base/state"
+  mkdir -p "$AGENT_HUB_STATE_DIR" || exit 1
+  if [ -f "$base/python-path" ]; then
+    AGENT_HUB_PYTHON=$(cat "$base/python-path")
+    export AGENT_HUB_PYTHON
+    export PATH="$(dirname "$AGENT_HUB_PYTHON"):$PATH"
+  fi
+fi
 /bin/sh {payload}
 "#,
         version = VERSION,
@@ -68,6 +84,12 @@ pub(super) fn powershell_script(
         r#"{bom}# {version}
 $ErrorActionPreference = 'Stop'
 $base = {base}
+$managed = Test-Path -LiteralPath (Join-Path $base 'managed')
+$claim = Join-Path $base 'run.claim'
+if ($managed) {{
+  try {{ New-Item -ItemType Directory -Path $claim -ErrorAction Stop | Out-Null }} catch {{ exit 0 }}
+  if (!(Test-Path -LiteralPath (Join-Path $base 'ready'))) {{ Remove-Item -LiteralPath $claim; exit 0 }}
+}}
 $runs = Join-Path $base 'runs'
 [IO.Directory]::CreateDirectory($runs) | Out-Null
 if (!(Test-Path -LiteralPath (Join-Path $base 'current-run')) -and (Test-Path -LiteralPath (Join-Path $base 'started'))) {{
@@ -91,6 +113,16 @@ $code = 0
 try {{
   Set-Location -LiteralPath {workdir}
   $env:AGENT_HUB_SCRIPT_DIR = {scripts_dir}
+  if ($managed) {{
+    $env:AGENT_HUB_TASK_DIR = {scripts_dir}
+    $env:AGENT_HUB_STATE_DIR = Join-Path $base 'state'
+    [IO.Directory]::CreateDirectory($env:AGENT_HUB_STATE_DIR) | Out-Null
+    $pythonPath = Join-Path $base 'python-path'
+    if (Test-Path -LiteralPath $pythonPath) {{
+      $env:AGENT_HUB_PYTHON = [IO.File]::ReadAllText($pythonPath).Trim()
+      $env:PATH = (Split-Path $env:AGENT_HUB_PYTHON) + ';' + $env:PATH
+    }}
+  }}
   & {payload} *> $log
   if ($LASTEXITCODE) {{ $code = $LASTEXITCODE }}
 }} catch {{ $_ | Out-File -LiteralPath $log -Append; $code = 1 }}
@@ -105,6 +137,7 @@ Get-ChildItem -LiteralPath $runs -Directory -Force | Where-Object {{
   if ($_.Name -ne $run) {{ Remove-Item -LiteralPath $_.FullName -Recurse -Force }}
 }}
 Copy-Item -LiteralPath (Join-Path $record 'exit') -Destination (Join-Path $base 'exit')
+if ($managed) {{ Remove-Item -LiteralPath $claim -ErrorAction SilentlyContinue }}
 exit $code
 "#,
         bom = "\u{feff}",
@@ -133,6 +166,7 @@ mod tests {
             std::fs::write(dir.join(name), value).unwrap();
         }
         let mut draft = AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit".into(),
             provider: Provider::System,

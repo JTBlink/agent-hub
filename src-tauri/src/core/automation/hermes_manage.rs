@@ -30,23 +30,43 @@ fn configuration(action: &str, id: Option<&str>, draft: &AutomationDraft) -> Vec
     if let Some(id) = id {
         args.push(id.into());
     }
-    args.extend([
-        "--name".into(),
-        draft.name.clone(),
-        "--prompt".into(),
-        draft.content.clone(),
-        "--schedule".into(),
-        draft.schedule.display(),
-    ]);
+    args.push(format!("--name={}", draft.name));
+    if action == "edit" {
+        args.extend([
+            format!("--prompt={}", draft.content),
+            format!("--schedule={}", draft.schedule.display()),
+        ]);
+    }
     if let Some(workdir) = &draft.workdir {
-        args.extend(["--workdir".into(), workdir.clone()]);
+        args.push(format!("--workdir={workdir}"));
+    }
+    if action == "create" {
+        args.extend(["--".into(), draft.schedule.display(), draft.content.clone()]);
     }
     args
 }
 
 pub(super) fn create(draft: &AutomationDraft) -> Result<(String, String), String> {
     let root = home()?;
-    let output = invoke(&root, &configuration("create", None, draft))?;
+    create_at(&root, draft, &[])
+}
+
+pub(super) fn create_at(
+    root: &std::path::Path,
+    draft: &AutomationDraft,
+    extra: &[String],
+) -> Result<(String, String), String> {
+    // Hermes has no atomic "create paused" switch. A distant interval keeps
+    // registration inert until the ID is known, paused and edited to the real schedule.
+    let mut dormant = draft.clone();
+    dormant.schedule = Schedule::Interval { minutes: 525600 };
+    let mut args = configuration("create", None, &dormant);
+    let position = args
+        .iter()
+        .position(|arg| arg == "--")
+        .ok_or("Missing Hermes argument separator")?;
+    args.splice(position..position, extra.iter().cloned());
+    let output = invoke(root, &args)?;
     // Hermes currently exposes no JSON option on cron create. Require its
     // explicit success ID, never guess a job from a friendly name or ordering.
     let output = strip_colors(&output);
@@ -63,11 +83,19 @@ pub(super) fn create(draft: &AutomationDraft) -> Result<(String, String), String
                     .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
         })
         .ok_or("Hermes did not return a job ID; refresh before creating another task")?;
-    if !draft.enabled {
-        if let Err(error) = action_at(&root, "pause", &id) {
-            let rollback = action_at(&root, "remove", &id);
-            return Err(format!("{error}; creation rollback: {rollback:?}"));
+    let configured = (|| {
+        action_at(root, "pause", &id)?;
+        let mut args = configuration("edit", Some(&id), draft);
+        args.extend(extra.iter().cloned());
+        invoke(root, &args)?;
+        if draft.enabled {
+            action_at(root, "resume", &id)?;
         }
+        Ok::<_, String>(())
+    })();
+    if let Err(error) = configured {
+        let rollback = action_at(root, "remove", &id);
+        return Err(format!("{error}; creation rollback: {rollback:?}"));
     }
     Ok((
         id,
@@ -167,12 +195,21 @@ pub(super) fn action_at(root: &std::path::Path, action: &str, id: &str) -> Resul
     invoke(root, &["cron".into(), action.into(), id.into()]).map(|_| ())
 }
 pub(super) fn edit(task: &AutomationTask, draft: &AutomationDraft) -> Result<(), String> {
+    edit_options(task, draft, &[])
+}
+pub(super) fn edit_options(
+    task: &AutomationTask,
+    draft: &AutomationDraft,
+    extra: &[String],
+) -> Result<(), String> {
     let root = root_for(task)?;
     if task.project.is_some() && draft.workdir.is_none() {
         return Err("Clear the Hermes working directory in Hermes; empty values are not supported by its CLI".into());
     }
     let id = task.identifier.as_deref().ok_or("Missing Hermes job ID")?;
-    invoke(&root, &configuration("edit", Some(id), draft))?;
+    let mut args = configuration("edit", Some(id), draft);
+    args.extend(extra.iter().cloned());
+    invoke(&root, &args)?;
     if draft.enabled != (task.status != "paused") {
         action_at(&root, if draft.enabled { "resume" } else { "pause" }, id)?;
     }
@@ -194,6 +231,7 @@ pub(super) fn draft(task: &AutomationTask) -> AutomationDraft {
         task.name.clone()
     };
     AutomationDraft {
+        package_options: None,
         files: Vec::new(),
         name,
         provider: super::definition::Provider::Hermes,
@@ -211,8 +249,26 @@ pub(super) fn draft(task: &AutomationTask) -> AutomationDraft {
 mod tests {
     use super::*;
     #[test]
+    fn clearing_an_existing_hermes_project_is_refused_before_cli_mutation() {
+        let mut task = AutomationTask::new(
+            "hermes:default:job".into(),
+            "Audit".into(),
+            "hermes",
+            "<profile>/cron/jobs.json".into(),
+        );
+        task.project = Some("<workspace>".into());
+        task.identifier = Some("job".into());
+        let draft = draft(&task);
+        let mut cleared = draft;
+        cleared.workdir = None;
+        assert!(edit(&task, &cleared)
+            .unwrap_err()
+            .contains("Clear the Hermes working directory"));
+    }
+    #[test]
     fn prompts_and_names_are_literal_arguments_and_existing_fields_are_not_reset() {
         let draft = AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit $(ignored)".into(),
             provider: super::super::definition::Provider::Hermes,
@@ -223,7 +279,7 @@ mod tests {
             enabled: true,
         };
         let args = configuration("edit", Some("id"), &draft);
-        assert!(args.contains(&draft.content));
+        assert!(args.contains(&format!("--prompt={}", draft.content)));
         assert!(!args.contains(&"--workdir".to_string()));
         assert!(!args.contains(&"--clear-skills".to_string()));
     }

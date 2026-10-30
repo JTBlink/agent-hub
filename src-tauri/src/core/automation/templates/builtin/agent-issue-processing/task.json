@@ -15,6 +15,11 @@
     "minute": 45
   },
   "provider": "system",
-  "entrypoint": "agent.py",
-  "scripts": ["agent.py", "prompt.md", "herdr.json", "README.md"]
+  "entrypoint": "scripts/agent.py",
+  "scripts": [
+    "scripts/agent.py",
+    "prompt.md",
+    "herdr.json",
+    "README.md"
+  ]
 }

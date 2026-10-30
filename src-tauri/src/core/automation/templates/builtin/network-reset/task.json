@@ -10,9 +10,19 @@
     "zh": "macOS：短暂关闭网络服务后自动恢复。默认每天 07:00，需一次管理员安装，创建后默认暂停。",
     "zh-TW": "macOS：短暫關閉網路服務後自動恢復。預設每天 07:00，需一次管理員安裝，建立後預設暫停。"
   },
-  "schedule": { "kind": "daily", "hour": 7, "minute": 0, "weekdays": false },
-  "entrypoint": "network-reset.py",
-  "scripts": ["network-reset.py", "setup.sh", "reset.sh", "README.md"],
+  "schedule": {
+    "kind": "daily",
+    "hour": 7,
+    "minute": 0,
+    "weekdays": false
+  },
+  "entrypoint": "scripts/network-reset.py",
+  "scripts": [
+    "scripts/network-reset.py",
+    "scripts/setup.sh",
+    "scripts/reset.sh",
+    "README.md"
+  ],
   "provider": "system",
   "enabled": false,
   "platform": "macos"

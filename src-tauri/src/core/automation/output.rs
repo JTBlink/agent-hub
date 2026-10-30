@@ -70,6 +70,10 @@ pub(super) fn native_directory(task: &super::AutomationTask) -> Result<Option<Pa
     };
     managed::verify(&root, &record)?;
     let dir = native::directory(&root, &record);
+    if super::package::directory(&record).is_some() {
+        super::package::checked(&root, &record)?;
+        return Ok(Some(dir));
+    }
     checked(&root, &dir)?;
     Ok(Some(dir))
 }

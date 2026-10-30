@@ -125,7 +125,7 @@
     "openWorkdirAfterSave": "选择目录或保存任务后，可在 VS Code 中打开",
     "scriptFiles": "脚本文件（{{count}}）",
     "closeFile": "关闭文件预览",
-    "networkSetupHelp": "网络重置需先在脚本目录执行 sudo /bin/bash network-reset/setup.sh；完成管理员安装后再启用计划。",
+    "networkSetupHelp": "安装此模板时，系统将请求管理员授权，为当前任务安装独立的网络重置入口。计划默认暂停；卸载时仅移除本任务的权限入口。",
     "scriptFilesHint": "脚本保存在独立目录中，点击文件查看或编辑。",
     "useTemplate": "使用模板",
     "backToEditor": "返回编辑",
@@ -133,7 +133,7 @@
     "more": "更多操作",
     "restoreBackup": "从备份恢复",
     "noTemplates": "暂无可用模板。",
-    "backupTemplateHint": "从备份新建副本，默认暂停，不覆盖本机已有任务。",
+    "backupTemplateHint": "从备份新建未安装副本，不覆盖本机已有任务。",
     "noBackupTemplates": "暂无可恢复的任务配置。",
     "otherShell": "此备份使用另一种 Shell，请先转换命令后再创建。",
     "pausedSaveHint": "保存为暂停状态，不会按日程自动运行。",
@@ -200,7 +200,27 @@
     "inactivePromptHelp": "选择智能体后会在项目工作区执行提示词；不选择时仅执行命令。",
     "hermesCommand": "由 Hermes 原生任务执行",
     "agentUnavailable": "未安装或未启用",
-    "backupSourceHelp": "这里保存的是自动化任务配置。选择后可编辑，保存时新建默认暂停的副本。"
+    "backupSourceHelp": "这里保存的是自动化任务配置。选择后可编辑，保存时新建默认暂停的副本。",
+    "importPackage": "导入任务",
+    "importPackageHelp": "预览任务包并导入为新的未安装任务。本机路径、凭据和运行历史不随包导入。",
+    "importFile": "选择 JSON 文件",
+    "importFolder": "选择任务目录",
+    "packageFileCount": "包含 {{count}} 个声明文件",
+    "installPackage": "安装任务",
+    "uninstallPackage": "卸载任务",
+    "exportPackage": "导出任务",
+    "migratePackage": "迁移为独立任务包",
+    "installStates": {
+      "uninstalled": "未安装",
+      "installed": "已安装",
+      "installing": "安装中",
+      "install_failed": "安装失败",
+      "uninstalling": "卸载中",
+      "uninstall_failed": "卸载失败",
+      "updating": "更新中",
+      "update_failed": "更新失败"
+    },
+    "uninstalledSaveHint": "保存为未安装任务。确认本机设置后，再安装并启用计划。"
   },
   "app": {
     "name": "agent-hub"

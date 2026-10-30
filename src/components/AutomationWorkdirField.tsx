@@ -15,6 +15,7 @@ export function AutomationWorkdirField({
   kind = "workdir",
   projects = [],
   projectsLoading = false,
+  readOnly = false,
 }: {
   value: string | null;
   disabled: boolean;
@@ -22,6 +23,7 @@ export function AutomationWorkdirField({
   kind?: "workdir" | "scriptDir" | "projectWorkspace";
   projects?: Project[];
   projectsLoading?: boolean;
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const inputId = useId();
@@ -43,7 +45,8 @@ export function AutomationWorkdirField({
         ? "automation.chooseProjectWorkspace"
         : "automation.chooseWorkdir";
   const launch = async (action: "choose" | "edit") => {
-    if (disabled || pending.current) return;
+    if (disabled || pending.current || (readOnly && action === "choose"))
+      return;
     pending.current = true;
     setAction(action);
     setError(null);
@@ -136,6 +139,7 @@ export function AutomationWorkdirField({
           <input
             id={inputId}
             value={value ?? ""}
+            readOnly={readOnly}
             disabled={disabled || action !== null}
             onChange={(event) => {
               setError(null);
@@ -148,31 +152,33 @@ export function AutomationWorkdirField({
             )}
             aria-label={t(`automation.${kind}`)}
             title={path || undefined}
-            className="app-input w-full min-w-0 pr-11"
+            className={`app-input w-full min-w-0 ${readOnly ? "" : "pr-11"}`}
           />
         )}
-        <div
-          className={
-            kind === "projectWorkspace"
-              ? "shrink-0"
-              : "absolute bottom-0 right-1 flex gap-0.5"
-          }
-        >
-          <button
-            type="button"
-            disabled={disabled || action !== null}
-            title={t(chooseLabel)}
-            aria-label={t(chooseLabel)}
-            className={buttonClass}
-            onClick={() => void launch("choose")}
+        {!readOnly && (
+          <div
+            className={
+              kind === "projectWorkspace"
+                ? "shrink-0"
+                : "absolute bottom-0 right-1 flex gap-0.5"
+            }
           >
-            {action === "choose" ? (
-              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-            ) : (
-              <FolderOpen aria-hidden="true" className="h-4 w-4" />
-            )}
-          </button>
-        </div>
+            <button
+              type="button"
+              disabled={disabled || action !== null}
+              title={t(chooseLabel)}
+              aria-label={t(chooseLabel)}
+              className={buttonClass}
+              onClick={() => void launch("choose")}
+            >
+              {action === "choose" ? (
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+              ) : (
+                <FolderOpen aria-hidden="true" className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
       {kind === "projectWorkspace" && path && (
         <p

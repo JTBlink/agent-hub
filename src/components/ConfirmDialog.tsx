@@ -9,6 +9,7 @@ interface Props {
   details?: string[];
   children?: ReactNode;
   confirmLabel?: string;
+  confirmDisabled?: boolean;
   tone?: "danger" | "warning";
   onClose: () => void;
   /** Return false when the action failed and the dialog should stay open. */
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   details,
   children,
   confirmLabel,
+  confirmDisabled = false,
   tone = "danger",
   onClose,
   onConfirm,
@@ -50,8 +52,8 @@ export function ConfirmDialog({
         if (!pending.current) closeCallback.current();
       } else if (e.key === "Tab") {
         const buttons = [
-          ...(panel.current?.querySelectorAll<HTMLButtonElement>(
-            "button:not(:disabled)",
+          ...(panel.current?.querySelectorAll<HTMLElement>(
+            "button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex='0']",
           ) ?? []),
         ];
         const first = buttons[0];
@@ -159,7 +161,7 @@ export function ConfirmDialog({
           </button>
           <button
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             className={
               tone === "warning"
                 ? "px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"

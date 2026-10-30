@@ -7,6 +7,7 @@ pub fn sync_workspace_scripts() -> Result<(), String> {
 }
 
 pub(super) fn sync_at(root: &Path) -> Result<(), String> {
+    // Package bodies are read directly and carry content-derived revisions.
     if !root.join("tasks.json").is_file() {
         return Ok(());
     }
@@ -17,6 +18,7 @@ pub(super) fn sync_at(root: &Path) -> Result<(), String> {
     let mut errors = Vec::new();
     for record in records.iter_mut().filter(|record| {
         record.draft.provider == Provider::System
+            && super::package::directory(record).is_none()
             && record.draft.scripts_dir().is_some()
             && !registry.removal_pending.contains(&record.id)
     }) {
@@ -69,6 +71,7 @@ mod tests {
             id: format!("agent_hub:{}", uuid::Uuid::new_v4()),
             revision: 1,
             draft: AutomationDraft {
+                package_options: None,
                 files: vec![
                     super::super::AutomationScriptFile {
                         path: "bundle/main.py".into(),

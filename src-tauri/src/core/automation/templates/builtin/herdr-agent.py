@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib
 import json
+import os
 import re
 import shutil
 import shlex
@@ -11,7 +12,9 @@ import time
 import uuid
 
 HERE = Path(__file__).resolve().parent
-STATE = HERE / ".herdr-run.json"
+TASK = Path(os.environ.get("AGENT_HUB_TASK_DIR", str(HERE.parent if HERE.name == "scripts" else HERE)))
+STATE_DIR = Path(os.environ.get("AGENT_HUB_STATE_DIR", str(TASK / ".local" / "state" if HERE.name == "scripts" else HERE)))
+STATE = STATE_DIR / ".herdr-run.json"
 
 
 class HerdrError(RuntimeError):
@@ -41,6 +44,7 @@ def command(binary, args, timeout=40, text_output=False):
 
 
 def save_state(state):
+    STATE.parent.mkdir(parents=True, exist_ok=True)
     temporary = STATE.with_suffix(".tmp")
     temporary.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
     temporary.replace(STATE)
@@ -171,7 +175,7 @@ def main():
     binary = shutil.which("herdr")
     if not binary:
         raise HerdrError("未找到 Herdr CLI，请安装 Herdr 并启动本地服务。")
-    config = json.loads(read_bundle(HERE / "herdr.json"))
+    config = json.loads(read_bundle(TASK / "herdr.json"))
     session = config.get("session", "default")
     kind = config.get("agent", "codex")
     if not isinstance(session, str) or not session or session.startswith("-"):
@@ -191,7 +195,7 @@ def main():
     # Unattended tasks must not stop at the CLI's interactive updater and exit.
     if kind == "codex":
         extra = ["-c", "check_for_update_on_startup=false", *extra]
-    prompt = read_bundle(HERE / "prompt.md").strip()
+    prompt = read_bundle(TASK / "prompt.md").strip()
     if not prompt:
         raise HerdrError("提示词为空，请填写任务提示词。")
     cwd = Path.cwd().resolve()

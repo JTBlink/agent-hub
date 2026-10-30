@@ -129,14 +129,13 @@ an explicit resume/repair before running.
 
 Use `create --template <template-id>` for the platform-correct built-in starters,
 or `create --file task.json` for a definition. `edit <id> --file task.json
---revision <revision>` protects managed tasks from stale edits. An omitted
-working directory is provisioned under `~/.agent-hub/automations/<task-name>/`;
-occupied names receive numeric suffixes (`-2`, `-3`, etc.). The association
-with the task ID stays in internal task data. Reusing the default workspace or
-renaming the task preserves its allocated path. Explicit directories and
-existing UUID-based workspaces are preserved. Saving does not add an immediate
-run. Task definitions join the existing Git auto-backup flow; runtime logs,
-registrations, wrappers, and other workspace files stay local.
+--revision <revision>` protects managed tasks from stale edits. New task packages are provisioned under `~/.agent-hub/automations/<task-name>/`;
+occupied names receive numeric suffixes. Renaming preserves the allocated path.
+The project `workdir` is a separate local binding, defaulting to execution in the
+package. Existing custom and UUID directories remain supported as legacy tasks.
+New packages are discovered independently of the legacy `tasks.json`. Task
+content and install requirements join Git backup; local registrations, bindings,
+environments and logs stay local.
 
 To configure a starter before registration, export its `draft` from `templates`
 to `task.json`, set the existing absolute `workdir` and desired `schedule`, then
@@ -145,38 +144,29 @@ use `create --file task.json`. For an existing task, read `show`, edit its
 pass the entire `show` response as a draft. `pause`, `resume`, and `remove` use
 the same exact task ID; use `runs` and `logs --run` to inspect an execution.
 
-System tasks execute a short shell entry in the working directory:
-`sh './run.sh'` (`& './run.ps1'` on Windows). Occupied names receive numeric
-suffixes such as `run-2.sh`; existing files are never adopted by name alone.
-The entry's body is included in `files`, so edit that file to change its
-command. Legacy inline `content` is normalized into this shell entry on save.
-Bundled system templates are
-individual folders containing a `template.json` manifest and one or more Python
-scripts. They are embedded into both the desktop and CLI binaries. Creating a
-task copies the declared `files` (relative `path` plus `content`) into matching
-folders inside its workspace. The scheduled shell entry invokes the Python
-script, e.g. `python3 ./disk-cleanup/disk-cleanup.py`; Python 3 is required.
-Users can expand Script files in the editor, edit `files` through CLI JSON, or
-customize the files directly; refresh and run preserve their contents.
-The app watches script edits and queues their contents in the existing Git
-auto-backup flow, alongside the task definition. CLI list/show and mutations
-reconcile file edits and advance the revision; re-read before editing a stale
-draft. Backup also reconciles current script contents. Runtime wrappers, logs,
-and unrelated workspace files are excluded. `automations remove <id>` preserves
-local data by default; add `--delete-local-data` to clean assigned/legacy
-workspaces and AgentHub run records. Custom/shared directories remain. Failed
-cleanup stays retryable; retry removal without editing or running the pending
-task. Git synchronization restores only dormant definitions;
-creating a restored copy materializes its own script without overwriting an
-existing task.
+New system tasks execute `sh './scripts/run.sh'` (`& './scripts/run.ps1'` on
+Windows). Templates place executable files under `scripts/` and prompt/config/
+README at the root. The embedded source catalog and shared Python code are
+rendered into each independent package. Edit its declared files or use the
+editor; file changes produce an opaque revision, so always re-read before an
+update. Private state and runs live in `.local/`; Python dependencies have
+private environments. Legacy task layouts remain supported until explicit
+`migrate`.
+
+Use `uninstall` to revoke scheduling and task-owned dependencies while keeping
+content and history. `remove` cancels management and preserves files by default;
+`--delete-local-data` also removes an owned package after reference checks.
+Project, external and shared resources remain protected. Failed operations keep
+retry state. Import and backup restore create uninstalled copies and never run
+the task or overwrite another instance.
 
 ```bash
 "$SM" --json automations backups
 "$SM" --json automations restore '<backup-id>'
 ```
 
-`restore` previews a paused copy. Use `--apply` only when the user wants that
-copy registered locally; Git sync itself must not activate tasks or overwrite
+`restore` previews a dormant copy. `--apply` creates a local uninstalled
+package; installation is a separate explicit step. Git sync itself must not activate tasks or overwrite
 an existing local schedule. GUI users can inspect the same definitions via
 New automation → Use template → Git backups.
 
@@ -541,7 +531,7 @@ trusted project's existing helper to keep newest builds per target/profile/featu
 `rust_targets` only clears expired incremental cache, preserving deps/binaries.
 Do not scan all projects/home. Active compilers cause build cleanup to skip.
 
-Run `python3 ./disk-cleanup/disk-cleanup.py --dry-run` first. Preview never deletes
+Run `python3 ./scripts/disk-cleanup.py --dry-run` first. Preview never deletes
 or notifies, and skips uv because uv has no side-effect-free preview.
 CLI supports `--config`, `--workspace-only`, `--no-tools`, `--agent-cache-days`,
 `--download-cache-days`, `--rust-target`, `--agent-hub-project`, `--notify` and
@@ -559,3 +549,7 @@ explicit Rust incremental roots may unlink expired hardlinks without removing
 other locations, and measured reclaimed space remains separate from file sizes. Custom Agent homes are
 supported. Upgrade existing tasks by adding the entire bundle to their `files`,
 retain customized configuration, then edit with the current revision.
+
+### Independent automation packages
+
+New automations own a task package with `task.json`, `scripts/`, root prompt/config/README and private `.local/` state. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new, uninstalled instance. `import --install` installs it paused. `install`, `uninstall`, `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Uninstall preserves task content and projects; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.

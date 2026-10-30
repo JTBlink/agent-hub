@@ -139,8 +139,8 @@ agent-hub/
 │   │       ├── git_fetcher/cache_cleanup.rs # 使用文件锁清理远程克隆缓存
 │   │       ├── git_fetcher/cache_lock.rs # 缓存操作共享锁及显式释放
 │   │       ├── git_skill_sync.rs   #     本地仓库写回预览、内容确认与失败恢复
-│   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及创建记录
-│   │       │   └── templates/builtin/ #   每模板独立文件夹：template.json + 一个或多个 Python 脚本，编译嵌入
+│   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及独立任务包
+│   │       │   └── templates/builtin/ #   每模板独立文件夹：task.json、scripts/ 与根目录提示词／说明，编译嵌入
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
 │   │       ├── github_api.rs       #     GitHub API 客户端

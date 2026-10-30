@@ -7,7 +7,7 @@ import sys
 from unittest.mock import patch
 
 root = Path(sys.argv[1])
-bundle = root / "network-reset"
+bundle = root / "scripts"
 for name in ["setup.sh", "reset.sh"]:
     subprocess.run(["/bin/bash", "-n", str(bundle / name)], check=True)
 module = runpy.run_path(str(bundle / "network-reset.py"))

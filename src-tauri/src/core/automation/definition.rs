@@ -77,6 +77,8 @@ pub struct AutomationScriptFile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct AutomationDraft {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub package_options: Option<super::package::PackageOptions>,
     pub name: String,
     pub provider: Provider,
     pub content: String,
@@ -96,6 +98,9 @@ impl AutomationDraft {
     }
 
     pub(super) fn validate(&mut self) -> Result<(), String> {
+        if let Some(options) = &self.package_options {
+            super::package::validate_options(options)?;
+        }
         let mut paths = std::collections::HashSet::new();
         let mut total = if super::native::shell_entry::entry(self).is_some() {
             0
@@ -117,10 +122,7 @@ impl AutomationDraft {
             }
             total = total.saturating_add(file.content.len());
         }
-        if self.files.len() > 32
-            || total > 65536
-            || (self.provider == Provider::Hermes && !self.files.is_empty())
-        {
+        if self.files.len() > 32 || total > 65536 {
             return Err("System template scripts must total at most 64 KiB across 32 files".into());
         }
         self.name = self.name.trim().into();
@@ -242,6 +244,7 @@ mod tests {
     #[test]
     fn validates_schedules_and_rejects_missing_directories_without_running_commands() {
         let mut draft = AutomationDraft {
+            package_options: None,
             files: Vec::new(),
             name: "Audit".into(),
             provider: Provider::System,
