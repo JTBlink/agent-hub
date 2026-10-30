@@ -244,6 +244,15 @@ export function AutomationTaskDetail({
                 label={t("automation.columns.source")}
                 value={t(`automation.sources.${task.source}`)}
               />
+              {task.origin === "agent_hub" && (
+                <Metric
+                  label={t("automation.packageVersion")}
+                  value={
+                    task.definition?.package_options?.version ??
+                    t("automation.unversioned")
+                  }
+                />
+              )}
             </dl>
             <dl
               aria-label={t("automation.runSummary")}

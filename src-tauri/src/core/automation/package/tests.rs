@@ -456,6 +456,11 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
         .unwrap();
     let state = store::root();
     let mut definition = draft();
+    definition.package_options = Some(PackageOptions {
+        version: Some("1.2.3".into()),
+        dependencies: vec![],
+        hermes: None,
+    });
     definition.enabled = true;
     definition.workdir = Some(temp.path().to_string_lossy().into_owned());
     let id = lifecycle::create(&state, definition, Vec::new(), false).unwrap();
@@ -490,6 +495,7 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
         .is_err());
     let public = backup_workspace::repo_dir().join(&relative);
     let preview = preview_package(&public).unwrap();
+    assert_eq!(preview.version.as_deref(), Some("1.2.3"));
     let serialized = serde_json::to_string(&preview).unwrap();
     assert!(!serialized.contains("private-credentials"));
     assert!(!serialized.contains("private-execution-output"));
@@ -511,9 +517,123 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
     assert_ne!(restored.id, id);
     let copy = find(&state, &restored.id).unwrap();
     assert_eq!(receipt(&copy).unwrap().state, "uninstalled");
+    assert_eq!(
+        copy.draft
+            .package_options
+            .as_ref()
+            .unwrap()
+            .version
+            .as_deref(),
+        Some("1.2.3")
+    );
     assert!(!copy.draft.enabled && copy.draft.workdir.is_none());
     assert_eq!(
         receipt(&find(&state, &id).unwrap()).unwrap().state,
         "installed"
     );
+}
+
+#[test]
+fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_revision() {
+    use crate::core::central_repo;
+    let _guard = central_repo::test_base_dir_lock();
+    let temp = tempfile::tempdir().unwrap();
+    central_repo::set_test_base_dir_override(Some(temp.path().join("app")));
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            central_repo::set_test_base_dir_override(None);
+        }
+    }
+    let _reset = Reset;
+    let package: AutomationPackage = serde_json::from_value(serde_json::json!({
+        "schema_version": 1, "version": "1.2.3", "shell": super::super::command_shell(),
+        "draft": draft(), "dependencies": []
+    }))
+    .unwrap();
+    let id = import_definition(package, None).unwrap();
+    let state = store::root();
+    let initial = find(&state, &id).unwrap();
+    assert_eq!(initial.revision, 1);
+    assert_eq!(
+        initial
+            .draft
+            .package_options
+            .as_ref()
+            .unwrap()
+            .version
+            .as_deref(),
+        Some("1.2.3")
+    );
+    let mut edited = initial.draft.clone();
+    edited.schedule = Schedule::Hourly { minute: 15 };
+    update::save(Some(&id), Some(initial.revision), edited).unwrap();
+    let edited = find(&state, &id).unwrap();
+    assert_eq!(edited.revision, 2);
+    assert_eq!(
+        edited
+            .draft
+            .package_options
+            .as_ref()
+            .unwrap()
+            .version
+            .as_deref(),
+        Some("1.2.3")
+    );
+    let mut released = edited.draft.clone();
+    released.package_options.as_mut().unwrap().version = Some("2.0.0-rc.1".into());
+    update::save(Some(&id), Some(edited.revision), released).unwrap();
+    let exported = temp.path().join("export.json");
+    export_package(&id, &exported).unwrap();
+    let preview = preview_package(&exported).unwrap();
+    assert_eq!(preview.version.as_deref(), Some("2.0.0-rc.1"));
+    assert_eq!(preview.schema_version, 1);
+    let original = find(&state, &id).unwrap();
+    let backup = super::super::backup::AutomationBackup {
+        schema_version: 1,
+        id: id.clone(),
+        shell: super::super::command_shell().into(),
+        draft: original.draft,
+    };
+    let cloud = temp.path().join("cloud-task");
+    write_backup_directory(&backup, &cloud).unwrap();
+    let restored = read_backup_directory(&cloud).unwrap();
+    assert_eq!(
+        restored
+            .draft
+            .package_options
+            .as_ref()
+            .unwrap()
+            .version
+            .as_deref(),
+        Some("2.0.0-rc.1")
+    );
+    let restored_id = import_definition(preview_package(&cloud).unwrap(), None).unwrap();
+    assert_ne!(id, restored_id);
+    let restored = find(&state, &restored_id).unwrap();
+    assert_eq!(restored.revision, 1);
+    assert_eq!(receipt(&restored).unwrap().state, "uninstalled");
+    assert_eq!(
+        restored
+            .draft
+            .package_options
+            .as_ref()
+            .unwrap()
+            .version
+            .as_deref(),
+        Some("2.0.0-rc.1")
+    );
+    let mut legacy: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(exported).unwrap()).unwrap();
+    legacy.as_object_mut().unwrap().remove("version");
+    let mut legacy: AutomationPackage = serde_json::from_value(legacy).unwrap();
+    legacy.validate().unwrap();
+    assert_eq!(legacy.version, None);
+    for invalid in ["", "1.0", "v1.0.0", "latest", "1.0.0 "] {
+        legacy.version = Some(invalid.into());
+        assert!(
+            legacy.validate().is_err(),
+            "accepted invalid version {invalid}"
+        );
+    }
 }

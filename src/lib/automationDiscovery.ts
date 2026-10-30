@@ -1,3 +1,4 @@
+import { gt, valid } from "semver";
 import type { AutomationDraft, AutomationPackage } from "./tauri";
 import { automationHerdrConfig } from "./automation";
 
@@ -29,4 +30,26 @@ export function automationRequirements(
   if (automationHerdrConfig(source.draft)) requirements.add("Herdr");
   if (source.draft.provider === "hermes") requirements.add("Hermes");
   return [...requirements];
+}
+
+/** Missing versions remain unknown for packages created before versioning. */
+export function automationPackageVersion(
+  source: AutomationInstallSource,
+): string | null {
+  return (
+    source.package?.version ?? source.draft.package_options?.version ?? null
+  );
+}
+
+export function hasNewerAutomationVersion(
+  installed: string | null | undefined,
+  incoming: string | null | undefined,
+): boolean {
+  return (
+    !!installed &&
+    !!incoming &&
+    !!valid(installed) &&
+    !!valid(incoming) &&
+    gt(incoming, installed)
+  );
 }

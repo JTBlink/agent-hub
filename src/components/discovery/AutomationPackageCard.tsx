@@ -1,7 +1,10 @@
 import { Bot, Check, Plus, SquareTerminal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationInstallSource } from "../../lib/automationDiscovery";
-import { automationRequirements } from "../../lib/automationDiscovery";
+import {
+  automationPackageVersion,
+  automationRequirements,
+} from "../../lib/automationDiscovery";
 import {
   automationPromptFile,
   formatAutomationSchedule,
@@ -12,16 +15,20 @@ export function AutomationPackageCard({
   task,
   onInstall,
   installed = false,
+  updateAvailable = false,
 }: {
   task: AutomationInstallSource;
   onInstall: () => void;
   installed?: boolean;
+  updateAvailable?: boolean;
 }) {
   const { t } = useTranslation();
   const agent =
     task.draft.provider === "hermes" || !!automationPromptFile(task.draft);
   const Icon = agent ? Bot : SquareTerminal;
+  const version = automationPackageVersion(task);
   const tags = [
+    ...(version ? [`v${version}`] : []),
     t(agent ? "discovery.agentTask" : "discovery.commandTask"),
     formatAutomationSchedule(task.draft.schedule, t),
     ...automationRequirements(task),
@@ -65,7 +72,11 @@ export function AutomationPackageCard({
       <div className="flex flex-wrap items-center gap-1">
         {installed && (
           <span className="text-[12px] text-accent-light">
-            {t("automation.installStates.installed")}
+            {t(
+              updateAvailable
+                ? "automation.updateAvailable"
+                : "automation.installStates.installed",
+            )}
           </span>
         )}
         <span

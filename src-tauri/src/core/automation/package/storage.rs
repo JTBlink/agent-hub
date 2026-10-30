@@ -80,8 +80,10 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
     }
     draft.script_dir = Some(path.to_string_lossy().into_owned());
     draft.workdir = json::<Binding>(&path.join(".local/binding.json"))?.workdir;
-    if !manifest.dependencies.is_empty() || manifest.hermes.is_some() {
+    if manifest.version.is_some() || !manifest.dependencies.is_empty() || manifest.hermes.is_some()
+    {
         draft.package_options = Some(PackageOptions {
+            version: manifest.version.clone(),
             dependencies: manifest.dependencies.clone(),
             hermes: manifest.hermes.clone(),
         });
@@ -91,6 +93,7 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
     portable.workdir = None;
     portable.script_dir = None;
     super::exchange::AutomationPackage {
+        version: manifest.version,
         schema_version: manifest.schema_version,
         shell: manifest.shell,
         draft: portable,
@@ -208,6 +211,11 @@ pub(super) fn materialize(
     json_write(
         &path.join("task.json"),
         &Manifest {
+            version: record
+                .draft
+                .package_options
+                .as_ref()
+                .and_then(|options| options.version.clone()),
             schema_version: 1,
             instance_id: record.id.clone(),
             shell: super::super::command_shell().into(),

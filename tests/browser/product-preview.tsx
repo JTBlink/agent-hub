@@ -38,19 +38,27 @@ import "../../src/index.css";
 const networkManifest = {
   ...networkManifestCatalog,
   ...networkManifestPackage.draft,
+  version: networkManifestPackage.version,
 };
 const maintenanceManifest = {
   ...maintenanceManifestCatalog,
   ...maintenanceManifestPackage.draft,
+  version: maintenanceManifestPackage.version,
 };
-const mrManifest = { ...mrManifestCatalog, ...mrManifestPackage.draft };
+const mrManifest = {
+  ...mrManifestCatalog,
+  ...mrManifestPackage.draft,
+  version: mrManifestPackage.version,
+};
 const issueManifest = {
   ...issueManifestCatalog,
   ...issueManifestPackage.draft,
+  version: issueManifestPackage.version,
 };
 const diskCleanupManifest = {
   ...diskCleanupManifestCatalog,
   ...diskCleanupManifestPackage.draft,
+  version: diskCleanupManifestPackage.version,
 };
 const previewAgentTemplates: AutomationTemplate[] = [
   {
@@ -65,6 +73,11 @@ const previewAgentTemplates: AutomationTemplate[] = [
   title: manifest.title.zh,
   description: manifest.description.zh,
   draft: {
+    package_options: {
+      version: manifest.version,
+      dependencies: [],
+      hermes: null,
+    },
     name: manifest.title.zh,
     provider: "system",
     content: "sh './run.sh'",
@@ -437,6 +450,11 @@ Object.assign(window, {
                 title: networkManifest.title.zh,
                 description: networkManifest.description.zh,
                 draft: {
+                  package_options: {
+                    version: networkManifest.version,
+                    dependencies: [],
+                    hermes: null,
+                  },
                   name: networkManifest.title.zh,
                   provider: "system",
                   content: "sh './run.sh'",
@@ -469,6 +487,11 @@ Object.assign(window, {
                 title: "清理磁盘缓存",
                 description: diskCleanupManifest.description.zh,
                 draft: {
+                  package_options: {
+                    version: diskCleanupManifest.version,
+                    dependencies: [],
+                    hermes: null,
+                  },
                   name: "清理磁盘缓存",
                   provider: "system",
                   content: "sh './run.sh'",

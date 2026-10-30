@@ -1,6 +1,6 @@
 //! Per-task lifecycle. State is durable before every external side effect.
 use super::super::Provider;
-pub(super) use super::creation::{create, create_identity, create_with_hermes};
+pub(super) use super::creation::{create, create_identity};
 use super::*;
 use std::fs;
 

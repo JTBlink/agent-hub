@@ -46,23 +46,40 @@ pub struct HermesScripts {
     pub no_agent: bool,
 }
 
-/// Optional install requirements travel with GUI/CLI draft snapshots and backups.
+/// Release version and install requirements travel with GUI/CLI drafts and backups.
 /// On disk they have a single home in the package manifest.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct PackageOptions {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
     pub hermes: Option<HermesScripts>,
 }
 
 pub(super) fn validate_options(options: &PackageOptions) -> Result<(), String> {
+    validate_version(options.version.as_deref())?;
     dependencies::validate(&options.dependencies)
+}
+
+pub(super) fn validate_version(version: Option<&str>) -> Result<(), String> {
+    if let Some(version) = version {
+        if version.len() > 128
+            || version.trim() != version
+            || semver::Version::parse(version).is_err()
+        {
+            return Err("Task version must be a SemVer value such as 1.0.0".into());
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Manifest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
     schema_version: u32,
     #[serde(default)]
     instance_id: String,

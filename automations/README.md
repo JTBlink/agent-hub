@@ -19,6 +19,8 @@ agent-hub-cli automations import --path ./automations/system/disk-cleanup --inst
 | `system/network-reset/`                                            | macOS 定时重置网络                        |
 | `engineering/agent-code-review/`、其他 `system/` 与 `hermes/` 任务 | 可独立安装的其他任务，保留旧 CLI 标识兼容 |
 
+`task.json` 顶层 `version` 声明任务的 SemVer 发布版本（当前内置任务为 `1.0.0`），独立于清单格式 `schema_version` 和本机编辑修订号 `revision`。发布任务内容更新时维护此版本，备份原样保留。
+
 `task.json` 声明任务、日程、依赖和实际文件列表；`scripts/` 保存代码，根目录可有 `prompt.md`、`herdr.json` 和 `README.md`。`catalog.json` 仅提供应用推荐目录使用的多语言介绍与平台适配信息，不属于安装后的本机状态。
 
 Herdr 任务各自携带完整运行脚本，可以单独安装。公共运行脚本的维护源为 `_shared/herdr-agent.py`，分发副本由一致性测试检查；修改运行脚本时同步这些副本。

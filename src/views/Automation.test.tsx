@@ -640,6 +640,10 @@ it("creates a manual command task with the shared DTO without running it on save
   await render();
   await click("新建自动化");
   expect(document.activeElement?.getAttribute("aria-label")).toBe("名称");
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="任务版本"]')?.value,
+  ).toBe("1.0.0");
+  await input("任务版本", "1.2.0");
   await input("名称", "手动检查");
   await input("执行命令", "printf test");
   await select("日程", "manual");
@@ -649,6 +653,7 @@ it("creates a manual command task with the shared DTO without running it on save
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
   );
   expect(api.saveAutomation).toHaveBeenCalledWith(null, null, {
+    package_options: { version: "1.2.0", dependencies: [], hermes: null },
     name: "手动检查",
     script_dir: null,
     provider: "system",

@@ -28,6 +28,7 @@ struct Manifest {
 
 #[derive(Deserialize)]
 struct TaskManifest {
+    version: String,
     draft: AutomationDraft,
     files: Vec<String>,
     dependencies: Vec<super::super::package::Dependency>,
@@ -249,7 +250,7 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
                 command
             };
             let mut draft = AutomationDraft {
-    package_options: Some(super::super::package::PackageOptions { dependencies: package.dependencies, hermes: None }),
+    package_options: Some(super::super::package::PackageOptions { version: Some(package.version), dependencies: package.dependencies, hermes: None }),
                 name: title.clone(),
                 provider: package.draft.provider,
                 content: command,

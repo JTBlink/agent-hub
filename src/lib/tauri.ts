@@ -18,6 +18,7 @@ export interface AutomationScriptFile {
 }
 export interface AutomationDraft {
   package_options?: {
+    version?: string | null;
     dependencies: AutomationPackage["dependencies"];
     hermes?: AutomationPackage["hermes"];
   } | null;
@@ -124,6 +125,8 @@ export const removeAutomation = (id: string, deleteLocalData = false) =>
   invoke<void>("remove_automation", { id, deleteLocalData });
 
 export interface AutomationPackage {
+  /** Task release version; independent of the manifest format and local edit revision. */
+  version?: string | null;
   schema_version: number;
   shell: "sh" | "powershell";
   draft: AutomationDraft;

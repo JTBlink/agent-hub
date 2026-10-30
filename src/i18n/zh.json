@@ -1,5 +1,10 @@
 {
   "automation": {
+    "packageVersion": "任务版本",
+    "unversioned": "未声明版本",
+    "packageVersionHelp": "使用语义化版本，例如 1.0.0。发布脚本或提示词更新时维护此版本；修改本机项目或日程不会自动升级版本。",
+    "versionTransition": "当前 {{current}} → 安装 {{incoming}}",
+    "updateAvailable": "有新版本",
     "fromDiscovery": "从发现安装",
     "leaveForDiscoveryTitle": "前往发现页？",
     "leaveForDiscoveryMessage": "当前填写的内容尚未保存，前往发现页会关闭此表单。是否继续？",

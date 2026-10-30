@@ -4,7 +4,10 @@ import { Check, Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import type { AutomationInstallSource } from "../../lib/automationDiscovery";
-import { automationRequirements } from "../../lib/automationDiscovery";
+import {
+  automationPackageVersion,
+  automationRequirements,
+} from "../../lib/automationDiscovery";
 import { formatAutomationSchedule } from "../../lib/automation";
 import {
   importAutomationPackage,
@@ -17,6 +20,7 @@ import { getErrorMessage } from "../../lib/error";
 import { AutomationProjectField } from "../AutomationProjectField";
 import { AutomationScheduleInput } from "../AutomationScheduleInput";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { FileReader } from "../file-reader";
 
 function canReplace(task: AutomationTask, provider: string) {
   return (
@@ -58,6 +62,7 @@ export function AutomationInstaller({
   const pending = useRef(false);
   const alive = useRef(true);
   const titleId = useId();
+  const filesTitleId = useId();
   useEffect(() => {
     alive.current = true;
     const node = dialog.current;
@@ -123,10 +128,12 @@ export function AutomationInstaller({
               script_dir: replacement.definition?.script_dir,
               package_options: task.package
                 ? {
+                    version: task.package.version ?? null,
                     dependencies: task.package.dependencies,
                     hermes: task.package.hermes,
                   }
                 : (intent.package_options ?? {
+                    version: null,
                     dependencies: [],
                     hermes: null,
                   }),
@@ -156,6 +163,7 @@ export function AutomationInstaller({
     }
   };
   const requirements = automationRequirements(task);
+  const version = automationPackageVersion(task) ?? t("automation.unversioned");
   return createPortal(
     <dialog
       ref={dialog}
@@ -164,7 +172,7 @@ export function AutomationInstaller({
         event.preventDefault();
         if (!pending.current) onClose();
       }}
-      className="m-auto max-h-[calc(100vh/var(--app-scale)_-_2rem)] w-[760px] max-w-[calc(100vw/var(--app-scale)_-_2rem)] overflow-hidden rounded-xl border border-border bg-surface p-0 text-primary shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      className="m-auto max-h-[calc(100vh/var(--app-scale)_-_2rem)] w-[960px] max-w-[calc(100vw/var(--app-scale)_-_2rem)] overflow-hidden rounded-xl border border-border bg-surface p-0 text-primary shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
     >
       <form
         onSubmit={(event) => {
@@ -172,7 +180,7 @@ export function AutomationInstaller({
           if (step === 0) setStep(1);
           else if (step === 1) void install();
         }}
-        className="flex max-h-[calc(100vh/var(--app-scale)_-_2rem)] flex-col"
+        className={`flex max-h-[calc(100vh/var(--app-scale)_-_2rem)] flex-col ${step === 0 ? "h-[min(820px,calc(100vh/var(--app-scale)_-_2rem))]" : ""}`}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-5 py-4">
           <div className="min-w-0">
@@ -212,11 +220,13 @@ export function AutomationInstaller({
             </li>
           ))}
         </ol>
-        <div className="min-h-0 space-y-4 overflow-y-auto p-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
           {step === 0 && (
             <>
               <p className="text-[13px] text-secondary">{task.description}</p>
               <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[12px]">
+                <dt className="text-muted">{t("automation.packageVersion")}</dt>
+                <dd className="font-mono">{version}</dd>
                 <dt className="text-muted">
                   {t("automation.columns.schedule")}
                 </dt>
@@ -240,26 +250,27 @@ export function AutomationInstaller({
                   {draft.content}
                 </pre>
               </details>
-              <h3 className="text-[13px] font-medium">
-                {t("automation.scriptFiles", {
-                  count: draft.files?.length ?? 0,
-                })}
-              </h3>
-              <div className="space-y-2">
-                {draft.files?.map((file) => (
-                  <details
-                    key={file.path}
-                    className="rounded-lg border border-border-subtle p-2"
-                  >
-                    <summary className="cursor-pointer break-all text-[12px]">
-                      {file.path}
-                    </summary>
-                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-[12px] text-secondary">
-                      {file.content}
-                    </pre>
-                  </details>
-                ))}
-              </div>
+              {!!draft.files?.length && (
+                <section
+                  aria-labelledby={filesTitleId}
+                  className="flex min-h-[260px] flex-1 flex-col gap-3"
+                >
+                  <h3 id={filesTitleId} className="text-[13px] font-medium">
+                    {t("automation.scriptFiles", { count: draft.files.length })}
+                  </h3>
+                  <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-border-subtle">
+                    <FileReader
+                      files={draft.files}
+                      initialPath={
+                        draft.files.find((file) => file.path === "README.md")
+                          ?.path ??
+                        draft.files.find((file) => file.path === "prompt.md")
+                          ?.path
+                      }
+                    />
+                  </div>
+                </section>
+              )}
             </>
           )}
           {step === 1 && (
@@ -417,6 +428,14 @@ export function AutomationInstaller({
               />
               <span>
                 {existing.name} · {existing.project || existing.location}
+                <span className="block font-mono text-muted">
+                  {t("automation.versionTransition", {
+                    current:
+                      existing.definition?.package_options?.version ??
+                      t("automation.unversioned"),
+                    incoming: version,
+                  })}
+                </span>
                 {!canReplace(existing, draft.provider) && (
                   <span className="block text-muted">
                     {t("discovery.cannotOverwrite")}

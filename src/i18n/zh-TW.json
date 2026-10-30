@@ -1,5 +1,10 @@
 {
   "automation": {
+    "packageVersion": "任務版本",
+    "unversioned": "未宣告版本",
+    "packageVersionHelp": "使用語意化版本，例如 1.0.0。發布腳本或提示詞更新時維護此版本；修改本機專案或排程不會自動升級版本。",
+    "versionTransition": "目前 {{current}} → 安裝 {{incoming}}",
+    "updateAvailable": "有新版本",
     "fromDiscovery": "從發現安裝",
     "leaveForDiscoveryTitle": "前往發現頁？",
     "leaveForDiscoveryMessage": "目前填寫的內容尚未儲存，前往發現頁會關閉此表單。是否繼續？",

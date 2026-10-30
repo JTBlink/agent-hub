@@ -53,10 +53,12 @@ pub(in crate::core::automation) fn save(
     portable.workdir = None;
     portable.script_dir = None;
     let options = portable.package_options.take().unwrap_or(PackageOptions {
+        version: None,
         dependencies: Vec::new(),
         hermes: None,
     });
     super::exchange::AutomationPackage {
+        version: options.version,
         schema_version: 1,
         shell: super::super::command_shell().into(),
         draft: portable,
@@ -100,6 +102,7 @@ pub(in crate::core::automation) fn save(
             .package_options
             .clone()
             .unwrap_or(PackageOptions {
+                version: None,
                 dependencies: Vec::new(),
                 hermes: None,
             });

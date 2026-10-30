@@ -37,6 +37,7 @@ const draft: api.AutomationDraft = {
   files: [{ path: "scripts/run.sh", content: "echo example" }],
 };
 const taskPackage: api.AutomationPackage = {
+  version: "1.3.0",
   schema_version: 1,
   shell: "sh",
   draft,
@@ -125,6 +126,64 @@ async function submit() {
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
   );
 }
+it("browses a read-only package tree and previews Markdown before configuration", async () => {
+  const files = [
+    { path: "scripts/run.sh", content: "echo package-preview" },
+    {
+      path: "README.md",
+      content: "# Package overview\nRead before installing.",
+    },
+    { path: "scripts/lib/check.py", content: "print('ready')" },
+  ];
+  vi.mocked(api.getAutomationTemplates).mockResolvedValue({
+    shell: "sh",
+    templates: [
+      {
+        id: "example",
+        title: "Example task",
+        description: "Example description",
+        draft: { ...draft, files },
+      },
+    ],
+  });
+  await render("recommended");
+  await click("安装 Example task");
+  const dialog = document.querySelector("dialog")!;
+  expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
+  expect(
+    dialog
+      .querySelector('button[aria-label="README.md"]')
+      ?.getAttribute("aria-current"),
+  ).toBe("page");
+  expect(
+    [...dialog.querySelectorAll("aside summary")].map(
+      (node) => node.textContent,
+    ),
+  ).toEqual(["scripts", "lib"]);
+  await click("scripts/lib/check.py");
+  const source = dialog.querySelector<HTMLTextAreaElement>(
+    'textarea[aria-label="scripts/lib/check.py"]',
+  )!;
+  expect(source.value).toBe("print('ready')");
+  expect(source.readOnly).toBe(true);
+  await click("README.md");
+  await click("源码");
+  expect(
+    dialog.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="README.md"]',
+    )?.value,
+  ).toContain("# Package overview");
+  await click("预览");
+  expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.importAutomationPackage).not.toHaveBeenCalled();
+  expect(dialog.querySelector('[name="task-name"]')).toBeNull();
+  await submit();
+  expect(
+    dialog.querySelector<HTMLInputElement>('[name="task-name"]')?.value,
+  ).toBe("Example task");
+});
+
 it("previews before creating and installs a configured recommendation paused", async () => {
   await render("recommended");
   await click("安装 Example task");
@@ -394,6 +453,7 @@ it("overwrites the selected identity only after confirmation and preserves impor
       script_dir: "~/automations/example",
       workdir: null,
       package_options: {
+        version: "1.3.0",
         dependencies: taskPackage.dependencies,
         hermes: undefined,
       },
@@ -489,4 +549,47 @@ it("does not create a task if the fresh name check fails", async () => {
     "Cannot read tasks",
   );
   expect(api.saveAutomation).not.toHaveBeenCalled();
+});
+
+it("shows an available task version and confirms the installed version before replacement", async () => {
+  vi.mocked(api.getAutomationTemplates).mockResolvedValue({
+    shell: "sh",
+    templates: [
+      {
+        id: "example",
+        title: "Example task",
+        description: "Example description",
+        draft: {
+          ...draft,
+          package_options: { version: "2.0.0", dependencies: [] },
+        },
+      },
+    ],
+  });
+  setOverview([
+    existingTask({
+      definition: {
+        ...draft,
+        package_options: { version: "1.0.0", dependencies: [] },
+      },
+    }),
+  ]);
+  await render("recommended");
+  expect(host.textContent).toContain("v2.0.0");
+  expect(host.textContent).toContain("有新版本");
+  await click("重新安装 Example task");
+  expect(document.querySelector("dialog")?.textContent).toContain("2.0.0");
+  await submit();
+  await submit();
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "当前 1.0.0 → 安装 2.0.0",
+  );
+  await click("确认覆盖安装");
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    "agent_hub:existing",
+    7,
+    expect.objectContaining({
+      package_options: expect.objectContaining({ version: "2.0.0" }),
+    }),
+  );
 });

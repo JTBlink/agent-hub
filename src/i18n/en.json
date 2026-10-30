@@ -1,5 +1,10 @@
 {
   "automation": {
+    "packageVersion": "Task version",
+    "unversioned": "Unversioned",
+    "packageVersionHelp": "Use SemVer, such as 1.0.0. Maintain this version when publishing script or prompt changes; local project and schedule edits do not bump it.",
+    "versionTransition": "Current {{current}} → installing {{incoming}}",
+    "updateAvailable": "Update available",
     "fromDiscovery": "Install from Discover",
     "leaveForDiscoveryTitle": "Go to Discover?",
     "leaveForDiscoveryMessage": "Your changes have not been saved. Going to Discover closes this form. Continue?",

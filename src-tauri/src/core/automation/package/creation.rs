@@ -31,10 +31,12 @@ pub(super) fn create_identity(
     install_now: bool,
     identity: Option<&str>,
 ) -> Result<String, String> {
+    let mut version = None;
     let hermes = if let Some(options) = draft.package_options.take() {
         if !dependencies.is_empty() || hermes.is_some() {
             return Err("Task installation requirements were declared twice".into());
         }
+        version = options.version;
         dependencies = options.dependencies;
         options.hermes
     } else {
@@ -72,6 +74,7 @@ pub(super) fn create_identity(
     portable.workdir = None;
     portable.script_dir = None;
     super::exchange::AutomationPackage {
+        version: version.clone(),
         schema_version: 1,
         shell: super::super::command_shell().into(),
         draft: portable,
@@ -79,8 +82,9 @@ pub(super) fn create_identity(
         hermes: hermes.clone(),
     }
     .validate()?;
-    if !dependencies.is_empty() || hermes.is_some() {
+    if version.is_some() || !dependencies.is_empty() || hermes.is_some() {
         draft.package_options = Some(PackageOptions {
+            version,
             dependencies: dependencies.clone(),
             hermes: hermes.clone(),
         });

@@ -1,3 +1,7 @@
+import {
+  automationPackageVersion,
+  hasNewerAutomationVersion,
+} from "../../lib/automationDiscovery";
 import { useEffect, useRef, useState } from "react";
 import { FolderUp, GitBranch, Loader2, Search } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -324,24 +328,32 @@ export function AutomationDiscovery({
       )}
       {source !== "local" && (
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((task, index) => (
-            <AutomationPackageCard
-              key={`${task.title}-${index}`}
-              task={task}
-              installed={
-                !!overview.data?.tasks.some(
-                  (existing) =>
-                    existing.origin === "agent_hub" &&
-                    (existing.name.trim() === task.draft.name.trim() ||
-                      existing.id ===
-                        installedIds[`${task.source}:${task.title}`]) &&
-                    (existing.installation === "installed" ||
-                      (!existing.installation && existing.can_run)),
-                )
-              }
-              onInstall={() => setSelected(task)}
-            />
-          ))}
+          {cards.map((task, index) => {
+            const installedTasks =
+              overview.data?.tasks.filter(
+                (existing) =>
+                  existing.origin === "agent_hub" &&
+                  (existing.name.trim() === task.draft.name.trim() ||
+                    existing.id ===
+                      installedIds[`${task.source}:${task.title}`]) &&
+                  (existing.installation === "installed" ||
+                    (!existing.installation && existing.can_run)),
+              ) ?? [];
+            return (
+              <AutomationPackageCard
+                key={`${task.title}-${index}`}
+                task={task}
+                installed={installedTasks.length > 0}
+                updateAvailable={installedTasks.some((existing) =>
+                  hasNewerAutomationVersion(
+                    existing.definition?.package_options?.version,
+                    automationPackageVersion(task),
+                  ),
+                )}
+                onInstall={() => setSelected(task)}
+              />
+            );
+          })}
         </div>
       )}
       {source === "recommended" &&

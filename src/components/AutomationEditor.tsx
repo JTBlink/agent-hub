@@ -11,6 +11,7 @@ import { X, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationDraft, AutomationTask } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { AutomationVersionField } from "./AutomationVersionField";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +33,7 @@ export function AutomationEditor({
   const navigate = useNavigate();
   const [draft, setDraft] = useState<AutomationDraft>(
     task?.definition ?? {
+      package_options: { version: "1.0.0", dependencies: [], hermes: null },
       name: "",
       provider: "system",
       content: "",
@@ -262,6 +264,9 @@ export function AutomationEditor({
                 <p className="rounded-lg border border-border-subtle bg-surface p-3 text-[12px] leading-6 text-secondary">
                   {t("automation.networkSetupHelp")}
                 </p>
+              )}
+              {!externalNative && (
+                <AutomationVersionField draft={draft} onChange={update} />
               )}
               <AutomationProjectField
                 value={draft.workdir}

@@ -5,6 +5,8 @@ use std::io::Write;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AutomationPackage {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     pub schema_version: u32,
     pub shell: String,
     pub draft: AutomationDraft,
@@ -37,6 +39,7 @@ impl AutomationPackage {
     }
 
     fn validate_portable(&mut self) -> Result<(), String> {
+        validate_version(self.version.as_deref())?;
         if self.schema_version != 1 || !["sh", "powershell"].contains(&self.shell.as_str()) {
             return Err("Unsupported task package version or shell".into());
         }
@@ -109,6 +112,7 @@ fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, 
             });
         }
         AutomationPackage {
+            version: manifest.version,
             schema_version: manifest.schema_version,
             shell: manifest.shell,
             draft,
@@ -141,6 +145,7 @@ pub(crate) fn write_backup_directory(
     draft.script_dir = None;
     draft.enabled = false;
     let options = draft.package_options.take().unwrap_or(PackageOptions {
+        version: None,
         dependencies: vec![],
         hermes: None,
     });
@@ -151,6 +156,7 @@ pub(crate) fn write_backup_directory(
         normalize(&mut draft);
     }
     let mut package = AutomationPackage {
+        version: options.version,
         schema_version: 1,
         shell: backup.shell.clone(),
         draft,
@@ -160,6 +166,7 @@ pub(crate) fn write_backup_directory(
     package.validate_portable()?;
     std::fs::create_dir(target).map_err(|e| e.to_string())?;
     let mut manifest = Manifest {
+        version: package.version,
         schema_version: 1,
         instance_id: backup.id.clone(),
         shell: package.shell,
@@ -187,6 +194,7 @@ pub(crate) fn read_backup_directory(
     }
     let mut package = read_package(source, false)?;
     package.draft.package_options = Some(PackageOptions {
+        version: package.version,
         dependencies: package.dependencies,
         hermes: package.hermes,
     });
@@ -212,13 +220,12 @@ pub fn import_definition(
     package.draft.enabled = false;
     package.draft.workdir = workdir;
     package.draft.validate()?;
-    super::lifecycle::create_with_hermes(
-        &store::root(),
-        package.draft,
-        package.dependencies,
-        package.hermes,
-        false,
-    )
+    package.draft.package_options = Some(PackageOptions {
+        version: package.version,
+        dependencies: package.dependencies,
+        hermes: package.hermes,
+    });
+    super::lifecycle::create(&store::root(), package.draft, Vec::new(), false)
 }
 
 /// A single JSON file contains portable intent and declared text files only.
@@ -234,6 +241,7 @@ pub fn export_package(id: &str, target: &Path) -> Result<(), String> {
     draft.package_options = None;
     draft.enabled = false;
     let mut package = AutomationPackage {
+        version: manifest.version,
         schema_version: 1,
         shell: manifest.shell,
         draft,
