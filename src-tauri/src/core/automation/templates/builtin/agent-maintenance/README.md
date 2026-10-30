@@ -13,3 +13,5 @@
 Codex 默认启动参数为 `--dangerously-bypass-approvals-and-sandbox`，无需交互确认。可在高级设置中填写额外的智能体参数（如 `-m model-id -c model_reasoning_effort=high`），保存在 `herdr.json` 的 `extra_arguments`，解析引号后追加到 `arguments` 之后；参数按 argv 传递，不执行 Shell 展开。其他 Agent 使用其各自支持的参数。
 
 提示词只投递一次，随后持续观察 Agent 状态并收集结果。启动初期的 `unknown` 或旧版 CLI 的 5 秒状态识别超时不会直接判为失败；运行包装器保持执行中，完成后记录输出与终态。
+
+定时任务会关闭 Codex 启动时的交互更新检查，不修改全局设置。若启动器在投递提示词前退出，可在原空闲 shell 面板恢复；有其他命令运行时直接跳过。已尝试投递但结果不明时不会自动重发。

@@ -55,27 +55,41 @@ def read_bundle(path):
 
 def previous_agent(invoke, previous, session, cwd):
     if not previous:
-        return None
+        return None, None
     if previous.get("session") != session or previous.get("cwd") != str(cwd):
         if previous.get("phase") != "completed":
             raise HerdrError("上次 Herdr 任务未确认完成，请先处理原会话后再更换目标。")
-        return None
+        return None, None
     if not previous.get("pane"):
         raise HerdrError("上次 Herdr 布局创建结果未确认，请在 Herdr 检查后处理 .herdr-run.json。")
     try:
-        return invoke(["agent", "get", previous["pane"]])["agent"]
+        return invoke(["agent", "get", previous["pane"]])["agent"], None
     except HerdrError as error:
         if error.code != "agent_not_found":
             raise
     # An absent agent can also mean the pane now hosts the user's shell or editor.
     # Only a confirmed closed pane permits automatic layout recreation.
     try:
-        invoke(["pane", "get", previous["pane"]])
+        pane = invoke(["pane", "get", previous["pane"]])["pane"]
     except HerdrError as error:
         if error.code != "pane_not_found":
             raise
         print(f"上次 Herdr 面板 {previous['pane']} 已关闭，将重新创建任务标签页。", flush=True)
-        return None
+        return None, None
+    may_start = not previous.get("replacement_pending") and (
+        previous.get("phase") in ("starting", "completed") or previous.get("prompt_attempted") is False
+    )
+    if may_start and not pane.get("agent"):
+        actual_cwd = pane.get("foreground_cwd") or pane.get("cwd")
+        if not actual_cwd or Path(actual_cwd).resolve() != cwd:
+            raise HerdrError("原 Herdr 面板的项目目录已更换，保留面板且不启动任务。")
+        info = invoke(["pane", "process-info", "--pane", previous["pane"]])["process_info"]
+        foreground = info.get("foreground_processes", [])
+        shell_pid = info.get("shell_pid")
+        if shell_pid and len(foreground) == 1 and foreground[0].get("pid") == shell_pid:
+            print(f"原 Herdr 面板 {previous['pane']} 已回到 shell，将在原面板启动新 Agent。", flush=True)
+            return None, pane
+        raise HerdrError("原面板仍在执行启动或其他命令，跳过本次触发。", "pane_busy")
     raise HerdrError("原 Herdr 面板仍存在但 Agent 已退出，请检查该面板后处理 .herdr-run.json。")
 
 
@@ -95,7 +109,9 @@ def verify_previous_agent(agent, previous, cwd):
         raise HerdrError("原 Agent 状态已变化，保留面板且不发起新任务。")
 
 
-def create_task_pane(invoke, previous, agent, session, cwd, title):
+def create_task_pane(invoke, previous, agent, session, cwd, title, available_pane=None):
+    if available_pane:
+        return available_pane
     if agent:
         verify_previous_agent(agent, previous, cwd)
         save_state({**previous, "phase": "attention"})
@@ -172,6 +188,9 @@ def main():
         extra = [*extra, *shlex.split(additional)]
     except ValueError:
         raise HerdrError("额外的智能体参数引号未闭合，请检查高级设置。") from None
+    # Unattended tasks must not stop at the CLI's interactive updater and exit.
+    if kind == "codex":
+        extra = ["-c", "check_for_update_on_startup=false", *extra]
     prompt = read_bundle(HERE / "prompt.md").strip()
     if not prompt:
         raise HerdrError("提示词为空，请填写任务提示词。")
@@ -187,7 +206,13 @@ def main():
     previous = None
     if STATE.exists():
         previous = json.loads(STATE.read_text(encoding="utf-8"))
-    agent = previous_agent(invoke, previous, session, cwd)
+    try:
+        agent, available_pane = previous_agent(invoke, previous, session, cwd)
+    except HerdrError as error:
+        if error.code != "pane_busy":
+            raise
+        print(error, flush=True)
+        return 0
     if agent:
         verify_agent_identity(agent, previous, cwd)
         status = agent["agent_status"]
@@ -195,6 +220,9 @@ def main():
             print(f"上次 Herdr 任务仍在运行：{previous['pane']}；跳过本次触发，不排队或重复发起。", flush=True)
             return 0
         if status == "unknown":
+            if previous.get("phase") == "starting" and previous.get("prompt_attempted") is False:
+                print("上次 Herdr Agent 仍在启动，跳过本次触发；尚未投递提示词。", flush=True)
+                return 0
             target = previous.get("agent_name") or previous["pane"]
             print(f"保留上次 Herdr 会话 {previous['pane']}，继续等待状态与结果；不重复投递。", flush=True)
             result = wait_for_result(invoke, target, previous.get("completion_seq") or 0)
@@ -208,20 +236,25 @@ def main():
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
-    created = create_task_pane(invoke, previous, agent, session, cwd, config.get("title", "AgentHub task"))
+    created = create_task_pane(invoke, previous, agent, session, cwd, config.get("title", "AgentHub task"), available_pane)
     pane = created["pane_id"]
     name = "ah-" + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + "-" + uuid.uuid4().hex[:6]
     state = {"session": session, "pane": pane, "cwd": str(cwd), "workspace": created["workspace_id"],
-             "tab": created.get("tab_id"), "agent_name": name, "phase": "attention"}
+             "tab": created.get("tab_id"), "agent_name": name, "phase": "starting", "prompt_attempted": False}
+    if agent:
+        state["replacement_pending"] = previous["pane"]
     save_state(state)
     if agent:
         verify_previous_agent(invoke(["agent", "get", previous["pane"]])["agent"], previous, cwd)
         invoke(["pane", "close", previous["pane"]])
+        state.pop("replacement_pending")
+        save_state(state)
     print(f"Herdr 会话 {session}，Agent {name}，面板 {pane}。", flush=True)
     started = invoke(["agent", "start", name, "--kind", kind, "--pane", pane,
                       "--timeout", "30000", *(["--", *extra] if extra else [])])
     # Persist before submission: timeout does not prove the prompt was not delivered.
     state["phase"] = "submitted"
+    state["prompt_attempted"] = True
     state["completion_seq"] = started.get("agent", {}).get("completion_seq") or 0
     save_state(state)
     try:

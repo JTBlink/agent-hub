@@ -36,7 +36,8 @@ class HerdrChecks(unittest.TestCase):
     def execute(self, missing=False, running=True, status='done', previous='done', failure=None,
                 output='Synthetic Herdr result', read_failure=None, config=None,
                 missing_agent=False, pane_exists=False, lookup_failure=None,
-                replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None):
+                replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None,
+                shell_busy=False, pane_cwd=None, start_failure=None):
         if config is not None:
             CONFIG.write_text(json.dumps(config), encoding='utf-8')
         previous_name = json.loads(STATE.read_text()).get('agent_name', OLD_NAME) if STATE.exists() else OLD_NAME
@@ -60,6 +61,8 @@ class HerdrChecks(unittest.TestCase):
                 elif command[:2] == ['tab', 'create']:
                     payload = {'result': {'root_pane': {'pane_id': 'w-test:p-test', 'workspace_id': 'w-test', 'tab_id': 'w-test:t-task'}}}
                 elif command[:2] == ['agent', 'start']:
+                    if start_failure:
+                        return error(args, start_failure)
                     payload = {'result': {'agent': {'agent_status': 'idle', 'completion_seq': 1}}}
                 elif command[:2] == ['agent', 'prompt']:
                     if failure:
@@ -79,7 +82,9 @@ class HerdrChecks(unittest.TestCase):
                 elif command[:2] == ['pane', 'get']:
                     if not pane_exists:
                         return error(args, 'pane_not_found')
-                    payload = {'result': {'pane': {'pane_id': 'w-test:p-test'}}}
+                    payload = {'result': {'pane': {'pane_id': 'w-test:p-test', 'workspace_id': 'w-test', 'tab_id': 'w-test:t-task', 'cwd': str(pane_cwd or PROJECT)}}}
+                elif command[:2] == ['pane', 'process-info']:
+                    payload = {'result': {'process_info': {'shell_pid': 201, 'foreground_processes': [{'pid': 202 if shell_busy else 201}]}}}
                 elif command[:2] == ['pane', 'split']:
                     if pane_failure:
                         return error(args, pane_failure)
@@ -182,9 +187,52 @@ class HerdrChecks(unittest.TestCase):
                 self.assertEqual(json.loads(STATE.read_text())['phase'], 'completed')
 
     def test_missing_agent_in_existing_pane_is_preserved(self):
-        self.save_previous()
+        self.save_previous('attention')
         self.assertIsInstance(self.execute(missing_agent=True, pane_exists=True), str)
         self.assertFalse(any('create' in args or 'start' in args or 'close' in args for args, _ in self.calls))
+
+    def test_startup_exit_resumes_in_the_existing_shell_without_new_layout(self):
+        self.assertIsInstance(self.execute(start_failure='agent_not_ready'), str)
+        state = json.loads(STATE.read_text())
+        self.assertEqual(state['phase'], 'starting')
+        self.assertFalse(state['prompt_attempted'])
+        self.calls = []
+        self.assertEqual(self.execute(missing_agent=True, pane_exists=True), 0)
+        self.assertFalse(any('create' in args or 'split' in args or 'close' in args for args, _ in self.calls))
+        self.assertEqual(sum('prompt' in args for args, _ in self.calls), 1)
+        self.assertEqual(json.loads(STATE.read_text())['tab'], 'w-test:t-task')
+
+    def test_completed_agent_exit_reuses_an_idle_shell_for_the_next_round(self):
+        self.save_previous()
+        self.assertEqual(self.execute(missing_agent=True, pane_exists=True), 0)
+        self.assertFalse(any('create' in args or 'split' in args or 'close' in args for args, _ in self.calls))
+        self.assertEqual(sum('start' in args for args, _ in self.calls), 1)
+
+    def test_busy_shell_is_skipped_without_input_or_layout_changes(self):
+        self.save_previous('starting')
+        self.assertEqual(self.execute(missing_agent=True, pane_exists=True, shell_busy=True), 0)
+        self.assertFalse(any('create' in args or 'start' in args or 'prompt' in args for args, _ in self.calls))
+        self.assertEqual(json.loads(STATE.read_text())['phase'], 'starting')
+
+    def test_shell_in_a_different_project_is_not_reused(self):
+        self.save_previous('starting')
+        self.assertIsInstance(self.execute(missing_agent=True, pane_exists=True, pane_cwd=HERE), str)
+        self.assertFalse(any('create' in args or 'start' in args or 'prompt' in args for args, _ in self.calls))
+
+    def test_unknown_startup_without_a_prompt_is_skipped_without_waiting_for_a_result(self):
+        self.save_previous('starting')
+        state = json.loads(STATE.read_text()); state['prompt_attempted'] = False
+        STATE.write_text(json.dumps(state))
+        self.assertEqual(self.execute(previous='unknown'), 0)
+        self.assertFalse(any('read' in args or 'prompt' in args or 'start' in args for args, _ in self.calls))
+
+    def test_only_codex_receives_the_unattended_update_override(self):
+        for kind in ['codex', 'claude']:
+            with self.subTest(kind=kind):
+                STATE.unlink(missing_ok=True); self.calls = []
+                self.assertEqual(self.execute(config={'agent': kind}), 0)
+                start = next(args for args, _ in self.calls if 'start' in args)
+                self.assertEqual('check_for_update_on_startup=false' in start, kind == 'codex')
 
     def test_unavailable_server_does_not_mean_previous_pane_was_closed(self):
         self.save_previous()
@@ -215,6 +263,15 @@ class HerdrChecks(unittest.TestCase):
                 self.assertIsInstance(self.execute(**options), str)
                 self.assertFalse(any('close' in args or 'start' in args or 'prompt' in args for args, _ in self.calls))
 
+    def test_pending_old_agent_replacement_cannot_start_a_second_agent_on_retry(self):
+        self.save_previous()
+        self.assertIsInstance(self.execute(previous_after='working'), str)
+        state = json.loads(STATE.read_text())
+        self.assertEqual(state['replacement_pending'], 'w-test:p-test')
+        self.calls = []
+        self.assertIsInstance(self.execute(missing_agent=True, pane_exists=True), str)
+        self.assertFalse(any('start' in args or 'prompt' in args for args, _ in self.calls))
+
     def test_failed_pane_replacement_is_not_repeated(self):
         self.save_previous()
         self.assertIsInstance(self.execute(pane_failure='timeout'), str)
@@ -231,6 +288,7 @@ class HerdrChecks(unittest.TestCase):
         }), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
         self.assertEqual(start[start.index('--') + 1:], [
+            '-c', 'check_for_update_on_startup=false',
             '--dangerously-bypass-approvals-and-sandbox', '-m', 'model-id',
             '-c', 'name="value with spaces"', '--literal', '$(touch NEVER)',
         ])
