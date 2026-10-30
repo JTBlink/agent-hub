@@ -11,6 +11,7 @@ import { X, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationDraft, AutomationTask } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
+import { AutomationAdminNotice } from "./AutomationAdminNotice";
 import { AutomationVersionField } from "./AutomationVersionField";
 import { ToggleSwitch } from "./ToggleSwitch";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -248,6 +249,7 @@ export function AutomationEditor({
               disabled={busy}
               className="min-w-0 space-y-6 border-t border-border-subtle bg-bg-secondary p-6 md:border-l md:border-t-0"
             >
+              <AutomationAdminNotice required={task?.requires_admin} />
               <AutomationAgentField
                 draft={draft}
                 disabled={busy || externalNative}

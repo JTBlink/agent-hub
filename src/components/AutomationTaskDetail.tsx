@@ -9,6 +9,7 @@ import { AutomationOriginBadge } from "./AutomationOriginBadge";
 import { CopyPathButton } from "./CopyPathButton";
 import { cn } from "../utils";
 
+import { AutomationAdminNotice } from "./AutomationAdminNotice";
 import { AutomationExecution } from "./AutomationExecution";
 
 const tabs = ["overview", "runs", "technical"] as const;
@@ -208,6 +209,7 @@ export function AutomationTaskDetail({
           </button>
         </div>
       </header>
+      <AutomationAdminNotice required={task?.requires_admin} />
       {children}
       {!task ? (
         <p role="status" className="py-10 text-center text-[13px] text-muted">

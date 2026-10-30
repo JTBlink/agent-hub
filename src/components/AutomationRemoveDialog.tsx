@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AutomationTask } from "../lib/tauri";
+import { AutomationAdminNotice } from "./AutomationAdminNotice";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 export function AutomationRemoveDialog({
@@ -28,6 +29,12 @@ export function AutomationRemoveDialog({
       onClose={onClose}
       onConfirm={() => onConfirm(owned && deleteLocalData)}
     >
+      <AutomationAdminNotice required={task.requires_admin} />
+      {!owned && (
+        <p className="text-[12px] leading-6 text-muted">
+          {t("automation.externalDeleteHelp")}
+        </p>
+      )}
       {owned && (
         <div className="space-y-2 rounded-lg border border-border-subtle bg-bg-secondary p-3">
           <label className="flex items-start gap-2 text-[13px] text-primary">

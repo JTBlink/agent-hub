@@ -200,6 +200,39 @@ const automationTasks: AutomationTask[] = [
     location: "crontab",
   },
 ];
+if (previewParams.has("system-launchd"))
+  automationTasks.push({
+    id: "launchd:system-audit",
+    name: "Scheduled Tasks · System Audit",
+    identifier: "org.example.system-audit",
+    bundle_id: null,
+    icon: null,
+    source: "launchd",
+    origin: "external",
+    can_edit: true,
+    can_run: true,
+    requires_admin: true,
+    definition: {
+      name: "Scheduled Tasks · System Audit",
+      provider: "system",
+      content: "'/usr/local/libexec/example-audit'",
+      workdir: null,
+      schedule: { kind: "daily", hour: 7, minute: 0, weekdays: false },
+      enabled: true,
+    },
+    revision: 42,
+    is_builtin: false,
+    schedule: "Hour=7 Minute=0",
+    project: null,
+    next_run: null,
+    last_run: null,
+    status: "active",
+    last_result: "0",
+    command: "/usr/local/libexec/example-audit",
+    prompt: null,
+    location: "/Library/LaunchDaemons/org.example.system-audit.plist",
+  });
+
 // Explicit synthetic creation record for previewing AgentHub ownership.
 automationTasks[0] = {
   ...automationTasks[0],

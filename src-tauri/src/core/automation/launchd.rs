@@ -27,6 +27,9 @@ pub(super) fn collect(report: &mut AutomationOverview, locale: &str) {
                 .ok()
                 .map(|text| (uid, super::external_launchd::disabled(&text)))
         });
+    let system_overrides = read_command("/bin/launchctl", &["print-disabled", "system"])
+        .ok()
+        .map(|text| super::external_launchd::disabled(&text));
     let directories = [
         user.clone(),
         "/Library/LaunchAgents".into(),
@@ -78,6 +81,19 @@ pub(super) fn collect(report: &mut AutomationOverview, locale: &str) {
                             if let Some((uid, overrides)) = &management {
                                 super::external_launchd::decorate(
                                     &mut task, &user, *uid, overrides,
+                                );
+                            }
+                        }
+                        if directory == std::path::Path::new("/Library/LaunchAgents") {
+                            if let Some((_, overrides)) = &management {
+                                super::external_launchd::decorate_system(
+                                    &mut task, &directory, overrides,
+                                );
+                            }
+                        } else if directory == std::path::Path::new("/Library/LaunchDaemons") {
+                            if let Some(overrides) = &system_overrides {
+                                super::external_launchd::decorate_system(
+                                    &mut task, &directory, overrides,
                                 );
                             }
                         }

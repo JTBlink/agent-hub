@@ -2030,3 +2030,73 @@ it("provides install and uninstall independently of scheduled enablement and man
   expect(api.runAutomation).not.toHaveBeenCalled();
   expect(api.saveAutomation).not.toHaveBeenCalled();
 });
+
+it("manages a system LaunchDaemon in place with administrator context and retains failed confirmations", async () => {
+  const system: api.AutomationTask = {
+    ...native,
+    id: "launchd:/Library/LaunchDaemons/org.example.audit.plist",
+    name: "System audit",
+    source: "launchd",
+    origin: "external",
+    can_edit: true,
+    can_run: true,
+    requires_admin: true,
+    status: "active",
+    revision: 42,
+    definition: {
+      name: "System audit",
+      provider: "system",
+      content: "'/usr/local/libexec/example-audit'",
+      workdir: null,
+      schedule: { kind: "daily", hour: 7, minute: 0, weekdays: false },
+      enabled: true,
+    },
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [system],
+    issues: [],
+    hermes_installed: false,
+  });
+  vi.mocked(api.saveAutomation).mockResolvedValue(system.id);
+  await render("/automation?task=" + encodeURIComponent(system.id));
+  expect(container.querySelector('[role="note"]')?.textContent).toContain(
+    "macOS 管理员授权",
+  );
+  await click("编辑自动化");
+  expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+    "macOS 管理员授权",
+  );
+  await input("名称", "Renamed system audit");
+  await click("保存");
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    system.id,
+    42,
+    expect.objectContaining({ name: "Renamed system audit" }),
+  );
+  await ariaClick("暂停计划");
+  expect(api.saveAutomation).toHaveBeenCalledWith(
+    system.id,
+    42,
+    expect.objectContaining({ enabled: false }),
+  );
+  await ariaClick("立即运行 System audit");
+  expect(api.runAutomation).toHaveBeenCalledWith(system.id);
+  await ariaClick("删除自动化");
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "原脚本与日志会保留",
+  );
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "macOS 管理员授权",
+  );
+  vi.mocked(api.removeAutomation).mockRejectedValueOnce(
+    new Error("Administrator authorization cancelled"),
+  );
+  await click("删除");
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "Administrator authorization cancelled",
+  );
+  await click("删除");
+  expect(api.removeAutomation).toHaveBeenLastCalledWith(system.id, false);
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+});

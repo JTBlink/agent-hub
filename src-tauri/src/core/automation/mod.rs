@@ -67,6 +67,8 @@ pub struct AutomationTask {
     pub origin: TaskOrigin,
     pub can_edit: bool,
     pub can_run: bool,
+    /// Operations require an explicit macOS administrator authorization.
+    pub requires_admin: bool,
     pub definition: Option<AutomationDraft>,
     pub revision: Option<u64>,
     pub installation: Option<String>,
@@ -95,6 +97,7 @@ impl AutomationTask {
             origin: TaskOrigin::External,
             can_edit: source == "hermes",
             can_run: source == "hermes",
+            requires_admin: false,
             definition: None,
             revision: None,
             installation: None,

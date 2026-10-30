@@ -1,4 +1,6 @@
-//! Edit current-user timed LaunchAgents in place; never claim them as AgentHub jobs.
+//! Edit supported timed launchd jobs in place, preserving their external ownership.
+mod admin;
+mod scope;
 use super::{
     definition::{AutomationDraft, Provider, Schedule},
     process::read_command,
@@ -27,10 +29,14 @@ fn read(path: &Path, root: &Path, uid: u32) -> Result<(Vec<u8>, Value), String> 
         || !metadata.is_file()
         || metadata.uid() != uid
         || metadata.mode() & 0o200 == 0
+        || (uid == 0 && metadata.mode() & 0o022 != 0)
         || path.extension().map_or(true, |ext| ext != "plist")
         || metadata.len() > 1024 * 1024
     {
-        return Err("Only writable current-user LaunchAgents can be managed".into());
+        return Err(
+            "Only regular owned launchd property lists inside the selected scope can be managed"
+                .into(),
+        );
     }
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     let plist =
@@ -177,10 +183,20 @@ pub(super) fn decorate(
     uid: u32,
     overrides: &HashMap<String, bool>,
 ) {
+    decorate_owned(task, root, uid, overrides, false);
+}
+
+fn decorate_owned(
+    task: &mut AutomationTask,
+    root: &Path,
+    owner: u32,
+    overrides: &HashMap<String, bool>,
+    requires_admin: bool,
+) {
     if task.is_builtin {
         return;
     }
-    let Ok((bytes, value)) = read(Path::new(&task.location), root, uid) else {
+    let Ok((bytes, value)) = read(Path::new(&task.location), root, owner) else {
         return;
     };
     let Some(label) = task.identifier.as_deref() else {
@@ -195,9 +211,36 @@ pub(super) fn decorate(
         task.definition = Some(definition);
         task.revision = Some(revision(&bytes, enabled));
         task.can_edit = true;
+        task.requires_admin = requires_admin;
         task.can_run = enabled;
         if !enabled && task.status != "running" {
             task.status = "paused".into();
+        }
+    }
+}
+
+pub(super) fn decorate_system(
+    task: &mut AutomationTask,
+    root: &Path,
+    overrides: &HashMap<String, bool>,
+) {
+    if !scope::system_root(root) || !task.identifier.as_deref().is_some_and(admin::valid_label) {
+        return;
+    }
+    decorate_owned(task, root, 0, overrides, true);
+    if task.can_edit && root == Path::new("/Library/LaunchDaemons") {
+        if let Some(label) = &task.identifier {
+            if let Ok(Some(runtime)) = scope::observe("system", label) {
+                task.status = if runtime.running {
+                    "running"
+                } else if task.definition.as_ref().is_some_and(|draft| !draft.enabled) {
+                    "paused"
+                } else {
+                    "active"
+                }
+                .into();
+                task.last_result = runtime.exit;
+            }
         }
     }
 }
@@ -210,6 +253,7 @@ struct Snapshot {
     domain: String,
     loaded: bool,
     enabled: bool,
+    requires_admin: bool,
 }
 fn snapshot(task: &AutomationTask) -> Result<Snapshot, String> {
     if task.source != "launchd" || task.is_builtin || !task.can_edit {
@@ -217,11 +261,10 @@ fn snapshot(task: &AutomationTask) -> Result<Snapshot, String> {
     }
     let uid = read_command("/usr/bin/id", &["-u"])?;
     let uid = uid.trim().parse::<u32>().map_err(|e| e.to_string())?;
-    let root = dirs::home_dir()
-        .ok_or("Cannot resolve user home")?
-        .join("Library/LaunchAgents");
+    let home = dirs::home_dir().ok_or("Cannot resolve user home")?;
     let path = PathBuf::from(&task.location);
-    let (bytes, value) = read(&path, &root, uid)?;
+    let scope = scope::Scope::resolve(&path, &home, uid)?;
+    let (bytes, value) = read(&path, &scope.root, scope.owner)?;
     let label = value["Label"]
         .as_str()
         .ok_or("Missing launchd label")?
@@ -233,23 +276,34 @@ fn snapshot(task: &AutomationTask) -> Result<Snapshot, String> {
     {
         return Err("LaunchAgent identity changed; refresh before editing".into());
     }
-    let domain = format!("gui/{uid}");
-    let loaded = super::launchd::runtime(&read_command("/bin/launchctl", &["list"])?);
-    if loaded.get(&label).is_some_and(|(running, _)| *running) {
-        return Err("Wait for the current run to finish before editing".into());
-    }
-    if loaded.contains_key(&label) {
-        let details = read_command("/bin/launchctl", &["print", &format!("{domain}/{label}")])?;
-        let loaded_path = details
-            .lines()
-            .find_map(|line| line.trim().strip_prefix("path = "));
-        if loaded_path.map(Path::new) != Some(path.as_path()) {
-            return Err(
-                "Loaded LaunchAgent has a different source path; manage it in its original tool"
-                    .into(),
-            );
+    let domain = scope.domain;
+    let loaded = if scope.requires_admin {
+        let runtime = scope::observe(&domain, &label)?;
+        if let Some(runtime) = &runtime {
+            if runtime.running {
+                return Err("Wait for the current run to finish before editing".into());
+            }
+            if runtime.path.as_deref().map(Path::new) != Some(path.as_path()) {
+                return Err(
+                    "Loaded launchd task has a different source path; refresh before editing"
+                        .into(),
+                );
+            }
         }
-    }
+        runtime.is_some()
+    } else {
+        let loaded = super::launchd::runtime(&read_command("/bin/launchctl", &["list"])?);
+        if loaded.get(&label).is_some_and(|(running, _)| *running) {
+            return Err("Wait for the current run to finish before editing".into());
+        }
+        if loaded.contains_key(&label) {
+            let details = read_command("/bin/launchctl", &["print", &format!("{domain}/{label}")])?;
+            if scope::runtime(&details).path.as_deref().map(Path::new) != Some(path.as_path()) {
+                return Err("Loaded LaunchAgent has a different source path; manage it in its original tool".into());
+            }
+        }
+        loaded.contains_key(&label)
+    };
     let overrides = disabled(&read_command(
         "/bin/launchctl",
         &["print-disabled", &domain],
@@ -267,7 +321,8 @@ fn snapshot(task: &AutomationTask) -> Result<Snapshot, String> {
         value,
         label: label.clone(),
         domain,
-        loaded: loaded.contains_key(&label),
+        loaded,
+        requires_admin: scope.requires_admin,
         enabled,
     })
 }
@@ -417,12 +472,25 @@ pub(super) fn save(
     let original = self::draft(&snapshot.value, &task.name, snapshot.enabled)
         .ok_or("Invalid external task")?;
     let bytes = update(&mut snapshot.value, draft, &original)?;
-    snapshot.apply(&bytes, draft.enabled, &mut ctl)?;
+    if snapshot.requires_admin {
+        admin::perform(
+            &snapshot,
+            admin::Action::Save {
+                bytes: &bytes,
+                enabled: draft.enabled,
+            },
+        )?;
+    } else {
+        snapshot.apply(&bytes, draft.enabled, &mut ctl)?;
+    }
     Ok(task.id.clone())
 }
 
 pub(super) fn remove(task: &AutomationTask) -> Result<(), String> {
     let snapshot = snapshot(task)?;
+    if snapshot.requires_admin {
+        return admin::perform(&snapshot, admin::Action::Remove);
+    }
     if snapshot.loaded {
         ctl(&["bootout", &snapshot.target()])?;
     }
@@ -439,6 +507,9 @@ pub(super) fn run(task: &AutomationTask) -> Result<(), String> {
     if !snapshot.enabled {
         return Err("Resume this task before running it".into());
     }
+    if snapshot.requires_admin {
+        return admin::perform(&snapshot, admin::Action::Run);
+    }
     if !snapshot.loaded {
         snapshot.bootstrap(&snapshot.bytes, &mut ctl)?;
     }
@@ -446,254 +517,4 @@ pub(super) fn run(task: &AutomationTask) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    fn value() -> Value {
-        json!({"Label":"org.example.audit", "StartInterval":600, "ProgramArguments":["/workspace/tool with spaces", "a'b", "$(literal)"], "WorkingDirectory":"/workspace/project", "EnvironmentVariables":{"LANG":"en_US.UTF-8"}, "StandardOutPath":"/workspace/audit.log", "RunAtLoad":false})
-    }
-    fn xml(value: &Value) -> Vec<u8> {
-        let mut bytes = Vec::new();
-        plist::to_writer_xml(&mut bytes, value).unwrap();
-        bytes
-    }
-    #[test]
-    fn edits_preserve_arguments_environment_logs_and_all_unmodified_schedule_fields() {
-        let mut value = value();
-        let original = draft(&value, "Audit", true).unwrap();
-        assert_eq!(
-            original.content,
-            "'/workspace/tool with spaces' 'a'\\''b' '$(literal)'"
-        );
-        let mut next = original.clone();
-        next.name = "New audit".into();
-        next.enabled = false;
-        let old = value.clone();
-        let bytes = update(&mut value, &next, &original).unwrap();
-        for key in [
-            "ProgramArguments",
-            "EnvironmentVariables",
-            "StandardOutPath",
-            "StartInterval",
-            "RunAtLoad",
-        ] {
-            assert_eq!(value[key], old[key]);
-        }
-        assert_eq!(value["Comment"], "New audit");
-        assert_eq!(value["Disabled"], true);
-        let decoded = plist::Value::from_reader(std::io::Cursor::new(bytes)).unwrap();
-        assert_eq!(serde_json::to_value(decoded).unwrap(), value);
-        next.content = "echo 'changed'".into();
-        next.schedule = Schedule::Hourly { minute: 15 };
-        update(&mut value, &next, &original).unwrap();
-        assert_eq!(
-            value["ProgramArguments"],
-            json!(["/bin/sh", "-c", "echo 'changed'"])
-        );
-        assert!(value.get("StartInterval").is_none());
-        assert_eq!(schedule(&value), Some(Schedule::Hourly { minute: 15 }));
-        assert_ne!(revision(&xml(&old), true), revision(&xml(&old), false));
-    }
-    #[test]
-    fn preserves_calendar_semantics_and_rejects_jobs_that_could_run_while_saving() {
-        for calendar in [
-            json!({"Hour":9,"Minute":0,"Day":1,"Weekday":1}),
-            json!([{"Hour":9,"Weekday":1},{"Hour":10}]),
-            json!({"Month":5}),
-            json!({"Hour":9}),
-        ] {
-            let mut value = value();
-            value.as_object_mut().unwrap().remove("StartInterval");
-            value["StartCalendarInterval"] = calendar;
-            assert!(draft(&value, "Audit", true).is_none());
-        }
-        for key in [
-            "KeepAlive",
-            "StartOnMount",
-            "WatchPaths",
-            "QueueDirectories",
-            "Sockets",
-            "MachServices",
-            "LaunchEvents",
-        ] {
-            let mut value = value();
-            value[key] = true.into();
-            assert!(draft(&value, "Audit", true).is_none(), "{key}");
-        }
-        let mut value = value();
-        value.as_object_mut().unwrap().remove("StartInterval");
-        value["StartCalendarInterval"] = json!((1..=5)
-            .map(|day| json!({"Weekday":day,"Hour":9,"Minute":30}))
-            .collect::<Vec<_>>());
-        assert_eq!(
-            schedule(&value),
-            Some(Schedule::Daily {
-                hour: 9,
-                minute: 30,
-                weekdays: true
-            })
-        );
-        value["StartInterval"] = 600.into();
-        assert!(schedule(&value).is_none());
-    }
-    #[test]
-    fn rejects_outside_paths_symlinks_and_foreign_ownership_and_respects_disabled_overrides() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("audit.plist");
-        std::fs::write(&path, xml(&value())).unwrap();
-        let uid = std::fs::metadata(&path).unwrap().uid();
-        assert!(read(&path, dir.path(), uid).is_ok());
-        assert!(read(&path, dir.path(), uid + 1).is_err());
-        assert!(read(&path, &dir.path().join("other"), uid).is_err());
-        let link = dir.path().join("link.plist");
-        std::os::unix::fs::symlink(&path, &link).unwrap();
-        assert!(read(&link, dir.path(), uid).is_err());
-        let mut task = AutomationTask::new(
-            format!("launchd:{}", path.display()),
-            "Audit".into(),
-            "launchd",
-            path.to_string_lossy().into(),
-        );
-        task.identifier = Some("org.example.audit".into());
-        decorate(
-            &mut task,
-            dir.path(),
-            uid,
-            &disabled("disabled services = {\n\"org.example.audit\" => true\n}"),
-        );
-        assert!(task.can_edit);
-        assert!(!task.can_run);
-        assert_eq!(task.status, "paused");
-        assert!(!task.definition.unwrap().enabled);
-    }
-    #[test]
-    fn failed_registration_restores_the_original_file_and_loaded_state() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("audit.plist");
-        let original = xml(&value());
-        std::fs::write(&path, &original).unwrap();
-        let snapshot = Snapshot {
-            path: path.clone(),
-            bytes: original.clone(),
-            value: value(),
-            label: "org.example.audit".into(),
-            domain: "gui/501".into(),
-            loaded: true,
-            enabled: true,
-        };
-        let mut calls = Vec::new();
-        let mut failed = false;
-        let error = snapshot
-            .apply(&xml(&value()), true, &mut |args| {
-                calls.push(args.iter().map(|v| v.to_string()).collect::<Vec<_>>());
-                if args[0] == "bootstrap" && !failed {
-                    failed = true;
-                    return Err("registration failed".into());
-                }
-                Ok(())
-            })
-            .unwrap_err();
-        assert!(error.contains("registration failed"));
-        assert_eq!(std::fs::read(&path).unwrap(), original);
-        assert_eq!(
-            calls
-                .iter()
-                .map(|args| args[0].as_str())
-                .collect::<Vec<_>>(),
-            [
-                "bootout",
-                "enable",
-                "bootstrap",
-                "bootout",
-                "enable",
-                "bootstrap"
-            ]
-        );
-        let mut calls = 0;
-        assert!(snapshot
-            .apply(b"new", true, &mut |_| {
-                calls += 1;
-                Err("cannot unload".into())
-            })
-            .is_err());
-        assert_eq!(calls, 1);
-        assert_eq!(std::fs::read(path).unwrap(), original);
-    }
-    #[test]
-    fn pause_keeps_the_recurrence_without_loading_or_running_the_job() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("audit.plist");
-        let value = value();
-        let bytes = xml(&value);
-        let snapshot = Snapshot {
-            path: path.clone(),
-            bytes: bytes.clone(),
-            value,
-            label: "org.example.audit".into(),
-            domain: "gui/501".into(),
-            loaded: true,
-            enabled: true,
-        };
-        let mut calls = Vec::new();
-        snapshot
-            .apply(&bytes, false, &mut |args| {
-                calls.push(args[0].to_owned());
-                Ok(())
-            })
-            .unwrap();
-        assert_eq!(calls, ["bootout", "disable"]);
-        assert_eq!(std::fs::read(path).unwrap(), bytes);
-    }
-    #[test]
-    fn run_at_load_jobs_remain_editable_without_executing_during_save_or_rollback() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("audit.plist");
-        let mut value = value();
-        value["RunAtLoad"] = true.into();
-        assert!(draft(&value, "Audit", true).is_some());
-        let bytes = xml(&value);
-        std::fs::write(&path, &bytes).unwrap();
-        let snapshot = Snapshot {
-            path: path.clone(),
-            bytes: bytes.clone(),
-            value: value.clone(),
-            label: "org.example.audit".into(),
-            domain: "gui/501".into(),
-            loaded: true,
-            enabled: true,
-        };
-        value["StartInterval"] = 1200.into();
-        let next = xml(&value);
-        let mut loaded_intervals = Vec::new();
-        snapshot
-            .apply(&next, true, &mut |args| {
-                if args[0] == "bootstrap" {
-                    let live: Value =
-                        serde_json::to_value(plist::Value::from_file(&path).unwrap()).unwrap();
-                    assert_eq!(live["RunAtLoad"], false);
-                    loaded_intervals.push(live["StartInterval"].as_u64().unwrap());
-                }
-                assert_ne!(args[0], "kickstart");
-                Ok(())
-            })
-            .unwrap();
-        assert_eq!(loaded_intervals, [1200]);
-        assert_eq!(std::fs::read(&path).unwrap(), next);
-        let mut failed = false;
-        assert!(snapshot
-            .apply(&next, true, &mut |args| {
-                if args[0] == "bootstrap" {
-                    let live: Value =
-                        serde_json::to_value(plist::Value::from_file(&path).unwrap()).unwrap();
-                    assert_eq!(live["RunAtLoad"], false);
-                    if !failed {
-                        failed = true;
-                        return Err("cannot register".into());
-                    }
-                    assert_eq!(live["StartInterval"], 600);
-                }
-                Ok(())
-            })
-            .is_err());
-        assert_eq!(std::fs::read(&path).unwrap(), bytes);
-    }
-}
+mod tests;

@@ -41,6 +41,7 @@ export interface AutomationTask {
   origin: AutomationTaskOrigin;
   can_edit: boolean;
   can_run: boolean;
+  requires_admin?: boolean;
   definition: AutomationDraft | null;
   revision: number | null;
   installation?: string | null;

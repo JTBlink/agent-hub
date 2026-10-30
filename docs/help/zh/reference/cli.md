@@ -80,7 +80,7 @@ agent-hub-cli automations remove '<task-id>' --delete-local-data
 
 `provider` 为 `hermes` 时，`content` 是提示词，除每日/间隔日程外还支持 `{"kind":"custom","expression":"0 9 * * 1-5"}`。本机须已安装 Hermes，计划运行还需要其调度服务运行。暂停或终态的 Hermes 任务需先恢复后才能手动运行。`run` 返回“已请求”而非“执行成功”，实际结果在 Hermes 中记录。
 
-AgentHub 创建的系统任务与当前用户支持的 launchd 定时任务可编辑；已有 Hermes 提示词任务通过 Hermes CLI 编辑，其他系统任务提供只读详情。外部 launchd 任务在原位置管理，不复制或删除其业务脚本，保留环境及日志配置。`--revision` 防止覆盖另一端刚保存的版本；省略时使用本次读取的版本。
+AgentHub 创建的系统任务与支持的第三方 launchd 定时任务可编辑；系统级 `/Library/LaunchAgents` 和 `/Library/LaunchDaemons` 任务在修改、启停、运行或删除时会请求 macOS 管理员授权。已有 Hermes 提示词任务通过 Hermes CLI 编辑，Apple 系统任务及无法无损表示的服务提供只读详情。外部 launchd 任务在原位置管理，不复制或删除其业务脚本，保留环境及日志配置。`--revision` 防止覆盖另一端刚保存的版本；省略时使用本次读取的版本。
 
 创建记录保存在系统应用数据目录的 `com.jtstudio.agenthub/automations` 下：macOS 为 `~/Library/Application Support/`，Linux 通常为 `~/.local/share/`，Windows 为 `%LOCALAPPDATA%`。这些记录不随技能库移动。需要隔离运行时，可设置绝对路径环境变量 `AGENT_HUB_AUTOMATION_HOME`（隔离模式的默认脚本目录也放在该目录的 `workspaces` 下）；此命令不使用技能库的 `--skills-root`。
 

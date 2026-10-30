@@ -1,5 +1,6 @@
 //! One supported administrator action, built from embedded trusted code. Imported
 //! install/uninstall scripts are never executed as lifecycle hooks.
+use super::super::process::authorize;
 use super::*;
 use base64::Engine;
 
@@ -121,22 +122,6 @@ fi
     );
     authorize(&script)?;
     std::fs::remove_file(receipt).map_err(|e| e.to_string())
-}
-
-fn authorize(script: &str) -> Result<(), String> {
-    if !cfg!(target_os = "macos") {
-        return Err("Administrator setup requires macOS".into());
-    }
-    let shell = format!("/bin/bash -c '{}'", script.replace('\'', "'\\''"));
-    let apple = format!(
-        "do shell script \"{}\" with administrator privileges",
-        shell
-            .replace('\\', "\\\\")
-            .replace('"', "\\\"")
-            .replace('\n', "\\n")
-    );
-    super::super::process::command_with_timeout("/usr/bin/osascript", &["-e", &apple], &[], 300)
-        .map(|_| ())
 }
 
 #[cfg(all(test, unix))]

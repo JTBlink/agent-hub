@@ -142,6 +142,8 @@ agent-hub/
 │   │       ├── git_fetcher/cache_lock.rs # 缓存操作共享锁及显式释放
 │   │       ├── git_skill_sync.rs   #     本地仓库写回预览、内容确认与失败恢复
 │   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及独立任务包
+│   │       │   ├── external_launchd.rs # 第三方定时任务编辑与用户级调度事务
+│   │       │   ├── external_launchd/ #   作用域校验、系统管理员事务、Shell 驱动与隔离测试
 │   │       │   └── templates/       #   从根目录 automations/ 编译嵌入推荐目录与跨平台入口
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理

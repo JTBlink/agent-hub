@@ -1,5 +1,7 @@
 {
   "automation": {
+    "adminAuthorizationHelp": "此为系统级定时任务。编辑、暂停或恢复、运行及删除时，会请求 macOS 管理员授权。",
+    "externalDeleteHelp": "删除仅移除任务的调度配置，原脚本与日志会保留。",
     "packageVersion": "任务版本",
     "unversioned": "未声明版本",
     "packageVersionHelp": "使用语义化版本，例如 1.0.0。发布脚本或提示词更新时维护此版本；修改本机项目或日程不会自动升级版本。",

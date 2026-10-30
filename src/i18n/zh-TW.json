@@ -1,5 +1,7 @@
 {
   "automation": {
+    "adminAuthorizationHelp": "此為系統層級排程任務。編輯、暫停或恢復、執行及刪除時，會請求 macOS 管理員授權。",
+    "externalDeleteHelp": "刪除僅移除任務的排程設定，原腳本與日誌會保留。",
     "packageVersion": "任務版本",
     "unversioned": "未宣告版本",
     "packageVersionHelp": "使用語意化版本，例如 1.0.0。發布腳本或提示詞更新時維護此版本；修改本機專案或排程不會自動升級版本。",
