@@ -12,7 +12,7 @@ import {
   CODING_WORKSPACE_CONFIG,
   LOBSTER_WORKSPACE_CONFIG,
 } from "./views/workspaceConfigs";
-import { InstallSkills } from "./views/InstallSkills";
+import { Discover } from "./views/Discover";
 import { Settings } from "./views/Settings";
 import { ProjectDetail } from "./views/ProjectDetail";
 import { Backup } from "./views/Backup";
@@ -63,7 +63,8 @@ function App() {
                 path="/lobster-workspace/:agentKey"
                 element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
               />
-              <Route path="/install" element={<InstallSkills />} />
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/install" element={<Discover />} />
               <Route path="/automation" element={<Automation />} />
               <Route path="/backup" element={<Backup />} />
               <Route path="/backup/diff" element={<BackupDiff />} />

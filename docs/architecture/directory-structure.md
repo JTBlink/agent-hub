@@ -274,3 +274,11 @@ agent-hub/
 - `src/lib/help/`：离线文档类型、查找、分享地址与本地搜索。
 - `src/components/help/`：目录、列表、文章与 Markdown 链接适配；`src/views/Help.tsx` 组合帮助路由与搜索状态。
 - `src/generated/help/`、`public/help-assets/`、`docs-site/.generated/`：忽略的构建产物，由内容源重建。
+
+### 发现与自动化安装入口
+
+- `src/views/Discover.tsx`：Skills／自动化类型及来源导航，兼容旧安装链接。
+- `src/components/discovery/`：自动化来源读取、紧凑任务卡片和预览／配置／安装向导。
+- `src/components/AutomationScheduleInput.tsx`：安装与任务编辑共用的日程输入。
+- `src/lib/automationDiscovery.ts`：安装来源类型和依赖展示；`src/lib/automation.ts` 统一日程格式化。
+- `src-tauri/src/core/automation/package/catalog.rs`：Git checkout 中的有界任务发现、固定版本快照与清理。

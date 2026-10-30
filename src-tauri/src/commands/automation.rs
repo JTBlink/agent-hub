@@ -154,3 +154,17 @@ pub async fn get_automation_history(id: String) -> Result<automation::Automation
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn preview_git_automation_packages(
+    store: tauri::State<'_, std::sync::Arc<crate::core::skill_store::SkillStore>>,
+    url: String,
+    reference: Option<String>,
+) -> Result<automation::package::catalog::GitAutomationCatalog, AppError> {
+    let proxy = store.proxy_url();
+    tauri::async_runtime::spawn_blocking(move || {
+        automation::package::catalog::preview_git(&url, reference.as_deref(), proxy.as_deref())
+            .map_err(AppError::invalid_input)
+    })
+    .await?
+}

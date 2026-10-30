@@ -7,13 +7,11 @@ import {
   useDeferredValue,
 } from "react";
 import {
-  UploadCloud,
-  GitBranch,
-  Box,
   Star,
   TrendingUp,
   Clock,
   FolderUp,
+  UploadCloud,
   Loader2,
   FolderInput,
   ChevronLeft,
@@ -33,7 +31,7 @@ import type {
   BatchImportResult,
 } from "../lib/tauri";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
 import { StatusBanner } from "../components/StatusBanner";
 import { LocalSkillsPanel } from "../components/LocalSkillsPanel";
@@ -57,7 +55,13 @@ const MARKET_SEARCH_DEBOUNCE_MS = 450;
 const MARKET_SEARCH_CACHE_TTL_MS = 120_000;
 const MARKET_SEARCH_CACHE_MAX_ENTRIES = 150;
 
-export function InstallSkills() {
+export function InstallSkills({
+  activeTab,
+  active = true,
+}: {
+  activeTab: "recommended" | "market" | "local" | "git";
+  active?: boolean;
+}) {
   const { t } = useTranslation();
   const {
     refreshSkillGroups,
@@ -67,10 +71,6 @@ export function InstallSkills() {
     openSkillDetailById,
   } = useApp();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<
-    "recommended" | "market" | "local" | "git"
-  >("market");
   const [marketTab, setMarketTab] = useState<"hot" | "trending" | "alltime">(
     "alltime",
   );
@@ -201,23 +201,6 @@ export function InstallSkills() {
     marketSkillsLengthRef.current = marketSkills.length;
   }, [marketSkills.length]);
 
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (
-      tab === "recommended" ||
-      tab === "market" ||
-      tab === "local" ||
-      tab === "git"
-    ) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
-
-  const switchTab = (tab: "recommended" | "market" | "local" | "git") => {
-    setActiveTab(tab);
-    setSearchParams({ tab });
-  };
-
   const runScan = useCallback(async () => {
     setScanLoading(true);
     setLocalError(null);
@@ -258,7 +241,7 @@ export function InstallSkills() {
   };
 
   useEffect(() => {
-    if (activeTab !== "market") return;
+    if (!active || activeTab !== "market") return;
 
     const query = debouncedMarketQuery.trim();
     const loadingMore =
@@ -327,6 +310,7 @@ export function InstallSkills() {
       stale = true;
     };
   }, [
+    active,
     activeTab,
     debouncedMarketQuery,
     marketReloadKey,
@@ -337,10 +321,10 @@ export function InstallSkills() {
   ]);
 
   useEffect(() => {
-    if (activeTab === "local" && !scanResult && !scanLoading) {
+    if (active && activeTab === "local" && !scanResult && !scanLoading) {
       runScan();
     }
-  }, [activeTab, scanLoading, scanResult, runScan]);
+  }, [active, activeTab, scanLoading, scanResult, runScan]);
 
   const installLocalSource = async (
     sourcePath: string,
@@ -831,57 +815,11 @@ export function InstallSkills() {
   const isLoadingMoreSearch = hasMarketQuery && marketLoadingMore;
 
   return (
-    <div className="app-page gap-4">
+    <div className="space-y-4">
       <LocalImportErrorDialog
         message={localImportError}
         onClose={() => setLocalImportError(null)}
       />
-      <div className="app-page-header border-b-0 pb-0">
-        <h1 className="app-page-title mb-4">{t("install.title")}</h1>
-        <div className="flex gap-1 border-b border-border-subtle">
-          {[
-            {
-              id: "recommended" as const,
-              label: t("install.recommended"),
-              icon: Star,
-            },
-            {
-              id: "market" as const,
-              label: t("install.browseMarket"),
-              icon: Box,
-            },
-            {
-              id: "local" as const,
-              label: t("install.localInstall"),
-              icon: UploadCloud,
-            },
-            {
-              id: "git" as const,
-              label: t("install.gitInstall"),
-              icon: GitBranch,
-            },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => switchTab(tab.id)}
-                className={cn(
-                  "mr-4 flex items-center gap-1.5 border-b-2 px-1 pb-1.5 text-[13px] font-medium transition-colors outline-none",
-                  isActive
-                    ? "border-accent text-accent"
-                    : "border-transparent text-muted hover:text-tertiary",
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {activeTab === "recommended" && (
         <div className="animate-in fade-in duration-300">
           <p className="mb-3 text-[13px] text-muted">

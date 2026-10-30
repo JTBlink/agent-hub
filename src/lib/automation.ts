@@ -1,5 +1,10 @@
 import type { TFunction } from "i18next";
-import type { AutomationTask, AutomationDraft, Project } from "./tauri";
+import type {
+  AutomationTask,
+  AutomationDraft,
+  AutomationSchedule,
+  Project,
+} from "./tauri";
 
 export function automationPromptFile(draft: AutomationDraft) {
   return draft.files?.find(
@@ -86,7 +91,15 @@ export function automationTime(value: string | null, locale: string) {
 /** Presentation uses the saved schedule; raw provider text remains searchable. */
 export function automationSchedule(task: AutomationTask, t: TFunction): string {
   const schedule = task.definition?.schedule;
-  if (!schedule) return task.schedule || t("automation.unknown");
+  return schedule
+    ? formatAutomationSchedule(schedule, t)
+    : task.schedule || t("automation.unknown");
+}
+
+export function formatAutomationSchedule(
+  schedule: AutomationSchedule,
+  t: TFunction,
+): string {
   if (schedule.kind === "manual") return t("automation.schedules.manual");
   if (schedule.kind === "custom") return schedule.expression;
   if (schedule.kind === "interval")

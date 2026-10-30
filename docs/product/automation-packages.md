@@ -34,9 +34,7 @@ agent-hub-cli automations migrate <legacy-task-id>
     "workdir": null,
     "schedule": { "kind": "manual" },
     "enabled": false,
-    "files": [
-      { "path": "scripts/run.sh", "content": "printf 'ready\\n'" }
-    ]
+    "files": [{ "path": "scripts/run.sh", "content": "printf 'ready\\n'" }]
   },
   "dependencies": []
 }
@@ -47,3 +45,11 @@ Windows 任务使用 `shell: "powershell"` 和相应的 `.ps1` 入口。Python �
 Agent 模板的 `prompt.md`、`herdr.json` 和 `README.md` 位于包根，执行脚本位于 `scripts/`；检查点位于 `.local/state/`。支持的内置网络权限安装会请求系统管理员授权，计划默认暂停，安装不重置网络。导入包中的普通 `setup.sh` 不作为安装钩子自动执行。
 
 安装或卸载失败时，详情显示具体失败信息；修复条件后可重试。更新中断时保留恢复信息，重新安装会先恢复之前的内容。备份恢复的任务同样默认未安装，需重新选择本机绑定和安装。
+
+## 从「发现」安装
+
+在「发现 → 自动化任务」选择推荐、本地安装或 Git 安装。卡片先进入内容预览，再配置本机实例名称、项目与日程；安装完成后计划默认暂停，可进入「自动化」查看、运行或启用。
+
+本地支持包含 `task.json` 的任务目录和导出的 JSON。Git 支持仓库或目录 URL，以及可选分支／标签；预览显示实际 commit 和各任务相对目录，安装使用该次预览的内容。仓库可在 `automations/<category>/<task>/` 下放置多个独立任务包。仅预览不会安装依赖或运行任务，损坏的包会单独显示错误。
+
+安装失败时保留已创建实例，点击重试继续安装；也可进入任务详情维护。再次安装同一来源会创建另一个独立实例。来源卡片不按名称合并实例状态；卸载和删除仍在「自动化」中操作。

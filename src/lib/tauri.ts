@@ -136,6 +136,20 @@ export interface AutomationPackage {
     no_agent: boolean;
   } | null;
 }
+export interface GitAutomationCatalog {
+  revision: string;
+  packages: { path: string; package: AutomationPackage }[];
+  issues: { path: string; message: string }[];
+}
+export const previewGitAutomationPackages = (
+  url: string,
+  reference: string | null,
+) =>
+  invoke<GitAutomationCatalog>("preview_git_automation_packages", {
+    url,
+    reference,
+  });
+
 export const previewAutomationPackage = (path: string) =>
   invoke<AutomationPackage>("preview_automation_package", { path });
 export const importAutomationPackage = (

@@ -1,5 +1,6 @@
 //! Independent task packages. Portable intent and local installation evidence
 //! live in separate files; a damaged package cannot hide another package.
+pub mod catalog;
 mod creation;
 mod dependencies;
 mod exchange;

@@ -105,3 +105,21 @@ it("mouse selection uses the existing change contract and disabled triggers stay
   );
   expect(document.querySelector('[role="listbox"]')).toBeNull();
 });
+
+it("keeps menu options inside the native modal's interactive subtree", async () => {
+  const changed = vi.fn();
+  await act(async () =>
+    root.render(
+      <dialog open>
+        <Picker changed={changed} />
+      </dialog>,
+    ),
+  );
+  const trigger =
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  await act(async () => trigger.click());
+  expect(container.querySelector('dialog [role="listbox"]')).not.toBeNull();
+  await key(trigger, "End");
+  await key(trigger, "Enter");
+  expect(changed).toHaveBeenCalledExactlyOnceWith("hermes");
+});

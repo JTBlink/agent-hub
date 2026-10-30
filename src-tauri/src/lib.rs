@@ -1057,6 +1057,7 @@ pub fn run() {
             commands::automation::get_automation_history,
             commands::automation::save_automation,
             commands::automation::preview_automation_package,
+            commands::automation::preview_git_automation_packages,
             commands::automation::import_automation_package,
             commands::automation::export_automation_package,
             commands::automation::set_automation_installation,

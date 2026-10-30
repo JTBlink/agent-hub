@@ -1,18 +1,18 @@
-import networkManifest from "../../src-tauri/src/core/automation/templates/builtin/network-reset/template.json";
-import networkLauncher from "../../src-tauri/src/core/automation/templates/builtin/network-reset/network-reset.py?raw";
-import networkSetup from "../../src-tauri/src/core/automation/templates/builtin/network-reset/setup.sh?raw";
-import networkReset from "../../src-tauri/src/core/automation/templates/builtin/network-reset/reset.sh?raw";
+import networkManifest from "../../src-tauri/src/core/automation/templates/builtin/network-reset/task.json";
+import networkLauncher from "../../src-tauri/src/core/automation/templates/builtin/network-reset/scripts/network-reset.py?raw";
+import networkSetup from "../../src-tauri/src/core/automation/templates/builtin/network-reset/scripts/setup.sh?raw";
+import networkReset from "../../src-tauri/src/core/automation/templates/builtin/network-reset/scripts/reset.sh?raw";
 import networkReadme from "../../src-tauri/src/core/automation/templates/builtin/network-reset/README.md?raw";
-import maintenanceManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/template.json";
-import mrManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/template.json";
+import maintenanceManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/task.json";
+import mrManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/task.json";
 import mrPrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/prompt.md?raw";
 import mrConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-mr-processing/herdr.json?raw";
-import issueManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/template.json";
+import issueManifest from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/task.json";
 import issuePrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/prompt.md?raw";
 import issueConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-issue-processing/herdr.json?raw";
 import React from "react";
-import diskCleanupManifest from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/template.json";
-import diskCleanupScript from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/disk-cleanup.py?raw";
+import diskCleanupManifest from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/task.json";
+import diskCleanupScript from "../../src-tauri/src/core/automation/templates/builtin/disk-cleanup/scripts/disk-cleanup.py?raw";
 import herdrScript from "../../src-tauri/src/core/automation/templates/builtin/herdr-agent.py?raw";
 import maintenancePrompt from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/prompt.md?raw";
 import maintenanceConfig from "../../src-tauri/src/core/automation/templates/builtin/agent-maintenance/herdr.json?raw";
@@ -51,11 +51,11 @@ const previewAgentTemplates: AutomationTemplate[] = [
     schedule: { kind: "hourly", minute: manifest.schedule.minute },
     enabled: true,
     files: [
-      { path: `${manifest.id}/agent.py`, content: herdrScript },
-      { path: `${manifest.id}/prompt.md`, content: prompt },
-      { path: `${manifest.id}/herdr.json`, content: config },
+      { path: "scripts/agent.py", content: herdrScript },
+      { path: "prompt.md", content: prompt },
+      { path: "herdr.json", content: config },
       {
-        path: "run.sh",
+        path: "scripts/run.sh",
         content: `python3 "$AGENT_HUB_SCRIPT_DIR/${manifest.id}/agent.py"`,
       },
     ],
@@ -366,6 +366,8 @@ Object.assign(window, {
       },
     ) => {
       switch (command) {
+        case "set_automation_installation":
+          return;
         case "run_automation":
           return;
         case "save_automation": {
@@ -426,14 +428,14 @@ Object.assign(window, {
                   enabled: false,
                   files: [
                     {
-                      path: "network-reset/network-reset.py",
+                      path: "scripts/network-reset.py",
                       content: networkLauncher,
                     },
-                    { path: "network-reset/setup.sh", content: networkSetup },
-                    { path: "network-reset/reset.sh", content: networkReset },
-                    { path: "network-reset/README.md", content: networkReadme },
+                    { path: "scripts/setup.sh", content: networkSetup },
+                    { path: "scripts/reset.sh", content: networkReset },
+                    { path: "README.md", content: networkReadme },
                     {
-                      path: "run.sh",
+                      path: "scripts/run.sh",
                       content:
                         'python3 "$AGENT_HUB_SCRIPT_DIR/network-reset/network-reset.py"',
                     },
@@ -450,11 +452,11 @@ Object.assign(window, {
                   content: "sh './run.sh'",
                   files: [
                     {
-                      path: "disk-cleanup/disk-cleanup.py",
+                      path: "scripts/disk-cleanup.py",
                       content: diskCleanupScript,
                     },
                     {
-                      path: "run.sh",
+                      path: "scripts/run.sh",
                       content: "python3 './disk-cleanup/disk-cleanup.py'",
                     },
                   ],
@@ -544,6 +546,8 @@ Object.assign(window, {
               } as Record<string, string>
             )[args?.key ?? ""] ?? null
           );
+        case "fetch_skillssh_leaderboard":
+          return [];
         case "get_tool_status":
           return empty ? [] : tools;
         case "get_skill_groups":
@@ -598,6 +602,7 @@ const { ThemeProvider } = await import("../../src/context/ThemeContext");
 const { Layout } = await import("../../src/components/Layout");
 const { Dashboard } = await import("../../src/views/Dashboard");
 const { Automation } = await import("../../src/views/Automation");
+const { Discover } = await import("../../src/views/Discover");
 const { MySkills } = await import("../../src/views/MySkills");
 const { WorkspaceView } = await import("../../src/views/WorkspaceView");
 const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
@@ -605,9 +610,11 @@ const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
 const initialRoute =
   new URLSearchParams(location.search).get("view") === "dashboard"
     ? "/"
-    : previewParams.get("view") === "automation"
-      ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
-      : "/my-skills";
+    : previewParams.get("view") === "discover"
+      ? `/discover?type=${previewParams.get("type") ?? "automations"}&source=${previewParams.get("source") ?? "recommended"}`
+      : previewParams.get("view") === "automation"
+        ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
+        : "/my-skills";
 createRoot(document.getElementById("root")!).render(
   <MemoryRouter initialEntries={[initialRoute]}>
     <ThemeProvider>
@@ -617,6 +624,7 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/automation" element={<Automation />} />
+            <Route path="/discover" element={<Discover />} />
             <Route path="/my-skills" element={<MySkills />} />
             <Route
               path="/global-workspace"
@@ -780,6 +788,41 @@ if (automationState) {
           if (document.activeElement instanceof HTMLElement)
             document.activeElement.blur();
         }, 100);
+    }
+  })();
+}
+
+// Discover uses the actual production cards and installer; no real tasks are created.
+const discoveryState = previewParams.get("discovery-state");
+if (discoveryState) {
+  const waitForDiscovery = async (read: () => HTMLElement | null) => {
+    for (let count = 0; count < 100; count++) {
+      const element = read();
+      if (element) return element;
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    throw new Error("Discover preview state did not become ready");
+  };
+  void (async () => {
+    const install = await waitForDiscovery(() =>
+      document.querySelector('[aria-label="安装 项目巡检"]'),
+    );
+    install.click();
+    if (discoveryState === "preview") return;
+    const next = await waitForDiscovery(
+      () =>
+        [...document.querySelectorAll<HTMLElement>("dialog button")].find(
+          (button) => button.textContent === "下一步：本机配置",
+        ) ?? null,
+    );
+    next.click();
+    if (discoveryState === "menu") {
+      const menu = await waitForDiscovery(() =>
+        document.querySelector(
+          'dialog button[role="combobox"][aria-label="日程"]',
+        ),
+      );
+      menu.click();
     }
   })();
 }

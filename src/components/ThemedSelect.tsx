@@ -97,12 +97,14 @@ export function ThemedSelect({
   const list = useRef<HTMLDivElement>(null);
   const typeahead = useRef({ value: "", time: 0 });
   const id = useId();
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const open = position !== null;
   const selected = options.find((option) => option.value === value);
   const locate = () =>
     setPosition(positionFor(trigger.current, options.length));
   const show = () => {
     if (props.disabled || !options.length) return;
+    setPortalRoot(trigger.current?.closest("dialog") ?? document.body);
     setActive(
       Math.max(
         0,
@@ -311,7 +313,7 @@ export function ThemedSelect({
               </button>
             ))}
           </div>,
-          document.body,
+          portalRoot ?? document.body,
         )}
     </div>
   );

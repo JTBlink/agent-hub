@@ -1,4 +1,4 @@
-import { ThemedSelect } from "./ThemedSelect";
+import { AutomationScheduleInput } from "./AutomationScheduleInput";
 import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
@@ -8,11 +8,7 @@ import { AutomationProjectField } from "./AutomationProjectField";
 import { AutomationTemplatePicker } from "./AutomationTemplatePicker";
 import { X, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type {
-  AutomationDraft,
-  AutomationTask,
-  AutomationSchedule,
-} from "../lib/tauri";
+import type { AutomationDraft, AutomationTask } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { ToggleSwitch } from "./ToggleSwitch";
 
@@ -104,26 +100,6 @@ export function AutomationEditor({
   const schedule = draft.schedule;
   const herdrConfig = automationHerdrConfig(draft);
   const promptFile = automationPromptFile(draft);
-  const mode =
-    schedule.kind === "daily" && schedule.weekdays ? "weekdays" : schedule.kind;
-  const changeMode = (mode: string) => {
-    const schedule: AutomationSchedule =
-      mode === "hourly"
-        ? { kind: "hourly", minute: 15 }
-        : mode === "interval"
-          ? { kind: "interval", minutes: 60 }
-          : mode === "manual"
-            ? { kind: "manual" }
-            : mode === "custom"
-              ? { kind: "custom", expression: "0 9 * * 1-5" }
-              : {
-                  kind: "daily",
-                  hour: 9,
-                  minute: 0,
-                  weekdays: mode === "weekdays",
-                };
-    update({ schedule });
-  };
   const submit = async () => {
     if (pending.current || picker !== null) return;
     pending.current = true;
@@ -275,127 +251,12 @@ export function AutomationEditor({
                   </div>
                 </details>
               )}
-              <div className="space-y-3">
-                <label className="block space-y-2">
-                  <span className="text-[12px] font-medium text-muted">
-                    {t("automation.columns.schedule")}
-                  </span>
-                  <ThemedSelect
-                    aria-label={t("automation.columns.schedule")}
-                    value={mode}
-                    onChange={(e) => changeMode(e.target.value)}
-                    className="app-input w-full"
-                  >
-                    {[
-                      "weekdays",
-                      "daily",
-                      "hourly",
-                      "interval",
-                      ...(draft.provider === "system"
-                        ? externalNative
-                          ? []
-                          : ["manual"]
-                        : ["custom"]),
-                    ].map((value) => (
-                      <option key={value} value={value}>
-                        {t(`automation.schedules.${value}`)}
-                      </option>
-                    ))}
-                  </ThemedSelect>
-                </label>
-                {schedule.kind === "daily" && (
-                  <label className="block space-y-2">
-                    <span className="text-[12px] font-medium text-muted">
-                      {t("automation.localTime")}
-                    </span>
-                    <input
-                      type="time"
-                      required
-                      aria-label={t("automation.localTime")}
-                      value={`${String(schedule.hour).padStart(2, "0")}:${String(schedule.minute).padStart(2, "0")}`}
-                      onChange={(e) => {
-                        const [hour, minute] = e.target.value
-                          .split(":")
-                          .map(Number);
-                        update({ schedule: { ...schedule, hour, minute } });
-                      }}
-                      className="app-input w-full"
-                    />
-                  </label>
-                )}
-                {schedule.kind === "interval" && (
-                  <label className="block space-y-2">
-                    <span className="text-[12px] font-medium text-muted">
-                      {t("automation.intervalMinutes")}
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={525600}
-                      required
-                      aria-label={t("automation.intervalMinutes")}
-                      value={schedule.minutes}
-                      onChange={(e) =>
-                        update({
-                          schedule: {
-                            kind: "interval",
-                            minutes: Number(e.target.value),
-                          },
-                        })
-                      }
-                      className="app-input w-full"
-                    />
-                  </label>
-                )}
-                {schedule.kind === "hourly" && (
-                  <label className="block space-y-2">
-                    <span className="text-[12px] font-medium text-muted">
-                      {t("automation.hourlyMinute")}
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={59}
-                      required
-                      value={schedule.minute}
-                      aria-label={t("automation.hourlyMinute")}
-                      onChange={(event) =>
-                        update({
-                          schedule: {
-                            kind: "hourly",
-                            minute: Number(event.target.value),
-                          },
-                        })
-                      }
-                      className="app-input w-full"
-                    />
-                  </label>
-                )}
-                {schedule.kind === "custom" && (
-                  <label className="block space-y-2">
-                    <span className="text-[12px] font-medium text-muted">
-                      {t("automation.expression")}
-                    </span>
-                    <input
-                      required
-                      aria-label={t("automation.expression")}
-                      value={schedule.expression}
-                      onChange={(e) =>
-                        update({
-                          schedule: {
-                            kind: "custom",
-                            expression: e.target.value,
-                          },
-                        })
-                      }
-                      className="app-input w-full font-mono"
-                    />
-                  </label>
-                )}
-                <p className="text-[11px] leading-5 text-muted">
-                  {Intl.DateTimeFormat().resolvedOptions().timeZone}
-                </p>
-              </div>
+              <AutomationScheduleInput
+                schedule={schedule}
+                provider={draft.provider}
+                allowManual={!externalNative}
+                onChange={(schedule) => update({ schedule })}
+              />
               <div className="flex items-center justify-between gap-3 text-[12px] text-secondary">
                 <span>{t("automation.enableSchedule")}</span>
                 <ToggleSwitch

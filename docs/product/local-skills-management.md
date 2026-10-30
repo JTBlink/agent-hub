@@ -31,7 +31,7 @@ agent-hub-cli project --path ~/projects/demo update code-review code-review
 
 ## 入口与操作
 
-1. 点击仪表盘的“已启用 Agent”卡片进入设置中的 Agent 管理区；从仪表盘或命令面板打开“本地 Skills 管理”，也可进入“安装 Skills → 本地”。
+1. 点击仪表盘的“已启用 Agent”卡片进入设置中的 Agent 管理区；从仪表盘或命令面板打开“本地 Skills 管理”，也可进入“发现 → Skills → 本地安装”。
 2. 首次进入扫描本机 Agent Skills 目录；技能库 `~/.agent-hub/skills` 中存在的 Skill 优先展示该位置，没有时展示其他来源。点击”重新扫描”更新结果。
 3. 按 Skill 名称、路径或 Agent 搜索；同一路径只展示一次，目录下直接列出适用 Agent 标签，不折叠 Agent。
 4. 每个目录支持“查看内容”和“打开目录”，软链接带指示图标并显示解析后的真实路径。同一 Skill 的其他来源目录默认折叠；同名不同内容分别展示。

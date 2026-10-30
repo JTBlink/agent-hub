@@ -8,7 +8,7 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  Download,
+  Compass,
   RefreshCw,
   Settings,
   Plus,
@@ -99,7 +99,7 @@ export function Sidebar() {
 
   const NAV_ITEMS = [
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
-    { name: t("sidebar.installSkills"), path: "/install", icon: Download },
+    { name: t("discovery.title"), path: "/discover", icon: Compass },
     { name: t("sidebar.backup"), path: "/backup", icon: RefreshCw },
     { name: t("automation.title"), path: "/automation", icon: CalendarClock },
   ];
@@ -135,7 +135,9 @@ export function Sidebar() {
         <div className="px-2.5 space-y-0.5 shrink-0">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive =
+              location.pathname === item.path ||
+              (item.path === "/discover" && location.pathname === "/install");
             return (
               <Link
                 key={item.path}
