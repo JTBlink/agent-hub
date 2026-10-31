@@ -52,6 +52,7 @@ agent-hub/
 │   │   ├── useGitRepositories.ts  #   仓库目录持久化、并发状态与安装请求
 │   │   ├── useWorkspaceSkills.ts #   按页面作用域扫描与显式刷新工作空间状态
 │   │   ├── useProjectSkillRestore.ts # 项目恢复确认、批量执行与刷新
+│   │   ├── useAutomationNextRunRefresh.ts # 按下次日程边界刷新任务视图
 │   │   ├── useMultiSelect.ts       #   多选逻辑
 │   │   ├── useDragWindow.ts        #   窗口拖拽
 │   │   └── useTheme.ts             #   主题切换
@@ -144,6 +145,7 @@ agent-hub/
 │   │       ├── automation/         #     系统任务读取、原生用户调度、Hermes CLI 管理及独立任务包
 │   │       │   ├── external_launchd.rs # 第三方定时任务编辑与用户级调度事务
 │   │       │   ├── external_launchd/ #   作用域校验、系统管理员事务、Shell 驱动与隔离测试
+│   │       │   ├── next_run.rs      #   launchd 日历任务的本地时区下一次时间
 │   │       │   └── templates/       #   从根目录 automations/ 编译嵌入推荐目录与跨平台入口
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理

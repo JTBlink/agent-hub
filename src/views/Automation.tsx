@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAutomationNextRunRefresh } from "../hooks/useAutomationNextRunRefresh";
 import { useAutomationOverview } from "../hooks/useAutomationOverview";
 import { AutomationTaskDetail } from "../components/AutomationTaskDetail";
 import { AutomationReadFeedback } from "../components/AutomationReadFeedback";
@@ -61,6 +62,7 @@ export function Automation() {
   const { data, loading, error, refresh, generation } = useAutomationOverview(
     i18n.resolvedLanguage ?? i18n.language,
   );
+  useAutomationNextRunRefresh(data?.tasks, refresh);
   const [projects, setProjects] = useState<Project[]>([]);
   useEffect(() => {
     let active = true;

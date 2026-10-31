@@ -2102,3 +2102,56 @@ it("manages a system LaunchDaemon in place with administrator context and retain
   expect(api.removeAutomation).toHaveBeenLastCalledWith(system.id, false);
   expect(document.querySelector('[role="alertdialog"]')).toBeNull();
 });
+
+it("shows the refreshed next calendar run after enabling and clears it after pausing", async () => {
+  const next = "2030-01-01T12:30:00+08:00";
+  const task: api.AutomationTask = {
+    ...native,
+    id: "agent_hub:next-run",
+    origin: "agent_hub",
+    source: "launchd",
+    name: "MR processing",
+    status: "paused",
+    installation: "installed",
+    can_edit: true,
+    can_run: true,
+    revision: 3,
+    definition: {
+      name: "MR processing",
+      provider: "system",
+      content: "pwd",
+      workdir: null,
+      schedule: { kind: "hourly", minute: 30 },
+      enabled: false,
+    },
+    next_run: null,
+  };
+  const overview = { tasks: [task], issues: [], hermes_installed: false };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue(overview);
+  vi.mocked(api.saveAutomation).mockImplementation(
+    async (_id, _revision, draft) => {
+      vi.mocked(api.getAutomationOverview).mockResolvedValue({
+        ...overview,
+        tasks: [
+          {
+            ...task,
+            definition: draft,
+            status: draft.enabled ? "active" : "paused",
+            next_run: draft.enabled ? next : null,
+          },
+        ],
+      });
+      return task.id;
+    },
+  );
+  await render("/automation?task=" + encodeURIComponent(task.id));
+  const nextMetric = () =>
+    [...container.querySelectorAll("dt")].find(
+      (node) => node.textContent === "下次运行",
+    )?.nextElementSibling?.textContent;
+  expect(nextMetric()).toBe("已停用");
+  await ariaClick("恢复计划");
+  expect(nextMetric()).toBe(new Date(next).toLocaleString("zh"));
+  await ariaClick("暂停计划");
+  expect(nextMetric()).toBe("已停用");
+});

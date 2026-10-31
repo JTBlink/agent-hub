@@ -24,6 +24,7 @@ mod linux;
 mod local_data;
 mod managed;
 mod native;
+mod next_run;
 pub mod package;
 mod process;
 mod script_sync;
@@ -168,6 +169,7 @@ pub fn overview(locale: Option<&str>) -> AutomationOverview {
         hermes::collect(&mut report);
     }
     managed::merge(&mut report, &store::root());
+    next_run::fill(&mut report, &chrono::Local::now());
     report.tasks.sort_by_key(|task| task.name.to_lowercase());
     report
 }
