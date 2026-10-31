@@ -7,6 +7,7 @@ import * as api from "../lib/tauri";
 import zh from "../i18n/zh.json";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { Automation } from "./Automation";
+import { automationOverviewCache } from "../lib/automationOverviewCache";
 import { open } from "@tauri-apps/plugin-dialog";
 import { codeEditor, installCodeEditorGeometry } from "../test/codeEditor";
 import { openDirectoryInVscode, openFileInVscode } from "../lib/openInVscode";
@@ -117,6 +118,7 @@ const localTools: api.ToolInfo[] = [
   category: key === "hermes" ? "lobster" : "coding",
 }));
 beforeEach(() => {
+  automationOverviewCache.clear();
   localStorage.removeItem("agent-hub:tool-order");
   localStorage.removeItem("agent-hub:lobster-tool-order");
   vi.mocked(api.getToolStatus).mockReset().mockResolvedValue(localTools);

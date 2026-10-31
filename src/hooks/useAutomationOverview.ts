@@ -1,58 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getAutomationOverview,
-  onAutomationChanged,
-  type AutomationOverview,
-} from "../lib/tauri";
-import { getErrorMessage } from "../lib/error";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { onAutomationChanged } from "../lib/tauri";
+import { automationOverviewCache as cache } from "../lib/automationOverviewCache";
 
 export function useAutomationOverview(locale: string) {
-  const [data, setData] = useState<AutomationOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const [settledLocale, setSettledLocale] = useState<string | null>(null);
-  const [generation, setGeneration] = useState(0);
-  const request = useRef<{
-    locale: string;
-    promise: Promise<AutomationOverview>;
-  } | null>(null);
+  const subscribe = useCallback(
+    (listener: () => void) => cache.subscribe(locale, listener),
+    [locale],
+  );
+  const getSnapshot = useCallback(() => cache.getSnapshot(locale), [locale]);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
   useEffect(() => {
-    let active = true;
-    // Reuse the initial read during StrictMode's effect replay.
-    if (!request.current || request.current.locale !== locale)
-      request.current = { locale, promise: getAutomationOverview(locale) };
-    void request.current.promise
-      .then((value) => {
-        if (active) {
-          setData((previous) =>
-            JSON.stringify(previous) === JSON.stringify(value)
-              ? previous
-              : value,
-          );
-          setError(null);
-        }
-      })
-      .catch((cause: unknown) => {
-        if (active) setError(getErrorMessage(cause, ""));
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-          setSettledLocale(locale);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [attempt, locale]);
-  const busy = loading || settledLocale !== locale;
-  const reload = useCallback((background: boolean) => {
-    request.current = null;
-    if (!background) setLoading(true);
-    setError(null);
-    setAttempt((value) => value + 1);
-  }, []);
+    // Show the session snapshot immediately, then revalidate in the background
+    // to catch changes made while this page was not observing filesystem events.
+    void cache.load(locale);
+  }, [locale]);
+  const reload = useCallback(
+    (background: boolean) => {
+      void cache.load(locale, true, background);
+    },
+    [locale],
+  );
   useEffect(() => {
     let active = true;
     let timer: number | undefined;
@@ -60,10 +27,7 @@ export function useAutomationOverview(locale: string) {
     const invalidate = () => {
       if (document.visibilityState === "hidden") return;
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        setGeneration((value) => value + 1);
-        reload(true);
-      }, 200);
+      timer = window.setTimeout(() => reload(true), 200);
     };
     void onAutomationChanged(invalidate)
       .then((stop) => {
@@ -83,15 +47,6 @@ export function useAutomationOverview(locale: string) {
       document.removeEventListener("visibilitychange", invalidate);
     };
   }, [reload]);
-  const refresh = useCallback(() => {
-    setGeneration((value) => value + 1);
-    reload(false);
-  }, [reload]);
-  return {
-    data,
-    loading: busy,
-    error: settledLocale === locale ? error : null,
-    refresh,
-    generation,
-  };
+  const refresh = useCallback(() => reload(false), [reload]);
+  return { ...snapshot, refresh };
 }

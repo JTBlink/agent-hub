@@ -10,6 +10,7 @@ import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
 import { openPreviewInVscode } from "../../lib/openInVscode";
 import zh from "../../i18n/zh.json";
 import { AutomationDiscovery } from "./AutomationDiscovery";
+import { automationOverviewCache } from "../../lib/automationOverviewCache";
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
 const translate = i18n.t.bind(i18n);
@@ -48,6 +49,7 @@ const taskPackage: api.AutomationPackage = {
 };
 let host: HTMLDivElement, root: Root;
 beforeEach(() => {
+  automationOverviewCache.clear();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   installCodeEditorGeometry();
   vi.clearAllMocks();
