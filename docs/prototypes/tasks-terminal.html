@@ -1,0 +1,2366 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgentHub · GitHub / GitLab 任务与终端原型</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #08101f;
+        --side: #0c162b;
+        --surface: #111d35;
+        --hover: #182748;
+        --active: #203356;
+        --line: #263b67;
+        --subtle: #203454;
+        --text: #edf4ff;
+        --secondary: #d4e2f8;
+        --muted: #a7b9d6;
+        --faint: #7184a5;
+        --accent: #168bff;
+        --blue: #66b5ff;
+        --accent-bg: rgb(22 139 255 / 12%);
+        --teal: #42d9b1;
+        --violet: #9b9cff;
+        --danger: #ff7c82;
+        --danger-bg: #4b252e;
+        --scrim: rgb(2 8 18 / 72%);
+        --shadow: 0 18px 50px rgb(0 0 0 / 25%);
+        font:
+          13px/1.55 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          sans-serif;
+      }
+      [data-theme="light"] {
+        color-scheme: light;
+        --bg: #f3f7ff;
+        --side: #eaf1fc;
+        --surface: #fff;
+        --hover: #edf4ff;
+        --active: #ddeaff;
+        --line: #c1d2ed;
+        --subtle: #d7e2f3;
+        --text: #111d35;
+        --secondary: #263b67;
+        --muted: #476084;
+        --faint: #607595;
+        --blue: #0872dc;
+        --accent-bg: rgb(22 139 255 / 8%);
+        --teal: #159e88;
+        --violet: #696acb;
+        --danger: #c5364c;
+        --danger-bg: rgb(197 54 76 / 8%);
+        --scrim: rgb(17 29 53 / 32%);
+        --shadow: 0 18px 50px rgb(17 29 53 / 12%);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+      button {
+        cursor: pointer;
+      }
+      button {
+        color: inherit;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+      }
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+      button {
+        background: none;
+        border: 0;
+      }
+      .icon {
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
+        vertical-align: middle;
+        stroke-width: 1.65;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .between {
+        justify-content: space-between;
+      }
+      .wrap {
+        flex-wrap: wrap;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .faint {
+        color: var(--faint);
+      }
+      .small {
+        font-size: 12px;
+      }
+      .tiny {
+        font-size: 11px;
+      }
+      .mono {
+        font:
+          12px/1.6 ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          monospace;
+      }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+        flex-shrink: 0;
+      }
+      .teal {
+        color: var(--teal);
+      }
+      .violet {
+        color: var(--violet);
+      }
+      .blue {
+        color: var(--blue);
+      }
+      .danger {
+        color: var(--danger);
+      }
+      .sep {
+        height: 18px;
+        width: 1px;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .app {
+        display: flex;
+        min-height: 100vh;
+      }
+      .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 220px;
+        background: var(--side);
+        border-right: 1px solid var(--subtle);
+        padding: 20px 12px 14px;
+        display: flex;
+        flex-direction: column;
+        z-index: 20;
+      }
+      .traffic {
+        display: flex;
+        gap: 7px;
+        margin: 0 0 24px 8px;
+      }
+      .traffic span {
+        height: 10px;
+        width: 10px;
+        border: 1px solid var(--line);
+        border-radius: 100%;
+        background: var(--surface);
+      }
+      .brand {
+        padding: 0 9px 26px;
+        font-weight: 650;
+        font-size: 17px;
+        gap: 10px;
+      }
+      .brand-mark {
+        width: 27px;
+        height: 27px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 3px;
+        transform: rotate(-8deg);
+      }
+      .brand-mark i {
+        background: var(--accent);
+        border-radius: 3px;
+      }
+      .brand-mark i:nth-child(2) {
+        background: var(--teal);
+      }
+      .brand-mark i:nth-child(3) {
+        background: var(--violet);
+      }
+      .brand-mark i:last-child {
+        opacity: 0.35;
+      }
+      .nav {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .nav button {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        width: 100%;
+        text-align: left;
+        padding: 10px 12px;
+        border-radius: 7px;
+        color: var(--muted);
+      }
+      .nav button:hover {
+        background: var(--hover);
+        color: var(--text);
+      }
+      .nav button.active {
+        background: var(--active);
+        color: var(--text);
+      }
+      .nav .number {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--blue);
+      }
+      .nav-label {
+        padding: 25px 12px 9px;
+        font-size: 11px;
+        color: var(--faint);
+      }
+      .project-dot {
+        width: 19px;
+        height: 19px;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+        background: var(--hover);
+        font-size: 10px;
+        color: var(--violet);
+        font-weight: 650;
+      }
+      .side-bottom {
+        margin-top: auto;
+        border-top: 1px solid var(--subtle);
+        padding: 13px 8px 0;
+      }
+      .side-bottom .row {
+        gap: 7px;
+      }
+      .prototype-note {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 2px 5px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .main {
+        margin-left: 220px;
+        width: calc(100% - 220px);
+        min-width: 0;
+        min-height: 100vh;
+        padding-bottom: 90px;
+      }
+      .topbar {
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 30px;
+        border-bottom: 1px solid var(--subtle);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .content {
+        padding: 30px;
+        max-width: 1680px;
+        margin: auto;
+      }
+      .page-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        margin-bottom: 26px;
+      }
+      h1 {
+        font-size: 23px;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+        margin: 0 0 6px;
+      }
+      h2 {
+        font-size: 17px;
+        font-weight: 600;
+        margin: 0 0 12px;
+      }
+      h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0 0 10px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 7px 11px;
+        border-radius: 6px;
+        white-space: nowrap;
+        min-height: 32px;
+      }
+      .button:hover {
+        background: var(--hover);
+      }
+      .button.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .button.primary:hover {
+        filter: brightness(1.08);
+      }
+      .button.ghost {
+        border-color: transparent;
+        background: transparent;
+        color: var(--muted);
+      }
+      .icon-button {
+        width: 31px;
+        height: 31px;
+        display: grid;
+        place-items: center;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        flex-shrink: 0;
+      }
+      .icon-button:hover {
+        background: var(--hover);
+        border-color: var(--subtle);
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid var(--subtle);
+        border-radius: 5px;
+        font-size: 11px;
+        padding: 2px 7px;
+        white-space: nowrap;
+        width: fit-content;
+      }
+      .badge.teal {
+        background: color-mix(in srgb, var(--teal) 8%, transparent);
+        border-color: color-mix(in srgb, var(--teal) 24%, transparent);
+      }
+      .badge.blue {
+        background: var(--accent-bg);
+        border-color: color-mix(in srgb, var(--blue) 22%, transparent);
+      }
+      .badge.violet {
+        background: color-mix(in srgb, var(--violet) 8%, transparent);
+        border-color: color-mix(in srgb, var(--violet) 25%, transparent);
+      }
+      .label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0 0 7px;
+      }
+      .providers {
+        padding: 3px;
+        display: flex;
+        gap: 3px;
+        border: 1px solid var(--subtle);
+        border-radius: 7px;
+        background: var(--side);
+      }
+      .providers button {
+        padding: 6px 12px;
+        border-radius: 4px;
+        display: flex;
+        gap: 7px;
+        align-items: center;
+        color: var(--muted);
+      }
+      .providers .active {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+      }
+      .scope {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 23px;
+      }
+      .scope .host {
+        font-size: 12px;
+        color: var(--faint);
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--subtle);
+        gap: 23px;
+      }
+      .tabs button {
+        padding: 10px 0 12px;
+        color: var(--muted);
+        position: relative;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .tabs .active {
+        color: var(--text);
+      }
+      .tabs .active:after {
+        position: absolute;
+        content: "";
+        height: 2px;
+        background: var(--accent);
+        bottom: -1px;
+        left: 0;
+        right: 0;
+      }
+      .tabs .count {
+        margin-left: 6px;
+        font-size: 10px;
+        color: var(--faint);
+      }
+      .filterbar {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 13px 0;
+        flex-wrap: wrap;
+      }
+      .chips {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .chip {
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .chip:hover {
+        background: var(--hover);
+      }
+      .chip.active {
+        background: var(--active);
+        color: var(--text);
+      }
+      .search {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+        background: var(--surface);
+        border: 1px solid var(--subtle);
+        border-radius: 6px;
+        padding: 6px 9px;
+        min-width: 170px;
+        max-width: 260px;
+        margin-left: auto;
+        color: var(--faint);
+      }
+      .search input {
+        border: 0;
+        outline: none;
+        background: none;
+        color: var(--text);
+        width: 100%;
+        font-size: 12px;
+        min-width: 0;
+      }
+      .key {
+        font-size: 10px;
+        padding: 0 4px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+      }
+      .table {
+        width: 100%;
+        border: 1px solid var(--subtle);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .table-scroll {
+        overflow: auto;
+      }
+      .table-header,
+      .task-row {
+        display: grid;
+        grid-template-columns: 66px minmax(260px, 1fr) 100px 105px 120px 66px;
+        align-items: center;
+        gap: 14px;
+        min-width: 820px;
+        padding: 0 18px;
+      }
+      .table-header {
+        height: 37px;
+        color: var(--faint);
+        font-size: 11px;
+        background: var(--side);
+        border-bottom: 1px solid var(--subtle);
+      }
+      .task-row {
+        width: 100%;
+        min-height: 68px;
+        text-align: left;
+        border-bottom: 1px solid var(--subtle);
+        color: var(--secondary);
+      }
+      .task-row:last-child {
+        border-bottom: 0;
+      }
+      .task-row:hover {
+        background: var(--hover);
+      }
+      .task-row.selected {
+        background: var(--accent-bg);
+        box-shadow: inset 2px 0 var(--accent);
+      }
+      .task-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        line-height: 1.7;
+      }
+      .task-context {
+        font-size: 11px;
+        color: var(--faint);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 3px;
+      }
+      .mini-label {
+        border: 1px solid var(--subtle);
+        border-radius: 3px;
+        padding: 0 5px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .avatar {
+        width: 23px;
+        height: 23px;
+        display: grid;
+        place-items: center;
+        background: var(--active);
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        font-size: 10px;
+      }
+      .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 16px;
+        color: var(--faint);
+        font-size: 11px;
+        border-top: 1px solid var(--subtle);
+      }
+      .insight {
+        display: flex;
+        gap: 20px;
+        margin: 16px 0;
+        color: var(--faint);
+        font-size: 11px;
+      }
+      .insight span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .alert {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 13px;
+        margin: 12px 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .alert .icon {
+        color: var(--violet);
+      }
+      .empty {
+        text-align: center;
+        padding: 75px 20px;
+        background: var(--surface);
+        border: 1px solid var(--subtle);
+        border-radius: 8px;
+      }
+      .empty .icon {
+        width: 29px;
+        height: 29px;
+        color: var(--faint);
+        margin-bottom: 14px;
+      }
+      .empty h2 {
+        font-size: 15px;
+      }
+      .empty p {
+        font-size: 12px;
+        color: var(--muted);
+        margin: 0 0 18px;
+      }
+      .split-layout {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.85fr) minmax(350px, 1.15fr);
+        border: 1px solid var(--subtle);
+        border-radius: 8px;
+        overflow: hidden;
+        min-height: 520px;
+      }
+      .compact-list {
+        background: var(--surface);
+        border-right: 1px solid var(--subtle);
+      }
+      .compact-row {
+        display: block;
+        text-align: left;
+        padding: 16px;
+        width: 100%;
+        border-bottom: 1px solid var(--subtle);
+      }
+      .compact-row.selected {
+        background: var(--accent-bg);
+        box-shadow: inset 2px 0 var(--accent);
+      }
+      .compact-row:hover {
+        background: var(--hover);
+      }
+      .compact-row .task-title {
+        margin: 7px 0;
+      }
+      .inspector {
+        background: var(--bg);
+        padding: 22px;
+        min-width: 0;
+      }
+      .inspector h2 {
+        font-size: 18px;
+        line-height: 1.6;
+      }
+      .inspector .details-body {
+        padding: 20px 0;
+      }
+      .board {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(230px, 1fr));
+        gap: 15px;
+        overflow: auto;
+        padding-bottom: 10px;
+      }
+      .lane {
+        background: var(--side);
+        border: 1px solid var(--subtle);
+        border-radius: 8px;
+        min-height: 440px;
+        padding: 12px;
+      }
+      .lane-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+        margin: 3px 2px 15px;
+      }
+      .board-card {
+        display: block;
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid var(--subtle);
+        border-radius: 6px;
+        text-align: left;
+        padding: 14px;
+        margin-bottom: 10px;
+      }
+      .board-card:hover {
+        border-color: var(--accent);
+      }
+      .board-card .task-title {
+        margin: 9px 0 14px;
+      }
+      .board-card .row {
+        font-size: 11px;
+      }
+      .board-note {
+        font-size: 11px;
+        color: var(--faint);
+        margin: 0 0 13px;
+      }
+      .detail-top {
+        margin-bottom: 22px;
+      }
+      .detail-title {
+        font-size: 23px;
+        line-height: 1.5;
+        max-width: 800px;
+        margin: 16px 0;
+      }
+      .detail-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 230px;
+        gap: 36px;
+      }
+      .details-body {
+        padding: 26px 0;
+        max-width: 760px;
+        color: var(--secondary);
+        font-size: 13px;
+        line-height: 1.9;
+      }
+      .details-body h3 {
+        margin: 20px 0 10px;
+        color: var(--text);
+        font-size: 14px;
+      }
+      .details-body h3:first-child {
+        margin-top: 0;
+      }
+      .check-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        margin: 7px 0;
+      }
+      .check-item .box {
+        border: 1px solid var(--line);
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        margin-top: 6px;
+        flex-shrink: 0;
+      }
+      .properties {
+        border-left: 1px solid var(--subtle);
+        padding-left: 24px;
+        padding-top: 24px;
+      }
+      .property {
+        margin-bottom: 22px;
+      }
+      .property .label {
+        font-size: 11px;
+        color: var(--faint);
+      }
+      .activity {
+        border-top: 1px solid var(--subtle);
+        padding: 23px 0;
+      }
+      .activity-item {
+        display: flex;
+        gap: 12px;
+        padding: 15px 0;
+      }
+      .activity-item p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .run-link {
+        border: 1px solid var(--subtle);
+        border-radius: 7px;
+        background: var(--surface);
+        padding: 17px;
+        text-align: left;
+        display: block;
+        width: 100%;
+        margin: 18px 0;
+      }
+      .run-link:hover {
+        border-color: var(--accent);
+      }
+      .session-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: 1px solid var(--subtle);
+        background: var(--surface);
+        border-radius: 7px;
+        padding: 14px 17px;
+        margin-bottom: 24px;
+        gap: 15px;
+      }
+      .session-icon {
+        height: 34px;
+        width: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        color: var(--violet);
+      }
+      .section-title {
+        margin: 24px 0 13px;
+      }
+      .run-row {
+        display: grid;
+        grid-template-columns: minmax(200px, 1fr) 120px 110px 130px 70px;
+        gap: 15px;
+        align-items: center;
+        text-align: left;
+        width: 100%;
+        padding: 18px;
+        border-bottom: 1px solid var(--subtle);
+      }
+      .run-row:last-child {
+        border-bottom: 0;
+      }
+      .run-row:hover {
+        background: var(--hover);
+      }
+      .execution-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 24px;
+      }
+      .terminal {
+        border: 1px solid var(--subtle);
+        background: var(--side);
+        border-radius: 7px;
+        overflow: hidden;
+      }
+      .terminal-head {
+        height: 39px;
+        padding: 0 15px;
+        border-bottom: 1px solid var(--subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--faint);
+      }
+      .terminal pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        min-height: 290px;
+        padding: 22px;
+        margin: 0;
+        font:
+          12px/2 ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          monospace;
+        color: var(--muted);
+      }
+      .timeline {
+        border: 1px solid var(--subtle);
+        border-radius: 7px;
+        padding: 18px;
+        background: var(--surface);
+      }
+      .timeline-step {
+        display: flex;
+        gap: 11px;
+        margin: 20px 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .timeline-step .dot {
+        margin-top: 7px;
+      }
+      .connections {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(260px, 1fr));
+        gap: 18px;
+      }
+      .connection {
+        padding: 24px;
+        border: 1px solid var(--subtle);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      .connection dl {
+        display: grid;
+        grid-template-columns: 95px 1fr;
+        gap: 14px;
+        font-size: 12px;
+        margin: 22px 0;
+      }
+      .connection dt {
+        color: var(--faint);
+      }
+      .connection dd {
+        margin: 0;
+      }
+      .connection .row h2 {
+        margin: 0;
+      }
+      .flow-note {
+        padding: 18px 0;
+        border-bottom: 1px solid var(--subtle);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.9;
+      }
+      .popover {
+        position: fixed;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 5px;
+        z-index: 90;
+        box-shadow: var(--shadow);
+        min-width: 175px;
+      }
+      .popover button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 4px;
+        gap: 18px;
+        text-align: left;
+        font-size: 12px;
+      }
+      .popover button:hover {
+        background: var(--hover);
+      }
+      .popover .selected {
+        color: var(--blue);
+      }
+      .scrim {
+        position: fixed;
+        inset: 0;
+        background: var(--scrim);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .modal {
+        width: 690px;
+        max-width: 100%;
+        max-height: calc(100vh - 48px);
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+      }
+      .modal-head {
+        padding: 21px 24px 17px;
+        border-bottom: 1px solid var(--subtle);
+      }
+      .modal-head h2 {
+        margin-bottom: 4px;
+      }
+      .modal-body {
+        padding: 21px 24px;
+      }
+      .modal-footer {
+        padding: 15px 24px;
+        border-top: 1px solid var(--subtle);
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .field {
+        margin-bottom: 18px;
+      }
+      .field .button {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .field textarea {
+        width: 100%;
+        min-height: 152px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--secondary);
+        padding: 12px;
+        font-size: 12px;
+        line-height: 1.9;
+      }
+      .field .hint {
+        font-size: 11px;
+        color: var(--faint);
+        margin-top: 6px;
+      }
+      .source-card {
+        border: 1px solid var(--subtle);
+        background: var(--bg);
+        border-radius: 6px;
+        padding: 11px 13px;
+        margin-bottom: 20px;
+        font-size: 12px;
+      }
+      .branch {
+        display: flex;
+        gap: 13px;
+        align-items: center;
+        font-size: 11px;
+        margin: -9px 0 20px;
+        color: var(--faint);
+      }
+      .demo-bar {
+        position: fixed;
+        bottom: 18px;
+        left: calc(50% + 110px);
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 60;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        border-radius: 10px;
+        padding: 8px 11px;
+        white-space: nowrap;
+      }
+      .demo-bar .variant-label {
+        min-width: 150px;
+        text-align: center;
+        font-size: 12px;
+      }
+      .demo-bar .tiny {
+        color: var(--faint);
+      }
+      .toast {
+        position: fixed;
+        top: 65px;
+        right: 25px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 12px 17px;
+        z-index: 150;
+        box-shadow: var(--shadow);
+        font-size: 12px;
+        max-width: 390px;
+      }
+      .state-panel {
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        width: 340px;
+        max-width: calc(100vw - 40px);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        padding: 16px;
+        border-radius: 8px;
+        z-index: 70;
+        box-shadow: var(--shadow);
+      }
+      .state-panel pre {
+        font:
+          11px/1.8 ui-monospace,
+          monospace;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        color: var(--muted);
+      }
+      @media (min-width: 1600px) {
+        .content {
+          padding: 36px 44px;
+        }
+        .topbar {
+          padding: 0 44px;
+        }
+      }
+      @media (max-width: 1150px) {
+        .sidebar {
+          width: 190px;
+        }
+        .main {
+          margin-left: 190px;
+          width: calc(100% - 190px);
+        }
+        .content {
+          padding: 24px;
+        }
+        .demo-bar {
+          left: calc(50% + 95px);
+        }
+        .detail-layout {
+          gap: 20px;
+          grid-template-columns: minmax(0, 1fr) 190px;
+        }
+        .properties {
+          padding-left: 16px;
+        }
+        .split-layout {
+          grid-template-columns: minmax(240px, 0.9fr) minmax(280px, 1.1fr);
+        }
+        .execution-grid {
+          grid-template-columns: 1fr;
+        }
+        .timeline {
+          display: none;
+        }
+        .run-row {
+          grid-template-columns: minmax(180px, 1fr) 100px 100px 90px;
+        }
+        .run-row > span:last-child {
+          display: none;
+        }
+      }
+      @media (max-width: 850px) {
+        .sidebar {
+          width: 64px;
+          padding: 20px 8px;
+        }
+        .brand {
+          padding: 0 10px 22px;
+        }
+        .brand > span,
+        .nav button > .nav-text,
+        .nav button > .number,
+        .nav-label,
+        .side-bottom .small,
+        .side-bottom .prototype-note,
+        .traffic {
+          display: none;
+        }
+        .nav button {
+          padding: 11px 14px;
+          justify-content: center;
+        }
+        .nav {
+          margin-bottom: 15px;
+        }
+        .side-bottom {
+          padding: 12px 0 0;
+        }
+        .side-bottom .row {
+          justify-content: center;
+        }
+        .main {
+          margin-left: 64px;
+          width: calc(100% - 64px);
+        }
+        .content {
+          padding: 22px 18px;
+        }
+        .topbar {
+          padding: 0 18px;
+        }
+        .demo-bar {
+          left: calc(50% + 32px);
+          gap: 5px;
+        }
+        .demo-bar .variant-label {
+          min-width: 130px;
+        }
+        .demo-bar > .tiny,
+        .demo-bar > .sep {
+          display: none;
+        }
+        .split-layout {
+          grid-template-columns: 1fr;
+        }
+        .compact-list {
+          max-height: 240px;
+          overflow: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--subtle);
+        }
+        .detail-layout {
+          grid-template-columns: 1fr;
+        }
+        .properties {
+          display: none;
+        }
+        .connections {
+          grid-template-columns: 1fr;
+        }
+        .page-head {
+          align-items: flex-start;
+        }
+        .page-head > .button {
+          margin-top: 4px;
+        }
+        .page-head .muted {
+          max-width: 300px;
+        }
+        .session-strip {
+          flex-wrap: wrap;
+        }
+        .run-row {
+          grid-template-columns: 1fr 100px;
+        }
+        .run-row > span:nth-last-child(2),
+        .run-row > span:nth-child(3) {
+          display: none;
+        }
+        .fields {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        .search {
+          max-width: none;
+        }
+        .host {
+          display: none;
+        }
+      }
+      @media (max-width: 500px) {
+        .topbar .prototype-note {
+          display: none;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        .page-head .muted {
+          font-size: 11px;
+        }
+        .demo-bar .variant-label {
+          min-width: 113px;
+        }
+        .demo-bar {
+          font-size: 11px;
+          max-width: calc(100vw - 80px);
+        }
+        .demo-bar .button {
+          padding: 5px 7px;
+        }
+        .providers button {
+          padding: 6px 10px;
+        }
+        .filterbar .search {
+          width: 100%;
+          max-width: 100%;
+          margin-top: 4px;
+        }
+        .modal-footer {
+          flex-wrap: wrap;
+        }
+        .modal-footer > .small {
+          width: 100%;
+        }
+        .scrim {
+          padding: 12px;
+        }
+        .modal {
+          max-height: calc(100vh - 24px);
+        }
+        .modal-body,
+        .modal-head,
+        .modal-footer {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+        .detail-title {
+          font-size: 20px;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+        }
+      }
+      @media (max-width: 500px) {
+        .demo-bar {
+          width: calc(100vw - 100px);
+          max-width: calc(100vw - 100px);
+          gap: 3px;
+          padding: 7px;
+        }
+        .demo-bar .variant-label {
+          min-width: 0;
+          flex: 1;
+          max-width: 115px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 10px;
+        }
+        .demo-bar .icon-button {
+          width: 25px;
+          height: 28px;
+        }
+        .demo-bar .button {
+          font-size: 10px;
+          padding: 5px 6px;
+        }
+        .tabs {
+          overflow-x: auto;
+        }
+      }
+
+      .terminal-host {
+        margin-top: 22px;
+        border: 1px solid var(--subtle);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--side);
+      }
+      .terminal-host-tabs {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--subtle);
+      }
+      .terminal-host-tabs button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 5px;
+        color: var(--muted);
+      }
+      .terminal-host-tabs button.active {
+        background: var(--active);
+        color: var(--text);
+      }
+      .terminal-path {
+        padding: 10px 18px;
+        color: var(--faint);
+        border-bottom: 1px solid var(--subtle);
+        font-size: 11px;
+      }
+      .shell-screen {
+        min-height: 340px;
+        padding: 24px;
+        font:
+          12px/2 ui-monospace,
+          SFMono-Regular,
+          monospace;
+      }
+      .shell-screen pre {
+        white-space: pre-wrap;
+        color: var(--muted);
+        font: inherit;
+        min-height: 50px;
+        margin: 0 0 12px;
+      }
+      #shell-form {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      #shell-command {
+        flex: 1;
+        min-width: 160px;
+        border: 0;
+        background: none;
+        color: var(--text);
+        outline: none;
+        font: inherit;
+      }
+      .herdr-tui {
+        padding: 15px;
+        min-height: 370px;
+      }
+      .tui-title {
+        padding: 6px 10px 15px;
+        color: var(--violet);
+      }
+      .tui-body {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        min-height: 260px;
+      }
+      .tui-workspaces {
+        padding: 15px;
+        border-right: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .tui-workspaces div {
+        padding: 7px;
+        margin-top: 4px;
+      }
+      .tui-selected {
+        background: var(--active);
+        color: var(--blue);
+        border-radius: 4px;
+      }
+      .tui-pane {
+        padding: 15px 20px;
+        min-width: 0;
+      }
+      .tui-input {
+        border-top: 1px solid var(--subtle);
+        padding-top: 15px;
+        color: var(--faint);
+      }
+      .tui-footer {
+        color: var(--faint);
+        font-size: 11px;
+        padding: 8px 3px 0;
+        gap: 10px;
+      }
+      @media (max-width: 700px) {
+        .tui-body {
+          grid-template-columns: 100px 1fr;
+        }
+        .tui-workspaces {
+          padding: 9px;
+        }
+        .tui-pane {
+          padding: 12px;
+        }
+        .terminal-host-tabs > .tiny {
+          display: none;
+        }
+        .terminal-host-tabs button {
+          padding: 7px;
+        }
+        .terminal-host-tabs button > .tiny {
+          display: none;
+        }
+      }
+
+      .table-header,
+      .task-row {
+        grid-template-columns: 66px minmax(240px, 1fr) 100px 95px 110px 90px;
+      }
+      .task-open {
+        padding: 0;
+        width: 100%;
+        text-align: left;
+      }
+      .task-open:hover {
+        color: var(--blue);
+      }
+      .preview-button {
+        width: 25px;
+        height: 25px;
+        color: var(--faint);
+      }
+      .quick-preview {
+        position: fixed;
+        right: 0;
+        top: 50px;
+        bottom: 78px;
+        width: min(540px, calc(100vw - 230px));
+        padding: 20px 26px;
+        border-left: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        z-index: 45;
+        overflow: auto;
+      }
+      .quick-preview > div:first-child {
+        border-bottom: 1px solid var(--subtle);
+        padding-bottom: 12px;
+        margin-bottom: 15px;
+      }
+      .quick-preview h2 {
+        font-size: 19px;
+        line-height: 1.6;
+        margin-top: 15px;
+      }
+      @media (max-width: 850px) {
+        .quick-preview {
+          width: calc(100vw - 64px);
+        }
+      }
+
+      .terminal-mode {
+        padding-bottom: 0;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .terminal-mode > .content {
+        padding: 0;
+        margin: 0;
+        max-width: none;
+        height: calc(100vh - 50px);
+      }
+      .terminal-workspace {
+        height: 100%;
+        display: flex;
+      }
+      .terminal-workspace .terminal-host {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        min-width: 0;
+        background: var(--bg);
+      }
+      .terminal-workspace .terminal-host-tabs {
+        height: 42px;
+        flex-shrink: 0;
+        padding: 4px 9px;
+        gap: 3px;
+      }
+      .terminal-workspace .terminal-host-tabs > button {
+        padding: 6px 10px;
+      }
+      .terminal-workspace .terminal-host-tabs > .icon-button {
+        padding: 0;
+        width: 28px;
+        height: 28px;
+      }
+      .terminal-workspace .shell-screen {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 18px 20px;
+      }
+      .terminal-workspace .herdr-tui {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        padding: 10px;
+      }
+      .terminal-workspace .tui-title {
+        padding: 3px 8px 10px;
+      }
+      .terminal-workspace .tui-body {
+        flex: 1;
+        min-height: 0;
+      }
+      .terminal-workspace .tui-footer {
+        height: 33px;
+        padding: 3px 2px 0;
+      }
+      .terminal-status {
+        height: 25px;
+        flex-shrink: 0;
+        padding: 0 12px;
+        border-top: 1px solid var(--subtle);
+        color: var(--faint);
+        font-size: 10px;
+        gap: 12px;
+      }
+      .terminal-focus > .sidebar {
+        display: none;
+      }
+      .terminal-focus > .main {
+        margin-left: 0;
+        width: 100%;
+      }
+      @media (max-width: 500px) {
+        .terminal-workspace .terminal-host-tabs {
+          padding: 4px;
+          gap: 0;
+        }
+        .terminal-workspace .terminal-host-tabs > button {
+          padding: 5px 6px;
+        }
+        .terminal-status {
+          gap: 7px;
+          padding: 0 7px;
+        }
+        .terminal-status > .tiny {
+          display: none;
+        }
+      }
+
+      .terminal-panes {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+        flex: 1;
+        min-height: 0;
+        min-width: 0;
+      }
+      .terminal-panes.split-right {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .terminal-panes.split-down {
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+      }
+      .terminal-pane {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        outline: none;
+      }
+      .terminal-panes.split-right > .terminal-pane + section {
+        border-left: 1px solid var(--line);
+      }
+      .terminal-panes.split-down > .terminal-pane + section {
+        border-top: 1px solid var(--line);
+      }
+      .terminal-panes[class*="split-"] > .pane-active {
+        box-shadow: inset 0 0 0 1px var(--accent);
+      }
+      .pane-chrome {
+        height: 26px;
+        flex-shrink: 0;
+        padding: 0 8px;
+        color: var(--faint);
+        font-size: 10px;
+        background: var(--side);
+      }
+      .pane-chrome .icon-button {
+        width: 21px;
+        height: 21px;
+      }
+      .pane-chrome .icon {
+        width: 13px;
+        height: 13px;
+      }
+      .terminal-pane .tui-body {
+        grid-template-columns: 110px minmax(0, 1fr);
+      }
+      .terminal-pane .tui-title {
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .terminal-pane .tui-pane {
+        overflow: hidden;
+      }
+      .terminal-pane .shell-screen form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .terminal-pane input[data-shell-command] {
+        flex: 1;
+        min-width: 100px;
+        width: 100px;
+        border: 0;
+        background: none;
+        color: var(--text);
+        outline: none;
+        font: inherit;
+      }
+      .herdr-shortcut {
+        font-size: 11px;
+      }
+      @media (max-width: 600px) {
+        .terminal-workspace .terminal-host-tabs {
+          overflow-x: auto;
+        }
+        .terminal-pane .tui-body {
+          grid-template-columns: 70px minmax(0, 1fr);
+        }
+        .terminal-pane .tui-workspaces {
+          padding: 7px;
+        }
+        .terminal-pane .tui-pane {
+          padding: 9px;
+        }
+      }
+
+      .table-header,
+      .task-row {
+        grid-template-columns: 66px minmax(230px, 1fr) 110px 95px 105px;
+      }
+      .task-row {
+        min-width: 720px;
+      }
+      .terminal-pane input[data-shell-command] {
+        min-width: 80px;
+      }
+      .terminal-maximize.is-maximized {
+        color: var(--blue);
+        background: var(--accent-bg);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="overlay"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <script>
+      // Interaction prototype only; all data and commands are simulated.
+      const icons = {
+        grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+        tasks:
+          '<path d="m4 6 2 2 4-4M4 13l2 2 4-4M4 20l2 2 4-4M13 6h7M13 13h7M13 20h7"/>',
+        terminal:
+          '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11H3Z"/>',
+        settings:
+          '<path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+        github:
+          '<path d="M9 19c-4 1-4-2-6-2m12 5v-4a3.5 3.5 0 0 0-1-3c3-.4 6-1.5 6-5a5 5 0 0 0-1.5-3.5A5 5 0 0 0 18 3s-1 0-3 1.5a12 12 0 0 0-6 0C7 3 6 3 6 3a5 5 0 0 0-.5 3.5A5 5 0 0 0 4 10c0 3.5 3 4.6 6 5a3.5 3.5 0 0 0-1 3v4"/>',
+        gitlab:
+          '<path d="m12 21 9-7-3-11-3 8H9L6 3 3 14l9 7Zm-3-10 3 10 3-10M3 14h18"/>',
+        chevron: '<path d="m8 10 4 4 4-4"/>',
+        right: '<path d="m9 5 7 7-7 7"/>',
+        left: '<path d="m15 5-7 7 7 7"/>',
+        arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
+        refresh:
+          '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/>',
+        maximize: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>',
+        restore: '<path d="M3 8h5V3m8 0v5h5M8 21v-5H3m18 0h-5v5"/>',
+        close: '<path d="m6 6 12 12M6 18 18 6"/>',
+        check: '<path d="m5 12 4 4L19 6"/>',
+        issue: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1"/>',
+        pr: '<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M6 7v10m12 0v-7a5 5 0 0 0-5-5h-1m3-3-3 3 3 3"/>',
+        sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+        info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-11v1"/>',
+        branch:
+          '<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="6" r="2"/><path d="M6 7v10m12-9a8 8 0 0 1-8 8H6"/>',
+        copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M15 8V3H3v12h5"/>',
+        pause: '<path d="M8 5v14M16 5v14"/>',
+        book: '<path d="M12 5C8 2 3 3 3 3v16s5-1 9 2c4-3 9-2 9-2V3s-5-1-9 2Zm0 0v16"/>',
+      };
+      const icon = (n) =>
+        `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[n] || icons.grid}</svg>`;
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const query = new URLSearchParams(location.search);
+      const S = {
+        view: ["terminal", "herdr"].includes(query.get("view"))
+          ? "terminal"
+          : "tasks",
+        provider: query.get("provider") === "gitlab" ? "gitlab" : "github",
+        kind: "issues",
+        project: "所有项目",
+        filter: "open",
+        search: "",
+        loaded: false,
+        detail: null,
+        preview: null,
+        context: null,
+        focused: false,
+        tool: { status: "ready", update: false, updating: false },
+        sessions: [],
+        activeTab: null,
+      };
+      let sequence = 0,
+        menu = null,
+        menuTrigger = null;
+      const taskData = [
+        ["218", "项目切换后保留任务列表筛选条件", "Docs", "bug"],
+        ["216", "支持项目配置的导入与导出", "Console", "enhancement"],
+        ["209", "断开连接后保留终端会话", "SDK", "reliability"],
+        ["205", "新增任务来源与权限诊断", "Console", "enhancement"],
+        ["201", "修复长标题在窄窗口下的布局", "Docs", "bug"],
+        ["198", "支持私有实例的多级项目路径", "SDK", "enhancement"],
+        ["192", "查看任务详情时保留列表位置", "Console", "experience"],
+        ["189", "完善无权限项目的错误提示", "Docs", "bug"],
+      ];
+      const pname = () => (S.provider === "github" ? "GitHub" : "GitLab");
+      const host = () =>
+        S.provider === "github" ? "github.com" : "gitlab.example.invalid";
+      const ref = (t) =>
+        (S.kind === "reviews" && S.provider === "gitlab" ? "!" : "#") +
+        t.number;
+      const projectPath = (t) => "demo/" + t.project.toLowerCase();
+      const tasks = () =>
+        taskData.map((x, i) => ({
+          number: x[0],
+          title:
+            S.kind === "reviews"
+              ? [
+                  "修复任务列表请求竞争",
+                  "完善多级项目路径解析",
+                  "同步项目筛选条件",
+                  "改进长标题布局",
+                ][i % 4]
+              : x[1],
+          project: x[2],
+          label: x[3],
+          mine: i % 2 === 0,
+          state: i === 7 ? "closed" : "open",
+          updated: [3, 12, 28, 45, 65, 90, 150, 240][i],
+        }));
+      const filtered = () =>
+        tasks()
+          .filter(
+            (t) =>
+              (S.project === "所有项目" || t.project === S.project) &&
+              (S.filter === "all" ||
+                (S.filter === "mine" && t.mine) ||
+                (S.filter === "open" && t.state === "open")) &&
+              `${t.title} ${t.number} ${projectPath(t)}`
+                .toLowerCase()
+                .includes(S.search.toLowerCase()),
+          )
+          .slice(0, S.loaded ? 8 : 6);
+      function button(text, action, style = "") {
+        return `<button class="button ${style}" data-action="${action}">${text}</button>`;
+      }
+      function select(name, text) {
+        return `<button class="button" data-menu="${name}" aria-haspopup="listbox" aria-expanded="false">${text}${icon("chevron")}</button>`;
+      }
+      function toast(text) {
+        document.querySelector("#toast").innerHTML =
+          `<div class="toast">${esc(text)}</div>`;
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(
+          () => (document.querySelector("#toast").innerHTML = ""),
+          2800,
+        );
+      }
+      function newTerminal(project = "Docs") {
+        const id = "terminal-" + ++sequence,
+          pid = "pane-" + ++sequence;
+        S.sessions.push({
+          id,
+          project,
+          label: project,
+          layout: "right",
+          active: pid,
+          panes: [{ id: pid, app: "shell", history: [], draft: "" }],
+        });
+        S.activeTab = id;
+      }
+      newTerminal();
+      const current = () => S.sessions.find((x) => x.id === S.activeTab);
+      const activePane = () =>
+        current().panes.find((x) => x.id === current().active) ||
+        current().panes[0];
+      function closeMenu() {
+        if (menu) menu.remove();
+        menu = null;
+        if (menuTrigger) menuTrigger.setAttribute("aria-expanded", "false");
+      }
+      function openMenu(trigger, name) {
+        closeMenu();
+        let options = [];
+        if (name === "projects")
+          options = ["所有项目", "Console", "SDK", "Docs"].map((v) => [v, v]);
+        if (name === "split")
+          options = [
+            ["right", "左右分屏"],
+            ["down", "上下分屏"],
+          ];
+        if (name === "demo")
+          options = [
+            ["ready", "演示：Herdr 已安装"],
+            ["missing", "演示：Herdr 未安装"],
+            ["outdated", "演示：Herdr 有更新"],
+            ["error", "演示：安装失败后重试"],
+          ];
+        menu = document.createElement("div");
+        menu.className = "popover";
+        menu.setAttribute("role", "listbox");
+        menu.innerHTML = options
+          .map(
+            ([v, l]) =>
+              `<button role="option" data-choice="${name}" data-value="${v}">${l}</button>`,
+          )
+          .join("");
+        document.body.append(menu);
+        menuTrigger = trigger;
+        trigger.setAttribute("aria-expanded", "true");
+        const b = trigger.getBoundingClientRect(),
+          r = menu.getBoundingClientRect();
+        menu.style.left =
+          Math.max(8, Math.min(b.left, innerWidth - r.width - 8)) + "px";
+        menu.style.top =
+          (b.bottom + r.height + 6 < innerHeight
+            ? b.bottom + 5
+            : Math.max(8, b.top - r.height - 5)) + "px";
+        menu.querySelector("button")?.focus();
+      }
+      function sidebar() {
+        return `<aside class="sidebar"><div class="traffic"><span></span><span></span><span></span></div><div class="brand row"><img width="27" height="27" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAFZklEQVR42uVXSW9bVRT+3mT7+dkZHcdtaJrQQq2GSWpBogxCINQNArGoVITET2DRBetu2RQWiA0LlkUqsEEsqIAi0QGohGilkKQJaRBNE8dRHNux33DfwDnXTpvBjuIUCSSedfWu/O49w3e+c+65Ov7lR//PGzB26mxsKLFmLBY6E5wbBOadlBi/cNbbaZ3S7sPQo6+e8YQ4HQXh07wqiqKODFAU3kRvTb0eM7TP5m99d25XBow9e6pvubB8xfe8fBCIjhW3MkTVDBhGbDKTyzw3fu3Cysbv6tYNrNxz6nnf9x5YOT8sIyBZnqjnlxeXr2z9rm2G/ZUzruO+HQZ+W4HxZApW9wDSmf2wMvtg9WVhprrYQ4lnIFqHPAqlM5m+bL5aXZm91pKEngjeCgn2Vk8skURX9gD0pIWQ7ObwBMInwQHhqEFLdyPFwxeoLi/Ac+xtMniPFwSnaXpuWwiY7US4461gT1gp9I3koZhdEIFCgkKCVkVqcASp7DDCEBCegG3X4QqBFCETN1Mtw4HIP8K6tiHAqVZokROsvH/kKGzPh6oSofTGXotCkBl5nIkORVWxencGCqHBXtZqNtLZHJTiApx6bYsR6BpKWMY4Ab7JAM7zrd7HEiatfhi240nFCrFZJbiJ2ugbHsMfl7+gqYrh4ydRXpiVc2Y9j0qpCLMngzCI4Ln1TSgsFgq7K0Rd2SHySJUKebCnbAQrKE7/irE33mWPMPPtp42EVpRmZjfWO7UyzN5+eIv1zithPJmGGjeJmOIe7BLviOJP1PHqFfx+7QeZRqJexf0F96dB4BFhfcQtC26t1qEBZho+wceQRayUmBYpPsJG1DnfoJXnaEa8IG9DSbDmoDXyR3PfcWDE2xugtjPAMBOygERRIFMtCkk5KeUR+S4hsArjsAn9UBwh5b6q6g1Dm2PdmEDY0GN65yFQdAOh58kcZ8hD/o8EM9M1UpZ84iHkX3+PeAFMKO/DmyjBsyv30Woa4vsB5KJODZAQcpEhL7iIEcikPGzWdlX+z3Jl1IOowY2widb6nJHgIrGX47hRUkk5lWWFlZGwvt4cisUZpEafhzMxLT1n5e6tEsyDB1C5cRvmUAa1ucI9JDSqHc0y3JkBPlU1NZGAz/ElYU/mT0LXEhg79g6WiPtTf/5E2Ecy1K5TxNCJN9Hz2iiq09NIPrYfi19elShoMZOccdsa0DY4wqlJdkdEulzmMCEZ4JffPkf17k0sXf5QErRWXkBtdR7CtjH39SeoTM2gcOEGNEOHdWSfJC6fIcJ2OjfA5RJKSjnmd+Zvojs9iKOPvICkYWKpdIc+UY6TEY23QH16BUqKKuSLh6D1mqiMz8GIxSk7DLj22t5asnppBcnuXqytlXDpx49w8MAxjE98Q2iEzbLaSLd10v318UWknxrG6lfT8v9kdz+ccnlHEqobezjZRm08np06wbyCFNV033MwO3tVvqXn0nuxAQkhY136eZLCFqCHjm6nUqFzwNnWIeUGB7cjwA0kolZcsFFfKcLq6odNSHDs10tthGgTArKAEezsuV0u0V63RYuG6rxTEy17woHRl64Lp96yJ4jRuZDo7iH4XRLsUHY4ZExDjqbpRLy4PD1VNUaer5Lnbsv+0Iinrhfnvn+mJQdihnE+FMZx39/eVnmuDW/JpkPKgk7pmbDSVIgM+S0ktnPdELZL5C21jzedpLqun9+xK86OvjwpRO1I6If/6AVE1XXqGxNTS7cv5XdMw4Fc/wnDsKY0bkAU5YEVswyWxcoHcpkTu7+YHKaLCTWQUeDv+WLChKMoTzLsCzMXP+joZrT5amYZG9uo3V3NBsFs3/PV7H9zO/4bg5/zKBjb6GAAAAAASUVORK5CYII="><span>AgentHub</span></div><nav class="nav" aria-label="主导航"><button disabled>${icon("grid")}<span class="nav-text">总览</span></button><button data-nav="tasks" class="${S.view === "tasks" ? "active" : ""}">${icon("tasks")}<span class="nav-text">任务</span></button><button data-nav="terminal" class="${S.view === "terminal" ? "active" : ""}">${icon("terminal")}<span class="nav-text">终端</span></button><button disabled title="沿用现有自动化页面">${icon("clock")}<span class="nav-text">自动化</span></button></nav><div class="nav-label">项目工作空间</div><nav class="nav">${["Console", "SDK", "Docs"].map((p) => `<button data-project="${p}"><span class="project-dot">${p[0]}</span><span class="nav-text">${p}</span></button>`).join("")}</nav><div class="nav-label">技能管理</div><nav class="nav"><button disabled>${icon("book")}<span class="nav-text">技能库</span></button><button disabled>${icon("folder")}<span class="nav-text">发现</span></button></nav><div class="side-bottom"><nav class="nav"><button data-nav="connections">${icon("settings")}<span class="nav-text">代码平台连接</span></button></nav><div class="row between" style="padding:8px 5px 0"><span class="small faint">AgentHub</span><button class="icon-button" data-action="theme" aria-label="切换明暗主题">${icon("sun")}</button></div></div></aside>`;
+      }
+      function contextText(t) {
+        return `${pname()} ${projectPath(t)} ${ref(t)}\n${t.title}\n\n请先阅读项目规范，结合任务正文和验收条件处理。\n任务链接：https://${host()}/${projectPath(t)}/${S.kind === "issues" ? "issues" : S.provider === "github" ? "pull" : "-/merge_requests"}/${t.number}`;
+      }
+      function description(t) {
+        return `<div class="details-body"><h3>问题描述</h3><p>${esc(t.title)}。目前在切换项目后，需要重新定位正在处理的内容，希望保留任务上下文和操作位置。</p><h3>验收条件</h3>${["切换项目后可以恢复筛选与列表位置。", "读取失败时保留已有内容并提供重试入口。", "窄窗口和放大字号下主要操作可达。"].map((x) => `<div class="check-item"><span class="box"></span><span>${x}</span></div>`).join("")}<h3>相关项目</h3><p><span class="mini-label">${projectPath(t)}</span></p></div>`;
+      }
+      function taskActions(t) {
+        return button(
+          icon("terminal") + "在终端中处理",
+          "task-terminal",
+          "primary",
+        );
+      }
+      function detail(t, preview = false) {
+        return `${preview ? `<div class="row between small muted"><span>快速预览</span><button class="icon-button" data-action="close-preview" aria-label="关闭快速预览">${icon("close")}</button></div>` : `<button class="button ghost" data-action="back-list">${icon("left")}返回任务列表</button>`}<div class="row small faint" style="margin-top:20px">${icon(S.provider)}${pname()} / ${projectPath(t)} / ${ref(t)}</div><h1 class="detail-title">${esc(t.title)}</h1><div class="row between wrap"><span class="badge teal"><i class="dot"></i>${t.state === "open" ? "打开" : "关闭"}</span><div class="row">${preview ? button("完整详情", "full-detail", "ghost") : ""}${taskActions(t)}</div></div>${description(t)}<section class="activity"><h3>讨论</h3><div class="activity-item"><span class="avatar">D</span><div><span class="small">项目维护者 <span class="tiny faint">· 1 小时前</span></span><p>请同时检查列表恢复与窄窗口场景，按项目规范验证。</p></div></div></section>`;
+      }
+      function taskRow(t) {
+        return `<div class="task-row" data-row-task="${t.number}"><span class="mono faint">${ref(t)}</span><div class="grow"><button class="row task-title task-open" data-task="${t.number}" title="点击打开详情，空格快速预览">${icon(S.kind === "issues" ? "issue" : "pr")}<span class="truncate">${esc(t.title)}</span></button><span class="task-context"><span>${projectPath(t)}</span><span class="mini-label">${t.label}</span></span></div><span class="row small muted"><span class="avatar">${t.mine ? "我" : "D"}</span>${t.mine ? "我" : "项目成员"}</span><span class="small teal row"><i class="dot"></i>${t.state === "open" ? "打开" : "关闭"}</span><span class="row between"><span class="tiny faint">${t.updated < 60 ? t.updated + " 分钟" : Math.floor(t.updated / 60) + " 小时"}前</span><button class="icon-button preview-button" data-preview="${t.number}" aria-label="快速预览 ${ref(t)}">${icon("info")}</button></span></div>`;
+      }
+      function tasksPage() {
+        if (S.detail) return detail(S.detail);
+        const items = filtered();
+        return `<div class="page-head"><div><h1>任务</h1><p class="muted small">查看代码平台任务，在项目终端中继续工作。</p></div></div><div class="scope"><div class="providers">${["github", "gitlab"].map((p) => `<button data-provider="${p}" class="${S.provider === p ? "active" : ""}">${icon(p)}${p === "github" ? "GitHub" : "GitLab"}</button>`).join("")}</div><span class="sep"></span>${select("projects", S.project)}<span class="host">${host()}</span></div><div class="tabs"><button data-kind="issues" class="${S.kind === "issues" ? "active" : ""}">Issues</button><button data-kind="reviews" class="${S.kind === "reviews" ? "active" : ""}">${S.provider === "github" ? "Pull requests" : "Merge requests"}</button></div><div class="filterbar"><div class="chips">${[
+          ["open", "打开"],
+          ["mine", "分配给我"],
+          ["all", "全部"],
+        ]
+          .map(
+            ([v, l]) =>
+              `<button class="chip ${S.filter === v ? "active" : ""}" data-filter="${v}">${l}</button>`,
+          )
+          .join(
+            "",
+          )}</div><label class="search">${icon("search")}<input id="search" value="${esc(S.search)}" placeholder="搜索标题、编号或项目…" aria-label="搜索任务"></label><button class="icon-button" data-action="refresh" aria-label="刷新任务">${icon("refresh")}</button></div>${items.length ? `<div class="table"><div class="table-scroll"><div class="table-header"><span>编号</span><span>标题 / 项目</span><span>负责人</span><span>远端状态</span><span>更新</span></div>${items.map(taskRow).join("")}</div><div class="table-footer"><span>已显示 ${items.length} 项 · 按最近更新排序</span>${button(S.loaded ? "已加载全部示例" : "加载更多", "more", S.loaded ? "ghost" : "")}</div></div>` : `<div class="empty">${icon("search")}<h2>没有符合条件的任务</h2><p>试试其他关键词或清除筛选。</p>${button("清除筛选", "clear")}</div>`}<p class="tiny faint" style="margin-top:14px">点击查看详情，使用预览图标或空格快速浏览。状态来自代码平台。</p>`;
+      }
+      function herdrButton() {
+        const busy = S.tool.status === "installing";
+        return `<button class="herdr-shortcut ${activePane().app === "herdr" ? "blue" : ""}" data-action="herdr" data-tool-state="${S.tool.status}" ${busy ? "disabled" : ""} title="在当前窗格快速启动 Herdr">${busy ? "安装中…" : S.tool.status === "error" ? "重试 Herdr" : "Herdr"}${S.tool.update ? ' <i class="dot blue" style="width:4px;height:4px"></i>' : ""}</button>`;
+      }
+      function updateHint() {
+        return S.tool.updating
+          ? '<span class="tiny faint">Herdr 后台更新中…</span>'
+          : S.tool.update
+            ? '<button class="tiny blue" data-action="update-herdr">Herdr 有更新 · 更新</button>'
+            : "";
+      }
+      function refreshTool() {
+        const b = document.querySelector('[data-action="herdr"]');
+        if (b) b.outerHTML = herdrButton();
+        const hint = document.querySelector("#herdr-update-status");
+        if (hint) hint.innerHTML = updateHint();
+      }
+      function launchTarget(target) {
+        const t = S.sessions.find((x) => x.id === target.tab),
+          p = t?.panes.find((x) => x.id === target.pane);
+        if (
+          !p ||
+          p.draft.trim() ||
+          S.view !== "terminal" ||
+          S.activeTab !== target.tab ||
+          t.active !== target.pane
+        ) {
+          toast("Herdr 已就绪，点击按钮即可启动。");
+          return;
+        }
+        if (p.app === "herdr") return;
+        p.app = "herdr";
+        render();
+      }
+      function launchHerdr() {
+        const target = { tab: S.activeTab, pane: current().active };
+        if (S.tool.status === "installing") return;
+        if (["missing", "error"].includes(S.tool.status)) {
+          S.tool.status = "installing";
+          refreshTool();
+          setTimeout(() => {
+            S.tool.status = "ready";
+            refreshTool();
+            launchTarget(target);
+            toast("模拟安装完成，未下载真实程序。");
+          }, 800);
+        } else launchTarget(target);
+      }
+      function paneView(p) {
+        return `<section class="terminal-pane ${p.id === current().active ? "pane-active" : ""}" data-pane="${p.id}" tabindex="0" aria-label="${p.app === "herdr" ? "Herdr TUI" : "Shell"} 窗格">${current().panes.length > 1 ? `<div class="pane-chrome row between"><span>${p.app === "herdr" ? "Herdr" : "zsh"}</span><button class="icon-button" data-close-pane="${p.id}" aria-label="关闭此窗格">${icon("close")}</button></div>` : ""}${p.app === "shell" ? `<div class="shell-screen"><pre>${esc(p.history.join("\n"))}</pre><form data-shell-form="${p.id}"><label class="shell-prompt" for="input-${p.id}">~/projects/${current().project.toLowerCase()} <span class="teal">❯</span></label><input id="input-${p.id}" data-shell-command="${p.id}" aria-label="模拟终端命令" value="${esc(p.draft)}" autocomplete="off" spellcheck="false" placeholder="输入命令"></form></div>` : `<div class="herdr-tui"><div class="tui-title row between"><strong>Herdr</strong><span class="tiny">Local / 开发会话</span></div><div class="tui-body"><aside class="tui-workspaces"><span class="tiny faint">工作空间</span><div class="tui-selected">${current().project}</div><div>Docs</div><span class="tiny faint" style="display:block;margin-top:28px">终端面板</span><div class="row"><i class="dot teal"></i>Codex</div><div class="row"><i class="dot blue"></i>Shell</div></aside><div class="tui-pane"><div class="row between tiny muted">Codex<span class="teal">等待输入</span></div><div style="padding:25px 0"><p class="mono">项目已就绪。</p><p class="small muted">等待本轮工作内容。</p></div><div class="tui-input mono">› <span class="blue">▌</span></div></div></div><div class="tui-footer row between"><span>开发会话</span>${button("返回 Shell", "shell", "ghost")}</div></div>`}</section>`;
+      }
+      function terminalPage() {
+        const t = current();
+        return `<section class="terminal-workspace" aria-label="终端会话"><div class="terminal-host"><div class="terminal-host-tabs">${S.sessions.map((x) => `<button data-terminal-tab="${x.id}" class="${x.id === t.id ? "active" : ""}">${icon("terminal")}${esc(x.label)}<span class="tiny faint">${x.panes.length > 1 ? x.panes.length + " 窗格" : x.panes[0].app === "herdr" ? "Herdr" : "zsh"}</span></button>`).join("")}<button class="icon-button" data-action="new-terminal" aria-label="新建终端" title="新建终端">${icon("plus")}</button><span class="grow"></span>${S.context ? `<button class="icon-button" data-action="context" aria-label="任务上下文" title="任务上下文">${icon("tasks")}</button>` : ""}${herdrButton()}<button class="icon-button" data-menu="split" aria-label="分屏" title="分屏">${icon("grid")}</button><button class="icon-button terminal-maximize ${S.focused ? "is-maximized" : ""}" data-action="focus" aria-pressed="${S.focused}" aria-label="${S.focused ? "还原终端" : "最大化终端"}" title="${S.focused ? "还原终端" : "最大化终端"}">${icon(S.focused ? "restore" : "maximize")}</button></div><div class="terminal-panes ${t.panes.length > 1 ? "split-" + t.layout : ""}">${t.panes.map(paneView).join("")}</div><footer class="terminal-status row"><span class="row"><i class="dot teal"></i>本机</span><span>~/projects/${t.project.toLowerCase()}</span><span class="grow"></span><span id="herdr-update-status">${updateHint()}</span><span class="tiny faint">交互示意</span></footer></div></section>`;
+      }
+      function connections() {
+        return `<div class="page-head"><div><h1>代码平台连接</h1><p class="muted small">使用平台 CLI 的现有登录；当前为合成连接。</p></div></div><div class="connections">${["github", "gitlab"].map((p) => `<section class="connection"><h2 class="row">${icon(p)}${p === "github" ? "GitHub" : "GitLab"}</h2><p class="small faint">${p === "github" ? "github.com" : "gitlab.example.invalid"}</p><span class="badge teal">已连接 · 示例身份</span><p style="margin-top:20px">绑定项目：Console、SDK、Docs</p><button class="button" data-provider="${p}">查看任务${icon("arrow")}</button></section>`).join("")}</div>`;
+      }
+      function render() {
+        closeMenu();
+        const terminal = S.view === "terminal";
+        document.querySelector("#app").innerHTML =
+          `<div class="app ${terminal && S.focused ? "terminal-focus" : ""}">${sidebar()}<main class="main ${terminal ? "terminal-mode" : ""}"><header class="topbar"><span>工作台 / ${terminal ? "终端" : S.view === "connections" ? "代码平台连接" : "任务"}</span><span class="row"><button class="prototype-note" data-menu="demo" title="仅用于演示 Herdr 安装和更新状态">交互原型 · 演示状态</button><span class="tiny faint">PRD v0.3</span></span></header><div class="content">${terminal ? terminalPage() : S.view === "connections" ? connections() : tasksPage()}</div></main></div>${S.preview && S.view === "tasks" ? `<aside class="quick-preview" role="dialog" aria-modal="false" aria-label="任务快速预览">${detail(S.preview, true)}</aside>` : ""}`;
+        const q = new URLSearchParams({ view: S.view, provider: S.provider });
+        history.replaceState({}, "", location.pathname + "?" + q);
+      }
+      function openContext(t) {
+        S.context = { ...t, text: contextText(t) };
+        showContext();
+      }
+      function showContext() {
+        document.querySelector("#overlay").innerHTML =
+          `<div class="scrim"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="context-title"><div class="modal-head row between"><h2 id="context-title">任务上下文</h2><button class="icon-button" data-action="close-context" aria-label="关闭任务上下文">${icon("close")}</button></div><div class="modal-body"><p class="small muted">准备好任务内容，在终端中使用你选择的工具继续处理。</p><div class="field"><label class="label" for="context-text">可复制的任务内容</label><textarea id="context-text">${esc(S.context.text)}</textarea></div><p class="tiny faint">不自动投递提示词，不创建执行记录。</p></div><div class="modal-footer"><span class="small faint">项目：${S.context.project}</span><div class="row">${button(icon("copy") + "复制上下文", "copy-context")}${button("打开项目终端", "open-project-terminal", "primary")}</div></div></section></div>`;
+        document.querySelector("#context-text").focus();
+      }
+      function closeContext() {
+        document.querySelector("#overlay").innerHTML = "";
+      }
+      document.addEventListener("click", async (e) => {
+        const pane = e.target.closest("[data-pane]");
+        if (pane) {
+          current().active = pane.dataset.pane;
+          document
+            .querySelectorAll(".terminal-pane")
+            .forEach((el) => el.classList.toggle("pane-active", el === pane));
+        }
+        const b = e.target.closest("button");
+        if (!b) {
+          const row = e.target.closest("[data-row-task]");
+          if (row) {
+            row.querySelector("[data-task]").click();
+            return;
+          }
+          if (!e.target.closest(".popover")) closeMenu();
+          return;
+        }
+        if (b.disabled) return;
+        if (b.dataset.menu) {
+          openMenu(b, b.dataset.menu);
+          return;
+        }
+        if (b.dataset.choice) {
+          const type = b.dataset.choice,
+            v = b.dataset.value;
+          closeMenu();
+          if (type === "projects") {
+            S.project = v;
+            S.detail = null;
+            S.preview = null;
+            render();
+          } else if (type === "split") {
+            const t = current();
+            t.layout = v;
+            if (t.panes.length === 1) {
+              const id = "pane-" + ++sequence;
+              t.panes.push({ id, app: "shell", history: [], draft: "" });
+              t.active = id;
+            }
+            render();
+          } else {
+            S.tool = {
+              status:
+                v === "missing" ? "missing" : v === "error" ? "error" : "ready",
+              update: v === "outdated",
+              updating: false,
+            };
+            refreshTool();
+            toast("模拟状态已切换，不影响终端。");
+          }
+          return;
+        }
+        if (b.dataset.nav) {
+          S.view = b.dataset.nav;
+          S.detail = null;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (b.dataset.project) {
+          S.project = b.dataset.project;
+          S.view = "tasks";
+          S.detail = null;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (b.dataset.provider) {
+          S.provider = b.dataset.provider;
+          S.kind = "issues";
+          S.view = "tasks";
+          S.detail = null;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (b.dataset.kind) {
+          S.kind = b.dataset.kind;
+          S.detail = null;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (b.dataset.filter) {
+          S.filter = b.dataset.filter;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (b.dataset.task) {
+          S.detail = tasks().find((t) => t.number === b.dataset.task);
+          S.preview = null;
+          render();
+          return;
+        }
+        if (b.dataset.preview) {
+          S.preview = tasks().find((t) => t.number === b.dataset.preview);
+          render();
+          return;
+        }
+        if (b.dataset.terminalTab) {
+          S.activeTab = b.dataset.terminalTab;
+          render();
+          return;
+        }
+        if (b.dataset.closePane) {
+          const t = current();
+          t.panes = t.panes.filter((p) => p.id !== b.dataset.closePane);
+          if (!t.panes.some((p) => p.id === t.active)) t.active = t.panes[0].id;
+          render();
+          return;
+        }
+        const a = b.dataset.action;
+        if (a === "theme") {
+          document.documentElement.dataset.theme =
+            document.documentElement.dataset.theme === "dark"
+              ? "light"
+              : "dark";
+          return;
+        }
+        if (a === "back-list") {
+          S.detail = null;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (a === "full-detail") {
+          S.detail = S.preview;
+          S.preview = null;
+          render();
+          return;
+        }
+        if (a === "close-preview") {
+          const id = S.preview?.number;
+          S.preview = null;
+          render();
+          document.querySelector(`[data-preview="${id}"]`)?.focus();
+          return;
+        }
+        if (a === "task-terminal") {
+          openContext(S.preview || S.detail);
+          return;
+        }
+        if (a === "context") {
+          showContext();
+          return;
+        }
+        if (a === "close-context") {
+          closeContext();
+          return;
+        }
+        if (a === "copy-context") {
+          S.context.text = document.querySelector("#context-text").value;
+          try {
+            await navigator.clipboard.writeText(S.context.text);
+            toast("任务上下文已复制。");
+          } catch {
+            toast("请选中文本并复制。");
+          }
+          return;
+        }
+        if (a === "open-project-terminal") {
+          S.context.text = document.querySelector("#context-text").value;
+          const existing = S.sessions.find(
+            (x) => x.project === S.context.project,
+          );
+          if (existing) S.activeTab = existing.id;
+          else newTerminal(S.context.project);
+          closeContext();
+          S.view = "terminal";
+          render();
+          return;
+        }
+        if (a === "new-terminal") {
+          newTerminal(current().project);
+          render();
+          return;
+        }
+        if (a === "herdr") {
+          launchHerdr();
+          return;
+        }
+        if (a === "shell") {
+          activePane().app = "shell";
+          render();
+          return;
+        }
+        if (a === "focus") {
+          S.focused = !S.focused;
+          render();
+          document.querySelector('[data-action="focus"]')?.focus();
+          return;
+        }
+        if (a === "update-herdr") {
+          if (S.tool.updating) return;
+          S.tool.updating = true;
+          refreshTool();
+          setTimeout(() => {
+            S.tool.updating = false;
+            S.tool.update = false;
+            refreshTool();
+            toast("模拟后台更新完成；当前会话继续运行。");
+          }, 800);
+          return;
+        }
+        if (a === "more") {
+          S.loaded = true;
+          render();
+          return;
+        }
+        if (a === "clear") {
+          S.search = "";
+          S.filter = "open";
+          S.project = "所有项目";
+          render();
+          return;
+        }
+        if (a === "refresh") {
+          toast("示例任务已刷新。");
+          return;
+        }
+      });
+      document.addEventListener("input", (e) => {
+        if (e.target.id === "search") {
+          const position = e.target.selectionStart;
+          S.search = e.target.value;
+          S.preview = null;
+          render();
+          const input = document.querySelector("#search");
+          input.focus();
+          input.setSelectionRange(position, position);
+        }
+        if (e.target.dataset?.shellCommand) {
+          const p = current().panes.find(
+            (p) => p.id === e.target.dataset.shellCommand,
+          );
+          if (p) p.draft = e.target.value;
+        }
+      });
+      document.addEventListener("focusin", (e) => {
+        const pane = e.target.closest("[data-pane]");
+        if (pane) {
+          current().active = pane.dataset.pane;
+          document
+            .querySelectorAll(".terminal-pane")
+            .forEach((el) => el.classList.toggle("pane-active", el === pane));
+        }
+      });
+      document.addEventListener("submit", (e) => {
+        const id = e.target.dataset?.shellForm;
+        if (!id) return;
+        e.preventDefault();
+        current().active = id;
+        const p = activePane(),
+          command = p.draft.trim();
+        if (!command) return;
+        p.draft = "";
+        p.history.push("❯ " + command);
+        if (command === "herdr") {
+          launchHerdr();
+          return;
+        }
+        if (command === "pwd")
+          p.history.push("~/projects/" + current().project.toLowerCase());
+        else if (command === "ls")
+          p.history.push("src/    docs/    Cargo.toml    README.md");
+        else if (command === "clear") p.history = [];
+        else p.history.push("原型未执行此命令。");
+        render();
+        document.querySelector(`[data-shell-command="${id}"]`)?.focus();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (menu) {
+            closeMenu();
+            menuTrigger?.focus();
+            return;
+          }
+          if (document.querySelector(".modal")) {
+            closeContext();
+            return;
+          }
+          if (S.preview) {
+            S.preview = null;
+            render();
+            return;
+          }
+        }
+        if (menu && ["ArrowDown", "ArrowUp"].includes(e.key)) {
+          e.preventDefault();
+          const options = [...menu.querySelectorAll("button")],
+            i = options.indexOf(document.activeElement);
+          options[
+            (i + (e.key === "ArrowDown" ? 1 : -1) + options.length) %
+              options.length
+          ].focus();
+          return;
+        }
+        if (e.code === "Space" && e.target.matches(".task-open")) {
+          e.preventDefault();
+          S.preview = tasks().find((t) => t.number === e.target.dataset.task);
+          render();
+          return;
+        }
+        const modal = document.querySelector(".modal");
+        if (modal && e.key === "Tab") {
+          const items = [...modal.querySelectorAll("button,textarea")],
+            first = items[0],
+            last = items[items.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+          return;
+        }
+        if (
+          e.key === "/" &&
+          !e.target.closest("input,textarea,.terminal-host")
+        ) {
+          e.preventDefault();
+          document.querySelector("#search")?.focus();
+        }
+      });
+      window.addEventListener("resize", closeMenu);
+      window.addEventListener("scroll", closeMenu, true);
+      render();
+    </script>
+  </body>
+</html>

@@ -1446,3 +1446,7 @@ export const setProjectLibrarySkillEnabled = (
     directory,
     enabled,
   });
+
+export * from "./terminalApi";
+
+export * from "./taskBrowserApi";

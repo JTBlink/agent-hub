@@ -54,3 +54,13 @@ pub mod timing;
 pub mod tool_adapters;
 mod tool_detection;
 pub mod tool_service;
+
+pub mod terminal;
+
+pub mod herdr_tools;
+
+pub(crate) mod cli_process;
+
+pub mod task_browser;
+
+pub mod project_paths;

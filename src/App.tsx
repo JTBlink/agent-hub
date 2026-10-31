@@ -18,6 +18,7 @@ import { ProjectDetail } from "./views/ProjectDetail";
 import { Backup } from "./views/Backup";
 import BackupDiff from "./views/BackupDiff";
 import { Help } from "./views/Help";
+import { Tasks } from "./views/Tasks";
 import { Automation } from "./views/Automation";
 
 function ThemedToaster() {
@@ -65,6 +66,8 @@ function App() {
               />
               <Route path="/discover" element={<Discover />} />
               <Route path="/install" element={<Discover />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/terminal" element={null} />
               <Route path="/automation" element={<Automation />} />
               <Route path="/backup" element={<Backup />} />
               <Route path="/backup/diff" element={<BackupDiff />} />

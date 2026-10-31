@@ -22,3 +22,9 @@ pub mod sync;
 pub mod tools;
 
 pub mod local_cleanup;
+
+pub mod terminal;
+
+pub mod herdr_tools;
+
+pub mod task_browser;

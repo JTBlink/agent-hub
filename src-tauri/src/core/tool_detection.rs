@@ -7,7 +7,7 @@ struct InstallationProbe {
     extension_hosts: Vec<(bool, PathBuf)>,
 }
 
-fn executable(path: &Path) -> bool {
+pub(crate) fn executable(path: &Path) -> bool {
     let Ok(metadata) = path.metadata() else {
         return false;
     };

@@ -17,6 +17,8 @@ import {
   GripVertical,
   Link2,
   CalendarClock,
+  TerminalSquare,
+  ListTodo,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -102,6 +104,8 @@ export function Sidebar() {
     { name: t("discovery.title"), path: "/discover", icon: Compass },
     { name: t("sidebar.backup"), path: "/backup", icon: RefreshCw },
     { name: t("automation.title"), path: "/automation", icon: CalendarClock },
+    { name: t("tasks.title"), path: "/tasks", icon: ListTodo },
+    { name: t("terminal.title"), path: "/terminal", icon: TerminalSquare },
   ];
 
   const handleDeleteProject = async () => {

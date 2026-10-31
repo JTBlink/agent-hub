@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { StatusBanner } from "./StatusBanner";
@@ -6,16 +6,21 @@ import { CommandPalette } from "./CommandPalette";
 import { useApp } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { useDragWindow } from "../hooks/useDragWindow";
+import { TerminalWorkspace } from "./terminal/TerminalWorkspace";
 import { cn } from "../utils";
 
 export function Layout() {
   const { t } = useTranslation();
-  const { appError, refreshAppData } = useApp();
+  const { appError, refreshAppData, projects } = useApp();
   const onDrag = useDragWindow();
   const navigate = useNavigate();
   const pathname = useLocation().pathname;
+  const [terminalMaximized, setTerminalMaximized] = useState(false);
+  const hideSidebar = pathname === "/terminal" && terminalMaximized;
   const fullHeightPage =
-    pathname === "/settings" || pathname === "/backup/diff";
+    pathname === "/settings" ||
+    pathname === "/backup/diff" ||
+    pathname === "/tasks";
 
   // Cmd+, to open Settings
   useEffect(() => {
@@ -54,8 +59,13 @@ export function Layout() {
         onMouseDown={onDrag}
         className="absolute inset-x-0 top-0 z-50 h-[28px] border-b border-border-subtle bg-bg-secondary"
       />
-      <Sidebar />
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+      {!hideSidebar && <Sidebar />}
+      <div
+        className={cn(
+          "relative min-w-0 flex-1 flex-col overflow-hidden",
+          pathname === "/terminal" ? "hidden" : "flex",
+        )}
+      >
         <div
           className={cn(
             "min-h-0 flex-1 px-5 pb-5 pt-[calc(28px+20px)] scrollbar-hide",
@@ -84,6 +94,10 @@ export function Layout() {
           </div>
         </div>
       </div>
+      <TerminalWorkspace
+        projects={projects}
+        onMaximizedChange={setTerminalMaximized}
+      />
       <CommandPalette />
     </div>
   );

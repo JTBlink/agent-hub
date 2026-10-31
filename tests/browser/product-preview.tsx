@@ -1,3 +1,4 @@
+import { taskTerminalFixture } from "./task-terminal-fixture";
 import networkManifestCatalog from "../../automations/system/network-reset/catalog.json";
 import diskCleanupManifestPackage from "../../automations/system/disk-cleanup/task.json";
 import issueManifestPackage from "../../automations/engineering/agent-issue-processing/task.json";
@@ -433,6 +434,8 @@ Object.assign(window, {
         draft?: AutomationDraft;
       },
     ) => {
+      const taskPreview = taskTerminalFixture(command, args);
+      if (taskPreview.handled) return taskPreview.value;
       switch (command) {
         case "set_automation_installation":
           return;
@@ -674,6 +677,7 @@ const { AppProvider } = await import("../../src/context/AppContext");
 const { ThemeProvider } = await import("../../src/context/ThemeContext");
 const { Layout } = await import("../../src/components/Layout");
 const { Dashboard } = await import("../../src/views/Dashboard");
+const { Tasks } = await import("../../src/views/Tasks");
 const { Automation } = await import("../../src/views/Automation");
 const { Discover } = await import("../../src/views/Discover");
 const { MySkills } = await import("../../src/views/MySkills");
@@ -685,9 +689,13 @@ const initialRoute =
     ? "/"
     : previewParams.get("view") === "discover"
       ? `/discover?type=${previewParams.get("type") ?? "automations"}&source=${previewParams.get("source") ?? "recommended"}`
-      : previewParams.get("view") === "automation"
-        ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
-        : "/my-skills";
+      : previewParams.get("view") === "tasks"
+        ? "/tasks"
+        : previewParams.get("view") === "terminal"
+          ? "/terminal"
+          : previewParams.get("view") === "automation"
+            ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
+            : "/my-skills";
 createRoot(document.getElementById("root")!).render(
   <MemoryRouter initialEntries={[initialRoute]}>
     <ThemeProvider>
@@ -696,6 +704,8 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/terminal" element={null} />
             <Route path="/automation" element={<Automation />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/my-skills" element={<MySkills />} />

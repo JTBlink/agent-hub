@@ -833,6 +833,9 @@ pub fn restart_app(app: &tauri::AppHandle) {
 
 fn teardown_before_exit(app: &tauri::AppHandle) {
     QUITTING.store(true, Ordering::SeqCst);
+    if let Some(terminals) = app.try_state::<Arc<core::terminal::TerminalManager>>() {
+        terminals.close_all();
+    }
     if let Some(w) = app.get_webview_window("main") {
         if let Err(err) = w.destroy() {
             log::error!("Failed to destroy main window while quitting: {err}");
@@ -864,6 +867,8 @@ pub fn run() {
     tauri::Builder::default()
         .manage(store)
         .manage(cancel_registry)
+        .manage(Arc::new(core::terminal::TerminalManager::default()))
+        .manage(Arc::new(core::herdr_tools::HerdrTools::default()))
         .manage(Arc::new(core::file_preview::FilePreviews::default()))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             restore_main_window(app);
@@ -1058,6 +1063,26 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::herdr_tools::herdr_detect,
+            commands::herdr_tools::herdr_install,
+            commands::herdr_tools::herdr_check_update,
+            commands::herdr_tools::herdr_update,
+            commands::terminal::terminal_launch_state,
+            commands::terminal::terminal_launch_herdr,
+            commands::task_browser::task_bindings,
+            commands::task_browser::task_save_binding,
+            commands::task_browser::task_remove_binding,
+            commands::task_browser::task_project_remotes,
+            commands::task_browser::task_list,
+            commands::task_browser::task_detail,
+            commands::task_browser::task_cancel,
+            commands::terminal::terminal_project_directory,
+            commands::terminal::terminal_create,
+            commands::terminal::terminal_write,
+            commands::terminal::terminal_resize,
+            commands::terminal::terminal_ack,
+            commands::terminal::terminal_list,
+            commands::terminal::terminal_close,
             commands::file_preview::prepare_file_preview,
             commands::automation::get_automation_overview,
             commands::automation::get_automation_output,
