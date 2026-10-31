@@ -25,7 +25,9 @@ export function TaskConnections({
   const [program, setProgram] = useState("");
   const [argumentsText, setArgumentsText] = useState("[]");
   const [editing, setEditing] = useState<string | null>(null);
-  const [remotes, setRemotes] = useState<string[]>([]);
+  const [remotes, setRemotes] = useState<
+    { remote: string; provider: TaskProvider | null }[]
+  >([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const first = useRef<HTMLInputElement>(null);
@@ -207,14 +209,16 @@ export function TaskConnections({
           </label>
           {remotes.length > 0 && (
             <div className="flex flex-wrap gap-1 sm:col-span-2">
-              {remotes.map((remote) => (
+              {remotes.map(({ remote, provider: remoteProvider }) => (
                 <button
                   key={remote}
                   type="button"
                   className="app-button-secondary text-xs"
                   onClick={() => {
                     const slash = remote.indexOf("/");
-                    setHost(remote.slice(0, slash));
+                    const remoteHost = remote.slice(0, slash);
+                    setHost(remoteHost);
+                    if (remoteProvider) setProvider(remoteProvider);
                     setRepository(remote.slice(slash + 1));
                   }}
                 >

@@ -153,3 +153,106 @@ it("retains successful sources, loaded rows and copyable context through details
   await act(async () => root.unmount());
   host.remove();
 });
+
+it("waits for CLI source discovery and refreshes discovered repositories", async () => {
+  let resolveSources: (bindings: TaskBinding[]) => void = () => {};
+  const pending = new Promise<TaskBinding[]>((resolve) => {
+    resolveSources = resolve;
+  });
+  let reads = 0;
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "task_bindings") {
+      reads += 1;
+      return reads === 1 ? pending : [];
+    }
+    return undefined;
+  });
+  const element = document.createElement("div");
+  const root = createRoot(element);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser projects={[]} />
+      </MemoryRouter>,
+    ),
+  );
+  expect(element.textContent).not.toContain("tasks.notConnected");
+  expect(element.textContent).toContain("common.loading");
+  await act(async () => resolveSources([]));
+  expect(element.textContent).toContain("tasks.notConnected");
+  await act(async () =>
+    element
+      .querySelector<HTMLButtonElement>('button[aria-label="common.refresh"]')
+      ?.click(),
+  );
+  expect(reads).toBe(2);
+  await act(async () => root.unmount());
+});
+
+it("uses CLI host discovery to select GitLab when choosing a self-hosted remote", async () => {
+  const remote = "git.example.invalid/group/demo";
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "task_bindings") return [];
+    if (command === "task_project_remotes")
+      return [{ remote, provider: "gitlab" }];
+    return undefined;
+  });
+  const element = document.createElement("div");
+  const root = createRoot(element);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser
+          projects={[
+            {
+              id: "demo",
+              name: "Demo",
+              path: "~/projects/demo",
+              workspace_type: "project",
+              linked_agent_name: null,
+              supports_skill_toggle: true,
+              sort_order: 0,
+              skill_count: 0,
+              sync_health: {
+                in_sync: 0,
+                project_newer: 0,
+                center_newer: 0,
+                diverged: 0,
+                project_only: 0,
+              },
+              created_at: 0,
+              updated_at: 0,
+              visited_at: null,
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  await act(async () =>
+    element
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="tasks.connections"]',
+      )
+      ?.click(),
+  );
+  const button = [
+    ...element.querySelectorAll<HTMLButtonElement>("button"),
+  ].find((item) => item.textContent === remote);
+  expect(button).toBeDefined();
+  await act(async () => button?.click());
+  await act(async () =>
+    element
+      .querySelector("form")
+      ?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  expect(vi.mocked(invoke)).toHaveBeenCalledWith("task_save_binding", {
+    binding: expect.objectContaining({
+      provider: "gitlab",
+      host: "git.example.invalid",
+      repository: "group/demo",
+      launcher: null,
+    }),
+  });
+  await act(async () => root.unmount());
+});

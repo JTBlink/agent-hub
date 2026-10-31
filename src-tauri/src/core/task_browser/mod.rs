@@ -1,7 +1,9 @@
 //! Read-only repository work, explicitly bound to registered local projects.
 mod adapter;
+mod discovery;
 mod types;
 use anyhow::{bail, Context, Result};
+pub use discovery::{remote_candidates, RemoteCandidate};
 use serde_json::Value;
 use std::{
     path::PathBuf,
@@ -61,11 +63,19 @@ impl Binding {
         Ok(())
     }
 }
-pub fn bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
+fn saved_bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
     match store.get_setting(SETTINGS_KEY)? {
         Some(value) => Ok(serde_json::from_str(&value)?),
         None => Ok(Vec::new()),
     }
+}
+pub fn bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
+    discovery::bindings(store, saved_bindings(store)?)
+}
+/// Recheck CLI login after the user refreshes the task panel.
+pub fn refresh_bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
+    discovery::refresh_hosts();
+    bindings(store)
 }
 pub fn save_binding(store: &super::skill_store::SkillStore, binding: Binding) -> Result<()> {
     binding.validate()?;
@@ -73,7 +83,7 @@ pub fn save_binding(store: &super::skill_store::SkillStore, binding: Binding) ->
         .lock()
         .unwrap_or_else(|error| error.into_inner());
     super::project_paths::project_directory(store, &binding.project_id)?;
-    let mut values = bindings(store)?;
+    let mut values = saved_bindings(store)?;
     values.retain(|value| value.id != binding.id);
     values.push(binding);
     store.set_setting(SETTINGS_KEY, &serde_json::to_string(&values)?)
@@ -82,7 +92,9 @@ pub fn remove_binding(store: &super::skill_store::SkillStore, id: &str) -> Resul
     let _guard = BINDING_WRITES
         .lock()
         .unwrap_or_else(|error| error.into_inner());
-    let mut values = bindings(store)?;
+    // Removing a discovered source must also survive the next remote scan.
+    let mut values = saved_bindings(store)?;
+    discovery::exclude(store, id, values.iter().find(|binding| binding.id == id))?;
     values.retain(|value| value.id != id);
     store.set_setting(SETTINGS_KEY, &serde_json::to_string(&values)?)
 }
@@ -212,18 +224,19 @@ impl<R: CliReader> TaskClient<R> {
         if cancel.load(Ordering::Acquire) {
             return Err(TaskFailure::new("cancelled", "Query cancelled"));
         }
-        self.reader.read(
-            binding,
-            &[
-                "api".into(),
-                "--method".into(),
-                "GET".into(),
-                "--hostname".into(),
-                binding.host.clone(),
-                endpoint,
-            ],
-            cancel,
-        )
+        let mut args = vec![
+            "api".into(),
+            "--method".into(),
+            "GET".into(),
+            "--hostname".into(),
+            binding.host.clone(),
+            endpoint,
+        ];
+        // glab rejects --hostname with a port; SystemCli carries GITLAB_HOST.
+        if binding.provider == Provider::Gitlab && binding.host.contains(':') {
+            args.drain(3..5);
+        }
+        self.reader.read(binding, &args, cancel)
     }
     pub fn list(
         &self,

@@ -19,6 +19,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [bindings, setBindings] = useState<api.TaskBinding[]>([]);
   const [connections, setConnections] = useState(false);
   const [settingsError, setSettingsError] = useState("");
+  const [discovering, setDiscovering] = useState(true);
   const [initial] = useState(readTaskViewPreferences);
   const [provider, setProvider] = useState(initial.provider);
   const [projectId, setProjectId] = useState(initial.projectId);
@@ -33,9 +34,14 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   } | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const refreshBindings = useCallback(async () => {
-    const next = await api.getTaskBindings();
-    setBindings(next);
-    setSettingsError("");
+    setDiscovering(true);
+    try {
+      const next = await api.getTaskBindings();
+      setBindings(next);
+      setSettingsError("");
+    } finally {
+      setDiscovering(false);
+    }
   }, []);
   useEffect(() => {
     let disposed = false;
@@ -46,6 +52,9 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
       })
       .catch((error) => {
         if (!disposed) setSettingsError(api.taskFailure(error).message);
+      })
+      .finally(() => {
+        if (!disposed) setDiscovering(false);
       });
     return () => {
       disposed = true;
@@ -87,7 +96,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
       () => returnFocus.current?.isConnected && returnFocus.current.focus(),
     );
   };
-  const loading = sources.some((source) => source.loading);
+  const loading = discovering || sources.some((source) => source.loading);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -212,7 +221,9 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           aria-label={t("common.refresh")}
           disabled={loading}
           onClick={() =>
-            sources.forEach((source) => void load(source.binding, 1))
+            void refreshBindings().catch((error) =>
+              setSettingsError(api.taskFailure(error).message),
+            )
           }
         >
           <RefreshCw size={15} />
@@ -257,7 +268,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
       {sources.some((source) => source.limited) && (
         <p className="text-xs text-muted">{t("tasks.limited")}</p>
       )}
-      {!bindings.length && !settingsError && (
+      {!bindings.length && !loading && !settingsError && (
         <p className="py-12 text-center text-sm text-muted">
           {t("tasks.notConnected")}
         </p>

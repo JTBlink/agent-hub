@@ -58,7 +58,10 @@ export const saveTaskBinding = (binding: TaskBinding) =>
 export const removeTaskBinding = (id: string) =>
   invoke<void>("task_remove_binding", { id });
 export const getTaskProjectRemotes = (projectId: string) =>
-  invoke<string[]>("task_project_remotes", { projectId });
+  invoke<{ remote: string; provider: TaskProvider | null }[]>(
+    "task_project_remotes",
+    { projectId },
+  );
 export const getRepositoryTasks = (
   bindingId: string,
   filters: TaskFilters,

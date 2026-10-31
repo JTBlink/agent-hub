@@ -13,7 +13,7 @@ use tauri::{State, WebviewWindow};
 pub async fn task_bindings(store: State<'_, Arc<SkillStore>>) -> Result<Vec<Binding>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        task_browser::bindings(&store).map_err(AppError::db)
+        task_browser::refresh_bindings(&store).map_err(AppError::db)
     })
     .await?
 }
@@ -43,10 +43,10 @@ pub async fn task_remove_binding(
 pub async fn task_project_remotes(
     store: State<'_, Arc<SkillStore>>,
     project_id: String,
-) -> Result<Vec<String>, AppError> {
+) -> Result<Vec<task_browser::RemoteCandidate>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        task_browser::remotes(&store, &project_id).map_err(AppError::io)
+        task_browser::remote_candidates(&store, &project_id).map_err(AppError::io)
     })
     .await?
 }

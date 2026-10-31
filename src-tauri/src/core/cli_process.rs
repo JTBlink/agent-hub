@@ -35,6 +35,18 @@ pub(crate) fn run(
     cwd: Option<&std::path::Path>,
     cancel: Option<&std::sync::atomic::AtomicBool>,
 ) -> Result<String, String> {
+    capture(program, args, env, timeout_seconds, cwd, cancel).map(|output| output.0)
+}
+
+/// Capture both streams: authentication status is written to stderr by some CLIs.
+pub(crate) fn capture(
+    program: &str,
+    args: &[&str],
+    env: &[(&str, &str)],
+    timeout_seconds: u64,
+    cwd: Option<&std::path::Path>,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> Result<(String, String), String> {
     let mut stdout = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut stderr = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut command = Command::new(program);
@@ -96,7 +108,7 @@ pub(crate) fn run(
         Ok(output.trim_start_matches('\u{feff}').to_string())
     };
     if status.success() {
-        read(&mut stdout)
+        Ok((read(&mut stdout)?, read(&mut stderr)?))
     } else {
         let error = read(&mut stderr)?;
         Err(format!(
@@ -107,5 +119,22 @@ pub(crate) fn run(
                 error.trim().to_string()
             }
         ))
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn captures_auth_status_on_stderr_without_polluting_api_json() {
+        let args = [
+            "-c",
+            "printf '{\"login\":\"demo\"}'; printf 'Logged in to github.example.invalid' >&2",
+        ];
+        let (stdout, stderr) = capture("sh", &args, &[], 5, None, None).unwrap();
+        assert_eq!(stdout, "{\"login\":\"demo\"}");
+        assert_eq!(stderr, "Logged in to github.example.invalid");
+        assert_eq!(run("sh", &args, &[], 5, None, None).unwrap(), stdout);
     }
 }

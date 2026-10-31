@@ -92,3 +92,32 @@ fn declared_launcher_is_required_and_cancellation_stops_reads() {
         "cancelled"
     );
 }
+
+#[test]
+fn ported_gitlab_routes_through_environment_instead_of_rejected_hostname_flag() {
+    use app_lib::core::task_browser::TaskKind;
+    let reader = |_: &Binding, args: &[String], _: &AtomicBool| -> Result<Value, TaskFailure> {
+        assert!(!args.iter().any(|arg| arg == "--hostname"));
+        assert_eq!(&args[..3], ["api", "--method", "GET"]);
+        if args.last().unwrap() == "user" {
+            Ok(json!({"username":"demo"}))
+        } else {
+            Ok(json!([]))
+        }
+    };
+    let binding = Binding {
+        id: "00000000-0000-4000-8000-000000000003".into(),
+        project_id: "demo".into(),
+        provider: Provider::Gitlab,
+        host: "git.example.invalid:8443".into(),
+        repository: "team/demo".into(),
+        launcher: None,
+    };
+    let filters = Filters {
+        kind: TaskKind::Issue,
+        ..Filters::default()
+    };
+    TaskClient::new(reader)
+        .list(&binding, &filters, 1, &AtomicBool::new(false))
+        .unwrap();
+}

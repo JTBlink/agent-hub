@@ -1892,7 +1892,7 @@
   "tasks": {
     "title": "Tasks",
     "connections": "Repository connections",
-    "connectionHint": "Bind a local project to a remote repository and reuse CLI authentication. If the project requires a dedicated launcher, enter it and its arguments explicitly.",
+    "connectionHint": "Project remotes are detected automatically using existing gh/glab authentication. Configure multiple remotes or a dedicated launcher here.",
     "project": "Project",
     "provider": "Platform",
     "host": "Host",
@@ -1914,7 +1914,7 @@
     "search": "Search tasks",
     "checkingIdentity": "Checking identity",
     "limited": "Platform search results are capped or incomplete. Narrow your filters.",
-    "notConnected": "No repositories connected. Bind a project in Repository connections.",
+    "notConnected": "No task repositories could be detected. Add a local project or select a remote in Repository connections. This does not indicate that the CLI is signed out.",
     "empty": "No tasks in this scope",
     "task": "Task",
     "assignee": "Assignee",
