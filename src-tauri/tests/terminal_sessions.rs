@@ -71,11 +71,12 @@ fn closing_a_flooding_terminal_is_bounded_and_does_not_close_its_neighbor() {
     let manager = TerminalManager::default();
     let directory = tempfile::tempdir().unwrap();
     let mut flood = CommandBuilder::new("/bin/sh");
+    flood.env_remove("ENV");
     flood.env(
         "BACKGROUND_PID_FILE",
         directory.path().join("background.pid"),
     );
-    flood.args(["-c", "sleep 30 & printf '%s' \"$!\" > \"$BACKGROUND_PID_FILE\"; while :; do printf '0123456789abcdef'; done"]);
+    flood.args(["-i", "-m", "-c", "sleep 30 & printf '%s' \"$!\" > \"$BACKGROUND_PID_FILE\"; while :; do printf '0123456789abcdef'; done"]);
     let (tx, rx) = mpsc::channel();
     let first = manager
         .create(
@@ -113,10 +114,16 @@ fn closing_a_flooding_terminal_is_bounded_and_does_not_close_its_neighbor() {
     }
     assert!(delivered > 0);
     assert!(manager.ack("other", &first.id, 1).is_err());
+    let background_pid = std::fs::read_to_string(directory.path().join("background.pid")).unwrap();
+    let pid: libc::pid_t = background_pid.trim().parse().unwrap();
+    assert_eq!(
+        unsafe { libc::getpgid(pid) },
+        pid,
+        "Fixture must exercise a separate job-control group"
+    );
     let start = std::time::Instant::now();
     manager.close("main", &first.id).unwrap();
     assert!(start.elapsed() < Duration::from_secs(1));
-    let background_pid = std::fs::read_to_string(directory.path().join("background.pid")).unwrap();
     let deadline = std::time::Instant::now() + Duration::from_secs(2);
     loop {
         let output = std::process::Command::new("/bin/ps")
