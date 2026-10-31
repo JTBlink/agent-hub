@@ -2,9 +2,15 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
+import {
+  loadTerminalFonts,
+  terminalAppearance,
+  terminalTheme,
+} from "./terminalAppearance";
 import "@xterm/xterm/css/xterm.css";
 
 export interface PaneControl {
@@ -43,14 +49,29 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
     if (!element.current) return;
     const node = element.current;
     const terminal = new Terminal({
+      ...terminalAppearance,
       cursorBlink: true,
       scrollback: 5000,
       allowProposedApi: false,
-      fontSize: 13,
     });
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
+    // The DOM renderer uses font strokes for borders; WebGL draws box glyphs
+    // against the cell grid so nested TUI pane lines remain continuous.
+    let renderer: WebglAddon | undefined;
+    try {
+      renderer = new WebglAddon();
+      renderer.onContextLoss(() => {
+        renderer?.dispose();
+        renderer = undefined;
+      });
+      terminal.loadAddon(renderer);
+    } catch {
+      renderer?.dispose();
+      renderer = undefined;
+      // Keep a usable DOM terminal on machines without WebGL2.
+    }
     let disposed = false;
     let sessionId: string | null = null;
     let pendingAck = 0;
@@ -85,14 +106,7 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
     focusNow.current = () => terminal.focus();
     const recolor = () => {
       const styles = getComputedStyle(document.documentElement);
-      terminal.options.theme = {
-        background: styles.getPropertyValue("--color-bg").trim() || undefined,
-        foreground:
-          styles.getPropertyValue("--color-text-primary").trim() || undefined,
-        cursor: styles.getPropertyValue("--color-accent").trim() || undefined,
-        selectionBackground:
-          styles.getPropertyValue("--color-surface-active").trim() || undefined,
-      };
+      terminal.options.theme = terminalTheme(styles);
       measure();
     };
     const observer = new ResizeObserver(measure);
@@ -102,7 +116,13 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
       attributes: true,
       attributeFilter: ["class", "style"],
     });
-    document.fonts?.addEventListener("loadingdone", measure);
+    const redrawFonts = () => {
+      if (disposed) return;
+      terminal.clearTextureAtlas();
+      terminal.refresh(0, terminal.rows - 1);
+      measure();
+    };
+    document.fonts?.addEventListener("loadingdone", redrawFonts);
     recolor();
     const input = terminal.onData((data) => {
       if (!sessionId || disposed) return;
@@ -137,44 +157,52 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
       }
       return true;
     });
-    fit.fit();
-    void api
-      .createTerminal(
-        projectId,
-        { rows: terminal.rows, cols: terminal.cols },
-        (event) => {
-          if (disposed) return;
-          if (event.kind === "output") {
-            const bytes = Uint8Array.from(atob(event.data), (character) =>
-              character.charCodeAt(0),
-            );
-            terminal.write(bytes, () => {
+    void loadTerminalFonts()
+      .catch(fail)
+      .then(() => {
+        if (disposed) return;
+        redrawFonts();
+        fit.fit();
+        return api
+          .createTerminal(
+            projectId,
+            { rows: terminal.rows, cols: terminal.cols },
+            (event) => {
               if (disposed) return;
-              if (sessionId)
-                void api.ackTerminal(sessionId, event.seq).catch(fail);
-              else pendingAck = event.seq;
+              if (event.kind === "output") {
+                const bytes = Uint8Array.from(atob(event.data), (character) =>
+                  character.charCodeAt(0),
+                );
+                terminal.write(bytes, () => {
+                  if (disposed) return;
+                  if (sessionId)
+                    void api.ackTerminal(sessionId, event.seq).catch(fail);
+                  else pendingAck = event.seq;
+                });
+              } else if (event.kind === "exit") setExitCode(event.code);
+              else setError(event.message);
+            },
+          )
+          .then((session) => {
+            if (disposed) {
+              void api.closeTerminal(session.id).catch(() => {});
+              return;
+            }
+            sessionId = session.id;
+            callback.current({
+              sessionId,
+              cwd: session.cwd,
+              focus: () => terminal.focus(),
+              inputRevision: () => revision,
+              ownsFocus: (target) =>
+                target instanceof Node && node.contains(target),
             });
-          } else if (event.kind === "exit") setExitCode(event.code);
-          else setError(event.message);
-        },
-      )
-      .then((session) => {
-        if (disposed) {
-          void api.closeTerminal(session.id).catch(() => {});
-          return;
-        }
-        sessionId = session.id;
-        callback.current({
-          sessionId,
-          cwd: session.cwd,
-          focus: () => terminal.focus(),
-          inputRevision: () => revision,
-          ownsFocus: (target) =>
-            target instanceof Node && node.contains(target),
-        });
-        if (pendingAck) void api.ackTerminal(sessionId, pendingAck).catch(fail);
-        measure();
-        if (activeRef.current) terminal.focus();
+            if (pendingAck)
+              void api.ackTerminal(sessionId, pendingAck).catch(fail);
+            measure();
+            if (activeRef.current) terminal.focus();
+          })
+          .catch(fail);
       })
       .catch(fail);
     return () => {
@@ -183,7 +211,7 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
       cancelAnimationFrame(frame);
       observer.disconnect();
       theme.disconnect();
-      document.fonts?.removeEventListener("loadingdone", measure);
+      document.fonts?.removeEventListener("loadingdone", redrawFonts);
       input.dispose();
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
@@ -202,7 +230,10 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
           {error}
         </div>
       )}
-      <div ref={element} className="min-h-0 flex-1 overflow-hidden p-1" />
+      <div
+        ref={element}
+        className="terminal-emulator min-h-0 flex-1 overflow-hidden p-1"
+      />
       {exitCode !== null && (
         <div role="status" className="px-2 text-xs text-muted">
           {t("terminal.exited", { code: exitCode })}

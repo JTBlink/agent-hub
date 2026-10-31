@@ -6,6 +6,8 @@ export class TerminalEmulator {
   private input: HTMLTextAreaElement | null = null;
   private data: ((value: string) => void) | null = null;
   loadAddon() {}
+  clearTextureAtlas() {}
+  refresh() {}
   open(element: HTMLElement) {
     this.input = document.createElement("textarea");
     this.input.setAttribute("aria-label", "Shell input");
