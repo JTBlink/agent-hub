@@ -1,6 +1,16 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { homeDir, join } from "@tauri-apps/api/path";
 import { vscodeDirectoryUrl } from "./skillDirectory";
+import { prepareFilePreview } from "./tauri";
+
+/** Open a temporary copy of preview text; external edits do not modify the task. */
+export async function openPreviewInVscode(
+  path: string,
+  content: string,
+): Promise<void> {
+  const localPath = await prepareFilePreview(path, content);
+  await openUrl(vscodeDirectoryUrl(localPath));
+}
 
 /** Open an absolute directory in VS Code. Callers handle launch failures. */
 export async function openDirectoryInVscode(path: string): Promise<void> {

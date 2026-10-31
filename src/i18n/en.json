@@ -1785,6 +1785,7 @@
     "entryIssuesHelp": "The skill content is still in the project. These assigned Agents have file or link problems:"
   },
   "fileReader": {
+    "previewInVscodeHint": "Open a preview copy; VS Code edits do not update the task. Copies are removed when AgentHub exits.",
     "openInVscodeHint": "Open the local file in VS Code; save draft changes first",
     "noLocalFile": "This file has no local path to open yet",
     "title": "File reader",
@@ -1808,6 +1809,8 @@
     "restore": "Restore reader"
   },
   "discovery": {
+    "openPreview": "Open preview",
+    "previewFilesHint": "Browse files, task instructions, and script source in a separate full-screen view.",
     "title": "Discover",
     "automations": "Automations",
     "sources": "Installation sources",

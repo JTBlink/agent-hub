@@ -1,6 +1,7 @@
 /* AgentHub identity: navy surfaces, blue actions, cyan and violet accents. */
 @layer base {
   :root {
+    --color-scheme: light;
     --app-scale: 1;
     --color-bg: #f3f7ff;
     --color-bg-secondary: #eaf1fc;
@@ -29,6 +30,7 @@
   }
 
   .dark {
+    --color-scheme: dark;
     --color-bg: #08101f;
     --color-bg-secondary: #0c162b;
     --color-surface: #111d35;

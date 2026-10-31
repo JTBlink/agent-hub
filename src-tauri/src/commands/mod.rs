@@ -5,6 +5,7 @@ pub mod automation;
 pub mod browse;
 pub mod dialog;
 pub mod discovered_skills;
+pub mod file_preview;
 pub mod git_backup;
 pub mod git_repositories;
 pub mod project_library;

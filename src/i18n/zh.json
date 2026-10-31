@@ -1783,6 +1783,7 @@
     "entryIssuesHelp": "项目里的技能内容仍然保留。以下已添加的 Agent 存在文件或链接问题："
   },
   "fileReader": {
+    "previewInVscodeHint": "打开预览副本；VS Code 中的修改不会写回任务，退出 AgentHub 后清理副本",
     "openInVscodeHint": "在 VS Code 中打开本地文件；草稿更改需先保存",
     "noLocalFile": "此文件尚无可打开的本地路径",
     "title": "文件阅读器",
@@ -1805,6 +1806,8 @@
     "restore": "还原阅读窗口"
   },
   "discovery": {
+    "openPreview": "打开预览",
+    "previewFilesHint": "在独立全屏视图中浏览文件目录、任务说明和脚本源码。",
     "title": "发现",
     "automations": "自动化任务",
     "sources": "安装来源",

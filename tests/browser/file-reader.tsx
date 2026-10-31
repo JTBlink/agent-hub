@@ -26,11 +26,21 @@ export function Preview() {
     },
     {
       path: "demo/maintenance.py",
-      content: Array.from(
-        { length: 180 },
-        (_, i) =>
-          `print("Example line ${i + 1}: ${"readable text ".repeat(10)}")`,
-      ).join("\n"),
+      content: [
+        '"""Example maintenance script."""',
+        "from pathlib import Path",
+        "",
+        "# Keep local workspaces tidy.",
+        "def clean_cache(root: Path, days: int = 30):",
+        "    enabled = True",
+        '    return {"root": str(root), "days": days, "enabled": enabled}',
+        "",
+        ...Array.from(
+          { length: 180 },
+          (_, i) =>
+            `print("Example line ${i + 1}: ${"readable text ".repeat(10)}")`,
+        ),
+      ].join("\n"),
     },
     {
       path: "demo/settings.json",

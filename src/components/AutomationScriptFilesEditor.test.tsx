@@ -3,6 +3,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
+import { codeEditor, installCodeEditorGeometry } from "../test/codeEditor";
 import zh from "../i18n/zh.json";
 import { AutomationScriptFilesEditor } from "./AutomationScriptFilesEditor";
 
@@ -38,6 +39,7 @@ const initial = [
 ];
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -78,31 +80,26 @@ it("opens a separate reader and keeps edits across file switches and reopening",
   const trigger = await openReader();
   expect(document.querySelector("dialog[open]")).not.toBeNull();
   await click("maintenance/agent.py");
-  const editor =
-    document.querySelector<HTMLTextAreaElement>("dialog textarea")!;
-  expect(editor.value).toBe("print('check')");
+  const editor = codeEditor(document);
+  expect(editor.state.sliceDoc()).toBe("print('check')");
   await act(async () => {
-    Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "value",
-    )!.set!.call(editor, "print('updated')");
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    editor.dispatch({
+      changes: {
+        from: 0,
+        to: editor.state.doc.length,
+        insert: "print('updated')",
+      },
+    });
   });
   await click("maintenance/herdr.json");
-  expect(
-    document.querySelector<HTMLTextAreaElement>("dialog textarea")!.value,
-  ).toBe('{"agent":"codex"}');
+  expect(codeEditor(document).state.sliceDoc()).toBe('{"agent":"codex"}');
   await click("maintenance/agent.py");
-  expect(
-    document.querySelector<HTMLTextAreaElement>("dialog textarea")!.value,
-  ).toBe("print('updated')");
+  expect(codeEditor(document).state.sliceDoc()).toBe("print('updated')");
   await click("关闭");
   expect(document.querySelector("dialog")).toBeNull();
   expect(document.activeElement).toBe(trigger);
   await openReader();
-  expect(
-    document.querySelector<HTMLTextAreaElement>("dialog textarea")!.value,
-  ).toBe("print('updated')");
+  expect(codeEditor(document).state.sliceDoc()).toBe("print('updated')");
 });
 it("allows reading and selecting text while busy and handles removed files", async () => {
   await act(async () =>
@@ -116,10 +113,9 @@ it("allows reading and selecting text while busy and handles removed files", asy
   );
   await openReader();
   await click("run.sh");
-  const editor =
-    document.querySelector<HTMLTextAreaElement>("dialog textarea")!;
-  expect(editor.readOnly).toBe(true);
-  expect(editor.disabled).toBe(false);
+  const editor = codeEditor(document);
+  expect(editor.state.readOnly).toBe(true);
+  expect(editor.contentDOM.getAttribute("tabindex")).toBe("0");
   await act(async () =>
     root.render(
       <AutomationScriptFilesEditor
@@ -129,9 +125,7 @@ it("allows reading and selecting text while busy and handles removed files", asy
       />,
     ),
   );
-  expect(document.querySelector("dialog textarea")).toBeNull();
+  expect(document.querySelector("dialog .cm-editor")).toBeNull();
   await click("maintenance/agent.py");
-  expect(
-    document.querySelector<HTMLTextAreaElement>("dialog textarea")!.readOnly,
-  ).toBe(false);
+  expect(codeEditor(document).state.readOnly).toBe(false);
 });

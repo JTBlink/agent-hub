@@ -5,20 +5,24 @@ import { getErrorMessage } from "../../lib/error";
 import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
 import type { FileReaderProps, ReaderFile } from "./types";
+import { CodeEditor } from "./CodeEditor";
 
 export function FileContent({
   file,
   onContentChange,
   onOpenInVscode,
+  openInVscodeHint,
   maxLength,
 }: {
   file: ReaderFile;
-} & Pick<FileReaderProps, "onContentChange" | "onOpenInVscode" | "maxLength">) {
+} & Pick<
+  FileReaderProps,
+  "onContentChange" | "onOpenInVscode" | "openInVscodeHint" | "maxLength"
+>) {
   const { t } = useTranslation();
   const markdown = /\.(md|markdown)$/i.test(file.path);
   const [preview, setPreview] = useState(markdown);
   const [wrap, setWrap] = useState(false);
-  const gutter = useRef<HTMLDivElement>(null);
   const pending = useRef(false);
   const mounted = useRef(false);
   const [opening, setOpening] = useState(false);
@@ -58,11 +62,14 @@ export function FileContent({
           <button
             type="button"
             aria-label={t("install.scan.openInVscode")}
-            title={t(
-              onOpenInVscode
-                ? "fileReader.openInVscodeHint"
-                : "fileReader.noLocalFile",
-            )}
+            title={
+              openInVscodeHint ??
+              t(
+                onOpenInVscode
+                  ? "fileReader.openInVscodeHint"
+                  : "fileReader.noLocalFile",
+              )
+            }
             disabled={!onOpenInVscode || opening}
             aria-busy={opening}
             onClick={() => void openInVscode()}
@@ -134,44 +141,24 @@ export function FileContent({
           />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 overflow-hidden bg-background font-mono text-[12px] leading-6">
-          {!wrap && (
-            <div
-              aria-hidden="true"
-              ref={gutter}
-              className="shrink-0 select-none overflow-hidden border-r border-border-subtle px-3 py-4 text-right text-muted"
-            >
-              <pre>
-                {Array.from({ length: lines }, (_, index) => index + 1).join(
-                  "\n",
-                )}
-              </pre>
-            </div>
-          )}
-          <textarea
-            aria-label={file.path}
-            readOnly={!onContentChange}
-            value={file.content}
-            maxLength={maxLength}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoCorrect="off"
-            wrap={wrap ? "soft" : "off"}
-            onChange={(event) =>
-              onContentChange?.(file.path, event.target.value)
-            }
-            onScroll={(event) => {
-              if (gutter.current)
-                gutter.current.scrollTop = event.currentTarget.scrollTop;
-            }}
-            className="min-h-0 min-w-0 flex-1 resize-none overflow-auto bg-transparent p-4 font-mono text-[12px] leading-6 text-secondary outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
-          />
-        </div>
+        <CodeEditor
+          file={file}
+          wrap={wrap}
+          maxLength={maxLength}
+          onChange={
+            onContentChange
+              ? (content) => onContentChange(file.path, content)
+              : undefined
+          }
+        />
       )}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-bg-secondary px-3 py-1.5 text-[11px] text-muted">
         <span>
           {t(onContentChange ? "fileReader.editable" : "fileReader.readOnly")}
         </span>
+        {openInVscodeHint && (
+          <span className="min-w-0 flex-1">{openInVscodeHint}</span>
+        )}
         <span>{t("fileReader.lines", { count: lines })} · UTF-8</span>
       </div>
     </>

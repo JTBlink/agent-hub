@@ -12,6 +12,7 @@ mod credential_file;
 pub mod crypto;
 pub mod deployment_preferences;
 pub mod error;
+pub mod file_preview;
 pub mod file_watcher;
 mod gh_credentials;
 pub mod git2_engine;

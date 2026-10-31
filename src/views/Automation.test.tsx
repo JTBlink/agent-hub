@@ -8,6 +8,7 @@ import zh from "../i18n/zh.json";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { Automation } from "./Automation";
 import { open } from "@tauri-apps/plugin-dialog";
+import { codeEditor, installCodeEditorGeometry } from "../test/codeEditor";
 import { openDirectoryInVscode, openFileInVscode } from "../lib/openInVscode";
 
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(), save: vi.fn() }));
@@ -124,6 +125,7 @@ beforeEach(() => {
   vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
   vi.mocked(openFileInVscode).mockReset().mockResolvedValue();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
   vi.mocked(api.onAutomationChanged)
     .mockReset()
     .mockResolvedValue(() => {});
@@ -1526,7 +1528,7 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
   )!;
   expect(
     container.querySelector(
-      'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
+      '[role="textbox"][aria-label="disk-cleanup/disk-cleanup.py"]',
     ),
   ).toBeNull();
   await click("打开文件阅读器");
@@ -1537,19 +1539,19 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
       )!
       .click(),
   );
-  const script = document.querySelector<HTMLTextAreaElement>(
-    'textarea[aria-label="disk-cleanup/disk-cleanup.py"]',
-  )!;
+  const script = codeEditor(document);
   await act(async () => {
-    Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "value",
-    )!.set!.call(script, "TEMP_RETENTION_DAYS = 14\nLOG_RETENTION_DAYS = 60\n");
-    script.dispatchEvent(new Event("input", { bubbles: true }));
+    script.dispatch({
+      changes: {
+        from: 0,
+        to: script.state.doc.length,
+        insert: "TEMP_RETENTION_DAYS = 14\nLOG_RETENTION_DAYS = 60\n",
+      },
+    });
   });
   // Escape belongs to the native reader, not the underlying automation editor.
   await act(async () => {
-    script.dispatchEvent(
+    script.contentDOM.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "Escape",
         bubbles: true,

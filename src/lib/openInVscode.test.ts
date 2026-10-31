@@ -1,5 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { openDirectoryInVscode, openFileInVscode } from "./openInVscode";
+import {
+  openDirectoryInVscode,
+  openFileInVscode,
+  openPreviewInVscode,
+} from "./openInVscode";
+import { prepareFilePreview } from "./tauri";
+
+vi.mock("./tauri", () => ({ prepareFilePreview: vi.fn() }));
 
 const openUrl = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl }));
@@ -39,4 +46,28 @@ it("expands home-relative file directories before opening", async () => {
   expect(openUrl).toHaveBeenCalledWith(
     "vscode://file/workspace/home/tasks/run.sh",
   );
+});
+
+it("opens the current preview text from a temporary copy without saving a task", async () => {
+  vi.mocked(prepareFilePreview).mockResolvedValueOnce(
+    "/temporary/preview/scripts/check #示例.py",
+  );
+  await openPreviewInVscode("scripts/check #示例.py", "print('preview')");
+  expect(prepareFilePreview).toHaveBeenLastCalledWith(
+    "scripts/check #示例.py",
+    "print('preview')",
+  );
+  expect(openUrl).toHaveBeenCalledWith(
+    "vscode://file/temporary/preview/scripts/check%20%23%E7%A4%BA%E4%BE%8B.py",
+  );
+});
+
+it("reports preview preparation failures without opening an invalid path", async () => {
+  vi.mocked(prepareFilePreview).mockRejectedValueOnce(
+    new Error("Cannot prepare preview"),
+  );
+  await expect(openPreviewInVscode("check.py", "text")).rejects.toThrow(
+    "Cannot prepare preview",
+  );
+  expect(openUrl).not.toHaveBeenCalled();
 });

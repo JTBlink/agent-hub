@@ -12,6 +12,7 @@ export function FileReader({
   initialPath,
   onContentChange,
   onOpenInVscode,
+  openInVscodeHint,
   maxLength,
 }: FileReaderProps) {
   const { t } = useTranslation();
@@ -110,6 +111,7 @@ export function FileReader({
             file={file}
             onContentChange={onContentChange}
             onOpenInVscode={onOpenInVscode}
+            openInVscodeHint={openInVscodeHint}
             maxLength={maxLength}
           />
         ) : (

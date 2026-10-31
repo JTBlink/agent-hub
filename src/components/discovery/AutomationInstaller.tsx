@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Loader2, X } from "lucide-react";
+import { BookOpen, Check, Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import type { AutomationInstallSource } from "../../lib/automationDiscovery";
@@ -20,7 +20,8 @@ import { getErrorMessage } from "../../lib/error";
 import { AutomationProjectField } from "../AutomationProjectField";
 import { AutomationScheduleInput } from "../AutomationScheduleInput";
 import { ConfirmDialog } from "../ConfirmDialog";
-import { FileReader } from "../file-reader";
+import { FileReaderDialog } from "../file-reader";
+import { openPreviewInVscode } from "../../lib/openInVscode";
 
 function canReplace(task: AutomationTask, provider: string) {
   return (
@@ -45,6 +46,7 @@ export function AutomationInstaller({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [draft, setDraft] = useState({
     ...task.draft,
@@ -180,7 +182,7 @@ export function AutomationInstaller({
           if (step === 0) setStep(1);
           else if (step === 1) void install();
         }}
-        className={`flex max-h-[calc(100vh/var(--app-scale)_-_2rem)] flex-col ${step === 0 ? "h-[min(820px,calc(100vh/var(--app-scale)_-_2rem))]" : ""}`}
+        className="flex max-h-[calc(100vh/var(--app-scale)_-_2rem)] flex-col"
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-5 py-4">
           <div className="min-w-0">
@@ -253,22 +255,26 @@ export function AutomationInstaller({
               {!!draft.files?.length && (
                 <section
                   aria-labelledby={filesTitleId}
-                  className="flex min-h-[260px] flex-1 flex-col gap-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-secondary p-4"
                 >
-                  <h3 id={filesTitleId} className="text-[13px] font-medium">
-                    {t("automation.scriptFiles", { count: draft.files.length })}
-                  </h3>
-                  <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-border-subtle">
-                    <FileReader
-                      files={draft.files}
-                      initialPath={
-                        draft.files.find((file) => file.path === "README.md")
-                          ?.path ??
-                        draft.files.find((file) => file.path === "prompt.md")
-                          ?.path
-                      }
-                    />
+                  <div className="min-w-0 flex-1">
+                    <h3 id={filesTitleId} className="text-[13px] font-medium">
+                      {t("automation.scriptFiles", {
+                        count: draft.files.length,
+                      })}
+                    </h3>
+                    <p className="mt-1 text-[12px] text-muted">
+                      {t("discovery.previewFilesHint")}
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="app-button-secondary shrink-0"
+                  >
+                    <BookOpen aria-hidden="true" className="h-4 w-4" />
+                    {t("discovery.openPreview")}
+                  </button>
                 </section>
               )}
             </>
@@ -395,6 +401,23 @@ export function AutomationInstaller({
           </div>
         </footer>
       </form>
+      {previewOpen && (
+        <FileReaderDialog
+          title={`${task.title} · ${t("automation.scriptFiles", { count: draft.files?.length ?? 0 })}`}
+          files={draft.files ?? []}
+          openInVscodeHint={t("fileReader.previewInVscodeHint")}
+          onOpenInVscode={async (path) => {
+            const file = draft.files?.find((item) => item.path === path);
+            if (file) await openPreviewInVscode(file.path, file.content);
+          }}
+          initialPath={
+            draft.files?.find((file) => file.path === "README.md")?.path ??
+            draft.files?.find((file) => file.path === "prompt.md")?.path
+          }
+          initialMaximized
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
       <ConfirmDialog
         open={conflicts.length > 0}
         title={t("discovery.overwriteTitle")}

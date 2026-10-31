@@ -838,6 +838,11 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
             log::error!("Failed to destroy main window while quitting: {err}");
         }
     }
+    if let Some(previews) = app.try_state::<Arc<core::file_preview::FilePreviews>>() {
+        if let Err(error) = previews.clear() {
+            log::warn!("Cannot clear preview copies: {error}");
+        }
+    }
     // 退出前 auto-backup (§3.4): local commit only, fail-fast on a busy lock,
     // after the window is gone so quitting feels instant.
     if let Some(store) = app.try_state::<Arc<core::skill_store::SkillStore>>() {
@@ -859,6 +864,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(store)
         .manage(cancel_registry)
+        .manage(Arc::new(core::file_preview::FilePreviews::default()))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             restore_main_window(app);
         }))
@@ -1052,6 +1058,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::file_preview::prepare_file_preview,
             commands::automation::get_automation_overview,
             commands::automation::get_automation_output,
             commands::automation::get_automation_history,

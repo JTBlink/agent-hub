@@ -6,6 +6,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import * as api from "../../lib/tauri";
+import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
+import { openPreviewInVscode } from "../../lib/openInVscode";
 import zh from "../../i18n/zh.json";
 import { AutomationDiscovery } from "./AutomationDiscovery";
 const i18n = createInstance();
@@ -14,6 +16,7 @@ const translate = i18n.t.bind(i18n);
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: translate, i18n }),
 }));
+vi.mock("../../lib/openInVscode", () => ({ openPreviewInVscode: vi.fn() }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
 vi.mock("../../lib/tauri", () => ({
   getAutomationTemplates: vi.fn(),
@@ -46,6 +49,7 @@ const taskPackage: api.AutomationPackage = {
 let host: HTMLDivElement, root: Root;
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
   vi.clearAllMocks();
   Object.defineProperties(HTMLDialogElement.prototype, {
     showModal: {
@@ -126,7 +130,7 @@ async function submit() {
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
   );
 }
-it("browses a read-only package tree and previews Markdown before configuration", async () => {
+it("opens a separate full-screen read-only preview and returns to configuration", async () => {
   const files = [
     { path: "scripts/run.sh", content: "echo package-preview" },
     {
@@ -148,7 +152,19 @@ it("browses a read-only package tree and previews Markdown before configuration"
   });
   await render("recommended");
   await click("安装 Example task");
-  const dialog = document.querySelector("dialog")!;
+  const installer = document.querySelector("dialog")!;
+  expect(installer.querySelector("h1")).toBeNull();
+  const previewButton = [...installer.querySelectorAll("button")].find(
+    (button) => button.textContent === "打开预览",
+  )!;
+  previewButton.focus();
+  await click("打开预览");
+  const dialog = document.querySelector<HTMLDialogElement>(
+    "dialog[data-file-reader]",
+  )!;
+  expect(dialog.open).toBe(true);
+  expect(dialog.contains(document.activeElement)).toBe(true);
+  expect(dialog.querySelector('[aria-label="还原阅读窗口"]')).toBeTruthy();
   expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
   expect(
     dialog
@@ -161,26 +177,43 @@ it("browses a read-only package tree and previews Markdown before configuration"
     ),
   ).toEqual(["scripts", "lib"]);
   await click("scripts/lib/check.py");
-  const source = dialog.querySelector<HTMLTextAreaElement>(
-    'textarea[aria-label="scripts/lib/check.py"]',
-  )!;
-  expect(source.value).toBe("print('ready')");
-  expect(source.readOnly).toBe(true);
+  const source = codeEditor(dialog);
+  expect(source.state.sliceDoc()).toBe("print('ready')");
+  expect(source.state.readOnly).toBe(true);
+  expect(
+    dialog.querySelector<HTMLButtonElement>('[aria-label="在 VS Code 中打开"]')!
+      .disabled,
+  ).toBe(false);
+  await click("在 VS Code 中打开");
+  expect(openPreviewInVscode).toHaveBeenLastCalledWith(
+    "scripts/lib/check.py",
+    "print('ready')",
+  );
+  expect(dialog.textContent).toContain("VS Code 中的修改不会写回任务");
   await click("README.md");
   await click("源码");
-  expect(
-    dialog.querySelector<HTMLTextAreaElement>(
-      'textarea[aria-label="README.md"]',
-    )?.value,
-  ).toContain("# Package overview");
+  expect(codeEditor(dialog).state.sliceDoc()).toContain("# Package overview");
   await click("预览");
   expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
   expect(api.saveAutomation).not.toHaveBeenCalled();
   expect(api.importAutomationPackage).not.toHaveBeenCalled();
   expect(dialog.querySelector('[name="task-name"]')).toBeNull();
+  await act(async () => {
+    dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
+  });
+  expect(document.querySelector("dialog[data-file-reader]")).toBeNull();
+  expect(installer.open).toBe(true);
+  expect(document.activeElement).toBe(previewButton);
+  await click("打开预览");
+  const reopened = document.querySelector("dialog[data-file-reader]")!;
+  await act(async () => {
+    reopened.querySelector<HTMLButtonElement>('[aria-label="关闭"]')!.click();
+  });
+  expect(document.querySelector("dialog[data-file-reader]")).toBeNull();
+  expect(document.activeElement).toBe(previewButton);
   await submit();
   expect(
-    dialog.querySelector<HTMLInputElement>('[name="task-name"]')?.value,
+    installer.querySelector<HTMLInputElement>('[name="task-name"]')?.value,
   ).toBe("Example task");
 });
 

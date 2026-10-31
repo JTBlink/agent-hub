@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
 import zh from "../../i18n/zh.json";
 import { FileReader, type ReaderFile } from ".";
+import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
 
 const i18n = createInstance();
 await i18n.init({
@@ -28,6 +29,7 @@ const files: ReaderFile[] = [
 ];
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -66,18 +68,16 @@ it("previews Markdown and edits its source without losing changes across duplica
   expect(container.querySelector("article script")).toBeNull();
   expect(container.querySelector("article img")).toBeNull();
   await click("源码");
-  const editor = container.querySelector("textarea")!;
   await act(async () => {
-    Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype,
-      "value",
-    )!.set!.call(editor, "# Updated");
-    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    const editor = codeEditor(container);
+    editor.dispatch({
+      changes: { from: 0, to: editor.state.doc.length, insert: "# Updated" },
+    });
   });
   await click("src/run.py");
-  expect(container.querySelector("textarea")!.value).toBe("print('hello')\n");
+  expect(codeEditor(container).state.sliceDoc()).toBe("print('hello')\n");
   await click("other/run.py");
-  expect(container.querySelector("textarea")!.value).toBe("print('other')");
+  expect(codeEditor(container).state.sliceDoc()).toBe("print('other')");
   await click("切换到 docs/README.md");
   expect(container.querySelector("article h1")!.textContent).toBe("Updated");
   await click("关闭 docs/README.md");
@@ -88,11 +88,15 @@ it("supports read-only source, wrapping and a collapsible explorer", async () =>
   await act(async () =>
     root.render(<FileReader files={files} initialPath="src/run.py" />),
   );
-  expect(container.querySelector("textarea")!.readOnly).toBe(true);
-  expect(container.querySelector("textarea")!.disabled).toBe(false);
-  expect(container.querySelector("textarea")!.wrap).toBe("off");
+  expect(codeEditor(container).state.readOnly).toBe(true);
+  expect(codeEditor(container).contentDOM.getAttribute("tabindex")).toBe("0");
+  expect(
+    codeEditor(container).contentDOM.classList.contains("cm-lineWrapping"),
+  ).toBe(false);
   await click("自动换行");
-  expect(container.querySelector("textarea")!.wrap).toBe("soft");
+  expect(
+    codeEditor(container).contentDOM.classList.contains("cm-lineWrapping"),
+  ).toBe(true);
   await click("显示或隐藏文件目录");
   expect(container.querySelector("aside")!.hidden).toBe(true);
   await click("显示或隐藏文件目录");
@@ -107,13 +111,13 @@ it("closes tabs without deleting files and recovers from empty or replaced input
   );
   await click("src/run.py");
   await act(async () => root.render(<FileReader files={[]} />));
-  expect(container.querySelector("textarea")).toBeNull();
+  expect(container.querySelector(".cm-editor")).toBeNull();
   expect(container.querySelector('[role="status"]')!.textContent).toContain(
     "暂无文件",
   );
   await act(async () => root.render(<FileReader files={[files[2]]} />));
   await click("other/run.py");
-  expect(container.querySelector("textarea")!.value).toBe("print('other')");
+  expect(codeEditor(container).state.sliceDoc()).toBe("print('other')");
 });
 
 it("opens the current file in VS Code without changing its draft", async () => {
@@ -177,7 +181,7 @@ it("prevents duplicate opening requests and supports retry after failure", async
   expect(container.querySelector('[role="alert"]')?.textContent).toBe(
     "VS Code unavailable",
   );
-  expect(container.querySelector("textarea")!.value).toBe(files[1].content);
+  expect(codeEditor(container).state.sliceDoc()).toBe(files[1].content);
   await click("在 VS Code 中打开");
   expect(open).toHaveBeenCalledTimes(2);
   expect(container.querySelector('[role="alert"]')).toBeNull();

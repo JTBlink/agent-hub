@@ -1,6 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+/** Prepare a session-scoped copy for opening unsaved preview text externally. */
+export function prepareFilePreview(
+  path: string,
+  content: string,
+): Promise<string> {
+  return invoke("prepare_file_preview", { path, content });
+}
+
 export type AutomationSource =
   "launchd" | "cron" | "systemd" | "windows" | "hermes";
 export type AutomationTaskStatus =

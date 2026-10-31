@@ -11,15 +11,17 @@ export function FileReaderDialog({
   title,
   description,
   onClose,
+  initialMaximized = false,
   ...props
 }: FileReaderProps & {
   title?: string;
   description?: string;
   onClose: () => void;
+  initialMaximized?: boolean;
 }) {
   const { t } = useTranslation();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [maximized, setMaximized] = useState(false);
+  const [maximized, setMaximized] = useState(initialMaximized);
   const titleId = useId();
   const descriptionId = useId();
   useEffect(() => {
@@ -41,6 +43,7 @@ export function FileReaderDialog({
       aria-describedby={description ? descriptionId : undefined}
       onCancel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose();
       }}
       className={cn(
