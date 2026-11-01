@@ -268,7 +268,13 @@ impl Session {
                 bail!("Another program owns the terminal foreground");
             }
         }
-        let command = shell.command(executable)?;
+        // Validate shell support before touching the persistent Herdr session.
+        shell.command(executable, &[])?;
+        let arguments = super::super::herdr_session::prepare_workspace(
+            executable,
+            std::path::Path::new(&self.snapshot.cwd),
+        )?;
+        let command = shell.command(executable, &arguments)?;
         shell.input(command.as_bytes(), false);
         self.enqueue(command.into_bytes())?;
         shell.state.herdr_active = true;

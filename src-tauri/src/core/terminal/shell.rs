@@ -80,7 +80,7 @@ impl ShellState {
             self.tail.drain(..self.tail.len() - keep);
         }
     }
-    pub fn command(&self, executable: &Path) -> Result<String> {
+    pub fn command(&self, executable: &Path, arguments: &[String]) -> Result<String> {
         let integration = self.integration.as_ref().ok_or_else(|| {
             anyhow::anyhow!("Shell readiness cannot be verified; open a supported empty Shell")
         })?;
@@ -90,14 +90,38 @@ impl ShellState {
         if path.contains(['\r', '\n', '\0']) {
             bail!("Invalid executable path");
         }
+        if arguments
+            .iter()
+            .any(|argument| argument.contains(['\r', '\n', '\0']))
+        {
+            bail!("Invalid launch argument");
+        }
         match integration.kind.as_str() {
             "cmd" => {
                 if path.contains(['%', '!', '"']) {
                     bail!("Use a Shell supporting this executable path");
                 }
-                Ok(format!("\"{path}\"\r"))
+                if arguments
+                    .iter()
+                    .any(|argument| argument.contains(['%', '!', '"']))
+                {
+                    bail!("Use a Shell supporting these launch arguments");
+                }
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| format!("\"{argument}\""))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Ok(format!("\"{path}\" {arguments}\r"))
             }
-            _ => Ok(format!("{}\r", quote(path))),
+            _ => {
+                let command = std::iter::once(path)
+                    .chain(arguments.iter().map(String::as_str))
+                    .map(quote)
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                Ok(format!("{command}\r"))
+            }
         }
     }
 }
@@ -134,12 +158,7 @@ pub fn prepare_shell(
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     // A nested launch must not inherit a different Herdr pane's caller identity.
-    for name in [
-        "HERDR_ENV",
-        "HERDR_PANE_ID",
-        "HERDR_TAB_ID",
-        "HERDR_WORKSPACE_ID",
-    ] {
+    for name in super::super::herdr_session::INHERITED_CONTEXT {
         command.env_remove(name);
     }
     let mut files = None;
