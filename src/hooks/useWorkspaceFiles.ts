@@ -5,9 +5,21 @@ import {
   type SetStateAction,
 } from "react";
 
-export type WorkspaceFiles = Record<string, { path: string; shown: boolean }>;
+import type { ReaderLocation } from "../components/file-reader/types";
+
+export interface ActiveCheckout {
+  projectId: string;
+  worktreePath: string;
+}
+
+export type WorkspaceFiles = Record<
+  string,
+  { path: string; shown: boolean; location?: ReaderLocation }
+>;
 export const WorkspaceFilesContext = createContext<{
   files: WorkspaceFiles;
+  checkout?: ActiveCheckout;
+  setCheckout: Dispatch<SetStateAction<ActiveCheckout | undefined>>;
   setFiles: Dispatch<SetStateAction<WorkspaceFiles>>;
 } | null>(null);
 

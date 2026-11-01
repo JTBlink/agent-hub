@@ -4,11 +4,12 @@ import { Code2, Loader2, WrapText } from "lucide-react";
 import { getErrorMessage } from "../../lib/error";
 import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
-import type { FileReaderProps, ReaderFile } from "./types";
+import type { FileReaderProps, ReaderFile, ReaderLocation } from "./types";
 import { CodeEditor } from "./CodeEditor";
 
 export function FileContent({
   file,
+  location,
   onContentChange,
   onOpenInVscode,
   openInVscodeHint,
@@ -16,6 +17,7 @@ export function FileContent({
   actions,
 }: {
   file: ReaderFile;
+  location?: ReaderLocation;
   actions?: ReactNode;
 } & Pick<
   FileReaderProps,
@@ -23,8 +25,11 @@ export function FileContent({
 >) {
   const { t } = useTranslation();
   const markdown = /\.(md|markdown)$/i.test(file.path);
-  const [preview, setPreview] = useState(markdown);
+  const [preview, setPreview] = useState(markdown && !location);
   const [wrap, setWrap] = useState(false);
+  useEffect(() => {
+    if (location) setPreview(false);
+  }, [location]);
   const pending = useRef(false);
   const mounted = useRef(false);
   const [opening, setOpening] = useState(false);
@@ -56,7 +61,7 @@ export function FileContent({
       <div className="flex min-h-10 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3 py-1.5">
         <span
           title={file.path}
-          className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted"
+          className="min-w-0 flex-1 truncate font-mono text-xs text-muted"
         >
           {file.path}
         </span>
@@ -76,7 +81,7 @@ export function FileContent({
             disabled={!onOpenInVscode || opening}
             aria-busy={opening}
             onClick={() => void openInVscode()}
-            className="app-button-ghost gap-1.5 px-2 py-1 text-[12px] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
+            className="app-button-ghost gap-1.5 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
           >
             {opening ? (
               <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
@@ -95,7 +100,7 @@ export function FileContent({
                 aria-pressed={preview === value}
                 onClick={() => setPreview(value)}
                 className={cn(
-                  "app-button-ghost px-2 py-1 text-[12px]",
+                  "app-button-ghost px-2 py-1 text-xs",
                   preview === value && "bg-surface-active text-accent-light",
                 )}
               >
@@ -122,7 +127,7 @@ export function FileContent({
       {openError && (
         <p
           role="alert"
-          className="shrink-0 break-words border-b border-border-subtle px-3 py-2 text-[12px] text-danger"
+          className="shrink-0 break-words border-b border-border-subtle px-3 py-2 text-xs text-danger"
         >
           {openError}
         </p>
@@ -146,6 +151,7 @@ export function FileContent({
       ) : (
         <CodeEditor
           file={file}
+          location={location}
           wrap={wrap}
           maxLength={maxLength}
           onChange={
@@ -155,7 +161,7 @@ export function FileContent({
           }
         />
       )}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-bg-secondary px-3 py-1.5 text-[11px] text-muted">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border-subtle bg-bg-secondary px-3 py-1.5 text-xs text-muted">
         <span>
           {t(onContentChange ? "fileReader.editable" : "fileReader.readOnly")}
         </span>

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   BookOpen,
@@ -36,7 +37,12 @@ export function ProjectWorkspace({
     (!route?.worktreePath ? worktrees.find((item) => item.is_main) : undefined);
   const path = worktree?.path ?? requestedPath;
   const scope = JSON.stringify([project?.id, path]);
-  const { files, setFiles } = useWorkspaceFiles();
+  const { files, setFiles, setCheckout } = useWorkspaceFiles();
+  const routeProjectId = route?.projectId;
+  useEffect(() => {
+    if (routeProjectId && path)
+      setCheckout({ projectId: routeProjectId, worktreePath: path });
+  }, [routeProjectId, path, setCheckout]);
   const file = files[scope];
   const visible = !!route || location.pathname === "/terminal";
   return (
@@ -171,6 +177,7 @@ export function ProjectWorkspace({
                 projectId={project.id}
                 worktreePath={path}
                 path={file.path}
+                location={file.location}
               />
             </div>
           )}

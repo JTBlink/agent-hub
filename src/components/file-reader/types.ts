@@ -16,3 +16,10 @@ export interface FileReaderProps {
   /** Optional constraint supplied by the host's storage contract. */
   maxLength?: number;
 }
+
+/** A one-based UTF-16 position requested by a search result. */
+export interface ReaderLocation {
+  line: number;
+  column: number;
+  endColumn: number;
+}

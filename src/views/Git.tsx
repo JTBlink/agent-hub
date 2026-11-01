@@ -1,3 +1,4 @@
+import { WorkspaceFilesContext } from "../hooks/useWorkspaceFiles";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
 import { FileCode2, GitBranch, RefreshCw, X } from "lucide-react";
@@ -47,6 +48,11 @@ export function Git() {
   const changesRef = useRef<HTMLElement>(null);
   const [actionError, setActionError] = useState<string>();
   const [fileView, setFileView] = useState(false);
+  const setCheckout = useContext(WorkspaceFilesContext)?.setCheckout;
+  useEffect(() => {
+    if (activeId && root)
+      setCheckout?.({ projectId: activeId, worktreePath: root });
+  }, [activeId, root, setCheckout]);
   const scope = JSON.stringify([activeId, root]);
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {

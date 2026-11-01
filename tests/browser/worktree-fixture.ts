@@ -1,3 +1,4 @@
+import { worktreeSearchFixture } from "./worktree-search-fixture";
 /** Synthetic project data. Never reads files or creates real worktrees. */
 const documents = new Map<string, string>();
 function source(path: unknown) {
@@ -22,6 +23,28 @@ export function worktreeFixture(command: string, raw: unknown) {
     "worktreePath" in args ? args.worktreePath : root,
     path,
   ]);
+  const searchPreview = worktreeSearchFixture(
+    command,
+    raw,
+    (path) =>
+      documents.get(
+        JSON.stringify([
+          projectId,
+          "worktreePath" in args ? args.worktreePath : root,
+          path,
+        ]),
+      ) ?? source(path),
+    (path, content) =>
+      documents.set(
+        JSON.stringify([
+          projectId,
+          "worktreePath" in args ? args.worktreePath : root,
+          path,
+        ]),
+        content,
+      ),
+  );
+  if (searchPreview.handled) return searchPreview;
   switch (command) {
     case "get_project_worktrees":
       return {

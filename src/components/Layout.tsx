@@ -43,7 +43,22 @@ export function Layout() {
 
   // Cmd+, to open Settings
   useEffect(() => {
+    const revealSearch = () => {
+      if (!hideSidebar) return;
+      setTerminalMaximized(false);
+      requestAnimationFrame(() =>
+        window.dispatchEvent(new Event("workspace-search-open")),
+      );
+    };
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "f"
+      ) {
+        e.preventDefault();
+        revealSearch();
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         const target = e.target as HTMLElement;
         if (
@@ -68,8 +83,12 @@ export function Layout() {
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigate, refreshAppData]);
+    window.addEventListener("workspace-search-open", revealSearch);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("workspace-search-open", revealSearch);
+    };
+  }, [navigate, refreshAppData, hideSidebar]);
 
   return (
     <SidebarVisibilityContext.Provider

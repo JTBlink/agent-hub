@@ -79,6 +79,21 @@ export function useWorktreeDocument(
     )
       void reload();
   }, [key, reload]);
+  useEffect(() => {
+    const reloadCleanFile = () => {
+      const current = documents.get(key);
+      if (
+        current &&
+        !current.editing &&
+        !current.saving &&
+        current.draft === current.original
+      )
+        void reload();
+    };
+    window.addEventListener("worktree-file-saved", reloadCleanFile);
+    return () =>
+      window.removeEventListener("worktree-file-saved", reloadCleanFile);
+  }, [key, reload]);
   const save = async () => {
     const current = documents.get(key);
     if (

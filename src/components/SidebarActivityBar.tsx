@@ -6,6 +6,7 @@ import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
 
 type ActivityIcon =
   | "files"
+  | "search"
   | "layout"
   | "checklist"
   | "github-action"
@@ -111,6 +112,7 @@ export function SidebarActivityBar({
     >
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
         {renderPanel("projects", t("sidebar.projects"), "files")}
+        {renderPanel("search", t("workspaceSearch.title"), "search")}
         {renderLink({ name: "Git", path: "/git", icon: "source-control" })}
         {renderLink({
           name: t("tasks.title"),

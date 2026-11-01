@@ -44,6 +44,7 @@ const app = vi.hoisted(() => ({
   refreshSkillGroups: vi.fn(),
   refreshManagedSkills: vi.fn(),
   refreshProjects: vi.fn(),
+  openSearch: vi.fn(),
 }));
 vi.mock("../context/AppContext", () => ({ useApp: () => app }));
 vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
@@ -186,6 +187,26 @@ it("keeps primary navigation in the activity bar with labelled, active links", a
   expect(container.querySelector("output")?.textContent).toBe("/tasks");
   expect(tasks.getAttribute("aria-current")).toBe("page");
   expect(container.querySelector('a[href="/terminal"]')).toBeNull();
+});
+
+it("places project, search and Git first and opens search without navigating", async () => {
+  await render("/tasks");
+  const navigation = container.querySelector('nav[aria-label="主导航"]')!;
+  const entries = [...navigation.querySelectorAll("button, a")];
+  expect(
+    entries.slice(0, 3).map((entry) => entry.getAttribute("aria-label")),
+  ).toEqual([zh.sidebar.projects, zh.workspaceSearch.title, "Git"]);
+  await click(entries[1] as HTMLElement);
+  expect(app.openSearch).not.toHaveBeenCalled();
+  expect(
+    container.querySelector("[data-workspace-search-input]"),
+  ).not.toBeNull();
+  expect(container.querySelector("output")?.textContent).toBe("/tasks");
+  expect(
+    navigation
+      .querySelector('[aria-current="page"]')
+      ?.getAttribute("aria-label"),
+  ).toBe(zh.workspaceSearch.title);
 });
 
 function explorer() {
@@ -748,4 +769,32 @@ it("returns to the last project and checkout when opening the project panel from
       .querySelector("[data-resource-visible]")
       ?.getAttribute("data-resource-visible"),
   ).toBe("true");
+});
+
+it("focuses the workspace search field on repeated shortcuts without opening global commands", async () => {
+  await render("/tasks");
+  const invokeShortcut = () =>
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "F",
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      }),
+    );
+  await act(async () => {
+    invokeShortcut();
+  });
+  const input = container.querySelector<HTMLInputElement>(
+    "[data-workspace-search-input]",
+  )!;
+  expect(document.activeElement).toBe(input);
+  container
+    .querySelector<HTMLButtonElement>('button[data-sidebar-panel="search"]')!
+    .focus();
+  await act(async () => {
+    invokeShortcut();
+  });
+  expect(document.activeElement).toBe(input);
+  expect(app.openSearch).not.toHaveBeenCalled();
 });

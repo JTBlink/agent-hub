@@ -9,7 +9,7 @@ export function activeSidebarSection(pathname: string): SidebarSection | null {
   return null;
 }
 
-export type SidebarPanel = "projects" | "skills";
+export type SidebarPanel = "projects" | "skills" | "search";
 export function activeSidebarPanel(pathname: string): SidebarPanel | null {
   if (pathname === "/terminal" || activeSidebarSection(pathname) === "projects")
     return "projects";

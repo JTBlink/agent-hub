@@ -6,7 +6,7 @@ import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { worktreeLabel, worktreeUrl } from "../../lib/worktreeApi";
 import { touchProjectVisited, type Project } from "../../lib/tauri";
-import { lastWorkspace } from "../../lib/lastWorkspace";
+import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { compactHomePath, cn } from "../../utils";
 
 export function ProjectSwitcher({
@@ -19,15 +19,15 @@ export function ProjectSwitcher({
   const route = useMatch("/project/:id/*");
   const { search } = useLocation();
   const navigate = useNavigate();
-  const previous = lastWorkspace(projects);
+  const active = useActiveWorkspace(projects);
   const routeProject = projects.find((item) => item.id === route?.params.id);
-  const project = routeProject ?? previous?.project;
+  const project = routeProject ?? active.project;
   const { worktrees, loading, error, refresh } = useProjectWorktrees(
     project?.id,
   );
   const requested = routeProject
     ? (new URLSearchParams(search).get("worktree") ?? project?.path)
-    : previous?.path;
+    : active.path;
   const current =
     worktrees.find((item) => item.path === requested) ??
     (!new URLSearchParams(search).has("worktree")

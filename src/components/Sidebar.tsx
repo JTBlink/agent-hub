@@ -15,7 +15,8 @@ import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { SidebarSkillGroups } from "./SidebarSkillGroups";
 import { SidebarProjectFiles } from "./worktree/SidebarProjectFiles";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
-import { lastWorkspace } from "../lib/lastWorkspace";
+import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
+import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { worktreeUrl } from "../lib/worktreeApi";
 import { SidebarActivityBar } from "./SidebarActivityBar";
 
@@ -26,6 +27,8 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { projects, refreshProjects, tools, appUpdate } = useApp();
+  const { project: activeProject, path: activePath } =
+    useActiveWorkspace(projects);
   const panelId = useId();
   const setResourcePanelVisible = useContext(
     SidebarVisibilityContext,
@@ -46,11 +49,19 @@ export function Sidebar() {
   if (panelSelection.routeKey !== location.key) {
     setPanelSelection({
       routeKey: location.key,
-      panel: activeSidebarPanel(location.pathname) ?? "skills",
-      manual: false,
+      panel:
+        panelSelection.panel === "search" &&
+        location.pathname.startsWith("/project/")
+          ? "search"
+          : (activeSidebarPanel(location.pathname) ?? "skills"),
+      manual:
+        panelSelection.panel === "search" &&
+        location.pathname.startsWith("/project/"),
     });
   }
   const selectedPanel = panelSelection.panel;
+  const [searchOpened, setSearchOpened] = useState(false);
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const panelVisible =
     panelOpen &&
     (activeSidebarPanel(location.pathname) !== null || panelSelection.manual);
@@ -58,12 +69,16 @@ export function Sidebar() {
     setResourcePanelVisible?.(panelVisible);
   }, [setResourcePanelVisible, panelVisible]);
   const selectPanel = (panel: SidebarPanel) => {
+    if (panel === "search") {
+      setSearchOpened(true);
+      setSearchFocusRequest((value) => value + 1);
+    }
     if (selectedPanel === panel && panelVisible) return;
     setPanelSelection({ routeKey: location.key, panel, manual: true });
     setPanelOpen(true);
     if (panel === "projects" && !location.pathname.startsWith("/project/")) {
-      const previous = lastWorkspace(projects);
-      if (previous) navigate(worktreeUrl(previous.project.id, previous.path));
+      if (activeProject && activePath)
+        navigate(worktreeUrl(activeProject.id, activePath));
     }
     try {
       localStorage.setItem(PANEL_STORAGE_KEY, "true");
@@ -102,6 +117,38 @@ export function Sidebar() {
     };
   }, [panelVisible, panelWidth, location.pathname]);
 
+  useEffect(() => {
+    const openSearch = (event: Event) => {
+      if (
+        event instanceof KeyboardEvent &&
+        (!(event.metaKey || event.ctrlKey) ||
+          !event.shiftKey ||
+          event.key.toLowerCase() !== "f")
+      )
+        return;
+      event.preventDefault();
+      setSearchOpened(true);
+      setSearchFocusRequest((value) => value + 1);
+      setPanelSelection({
+        routeKey: location.key,
+        panel: "search",
+        manual: true,
+      });
+      setPanelOpen(true);
+      try {
+        localStorage.setItem(PANEL_STORAGE_KEY, "true");
+      } catch {
+        /* Session state still works. */
+      }
+    };
+    window.addEventListener("keydown", openSearch);
+    window.addEventListener("workspace-search-open", openSearch);
+    return () => {
+      window.removeEventListener("keydown", openSearch);
+      window.removeEventListener("workspace-search-open", openSearch);
+    };
+  }, [location.key]);
+
   const handleDeleteProject = async () => {
     if (!deleteProjectTarget) return;
     await api.removeProject(deleteProjectTarget.id);
@@ -133,9 +180,11 @@ export function Sidebar() {
         <ResizableSidebar
           storageKey="agent-hub:sidebar-width"
           label={t(
-            selectedPanel === "projects"
-              ? "sidebar.projects"
-              : "sidebar.skillPanel",
+            selectedPanel === "search"
+              ? "workspaceSearch.title"
+              : selectedPanel === "projects"
+                ? "sidebar.projects"
+                : "sidebar.skillPanel",
           )}
           reserveWidth={360}
           onWidthChange={setPanelWidth}
@@ -143,7 +192,13 @@ export function Sidebar() {
           hidden={!panelVisible}
           className="workbench-sidebar-panel"
         >
-          <div className="flex h-9 shrink-0 items-center justify-between gap-1 px-3">
+          <div
+            hidden={selectedPanel === "search"}
+            className={cn(
+              "h-9 shrink-0 items-center justify-between gap-1 px-3",
+              selectedPanel === "search" ? "hidden" : "flex",
+            )}
+          >
             <span className="truncate text-xs font-semibold text-secondary">
               {t(
                 selectedPanel === "projects"
@@ -176,7 +231,35 @@ export function Sidebar() {
               <PanelLeftClose className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-2">
+          <div
+            hidden={selectedPanel !== "search"}
+            className={cn(
+              "min-h-0 flex-1 flex-col",
+              selectedPanel === "search" ? "flex" : "hidden",
+            )}
+          >
+            {searchOpened && (
+              <WorkspaceSearch
+                focusRequest={searchFocusRequest}
+                active={panelVisible && selectedPanel === "search"}
+                onHide={() => {
+                  togglePanel();
+                  document
+                    .querySelector<HTMLButtonElement>(
+                      'button[data-sidebar-panel="search"]',
+                    )
+                    ?.focus();
+                }}
+              />
+            )}
+          </div>
+          <div
+            hidden={selectedPanel === "search"}
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-2",
+              selectedPanel === "search" && "hidden",
+            )}
+          >
             <div hidden={selectedPanel !== "projects"}>
               <ProjectSwitcher onRemove={setDeleteProjectTarget} />
               <SidebarProjectFiles />

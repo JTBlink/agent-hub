@@ -1,3 +1,4 @@
+import type { ReaderLocation } from "../file-reader/types";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { openFileInVscode } from "../../lib/openInVscode";
@@ -8,10 +9,12 @@ export function WorktreeFilePreview({
   projectId,
   worktreePath,
   path,
+  location,
 }: {
   projectId: string;
   worktreePath: string;
   path: string;
+  location?: ReaderLocation;
 }) {
   const { t } = useTranslation();
   const document = useWorktreeDocument(projectId, worktreePath, path);
@@ -50,6 +53,7 @@ export function WorktreeFilePreview({
       {document.draft !== undefined && (
         <FileContent
           file={{ path, content: document.draft }}
+          location={location}
           maxLength={1024 * 1024}
           actions={
             <div className="flex items-center gap-1 text-xs">

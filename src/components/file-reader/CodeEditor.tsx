@@ -17,12 +17,13 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching, syntaxHighlighting } from "@codemirror/language";
 import { codeHighlightStyle, codeTheme } from "./codeTheme";
 import { languageForPath } from "./codeLanguages";
-import type { ReaderFile } from "./types";
+import type { ReaderFile, ReaderLocation } from "./types";
 
 const externalChange = Annotation.define<boolean>();
 
 interface CodeEditorProps {
   file: ReaderFile;
+  location?: ReaderLocation;
   wrap: boolean;
   maxLength?: number;
   onChange?: (content: string) => void;
@@ -73,6 +74,7 @@ function contentConfiguration({
 /** Controlled text surface; the host remains the authority for draft content. */
 export function CodeEditor({
   file,
+  location,
   wrap,
   maxLength,
   onChange,
@@ -81,6 +83,7 @@ export function CodeEditor({
   const view = useRef<EditorView | null>(null);
   const configuration = useRef(new Compartment());
   const language = useRef(new Compartment());
+  const positioned = useRef<ReaderLocation | undefined>(undefined);
 
   useLayoutEffect(() => {
     if (!host.current) return;
@@ -123,6 +126,24 @@ export function CodeEditor({
         ],
       });
   }, [file, wrap, maxLength, onChange]);
+
+  useLayoutEffect(() => {
+    const editor = view.current;
+    if (!editor || !location || positioned.current === location) return;
+    positioned.current = location;
+    const line = editor.state.doc.line(
+      Math.max(1, Math.min(location.line, editor.state.doc.lines)),
+    );
+    const from =
+      line.from + Math.max(0, Math.min(location.column - 1, line.length));
+    const to =
+      line.from + Math.max(0, Math.min(location.endColumn - 1, line.length));
+    editor.dispatch({
+      selection: { anchor: from, head: Math.max(from, to) },
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+    });
+    editor.focus();
+  }, [location, file.content]);
 
   useCodeLanguage(view, language, file.path);
 

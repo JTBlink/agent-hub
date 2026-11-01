@@ -73,3 +73,37 @@ pub async fn write_worktree_file(
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn search_worktree(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: String,
+    options: crate::core::worktree_search::SearchOptions,
+) -> Result<crate::core::worktree_search::SearchResult, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let directory = project_worktrees::directory(&store, &project_id, Some(&worktree_path))
+            .map_err(AppError::io)?;
+        crate::core::worktree_search::search(&directory, &options).map_err(AppError::io)
+    })
+    .await?
+}
+#[tauri::command]
+pub async fn replace_worktree_matches(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: String,
+    options: crate::core::worktree_search::SearchOptions,
+    replacement: String,
+    files: Vec<crate::core::worktree_search::SearchFile>,
+) -> Result<crate::core::worktree_search::ReplaceResult, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let directory = project_worktrees::directory(&store, &project_id, Some(&worktree_path))
+            .map_err(AppError::io)?;
+        crate::core::worktree_search::replace(&directory, &options, &replacement, &files)
+            .map_err(AppError::io)
+    })
+    .await?
+}

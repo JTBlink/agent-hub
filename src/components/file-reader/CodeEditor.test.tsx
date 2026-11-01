@@ -152,3 +152,36 @@ it("allows shortening existing content that exceeds a newly applied length limit
   editor.dispatch({ changes: { from: 0, insert: "more" } });
   expect(editor.state.sliceDoc()).toBe("too lon");
 });
+
+it("locates search results by UTF-16 columns without resetting a later editor selection", async () => {
+  const location = { line: 2, column: 4, endColumn: 10 };
+  const file = { path: "demo.ts", content: "first\n😀 needle tail\nlast" };
+  await act(async () =>
+    root.render(<CodeEditor file={file} location={location} wrap={false} />),
+  );
+  const editor = codeEditor(host);
+  expect(
+    editor.state.sliceDoc(
+      editor.state.selection.main.from,
+      editor.state.selection.main.to,
+    ),
+  ).toBe("needle");
+  editor.dispatch({ selection: { anchor: 0 } });
+  await act(async () =>
+    root.render(
+      <CodeEditor file={{ ...file }} location={location} wrap={false} />,
+    ),
+  );
+  expect(editor.state.selection.main.from).toBe(0);
+  await act(async () =>
+    root.render(
+      <CodeEditor file={file} location={{ ...location }} wrap={false} />,
+    ),
+  );
+  expect(
+    editor.state.sliceDoc(
+      editor.state.selection.main.from,
+      editor.state.selection.main.to,
+    ),
+  ).toBe("needle");
+});
