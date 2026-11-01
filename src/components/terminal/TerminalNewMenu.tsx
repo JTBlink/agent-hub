@@ -3,12 +3,15 @@ import { useTranslation } from "react-i18next";
 import { herdrAgents, type HerdrAgent } from "../../lib/herdrAgents";
 import { AgentIcon } from "../AgentIcon";
 import { CardActionMenu } from "../CardActionMenu";
+import type { ToolInfo } from "../../lib/tauri";
 
 export function TerminalNewMenu({
   disabled,
+  tools,
   onNew,
 }: {
   disabled: boolean;
+  tools: readonly Pick<ToolInfo, "key" | "installed">[];
   onNew: (agent?: HerdrAgent) => void;
 }) {
   const { t } = useTranslation();
@@ -27,17 +30,21 @@ export function TerminalNewMenu({
           icon: <TerminalSquare size={14} />,
           onSelect: () => onNew(),
         },
-        ...herdrAgents.map(({ id, label, icon }) => ({
-          key: id,
-          label,
-          icon: (
-            <AgentIcon
-              agentKey={icon}
-              className="h-4 w-4 border-0 bg-transparent"
-            />
-          ),
-          onSelect: () => onNew(id),
-        })),
+        ...herdrAgents
+          .filter(({ icon }) =>
+            tools.some((tool) => tool.key === icon && tool.installed),
+          )
+          .map(({ id, label, icon }) => ({
+            key: id,
+            label,
+            icon: (
+              <AgentIcon
+                agentKey={icon}
+                className="h-4 w-4 border-0 bg-transparent"
+              />
+            ),
+            onSelect: () => onNew(id),
+          })),
       ]}
     />
   );

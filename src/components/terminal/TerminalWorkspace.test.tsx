@@ -5,7 +5,7 @@ import { Link, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project } from "../../lib/tauri";
-import { makeProject } from "../../../tests/fixtures/workspace";
+import { makeProject, makeTool } from "../../../tests/fixtures/workspace";
 import {
   createTerminalTab,
   writeTerminalLayout,
@@ -691,10 +691,10 @@ it("launches installed Herdr from the toolbar in the selected shell", async () =
 
 it.each([
   ["Codex", "codex"],
-  ["Claude", "claude"],
+  ["Claude Code", "claude"],
   ["Claude Agent Teams", "claude_teams"],
   ["OpenCode", "opencode"],
-  ["Hermes", "hermes"],
+  ["Hermes Agent", "hermes"],
 ])(
   "opens %s only after selecting it from the new menu, in the current worktree",
   async (label, agent) => {
@@ -718,7 +718,12 @@ it.each([
               `/project/${project.id}?worktree=${encodeURIComponent(topic)}`,
             ]}
           >
-            <TerminalWorkspace projects={[project]} />
+            <TerminalWorkspace
+              projects={[project]}
+              tools={["codex", "claude_code", "opencode", "hermes"].map((key) =>
+                makeTool(key),
+              )}
+            />
           </MemoryRouter>,
         ),
       );

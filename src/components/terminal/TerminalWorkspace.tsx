@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { terminalTaskRequest } from "../../lib/taskContext";
 import { getErrorMessage } from "../../lib/error";
-import type { Project } from "../../lib/tauri";
+import type { Project, ToolInfo } from "../../lib/tauri";
 import { ThemedSelect } from "../ThemedSelect";
 import { TerminalPane, type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
@@ -38,6 +38,7 @@ import type { HerdrAgent } from "../../lib/herdrAgents";
 
 interface Props {
   projects: Project[];
+  tools?: readonly ToolInfo[];
   shown?: boolean;
   projectsReady?: boolean;
   toolbar?: ReactNode;
@@ -51,6 +52,7 @@ const toolbarAction = "app-button-ghost h-7 w-7 shrink-0 p-0";
 
 export function TerminalWorkspace({
   projects,
+  tools = [],
   shown = true,
   projectsReady = true,
   toolbar,
@@ -377,6 +379,7 @@ export function TerminalWorkspace({
           >
             {shown && (
               <TerminalNewMenu
+                tools={tools}
                 disabled={
                   !ready ||
                   !(scopedProject || selected) ||

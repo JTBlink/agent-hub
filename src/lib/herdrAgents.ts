@@ -4,10 +4,10 @@ export type HerdrAgent =
 
 export const herdrAgents: { id: HerdrAgent; label: string; icon: string }[] = [
   { id: "codex", label: "Codex", icon: "codex" },
-  { id: "claude", label: "Claude", icon: "claude_code" },
+  { id: "claude", label: "Claude Code", icon: "claude_code" },
   { id: "claude_teams", label: "Claude Agent Teams", icon: "claude_code" },
   { id: "opencode", label: "OpenCode", icon: "opencode" },
-  { id: "hermes", label: "Hermes", icon: "hermes" },
+  { id: "hermes", label: "Hermes Agent", icon: "hermes" },
 ];
 
 export const herdrAgentLabel = (agent: HerdrAgent) =>

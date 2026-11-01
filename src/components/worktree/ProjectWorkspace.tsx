@@ -25,7 +25,7 @@ export function ProjectWorkspace({ page }: { page?: ReactNode }) {
   const [gitTabsContainer, setGitTabsContainer] =
     useState<HTMLDivElement | null>(null);
   const [fileToolbar, setFileToolbar] = useState<HTMLDivElement | null>(null);
-  const { projects, loading: projectsLoading, appError } = useApp();
+  const { projects, tools, loading: projectsLoading, appError } = useApp();
   const location = useLocation();
   const activeWorkspace = useActiveWorkspace(projects);
   const gitPage = location.pathname === "/git";
@@ -99,6 +99,7 @@ export function ProjectWorkspace({ page }: { page?: ReactNode }) {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TerminalWorkspace
             projects={projects}
+            tools={tools}
             onProjectSkills={
               route ? () => setSkillsSelection(skillsKey) : undefined
             }

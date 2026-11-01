@@ -26,6 +26,8 @@
 
 ### Changed
 
+- 终端新建菜单与设置页共用 Agent 安装检测结果，仅显示已安装的受支持 Agent；Claude Agent Teams 跟随 Claude Code 的安装状态，名称与设置页保持一致。
+
 - 终端“+”按钮紧跟终端标签并展开新建菜单，支持普通终端、Codex、Claude、Claude Agent Teams、OpenCode 与 Hermes；Agent 由独立 Herdr 模块在当前工作树以 YOLO 模式启动，重启应用不重放启动请求。
 
 - 源代码管理默认隐藏“最近提交”，通过工具栏历史按钮按需显示或隐藏，为变更文件列表保留空间。
