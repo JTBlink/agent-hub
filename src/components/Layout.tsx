@@ -13,6 +13,8 @@ import { ProjectWorkspace } from "./worktree/ProjectWorkspace";
 import { projectWorkspaceRoute } from "../lib/worktreeApi";
 import { cn } from "../utils";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
+import { AgentUsageStatusBar } from "./usage/AgentUsageStatusBar";
+import { SystemLoadStatus } from "./SystemLoadStatus";
 
 export function Layout() {
   const { t } = useTranslation();
@@ -159,6 +161,10 @@ export function Layout() {
             <span className="workbench-status-fallback truncate">
               {t("app.name")}
             </span>
+            <div className="ml-auto flex h-full shrink-0 items-center gap-3">
+              <AgentUsageStatusBar />
+              <SystemLoadStatus />
+            </div>
           </footer>
           <AddProjectDialog
             open={manageWorkspaces}

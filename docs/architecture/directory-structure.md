@@ -21,6 +21,7 @@ agent-hub/
 │   │   └── workspaceConfigs.ts     #   工作空间配置定义
 │   ├── components/                 # 共享 UI 组件
 │   │   ├── Layout.tsx              #   主布局框架
+│   │   ├── usage/                  #   Agent 订阅用量摘要与详情
 │   │   ├── Sidebar.tsx             #   侧边栏导航
 │   │   ├── CommandPalette.tsx      #   命令面板
 │   │   ├── DetailSheet.tsx         #   详情抽屉
@@ -52,6 +53,7 @@ agent-hub/
 │   │   ├── AppContext.tsx          #   应用全局上下文
 │   │   └── ThemeContext.tsx        #   主题上下文
 │   ├── hooks/                      # 自定义 Hooks
+│   │   ├── useAgentUsage.ts        #   前台用量刷新、并发与生命周期
 │   │   ├── useLocalSkillManagement.ts # 本地内容读取与删除状态
 │   │   ├── useGitRepositories.ts  #   仓库目录持久化、并发状态与安装请求
 │   │   ├── useWorkspaceSkills.ts #   按页面作用域扫描与显式刷新工作空间状态
@@ -73,6 +75,7 @@ agent-hub/
 │   │   ├── distribution.ts         #   分发逻辑
 │   │   ├── exportAgents.ts         #   Agent 导出
 │   │   ├── agentIcons.ts           #   Agent 图标映射
+│   │   ├── agentUsage.ts           #   额度快照类型与展示计算
 │   │   ├── skillTags.ts            #   技能标签
 │   │   ├── skillPickerStatus.ts    #   技能选择状态
 │   │   ├── skillGroupStatus.ts      #   技能组状态
@@ -124,6 +127,7 @@ agent-hub/
 │   │   │   └── app_updates.rs      #     应用更新
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
+│   │       ├── agent_usage/        #     独立 Claude／Codex 额度、凭据与缓存
 │   │       ├── app_state.rs        #     全局应用状态
 │   │       ├── error.rs            #     统一错误类型
 │   │       ├── tool_detection.rs   #     Agent 程序、桌面应用与 IDE 扩展安装检测

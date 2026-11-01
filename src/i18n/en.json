@@ -1,4 +1,44 @@
 {
+  "systemLoad": {
+    "title": "System load",
+    "cpu": "System CPU: {{percent}}",
+    "memory": "System memory: {{percent}} ({{used}} / {{total}} GiB)",
+    "sampling": "Sampling system load…",
+    "unavailable": "System load unavailable"
+  },
+  "agentUsage": {
+    "title": "Agent usage",
+    "refresh": "Refresh usage",
+    "description": "Subscription quota and reset times for your current sign-in.",
+    "loading": "Checking usage…",
+    "used": "{{percent}}% used",
+    "minutes": "{{count}} minutes",
+    "resetsAt": "Resets: {{time}}",
+    "checkedAt": "Checked {{time}}",
+    "loginHint": "Sign in through Claude Code or Codex. Official subscriptions are supported. Automatic refresh runs while this window is active.",
+    "windows": {
+      "five_hour": "5 hours",
+      "seven_day": "Weekly",
+      "seven_day_sonnet": "Sonnet weekly",
+      "seven_day_opus": "Opus weekly",
+      "primary": "Primary window",
+      "secondary": "Secondary window"
+    },
+    "status": {
+      "ready": "Usage updated",
+      "not_installed": "Codex CLI was not found. Install it and sign in.",
+      "signed_out": "Not signed in. Sign in through the corresponding tool.",
+      "unsupported": "API keys and custom services do not provide subscription quota.",
+      "credentials_unavailable": "Could not read sign-in credentials. Check the credential file or Keychain access.",
+      "auth_expired": "Sign-in expired. Sign in again through the tool, then refresh.",
+      "permission_denied": "This sign-in cannot read usage. Check account permissions or sign in again.",
+      "rate_limited": "Too many usage checks. Retrying after a cooldown.",
+      "network_error": "Connection timed out or network unavailable. Check your network and proxy, then refresh.",
+      "invalid_response": "Usage data was not recognized. Update the tool or retry later.",
+      "no_data": "No current quota data. Refresh later.",
+      "query_failed": "Usage check failed. Update the tool or retry later."
+    }
+  },
   "menu": {
     "developerMode": "Developer Mode",
     "file": "File",

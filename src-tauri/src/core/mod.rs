@@ -1,3 +1,4 @@
+pub mod agent_usage;
 pub mod app_state;
 pub mod app_updates;
 pub mod audit_log;
@@ -50,6 +51,7 @@ pub mod skill_versions;
 pub mod skillssh_api;
 pub mod sync_engine;
 pub mod sync_metadata;
+pub mod system_load;
 pub mod timing;
 pub mod tool_adapters;
 mod tool_detection;

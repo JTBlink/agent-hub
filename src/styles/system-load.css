@@ -1,0 +1,58 @@
+.system-load-status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1em;
+  height: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.system-load-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.system-load-history {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(1px / var(--app-scale));
+  width: calc(47px / var(--app-scale));
+  height: calc(11px / var(--app-scale));
+}
+
+.system-load-bar {
+  width: calc(2px / var(--app-scale));
+  flex: none;
+}
+
+.system-load-meter {
+  width: calc(32px / var(--app-scale));
+  height: calc(5px / var(--app-scale));
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border-subtle);
+}
+
+.system-load-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.system-load-status .normal {
+  background: var(--color-text-muted);
+}
+
+.system-load-status .warning {
+  background: var(--terminal-yellow);
+}
+
+.system-load-status .critical {
+  background: var(--color-danger);
+}
+
+.system-load-percent {
+  min-width: 4ch;
+  text-align: right;
+}

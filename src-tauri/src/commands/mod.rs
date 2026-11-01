@@ -1,4 +1,5 @@
 pub mod agent_control;
+pub mod agent_usage;
 pub mod agent_workspace;
 pub mod app_updates;
 pub mod automation;
@@ -20,6 +21,7 @@ pub mod skills;
 mod skills_diff_metadata;
 mod skills_update_policy;
 pub mod sync;
+pub mod system_load;
 pub mod tools;
 
 pub mod local_cleanup;

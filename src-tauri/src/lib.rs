@@ -869,6 +869,8 @@ pub fn run() {
     tauri::Builder::default()
         .manage(store)
         .manage(cancel_registry)
+        .manage(Arc::new(core::agent_usage::AgentUsage::default()))
+        .manage(Arc::new(std::sync::Mutex::new(core::system_load::SystemLoad::default())))
         .manage(Arc::new(core::terminal::TerminalManager::default()))
         .manage(Arc::new(core::herdr_tools::HerdrTools::default()))
         .manage(Arc::new(core::file_preview::FilePreviews::default()))
@@ -1067,6 +1069,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::agent_usage::get_agent_usage,
+            commands::system_load::get_system_load,
             commands::herdr_tools::herdr_detect,
             commands::herdr_tools::herdr_install,
             commands::herdr_tools::herdr_check_update,

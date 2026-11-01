@@ -1,4 +1,44 @@
 {
+  "systemLoad": {
+    "title": "系统负载",
+    "cpu": "本机 CPU：{{percent}}",
+    "memory": "本机内存：{{percent}}（{{used}} / {{total}} GiB）",
+    "sampling": "正在采样系统负载…",
+    "unavailable": "系统负载暂不可用"
+  },
+  "agentUsage": {
+    "title": "Agent 用量",
+    "refresh": "刷新用量",
+    "description": "查看当前登录账户的订阅额度与重置时间。",
+    "loading": "正在查询用量…",
+    "used": "已用 {{percent}}%",
+    "minutes": "{{count}} 分钟",
+    "resetsAt": "重置：{{time}}",
+    "checkedAt": "查询于 {{time}}",
+    "loginHint": "请在 Claude Code 或 Codex 中完成登录。支持官方订阅，自动刷新仅在窗口处于前台时运行。",
+    "windows": {
+      "five_hour": "5 小时",
+      "seven_day": "每周",
+      "seven_day_sonnet": "Sonnet 每周",
+      "seven_day_opus": "Opus 每周",
+      "primary": "主要周期",
+      "secondary": "次要周期"
+    },
+    "status": {
+      "ready": "用量已更新",
+      "not_installed": "未找到 Codex CLI，请先安装并登录。",
+      "signed_out": "尚未登录，请先在对应工具中登录。",
+      "unsupported": "当前为 API key 或自定义服务，不提供订阅额度。",
+      "credentials_unavailable": "无法读取登录凭据，请检查凭据文件或钥匙串访问权限。",
+      "auth_expired": "登录已失效，请在对应工具中重新登录后刷新。",
+      "permission_denied": "当前登录无权查询用量，请检查账户权限或重新登录。",
+      "rate_limited": "查询过于频繁，稍后将自动重试。",
+      "network_error": "连接超时或网络不可用，请检查网络与代理后刷新。",
+      "invalid_response": "用量数据无法识别，请更新工具或稍后重试。",
+      "no_data": "暂无有效额度数据，请稍后刷新。",
+      "query_failed": "查询失败，请更新工具或稍后重试。"
+    }
+  },
   "menu": {
     "developerMode": "开发者模式",
     "file": "文件",
