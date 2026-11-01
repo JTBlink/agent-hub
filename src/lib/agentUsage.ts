@@ -19,14 +19,24 @@ export interface UsageWindow {
   resets_at: number | null;
   window_minutes: number | null;
 }
+export interface ResetCredit {
+  reset_type: string;
+  title: string | null;
+  expires_at: number | null;
+}
+export interface ResetCredits {
+  available_count: number;
+  credits: ResetCredit[] | null;
+}
 export interface ProviderUsage {
   provider: UsageProvider;
   status: UsageStatus;
   windows: UsageWindow[];
+  reset_credits?: ResetCredits | null;
   updated_at: number;
   retry_after_seconds: number | null;
 }
-export const USAGE_PROVIDERS: UsageProvider[] = ["claude", "codex"];
+export const USAGE_PROVIDERS: UsageProvider[] = ["codex", "claude"];
 export const isTransientUsageFailure = (status: UsageStatus) =>
   status === "network_error" ||
   status === "query_failed" ||
@@ -64,4 +74,27 @@ export function quotaTime(timestamp: number, locale: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(timestamp * 1000));
+}
+
+/** Warn within the final 72 hours, excluding credits that have already expired. */
+export function resetCreditExpiring(
+  credit: ResetCredit,
+  now = Date.now(),
+): boolean {
+  if (credit.expires_at === null) return false;
+  const remaining = credit.expires_at * 1000 - now;
+  return remaining > 0 && remaining <= 3 * 24 * 60 * 60 * 1000;
+}
+
+export function hasExpiringResetCredits(
+  snapshot: ProviderUsage | undefined,
+  now = Date.now(),
+): boolean {
+  return (
+    snapshot?.status === "ready" &&
+    snapshot.provider === "codex" &&
+    !!snapshot.reset_credits?.credits?.some((credit) =>
+      resetCreditExpiring(credit, now),
+    )
+  );
 }

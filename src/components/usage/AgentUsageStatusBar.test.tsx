@@ -101,7 +101,7 @@ afterEach(async () => {
 
 it("shows the tightest quota and zero, opens details and restores focus with Escape", async () => {
   await render();
-  expect(button("Agent 用量").textContent).toBe("85%0%");
+  expect(button("Agent 用量").textContent).toBe("0%85%");
   await click("Agent 用量");
   const panel = document.querySelector<HTMLElement>('[role="dialog"]')!;
   expect(panel).not.toBeNull();
@@ -222,7 +222,7 @@ it("keeps the usage entry available without quota and shows percentages after re
   await render();
   expect(button("Agent 用量").textContent).toBe("Agent 用量");
   await act(async () => vi.advanceTimersByTime(300000));
-  expect(button("Agent 用量").textContent).toBe("85%0%");
+  expect(button("Agent 用量").textContent).toBe("0%85%");
 });
 
 it("recovers a hidden Codex quota promptly after a transient query failure", async () => {
@@ -267,6 +267,99 @@ it("opens failure details and manually recovers through the persistent usage ent
   expect(panel.textContent).toContain("查询失败");
   expect(panel.querySelector('[role="progressbar"]')).toBeNull();
   await click("刷新用量");
-  expect(button("Agent 用量").textContent).toBe("85%0%");
+  expect(button("Agent 用量").textContent).toBe("0%85%");
   expect(panel.querySelectorAll('[role="progressbar"]')).toHaveLength(3);
+});
+
+it("prioritizes Codex and warns in the status bar and reset details before expiry", async () => {
+  const snapshots = fixture();
+  const codex = snapshots.find((item) => item.provider === "codex")!;
+  codex.reset_credits = {
+    available_count: 4,
+    credits: [
+      {
+        reset_type: "codexRateLimits",
+        title: null,
+        expires_at: codex.updated_at + 86400,
+      },
+      {
+        reset_type: "codexRateLimits",
+        title: null,
+        expires_at: codex.updated_at + 10 * 86400,
+      },
+      {
+        reset_type: "codexRateLimits",
+        title: null,
+        expires_at: codex.updated_at - 1,
+      },
+      { reset_type: "futureType", title: "Example reset", expires_at: null },
+    ],
+  };
+  vi.mocked(getAgentUsage).mockResolvedValue(snapshots);
+  await render();
+  expect(button("Agent 用量").textContent).toContain("重置额度即将到期");
+  expect(button("Agent 用量").textContent).toContain("0%85%");
+  await click("Agent 用量");
+  const panel = document.querySelector('[role="dialog"]')!;
+  const providers = panel.querySelectorAll(
+    'section[aria-label="Codex"], section[aria-label="Claude"]',
+  );
+  expect(providers[0].getAttribute("aria-label")).toBe("Codex");
+  const resets = panel.querySelector('section[aria-label="使用限额重置"]')!;
+  expect(resets.textContent).toContain("可用 4 次");
+  expect(resets.querySelectorAll("li")).toHaveLength(4);
+  expect(resets.textContent).toContain("未提供到期时间");
+  expect(resets.textContent).toContain("已到期");
+  expect(resets.querySelectorAll("li.text-danger")).toHaveLength(1);
+  expect(resets.querySelector("li.text-danger")?.textContent).toContain(
+    "即将到期，请尽快使用",
+  );
+});
+
+it("distinguishes absent reset data, a known zero, and count-only results", async () => {
+  for (const reset_credits of [
+    undefined,
+    { available_count: 0, credits: [] },
+    { available_count: 2, credits: null },
+  ]) {
+    const snapshots = fixture();
+    snapshots[1].reset_credits = reset_credits;
+    vi.mocked(getAgentUsage).mockResolvedValue(snapshots);
+    await render();
+    await click("Agent 用量");
+    await click("刷新用量");
+    const resets = document.querySelector('section[aria-label="使用限额重置"]');
+    if (!reset_credits) expect(resets).toBeNull();
+    else {
+      expect(resets?.textContent).toContain(
+        `可用 ${reset_credits.available_count} 次`,
+      );
+      if (reset_credits.credits === null)
+        expect(resets?.textContent).toContain("暂未提供额度明细");
+    }
+    await click("关闭");
+  }
+});
+
+it("starts the expiry reminder as the clock enters the three-day window without another query", async () => {
+  vi.useFakeTimers();
+  const snapshots = fixture();
+  const codex = snapshots.find((item) => item.provider === "codex")!;
+  codex.reset_credits = {
+    available_count: 1,
+    credits: [
+      {
+        reset_type: "codexRateLimits",
+        title: null,
+        expires_at: codex.updated_at + 3 * 86400 + 60,
+      },
+    ],
+  };
+  vi.mocked(getAgentUsage).mockResolvedValue(snapshots);
+  await render();
+  expect(button("Agent 用量").textContent).not.toContain("重置额度即将到期");
+  const queries = vi.mocked(getAgentUsage).mock.calls.length;
+  await act(async () => vi.advanceTimersByTime(60_000));
+  expect(button("Agent 用量").textContent).toContain("重置额度即将到期");
+  expect(getAgentUsage).toHaveBeenCalledTimes(queries);
 });

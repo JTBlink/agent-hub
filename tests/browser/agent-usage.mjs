@@ -65,12 +65,20 @@ try {
       JSON.stringify(metrics),
     );
     assert.ok(Math.abs(metrics.bar - 32) < 1, `Status bar: ${metrics.bar}`);
-    assert.deepEqual(metrics.progress, ["23", "81", "0"]);
+    assert.deepEqual(metrics.progress, ["0", "23", "81"]);
     if (width === 1440)
       await request(
         `/screenshot?target=${targetId}&file=/tmp/agent-hub-usage-preview.png`,
       );
     assert.ok(!metrics.text.includes("agentUsage."), metrics.text);
+    const resets = await evaluate(
+      `(()=>{const d=${doc},p=d.querySelector('[role="dialog"]'),rows=[...p.querySelectorAll('li')];return {first:p.querySelector('section')?.getAttribute('aria-label'),rows:rows.length,urgent:rows.filter(n=>n.classList.contains('text-danger')).length,colors:rows.map(n=>d.defaultView.getComputedStyle(n).color),reminder:!!d.querySelector('footer .text-danger[title]')}})()`,
+    );
+    assert.equal(resets.first, "Codex");
+    assert.equal(resets.rows, 2);
+    assert.equal(resets.urgent, 1);
+    assert.notEqual(resets.colors[0], resets.colors[1]);
+    assert.equal(resets.reminder, true);
     await evaluate(
       `(()=>{const d=${doc};d.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true})()`,
     );

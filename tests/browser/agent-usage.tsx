@@ -51,6 +51,21 @@ Object.assign(window, {
         {
           provider: "codex",
           status: "ready",
+          reset_credits: {
+            available_count: 2,
+            credits: [
+              {
+                reset_type: "codexRateLimits",
+                title: null,
+                expires_at: now + 2 * 86400,
+              },
+              {
+                reset_type: "codexRateLimits",
+                title: null,
+                expires_at: now + 10 * 86400,
+              },
+            ],
+          },
           windows: [
             {
               key: "five_hour",

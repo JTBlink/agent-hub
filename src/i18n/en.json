@@ -11,6 +11,18 @@
     "unavailable": "System load unavailable"
   },
   "agentUsage": {
+    "resetCredits": {
+      "title": "Usage limit resets",
+      "available": "{{count}} available",
+      "fullReset": "Full reset",
+      "reset": "Limit reset",
+      "expiresAt": "Expires: {{time}}",
+      "expiryUnknown": "Expiration not provided",
+      "detailsUnavailable": "Reset details are not available",
+      "expiring": "Expiring soon — use your reset credit",
+      "expired": "Expired",
+      "useSoon": "Reset credit expiring soon"
+    },
     "title": "Agent usage",
     "refresh": "Refresh usage",
     "description": "Subscription quota and reset times for your current sign-in.",

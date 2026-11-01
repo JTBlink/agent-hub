@@ -1,5 +1,8 @@
 //! Query the installed CLI's documented app-server account API, never a turn.
-use super::{valid_percent, ProviderUsage, UsageProvider, UsageStatus, UsageWindow};
+use super::{
+    valid_percent, ProviderUsage, ResetCredit, ResetCredits, UsageProvider, UsageStatus,
+    UsageWindow,
+};
 use serde_json::{json, Value};
 use std::{path::Path, process::Stdio, time::Duration};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
@@ -218,7 +221,35 @@ fn parse(data: &Value) -> Result<ProviderUsage, UsageStatus> {
                 .filter(|v| *v > 0 && *v <= 253402300799),
         });
     }
-    Ok(ProviderUsage::ready(UsageProvider::Codex, windows))
+    let mut snapshot = ProviderUsage::ready(UsageProvider::Codex, windows);
+    snapshot.reset_credits = parse_reset_credits(&data["rateLimitResetCredits"]);
+    if snapshot.reset_credits.is_some() {
+        snapshot.status = UsageStatus::Ready;
+    }
+    Ok(snapshot)
+}
+
+fn parse_reset_credits(raw: &Value) -> Option<ResetCredits> {
+    let available_count = raw["availableCount"].as_u64()?;
+    let credits = raw["credits"].as_array().map(|rows| {
+        rows.iter()
+            .filter(|row| row["status"] == "available")
+            .map(|row| ResetCredit {
+                reset_type: row["resetType"].as_str().unwrap_or_default().to_owned(),
+                title: row["title"]
+                    .as_str()
+                    .filter(|title| !title.trim().is_empty())
+                    .map(str::to_owned),
+                expires_at: row["expiresAt"]
+                    .as_i64()
+                    .filter(|time| *time > 0 && *time <= 253402300799),
+            })
+            .collect()
+    });
+    Some(ResetCredits {
+        available_count,
+        credits,
+    })
 }
 
 #[cfg(test)]

@@ -1,11 +1,13 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Gauge } from "lucide-react";
+import { AlertTriangle, Gauge } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "../AgentIcon";
+import { useCurrentTime } from "../../hooks/useCurrentTime";
 import { useAgentUsage } from "../../hooks/useAgentUsage";
 import {
   highestUsage,
+  hasExpiringResetCredits,
   USAGE_PROVIDERS,
   usageAgentKey,
   usageProviderName,
@@ -14,6 +16,7 @@ import { AgentUsagePanel } from "./AgentUsagePanel";
 
 export function AgentUsageStatusBar() {
   const { t } = useTranslation();
+  const now = useCurrentTime();
   const { snapshots, loading, failed, refresh } = useAgentUsage();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -54,12 +57,15 @@ export function AgentUsageStatusBar() {
 
   const visibleProviders = USAGE_PROVIDERS.flatMap((provider) => {
     const snapshot = snapshots.find((item) => item.provider === provider);
-    const percent = highestUsage(snapshot);
+    const percent = highestUsage(snapshot, now);
     return percent !== null && Number.isFinite(percent)
       ? [{ provider, percent }]
       : [];
   });
 
+  const expiringReset = snapshots.some((snapshot) =>
+    hasExpiringResetCredits(snapshot, now),
+  );
   return (
     <>
       <button
@@ -77,6 +83,15 @@ export function AgentUsageStatusBar() {
           if (!open) void refresh();
         }}
       >
+        {expiringReset && (
+          <span
+            className="inline-flex items-center gap-1 text-danger"
+            title={t("agentUsage.resetCredits.expiring")}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>{t("agentUsage.resetCredits.useSoon")}</span>
+          </span>
+        )}
         {visibleProviders.length === 0 && (
           <>
             <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
@@ -118,6 +133,7 @@ export function AgentUsageStatusBar() {
             }}
           >
             <AgentUsagePanel
+              now={now}
               snapshots={snapshots}
               loading={loading}
               failed={failed}

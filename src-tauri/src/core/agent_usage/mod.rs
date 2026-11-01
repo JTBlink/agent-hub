@@ -45,10 +45,25 @@ pub struct UsageWindow {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct ResetCredit {
+    pub reset_type: String,
+    pub title: Option<String>,
+    pub expires_at: Option<i64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct ResetCredits {
+    pub available_count: u64,
+    /// None means the service returned only the count; rows may be capped.
+    pub credits: Option<Vec<ResetCredit>>,
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub struct ProviderUsage {
     pub provider: UsageProvider,
     pub status: UsageStatus,
     pub windows: Vec<UsageWindow>,
+    pub reset_credits: Option<ResetCredits>,
     pub updated_at: i64,
     pub retry_after_seconds: Option<u64>,
 }
@@ -59,6 +74,7 @@ impl ProviderUsage {
             provider,
             status,
             windows: Vec::new(),
+            reset_credits: None,
             updated_at: chrono::Utc::now().timestamp(),
             retry_after_seconds: None,
         }

@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { RefreshCw, X } from "lucide-react";
 import { AgentIcon } from "../AgentIcon";
+import { ResetCreditsSection } from "./ResetCreditsSection";
 import {
   currentUsageWindows,
   quotaTime,
@@ -11,6 +12,7 @@ import {
 } from "../../lib/agentUsage";
 
 export function AgentUsagePanel({
+  now,
   snapshots,
   loading,
   failed,
@@ -18,6 +20,7 @@ export function AgentUsagePanel({
   onRefresh,
   onClose,
 }: {
+  now: number;
   snapshots: ProviderUsage[];
   loading: boolean;
   failed: boolean;
@@ -62,7 +65,7 @@ export function AgentUsagePanel({
       <div className="space-y-4" aria-busy={loading}>
         {USAGE_PROVIDERS.map((provider) => {
           const snapshot = snapshots.find((item) => item.provider === provider);
-          const windows = currentUsageWindows(snapshot);
+          const windows = currentUsageWindows(snapshot, now);
           const status =
             snapshot?.status === "ready" && windows.length === 0
               ? "no_data"
@@ -123,7 +126,8 @@ export function AgentUsagePanel({
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : snapshot?.status === "ready" &&
+                snapshot.reset_credits ? null : (
                 <p className="text-xs leading-relaxed text-muted" role="status">
                   {t(
                     loading && !snapshot
@@ -132,6 +136,14 @@ export function AgentUsagePanel({
                   )}
                 </p>
               )}
+              {provider === "codex" &&
+                snapshot?.status === "ready" &&
+                snapshot.reset_credits && (
+                  <ResetCreditsSection
+                    credits={snapshot.reset_credits}
+                    now={now}
+                  />
+                )}
               {snapshot && (
                 <p className="mt-2 text-xs text-accent-light">
                   {t("agentUsage.checkedAt", {

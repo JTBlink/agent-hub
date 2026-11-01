@@ -11,6 +11,18 @@
     "unavailable": "系统负载暂不可用"
   },
   "agentUsage": {
+    "resetCredits": {
+      "title": "使用限额重置",
+      "available": "可用 {{count}} 次",
+      "fullReset": "完全重置",
+      "reset": "限额重置",
+      "expiresAt": "到期：{{time}}",
+      "expiryUnknown": "未提供到期时间",
+      "detailsUnavailable": "暂未提供额度明细",
+      "expiring": "即将到期，请尽快使用",
+      "expired": "已到期",
+      "useSoon": "重置额度即将到期"
+    },
     "title": "Agent 用量",
     "refresh": "刷新用量",
     "description": "查看当前登录账户的订阅额度与重置时间。",

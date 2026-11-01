@@ -37,3 +37,38 @@ it("uses the tightest live window, preserving zero and excluding expired or fail
   ).toBeNull();
   expect(highestUsage(undefined)).toBeNull();
 });
+
+it("warns only for live reset credits within the inclusive 72-hour boundary", async () => {
+  const { resetCreditExpiring, hasExpiringResetCredits } =
+    await import("./agentUsage");
+  const now = Date.now();
+  const seconds = Math.floor(now / 1000);
+  const credit = {
+    reset_type: "codexRateLimits",
+    title: null,
+    expires_at: seconds + 3 * 86400,
+  };
+  expect(resetCreditExpiring(credit, seconds * 1000)).toBe(true);
+  expect(
+    resetCreditExpiring(
+      { ...credit, expires_at: credit.expires_at + 1 },
+      seconds * 1000,
+    ),
+  ).toBe(false);
+  expect(
+    resetCreditExpiring({ ...credit, expires_at: seconds }, seconds * 1000),
+  ).toBe(false);
+  expect(resetCreditExpiring({ ...credit, expires_at: null }, now)).toBe(false);
+  const snapshot: ProviderUsage = {
+    provider: "codex",
+    status: "ready",
+    windows: [],
+    updated_at: seconds,
+    retry_after_seconds: null,
+    reset_credits: { available_count: 2, credits: [credit] },
+  };
+  expect(hasExpiringResetCredits(snapshot)).toBe(true);
+  expect(hasExpiringResetCredits({ ...snapshot, status: "query_failed" })).toBe(
+    false,
+  );
+});
