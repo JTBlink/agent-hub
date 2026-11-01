@@ -44,6 +44,9 @@ export function useHerdrShortcut(
       setNotice(t("terminal.herdrWait"));
       return;
     }
+    // Transfer focus before disabling the clicked button. Otherwise the
+    // WebView's focus fallback can look like navigation and cancel launch.
+    pane.focus();
     const inputRevision = pane.inputRevision();
     const selectionRevision = selection.current.revision;
     const originalFocus = document.activeElement;

@@ -1,4 +1,10 @@
-import { LayoutGrid, Maximize2, Minimize2, PanelLeft } from "lucide-react";
+import {
+  LayoutGrid,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  PanelLeft,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
 
@@ -35,11 +41,20 @@ export function TerminalPanelTools({
         <>
           <button
             type="button"
-            className="app-button-ghost h-7 shrink-0 px-2 py-0 text-xs"
-            disabled={!hasTerminal || herdrBusy}
-            onClick={onHerdr}
+            className="app-button-ghost h-7 shrink-0 gap-1 px-2 py-0 text-xs aria-disabled:opacity-50"
+            // Keep native focus stable during preparation. Disabling the clicked
+            // button can move focus to the WebView document and cancel launch.
+            disabled={!hasTerminal}
+            aria-disabled={!hasTerminal || herdrBusy}
+            aria-busy={herdrBusy}
+            onClick={() => {
+              if (!herdrBusy) onHerdr();
+            }}
             title={t("terminal.herdrLaunch")}
           >
+            {herdrBusy && (
+              <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+            )}
             Herdr{hasUpdate ? " •" : ""}
           </button>
           <button

@@ -632,3 +632,53 @@ it("switches between peer file and terminal tabs without replacing running panes
     host.remove();
   }
 });
+
+it("launches installed Herdr from the toolbar in the selected shell", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "terminal_list") return [];
+    if (command === "terminal_project_directory") return "<workspace>";
+    if (command === "terminal_create")
+      return { id: "launch-pty", cwd: "<workspace>" };
+    if (command === "terminal_launch_state")
+      return { ready: true, revision: 9, herdr_active: false };
+    if (command === "herdr_detect")
+      return { path: "<tools>/herdr", version: "1.0.0", managed: false };
+    if (command === "herdr_check_update")
+      return { has_update: false, latest_version: "1.0.0", managed: false };
+    if (command === "terminal_launch_herdr") return true;
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter
+          initialEntries={[
+            { pathname: "/terminal", state: { projectId: "demo" } },
+          ]}
+        >
+          <TerminalWorkspace
+            projects={[{ ...makeProject(), path: "<workspace>" }]}
+            onMaximizedChange={() => {}}
+          />
+        </MemoryRouter>,
+      ),
+    );
+    const button = host.querySelector<HTMLButtonElement>(
+      'button[title="terminal.herdrLaunch"]',
+    )!;
+    expect(button.disabled).toBe(false);
+    await act(async () => {
+      button.focus();
+      button.click();
+    });
+    expect(invoke).toHaveBeenCalledWith("terminal_launch_herdr", {
+      id: "launch-pty",
+      revision: 9,
+    });
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

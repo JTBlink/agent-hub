@@ -6,10 +6,21 @@ use std::{path::Path, sync::mpsc, time::Duration};
 
 #[test]
 fn shortcut_requires_verified_prompt_and_unchanged_input() {
+    verify_shell_launch("/bin/bash");
+}
+
+#[test]
+fn zsh_shortcut_launches_at_verified_prompt() {
+    if Path::new("/bin/zsh").exists() {
+        verify_shell_launch("/bin/zsh");
+    }
+}
+
+fn verify_shell_launch(program: &str) {
     let directory = tempfile::tempdir().unwrap();
     std::fs::write(directory.path().join(".bashrc"), "PROMPT_COMMAND='true;'\n").unwrap();
     let (command, integration) =
-        prepare_shell(Some(Path::new("/bin/bash")), Some(directory.path())).unwrap();
+        prepare_shell(Some(Path::new(program)), Some(directory.path())).unwrap();
     let manager = TerminalManager::default();
     let (tx, rx) = mpsc::channel();
     let session = manager
