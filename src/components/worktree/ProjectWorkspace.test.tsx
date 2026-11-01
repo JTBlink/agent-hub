@@ -32,19 +32,31 @@ vi.mock("../../lib/worktreeApi", async (importOriginal) => ({
 vi.mock("../terminal/TerminalWorkspace", () => ({
   TerminalWorkspace: ({
     shown,
-    toolbarStart,
     toolbarEnd,
+    extraTabs,
+    content,
+    onSelectTerminal,
   }: {
     shown: boolean;
-    toolbarStart?: ReactNode;
     toolbarEnd?: ReactNode;
+    extraTabs?: ReactNode;
+    content?: ReactNode;
+    onSelectTerminal?: () => void;
   }) => (
-    <div hidden={!shown} data-terminal>
+    <div>
       <div data-terminal-toolbar>
-        {toolbarStart}
+        <div role="tablist">
+          <button role="tab" aria-selected={shown} onClick={onSelectTerminal}>
+            terminal.title
+          </button>
+          {extraTabs}
+        </div>
         {toolbarEnd}
       </div>
-      Shell
+      <div hidden={!shown} data-terminal>
+        Shell
+      </div>
+      {content}
     </div>
   ),
 }));
@@ -191,4 +203,39 @@ it("collapses folders, refreshes the tree and retains file selection for each ch
   await act(async () => rootButton.click());
   expect(rootButton.getAttribute("aria-expanded")).toBe("false");
   expect(host.querySelector("aside [hidden]")).not.toBeNull();
+});
+
+it("keeps branch context in the top terminal/file row across preview and checkout changes", async () => {
+  await render();
+  const terminalButton = () =>
+    Array.from(host.querySelectorAll("button")).find(
+      (button) => button.textContent === "terminal.title",
+    )!;
+  const expectTopBranch = (branch: string) => {
+    expect(
+      terminalButton().closest("[data-terminal-toolbar]")?.textContent,
+    ).toContain(branch);
+    expect(host.querySelector("[data-terminal]")?.textContent).not.toContain(
+      branch,
+    );
+  };
+  expectTopBranch("main");
+  await click('aside button[title="src"]');
+  await click('aside button[title="src/app.ts"]');
+  expectTopBranch("main");
+  const fileTab = host.querySelector('[role="tab"][title="src/app.ts"]')!;
+  expect(fileTab.closest('[role="tablist"]')).toBe(
+    terminalButton().closest('[role="tablist"]'),
+  );
+  expect(fileTab.getAttribute("aria-selected")).toBe("true");
+  expect(terminalButton().getAttribute("aria-selected")).toBe("false");
+  await act(async () => terminalButton().click());
+  expect(host.querySelector("[data-terminal]")?.hasAttribute("hidden")).toBe(
+    false,
+  );
+  expectTopBranch("main");
+  await click('[aria-label="fileReader.closeFile"]');
+  expectTopBranch("main");
+  await click("[data-topic]");
+  expectTopBranch("topic");
 });

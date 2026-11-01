@@ -31,14 +31,17 @@ import {
 import { useTerminalLayout } from "./useTerminalLayout";
 import { TerminalSessions } from "./TerminalSessions";
 import { TerminalTabs } from "./TerminalTabs";
+import { TerminalStatus } from "./TerminalStatus";
 
 interface Props {
   projects: Project[];
   onMaximizedChange: (maximized: boolean) => void;
   shown?: boolean;
   projectsReady?: boolean;
-  toolbarStart?: ReactNode;
   toolbarEnd?: ReactNode;
+  extraTabs?: ReactNode;
+  content?: ReactNode;
+  onSelectTerminal?: () => void;
 }
 const toolbarAction = "app-button-ghost h-7 w-7 shrink-0 p-0";
 
@@ -47,8 +50,10 @@ export function TerminalWorkspace({
   onMaximizedChange,
   shown = true,
   projectsReady = true,
-  toolbarStart,
   toolbarEnd,
+  extraTabs,
+  content,
+  onSelectTerminal,
 }: Props) {
   const { t } = useTranslation();
   const statusContainer = useContext(SidebarVisibilityContext)?.statusContainer;
@@ -61,7 +66,9 @@ export function TerminalWorkspace({
       projects.find((project) => project.id === scopedProject)?.path)
     : undefined;
   const legacy = location.pathname === "/terminal";
-  const visible = shown && (legacy || !!workspace);
+  const workspaceVisible = legacy || !!workspace;
+  const visible = shown && workspaceVisible;
+  const panelVisible = workspaceVisible && (shown || !!content);
   const [projectId, setProjectId] = useState("");
   const {
     tabs,
@@ -276,6 +283,7 @@ export function TerminalWorkspace({
   const add = () => {
     if (!ready || !(scopedProject || selected) || count >= TERMINAL_PANE_LIMIT)
       return;
+    onSelectTerminal?.();
     initialized.current = true;
     const target = scopedProject || selected;
     const tab = createTab(
@@ -340,56 +348,48 @@ export function TerminalWorkspace({
     onMaximizedChange(next);
   };
   const statusBar = (
-    <div
-      role="status"
-      className="flex min-h-5 min-w-0 flex-1 items-center gap-2 text-xs text-muted"
-    >
-      <span
-        className="min-w-0 flex-1 truncate"
-        title={bridgeError || herdr.notice}
-      >
-        {bridgeError ||
-          herdr.notice ||
-          projects.find(
-            (project) => project.id === (active?.projectId ?? scopedProject),
-          )?.name ||
-          t("terminal.title")}
-      </span>
-      {herdr.update?.has_update && (
-        <button
-          type="button"
-          className="text-accent-light"
-          disabled={herdr.busy}
-          onClick={() => void herdr.upgrade()}
-        >
-          {t("terminal.herdrUpdateAvailable", {
-            version: herdr.update.latest_version,
-          })}
-        </button>
-      )}
-    </div>
+    <TerminalStatus
+      message={
+        bridgeError ||
+        herdr.notice ||
+        projects.find(
+          (project) => project.id === (active?.projectId ?? scopedProject),
+        )?.name ||
+        t("terminal.title")
+      }
+      notice={bridgeError || herdr.notice}
+      updateVersion={
+        herdr.update?.has_update ? herdr.update.latest_version : undefined
+      }
+      busy={herdr.busy}
+      onUpgrade={() => void herdr.upgrade()}
+    />
   );
   return (
     <section
       aria-label={t("terminal.title")}
-      hidden={!visible}
+      hidden={!panelVisible}
       className={
-        visible ? cn("relative flex min-h-0 min-w-0 flex-1 flex-col") : "hidden"
+        panelVisible
+          ? cn("relative flex min-h-0 min-w-0 flex-1 flex-col")
+          : "hidden"
       }
     >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
-        {toolbarStart}
         <TerminalTabs
           tabs={scopedTabs}
           projects={projects}
-          activeId={displayedId}
+          activeId={shown ? displayedId : ""}
           scoped={!!workspace}
           onClose={close}
           onSelect={(tab) => {
+            onSelectTerminal?.();
             setActiveId(tab.id);
             setProjectId(tab.projectId);
           }}
-        />
+        >
+          {extraTabs}
+        </TerminalTabs>
         {!workspace && (
           <ThemedSelect
             aria-label={t("terminal.chooseProject")}
@@ -443,10 +443,11 @@ export function TerminalWorkspace({
         )}
         <TerminalPanelTools
           key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
-          hasTerminal={!!active}
+          hasTerminal={shown && !!active}
           herdrBusy={herdr.busy}
           hasUpdate={!!herdr.update?.has_update}
           canSplit={
+            shown &&
             ready &&
             !!active &&
             active.panes.length < 2 &&
@@ -459,149 +460,155 @@ export function TerminalWorkspace({
           onMaximize={toggleMaximize}
         />
       </div>
-      {restoreError && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 px-2 py-1 text-xs text-danger"
-        >
-          <span className="min-w-0 flex-1">{restoreError}</span>
-          <button type="button" className="app-button-ghost" onClick={retry}>
-            {t("common.retry")}
-          </button>
-        </div>
-      )}
-      {!scopedTabs.length && (
-        <div className="flex flex-1 items-center justify-center text-sm text-muted">
-          {t(
-            !ready
-              ? "common.loading"
-              : count >= TERMINAL_PANE_LIMIT
-                ? "worktree.terminalLimit"
-                : "terminal.chooseProject",
-          )}
-        </div>
-      )}
-      {tabs.map((tab) => (
-        <div
-          key={tab.id}
-          role="tabpanel"
-          aria-label={
-            projects.find((project) => project.id === tab.projectId)?.name ||
-            t("terminal.title")
-          }
-          hidden={tab.id !== displayedId || !scopedTabs.includes(tab)}
-          className={cn(
-            tab.id === displayedId && scopedTabs.includes(tab)
-              ? "flex"
-              : "hidden",
-            "min-h-0 flex-1",
-            tab.direction === "vertical" && "flex-col",
-          )}
-        >
-          {tab.panes.map((pane) => (
-            <div
-              key={pane}
-              className={cn(
-                "relative flex min-h-0 min-w-0 flex-1 overflow-hidden border",
-                tab.activePane === pane
-                  ? "border-accent"
-                  : "border-border-subtle",
-              )}
-              onFocusCapture={() =>
-                setTabs((previous) =>
-                  previous.map((item) =>
-                    item.id === tab.id && item.activePane !== pane
-                      ? { ...item, activePane: pane }
-                      : item,
-                  ),
+      {content}
+      <div
+        hidden={!shown}
+        className={shown ? "relative flex min-h-0 flex-1 flex-col" : "hidden"}
+      >
+        {restoreError && (
+          <div
+            role="alert"
+            className="flex items-center gap-2 px-2 py-1 text-xs text-danger"
+          >
+            <span className="min-w-0 flex-1">{restoreError}</span>
+            <button type="button" className="app-button-ghost" onClick={retry}>
+              {t("common.retry")}
+            </button>
+          </div>
+        )}
+        {!scopedTabs.length && (
+          <div className="flex flex-1 items-center justify-center text-sm text-muted">
+            {t(
+              !ready
+                ? "common.loading"
+                : count >= TERMINAL_PANE_LIMIT
+                  ? "worktree.terminalLimit"
+                  : "terminal.chooseProject",
+            )}
+          </div>
+        )}
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            role="tabpanel"
+            aria-label={
+              projects.find((project) => project.id === tab.projectId)?.name ||
+              t("terminal.title")
+            }
+            hidden={tab.id !== displayedId || !scopedTabs.includes(tab)}
+            className={cn(
+              tab.id === displayedId && scopedTabs.includes(tab)
+                ? "flex"
+                : "hidden",
+              "min-h-0 flex-1",
+              tab.direction === "vertical" && "flex-col",
+            )}
+          >
+            {tab.panes.map((pane) => (
+              <div
+                key={pane}
+                className={cn(
+                  "relative flex min-h-0 min-w-0 flex-1 overflow-hidden border",
+                  tab.activePane === pane
+                    ? "border-accent"
+                    : "border-border-subtle",
+                )}
+                onFocusCapture={() =>
+                  setTabs((previous) =>
+                    previous.map((item) =>
+                      item.id === tab.id && item.activePane !== pane
+                        ? { ...item, activePane: pane }
+                        : item,
+                    ),
+                  )
+                }
+              >
+                {tab.panes.length > 1 && (
+                  <button
+                    type="button"
+                    className="app-button-ghost absolute right-1 top-1 z-10"
+                    aria-label={t("terminal.closePane")}
+                    onClick={() => close(tab, pane)}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+                <TerminalPane
+                  projectId={tab.projectId}
+                  worktreePath={tab.worktreePath}
+                  visible={visible && displayedId === tab.id}
+                  active={
+                    visible && displayedId === tab.id && tab.activePane === pane
+                  }
+                  onReady={(control) => {
+                    if (control) {
+                      controls.current.set(pane, control);
+                      if (
+                        visible &&
+                        displayedId === tab.id &&
+                        tab.activePane === pane
+                      )
+                        activeTarget.current = control;
+                    } else {
+                      const previous = controls.current.get(pane);
+                      controls.current.delete(pane);
+                      if (activeTarget.current === previous)
+                        activeTarget.current = null;
+                    }
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+        {contextVisible && active?.context && (
+          <section
+            aria-label={t("tasks.context")}
+            className="absolute bottom-7 right-3 z-20 flex max-h-[calc(50vh/var(--app-scale))] w-[480px] max-w-[90%] flex-col gap-2 rounded-lg border border-border bg-surface p-3 shadow-card"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setContextVisible(false);
+                controls.current.get(active.activePane)?.focus();
+              }
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-xs">
+                {active.context.title}
+              </span>
+              <button
+                type="button"
+                aria-label={t("common.close")}
+                className="app-button-ghost"
+                onClick={() => setContextVisible(false)}
+              >
+                <X size={13} />
+              </button>
+            </div>
+            <textarea
+              aria-label={t("tasks.context")}
+              readOnly
+              value={active.context.text}
+              className="app-input min-h-32 flex-1 font-mono text-xs"
+            />
+            <button
+              type="button"
+              className="app-button-secondary self-start text-xs"
+              onClick={() =>
+                void writeText(active.context?.text || "").catch((error) =>
+                  setBridgeError(getErrorMessage(error, t("common.error"))),
                 )
               }
             >
-              {tab.panes.length > 1 && (
-                <button
-                  type="button"
-                  className="app-button-ghost absolute right-1 top-1 z-10"
-                  aria-label={t("terminal.closePane")}
-                  onClick={() => close(tab, pane)}
-                >
-                  <X size={12} />
-                </button>
-              )}
-              <TerminalPane
-                projectId={tab.projectId}
-                worktreePath={tab.worktreePath}
-                visible={visible && displayedId === tab.id}
-                active={
-                  visible && displayedId === tab.id && tab.activePane === pane
-                }
-                onReady={(control) => {
-                  if (control) {
-                    controls.current.set(pane, control);
-                    if (
-                      visible &&
-                      displayedId === tab.id &&
-                      tab.activePane === pane
-                    )
-                      activeTarget.current = control;
-                  } else {
-                    const previous = controls.current.get(pane);
-                    controls.current.delete(pane);
-                    if (activeTarget.current === previous)
-                      activeTarget.current = null;
-                  }
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      ))}
-      {contextVisible && active?.context && (
-        <section
-          aria-label={t("tasks.context")}
-          className="absolute bottom-7 right-3 z-20 flex max-h-[calc(50vh/var(--app-scale))] w-[480px] max-w-[90%] flex-col gap-2 rounded-lg border border-border bg-surface p-3 shadow-card"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setContextVisible(false);
-              controls.current.get(active.activePane)?.focus();
-            }
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="min-w-0 flex-1 truncate text-xs">
-              {active.context.title}
-            </span>
-            <button
-              type="button"
-              aria-label={t("common.close")}
-              className="app-button-ghost"
-              onClick={() => setContextVisible(false)}
-            >
-              <X size={13} />
+              <Copy size={13} />
+              {t("tasks.copy")}
             </button>
-          </div>
-          <textarea
-            aria-label={t("tasks.context")}
-            readOnly
-            value={active.context.text}
-            className="app-input min-h-32 flex-1 font-mono text-xs"
-          />
-          <button
-            type="button"
-            className="app-button-secondary self-start text-xs"
-            onClick={() =>
-              void writeText(active.context?.text || "").catch((error) =>
-                setBridgeError(getErrorMessage(error, t("common.error"))),
-              )
-            }
-          >
-            <Copy size={13} />
-            {t("tasks.copy")}
-          </button>
-        </section>
-      )}
-      {statusContainer
-        ? visible && createPortal(statusBar, statusContainer)
-        : statusBar}
+          </section>
+        )}
+        {statusContainer
+          ? visible && createPortal(statusBar, statusContainer)
+          : statusBar}
+      </div>
     </section>
   );
 }

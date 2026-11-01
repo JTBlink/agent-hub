@@ -1,12 +1,6 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  BookOpen,
-  FileCode2,
-  GitBranch,
-  RefreshCw,
-  TerminalSquare,
-} from "lucide-react";
+import { BookOpen, FileCode2, GitBranch, RefreshCw } from "lucide-react";
 import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../../context/AppContext";
@@ -112,91 +106,84 @@ export function ProjectWorkspace({
         )}
       <div className="flex min-h-0 min-w-0 flex-1">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {file && route && (
-            <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border-subtle bg-bg-secondary px-2">
-              <button
-                type="button"
-                aria-pressed={!file.shown}
-                onClick={() =>
-                  setFiles((previous) => ({
-                    ...previous,
-                    [scope]: { ...file, shown: false },
-                  }))
-                }
-                className={cn(
-                  "app-button-ghost gap-1.5 text-xs",
-                  !file.shown && "bg-surface-active",
-                )}
-              >
-                <TerminalSquare size={13} />
-                {t("terminal.title")}
-              </button>
-              <div
-                className={cn(
-                  "flex h-full min-w-0 items-center rounded-t border-b-2",
-                  file.shown
-                    ? "border-accent bg-surface"
-                    : "border-transparent",
-                )}
-              >
-                <button
-                  type="button"
-                  title={file.path}
-                  aria-pressed={file.shown}
-                  onClick={() =>
-                    setFiles((previous) => ({
-                      ...previous,
-                      [scope]: { ...file, shown: true },
-                    }))
-                  }
-                  className="flex h-full min-w-0 items-center gap-1.5 px-2 text-xs text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-                >
-                  <FileCode2 size={13} className="shrink-0" />
-                  <span className="truncate">
-                    {file.path.split("/").at(-1)}
-                  </span>
-                </button>
-                <TabCloseButton
-                  aria-label={t("fileReader.closeFile", { path: file.path })}
-                  title={t("fileReader.closeFile", { path: file.path })}
-                  onClick={() =>
-                    setFiles((previous) => {
-                      const next = { ...previous };
-                      delete next[scope];
-                      return next;
-                    })
-                  }
-                />
-              </div>
-              {file.shown && (
-                <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1">
-                  {workspaceContext}
-                  <div className="flex shrink-0 items-center gap-1">
-                    {workspaceActions}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
           <TerminalWorkspace
             projects={projects}
             projectsReady={!projectsLoading && !appError}
             shown={!file?.shown || !route}
             onMaximizedChange={onMaximizedChange}
-            toolbarStart={workspaceContext}
-            toolbarEnd={workspaceActions}
+            onSelectTerminal={() => {
+              if (file?.shown)
+                setFiles((previous) => ({
+                  ...previous,
+                  [scope]: { ...file, shown: false },
+                }));
+            }}
+            extraTabs={
+              route &&
+              file && (
+                <div
+                  className={cn(
+                    "flex h-full min-w-0 items-center rounded-t border-b-2",
+                    file.shown
+                      ? "border-accent bg-surface"
+                      : "border-transparent",
+                  )}
+                >
+                  <button
+                    type="button"
+                    title={file.path}
+                    role="tab"
+                    aria-selected={file.shown}
+                    onClick={() =>
+                      setFiles((previous) => ({
+                        ...previous,
+                        [scope]: { ...file, shown: true },
+                      }))
+                    }
+                    className="flex h-full min-w-0 items-center gap-1.5 px-2 text-xs text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                  >
+                    <FileCode2 size={13} className="shrink-0" />
+                    <span className="truncate">
+                      {file.path.split("/").at(-1)}
+                    </span>
+                  </button>
+                  <TabCloseButton
+                    aria-label={t("fileReader.closeFile", { path: file.path })}
+                    title={t("fileReader.closeFile", { path: file.path })}
+                    onClick={() =>
+                      setFiles((previous) => {
+                        const next = { ...previous };
+                        delete next[scope];
+                        return next;
+                      })
+                    }
+                  />
+                </div>
+              )
+            }
+            toolbarEnd={
+              <>
+                {workspaceContext}
+                {workspaceActions}
+              </>
+            }
+            content={
+              route &&
+              project &&
+              path &&
+              file?.shown && (
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <WorktreeFilePreview
+                    key={`${scope}:${file.path}`}
+                    projectId={project.id}
+                    worktreePath={path}
+                    path={file.path}
+                    location={file.location}
+                  />
+                </div>
+              )
+            }
           />
-          {route && project && path && file?.shown && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <WorktreeFilePreview
-                key={`${scope}:${file.path}`}
-                projectId={project.id}
-                worktreePath={path}
-                path={file.path}
-                location={file.location}
-              />
-            </div>
-          )}
         </div>
       </div>
     </section>

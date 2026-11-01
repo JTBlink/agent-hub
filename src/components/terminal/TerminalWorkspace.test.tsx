@@ -1,10 +1,15 @@
 // @vitest-environment jsdom
-import { act, StrictMode } from "react";
+import { act, StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Link, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project } from "../../lib/tauri";
+import { makeProject } from "../../../tests/fixtures/workspace";
+import {
+  createTerminalTab,
+  writeTerminalLayout,
+} from "../../lib/terminalLayout";
 import { TerminalWorkspace } from "./TerminalWorkspace";
 import { TerminalSessions } from "./TerminalSessions";
 import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
@@ -538,5 +543,87 @@ it("moves terminal status into the window footer and clears it when navigating a
     await act(async () => root.unmount());
     host.remove();
     statusContainer.remove();
+  }
+});
+
+it("switches between peer file and terminal tabs without replacing running panes", async () => {
+  const project = makeProject();
+  const tabs = [
+    createTerminalTab(project.id, undefined, project.path),
+    createTerminalTab(project.id, undefined, project.path),
+  ];
+  writeTerminalLayout({ tabs, activeIds: {}, lastActiveId: tabs[0].id });
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "terminal_list"
+      ? []
+      : command === "terminal_create"
+        ? { id: crypto.randomUUID(), cwd: project.path }
+        : undefined,
+  );
+  function Workspace() {
+    const [shown, setShown] = useState(true);
+    return (
+      <TerminalWorkspace
+        projects={[project]}
+        shown={shown}
+        onMaximizedChange={() => {}}
+        onSelectTerminal={() => setShown(true)}
+        extraTabs={
+          <button
+            role="tab"
+            aria-selected={!shown}
+            onClick={() => setShown(false)}
+          >
+            demo.ts
+          </button>
+        }
+        content={!shown && <output>File preview</output>}
+      />
+    );
+  }
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={[`/project/${project.id}`]}>
+          <Workspace />
+        </MemoryRouter>,
+      ),
+    );
+    const tablist = host.querySelector('[role="tablist"]')!;
+    const tabButtons =
+      tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    expect(tabButtons).toHaveLength(3);
+    const panels = Array.from(host.querySelectorAll('[role="tabpanel"]'));
+    await act(async () => tabButtons[2].click());
+    expect(host.querySelector("section")?.hidden).toBe(false);
+    expect(host.querySelector("output")?.textContent).toBe("File preview");
+    expect(tabButtons[0].getAttribute("aria-selected")).toBe("false");
+    expect(tabButtons[1].getAttribute("aria-selected")).toBe("false");
+    await act(async () => tabButtons[1].click());
+    expect(tabButtons[1].getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelector("output")).toBeNull();
+    expect(Array.from(host.querySelectorAll('[role="tabpanel"]'))).toEqual(
+      panels,
+    );
+    expect(panels[1].hasAttribute("hidden")).toBe(false);
+    await act(async () => tabButtons[2].click());
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="terminal.new"]')!
+        .click(),
+    );
+    expect(host.querySelector("output")).toBeNull();
+    expect(tablist.querySelectorAll('[role="tab"]')).toHaveLength(4);
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.filter(([command]) => command === "terminal_close"),
+    ).toHaveLength(0);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
   }
 });
