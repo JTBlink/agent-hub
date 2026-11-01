@@ -136,3 +136,20 @@ pub async fn get_project_git_history(
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn get_project_git_graph(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    include_remotes: bool,
+    limit: usize,
+) -> Result<project_git::GitGraph, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::graph(&root, include_remotes, limit).map_err(AppError::io)
+    })
+    .await?
+}

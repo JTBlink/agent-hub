@@ -1,6 +1,8 @@
 //! Git inspection and explicit local changes within an authorized registered checkout.
 mod actions;
+mod graph;
 mod history;
+pub use graph::{graph, GitGraph};
 mod references;
 pub use actions::{commit, set_staged};
 use anyhow::{bail, Result};

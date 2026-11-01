@@ -2079,6 +2079,17 @@
     "unsaved": "未保存"
   },
   "git": {
+    "graph": {
+      "title": "Git Graph",
+      "open": "打开 Git Graph",
+      "close": "关闭 Git Graph",
+      "remotes": "显示远端分支",
+      "column": "关系图",
+      "date": "时间",
+      "uncommitted": "未提交的更改（{{count}}）",
+      "loadMore": "加载更多",
+      "limit": "最多显示 5,000 条提交"
+    },
     "changedFiles": "{{count}} 项变更",
     "changedFilesTruncated": "至少 {{count}} 项变更",
     "worktree": "工作目录",

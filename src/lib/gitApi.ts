@@ -131,3 +131,28 @@ export const getProjectGitHistory = (
     sha,
     offset,
   });
+
+export interface GitGraphCommit {
+  sha: string;
+  summary: string;
+  author: string;
+  time: number;
+  parents: string[];
+  refs: { name: string; remote: boolean }[];
+}
+export interface GitGraphData {
+  commits: GitGraphCommit[];
+  has_more: boolean;
+}
+export const getProjectGitGraph = (
+  projectId: string,
+  worktreePath: string | undefined,
+  includeRemotes: boolean,
+  limit: number,
+) =>
+  invoke<GitGraphData>("get_project_git_graph", {
+    projectId,
+    worktreePath,
+    includeRemotes,
+    limit,
+  });

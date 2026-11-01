@@ -2033,6 +2033,17 @@
     "unsaved": "未儲存"
   },
   "git": {
+    "graph": {
+      "title": "Git Graph",
+      "open": "開啟 Git Graph",
+      "close": "關閉 Git Graph",
+      "remotes": "顯示遠端分支",
+      "column": "關係圖",
+      "date": "時間",
+      "uncommitted": "未提交的變更（{{count}}）",
+      "loadMore": "載入更多",
+      "limit": "最多顯示 5,000 筆提交"
+    },
     "changedFiles": "{{count}} 項變更",
     "changedFilesTruncated": "至少 {{count}} 項變更",
     "worktree": "工作目錄",

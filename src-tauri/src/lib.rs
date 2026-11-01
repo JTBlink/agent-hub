@@ -1228,6 +1228,7 @@ pub fn run() {
             commands::project_worktrees::search_worktree,
             commands::project_worktrees::replace_worktree_matches,
             commands::project_git::get_project_git_status,
+            commands::project_git::get_project_git_graph,
             commands::project_git::get_project_git_diff,
             commands::project_git::get_project_git_commit,
             commands::project_git::get_project_git_references,

@@ -16,6 +16,7 @@ import {
   getProjectGitCommit,
   getProjectGitCommitDiff,
   getProjectGitStatus,
+  getProjectGitGraph,
   type GitStatus,
 } from "../lib/gitApi";
 import { makeProject } from "../../tests/fixtures/workspace";
@@ -63,6 +64,7 @@ vi.mock("../lib/gitApi", () => ({
   commitProjectGit: vi.fn(),
   setProjectGitStaged: vi.fn(),
   getProjectGitStatus: vi.fn(),
+  getProjectGitGraph: vi.fn(),
   getProjectGitDiff: vi.fn(),
   getProjectGitCommit: vi.fn(),
   getProjectGitCommitDiff: vi.fn(),
@@ -517,6 +519,95 @@ it("opens committed file diffs separately from working changes", async () => {
     expect(host.textContent).toContain("git.parentVersion");
     await act(async () => window.dispatchEvent(new Event("focus")));
     expect(host.textContent).toContain("src/demo.ts");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("opens Git Graph from source control and returns to the selected diff on close", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "main",
+    head: null,
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    state: "Clean",
+    truncated: false,
+    commits: [],
+    files: [
+      {
+        path: "README.md",
+        staged: false,
+        unstaged: true,
+        conflicted: false,
+        status: "modified",
+      },
+    ],
+  });
+  vi.mocked(getProjectGitDiff).mockResolvedValue("@@ -0,0 +1 @@\n+hello\n");
+  vi.mocked(getProjectGitGraph).mockResolvedValue({
+    commits: [
+      {
+        sha: "a".repeat(40),
+        summary: "Example graph commit",
+        author: "Example",
+        time: 1793408400,
+        parents: [],
+        refs: [{ name: "main", remote: false }],
+      },
+    ],
+    has_more: false,
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<TestGit />));
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="git.unstaged: README.md"]',
+        )!
+        .click(),
+    );
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="git.graph.open"]')!
+        .click(),
+    );
+    expect(
+      host
+        .querySelector('[aria-label="git.graph.open"]')
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(host.querySelector("table")?.textContent).toContain(
+      "Example graph commit",
+    );
+    expect(getProjectGitGraph).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      true,
+      200,
+    );
+    await act(async () =>
+      host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
+    );
+    expect(getProjectGitGraph).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      false,
+      200,
+    );
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="git.graph.close"]')!
+        .click(),
+    );
+    expect(host.querySelector("table")).toBeNull();
+    expect(host.querySelector(".cm-editor")).not.toBeNull();
   } finally {
     await act(async () => root.unmount());
     host.remove();

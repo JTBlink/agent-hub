@@ -1,7 +1,7 @@
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
-import { FileCode2, GitBranch, RefreshCw, X } from "lucide-react";
+import { GitBranch, GitGraph as GraphIcon, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ResizableSidebar } from "../components/ResizableSidebar";
 import { VerticalSplit } from "../components/VerticalSplit";
@@ -17,12 +17,12 @@ import {
 } from "../lib/gitApi";
 import { getErrorMessage } from "../lib/error";
 import { groupGitChanges } from "../lib/gitChanges";
-import { WorktreeFilePreview } from "../components/worktree/WorktreeFilePreview";
 import { cn } from "../utils";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
+import { GitGraph } from "../components/git/GitGraph";
 import { GitHistory } from "../components/git/GitHistory";
 import { GitCommitForm } from "../components/git/GitCommitForm";
-import { GitDiffViewer } from "../components/git/GitDiffViewer";
+import { GitFileEditor } from "../components/git/GitFileEditor";
 import "../components/git/git.css";
 
 export function Git() {
@@ -34,6 +34,7 @@ export function Git() {
   const [revision, setRevision] = useState(0);
   const [selection, setSelection] = useState<GitSelection>();
   const [commitSha, setCommitSha] = useState<string>();
+  const [graphOpen, setGraphOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(true);
   const [actionType, setActionType] = useState<"stage" | "commit">();
   const busy = actionType !== undefined;
@@ -45,6 +46,7 @@ export function Git() {
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {
     setPreviousScope(scope);
+    setGraphOpen(false);
     setSelection(undefined);
     setCommitSha(undefined);
     setFileView(false);
@@ -96,9 +98,11 @@ export function Git() {
   useEffect(() => {
     window.addEventListener("worktree-file-saved", refresh);
     window.addEventListener("focus", refresh);
+    window.addEventListener("project-git-changed", refresh);
     return () => {
       window.removeEventListener("worktree-file-saved", refresh);
       window.removeEventListener("focus", refresh);
+      window.removeEventListener("project-git-changed", refresh);
     };
   }, [refresh]);
   useEffect(() => {
@@ -168,6 +172,7 @@ export function Git() {
     busy: busy || loading,
     batchLimited: !!status?.truncated,
     onSelect: (next: GitSelection) => {
+      setGraphOpen(false);
       setSelection(next);
       setCommitSha(undefined);
       setFileView(false);
@@ -219,7 +224,18 @@ export function Git() {
         </h1>
         <button
           type="button"
-          className="app-button-ghost ml-auto h-7 w-7 p-0"
+          className="app-button-ghost h-7 w-7 p-0"
+          aria-label={t("git.graph.open")}
+          title={t("git.graph.open")}
+          aria-pressed={graphOpen}
+          disabled={!activeId}
+          onClick={() => setGraphOpen(true)}
+        >
+          <GraphIcon size={15} />
+        </button>
+        <button
+          type="button"
+          className="app-button-ghost h-7 w-7 p-0"
           aria-label={t("settings.refresh")}
           title={t("settings.refresh")}
           disabled={loading || busy}
@@ -309,6 +325,7 @@ export function Git() {
                   : undefined
               }
               onSelect={({ sha, path }) => {
+                setGraphOpen(false);
                 setCommitSha(sha);
                 setSelection({ path, staged: false });
                 setFileView(false);
@@ -356,84 +373,42 @@ export function Git() {
               {!sidebarVisibility?.sidebarContainer && sidebar}
 
               <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                {selection ? (
-                  <>
-                    <div className="flex shrink-0 items-center border-b border-border-subtle bg-bg-secondary">
-                      <div className="flex min-w-0 items-center gap-2 border-r border-border-subtle border-t-2 border-t-accent bg-background px-3 py-2 text-xs">
-                        <FileCode2
-                          size={14}
-                          className="shrink-0 text-accent-light"
-                        />
-                        <span className="truncate" title={selection.path}>
-                          {selection.path.split("/").pop()}
-                        </span>
-                        <span className="shrink-0 text-muted">
-                          {commitSha
-                            ? commitSha.slice(0, 7)
-                            : t(
-                                selection.staged
-                                  ? "git.staged"
-                                  : "git.unstaged",
-                              )}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label={t("common.close")}
-                          title={t("common.close")}
-                          className="app-button-ghost h-5 w-5 shrink-0 p-0"
-                          onClick={() => {
-                            changesRef.current
-                              ?.querySelector<HTMLButtonElement>(
-                                'button[aria-current="true"]',
-                              )
-                              ?.focus();
-                            setSelection(undefined);
-                            setCommitSha(undefined);
-                            setFileView(false);
-                          }}
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    </div>
-                    {fileView && (
-                      <div className="flex shrink-0 items-center border-b border-border-subtle px-2 py-1">
-                        <button
-                          type="button"
-                          className="app-button-ghost px-2 py-1 text-xs"
-                          onClick={() => setFileView(false)}
-                        >
-                          {t("git.diff")}
-                        </button>
-                      </div>
-                    )}
-                    {fileView && root ? (
-                      <WorktreeFilePreview
-                        key={`${activeId}:${root}:${selection.path}`}
-                        projectId={activeId}
-                        worktreePath={root}
-                        path={selection.path}
-                      />
-                    ) : diff !== undefined ? (
-                      <GitDiffViewer
-                        patch={diff}
-                        path={selection.path}
-                        staged={selection.staged}
-                        historical={!!commitSha}
-                        onOpenFile={
-                          !commitSha &&
-                          files.find((file) => file.path === selection.path)
-                            ?.status !== "deleted"
-                            ? () => setFileView(true)
-                            : undefined
-                        }
-                      />
-                    ) : (
-                      <p role="status" className="p-6 text-xs text-muted">
-                        {diffError || t("common.loading")}
-                      </p>
-                    )}
-                  </>
+                {graphOpen ? (
+                  <GitGraph
+                    key={scope}
+                    target={{ projectId: activeId, worktreePath: root }}
+                    revision={revision}
+                    changedFiles={files.length}
+                    onClose={() => setGraphOpen(false)}
+                    onSelect={({ sha, path }) => {
+                      setGraphOpen(false);
+                      setCommitSha(sha);
+                      setSelection({ path, staged: false });
+                      setFileView(false);
+                    }}
+                  />
+                ) : selection ? (
+                  <GitFileEditor
+                    activeId={activeId}
+                    root={root}
+                    selection={selection}
+                    commitSha={commitSha}
+                    fileView={fileView}
+                    diff={diff}
+                    diffError={diffError}
+                    files={files}
+                    onFileViewChange={setFileView}
+                    onClose={() => {
+                      changesRef.current
+                        ?.querySelector<HTMLButtonElement>(
+                          'button[aria-current="true"]',
+                        )
+                        ?.focus();
+                      setSelection(undefined);
+                      setCommitSha(undefined);
+                      setFileView(false);
+                    }}
+                  />
                 ) : (
                   <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted">
                     <GitBranch

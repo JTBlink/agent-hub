@@ -24,6 +24,7 @@ export function gitFixture(
     ![
       "get_project_git_status",
       "get_project_git_history",
+      "get_project_git_graph",
       "get_project_git_references",
       "get_project_git_commit",
       "get_project_git_commit_diff",
@@ -121,6 +122,52 @@ export function gitFixture(
       ],
     };
     snapshots.set(key, snapshot);
+  }
+  if (command === "get_project_git_graph") {
+    const ids = [
+      snapshot.commits[0].sha,
+      snapshot.commits[1].sha,
+      ...Array.from({ length: 22 }, (_, i) =>
+        (100 + i).toString(16).padStart(40, "0"),
+      ),
+    ];
+    const remote = "includeRemotes" in args && args.includeRemotes === true;
+    return {
+      handled: true,
+      value: {
+        has_more: false,
+        commits: ids.map((sha, i) => ({
+          sha,
+          summary:
+            i === 0
+              ? "Merge feature/parser into main"
+              : i === 1
+                ? "Improve parser validation"
+                : `Refine workspace navigation ${i - 1}`,
+          author: "Example",
+          time: 1793408400 - i * 900,
+          parents:
+            i === 0
+              ? [ids[1], ids[2]]
+              : i === 1
+                ? [ids[3]]
+                : i < ids.length - 1
+                  ? [ids[i + 1]]
+                  : [],
+          refs:
+            i === 0
+              ? [
+                  { name: "main", remote: false },
+                  ...(remote ? [{ name: "origin/main", remote: true }] : []),
+                ]
+              : i === 1
+                ? [{ name: "feature/parser", remote: false }]
+                : i === 3
+                  ? [{ name: "v1.0.0", remote: false }]
+                  : [],
+        })),
+      },
+    };
   }
   if (command === "get_project_git_history")
     return {

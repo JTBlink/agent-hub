@@ -2082,6 +2082,17 @@
     "unsaved": "Unsaved"
   },
   "git": {
+    "graph": {
+      "title": "Git Graph",
+      "open": "Open Git Graph",
+      "close": "Close Git Graph",
+      "remotes": "Show remote branches",
+      "column": "Graph",
+      "date": "Date",
+      "uncommitted": "Uncommitted changes ({{count}})",
+      "loadMore": "Load more",
+      "limit": "Showing up to 5,000 commits"
+    },
     "changedFiles": "{{count}} changes",
     "changedFilesTruncated": "At least {{count}} changes",
     "worktree": "Worktree",
