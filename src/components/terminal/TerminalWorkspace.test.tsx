@@ -28,6 +28,10 @@ vi.mock("@xterm/addon-webgl", () => ({
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), Channel: class {} }));
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
 beforeEach(() => {
+  localStorage.clear();
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "terminal_list" ? [] : undefined,
+  );
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.stubGlobal(
     "ResizeObserver",
@@ -49,9 +53,11 @@ afterEach(() => {
 
 it("opens the most recently visited project once, after loading and entering the terminal", async () => {
   vi.mocked(invoke).mockImplementation(async (command) =>
-    command === "terminal_create"
-      ? { id: "default-pty", cwd: "<workspace>" }
-      : undefined,
+    command === "terminal_list"
+      ? []
+      : command === "terminal_create"
+        ? { id: "default-pty", cwd: "<workspace>" }
+        : undefined,
   );
   const base: Project = {
     id: "first",
@@ -186,6 +192,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   let herdrActive = false;
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "terminal_project_directory") return "<workspace>";
+    if (command === "terminal_list") return [];
     if (command === "terminal_create")
       return {
         id: `pty-${++created}`,
@@ -360,6 +367,7 @@ it("keeps terminals, split panes and the selected tab independent for each workt
   const project = makeProject();
   let next = 0;
   vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "terminal_list") return [];
     if (command === "terminal_create")
       return {
         id: `pty-${++next}`,

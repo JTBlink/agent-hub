@@ -260,6 +260,7 @@ export function taskTerminalFixture(
       handled: true,
       value: "worktreePath" in args ? args.worktreePath : "~/projects/demo-web",
     };
+  if (command === "terminal_list") return { handled: true, value: [] };
   if (command === "terminal_create") {
     const id = `preview-${++nextTerminal}`;
     if (

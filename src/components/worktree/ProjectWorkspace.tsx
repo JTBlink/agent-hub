@@ -27,7 +27,7 @@ export function ProjectWorkspace({
   maximized: boolean;
 }) {
   const { t } = useTranslation();
-  const { projects } = useApp();
+  const { projects, loading: projectsLoading, appError } = useApp();
   const location = useLocation();
   const route = projectWorkspaceRoute(location.pathname, location.search);
   const project = projects.find((item) => item.id === route?.projectId);
@@ -178,6 +178,7 @@ export function ProjectWorkspace({
           )}
           <TerminalWorkspace
             projects={projects}
+            projectsReady={!projectsLoading && !appError}
             shown={!file?.shown || !route}
             onMaximizedChange={onMaximizedChange}
           />

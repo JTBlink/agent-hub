@@ -26,6 +26,7 @@ agent-hub/
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗
 │   │   ├── worktree/               #   项目／工作树导航、持久终端工作区与惰性文件浏览
+│   │   ├── terminal/               #   PTY 窗格、跨工作树会话总览与本机标签／分屏布局恢复
 │   │   ├── file-reader/            #   通用文件阅读器、弹窗壳、目录树与文本内容区
 │   │   ├── MarkdownContent.tsx     #   通用 Markdown 正文渲染
 │   │   ├── StatusBanner.tsx        #   状态横幅

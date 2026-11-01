@@ -15,12 +15,16 @@ export type TerminalEvent =
   | { kind: "exit"; code: number }
   | { kind: "error"; message: string };
 
-export function createTerminal(
+const closingTerminals = new Set<Promise<void>>();
+
+export async function createTerminal(
   projectId: string,
   size: TerminalSize,
   onEvent: (event: TerminalEvent) => void,
   worktreePath?: string,
 ) {
+  // A tab can be closed and replaced before its PTY close IPC has completed.
+  await Promise.all(closingTerminals);
   const events = new Channel<TerminalEvent>();
   events.onmessage = onEvent;
   return invoke<TerminalSession>("terminal_create", {
@@ -36,8 +40,15 @@ export const resizeTerminal = (id: string, size: TerminalSize) =>
   invoke<void>("terminal_resize", { id, size });
 export const ackTerminal = (id: string, seq: number) =>
   invoke<void>("terminal_ack", { id, seq });
-export const closeTerminal = (id: string) =>
-  invoke<void>("terminal_close", { id });
+export function closeTerminal(id: string) {
+  const closing = invoke<void>("terminal_close", { id });
+  closingTerminals.add(closing);
+  void closing.then(
+    () => closingTerminals.delete(closing),
+    () => closingTerminals.delete(closing),
+  );
+  return closing;
+}
 export const listTerminals = () => invoke<TerminalSession[]>("terminal_list");
 
 export interface HerdrInstallation {
