@@ -20,6 +20,7 @@ import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { SidebarActivityBar } from "./SidebarActivityBar";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { useGitChangeCount } from "../hooks/useGitChangeCount";
+import { SidebarHerdr } from "./herdr/SidebarHerdr";
 
 const PANEL_STORAGE_KEY = "agent-hub:sidebar-panel-open";
 
@@ -83,6 +84,7 @@ export function Sidebar() {
   }
   const selectedPanel = panelSelection.panel;
   const [searchOpened, setSearchOpened] = useState(false);
+  const [herdrOpened, setHerdrOpened] = useState(false);
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const panelVisible =
     panelOpen &&
@@ -105,6 +107,7 @@ export function Sidebar() {
       setSearchOpened(true);
       setSearchFocusRequest((value) => value + 1);
     }
+    if (panel === "herdr") setHerdrOpened(true);
     setPanelSelection({ routeKey: location.key, panel, manual: true });
     setPanelOpen(true);
     if (panel === "projects" && !location.pathname.startsWith("/project/")) {
@@ -221,7 +224,7 @@ export function Sidebar() {
         <ResizableSidebar
           storageKey="agent-hub:sidebar-width"
           label={t(
-            selectedPanel === "search"
+            selectedPanel === "herdr" ? "herdr.title" : selectedPanel === "search"
               ? "workspaceSearch.title"
               : selectedPanel === "projects"
                 ? "sidebar.projects"
@@ -298,10 +301,16 @@ export function Sidebar() {
             )}
           </div>
           <div
-            hidden={selectedPanel === "search"}
+            hidden={selectedPanel !== "herdr"}
+            className={cn("min-h-0 flex-1 flex-col",selectedPanel === "herdr" ? "flex" : "hidden")}
+          >
+            {herdrOpened && <SidebarHerdr active={panelVisible && selectedPanel === "herdr"} onHide={togglePanel}/>}
+          </div>
+          <div
+            hidden={selectedPanel === "search" || selectedPanel === "herdr"}
             className={cn(
               "min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-2",
-              selectedPanel === "search" && "hidden",
+              (selectedPanel === "search" || selectedPanel === "herdr") && "hidden",
             )}
           >
             <div hidden={selectedPanel !== "projects"}>

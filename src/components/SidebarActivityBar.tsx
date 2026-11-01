@@ -13,6 +13,7 @@ type ActivityIcon =
   | "source-control"
   | "layers"
   | "extensions"
+  | "layout-panel"
   | "cloud"
   | "settings-gear";
 
@@ -172,6 +173,7 @@ export function SidebarActivityBar({
           path: "/discover",
           icon: "extensions",
         })}
+        {renderPanel("herdr", "Herdr", "layout-panel")}
       </div>
       <div className="shrink-0">
         {renderLink({

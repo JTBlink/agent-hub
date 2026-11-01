@@ -38,6 +38,11 @@ import { TerminalStatus } from "./TerminalStatus";
 import { TerminalTaskContextPanel } from "./TerminalTaskContextPanel";
 import { TerminalNewMenu } from "./TerminalNewMenu";
 import type { HerdrAgent } from "../../lib/herdrAgents";
+import { herdrNavigation } from "../../lib/herdrControlApi";
+import { useTerminalTaskRequest } from "./useTerminalTaskRequest";
+import { useHerdrAttachment } from "./useHerdrAttachment";
+import { LocalTerminalTools } from "./TerminalActionBar";
+import { HerdrTerminalTools } from "./HerdrTerminalTools";
 
 interface Props {
   projects: Project[];
@@ -105,7 +110,10 @@ export function TerminalWorkspace({
   } = useTerminalLayout(projects, projectsReady, {
     projectId: scopedProject,
     path: scopedPath,
-    initialize: visible && !terminalTaskRequest(location.state),
+    initialize:
+      visible &&
+      !terminalTaskRequest(location.state) &&
+      !herdrNavigation(location.state),
   });
   useEffect(() => {
     onStartupStateChange?.({ ready: startupReady, error: restoreError, retry });
@@ -122,91 +130,38 @@ export function TerminalWorkspace({
   useLayoutEffect(() => {
     tabsRef.current = tabs;
   }, [tabs]);
-  const consumed = useRef("");
   const initialized = useRef(false);
   const [bridgeError, setBridgeError] = useState("");
   const [contextVisible, setContextVisible] = useState(false);
-  useEffect(() => {
-    const request = terminalTaskRequest(location.state);
-    if (!ready || !visible || !request || consumed.current === location.key)
-      return;
-    let cancelled = false;
-    void api
-      .resolveTerminalProject(request.projectId, scopedPath)
-      .then(() => {
-        if (cancelled) return;
-        consumed.current = location.key;
-        initialized.current = true;
-        setBridgeError("");
-        const existing = tabsRef.current.find(
-          (tab) =>
-            tab.projectId === request.projectId &&
-            (tab.worktreePath ??
-              projects.find((project) => project.id === request.projectId)
-                ?.path) ===
-              (scopedPath ??
-                projects.find((project) => project.id === request.projectId)
-                  ?.path),
-        );
-        if (existing) {
-          setTabs((previous) =>
-            previous.map((tab) =>
-              tab.id === existing.id
-                ? { ...tab, context: request.context }
-                : tab,
-            ),
-          );
-          setActiveIds((previous) => ({
-            ...previous,
-            [scopeKey]: existing.id,
-          }));
-        } else {
-          if (
-            tabsRef.current.reduce((sum, tab) => sum + tab.panes.length, 0) >=
-            TERMINAL_PANE_LIMIT
-          ) {
-            setBridgeError(t("worktree.terminalLimit"));
-            return;
-          }
-          const tab = createTab(
-            request.projectId,
-            request.context,
-            scopedPath ??
-              projects.find((project) => project.id === request.projectId)
-                ?.path,
-          );
-          setTabs((previous) => [...previous, tab]);
-          setActiveIds((previous) => ({ ...previous, [scopeKey]: tab.id }));
-        }
-        setProjectId(request.projectId);
-        setContextVisible(false);
-        navigate(`${location.pathname}${location.search}`, {
-          replace: true,
-          state: null,
-        });
-      })
-      .catch((error) => {
-        if (!cancelled)
-          setBridgeError(getErrorMessage(error, t("common.error")));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    location.key,
-    location.pathname,
-    location.search,
-    location.state,
-    visible,
-    navigate,
-    t,
-    scopedPath,
-    scopeKey,
+  const [zoomedPane, setZoomedPane] = useState("");
+  useHerdrAttachment({
     ready,
-    projects,
+    visible,
+    projectId: scopedProject,
+    path: scopedPath,
+    tabs: tabsRef,
     setTabs,
     setActiveIds,
-  ]);
+    rememberActive,
+    initializedRef: initialized,
+    onError: setBridgeError,
+    onSelectTerminal,
+  });
+  useTerminalTaskRequest({
+    ready,
+    visible,
+    projectId: scopedProject,
+    path: scopedPath,
+    projects,
+    tabs: tabsRef,
+    setTabs,
+    setActiveIds,
+    initializedRef: initialized,
+    onError: setBridgeError,
+    setProjectId,
+    setContextVisible,
+  });
+
   const recent = projects.reduce<Project | undefined>(
     (latest, project) =>
       !latest || (project.visited_at ?? 0) > (latest.visited_at ?? 0)
@@ -373,7 +328,7 @@ export function TerminalWorkspace({
       }
     >
       {toolbar ?? (
-        <div className="flex h-9 shrink-0 flex-nowrap items-center gap-1 border-b border-border bg-bg-secondary px-2">
+        <div className="flex h-9 shrink-0 flex-nowrap items-center overflow-x-auto gap-1 border-b border-border bg-bg-secondary px-2">
           <TerminalTabs
             tabs={scopedTabs}
             projects={projects}
@@ -517,6 +472,10 @@ export function TerminalWorkspace({
                 key={pane}
                 className={cn(
                   "relative flex min-h-0 min-w-0 flex-1 overflow-hidden border",
+                  zoomedPane &&
+                    tab.panes.includes(zoomedPane) &&
+                    pane !== zoomedPane &&
+                    "hidden",
                   tab.activePane === pane
                     ? "border-accent-border"
                     : "border-border-subtle",
@@ -545,6 +504,7 @@ export function TerminalWorkspace({
                   projectId={tab.projectId}
                   worktreePath={tab.worktreePath}
                   agent={tab.agent}
+                  herdrTarget={tab.herdrTarget}
                   visible={visible && displayedId === tab.id}
                   active={
                     visible && displayedId === tab.id && tab.activePane === pane
@@ -580,6 +540,40 @@ export function TerminalWorkspace({
             }}
             onError={(error) =>
               setBridgeError(getErrorMessage(error, t("common.error")))
+            }
+          />
+        )}
+        {shown && active && !active.herdrTarget && (
+          <LocalTerminalTools
+            current={() => activeTarget.current}
+            onNew={() => add()}
+            onSplit={split}
+            onSidebar={herdr.toggleSidebar}
+            onError={setBridgeError}
+            zoomed={zoomedPane === active.activePane}
+            onZoom={() =>
+              setZoomedPane((value) =>
+                value === active.activePane ? "" : active.activePane,
+              )
+            }
+            canSplit={
+              !active.agent &&
+              active.panes.length < 2 &&
+              count < TERMINAL_PANE_LIMIT
+            }
+            canAdd={count < TERMINAL_PANE_LIMIT}
+            canZoom={active.panes.length > 1}
+          />
+        )}
+        {shown && active?.herdrTarget && (
+          <HerdrTerminalTools
+            target={active.herdrTarget}
+            current={() => activeTarget.current}
+            onError={setBridgeError}
+            onOpen={(opened) =>
+              navigate(worktreeUrl(opened.project_id, opened.path), {
+                state: { preserveSidebar: true, herdrAttachment: opened },
+              })
             }
           />
         )}

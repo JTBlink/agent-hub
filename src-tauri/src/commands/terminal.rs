@@ -8,7 +8,7 @@ use crate::core::{
 use std::sync::Arc;
 use tauri::{ipc::Channel, Manager, State, WebviewWindow};
 
-fn owner(window: &WebviewWindow) -> Result<String, AppError> {
+pub(crate) fn owner(window: &WebviewWindow) -> Result<String, AppError> {
     if window.label() != "main" {
         return Err(AppError::invalid_input(
             "Terminal access requires the main window",

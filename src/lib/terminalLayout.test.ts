@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, it } from "vitest";
 import {
+  lastHerdrAttachment,
   createTerminalTab,
   readTerminalLayout,
   writeTerminalLayout,
@@ -88,4 +89,28 @@ it("bounds restored panes and discards duplicate identifiers and foreign selecti
   expect(restored.tabs[0].panes).toEqual(["pane", "extra"]);
   expect(restored.tabs[0].activePane).toBe("pane");
   expect(restored.activeIds).toEqual({});
+});
+
+it("restores a native Herdr attachment locator without retaining Agent identity", () => {
+  const tab = createTerminalTab("demo", undefined, "/projects/demo");
+  tab.herdrTarget = {
+    session: "default",
+    workspace_id: "w1",
+    pane_id: "w1:p1",
+    terminal_id: "native-1",
+    revision: 10,
+    agent_session: { private: "identity" },
+  };
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
+  expect(readTerminalLayout().tabs[0].herdrTarget).toEqual({
+    ...tab.herdrTarget,
+    revision: 0,
+    agent_session: null,
+  });
+  expect(lastHerdrAttachment(readTerminalLayout())).toMatchObject({
+    project_id: "demo",
+    path: "/projects/demo",
+    target: { pane_id: "w1:p1" },
+  });
+  expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("private");
 });

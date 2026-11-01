@@ -60,6 +60,7 @@ pub mod tool_service;
 pub mod terminal;
 
 pub mod herdr_agents;
+pub mod herdr_control;
 pub(crate) mod herdr_session;
 pub mod herdr_tools;
 

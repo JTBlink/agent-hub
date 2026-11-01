@@ -70,6 +70,81 @@ async function openNew(host: HTMLElement, label = "terminal.new") {
   await act(async () => item.click());
 }
 
+it("attaches the explicitly opened Herdr checkout without creating an extra Shell", async () => {
+  const project = {
+    ...makeProject(),
+    id: "herdr-project",
+    path: "/projects/demo",
+  };
+  const target = {
+    session: "default",
+    workspace_id: "w1",
+    pane_id: "w1:p1",
+    terminal_id: "native-1",
+    revision: 1,
+    agent_session: null,
+  };
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "terminal_list"
+      ? []
+      : command === "herdr_terminal_create"
+        ? {
+            id: "herdr-pty",
+            cwd: project.path,
+            project_id: project.id,
+            exited: false,
+          }
+        : undefined,
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: `/project/${project.id}`,
+              search: "?worktree=%2Fprojects%2Fdemo",
+              state: {
+                herdrAttachment: {
+                  project_id: project.id,
+                  path: project.path,
+                  target,
+                },
+              },
+            },
+          ]}
+        >
+          <TerminalWorkspace projects={[project]} />
+        </MemoryRouter>,
+      ),
+    );
+    expect(invoke).toHaveBeenCalledWith(
+      "herdr_terminal_create",
+      expect.objectContaining({
+        request: expect.objectContaining({
+          project_id: project.id,
+          worktree_path: project.path,
+          target,
+        }),
+      }),
+    );
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.filter(([command]) => command === "terminal_create"),
+    ).toHaveLength(0);
+    expect(
+      host.querySelector('[aria-label="herdr.terminalTools"]'),
+    ).not.toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
 it("dismisses the session overview with Escape and outside clicks", async () => {
   const host = document.createElement("div");
   document.body.append(host);

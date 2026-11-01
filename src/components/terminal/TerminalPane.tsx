@@ -6,6 +6,7 @@ import { createTerminalRenderer } from "./terminalRenderer";
 import { bindTerminalPaste } from "./terminalClipboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
+import type { HerdrTarget } from "../../lib/herdrControlApi";
 import { getErrorMessage } from "../../lib/error";
 import { herdrAgentLabel, type HerdrAgent } from "../../lib/herdrAgents";
 import { createTerminalInputQueue } from "../../lib/terminalInput";
@@ -22,11 +23,15 @@ export interface PaneControl {
   focus: () => void;
   inputRevision: () => number;
   ownsFocus: (target: EventTarget | null) => boolean;
+  clear?: () => void;
+  read?: () => string;
+  herdrTarget?: HerdrTarget;
 }
 interface Props {
   projectId: string;
   worktreePath?: string;
   agent?: HerdrAgent;
+  herdrTarget?: HerdrTarget;
   active: boolean;
   visible?: boolean;
   onReady: (control: PaneControl | null) => void;
@@ -37,6 +42,7 @@ export function TerminalPane({
   projectId,
   worktreePath,
   agent,
+  herdrTarget,
   active,
   visible = true,
   onReady,
@@ -50,6 +56,13 @@ export function TerminalPane({
   const visibleRef = useRef(visible);
   const showNow = useRef<() => void>(() => {});
   const translate = useRef(t);
+  const attachment = useRef(herdrTarget);
+  const attachmentKey = herdrTarget
+    ? `${herdrTarget.session}:${herdrTarget.workspace_id}`
+    : "";
+  useLayoutEffect(() => {
+    attachment.current = herdrTarget;
+  }, [herdrTarget]);
   useLayoutEffect(() => {
     translate.current = t;
   }, [t]);
@@ -115,7 +128,10 @@ export function TerminalPane({
       renderer.setVisible(fontsReady && visibleRef.current);
       if (visibleRef.current) measure();
     };
-    focusNow.current = () => terminal.focus();
+    const focus = () => {
+      if (!document.querySelector('[aria-modal="true"]')) terminal.focus();
+    };
+    focusNow.current = focus;
     const recolor = () => {
       const styles = getComputedStyle(document.documentElement);
       terminal.options = terminalAppearance(styles);
@@ -186,6 +202,7 @@ export function TerminalPane({
             },
             worktreePath,
             agent,
+            attachmentKey ? attachment.current : undefined,
           )
           .then((session) => {
             if (disposed) {
@@ -198,15 +215,27 @@ export function TerminalPane({
             callback.current({
               sessionId,
               cwd: session.cwd,
-              focus: () => terminal.focus(),
+              focus,
               inputRevision: () => revision,
               ownsFocus: (target) =>
                 target instanceof Node && node.contains(target),
+              clear: () => terminal.clear(),
+              read: () => {
+                const buffer = terminal.buffer.active;
+                return Array.from(
+                  { length: terminal.rows },
+                  (_, row) =>
+                    buffer
+                      .getLine(buffer.viewportY + row)
+                      ?.translateToString(true) ?? "",
+                ).join("\n");
+              },
+              herdrTarget: attachmentKey ? attachment.current : undefined,
             });
             if (pendingAck)
               void api.ackTerminal(sessionId, pendingAck).catch(fail);
             measure();
-            if (activeRef.current) terminal.focus();
+            if (activeRef.current) focus();
           })
           .catch(fail);
       })
@@ -226,7 +255,7 @@ export function TerminalPane({
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };
-  }, [projectId, worktreePath, agent]);
+  }, [projectId, worktreePath, agent, attachmentKey]);
   useEffect(() => {
     showNow.current();
   }, [visible]);

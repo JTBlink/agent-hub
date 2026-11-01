@@ -33,3 +33,5 @@ SQLite 保存技能、项目、技能组和设置等状态。桌面 commands 和
 - **Herdr Agent 启动**：终端“+”菜单可在当前工作树新建 Codex、Claude、Claude Agent Teams、OpenCode 或 Hermes 标签，由独立模块在专用 Herdr 会话中以 YOLO 模式启动原生 CLI。先连接新建 Herdr 终端，再等待 Agent 就绪，保留原生启动和错误输出；清理调用者的 Agent 会话环境，关闭标签只断开客户端，不停止 Herdr Agent。启动意图不进入布局持久化，重启仅恢复普通 Shell。
 
 - **Agent 订阅用量**：独立查询 Claude／Codex 当前登录的官方订阅额度，底部状态栏展示各周期用量与重置时间。Rust core 管理凭据读取、缓存、超时与限流，前端仅接收无凭据的快照；仅前台自动刷新。不统计本地 token 或 API 账单，见[用量架构](docs/architecture/agent-usage.md)。
+
+- **Herdr 侧栏**：显式选择本机运行中的会话，以真实快照展示工作空间与 Agent；按规范目录和 Git worktree 归属联动项目，未登记目录只登记元数据，不初始化技能目录。新建／任务／输出／中断为手动操作，身份或前台进程无法确认时拒绝输入；启动或投递结果不明时保留窗格供人工检查。终端布局可保存 Herdr 挂接定位信息，恢复时重新验证会话、目录和终端，不重放启动或提示词。自动巡检与决策继续由自动化任务承载。

@@ -1,4 +1,73 @@
 {
+  "herdr": {
+    "toggleZoom": "放大／还原窗格",
+    "title": "Herdr",
+    "hide": "收起 Herdr 面板",
+    "session": "Herdr 会话",
+    "noSessions": "没有已保存的会话",
+    "stopped": "未运行",
+    "openCurrent": "在 Herdr 打开当前工作空间",
+    "missing": "尚未安装 Herdr。",
+    "install": "安装 Herdr",
+    "noRunningSessions": "没有运行中的 Herdr 会话。请从终端的 Herdr 入口启动后刷新。",
+    "search": "查找工作空间或 Agent…",
+    "newAgent": "新建 Agent",
+    "pending": "待处理",
+    "workspaces": "工作空间",
+    "directoryUnknown": "工作空间目录缺失或存在歧义",
+    "noMatches": "没有匹配的内容",
+    "noWorkspaces": "还没有工作空间，可用上方终端按钮打开当前项目。",
+    "resizeLists": "调整工作空间与 Agent 列表高度",
+    "agents": "Agent",
+    "byState": "按状态",
+    "byWorkspace": "按空间",
+    "scopeChanged": "目标工作空间已变化，请重新选择。",
+    "createAgent": "创建 Agent",
+    "sendTask": "发送任务",
+    "interrupt": "中断任务",
+    "focus": "定位终端",
+    "copyOutput": "复制输出",
+    "agentType": "Agent 类型",
+    "agentName": "唯一 Agent 名称",
+    "noInstalledAgents": "请先安装并启用支持的 Agent CLI。",
+    "nameHelp": "以小写字母开头，最多 32 个小写字母、数字、下划线或连字符。",
+    "initialTask": "初始任务（可选）",
+    "task": "任务",
+    "focusAfterCreate": "启动后切换到新 Agent",
+    "interruptHelp": "向这个 Agent 发送 Ctrl+C。保留窗格和会话，发送后重新核实状态。",
+    "newTab": "新建标签",
+    "restorePane": "还原窗格",
+    "zoomPane": "放大窗格",
+    "clear": "清屏",
+    "terminalTools": "Herdr 终端操作",
+    "states": {
+      "idle": "空闲",
+      "working": "工作中",
+      "blocked": "等待输入",
+      "done": "已完成",
+      "unknown": "状态未知"
+    },
+    "dialog": {
+      "new": "新建 Agent",
+      "prompt": "发送任务",
+      "output": "Agent 输出",
+      "interrupt": "中断任务"
+    },
+    "templates": {
+      "review": {
+        "label": "审查改动",
+        "prompt": "审查当前未提交的改动，重点检查正确性、兼容性和测试覆盖。报告具体问题及文件位置，先不要修改代码。"
+      },
+      "test": {
+        "label": "补充回归测试",
+        "prompt": "为当前改动补充必要的回归测试，覆盖可观察行为和关键边界，并运行相关测试。"
+      },
+      "debug": {
+        "label": "排查构建失败",
+        "prompt": "定位当前构建失败的原因，给出证据，完成最小修复并重新运行构建验证。"
+      }
+    }
+  },
   "systemLoad": {
     "title": "系统负载",
     "cpu": "本机 CPU：{{percent}}",

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { projectWorkspaceRoute } from "../../lib/worktreeApi";
+import { herdrNavigation } from "../../lib/herdrControlApi";
 import { cn } from "../../utils";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
@@ -113,7 +114,7 @@ export function ProjectWorkspace({
               route ? () => setSkillsSelection(skillsKey) : undefined
             }
             projectsReady={!projectsLoading && !appError}
-            shown={!skillsShown && !pageShown && (!file?.shown || !route)}
+            shown={!!herdrNavigation(location.state) || (!skillsShown && !pageShown && (!file?.shown || !route))}
             onSelectTerminal={() => {
               setSkillsSelection(null);
               setPageSelection("");

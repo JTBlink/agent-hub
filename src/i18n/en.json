@@ -1,4 +1,73 @@
 {
+  "herdr": {
+    "toggleZoom": "Zoom / restore pane",
+    "title": "Herdr",
+    "hide": "Hide Herdr panel",
+    "session": "Herdr session",
+    "noSessions": "No saved sessions",
+    "stopped": "Stopped",
+    "openCurrent": "Open this checkout in Herdr",
+    "missing": "Herdr is not installed.",
+    "install": "Install Herdr",
+    "noRunningSessions": "No Herdr session is running. Start one with the terminal Herdr launcher, then refresh.",
+    "search": "Find workspace or Agent…",
+    "newAgent": "New Agent",
+    "pending": "Needs input",
+    "workspaces": "Workspaces",
+    "directoryUnknown": "Workspace directory is missing or ambiguous",
+    "noMatches": "No matching entries",
+    "noWorkspaces": "No workspaces. Open the current checkout with the terminal button above.",
+    "resizeLists": "Resize workspace and Agent lists",
+    "agents": "Agents",
+    "byState": "By state",
+    "byWorkspace": "By workspace",
+    "scopeChanged": "The requested checkout changed. Select the workspace again.",
+    "createAgent": "Create Agent",
+    "sendTask": "Send task",
+    "interrupt": "Interrupt task",
+    "focus": "Open in terminal",
+    "copyOutput": "Copy output",
+    "agentType": "Agent type",
+    "agentName": "Unique Agent name",
+    "noInstalledAgents": "Install and enable a supported Agent CLI first.",
+    "nameHelp": "Start with a lowercase letter. Use up to 32 lowercase letters, digits, underscores or hyphens.",
+    "initialTask": "Initial task (optional)",
+    "task": "Task",
+    "focusAfterCreate": "Switch to the new Agent after starting",
+    "interruptHelp": "Send Ctrl+C to this Agent. Its pane and session stay open; refresh the state after sending.",
+    "newTab": "New tab",
+    "restorePane": "Restore pane",
+    "zoomPane": "Zoom pane",
+    "clear": "Clear screen",
+    "terminalTools": "Herdr terminal actions",
+    "states": {
+      "idle": "Idle",
+      "working": "Working",
+      "blocked": "Needs input",
+      "done": "Done",
+      "unknown": "Unknown"
+    },
+    "dialog": {
+      "new": "New Agent",
+      "prompt": "Send task",
+      "output": "Agent output",
+      "interrupt": "Interrupt task"
+    },
+    "templates": {
+      "review": {
+        "label": "Review changes",
+        "prompt": "Review the current uncommitted changes for correctness, compatibility and test coverage. Report actionable findings and file locations. Do not edit code yet."
+      },
+      "test": {
+        "label": "Add regression tests",
+        "prompt": "Add focused regression tests for the current changes, covering observable behavior and important boundaries, then run the relevant tests."
+      },
+      "debug": {
+        "label": "Diagnose build failure",
+        "prompt": "Identify the current build failure using concrete evidence, make the smallest fix, and rerun the build to verify it."
+      }
+    }
+  },
   "systemLoad": {
     "title": "System load",
     "cpu": "System CPU: {{percent}}",

@@ -1,4 +1,73 @@
 {
+  "herdr": {
+    "toggleZoom": "放大／還原窗格",
+    "title": "Herdr",
+    "hide": "收起 Herdr 面板",
+    "session": "Herdr 工作階段",
+    "noSessions": "沒有已儲存的工作階段",
+    "stopped": "未執行",
+    "openCurrent": "在 Herdr 開啟目前工作空間",
+    "missing": "尚未安裝 Herdr。",
+    "install": "安裝 Herdr",
+    "noRunningSessions": "沒有執行中的 Herdr 工作階段。請從終端的 Herdr 入口啟動後重新整理。",
+    "search": "尋找工作空間或 Agent…",
+    "newAgent": "新增 Agent",
+    "pending": "待處理",
+    "workspaces": "工作空間",
+    "directoryUnknown": "工作空間目錄缺失或存在歧義",
+    "noMatches": "沒有符合的內容",
+    "noWorkspaces": "尚無工作空間，可用上方終端按鈕開啟目前專案。",
+    "resizeLists": "調整工作空間與 Agent 清單高度",
+    "agents": "Agent",
+    "byState": "依狀態",
+    "byWorkspace": "依空間",
+    "scopeChanged": "目標工作空間已變更，請重新選擇。",
+    "createAgent": "建立 Agent",
+    "sendTask": "傳送任務",
+    "interrupt": "中斷任務",
+    "focus": "定位終端",
+    "copyOutput": "複製輸出",
+    "agentType": "Agent 類型",
+    "agentName": "唯一 Agent 名稱",
+    "noInstalledAgents": "請先安裝並啟用支援的 Agent CLI。",
+    "nameHelp": "以小寫字母開頭，最多 32 個小寫字母、數字、底線或連字號。",
+    "initialTask": "初始任務（選填）",
+    "task": "任務",
+    "focusAfterCreate": "啟動後切換到新 Agent",
+    "interruptHelp": "向這個 Agent 傳送 Ctrl+C。保留窗格和工作階段，傳送後重新確認狀態。",
+    "newTab": "新增分頁",
+    "restorePane": "還原窗格",
+    "zoomPane": "放大窗格",
+    "clear": "清除畫面",
+    "terminalTools": "Herdr 終端操作",
+    "states": {
+      "idle": "閒置",
+      "working": "執行中",
+      "blocked": "等待輸入",
+      "done": "已完成",
+      "unknown": "狀態未知"
+    },
+    "dialog": {
+      "new": "新增 Agent",
+      "prompt": "傳送任務",
+      "output": "Agent 輸出",
+      "interrupt": "中斷任務"
+    },
+    "templates": {
+      "review": {
+        "label": "審查變更",
+        "prompt": "審查目前尚未提交的變更，重點檢查正確性、相容性與測試覆蓋。回報具體問題與檔案位置，先不要修改程式碼。"
+      },
+      "test": {
+        "label": "補充迴歸測試",
+        "prompt": "為目前變更補充必要的迴歸測試，涵蓋可觀察行為與關鍵邊界，並執行相關測試。"
+      },
+      "debug": {
+        "label": "排查建置失敗",
+        "prompt": "定位目前建置失敗的原因，提供證據，完成最小修復並重新執行建置驗證。"
+      }
+    }
+  },
   "systemLoad": {
     "title": "系統負載",
     "cpu": "本機 CPU：{{percent}}",

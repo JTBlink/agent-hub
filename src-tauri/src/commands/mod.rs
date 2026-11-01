@@ -28,6 +28,7 @@ pub mod local_cleanup;
 
 pub mod terminal;
 
+pub mod herdr_control;
 pub mod herdr_tools;
 
 pub mod task_browser;

@@ -234,6 +234,7 @@ it("keeps primary navigation in the activity bar with labelled, active links", a
   expect(container.querySelector("output")?.textContent).toBe("/tasks");
   expect(tasks.getAttribute("aria-current")).toBe("page");
   expect(container.querySelector('a[href="/terminal"]')).toBeNull();
+  expect(navigation.querySelector('button[aria-label="Herdr"]')).not.toBeNull();
 });
 
 it("places project, search and Git first and opens search without navigating", async () => {

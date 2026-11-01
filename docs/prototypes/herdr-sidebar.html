@@ -2009,8 +2009,8 @@
         <p>评审问题：在保留终端工作流的前提下，Herdr 面板怎样组织最顺手？</p>
         <h3>入口与布局</h3>
         <p>
-          在 AgentHub 左侧活动栏的终端下方新增 Herdr
-          入口。点击展开侧边面板；主区域保留 Herdr
+          在 AgentHub 左侧活动栏保留独立 Herdr
+          入口，不再增加单独的“终端”入口。点击展开侧边面板；主区域保留 Herdr
           终端，收起面板不结束任何进程。
         </p>
         <h3>首版要做什么</h3>
@@ -2027,6 +2027,7 @@
           <li>
             侧边栏提供新建 Agent、待处理筛选，以及发送任务、查看输出和中断。
           </li>
+          <li>按真实目录联动项目／工作树，未打开时自动打开对应工作空间。</li>
           <li>新建标签、分屏和放大等操作集中在终端底部。</li>
         </ol>
         <h3>本轮优化</h3>
@@ -2050,9 +2051,11 @@
         </p>
         <h3>关键验收</h3>
         <ul>
-          <li>入口在终端下方；打开、收起、筛选不影响进程和输入。</li>
+          <li>活动栏仅保留 Herdr 功能入口；终端从项目工作空间进入。</li>
           <li>切换会话时，旧响应不覆盖当前目标。</li>
-          <li>工作空间、标签、Agent 的切换定位准确，不关闭其他终端。</li>
+          <li>
+            按目录打开对应 AgentHub 项目／工作树，Herdr 服务和 Agent 持续运行。
+          </li>
           <li>未安装、未运行、空内容、连接失败有各自提示。</li>
           <li>等待确认时定位终端，由用户处理，不自动批准。</li>
           <li>切换工作空间回到上次使用的窗格，不把列表重置到顶部。</li>
@@ -2450,6 +2453,18 @@
           ],
         },
       ];
+      // Declared demo bindings only: the prototype never reads real directories.
+      for (const space of [...workspaces, ...alternate]) {
+        space.directory = space.linkedTo
+          ? "/projects/demo-app/worktrees/terminal-focus"
+          : `/projects/${space.name}`;
+      }
+      function checkoutFor(space) {
+        const root =
+          [...workspaces, ...alternate].find((w) => w.id === space.linkedTo) ||
+          space;
+        return { project: root.name, directory: space.directory };
+      }
       const state = {
         variant: names[new URLSearchParams(location.search).get("variant")]
           ? new URLSearchParams(location.search).get("variant")
@@ -2480,6 +2495,7 @@
         scrollPositions: {},
         agentMode: "new",
         actionTarget: null,
+        openedCheckouts: ["/projects/demo-app"],
       };
       let toastTimer;
       const currentSpaces = () =>
@@ -2567,7 +2583,15 @@
           state.expanded.add(a.workspace.id);
           state.expanded.add(a.tab.id);
         }
-        state.lastAction = `定位 ${a?.name ?? "窗格"} ${id}`;
+        const checkout = a ? checkoutFor(a.workspace) : null;
+        const autoOpened =
+          checkout && !state.openedCheckouts.includes(checkout.directory);
+        if (autoOpened) state.openedCheckouts.push(checkout.directory);
+        state.lastAction = `定位 ${a?.name ?? "窗格"} ${id}${autoOpened ? `；自动打开 ${checkout.project} / ${checkout.directory}` : ""}`;
+        if (autoOpened)
+          showToast(
+            `已自动打开对应工作空间：${checkout.project} / ${checkout.directory}`,
+          );
         rememberWorkspace();
         render();
       }
@@ -2580,7 +2604,6 @@
           ["clock", "自动化"],
           ["layers", "技能"],
           ["extensions", "发现"],
-          ["terminal", "终端"],
           ["herdr", "Herdr"],
         ]
           .map(
@@ -2864,7 +2887,7 @@
       function renderEditorContent() {
         const a = selected(),
           split = state.split && !state.zoom;
-        return `<main class="editor" aria-label="主终端"><div class="tabs"><button class="tab selected" data-action="open-terminal">${icon("terminal")}终端 1 <span class="tiny faint">Herdr</span><span class="cross">×</span></button><button class="tab" data-action="shell-tab">${icon("terminal")}终端 2<span class="cross">×</span></button><div class="tools"><span class="optional">${icon("plus")}</span><span class="tag">Herdr</span>${tool("native", "切换 Herdr 原生侧栏", "sidebar")}${tool("zoom", "放大或还原窗格", "zoom")}</div></div><div class="breadcrumb">${icon("folder")}<span>当前项目：demo-app</span><span class="faint">›</span><span class="truncate selected-crumb">${esc(a?.workspace.name ?? "Herdr")}</span><span class="grow"></span><span class="tiny faint">本机 / ${esc(state.session)}</span></div><div class="terminal-area"><aside class="native-sidebar" ${state.nativeSidebar ? "" : "hidden"}><strong>spaces</strong>${currentSpaces()
+        return `<main class="editor" aria-label="主终端"><div class="tabs"><button class="tab selected" data-action="open-terminal">${icon("terminal")}终端 1 <span class="tiny faint">Herdr</span><span class="cross">×</span></button><button class="tab" data-action="shell-tab">${icon("terminal")}终端 2<span class="cross">×</span></button><div class="tools"><span class="optional">${icon("plus")}</span><span class="tag">Herdr</span>${tool("native", "切换 Herdr 原生侧栏", "sidebar")}${tool("zoom", "放大或还原窗格", "zoom")}</div></div><div class="breadcrumb">${icon("folder")}<span>当前项目：${esc(a ? checkoutFor(a.workspace).project : "未选择")}</span><span class="faint">›</span><span class="truncate selected-crumb" title="${esc(a ? checkoutFor(a.workspace).directory : "")}">${esc(a ? checkoutFor(a.workspace).directory : "Herdr")}</span><span class="grow"></span><span class="tiny faint">本机 / ${esc(state.session)}</span></div><div class="terminal-area"><aside class="native-sidebar" ${state.nativeSidebar ? "" : "hidden"}><strong>spaces</strong>${currentSpaces()
           .map(
             (w) =>
               `<div style="color:${w.id === a?.workspace.id ? "var(--accent)" : "var(--muted)"}">${esc(w.name)}</div><span class="faint"> ${esc(w.branch)}</span>`,
@@ -2894,7 +2917,7 @@
             )
             .join(
               "",
-            )}<button class="arrow" data-cycle="1" aria-label="下一个方案">›</button><span class="divider"></span><button data-action="readout" aria-pressed="${state.readout}">状态</button></div><div class="state-readout" ${state.readout ? "" : "hidden"}><div>方案：${state.variant} / ${names[state.variant]}</div><div>会话：本机 / ${esc(state.session)}</div><div>目标：${esc(a?.id ?? "无")}</div><div>Agent：${esc(a?.name ?? "无")} / ${a ? statuses[a.status] : "无"}</div><div>面板：${esc(state.panel || "已收起")}；分屏：${state.zoom ? "已放大" : state.split || "无"}</div><div>状态：${esc(state.scenario)}</div><div>最近操作：${esc(state.lastAction)}</div></div><div class="scenario-popover" id="scenario-popover" hidden>${[
+            )}<button class="arrow" data-cycle="1" aria-label="下一个方案">›</button><span class="divider"></span><button data-action="readout" aria-pressed="${state.readout}">状态</button></div><div class="state-readout" ${state.readout ? "" : "hidden"}><div>方案：${state.variant} / ${names[state.variant]}</div><div>会话：本机 / ${esc(state.session)}</div><div>目标：${esc(a?.id ?? "无")}</div><div>Agent：${esc(a?.name ?? "无")} / ${a ? statuses[a.status] : "无"}</div><div>面板：${esc(state.panel || "已收起")}；分屏：${state.zoom ? "已放大" : state.split || "无"}</div><div>状态：${esc(state.scenario)}</div><div>项目：${esc(a ? checkoutFor(a.workspace).project : "无")}</div><div>目录：${esc(a ? checkoutFor(a.workspace).directory : "无")}</div><div>最近操作：${esc(state.lastAction)}</div></div><div class="scenario-popover" id="scenario-popover" hidden>${[
             ["loading", "加载中"],
             ["ready", "已连接"],
             ["missing", "尚未安装"],
@@ -3463,7 +3486,13 @@
           const spaces = state.session === "sandbox" ? alternate : workspaces;
           let w = selected()?.workspace;
           if (state.createType !== "tab" || !w) {
-            w = { id: `w${Date.now()}`, name, branch: "main", tabs: [] };
+            w = {
+              id: `w${Date.now()}`,
+              name,
+              branch: "main",
+              directory: String(data.get("directory") || `/projects/${name}`),
+              tabs: [],
+            };
             spaces.push(w);
             state.scenario = "ready";
           }

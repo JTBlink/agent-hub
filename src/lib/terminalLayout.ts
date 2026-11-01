@@ -1,5 +1,10 @@
 import type { TerminalTaskContext } from "./taskContext";
 import type { HerdrAgent } from "./herdrAgents";
+import {
+  herdrNavigation,
+  type HerdrOpenedWorkspace,
+  type HerdrTarget,
+} from "./herdrControlApi";
 
 export const TERMINAL_PANE_LIMIT = 8;
 export const TERMINAL_LAYOUT_KEY = "agent-hub:terminal-layout";
@@ -14,6 +19,7 @@ export interface TerminalTab {
   context?: TerminalTaskContext;
   // Launch intent belongs only to this run, and is omitted from saved layouts.
   agent?: HerdrAgent;
+  herdrTarget?: HerdrTarget;
 }
 
 export interface TerminalLayout {
@@ -46,7 +52,7 @@ function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-/** Restore layout only; commands, task prompts and PTY identifiers are not saved. */
+/** Restore layout and validated native attachment locators; never replay commands or prompts. */
 export function readTerminalLayout(): TerminalLayout {
   const empty = { tabs: [], activeIds: {}, lastActiveId: "" };
   try {
@@ -86,6 +92,13 @@ export function readTerminalLayout(): TerminalLayout {
       ids.add(tab.id);
       panes.forEach((pane) => ids.add(pane));
       count += panes.length;
+      const attachment = herdrNavigation({
+        herdrAttachment: {
+          project_id: tab.projectId,
+          path: tab.worktreePath,
+          target: tab.herdrTarget,
+        },
+      });
       tabs.push({
         id: tab.id,
         projectId: tab.projectId,
@@ -96,6 +109,7 @@ export function readTerminalLayout(): TerminalLayout {
             ? tab.activePane
             : panes[0],
         direction: tab.direction,
+        ...(attachment ? { herdrTarget: attachment.target } : {}),
       });
     }
     const activeIds: Record<string, string> = {};
@@ -136,13 +150,30 @@ export function writeTerminalLayout(layout: TerminalLayout) {
         version: 1,
         ...layout,
         tabs: layout.tabs.map(
-          ({ id, projectId, worktreePath, panes, activePane, direction }) => ({
+          ({
             id,
             projectId,
             worktreePath,
             panes,
             activePane,
             direction,
+            herdrTarget,
+          }) => ({
+            id,
+            projectId,
+            worktreePath,
+            panes,
+            activePane,
+            direction,
+            ...(herdrTarget
+              ? {
+                  herdrTarget: {
+                    ...herdrTarget,
+                    revision: 0,
+                    agent_session: null,
+                  },
+                }
+              : {}),
           }),
         ),
       }),
@@ -150,4 +181,18 @@ export function writeTerminalLayout(layout: TerminalLayout) {
   } catch {
     // Storage failure must not prevent using or closing terminals.
   }
+}
+
+/** Recover only the last explicitly attached native target, never a launch intent. */
+export function lastHerdrAttachment(
+  layout: TerminalLayout,
+): HerdrOpenedWorkspace | null {
+  const tab = layout.tabs.find((tab) => tab.id === layout.lastActiveId);
+  return tab?.herdrTarget && tab.worktreePath
+    ? {
+        project_id: tab.projectId,
+        path: tab.worktreePath,
+        target: tab.herdrTarget,
+      }
+    : null;
 }

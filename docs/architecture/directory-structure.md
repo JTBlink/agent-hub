@@ -27,6 +27,7 @@ agent-hub/
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗
 │   │   ├── worktree/               #   项目／工作树导航、持久终端工作区与惰性文件浏览
+│   │   ├── herdr/                  #   Herdr 会话与工作空间切换、Agent 手动操作
 │   │   ├── terminal/               #   PTY 窗格、跨工作树会话总览与本机标签／分屏布局恢复
 │   │   ├── file-reader/            #   通用文件阅读器、弹窗壳、目录树与文本内容区
 │   │   ├── MarkdownContent.tsx     #   通用 Markdown 正文渲染
@@ -76,6 +77,7 @@ agent-hub/
 │   │   ├── exportAgents.ts         #   Agent 导出
 │   │   ├── agentIcons.ts           #   Agent 图标映射
 │   │   ├── agentUsage.ts           #   额度快照类型与展示计算
+│   │   ├── herdrControlApi.ts      #   显式会话的快照、目录联动和 Agent 控制 bindings
 │   │   ├── herdrAgents.ts          #   Herdr Agent 类型、菜单名称与图标映射
 │   │   ├── skillTags.ts            #   技能标签
 │   │   ├── skillPickerStatus.ts    #   技能选择状态
@@ -129,6 +131,7 @@ agent-hub/
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
 │   │       ├── agent_usage/        #     独立 Claude／Codex 额度、凭据与缓存
+│   │       ├── herdr_control/      #     真实快照、工作空间映射、目标核验及有界 CLI 控制
 │   │       ├── herdr_agents/       #     独立 Herdr Agent 启动、调用环境隔离与终端连接
 │   │       ├── herdr_tools/        #     Herdr 安装检测、下载与版本更新
 │   │       ├── app_state.rs        #     全局应用状态
