@@ -6,23 +6,27 @@ use anyhow::Result;
 use sha2::{Digest, Sha256};
 use std::{
     collections::{HashMap, HashSet},
-    sync::{Mutex, OnceLock},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Mutex, OnceLock,
+    },
     time::{Duration, Instant},
 };
 
 const EXCLUDED: &str = "task_browser_excluded_sources_v1";
 type HostCache = HashMap<String, (Instant, HashSet<String>)>;
 static HOSTS: OnceLock<Mutex<HostCache>> = OnceLock::new();
+static HOST_GENERATION: AtomicU64 = AtomicU64::new(0);
+static HOST_PROBES: [Mutex<()>; 2] = [Mutex::new(()), Mutex::new(())];
 
 fn host_cache() -> &'static Mutex<HostCache> {
     HOSTS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 pub(super) fn refresh_hosts() {
-    host_cache()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clear();
+    let mut cache = host_cache().lock().unwrap_or_else(|e| e.into_inner());
+    HOST_GENERATION.fetch_add(1, Ordering::AcqRel);
+    cache.clear();
 }
 
 fn excluded(store: &SkillStore) -> Result<HashSet<String>> {
@@ -67,15 +71,19 @@ fn status_hosts(text: &str) -> HashSet<String> {
 }
 
 fn known_hosts(program: &str, default_host: &str) -> HashSet<String> {
+    let _probe = HOST_PROBES[usize::from(program == "glab")]
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     if let Some((time, hosts)) = host_cache()
         .lock()
         .unwrap_or_else(|e| e.into_inner())
         .get(program)
     {
-        if time.elapsed() < Duration::from_secs(30) {
+        if time.elapsed() < Duration::from_secs(15 * 60) {
             return hosts.clone();
         }
     }
+    let generation = HOST_GENERATION.load(Ordering::Acquire);
     let mut hosts = HashSet::from([default_host.into()]);
     if let Some(path) = tool_detection::find_command(program) {
         // Keep the existing CLI environment (HOME, config overrides and keyring).
@@ -93,10 +101,10 @@ fn known_hosts(program: &str, default_host: &str) -> HashSet<String> {
         };
         hosts.extend(status_hosts(&output));
     }
-    host_cache()
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .insert(program.into(), (Instant::now(), hosts.clone()));
+    let mut cache = host_cache().lock().unwrap_or_else(|e| e.into_inner());
+    if HOST_GENERATION.load(Ordering::Acquire) == generation {
+        cache.insert(program.into(), (Instant::now(), hosts.clone()));
+    }
     hosts
 }
 
@@ -132,9 +140,9 @@ pub struct RemoteCandidate {
 }
 
 pub fn remote_candidates(store: &SkillStore, project_id: &str) -> Result<Vec<RemoteCandidate>> {
-    let github = known_hosts("gh", "github.com");
-    let gitlab = known_hosts("glab", "gitlab.com");
-    Ok(super::remotes(store, project_id)?
+    let remotes = super::remotes(store, project_id)?;
+    let (github, gitlab) = hosts_for(&remotes);
+    Ok(remotes
         .into_iter()
         .map(|remote| {
             let provider =
@@ -142,6 +150,35 @@ pub fn remote_candidates(store: &SkillStore, project_id: &str) -> Result<Vec<Rem
             RemoteCandidate { remote, provider }
         })
         .collect())
+}
+
+fn default_hosts() -> (HashSet<String>, HashSet<String>) {
+    (
+        HashSet::from(["github.com".into()]),
+        HashSet::from(["gitlab.com".into()]),
+    )
+}
+
+fn authenticated_hosts() -> (HashSet<String>, HashSet<String>) {
+    std::thread::scope(|scope| {
+        let github = scope.spawn(|| known_hosts("gh", "github.com"));
+        let gitlab = known_hosts("glab", "gitlab.com");
+        (github.join().unwrap_or_else(|_| default_hosts().0), gitlab)
+    })
+}
+
+fn hosts_for(remotes: &[String]) -> (HashSet<String>, HashSet<String>) {
+    if remotes.iter().any(|remote| !is_public_remote(remote)) {
+        authenticated_hosts()
+    } else {
+        default_hosts()
+    }
+}
+
+fn is_public_remote(remote: &str) -> bool {
+    remote.split_once('/').is_some_and(|(host, _)| {
+        host.eq_ignore_ascii_case("github.com") || host.eq_ignore_ascii_case("gitlab.com")
+    })
 }
 
 fn source_id(project_id: &str, host: &str, repository: &str) -> String {
@@ -153,18 +190,34 @@ fn source_id(project_id: &str, host: &str, repository: &str) -> String {
 }
 
 pub(super) fn bindings(store: &SkillStore, saved: Vec<Binding>) -> Result<Vec<Binding>> {
-    discover(store, saved, || {
-        (
-            known_hosts("gh", "github.com"),
-            known_hosts("glab", "gitlab.com"),
-        )
-    })
+    discover(store, saved, authenticated_hosts)
+}
+
+pub(super) fn binding(
+    store: &SkillStore,
+    saved: Vec<Binding>,
+    id: &str,
+) -> Result<Option<Binding>> {
+    Ok(
+        discover_matching(store, saved, authenticated_hosts, Some(id))?
+            .into_iter()
+            .find(|binding| binding.id == id),
+    )
 }
 
 fn discover(
     store: &SkillStore,
+    saved: Vec<Binding>,
+    hosts: impl FnOnce() -> (HashSet<String>, HashSet<String>),
+) -> Result<Vec<Binding>> {
+    discover_matching(store, saved, hosts, None)
+}
+
+fn discover_matching(
+    store: &SkillStore,
     mut saved: Vec<Binding>,
     hosts: impl FnOnce() -> (HashSet<String>, HashSet<String>),
+    wanted: Option<&str>,
 ) -> Result<Vec<Binding>> {
     let projects = store.get_all_projects()?;
     let projects: Vec<_> = projects
@@ -174,21 +227,35 @@ fn discover(
     if projects.is_empty() {
         return Ok(saved);
     }
-    let (github, gitlab) = hosts();
     let excluded = excluded(store)?;
-    for project in projects {
-        let Ok(remotes) = super::remotes(store, &project.id) else {
-            continue;
-        };
-        // Do not guess between a fork and upstream. The connection UI lets users
-        // choose a remote when a project's repository is ambiguous.
-        if remotes.len() != 1 {
-            continue;
-        }
-        if let Some(binding) = source(&project.id, &remotes[0], &github, &gitlab) {
-            if !excluded.contains(&binding.id) {
-                saved.push(binding);
+    let candidates: Vec<_> = projects
+        .into_iter()
+        .filter_map(|project| {
+            let remotes = super::remotes(store, &project.id).ok()?;
+            if remotes.len() != 1 {
+                return None;
             }
+            let remote = remotes.into_iter().next()?;
+            let (host, repository) = remote.split_once('/')?;
+            let id = source_id(&project.id, host, repository);
+            if excluded.contains(&id) || wanted.is_some_and(|wanted| wanted != id) {
+                return None;
+            }
+            Some((project.id, remote))
+        })
+        .collect();
+    // Public hosts and folders need no online login probe before the first list.
+    let (github, gitlab) = if candidates
+        .iter()
+        .any(|(_, remote)| !is_public_remote(remote))
+    {
+        hosts()
+    } else {
+        default_hosts()
+    };
+    for (project_id, remote) in candidates {
+        if let Some(binding) = source(&project_id, &remote, &github, &gitlab) {
+            saved.push(binding);
         }
     }
     Ok(saved)

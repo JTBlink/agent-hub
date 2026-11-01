@@ -189,6 +189,13 @@ it("waits for CLI source discovery and refreshes discovered repositories", async
       ?.click(),
   );
   expect(reads).toBe(2);
+  const discoveries = vi
+    .mocked(invoke)
+    .mock.calls.filter(([command]) => command === "task_bindings");
+  expect(discoveries.map(([, args]) => args)).toEqual([
+    { refresh: false },
+    { refresh: true },
+  ]);
   await act(async () => root.unmount());
 });
 

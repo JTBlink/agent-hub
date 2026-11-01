@@ -48,12 +48,7 @@ fn registered_remote_loads_without_binding_and_respects_removal_and_override() {
             visited_at: None,
         })
         .unwrap();
-    let hosts = || {
-        (
-            HashSet::from(["github.com".into()]),
-            HashSet::from(["gitlab.com".into()]),
-        )
-    };
+    let hosts = || panic!("public remotes must not probe CLI login");
     let discovered = discover(&store, vec![], hosts).unwrap();
     assert_eq!(discovered.len(), 1);
     assert_eq!(discovered[0].repository, "team/demo");
@@ -61,6 +56,24 @@ fn registered_remote_loads_without_binding_and_respects_removal_and_override() {
         .get_setting(super::super::SETTINGS_KEY)
         .unwrap()
         .is_none());
+    let mut unrelated = store.get_all_projects().unwrap().remove(0);
+    unrelated.id = "unrelated".into();
+    unrelated.path = temp.path().join("unrelated").to_string_lossy().into();
+    let unrelated_repo = git2::Repository::init(&unrelated.path).unwrap();
+    unrelated_repo
+        .remote("origin", "git@unknown.example.invalid:team/other.git")
+        .unwrap();
+    store.insert_project(&unrelated).unwrap();
+    let selected = discover_matching(
+        &store,
+        vec![],
+        || panic!("unrelated hosts must not be probed"),
+        Some(&discovered[0].id),
+    )
+    .unwrap();
+    assert_eq!(selected.len(), 1);
+    assert_eq!(selected[0].id, discovered[0].id);
+    unrelated_repo.remote_delete("origin").unwrap();
     let mut explicit = discovered[0].clone();
     explicit.launcher = Some(super::super::CliLauncher {
         program: "project-launcher".into(),
@@ -81,4 +94,16 @@ fn registered_remote_loads_without_binding_and_respects_removal_and_override() {
     repo.remote("upstream", "git@github.com:upstream/demo.git")
         .unwrap();
     assert!(discover(&store, vec![], hosts).unwrap().is_empty());
+    repo.remote_delete("upstream").unwrap();
+    repo.remote_set_url("origin", "git@git.example.invalid:team/demo.git")
+        .unwrap();
+    let enterprise = discover(&store, vec![], || {
+        (
+            HashSet::from(["github.com".into()]),
+            HashSet::from(["git.example.invalid".into()]),
+        )
+    })
+    .unwrap();
+    assert_eq!(enterprise.len(), 1);
+    assert_eq!(enterprise[0].provider, Provider::Gitlab);
 }

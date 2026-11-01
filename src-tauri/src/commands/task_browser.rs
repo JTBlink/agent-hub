@@ -10,10 +10,18 @@ use std::sync::Arc;
 use tauri::{State, WebviewWindow};
 
 #[tauri::command]
-pub async fn task_bindings(store: State<'_, Arc<SkillStore>>) -> Result<Vec<Binding>, AppError> {
+pub async fn task_bindings(
+    store: State<'_, Arc<SkillStore>>,
+    refresh: Option<bool>,
+) -> Result<Vec<Binding>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        task_browser::refresh_bindings(&store).map_err(AppError::db)
+        if refresh.unwrap_or(false) {
+            task_browser::refresh_bindings(&store)
+        } else {
+            task_browser::bindings(&store)
+        }
+        .map_err(AppError::db)
     })
     .await?
 }
@@ -56,12 +64,9 @@ fn request_key(window: &WebviewWindow, id: &str) -> Result<String, TaskFailure> 
     Ok(format!("tasks:{}:{id}", window.label()))
 }
 fn client(store: &SkillStore, id: &str) -> Result<(Binding, TaskClient<SystemCli>), TaskFailure> {
-    let binding = task_browser::bindings(store)?
-        .into_iter()
-        .find(|binding| binding.id == id)
-        .ok_or_else(|| {
-            TaskFailure::new("not_connected", "Repository binding is no longer available")
-        })?;
+    let binding = task_browser::binding(store, id)?.ok_or_else(|| {
+        TaskFailure::new("not_connected", "Repository binding is no longer available")
+    })?;
     let cwd = crate::core::project_paths::project_directory(store, &binding.project_id)?;
     Ok((binding, TaskClient::new(SystemCli { cwd })))
 }

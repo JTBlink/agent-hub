@@ -121,3 +121,85 @@ fn ported_gitlab_routes_through_environment_instead_of_rejected_hostname_flag() 
         .list(&binding, &filters, 1, &AtomicBool::new(false))
         .unwrap();
 }
+
+#[test]
+fn list_queries_share_identity_across_clients_and_refresh_after_auth_failure_or_manual_refresh() {
+    use app_lib::core::skill_store::SkillStore;
+    use app_lib::core::task_browser::{refresh_bindings, CliReader};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+
+    struct Reader {
+        scope: String,
+        users: Arc<AtomicUsize>,
+        reject: Arc<AtomicBool>,
+    }
+    impl CliReader for Reader {
+        fn identity_scope(&self, binding: &Binding) -> Option<String> {
+            Some(format!("{}:{:?}", self.scope, binding.provider))
+        }
+        fn read(
+            &self,
+            binding: &Binding,
+            args: &[String],
+            _: &AtomicBool,
+        ) -> Result<Value, TaskFailure> {
+            let endpoint = args.last().unwrap();
+            if endpoint == "user" {
+                let number = self.users.fetch_add(1, Ordering::SeqCst) + 1;
+                let name = format!("account-{number}");
+                return Ok(json!({"login":name,"username":name}));
+            }
+            if self.reject.swap(false, Ordering::SeqCst) {
+                return Err(TaskFailure::new("authentication", "Login expired"));
+            }
+            if binding.provider == Provider::Github {
+                Ok(json!({"total_count":0,"items":[]}))
+            } else {
+                Ok(json!([]))
+            }
+        }
+    }
+    let temp = tempfile::tempdir().unwrap();
+    let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
+    for provider in [Provider::Github, Provider::Gitlab] {
+        let users = Arc::new(AtomicUsize::new(0));
+        let reject = Arc::new(AtomicBool::new(false));
+        let scope = uuid::Uuid::new_v4().to_string();
+        let query = |filters: &Filters, page| {
+            TaskClient::new(Reader {
+                scope: scope.clone(),
+                users: users.clone(),
+                reject: reject.clone(),
+            })
+            .list(
+                &Binding {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    project_id: "demo".into(),
+                    provider,
+                    host: "git.example.invalid".into(),
+                    repository: "team/demo".into(),
+                    launcher: None,
+                },
+                filters,
+                page,
+                &AtomicBool::new(false),
+            )
+        };
+        assert_eq!(query(&Filters::default(), 1).unwrap().identity, "account-1");
+        let assigned = Filters {
+            personal: "assigned".into(),
+            text: "example".into(),
+            ..Filters::default()
+        };
+        assert_eq!(query(&assigned, 2).unwrap().identity, "account-1");
+        assert_eq!(users.load(Ordering::SeqCst), 1);
+        reject.store(true, Ordering::SeqCst);
+        assert_eq!(query(&assigned, 1).unwrap_err().kind, "authentication");
+        assert_eq!(query(&assigned, 1).unwrap().identity, "account-2");
+        refresh_bindings(&store).unwrap();
+        assert_eq!(query(&assigned, 1).unwrap().identity, "account-3");
+    }
+}

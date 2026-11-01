@@ -1,16 +1,16 @@
 //! Read-only repository work, explicitly bound to registered local projects.
 mod adapter;
+mod cli;
 mod development;
 mod discovery;
+mod identity;
 mod metadata;
 mod types;
 use anyhow::{bail, Context, Result};
+pub use cli::SystemCli;
 pub use discovery::{remote_candidates, RemoteCandidate};
 use serde_json::Value;
-use std::{
-    path::PathBuf,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 pub use types::*;
 
 static BINDING_WRITES: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -74,9 +74,18 @@ fn saved_bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>
 pub fn bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
     discovery::bindings(store, saved_bindings(store)?)
 }
+/// Explicit sources never need unrelated repositories or host probes to resolve.
+pub fn binding(store: &super::skill_store::SkillStore, id: &str) -> Result<Option<Binding>> {
+    let saved = saved_bindings(store)?;
+    if let Some(binding) = saved.iter().find(|binding| binding.id == id) {
+        return Ok(Some(binding.clone()));
+    }
+    discovery::binding(store, saved, id)
+}
 /// Recheck CLI login after the user refreshes the task panel.
 pub fn refresh_bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
     discovery::refresh_hosts();
+    identity::clear();
     bindings(store)
 }
 pub fn save_binding(store: &super::skill_store::SkillStore, binding: Binding) -> Result<()> {
@@ -135,6 +144,11 @@ pub fn remotes(store: &super::skill_store::SkillStore, project_id: &str) -> Resu
 
 /// The seam replaces only the external CLI, not task semantics.
 pub trait CliReader {
+    /// Identity reuse is opt-in because launchers may select different accounts.
+    fn identity_scope(&self, _binding: &Binding) -> Option<String> {
+        None
+    }
+
     fn read(
         &self,
         binding: &Binding,
@@ -153,61 +167,6 @@ where
         cancel: &AtomicBool,
     ) -> std::result::Result<Value, TaskFailure> {
         self(binding, args, cancel)
-    }
-}
-pub struct SystemCli {
-    pub cwd: PathBuf,
-}
-impl CliReader for SystemCli {
-    fn read(
-        &self,
-        binding: &Binding,
-        args: &[String],
-        cancel: &AtomicBool,
-    ) -> std::result::Result<Value, TaskFailure> {
-        if cancel.load(Ordering::Acquire) {
-            return Err(TaskFailure::new("cancelled", "Query cancelled"));
-        }
-        let default = match binding.provider {
-            Provider::Github => "gh",
-            Provider::Gitlab => "glab",
-        };
-        let configured = binding.launcher.as_ref();
-        let name = configured
-            .map(|launcher| launcher.program.as_str())
-            .unwrap_or(default);
-        let path = if std::path::Path::new(name).is_absolute() {
-            let path = PathBuf::from(name);
-            super::tool_detection::executable(&path).then_some(path)
-        } else {
-            super::tool_detection::find_command(name)
-        }
-        .ok_or_else(|| {
-            TaskFailure::new(
-                "missing_cli",
-                format!("CLI launcher is unavailable: {name}"),
-            )
-        })?;
-        let mut command_args = configured
-            .map(|launcher| launcher.args.clone())
-            .unwrap_or_default();
-        command_args.extend_from_slice(args);
-        let arguments: Vec<_> = command_args.iter().map(String::as_str).collect();
-        let text = super::cli_process::run(
-            &path.to_string_lossy(),
-            &arguments,
-            &[
-                ("GH_PROMPT_DISABLED", "1"),
-                ("GITLAB_HOST", &binding.host),
-                ("GLAB_CHECK_UPDATE", "false"),
-            ],
-            20,
-            Some(&self.cwd),
-            Some(cancel),
-        )
-        .map_err(TaskFailure::cli)?;
-        serde_json::from_str(&text)
-            .map_err(|_| TaskFailure::new("invalid_response", "Platform CLI returned invalid JSON"))
     }
 }
 pub struct TaskClient<R> {
@@ -238,7 +197,16 @@ impl<R: CliReader> TaskClient<R> {
         if binding.provider == Provider::Gitlab && binding.host.contains(':') {
             args.drain(3..5);
         }
-        self.reader.read(binding, &args, cancel)
+        let result = self.reader.read(binding, &args, cancel);
+        if result
+            .as_ref()
+            .is_err_and(|error| error.kind == "authentication")
+        {
+            if let Some(scope) = self.reader.identity_scope(binding) {
+                identity::invalidate(&scope);
+            }
+        }
+        result
     }
     pub fn list(
         &self,
@@ -248,21 +216,28 @@ impl<R: CliReader> TaskClient<R> {
         cancel: &AtomicBool,
     ) -> std::result::Result<TaskPage, TaskFailure> {
         adapter::validate_query(binding, filters, page)?;
-        let identity = self.api(binding, "user".into(), cancel)?;
-        let username = adapter::string(
-            &identity,
-            if binding.provider == Provider::Github {
-                "login"
-            } else {
-                "username"
-            },
-        );
-        if username.is_empty() {
-            return Err(TaskFailure::new(
-                "authentication",
-                "Cannot determine the current platform identity",
-            ));
-        }
+        let fetch = || {
+            let user = self.api(binding, "user".into(), cancel)?;
+            let username = adapter::string(
+                &user,
+                if binding.provider == Provider::Github {
+                    "login"
+                } else {
+                    "username"
+                },
+            );
+            if username.is_empty() {
+                return Err(TaskFailure::new(
+                    "authentication",
+                    "Cannot determine the current platform identity",
+                ));
+            }
+            Ok(username)
+        };
+        let username = match self.reader.identity_scope(binding) {
+            Some(scope) => identity::get(&scope, cancel, fetch)?,
+            None => fetch()?,
+        };
         let endpoint = adapter::list_endpoint(binding, filters, page, &username);
         let response = self.api(binding, endpoint, cancel)?;
         adapter::page(binding, filters.kind, &username, page, response)

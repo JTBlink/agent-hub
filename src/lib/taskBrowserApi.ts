@@ -134,7 +134,8 @@ export interface TaskFailure {
   kind: string;
   message: string;
 }
-export const getTaskBindings = () => invoke<TaskBinding[]>("task_bindings");
+export const getTaskBindings = (refresh = false) =>
+  invoke<TaskBinding[]>("task_bindings", { refresh });
 export const saveTaskBinding = (binding: TaskBinding) =>
   invoke<void>("task_save_binding", { binding });
 export const removeTaskBinding = (id: string) =>

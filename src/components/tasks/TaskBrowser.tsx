@@ -61,7 +61,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const refreshBindings = useCallback(async () => {
     setDiscovering(true);
     try {
-      const next = await api.getTaskBindings();
+      const next = await api.getTaskBindings(true);
       setBindings(next);
       setSettingsError("");
     } finally {
