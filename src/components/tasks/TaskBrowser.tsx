@@ -71,11 +71,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const activeProjectId =
     projectId === "all" ||
     discovering ||
-    bindings.some(
-      (binding) =>
-        binding.project_id === projectId &&
-        (provider === "all" || binding.provider === provider),
-    )
+    projects.some((project) => project.id === projectId)
       ? projectId
       : "all";
   useEffect(() => {
@@ -129,14 +125,6 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
         connections={connections}
         onProvider={(value) => {
           setProvider(value);
-          if (
-            !bindings.some(
-              (binding) =>
-                binding.project_id === projectId &&
-                (value === "all" || binding.provider === value),
-            )
-          )
-            setProjectId("all");
           setSelection(null);
         }}
         onProject={(value) => {

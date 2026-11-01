@@ -303,7 +303,7 @@ it("offers repository setup when the selected platform has no discovered source"
   await act(async () => root.unmount());
 });
 
-it("switches platform and kind filters, resets an incompatible project, and opens the selected repository", async () => {
+it("switches platform and kind filters, retains the project scope, and opens the selected repository", async () => {
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "task_bindings") return scopedBindings;
     if (command === "task_list")
@@ -351,15 +351,16 @@ it("switches platform and kind filters, resets an incompatible project, and open
   await choose("tasks.project", "Project 0");
   expect(projectMenu().textContent).toBe("Project 0");
   await act(async () => radio("GitLab").click());
-  expect(projectMenu().textContent).toBe("tasks.allProjects");
+  expect(projectMenu().textContent).toBe("Project 0");
+  expect(host.textContent).toContain("tasks.notConnected");
   await act(async () => projectMenu().click());
   expect(
     [...document.querySelectorAll('[role="option"]')].map(
       (option) => option.textContent,
     ),
-  ).toEqual(["tasks.allProjects", "Project 1"]);
+  ).toEqual(["tasks.allProjects", "Project 0", "Project 1"]);
   await act(async () =>
-    document.querySelectorAll<HTMLButtonElement>('[role="option"]')[1].click(),
+    document.querySelectorAll<HTMLButtonElement>('[role="option"]')[2].click(),
   );
   await act(async () => radio("MR").click());
   await act(async () => radio("tasks.closed").click());

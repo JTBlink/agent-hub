@@ -57,9 +57,6 @@ export function TaskToolbar({
   const scopedBindings = bindings.filter(
     (binding) => provider === "all" || binding.provider === provider,
   );
-  const projectIds = new Set(
-    scopedBindings.map((binding) => binding.project_id),
-  );
   const repository = scopedBindings.filter(
     (binding) => binding.project_id === projectId,
   );
@@ -126,13 +123,11 @@ export function TaskToolbar({
             onChange={(event) => onProject(event.target.value)}
           >
             <option value="all">{t("tasks.allProjects")}</option>
-            {projects
-              .filter((project) => projectIds.has(project.id))
-              .map((project) => (
-                <option value={project.id} key={project.id}>
-                  {project.name}
-                </option>
-              ))}
+            {projects.map((project) => (
+              <option value={project.id} key={project.id}>
+                {project.name}
+              </option>
+            ))}
           </ThemedSelect>
         </div>
         {repository.length === 1 && (
