@@ -2,7 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGitCommitDetails } from "../../hooks/useGitCommitDetails";
-import { formatGitCommitTime } from "../../lib/gitTime";
+import { GitCommitMetadata } from "./GitCommitMetadata";
 import { getErrorMessage } from "../../lib/error";
 import { GitChangeFiles } from "./GitChanges";
 
@@ -20,13 +20,17 @@ export function GitCommitDetails({
   sha,
   selected,
   onSelect,
+  expanded = false,
+  onSelectParent,
 }: {
   target: CommitTarget;
   sha: string;
   selected?: CommitFileSelection;
   onSelect: (selection: CommitFileSelection) => void;
+  expanded?: boolean;
+  onSelectParent?: (sha: string) => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [revision, setRevision] = useState(0);
   const result = useGitCommitDetails(
     target.projectId,
@@ -54,8 +58,17 @@ export function GitCommitDetails({
     );
   const data = result.data;
   return (
-    <div className="ml-[20px] border-l border-border-subtle pb-1">
-      <details className="text-xs text-muted">
+    <div
+      className={
+        expanded
+          ? "git-commit-inspector"
+          : "ml-[20px] border-l border-border-subtle pb-1"
+      }
+    >
+      <details
+        open={expanded || undefined}
+        className="min-w-0 text-xs text-muted"
+      >
         <summary className="git-history-summary flex min-w-0 cursor-pointer items-center gap-1 px-2 py-1 text-xs hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
           <ChevronRight
             size={12}
@@ -69,53 +82,36 @@ export function GitCommitDetails({
           </span>{" "}
           <span className="text-danger">−{data.deletions}</span>
         </summary>
-        <dl className="space-y-1.5 bg-surface px-3 py-2">
-          <dt>{t("git.commitMessage")}</dt>
-          <dd className="whitespace-pre-wrap break-words text-secondary">
-            {data.message}
-          </dd>
-          <dt>SHA</dt>
-          <dd className="select-text break-all font-mono text-accent-light">
-            {data.sha}
-          </dd>
-          <dt>{t("git.author")}</dt>
-          <dd className="break-words">{data.author}</dd>
-          <dt>{t("git.committer")}</dt>
-          <dd className="break-words">
-            {data.committer} ·{" "}
-            {formatGitCommitTime(data.time, i18n.language, true)}
-          </dd>
-          <dt>{t("git.parents")}</dt>
-          <dd className="select-text break-all font-mono">
-            {data.parents.join("\n") || t("git.initialCommit")}
-          </dd>
-          {data.parents.length > 1 && <dd>{t("git.firstParentDiff")}</dd>}
-        </dl>
+        <GitCommitMetadata data={data} onSelectParent={onSelectParent} />
       </details>
-      <GitChangeFiles
-        files={data.files.map((file) => ({
-          ...file,
-          staged: false,
-          unstaged: false,
-          conflicted: false,
-        }))}
-        staged={false}
-        busy={false}
-        batchLimited={false}
-        fileLabel={t("git.commitFile")}
-        selection={
-          selected?.sha === sha
-            ? { path: selected.path, staged: false }
-            : undefined
-        }
-        onSelect={({ path }) => onSelect({ sha, path })}
-      />
-      {data.files.length === 0 && (
-        <p className="px-3 py-2 text-xs text-muted">{t("git.noCommitFiles")}</p>
-      )}
-      {data.truncated && (
-        <p className="px-3 py-2 text-xs text-muted">{t("git.truncated")}</p>
-      )}
+      <div className="min-w-0">
+        <GitChangeFiles
+          files={data.files.map((file) => ({
+            ...file,
+            staged: false,
+            unstaged: false,
+            conflicted: false,
+          }))}
+          staged={false}
+          busy={false}
+          batchLimited={false}
+          fileLabel={t("git.commitFile")}
+          selection={
+            selected?.sha === sha
+              ? { path: selected.path, staged: false }
+              : undefined
+          }
+          onSelect={({ path }) => onSelect({ sha, path })}
+        />
+        {data.files.length === 0 && (
+          <p className="px-3 py-2 text-xs text-muted">
+            {t("git.noCommitFiles")}
+          </p>
+        )}
+        {data.truncated && (
+          <p className="px-3 py-2 text-xs text-muted">{t("git.truncated")}</p>
+        )}
+      </div>
     </div>
   );
 }

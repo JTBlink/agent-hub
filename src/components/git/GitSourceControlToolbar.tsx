@@ -1,16 +1,5 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  Download,
-  GitBranch,
-  History,
-  ListTree,
-  RefreshCw,
-  List,
-  Plus,
-  Minus,
-} from "lucide-react";
+import { Download, GitGraph, Plus, Minus } from "lucide-react";
+import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
 import { cn } from "../../utils";
@@ -22,6 +11,8 @@ export function GitSourceControlToolbar({
   loading,
   tree,
   history,
+  graph,
+  onGraph,
   onRemote,
   onBranch,
   onRefresh,
@@ -38,6 +29,8 @@ export function GitSourceControlToolbar({
   loading: boolean;
   tree: boolean;
   history: boolean;
+  graph: boolean;
+  onGraph: () => void;
   onRemote: (action: "fetch" | "pull" | "push") => void;
   onBranch: () => void;
   onRefresh: () => void;
@@ -52,31 +45,38 @@ export function GitSourceControlToolbar({
   const actions = [
     {
       key: "pull",
-      icon: ArrowDown,
+      icon: "repo-pull",
       onClick: () => onRemote("pull"),
       disabled: disabled || !canSync,
     },
     {
       key: "push",
-      icon: ArrowUp,
+      icon: "repo-push",
       onClick: () => onRemote("push"),
       disabled: disabled || !canSync,
     },
-    { key: "branches", icon: GitBranch, onClick: onBranch, disabled },
-    { key: "commit", icon: Check, disabled: !canCommit },
-    { key: "history", icon: History, onClick: onHistory, pressed: history },
+    { key: "branches", icon: "source-control", onClick: onBranch, disabled },
+    { key: "commit", icon: "check", disabled: !canCommit },
+    { key: "history", icon: "history", onClick: onHistory, pressed: history },
     {
       key: "refresh",
-      icon: RefreshCw,
+      icon: "refresh",
       onClick: onRefresh,
       disabled,
       spin: loading,
     },
     {
       key: "layout",
-      icon: tree ? ListTree : List,
+      icon: tree ? "list-tree" : "list-flat",
       onClick: onTree,
       pressed: tree,
+    },
+    {
+      key: "graph",
+      icon: GitGraph,
+      onClick: onGraph,
+      pressed: graph,
+      disabled,
     },
   ];
   return (
@@ -94,8 +94,12 @@ export function GitSourceControlToolbar({
             <button
               key={key}
               type={key === "commit" ? "submit" : "button"}
-              aria-label={t(`git.actions.${key}`)}
-              title={t(`git.actions.${key}`)}
+              aria-label={t(
+                key === "graph" ? "git.graph.open" : `git.actions.${key}`,
+              )}
+              title={t(
+                key === "graph" ? "git.graph.open" : `git.actions.${key}`,
+              )}
               aria-pressed={pressed}
               disabled={inactive}
               onClick={onClick}
@@ -104,7 +108,18 @@ export function GitSourceControlToolbar({
                 pressed && "bg-surface-active text-accent-light",
               )}
             >
-              <Icon size={14} className={cn(spin && "animate-spin")} />
+              {typeof Icon === "string" ? (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    `codicon codicon-${Icon}`,
+                    spin && "animate-spin",
+                  )}
+                  style={{ fontSize: 14, lineHeight: 1 }}
+                />
+              ) : (
+                <Icon size={14} aria-hidden="true" />
+              )}
             </button>
           ),
         )}

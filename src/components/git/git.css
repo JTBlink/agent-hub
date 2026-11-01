@@ -107,3 +107,21 @@
   padding: 0 8px;
   height: 30px;
 }
+
+/* Graph inspection uses the same metadata and file tree as inline history. */
+.git-commit-inspector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.git-commit-inspector > details {
+  border-right: 1px solid var(--color-border-subtle);
+}
+@container git-history (max-width: 640px) {
+  .git-commit-inspector {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .git-commit-inspector > details {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+}

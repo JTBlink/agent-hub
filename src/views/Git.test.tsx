@@ -486,6 +486,8 @@ it("opens committed file diffs separately from working changes", async () => {
     message: "Historical update",
     author: "example",
     committer: "example",
+    author_email: "user@example.invalid",
+    committer_email: "user@example.invalid",
     time: 1000,
     parents: [],
     additions: 1,
@@ -651,6 +653,25 @@ it("opens Git Graph from source control and returns to the selected diff on clos
         )!
         .click(),
     );
+    const graphButton = host.querySelector<HTMLButtonElement>(
+      '[aria-label="git.graph.open"]',
+    )!;
+    const actions = graphButton.closest(
+      '[role="group"][aria-label="git.actions.label"]',
+    );
+    expect(actions).not.toBeNull();
+    expect(
+      host.querySelector('header [aria-label="git.graph.open"]'),
+    ).toBeNull();
+    expect(
+      host.querySelector('header [aria-label="settings.refresh"]'),
+    ).toBeNull();
+    const toolbarButtons = [...actions!.querySelectorAll("button")];
+    expect(
+      toolbarButtons
+        .slice(-2)
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["git.graph.open", "git.actions.more"]);
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>('[aria-label="git.graph.open"]')!

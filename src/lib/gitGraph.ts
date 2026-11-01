@@ -1,4 +1,8 @@
-import type { GitGraphCommit } from "./gitApi";
+/** Layout consumes only commit topology; it has no dependency on IPC or React. */
+export interface GraphNode {
+  sha: string;
+  parents: readonly string[];
+}
 
 export interface GraphEdge {
   from: number;
@@ -11,7 +15,7 @@ export interface GraphRow {
   edges: GraphEdge[];
 }
 /** Keep pending parents in stable lanes so merges connect to their actual SHA. */
-export function layoutGitGraph(commits: GitGraphCommit[]) {
+export function layoutGitGraph(commits: readonly GraphNode[]) {
   const lanes: (string | null)[] = [];
   let width = 1;
   const rows: GraphRow[] = commits.map((commit) => {

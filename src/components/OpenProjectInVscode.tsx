@@ -36,7 +36,11 @@ export function OpenProjectInVscode({ path }: { path: string }) {
       {opening ? (
         <Loader2 size={14} className="animate-spin" />
       ) : (
-        <span aria-hidden="true" className="codicon codicon-vscode" />
+        <span
+          aria-hidden="true"
+          className="codicon codicon-vscode"
+          style={{ fontSize: 14, lineHeight: 1 }}
+        />
       )}
     </button>
   );

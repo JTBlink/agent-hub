@@ -8,6 +8,7 @@ export function useGitGraph(
   limit: number,
   revision: number,
 ) {
+  const scope = JSON.stringify([projectId, worktreePath, remotes]);
   const key = JSON.stringify([
     projectId,
     worktreePath,
@@ -17,6 +18,7 @@ export function useGitGraph(
   ]);
   const [result, setResult] = useState<{
     key: string;
+    scope: string;
     data?: GitGraphData;
     error?: unknown;
   }>();
@@ -24,15 +26,23 @@ export function useGitGraph(
     let cancelled = false;
     void getProjectGitGraph(projectId, worktreePath, remotes, limit).then(
       (data) => {
-        if (!cancelled) setResult({ key, data });
+        if (!cancelled) setResult({ key, scope, data });
       },
       (error: unknown) => {
-        if (!cancelled) setResult({ key, error });
+        if (!cancelled)
+          setResult((previous) => ({
+            key,
+            scope,
+            error,
+            data: previous?.scope === scope ? previous.data : undefined,
+          }));
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [projectId, worktreePath, remotes, limit, revision, key]);
-  return result?.key === key ? result : undefined;
+  }, [projectId, worktreePath, remotes, limit, revision, key, scope]);
+  return result?.scope === scope
+    ? { ...result, loading: result.key !== key }
+    : undefined;
 }

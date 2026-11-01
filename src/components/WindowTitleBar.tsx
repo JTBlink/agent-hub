@@ -1,3 +1,4 @@
+import { WorkspaceSelectionValue } from "./worktree/WorkspaceSelectionValue";
 import { OpenProjectInVscode } from "./OpenProjectInVscode";
 import { Link, useLocation, useMatch } from "react-router-dom";
 import { CircleHelp, Search } from "lucide-react";
@@ -51,16 +52,23 @@ export function WindowTitleBar({
       style={{ paddingLeft: "calc(80px / var(--app-scale))" }}
     >
       <div
-        className="flex min-w-0 max-w-[25%] items-center text-sm text-muted"
+        className="flex min-w-0 max-w-[55%] items-center text-sm text-muted"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <ThemedSelect
           aria-label={t("sidebar.switchProject")}
           title={
             selectedProject
-              ? compactHomePath(selectedProject.path)
+              ? `${selection.selectedLabel}\n${compactHomePath(selection.path ?? selectedProject.path)}`
               : t("sidebar.switchProject")
           }
+          renderValue={() => (
+            <WorkspaceSelectionValue
+              project={selectedProject?.name ?? t("sidebar.switchProject")}
+              branch={selection.branchLabel}
+              truncate={false}
+            />
+          )}
           value={selection.value}
           onChange={(event) => selection.select(event.target.value)}
           leadingIcon={
@@ -97,7 +105,7 @@ export function WindowTitleBar({
         onClick={onOpenCommands}
         aria-label={t("titleBar.searchCommands")}
         title={`${t("commandPalette.placeholder")} (${shortcut})`}
-        className="mx-auto flex h-6 w-[38%] max-w-[400px] min-w-0 items-center gap-2 rounded-md border border-border-subtle bg-surface/60 px-2 text-xs text-muted transition-colors hover:border-border hover:bg-surface-hover hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="mx-auto flex h-6 w-[38%] max-w-[400px] min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-surface/60 px-2 text-xs text-muted transition-colors hover:border-border hover:bg-surface-hover hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >
         <Search className="h-3 w-3 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1 truncate text-center">{title}</span>
@@ -113,7 +121,7 @@ export function WindowTitleBar({
         onMouseDown={(event) => event.stopPropagation()}
         title={t("help.pageTitle")}
         aria-label={t("help.pageTitle")}
-        className="app-button-ghost rounded p-1"
+        className="app-button-ghost shrink-0 rounded p-1"
       >
         <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
       </Link>

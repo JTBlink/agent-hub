@@ -24,6 +24,8 @@ export interface GitFile {
   unstaged: boolean;
   conflicted: boolean;
   status: string;
+  additions?: number | null;
+  deletions?: number | null;
 }
 export interface GitStatus {
   branch: string | null;
@@ -97,9 +99,17 @@ export interface GitCommitDetails {
   message: string;
   author: string;
   committer: string;
+  author_email: string;
+  committer_email: string;
   time: number;
   parents: string[];
-  files: { path: string; old_path: string | null; status: string }[];
+  files: {
+    path: string;
+    old_path: string | null;
+    status: string;
+    additions?: number | null;
+    deletions?: number | null;
+  }[];
   additions: number;
   deletions: number;
   truncated: boolean;

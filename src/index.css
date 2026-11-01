@@ -21,6 +21,7 @@
   :root {
     /* Keep the native window chrome at a stable height when text is zoomed. */
     --app-titlebar-height: calc(36px / var(--app-scale));
+    --app-statusbar-height: calc(22px / var(--app-scale));
     --app-activitybar-width: calc(48px / var(--app-scale));
     --app-sidebar-width: 200px;
   }
@@ -171,7 +172,18 @@
   border-radius: 6px;
 }
 .workbench-statusbar {
-  min-height: calc(24px / var(--app-scale));
+  height: var(--app-statusbar-height);
+  min-height: var(--app-statusbar-height);
+  line-height: 1;
+}
+.workbench-status-content {
+  height: 100%;
+  overflow: hidden;
+}
+.workbench-status-content > * {
+  height: 100%;
+  min-height: 0;
+  line-height: 1;
 }
 .workbench-status-content:empty {
   display: none;

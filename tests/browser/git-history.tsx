@@ -17,6 +17,26 @@ const recentPages = Array.from({ length: 45 }, (_, index) => ({
 Object.assign(window, {
   __TAURI_INTERNALS__: {
     invoke: async (command: string, args?: unknown) => {
+      if (params.has("graph") && command === "get_project_git_graph") {
+        const limit =
+          typeof args === "object" && args !== null && "limit" in args
+            ? Number(args.limit)
+            : 200;
+        return {
+          commits: Array.from({ length: limit }, (_, index) => ({
+            sha: (1000 + index).toString(16).padStart(40, "0"),
+            summary: `Example graph commit ${index + 1}`,
+            author: "Example",
+            time: 1793408400 - index * 60,
+            parents:
+              index < 4999
+                ? [(1001 + index).toString(16).padStart(40, "0")]
+                : [],
+            refs: index === 0 ? [{ name: "main", remote: false }] : [],
+          })),
+          has_more: limit < 5000,
+        };
+      }
       if (params.has("many-commits") && command === "get_project_git_history") {
         const offset =
           typeof args === "object" && args !== null && "offset" in args
@@ -36,6 +56,7 @@ Object.assign(window, {
 });
 const { i18nReady } = await import("../../src/i18n/index");
 await i18nReady;
+const { GitGraph } = await import("../../src/components/git/GitGraph");
 const { GitHistory } = await import("../../src/components/git/GitHistory");
 const { GitDiffViewer } =
   await import("../../src/components/git/GitDiffViewer");
@@ -55,6 +76,21 @@ export function Preview() {
   const patch = selected
     ? (gitFixture("get_project_git_commit_diff", {}).value as string)
     : "";
+  if (params.has("graph"))
+    return (
+      <div
+        className="flex flex-col bg-background text-primary"
+        style={{ height: "calc(100vh / var(--app-scale))" }}
+      >
+        <GitGraph
+          target={{ projectId: "example" }}
+          revision={0}
+          changedFiles={2}
+          onSelect={setSelected}
+          onClose={() => {}}
+        />
+      </div>
+    );
   return (
     <div
       className="flex bg-background text-primary"

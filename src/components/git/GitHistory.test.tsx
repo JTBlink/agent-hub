@@ -132,6 +132,8 @@ it("navigates repository icons, lazily expands tags, retries reads and filters b
     message: "Tagged commit",
     author: "example",
     committer: "example",
+    author_email: "user@example.invalid",
+    committer_email: "user@example.invalid",
     time: 1000,
     parents: [],
     additions: 0,

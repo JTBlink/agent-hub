@@ -1,7 +1,7 @@
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
-import { GitBranch, GitGraph as GraphIcon, RefreshCw } from "lucide-react";
+import { GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ResizableSidebar } from "../components/ResizableSidebar";
 import { VerticalSplit } from "../components/VerticalSplit";
@@ -21,7 +21,6 @@ import {
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { getErrorMessage } from "../lib/error";
 import { groupGitChanges } from "../lib/gitChanges";
-import { cn } from "../utils";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
 import { GitGraph } from "../components/git/GitGraph";
 import { GitHistory } from "../components/git/GitHistory";
@@ -234,27 +233,6 @@ export function Git() {
         <h1 className="mr-auto text-xs font-semibold">
           {t("git.sourceControl")}
         </h1>
-        <button
-          type="button"
-          className="app-button-ghost h-7 w-7 p-0"
-          aria-label={t("git.graph.open")}
-          title={t("git.graph.open")}
-          aria-pressed={graphOpen}
-          disabled={!activeId}
-          onClick={() => setGraphOpen(true)}
-        >
-          <GraphIcon size={15} />
-        </button>
-        <button
-          type="button"
-          className="app-button-ghost h-7 w-7 p-0"
-          aria-label={t("settings.refresh")}
-          title={t("settings.refresh")}
-          disabled={loading || busy}
-          onClick={refresh}
-        >
-          <RefreshCw size={14} className={cn(loading && "animate-spin")} />
-        </button>
       </header>
       <aside
         ref={changesRef}
@@ -286,6 +264,8 @@ export function Git() {
                     loading={loading || busy}
                     tree={tree}
                     history={historyExpanded}
+                    graph={graphOpen}
+                    onGraph={() => setGraphOpen(true)}
                     onRemote={(action) => {
                       if (activeId)
                         void runAction(

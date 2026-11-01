@@ -210,16 +210,25 @@ export function gitFixture(
       handled: true,
       value: {
         ...commit,
+        sha,
         message:
           commit.summary +
           "\n\nPreserve workspace context and cover empty input.",
         committer: "example",
+        author_email: "user@example.invalid",
+        committer_email: "user@example.invalid",
         parents: ["123456abcdef7890123456abcdef7890123456abcd"],
         additions: 18,
         deletions: 4,
         truncated: false,
         files: [
-          { path: "src/parser.rs", old_path: null, status: "modified" },
+          {
+            path: "src/parser.rs",
+            old_path: null,
+            status: "modified",
+            additions: 9,
+            deletions: 2,
+          },
           {
             path: "src/components/Workspace.tsx",
             old_path: null,

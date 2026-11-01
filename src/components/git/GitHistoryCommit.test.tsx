@@ -23,6 +23,8 @@ it("shows minute precision and lazy hover details, shares inspection with the tr
     ...commit,
     message: "Improve navigation\n\nFull explanation",
     committer: "example",
+    author_email: "user@example.invalid",
+    committer_email: "user@example.invalid",
     parents: [],
     files: [{ path: "demo.txt", old_path: null, status: "added" }],
     additions: 8,

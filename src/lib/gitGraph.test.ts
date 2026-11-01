@@ -40,3 +40,29 @@ it("reuses an empty lane for independent history without inventing an incoming e
   expect(width).toBe(1);
   expect(rows[1]).toEqual({ lane: 0, edges: [] });
 });
+
+it("keeps existing geometry when a truncated history is extended, including an octopus merge", () => {
+  const nodes = [
+    { sha: "merge", parents: ["left", "middle", "right"] },
+    { sha: "left", parents: ["base"] },
+    { sha: "middle", parents: ["base"] },
+    { sha: "right", parents: ["base"] },
+    { sha: "base", parents: [] },
+  ];
+  const partial = layoutGitGraph(nodes.slice(0, 2));
+  const full = layoutGitGraph(nodes);
+  expect(full.rows.slice(0, 2)).toEqual(partial.rows);
+  expect(full.width).toBe(3);
+  expect(full.rows[4].edges.filter((edge) => edge.half === "bottom")).toEqual(
+    [],
+  );
+  for (let i = 0; i < full.rows.length - 1; i++) {
+    const outgoing = full.rows[i].edges
+      .filter((edge) => edge.half === "bottom")
+      .map((edge) => edge.to);
+    const incoming = full.rows[i + 1].edges
+      .filter((edge) => edge.half === "top")
+      .map((edge) => edge.from);
+    expect(new Set(outgoing)).toEqual(new Set(incoming));
+  }
+});

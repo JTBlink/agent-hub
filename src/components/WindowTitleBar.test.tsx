@@ -328,7 +328,7 @@ it("shares checkout options, selection and branch refresh between the title bar 
     },
     {
       path: "<workspace>/demo-topic",
-      branch: "renamed",
+      branch: "feature/workspace-navigation-and-editor-improvements",
       head: "fedcba",
       is_main: false,
       locked: false,
@@ -339,6 +339,17 @@ it("shares checkout options, selection and branch refresh between the title bar 
   expect(getProjectWorktrees).toHaveBeenCalledTimes(calls + 1);
   assertShared("<workspace>/demo-topic");
   expect(selectors()[0].selectedOptions[0].text).toBe(
-    "Demo workspace · renamed",
+    "Demo workspace · feature/workspace-navigation-and-editor-improvements",
   );
+  for (const trigger of container.querySelectorAll<HTMLButtonElement>(
+    '[role="combobox"]',
+  )) {
+    expect(trigger.title).toContain(
+      "feature/workspace-navigation-and-editor-improvements",
+    );
+    expect(trigger.title).toContain("<workspace>/demo-topic");
+    expect(trigger.textContent).toContain(
+      "feature/workspace-navigation-and-editor-improvements",
+    );
+  }
 });

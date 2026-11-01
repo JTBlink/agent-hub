@@ -8,6 +8,8 @@ pub struct CommitFile {
     pub path: String,
     pub old_path: Option<String>,
     pub status: String,
+    pub additions: Option<usize>,
+    pub deletions: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -16,6 +18,8 @@ pub struct GitCommitDetails {
     pub message: String,
     pub author: String,
     pub committer: String,
+    pub author_email: String,
+    pub committer_email: String,
     pub time: i64,
     pub parents: Vec<String>,
     pub files: Vec<CommitFile>,
@@ -55,7 +59,17 @@ pub fn commit_details(root: &Path, sha: &str) -> Result<GitCommitDetails> {
     let files = diff
         .deltas()
         .take(1000)
-        .map(|delta| {
+        .enumerate()
+        .map(|(index, delta)| -> Result<CommitFile> {
+            let patch = git2::Patch::from_diff(&diff, index)?;
+            let lines = patch
+                .as_ref()
+                .filter(|patch| {
+                    let delta = patch.delta();
+                    !delta.old_file().is_binary() && !delta.new_file().is_binary()
+                })
+                .map(|patch| patch.line_stats())
+                .transpose()?;
             let path = delta
                 .new_file()
                 .path()
@@ -67,9 +81,11 @@ pub fn commit_details(root: &Path, sha: &str) -> Result<GitCommitDetails> {
                 .path()
                 .map(|path| path.to_string_lossy().into_owned())
                 .filter(|old| old != &path);
-            CommitFile {
+            Ok(CommitFile {
                 path,
                 old_path,
+                additions: lines.map(|(_, added, _)| added),
+                deletions: lines.map(|(_, _, deleted)| deleted),
                 status: match delta.status() {
                     git2::Delta::Added => "added",
                     git2::Delta::Deleted => "deleted",
@@ -77,16 +93,20 @@ pub fn commit_details(root: &Path, sha: &str) -> Result<GitCommitDetails> {
                     _ => "modified",
                 }
                 .into(),
-            }
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>>>()?;
     let author = commit.author().name().unwrap_or_default().to_owned();
     let committer = commit.committer().name().unwrap_or_default().to_owned();
+    let author_email = commit.author().email().unwrap_or_default().to_owned();
+    let committer_email = commit.committer().email().unwrap_or_default().to_owned();
     Ok(GitCommitDetails {
         sha: commit.id().to_string(),
         message: commit.message().unwrap_or_default().into(),
         author,
         committer,
+        author_email,
+        committer_email,
         time: commit.time().seconds(),
         parents: commit.parent_ids().map(|id| id.to_string()).collect(),
         files,
@@ -182,6 +202,10 @@ mod tests {
         assert!(initial.parents.is_empty());
         assert_eq!(initial.additions, 1);
         assert_eq!(initial.files[0].status, "added");
+        assert_eq!(initial.author_email, "user@example.invalid");
+        assert_eq!(initial.committer_email, "user@example.invalid");
+        assert_eq!(initial.files[0].additions, Some(1));
+        assert_eq!(initial.files[0].deletions, Some(0));
         assert!(commit_diff(temp.path(), &first, "demo.txt")
             .unwrap()
             .contains("+first"));
@@ -191,12 +215,26 @@ mod tests {
         let details = commit_details(temp.path(), &second).unwrap();
         assert_eq!(details.parents, vec![first]);
         assert_eq!((details.additions, details.deletions), (1, 1));
+        assert_eq!(details.files[0].additions, Some(1));
+        assert_eq!(details.files[0].deletions, Some(1));
         let patch = commit_diff(temp.path(), &second, "demo.txt").unwrap();
         assert!(patch.contains("-first") && patch.contains("+second"));
         assert!(!patch.contains("uncommitted"));
         assert!(commit_details(temp.path(), "HEAD").is_err());
         assert!(commit_diff(temp.path(), &second, "../outside").is_err());
     }
+    #[test]
+    fn binary_files_have_no_text_line_counts() {
+        let temp = tempfile::tempdir().unwrap();
+        let repo = git2::Repository::init(temp.path()).unwrap();
+        std::fs::write(temp.path().join("demo.txt"), b"binary\0content").unwrap();
+        let sha = save(&repo, "Binary file");
+        let details = commit_details(temp.path(), &sha).unwrap();
+        assert_eq!(details.files.len(), 1);
+        assert_eq!(details.files[0].additions, None);
+        assert_eq!(details.files[0].deletions, None);
+    }
+
     #[test]
     fn preserves_rename_metadata_and_patch_paths() {
         let temp = tempfile::tempdir().unwrap();

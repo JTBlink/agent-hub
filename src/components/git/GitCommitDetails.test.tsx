@@ -18,13 +18,21 @@ const data: Details = {
   message: "Improve parser\n\nKeep empty inputs safe",
   author: "example",
   committer: "example",
+  author_email: "user@example.invalid",
+  committer_email: "user@example.invalid",
   time: 1793408400,
   parents: ["b".repeat(40)],
   additions: 3,
   deletions: 1,
   truncated: false,
   files: [
-    { path: "src/parser.rs", old_path: null, status: "modified" },
+    {
+      path: "src/parser.rs",
+      old_path: null,
+      status: "modified",
+      additions: 3,
+      deletions: 1,
+    },
     { path: "tests/parser.rs", old_path: null, status: "added" },
   ],
 };
@@ -114,6 +122,43 @@ it("ignores a previous checkout response after the target changes", async () => 
     await act(async () => finish(data));
     expect(host.textContent).toContain("Current checkout");
     expect(host.textContent).not.toContain(data.message);
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it("opens graph metadata immediately and shows identities, full message, file counts and selectable parents", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitCommit).mockResolvedValue(data);
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const onParent = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <GitCommitDetails
+          target={{ projectId: "graph" }}
+          sha={data.sha}
+          expanded
+          onSelect={vi.fn()}
+          onSelectParent={onParent}
+        />,
+      ),
+    );
+    expect(host.querySelector("details")?.open).toBe(true);
+    expect(host.textContent).toContain(data.message);
+    expect(host.textContent).toContain(data.sha);
+    expect(host.textContent).toContain("user@example.invalid");
+    expect(
+      host.querySelector('[aria-label="git.commitFile: src/parser.rs"]')
+        ?.textContent,
+    ).toContain("+3 / −1");
+    const parent = [...host.querySelectorAll("button")].find(
+      (button) => button.textContent === data.parents[0],
+    )!;
+    await act(async () => parent.click());
+    expect(onParent).toHaveBeenCalledWith(data.parents[0]);
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();

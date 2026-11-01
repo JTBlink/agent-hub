@@ -1,3 +1,4 @@
+import { WorkspaceSelectionValue } from "./WorkspaceSelectionValue";
 import { GitBranch, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ThemedSelect } from "../ThemedSelect";
@@ -30,9 +31,15 @@ export function ProjectSwitcher({
                 aria-label={t("worktree.title")}
                 title={
                   selection.path
-                    ? compactHomePath(selection.path)
+                    ? `${selection.selectedLabel}\n${compactHomePath(selection.path)}`
                     : t("worktree.title")
                 }
+                renderValue={() => (
+                  <WorkspaceSelectionValue
+                    project={project.name}
+                    branch={selection.branchLabel}
+                  />
+                )}
                 value={selection.value}
                 disabled={loading || selection.options.length === 0}
                 onChange={(event) => selection.select(event.target.value)}

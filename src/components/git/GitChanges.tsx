@@ -176,6 +176,15 @@ function ChangeTree({
               >
                 <FileCode2 size={14} className="shrink-0 text-muted" />
                 <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                {node.file.additions != null && node.file.deletions != null && (
+                  <span className="shrink-0 font-mono tabular-nums">
+                    <span className="text-[var(--color-brand-teal)]">
+                      +{node.file.additions}
+                    </span>
+                    {" / "}
+                    <span className="text-danger">−{node.file.deletions}</span>
+                  </span>
+                )}
                 <span
                   title={t(`git.states.${node.file.status}`)}
                   aria-label={t(`git.states.${node.file.status}`)}

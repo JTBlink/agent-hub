@@ -75,6 +75,7 @@ export function ThemedSelect({
   className,
   leadingIcon,
   optionIcon,
+  renderValue,
   ...props
 }: Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
@@ -83,6 +84,7 @@ export function ThemedSelect({
   value: string;
   leadingIcon?: ReactNode;
   optionIcon?: (value: string) => ReactNode;
+  renderValue?: (value: string, label: string) => ReactNode;
 }) {
   const options = optionsFrom(children);
   const [position, setPosition] = useState<{
@@ -229,7 +231,7 @@ export function ThemedSelect({
             setPosition(null);
           } else if (event.key === "Tab") setPosition(null);
           else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-            const now = Date.now();
+            const now = event.timeStamp;
             const query =
               (now - typeahead.current.time < 700
                 ? typeahead.current.value
@@ -254,7 +256,9 @@ export function ThemedSelect({
       >
         {leadingIcon}
         <span className="min-w-0 flex-1 truncate">
-          {selected?.label ?? props["aria-label"]}
+          {selected && renderValue
+            ? renderValue(selected.value, selected.label)
+            : (selected?.label ?? props["aria-label"])}
         </span>
         <ChevronDown
           aria-hidden="true"

@@ -76,5 +76,25 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
     void touchProjectVisited(projectId).catch(() => {});
     navigate(worktreeUrl(projectId, worktreePath));
   };
-  return { ...snapshot, project, current, path, value, options, select };
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ??
+    project?.name ??
+    "";
+  const branchLabel =
+    current?.branch ??
+    current?.head?.slice(0, 8) ??
+    (path && path !== project?.path
+      ? path.split(/[\\/]/).filter(Boolean).at(-1)
+      : undefined);
+  return {
+    ...snapshot,
+    project,
+    current,
+    path,
+    value,
+    options,
+    select,
+    selectedLabel,
+    branchLabel,
+  };
 }
