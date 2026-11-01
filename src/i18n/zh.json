@@ -1190,7 +1190,8 @@
       "agents": "Agent",
       "skills": "技能与部署",
       "appearance": "外观与行为",
-      "backup": "同步与网络",
+      "backup": "同步与备份",
+      "network": "网络",
       "about": "关于与诊断"
     },
     "skillStorage": "技能目录",
@@ -1319,7 +1320,7 @@
     "gitBackupDesc": "通过 Git 仓库在设备间同步技能库，并保留版本历史。",
     "proxyConfig": "网络代理",
     "proxyUrl": "代理地址",
-    "proxyUrlDesc": "设置后，所有 Git 拉取和网络请求均通过此代理出口。留空则直连。",
+    "proxyUrlDesc": "用于 Codex／Claude 用量查询、技能下载和 Git 同步等应用网络请求。留空时沿用应用进程的网络环境；不修改系统代理。",
     "proxyUrlPlaceholder": "http://127.0.0.1:7890",
     "proxyUrlSaved": "代理设置已保存",
     "proxyUrlInvalid": "代理地址必须以 http://、https:// 或 socks5:// 开头",

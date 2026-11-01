@@ -111,7 +111,11 @@ where
 {
     let mut cached = cache.lock().await;
     if let Some(entry) = cached.as_ref() {
-        let minimum = if refresh { 15 } else { 120 };
+        let transient = matches!(
+            entry.snapshot.status,
+            UsageStatus::NetworkError | UsageStatus::QueryFailed | UsageStatus::InvalidResponse
+        );
+        let minimum = if refresh || transient { 15 } else { 120 };
         let cooldown = if entry.snapshot.status == UsageStatus::RateLimited {
             300
         } else {

@@ -3,7 +3,14 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../../utils";
 
-const tabs = ["agents", "skills", "appearance", "backup", "about"] as const;
+const tabs = [
+  "agents",
+  "skills",
+  "appearance",
+  "backup",
+  "network",
+  "about",
+] as const;
 type SettingsTab = (typeof tabs)[number];
 
 export function SettingsTabs({

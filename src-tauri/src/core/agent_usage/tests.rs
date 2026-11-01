@@ -47,3 +47,22 @@ async fn manual_refresh_bypasses_normal_ttl_but_failed_queries_clear_old_numbers
     assert_eq!(snapshot.status, UsageStatus::AuthExpired);
     assert!(snapshot.windows.is_empty());
 }
+
+#[tokio::test]
+async fn retries_transient_failures_without_waiting_for_the_success_cache_ttl() {
+    for status in [
+        UsageStatus::NetworkError,
+        UsageStatus::QueryFailed,
+        UsageStatus::InvalidResponse,
+    ] {
+        let cache = Mutex::new(Some(CachedUsage {
+            snapshot: ProviderUsage::empty(UsageProvider::Codex, status),
+            checked_at: Instant::now() - Duration::from_secs(31),
+        }));
+        let snapshot = cached_query(&cache, false, || async {
+            ProviderUsage::ready(UsageProvider::Codex, vec![])
+        })
+        .await;
+        assert_ne!(snapshot.status, status);
+    }
+}

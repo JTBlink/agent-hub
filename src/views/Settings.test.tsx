@@ -81,6 +81,10 @@ it("groups existing settings and retains an unsaved proxy across tabs and locale
   await act(async () => tabs()[3].click());
   expect(visiblePanel().textContent).toContain("本地同步仓库");
   expect(visiblePanel().querySelector("details")?.open).toBe(false);
+  expect(visiblePanel().querySelector("#network-proxy-url")).toBeNull();
+  await act(async () => tabs()[4].click());
+  expect(visiblePanel().textContent).toContain("网络代理");
+  expect(visiblePanel().textContent).toContain("Codex／Claude 用量查询");
   const proxy = visiblePanel().querySelector<HTMLInputElement>(
     'input[placeholder*="7890"]',
   )!;
@@ -93,11 +97,11 @@ it("groups existing settings and retains an unsaved proxy across tabs and locale
     setter.call(proxy, "http://127.0.0.1:8080");
     proxy.dispatchEvent(new Event("input", { bubbles: true }));
   });
-  await act(async () => tabs()[4].click());
+  await act(async () => tabs()[5].click());
   expect(visiblePanel().textContent).toContain("检查更新");
   expect(visiblePanel().textContent).toContain("应用数据目录");
   await act(async () => i18n.changeLanguage("en"));
-  await act(async () => tabs()[3].click());
+  await act(async () => tabs()[4].click());
   expect(proxy.value).toBe("http://127.0.0.1:8080");
   const alert = [...container.querySelectorAll("p")].find(
     (p) => p.textContent === "settings.repoWarning_nested",

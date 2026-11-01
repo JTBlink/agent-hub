@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { Gauge } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "../AgentIcon";
@@ -61,40 +62,45 @@ export function AgentUsageStatusBar() {
 
   return (
     <>
-      {visibleProviders.length > 0 && (
-        <button
-          ref={trigger}
-          type="button"
-          aria-label={t("agentUsage.title")}
-          title={t("agentUsage.title")}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          aria-controls={open ? id : undefined}
-          className="app-button-ghost ml-auto flex h-full shrink-0 items-center gap-2 rounded px-1.5"
-          onClick={() => {
-            setOpen(!open);
-            if (!open) void refresh();
-          }}
-        >
-          {visibleProviders.map(({ provider, percent }) => {
-            return (
-              <span
-                key={provider}
-                className="inline-flex items-center gap-1"
-                title={`${usageProviderName(provider)} · ${t("agentUsage.used", { percent: Math.round(percent) })}`}
-              >
-                <AgentIcon
-                  agentKey={usageAgentKey(provider)}
-                  className="h-3.5 w-3.5 border-0 bg-transparent"
-                />
-                <span className={percent >= 80 ? "text-danger" : ""}>
-                  {`${Math.round(percent)}%`}
-                </span>
+      <button
+        ref={trigger}
+        type="button"
+        aria-label={t("agentUsage.title")}
+        title={t("agentUsage.title")}
+        aria-expanded={open}
+        aria-busy={loading}
+        aria-haspopup="dialog"
+        aria-controls={open ? id : undefined}
+        className="app-button-ghost ml-auto flex h-full shrink-0 items-center gap-2 rounded px-1.5"
+        onClick={() => {
+          setOpen(!open);
+          if (!open) void refresh();
+        }}
+      >
+        {visibleProviders.length === 0 && (
+          <>
+            <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>{t("agentUsage.title")}</span>
+          </>
+        )}
+        {visibleProviders.map(({ provider, percent }) => {
+          return (
+            <span
+              key={provider}
+              className="inline-flex items-center gap-1"
+              title={`${usageProviderName(provider)} · ${t("agentUsage.used", { percent: Math.round(percent) })}`}
+            >
+              <AgentIcon
+                agentKey={usageAgentKey(provider)}
+                className="h-3.5 w-3.5 border-0 bg-transparent"
+              />
+              <span className={percent >= 80 ? "text-danger" : ""}>
+                {`${Math.round(percent)}%`}
               </span>
-            );
-          })}
-        </button>
-      )}
+            </span>
+          );
+        })}
+      </button>
       {open &&
         createPortal(
           <div

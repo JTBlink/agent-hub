@@ -150,7 +150,7 @@ it("prevents duplicate manual queries, retains displayed data during refresh and
   expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
     "登录已失效",
   );
-  expect(document.querySelector('button[aria-label="Agent 用量"]')).toBeNull();
+  expect(button("Agent 用量").textContent).toBe("Agent 用量");
 });
 
 it("pauses automatic queries when hidden or unfocused and resumes on activation", async () => {
@@ -179,7 +179,7 @@ it("closes on outside focus and displays an IPC failure without stale percentage
   expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
     "查询失败",
   );
-  expect(document.querySelector('button[aria-label="Agent 用量"]')).toBeNull();
+  expect(button("Agent 用量").textContent).toBe("Agent 用量");
   const outside = document.createElement("button");
   document.body.append(outside);
   await act(async () => outside.focus());
@@ -216,11 +216,57 @@ it("hides unavailable providers while keeping a valid zero usage visible", async
   expect(button("Agent 用量").querySelector('[title^="Codex"]')).not.toBeNull();
 });
 
-it("hides the usage entry when neither provider has data and restores it after recovery", async () => {
+it("keeps the usage entry available without quota and shows percentages after recovery", async () => {
   vi.useFakeTimers();
   vi.mocked(getAgentUsage).mockResolvedValueOnce([]);
   await render();
-  expect(document.querySelector('button[aria-label="Agent 用量"]')).toBeNull();
+  expect(button("Agent 用量").textContent).toBe("Agent 用量");
   await act(async () => vi.advanceTimersByTime(300000));
   expect(button("Agent 用量").textContent).toBe("85%0%");
+});
+
+it("recovers a hidden Codex quota promptly after a transient query failure", async () => {
+  vi.useFakeTimers();
+  vi.mocked(getAgentUsage).mockResolvedValueOnce(
+    fixture().map((snapshot) =>
+      snapshot.provider === "codex"
+        ? { ...snapshot, status: "query_failed", windows: [] }
+        : snapshot,
+    ),
+  );
+  await render();
+  expect(button("Agent 用量").querySelector('[title^="Codex"]')).toBeNull();
+  await act(async () => vi.advanceTimersByTime(30000));
+  expect(button("Agent 用量").querySelector('[title^="Codex"]')).not.toBeNull();
+  expect(getAgentUsage).toHaveBeenCalledTimes(2);
+  await act(async () => vi.advanceTimersByTime(30000));
+  expect(getAgentUsage).toHaveBeenCalledTimes(2);
+});
+
+it("opens failure details and manually recovers through the persistent usage entry", async () => {
+  vi.mocked(getAgentUsage)
+    .mockResolvedValueOnce(
+      fixture().map((snapshot) => ({
+        ...snapshot,
+        status: "query_failed",
+        windows: [],
+      })),
+    )
+    .mockResolvedValueOnce(
+      fixture().map((snapshot) => ({
+        ...snapshot,
+        status: "query_failed",
+        windows: [],
+      })),
+    );
+  await render();
+  expect(button("Agent 用量").textContent).toBe("Agent 用量");
+  await click("Agent 用量");
+  const panel = document.querySelector('[role="dialog"]')!;
+  expect(panel.textContent).toContain("Codex");
+  expect(panel.textContent).toContain("查询失败");
+  expect(panel.querySelector('[role="progressbar"]')).toBeNull();
+  await click("刷新用量");
+  expect(button("Agent 用量").textContent).toBe("85%0%");
+  expect(panel.querySelectorAll('[role="progressbar"]')).toHaveLength(3);
 });

@@ -5,7 +5,8 @@ import { SettingsTabs } from "../components/settings/SettingsTabs";
 import { AgentsSettings } from "../components/settings/AgentsSettings";
 import { SkillsSettings } from "../components/settings/SkillsSettings";
 import { AppearanceSettings } from "../components/settings/AppearanceSettings";
-import { BackupNetworkSettings } from "../components/settings/BackupNetworkSettings";
+import { BackupSettings } from "../components/settings/BackupSettings";
+import { NetworkSettings } from "../components/settings/NetworkSettings";
 import { AboutSettings } from "../components/settings/AboutSettings";
 import { AppDataDirectorySetting } from "../components/settings/AppDataDirectorySetting";
 import { SettingsAlerts } from "../components/settings/SettingsAlerts";
@@ -30,7 +31,8 @@ export function Settings() {
           agents: <AgentsSettings />,
           skills: <SkillsSettings />,
           appearance: <AppearanceSettings />,
-          backup: <BackupNetworkSettings />,
+          backup: <BackupSettings />,
+          network: <NetworkSettings />,
           about: (
             <>
               <AboutSettings diagnostics={diagnostics} />

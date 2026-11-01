@@ -27,6 +27,10 @@ export interface ProviderUsage {
   retry_after_seconds: number | null;
 }
 export const USAGE_PROVIDERS: UsageProvider[] = ["claude", "codex"];
+export const isTransientUsageFailure = (status: UsageStatus) =>
+  status === "network_error" ||
+  status === "query_failed" ||
+  status === "invalid_response";
 export const usageAgentKey = (provider: UsageProvider) =>
   provider === "claude" ? "claude_code" : "codex";
 export const usageProviderName = (provider: UsageProvider) =>

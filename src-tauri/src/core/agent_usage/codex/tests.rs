@@ -123,3 +123,22 @@ async fn bounds_and_reaps_an_unresponsive_probe() {
     );
     assert!(started.elapsed() < Duration::from_secs(3));
 }
+
+#[tokio::test]
+async fn ignores_cli_startup_noise_without_losing_rpc_responses() {
+    let bytes = b"starting CLI wrapper\n\n{\"method\":\"notice\"}\n{\"id\":1,\"result\":{}}\n{\"id\":2,\"result\":{\"requiresOpenaiAuth\":true,\"account\":{\"type\":\"chatgpt\"}}}\n{\"id\":3,\"result\":{\"rateLimits\":{\"primary\":{\"usedPercent\":61,\"windowDurationMins\":10080}}}}\n";
+    let snapshot = exchange(tokio::io::sink(), bytes.as_slice()).await.unwrap();
+    assert_eq!(snapshot.status, UsageStatus::Ready);
+    assert_eq!(snapshot.windows[0].used_percent, 61.0);
+}
+
+#[tokio::test]
+async fn queries_chatgpt_quota_even_when_the_configured_model_needs_no_openai_auth() {
+    let snapshot = mock_exchange(
+        json!({"requiresOpenaiAuth":false,"account":{"type":"chatgpt"}}),
+        json!({"rateLimits":{"primary":{"usedPercent":61,"windowDurationMins":10080}}}),
+    )
+    .await
+    .unwrap();
+    assert_eq!(snapshot.status, UsageStatus::Ready);
+}

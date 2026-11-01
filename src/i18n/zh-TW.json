@@ -1165,6 +1165,12 @@
     }
   },
   "settings": {
+    "proxyConfig": "網路代理",
+    "proxyUrl": "代理位址",
+    "proxyUrlDesc": "用於 Codex／Claude 用量查詢、技能下載和 Git 同步等應用程式網路請求。留空時沿用應用程式程序的網路環境；不修改系統代理。",
+    "proxyUrlPlaceholder": "http://127.0.0.1:7890",
+    "proxyUrlSaved": "代理設定已儲存",
+    "proxyUrlInvalid": "代理位址必須以 http://、https:// 或 socks5:// 開頭",
     "trayIconOffHint": "托盤圖示已隱藏，關閉視窗時將先詢問。",
     "closeAction_close": "退出前確認",
     "loadFailed": "設定讀取失敗，請重試。",
@@ -1173,7 +1179,8 @@
       "agents": "Agent",
       "skills": "技能與部署",
       "appearance": "外觀與行為",
-      "backup": "同步與網路",
+      "backup": "同步與備份",
+      "network": "網路",
       "about": "關於與診斷"
     },
     "skillStorage": "技能目錄",

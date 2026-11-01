@@ -10,7 +10,7 @@ import { ToggleSwitch } from "../../components/ToggleSwitch";
 import * as api from "../../lib/tauri";
 import { actionButtonClass, fieldClass } from "./settingsStyles";
 
-export function BackupNetworkSettings() {
+export function BackupSettings() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [gitRemoteInput, setGitRemoteInput] = useState("");
@@ -19,18 +19,14 @@ export function BackupNetworkSettings() {
   const [gitEngineGit2, setGitEngineGit2] = useState(false);
   // Object merge is the default since 3d-β; "system" is the opt-out.
   const [gitMergeEngineObject, setGitMergeEngineObject] = useState(true);
-  const [proxyInput, setProxyInput] = useState("");
-  const [proxySaving, setProxySaving] = useState(false);
   const form = useSettingsForm(
     () =>
       Promise.all([
-        api.getSettings("proxy_url"),
         api.getSettings("git_backup_remote_url"),
         api.getSettings("git_backup_engine"),
         api.getSettings("merge_engine"),
       ]),
-    ([proxy, remote, git, merge]) => {
-      setProxyInput(proxy ?? "");
+    ([remote, git, merge]) => {
       setGitRemoteInput(remote?.trim() || "");
       setGitEngineGit2(git?.trim() === "git2");
       setGitMergeEngineObject((merge ?? "").trim() !== "system");
@@ -68,22 +64,6 @@ export function BackupNetworkSettings() {
     }
   };
 
-  const handleSaveProxy = async () => {
-    const trimmed = proxyInput.trim();
-    if (trimmed && !/^(https?|socks5):\/\//i.test(trimmed)) {
-      toast.error(t("settings.proxyUrlInvalid"));
-      return;
-    }
-    setProxySaving(true);
-    try {
-      await api.setSettings("proxy_url", trimmed);
-      toast.success(t("settings.proxyUrlSaved"));
-    } catch {
-      toast.error(t("common.error"));
-    } finally {
-      setProxySaving(false);
-    }
-  };
   return (
     <SettingsForm form={form}>
       <section>
@@ -223,41 +203,6 @@ export function BackupNetworkSettings() {
                 />
               </div>
             </details>
-          </div>
-        </div>
-      </section>
-      <section>
-        <h2 className="app-section-title mb-3">{t("settings.proxyConfig")}</h2>
-        <div className="app-panel overflow-hidden divide-y divide-border-faint">
-          <div className="px-4 py-3">
-            <h3 className="text-base font-semibold text-primary">
-              {t("settings.proxyUrl")}
-            </h3>
-            <p className="mt-0.5 mb-2 text-xs text-muted">
-              {t("settings.proxyUrlDesc")}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                aria-label={t("settings.proxyUrl")}
-                value={proxyInput}
-                onChange={(e) => setProxyInput(e.target.value)}
-                placeholder={t("settings.proxyUrlPlaceholder")}
-                className={`${fieldClass} min-w-0 flex-1 font-mono`}
-              />
-              <button
-                onClick={() => void form.save(handleSaveProxy)}
-                disabled={proxySaving}
-                className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
-              >
-                {proxySaving ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <LinkIcon className="w-3 h-3" />
-                )}
-                {t("common.save")}
-              </button>
-            </div>
           </div>
         </div>
       </section>

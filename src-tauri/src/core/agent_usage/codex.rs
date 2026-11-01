@@ -24,7 +24,7 @@ pub(super) async fn query(proxy: Option<&str>) -> ProviderUsage {
     let executable =
         tokio::task::spawn_blocking(|| crate::core::tool_detection::find_command("codex")).await;
     let result = match executable {
-        Ok(Some(path)) => query_command(&path, Duration::from_secs(25), proxy).await,
+        Ok(Some(path)) => query_command(&path, Duration::from_secs(40), proxy).await,
         Ok(None) => Err(UsageStatus::NotInstalled),
         Err(_) => Err(UsageStatus::QueryFailed),
     };
@@ -50,7 +50,17 @@ async fn query_command(
         command.as_std_mut().process_group(0);
     }
     command
-        .arg("app-server")
+        // Override legacy approval settings before config validation; this probe
+        // only reads account metadata and must not prompt or permit writes.
+        .args([
+            "-c",
+            "approval_policy=never",
+            "-s",
+            "read-only",
+            "-a",
+            "never",
+            "app-server",
+        ])
         .current_dir(std::env::temp_dir())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -112,8 +122,11 @@ async fn response(
         {
             return Err(UsageStatus::InvalidResponse);
         }
-        let message: Value =
-            serde_json::from_slice(&line).map_err(|_| UsageStatus::InvalidResponse)?;
+        // CLI wrappers may print startup notices or blank lines on stdout.
+        // Keep scanning within the same total byte/deadline limits.
+        let Ok(message) = serde_json::from_slice::<Value>(&line) else {
+            continue;
+        };
         if message["id"].as_u64() != Some(id) {
             continue;
         }
@@ -156,13 +169,16 @@ async fn exchange(
     )
     .await?;
     let account = response(&mut reader, 2).await?;
-    if account["requiresOpenaiAuth"] == false {
-        return Err(UsageStatus::Unsupported);
-    }
     let identity = account.get("account").ok_or(UsageStatus::InvalidResponse)?;
     if identity.is_null() {
-        return Err(UsageStatus::SignedOut);
+        return Err(if account["requiresOpenaiAuth"] == false {
+            UsageStatus::Unsupported
+        } else {
+            UsageStatus::SignedOut
+        });
     }
+    // requiresOpenaiAuth describes the configured model provider, not whether
+    // the CLI still has a ChatGPT subscription account whose quota we can read.
     if identity["type"] != "chatgpt" {
         return Err(UsageStatus::Unsupported);
     }

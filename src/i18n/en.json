@@ -1192,7 +1192,8 @@
       "agents": "Agents",
       "skills": "Skills & deployment",
       "appearance": "Appearance & behavior",
-      "backup": "Sync & Network",
+      "backup": "Sync & backup",
+      "network": "Network",
       "about": "About & diagnostics"
     },
     "skillStorage": "Skill directory",
@@ -1321,7 +1322,7 @@
     "gitBackupDesc": "Sync your skill library across devices through a Git repository and keep version history.",
     "proxyConfig": "Network Proxy",
     "proxyUrl": "Proxy URL",
-    "proxyUrlDesc": "All Git clones and network requests will route through this proxy. Leave blank to connect directly.",
+    "proxyUrlDesc": "Used for Codex/Claude quota queries, skill downloads, Git sync, and other app network requests. Leave empty to use the app process’s network environment. This does not change the system proxy.",
     "proxyUrlPlaceholder": "http://127.0.0.1:7890",
     "proxyUrlSaved": "Proxy settings saved",
     "proxyUrlInvalid": "Proxy URL must start with http://, https://, or socks5://",

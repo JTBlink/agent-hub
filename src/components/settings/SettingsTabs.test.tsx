@@ -31,7 +31,8 @@ function Subject() {
           agents: <input aria-label="Agent name" defaultValue="draft" />,
           skills: <p>Skills</p>,
           appearance: <p>Appearance</p>,
-          backup: <input aria-label="Proxy" />,
+          backup: <p>Backup</p>,
+          network: <input aria-label="Proxy" />,
           about: <p>About</p>,
         }}
       </SettingsTabs>
@@ -57,7 +58,7 @@ const tabs = () => [
 
 it("opens the Agent deep link and preserves drafts and scroll across tab switches and back", async () => {
   await render();
-  expect(tabs()).toHaveLength(5);
+  expect(tabs()).toHaveLength(6);
   expect(tabs()[0].getAttribute("aria-selected")).toBe("true");
   const panel = container.querySelector<HTMLElement>('[role="tabpanel"]')!;
   const input = panel.querySelector<HTMLInputElement>("input")!;
@@ -75,10 +76,10 @@ it("opens the Agent deep link and preserves drafts and scroll across tab switche
 
 it("supports keyboard navigation and opens the update deep link directly", async () => {
   await render("/settings#about");
-  expect(tabs()[4].getAttribute("aria-selected")).toBe("true");
-  tabs()[4].focus();
+  expect(tabs()[5].getAttribute("aria-selected")).toBe("true");
+  tabs()[5].focus();
   await act(async () =>
-    tabs()[4].dispatchEvent(
+    tabs()[5].dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
     ),
   );
@@ -89,11 +90,23 @@ it("supports keyboard navigation and opens the update deep link directly", async
       new KeyboardEvent("keydown", { key: "End", bubbles: true }),
     ),
   );
-  expect(document.activeElement).toBe(tabs()[4]);
+  expect(document.activeElement).toBe(tabs()[5]);
   await act(async () =>
-    tabs()[4].dispatchEvent(
+    tabs()[5].dispatchEvent(
       new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
     ),
   );
   expect(document.activeElement).toBe(tabs()[0]);
+});
+
+it("opens the network deep link with its own panel independently of backup", async () => {
+  await render("/settings#network");
+  const tab = tabs().find((item) => item.textContent === "网络")!;
+  expect(tab.getAttribute("aria-selected")).toBe("true");
+  expect(
+    container.querySelector<HTMLElement>("#settings-panel-network")?.hidden,
+  ).toBe(false);
+  expect(
+    container.querySelector<HTMLElement>("#settings-panel-backup")?.hidden,
+  ).toBe(true);
 });
