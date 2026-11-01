@@ -46,7 +46,7 @@ try {
           `(()=>{const d=${doc};const footer=d.querySelector('footer');const rect=footer.getBoundingClientRect();const trigger=d.querySelector('header [role=combobox]');const labels=[...trigger.querySelectorAll('span')];const status=[...footer.querySelectorAll('span,button')].filter(e=>e.getClientRects().length);return {height:rect.height,overflow:d.documentElement.scrollWidth>d.documentElement.clientWidth,labelsVisible:labels.every(e=>e.scrollWidth<=e.clientWidth+1),statusFits:status.every(e=>{const r=e.getBoundingClientRect();return r.top>=rect.top-0.5&&r.bottom<=rect.bottom+0.5})}})()`,
         );
         assert.ok(
-          Math.abs(metrics.height - 22) < 0.2,
+          Math.abs(metrics.height - 28) < 0.2,
           `${view}/${theme}/${scale}: ${JSON.stringify(metrics)}`,
         );
         assert.equal(metrics.overflow, false, `${view}: document overflow`);
@@ -64,7 +64,7 @@ try {
     }
   }
   console.log(
-    "PASS: complete project/branch labels and 22px status bar at 960px, both themes and 100%/120%, across workspace, Git and dashboard.",
+    "PASS: complete project/branch labels and 28px status bar at 960px, both themes and 100%/120%, across workspace, Git and dashboard.",
   );
 } finally {
   await request(`/close?target=${targetId}`);

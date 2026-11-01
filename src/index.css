@@ -21,7 +21,7 @@
   :root {
     /* Keep the native window chrome at a stable height when text is zoomed. */
     --app-titlebar-height: calc(36px / var(--app-scale));
-    --app-statusbar-height: calc(22px / var(--app-scale));
+    --app-statusbar-height: calc(28px / var(--app-scale));
     --app-activitybar-width: calc(48px / var(--app-scale));
     --app-sidebar-width: 200px;
   }
@@ -174,6 +174,9 @@
 .workbench-statusbar {
   height: var(--app-statusbar-height);
   min-height: var(--app-statusbar-height);
+  max-height: var(--app-statusbar-height);
+  flex-basis: var(--app-statusbar-height);
+  font-size: calc(12px / var(--app-scale));
   line-height: 1;
 }
 .workbench-status-content {
@@ -184,6 +187,16 @@
   height: 100%;
   min-height: 0;
   line-height: 1;
+}
+/* Chrome content must follow the fixed bar, rather than the reading text zoom. */
+.workbench-statusbar .text-xs {
+  font-size: inherit;
+  line-height: 1;
+}
+.workbench-statusbar svg {
+  width: calc(12px / var(--app-scale));
+  height: calc(12px / var(--app-scale));
+  flex-shrink: 0;
 }
 .workbench-status-content:empty {
   display: none;
