@@ -133,7 +133,7 @@ export function AgentUsagePanel({
                 </p>
               )}
               {snapshot && (
-                <p className="mt-2 text-xs text-faint">
+                <p className="mt-2 text-xs text-accent-light">
                   {t("agentUsage.checkedAt", {
                     time: quotaTime(snapshot.updated_at, i18n.language),
                   })}
