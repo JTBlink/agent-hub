@@ -2087,6 +2087,7 @@
     "unsaved": "Unsaved"
   },
   "git": {
+    "noProjects": "No projects added. Use File → Open Project… to add a project and view Git changes.",
     "actions": {
       "label": "Source control actions",
       "pull": "Pull (fast-forward only)",

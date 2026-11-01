@@ -432,7 +432,7 @@ export function Git() {
         {!activeId ? (
           <>
             {!sidebarVisibility?.sidebarContainer && sidebar}
-            <p className="p-8 text-sm text-muted">{t("terminal.noProjects")}</p>
+            <p className="p-8 text-sm text-muted">{t("git.noProjects")}</p>
           </>
         ) : (
           <>

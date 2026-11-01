@@ -47,6 +47,8 @@ function TestGit() {
   );
 }
 
+const emptyState = vi.hoisted(() => ({ noProjects: false }));
+
 const translate = (key: string) => key;
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: translate, i18n: { language: "en" } }),
@@ -54,10 +56,12 @@ vi.mock("react-i18next", () => ({
 vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("../context/AppContext", () => ({
   useApp: () => ({
-    projects: [
-      { ...makeProject(), id: "first", name: "First" },
-      { ...makeProject(), id: "second", name: "Second" },
-    ],
+    projects: emptyState.noProjects
+      ? []
+      : [
+          { ...makeProject(), id: "first", name: "First" },
+          { ...makeProject(), id: "second", name: "Second" },
+        ],
   }),
 }));
 vi.mock("../hooks/useProjectWorktrees", () => ({
@@ -847,6 +851,30 @@ it("runs toolbar operations against the selected checkout and switches change la
   } finally {
     await act(async () => root.unmount());
     host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("uses a Git-specific empty state when no projects are available", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  emptyState.noProjects = true;
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<TestGit />));
+    expect(host.textContent).toContain("git.noProjects");
+    expect(host.textContent).not.toContain("terminal.noProjects");
+    for (const resource of [
+      await import("../i18n/zh.json"),
+      await import("../i18n/en.json"),
+      await import("../i18n/zh-TW.json"),
+    ]) {
+      expect(resource.default.git.noProjects).toBeTruthy();
+      expect(resource.default.git.noProjects).not.toBe("git.noProjects");
+    }
+  } finally {
+    await act(async () => root.unmount());
+    emptyState.noProjects = false;
     vi.unstubAllGlobals();
   }
 });
