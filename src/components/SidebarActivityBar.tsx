@@ -9,7 +9,7 @@ type ActivityIcon =
   | "search"
   | "layout"
   | "checklist"
-  | "github-action"
+  | "clock"
   | "source-control"
   | "layers"
   | "extensions"
@@ -164,7 +164,7 @@ export function SidebarActivityBar({
         {renderLink({
           name: t("automation.title"),
           path: "/automation",
-          icon: "github-action",
+          icon: "clock",
         })}
         {renderPanel("skills", t("sidebar.skillPanel"), "layers")}
         {renderLink({
