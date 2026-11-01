@@ -11,7 +11,17 @@ pub(super) fn repository(root: &Path) -> Result<git2::Repository> {
     )?)
 }
 
-pub(super) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
+pub(crate) fn validate_branch_name(branch: &str) -> Result<()> {
+    if branch.is_empty()
+        || branch.starts_with('-')
+        || !git2::Reference::is_valid_name(&format!("refs/heads/{branch}"))
+    {
+        bail!("Enter a valid local branch name");
+    }
+    Ok(())
+}
+
+pub(crate) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
     let mut command = Command::new("git");
     command
         .arg("--literal-pathspecs")

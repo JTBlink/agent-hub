@@ -2022,6 +2022,12 @@
     }
   },
   "worktree": {
+    "create": "建立工作樹",
+    "createMenu": "建立工作樹…",
+    "createHint": "從目前工作樹的 HEAD 建立新分支與獨立工作目錄，建立後自動切換。",
+    "newBranch": "新分支名稱",
+    "destination": "目標目錄",
+    "destinationHint": "填寫尚不存在的絕對路徑，父目錄須已存在。",
     "selectWorktree": "切換工作樹",
     "projectActions": "專案操作",
     "detached": "分離 HEAD",

@@ -2068,6 +2068,12 @@
     }
   },
   "worktree": {
+    "create": "创建工作树",
+    "createMenu": "创建工作树…",
+    "createHint": "从当前工作树的 HEAD 创建新分支和独立工作目录，创建后自动切换。",
+    "newBranch": "新分支名",
+    "destination": "目标目录",
+    "destinationHint": "填写尚不存在的绝对路径，父目录须已存在。",
     "selectWorktree": "切换工作树",
     "projectActions": "项目操作",
     "detached": "游离 HEAD",

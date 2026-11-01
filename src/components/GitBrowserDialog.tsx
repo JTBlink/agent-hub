@@ -41,7 +41,7 @@ export function GitBrowserDialog({
       onClick={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
-      className="m-auto max-h-[80vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+      className="m-auto max-h-[calc(80vh/var(--app-scale))] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 id={titleId} className="min-w-0 break-words text-lg font-semibold">

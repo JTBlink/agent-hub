@@ -107,3 +107,19 @@ pub async fn replace_worktree_matches(
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn create_project_worktree(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    source_path: String,
+    branch: String,
+    destination: String,
+) -> Result<ProjectWorktree, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        project_worktrees::create(&store, &project_id, &source_path, &branch, &destination)
+            .map_err(AppError::io)
+    })
+    .await?
+}

@@ -1,4 +1,4 @@
-//! Read-only project worktrees and bounded, lazy file browsing.
+//! Project worktrees and bounded, lazy file browsing.
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use std::{
@@ -128,6 +128,74 @@ pub fn directory(
     Ok(candidate)
 }
 
+/// Create a new branch and checkout from an authorized worktree's current HEAD.
+/// Existing destinations and branches are never overwritten.
+pub fn create(
+    store: &SkillStore,
+    project_id: &str,
+    source_path: &str,
+    branch: &str,
+    destination: &str,
+) -> Result<ProjectWorktree> {
+    let source = directory(store, project_id, Some(source_path))?;
+    let repo = git2::Repository::open_ext(
+        &source,
+        git2::RepositoryOpenFlags::NO_SEARCH,
+        &[] as &[&Path],
+    )?;
+    let head = repo
+        .head()
+        .context("Create a commit before creating a worktree")?
+        .peel_to_commit()?
+        .id()
+        .to_string();
+    super::project_git::validate_branch_name(branch)?;
+    if repo.find_branch(branch, git2::BranchType::Local).is_ok() {
+        bail!("Branch already exists; enter a new branch name");
+    }
+    let target = Path::new(destination);
+    if !target.is_absolute()
+        || target
+            .components()
+            .any(|part| matches!(part, Component::ParentDir))
+    {
+        bail!("Enter an absolute destination path without parent traversal");
+    }
+    let parent = target
+        .parent()
+        .context("Select a destination directory")?
+        .canonicalize()
+        .context("Destination parent directory must exist")?;
+    let target = parent.join(
+        target
+            .file_name()
+            .context("Select a new destination directory")?,
+    );
+    if target.components().any(|part| {
+        part.as_os_str()
+            .to_str()
+            .is_some_and(|name| name.eq_ignore_ascii_case(".git"))
+    }) {
+        bail!("Destination cannot be inside Git metadata");
+    }
+    if target.symlink_metadata().is_ok() {
+        bail!("Destination already exists; choose a new directory");
+    }
+    let target_str = target.to_str().context("Destination must be valid UTF-8")?;
+    super::project_git::run_git(
+        &source,
+        &["worktree", "add", "-b", branch, "--", target_str, &head],
+    )?;
+    Ok(ProjectWorktree {
+        path: target_str.to_owned(),
+        branch: Some(branch.to_owned()),
+        head: Some(head),
+        is_main: false,
+        locked: false,
+        available: true,
+    })
+}
+
 fn file_path(root: &Path, relative: &str) -> Result<PathBuf> {
     if Path::new(relative)
         .components()
@@ -241,6 +309,127 @@ mod tests {
         assert_eq!(list_directory(&checkout).unwrap().len(), 2);
         std::fs::create_dir(root.join("subdirectory")).unwrap();
         assert_eq!(list_directory(&root.join("subdirectory")).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn creates_from_selected_head_and_preserves_existing_data() {
+        let temp = tempdir().unwrap();
+        let root = temp.path().join("main");
+        let repo = git2::Repository::init(&root).unwrap();
+        let signature = git2::Signature::now("Example", "user@example.invalid").unwrap();
+        std::fs::write(root.join("readme.txt"), "committed").unwrap();
+        let mut index = repo.index().unwrap();
+        index.add_path(Path::new("readme.txt")).unwrap();
+        index.write().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let head = repo
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                "Initial",
+                &repo.find_tree(tree_id).unwrap(),
+                &[],
+            )
+            .unwrap();
+        let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
+        store
+            .insert_project(&super::super::skill_store::ProjectRecord {
+                id: "demo".into(),
+                name: "Demo".into(),
+                path: root.to_string_lossy().into_owned(),
+                workspace_type: "project".into(),
+                linked_agent_key: None,
+                linked_agent_name: None,
+                disabled_path: None,
+                sort_order: 0,
+                created_at: 0,
+                updated_at: 0,
+                visited_at: None,
+            })
+            .unwrap();
+        std::fs::write(root.join("readme.txt"), "keep local changes").unwrap();
+        let target = temp.path().join("topic checkout");
+        let tree = create(
+            &store,
+            "demo",
+            root.to_str().unwrap(),
+            "feature/topic",
+            target.to_str().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(tree.branch.as_deref(), Some("feature/topic"));
+        assert_eq!(tree.head, Some(head.to_string()));
+        assert_eq!(
+            std::fs::read_to_string(target.join("readme.txt")).unwrap(),
+            "committed"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("readme.txt")).unwrap(),
+            "keep local changes"
+        );
+        assert_eq!(list(&store, "demo").unwrap().len(), 2);
+        assert!(directory(&store, "demo", Some(&tree.path)).is_ok());
+        // A detached linked checkout is also an authorized source.
+        let linked = git2::Repository::open(&target).unwrap();
+        let second_tree = linked.treebuilder(None).unwrap().write().unwrap();
+        let second_head = linked
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                "Topic",
+                &linked.find_tree(second_tree).unwrap(),
+                &[&linked.find_commit(head).unwrap()],
+            )
+            .unwrap();
+        linked.set_head_detached(second_head).unwrap();
+        let second = temp.path().join("second");
+        let created = create(
+            &store,
+            "demo",
+            &tree.path,
+            "second",
+            second.to_str().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(created.head, Some(second_head.to_string()));
+        let unused = temp.path().join("unused");
+        for branch in ["feature/topic", "bad..branch", "-option", ""] {
+            assert!(create(
+                &store,
+                "demo",
+                root.to_str().unwrap(),
+                branch,
+                unused.to_str().unwrap()
+            )
+            .is_err());
+            assert!(!unused.exists());
+        }
+        for destination in [
+            target.clone(),
+            root.join(".git/unsafe"),
+            temp.path().join("missing/child"),
+        ] {
+            assert!(create(
+                &store,
+                "demo",
+                root.to_str().unwrap(),
+                "unused",
+                destination.to_str().unwrap()
+            )
+            .is_err());
+        }
+        assert!(repo.find_branch("unused", git2::BranchType::Local).is_err());
+        assert!(create(
+            &store,
+            "demo",
+            temp.path().to_str().unwrap(),
+            "outside",
+            unused.to_str().unwrap()
+        )
+        .is_err());
+        assert!(!unused.exists());
     }
 
     #[test]

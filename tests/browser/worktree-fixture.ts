@@ -1,5 +1,7 @@
+import type { ProjectWorktree } from "../../src/lib/worktreeApi";
 import { worktreeSearchFixture } from "./worktree-search-fixture";
 /** Synthetic project data. Never reads files or creates real worktrees. */
+const createdWorktrees = new Map<unknown, ProjectWorktree[]>();
 const documents = new Map<string, string>();
 function source(path: unknown) {
   if (path === "README.md")
@@ -46,10 +48,29 @@ export function worktreeFixture(command: string, raw: unknown) {
   );
   if (searchPreview.handled) return searchPreview;
   switch (command) {
+    case "create_project_worktree": {
+      if (!("branch" in args) || !("destination" in args))
+        throw new Error("Missing worktree fields");
+      if (args.branch === "existing") throw new Error("Branch already exists");
+      const tree = {
+        path: String(args.destination),
+        branch: String(args.branch),
+        head: "abcdef1234",
+        is_main: false,
+        locked: false,
+        available: true,
+      };
+      createdWorktrees.set(projectId, [
+        ...(createdWorktrees.get(projectId) ?? []),
+        tree,
+      ]);
+      return { handled: true, value: tree };
+    }
     case "get_project_worktrees":
       return {
         handled: true,
         value: [
+          ...(createdWorktrees.get(projectId) ?? []),
           {
             path: root,
             branch: "main",

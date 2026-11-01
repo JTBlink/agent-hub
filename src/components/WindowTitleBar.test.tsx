@@ -6,13 +6,14 @@ import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
 import { makeProject } from "../../tests/fixtures/workspace";
+import { refreshProjectWorktrees } from "../hooks/useProjectWorktrees";
 import { WindowTitleBar } from "./WindowTitleBar";
 import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CommandPalette } from "./CommandPalette";
 import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { getProjectGitReferences, runProjectGitAction } from "../lib/gitApi";
-import { getProjectWorktrees } from "../lib/worktreeApi";
+import { createProjectWorktree, getProjectWorktrees } from "../lib/worktreeApi";
 
 vi.mock("../lib/gitApi", () => ({
   getProjectGitReferences: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock("../lib/worktreeApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/worktreeApi")>();
   return {
     ...actual,
+    createProjectWorktree: vi.fn(),
     getProjectWorktrees: vi.fn(async (id: string) => {
       const path = id === "other" ? "~/projects/other" : "<workspace>/demo";
       return [
@@ -87,6 +89,20 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
   vi.clearAllMocks();
+  Object.defineProperties(HTMLDialogElement.prototype, {
+    showModal: {
+      configurable: true,
+      value() {
+        this.open = true;
+      },
+    },
+    close: {
+      configurable: true,
+      value() {
+        this.open = false;
+      },
+    },
+  });
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
     configurable: true,
@@ -222,6 +238,7 @@ it("only lists worktrees of the current project in the title bar", async () => {
   expect(options.map((item) => item.textContent)).toEqual([
     "demo · 主工作树",
     "demo-topic",
+    "创建工作树…",
   ]);
   await act(async () => options[1].click());
   expect(selector.textContent).toContain("demo-topic");
@@ -320,6 +337,7 @@ it("separates project, directory and branch selection and preserves the checkout
   expect(document.querySelector('[role="listbox"]')).toBeNull();
   expect(document.activeElement).toBe(directoryTrigger);
   await key("End");
+  await key("ArrowUp");
   await key("Enter");
   expect(checkout().value).toBe(
     JSON.stringify(["demo", "<workspace>/demo-topic"]),
@@ -422,4 +440,95 @@ it("preserves an unavailable worktree instead of silently selecting the main dir
       'button[aria-label="刷新工作树"]',
     )!.disabled,
   ).toBe(false);
+});
+
+it("creates a worktree from the title menu, retains failed inputs and switches only after success", async () => {
+  await refreshProjectWorktrees("demo");
+  await render("/project/demo");
+  const trigger = container.querySelector<HTMLButtonElement>(
+    'header [role="combobox"]',
+  )!;
+  await act(async () => trigger.click());
+  const create = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ].find((item) => item.textContent?.includes("创建工作树…"))!;
+  await act(async () => create.click());
+  const dialog = document.querySelector("dialog")!;
+  const inputs = [...dialog.querySelectorAll("input")];
+  expect(document.activeElement).toBe(inputs[0]);
+  expect(trigger.textContent).toContain("demo");
+  async function fill(input: HTMLInputElement, value: string) {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }
+  await fill(inputs[0], "feature/new");
+  expect(inputs[1].value).toBe("<workspace>/demo-feature-new");
+  await fill(inputs[1], "/workspace/new checkout");
+  vi.mocked(createProjectWorktree).mockRejectedValueOnce(
+    new Error("Branch already exists"),
+  );
+  const submit = () =>
+    dialog
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  await act(async () => {
+    submit();
+    submit();
+  });
+  expect(createProjectWorktree).toHaveBeenCalledTimes(1);
+  expect(createProjectWorktree).toHaveBeenLastCalledWith(
+    "demo",
+    "<workspace>/demo",
+    "feature/new",
+    "/workspace/new checkout",
+  );
+  expect(dialog.querySelector('[role="alert"]')?.textContent).toContain(
+    "Branch already exists",
+  );
+  expect(inputs[0].value).toBe("feature/new");
+  expect(inputs[1].value).toBe("/workspace/new checkout");
+  expect(trigger.textContent).toContain("demo");
+  const created = {
+    path: "/workspace/new checkout",
+    branch: "feature/new",
+    head: "abcdef",
+    is_main: false,
+    locked: false,
+    available: true,
+  };
+  vi.mocked(createProjectWorktree).mockResolvedValueOnce(created);
+  vi.mocked(getProjectWorktrees).mockResolvedValueOnce([created]);
+  await act(async () => {
+    submit();
+  });
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(trigger.textContent).toContain("new checkout");
+  expect(document.activeElement).toBe(trigger);
+});
+
+it("cancels worktree creation without changing the current checkout", async () => {
+  await refreshProjectWorktrees("demo");
+  await render("/project/demo");
+  const trigger = container.querySelector<HTMLButtonElement>(
+    'header [role="combobox"]',
+  )!;
+  await act(async () => trigger.click());
+  const create = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ].find((item) => item.textContent?.includes("创建工作树…"))!;
+  await act(async () => create.click());
+  await act(async () =>
+    document
+      .querySelector("dialog")!
+      .dispatchEvent(new Event("cancel", { cancelable: true })),
+  );
+  expect(document.querySelector("dialog")).toBeNull();
+  expect(createProjectWorktree).not.toHaveBeenCalled();
+  expect(trigger.textContent).toContain("demo");
+  expect(document.activeElement).toBe(trigger);
 });

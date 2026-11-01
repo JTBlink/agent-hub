@@ -1,6 +1,9 @@
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { CreateWorktreeDialog } from "./worktree/CreateWorktreeDialog";
 import { OpenProjectInVscode } from "./OpenProjectInVscode";
 import { Link, useLocation, useMatch } from "react-router-dom";
-import { CircleHelp, Search } from "lucide-react";
+import { CircleHelp, Search, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 import { ThemedSelect } from "./ThemedSelect";
@@ -19,6 +22,7 @@ export function WindowTitleBar({
   const projectRoute = useMatch("/project/:id/*");
   const { projects } = useApp();
   const onDrag = useDragWindow();
+  const [creatingFor, setCreatingFor] = useState<string>();
   const selection = useWorkspaceSelection(projects);
   const project = projects.find((item) => item.id === projectRoute?.params.id);
   const selectedProject = selection.project;
@@ -65,7 +69,16 @@ export function WindowTitleBar({
           }
           value={selection.value}
           disabled={!selectedProject || selection.loading}
-          onChange={(event) => selection.select(event.target.value)}
+          onChange={(event) => {
+            if (event.target.value === "create-worktree")
+              setCreatingFor(`${selectedProject?.id}:${selection.path}`);
+            else selection.select(event.target.value);
+          }}
+          optionIcon={(value) =>
+            value === "create-worktree" ? (
+              <Plus size={14} aria-hidden="true" />
+            ) : null
+          }
           leadingIcon={
             <img
               src="/icons/32x32.png"
@@ -98,7 +111,32 @@ export function WindowTitleBar({
               </option>
             );
           })}
+          {selectedProject && selection.current?.head && (
+            <option
+              value="create-worktree"
+              disabled={!selection.current.available}
+            >
+              {t("worktree.createMenu")}
+            </option>
+          )}
         </ThemedSelect>
+        {selectedProject &&
+          selection.path &&
+          creatingFor === `${selectedProject.id}:${selection.path}` &&
+          createPortal(
+            <CreateWorktreeDialog
+              key={creatingFor}
+              projectId={selectedProject.id}
+              sourcePath={selection.path}
+              projectPath={selectedProject.path}
+              onClose={() => setCreatingFor(undefined)}
+              onCreated={(worktree) => {
+                setCreatingFor(undefined);
+                selection.openWorktree(selectedProject.id, worktree.path);
+              }}
+            />,
+            document.body,
+          )}
         {selectedProject && vscodePath && (
           <OpenProjectInVscode key={vscodePath} path={vscodePath} />
         )}

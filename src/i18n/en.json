@@ -2071,6 +2071,12 @@
     }
   },
   "worktree": {
+    "create": "Create worktree",
+    "createMenu": "Create worktree…",
+    "createHint": "Create a new branch and separate working directory from the current worktree’s HEAD, then switch to it.",
+    "newBranch": "New branch name",
+    "destination": "Destination directory",
+    "destinationHint": "Enter a new absolute path whose parent directory already exists.",
     "selectWorktree": "Switch worktree",
     "projectActions": "Project actions",
     "detached": "Detached HEAD",

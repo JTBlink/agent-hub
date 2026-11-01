@@ -1,5 +1,5 @@
 //! Explicit repository operations; no force push, reset, or implicit merge.
-use super::actions::{repository, run_git};
+use super::actions::{repository, run_git, validate_branch_name};
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::path::Path;
@@ -32,11 +32,7 @@ pub fn repository_action(
     match action {
         GitRepositoryAction::SwitchBranch | GitRepositoryAction::CreateBranch => {
             let branch = branch.context("Select or enter a local branch name")?;
-            if branch.starts_with('-')
-                || !git2::Reference::is_valid_name(&format!("refs/heads/{branch}"))
-            {
-                bail!("Enter a valid local branch name");
-            }
+            validate_branch_name(branch)?;
             if matches!(action, GitRepositoryAction::CreateBranch) {
                 run_git(root, &["switch", "--no-guess", "-c", branch])
             } else {

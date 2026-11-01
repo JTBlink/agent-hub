@@ -6,6 +6,7 @@ pub use graph::{graph, GitGraph};
 mod references;
 mod repository_actions;
 pub use actions::{commit, discard, set_staged};
+pub(crate) use actions::{run_git, validate_branch_name};
 use anyhow::{bail, Result};
 pub use history::{commit_details, commit_diff, commit_history, GitCommitDetails, GitHistoryPage};
 pub use references::{references, GitReferences};

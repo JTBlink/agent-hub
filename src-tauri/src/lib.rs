@@ -1223,6 +1223,7 @@ pub fn run() {
             commands::git_backup::git_backup_sync,
             // Projects
             commands::project_worktrees::get_project_worktrees,
+            commands::project_worktrees::create_project_worktree,
             commands::project_worktrees::get_worktree_files,
             commands::project_worktrees::read_worktree_file,
             commands::project_worktrees::write_worktree_file,

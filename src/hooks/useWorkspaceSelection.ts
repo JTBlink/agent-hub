@@ -73,15 +73,16 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
       projectId: project.id,
       worktreePath: path,
     });
+  const openWorktree = (projectId: string, worktreePath: string) => {
+    workspace?.setCheckout({ projectId, worktreePath });
+    void touchProjectVisited(projectId).catch(() => {});
+    navigate(worktreeUrl(projectId, worktreePath));
+  };
   const select = (nextValue: string) => {
     const option = options.find(
       (item) => item.value === nextValue && !item.disabled,
     );
-    if (!option) return;
-    const { projectId, worktreePath } = option;
-    workspace?.setCheckout({ projectId, worktreePath });
-    void touchProjectVisited(projectId).catch(() => {});
-    navigate(worktreeUrl(projectId, worktreePath));
+    if (option) openWorktree(option.projectId, option.worktreePath);
   };
   const selectedLabel =
     options.find((option) => option.value === value)?.label ??
@@ -101,6 +102,7 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
     value,
     options,
     select,
+    openWorktree,
     worktreeOptions: options.filter(
       (option) => option.projectId === project?.id,
     ),

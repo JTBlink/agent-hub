@@ -46,7 +46,7 @@ try {
         const metrics = await evaluate(
           `(()=>{const d=${doc},m=d.querySelector('[role=listbox]'),r=m.getBoundingClientRect(),w=d.defaultView,items=[...m.querySelectorAll('[role=option]')];return {count:items.length,fits:r.left>=0&&r.right<=w.innerWidth&&r.bottom<=w.innerHeight,scroll:m.scrollHeight>m.clientHeight+1,rowsFit:items.every(e=>e.getBoundingClientRect().height<=36*${scale}+1),labelsFit:items.every(e=>{const s=e.lastElementChild;return s.scrollWidth<=s.clientWidth+1}),headerHeight:d.querySelector('header').getBoundingClientRect().height}})()`,
         );
-        assert.equal(metrics.count, long ? 10 : 3);
+        assert.equal(metrics.count, long ? 11 : 4);
         assert.equal(metrics.fits, true, JSON.stringify(metrics));
         assert.equal(metrics.scroll, false, JSON.stringify(metrics));
         assert.equal(metrics.rowsFit, true, JSON.stringify(metrics));
@@ -59,11 +59,34 @@ try {
           `(()=>{const d=${doc};d.querySelector('header [role=combobox]').dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true})()`,
         );
         await until(`!${doc}.querySelector('[role=listbox]')`);
+        await evaluate(
+          `(()=>{const d=${doc},b=d.querySelector('header [role=combobox]');b.click();return true})()`,
+        );
+        await until(`!!${doc}.querySelector('[role=listbox]')`);
+        await evaluate(
+          `[...${doc}.querySelectorAll('[role=option]')].at(-1).click();true`,
+        );
+        await until(`!!${doc}.querySelector('dialog[open] input')`);
+        const modal = await evaluate(
+          `(()=>{const d=${doc},m=d.querySelector('dialog'),r=m.getBoundingClientRect(),w=d.defaultView;return {fits:r.left>=0&&r.right<=w.innerWidth&&r.top>=0&&r.bottom<=w.innerHeight,focused:d.activeElement===m.querySelector('input')}})()`,
+        );
+        assert.equal(modal.fits, true, JSON.stringify(modal));
+        assert.equal(modal.focused, true);
+        await evaluate(
+          `(()=>{const d=${doc};d.querySelector('dialog').dispatchEvent(new d.defaultView.Event('cancel',{cancelable:true}));return true})()`,
+        );
+        await until(`!${doc}.querySelector('dialog')`);
+        assert.equal(
+          await evaluate(
+            `${doc}.activeElement===${doc}.querySelector('header [role=combobox]')`,
+          ),
+          true,
+        );
       }
     }
   }
   console.log(
-    "PASS: complete worktree labels and all 3/10 rows at 960px, both themes, 100%/120%, with unchanged titlebar height.",
+    "PASS: complete worktree labels and all worktree and create rows at 960px, both themes, 100%/120%, with unchanged titlebar height.",
   );
 } finally {
   await request(`/close?target=${targetId}`);

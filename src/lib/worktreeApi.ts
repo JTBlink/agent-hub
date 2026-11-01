@@ -83,3 +83,16 @@ export function projectWorkspaceRoute(pathname: string, search: string) {
 export function worktreeUrl(projectId: string, path?: string) {
   return `/project/${encodeURIComponent(projectId)}${path ? `?${new URLSearchParams({ worktree: path })}` : ""}`;
 }
+
+export const createProjectWorktree = (
+  projectId: string,
+  sourcePath: string,
+  branch: string,
+  destination: string,
+) =>
+  invoke<ProjectWorktree>("create_project_worktree", {
+    projectId,
+    sourcePath,
+    branch,
+    destination,
+  });
