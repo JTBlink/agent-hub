@@ -136,3 +136,63 @@ pub fn task_cancel(
     registry.cancel(&request_key(&window, &request_id)?);
     Ok(())
 }
+
+#[tauri::command]
+pub async fn task_update_issue(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    number: u64,
+    change: task_browser::IssueStateChange,
+) -> Result<task_browser::TaskSummary, TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.update_issue(&binding, number, &change)
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn task_add_comment(
+    store: State<'_, Arc<SkillStore>>,
+    binding_id: String,
+    kind: TaskKind,
+    number: u64,
+    body: String,
+) -> Result<task_browser::TaskComment, TaskFailure> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (binding, client) = client(&store, &binding_id)?;
+        client.add_comment(&binding, kind, number, &body)
+    })
+    .await
+    .map_err(|error| TaskFailure::new("internal", error.to_string()))?
+}
+
+#[tauri::command]
+pub async fn task_prepare_herdr_workspace(
+    window: WebviewWindow,
+    store: State<'_, Arc<SkillStore>>,
+    tools: State<'_, Arc<crate::core::herdr_tools::HerdrTools>>,
+    project_id: String,
+    path: String,
+) -> Result<crate::core::herdr_control::OpenedWorkspace, AppError> {
+    super::terminal::owner(&window)?;
+    let store = store.inner().clone();
+    let tools = tools.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let installation = tools
+            .detect()
+            .map_err(AppError::io)?
+            .ok_or_else(|| AppError::not_found("Install Herdr before starting a task"))?;
+        task_browser::prepare_managed_workspace(
+            &store,
+            std::path::Path::new(&installation.path),
+            &project_id,
+            &path,
+        )
+        .map_err(AppError::io)
+    })
+    .await?
+}

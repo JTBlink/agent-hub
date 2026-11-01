@@ -49,7 +49,12 @@ let serial: number;
 const project = makeProject();
 const topic = "<workspace>/topic";
 const creations = () =>
-  vi.mocked(invoke).mock.calls.filter(([name]) => name === "terminal_create");
+  vi
+    .mocked(invoke)
+    .mock.calls.filter(
+      ([name]) =>
+        name === "terminal_create" || name === "herdr_terminal_create",
+    );
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
@@ -66,7 +71,7 @@ beforeEach(() => {
   vi.stubGlobal("cancelAnimationFrame", () => {});
   vi.mocked(invoke).mockImplementation(async (command, args) => {
     if (command === "terminal_list") return [];
-    if (command === "terminal_create")
+    if (command === "terminal_create" || command === "herdr_terminal_create")
       return {
         id: `new-${++serial}`,
         cwd:
@@ -311,14 +316,14 @@ it("does not reopen removed projects or unavailable worktrees", async () => {
   );
 });
 
-it("closes all panes of the previous project, frees capacity and opens a fresh shell when returning", async () => {
+it("keeps split panes and each project's active tab when switching projects repeatedly", async () => {
   const other = {
     ...makeProject(),
     id: "other",
     name: "Other",
     path: "<workspace>/other",
   };
-  const tabs = Array.from({ length: 4 }, (_, index) => {
+  const tabs = Array.from({ length: 3 }, (_, index) => {
     const tab = createTerminalTab(
       project.id,
       undefined,
@@ -327,43 +332,148 @@ it("closes all panes of the previous project, frees capacity and opens a fresh s
     tab.panes.push(`split-${index}`);
     return tab;
   });
+  writeTerminalLayout({
+    tabs,
+    activeIds: { [terminalScopeKey(project.id, project.path)]: tabs[0].id },
+    lastActiveId: tabs[0].id,
+  });
+  await render(worktreeUrl(project.id, project.path), [project, other]);
+  const panels = [...host.querySelectorAll('[role="tabpanel"]')];
+  const input = panels[0].querySelector("textarea")!;
+  expect(creations()).toHaveLength(6);
+  for (let i = 0; i < 3; i++) {
+    await click(`Open ${other.id}`);
+    expect(panels.every((panel) => panel.hasAttribute("hidden"))).toBe(true);
+    expect(creations()).toHaveLength(7);
+    expect(readTerminalLayout().tabs.map((tab) => tab.id)).toEqual([
+      ...tabs.map((tab) => tab.id),
+      readTerminalLayout().tabs.at(-1)?.id,
+    ]);
+    await click(`Open ${project.id}`);
+    expect(host.querySelector('[role="tabpanel"]:not([hidden])')).toBe(
+      panels[0],
+    );
+    expect(panels[0].querySelector("textarea")).toBe(input);
+    expect(creations()).toHaveLength(7);
+    expect(invoke).not.toHaveBeenCalledWith(
+      "terminal_close",
+      expect.anything(),
+    );
+  }
+  await act(async () => {
+    input.value = "echo still-running";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(invoke).toHaveBeenCalledWith("terminal_write", {
+    id: "new-1",
+    data: "echo still-running",
+  });
+  await click("全部终端 7/8");
+  await click(`切换到 ${other.name} · 终端 1 · ${other.path}`);
+  expect(host.querySelector("output")?.textContent).toBe(
+    worktreeUrl(other.id, other.path),
+  );
+  expect(creations()).toHaveLength(7);
+  await click("全部终端 7/8");
+  await click(`关闭 ${project.name} · 终端 1 · ${project.path}`);
+  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
+  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-2" });
+  expect(readTerminalLayout().tabs).toHaveLength(3);
+});
+
+it("reuses a Herdr attachment when returning through the sidebar with a refreshed target", async () => {
+  const other = {
+    ...makeProject(),
+    id: "other",
+    name: "Other",
+    path: "<workspace>/other",
+  };
+  const tab = createTerminalTab(project.id, undefined, project.path);
+  const target = {
+    session: "isolated",
+    workspace_id: "w1",
+    pane_id: "w1:p1",
+    terminal_id: "native-1",
+    revision: 3,
+    agent_session: null,
+  };
+  tab.herdrTarget = target;
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={[worktreeUrl(project.id, project.path)]}>
+        <Link to={worktreeUrl(other.id, other.path)}>Other workspace</Link>
+        <Link
+          to={worktreeUrl(project.id, project.path)}
+          state={{
+            herdrAttachment: {
+              project_id: project.id,
+              path: project.path,
+              target: {
+                ...target,
+                pane_id: "w1:p2",
+                terminal_id: "native-2",
+                revision: 4,
+              },
+            },
+          }}
+        >
+          Herdr workspace
+        </Link>
+        <TerminalWorkspace projects={[project, other]} />
+      </MemoryRouter>,
+    ),
+  );
+  expect(creations()).toHaveLength(1);
+  expect(creations()[0][1]).toMatchObject({
+    request: { target: { ...target, revision: 0 } },
+  });
+  const input = host.querySelector("textarea");
+  for (let i = 0; i < 3; i++) {
+    await click("Other workspace");
+    await click("Herdr workspace");
+    expect(creations()).toHaveLength(2);
+    expect(host.querySelector('[role="tabpanel"]:not([hidden]) textarea')).toBe(
+      input,
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      "terminal_close",
+      expect.anything(),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      "terminal_write",
+      expect.anything(),
+    );
+    expect(readTerminalLayout().tabs).toHaveLength(2);
+  }
+});
+
+it("keeps all eight panes at capacity until the user explicitly closes a terminal", async () => {
+  const other = {
+    ...makeProject(),
+    id: "other",
+    name: "Other",
+    path: "<workspace>/other",
+  };
+  const tabs = Array.from({ length: 8 }, () =>
+    createTerminalTab(project.id, undefined, project.path),
+  );
   writeTerminalLayout({ tabs, activeIds: {}, lastActiveId: tabs[0].id });
   await render(worktreeUrl(project.id, project.path), [project, other]);
-  expect(creations()).toHaveLength(8);
-  const release: Array<() => void> = [];
-  const base = vi.mocked(invoke).getMockImplementation()!;
-  vi.mocked(invoke).mockImplementation((command, args, options) => {
-    if (command === "terminal_close")
-      return new Promise<void>((resolve) => release.push(resolve));
-    return base(command, args, options);
-  });
   await click(`Open ${other.id}`);
   expect(creations()).toHaveLength(8);
-  expect(release).toHaveLength(8);
-  await act(async () => release.forEach((resolve) => resolve()));
-  vi.mocked(invoke).mockImplementation(base);
+  expect(invoke).not.toHaveBeenCalledWith("terminal_close", expect.anything());
+  expect(host.querySelector('[role="tabpanel"]:not([hidden])')).toBeNull();
+  await click("全部终端 8/8");
+  await click(`关闭 ${project.name} · 终端 1 · ${project.path}`);
   expect(creations()).toHaveLength(9);
-  const closures = vi
-    .mocked(invoke)
-    .mock.calls.filter(([command]) => command === "terminal_close")
-    .map(([, args]) => args);
-  expect(closures).toEqual(
-    Array.from({ length: 8 }, (_, i) => ({ id: `new-${i + 1}` })),
-  );
-  expect(readTerminalLayout().tabs.map((tab) => tab.projectId)).toEqual([
-    other.id,
-  ]);
-  expect(host.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
-  await click("全部终端 1/8");
+  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
+  expect(readTerminalLayout().tabs).toHaveLength(8);
   expect(
-    document.querySelector('[aria-label="所有项目的终端"]')?.textContent,
-  ).not.toContain(project.name);
-  await click("全部终端 1/8");
-  await click(`Open ${project.id}`);
-  expect(creations()).toHaveLength(10);
-  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-9" });
-  expect(readTerminalLayout().tabs).toHaveLength(1);
-  expect(readTerminalLayout().tabs[0].id).not.toBe(tabs[0].id);
+    host
+      .querySelector('[role="tabpanel"]:not([hidden])')
+      ?.getAttribute("aria-label"),
+  ).toBe(other.name);
 });
 
 it("restores only the selected project from an older layout containing multiple projects", async () => {

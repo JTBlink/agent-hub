@@ -63,7 +63,7 @@ Object.assign(window, {
               {
                 id: "reset-preview-2",
                 reset_type: "codexRateLimits",
-                title: null,
+                title: "Full reset",
                 expires_at: now + 10 * 86400,
               },
             ],

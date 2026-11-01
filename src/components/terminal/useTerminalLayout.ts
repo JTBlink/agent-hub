@@ -48,28 +48,9 @@ export function useTerminalLayout(
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [lastActiveId, rememberActive] = useState(saved.lastActiveId);
-  const [owner, setOwner] = useState(projectId);
   const [initializedScopes, setInitializedScopes] = useState<string[]>([]);
-  // Reconcile before mounting panes, including layouts saved by older versions.
-  // Removing a pane lets its existing owner dispose the emulator and PTY.
-  const switching =
-    ready &&
-    !!projectId &&
-    (owner !== projectId || tabs.some((tab) => tab.projectId !== projectId));
-  if (switching) {
-    const retained = tabs.filter((tab) => tab.projectId === projectId);
-    const retainedIds = new Set(retained.map((tab) => tab.id));
-    setOwner(projectId);
-    setTabs(retained);
-    setActiveIds(
-      Object.fromEntries(
-        Object.entries(activeIds).filter(([, id]) => retainedIds.has(id)),
-      ),
-    );
-    if (!retainedIds.has(lastActiveId))
-      rememberActive(retained.at(-1)?.id ?? "");
-    if (owner !== projectId) setInitializedScopes([]);
-  }
+  // Scope changes only select visible panes; their emulator and PTY stay owned
+  // by the mounted workspace until the user closes them or the app exits.
   const scopedTabs = projectId
     ? tabs.filter(
         (tab) => tab.projectId === projectId && tab.worktreePath === path,
@@ -78,7 +59,6 @@ export function useTerminalLayout(
   const scopeKey = terminalScopeKey(projectId, path);
   if (
     ready &&
-    !switching &&
     initialize &&
     projectId &&
     path &&
@@ -134,13 +114,30 @@ export function useTerminalLayout(
     void bootstrap.current
       .then((layout) => {
         if (cancelled) return;
-        setTabs(layout.tabs);
-        setActiveIds(layout.activeIds);
+        const previous =
+          layout.tabs.find((tab) => tab.id === layout.lastActiveId) ??
+          layout.tabs.at(-1);
+        // On restart, open shells only for the entry project. During this run,
+        // tabs from every visited project remain mounted and share the limit.
+        const entryProject = projectId ?? previous?.projectId;
+        const restoredTabs = layout.tabs.filter(
+          (tab) => tab.projectId === entryProject,
+        );
+        const restoredIds = new Set(restoredTabs.map((tab) => tab.id));
+        setTabs(restoredTabs);
+        setActiveIds(
+          Object.fromEntries(
+            Object.entries(layout.activeIds).filter(([, id]) =>
+              restoredIds.has(id),
+            ),
+          ),
+        );
         setError("");
         setReady(true);
         const active =
-          layout.tabs.find((tab) => tab.id === layout.lastActiveId) ??
-          layout.tabs.at(-1);
+          restoredTabs.find((tab) => tab.id === layout.lastActiveId) ??
+          restoredTabs.at(-1);
+        rememberActive(active?.id ?? "");
         if (location.pathname === "/" && active) {
           const destination = worktreeUrl(
             active.projectId,
@@ -172,6 +169,7 @@ export function useTerminalLayout(
       cancelled = true;
     };
   }, [
+    projectId,
     projects,
     projectsReady,
     ready,

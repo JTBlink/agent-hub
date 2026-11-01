@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from "react";
 import {
+  X,
   Plus,
   Columns2,
   Rows2,
   Copy,
   Maximize2,
   Minimize2,
-  Eraser,
   PanelLeft,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -19,8 +19,8 @@ export type TerminalAction =
   | "split_down"
   | "copy"
   | "zoom"
-  | "clear"
-  | "sidebar";
+  | "sidebar"
+  | "close";
 export function TerminalActionBar({
   busy,
   zoomed,
@@ -54,7 +54,7 @@ export function TerminalActionBar({
             : "herdr.zoomPane",
       icon: zoomed ? Minimize2 : Maximize2,
     },
-    { action: "clear", label: "herdr.clear", icon: Eraser },
+    { action: "close", label: "terminal.closePane", icon: X },
     { action: "sidebar", label: "terminal.herdrSidebar", icon: PanelLeft },
   ] as const;
   return (
@@ -66,7 +66,7 @@ export function TerminalActionBar({
         <button
           type="button"
           key={action}
-          className="app-button-ghost flex h-7 items-center gap-1.5 rounded px-2 text-xs"
+          className="app-button-ghost flex h-7 w-7 items-center justify-center rounded"
           title={t(label)}
           aria-label={t(label)}
           aria-pressed={action === "zoom" ? zoomed : undefined}
@@ -74,7 +74,6 @@ export function TerminalActionBar({
           onClick={() => onAction(action)}
         >
           <Icon size={13} />
-          <span className="hidden sm:inline">{t(label)}</span>
         </button>
       ))}
       {children}
@@ -82,13 +81,14 @@ export function TerminalActionBar({
   );
 }
 
-/** Local Shell controls also cover terminals opened through the existing Herdr menu. */
+/** Local Shell controls also cover terminals opened through the Herdr shortcut. */
 export function LocalTerminalTools({
   current,
   onNew,
   onSplit,
   onSidebar,
   onError,
+  onClose,
   zoomed,
   onZoom,
   canSplit,
@@ -100,6 +100,7 @@ export function LocalTerminalTools({
   onSplit: (direction: "horizontal" | "vertical") => void;
   onSidebar: () => Promise<void>;
   onError: (message: string) => void;
+  onClose: () => void;
   zoomed: boolean;
   onZoom: () => void;
   canSplit: boolean;
@@ -116,8 +117,8 @@ export function LocalTerminalTools({
       else if (action === "split_right" || action === "split_down")
         onSplit(action === "split_right" ? "horizontal" : "vertical");
       else if (action === "copy") await writeText(control.read?.() ?? "");
-      else if (action === "clear") control.clear?.();
       else if (action === "zoom") onZoom();
+      else if (action === "close") onClose();
       else {
         setBusy(true);
         await onSidebar();

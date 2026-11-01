@@ -214,7 +214,7 @@
 .activity-bar-item {
   height: var(--app-activitybar-width);
 }
-.workbench-activity-bar .codicon.activity-bar-icon {
+.workbench-activity-bar .activity-bar-icon {
   width: calc(24px / var(--app-scale));
   height: calc(24px / var(--app-scale));
   font-size: calc(24px / var(--app-scale));

@@ -312,8 +312,10 @@ it("prioritizes Codex and warns in the status bar and reset details before expir
   const resets = panel.querySelector('section[aria-label="使用限额重置"]')!;
   expect(resets.textContent).toContain("可用 4 次");
   expect(resets.querySelectorAll("li")).toHaveLength(4);
-  expect(resets.textContent).toContain("完整重置");
-  expect(resets.textContent).not.toContain("Full reset");
+  expect(resets.querySelector("li span[title]")?.textContent).toBe(
+    "Full reset",
+  );
+  expect(resets.textContent).toContain("完全重置");
   expect(resets.textContent).toContain("Example reset");
   expect(resets.textContent).toContain("未提供到期时间");
   expect(resets.textContent).toContain("已到期");

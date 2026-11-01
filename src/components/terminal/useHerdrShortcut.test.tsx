@@ -155,7 +155,6 @@ it("launches when WebView delays terminal focus until after the toolbar click", 
         canSplit={false}
 
         onHerdr={() => void shortcut.launch()}
-        onHerdrSidebar={() => {}}
         onSplit={() => {}}
       />
     );
@@ -169,10 +168,6 @@ it("launches when WebView delays terminal focus until after the toolbar click", 
       button.focus();
       button.click();
     });
-    const launch = document.querySelector<HTMLButtonElement>(
-      '[role="menuitem"][title="terminal.herdrLaunch"]',
-    )!;
-    await act(async () => launch.click());
     expect(button.disabled).toBe(false);
     expect(api.detectHerdr).toHaveBeenCalledTimes(1);
     await act(async () =>

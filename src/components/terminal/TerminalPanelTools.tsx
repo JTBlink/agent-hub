@@ -1,10 +1,8 @@
 import {
-  ChevronDown,
   Download,
   LayoutGrid,
   Layers,
   Loader2,
-  PanelLeft,
   TerminalSquare,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -19,7 +17,6 @@ interface Props {
   canSplit: boolean;
   onProjectSkills?: () => void;
   onHerdr: () => void;
-  onHerdrSidebar: () => void;
   onSplit: (direction: "horizontal" | "vertical") => void;
 }
 
@@ -33,7 +30,6 @@ export function TerminalPanelTools({
   canSplit,
   onProjectSkills,
   onHerdr,
-  onHerdrSidebar,
   onSplit,
 }: Props) {
   const { t } = useTranslation();
@@ -41,53 +37,40 @@ export function TerminalPanelTools({
     <div className="flex shrink-0 items-center gap-1">
       {showTerminalActions && (
         <>
-          <CardActionMenu
-            label="Herdr"
+          <button
+            type="button"
+            aria-label="Herdr"
+            title={t("terminal.herdrLaunch")}
+            aria-busy={herdrBusy}
             disabled={!hasTerminal}
-            triggerClassName="h-7 w-auto gap-1 px-2 text-xs"
-            triggerIcon={
-              <>
-                {herdrBusy && (
-                  <Loader2
-                    size={12}
-                    className="animate-spin"
-                    aria-hidden="true"
-                  />
-                )}
-                <span>Herdr{updateVersion ? " •" : ""}</span>
-                <ChevronDown size={12} aria-hidden="true" />
-              </>
-            }
-            actions={[
-              {
-                key: "launch",
-                label: t("terminal.herdrLaunch"),
-                icon: <TerminalSquare size={14} />,
-                disabled: herdrBusy,
-                onSelect: onHerdr,
-              },
-              {
-                key: "sidebar",
-                label: t("terminal.herdrSidebar"),
-                icon: <PanelLeft size={14} />,
-                disabled: herdrBusy,
-                onSelect: onHerdrSidebar,
-              },
-              ...(updateVersion && onHerdrUpgrade
-                ? [
-                    {
-                      key: "upgrade",
-                      label: t("terminal.herdrUpdateAvailable", {
-                        version: updateVersion,
-                      }),
-                      icon: <Download size={14} />,
-                      disabled: herdrBusy,
-                      onSelect: onHerdrUpgrade,
-                    },
-                  ]
-                : []),
-            ]}
-          />
+            className="app-button-ghost flex h-7 items-center gap-1 rounded px-2 text-xs"
+            onClick={() => {
+              if (!herdrBusy) onHerdr();
+            }}
+          >
+            {herdrBusy ? (
+              <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <TerminalSquare size={14} aria-hidden="true" />
+            )}
+            <span>Herdr</span>
+          </button>
+          {updateVersion && onHerdrUpgrade && (
+            <button
+              type="button"
+              aria-label={t("terminal.herdrUpdateAvailable", {
+                version: updateVersion,
+              })}
+              title={t("terminal.herdrUpdateAvailable", {
+                version: updateVersion,
+              })}
+              disabled={!hasTerminal || herdrBusy}
+              className="app-button-ghost flex h-7 items-center rounded px-1.5"
+              onClick={onHerdrUpgrade}
+            >
+              <Download size={14} aria-hidden="true" />
+            </button>
+          )}
         </>
       )}
       {(showTerminalActions || onProjectSkills) && (

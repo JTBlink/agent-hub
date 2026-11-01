@@ -2,15 +2,19 @@ import type { ReactNode } from "react";
 import {
   CircleCheck,
   CircleDot,
-  Eye,
   GitMerge,
   GitPullRequest,
+  Github,
+  Gitlab,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project, RepositoryTask } from "../../lib/tauri";
 import { cn } from "../../utils";
+import { taskTime } from "../../lib/taskTime";
 import { TaskSummaryFacts } from "./TaskFacts";
 import { TaskStatusBadge } from "./TaskStatusBadge";
+import { TaskIssueStatus } from "./TaskIssueStatus";
+import { TaskRowActions } from "./TaskRowActions";
 
 export function TaskListTable({
   items,
@@ -18,16 +22,22 @@ export function TaskListTable({
   selectedKey,
   empty,
   onOpen,
+  onOpenRepository,
+  onUpdated,
+  onStart,
 }: {
   items: RepositoryTask[];
   projects: Project[];
   selectedKey?: string;
   empty?: ReactNode;
   onOpen: (task: RepositoryTask, full: boolean, trigger: HTMLElement) => void;
+  onOpenRepository: (task: RepositoryTask) => void;
+  onUpdated: (task: RepositoryTask) => void;
+  onStart: (task: RepositoryTask) => void;
 }) {
   const { t } = useTranslation();
   return (
-    <table className="w-full min-w-[580px] table-fixed text-left text-xs">
+    <table className="w-full min-w-[720px] table-fixed text-left text-xs">
       <thead className="sticky top-0 z-10 bg-bg-secondary text-xs font-medium text-muted">
         <tr>
           <th scope="col" className="w-[100px] px-4 py-2.5">
@@ -39,10 +49,13 @@ export function TaskListTable({
           <th scope="col" className="w-[104px] px-3 py-2.5">
             {t("tasks.assignee")}
           </th>
-          <th scope="col" className="w-[100px] px-3 py-2.5">
+          <th scope="col" className="w-[104px] px-3 py-2.5">
+            {t("tasks.state")}
+          </th>
+          <th scope="col" className="w-[160px] px-3 py-2.5">
             {t("tasks.updated")}
           </th>
-          <th scope="col" className="w-9">
+          <th scope="col" className="w-[144px]">
             <span className="sr-only">{t("tasks.preview")}</span>
           </th>
         </tr>
@@ -111,39 +124,66 @@ export function TaskListTable({
                 >
                   {task.title}
                 </button>
-                <div className="mt-1.5 flex min-w-0 items-center gap-2 overflow-hidden text-xs text-muted">
-                  <span
+                <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted">
+                  {task.metadata?.author && <span>{task.metadata.author}</span>}
+                  <button
+                    type="button"
                     title={`${task.host}/${task.repository}`}
-                    className="min-w-0 truncate"
+                    aria-label={t("tasks.openRepository", {
+                      provider:
+                        task.provider === "github" ? "GitHub" : "GitLab",
+                      repository: task.repository,
+                    })}
+                    className="inline-flex min-w-0 items-center gap-1 rounded text-left outline-none hover:text-accent-light focus-visible:ring-2 focus-visible:ring-accent"
+                    onClick={() => onOpenRepository(task)}
                   >
-                    {project?.name ? `${project.name} / ` : ""}
-                    {task.repository}
-                  </span>
-                  <TaskStatusBadge state={task.state} label={stateLabel} />
+                    {task.provider === "github" ? (
+                      <Github size={12} className="shrink-0" />
+                    ) : (
+                      <Gitlab size={12} className="shrink-0" />
+                    )}
+                    <span className="break-all">
+                      {project?.name ? `${project.name} / ` : ""}
+                      {task.repository}
+                    </span>
+                  </button>
                   <TaskSummaryFacts task={task} />
                 </div>
               </td>
               <td
                 title={task.assignees.join(", ")}
-                className="truncate px-3 py-3 align-top leading-6 text-muted"
+                className="break-words px-3 py-3 align-top leading-6 text-muted"
               >
                 {task.assignees.join(", ") || "—"}
               </td>
-              <td className="px-3 py-3 align-top leading-6 text-muted">
-                {task.updated_at
-                  ? new Date(task.updated_at).toLocaleDateString()
-                  : "—"}
+              <td className="px-3 py-3 align-top leading-6">
+                {task.kind === "issue" ? (
+                  <TaskIssueStatus
+                    task={task}
+                    items={items}
+                    onUpdated={onUpdated}
+                  />
+                ) : (
+                  <TaskStatusBadge
+                    state={task.state}
+                    label={
+                      isOpen && task.metadata?.review?.draft
+                        ? t("tasks.facts.draft")
+                        : stateLabel
+                    }
+                  />
+                )}
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 align-top tabular-nums leading-6 text-muted">
+                {taskTime(task.updated_at)}
               </td>
               <td className="px-1 py-3 align-top">
-                <button
-                  type="button"
-                  className="app-button-ghost h-7 w-7 p-0"
-                  aria-label={t("tasks.preview")}
-                  title={t("tasks.preview")}
-                  onClick={(event) => onOpen(task, false, event.currentTarget)}
-                >
-                  <Eye size={14} />
-                </button>
+                <TaskRowActions
+                  task={task}
+                  canStart={!!project}
+                  onStart={() => onStart(task)}
+                  onPreview={(trigger) => onOpen(task, false, trigger)}
+                />
               </td>
             </tr>
           );
@@ -151,7 +191,7 @@ export function TaskListTable({
         {!items.length && empty && (
           <tr>
             <td
-              colSpan={5}
+              colSpan={6}
               className="px-6 py-16 text-center text-sm text-muted"
             >
               {empty}

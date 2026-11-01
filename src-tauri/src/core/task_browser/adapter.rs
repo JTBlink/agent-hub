@@ -6,81 +6,8 @@ pub(super) fn string(value: &Value, key: &str) -> String {
         .unwrap_or_default()
         .into()
 }
-pub(super) fn validate_query(
-    binding: &Binding,
-    filters: &Filters,
-    page: u32,
-) -> std::result::Result<(), TaskFailure> {
-    binding.validate()?;
-    if page == 0
-        || page > 1000
-        || filters.text.len() > 256
-        || !matches!(filters.state.as_str(), "open" | "closed" | "all")
-        || !matches!(filters.personal.as_str(), "all" | "assigned" | "created")
-        || (binding.provider == Provider::Github && page > 40)
-    {
-        return Err(TaskFailure::new(
-            "invalid_input",
-            "Unsupported task query or page",
-        ));
-    }
-    Ok(())
-}
 fn encode(value: &str) -> String {
     urlencoding::encode(value).into_owned()
-}
-pub(super) fn list_endpoint(
-    binding: &Binding,
-    filters: &Filters,
-    page: u32,
-    username: &str,
-) -> String {
-    match binding.provider {
-        Provider::Github => {
-            let kind = if filters.kind == TaskKind::Issue {
-                "issue"
-            } else {
-                "pr"
-            };
-            let mut query = format!("repo:{} is:{kind}", binding.repository);
-            if filters.state != "all" {
-                query.push_str(&format!(" state:{}", filters.state));
-            }
-            match filters.personal.as_str() {
-                "assigned" => query.push_str(&format!(" assignee:{username}")),
-                "created" => query.push_str(&format!(" author:{username}")),
-                _ => {}
-            }
-            if !filters.text.trim().is_empty() {
-                query.push_str(&format!(
-                    " {}",
-                    serde_json::to_string(filters.text.trim()).unwrap_or_default()
-                ));
-            }
-            format!(
-                "search/issues?q={}&sort=updated&order=desc&per_page={PAGE_SIZE}&page={page}",
-                encode(&query)
-            )
-        }
-        Provider::Gitlab => {
-            let resource = if filters.kind == TaskKind::Issue {
-                "issues"
-            } else {
-                "merge_requests"
-            };
-            let state = if filters.state == "open" {
-                "opened"
-            } else {
-                &filters.state
-            };
-            let scope = match filters.personal.as_str() {
-                "assigned" => "assigned_to_me",
-                "created" => "created_by_me",
-                _ => "all",
-            };
-            format!("projects/{}/{resource}?scope={scope}&state={state}&search={}&order_by=updated_at&sort=desc&per_page={PAGE_SIZE}&page={page}",encode(&binding.repository),encode(&filters.text))
-        }
-    }
 }
 pub(super) fn object_endpoint(binding: &Binding, kind: TaskKind, number: u64) -> String {
     match binding.provider {
@@ -159,7 +86,10 @@ pub(super) fn summary(
                 .collect()
         })
         .unwrap_or_default();
-    let state = if item.get("merged_at").is_some_and(|value| !value.is_null()) {
+    let state = if kind == TaskKind::Review
+        && (item.get("merged_at").is_some_and(|value| !value.is_null())
+            || item["pull_request"]["merged_at"].as_str().is_some())
+    {
         "merged".into()
     } else {
         string(item, "state")

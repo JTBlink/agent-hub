@@ -36,7 +36,10 @@ export function readTaskViewPreferences(): TaskViewPreferences {
         kind: "kind" in filter && filter.kind === "review" ? "review" : "issue",
         state:
           "state" in filter &&
-          (filter.state === "all" || filter.state === "closed")
+          (filter.state === "all" ||
+            filter.state === "closed" ||
+            filter.state === "merged" ||
+            filter.state === "draft")
             ? filter.state
             : "open",
         text:
@@ -48,6 +51,20 @@ export function readTaskViewPreferences(): TaskViewPreferences {
           (filter.personal === "created" || filter.personal === "assigned")
             ? filter.personal
             : "all",
+        author:
+          "author" in filter && typeof filter.author === "string"
+            ? filter.author.slice(0, 256)
+            : undefined,
+        assignee:
+          "assignee" in filter && typeof filter.assignee === "string"
+            ? filter.assignee.slice(0, 256)
+            : undefined,
+        labels:
+          "labels" in filter && Array.isArray(filter.labels)
+            ? filter.labels
+                .filter((label): label is string => typeof label === "string")
+                .slice(0, 20)
+            : undefined,
       },
     };
   } catch {

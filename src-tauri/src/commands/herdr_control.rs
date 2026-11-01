@@ -57,6 +57,21 @@ pub async fn herdr_inventory(
     .await?
 }
 #[tauri::command]
+pub async fn herdr_delete_session(
+    window: WebviewWindow,
+    tools: State<'_, Arc<HerdrTools>>,
+    session: String,
+) -> Result<(), AppError> {
+    super::terminal::owner(&window)?;
+    let tools = tools.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        controller(&tools)?
+            .delete_session(&session)
+            .map_err(AppError::io)
+    })
+    .await?
+}
+#[tauri::command]
 pub async fn herdr_snapshot(
     window: WebviewWindow,
     tools: State<'_, Arc<HerdrTools>>,

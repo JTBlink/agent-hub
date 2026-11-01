@@ -153,6 +153,13 @@ impl HerdrControl {
                     5,
                 )?;
             }
+            Action::Close => {
+                self.call(
+                    Some(&target.session),
+                    &["pane", "close", &target.pane_id],
+                    5,
+                )?;
+            }
             Action::Zoom => {
                 self.call(
                     Some(&target.session),

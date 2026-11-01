@@ -39,9 +39,27 @@ beforeEach(() => {
   vi.mocked(writeText).mockResolvedValue(undefined);
   vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
     version: "0.9.3",
-    workspaces: [],
+    workspaces: [
+      {
+        workspace_id: "w1",
+        active_tab_id: "t1",
+        label: "Demo",
+        directory: null,
+        branch: null,
+      },
+    ],
     tabs: [],
-    panes: [],
+    panes: [
+      {
+        ...target,
+        tab_id: "t1",
+        focused: true,
+        cwd: null,
+        agent_status: "idle",
+        agent: null,
+        name: null,
+      },
+    ],
     agents: [],
   });
   vi.mocked(api.runHerdrAction).mockResolvedValue({
@@ -151,7 +169,7 @@ it("submits an edited task once and only interrupts after confirmation", async (
   await act(async () => button("herdr.interrupt").click());
   expect(api.runHerdrAction).toHaveBeenLastCalledWith(target, "interrupt");
 });
-it("orders the bottom actions by frequency, copies visible output and clears only the local renderer", async () => {
+it("offers bottom actions without clear and copies visible output", async () => {
   const control = {
     sessionId: "client-1",
     cwd: "/projects/demo",
@@ -181,14 +199,14 @@ it("orders the bottom actions by frequency, copies visible output and clears onl
     "terminal.splitVertical",
     "herdr.copyOutput",
     "herdr.toggleZoom",
-    "herdr.clear",
+    "terminal.closePane",
     "terminal.herdrSidebar",
   ]);
   await act(async () => button("herdr.copyOutput").click());
   expect(api.runHerdrAction).toHaveBeenCalledWith(target, "read");
   expect(writeText).toHaveBeenCalledWith("visible output");
-  await act(async () => button("herdr.clear").click());
-  expect(control.clear).toHaveBeenCalledOnce();
+  expect(host.querySelector('[aria-label="herdr.clear"]')).toBeNull();
+  expect(control.clear).not.toHaveBeenCalled();
   expect(api.writeTerminal).not.toHaveBeenCalled();
   vi.mocked(api.getHerdrSidebarKeys).mockResolvedValue("\u0001b");
   await act(async () => button("terminal.herdrSidebar").click());
@@ -217,4 +235,123 @@ it("keeps the current terminal selected while viewing and copying another Agent 
   expect(writeText).toHaveBeenCalledWith("Other Agent output");
   expect(focus).not.toHaveBeenCalled();
   expect(api.runHerdrAction).not.toHaveBeenCalled();
+});
+
+it("splits the currently focused pane instead of the stale attachment pane", async () => {
+  const focused = {
+    pane_id: "w1:p2",
+    workspace_id: "w1",
+    tab_id: "t2",
+    terminal_id: "native-2",
+    focused: true,
+    revision: 9,
+    agent_session: null,
+    cwd: "/projects/demo",
+    agent: null,
+    agent_status: "idle",
+    name: null,
+  };
+  vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
+    version: "0.9.3",
+    workspaces: [
+      {
+        workspace_id: "w1",
+        active_tab_id: "t2",
+        label: "Demo",
+        directory: "/projects/demo",
+        branch: null,
+      },
+    ],
+    tabs: [],
+    panes: [focused],
+    agents: [],
+  });
+  const control = {
+    sessionId: "client-1",
+    cwd: "/projects/demo",
+    inputRevision: () => 0,
+    ownsFocus: () => true,
+    focus: vi.fn(),
+  };
+  await act(async () =>
+    root.render(
+      <HerdrTerminalTools
+        target={target}
+        current={() => control}
+        onOpen={() => {}}
+        onError={() => {}}
+      />,
+    ),
+  );
+  await act(async () => button("terminal.splitHorizontal").click());
+  expect(api.runHerdrAction).toHaveBeenCalledWith(
+    {
+      ...target,
+      pane_id: "w1:p2",
+      terminal_id: "native-2",
+      revision: 9,
+    },
+    "split_right",
+  );
+});
+
+it("closes the focused Herdr pane only after confirmation", async () => {
+  const control = {
+    sessionId: "client-1",
+    cwd: "/projects/demo",
+    inputRevision: () => 0,
+    ownsFocus: () => true,
+    focus: vi.fn(),
+  };
+  await act(async () =>
+    root.render(
+      <HerdrTerminalTools
+        target={target}
+        current={() => control}
+        onOpen={() => {}}
+        onError={() => {}}
+      />,
+    ),
+  );
+  await act(async () => button("terminal.closePane").click());
+  expect(api.runHerdrAction).not.toHaveBeenCalled();
+  const confirm =
+    document.querySelector('[role="alertdialog"] button.app-button-danger') ??
+    [...document.querySelectorAll('[role="alertdialog"] button')].find(
+      (b) => b.textContent === "terminal.closePane",
+    );
+  expect(confirm).toBeTruthy();
+  await act(async () => (confirm as HTMLButtonElement).click());
+  expect(api.runHerdrAction).toHaveBeenCalledWith(target, "close");
+});
+
+it("refuses actions when the workspace has no identifiable focused pane", async () => {
+  vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
+    version: "0.9.3",
+    workspaces: [],
+    tabs: [],
+    panes: [],
+    agents: [],
+  });
+  const error = vi.fn();
+  const control = {
+    sessionId: "client-1",
+    cwd: "/projects/demo",
+    inputRevision: () => 0,
+    ownsFocus: () => true,
+    focus: vi.fn(),
+  };
+  await act(async () =>
+    root.render(
+      <HerdrTerminalTools
+        target={target}
+        current={() => control}
+        onOpen={() => {}}
+        onError={error}
+      />,
+    ),
+  );
+  await act(async () => button("terminal.splitHorizontal").click());
+  expect(api.runHerdrAction).not.toHaveBeenCalled();
+  expect(error).toHaveBeenLastCalledWith("terminal.herdrFocusUnavailable");
 });

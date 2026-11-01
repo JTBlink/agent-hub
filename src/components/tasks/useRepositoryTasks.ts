@@ -13,6 +13,7 @@ export interface TaskSource {
 export function useRepositoryTasks(
   bindings: api.TaskBinding[],
   filters: api.TaskFilters,
+  refreshKey = 0,
 ) {
   const [sources, setSources] = useState<TaskSource[]>([]);
   const generation = useRef(0);
@@ -107,7 +108,7 @@ export function useRepositoryTasks(
       );
       active.clear();
     };
-  }, [bindings, load]);
+  }, [bindings, load, refreshKey]);
   const items = sources
     .flatMap((source) => source.items)
     .sort((first, second) => second.updated_at.localeCompare(first.updated_at));

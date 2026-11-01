@@ -249,6 +249,13 @@ fn live_workspace_layout_and_pty_attachment_keep_the_server_running() {
         );
         std::thread::sleep(Duration::from_millis(100));
     }
+    control.action(&split, Action::Close, None).unwrap();
+    assert!(!control
+        .snapshot(&session)
+        .unwrap()
+        .panes
+        .iter()
+        .any(|pane| pane.pane_id == split.pane_id));
     manager.close("main", &terminal.id).unwrap();
     assert!(control
         .sessions()
@@ -345,4 +352,51 @@ fn a_linked_worktree_reuses_its_registered_project_instead_of_registering_a_dupl
         linked.canonicalize().unwrap().to_string_lossy()
     );
     assert_eq!(store.get_all_projects().unwrap().len(), 1);
+}
+
+#[test]
+fn deletion_protects_default_and_stops_running_named_sessions_before_removal() {
+    let root = tempfile::tempdir().unwrap();
+    let cli = root.path().join("herdr");
+    fs::write(&cli, r#"#!/bin/sh
+printf '%s\n' "$*" >> "$0.calls"
+case "$1 $2" in
+  'session list') echo '{"sessions":[{"name":"default","default":true,"running":true},{"name":"demo","running":true},{"name":"saved","running":false}]}' ;;
+  'session stop') echo '{"stopped":true}' ;;
+  'session delete') echo '{"deleted":true}' ;;
+esac
+"#).unwrap();
+    fs::set_permissions(&cli, fs::Permissions::from_mode(0o755)).unwrap();
+    let control = HerdrControl::new(cli.clone());
+    assert!(control.delete_session("default").is_err());
+    assert!(control.delete_session("missing").is_err());
+    let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
+    assert!(!calls.contains("session stop"));
+    assert!(!calls.contains("session delete"));
+    control.delete_session("demo").unwrap();
+    control.delete_session("saved").unwrap();
+    let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
+    assert!(calls.contains("session stop demo --json\nsession delete demo --json"));
+    assert!(calls.contains("session delete saved --json"));
+    assert!(!calls.contains("session stop saved"));
+}
+
+#[test]
+fn closes_only_the_verified_pane() {
+    use app_lib::core::herdr_control::Action;
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    fs::create_dir(&directory).unwrap();
+    let cli = fake_cli(root.path(), &directory);
+    let control = HerdrControl::new(cli);
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let opened = control.open(&store, "default", "w1", None).unwrap();
+    control.action(&opened.target, Action::Close, None).unwrap();
+    let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
+    assert!(calls.contains("pane close w1:p1"));
+    let mut replaced = opened.target;
+    replaced.terminal_id = "replaced".into();
+    assert!(control.action(&replaced, Action::Close, None).is_err());
+    let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
+    assert_eq!(calls.matches("pane close").count(), 1);
 }

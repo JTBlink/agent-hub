@@ -33,6 +33,12 @@ pub struct Filters {
     pub state: String,
     pub text: String,
     pub personal: String,
+    #[serde(default)]
+    pub author: Option<String>,
+    #[serde(default)]
+    pub assignee: Option<String>,
+    #[serde(default)]
+    pub labels: Vec<String>,
 }
 impl Default for Filters {
     fn default() -> Self {
@@ -41,6 +47,9 @@ impl Default for Filters {
             state: "open".into(),
             text: String::new(),
             personal: "all".into(),
+            author: None,
+            assignee: None,
+            labels: Vec::new(),
         }
     }
 }
@@ -65,6 +74,7 @@ pub struct TaskSummary {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct TaskMetadata {
+    pub state_reason: Option<String>,
     pub author: Option<String>,
     pub labels: Vec<String>,
     pub milestone: Option<String>,
@@ -189,6 +199,22 @@ pub struct TaskDetail {
 pub struct TaskFailure {
     pub kind: String,
     pub message: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IssueAction {
+    Open,
+    Closed,
+    Completed,
+    NotPlanned,
+    Duplicate,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct IssueStateChange {
+    pub action: IssueAction,
+    pub duplicate_of: Option<u64>,
 }
 impl std::fmt::Display for TaskFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

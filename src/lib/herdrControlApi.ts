@@ -11,6 +11,12 @@ export interface HerdrWorkspace {
   active_tab_id: string;
   directory: string | null;
   branch: string | null;
+  repository_icon?: "github" | "gitlab" | "git" | null;
+  worktree?: {
+    repo_key: string;
+    is_linked_worktree: boolean;
+    checkout_path: string;
+  } | null;
 }
 export interface HerdrPane {
   pane_id: string;
@@ -53,7 +59,8 @@ export type HerdrAction =
   | "new_tab"
   | "split_right"
   | "split_down"
-  | "zoom";
+  | "zoom"
+  | "close";
 export interface HerdrActionResult {
   output: string | null;
   target: HerdrTarget | null;
@@ -150,3 +157,6 @@ export function herdrState(value: string) {
 }
 
 export const getHerdrSidebarKeys = () => invoke<string>("herdr_sidebar_keys");
+
+export const deleteHerdrSession = (session: string) =>
+  invoke<void>("herdr_delete_session", { session });

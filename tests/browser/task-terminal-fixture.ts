@@ -53,7 +53,7 @@ function task(
     assignees: ["demo"],
     metadata: makeTaskMetadata({
       author: "demo",
-      labels: ["parser", "priority::high"],
+      labels: ["parser", "priority::high", "needs review", "regression"],
       milestone: "v2.0",
       created_at: "2026-10-29T09:00:00Z",
       due_date: review ? null : "2026-11-05",
@@ -89,6 +89,8 @@ export function taskTerminalFixture(
   const git = gitFixture(command, raw);
   if (git.handled) return git;
   if (command === "task_bindings") return { handled: true, value: bindings };
+  if (command === "herdr_inventory")
+    return { handled: true, value: { installed: true, sessions: [] } };
   if (command === "task_list") {
     const binding =
       bindings.find(
@@ -100,12 +102,47 @@ export function taskTerminalFixture(
       args.filters !== null &&
       "kind" in args.filters &&
       args.filters.kind === "review";
+    const filters =
+      "filters" in args &&
+      typeof args.filters === "object" &&
+      args.filters !== null
+        ? args.filters
+        : {};
+    const items = Array.from({ length: 4 }, (_, index) =>
+      task(binding, index + 1, review),
+    ).filter((item) => {
+      const state = "state" in filters ? filters.state : "all";
+      if (state === "open" && item.state !== "open") return false;
+      if (state === "closed" && item.state !== "closed") return false;
+      if (state === "merged" || state === "draft") return false;
+      if (
+        "labels" in filters &&
+        Array.isArray(filters.labels) &&
+        !filters.labels.every(
+          (label) =>
+            typeof label === "string" && item.metadata?.labels.includes(label),
+        )
+      )
+        return false;
+      for (const key of ["author", "assignee"] as const) {
+        if (
+          key in filters &&
+          typeof filters[key] === "string" &&
+          filters[key] &&
+          !["@me", "demo"].includes(filters[key])
+        )
+          return false;
+      }
+      return (
+        !("text" in filters) ||
+        typeof filters.text !== "string" ||
+        item.title.toLowerCase().includes(filters.text.toLowerCase())
+      );
+    });
     return {
       handled: true,
       value: {
-        items: Array.from({ length: 4 }, (_, index) =>
-          task(binding, index + 1, review),
-        ),
+        items,
         identity: "demo",
         has_more: false,
         limited: false,

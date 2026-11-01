@@ -4,6 +4,8 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
 import { TerminalActionBar } from "./TerminalActionBar";
+import { herdrTarget } from "../../lib/herdrControlApi";
+import { ConfirmDialog } from "../ConfirmDialog";
 import type { PaneControl } from "./TerminalPane";
 
 interface Props {
@@ -21,6 +23,7 @@ export function HerdrTerminalTools({
   onError,
 }: Props) {
   const { t } = useTranslation();
+  const [closing, setClosing] = useState<api.HerdrTarget | null>(null);
   const [busy, setBusy] = useState(false);
   const [zoomed, setZoomed] = useState<boolean>();
   const pending = useRef(false);
@@ -29,6 +32,7 @@ export function HerdrTerminalTools({
   useEffect(() => {
     let cancelled = false;
     setZoomed(undefined);
+    setClosing(null);
     void api
       .getHerdrSnapshot(target.session)
       .then((snapshot) => {
@@ -48,14 +52,15 @@ export function HerdrTerminalTools({
     };
   }, [target.session, target.pane_id, target.terminal_id]);
   const run = async (
-    action: api.HerdrAction | "clear" | "sidebar" | "copy",
+    action: api.HerdrAction | "sidebar" | "copy",
+    confirmed?: api.HerdrTarget,
   ) => {
-    if (pending.current) return;
+    if (pending.current) return false;
     const requested = target;
     const control = current();
     if (!control) {
       onError(t("terminal.herdrWait"));
-      return;
+      return false;
     }
     pending.current = true;
     setBusy(true);
@@ -64,30 +69,42 @@ export function HerdrTerminalTools({
       live.current.session === requested.session &&
       live.current.workspace_id === requested.workspace_id &&
       live.current.pane_id === requested.pane_id &&
+      live.current.terminal_id === requested.terminal_id &&
       current() === control;
     try {
-      if (action === "clear") {
-        control.clear?.();
-        return;
-      }
       if (action === "sidebar") {
         const keys = await api.getHerdrSidebarKeys();
-        if (!unchanged()) return;
+        if (!unchanged()) return false;
         await api.writeTerminal(control.sessionId, keys);
         if (unchanged()) control.focus();
-        return;
+        return true;
+      }
+      const snapshot = await api.getHerdrSnapshot(requested.session);
+      if (!unchanged()) return false;
+      const workspace = snapshot.workspaces.find(
+        (space) => space.workspace_id === requested.workspace_id,
+      );
+      const focused = snapshot.panes.find(
+        (pane) =>
+          pane.workspace_id === requested.workspace_id &&
+          pane.tab_id === workspace?.active_tab_id &&
+          pane.focused,
+      );
+      if (!focused) throw new Error(t("terminal.herdrFocusUnavailable"));
+      const resolved = confirmed ?? herdrTarget(requested.session, focused);
+      if (action === "close" && !confirmed) {
+        setClosing(resolved);
+        return true;
       }
       const result = await api.runHerdrAction(
-        requested,
+        resolved,
         action === "copy" ? "read" : action,
       );
-      if (!unchanged()) return;
+      if (!unchanged()) return false;
       if (action === "copy") await writeText(result.output ?? "");
       if (action === "zoom") {
         const snapshot = await api.getHerdrSnapshot(requested.session);
-        const pane = snapshot.panes.find(
-          (p) => p.pane_id === requested.pane_id,
-        );
+        const pane = snapshot.panes.find((p) => p.pane_id === resolved.pane_id);
         if (unchanged())
           setZoomed(
             snapshot.layouts?.find((l) => l.tab_id === pane?.tab_id)?.zoomed,
@@ -101,25 +118,41 @@ export function HerdrTerminalTools({
         );
         if (unchanged()) onOpen(opened);
       }
+      return true;
     } catch (error) {
       if (unchanged()) onError(getErrorMessage(error, t("common.error")));
+      return false;
     } finally {
       pending.current = false;
       setBusy(false);
     }
   };
   return (
-    <TerminalActionBar
-      busy={busy}
-      zoomed={zoomed}
-      onAction={(action) => void run(action)}
-    >
-      <span
-        className="ml-auto min-w-0 truncate pl-2 text-xs text-muted"
-        title={`${target.session} / ${target.workspace_id} / ${target.pane_id}`}
+    <>
+      <ConfirmDialog
+        open={closing !== null}
+        title={t("terminal.closePane")}
+        message={t("terminal.closeHerdrPaneConfirm")}
+        details={closing ? [closing.pane_id] : []}
+        confirmLabel={t("terminal.closePane")}
+        onClose={() => setClosing(null)}
+        onConfirm={async () => {
+          if (!closing || !(await run("close", closing))) return false;
+          setClosing(null);
+        }}
+      />
+      <TerminalActionBar
+        busy={busy}
+        zoomed={zoomed}
+        onAction={(action) => void run(action)}
       >
-        {target.pane_id}
-      </span>
-    </TerminalActionBar>
+        <span
+          className="ml-auto min-w-0 truncate pl-2 text-xs text-muted"
+          title={`${target.session} / ${target.workspace_id} / ${target.pane_id}`}
+        >
+          {target.pane_id}
+        </span>
+      </TerminalActionBar>
+    </>
   );
 }

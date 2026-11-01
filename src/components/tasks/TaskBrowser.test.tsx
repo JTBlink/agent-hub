@@ -7,6 +7,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { makeProject } from "../../../tests/fixtures/workspace";
+import { makeTaskMetadata } from "../../../tests/fixtures/repositoryTask";
 import type { RepositoryTask, TaskBinding } from "../../lib/tauri";
 import { TaskBrowser } from "./TaskBrowser";
 import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
@@ -15,7 +16,9 @@ vi.mock("react-i18next", () => ({
 }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => []) }));
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
-vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openUrl: vi.fn(async () => {}),
+}));
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   localStorage.clear();
@@ -65,7 +68,11 @@ it("retains successful sources, loaded rows and copyable context through details
     number: 7,
     title: "Example task",
     state: "open",
-    updated_at: "2026-01-01T00:00:00Z",
+    metadata: makeTaskMetadata({
+      author: "contributor",
+      labels: ["bug", "priority::high", "parser", "needs review"],
+    }),
+    updated_at: new Date(2026, 0, 1, 13, 42, 57).toISOString(),
     assignees: ["demo"],
     url: "https://github.example.invalid/team/demo/issues/7",
   };
@@ -115,6 +122,26 @@ it("retains successful sources, loaded rows and copyable context through details
     ),
   );
   expect(host.textContent).toContain("Example task");
+  const updated = host.querySelector("tbody tr td:nth-child(5)")?.textContent;
+  expect(updated).toContain(new Date(task.updated_at).toLocaleDateString());
+  expect(updated).toContain("13:42");
+  expect(updated).not.toContain("13:42:57");
+  const row = host.querySelector("tbody tr");
+  expect(row?.textContent).toContain("contributor");
+  expect(row?.textContent).toContain("needs review");
+  expect(row?.querySelector("td:nth-child(4)")?.textContent).toContain(
+    "tasks.open",
+  );
+  await act(async () =>
+    row
+      ?.querySelector<HTMLButtonElement>(
+        'button[aria-label="tasks.openRepository"]',
+      )
+      ?.click(),
+  );
+  expect(openUrl).toHaveBeenCalledWith(
+    "https://github.example.invalid/team/demo",
+  );
   expect(host.textContent).toContain("HTTP 403");
   const more = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
     (button) => button.textContent === "tasks.loadMore",
@@ -132,7 +159,7 @@ it("retains successful sources, loaded rows and copyable context through details
     host.querySelector('aside[aria-label="tasks.details"]')?.textContent,
   ).toContain("Review the example requirement.");
   const copy = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
-    (button) => button.textContent === "tasks.copy",
+    (button) => button.getAttribute("aria-label") === "tasks.copy",
   );
   await act(async () => copy?.click());
   expect(vi.mocked(writeText).mock.calls[0]?.[0]).toContain(
@@ -386,8 +413,33 @@ it("switches platform and kind filters, retains the project scope, and opens the
     document.querySelectorAll<HTMLButtonElement>('[role="option"]')[2].click(),
   );
   await act(async () => radio("MR").click());
-  await act(async () => radio("tasks.closed").click());
-  await choose("tasks.personal", "tasks.assigned");
+  const pickFilter = async (section: string, value: string) => {
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('button[aria-label="tasks.filters"]')!
+        .click(),
+    );
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+        .find((button) => button.textContent === section)!
+        .click(),
+    );
+    await act(async () =>
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[role="dialog"] button',
+        ),
+      ]
+        .find((button) => button.textContent === value)!
+        .click(),
+    );
+  };
+  await pickFilter("tasks.state", "tasks.closed");
+  await pickFilter("tasks.assignee", "@me");
+  expect(
+    host.querySelector<HTMLInputElement>('input[aria-label="tasks.search"]')
+      ?.value,
+  ).toBe("is:pr is:closed assignee:@me");
   expect(vi.mocked(invoke)).toHaveBeenLastCalledWith(
     "task_list",
     expect.objectContaining({
@@ -395,7 +447,8 @@ it("switches platform and kind filters, retains the project scope, and opens the
       filters: {
         kind: "review",
         state: "closed",
-        personal: "assigned",
+        personal: "all",
+        assignee: "@me",
         text: "",
       },
     }),
@@ -404,7 +457,11 @@ it("switches platform and kind filters, retains the project scope, and opens the
     {
       provider: "gitlab",
       projectId: "project-1",
-      filters: { kind: "review", personal: "assigned" },
+      filters: {
+        kind: "review",
+        assignee: "@me",
+        text: "is:pr is:closed assignee:@me",
+      },
     },
   );
   await act(async () =>

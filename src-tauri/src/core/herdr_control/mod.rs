@@ -52,6 +52,29 @@ impl HerdrControl {
         )
         .map_err(Into::into)
     }
+    /// Stop and remove an explicitly selected named session. The default is retained.
+    pub fn delete_session(&self, session: &str) -> Result<()> {
+        let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
+        let info = self
+            .sessions()?
+            .into_iter()
+            .find(|s| s.name == session)
+            .context("Herdr session no longer exists; refresh the sidebar")?;
+        if info.default || session == "default" {
+            bail!("The default Herdr session cannot be deleted")
+        }
+        if info.running {
+            let result = self.call(None, &["session", "stop", session, "--json"], 10)?;
+            if result.get("stopped").and_then(Value::as_bool) != Some(true) {
+                bail!("Herdr did not confirm the session was stopped; refresh and retry")
+            }
+        }
+        let result = self.call(None, &["session", "delete", session, "--json"], 10)?;
+        if result.get("deleted").and_then(Value::as_bool) != Some(true) {
+            bail!("Herdr did not confirm session deletion; refresh and retry")
+        }
+        Ok(())
+    }
     fn running(&self, session: &str) -> Result<()> {
         if !self
             .sessions()?
@@ -74,6 +97,35 @@ impl HerdrControl {
             workspace.directory = directory_for(workspace, &snapshot.panes)
                 .ok()
                 .map(|p| p.to_string_lossy().into_owned());
+            workspace.repository_icon = workspace
+                .directory
+                .as_deref()
+                .and_then(|p| git2::Repository::open(p).ok())
+                .map(|repo| {
+                    let remote = repo.find_remote("origin").ok();
+                    let url = remote.as_ref().and_then(|r| r.url()).unwrap_or("");
+                    let host = if let Some((_, rest)) = url.split_once("://") {
+                        rest.split('/')
+                            .next()
+                            .unwrap_or("")
+                            .rsplit('@')
+                            .next()
+                            .unwrap_or("")
+                    } else {
+                        url.split(':')
+                            .next()
+                            .unwrap_or("")
+                            .rsplit('@')
+                            .next()
+                            .unwrap_or("")
+                    };
+                    match host {
+                        "github.com" => "github",
+                        "gitlab.com" => "gitlab",
+                        _ => "git",
+                    }
+                    .to_owned()
+                });
             workspace.branch = workspace
                 .directory
                 .as_deref()

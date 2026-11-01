@@ -88,7 +88,7 @@ try {
         Math.max(...row.centers) - Math.min(...row.centers) < 1,
         JSON.stringify(row),
       );
-      assert.equal(row.title, language === "en" ? "Full reset" : "完整重置");
+      assert.equal(row.title, "Full reset");
     }
     await evaluate(`${doc}.querySelector('li button').click();true`);
     await until(`!!${doc}.querySelector('[role="alertdialog"]')`);

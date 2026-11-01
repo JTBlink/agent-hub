@@ -10,7 +10,6 @@ vi.mock("react-i18next", () => ({
 let host: HTMLDivElement;
 let root: Root;
 const launch = vi.fn();
-const sidebar = vi.fn();
 const upgrade = vi.fn();
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -39,7 +38,6 @@ async function render(
         canSplit
 
         onHerdr={launch}
-        onHerdrSidebar={sidebar}
         onHerdrUpgrade={upgrade}
         onSplit={() => {}}
       />,
@@ -52,54 +50,29 @@ const items = () => [
   ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
 ];
 
-it("groups launch, sidebar and update in a single menu and closes after selecting", async () => {
+it("launches Herdr directly without opening a menu", async () => {
   await render();
+  await act(async () => trigger().click());
+  expect(launch).toHaveBeenCalledOnce();
   expect(document.querySelector('[role="menu"]')).toBeNull();
-  for (const [index, callback] of [launch, sidebar, upgrade].entries()) {
-    await act(async () => trigger().click());
-    expect(items().map((item) => item.textContent)).toEqual([
-      "terminal.herdrLaunch",
-      "terminal.herdrSidebar",
-      "terminal.herdrUpdateAvailable",
-    ]);
-    await act(async () => items()[index].click());
-    expect(callback).toHaveBeenCalledOnce();
-    expect(document.querySelector('[role="menu"]')).toBeNull();
-    expect(document.activeElement).toBe(trigger());
-  }
+  expect(trigger().hasAttribute("aria-haspopup")).toBe(false);
 });
 
-it("supports keyboard navigation and Escape returns focus to the menu trigger", async () => {
+it("offers an available update as a separate button", async () => {
   await render();
-  await act(async () => {
-    trigger().focus();
-    trigger().dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
-    );
-  });
-  expect(document.activeElement).toBe(items()[0]);
-  await act(async () =>
-    items()[0].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
-    ),
-  );
-  expect(document.activeElement).toBe(items()[2]);
-  await act(async () =>
-    items()[2].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    ),
-  );
-  expect(document.querySelector('[role="menu"]')).toBeNull();
-  expect(document.activeElement).toBe(trigger());
+  const update = host.querySelector<HTMLButtonElement>(
+    '[aria-label="terminal.herdrUpdateAvailable"]',
+  )!;
+  await act(async () => update.click());
+  expect(upgrade).toHaveBeenCalledOnce();
+  expect(launch).not.toHaveBeenCalled();
 });
 
-it("disables actions during preparation and disables the trigger without a terminal", async () => {
+it("prevents repeated launch while preparing and launch without a terminal", async () => {
   await render(true);
   await act(async () => trigger().click());
-  expect(items().every((item) => item.disabled)).toBe(true);
-  await act(async () => items()[0].click());
   expect(launch).not.toHaveBeenCalled();
-  await act(async () => trigger().click());
+  expect(trigger().getAttribute("aria-busy")).toBe("true");
   await render(false, false);
   expect(trigger().disabled).toBe(true);
 });

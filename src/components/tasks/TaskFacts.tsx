@@ -11,7 +11,7 @@ export function TaskSummaryFacts({ task }: { task: RepositoryTask }) {
   const facts = [
     metadata.review?.draft ? t("tasks.facts.draft") : null,
     metadata.milestone,
-    ...metadata.labels.slice(0, 3),
+    ...metadata.labels,
   ];
   return (
     <>
@@ -19,7 +19,7 @@ export function TaskSummaryFacts({ task }: { task: RepositoryTask }) {
         <span
           key={`${fact}:${index}`}
           title={fact ?? ""}
-          className="max-w-[130px] shrink-0 truncate rounded bg-surface-hover px-1.5 py-px text-xs text-muted"
+          className="max-w-full break-words rounded bg-surface-hover px-1.5 py-px text-xs text-muted"
         >
           {fact}
         </span>

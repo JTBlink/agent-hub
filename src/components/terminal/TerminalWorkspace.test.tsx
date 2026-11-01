@@ -465,9 +465,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   );
   expect(second.isConnected).toBe(true);
   expect(second.value).toBe("draft");
-  expect(document.activeElement).toBe(
-    host.querySelector('[aria-label="Herdr"]'),
-  );
+  expect(document.activeElement).toBe(projectControl);
   const writesBeforeSidebar = vi
     .mocked(invoke)
     .mock.calls.filter(([command]) => command === "terminal_write").length;
@@ -711,12 +709,10 @@ it("switches between peer file and terminal tabs without replacing running panes
 });
 
 async function selectHerdrAction(host: HTMLElement, label: string) {
-  const trigger = host.querySelector<HTMLButtonElement>(
-    'button[aria-label="Herdr"]',
-  )!;
-  await act(async () => trigger.click());
-  const action = document.querySelector<HTMLButtonElement>(
-    `[role="menuitem"][title="${label}"]`,
+  const action = host.querySelector<HTMLButtonElement>(
+    label === "terminal.herdrLaunch"
+      ? 'button[aria-label="Herdr"]'
+      : `button[aria-label="${label}"]`,
   )!;
   expect(action).not.toBeNull();
   await act(async () => action.click());

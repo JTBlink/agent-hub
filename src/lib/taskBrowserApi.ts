@@ -11,9 +11,12 @@ export interface TaskBinding {
 }
 export interface TaskFilters {
   kind: TaskKind;
-  state: "open" | "closed" | "all";
+  state: "open" | "closed" | "merged" | "draft" | "all";
   text: string;
   personal: "all" | "assigned" | "created";
+  author?: string;
+  assignee?: string;
+  labels?: string[];
 }
 export interface RepositoryTask {
   key: string;
@@ -38,6 +41,7 @@ export interface TaskCheck {
   sha: string | null;
 }
 export interface TaskMetadata {
+  state_reason?: string | null;
   author: string | null;
   labels: string[];
   milestone: string | null;
@@ -173,6 +177,26 @@ export const getRepositoryTaskDetail = (
   });
 export const cancelTaskQuery = (requestId: string) =>
   invoke<void>("task_cancel", { requestId });
+export interface IssueStateChange {
+  action: "open" | "closed" | "completed" | "not_planned" | "duplicate";
+  duplicate_of?: number;
+}
+export const updateRepositoryIssue = (
+  task: RepositoryTask,
+  change: IssueStateChange,
+) =>
+  invoke<RepositoryTask>("task_update_issue", {
+    bindingId: task.binding_id,
+    number: task.number,
+    change,
+  });
+export const addRepositoryTaskComment = (task: RepositoryTask, body: string) =>
+  invoke<RepositoryTaskComment>("task_add_comment", {
+    bindingId: task.binding_id,
+    kind: task.kind,
+    number: task.number,
+    body,
+  });
 export function taskFailure(error: unknown): TaskFailure {
   if (
     typeof error === "object" &&

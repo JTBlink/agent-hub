@@ -55,10 +55,10 @@ export function ResetCreditsSection({
             const expired =
               credit.expires_at !== null && credit.expires_at * 1000 <= now;
             const title =
-              credit.reset_type === "codexRateLimits" ||
-              credit.title?.trim().toLowerCase() === "full reset"
-                ? t("agentUsage.resetCredits.fullReset")
-                : (credit.title ?? t("agentUsage.resetCredits.reset"));
+              credit.title ??
+              t(
+                `agentUsage.resetCredits.${credit.reset_type === "codexRateLimits" ? "fullReset" : "reset"}`,
+              );
             const expiry =
               credit.expires_at === null
                 ? t("agentUsage.resetCredits.expiryUnknown")

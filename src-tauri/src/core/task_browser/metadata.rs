@@ -19,6 +19,7 @@ fn actors(value: &Value) -> Vec<String> {
 
 pub(super) fn extract(provider: Provider, kind: TaskKind, item: &Value) -> TaskMetadata {
     TaskMetadata {
+        state_reason: text(&item["state_reason"]),
         author: actor(
             &item[if provider == Provider::Github {
                 "user"

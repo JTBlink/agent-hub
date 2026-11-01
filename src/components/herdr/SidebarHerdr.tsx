@@ -24,6 +24,8 @@ import {
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { cn } from "../../utils";
 import { ThemedSelect } from "../ThemedSelect";
+import { HerdrDeleteSession } from "./HerdrDeleteSession";
+import { HerdrWorkspaceList } from "./HerdrWorkspaceList";
 import { HerdrStatus } from "./HerdrStatus";
 import { HerdrAgentDialog, type HerdrDialogRequest } from "./HerdrAgentDialog";
 
@@ -261,6 +263,15 @@ export function SidebarHerdr({
             </option>
           ))}
         </ThemedSelect>
+        <HerdrDeleteSession
+          session={source.inventory?.sessions.find((s) => s.name === session)}
+          disabled={busy}
+          onDeleted={() => {
+            source.setSession("");
+            setOpened(null);
+            source.refresh();
+          }}
+        />
         <button
           className={button}
           aria-label={t("herdr.openCurrent")}
@@ -382,42 +393,18 @@ export function SidebarHerdr({
                 <span className="text-muted">{spaces.length}</span>
               </div>
               <div
-                className="min-h-0 flex-1 overflow-y-auto"
+                className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-1 pb-2"
                 onKeyDown={keyNavigation}
               >
-                {spaces.map((w) => (
-                  <button
-                    key={w.workspace_id}
-                    data-herdr-item
-                    data-herdr-workspace={w.workspace_id}
-                    disabled={busy}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
-                      current?.target.workspace_id === w.workspace_id &&
-                        "bg-accent-bg",
-                    )}
-                    title={w.directory ?? t("herdr.directoryUnknown")}
-                    aria-pressed={
-                      current?.target.workspace_id === w.workspace_id
-                    }
-                    onClick={() =>
-                      void open(
-                        w.workspace_id,
-                        lastPanes.current.get(`${session}:${w.workspace_id}`),
-                      )
-                    }
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">
-                        {w.label}
-                      </span>
-                      <span className="block truncate text-muted">
-                        {[w.branch, w.directory].filter(Boolean).join(" · ") ||
-                          t("herdr.directoryUnknown")}
-                      </span>
-                    </span>
-                  </button>
-                ))}
+                <HerdrWorkspaceList
+                  spaces={spaces}
+                  agents={snapshot.agents}
+                  selected={current?.target.workspace_id}
+                  disabled={busy}
+                  onOpen={(id) =>
+                    void open(id, lastPanes.current.get(`${session}:${id}`))
+                  }
+                />
                 {!spaces.length && (
                   <p className="px-3 py-2 text-xs text-muted">
                     {t(query ? "herdr.noMatches" : "herdr.noWorkspaces")}

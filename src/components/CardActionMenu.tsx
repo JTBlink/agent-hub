@@ -23,6 +23,7 @@ interface Props {
   triggerClassName?: string;
   disabled?: boolean;
   align?: "start" | "end";
+  renderContent?: (close: () => void) => React.ReactNode;
 }
 
 interface MenuPos {
@@ -39,11 +40,13 @@ export function CardActionMenu({
   triggerClassName,
   disabled,
   align = "end",
+  renderContent,
 }: Props) {
   const [pos, setPos] = useState<MenuPos | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const openChangeRef = useRef(onOpenChange);
+  const wasOpen = useRef(false);
   const menuId = useId();
 
   const open = pos !== null;
@@ -54,8 +57,10 @@ export function CardActionMenu({
 
   const setOpenState = useCallback((next: MenuPos | null) => {
     setPos(next);
-    openChangeRef.current?.(next !== null);
   }, []);
+  useEffect(() => {
+    openChangeRef.current?.(open);
+  }, [open]);
 
   const locate = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
@@ -135,6 +140,18 @@ export function CardActionMenu({
   }, [open, locate, setOpenState]);
 
   useEffect(() => () => openChangeRef.current?.(false), []);
+  useEffect(() => {
+    if (wasOpen.current && !open && document.activeElement === document.body)
+      triggerRef.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+
+  useEffect(() => {
+    if (open && !renderContent)
+      panelRef.current
+        ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+        ?.focus();
+  }, [open, renderContent]);
 
   const handleToggle = useCallback(() => {
     if (open) {
@@ -190,12 +207,13 @@ export function CardActionMenu({
             <div
               ref={attachPanel}
               id={menuId}
-              role="menu"
+              role={renderContent ? "dialog" : "menu"}
               aria-label={label}
               className="fixed z-50 min-w-[156px] max-w-[calc(100vw/var(--app-scale)-16px)] max-h-[calc(100vh/var(--app-scale)-16px)] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg"
               style={{ top: pos.top, right: pos.right }}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(event) => {
+                if (renderContent) return;
                 if (event.key === "Tab") {
                   setOpenState(null);
                   triggerRef.current?.focus();
@@ -224,36 +242,38 @@ export function CardActionMenu({
                 items[next]?.focus();
               }}
             >
-              {actions.map((action) => (
-                <button
-                  key={action.key}
-                  type="button"
-                  role="menuitem"
-                  disabled={action.disabled}
-                  title={action.label}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!action.keepOpen) {
-                      setOpenState(null);
-                      triggerRef.current?.focus();
-                    }
-                    action.onSelect();
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-                    action.danger
-                      ? "text-danger hover:bg-danger-bg"
-                      : "text-secondary hover:bg-surface-hover",
-                  )}
-                >
-                  {action.icon && (
-                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
-                      {action.icon}
-                    </span>
-                  )}
-                  <span className="min-w-0 truncate">{action.label}</span>
-                </button>
-              ))}
+              {renderContent
+                ? renderContent(() => setOpenState(null))
+                : actions.map((action) => (
+                    <button
+                      key={action.key}
+                      type="button"
+                      role="menuitem"
+                      disabled={action.disabled}
+                      title={action.label}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!action.keepOpen) {
+                          setOpenState(null);
+                          triggerRef.current?.focus();
+                        }
+                        action.onSelect();
+                      }}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+                        action.danger
+                          ? "text-danger hover:bg-danger-bg"
+                          : "text-secondary hover:bg-surface-hover",
+                      )}
+                    >
+                      {action.icon && (
+                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
+                          {action.icon}
+                        </span>
+                      )}
+                      <span className="min-w-0 truncate">{action.label}</span>
+                    </button>
+                  ))}
             </div>
           </>,
           document.body,

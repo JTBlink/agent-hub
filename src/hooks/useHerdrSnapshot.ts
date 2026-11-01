@@ -42,7 +42,7 @@ export function useHerdrSnapshot(active: boolean) {
       .then((value) => {
         if (cancelled) return;
         setInventory(value);
-        if (!session)
+        if (!value.sessions.some((s) => s.name === session))
           setSessionValue(
             value.sessions.find((s) => s.default && s.running)?.name ??
               value.sessions.find((s) => s.running)?.name ??

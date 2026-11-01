@@ -314,6 +314,7 @@ export function TerminalWorkspace({
         )?.name ||
         t("terminal.title")
       }
+      error={!!bridgeError}
       notice={bridgeError || herdr.notice}
     />
   );
@@ -417,7 +418,6 @@ export function TerminalWorkspace({
                 count < TERMINAL_PANE_LIMIT
               }
               onHerdr={() => void herdr.launch()}
-              onHerdrSidebar={() => void herdr.toggleSidebar()}
               onSplit={split}
             />
           </div>
@@ -548,6 +548,7 @@ export function TerminalWorkspace({
             current={() => activeTarget.current}
             onNew={() => add()}
             onSplit={split}
+            onClose={() => close(active, active.activePane)}
             onSidebar={herdr.toggleSidebar}
             onError={setBridgeError}
             zoomed={zoomedPane === active.activePane}

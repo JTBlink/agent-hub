@@ -1,14 +1,18 @@
-//! Read-only repository work, explicitly bound to registered local projects.
+//! Repository work, explicitly bound to registered local projects.
 mod adapter;
 mod cli;
 mod development;
 mod discovery;
 mod identity;
+mod launch;
 mod metadata;
+mod mutation;
+mod query;
 mod types;
 use anyhow::{bail, Context, Result};
 pub use cli::SystemCli;
 pub use discovery::{remote_candidates, RemoteCandidate};
+pub use launch::prepare_managed_workspace;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 pub use types::*;
@@ -182,13 +186,23 @@ impl<R: CliReader> TaskClient<R> {
         endpoint: String,
         cancel: &AtomicBool,
     ) -> std::result::Result<Value, TaskFailure> {
+        self.request(binding, "GET", endpoint, &[], cancel)
+    }
+    fn request(
+        &self,
+        binding: &Binding,
+        method: &str,
+        endpoint: String,
+        fields: &[(&str, String)],
+        cancel: &AtomicBool,
+    ) -> std::result::Result<Value, TaskFailure> {
         if cancel.load(Ordering::Acquire) {
             return Err(TaskFailure::new("cancelled", "Query cancelled"));
         }
         let mut args = vec![
             "api".into(),
             "--method".into(),
-            "GET".into(),
+            method.into(),
             "--hostname".into(),
             binding.host.clone(),
             endpoint,
@@ -196,6 +210,9 @@ impl<R: CliReader> TaskClient<R> {
         // glab rejects --hostname with a port; SystemCli carries GITLAB_HOST.
         if binding.provider == Provider::Gitlab && binding.host.contains(':') {
             args.drain(3..5);
+        }
+        for (key, value) in fields {
+            args.extend(["--raw-field".into(), format!("{key}={value}")]);
         }
         let result = self.reader.read(binding, &args, cancel);
         if result
@@ -215,7 +232,7 @@ impl<R: CliReader> TaskClient<R> {
         page: u32,
         cancel: &AtomicBool,
     ) -> std::result::Result<TaskPage, TaskFailure> {
-        adapter::validate_query(binding, filters, page)?;
+        query::validate(binding, filters, page)?;
         let fetch = || {
             let user = self.api(binding, "user".into(), cancel)?;
             let username = adapter::string(
@@ -238,7 +255,7 @@ impl<R: CliReader> TaskClient<R> {
             Some(scope) => identity::get(&scope, cancel, fetch)?,
             None => fetch()?,
         };
-        let endpoint = adapter::list_endpoint(binding, filters, page, &username);
+        let endpoint = query::endpoint(binding, filters, page, &username);
         let response = self.api(binding, endpoint, cancel)?;
         adapter::page(binding, filters.kind, &username, page, response)
     }

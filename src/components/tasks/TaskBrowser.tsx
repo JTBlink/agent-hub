@@ -5,6 +5,8 @@ import {
   useMemo,
   useRef,
   useState,
+  lazy,
+  Suspense,
 } from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
@@ -14,6 +16,11 @@ import { TaskToolbar } from "./TaskToolbar";
 import { TaskListTable } from "./TaskListTable";
 import { TaskConnections } from "./TaskConnections";
 import { TaskDetails } from "./TaskDetails";
+const TaskStartDialog = lazy(() =>
+  import("./TaskStartDialog").then((module) => ({
+    default: module.TaskStartDialog,
+  })),
+);
 import { useRepositoryTasks } from "./useRepositoryTasks";
 import {
   readTaskViewPreferences,
@@ -21,6 +28,12 @@ import {
 } from "../../lib/taskViewPreferences";
 import { getAppScale } from "../../lib/textScale";
 import { cn } from "../../utils";
+import {
+  changeTaskFilters,
+  defaultTaskFilters,
+  serializeTaskFilters,
+  taskSearchFilters,
+} from "../../lib/taskSearch";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
 
@@ -30,7 +43,14 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [connections, setConnections] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [discovering, setDiscovering] = useState(true);
-  const [initial] = useState(readTaskViewPreferences);
+  const [initial] = useState(() => {
+    const saved = readTaskViewPreferences();
+    const filters = taskSearchFilters(saved.filters);
+    return {
+      ...saved,
+      filters: { ...filters, text: serializeTaskFilters(filters) },
+    };
+  });
   const workspace = useActiveWorkspace(projects);
   const inWorkspace = useContext(WorkspaceFilesContext) !== null;
   const workspaceId = inWorkspace ? workspace.project?.id : undefined;
@@ -50,6 +70,8 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     task: RepositoryTask;
     full: boolean;
   } | null>(null);
+  const [taskRefresh, setTaskRefresh] = useState(0);
+  const [startingTask, setStartingTask] = useState<RepositoryTask | null>(null);
   if (projectScope.workspaceKey !== workspaceKey) {
     setProjectScope({
       workspaceKey,
@@ -101,9 +123,23 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     projects.some((project) => project.id === projectId)
       ? projectId
       : "all";
+  const appliedFilters = useMemo(
+    () =>
+      taskSearchFilters({
+        ...defaultTaskFilters,
+        kind: filters.kind,
+        state: "all",
+        text: filters.text,
+      }),
+    [filters],
+  );
   useEffect(() => {
-    saveTaskViewPreferences({ provider, projectId: activeProjectId, filters });
-  }, [provider, activeProjectId, filters]);
+    saveTaskViewPreferences({
+      provider,
+      projectId: activeProjectId,
+      filters: { ...appliedFilters, text: filters.text },
+    });
+  }, [provider, activeProjectId, filters.text, appliedFilters]);
   const selectedBindings = useMemo(
     () =>
       bindings.filter(
@@ -115,8 +151,15 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   );
   const { sources, items, load } = useRepositoryTasks(
     selectedBindings,
-    filters,
+    appliedFilters,
+    taskRefresh,
   );
+  const taskUpdated = (task: RepositoryTask) => {
+    setSelection((previous) =>
+      previous?.task.key === task.key ? { ...previous, task } : previous,
+    );
+    setTaskRefresh((value) => value + 1);
+  };
   const open = (task: RepositoryTask, full: boolean, trigger: HTMLElement) => {
     returnFocus.current = trigger;
     setSelection({
@@ -131,6 +174,12 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     );
   };
   const loading = discovering || sources.some((source) => source.loading);
+  const openRepository = (
+    repository: Pick<api.TaskBinding, "host" | "repository">,
+  ) =>
+    void openUrl(
+      `https://${repository.host}/${repository.repository.split("/").map(encodeURIComponent).join("/")}`,
+    ).catch((error) => setSettingsError(api.taskFailure(error).message));
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-0">
       <TaskToolbar
@@ -145,7 +194,8 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
               .map((source) => `${source.binding.host} · ${source.identity}`),
           ),
         ]}
-        filters={filters}
+        filters={appliedFilters}
+        items={items}
         search={search}
         loading={loading}
         connections={connections}
@@ -158,7 +208,18 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           setSelection(null);
         }}
         onFilters={(patch) => {
-          setFilters((previous) => ({ ...previous, ...patch }));
+          const next = changeTaskFilters(
+            {
+              ...defaultTaskFilters,
+              kind: appliedFilters.kind,
+              state: "all",
+              text: search,
+            },
+            patch,
+          );
+          const text = serializeTaskFilters(next);
+          setFilters({ ...next, text });
+          setSearch(text);
           setSelection(null);
         }}
         onSearch={setSearch}
@@ -168,11 +229,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           )
         }
         onConnections={() => setConnections((value) => !value)}
-        onOpenRepository={(binding) =>
-          void openUrl(
-            `https://${binding.host}/${binding.repository.split("/").map(encodeURIComponent).join("/")}`,
-          ).catch((error) => setSettingsError(api.taskFailure(error).message))
-        }
+        onOpenRepository={openRepository}
       />
       {settingsError && (
         <p role="alert" className="my-3 text-xs text-danger">
@@ -239,6 +296,9 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
             projects={projects}
             selectedKey={selection?.task.key}
             onOpen={open}
+            onOpenRepository={openRepository}
+            onUpdated={taskUpdated}
+            onStart={setStartingTask}
             empty={
               loading ? (
                 <p role="status">{t("common.loading")}</p>
@@ -285,9 +345,27 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
             full={selection.full}
             onClose={close}
             onExpand={() => setSelection({ ...selection, full: true })}
+            onUpdated={taskUpdated}
+            onStart={setStartingTask}
           />
         )}
       </div>
+      {startingTask && (
+        <Suspense
+          fallback={
+            <p role="status" className="text-xs text-muted">
+              {t("common.loading")}
+            </p>
+          }
+        >
+          <TaskStartDialog
+            key={startingTask.key}
+            task={startingTask}
+            projects={projects}
+            onClose={() => setStartingTask(null)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

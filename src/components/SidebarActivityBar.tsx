@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
+import { HerdrIcon } from "./HerdrIcon";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
 
 type ActivityIcon =
@@ -13,11 +14,12 @@ type ActivityIcon =
   | "source-control"
   | "layers"
   | "extensions"
-  | "layout-panel"
+  | "herdr"
   | "cloud"
   | "settings-gear";
 
 function ActivityBarIcon({ name }: { name: ActivityIcon }) {
+  if (name === "herdr") return <HerdrIcon className="activity-bar-icon" />;
   return (
     <span
       className={`codicon codicon-${name} activity-bar-icon`}
@@ -173,7 +175,7 @@ export function SidebarActivityBar({
           path: "/discover",
           icon: "extensions",
         })}
-        {renderPanel("herdr", "Herdr", "layout-panel")}
+        {renderPanel("herdr", "Herdr", "herdr")}
       </div>
       <div className="shrink-0">
         {renderLink({

@@ -21,6 +21,8 @@ pub struct Workspace {
     pub directory: Option<String>,
     #[serde(default)]
     pub branch: Option<String>,
+    #[serde(default)]
+    pub repository_icon: Option<String>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Tab {
@@ -102,6 +104,7 @@ pub enum Action {
     SplitRight,
     SplitDown,
     Zoom,
+    Close,
 }
 #[derive(Serialize)]
 pub struct ActionResult {

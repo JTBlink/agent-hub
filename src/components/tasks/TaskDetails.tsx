@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -20,19 +19,30 @@ import { TaskFacts } from "./TaskFacts";
 import { TaskDevelopmentView } from "./TaskDevelopmentView";
 import { TaskCodeChanges } from "./TaskCodeChanges";
 import { TaskStatusBadge } from "./TaskStatusBadge";
+import { TaskIssueStatus } from "./TaskIssueStatus";
+import { TaskCommentComposer } from "./TaskCommentComposer";
+import { taskTime } from "../../lib/taskTime";
 
 interface Props {
   task: RepositoryTask;
   full: boolean;
   onClose: () => void;
   onExpand: () => void;
+  onUpdated: (task: RepositoryTask) => void;
+  onStart: (task: RepositoryTask) => void;
 }
 function safeLink(href: string) {
   return /^https?:\/\//i.test(href);
 }
-export function TaskDetails({ task, full, onClose, onExpand }: Props) {
+export function TaskDetails({
+  task,
+  full,
+  onClose,
+  onExpand,
+  onUpdated,
+  onStart,
+}: Props) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [detail, setDetail] = useState<RepositoryTaskDetail | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -169,6 +179,15 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
         <button
           type="button"
           className="app-button-ghost"
+          aria-label={t("tasks.copy")}
+          disabled={!detail}
+          onClick={() => void copy()}
+        >
+          <Copy size={14} />
+        </button>
+        <button
+          type="button"
+          className="app-button-ghost"
           aria-label={t("settings.refresh")}
           title={t("settings.refresh")}
           disabled={loading}
@@ -207,16 +226,68 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
         )}
       </div>
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
-        <h2 className="text-base font-semibold">{current.title}</h2>
-        <p className="text-xs text-muted">
-          {task.host} · <TaskStatusBadge state={current.state} /> ·{" "}
-          {current.assignees.join(", ") || "—"}
-        </p>
-        <TaskFacts
-          task={current}
-          development={detail?.development}
-          compact={!full}
-        />
+        <div className="flex flex-wrap items-start gap-3">
+          <h2 className="min-w-0 flex-1 break-words text-xl font-semibold">
+            {current.title}{" "}
+            <span className="font-normal text-muted">#{current.number}</span>
+          </h2>
+          <button
+            type="button"
+            className="app-button-primary shrink-0 text-xs"
+            disabled={!detail}
+            onClick={() => onStart(current)}
+          >
+            <TerminalSquare size={13} />
+            {t("tasks.start")}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+          {current.kind === "issue" ? (
+            <TaskIssueStatus
+              task={current}
+              onUpdated={(updated) => {
+                setDetail((previous) =>
+                  previous ? { ...previous, summary: updated } : previous,
+                );
+                onUpdated(updated);
+              }}
+            />
+          ) : (
+            <TaskStatusBadge state={current.state} />
+          )}
+          {current.metadata?.author && (
+            <span className="font-medium text-secondary">
+              {current.metadata.author}
+            </span>
+          )}
+          <span>
+            {t("tasks.updated")}: {taskTime(current.updated_at)}
+          </span>
+        </div>
+        {detail && (
+          <div className="rounded-lg border border-border-subtle bg-background p-4">
+            <MarkdownContent
+              content={detail.body || t("tasks.noDescription")}
+              components={components}
+              className="max-w-none [&>:first-child]:mt-0 [&>:last-child]:mb-0"
+            />
+          </div>
+        )}
+        <details
+          className="rounded border border-border-subtle px-3 py-2"
+          open={current.kind === "review" || undefined}
+        >
+          <summary className="cursor-pointer text-xs text-muted">
+            {t("tasks.factsTitle")}
+          </summary>
+          <div className="pt-3">
+            <TaskFacts
+              task={current}
+              development={detail?.development}
+              compact={!full}
+            />
+          </div>
+        </details>
         {loading && (
           <p role="status" className="text-xs text-muted">
             {t("common.loading")}
@@ -240,7 +311,6 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
         )}
         {detail && (
           <>
-            <MarkdownContent content={detail.body} components={components} />
             <TaskDevelopmentView
               detail={detail}
               components={components}
@@ -251,22 +321,34 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
                   );
               }}
             />
-            <TaskCodeChanges development={detail.development} />
-            <h3 className="text-xs font-medium">{t("tasks.discussion")}</h3>
+            {current.kind === "review" && (
+              <TaskCodeChanges development={detail.development} />
+            )}
+            <h3 className="text-sm font-medium">
+              {t("tasks.discussion")}{" "}
+              <span className="text-xs text-muted">
+                {detail.comments.length}
+                {detail.has_more_comments ? "+" : ""}
+              </span>
+            </h3>
             {detail.comments.map((comment) => (
               <div
                 key={comment.id}
-                className="border-t border-border-subtle pt-2"
+                className="overflow-hidden rounded-lg border border-border-subtle bg-background"
               >
-                <p className="mb-2 text-xs text-muted">
-                  {comment.author} ·{" "}
-                  {comment.updated_at
-                    ? new Date(comment.updated_at).toLocaleString()
-                    : ""}
+                <p className="flex items-center gap-2 border-b border-border-subtle bg-bg-secondary px-3 py-2 text-xs text-muted">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface-active font-medium text-secondary">
+                    {comment.author.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="font-medium text-secondary">
+                    {comment.author}
+                  </span>{" "}
+                  · {taskTime(comment.updated_at)}
                 </p>
                 <MarkdownContent
                   content={comment.body}
                   components={components}
+                  className="max-w-none p-3 [&>:last-child]:mb-0"
                 />
               </div>
             ))}
@@ -285,6 +367,24 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
                 {t("tasks.loadMore")}
               </button>
             )}
+            <TaskCommentComposer
+              task={current}
+              onCreated={(comment) =>
+                setDetail((previous) =>
+                  previous
+                    ? {
+                        ...previous,
+                        comments: [
+                          ...previous.comments.filter(
+                            (item) => item.id !== comment.id,
+                          ),
+                          comment,
+                        ],
+                      }
+                    : previous,
+                )
+              }
+            />
           </>
         )}
         {contextVisible && (
@@ -303,28 +403,6 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
           onClick={() => setContextVisible((value) => !value)}
         >
           {t("tasks.context")}
-        </button>
-        <button
-          type="button"
-          disabled={!detail}
-          className="app-button-secondary text-xs"
-          onClick={() => void copy()}
-        >
-          <Copy size={13} />
-          {t("tasks.copy")}
-        </button>
-        <button
-          type="button"
-          disabled={!detail}
-          className="app-button-primary text-xs"
-          onClick={() =>
-            navigate(`/project/${task.project_id}`, {
-              state: { projectId: task.project_id, context },
-            })
-          }
-        >
-          <TerminalSquare size={13} />
-          {t("tasks.openTerminal")}
         </button>
         <span role="status" className="text-xs text-muted">
           {notice}

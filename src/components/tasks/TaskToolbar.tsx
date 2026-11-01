@@ -7,10 +7,16 @@ import {
   RefreshCw,
   Search,
   Settings2,
-  UserRound,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { Project, TaskBinding, TaskFilters } from "../../lib/tauri";
+import type {
+  Project,
+  RepositoryTask,
+  TaskBinding,
+  TaskFilters,
+} from "../../lib/tauri";
+import { TaskAttributeFilters } from "./TaskAttributeFilters";
 import type { TaskViewPreferences } from "../../lib/taskViewPreferences";
 import { ThemedSelect } from "../ThemedSelect";
 import { TaskFilterGroup } from "./TaskFilterGroup";
@@ -23,6 +29,7 @@ interface Props {
   bindings: TaskBinding[];
   identities: string[];
   filters: TaskFilters;
+  items: RepositoryTask[];
   search: string;
   loading: boolean;
   connections: boolean;
@@ -42,6 +49,7 @@ export function TaskToolbar({
   bindings,
   identities,
   filters,
+  items,
   search,
   loading,
   connections,
@@ -184,44 +192,13 @@ export function TaskToolbar({
           </button>
         </div>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 pb-2">
-        <TaskFilterGroup
-          label={t("tasks.state")}
-          value={filters.state}
-          onChange={(state) => onFilters({ state })}
-          options={[
-            { value: "open", label: t("tasks.open") },
-            { value: "closed", label: t("tasks.closed") },
-            { value: "all", label: t("tasks.allStates") },
-          ]}
+      <div className="flex min-w-0 items-center gap-2 pb-2">
+        <TaskAttributeFilters
+          filters={filters}
+          items={items}
+          onChange={onFilters}
         />
-        <ThemedSelect
-          aria-label={t("tasks.personal")}
-          className="h-7 w-[140px] border-transparent bg-transparent py-0 text-xs"
-          leadingIcon={
-            <UserRound
-              size={13}
-              className="shrink-0 text-muted"
-              aria-hidden="true"
-            />
-          }
-          value={filters.personal}
-          onChange={(event) =>
-            onFilters({
-              personal:
-                event.target.value === "assigned"
-                  ? "assigned"
-                  : event.target.value === "created"
-                    ? "created"
-                    : "all",
-            })
-          }
-        >
-          <option value="all">{t("tasks.everyone")}</option>
-          <option value="assigned">{t("tasks.assigned")}</option>
-          <option value="created">{t("tasks.created")}</option>
-        </ThemedSelect>
-        <div className="relative ml-auto min-w-[180px] flex-1 basis-[200px]">
+        <div className="relative min-w-0 flex-1">
           <Search
             size={14}
             aria-hidden="true"
@@ -229,12 +206,29 @@ export function TaskToolbar({
           />
           <input
             aria-label={t("tasks.search")}
-            className="app-input h-7 w-full pl-8 text-xs"
+            className="app-input h-7 w-full pl-8 pr-8 text-xs"
             value={search}
             placeholder={t("tasks.search")}
             maxLength={256}
             onChange={(event) => onSearch(event.target.value)}
           />
+          <button
+            type="button"
+            className="absolute right-1 top-1/2 -translate-y-1/2 app-button-ghost h-6 w-6 p-0"
+            aria-label={t("tasks.clearFilters")}
+            onClick={() =>
+              onFilters({
+                state: "open",
+                author: "",
+                assignee: "",
+                labels: [],
+                personal: "all",
+                text: "",
+              })
+            }
+          >
+            <X size={13} />
+          </button>
         </div>
       </div>
     </div>
