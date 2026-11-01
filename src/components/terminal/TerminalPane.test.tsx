@@ -10,6 +10,8 @@ const renderer = vi.hoisted(() => ({
   unsupported: false,
   dispose: vi.fn(),
   redraw: vi.fn(),
+  created: vi.fn(),
+  clearAtlas: vi.fn(),
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -25,6 +27,7 @@ vi.mock("@xterm/xterm", async () => {
   return {
     Terminal: class extends TerminalEmulator {
       refresh = renderer.redraw;
+      clearTextureAtlas = renderer.clearAtlas;
     },
   };
 });
@@ -36,6 +39,7 @@ vi.mock("@xterm/addon-fit", () => ({
 vi.mock("@xterm/addon-webgl", () => ({
   WebglAddon: class {
     constructor() {
+      renderer.created();
       if (renderer.unsupported) throw new Error("WebGL2 unavailable");
     }
     onContextLoss(callback: () => void) {
@@ -93,10 +97,65 @@ it("waits for bundled fonts before starting the PTY and redraws without restarti
   expect(renderer.redraw.mock.calls.length).toBeGreaterThan(redraws);
   expect(api.createTerminal).toHaveBeenCalledTimes(1);
   expect(api.closeTerminal).not.toHaveBeenCalled();
+  const disposals = renderer.dispose.mock.calls.length;
   await act(async () => renderer.lost());
-  expect(renderer.dispose).toHaveBeenCalledOnce();
+  expect(renderer.dispose).toHaveBeenCalledTimes(disposals + 1);
   expect(host.querySelector("textarea")).not.toBeNull();
   expect(api.closeTerminal).not.toHaveBeenCalled();
+});
+
+it("restores visible panes independently of focus without clearing a shared atlas or restarting the PTY", async () => {
+  const render = async (visible: boolean) => {
+    await act(async () =>
+      root.render(
+        <TerminalPane
+          projectId="demo"
+          active={false}
+          visible={visible}
+          onReady={() => {}}
+        />,
+      ),
+    );
+  };
+  await render(true);
+  await act(async () => finishFonts());
+  expect(renderer.created).toHaveBeenCalledOnce();
+  for (let index = 0; index < 5; index++) {
+    const creations = renderer.created.mock.calls.length;
+    const redraws = renderer.redraw.mock.calls.length;
+    await render(false);
+    await act(async () => fontEvents.dispatchEvent(new Event("loadingdone")));
+    expect(renderer.created).toHaveBeenCalledTimes(creations);
+    await render(true);
+    expect(renderer.created).toHaveBeenCalledTimes(creations + 1);
+    expect(renderer.redraw.mock.calls.length).toBeGreaterThan(redraws);
+  }
+  expect(renderer.clearAtlas).not.toHaveBeenCalled();
+  expect(api.createTerminal).toHaveBeenCalledOnce();
+  expect(api.closeTerminal).not.toHaveBeenCalled();
+});
+
+it("defers GPU allocation when fonts finish after navigating away", async () => {
+  await act(async () =>
+    root.render(
+      <TerminalPane
+        projectId="demo"
+        active={false}
+        visible={false}
+        onReady={() => {}}
+      />,
+    ),
+  );
+  await act(async () => finishFonts());
+  expect(renderer.created).not.toHaveBeenCalled();
+  expect(api.createTerminal).toHaveBeenCalledOnce();
+  await act(async () =>
+    root.render(
+      <TerminalPane projectId="demo" active visible onReady={() => {}} />,
+    ),
+  );
+  expect(renderer.created).toHaveBeenCalledOnce();
+  expect(api.createTerminal).toHaveBeenCalledOnce();
 });
 
 it("does not create a late PTY when the pane closes during font loading", async () => {

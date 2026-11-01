@@ -1,27 +1,43 @@
 import type { ITerminalOptions, ITheme } from "@xterm/xterm";
 import "./terminal.css";
 
-export const terminalAppearance: ITerminalOptions = {
-  fontFamily: '"AgentHub Mono", "AgentHub Symbols", monospace',
-  fontSize: 14,
-  lineHeight: 1,
-  letterSpacing: 0,
-  fontWeight: "400",
-  fontWeightBold: "700",
-  customGlyphs: true,
-  cursorStyle: "bar",
-  cursorInactiveStyle: "outline",
-};
+/** Canvas text consumes the same CSS typography tokens as the code editor. */
+export function terminalAppearance(
+  styles: CSSStyleDeclaration,
+): ITerminalOptions {
+  return {
+    fontFamily:
+      styles.getPropertyValue("--font-family-code").trim() || undefined,
+    fontSize:
+      parseFloat(styles.getPropertyValue("--font-size-code")) || undefined,
+    lineHeight:
+      parseFloat(styles.getPropertyValue("--line-height-terminal")) ||
+      undefined,
+    letterSpacing: 0,
+    fontWeight: "400",
+    fontWeightBold: "700",
+    customGlyphs: true,
+    cursorStyle: "bar",
+    cursorInactiveStyle: "outline",
+  };
+}
 
 /** Load both text styles and private-use icons before measuring the PTY grid. */
 export async function loadTerminalFonts(): Promise<void> {
   if (!document.fonts) return;
+  const size =
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--font-size-code")
+      .trim() || "1em";
   await Promise.all([
-    document.fonts.load('14px "AgentHub Mono"'),
-    document.fonts.load('bold 14px "AgentHub Mono"'),
-    document.fonts.load('italic 14px "AgentHub Mono"'),
-    document.fonts.load('bold italic 14px "AgentHub Mono"'),
-    document.fonts.load('14px "AgentHub Symbols"', "\ue0a0\uf07b\udb80\udc01"),
+    document.fonts.load(`${size} "AgentHub Mono"`),
+    document.fonts.load(`bold ${size} "AgentHub Mono"`),
+    document.fonts.load(`italic ${size} "AgentHub Mono"`),
+    document.fonts.load(`bold italic ${size} "AgentHub Mono"`),
+    document.fonts.load(
+      `${size} "AgentHub Symbols"`,
+      "\ue0a0\uf07b\udb80\udc01",
+    ),
   ]);
 }
 

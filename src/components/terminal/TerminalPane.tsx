@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
-import { WebglAddon } from "@xterm/addon-webgl";
+import { createTerminalRenderer } from "./terminalRenderer";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
@@ -24,6 +24,7 @@ interface Props {
   projectId: string;
   worktreePath?: string;
   active: boolean;
+  visible?: boolean;
   onReady: (control: PaneControl | null) => void;
 }
 
@@ -32,6 +33,7 @@ export function TerminalPane({
   projectId,
   worktreePath,
   active,
+  visible = true,
   onReady,
 }: Props) {
   const { t } = useTranslation();
@@ -40,14 +42,17 @@ export function TerminalPane({
   const focusNow = useRef<() => void>(() => {});
   const callback = useRef(onReady);
   const activeRef = useRef(active);
+  const visibleRef = useRef(visible);
+  const showNow = useRef<() => void>(() => {});
   const translate = useRef(t);
   useLayoutEffect(() => {
     translate.current = t;
   }, [t]);
   useLayoutEffect(() => {
     activeRef.current = active;
+    visibleRef.current = visible;
     callback.current = onReady;
-  }, [active, onReady]);
+  }, [active, visible, onReady]);
   const [error, setError] = useState("");
   const [exitCode, setExitCode] = useState<number | null>(null);
 
@@ -55,7 +60,7 @@ export function TerminalPane({
     if (!element.current) return;
     const node = element.current;
     const terminal = new Terminal({
-      ...terminalAppearance,
+      ...terminalAppearance(getComputedStyle(document.documentElement)),
       cursorBlink: true,
       scrollback: 5000,
       allowProposedApi: false,
@@ -63,21 +68,8 @@ export function TerminalPane({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
-    // The DOM renderer uses font strokes for borders; WebGL draws box glyphs
-    // against the cell grid so nested TUI pane lines remain continuous.
-    let renderer: WebglAddon | undefined;
-    try {
-      renderer = new WebglAddon();
-      renderer.onContextLoss(() => {
-        renderer?.dispose();
-        renderer = undefined;
-      });
-      terminal.loadAddon(renderer);
-    } catch {
-      renderer?.dispose();
-      renderer = undefined;
-      // Keep a usable DOM terminal on machines without WebGL2.
-    }
+    const renderer = createTerminalRenderer(terminal);
+    let fontsReady = false;
     let disposed = false;
     let sessionId: string | null = null;
     let pendingAck = 0;
@@ -94,11 +86,13 @@ export function TerminalPane({
       frame = requestAnimationFrame(() => {
         if (
           disposed ||
+          !visibleRef.current ||
           !node.getBoundingClientRect().width ||
           !node.getBoundingClientRect().height
         )
           return;
         fit.fit();
+        terminal.refresh(0, terminal.rows - 1);
         if (sessionId)
           void api
             .resizeTerminal(sessionId, {
@@ -109,6 +103,10 @@ export function TerminalPane({
       });
     };
     fitNow.current = measure;
+    showNow.current = () => {
+      renderer.setVisible(fontsReady && visibleRef.current);
+      if (visibleRef.current) measure();
+    };
     focusNow.current = () => terminal.focus();
     const recolor = () => {
       const styles = getComputedStyle(document.documentElement);
@@ -124,8 +122,7 @@ export function TerminalPane({
     });
     const redrawFonts = () => {
       if (disposed) return;
-      terminal.clearTextureAtlas();
-      terminal.refresh(0, terminal.rows - 1);
+      renderer.redraw();
       measure();
     };
     document.fonts?.addEventListener("loadingdone", redrawFonts);
@@ -167,8 +164,13 @@ export function TerminalPane({
       .catch(fail)
       .then(() => {
         if (disposed) return;
-        redrawFonts();
-        fit.fit();
+        fontsReady = true;
+        showNow.current();
+        if (
+          node.getBoundingClientRect().width &&
+          node.getBoundingClientRect().height
+        )
+          fit.fit();
         return api
           .createTerminal(
             projectId,
@@ -220,10 +222,15 @@ export function TerminalPane({
       theme.disconnect();
       document.fonts?.removeEventListener("loadingdone", redrawFonts);
       input.dispose();
+      showNow.current = () => {};
+      renderer.dispose();
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };
   }, [projectId, worktreePath]);
+  useEffect(() => {
+    showNow.current();
+  }, [visible]);
   useEffect(() => {
     if (active) {
       fitNow.current();

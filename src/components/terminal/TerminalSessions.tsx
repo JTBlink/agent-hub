@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { List, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "../../lib/tauri";
@@ -25,13 +25,37 @@ export function TerminalSessions({
   const [open, setOpen] = useState(false);
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !container.current?.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [open]);
   const count = tabs.reduce((sum, tab) => sum + tab.panes.length, 0);
   const label = t("terminal.allSessions", {
     count,
     limit: TERMINAL_PANE_LIMIT,
   });
   return (
-    <div className="shrink-0 border-b border-border-subtle bg-bg-secondary">
+    <div
+      ref={container}
+      className="relative shrink-0"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          setOpen(false);
+          trigger.current?.focus();
+        }
+      }}
+    >
       <button
         ref={trigger}
         type="button"
@@ -40,7 +64,7 @@ export function TerminalSessions({
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={() => setOpen(!open)}
-        className="app-button-ghost mx-2 my-0.5 h-6 gap-1.5 px-1.5 text-xs"
+        className="app-button-ghost h-7 gap-1.5 px-1.5 text-xs text-muted"
       >
         <List size={13} />
         {label}
@@ -49,14 +73,7 @@ export function TerminalSessions({
         <section
           id={id}
           aria-label={t("terminal.sessionsOverview")}
-          className="max-h-48 overflow-y-auto border-t border-border-subtle px-2 py-1"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.stopPropagation();
-              setOpen(false);
-              trigger.current?.focus();
-            }
-          }}
+          className="absolute right-0 top-full z-30 mt-1 max-h-48 w-80 max-w-[calc(100vw/var(--app-scale)-2rem)] overflow-y-auto rounded border border-border bg-surface px-2 py-1 shadow-xl"
         >
           {!tabs.length && (
             <p className="px-2 py-1 text-xs text-muted">

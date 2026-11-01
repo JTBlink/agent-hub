@@ -6,6 +6,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project } from "../../lib/tauri";
 import { TerminalWorkspace } from "./TerminalWorkspace";
+import { TerminalSessions } from "./TerminalSessions";
+import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -49,6 +51,45 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+it("dismisses the session overview with Escape and outside clicks", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <TerminalSessions
+          tabs={[]}
+          projects={[]}
+          activeId=""
+          onSelect={vi.fn()}
+          onClose={vi.fn()}
+        />,
+      ),
+    );
+    const trigger = host.querySelector("button")!;
+    await act(async () => trigger.click());
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    const overview = host.querySelector("section")!;
+    await act(async () =>
+      overview.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      ),
+    );
+    expect(host.querySelector("section")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    await act(async () => trigger.click());
+    await act(async () =>
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true })),
+    );
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(host.querySelector("section")).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
 });
 
 it("opens the most recently visited project once, after loading and entering the terminal", async () => {
@@ -465,4 +506,37 @@ it("keeps terminals, split panes and the selected tab independent for each workt
   expect(creations()).toHaveLength(beforeSwitch + 1);
   await act(async () => root.unmount());
   host.remove();
+});
+
+it("moves terminal status into the window footer and clears it when navigating away", async () => {
+  const host = document.createElement("div");
+  const statusContainer = document.createElement("div");
+  document.body.append(host, statusContainer);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={["/terminal"]}>
+          <SidebarVisibilityContext.Provider
+            value={{
+              resourcePanelVisible: false,
+              setResourcePanelVisible: () => {},
+              statusContainer,
+            }}
+          >
+            <Link to="/settings">Settings</Link>
+            <TerminalWorkspace projects={[]} onMaximizedChange={() => {}} />
+          </SidebarVisibilityContext.Provider>
+        </MemoryRouter>,
+      ),
+    );
+    expect(statusContainer.querySelector('[role="status"]')).not.toBeNull();
+    expect(host.querySelector('[role="status"]')).toBeNull();
+    await act(async () => host.querySelector<HTMLAnchorElement>("a")!.click());
+    expect(statusContainer.childElementCount).toBe(0);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    statusContainer.remove();
+  }
 });

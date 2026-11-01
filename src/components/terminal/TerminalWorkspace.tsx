@@ -1,4 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, X, FileText, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -38,6 +46,7 @@ export function TerminalWorkspace({
   projectsReady = true,
 }: Props) {
   const { t } = useTranslation();
+  const statusContainer = useContext(SidebarVisibilityContext)?.statusContainer;
   const location = useLocation();
   const navigate = useNavigate();
   const workspace = projectWorkspaceRoute(location.pathname, location.search);
@@ -325,20 +334,45 @@ export function TerminalWorkspace({
     setMaximized(next);
     onMaximizedChange(next);
   };
+  const statusBar = (
+    <div
+      role="status"
+      className="flex min-h-5 min-w-0 flex-1 items-center gap-2 text-xs text-muted"
+    >
+      <span
+        className="min-w-0 flex-1 truncate"
+        title={bridgeError || herdr.notice}
+      >
+        {bridgeError ||
+          herdr.notice ||
+          projects.find(
+            (project) => project.id === (active?.projectId ?? scopedProject),
+          )?.name ||
+          t("terminal.title")}
+      </span>
+      {herdr.update?.has_update && (
+        <button
+          type="button"
+          className="text-accent-light"
+          disabled={herdr.busy}
+          onClick={() => void herdr.upgrade()}
+        >
+          {t("terminal.herdrUpdateAvailable", {
+            version: herdr.update.latest_version,
+          })}
+        </button>
+      )}
+    </div>
+  );
   return (
     <section
       aria-label={t("terminal.title")}
       hidden={!visible}
       className={
-        visible
-          ? cn(
-              "relative flex min-h-0 min-w-0 flex-1 flex-col",
-              legacy && "pt-[28px]",
-            )
-          : "hidden"
+        visible ? cn("relative flex min-h-0 min-w-0 flex-1 flex-col") : "hidden"
       }
     >
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
         <TerminalTabs
           tabs={scopedTabs}
           projects={projects}
@@ -368,6 +402,13 @@ export function TerminalWorkspace({
             ))}
           </ThemedSelect>
         )}
+        <TerminalSessions
+          tabs={tabs}
+          projects={projects}
+          activeId={displayedId}
+          onSelect={selectSession}
+          onClose={close}
+        />
         <button
           type="button"
           className={toolbarAction}
@@ -411,13 +452,6 @@ export function TerminalWorkspace({
           onMaximize={toggleMaximize}
         />
       </div>
-      <TerminalSessions
-        tabs={tabs}
-        projects={projects}
-        activeId={displayedId}
-        onSelect={selectSession}
-        onClose={close}
-      />
       {restoreError && (
         <div
           role="alert"
@@ -489,6 +523,7 @@ export function TerminalWorkspace({
               <TerminalPane
                 projectId={tab.projectId}
                 worktreePath={tab.worktreePath}
+                visible={visible && displayedId === tab.id}
                 active={
                   visible && displayedId === tab.id && tab.activePane === pane
                 }
@@ -557,29 +592,9 @@ export function TerminalWorkspace({
           </button>
         </section>
       )}
-      <div
-        role="status"
-        className="flex min-h-5 shrink-0 items-center gap-2 border-t border-border-subtle px-2 text-[11px] text-muted"
-      >
-        <span
-          className="min-w-0 flex-1 truncate"
-          title={bridgeError || herdr.notice}
-        >
-          {bridgeError || herdr.notice}
-        </span>
-        {herdr.update?.has_update && (
-          <button
-            type="button"
-            className="text-accent-light"
-            disabled={herdr.busy}
-            onClick={() => void herdr.upgrade()}
-          >
-            {t("terminal.herdrUpdateAvailable", {
-              version: herdr.update.latest_version,
-            })}
-          </button>
-        )}
-      </div>
+      {statusContainer
+        ? visible && createPortal(statusBar, statusContainer)
+        : statusBar}
     </section>
   );
 }
