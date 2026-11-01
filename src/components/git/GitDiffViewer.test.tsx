@@ -126,9 +126,11 @@ it("navigates change blocks in both layouts and applies the toolbar display cont
   ).toBe(true);
   await click("git.showWhitespace");
   expect(host.querySelector(".cm-highlightSpace")).not.toBeNull();
-  await click("git.changeOverview");
-  expect(host.querySelector('[role="scrollbar"]')).toBeNull();
-  await click("git.changeOverview");
+  await click("git.collapseUnchanged");
+  expect(button("git.collapseUnchanged").getAttribute("aria-pressed")).toBe(
+    "true",
+  );
+  await click("git.collapseUnchanged");
   expect(host.querySelector('[role="scrollbar"]')).not.toBeNull();
   await click("git.split");
   expect(editors()).toHaveLength(1);
@@ -198,4 +200,39 @@ it("keeps unified decorations and navigation valid for CRLF patches", async () =
   ).toBe("-old");
   expect(host.querySelectorAll(".diff-code-removed")).toHaveLength(1);
   expect(host.querySelectorAll(".diff-code-added")).toHaveLength(1);
+});
+
+it("shows full context by default and toggles unchanged regions in both layouts", async () => {
+  const before = Array.from({ length: 12 }, (_, i) => ` before ${i}`).join(
+    "\n",
+  );
+  const after = Array.from({ length: 12 }, (_, i) => ` after ${i}`).join("\n");
+  const full = `@@ -1,25 +1,25 @@\n${before}\n-old\n+new\n${after}\n`;
+  await act(async () =>
+    root.render(<GitDiffViewer patch={full} staged={false} />),
+  );
+  const click = (name: string) =>
+    act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!
+        .click(),
+    );
+  expect(editors()[1].state.sliceDoc()).toContain("before 0");
+  await click("git.collapseUnchanged");
+  expect(editors()[1].state.sliceDoc()).not.toContain("before 0");
+  expect(editors()[1].state.sliceDoc()).toContain("before 11\nnew\nafter 0");
+  expect(host.querySelector(".cm-lineNumbers")?.textContent).toContain("10");
+  await click("git.nextChange");
+  expect(
+    editors()[1].state.doc.lineAt(editors()[1].state.selection.main.head).text,
+  ).toBe("new");
+  await click("git.split");
+  expect(editors()[0].state.sliceDoc()).not.toContain("before 0");
+  await click("git.collapseUnchanged");
+  expect(editors()[0].state.sliceDoc()).toBe(full);
+  await click("git.collapseUnchanged");
+  await click("git.nextChange");
+  expect(
+    editors()[0].state.doc.lineAt(editors()[0].state.selection.main.head).text,
+  ).toBe("-old");
 });

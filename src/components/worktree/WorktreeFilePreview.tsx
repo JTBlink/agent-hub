@@ -1,7 +1,6 @@
 import type { ReaderLocation } from "../file-reader/types";
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
-import { openFileInVscode } from "../../lib/openInVscode";
+import { RefreshCw, Save } from "lucide-react";
 import { FileContent } from "../file-reader/FileContent";
 import { useWorktreeDocument } from "../../hooks/useWorktreeDocument";
 
@@ -10,11 +9,13 @@ export function WorktreeFilePreview({
   worktreePath,
   path,
   location,
+  toolbarContainer,
 }: {
   projectId: string;
   worktreePath: string;
   path: string;
   location?: ReaderLocation;
+  toolbarContainer?: HTMLElement | null;
 }) {
   const { t } = useTranslation();
   const document = useWorktreeDocument(projectId, worktreePath, path);
@@ -43,7 +44,7 @@ export function WorktreeFilePreview({
           <button
             type="button"
             className="app-button-ghost ml-2"
-            disabled={document.dirty}
+            disabled={document.dirty || document.saving || document.loading}
             onClick={() => void document.reload()}
           >
             {t("common.retry")}
@@ -54,6 +55,9 @@ export function WorktreeFilePreview({
         <FileContent
           file={{ path, content: document.draft }}
           location={location}
+          toolbarContainer={toolbarContainer}
+          showOpenInVscode={false}
+          defaultSource
           maxLength={1024 * 1024}
           actions={
             <div className="flex items-center gap-1 text-xs">
@@ -67,52 +71,34 @@ export function WorktreeFilePreview({
               >
                 <RefreshCw size={13} />
               </button>
-              <span role="status" className="mr-auto text-muted">
-                {document.dirty
-                  ? t("worktree.unsaved")
-                  : t(
-                      document.editing
-                        ? "fileReader.editable"
-                        : "fileReader.readOnly",
-                    )}
-              </span>
-              {document.editing ? (
-                <>
-                  <button
-                    type="button"
-                    className="app-button-ghost px-2 py-1"
-                    disabled={document.saving}
-                    onClick={document.cancel}
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    type="button"
-                    className="app-button-primary px-2 py-1 text-xs"
-                    disabled={!document.dirty || document.saving}
-                    onClick={() => void document.save()}
-                  >
-                    {t("common.save")}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="app-button-ghost px-2 py-1"
-                  disabled={document.draft === undefined}
-                  onClick={document.edit}
-                >
-                  {t("common.edit")}
-                </button>
+              {(document.dirty || toolbarContainer === undefined) && (
+                <span role="status" className="text-muted">
+                  {document.dirty
+                    ? t("worktree.unsaved")
+                    : t("fileReader.editable")}
+                </span>
               )}
+              <button
+                type="button"
+                className="app-button-ghost px-2 py-1 text-xs"
+                aria-label={t("common.save")}
+                title={t("common.save")}
+                disabled={!document.dirty || document.saving}
+                onClick={() => void document.save()}
+              >
+                {toolbarContainer !== undefined ? (
+                  <Save size={15} />
+                ) : (
+                  t("common.save")
+                )}
+              </button>
             </div>
           }
           onContentChange={
-            document.editing && !document.saving
+            !document.saving && !document.loading
               ? (_, content) => document.change(content)
               : undefined
           }
-          onOpenInVscode={(file) => openFileInVscode(worktreePath, file)}
         />
       )}
     </div>

@@ -31,6 +31,7 @@ export function gitFixture(
       "get_project_git_diff",
       "set_project_git_staged",
       "commit_project_git",
+      "run_project_git_action",
     ].includes(command)
   )
     return { handled: false };
@@ -271,6 +272,16 @@ export function gitFixture(
       author: "example",
       time: 1793494800,
     });
+  }
+  if (command === "run_project_git_action") {
+    if (
+      "action" in args &&
+      (args.action === "switch_branch" || args.action === "create_branch")
+    )
+      snapshot.branch =
+        "branch" in args ? String(args.branch) : snapshot.branch;
+    if ("action" in args && args.action === "pull") snapshot.behind = 0;
+    if ("action" in args && args.action === "push") snapshot.ahead = 0;
   }
   return { handled: true, value: null };
 }

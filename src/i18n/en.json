@@ -336,9 +336,9 @@
     }
   },
   "dashboard": {
-    "searchWorkspaces": "Search workspaces",
+    "searchWorkspaces": "Search by name or path",
     "clearWorkspaceSearch": "Clear workspace search",
-    "noWorkspaceMatches": "No matching workspaces. Try another name or clear the search.",
+    "noWorkspaceMatches": "No matching workspaces. Try another name or path, or clear the search.",
     "showMoreRecent": "Show {{count}} more",
     "collapseRecent": "Show fewer skills",
     "workspaces": "Workspaces",
@@ -2064,6 +2064,10 @@
     }
   },
   "worktree": {
+    "saveBeforeCloseTitle": "Save changes?",
+    "saveBeforeCloseMessage": "Save changes to these files before closing? Unsaved changes will be lost.",
+    "dontSave": "Don’t Save",
+    "saveBeforeCloseFailed": "Saving failed. Files remain open. Check for conflicts or write permissions and retry.",
     "title": "Worktree",
     "main": "Main",
     "locked": "Locked",
@@ -2082,6 +2086,24 @@
     "unsaved": "Unsaved"
   },
   "git": {
+    "actions": {
+      "label": "Source control actions",
+      "pull": "Pull (fast-forward only)",
+      "push": "Push to upstream branch",
+      "fetch": "Fetch all remotes",
+      "branches": "Branches",
+      "commit": "Commit staged changes",
+      "history": "Show/hide recent commits",
+      "refresh": "Refresh changes",
+      "layout": "Toggle tree/list view",
+      "more": "More Git actions",
+      "branchHint": "Switch to a local branch or create a branch from the current commit. Git prevents overwriting uncommitted changes.",
+      "createBranch": "Create and switch branch",
+      "switchBranch": "Switch branch",
+      "branchName": "New branch name",
+      "completed": "Git operation completed",
+      "running": "Running Git operation…"
+    },
     "graph": {
       "title": "Git Graph",
       "open": "Open Git Graph",
@@ -2093,6 +2115,10 @@
       "loadMore": "Load more",
       "limit": "Showing up to 5,000 commits"
     },
+    "stageDirectory": "Stage Changes in Folder",
+    "unstageDirectory": "Unstage Changes in Folder",
+    "discardChanges": "Discard Changes",
+    "discardConfirm": "Discard unstaged changes in these files? Tracked files will be restored from the index; untracked files will be deleted. This cannot be undone.",
     "changedFiles": "{{count}} changes",
     "changedFilesTruncated": "At least {{count}} changes",
     "worktree": "Worktree",
@@ -2185,6 +2211,7 @@
     "tagHistoryHint": "History starting at the tagged commit, including earlier commits",
     "allCommitsLoaded": "All commits loaded",
     "localRefs": "Local refs",
+    "collapseUnchanged": "Collapse unchanged regions",
     "changeOverview": "Diff scroll overview",
     "overviewHint": "Click or drag to navigate; arrows scroll, Page Up/Down page, Home/End go to the edges"
   },

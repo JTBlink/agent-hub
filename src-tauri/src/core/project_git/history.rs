@@ -101,7 +101,9 @@ pub fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<String> {
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let (parent, tree) = trees(&repo, sha)?;
-    let mut diff = repo.diff_tree_to_tree(parent.as_ref(), Some(&tree), None)?;
+    let mut options = git2::DiffOptions::new();
+    options.context_lines(u32::MAX);
+    let mut diff = repo.diff_tree_to_tree(parent.as_ref(), Some(&tree), Some(&mut options))?;
     diff.find_similar(None)?;
     super::render_diff_for_path(&diff, Some(path))
 }
@@ -133,6 +135,24 @@ pub fn commit_history(root: &Path, sha: &str, offset: usize) -> Result<GitHistor
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn previews_include_context_far_from_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let repo = git2::Repository::init(dir.path()).unwrap();
+        let original = (0..30).map(|i| format!("line {i}\n")).collect::<String>();
+        std::fs::write(dir.path().join("demo.txt"), &original).unwrap();
+        save(&repo, "initial");
+        let changed = original.replace("line 15\n", "updated\n");
+        std::fs::write(dir.path().join("demo.txt"), changed).unwrap();
+        let patch = super::super::diff(dir.path(), "demo.txt", false).unwrap();
+        assert!(patch.contains(" line 0\n"));
+        assert!(patch.contains(" line 29\n"));
+        let commit = save(&repo, "change");
+        let patch = commit_diff(dir.path(), &commit, "demo.txt").unwrap();
+        assert!(patch.contains(" line 0\n"));
+        assert!(patch.contains(" line 29\n"));
+    }
+
     fn save(repo: &git2::Repository, message: &str) -> String {
         let mut index = repo.index().unwrap();
         index.add_path(Path::new("demo.txt")).unwrap();

@@ -316,6 +316,10 @@ it("defaults to projects and exposes every project with its status and route", a
   const last = entries.querySelector<HTMLAnchorElement>(
     'a[href="/project/project-11"]',
   )!;
+  expect(last.textContent).toContain("<workspace>/project-11");
+  expect(
+    last.querySelector('[title="<workspace>/project-11"]')?.textContent,
+  ).toBe("<workspace>/project-11");
   expect(last.textContent).toContain("11 个技能");
   expect(last.textContent).toContain("2 项内容冲突");
   await act(async () => last.click());
@@ -338,6 +342,9 @@ it("keeps the project empty state with enabled Agents and allows switching", asy
   expect(
     entries.querySelector('a[href="/lobster-workspace/hermes"]'),
   ).not.toBeNull();
+  expect(
+    entries.querySelector('a[href="/global-workspace/codex"]')?.textContent,
+  ).toContain("<workspace>/skills");
   expect(container.querySelector('a[href="/settings#agents"]')).not.toBeNull();
   app.projects = [project(0)];
   await render();
@@ -397,4 +404,33 @@ it("filters workspace names, clears no matches and resets search on type switch"
       .click(),
   );
   expect(entries.querySelectorAll("a")).toHaveLength(12);
+});
+
+it("finds project and Agent workspaces by directory as well as name", async () => {
+  app.projects = Array.from({ length: 5 }, (_, i) => project(i));
+  app.projects[2] = { ...project(2), path: "<workspace>/team/shared-tools" };
+  app.tools = Array.from({ length: 5 }, (_, i) => ({
+    ...agent(`agent-${i}`, "coding"),
+    skills_dir: `<workspace>/agent-${i}/skills`,
+  }));
+  await render();
+  const entries = container.querySelector("#dashboard-workspace-entries")!;
+  await searchWorkspaces("  TEAM/SHARED-TOOLS  ");
+  expect(entries.querySelectorAll("a")).toHaveLength(1);
+  expect(entries.textContent).toContain("demo-project-2");
+  await act(async () =>
+    container
+      .querySelectorAll<HTMLButtonElement>(
+        '[role="group"][aria-label="工作空间类型"] button',
+      )[1]
+      .click(),
+  );
+  await searchWorkspaces("AGENT-3/SKILLS");
+  expect(entries.querySelectorAll("a")).toHaveLength(1);
+  expect(entries.querySelector("a")?.getAttribute("href")).toBe(
+    "/global-workspace/agent-3",
+  );
+  expect(
+    entries.querySelector('[title="<workspace>/agent-3/skills"]')?.textContent,
+  ).toBe("<workspace>/agent-3/skills");
 });

@@ -1,13 +1,11 @@
-import { useLocation, useMatch, useNavigate } from "react-router-dom";
-import { FolderOpen, GitBranch, RefreshCw, Trash2 } from "lucide-react";
+import { GitBranch, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ThemedSelect } from "../ThemedSelect";
 import { useApp } from "../../context/AppContext";
-import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
-import { worktreeLabel, worktreeUrl } from "../../lib/worktreeApi";
-import { touchProjectVisited, type Project } from "../../lib/tauri";
-import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
-import { compactHomePath, cn } from "../../utils";
+import type { Project } from "../../lib/tauri";
+import { useWorkspaceSelection } from "../../hooks/useWorkspaceSelection";
+import { compactHomePath } from "../../utils";
+import { cn } from "../../utils";
 
 export function ProjectSwitcher({
   onRemove,
@@ -16,60 +14,57 @@ export function ProjectSwitcher({
 }) {
   const { t } = useTranslation();
   const { projects } = useApp();
-  const route = useMatch("/project/:id/*");
-  const { search } = useLocation();
-  const navigate = useNavigate();
-  const active = useActiveWorkspace(projects);
-  const routeProject = projects.find((item) => item.id === route?.params.id);
-  const project = routeProject ?? active.project;
-  const { worktrees, loading, error, refresh } = useProjectWorktrees(
-    project?.id,
-  );
-  const requested = routeProject
-    ? (new URLSearchParams(search).get("worktree") ?? project?.path)
-    : active.path;
-  const current =
-    worktrees.find((item) => item.path === requested) ??
-    (!new URLSearchParams(search).has("worktree")
-      ? worktrees.find((item) => item.is_main)
-      : undefined);
-  const open = (target: Project, path = target.path) => {
-    void touchProjectVisited(target.id).catch(() => {});
-    navigate(worktreeUrl(target.id, path));
-  };
+  const selection = useWorkspaceSelection(projects);
+  const { project, loading, error, refresh } = selection;
   return (
-    <div className="space-y-1 border-b border-border-subtle p-2">
-      <div className="flex min-w-0 items-center gap-1">
-        <div className="min-w-0 flex-1">
-          <ThemedSelect
-            aria-label={t("sidebar.switchProject")}
-            title={
-              project
-                ? compactHomePath(project.path)
-                : t("sidebar.switchProject")
-            }
-            value={project?.id ?? ""}
-            onChange={(event) => {
-              const next = projects.find(
-                (item) => item.id === event.target.value,
-              );
-              if (next) open(next);
-            }}
-            leadingIcon={<FolderOpen size={14} className="shrink-0" />}
-            className="w-full rounded border border-border-subtle bg-surface px-2 py-1 text-sm"
-          >
-            {!project && (
-              <option value="" disabled>
-                {t("sidebar.switchProject")}
-              </option>
-            )}
-            {projects.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </ThemedSelect>
-        </div>
+    <div
+      role="group"
+      aria-label={t("worktree.title")}
+      className="shrink-0 border-b border-border-subtle px-2 py-1"
+    >
+      <div className="flex h-7 min-w-0 items-center gap-0.5">
+        {project && (
+          <>
+            <div className="min-w-0 flex-1">
+              <ThemedSelect
+                aria-label={t("worktree.title")}
+                title={
+                  selection.path
+                    ? compactHomePath(selection.path)
+                    : t("worktree.title")
+                }
+                value={selection.value}
+                disabled={loading || selection.options.length === 0}
+                onChange={(event) => selection.select(event.target.value)}
+                leadingIcon={<GitBranch size={13} className="shrink-0" />}
+                className="h-7 w-full gap-1 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:text-secondary"
+              >
+                <option value="" disabled>
+                  {t(loading ? "common.loading" : "worktree.title")}
+                </option>
+                {selection.options.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={option.disabled}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </ThemedSelect>
+            </div>
+            <button
+              type="button"
+              disabled={loading}
+              aria-label={t("worktree.refresh")}
+              title={t("worktree.refresh")}
+              onClick={() => void refresh()}
+              className="app-button-ghost h-6 w-6 shrink-0 p-0 text-muted hover:text-secondary"
+            >
+              <RefreshCw size={13} className={cn(loading && "animate-spin")} />
+            </button>
+          </>
+        )}
         {project && (
           <button
             type="button"
@@ -82,44 +77,6 @@ export function ProjectSwitcher({
           </button>
         )}
       </div>
-      {project && (
-        <div className="flex min-w-0 items-center gap-1">
-          <div className="min-w-0 flex-1">
-            <ThemedSelect
-              aria-label={t("worktree.title")}
-              value={current?.path ?? ""}
-              disabled={loading || worktrees.length === 0}
-              onChange={(event) => open(project, event.target.value)}
-              leadingIcon={<GitBranch size={13} className="shrink-0" />}
-              className="h-7 w-full gap-2 rounded border-transparent bg-transparent px-2 py-0 text-xs text-muted hover:text-secondary"
-            >
-              <option value="" disabled>
-                {t(loading ? "common.loading" : "worktree.title")}
-              </option>
-              {worktrees.map((item) => (
-                <option
-                  key={item.path}
-                  value={item.path}
-                  disabled={!item.available}
-                >
-                  {worktreeLabel(item)}
-                  {!item.available ? ` · ${t("worktree.unavailable")}` : ""}
-                </option>
-              ))}
-            </ThemedSelect>
-          </div>
-          <button
-            type="button"
-            disabled={loading}
-            aria-label={t("worktree.refresh")}
-            title={t("worktree.refresh")}
-            onClick={() => void refresh()}
-            className="app-button-ghost h-6 w-6 shrink-0 p-0 text-muted hover:text-secondary"
-          >
-            <RefreshCw size={13} className={cn(loading && "animate-spin")} />
-          </button>
-        </div>
-      )}
       {error && (
         <p role="alert" className="break-words text-xs text-danger">
           {error}

@@ -9,12 +9,16 @@ import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { useApp } from "../context/AppContext";
 import {
   commitProjectGit,
+  discardProjectGitChanges,
   setProjectGitStaged,
   getProjectGitDiff,
   getProjectGitCommitDiff,
   getProjectGitStatus,
   type GitStatus,
+  runProjectGitAction,
+  type GitRepositoryAction,
 } from "../lib/gitApi";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { getErrorMessage } from "../lib/error";
 import { groupGitChanges } from "../lib/gitChanges";
 import { cn } from "../utils";
@@ -22,6 +26,9 @@ import { GitChanges, type GitSelection } from "../components/git/GitChanges";
 import { GitGraph } from "../components/git/GitGraph";
 import { GitHistory } from "../components/git/GitHistory";
 import { GitCommitForm } from "../components/git/GitCommitForm";
+import { GitStatusBar } from "../components/git/GitStatusBar";
+import { GitSourceControlToolbar } from "../components/git/GitSourceControlToolbar";
+import { GitBranchDialog } from "../components/git/GitBranchDialog";
 import { GitFileEditor } from "../components/git/GitFileEditor";
 import "../components/git/git.css";
 
@@ -31,18 +38,30 @@ export function Git() {
   const sidebarVisibility = useContext(SidebarVisibilityContext);
   const { project, path: root } = useActiveWorkspace(projects);
   const activeId = project?.id;
+  const [discardTarget, setDiscardTarget] = useState<{
+    projectId: string;
+    root?: string;
+    paths: string[];
+  }>();
   const [revision, setRevision] = useState(0);
   const [selection, setSelection] = useState<GitSelection>();
   const [commitSha, setCommitSha] = useState<string>();
   const [graphOpen, setGraphOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(true);
-  const [actionType, setActionType] = useState<"stage" | "commit">();
+  const [actionType, setActionType] = useState<
+    "stage" | "commit" | GitRepositoryAction
+  >();
+  const [tree, setTree] = useState(true);
+  const [branchDialog, setBranchDialog] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string>();
   const busy = actionType !== undefined;
   const actionLock = useRef(false);
   const changesRef = useRef<HTMLElement>(null);
   const [actionError, setActionError] = useState<string>();
   const [fileView, setFileView] = useState(false);
   const scope = JSON.stringify([activeId, root]);
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {
     setPreviousScope(scope);
@@ -51,6 +70,9 @@ export function Git() {
     setCommitSha(undefined);
     setFileView(false);
     setActionError(undefined);
+    setDiscardTarget(undefined);
+    setBranchDialog(false);
+    setActionNotice(undefined);
   }
   const statusKey = JSON.stringify([scope, revision]);
   const [statusResult, setStatusResult] = useState<{
@@ -132,18 +154,28 @@ export function Git() {
   const branch = status?.branch ?? status?.head?.slice(0, 8) ?? t("git.unborn");
   async function runAction(
     action: () => Promise<void>,
-    type: "stage" | "commit" = "stage",
+    type: "stage" | "commit" | GitRepositoryAction = "stage",
   ) {
     if (actionLock.current) return false;
     actionLock.current = true;
     setActionType(type);
     setActionError(undefined);
+    setActionNotice(undefined);
+    const actionScope = scope;
     try {
       await action();
+      if (
+        currentScope.current === actionScope &&
+        ["fetch", "pull", "push", "switch_branch", "create_branch"].includes(
+          type,
+        )
+      )
+        setActionNotice(t("git.actions.completed"));
       refresh();
       return true;
     } catch (cause) {
-      setActionError(getErrorMessage(cause, t("common.error")));
+      if (currentScope.current === actionScope)
+        setActionError(getErrorMessage(cause, t("common.error")));
       refresh();
       return false;
     } finally {
@@ -168,6 +200,7 @@ export function Git() {
     }
   }, [status, selection, commitSha]);
   const changeProps = {
+    tree,
     selection: commitSha ? undefined : selection,
     busy: busy || loading,
     batchLimited: !!status?.truncated,
@@ -177,6 +210,10 @@ export function Git() {
       setCommitSha(undefined);
       setFileView(false);
     },
+    onDiscard: (paths: string[]) => {
+      setActionError(undefined);
+      if (activeId) setDiscardTarget({ projectId: activeId, root, paths });
+    },
     onStage: (paths: string[], staged: boolean) => {
       if (activeId)
         void runAction(() =>
@@ -184,32 +221,7 @@ export function Git() {
         );
     },
   };
-  const statusBar = (
-    <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden text-xs text-muted">
-      <span className="flex min-w-0 items-center gap-1" title={branch}>
-        <GitBranch size={12} className="shrink-0" />
-        <span className="max-w-[200px] truncate">{branch}</span>
-      </span>
-      {status?.upstream && (
-        <span className="max-w-[220px] truncate" title={status.upstream}>
-          {status.upstream}
-        </span>
-      )}
-      {status?.ahead != null && (
-        <span title={t("git.cachedRefs")}>
-          ↑ {status.ahead} ↓ {status.behind}
-        </span>
-      )}
-      {status && status.state !== "Clean" && (
-        <span className="text-danger" title={t("git.operation")}>
-          {status.state}
-        </span>
-      )}
-      <span className="ml-auto" title={t("git.cachedRefs")}>
-        {t("git.localRefs")}
-      </span>
-    </div>
-  );
+  const statusBar = <GitStatusBar branch={branch} status={status} />;
   const sidebar = (
     <ResizableSidebar
       storageKey="agent-hub:sidebar-width"
@@ -261,6 +273,49 @@ export function Git() {
                 branch={branch}
                 busy={busy}
                 committing={actionType === "commit"}
+                toolbar={(canCommit) => (
+                  <GitSourceControlToolbar
+                    disabled={!status || loading || busy}
+                    canSync={
+                      !!status?.upstream &&
+                      !!status.branch &&
+                      status.state === "Clean" &&
+                      !files.some((file) => file.conflicted)
+                    }
+                    canCommit={canCommit}
+                    loading={loading || busy}
+                    tree={tree}
+                    history={historyExpanded}
+                    onRemote={(action) => {
+                      if (activeId)
+                        void runAction(
+                          () => runProjectGitAction(activeId, root, action),
+                          action,
+                        );
+                    }}
+                    onBranch={() => {
+                      setActionError(undefined);
+                      setBranchDialog(true);
+                    }}
+                    onRefresh={refresh}
+                    onTree={() => setTree((value) => !value)}
+                    onHistory={() => setHistoryExpanded((value) => !value)}
+                    canStage={!status?.truncated && unstagedFiles.length > 0}
+                    canUnstage={!status?.truncated && stagedFiles.length > 0}
+                    onStageAll={() =>
+                      changeProps.onStage(
+                        unstagedFiles.map((file) => file.path),
+                        true,
+                      )
+                    }
+                    onUnstageAll={() =>
+                      changeProps.onStage(
+                        stagedFiles.map((file) => file.path),
+                        false,
+                      )
+                    }
+                  />
+                )}
                 enabled={
                   !!status &&
                   !loading &&
@@ -338,11 +393,62 @@ export function Git() {
   );
   return (
     <>
+      {branchDialog && activeId && (
+        <GitBranchDialog
+          key={scope}
+          projectId={activeId}
+          worktreePath={root}
+          current={branch}
+          actionError={actionError}
+          onClose={() => setBranchDialog(false)}
+          onRun={(action, name) =>
+            runAction(
+              () => runProjectGitAction(activeId, root, action, name),
+              action,
+            )
+          }
+        />
+      )}
+      <ConfirmDialog
+        open={!!discardTarget}
+        title={t("git.discardChanges")}
+        message={t("git.discardConfirm")}
+        details={discardTarget?.paths}
+        confirmLabel={t("git.discardChanges")}
+        onClose={() => setDiscardTarget(undefined)}
+        onConfirm={async () => {
+          if (!discardTarget) return false;
+          const success = await runAction(() =>
+            discardProjectGitChanges(
+              discardTarget.projectId,
+              discardTarget.root,
+              discardTarget.paths,
+            ),
+          );
+          if (!success) return false;
+        }}
+      >
+        {actionError && (
+          <p role="alert" className="text-xs text-danger">
+            {actionError}
+          </p>
+        )}
+      </ConfirmDialog>
+
       {sidebarVisibility?.statusContainer &&
         createPortal(statusBar, sidebarVisibility.statusContainer)}
       {sidebarVisibility?.sidebarContainer &&
         createPortal(sidebar, sidebarVisibility.sidebarContainer)}
       <div className="git-panel flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+        {(actionNotice ||
+          (busy && actionType !== "stage" && actionType !== "commit")) && (
+          <p
+            role="status"
+            className="shrink-0 px-3 py-1 text-xs text-secondary"
+          >
+            {busy ? t("git.actions.running") : actionNotice}
+          </p>
+        )}
         {!activeId ? (
           <>
             {!sidebarVisibility?.sidebarContainer && sidebar}

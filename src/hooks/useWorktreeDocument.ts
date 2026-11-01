@@ -6,13 +6,11 @@ import i18n from "../i18n";
 interface Document {
   original?: string;
   draft?: string;
-  editing: boolean;
   loading: boolean;
   saving: boolean;
   error: string;
 }
 const empty: Document = {
-  editing: false,
   loading: true,
   saving: false,
   error: "",
@@ -61,7 +59,7 @@ export function useWorktreeDocument(
     publish(key, { loading: true, error: "" });
     try {
       const content = await readWorktreeFile(projectId, worktreePath, path);
-      publish(key, { original: content, draft: content, editing: false });
+      publish(key, { original: content, draft: content });
     } catch (cause) {
       publish(key, { error: getErrorMessage(cause, i18n.t("common.error")) });
     } finally {
@@ -71,65 +69,71 @@ export function useWorktreeDocument(
   }, [key, projectId, worktreePath, path]);
   useEffect(() => {
     const previous = documents.get(key);
-    if (
-      !previous ||
-      (!previous.editing &&
-        !previous.saving &&
-        previous.original === previous.draft)
-    )
+    if (!previous || (!previous.saving && previous.original === previous.draft))
       void reload();
   }, [key, reload]);
   useEffect(() => {
     const reloadCleanFile = () => {
       const current = documents.get(key);
-      if (
-        current &&
-        !current.editing &&
-        !current.saving &&
-        current.draft === current.original
-      )
+      if (current && !current.saving && current.draft === current.original)
         void reload();
     };
     window.addEventListener("worktree-file-saved", reloadCleanFile);
     return () =>
       window.removeEventListener("worktree-file-saved", reloadCleanFile);
   }, [key, reload]);
-  const save = async () => {
-    const current = documents.get(key);
-    if (
-      !current ||
-      current.saving ||
-      current.original === undefined ||
-      current.draft === undefined
-    )
-      return;
-    publish(key, { saving: true, error: "" });
-    try {
-      await writeWorktreeFile(
-        projectId,
-        worktreePath,
-        path,
-        current.original,
-        current.draft,
-      );
-      publish(key, { original: current.draft, editing: false });
-      window.dispatchEvent(new Event("worktree-file-saved"));
-    } catch (cause) {
-      publish(key, { error: getErrorMessage(cause, i18n.t("common.error")) });
-    } finally {
-      publish(key, { saving: false });
-    }
-  };
   return {
     ...document,
     dirty: document.draft !== document.original,
     reload,
-    save,
-    edit: () => publish(key, { editing: true }),
+    save: () => saveWorktreeDocument(key),
     change: (draft: string) => {
       if (!documents.get(key)?.saving) publish(key, { draft });
     },
-    cancel: () =>
-      publish(key, { draft: document.original, editing: false, error: "" }),
   };
+}
+
+export async function saveWorktreeDocument(key: string): Promise<boolean> {
+  const [projectId, worktreePath, path]: string[] = JSON.parse(key);
+  const current = documents.get(key);
+  if (
+    !current ||
+    current.saving ||
+    current.original === undefined ||
+    current.draft === undefined
+  )
+    return false;
+  publish(key, { saving: true, error: "" });
+  try {
+    await writeWorktreeFile(
+      projectId,
+      worktreePath,
+      path,
+      current.original,
+      current.draft,
+    );
+    publish(key, { original: current.draft });
+    window.dispatchEvent(new Event("worktree-file-saved"));
+    return true;
+  } catch (cause) {
+    publish(key, { error: getErrorMessage(cause, i18n.t("common.error")) });
+    return false;
+  } finally {
+    publish(key, { saving: false });
+  }
+}
+
+export function dirtyWorktreeDocuments() {
+  return [...documents.entries()]
+    .filter(([, doc]) => doc.draft !== doc.original)
+    .map(([key]) => {
+      const [, , path]: string[] = JSON.parse(key);
+      return { key, path };
+    });
+}
+
+export function discardWorktreeDocument(key: string) {
+  const document = documents.get(key);
+  if (document && !document.saving)
+    publish(key, { draft: document.original, error: "" });
 }

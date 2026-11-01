@@ -336,9 +336,9 @@
     }
   },
   "dashboard": {
-    "searchWorkspaces": "搜尋工作空間",
+    "searchWorkspaces": "搜尋名稱或路徑",
     "clearWorkspaceSearch": "清除工作空間搜尋",
-    "noWorkspaceMatches": "沒有符合的工作空間，請換個名稱或清除搜尋。",
+    "noWorkspaceMatches": "沒有符合的工作空間，請換個名稱或路徑，或清除搜尋。",
     "showMoreRecent": "展開另外 {{count}} 項",
     "collapseRecent": "收起近期技能",
     "workspaces": "工作空間",
@@ -2015,6 +2015,10 @@
     }
   },
   "worktree": {
+    "saveBeforeCloseTitle": "儲存變更？",
+    "saveBeforeCloseMessage": "關閉前是否儲存以下檔案的變更？不儲存將遺失這些變更。",
+    "dontSave": "不儲存",
+    "saveBeforeCloseFailed": "儲存失敗，檔案仍保持開啟。請檢查檔案衝突或寫入權限後重試。",
     "title": "工作樹",
     "main": "主要工作樹",
     "locked": "已鎖定",
@@ -2033,6 +2037,24 @@
     "unsaved": "未儲存"
   },
   "git": {
+    "actions": {
+      "label": "原始碼管理操作",
+      "pull": "拉取（僅快轉）",
+      "push": "推送至上游分支",
+      "fetch": "擷取所有遠端",
+      "branches": "分支",
+      "commit": "提交已暫存的變更",
+      "history": "顯示／隱藏最近提交",
+      "refresh": "重新整理變更",
+      "layout": "切換樹狀／清單檢視",
+      "more": "更多 Git 操作",
+      "branchHint": "切換至本機分支，或從目前提交建立分支。Git 會阻止覆寫未提交的變更。",
+      "createBranch": "建立並切換分支",
+      "switchBranch": "切換分支",
+      "branchName": "新分支名稱",
+      "completed": "Git 操作已完成",
+      "running": "正在執行 Git 操作…"
+    },
     "graph": {
       "title": "Git Graph",
       "open": "開啟 Git Graph",
@@ -2044,6 +2066,10 @@
       "loadMore": "載入更多",
       "limit": "最多顯示 5,000 筆提交"
     },
+    "stageDirectory": "暫存目錄中的變更",
+    "unstageDirectory": "取消暫存目錄中的變更",
+    "discardChanges": "捨棄變更",
+    "discardConfirm": "確定捨棄以下檔案的未暫存變更？已追蹤檔案將還原至暫存版本，未追蹤檔案將被刪除。此操作無法復原。",
     "changedFiles": "{{count}} 項變更",
     "changedFilesTruncated": "至少 {{count}} 項變更",
     "worktree": "工作目錄",
@@ -2136,6 +2162,7 @@
     "tagHistoryHint": "從標籤指向的提交開始瀏覽歷史，包含更早的提交",
     "allCommitsLoaded": "已載入全部提交",
     "localRefs": "本機參照",
+    "collapseUnchanged": "摺疊未變更區域",
     "changeOverview": "差異捲動概覽",
     "overviewHint": "點選或拖曳定位；方向鍵捲動，Page Up／Down 翻頁，Home／End 到首尾"
   },

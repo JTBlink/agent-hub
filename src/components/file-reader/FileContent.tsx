@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Code2,
   FileCode2,
+  Eye,
   Loader2,
   WrapText,
 } from "lucide-react";
@@ -21,17 +23,27 @@ export function FileContent({
   openInVscodeHint,
   maxLength,
   actions,
+  toolbarContainer,
+  defaultSource = false,
+  showOpenInVscode = true,
 }: {
   file: ReaderFile;
   location?: ReaderLocation;
   actions?: ReactNode;
+  /** Render controls in a host toolbar and omit the breadcrumb row. */
+  toolbarContainer?: HTMLElement | null;
+  defaultSource?: boolean;
+  /** Project workspaces expose the external editor at the project level. */
+  showOpenInVscode?: boolean;
 } & Pick<
   FileReaderProps,
   "onContentChange" | "onOpenInVscode" | "openInVscodeHint" | "maxLength"
 >) {
   const { t } = useTranslation();
   const markdown = /\.(md|markdown)$/i.test(file.path);
-  const [preview, setPreview] = useState(markdown && !location);
+  const [preview, setPreview] = useState(
+    markdown && !location && !defaultSource,
+  );
   const [wrap, setWrap] = useState(false);
   useEffect(() => {
     if (location) setPreview(false);
@@ -61,101 +73,124 @@ export function FileContent({
       if (mounted.current) setOpening(false);
     }
   };
+  const toolbar = (
+    <div className="flex shrink-0 items-center gap-1">
+      {actions}
+      {showOpenInVscode && (
+        <button
+          type="button"
+          aria-label={t("install.scan.openInVscode")}
+          title={
+            openInVscodeHint ??
+            t(
+              onOpenInVscode
+                ? "fileReader.openInVscodeHint"
+                : "fileReader.noLocalFile",
+            )
+          }
+          disabled={!onOpenInVscode || opening}
+          aria-busy={opening}
+          onClick={() => void openInVscode()}
+          className="app-button-ghost gap-1.5 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {opening ? (
+            <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          ) : (
+            <Code2 aria-hidden="true" className="h-4 w-4" />
+          )}
+          <span
+            className={
+              toolbarContainer !== undefined ? "sr-only" : "hidden sm:inline"
+            }
+          >
+            {t("install.scan.openInVscode")}
+          </span>
+        </button>
+      )}
+      {markdown &&
+        [false, true].map((value) => (
+          <button
+            key={String(value)}
+            type="button"
+            aria-label={t(value ? "fileReader.preview" : "fileReader.source")}
+            title={t(value ? "fileReader.preview" : "fileReader.source")}
+            aria-pressed={preview === value}
+            onClick={() => setPreview(value)}
+            className={cn(
+              "app-button-ghost px-2 py-1 text-xs",
+              preview === value && "bg-surface-active text-accent-light",
+            )}
+          >
+            {toolbarContainer !== undefined ? (
+              value ? (
+                <Eye size={15} />
+              ) : (
+                <FileCode2 size={15} />
+              )
+            ) : (
+              t(value ? "fileReader.preview" : "fileReader.source")
+            )}
+          </button>
+        ))}
+      {!preview && (
+        <button
+          type="button"
+          title={t("fileReader.wrap")}
+          aria-label={t("fileReader.wrap")}
+          aria-pressed={wrap}
+          onClick={() => setWrap(!wrap)}
+          className={cn(
+            "app-button-ghost p-1.5",
+            wrap && "bg-surface-active text-accent-light",
+          )}
+        >
+          <WrapText aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
   const lines = file.content.split("\n").length;
   return (
     <>
-      <div className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border-subtle px-3 py-0.5">
-        <div
-          title={file.path}
-          aria-label={file.path}
-          className="flex min-w-0 flex-1 items-center overflow-hidden text-xs text-muted"
-        >
-          {file.path.split("/").map((part, index, parts) => (
-            <span key={index} className="flex min-w-0 items-center">
-              {index > 0 && (
-                <ChevronRight
-                  aria-hidden="true"
-                  size={12}
-                  className="mx-1 shrink-0 text-faint"
-                />
-              )}
-              {index === parts.length - 1 && (
-                <FileCode2
-                  aria-hidden="true"
-                  size={13}
-                  className="mr-1.5 shrink-0"
-                />
-              )}
-              <span
-                className={cn(
-                  "truncate",
-                  index === parts.length - 1 && "text-secondary",
-                )}
-              >
-                {part}
-              </span>
-            </span>
-          ))}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {actions}
-          <button
-            type="button"
-            aria-label={t("install.scan.openInVscode")}
-            title={
-              openInVscodeHint ??
-              t(
-                onOpenInVscode
-                  ? "fileReader.openInVscodeHint"
-                  : "fileReader.noLocalFile",
-              )
-            }
-            disabled={!onOpenInVscode || opening}
-            aria-busy={opening}
-            onClick={() => void openInVscode()}
-            className="app-button-ghost gap-1.5 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
+      {toolbarContainer !== undefined ? (
+        toolbarContainer && createPortal(toolbar, toolbarContainer)
+      ) : (
+        <div className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border-subtle px-3 py-0.5">
+          <div
+            title={file.path}
+            aria-label={file.path}
+            className="flex min-w-0 flex-1 items-center overflow-hidden text-xs text-muted"
           >
-            {opening ? (
-              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-            ) : (
-              <Code2 aria-hidden="true" className="h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">
-              {t("install.scan.openInVscode")}
-            </span>
-          </button>
-          {markdown &&
-            [false, true].map((value) => (
-              <button
-                key={String(value)}
-                type="button"
-                aria-pressed={preview === value}
-                onClick={() => setPreview(value)}
-                className={cn(
-                  "app-button-ghost px-2 py-1 text-xs",
-                  preview === value && "bg-surface-active text-accent-light",
+            {file.path.split("/").map((part, index, parts) => (
+              <span key={index} className="flex min-w-0 items-center">
+                {index > 0 && (
+                  <ChevronRight
+                    aria-hidden="true"
+                    size={12}
+                    className="mx-1 shrink-0 text-faint"
+                  />
                 )}
-              >
-                {t(value ? "fileReader.preview" : "fileReader.source")}
-              </button>
+                {index === parts.length - 1 && (
+                  <FileCode2
+                    aria-hidden="true"
+                    size={13}
+                    className="mr-1.5 shrink-0"
+                  />
+                )}
+                <span
+                  className={cn(
+                    "truncate",
+                    index === parts.length - 1 && "text-secondary",
+                  )}
+                >
+                  {part}
+                </span>
+              </span>
             ))}
-          {!preview && (
-            <button
-              type="button"
-              title={t("fileReader.wrap")}
-              aria-label={t("fileReader.wrap")}
-              aria-pressed={wrap}
-              onClick={() => setWrap(!wrap)}
-              className={cn(
-                "app-button-ghost p-1.5",
-                wrap && "bg-surface-active text-accent-light",
-              )}
-            >
-              <WrapText aria-hidden="true" className="h-4 w-4" />
-            </button>
-          )}
+          </div>
+          {toolbar}
         </div>
-      </div>
+      )}
       {openError && (
         <p
           role="alert"

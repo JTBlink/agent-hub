@@ -321,21 +321,14 @@
 
 .dashboard-workspaces {
   min-width: 0;
-  padding: 1rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 1rem;
-  background: var(--color-bg-secondary);
 }
 
 .dashboard-workspace-switch {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.25rem;
+  gap: 1rem;
   margin-bottom: 0.65rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 0.85rem;
-  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .dashboard-workspace-switch button {
@@ -343,16 +336,15 @@
   align-items: center;
   gap: 0.6rem;
   min-height: 2.5rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 0.6rem;
+  padding: 0.5rem 0.1rem;
+  border-bottom: 2px solid transparent;
   color: var(--color-text-tertiary);
   font-size: var(--font-size-ui);
 }
 
 .dashboard-workspace-switch button[aria-pressed="true"] {
-  background: var(--color-surface);
+  border-bottom-color: var(--color-accent);
   color: var(--color-text-primary);
-  box-shadow: var(--shadow-card);
 }
 
 .dashboard-workspace-switch button:focus-visible {
@@ -361,29 +353,25 @@
 }
 
 .dashboard-workspace-switch button span {
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.35rem;
-  background: var(--color-surface-active);
+  color: var(--color-text-tertiary);
   font-size: var(--font-size-caption);
   font-variant-numeric: tabular-nums;
 }
 
-.dashboard-workspace-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-  gap: 0.75rem;
+.dashboard-workspace-list {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
 }
 
 .dashboard-workspace-search {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-left: 0.75rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 0.6rem;
+  margin-bottom: 0.25rem;
+  padding-left: 0.25rem;
+  border-bottom: 1px solid var(--color-border-subtle);
   color: var(--color-text-tertiary);
-  background: var(--color-surface);
 }
 
 .dashboard-workspace-search:focus-within {
@@ -424,29 +412,82 @@
 }
 
 .dashboard-workspace-link {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
-  min-height: 2.75rem;
-  padding: 0.6rem;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 0.85rem;
-  background: var(--color-surface);
+  min-height: 3.75rem;
+  padding: 0.6rem 0.25rem;
   color: var(--color-text-secondary);
-  transition:
-    background-color 150ms,
-    border-color 150ms;
+  transition: background-color 150ms;
+}
+
+.dashboard-workspace-link + .dashboard-workspace-link {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.dashboard-workspace-link > svg:last-child {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.dashboard-workspace-icon {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-accent-light);
+}
+
+.dashboard-workspace-path {
+  display: block;
+  overflow: hidden;
+  margin-top: 0.3rem;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-code);
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-workspace-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 15rem;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-caption);
+}
+
+.dashboard-workspace-skill-count {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@container (max-width: 32rem) {
+  .dashboard-workspace-meta {
+    grid-column: 2;
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .dashboard-workspace-icon,
+  .dashboard-workspace-link > svg:last-child {
+    grid-row: 1 / 3;
+  }
 }
 
 .dashboard-workspace-link:hover {
-  border-color: var(--color-accent-border);
   background: var(--color-surface-hover);
 }
 
 .dashboard-workspace-link:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
+  outline-offset: -2px;
 }
 
 .dashboard-workspace-empty {

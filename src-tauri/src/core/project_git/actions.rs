@@ -3,7 +3,7 @@ use anyhow::{bail, Context, Result};
 use std::path::Path;
 use std::process::Command;
 
-fn repository(root: &Path) -> Result<git2::Repository> {
+pub(super) fn repository(root: &Path) -> Result<git2::Repository> {
     Ok(git2::Repository::open_ext(
         root,
         git2::RepositoryOpenFlags::NO_SEARCH,
@@ -11,7 +11,7 @@ fn repository(root: &Path) -> Result<git2::Repository> {
     )?)
 }
 
-fn run_git(root: &Path, args: &[&str]) -> Result<()> {
+pub(super) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
     let mut command = Command::new("git");
     command
         .arg("--literal-pathspecs")
@@ -28,19 +28,9 @@ fn run_git(root: &Path, args: &[&str]) -> Result<()> {
     ] {
         command.env_remove(name);
     }
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
-    }
-    let output = command.output().context("Unable to run Git")?;
-    if !output.status.success() {
-        let error = String::from_utf8_lossy(&output.stderr);
-        if error.trim().is_empty() {
-            bail!("Git exited with {}", output.status);
-        }
-        bail!("Git: {}", error.trim());
-    }
+    super::super::cli_process::capture_prepared(command, "git", 120, None)
+        .map_err(anyhow::Error::msg)
+        .context("Unable to complete Git operation")?;
     Ok(())
 }
 
@@ -88,6 +78,48 @@ pub fn set_staged(root: &Path, paths: &[String], staged: bool) -> Result<()> {
     run_git(root, &args)
 }
 
+/// Restore selected working files from the index, leaving staged content untouched.
+/// Untracked files are removed only when explicitly selected; directories are never swept.
+pub fn discard(root: &Path, paths: &[String]) -> Result<()> {
+    if paths.is_empty() || paths.len() > 2000 {
+        bail!("Select between 1 and 2000 files");
+    }
+    let repo = repository(root)?;
+    let index = repo.index()?;
+    if index.has_conflicts() {
+        bail!("Resolve index conflicts before discarding changes");
+    }
+    let mut tracked = Vec::new();
+    let mut untracked = Vec::new();
+    for path in paths {
+        super::validate_file_path(path)?;
+        if index.get_path(Path::new(path), 0).is_some() {
+            tracked.push(path.as_str());
+        } else {
+            let status = repo.status_file(Path::new(path))?;
+            if !status.is_wt_new() {
+                bail!("Selected path is not an untracked file: {path}");
+            }
+            let metadata = std::fs::symlink_metadata(root.join(path))?;
+            if metadata.is_dir() {
+                bail!("Select individual files rather than directories: {path}");
+            }
+            untracked.push(path.as_str());
+        }
+    }
+    if !tracked.is_empty() {
+        let mut args = vec!["restore", "--worktree", "--"];
+        args.extend(tracked);
+        run_git(root, &args)?;
+    }
+    if !untracked.is_empty() {
+        let mut args = vec!["clean", "-f", "--"];
+        args.extend(untracked);
+        run_git(root, &args)?;
+    }
+    Ok(())
+}
+
 /// Commit the index only, using the repository's configured identity, hooks and signing.
 pub fn commit(root: &Path, message: &str) -> Result<()> {
     if message.trim().is_empty() || message.len() > 64 * 1024 || message.contains('\0') {
@@ -114,6 +146,69 @@ mod tests {
         config.set_str("core.hooksPath", "disabled-hooks").unwrap();
         repo
     }
+    #[test]
+    fn discards_only_selected_working_changes_and_preserves_index_and_neighbors() {
+        let temp = tempfile::tempdir().unwrap();
+        let repo = init(temp.path());
+        std::fs::write(temp.path().join("demo.txt"), "original").unwrap();
+        std::fs::write(temp.path().join("deleted.txt"), "restore me").unwrap();
+        std::fs::write(temp.path().join("neighbor.txt"), "original").unwrap();
+        set_staged(
+            temp.path(),
+            &[
+                "demo.txt".into(),
+                "deleted.txt".into(),
+                "neighbor.txt".into(),
+            ],
+            true,
+        )
+        .unwrap();
+        commit(temp.path(), "initial").unwrap();
+        std::fs::write(temp.path().join("demo.txt"), "staged").unwrap();
+        set_staged(temp.path(), &["demo.txt".into()], true).unwrap();
+        std::fs::write(temp.path().join("demo.txt"), "unstaged").unwrap();
+        std::fs::remove_file(temp.path().join("deleted.txt")).unwrap();
+        std::fs::write(temp.path().join("neighbor.txt"), "keep neighbor").unwrap();
+        std::fs::write(temp.path().join("new.txt"), "remove me").unwrap();
+        std::fs::write(temp.path().join("other.txt"), "keep untracked").unwrap();
+        discard(
+            temp.path(),
+            &["demo.txt".into(), "deleted.txt".into(), "new.txt".into()],
+        )
+        .unwrap();
+        assert_eq!(
+            std::fs::read_to_string(temp.path().join("demo.txt")).unwrap(),
+            "staged"
+        );
+        assert_eq!(
+            std::fs::read_to_string(temp.path().join("deleted.txt")).unwrap(),
+            "restore me"
+        );
+        assert_eq!(
+            std::fs::read_to_string(temp.path().join("neighbor.txt")).unwrap(),
+            "keep neighbor"
+        );
+        assert!(temp.path().join("other.txt").exists());
+        assert!(!temp.path().join("new.txt").exists());
+        let index = repo.index().unwrap();
+        let entry = index.get_path(Path::new("demo.txt"), 0).unwrap();
+        assert_eq!(repo.find_blob(entry.id).unwrap().content(), b"staged");
+    }
+
+    #[test]
+    fn rejects_invalid_discard_batches_before_changing_any_files() {
+        let temp = tempfile::tempdir().unwrap();
+        init(temp.path());
+        std::fs::write(temp.path().join("keep.txt"), "keep").unwrap();
+        std::fs::create_dir(temp.path().join("folder")).unwrap();
+        std::fs::write(temp.path().join("folder/keep.txt"), "keep").unwrap();
+        for invalid in ["../outside", ":(glob)*", "folder", ".git/config"] {
+            assert!(discard(temp.path(), &["keep.txt".into(), invalid.into()]).is_err());
+            assert!(temp.path().join("keep.txt").exists());
+            assert!(temp.path().join("folder/keep.txt").exists());
+        }
+    }
+
     #[test]
     fn stages_and_unstages_unborn_files_without_deleting_working_content() {
         let temp = tempfile::tempdir().unwrap();

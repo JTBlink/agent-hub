@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -8,12 +8,14 @@ export function GitCommitForm({
   busy,
   committing,
   onCommit,
+  toolbar,
 }: {
   branch: string;
   enabled: boolean;
   busy: boolean;
   committing: boolean;
   onCommit: (message: string) => Promise<boolean>;
+  toolbar?: (canCommit: boolean) => ReactNode;
 }) {
   const { t } = useTranslation();
   const [message, setMessage] = useState("");
@@ -29,6 +31,7 @@ export function GitCommitForm({
         void submit();
       }}
     >
+      {toolbar?.(enabled && !busy && !!message.trim())}
       <textarea
         aria-label={t("git.commitMessage")}
         placeholder={t("git.commitPlaceholder", { branch })}

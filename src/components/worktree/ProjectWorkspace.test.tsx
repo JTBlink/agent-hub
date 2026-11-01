@@ -205,24 +205,25 @@ it("collapses folders, refreshes the tree and retains file selection for each ch
   expect(host.querySelector("aside [hidden]")).not.toBeNull();
 });
 
-it("keeps branch context in the top terminal/file row across preview and checkout changes", async () => {
+it("omits duplicate branch context and refresh from the terminal/file toolbar", async () => {
   await render();
   const terminalButton = () =>
     Array.from(host.querySelectorAll("button")).find(
       (button) => button.textContent === "terminal.title",
     )!;
-  const expectTopBranch = (branch: string) => {
+  const expectCompactToolbar = (fileShown = false) => {
+    const toolbar = terminalButton().closest("[data-terminal-toolbar]")!;
+    expect(toolbar.textContent).not.toContain("main");
+    expect(toolbar.textContent).not.toContain("topic");
+    expect(toolbar.querySelector('[aria-label="worktree.refresh"]')).toBeNull();
     expect(
-      terminalButton().closest("[data-terminal-toolbar]")?.textContent,
-    ).toContain(branch);
-    expect(host.querySelector("[data-terminal]")?.textContent).not.toContain(
-      branch,
-    );
+      toolbar.querySelector('[aria-label="worktree.projectSkills"]') === null,
+    ).toBe(fileShown);
   };
-  expectTopBranch("main");
+  expectCompactToolbar();
   await click('aside button[title="src"]');
   await click('aside button[title="src/app.ts"]');
-  expectTopBranch("main");
+  expectCompactToolbar(true);
   const fileTab = host.querySelector('[role="tab"][title="src/app.ts"]')!;
   expect(fileTab.closest('[role="tablist"]')).toBe(
     terminalButton().closest('[role="tablist"]'),
@@ -233,9 +234,9 @@ it("keeps branch context in the top terminal/file row across preview and checkou
   expect(host.querySelector("[data-terminal]")?.hasAttribute("hidden")).toBe(
     false,
   );
-  expectTopBranch("main");
+  expectCompactToolbar();
   await click('[aria-label="fileReader.closeFile"]');
-  expectTopBranch("main");
+  expectCompactToolbar();
   await click("[data-topic]");
-  expectTopBranch("topic");
+  expectCompactToolbar();
 });

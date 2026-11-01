@@ -442,7 +442,7 @@ it("opens only the active region on navigation, including history return after a
   );
   expect(
     container
-      .querySelector('[role="combobox"][aria-label="切换项目"]')
+      .querySelector('[role="group"][aria-label="工作树"]')
       ?.closest("[hidden]"),
   ).toBeNull();
   await click(button("Go settings"));
@@ -452,7 +452,7 @@ it("opens only the active region on navigation, including history return after a
   await click(button("Go project"));
   expect(
     container
-      .querySelector('[role="combobox"][aria-label="切换项目"]')
+      .querySelector('[role="group"][aria-label="工作树"]')
       ?.closest("[hidden]"),
   ).toBeNull();
 });
@@ -623,18 +623,21 @@ it("switches worktrees from a menu and disables unavailable checkouts", async ()
     container.querySelector<HTMLButtonElement>(
       '[role="combobox"][aria-label="工作树"]',
     )!;
-  expect(worktreeMenu().textContent).toContain("demo · main");
+  expect(worktreeMenu().textContent).toContain("Demo Project · main");
   await click(worktreeMenu());
   const options = [
     ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
   ];
   expect(
-    options.find((item) => item.textContent?.startsWith("missing"))?.disabled,
+    options.find((item) => item.textContent === "Demo Project · missing")
+      ?.disabled,
   ).toBe(true);
   await click(
-    options.find((item) => item.textContent === "topic · feature/topic")!,
+    options.find(
+      (item) => item.textContent === "Demo Project · feature/topic",
+    )!,
   );
-  expect(worktreeMenu().textContent).toContain("topic · feature/topic");
+  expect(worktreeMenu().textContent).toContain("Demo Project · feature/topic");
   expect(container.querySelector("output")?.textContent).toBe(
     `/project/${project.id}`,
   );
@@ -673,7 +676,7 @@ it("puts Projects first and separates project files from the skills panel", asyn
     '[data-sidebar-panel="skills"]',
   )!;
   const projectHeading = container.querySelector<HTMLElement>(
-    '[role="combobox"][aria-label="切换项目"]',
+    '[role="group"][aria-label="工作树"]',
   )!;
   const skillsHeading = button("Agent 工作区");
   expect(projectHeading.closest("[hidden]")).not.toBeNull();
@@ -693,32 +696,17 @@ it("puts Projects first and separates project files from the skills panel", asyn
   expect(skillsHeading.closest("[hidden]")).not.toBeNull();
 });
 
-it("switches projects from a dropdown instead of showing an expanded project list", async () => {
-  const first = { ...makeProject(), id: "switch-first", name: "First" };
-  const second = {
-    ...makeProject(),
-    id: "switch-second",
-    name: "Second",
-    path: "~/projects/second",
-  };
-  Object.assign(app, { projects: [first, second] });
-  await render(`/project/${first.id}`);
-  const selector = container.querySelector<HTMLButtonElement>(
-    '[role="combobox"][aria-label="切换项目"]',
-  )!;
-  expect(selector.textContent).toContain("First");
+it("uses the top menu for project switching and keeps the worktree controls", async () => {
+  const project = { ...makeProject(), id: "menu-project", name: "Demo" };
+  Object.assign(app, { projects: [project] });
+  await render(`/project/${project.id}`);
   expect(
-    container.querySelector('[data-rfd-draggable-id="switch-first"]'),
+    container.querySelector('[role="combobox"][aria-label="切换项目"]'),
   ).toBeNull();
-  await click(selector);
-  const option = [
-    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
-  ].find((item) => item.textContent === "Second")!;
-  await click(option);
-  expect(container.querySelector("output")?.textContent).toBe(
-    `/project/${second.id}`,
-  );
-  expect(selector.textContent).toContain("Second");
+  expect(
+    container.querySelector('[role="combobox"][aria-label="工作树"]'),
+  ).not.toBeNull();
+  expect(container.querySelector('[aria-label="刷新工作树"]')).not.toBeNull();
 });
 
 it("replaces the Git sidebar when another panel opens and restores Git on its activity click", async () => {
@@ -769,9 +757,8 @@ it("returns to the last project and checkout when opening the project panel from
   writeTerminalLayout({ tabs: [tab], lastActiveId: tab.id, activeIds: {} });
   await render("/git");
   expect(
-    container.querySelector('[role="combobox"][aria-label="切换项目"]')
-      ?.textContent,
-  ).toContain("Last");
+    container.querySelector('[aria-label="移除项目 Last"]'),
+  ).not.toBeNull();
   await click(
     container.querySelector<HTMLButtonElement>(
       '[data-sidebar-panel="projects"]',

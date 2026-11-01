@@ -1,12 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, FileCode2, GitBranch, RefreshCw } from "lucide-react";
-import { TabCloseButton } from "../TabCloseButton";
+import { BookOpen, FileCode2 } from "lucide-react";
+import { WorktreeFileCloseButton } from "./WorktreeFileCloseButton";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
-import { projectWorkspaceRoute, worktreeLabel } from "../../lib/worktreeApi";
-import { compactHomePath, cn } from "../../utils";
+import { projectWorkspaceRoute } from "../../lib/worktreeApi";
+import { cn } from "../../utils";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
 import { WorktreeFilePreview } from "./WorktreeFilePreview";
@@ -18,13 +18,12 @@ export function ProjectWorkspace({
   onMaximizedChange: (value: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const [fileToolbar, setFileToolbar] = useState<HTMLDivElement | null>(null);
   const { projects, loading: projectsLoading, appError } = useApp();
   const location = useLocation();
   const route = projectWorkspaceRoute(location.pathname, location.search);
   const project = projects.find((item) => item.id === route?.projectId);
-  const { worktrees, loading, error, refresh } = useProjectWorktrees(
-    project?.id,
-  );
+  const { worktrees, error, refresh } = useProjectWorktrees(project?.id);
   const requestedPath = route?.worktreePath ?? project?.path;
   const worktree =
     worktrees.find((item) => item.path === requestedPath) ??
@@ -39,43 +38,15 @@ export function ProjectWorkspace({
   }, [routeProjectId, path, setCheckout]);
   const file = files[scope];
   const visible = !!route || location.pathname === "/terminal";
-  const workspaceContext = route && (
-    <div
-      className="flex min-w-0 max-w-[30%] items-center gap-1.5 pr-2 text-xs text-muted"
-      title={path && compactHomePath(path)}
-    >
-      <GitBranch size={13} className="shrink-0" />
-      <span className="truncate">
-        {worktree
-          ? worktreeLabel(worktree)
-          : project?.name || t("worktree.title")}
-      </span>
-      {worktree?.is_main && (
-        <span className="sr-only">{t("worktree.main")}</span>
-      )}
-    </div>
-  );
   const workspaceActions = route && (
-    <>
-      <button
-        type="button"
-        disabled={loading}
-        aria-label={t("worktree.refresh")}
-        title={t("worktree.refresh")}
-        onClick={() => void refresh()}
-        className="app-button-ghost h-7 w-7 shrink-0 p-0 text-muted"
-      >
-        <RefreshCw size={13} className={cn(loading && "animate-spin")} />
-      </button>
-      <Link
-        to={`/project/${route.projectId}/skills${location.search}`}
-        aria-label={t("worktree.projectSkills")}
-        title={t("worktree.projectSkills")}
-        className="app-button-ghost h-7 w-7 shrink-0 p-0 text-muted"
-      >
-        <BookOpen size={13} />
-      </Link>
-    </>
+    <Link
+      to={`/project/${route.projectId}/skills${location.search}`}
+      aria-label={t("worktree.projectSkills")}
+      title={t("worktree.projectSkills")}
+      className="app-button-ghost h-7 w-7 shrink-0 p-0 text-muted"
+    >
+      <BookOpen size={13} />
+    </Link>
   );
   return (
     <section
@@ -120,7 +91,8 @@ export function ProjectWorkspace({
             }}
             extraTabs={
               route &&
-              file && (
+              file &&
+              path && (
                 <div
                   className={cn(
                     "flex h-full min-w-0 items-center rounded-t border-b-2",
@@ -147,10 +119,12 @@ export function ProjectWorkspace({
                       {file.path.split("/").at(-1)}
                     </span>
                   </button>
-                  <TabCloseButton
-                    aria-label={t("fileReader.closeFile", { path: file.path })}
-                    title={t("fileReader.closeFile", { path: file.path })}
-                    onClick={() =>
+                  <WorktreeFileCloseButton
+                    key={`${scope}:${file.path}`}
+                    projectId={route.projectId}
+                    worktreePath={path}
+                    path={file.path}
+                    onClose={() =>
                       setFiles((previous) => {
                         const next = { ...previous };
                         delete next[scope];
@@ -162,10 +136,14 @@ export function ProjectWorkspace({
               )
             }
             toolbarEnd={
-              <>
-                {workspaceContext}
-                {workspaceActions}
-              </>
+              file?.shown && route ? (
+                <div
+                  ref={setFileToolbar}
+                  className="flex shrink-0 items-center"
+                />
+              ) : (
+                workspaceActions
+              )
             }
             content={
               route &&
@@ -179,6 +157,7 @@ export function ProjectWorkspace({
                     worktreePath={path}
                     path={file.path}
                     location={file.location}
+                    toolbarContainer={fileToolbar}
                   />
                 </div>
               )

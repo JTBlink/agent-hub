@@ -1,4 +1,22 @@
 import { invoke } from "@tauri-apps/api/core";
+export type GitRepositoryAction =
+  "fetch" | "pull" | "push" | "switch_branch" | "create_branch";
+export async function runProjectGitAction(
+  projectId: string,
+  worktreePath: string | undefined,
+  action: GitRepositoryAction,
+  branch?: string,
+) {
+  await invoke<void>("run_project_git_action", {
+    projectId,
+    worktreePath,
+    action,
+    branch,
+  });
+  window.dispatchEvent(new Event("project-git-changed"));
+  if (action !== "fetch" && action !== "push")
+    window.dispatchEvent(new Event("worktree-file-saved"));
+}
 export interface GitFile {
   path: string;
   old_path?: string | null;
@@ -45,6 +63,20 @@ export const setProjectGitStaged = async (
     staged,
   });
   window.dispatchEvent(new Event("project-git-changed"));
+};
+
+export const discardProjectGitChanges = async (
+  projectId: string,
+  worktreePath: string | undefined,
+  paths: string[],
+) => {
+  await invoke<void>("discard_project_git_changes", {
+    projectId,
+    worktreePath,
+    paths,
+  });
+  window.dispatchEvent(new Event("project-git-changed"));
+  window.dispatchEvent(new Event("worktree-file-saved"));
 };
 
 export const commitProjectGit = async (

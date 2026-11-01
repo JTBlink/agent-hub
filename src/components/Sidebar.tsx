@@ -213,10 +213,10 @@ export function Sidebar() {
           className="workbench-sidebar-panel"
         >
           <div
-            hidden={selectedPanel === "search"}
+            hidden={selectedPanel !== "skills"}
             className={cn(
               "h-9 shrink-0 items-center justify-between gap-1 px-3",
-              selectedPanel === "search" ? "hidden" : "flex",
+              selectedPanel !== "skills" ? "hidden" : "flex",
             )}
           >
             <span className="truncate text-xs font-semibold text-secondary">
@@ -251,6 +251,9 @@ export function Sidebar() {
               <PanelLeftClose className="h-3.5 w-3.5" />
             </button>
           </div>
+          <div hidden={selectedPanel !== "projects"} className="shrink-0">
+            <ProjectSwitcher onRemove={setDeleteProjectTarget} />
+          </div>
           <div
             hidden={selectedPanel !== "search"}
             className={cn(
@@ -281,7 +284,6 @@ export function Sidebar() {
             )}
           >
             <div hidden={selectedPanel !== "projects"}>
-              <ProjectSwitcher onRemove={setDeleteProjectTarget} />
               <SidebarProjectFiles />
             </div>
             <div hidden={selectedPanel !== "skills"}>

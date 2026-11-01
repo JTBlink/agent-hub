@@ -15,13 +15,13 @@ export function GitDiffToolbar({
   split,
   wrap,
   whitespace,
-  overview,
+  collapsed,
   count,
   active,
   onSplit,
   onWrap,
   onWhitespace,
-  onOverview,
+  onCollapse,
   onNavigate,
   onOpenFile,
 }: {
@@ -29,13 +29,13 @@ export function GitDiffToolbar({
   split: boolean;
   wrap: boolean;
   whitespace: boolean;
-  overview: boolean;
+  collapsed: boolean;
   count: number;
   active: number;
   onSplit: () => void;
   onWrap: () => void;
   onWhitespace: () => void;
-  onOverview: () => void;
+  onCollapse: () => void;
   onNavigate: (direction: number) => void;
   onOpenFile?: () => void;
 }) {
@@ -72,10 +72,10 @@ export function GitDiffToolbar({
       pressed: whitespace,
     },
     {
-      label: t("git.changeOverview"),
+      label: t("git.collapseUnchanged"),
       Icon: Map,
-      action: onOverview,
-      pressed: overview,
+      action: onCollapse,
+      pressed: collapsed,
     },
     { label: t("git.split"), Icon: Columns2, action: onSplit, pressed: split },
   ];

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { EditorView } from "@codemirror/view";
+import { collapseGitDiff } from "../../lib/collapseGitDiff";
 import { parseGitDiff } from "../../lib/gitDiff";
 import { gitDiffNavigation } from "../../lib/gitDiffNavigation";
 import { ScrollOverview } from "../ScrollOverview";
@@ -31,12 +32,22 @@ export function GitDiffViewer({
   onOpenFile?: () => void;
 }) {
   const { t } = useTranslation();
-  const { rows, truncated } = useMemo(() => parseGitDiff(patch), [patch]);
-  const targets = useMemo(() => gitDiffNavigation(rows, patch), [rows, patch]);
+  const [collapsed, setCollapsed] = useState(false);
+  const displayPatch = useMemo(
+    () => (collapsed ? collapseGitDiff(patch) : patch),
+    [patch, collapsed],
+  );
+  const { rows, truncated } = useMemo(
+    () => parseGitDiff(displayPatch),
+    [displayPatch],
+  );
+  const targets = useMemo(
+    () => gitDiffNavigation(rows, displayPatch),
+    [rows, displayPatch],
+  );
   const [split, setSplit] = useState(true);
   const [wrap, setWrap] = useState(false);
   const [whitespace, setWhitespace] = useState(false);
-  const [overview, setOverview] = useState(true);
   const [position, setPosition] = useState({ patch, index: -1 });
   const active = position.patch === patch ? position.index : -1;
   const right = useRef<HTMLElement>(null);
@@ -113,17 +124,16 @@ export function GitDiffViewer({
         ? "git.indexVersion"
         : "git.workingVersion",
   );
-  const renderOverview = () =>
-    overview && (
-      <ScrollOverview
-        scrollRef={right}
-        contentKey={`${split}:${patch}`}
-        controls={id}
-        label={t("git.changeOverview")}
-        hint={t("git.overviewHint")}
-        getMarks={getMarks}
-      />
-    );
+  const renderOverview = () => (
+    <ScrollOverview
+      scrollRef={right}
+      contentKey={`${split}:${displayPatch}`}
+      controls={id}
+      label={t("git.changeOverview")}
+      hint={t("git.overviewHint")}
+      getMarks={getMarks}
+    />
+  );
   return (
     <div
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -140,7 +150,7 @@ export function GitDiffViewer({
         split={split}
         wrap={wrap}
         whitespace={whitespace}
-        overview={overview}
+        collapsed={collapsed}
         count={targets.length}
         active={active}
         onSplit={() => {
@@ -149,7 +159,10 @@ export function GitDiffViewer({
         }}
         onWrap={() => setWrap(!wrap)}
         onWhitespace={() => setWhitespace(!whitespace)}
-        onOverview={() => setOverview(!overview)}
+        onCollapse={() => {
+          setCollapsed(!collapsed);
+          setPosition({ patch, index: -1 });
+        }}
         onNavigate={navigate}
         onOpenFile={onOpenFile}
       />
@@ -202,7 +215,7 @@ export function GitDiffViewer({
       ) : (
         <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
           <UnifiedDiffPane
-            patch={patch}
+            patch={displayPatch}
             path={path}
             wrap={wrap}
             whitespace={whitespace}

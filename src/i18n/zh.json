@@ -336,9 +336,9 @@
     }
   },
   "dashboard": {
-    "searchWorkspaces": "搜索工作空间",
+    "searchWorkspaces": "搜索名称或路径",
     "clearWorkspaceSearch": "清除工作空间搜索",
-    "noWorkspaceMatches": "没有匹配的工作空间，请换个名称或清除搜索。",
+    "noWorkspaceMatches": "没有匹配的工作空间，请换个名称或路径，或清除搜索。",
     "showMoreRecent": "展开另外 {{count}} 项",
     "collapseRecent": "收起近期技能",
     "workspaces": "工作空间",
@@ -2061,6 +2061,10 @@
     }
   },
   "worktree": {
+    "saveBeforeCloseTitle": "保存更改？",
+    "saveBeforeCloseMessage": "关闭前是否保存以下文件的更改？不保存将丢失这些更改。",
+    "dontSave": "不保存",
+    "saveBeforeCloseFailed": "保存失败，文件仍保持打开。请检查文件冲突或写入权限后重试。",
     "title": "工作树",
     "main": "主工作树",
     "locked": "已锁定",
@@ -2079,6 +2083,24 @@
     "unsaved": "未保存"
   },
   "git": {
+    "actions": {
+      "label": "源代码管理操作",
+      "pull": "拉取（仅快进）",
+      "push": "推送到上游分支",
+      "fetch": "抓取所有远端",
+      "branches": "分支",
+      "commit": "提交已暂存的更改",
+      "history": "显示／隐藏最近提交",
+      "refresh": "刷新更改",
+      "layout": "切换树形／列表视图",
+      "more": "更多 Git 操作",
+      "branchHint": "切换到本地分支，或从当前提交创建分支。Git 会阻止覆盖未提交的改动。",
+      "createBranch": "创建并切换分支",
+      "switchBranch": "切换分支",
+      "branchName": "新分支名称",
+      "completed": "Git 操作已完成",
+      "running": "正在执行 Git 操作…"
+    },
     "graph": {
       "title": "Git Graph",
       "open": "打开 Git Graph",
@@ -2090,6 +2112,10 @@
       "loadMore": "加载更多",
       "limit": "最多显示 5,000 条提交"
     },
+    "stageDirectory": "暂存目录中的更改",
+    "unstageDirectory": "取消暂存目录中的更改",
+    "discardChanges": "放弃更改",
+    "discardConfirm": "确定放弃以下文件的未暂存更改？已跟踪文件将恢复到暂存版本，未跟踪文件将被删除。此操作无法撤销。",
     "changedFiles": "{{count}} 项变更",
     "changedFilesTruncated": "至少 {{count}} 项变更",
     "worktree": "工作目录",
@@ -2182,6 +2208,7 @@
     "tagHistoryHint": "从标签指向的提交开始浏览历史，包含更早的提交",
     "allCommitsLoaded": "已加载全部提交",
     "localRefs": "本地引用",
+    "collapseUnchanged": "折叠未更改区域",
     "changeOverview": "差异滚动概览",
     "overviewHint": "点击或拖动定位；方向键滚动，Page Up／Down 翻页，Home／End 到首尾"
   },

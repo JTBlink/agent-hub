@@ -47,13 +47,27 @@ pub(crate) fn capture(
     cwd: Option<&std::path::Path>,
     cancel: Option<&std::sync::atomic::AtomicBool>,
 ) -> Result<(String, String), String> {
-    let mut stdout = tempfile::tempfile().map_err(|e| e.to_string())?;
-    let mut stderr = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut command = Command::new(program);
     command
         .args(args)
         .envs(env.iter().copied())
-        .env("LC_ALL", "C")
+        .env("LC_ALL", "C");
+    if let Some(cwd) = cwd {
+        command.current_dir(cwd);
+    }
+    capture_prepared(command, program, timeout_seconds, cancel)
+}
+
+/// Run a command whose caller owns environment isolation, using the same bounded capture.
+pub(crate) fn capture_prepared(
+    mut command: Command,
+    program: &str,
+    timeout_seconds: u64,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+) -> Result<(String, String), String> {
+    let mut stdout = tempfile::tempfile().map_err(|e| e.to_string())?;
+    let mut stderr = tempfile::tempfile().map_err(|e| e.to_string())?;
+    command
         .stdin(Stdio::null())
         .stdout(stdout.try_clone().map_err(|e| e.to_string())?)
         .stderr(stderr.try_clone().map_err(|e| e.to_string())?);
@@ -61,9 +75,6 @@ pub(crate) fn capture(
     {
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000);
-    }
-    if let Some(cwd) = cwd {
-        command.current_dir(cwd);
     }
     let mut child = command.spawn().map_err(|e| format!("{program}: {e}"))?;
     let started = Instant::now();

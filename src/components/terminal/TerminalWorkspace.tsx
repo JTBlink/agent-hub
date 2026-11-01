@@ -72,6 +72,7 @@ export function TerminalWorkspace({
   const [projectId, setProjectId] = useState("");
   const {
     tabs,
+    scopedTabs,
     setTabs,
     activeIds,
     setActiveIds,
@@ -79,7 +80,11 @@ export function TerminalWorkspace({
     error: restoreError,
     retry,
     rememberActive,
-  } = useTerminalLayout(projects, projectsReady);
+  } = useTerminalLayout(projects, projectsReady, {
+    projectId: scopedProject,
+    path: scopedPath,
+    initialize: visible && !terminalTaskRequest(location.state),
+  });
   const scopeKey = workspace ? terminalScopeKey(scopedProject, scopedPath) : "";
   const activeId = activeIds[scopeKey] ?? "";
   const setActiveId = (id: string) => {
@@ -95,7 +100,6 @@ export function TerminalWorkspace({
   }, [tabs]);
   const consumed = useRef("");
   const initialized = useRef(false);
-  const [initializedScopes, setInitializedScopes] = useState<string[]>([]);
   const [bridgeError, setBridgeError] = useState("");
   const [contextVisible, setContextVisible] = useState(false);
   useEffect(() => {
@@ -240,33 +244,10 @@ export function TerminalWorkspace({
     setTabs,
     setActiveIds,
   ]);
-  const scopedTabs = workspace
-    ? tabs.filter(
-        (tab) =>
-          tab.projectId === scopedProject && tab.worktreePath === scopedPath,
-      )
-    : tabs;
   const active =
     scopedTabs.find((tab) => tab.id === activeId) ?? scopedTabs.at(-1);
   const displayedId = active?.id ?? "";
   const count = tabs.reduce((sum, tab) => sum + tab.panes.length, 0);
-  if (
-    ready &&
-    visible &&
-    scopeKey &&
-    scopedProject &&
-    scopedPath &&
-    !terminalTaskRequest(location.state) &&
-    !initializedScopes.includes(scopeKey) &&
-    (scopedTabs.length > 0 || count < TERMINAL_PANE_LIMIT)
-  ) {
-    setInitializedScopes([...initializedScopes, scopeKey]);
-    if (!scopedTabs.length) {
-      const tab = createTab(scopedProject, undefined, scopedPath);
-      setTabs([...tabs, tab]);
-      setActiveIds({ ...activeIds, [scopeKey]: tab.id });
-    }
-  }
   useLayoutEffect(() => {
     activeTarget.current =
       visible && active
@@ -409,39 +390,44 @@ export function TerminalWorkspace({
           </ThemedSelect>
         )}
         {toolbarEnd}
-        <TerminalSessions
-          tabs={tabs}
-          projects={projects}
-          activeId={displayedId}
-          onSelect={selectSession}
-          onClose={close}
-        />
-        <button
-          type="button"
-          className={toolbarAction}
-          aria-label={t("terminal.new")}
-          title={t("terminal.new")}
-          disabled={
-            !ready ||
-            !(scopedProject || selected) ||
-            count >= TERMINAL_PANE_LIMIT
-          }
-          onClick={add}
-        >
-          <Plus size={15} />
-        </button>
-        {active?.context && (
-          <button
-            type="button"
-            className={toolbarAction}
-            aria-label={t("tasks.context")}
-            title={active.context.title}
-            onClick={() => setContextVisible((value) => !value)}
-          >
-            <FileText size={15} />
-          </button>
+        {shown && (
+          <>
+            <TerminalSessions
+              tabs={tabs}
+              projects={projects}
+              activeId={displayedId}
+              onSelect={selectSession}
+              onClose={close}
+            />
+            <button
+              type="button"
+              className={toolbarAction}
+              aria-label={t("terminal.new")}
+              title={t("terminal.new")}
+              disabled={
+                !ready ||
+                !(scopedProject || selected) ||
+                count >= TERMINAL_PANE_LIMIT
+              }
+              onClick={add}
+            >
+              <Plus size={15} />
+            </button>
+            {active?.context && (
+              <button
+                type="button"
+                className={toolbarAction}
+                aria-label={t("tasks.context")}
+                title={active.context.title}
+                onClick={() => setContextVisible((value) => !value)}
+              >
+                <FileText size={15} />
+              </button>
+            )}
+          </>
         )}
         <TerminalPanelTools
+          showTerminalActions={shown}
           key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
           hasTerminal={shown && !!active}
           herdrBusy={herdr.busy}

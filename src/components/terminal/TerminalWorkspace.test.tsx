@@ -610,6 +610,11 @@ it("switches between peer file and terminal tabs without replacing running panes
     );
     expect(panels[1].hasAttribute("hidden")).toBe(false);
     await act(async () => tabButtons[2].click());
+    expect(host.querySelector('[aria-label="terminal.new"]')).toBeNull();
+    expect(
+      host.querySelector('[aria-label="terminal.herdrSidebar"]'),
+    ).toBeNull();
+    await act(async () => tabButtons[1].click());
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>('[aria-label="terminal.new"]')!

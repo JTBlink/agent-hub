@@ -55,7 +55,11 @@ export function useProjectWorktrees(projectId?: string) {
       void refreshProjectWorktrees(projectId);
     };
     window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
+    window.addEventListener("project-git-changed", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("project-git-changed", refresh);
+    };
   }, [projectId]);
   return {
     ...snapshot,

@@ -5,6 +5,7 @@ import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
+import * as documents from "../hooks/useWorktreeDocument";
 import { CloseActionGuard } from "./CloseActionGuard";
 
 const mocks = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 vi.mock("../lib/tauri", () => mocks);
+vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: mocks.listen }));
 vi.mock("sonner", () => ({ toast: { error: mocks.error } }));
 
@@ -203,5 +205,25 @@ it("confirms a menu quit even when window closing is configured to hide", async 
   expect(mocks.appExit).not.toHaveBeenCalled();
   await act(async () => requestExit());
   await click(zh.closeAction.close);
+  expect(mocks.appExit).toHaveBeenCalledOnce();
+});
+
+it("saves dirty files before exiting and cancels exit when the save prompt is dismissed", async () => {
+  const dirty = vi
+    .spyOn(documents, "dirtyWorktreeDocuments")
+    .mockReturnValue([{ key: "draft", path: "demo.ts" }]);
+  const save = vi
+    .spyOn(documents, "saveWorktreeDocument")
+    .mockResolvedValue(true);
+  await act(async () => requestExit());
+  await click(zh.closeAction.close);
+  expect(container.textContent).toContain(zh.worktree.saveBeforeCloseTitle);
+  await click(zh.common.cancel);
+  expect(mocks.appExit).not.toHaveBeenCalled();
+  await act(async () => requestExit());
+  await click(zh.closeAction.close);
+  dirty.mockReturnValue([]);
+  await click(zh.common.save);
+  expect(save).toHaveBeenCalledWith("draft");
   expect(mocks.appExit).toHaveBeenCalledOnce();
 });

@@ -8,6 +8,23 @@ use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
+pub async fn run_project_git_action(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    action: project_git::GitRepositoryAction,
+    branch: Option<String>,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::repository_action(&root, action, branch.as_deref()).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn get_project_git_status(
     store: State<'_, Arc<SkillStore>>,
     project_id: String,
@@ -52,6 +69,22 @@ pub async fn set_project_git_staged(
         let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
             .map_err(AppError::io)?;
         project_git::set_staged(&root, &paths, staged).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn discard_project_git_changes(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    paths: Vec<String>,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::discard(&root, &paths).map_err(AppError::io)
     })
     .await?
 }

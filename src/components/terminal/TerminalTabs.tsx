@@ -28,7 +28,7 @@ export function TerminalTabs({
     <div
       role="tablist"
       aria-label={t("terminal.sessions")}
-      className="flex min-w-0 flex-1 overflow-x-auto"
+      className="flex h-full min-w-0 flex-1 overflow-x-auto"
     >
       {tabs.map((tab, index) => {
         const project = projects.find(
@@ -38,7 +38,7 @@ export function TerminalTabs({
           <div
             key={tab.id}
             className={cn(
-              "flex shrink-0 items-center rounded-t border-b-2",
+              "flex h-full shrink-0 items-center rounded-t border-b-2",
               tab.id === activeId
                 ? "border-accent bg-surface"
                 : "border-transparent",
@@ -48,7 +48,7 @@ export function TerminalTabs({
               type="button"
               role="tab"
               aria-selected={tab.id === activeId}
-              className="flex h-8 max-w-48 items-center gap-1.5 px-3 text-xs"
+              className="flex h-full max-w-48 items-center gap-1.5 px-3 text-xs"
               title={project?.name}
               onClick={() => onSelect(tab)}
             >

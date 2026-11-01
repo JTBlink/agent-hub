@@ -26,8 +26,11 @@ export function DashboardWorkspaces({
   );
   const entries = type === "agents" ? agents : sortedProjects;
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const matches = (name: string) =>
-    name.toLocaleLowerCase().includes(normalizedQuery);
+  const matches = (entry: Project | ToolInfo) =>
+    ("display_name" in entry
+      ? [entry.display_name, entry.skills_dir]
+      : [entry.name, entry.path]
+    ).some((value) => value?.toLocaleLowerCase().includes(normalizedQuery));
   const switchType = (nextType: WorkspaceType) => {
     setType(nextType);
     setQuery("");
@@ -59,7 +62,7 @@ export function DashboardWorkspaces({
       )}
       <div
         id="dashboard-workspace-entries"
-        className="dashboard-workspace-grid"
+        className="dashboard-workspace-list"
         aria-label={t(
           type === "agents"
             ? "dashboard.agentWorkspaces"
@@ -72,21 +75,19 @@ export function DashboardWorkspaces({
               type === "agents" ? "dashboard.noAgents" : "dashboard.noProjects",
             )}
           </p>
-        ) : !entries.some((entry) =>
-            matches("display_name" in entry ? entry.display_name : entry.name),
-          ) ? (
+        ) : !entries.some(matches) ? (
           <p className="dashboard-workspace-empty" role="status">
             {t("dashboard.noWorkspaceMatches")}
           </p>
         ) : type === "agents" ? (
           agents
-            .filter((agent) => matches(agent.display_name))
+            .filter(matches)
             .map((agent) => (
               <AgentWorkspaceLink key={agent.key} agent={agent} />
             ))
         ) : (
           sortedProjects
-            .filter((project) => matches(project.name))
+            .filter(matches)
             .map((project) => (
               <ProjectWorkspaceLink key={project.id} project={project} />
             ))
@@ -177,11 +178,13 @@ function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
       className="dashboard-workspace-link"
       title={t("dashboard.openWorkspace")}
     >
-      <AgentIcon
-        agentKey={agent.key}
-        displayName={agent.display_name}
-        className="h-6 w-6 shrink-0"
-      />
+      <span className="dashboard-workspace-icon">
+        <AgentIcon
+          agentKey={agent.key}
+          displayName={agent.display_name}
+          className="h-5 w-5"
+        />
+      </span>
       <span className="min-w-0 flex-1">
         <span
           className="block truncate text-sm font-medium"
@@ -189,6 +192,11 @@ function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
         >
           {agent.display_name}
         </span>
+        {agent.skills_dir && (
+          <span className="dashboard-workspace-path" title={agent.skills_dir}>
+            {agent.skills_dir}
+          </span>
+        )}
       </span>
       <ChevronRight
         aria-hidden="true"
@@ -206,7 +214,7 @@ function ProjectWorkspaceLink({ project }: { project: Project }) {
       className="dashboard-workspace-link"
       onClick={() => void touchProjectVisited(project.id)}
     >
-      <span className="rounded-lg bg-accent-bg p-2 text-accent-light">
+      <span className="dashboard-workspace-icon">
         <FolderOpen aria-hidden="true" className="h-5 w-5" />
       </span>
       <span className="min-w-0 flex-1">
@@ -216,16 +224,21 @@ function ProjectWorkspaceLink({ project }: { project: Project }) {
         >
           {project.name}
         </span>
-        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-tertiary">
-          {t("dashboard.projectSkills", { count: project.skill_count })}
-          {project.sync_health.diverged > 0 && (
-            <span className="rounded bg-danger-bg px-1.5 py-0.5 text-danger">
-              {t("dashboard.conflicts", {
-                count: project.sync_health.diverged,
-              })}
-            </span>
-          )}
+        <span className="dashboard-workspace-path" title={project.path}>
+          {project.path}
         </span>
+      </span>
+      <span className="dashboard-workspace-meta">
+        <span className="dashboard-workspace-skill-count">
+          {t("dashboard.projectSkills", { count: project.skill_count })}
+        </span>
+        {project.sync_health.diverged > 0 && (
+          <span className="rounded bg-danger-bg px-1.5 py-0.5 text-danger">
+            {t("dashboard.conflicts", {
+              count: project.sync_health.diverged,
+            })}
+          </span>
+        )}
       </span>
       <ChevronRight
         aria-hidden="true"

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { createInstance } from "i18next";
@@ -104,6 +104,11 @@ async function render(
       <StrictMode>
         <MemoryRouter initialEntries={[path]}>
           <RouteMarker />
+          {projects.map((project) => (
+            <Link key={project.id} to={worktreeUrl(project.id, project.path)}>
+              {`Open ${project.id}`}
+            </Link>
+          ))}
           <TerminalWorkspace
             projects={projects}
             projectsReady={ready}
@@ -115,7 +120,7 @@ async function render(
   );
 }
 async function click(label: string) {
-  const element = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+  const element = [...host.querySelectorAll<HTMLElement>("button, a")].find(
     (button) =>
       button.getAttribute("aria-label") === label ||
       button.textContent === label,
@@ -297,4 +302,87 @@ it("does not reopen removed projects or unavailable worktrees", async () => {
   expect(host.querySelector("output")?.textContent).toBe(
     worktreeUrl(project.id, project.path),
   );
+});
+
+it("closes all panes of the previous project, frees capacity and opens a fresh shell when returning", async () => {
+  const other = {
+    ...makeProject(),
+    id: "other",
+    name: "Other",
+    path: "<workspace>/other",
+  };
+  const tabs = Array.from({ length: 4 }, (_, index) => {
+    const tab = createTerminalTab(
+      project.id,
+      undefined,
+      index < 2 ? project.path : topic,
+    );
+    tab.panes.push(`split-${index}`);
+    return tab;
+  });
+  writeTerminalLayout({ tabs, activeIds: {}, lastActiveId: tabs[0].id });
+  await render(worktreeUrl(project.id, project.path), [project, other]);
+  expect(creations()).toHaveLength(8);
+  const release: Array<() => void> = [];
+  const base = vi.mocked(invoke).getMockImplementation()!;
+  vi.mocked(invoke).mockImplementation((command, args, options) => {
+    if (command === "terminal_close")
+      return new Promise<void>((resolve) => release.push(resolve));
+    return base(command, args, options);
+  });
+  await click(`Open ${other.id}`);
+  expect(creations()).toHaveLength(8);
+  expect(release).toHaveLength(8);
+  await act(async () => release.forEach((resolve) => resolve()));
+  vi.mocked(invoke).mockImplementation(base);
+  expect(creations()).toHaveLength(9);
+  const closures = vi
+    .mocked(invoke)
+    .mock.calls.filter(([command]) => command === "terminal_close")
+    .map(([, args]) => args);
+  expect(closures).toEqual(
+    Array.from({ length: 8 }, (_, i) => ({ id: `new-${i + 1}` })),
+  );
+  expect(readTerminalLayout().tabs.map((tab) => tab.projectId)).toEqual([
+    other.id,
+  ]);
+  expect(host.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
+  await click("全部终端 1/8");
+  expect(
+    host.querySelector('[aria-label="所有项目的终端"]')?.textContent,
+  ).not.toContain(project.name);
+  await click("全部终端 1/8");
+  await click(`Open ${project.id}`);
+  expect(creations()).toHaveLength(10);
+  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-9" });
+  expect(readTerminalLayout().tabs).toHaveLength(1);
+  expect(readTerminalLayout().tabs[0].id).not.toBe(tabs[0].id);
+});
+
+it("restores only the selected project from an older layout containing multiple projects", async () => {
+  const other = {
+    ...makeProject(),
+    id: "other",
+    name: "Other",
+    path: "<workspace>/other",
+  };
+  const [main, checkout] = savedTabs();
+  const foreign = createTerminalTab(other.id, undefined, other.path);
+  writeTerminalLayout({
+    tabs: [main, checkout, foreign],
+    activeIds: {},
+    lastActiveId: foreign.id,
+  });
+  await render(worktreeUrl(project.id, project.path), [project, other]);
+  expect(creations()).toHaveLength(3);
+  expect(
+    creations().every(
+      ([, args]) =>
+        args &&
+        typeof args === "object" &&
+        "projectId" in args &&
+        args.projectId === project.id,
+    ),
+  ).toBe(true);
+  expect(readTerminalLayout().tabs).toEqual([main, checkout]);
 });

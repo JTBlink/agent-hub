@@ -11,6 +11,9 @@ import {
 } from "../hooks/useWorkspaceFiles";
 import {
   commitProjectGit,
+  runProjectGitAction,
+  getProjectGitReferences,
+  discardProjectGitChanges,
   setProjectGitStaged,
   getProjectGitDiff,
   getProjectGitCommit,
@@ -62,6 +65,9 @@ vi.mock("../hooks/useProjectWorktrees", () => ({
 }));
 vi.mock("../lib/gitApi", () => ({
   commitProjectGit: vi.fn(),
+  runProjectGitAction: vi.fn(),
+  getProjectGitReferences: vi.fn(),
+  discardProjectGitChanges: vi.fn(),
   setProjectGitStaged: vi.fn(),
   getProjectGitStatus: vi.fn(),
   getProjectGitGraph: vi.fn(),
@@ -526,6 +532,78 @@ it("opens committed file diffs separately from working changes", async () => {
   }
 });
 
+it("requires confirmation before discarding a folder and keeps failures retryable", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "main",
+    head: null,
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    state: "Clean",
+    truncated: false,
+    commits: [],
+    files: [
+      {
+        path: "src/demo.ts",
+        staged: false,
+        unstaged: true,
+        conflicted: false,
+        status: "modified",
+      },
+      {
+        path: "other.ts",
+        staged: false,
+        unstaged: true,
+        conflicted: false,
+        status: "modified",
+      },
+    ],
+  });
+  vi.mocked(discardProjectGitChanges)
+    .mockReset()
+    .mockRejectedValueOnce(new Error("Unable to restore"))
+    .mockResolvedValue();
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () => root.render(<TestGit />));
+  const open = () =>
+    host
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="git.discardChanges: src"]',
+      )!
+      .click();
+  const dialogButton = (label: string) =>
+    [
+      ...host.querySelectorAll<HTMLButtonElement>(
+        '[role="alertdialog"] button',
+      ),
+    ].find((button) => button.textContent === label)!;
+  await act(async () => open());
+  expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "src/demo.ts",
+  );
+  expect(discardProjectGitChanges).not.toHaveBeenCalled();
+  await act(async () => dialogButton("common.cancel").click());
+  expect(discardProjectGitChanges).not.toHaveBeenCalled();
+  await act(async () => open());
+  await act(async () => dialogButton("git.discardChanges").click());
+  expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "Unable to restore",
+  );
+  await act(async () => dialogButton("git.discardChanges").click());
+  expect(discardProjectGitChanges).toHaveBeenLastCalledWith(
+    "first",
+    "<workspace>/demo",
+    ["src/demo.ts"],
+  );
+  expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+  await act(async () => root.unmount());
+  host.remove();
+  vi.unstubAllGlobals();
+});
+
 it("opens Git Graph from source control and returns to the selected diff on close", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.mocked(getProjectGitStatus).mockResolvedValue({
@@ -608,6 +686,143 @@ it("opens Git Graph from source control and returns to the selected diff on clos
     );
     expect(host.querySelector("table")).toBeNull();
     expect(host.querySelector(".cm-editor")).not.toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("runs toolbar operations against the selected checkout and switches change layouts", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "main",
+    head: "abcdef",
+    upstream: "origin/main",
+    ahead: 1,
+    behind: 0,
+    state: "Clean",
+    truncated: false,
+    commits: [],
+    files: [
+      {
+        path: "src/demo.ts",
+        staged: false,
+        unstaged: true,
+        conflicted: false,
+        status: "modified",
+      },
+    ],
+  });
+  vi.mocked(getProjectGitReferences).mockResolvedValue({
+    entries: [
+      { kind: "branches", name: "main", sha: "abcdef" },
+      { kind: "branches", name: "topic", sha: "fedcba" },
+    ],
+    truncated: false,
+  });
+  vi.mocked(runProjectGitAction).mockReset().mockResolvedValue();
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const button = (label: string) =>
+    host.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
+  try {
+    await act(async () => root.render(<TestGit />));
+    await act(async () => button("git.actions.pull").click());
+    expect(runProjectGitAction).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      "pull",
+    );
+    await act(async () => button("git.actions.push").click());
+    expect(runProjectGitAction).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      "push",
+    );
+    expect(button("git.unstaged: src/demo.ts").textContent).not.toContain(
+      "src/",
+    );
+    await act(async () => button("git.actions.layout").click());
+    expect(button("git.unstaged: src/demo.ts").textContent).toContain(
+      "src/demo.ts",
+    );
+    expect(button("git.actions.layout").getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+    await act(async () => button("git.actions.history").click());
+    expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+    await act(async () => button("git.actions.branches").click());
+    const picker = host.querySelector<HTMLButtonElement>(
+      '[role="alertdialog"] [role="combobox"]',
+    )!;
+    await act(async () => {
+      picker.focus();
+      picker.click();
+    });
+    expect(document.querySelector('[role="listbox"]')).not.toBeNull();
+    await act(async () =>
+      picker.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      ),
+    );
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
+    expect(host.querySelector('[role="alertdialog"]')).not.toBeNull();
+    const select = host.querySelector<HTMLSelectElement>("select")!;
+    await act(async () => {
+      select.value = "topic";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    const confirm = () =>
+      [
+        ...host.querySelectorAll<HTMLButtonElement>(
+          '[role="alertdialog"] button',
+        ),
+      ].find((e) => e.textContent === "git.actions.switchBranch")!;
+    vi.mocked(runProjectGitAction).mockRejectedValueOnce(
+      new Error("Branch is checked out elsewhere"),
+    );
+    await act(async () => confirm().click());
+    expect(runProjectGitAction).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      "switch_branch",
+      "topic",
+    );
+    expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain(
+      "Branch is checked out elsewhere",
+    );
+    await act(async () => confirm().click());
+    expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+    await act(async () => button("git.actions.more").click());
+    const menuFetch = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ].find((e) => e.textContent === "git.actions.fetch")!;
+    await act(async () => menuFetch.click());
+    expect(runProjectGitAction).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      "fetch",
+    );
+    let reject!: (error: Error) => void;
+    vi.mocked(runProjectGitAction).mockReturnValueOnce(
+      new Promise((_, fail) => {
+        reject = fail;
+      }),
+    );
+    await act(async () => button("git.actions.pull").click());
+    expect(button("git.actions.push").disabled).toBe(true);
+    const calls = vi.mocked(runProjectGitAction).mock.calls.length;
+    await act(async () => button("git.actions.pull").click());
+    expect(runProjectGitAction).toHaveBeenCalledTimes(calls);
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("[data-select-workspace]")!.click(),
+    );
+    await act(async () => reject(new Error("Old checkout failure")));
+    expect(host.textContent).not.toContain("Old checkout failure");
   } finally {
     await act(async () => root.unmount());
     host.remove();

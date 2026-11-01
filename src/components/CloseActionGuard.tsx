@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { dirtyWorktreeDocuments } from "../hooks/useWorktreeDocument";
+import { SaveWorktreeChangesDialog } from "./worktree/SaveWorktreeChangesDialog";
 import { CloseActionDialog } from "./CloseActionDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 import * as api from "../lib/tauri";
@@ -12,9 +14,13 @@ export function CloseActionGuard() {
   const [confirmExit, setConfirmExit] = useState(false);
   const [trayEnabled, setTrayEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [unsavedExit, setUnsavedExit] = useState<{
+    documents: ReturnType<typeof dirtyWorktreeDocuments>;
+    remember: boolean;
+  } | null>(null);
   const pending = useRef(false);
   const dialogVisible = useRef(false);
-  dialogVisible.current = dialogOpen || confirmExit;
+  dialogVisible.current = dialogOpen || confirmExit || !!unsavedExit;
 
   useEffect(() => {
     let disposed = false;
@@ -73,6 +79,15 @@ export function CloseActionGuard() {
 
   const perform = async (action: "close" | "hide", remember: boolean) => {
     if (pending.current) return false;
+    if (action === "close") {
+      const documents = dirtyWorktreeDocuments();
+      if (documents.length) {
+        setDialogOpen(false);
+        setConfirmExit(false);
+        setUnsavedExit({ documents, remember });
+        return false;
+      }
+    }
     pending.current = true;
     setBusy(true);
     try {
@@ -101,6 +116,17 @@ export function CloseActionGuard() {
 
   return (
     <>
+      {unsavedExit && (
+        <SaveWorktreeChangesDialog
+          documents={unsavedExit.documents}
+          onCancel={() => setUnsavedExit(null)}
+          onProceed={() => {
+            const remember = unsavedExit.remember;
+            setUnsavedExit(null);
+            void perform("close", remember);
+          }}
+        />
+      )}
       {dialogOpen && (
         <CloseActionDialog
           open={dialogOpen}

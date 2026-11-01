@@ -9,6 +9,7 @@ interface Props {
   details?: string[];
   children?: ReactNode;
   confirmLabel?: string;
+  secondaryAction?: ReactNode;
   confirmDisabled?: boolean;
   tone?: "danger" | "warning";
   onClose: () => void;
@@ -23,6 +24,7 @@ export function ConfirmDialog({
   details,
   children,
   confirmLabel,
+  secondaryAction,
   confirmDisabled = false,
   tone = "danger",
   onClose,
@@ -47,6 +49,13 @@ export function ConfirmDialog({
     cancel.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // Let an open picker consume the first Escape before closing its dialog.
+        if (
+          panel.current?.querySelector(
+            '[role="combobox"][aria-expanded="true"]',
+          )
+        )
+          return;
         e.preventDefault();
         e.stopImmediatePropagation();
         if (!pending.current) closeCallback.current();
@@ -151,6 +160,7 @@ export function ConfirmDialog({
         )}
 
         <div className="flex justify-end gap-2">
+          {secondaryAction}
           <button
             ref={cancel}
             onClick={close}

@@ -48,7 +48,7 @@ try:
         assert js("document.documentElement.scrollWidth <= innerWidth"), "horizontal overflow"
         assert js("[...document.querySelectorAll('.dashboard-overview [id^=dashboard-][id$=-title]')].every(el=>el.closest('button').getBoundingClientRect().right <= innerWidth)"), "overview card clipped"
         assert js("document.querySelector('.dashboard-library-art')?.getAttribute('aria-hidden') === 'true'"), "decorative SVG not hidden"
-        assert js("[...document.querySelectorAll('.dashboard-workspace-grid,.dashboard-recent-grid')].every(e=>e.scrollHeight <= e.clientHeight + 1)"), "nested scroll region"
+        assert js("[...document.querySelectorAll('.dashboard-workspace-list,.dashboard-recent-grid')].every(e=>e.scrollHeight <= e.clientHeight + 1)"), "nested scroll region"
         if width == 1440 and language == "zh":
             assert js("document.querySelector('.dashboard-page').parentElement.parentElement.scrollHeight <= document.querySelector('.dashboard-page').parentElement.parentElement.clientHeight + 1"), "default dashboard does not fit the first screen"
             assert js("document.querySelectorAll('#dashboard-recent-skills button').length === 3"), "recent skills not compact by default"
@@ -66,11 +66,11 @@ try:
     ready()
     assert js("document.querySelectorAll('.dashboard-workspace-switch button')[0].getAttribute('aria-pressed') === 'true'"), "projects are not the default"
     wait_until("document.querySelectorAll('#dashboard-workspace-entries a').length === 12",
-               "project grid did not show all projects")
-    assert js("document.querySelector('#dashboard-workspace-entries').scrollHeight === document.querySelector('#dashboard-workspace-entries').clientHeight"), "project grid scrolls independently"
+               "project list did not show all projects")
+    assert js("document.querySelector('#dashboard-workspace-entries').scrollHeight === document.querySelector('#dashboard-workspace-entries').clientHeight"), "project list scrolls independently"
     node = next(n for n in cdp("Accessibility.getFullAXTree")["nodes"]
                 if n.get("role", {}).get("value") == "searchbox"
-                and n.get("name", {}).get("value") == "搜索工作空间")
+                and n.get("name", {}).get("value") == "搜索名称或路径")
     box = cdp("DOM.getBoxModel", backendNodeId=node["backendDOMNodeId"])["model"]["content"]
     click_at_xy(sum(box[0::2]) / 4, sum(box[1::2]) / 4)
     cdp("Input.insertText", text="DEMO-PROJECT-11")
@@ -82,8 +82,8 @@ try:
         deltaX=0, deltaY=500)
     wait_until(f"document.querySelector('.dashboard-page').parentElement.parentElement.scrollTop > {before}",
                "wheel over projects did not scroll the main page")
-    assert js("document.querySelector('#dashboard-workspace-entries').scrollTop === 0"), "project grid consumed scrolling"
-    print("PASS: project switch, complete 12-project grid, page-only wheel scrolling")
+    assert js("document.querySelector('#dashboard-workspace-entries').scrollTop === 0"), "project list consumed scrolling"
+    print("PASS: project switch, complete 12-project list, page-only wheel scrolling")
 
     goto_url(url + "&theme=dark&language=zh&undeployed&ungrouped")
     wait_for_load()

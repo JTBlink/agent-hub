@@ -1,5 +1,12 @@
 import { useId, useState } from "react";
-import { ChevronRight, FileCode2, Folder, Minus, Plus } from "lucide-react";
+import {
+  ChevronRight,
+  FileCode2,
+  Folder,
+  Minus,
+  Plus,
+  Undo2,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitFile } from "../../lib/gitApi";
 import { cn } from "../../utils";
@@ -49,14 +56,77 @@ const markers: Record<string, string> = {
 };
 
 type ChangeProps = {
+  tree?: boolean;
   staged: boolean;
   selection?: GitSelection;
   busy: boolean;
   batchLimited: boolean;
   onSelect: (selection: GitSelection) => void;
   onStage?: (paths: string[], staged: boolean) => void;
+  onDiscard?: (paths: string[]) => void;
   fileLabel?: string;
 };
+function descendantPaths(node: ChangeNode): string[] {
+  return node.file ? [node.path] : node.children.flatMap(descendantPaths);
+}
+
+function ChangeActions({
+  paths,
+  directory,
+  ...props
+}: ChangeProps & { paths: string[]; directory?: string }) {
+  const { t } = useTranslation();
+  const disabled = props.busy || (!!directory && props.batchLimited);
+  const stageLabel = t(
+    directory
+      ? props.staged
+        ? "git.unstageDirectory"
+        : "git.stageDirectory"
+      : props.staged
+        ? "git.unstageFile"
+        : "git.stageFile",
+  );
+  const labelPath = directory ?? paths[0];
+  const style =
+    "app-button-ghost h-6 w-6 shrink-0 p-0 text-muted sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100";
+  return (
+    <>
+      {!props.staged && props.onDiscard && (
+        <button
+          type="button"
+          disabled={disabled}
+          title={t("git.discardChanges")}
+          aria-label={`${t("git.discardChanges")}: ${labelPath}`}
+          className={style}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            props.onDiscard?.(paths);
+          }}
+        >
+          <Undo2 size={14} />
+        </button>
+      )}
+      {props.onStage && (
+        <button
+          type="button"
+          disabled={disabled}
+          title={stageLabel}
+          aria-label={`${stageLabel}: ${labelPath}`}
+          className={style}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            props.onStage?.(paths, !props.staged);
+          }}
+        >
+          {props.staged ? <Minus size={14} /> : <Plus size={14} />}
+        </button>
+      )}
+    </>
+  );
+}
+
 function ChangeTree({
   nodes,
   depth = 0,
@@ -114,18 +184,7 @@ function ChangeTree({
                   {markers[node.file.status] ?? "M"}
                 </span>
               </button>
-              {props.onStage && (
-                <button
-                  type="button"
-                  disabled={props.busy}
-                  title={t(props.staged ? "git.unstageFile" : "git.stageFile")}
-                  aria-label={`${t(props.staged ? "git.unstageFile" : "git.stageFile")}: ${node.path}`}
-                  className="app-button-ghost mr-1 h-6 w-6 shrink-0 p-0 text-muted sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                  onClick={() => props.onStage?.([node.path], !props.staged)}
-                >
-                  {props.staged ? <Minus size={14} /> : <Plus size={14} />}
-                </button>
-              )}
+              <ChangeActions {...props} paths={[node.path]} />
             </div>
           ) : (
             <details
@@ -135,11 +194,16 @@ function ChangeTree({
               <summary
                 title={node.path}
                 style={{ paddingLeft: 8 + depth * 12 }}
-                className="flex h-6 cursor-pointer list-none items-center gap-1.5 pr-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
+                className="group flex h-6 cursor-pointer list-none items-center gap-1.5 pr-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
               >
                 <ChevronRight size={12} className="shrink-0" />
                 <Folder size={14} className="shrink-0 text-muted" />
-                <span className="truncate">{node.name}</span>
+                <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                <ChangeActions
+                  {...props}
+                  directory={node.path}
+                  paths={descendantPaths(node)}
+                />
               </summary>
               <ChangeTree {...props} nodes={node.children} depth={depth + 1} />
             </details>
@@ -197,7 +261,19 @@ export function GitChanges({
       </div>
       <div id={id} hidden={!expanded}>
         {files.length ? (
-          <ChangeTree {...props} nodes={changeTree(files)} />
+          <ChangeTree
+            {...props}
+            nodes={
+              props.tree === false
+                ? files.map((file) => ({
+                    name: file.path,
+                    path: file.path,
+                    children: [],
+                    file,
+                  }))
+                : changeTree(files)
+            }
+          />
         ) : (
           <p className="px-5 py-4 text-xs text-muted">{t("git.clean")}</p>
         )}

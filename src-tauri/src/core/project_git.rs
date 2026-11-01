@@ -4,10 +4,12 @@ mod graph;
 mod history;
 pub use graph::{graph, GitGraph};
 mod references;
-pub use actions::{commit, set_staged};
+mod repository_actions;
+pub use actions::{commit, discard, set_staged};
 use anyhow::{bail, Result};
 pub use history::{commit_details, commit_diff, commit_history, GitCommitDetails, GitHistoryPage};
 pub use references::{references, GitReferences};
+pub use repository_actions::{repository_action, GitRepositoryAction};
 use serde::Serialize;
 use std::path::Path;
 
@@ -145,6 +147,7 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let mut options = git2::DiffOptions::new();
     options
+        .context_lines(u32::MAX)
         .pathspec(path)
         .disable_pathspec_match(true)
         .include_untracked(true)

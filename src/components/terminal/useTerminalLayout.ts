@@ -7,13 +7,21 @@ import { getErrorMessage } from "../../lib/error";
 import {
   readTerminalLayout,
   writeTerminalLayout,
+  createTerminalTab,
+  terminalScopeKey,
+  TERMINAL_PANE_LIMIT,
   type TerminalLayout,
   type TerminalTab,
 } from "../../lib/terminalLayout";
 import { worktreeUrl } from "../../lib/worktreeApi";
 
 /** Reconcile the previous webview's PTYs before creating any restored shells. */
-export function useTerminalLayout(projects: Project[], projectsReady: boolean) {
+export function useTerminalLayout(
+  projects: Project[],
+  projectsReady: boolean,
+  scope: { projectId?: string; path?: string; initialize: boolean },
+) {
+  const { projectId, path, initialize } = scope;
   const { t } = useTranslation();
   const errorText = t("terminal.error");
   const location = useLocation();
@@ -25,6 +33,52 @@ export function useTerminalLayout(projects: Project[], projectsReady: boolean) {
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [lastActiveId, rememberActive] = useState(saved.lastActiveId);
+  const [owner, setOwner] = useState(projectId);
+  const [initializedScopes, setInitializedScopes] = useState<string[]>([]);
+  // Reconcile before mounting panes, including layouts saved by older versions.
+  // Removing a pane lets its existing owner dispose the emulator and PTY.
+  const switching =
+    ready &&
+    !!projectId &&
+    (owner !== projectId || tabs.some((tab) => tab.projectId !== projectId));
+  if (switching) {
+    const retained = tabs.filter((tab) => tab.projectId === projectId);
+    const retainedIds = new Set(retained.map((tab) => tab.id));
+    setOwner(projectId);
+    setTabs(retained);
+    setActiveIds(
+      Object.fromEntries(
+        Object.entries(activeIds).filter(([, id]) => retainedIds.has(id)),
+      ),
+    );
+    if (!retainedIds.has(lastActiveId))
+      rememberActive(retained.at(-1)?.id ?? "");
+    if (owner !== projectId) setInitializedScopes([]);
+  }
+  const scopedTabs = projectId
+    ? tabs.filter(
+        (tab) => tab.projectId === projectId && tab.worktreePath === path,
+      )
+    : tabs;
+  const scopeKey = terminalScopeKey(projectId, path);
+  if (
+    ready &&
+    !switching &&
+    initialize &&
+    projectId &&
+    path &&
+    !initializedScopes.includes(scopeKey) &&
+    (scopedTabs.length > 0 ||
+      tabs.reduce((sum, tab) => sum + tab.panes.length, 0) <
+        TERMINAL_PANE_LIMIT)
+  ) {
+    setInitializedScopes([...initializedScopes, scopeKey]);
+    if (!scopedTabs.length) {
+      const tab = createTerminalTab(projectId, undefined, path);
+      setTabs([...tabs, tab]);
+      setActiveIds({ ...activeIds, [scopeKey]: tab.id });
+    }
+  }
   const bootstrap = useRef<Promise<TerminalLayout> | null>(null);
   useEffect(() => {
     if (!projectsReady || ready) return;
@@ -114,6 +168,7 @@ export function useTerminalLayout(projects: Project[], projectsReady: boolean) {
 
   return {
     tabs,
+    scopedTabs,
     setTabs,
     activeIds,
     setActiveIds,
