@@ -4,6 +4,7 @@ import {
   isValidElement,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type OptionHTMLAttributes,
@@ -41,7 +42,12 @@ function optionsFrom(children: ReactNode): Option[] {
   });
 }
 
-function positionFor(element: HTMLElement | null, count: number) {
+function positionFor(
+  element: HTMLElement | null,
+  count: number,
+  fitContent = false,
+  menu?: HTMLElement | null,
+) {
   if (!element) return null;
   const rect = element.getBoundingClientRect();
   const scale = getAppScale();
@@ -49,13 +55,22 @@ function positionFor(element: HTMLElement | null, count: number) {
   const heightLimit = window.innerHeight / scale;
   const below = heightLimit - rect.bottom / scale - 8;
   const above = rect.top / scale - 8;
-  const desired = Math.min(256, count * 36 + 8);
+  const desired = fitContent
+    ? Math.max(count * 36 + 10, (menu?.scrollHeight ?? 0) + 2)
+    : Math.min(256, count * 36 + 8);
   const upwards = below < desired && above > below;
   const height = Math.max(
     36,
     Math.min(desired, upwards ? above - 4 : below - 4),
   );
-  const width = Math.min(Math.max(rect.width / scale, 180), widthLimit - 16);
+  const width = Math.min(
+    Math.max(
+      rect.width / scale,
+      180,
+      fitContent && menu ? menu.getBoundingClientRect().width / scale : 0,
+    ),
+    widthLimit - 16,
+  );
   return {
     left: Math.max(8, Math.min(rect.left / scale, widthLimit - width - 8)),
     top: Math.max(
@@ -76,6 +91,7 @@ export function ThemedSelect({
   leadingIcon,
   optionIcon,
   renderValue,
+  fitContent = false,
   ...props
 }: Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
@@ -85,6 +101,8 @@ export function ThemedSelect({
   leadingIcon?: ReactNode;
   optionIcon?: (value: string) => ReactNode;
   renderValue?: (value: string, label: string) => ReactNode;
+  /** Let the menu fit complete labels and all rows when the viewport allows. */
+  fitContent?: boolean;
 }) {
   const options = optionsFrom(children);
   const [position, setPosition] = useState<{
@@ -103,7 +121,9 @@ export function ThemedSelect({
   const open = position !== null;
   const selected = options.find((option) => option.value === value);
   const locate = () =>
-    setPosition(positionFor(trigger.current, options.length));
+    setPosition(
+      positionFor(trigger.current, options.length, fitContent, list.current),
+    );
   const show = () => {
     if (props.disabled || !options.length) return;
     setPortalRoot(trigger.current?.closest("dialog") ?? document.body);
@@ -126,7 +146,7 @@ export function ThemedSelect({
     setPosition(null);
     trigger.current?.focus({ preventScroll: true });
   };
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const dismiss = (event: MouseEvent) => {
       if (
@@ -138,7 +158,9 @@ export function ThemedSelect({
     };
     const blur = () => setPosition(null);
     const reposition = () =>
-      setPosition(positionFor(trigger.current, options.length));
+      setPosition(
+        positionFor(trigger.current, options.length, fitContent, list.current),
+      );
     reposition();
     document.addEventListener("mousedown", dismiss);
     window.addEventListener("blur", blur);
@@ -150,7 +172,7 @@ export function ThemedSelect({
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };
-  }, [open, options.length]);
+  }, [open, options.length, fitContent]);
   useEffect(() => {
     if (open)
       list.current
@@ -279,7 +301,9 @@ export function ThemedSelect({
               position: "fixed",
               left: position.left,
               top: position.top,
-              width: position.width,
+              width: fitContent ? "max-content" : position.width,
+              minWidth: fitContent ? position.width : undefined,
+              maxWidth: "calc(100vw / var(--app-scale) - 16px)",
               maxHeight: position.height,
             }}
             className="z-[100] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-xl"
@@ -314,7 +338,14 @@ export function ThemedSelect({
                   )}
                 </span>
                 {optionIcon?.(option.value)}
-                <span className="min-w-0 break-words">{option.label}</span>
+                <span
+                  className={cn(
+                    "min-w-0 break-words",
+                    fitContent && "[overflow-wrap:anywhere]",
+                  )}
+                >
+                  {option.label}
+                </span>
               </button>
             ))}
           </div>,

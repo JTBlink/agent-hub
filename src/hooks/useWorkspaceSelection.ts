@@ -2,23 +2,19 @@ import { useContext } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router-dom";
 import type { Project } from "../lib/tauri";
 import { touchProjectVisited } from "../lib/tauri";
-import { worktreeUrl } from "../lib/worktreeApi";
+import { worktreeDirectoryName, worktreeUrl } from "../lib/worktreeApi";
 import { useActiveWorkspace } from "./useActiveWorkspace";
 import { useProjectWorktrees } from "./useProjectWorktrees";
 import { WorkspaceFilesContext } from "./useWorkspaceFiles";
 
 function checkoutLabel(project: Project, path: string) {
-  const directory =
-    path
-      .replace(/[\\/]+$/, "")
-      .split(/[\\/]/)
-      .at(-1) || path;
+  const directory = worktreeDirectoryName(path);
   return directory === project.name
     ? project.name
     : `${project.name} · ${directory}`;
 }
 
-/** The title bar selects a checkout; branch operations keep that directory selected. */
+/** Project and directory selection share routing; branch changes keep the directory. */
 export function useWorkspaceSelection(projects: readonly Project[]) {
   const route = useMatch("/project/:id/*");
   const { search } = useLocation();
@@ -105,6 +101,9 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
     value,
     options,
     select,
+    worktreeOptions: options.filter(
+      (option) => option.projectId === project?.id,
+    ),
     selectedLabel,
     branchLabel,
   };

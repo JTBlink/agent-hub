@@ -2016,6 +2016,9 @@
     }
   },
   "worktree": {
+    "selectWorktree": "切換工作樹",
+    "projectActions": "專案操作",
+    "detached": "分離 HEAD",
     "selectCheckout": "切換專案／工作樹",
     "saveBeforeCloseTitle": "儲存變更？",
     "saveBeforeCloseMessage": "關閉前是否儲存以下檔案的變更？不儲存將遺失這些變更。",

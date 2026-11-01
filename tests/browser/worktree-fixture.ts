@@ -74,6 +74,16 @@ export function worktreeFixture(command: string, raw: unknown) {
             locked: true,
             available: true,
           },
+          ...(new URLSearchParams(location.search).has("longWorktrees")
+            ? Array.from({ length: 7 }, (_, index) => ({
+                path: `${root}-worktrees/${index === 0 ? "feature-workspace-navigation-and-branch-controls" : `checkout-${index}`}`,
+                branch: `feature/checkout-${index}`,
+                head: "abcdef1234",
+                is_main: false,
+                locked: false,
+                available: true,
+              }))
+            : []),
         ],
       };
     case "get_worktree_files": {

@@ -32,7 +32,7 @@ export function WorktreeBranchSwitcher({
         label={t("git.actions.switchBranch")}
         disabled={disabled || busy}
         className="w-full min-w-0"
-        triggerClassName="app-button-ghost h-7 w-full min-w-0 gap-1 px-1 text-xs text-muted hover:text-secondary"
+        triggerClassName="app-button-ghost h-7 w-full min-w-0 gap-1.5 rounded border border-border-subtle bg-surface px-2 text-xs text-secondary hover:text-primary"
         triggerIcon={
           <>
             {busy ? (

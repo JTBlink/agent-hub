@@ -2065,6 +2065,9 @@
     }
   },
   "worktree": {
+    "selectWorktree": "Switch worktree",
+    "projectActions": "Project actions",
+    "detached": "Detached HEAD",
     "selectCheckout": "Switch project / worktree",
     "saveBeforeCloseTitle": "Save changes?",
     "saveBeforeCloseMessage": "Save changes to these files before closing? Unsaved changes will be lost.",

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 import { ThemedSelect } from "./ThemedSelect";
 import { useWorkspaceSelection } from "../hooks/useWorkspaceSelection";
+import { worktreeDirectoryName } from "../lib/worktreeApi";
 import { compactHomePath } from "../utils";
 import { useDragWindow } from "../hooks/useDragWindow";
 
@@ -55,13 +56,15 @@ export function WindowTitleBar({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <ThemedSelect
-          aria-label={t("worktree.selectCheckout")}
+          fitContent
+          aria-label={t("worktree.selectWorktree")}
           title={
-            selectedProject
-              ? `${selection.selectedLabel}\n${compactHomePath(selection.path ?? selectedProject.path)}`
-              : t("sidebar.switchProject")
+            selectedProject && selection.path
+              ? `${selectedProject.name}\n${compactHomePath(selection.path)}`
+              : t("sidebar.openProjectHint")
           }
           value={selection.value}
+          disabled={!selectedProject || selection.loading}
           onChange={(event) => selection.select(event.target.value)}
           leadingIcon={
             <img
@@ -71,21 +74,30 @@ export function WindowTitleBar({
             />
           }
           className="h-6 min-w-0 gap-1.5 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:bg-surface-hover hover:text-secondary"
+          renderValue={(value) => {
+            const option = selection.worktreeOptions.find(
+              (item) => item.value === value,
+            );
+            return option ? worktreeDirectoryName(option.worktreePath) : "";
+          }}
         >
-          {!selectedProject && (
-            <option value="" disabled>
-              {t("sidebar.switchProject")}
-            </option>
-          )}
-          {selection.options.map((option) => (
-            <option
-              key={option.value}
-              value={option.value}
-              disabled={option.disabled}
-            >
-              {option.label}
-            </option>
-          ))}
+          {!selectedProject && <option value="">{t("app.name")}</option>}
+          {selection.worktreeOptions.map((option) => {
+            const tree = selection.worktrees.find(
+              (item) => item.path === option.worktreePath,
+            );
+            return (
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled}
+              >
+                {worktreeDirectoryName(option.worktreePath)}
+                {tree?.is_main ? ` · ${t("worktree.main")}` : ""}
+                {tree?.locked ? ` · ${t("worktree.locked")}` : ""}
+              </option>
+            );
+          })}
         </ThemedSelect>
         {selectedProject && vscodePath && (
           <OpenProjectInVscode key={vscodePath} path={vscodePath} />

@@ -37,12 +37,17 @@ export const readWorktreeFile = (
     relativePath,
   });
 
-export function worktreeLabel(worktree: ProjectWorktree) {
-  const directory =
-    worktree.path
+export function worktreeDirectoryName(path: string) {
+  return (
+    path
       .replace(/[\\/]+$/, "")
       .split(/[\\/]/)
-      .at(-1) || worktree.path;
+      .at(-1) || path
+  );
+}
+
+export function worktreeLabel(worktree: ProjectWorktree) {
+  const directory = worktreeDirectoryName(worktree.path);
   const branch =
     worktree.branch ??
     worktree.head?.slice(0, 8) ??

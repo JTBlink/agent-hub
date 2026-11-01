@@ -206,28 +206,32 @@ it("drags from the title bar background while its controls remain clickable", as
   expect(container.querySelector("output")?.textContent).toBe("/help");
 });
 
-it("switches projects from the title bar without dragging the window", async () => {
-  await render();
+it("only lists worktrees of the current project in the title bar", async () => {
+  await render("/project/demo");
   const selector = container.querySelector<HTMLButtonElement>(
-    '[role="combobox"][aria-label="切换项目／工作树"]',
+    'header [role="combobox"][aria-label="切换工作树"]',
   )!;
   await act(async () =>
     selector.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })),
   );
   expect(drag).not.toHaveBeenCalled();
   await act(async () => selector.click());
-  const option = [
+  const options = [
     ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
-  ].find((item) => item.textContent === "Other workspace")!;
-  await act(async () => option.click());
-  expect(container.querySelector("output")?.textContent).toBe("/project/other");
-  expect(selector.textContent).toContain("Other workspace");
+  ];
+  expect(options.map((item) => item.textContent)).toEqual([
+    "demo · 主工作树",
+    "demo-topic",
+  ]);
+  await act(async () => options[1].click());
+  expect(selector.textContent).toContain("demo-topic");
+  expect(container.querySelector("output")?.textContent).toBe("/project/demo");
 });
 
-it("places the VS Code icon beside the project selector and opens the route worktree", async () => {
+it("places the VS Code icon beside the worktree selector and opens the route worktree", async () => {
   await render("/project/demo?worktree=%2Fworkspace%2Ftopic");
   const selector = container.querySelector(
-    '[role="combobox"][aria-label="切换项目／工作树"]',
+    'header [role="combobox"][aria-label="切换工作树"]',
   )!;
   const button = container.querySelector<HTMLButtonElement>(
     'header button[aria-label="在 VS Code 中打开"]',
@@ -244,13 +248,14 @@ it("places the VS Code icon beside the project selector and opens the route work
   expect(openDirectoryInVscode).toHaveBeenLastCalledWith("/workspace/topic");
 });
 
-it("selects worktrees above and changes branches below without navigating to another checkout", async () => {
+it("separates project, directory and branch selection and preserves the checkout on branch failure", async () => {
+  const remove = vi.fn();
   function SharedShell() {
     const location = useLocation();
     return (
       <>
         <WindowTitleBar onOpenCommands={() => {}} />
-        <ProjectSwitcher onRemove={() => {}} />
+        <ProjectSwitcher onRemove={remove} />
         <output>
           {location.pathname}
           {location.search}
@@ -270,16 +275,57 @@ it("selects worktrees above and changes branches below without navigating to ano
     ),
   );
   const checkout = () =>
-    container.querySelector<HTMLSelectElement>("header select")!;
+    container.querySelector<HTMLSelectElement>(
+      'select[aria-label="切换工作树"]',
+    )!;
   const branch = () =>
     container.querySelector<HTMLButtonElement>(
       'button[aria-label="切换分支"]',
     )!;
-  expect(checkout().selectedOptions[0].text).toBe(
-    "Demo workspace · demo-topic",
+  expect(checkout().selectedOptions[0].text).toBe("demo-topic");
+  expect(branch().textContent).toContain("feature/shared");
+  expect(container.querySelectorAll("header [role=combobox]")).toHaveLength(1);
+  expect(
+    container.querySelector("header [role=combobox]")?.textContent,
+  ).toContain("demo-topic");
+  expect(
+    [...container.querySelectorAll("header option")].some((option) =>
+      option.textContent?.includes("Other workspace"),
+    ),
+  ).toBe(false);
+  expect(checkout().options[0].text).toContain("主工作树");
+  expect(
+    container.querySelector('button[aria-label="移除项目 Demo workspace"]'),
+  ).toBeNull();
+  const directoryTrigger = container.querySelector<HTMLButtonElement>(
+    'button[role="combobox"][aria-label="切换工作树"]',
+  )!;
+  const key = async (value: string) =>
+    act(async () => {
+      directoryTrigger.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: value,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+  await key("Home");
+  await key("Enter");
+  expect(checkout().value).toBe(JSON.stringify(["demo", "<workspace>/demo"]));
+  expect(branch().textContent).toContain("main");
+  await key("End");
+  await key("Escape");
+  expect(checkout().value).toBe(JSON.stringify(["demo", "<workspace>/demo"]));
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(document.activeElement).toBe(directoryTrigger);
+  await key("End");
+  await key("Enter");
+  expect(checkout().value).toBe(
+    JSON.stringify(["demo", "<workspace>/demo-topic"]),
   );
   expect(branch().textContent).toContain("feature/shared");
-  expect(container.querySelectorAll("select")).toHaveLength(1);
+  expect(runProjectGitAction).not.toHaveBeenCalled();
   const route = container.querySelector("output")!.textContent;
   vi.mocked(getProjectGitReferences).mockResolvedValue({
     entries: [
@@ -296,7 +342,6 @@ it("selects worktrees above and changes branches below without navigating to ano
     [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
       (button) => button.textContent === "main",
     )!;
-  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
   await act(async () => chooseBranch().click());
   expect(runProjectGitAction).toHaveBeenLastCalledWith(
     "demo",
@@ -325,9 +370,7 @@ it("selects worktrees above and changes branches below without navigating to ano
   await act(async () => chooseBranch().click());
   expect(document.querySelector('[role="alertdialog"]')).toBeNull();
   expect(branch().textContent).toContain("main");
-  expect(checkout().selectedOptions[0].text).toBe(
-    "Demo workspace · demo-topic",
-  );
+  expect(checkout().selectedOptions[0].text).toBe("demo-topic");
   expect(container.querySelector("output")!.textContent).toBe(route);
   await act(async () =>
     container
@@ -339,4 +382,44 @@ it("selects worktrees above and changes branches below without navigating to ano
   expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
     "<workspace>/demo-topic",
   );
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('button[aria-label="项目操作"]')!
+      .click(),
+  );
+  const removeAction = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((button) => button.textContent === "移除项目 Demo workspace")!;
+  expect(remove).not.toHaveBeenCalled();
+  await act(async () => removeAction.click());
+  expect(remove).toHaveBeenCalledWith(expect.objectContaining({ id: "demo" }));
+});
+
+it("preserves an unavailable worktree instead of silently selecting the main directory", async () => {
+  await act(async () =>
+    root.render(
+      <MemoryRouter
+        initialEntries={["/project/demo?worktree=%3Cworkspace%3E%2Fmissing"]}
+      >
+        <WorkspaceFilesProvider>
+          <WindowTitleBar onOpenCommands={() => {}} />
+          <ProjectSwitcher onRemove={() => {}} />
+        </WorkspaceFilesProvider>
+      </MemoryRouter>,
+    ),
+  );
+  const directory = container.querySelector<HTMLSelectElement>(
+    'select[aria-label="切换工作树"]',
+  )!;
+  expect(directory.selectedOptions[0].text).toBe("missing");
+  expect(directory.selectedOptions[0].disabled).toBe(true);
+  expect(
+    container.querySelector<HTMLButtonElement>('button[aria-label="切换分支"]')!
+      .disabled,
+  ).toBe(true);
+  expect(
+    container.querySelector<HTMLButtonElement>(
+      'button[aria-label="刷新工作树"]',
+    )!.disabled,
+  ).toBe(false);
 });

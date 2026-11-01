@@ -722,9 +722,8 @@ it("returns to the last project and checkout when opening the project panel from
   const tab = createTerminalTab(last.id, undefined, "~/projects/topic");
   writeTerminalLayout({ tabs: [tab], lastActiveId: tab.id, activeIds: {} });
   await render("/git");
-  expect(
-    container.querySelector('[aria-label="移除项目 Last"]'),
-  ).not.toBeNull();
+  expect(container.querySelector('[aria-label="项目操作"]')).not.toBeNull();
+  expect(container.querySelector('[aria-label="移除项目 Last"]')).toBeNull();
   await click(
     container.querySelector<HTMLButtonElement>(
       '[data-sidebar-panel="projects"]',
@@ -733,6 +732,13 @@ it("returns to the last project and checkout when opening the project panel from
   expect(container.querySelector("output")?.textContent).toBe(
     `/project/${last.id}`,
   );
+  await click(
+    container.querySelector<HTMLButtonElement>('[aria-label="项目操作"]')!,
+  );
+  expect(document.querySelector('[role="menu"]')?.textContent).toContain(
+    "移除项目 Last",
+  );
+
   expect(
     container
       .querySelector("[data-resource-visible]")
