@@ -99,7 +99,7 @@ export function SidebarAgentWorkspaces({
                 to={group.basePath}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "mb-0.5 flex items-center gap-2 px-2.5 py-[7px] rounded-md text-sm transition-colors outline-none",
+                  "flex items-center gap-1.5 px-2 py-1 rounded-sm text-sm leading-4 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
                   isActive
                     ? "bg-surface-active font-medium text-primary"
                     : "text-tertiary hover:text-secondary hover:bg-surface-hover",
@@ -107,7 +107,7 @@ export function SidebarAgentWorkspaces({
               >
                 <span
                   className={cn(
-                    "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border",
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
                     isActive
                       ? "border-accent/30 bg-accent/10 text-accent"
                       : "border-border bg-surface text-muted",
@@ -120,15 +120,13 @@ export function SidebarAgentWorkspaces({
             );
           })()}
           {group.tools.length === 0 ? (
-            <p className="px-5 py-1.5 text-[12px] text-faint">
-              {group.emptyLabel}
-            </p>
+            <p className="px-5 py-1.5 text-xs text-faint">{group.emptyLabel}</p>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId={group.droppableId}>
                 {(droppableProvided) => (
                   <div
-                    className="space-y-0.5"
+                    className="px-1"
                     ref={droppableProvided.innerRef}
                     {...droppableProvided.droppableProps}
                   >
@@ -147,19 +145,20 @@ export function SidebarAgentWorkspaces({
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               className={cn(
-                                "group relative flex items-center rounded-md transition-colors",
+                                "group relative flex items-center rounded-sm transition-colors",
                                 isActive
                                   ? "bg-surface-active"
                                   : "hover:bg-surface-hover",
                               )}
                             >
                               <button
+                                title={tool.display_name}
                                 aria-current={isActive ? "page" : undefined}
                                 onClick={() =>
                                   navigate(agentWorkspacePath(tool))
                                 }
                                 className={cn(
-                                  "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                                  "flex min-w-0 flex-1 items-center gap-1.5 px-1 py-1 text-left text-sm leading-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
                                   isActive
                                     ? "font-medium text-primary"
                                     : "text-tertiary group-hover:text-secondary",
@@ -169,7 +168,7 @@ export function SidebarAgentWorkspaces({
                                   agentKey={tool.key}
                                   displayName={tool.display_name}
                                   className={cn(
-                                    "h-[20px] w-[20px] rounded border transition-colors",
+                                    "h-4 w-4 rounded border transition-colors",
                                     isActive
                                       ? "border-accent/30 bg-accent/10"
                                       : "group-hover:border-border",
@@ -182,7 +181,7 @@ export function SidebarAgentWorkspaces({
                                   {skillCount > 0 && (
                                     <span
                                       className={cn(
-                                        "min-w-[18px] rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
+                                        "min-w-[18px] rounded-full px-1.5 text-center text-xs font-medium leading-[18px] tabular-nums",
                                         isActive
                                           ? "bg-accent-bg text-accent-light"
                                           : "bg-surface-hover text-muted",

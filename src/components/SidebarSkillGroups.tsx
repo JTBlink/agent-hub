@@ -23,9 +23,9 @@ import { ConfirmDialog } from "./ConfirmDialog";
 
 const COMMON_GROUP_LIMIT = 5;
 const navClass =
-  "flex w-full items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+  "flex w-full items-center gap-1.5 rounded-sm px-2 py-1 text-left text-sm leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
 const badgeClass =
-  "min-w-[18px] shrink-0 rounded-full bg-surface-hover px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums text-muted";
+  "min-w-[18px] shrink-0 rounded-full bg-surface-hover px-1.5 text-center text-xs font-medium leading-[18px] tabular-nums text-muted";
 
 export function SidebarSkillGroups({
   isOpen,
@@ -186,7 +186,7 @@ export function SidebarSkillGroups({
                 : "text-tertiary hover:text-secondary hover:bg-surface-hover",
             )}
           >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
               <Layers className="h-3 w-3" />
             </span>
             <span className="flex-1 truncate">{t("sidebar.allSkills")}</span>
@@ -198,7 +198,7 @@ export function SidebarSkillGroups({
                   id={listId}
                   ref={drop.innerRef}
                   {...drop.droppableProps}
-                  className="space-y-0.5"
+                  className="px-1"
                 >
                   {visible.map((group, index) => (
                     <Draggable
@@ -237,9 +237,9 @@ export function SidebarSkillGroups({
               )}
             >
               {showAll ? (
-                <ChevronUp className="h-5 w-5 shrink-0" />
+                <ChevronUp className="h-4 w-4 shrink-0" />
               ) : (
-                <Ellipsis className="h-5 w-5 shrink-0" />
+                <Ellipsis className="h-4 w-4 shrink-0" />
               )}
               <span className="flex-1 truncate">
                 {t(showAll ? "sidebar.lessGroups" : "sidebar.moreGroups")}
@@ -262,7 +262,7 @@ export function SidebarSkillGroups({
                   : "text-tertiary hover:text-secondary hover:bg-surface-hover",
               )}
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border bg-surface text-muted">
                 <Layers className="h-3 w-3" />
               </span>
               <span className="flex-1 truncate">

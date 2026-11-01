@@ -50,13 +50,13 @@ export function ProjectTreeRow({
   };
   return (
     <div>
-      <div className="group/project flex items-center rounded-md hover:bg-surface-hover">
+      <div className="group/project relative flex items-center rounded-sm hover:bg-surface-hover">
         <button
           type="button"
           aria-label={t("worktree.toggleProject", { name: project.name })}
           aria-expanded={expanded}
           onClick={() => setExpanded(!expanded)}
-          className="app-button-ghost h-7 w-5 shrink-0 p-0"
+          className="app-button-ghost h-6 w-4 shrink-0 rounded-sm p-0"
         >
           <ChevronRight
             size={12}
@@ -65,10 +65,10 @@ export function ProjectTreeRow({
         </button>
         <button
           type="button"
-          title={compactHomePath(project.path)}
+          title={`${project.name}\n${compactHomePath(project.path)}`}
           onClick={() => open()}
           className={cn(
-            "flex min-w-0 flex-1 items-center gap-2 py-[7px] text-left text-sm",
+            "flex min-w-0 flex-1 items-center gap-1.5 py-1 pr-1 text-left text-sm leading-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
             active ? "font-medium text-primary" : "text-tertiary",
           )}
         >
@@ -79,7 +79,7 @@ export function ProjectTreeRow({
           )}
           <span className="truncate">{project.name}</span>
         </button>
-        <div className="flex shrink-0 opacity-0 focus-within:opacity-100 group-hover/project:opacity-100">
+        <div className="pointer-events-none absolute right-0 flex shrink-0 rounded-sm bg-bg-secondary opacity-0 focus-within:pointer-events-auto focus-within:opacity-100 group-hover/project:pointer-events-auto group-hover/project:bg-surface-hover group-hover/project:opacity-100">
           <div
             {...dragHandleProps}
             className="cursor-grab rounded p-1 text-muted"
@@ -97,7 +97,7 @@ export function ProjectTreeRow({
         </div>
       </div>
       {expanded && (
-        <div className="mb-1 ml-3 border-l border-border-subtle pl-2">
+        <div className="ml-2 border-l border-border-subtle pl-1">
           {loading && !worktrees.length && (
             <p role="status" className="px-2 py-2 text-xs text-muted">
               {t("common.loading")}
@@ -118,7 +118,7 @@ export function ProjectTreeRow({
           )}
           <ul
             aria-label={t("worktree.list", { name: project.name })}
-            className="space-y-0.5"
+            className="py-0.5"
           >
             {worktrees.map((worktree) => {
               const current =
@@ -132,10 +132,10 @@ export function ProjectTreeRow({
                     type="button"
                     disabled={!worktree.available}
                     aria-current={current ? "page" : undefined}
-                    title={compactHomePath(worktree.path)}
+                    title={`${worktreeLabel(worktree)}\n${compactHomePath(worktree.path)}${worktree.is_main ? `\n${t("worktree.main")}` : ""}`}
                     onClick={() => open(worktree.path)}
                     className={cn(
-                      "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-2 text-left text-[12px] focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40",
+                      "flex w-full min-w-0 items-center gap-1.5 rounded-sm px-1.5 py-1 text-left text-sm leading-4 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
                       current
                         ? "bg-surface-active text-primary"
                         : "text-tertiary hover:bg-surface-hover hover:text-secondary",
@@ -156,9 +156,7 @@ export function ProjectTreeRow({
                       />
                     )}
                     {worktree.is_main && (
-                      <span className="shrink-0 rounded border border-border px-1 text-[10px] text-muted">
-                        {t("worktree.main")}
-                      </span>
+                      <span className="sr-only">{t("worktree.main")}</span>
                     )}
                   </button>
                 </li>

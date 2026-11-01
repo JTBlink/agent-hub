@@ -60,17 +60,6 @@ pub async fn set_settings(
         if key_for_store == crate::core::git_auth_source::SETTING_USE_GH {
             crate::core::git_auth_source::set_preference(Some(&value_for_store));
         }
-        if key_for_store == "show_tray_icon" {
-            let tray_enabled = matches!(
-                value_for_store.trim().to_ascii_lowercase().as_str(),
-                "true" | "1" | "yes" | "on"
-            );
-            if !tray_enabled {
-                store
-                    .set_setting("close_action", "close")
-                    .map_err(AppError::db)?;
-            }
-        }
         Ok::<(), AppError>(())
     })
     .await??;
@@ -727,8 +716,9 @@ pub async fn hide_to_tray(
     };
 
     if !show_tray_icon {
-        crate::quit_app(&app);
-        return Ok(());
+        return Err(AppError::io(
+            "Enable the tray icon before hiding the window",
+        ));
     }
 
     window.hide().map_err(|e| AppError::io(e.to_string()))?;

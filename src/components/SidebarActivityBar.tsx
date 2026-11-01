@@ -1,0 +1,152 @@
+import { Link, useLocation } from "react-router-dom";
+import "@vscode/codicons/dist/codicon.css";
+import { useTranslation } from "react-i18next";
+import { cn } from "../utils";
+import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
+
+type ActivityIcon =
+  | "files"
+  | "layout"
+  | "checklist"
+  | "github-action"
+  | "source-control"
+  | "layers"
+  | "extensions"
+  | "cloud"
+  | "settings-gear";
+
+function ActivityBarIcon({ name }: { name: ActivityIcon }) {
+  return (
+    <span
+      className={`codicon codicon-${name} activity-bar-icon`}
+      aria-hidden="true"
+    />
+  );
+}
+
+export function SidebarActivityBar({
+  panelOpen,
+  panelId,
+  selectedPanel,
+  manualSelection,
+  onSelectPanel,
+  updateVersion,
+}: {
+  panelOpen: boolean;
+  panelId: string;
+  selectedPanel: SidebarPanel;
+  manualSelection: boolean;
+  onSelectPanel: (panel: SidebarPanel) => void;
+  updateVersion?: string;
+}) {
+  const { t } = useTranslation();
+  const { pathname } = useLocation();
+  const routePanel = activeSidebarPanel(pathname);
+  const panelActive = routePanel !== null || (panelOpen && manualSelection);
+  const itemClass =
+    "activity-bar-item relative isolate flex w-full shrink-0 items-center justify-center outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
+  const activeClass = "activity-bar-item-active text-primary";
+  const idleClass = "text-muted hover:text-primary";
+  const renderLink = (item: {
+    name: string;
+    path: string;
+    icon: ActivityIcon;
+    update?: boolean;
+  }) => {
+    const active =
+      !panelActive &&
+      (pathname === item.path ||
+        (item.path === "/discover" && pathname === "/install"));
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        title={item.name}
+        aria-label={item.name}
+        aria-current={active ? "page" : undefined}
+        className={cn(itemClass, active ? activeClass : idleClass)}
+      >
+        <ActivityBarIcon name={item.icon} />
+        <span className="sr-only">{item.name}</span>
+        {item.update && updateVersion && (
+          <span
+            className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400"
+            role="status"
+            aria-label={t("settings.updateAvailable", {
+              version: updateVersion,
+            })}
+          />
+        )}
+      </Link>
+    );
+  };
+
+  const renderPanel = (
+    panel: SidebarPanel,
+    label: string,
+    icon: ActivityIcon,
+  ) => {
+    const active = panelActive && selectedPanel === panel;
+    return (
+      <button
+        type="button"
+        data-sidebar-panel={panel}
+        title={label}
+        aria-label={label}
+        aria-current={active ? "page" : undefined}
+        aria-expanded={panelOpen && selectedPanel === panel}
+        aria-controls={panelId}
+        onClick={() => onSelectPanel(panel)}
+        className={cn(itemClass, active ? activeClass : idleClass)}
+      >
+        <ActivityBarIcon name={icon} />
+      </button>
+    );
+  };
+
+  return (
+    <nav
+      aria-label={t("sidebar.navigation")}
+      className="workbench-activity-bar flex shrink-0 flex-col bg-bg-secondary"
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
+        {renderPanel("projects", t("sidebar.projects"), "files")}
+        {renderLink({ name: "Git", path: "/git", icon: "source-control" })}
+        {renderLink({
+          name: t("tasks.title"),
+          path: "/tasks",
+          icon: "checklist",
+        })}
+        {renderLink({
+          name: t("automation.title"),
+          path: "/automation",
+          icon: "github-action",
+        })}
+        {renderPanel("skills", t("sidebar.skillPanel"), "layers")}
+        {renderLink({
+          name: t("discovery.title"),
+          path: "/discover",
+          icon: "extensions",
+        })}
+      </div>
+      <div className="shrink-0">
+        {renderLink({
+          name: t("sidebar.dashboard"),
+          path: "/",
+          icon: "layout",
+        })}
+        {renderLink({
+          name: t("sidebar.backup"),
+          path: "/backup",
+          icon: "cloud",
+        })}
+        {renderLink({
+          name: t("sidebar.settings"),
+          path: "/settings",
+          icon: "settings-gear",
+          update: true,
+        })}
+      </div>
+    </nav>
+  );
+}

@@ -137,6 +137,7 @@ export function ThemedSelect({
     const blur = () => setPosition(null);
     const reposition = () =>
       setPosition(positionFor(trigger.current, options.length));
+    reposition();
     document.addEventListener("mousedown", dismiss);
     window.addEventListener("blur", blur);
     window.addEventListener("resize", reposition);
@@ -296,7 +297,7 @@ export function ThemedSelect({
                 }}
                 onClick={() => choose(option)}
                 className={cn(
-                  "flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[13px] leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+                  "flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
                   active === index && "bg-surface-hover",
                   option.value === value
                     ? "font-medium text-accent-light"

@@ -1,4 +1,18 @@
 {
+  "menu": {
+    "file": "檔案",
+    "edit": "編輯",
+    "view": "檢視",
+    "window": "視窗",
+    "help": "說明",
+    "openProject": "開啟專案…",
+    "recentProjects": "最近專案",
+    "manageWorkspaces": "管理工作區…",
+    "closeWindow": "關閉視窗",
+    "quit": "結束 AgentHub",
+    "about": "關於 AgentHub",
+    "failed": "無法載入應用程式選單，請重新啟動應用程式。"
+  },
   "automation": {
     "adminAuthorizationHelp": "此為系統層級排程任務。編輯、暫停或恢復、執行及刪除時，會請求 macOS 管理員授權。",
     "externalDeleteHelp": "刪除僅移除任務的排程設定，原腳本與日誌會保留。",
@@ -245,6 +259,14 @@
     "confirmAction": "覆蓋"
   },
   "sidebar": {
+    "navigation": "主導覽",
+    "resize": "調整{{name}}寬度",
+    "resizeHint": "左右拖曳調整寬度，按兩下恢復預設",
+    "switchProject": "切換專案",
+    "openProjectHint": "透過「檔案 → 開啟專案…」關聯專案。",
+    "skillPanel": "技能面板",
+    "hideProjectPanel": "收起專案工作區",
+    "hideSkillPanel": "收起技能面板",
     "dashboard": "工作台",
     "mySkills": "技能庫",
     "allSkills": "全部技能",
@@ -298,8 +320,11 @@
     "reportIssue": "回報問題",
     "translationFallback": "本文目前提供簡體中文，翻譯尚未完成。"
   },
+  "titleBar": {
+    "searchCommands": "搜尋與命令"
+  },
   "commandPalette": {
-    "placeholder": "跳轉到技能、技能組、專案或操作…",
+    "placeholder": "跳轉到專案、技能組、技能或操作…",
     "empty": "沒有符合項目，換個關鍵字試試。",
     "skills": "技能",
     "skillGroups": "技能組",
@@ -1091,6 +1116,8 @@
     }
   },
   "settings": {
+    "trayIconOffHint": "托盤圖示已隱藏，關閉視窗時將先詢問。",
+    "closeAction_close": "退出前確認",
     "loadFailed": "設定讀取失敗，請重試。",
     "subtitle": "管理 Agent、技能部署與應用程式偏好",
     "tabs": {
@@ -1318,6 +1345,16 @@
     "gitErrorSshAuth": "SSH 驗證失敗：請檢查 SSH 金鑰、ssh-agent 及該金鑰對儲存庫的存取權限。",
     "gitErrorCredentialRead": "無法讀取或儲存 Git 憑證。請檢查應用程式資料目錄權限並重新連接帳號。",
     "gitErrorCredentialMissing": "Git 未能取得登入憑證。GitHub 備份請點擊「重新連接 GitHub」；其他遠端請設定相應憑證。"
+  },
+  "closeAction": {
+    "title": "關閉行為",
+    "exitTitle": "退出 AgentHub？",
+    "exitMessage": "退出會結束應用程式內的終端工作階段及其中執行的程序。",
+    "enableTrayHint": "選擇背景執行會啟用托盤圖示，方便重新開啟視窗。",
+    "message": "背景執行會保留終端工作階段，你可以從系統托盤重新開啟視窗。退出應用程式會結束終端工作階段。",
+    "close": "退出應用程式",
+    "hide": "背景執行",
+    "remember": "記住關閉偏好（退出前仍會確認）"
   },
   "common": {
     "close": "關閉",
@@ -1987,6 +2024,7 @@
     "removeProject": "移除專案 {{name}}",
     "list": "{{name}} 的工作樹",
     "refresh": "重新整理工作樹",
+    "collapseFiles": "全部摺疊",
     "refreshFiles": "重新整理檔案樹",
     "projectSkills": "專案技能",
     "back": "返回工作區",
@@ -2000,14 +2038,14 @@
     "worktree": "工作目錄",
     "unborn": "尚無提交",
     "cachedRefs": "遠端比較基於本機快取引用",
-    "changes": "工作區變更",
+    "changes": "變更",
     "clean": "沒有工作區變更",
     "staged": "暫存",
     "unstaged": "未暫存",
     "commits": "最近提交",
     "truncated": "檔案過多，僅顯示前 1000 項",
     "file": "檢視檔案",
-    "chooseFile": "選擇檔案檢視暫存或工作區 diff",
+    "chooseFile": "選擇檔案查看變更",
     "noDiff": "無文字差異，可能是二進位檔案或檔案模式變更",
     "states": {
       "conflict": "衝突",
@@ -2017,6 +2055,26 @@
       "modified": "修改",
       "removed": "刪除"
     },
-    "operation": "儲存庫操作狀態"
+    "operation": "儲存庫操作狀態",
+    "sourceControl": "原始碼管理",
+    "stagedChanges": "已暫存的變更",
+    "reviewHint": "從左側選擇檔案，比較暫存區或工作區的差異。",
+    "stageFile": "暫存變更",
+    "unstageFile": "取消暫存",
+    "stageAll": "暫存全部變更",
+    "unstageAll": "取消全部暫存",
+    "commit": "提交",
+    "commitMessage": "提交訊息",
+    "commitPlaceholder": "訊息（⌘/Ctrl+Enter 提交至「{{branch}}」）",
+    "commitStagedHint": "僅提交已暫存的變更",
+    "diff": "差異",
+    "diffLayout": "差異配置",
+    "split": "並排",
+    "unified": "統一",
+    "headVersion": "HEAD · 提交版本",
+    "indexVersion": "暫存區",
+    "workingVersion": "工作區",
+    "diffTruncated": "差異較大，僅預覽前 3000 行；可切換統一檢視繼續閱讀。",
+    "localRefs": "本機參照"
   }
 }

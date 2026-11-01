@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   BookOpen,
   FileCode2,
   GitBranch,
-  PanelRight,
   RefreshCw,
   TerminalSquare,
   X,
@@ -15,16 +13,14 @@ import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { projectWorkspaceRoute, worktreeLabel } from "../../lib/worktreeApi";
 import { compactHomePath, cn } from "../../utils";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
-import { WorktreeExplorer } from "./WorktreeExplorer";
+import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
 import { WorktreeFilePreview } from "./WorktreeFilePreview";
 
 /** Remains mounted with Layout so switching worktrees/pages preserves PTYs. */
 export function ProjectWorkspace({
   onMaximizedChange,
-  maximized,
 }: {
   onMaximizedChange: (value: boolean) => void;
-  maximized: boolean;
 }) {
   const { t } = useTranslation();
   const { projects, loading: projectsLoading, appError } = useApp();
@@ -40,10 +36,7 @@ export function ProjectWorkspace({
     (!route?.worktreePath ? worktrees.find((item) => item.is_main) : undefined);
   const path = worktree?.path ?? requestedPath;
   const scope = JSON.stringify([project?.id, path]);
-  const [files, setFiles] = useState<
-    Record<string, { path: string; shown: boolean }>
-  >({});
-  const [explorer, setExplorer] = useState(true);
+  const { files, setFiles } = useWorkspaceFiles();
   const file = files[scope];
   const visible = !!route || location.pathname === "/terminal";
   return (
@@ -51,12 +44,11 @@ export function ProjectWorkspace({
       hidden={!visible}
       className={cn(
         visible ? "flex" : "hidden",
-        "min-h-0 min-w-0 flex-1 flex-col",
-        route && "pt-[28px]",
+        "workbench-editor-panel min-h-0 min-w-0 flex-1 flex-col overflow-hidden mr-1",
       )}
     >
       {route && (
-        <header className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle bg-bg-secondary px-3 py-1">
+        <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-secondary px-3">
           <span className="max-w-[30%] truncate text-xs text-muted">
             {project?.name}
           </span>
@@ -69,7 +61,7 @@ export function ProjectWorkspace({
             {worktree ? worktreeLabel(worktree) : t("worktree.title")}
           </span>
           {worktree?.is_main && (
-            <span className="rounded border border-border px-1 text-[10px] text-muted">
+            <span className="rounded border border-border px-1 text-xs text-muted">
               {t("worktree.main")}
             </span>
           )}
@@ -90,16 +82,6 @@ export function ProjectWorkspace({
             <BookOpen size={13} />
             {t("worktree.projectSkills")}
           </Link>
-          <button
-            type="button"
-            aria-label={t("fileReader.toggleExplorer")}
-            title={t("fileReader.toggleExplorer")}
-            aria-pressed={explorer}
-            onClick={() => setExplorer(!explorer)}
-            className="app-button-ghost h-7 w-7 shrink-0 p-0"
-          >
-            <PanelRight size={14} />
-          </button>
         </header>
       )}
       {route &&
@@ -193,25 +175,6 @@ export function ProjectWorkspace({
             </div>
           )}
         </div>
-        {route &&
-          project &&
-          worktree?.available &&
-          path &&
-          explorer &&
-          !maximized && (
-            <WorktreeExplorer
-              key={scope}
-              projectId={project.id}
-              worktreePath={path}
-              selected={file?.path}
-              onSelect={(selected) =>
-                setFiles((previous) => ({
-                  ...previous,
-                  [scope]: { path: selected, shown: true },
-                }))
-              }
-            />
-          )}
       </div>
     </section>
   );

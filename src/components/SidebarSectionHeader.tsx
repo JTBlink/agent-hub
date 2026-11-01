@@ -15,12 +15,13 @@ export function SidebarSectionHeader({
   count?: number;
 }) {
   return (
-    <div className="mb-1.5 px-2.5">
+    <div className="border-y border-border-subtle bg-surface/40 px-1.5 first:border-t-0">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="flex w-full min-w-0 items-center gap-1.5 rounded py-1 text-left text-muted transition-colors hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        title={label}
+        className="flex h-6 w-full min-w-0 items-center gap-1 text-left text-muted transition-colors hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         {isOpen ? (
           <ChevronDown className="h-3 w-3 shrink-0 text-faint" />
@@ -28,11 +29,11 @@ export function SidebarSectionHeader({
           <ChevronRight className="h-3 w-3 shrink-0 text-faint" />
         )}
         {icon}
-        <span className="truncate text-[12px] font-semibold tracking-[0.01em]">
+        <span className="truncate text-xs font-semibold tracking-[0.01em]">
           {label}
         </span>
         {count !== undefined && (
-          <span className="ml-auto text-[11px] font-medium tabular-nums text-faint">
+          <span className="ml-auto text-xs font-medium tabular-nums text-faint">
             {count}
           </span>
         )}

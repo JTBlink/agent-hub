@@ -4,6 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { makeProject } from "../../../tests/fixtures/workspace";
+import { SidebarProjectFiles } from "./SidebarProjectFiles";
+import { WorkspaceFilesProvider } from "./WorkspaceFilesContext";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { ProjectSkills } from "../../views/ProjectSkills";
 import { worktreeUrl } from "../../lib/worktreeApi";
@@ -83,7 +85,10 @@ async function render() {
         <Link data-topic to={worktreeUrl(project.id, topic)}>
           Topic
         </Link>
-        <ProjectWorkspace onMaximizedChange={() => {}} maximized={false} />
+        <WorkspaceFilesProvider>
+          <SidebarProjectFiles />
+          <ProjectWorkspace onMaximizedChange={() => {}} />
+        </WorkspaceFilesProvider>
         <Routes>
           <Route path="/project/:id" element={null} />
           <Route path="/project/:id/skills" element={<ProjectSkills />} />
@@ -142,4 +147,34 @@ it("loads only expanded directories and previews files within the selected check
   await click('aside button[title="src"]');
   await click('aside button[title="src/app.ts"]');
   expect(mocks.read).toHaveBeenLastCalledWith(project.id, topic, "src/app.ts");
+});
+
+it("collapses folders, refreshes the tree and retains file selection for each checkout", async () => {
+  await render();
+  await click('aside button[title="src"]');
+  await click('aside button[title="src/app.ts"]');
+  const terminal = host.querySelector("[data-terminal]");
+  await click('aside button[aria-label="worktree.collapseFiles"]');
+  expect(host.querySelector('aside button[title="src/app.ts"]')).toBeNull();
+  expect(host.querySelector('output[aria-label="src/app.ts"]')).not.toBeNull();
+  await click('aside button[title="src"]');
+  expect(
+    host
+      .querySelector('aside button[title="src/app.ts"]')
+      ?.getAttribute("aria-pressed"),
+  ).toBe("true");
+  await click("[data-topic]");
+  expect(host.querySelector('output[aria-label="src/app.ts"]')).toBeNull();
+  await click("[data-main]");
+  expect(host.querySelector('output[aria-label="src/app.ts"]')).not.toBeNull();
+  const before = mocks.files.mock.calls.length;
+  await click('aside button[aria-label="worktree.refreshFiles"]');
+  expect(mocks.files.mock.calls.length).toBeGreaterThan(before);
+  expect(host.querySelector("[data-terminal]")).toBe(terminal);
+  const rootButton = host.querySelector<HTMLButtonElement>(
+    "aside button[aria-expanded]",
+  )!;
+  await act(async () => rootButton.click());
+  expect(rootButton.getAttribute("aria-expanded")).toBe("false");
+  expect(host.querySelector("aside [hidden]")).not.toBeNull();
 });

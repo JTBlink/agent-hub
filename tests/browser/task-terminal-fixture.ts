@@ -1,3 +1,4 @@
+import { gitFixture } from "./git-fixture";
 import type { RepositoryTask, TaskBinding } from "../../src/lib/tauri";
 import {
   makeTaskMetadata,
@@ -85,55 +86,8 @@ export function taskTerminalFixture(
   raw: unknown,
 ): { handled: boolean; value?: unknown } {
   const args = typeof raw === "object" && raw !== null ? raw : {};
-  if (command === "get_project_git_status")
-    return {
-      handled: true,
-      value: {
-        branch: "feature/parser",
-        head: "abcdef1234567890",
-        upstream: "origin/feature/parser",
-        ahead: 2,
-        behind: 1,
-        state: "Clean",
-        truncated: false,
-        files: [
-          {
-            path: "src/parser.rs",
-            staged: false,
-            unstaged: true,
-            conflicted: false,
-            status: "modified",
-          },
-          {
-            path: "README.md",
-            staged: true,
-            unstaged: false,
-            conflicted: false,
-            status: "modified",
-          },
-        ],
-        commits: [
-          {
-            sha: "abcdef1234567890",
-            summary: "Handle empty parser input",
-            author: "demo",
-            time: 1793408400,
-          },
-          {
-            sha: "123456abcdef7890",
-            summary: "Add parser regression coverage",
-            author: "demo",
-            time: 1793322000,
-          },
-        ],
-      },
-    };
-  if (command === "get_project_git_diff")
-    return {
-      handled: true,
-      value:
-        'diff --git a/src/parser.rs b/src/parser.rs\n--- a/src/parser.rs\n+++ b/src/parser.rs\n@@ -1,3 +1,4 @@\n pub fn parse(input: &str) -> Result<&str, &\'static str> {\n+    if input.is_empty() { return Err("empty input"); }\n     Ok(input.trim())\n }\n',
-    };
+  const git = gitFixture(command, raw);
+  if (git.handled) return git;
   if (command === "task_bindings") return { handled: true, value: bindings };
   if (command === "task_list") {
     const binding =

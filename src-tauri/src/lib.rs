@@ -1,4 +1,5 @@
 mod tray_text;
+mod window_layout;
 use tray_text::{
     format_status_line, format_tooltip, format_updates_label, skill_group_menu_label, TrayLanguage,
 };
@@ -837,6 +838,7 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
         terminals.close_all();
     }
     if let Some(w) = app.get_webview_window("main") {
+        window_layout::save(&w);
         if let Err(err) = w.destroy() {
             log::error!("Failed to destroy main window while quitting: {err}");
         }
@@ -1040,9 +1042,11 @@ pub fn run() {
             // When QUITTING is set, allow the close to proceed so the process fully exits.
             let step = Instant::now();
             let win = app.get_webview_window("main").unwrap();
+            window_layout::restore(&win, &store_for_setup);
             let win_for_event = win.clone();
             win.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    window_layout::save(&win_for_event);
                     if QUITTING.load(Ordering::SeqCst) {
                         return; // allow close
                     }

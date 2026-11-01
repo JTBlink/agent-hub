@@ -123,3 +123,35 @@ it("keeps menu options inside the native modal's interactive subtree", async () 
   await key(trigger, "Enter");
   expect(changed).toHaveBeenCalledExactlyOnceWith("hermes");
 });
+
+it("recalculates menu height when asynchronous options arrive while open", async () => {
+  const render = (loaded: boolean) =>
+    root.render(
+      <ThemedSelect
+        aria-label="Projects"
+        value=""
+        onChange={() => {}}
+        className="w-full"
+      >
+        <option value="">Choose</option>
+        {loaded && (
+          <>
+            <option value="first">First</option>
+            <option value="second">Second</option>
+          </>
+        )}
+      </ThemedSelect>,
+    );
+  await act(async () => render(false));
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!.click(),
+  );
+  const before =
+    document.querySelector<HTMLElement>('[role="listbox"]')!.style.maxHeight;
+  await act(async () => render(true));
+  const menu = document.querySelector<HTMLElement>('[role="listbox"]')!;
+  expect(Number.parseFloat(menu.style.maxHeight)).toBeGreaterThan(
+    Number.parseFloat(before),
+  );
+  expect(menu.textContent).toContain("Second");
+});

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ChevronRight,
   FileCode2,
-  Folder,
+  CopyMinus,
   Link2,
   RefreshCw,
 } from "lucide-react";
@@ -24,15 +24,32 @@ interface Props {
 export function WorktreeExplorer(props: Props) {
   const { t } = useTranslation();
   const [revision, setRevision] = useState(0);
+  const [collapse, setCollapse] = useState(0);
+  const [open, setOpen] = useState(true);
+  const rootName =
+    props.worktreePath
+      .replace(/[\\/]+$/, "")
+      .split(/[\\/]/)
+      .at(-1) || props.worktreePath;
   return (
     <aside
       aria-label={t("fileReader.explorer")}
-      className="flex w-[240px] min-w-[150px] max-w-[35%] shrink-0 flex-col border-l border-border-subtle bg-bg-secondary"
+      className="flex min-h-0 flex-col bg-bg-secondary"
     >
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-secondary">
-          {t("fileReader.explorer")}
-        </span>
+      <div className="group flex h-7 shrink-0 items-center pr-1">
+        <button
+          type="button"
+          aria-expanded={open}
+          title={rootName}
+          onClick={() => setOpen(!open)}
+          className="flex h-full min-w-0 flex-1 items-center gap-1 px-2 text-left text-sm font-semibold text-primary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        >
+          <ChevronRight
+            size={14}
+            className={cn("shrink-0", open && "rotate-90")}
+          />
+          <span className="truncate">{rootName}</span>
+        </button>
         <button
           type="button"
           aria-label={t("worktree.refreshFiles")}
@@ -40,21 +57,37 @@ export function WorktreeExplorer(props: Props) {
           className="app-button-ghost h-6 w-6 p-0"
           onClick={() => setRevision((value) => value + 1)}
         >
-          <RefreshCw size={12} />
+          <RefreshCw size={14} />
+        </button>
+        <button
+          type="button"
+          aria-label={t("worktree.collapseFiles")}
+          title={t("worktree.collapseFiles")}
+          className="app-button-ghost h-6 w-6 p-0"
+          onClick={() => setCollapse((value) => value + 1)}
+        >
+          <CopyMinus size={14} />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto p-2">
+      <div hidden={!open} className="min-h-0 flex-1 overflow-auto pb-2">
         <Directory
           key={`${props.projectId}:${props.worktreePath}:${revision}`}
           {...props}
           path=""
+          depth={0}
+          collapse={collapse}
         />
       </div>
     </aside>
   );
 }
 
-function Directory({ path, ...props }: Props & { path: string }) {
+function Directory({
+  path,
+  depth,
+  collapse,
+  ...props
+}: Props & { path: string; depth: number; collapse: number }) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<WorktreeFileEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,11 +143,16 @@ function Directory({ path, ...props }: Props & { path: string }) {
       </p>
     );
   return (
-    <ul className="space-y-0.5">
+    <ul>
       {files.map((file) => (
         <li key={file.path}>
           {file.is_dir ? (
-            <FolderEntry {...props} file={file} />
+            <FolderEntry
+              {...props}
+              file={file}
+              depth={depth}
+              collapse={collapse}
+            />
           ) : (
             <button
               type="button"
@@ -122,17 +160,18 @@ function Directory({ path, ...props }: Props & { path: string }) {
               title={file.is_symlink ? t("worktree.symlink") : file.path}
               aria-pressed={props.selected === file.path}
               onClick={() => props.onSelect(file.path)}
+              style={{ paddingLeft: 28 + depth * 12 }}
               className={cn(
-                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40",
+                "flex h-[22px] w-full min-w-0 items-center gap-1.5 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
                 props.selected === file.path
                   ? "bg-surface-active text-primary"
                   : "text-secondary hover:bg-surface-hover",
               )}
             >
               {file.is_symlink ? (
-                <Link2 size={13} className="ml-4 shrink-0 text-muted" />
+                <Link2 size={13} className="shrink-0 text-muted" />
               ) : (
-                <FileCode2 size={13} className="ml-4 shrink-0 text-muted" />
+                <FileCode2 size={13} className="shrink-0 text-muted" />
               )}
               <span className="truncate">{file.name}</span>
             </button>
@@ -143,8 +182,18 @@ function Directory({ path, ...props }: Props & { path: string }) {
   );
 }
 
-function FolderEntry({ file, ...props }: Props & { file: WorktreeFileEntry }) {
+function FolderEntry({
+  file,
+  depth,
+  collapse,
+  ...props
+}: Props & { file: WorktreeFileEntry; depth: number; collapse: number }) {
   const [open, setOpen] = useState(false);
+  const [previousCollapse, setPreviousCollapse] = useState(collapse);
+  if (previousCollapse !== collapse) {
+    setPreviousCollapse(collapse);
+    setOpen(false);
+  }
   return (
     <>
       <button
@@ -152,19 +201,22 @@ function FolderEntry({ file, ...props }: Props & { file: WorktreeFileEntry }) {
         aria-expanded={open}
         title={file.path}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
+        style={{ paddingLeft: 12 + depth * 12 }}
+        className="flex h-[22px] w-full min-w-0 items-center gap-1 pr-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <ChevronRight
           size={12}
           className={cn("shrink-0", open && "rotate-90")}
         />
-        <Folder size={13} className="shrink-0 text-muted" />
         <span className="truncate">{file.name}</span>
       </button>
       {open && (
-        <div className="ml-3 border-l border-border-subtle pl-1">
-          <Directory {...props} path={file.path} />
-        </div>
+        <Directory
+          {...props}
+          path={file.path}
+          depth={depth + 1}
+          collapse={collapse}
+        />
       )}
     </>
   );

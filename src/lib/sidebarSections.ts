@@ -4,6 +4,14 @@ export type SidebarSection = "skills" | "agents" | "projects";
 export function activeSidebarSection(pathname: string): SidebarSection | null {
   if (pathname === "/my-skills") return "skills";
   if (/^\/(global|lobster)-workspace(?:\/|$)/.test(pathname)) return "agents";
-  if (/^\/project\//.test(pathname)) return "projects";
+  if (pathname === "/terminal" || /^\/project\//.test(pathname))
+    return "projects";
   return null;
+}
+
+export type SidebarPanel = "projects" | "skills";
+export function activeSidebarPanel(pathname: string): SidebarPanel | null {
+  if (pathname === "/terminal" || activeSidebarSection(pathname) === "projects")
+    return "projects";
+  return activeSidebarSection(pathname) ? "skills" : null;
 }

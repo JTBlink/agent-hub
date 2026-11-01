@@ -1,0 +1,8 @@
+Codicons
+Copyright (c) Microsoft Corporation and contributors.
+Source: https://github.com/microsoft/vscode-codicons
+Package: @vscode/codicons
+
+Icon assets are distributed under Creative Commons Attribution 4.0 International
+(see LICENSE.txt). Code is distributed under the MIT License
+(see LICENSE-CODE.txt). Icons are used without modification.

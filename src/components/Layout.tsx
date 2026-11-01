@@ -1,24 +1,39 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { AddProjectDialog } from "./AddProjectDialog";
+import { useApplicationMenu } from "../hooks/useApplicationMenu";
+import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { Sidebar } from "./Sidebar";
 import { StatusBanner } from "./StatusBanner";
 import { CommandPalette } from "./CommandPalette";
 import { useApp } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
-import { useDragWindow } from "../hooks/useDragWindow";
+import { WindowTitleBar } from "./WindowTitleBar";
 import { ProjectWorkspace } from "./worktree/ProjectWorkspace";
 import { projectWorkspaceRoute } from "../lib/worktreeApi";
 import { cn } from "../utils";
+import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 
 export function Layout() {
   const { t } = useTranslation();
-  const { appError, refreshAppData } = useApp();
-  const onDrag = useDragWindow();
+  const { appError, refreshAppData, refreshProjects } = useApp();
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   const workspacePage =
     !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
   const [terminalMaximized, setTerminalMaximized] = useState(false);
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  const [manageWorkspaces, setManageWorkspaces] = useState(false);
+  useApplicationMenu(
+    () => setCommandsOpen(true),
+    () => setManageWorkspaces(true),
+  );
+  const [sidebarContainer, setSidebarContainer] =
+    useState<HTMLDivElement | null>(null);
+  const [statusContainer, setStatusContainer] = useState<HTMLDivElement | null>(
+    null,
+  );
+  const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
   const hideSidebar = workspacePage && terminalMaximized;
   const fullHeightPage =
     pathname === "/settings" ||
@@ -57,55 +72,86 @@ export function Layout() {
   }, [navigate, refreshAppData]);
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden bg-background text-primary">
-      {/* Full-width top drag bar — spans sidebar + content, with bottom divider */}
-      <div
-        onMouseDown={onDrag}
-        className="absolute inset-x-0 top-0 z-50 h-[28px] border-b border-border-subtle bg-bg-secondary"
-      />
-      {!hideSidebar && <Sidebar />}
-      <div
-        className={cn(
-          "relative min-w-0 flex-1 flex-col overflow-hidden",
-          workspacePage ? "hidden" : "flex",
-        )}
-      >
-        <div
-          className={cn(
-            "min-h-0 flex-1 px-5 pb-5 pt-[calc(28px+20px)] scrollbar-hide",
-            fullHeightPage
-              ? "flex flex-col overflow-hidden"
-              : "overflow-y-auto",
-          )}
-        >
-          <div
-            className={cn(
-              "mx-auto flex w-full flex-col gap-4",
-              pathname === "/tasks" || pathname === "/git"
-                ? "max-w-none"
-                : "max-w-[1200px]",
-              fullHeightPage ? "min-h-0 flex-1" : "min-h-full",
-            )}
-          >
-            {appError ? (
-              <StatusBanner
-                compact
-                title={t("common.dataOutOfDate")}
-                description={appError}
-                actionLabel={t("common.retry")}
-                onAction={refreshAppData}
-                tone="danger"
-              />
-            ) : null}
-            <Outlet />
+    <SidebarVisibilityContext.Provider
+      value={{
+        resourcePanelVisible,
+        setResourcePanelVisible,
+        sidebarContainer,
+        statusContainer,
+      }}
+    >
+      <WorkspaceFilesProvider>
+        <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary">
+          <WindowTitleBar onOpenCommands={() => setCommandsOpen(true)} />
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            {!hideSidebar && <Sidebar />}
+            <div
+              ref={setSidebarContainer}
+              hidden={pathname !== "/git" || resourcePanelVisible}
+              className={cn(
+                "min-h-0 shrink-0",
+                pathname === "/git" && !resourcePanelVisible
+                  ? "flex"
+                  : "hidden",
+              )}
+            />
+            <div
+              className={cn(
+                "workbench-editor-panel relative min-w-0 flex-1 flex-col overflow-hidden mr-1",
+                workspacePage ? "hidden" : "flex",
+              )}
+            >
+              <div
+                className={cn(
+                  "min-h-0 flex-1 scrollbar-hide",
+                  pathname === "/git" ? "p-0" : "p-5",
+                  fullHeightPage
+                    ? "flex flex-col overflow-hidden"
+                    : "overflow-y-auto",
+                )}
+              >
+                <div
+                  className={cn(
+                    "mx-auto flex w-full flex-col gap-4",
+                    pathname === "/tasks" || pathname === "/git"
+                      ? "max-w-none"
+                      : "max-w-[1200px]",
+                    fullHeightPage ? "min-h-0 flex-1" : "min-h-full",
+                  )}
+                >
+                  {appError ? (
+                    <StatusBanner
+                      compact
+                      title={t("common.dataOutOfDate")}
+                      description={appError}
+                      actionLabel={t("common.retry")}
+                      onAction={refreshAppData}
+                      tone="danger"
+                    />
+                  ) : null}
+                  <Outlet />
+                </div>
+              </div>
+            </div>
+            <ProjectWorkspace onMaximizedChange={setTerminalMaximized} />
           </div>
+          <footer className="workbench-statusbar flex shrink-0 items-center gap-3 border-t border-border-subtle bg-bg-secondary px-2 text-xs text-muted">
+            <div
+              ref={setStatusContainer}
+              className="workbench-status-content flex min-w-0 flex-1 items-center"
+            />
+            <span className="workbench-status-fallback truncate">
+              {t("app.name")}
+            </span>
+          </footer>
+          <AddProjectDialog
+            open={manageWorkspaces}
+            onClose={() => setManageWorkspaces(false)}
+            onAdded={refreshProjects}
+          />
+          <CommandPalette open={commandsOpen} onOpenChange={setCommandsOpen} />
         </div>
-      </div>
-      <ProjectWorkspace
-        maximized={terminalMaximized}
-        onMaximizedChange={setTerminalMaximized}
-      />
-      <CommandPalette />
-    </div>
+      </WorkspaceFilesProvider>
+    </SidebarVisibilityContext.Provider>
   );
 }

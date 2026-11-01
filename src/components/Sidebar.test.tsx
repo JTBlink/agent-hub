@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { createInstance } from "i18next";
@@ -10,6 +10,9 @@ import zhTW from "../i18n/zh-TW.json";
 import { makeSkillGroup } from "../../tests/fixtures/skillGroup";
 import type { SkillGroup } from "../lib/tauri";
 import { makeTool, makeProject } from "../../tests/fixtures/workspace";
+import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
+import { createTerminalTab, writeTerminalLayout } from "../lib/terminalLayout";
+import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { Sidebar } from "./Sidebar";
 import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
 
@@ -19,6 +22,7 @@ const worktreeMocks = vi.hoisted(() => ({
 vi.mock("../lib/worktreeApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/worktreeApi")>()),
   getProjectWorktrees: worktreeMocks.list,
+  getWorktreeFiles: vi.fn().mockResolvedValue([]),
 }));
 vi.mock("../lib/tauri", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/tauri")>()),
@@ -69,6 +73,10 @@ beforeEach(async () => {
   app.viewedSkillGroup = null;
   app.viewingUngrouped = false;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: vi.fn(),
+  });
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -87,7 +95,34 @@ function Navigation() {
       <button onClick={() => navigate("/project/demo")}>Go project</button>
       <button onClick={() => navigate("/settings")}>Go settings</button>
       <button onClick={() => navigate(-1)}>Go back</button>
+      {[
+        "/",
+        "/discover",
+        "/install",
+        "/tasks",
+        "/automation",
+        "/backup",
+        "/settings",
+        "/help",
+      ].map((path) => (
+        <button
+          key={path}
+          onClick={() => navigate(path)}
+        >{`Go ${path}`}</button>
+      ))}
     </>
+  );
+}
+
+function TestSidebar() {
+  const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
+  return (
+    <SidebarVisibilityContext.Provider
+      value={{ resourcePanelVisible, setResourcePanelVisible }}
+    >
+      <Sidebar />
+      <div data-resource-visible={String(resourcePanelVisible)} />
+    </SidebarVisibilityContext.Provider>
   );
 }
 
@@ -95,7 +130,9 @@ async function render(path = "/global-workspace/codex") {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={[path]}>
-        <Sidebar />
+        <WorkspaceFilesProvider>
+          <TestSidebar />
+        </WorkspaceFilesProvider>
         <Navigation />
       </MemoryRouter>,
     ),
@@ -123,31 +160,199 @@ it("provides a permanent automation entry independent of installed agents", asyn
   expect(container.querySelector("output")?.textContent).toBe("/automation");
 });
 
-it("prioritizes Tasks, Automation and project workspaces with terminals inside worktrees", async () => {
+it("keeps primary navigation in the activity bar with labelled, active links", async () => {
   await render("/");
-  const sidebar = container.firstElementChild!;
-  const entries = [...sidebar.querySelectorAll("a, button[aria-expanded]")].map(
-    (element) => element.textContent,
+  const navigation = container.querySelector('nav[aria-label="主导航"]')!;
+  const entries = [...navigation.querySelectorAll("a")].map((element) =>
+    element.getAttribute("aria-label"),
   );
-  expect(entries.slice(0, 9)).toEqual([
-    "工作台",
+  expect(entries).toEqual([
+    "Git",
     "任务",
     "自动化",
-    "Git",
-    "项目工作区",
-    "全局工作区",
-    "技能库0",
     "发现",
+    "工作台",
     "云端同步",
+    "设置",
   ]);
-  await click(container.querySelector<HTMLAnchorElement>('a[href="/tasks"]')!);
+  for (const link of navigation.querySelectorAll("a")) {
+    expect(link.title).toBe(link.getAttribute("aria-label"));
+  }
+  expect(navigation.querySelector('[aria-current="page"]')?.textContent).toBe(
+    "工作台",
+  );
+  const tasks = container.querySelector<HTMLAnchorElement>('a[href="/tasks"]')!;
+  await click(tasks);
   expect(container.querySelector("output")?.textContent).toBe("/tasks");
+  expect(tasks.getAttribute("aria-current")).toBe("page");
   expect(container.querySelector('a[href="/terminal"]')).toBeNull();
 });
-function expanded() {
-  return [...container.querySelectorAll('[aria-expanded="true"]')].map(
-    (element) => element.textContent,
+
+function explorer() {
+  return (container.querySelector<HTMLButtonElement>(
+    `button[data-sidebar-panel][aria-current="page"]`,
+  ) ??
+    container.querySelector<HTMLButtonElement>(
+      `button[data-sidebar-panel="skills"]`,
+    ))!;
+}
+
+it("hides the dashboard resource panel until requested and hides it again on return", async () => {
+  await render("/");
+  const toggle = explorer();
+  const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  expect(getComputedStyle(panel).display).toBe("none");
+  await click(toggle);
+  expect(getComputedStyle(panel).display).not.toBe("none");
+  await click(button("Go settings"));
+  expect(getComputedStyle(panel).display).toBe("none");
+  await click(button("Go back"));
+  expect(getComputedStyle(panel).display).toBe("none");
+  expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("true");
+});
+
+it.each([
+  "/",
+  "/discover",
+  "/install",
+  "/tasks",
+  "/automation",
+  "/backup",
+  "/settings",
+  "/help",
+])(
+  "automatically hides resource panels on %s without changing the width or open preference",
+  async (path) => {
+    localStorage.setItem("agent-hub:sidebar-width", "320");
+    await render("/my-skills");
+    const toggle = container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="skills"]',
+    )!;
+    const panel = document.getElementById(
+      toggle.getAttribute("aria-controls")!,
+    )!;
+    const resize = panel.querySelector('[role="separator"]')!;
+    expect(panel.hidden).toBe(false);
+    await click(button(`Go ${path}`));
+    expect(panel.hidden).toBe(true);
+    expect(
+      container
+        .querySelector("[data-resource-visible]")
+        ?.getAttribute("data-resource-visible"),
+    ).toBe("false");
+    await click(toggle);
+    expect(panel.hidden).toBe(false);
+    expect(container.querySelector("output")?.textContent).toBe(path);
+    await click(button("Go settings"));
+    expect(panel.hidden).toBe(true);
+    await click(button("Go project"));
+    expect(panel.hidden).toBe(false);
+    expect(resize.getAttribute("aria-valuenow")).toBe("320");
+    expect(localStorage.getItem("agent-hub:sidebar-width")).toBe("320");
+    expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("true");
+  },
+);
+
+it.each([
+  ["/", "工作台"],
+  ["/tasks", "任务"],
+  ["/automation", "自动化"],
+  ["/git", "Git"],
+  ["/discover", "发现"],
+  ["/install", "发现"],
+  ["/backup", "云端同步"],
+  ["/settings", "设置"],
+  ["/my-skills", "技能面板"],
+  ["/project/demo", "项目工作区"],
+  ["/project/demo/skills", "项目工作区"],
+  ["/global-workspace/codex", "技能面板"],
+  ["/lobster-workspace/hermes", "技能面板"],
+  ["/terminal", "项目工作区"],
+])(
+  "selects only %s's activity entry regardless of panel visibility",
+  async (path, label) => {
+    await render(path);
+    const navigation = container.querySelector('nav[aria-label="主导航"]')!;
+    const checkSelection = (expected = label) => {
+      const selected = navigation.querySelectorAll('[aria-current="page"]');
+      expect(selected).toHaveLength(1);
+      expect(selected[0].getAttribute("aria-label")).toBe(expected);
+    };
+    checkSelection();
+    const wasOpen = explorer().getAttribute("aria-expanded") === "true";
+    await click(explorer());
+    expect(explorer().getAttribute("aria-expanded")).toBe("true");
+    const expected = wasOpen ? label : "技能面板";
+    checkSelection(expected);
+    await click(explorer());
+    expect(explorer().getAttribute("aria-expanded")).toBe("true");
+    checkSelection(expected);
+  },
+);
+
+it("moves the single activity selection between Git and workspace routes on navigation and history", async () => {
+  await render("/git");
+  const navigation = container.querySelector('nav[aria-label="主导航"]')!;
+  const selection = () =>
+    [...navigation.querySelectorAll('[aria-current="page"]')].map((entry) =>
+      entry.getAttribute("aria-label"),
+    );
+  expect(selection()).toEqual(["Git"]);
+  await click(button("Go project"));
+  expect(selection()).toEqual(["项目工作区"]);
+  await click(button("Go settings"));
+  expect(selection()).toEqual(["设置"]);
+  await click(button("Go back"));
+  expect(selection()).toEqual(["项目工作区"]);
+  await click(button("Go back"));
+  expect(selection()).toEqual(["Git"]);
+});
+
+it("collapses the skill panel, returns focus to Skills and keeps navigation usable", async () => {
+  await render("/my-skills");
+  const toggle = explorer();
+  const panel = document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  const hide = container.querySelector<HTMLButtonElement>(
+    '[aria-label="收起技能面板"]',
+  )!;
+  hide.focus();
+  await click(hide);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(document.activeElement).toBe(toggle);
+  expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("false");
+  expect(getComputedStyle(panel).display).toBe("none");
+  await click(
+    container.querySelector<HTMLAnchorElement>('a[href="/automation"]')!,
   );
+  expect(container.querySelector("output")?.textContent).toBe("/automation");
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  await click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("true");
+});
+
+it("restores the collapsed preference while keeping all resource sections mounted", async () => {
+  localStorage.setItem("agent-hub:sidebar-panel-open", "false");
+  app.skillGroups = groups(8);
+  await render("/my-skills");
+  expect(explorer().getAttribute("aria-expanded")).toBe("false");
+  await click(explorer());
+  expect(explorer().getAttribute("aria-expanded")).toBe("true");
+  expect(groupOrder()).toEqual(groups(5).map((group) => group.id));
+  await click(more());
+  await click(
+    container.querySelector<HTMLButtonElement>('[aria-label="收起技能面板"]')!,
+  );
+  await click(explorer());
+  expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
+});
+
+function expanded() {
+  return [
+    ...container.querySelectorAll(
+      '[aria-expanded="true"]:not([aria-controls])',
+    ),
+  ].map((element) => element.textContent);
 }
 
 it("appends assistants to one workspace with existing orders and working detail routes", async () => {
@@ -180,16 +385,26 @@ it("appends assistants to one workspace with existing orders and working detail 
 it("opens only the active region on navigation, including history return after a manual toggle", async () => {
   await render("/lobster-workspace/hermes");
   expect(expanded()).toEqual(["全局工作区"]);
-  await click(button("项目工作区"));
-  expect(expanded()).toEqual(["项目工作区"]);
+  await click(
+    container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="projects"]',
+    )!,
+  );
+  expect(
+    container
+      .querySelector('[role="combobox"][aria-label="切换项目"]')
+      ?.closest("[hidden]"),
+  ).toBeNull();
   await click(button("Go settings"));
   expect(expanded()).toEqual([]);
   await click(button("Go back"));
   expect(expanded()).toEqual(["全局工作区"]);
   await click(button("Go project"));
-  expect(expanded()).toEqual(["项目工作区"]);
-  await click(button("项目工作区"));
-  expect(expanded()).toEqual([]);
+  expect(
+    container
+      .querySelector('[role="combobox"][aria-label="切换项目"]')
+      ?.closest("[hidden]"),
+  ).toBeNull();
 });
 
 it("uses the library title solely to toggle and All Skills to clear both group filters", async () => {
@@ -230,7 +445,7 @@ function groups(count: number) {
 }
 function more() {
   return container.querySelector<HTMLButtonElement>(
-    "button[aria-controls][aria-expanded]",
+    "button[aria-controls][aria-expanded]:not([aria-label])",
   )!;
 }
 function groupOrder() {
@@ -356,7 +571,7 @@ it.each(["edit", "delete", "create"])(
   },
 );
 
-it("expands projects into worktrees and navigates by checkout path", async () => {
+it("switches worktrees from a menu and disables unavailable checkouts", async () => {
   const project = { ...makeProject(), id: "tree-demo" };
   Object.assign(app, { projects: [project] });
   worktreeMocks.list.mockResolvedValueOnce([
@@ -387,22 +602,150 @@ it("expands projects into worktrees and navigates by checkout path", async () =>
   ]);
   await render(`/project/${project.id}`);
   expect(worktreeMocks.list).toHaveBeenCalledWith(project.id);
-  expect(button("demo · main主工作树").getAttribute("aria-current")).toBe(
-    "page",
+  const worktreeMenu = () =>
+    container.querySelector<HTMLButtonElement>(
+      '[role="combobox"][aria-label="工作树"]',
+    )!;
+  expect(worktreeMenu().textContent).toContain("demo · main");
+  await click(worktreeMenu());
+  const options = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ];
+  expect(
+    options.find((item) => item.textContent?.startsWith("missing"))?.disabled,
+  ).toBe(true);
+  await click(
+    options.find((item) => item.textContent === "topic · feature/topic")!,
   );
-  expect(button("missing").disabled).toBe(true);
-  await click(button("topic · feature/topic"));
+  expect(worktreeMenu().textContent).toContain("topic · feature/topic");
   expect(container.querySelector("output")?.textContent).toBe(
     `/project/${project.id}`,
   );
-  expect(button("topic · feature/topic").getAttribute("aria-current")).toBe(
-    "page",
+});
+
+it("puts Projects first and separates project files from the skills panel without navigating", async () => {
+  await render("/my-skills");
+  const nav = container.querySelector('nav[aria-label="主导航"]')!;
+  expect(nav.querySelector("button, a")?.getAttribute("aria-label")).toBe(
+    "项目工作区",
   );
-  expect(button("demo · main主工作树").getAttribute("aria-current")).toBeNull();
-  const toggle = container.querySelector<HTMLButtonElement>(
-    `[aria-label="展开或收起 ${project.name}"]`,
+  const projectToggle = nav.querySelector<HTMLButtonElement>(
+    '[data-sidebar-panel="projects"]',
   )!;
-  await click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  expect(container.textContent).not.toContain("feature/topic");
+  const skillsToggle = nav.querySelector<HTMLButtonElement>(
+    '[data-sidebar-panel="skills"]',
+  )!;
+  const projectHeading = container.querySelector<HTMLElement>(
+    '[role="combobox"][aria-label="切换项目"]',
+  )!;
+  const skillsHeading = button("全局工作区");
+  expect(projectHeading.closest("[hidden]")).not.toBeNull();
+  expect(skillsHeading.closest("[hidden]")).toBeNull();
+  await click(projectToggle);
+  expect(projectHeading.closest("[hidden]")).toBeNull();
+  expect(skillsHeading.closest("[hidden]")).not.toBeNull();
+  expect(projectToggle.getAttribute("aria-current")).toBe("page");
+  expect(skillsToggle.getAttribute("aria-current")).toBeNull();
+  expect(container.querySelector("output")?.textContent).toBe("/my-skills");
+  await click(skillsToggle);
+  expect(projectHeading.closest("[hidden]")).not.toBeNull();
+  expect(skillsHeading.closest("[hidden]")).toBeNull();
+  expect(skillsToggle.getAttribute("aria-expanded")).toBe("true");
+  await click(button("Go project"));
+  expect(projectHeading.closest("[hidden]")).toBeNull();
+  expect(skillsHeading.closest("[hidden]")).not.toBeNull();
+});
+
+it("switches projects from a dropdown instead of showing an expanded project list", async () => {
+  const first = { ...makeProject(), id: "switch-first", name: "First" };
+  const second = {
+    ...makeProject(),
+    id: "switch-second",
+    name: "Second",
+    path: "~/projects/second",
+  };
+  Object.assign(app, { projects: [first, second] });
+  await render(`/project/${first.id}`);
+  const selector = container.querySelector<HTMLButtonElement>(
+    '[role="combobox"][aria-label="切换项目"]',
+  )!;
+  expect(selector.textContent).toContain("First");
+  expect(
+    container.querySelector('[data-rfd-draggable-id="switch-first"]'),
+  ).toBeNull();
+  await click(selector);
+  const option = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ].find((item) => item.textContent === "Second")!;
+  await click(option);
+  expect(container.querySelector("output")?.textContent).toBe(
+    `/project/${second.id}`,
+  );
+  expect(selector.textContent).toContain("Second");
+});
+
+it("replaces the Git sidebar when another panel opens and restores Git on its activity click", async () => {
+  await render("/git");
+  const visible = () =>
+    container
+      .querySelector("[data-resource-visible]")
+      ?.getAttribute("data-resource-visible");
+  expect(visible()).toBe("false");
+  await click(
+    container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="projects"]',
+    )!,
+  );
+  expect(visible()).toBe("true");
+  await click(
+    container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="skills"]',
+    )!,
+  );
+  expect(visible()).toBe("true");
+  expect(
+    container.querySelectorAll('nav button[aria-expanded="true"]'),
+  ).toHaveLength(1);
+  await click(container.querySelector<HTMLAnchorElement>('a[href="/git"]')!);
+  expect(visible()).toBe("false");
+  expect(
+    container.querySelectorAll('nav button[aria-expanded="true"]'),
+  ).toHaveLength(0);
+});
+
+it("returns to the last project and checkout when opening the project panel from Git", async () => {
+  const first = {
+    ...makeProject(),
+    id: "remember-first",
+    name: "First",
+    visited_at: 200,
+  };
+  const last = {
+    ...makeProject(),
+    id: "remember-last",
+    name: "Last",
+    path: "~/projects/last",
+    visited_at: 100,
+  };
+  Object.assign(app, { projects: [first, last] });
+  const tab = createTerminalTab(last.id, undefined, "~/projects/topic");
+  writeTerminalLayout({ tabs: [tab], lastActiveId: tab.id, activeIds: {} });
+  await render("/git");
+  expect(
+    container.querySelector('[role="combobox"][aria-label="切换项目"]')
+      ?.textContent,
+  ).toContain("Last");
+  await click(
+    container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="projects"]',
+    )!,
+  );
+  expect(container.querySelector("output")?.textContent).toBe(
+    `/project/${last.id}`,
+  );
+  expect(
+    container
+      .querySelector("[data-resource-visible]")
+      ?.getAttribute("data-resource-visible"),
+  ).toBe("true");
 });

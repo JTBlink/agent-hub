@@ -1,4 +1,18 @@
 {
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "window": "Window",
+    "help": "Help",
+    "openProject": "Open Project…",
+    "recentProjects": "Recent Projects",
+    "manageWorkspaces": "Manage Workspaces…",
+    "closeWindow": "Close Window",
+    "quit": "Quit AgentHub",
+    "about": "About AgentHub",
+    "failed": "Unable to load the application menu. Please restart the app."
+  },
   "automation": {
     "adminAuthorizationHelp": "This is a system-level scheduled task. Editing, pausing or resuming, running, and deleting request macOS administrator authorization.",
     "externalDeleteHelp": "Deleting removes only the task’s scheduler configuration. Original scripts and logs are retained.",
@@ -245,6 +259,14 @@
     "confirmAction": "Overwrite"
   },
   "sidebar": {
+    "navigation": "Main navigation",
+    "resize": "Resize {{name}}",
+    "resizeHint": "Drag to resize; double-click to reset",
+    "switchProject": "Switch Project",
+    "openProjectHint": "Use File → Open Project… to add a project.",
+    "skillPanel": "Skills",
+    "hideProjectPanel": "Hide project workspace panel",
+    "hideSkillPanel": "Hide skills panel",
     "dashboard": "Dashboard",
     "mySkills": "Library",
     "allSkills": "All Skills",
@@ -298,8 +320,11 @@
     "reportIssue": "Report an issue",
     "translationFallback": "This article is currently available in Chinese. Translation is not yet available."
   },
+  "titleBar": {
+    "searchCommands": "Search and commands"
+  },
   "commandPalette": {
-    "placeholder": "Jump to skill, skill group, project, action…",
+    "placeholder": "Jump to project, skill group, skill, action…",
     "empty": "No matches. Try a different query.",
     "skills": "Skills",
     "skillGroups": "Skill Groups",
@@ -1345,12 +1370,12 @@
     "closeActionDesc": "Choose what happens when you click the window close button.",
     "closeAction_ask": "Ask each time",
     "closeAction_hide": "Minimize to tray",
-    "closeAction_close": "Quit app",
+    "closeAction_close": "Confirm before quitting",
     "trayIcon": "Tray Icon",
     "trayIconDesc": "Show an icon in the system tray for quick Show and Quit actions.",
     "trayIcon_on": "Show",
     "trayIcon_off": "Hide",
-    "trayIconOffHint": "Tray icon is hidden, so closing the window will quit the app.",
+    "trayIconOffHint": "The tray icon is hidden. Closing the window will ask what to do.",
     "backupDirectory": "Local sync repository",
     "backupDirectoryHint": "This directory stores Git sync data and version history. The cloud repository URL is shown in the connection details below.",
     "gitErrorSshAuth": "SSH authentication failed. Check your SSH key, ssh-agent, and the key’s repository access.",
@@ -1358,11 +1383,14 @@
     "gitErrorCredentialMissing": "Git could not obtain login credentials. Reconnect GitHub for GitHub backups, or configure credentials for the remote host."
   },
   "closeAction": {
+    "enableTrayHint": "Running in the background will enable the tray icon so you can reopen the window.",
+    "exitMessage": "Quitting ends in-app terminal sessions and their running processes.",
+    "exitTitle": "Quit AgentHub?",
     "title": "Close behavior",
-    "message": "Minimize to tray keeps the app running in the background and lets you reopen it from the tray icon.",
+    "message": "Running in the background keeps terminal sessions active. Reopen the window from the tray icon. Quitting ends terminal sessions.",
     "close": "Quit app",
-    "hide": "Minimize to tray",
-    "remember": "Remember my choice for next time"
+    "hide": "Run in background",
+    "remember": "Remember this preference (quitting still requires confirmation)"
   },
   "common": {
     "close": "Close",
@@ -2045,6 +2073,7 @@
     "removeProject": "Remove project {{name}}",
     "list": "Worktrees in {{name}}",
     "refresh": "Refresh worktrees",
+    "collapseFiles": "Collapse All",
     "refreshFiles": "Refresh files",
     "projectSkills": "Project skills",
     "back": "Back to workspace",
@@ -2058,14 +2087,14 @@
     "worktree": "Worktree",
     "unborn": "No commits yet",
     "cachedRefs": "Remote comparison uses locally cached refs",
-    "changes": "Working tree changes",
+    "changes": "Changes",
     "clean": "No working tree changes",
     "staged": "Staged",
     "unstaged": "Unstaged",
     "commits": "Recent commits",
     "truncated": "Showing the first 1,000 changed files",
     "file": "View file",
-    "chooseFile": "Select a file to inspect staged or working tree diff",
+    "chooseFile": "Select a file to review changes",
     "noDiff": "No text diff; this may be a binary or file mode change",
     "states": {
       "conflict": "Conflict",
@@ -2075,6 +2104,26 @@
       "modified": "Modified",
       "removed": "Deleted"
     },
-    "operation": "Repository operation"
+    "operation": "Repository operation",
+    "sourceControl": "Source control",
+    "stagedChanges": "Staged changes",
+    "reviewHint": "Choose a file on the left to compare staged or working tree changes.",
+    "stageFile": "Stage changes",
+    "unstageFile": "Unstage changes",
+    "stageAll": "Stage all changes",
+    "unstageAll": "Unstage all changes",
+    "commit": "Commit",
+    "commitMessage": "Commit message",
+    "commitPlaceholder": "Message (⌘/Ctrl+Enter to commit on “{{branch}}”)",
+    "commitStagedHint": "Commit staged changes only",
+    "diff": "Diff",
+    "diffLayout": "Diff layout",
+    "split": "Side by side",
+    "unified": "Unified",
+    "headVersion": "HEAD · Committed",
+    "indexVersion": "Index",
+    "workingVersion": "Working tree",
+    "diffTruncated": "Preview limited to 3000 lines. Switch to unified view to read more.",
+    "localRefs": "Local refs"
   }
 }
