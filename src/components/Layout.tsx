@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import type { TerminalStartupState } from "./terminal/useTerminalLayout";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AddProjectDialog } from "./AddProjectDialog";
 import { useApplicationMenu } from "../hooks/useApplicationMenu";
@@ -20,7 +22,11 @@ import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
 
 export function Layout() {
   const { t } = useTranslation();
-  const { appError, refreshAppData, refreshProjects } = useApp();
+  const { appError, refreshAppData, refreshProjects, loading } = useApp();
+  const [started, setStarted] = useState(false);
+  const [startup, setStartup] = useState<TerminalStartupState | null>(null);
+  // Initial hydration is one-shot; normal refreshes keep the current page mounted.
+  if (!started && !loading && startup?.ready) setStarted(true);
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
   const workspacePage =
@@ -96,7 +102,10 @@ export function Layout() {
       }}
     >
       <WorkspaceFilesProvider>
-        <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary">
+        <div
+          inert={!started}
+          className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary"
+        >
           <WindowTitleBar onOpenCommands={() => setCommandsOpen(true)} />
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <Sidebar />
@@ -149,12 +158,13 @@ export function Layout() {
                       tone="danger"
                     />
                   ) : null}
-                  {pathname !== "/git" && <Outlet />}
+                  {started && pathname !== "/git" && <Outlet />}
                 </div>
               </div>
             </div>
             <ProjectWorkspace
-              page={pathname === "/git" ? <Outlet /> : undefined}
+              onStartupStateChange={setStartup}
+              page={started && pathname === "/git" ? <Outlet /> : undefined}
             />
           </div>
           <WorkbenchStatusBar
@@ -168,6 +178,35 @@ export function Layout() {
           />
           <CommandPalette open={commandsOpen} onOpenChange={setCommandsOpen} />
         </div>
+        {!started && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-background text-primary"
+            data-tauri-drag-region
+          >
+            {appError || startup?.error ? (
+              <div role="alert" className="max-w-lg px-4">
+                <StatusBanner
+                  title={t("common.dataOutOfDate")}
+                  description={appError || startup?.error || ""}
+                  actionLabel={t("common.retry")}
+                  onAction={appError ? refreshAppData : startup?.retry}
+                  tone="danger"
+                />
+              </div>
+            ) : (
+              <div
+                role="status"
+                className="flex items-center gap-2 text-sm text-muted"
+              >
+                <Loader2
+                  aria-hidden="true"
+                  className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                />
+                {t("common.loading")}
+              </div>
+            )}
+          </div>
+        )}
       </WorkspaceFilesProvider>
     </SidebarVisibilityContext.Provider>
   );

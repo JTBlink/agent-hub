@@ -27,7 +27,10 @@ import {
   TERMINAL_PANE_LIMIT,
   type TerminalTab as Tab,
 } from "../../lib/terminalLayout";
-import { useTerminalLayout } from "./useTerminalLayout";
+import {
+  useTerminalLayout,
+  type TerminalStartupState,
+} from "./useTerminalLayout";
 import { TerminalSessions } from "./TerminalSessions";
 import { TerminalTabs } from "./TerminalTabs";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
@@ -47,6 +50,7 @@ interface Props {
   extraTabs?: ReactNode;
   content?: ReactNode;
   onSelectTerminal?: () => void;
+  onStartupStateChange?: (state: TerminalStartupState) => void;
 }
 const toolbarAction = "app-button-ghost h-7 w-7 shrink-0 p-0";
 
@@ -61,6 +65,7 @@ export function TerminalWorkspace({
   extraTabs,
   content,
   onSelectTerminal,
+  onStartupStateChange,
 }: Props) {
   const { t } = useTranslation();
   const statusContainer = useContext(SidebarVisibilityContext)?.statusContainer;
@@ -93,6 +98,7 @@ export function TerminalWorkspace({
     activeIds,
     setActiveIds,
     ready,
+    startupReady,
     error: restoreError,
     retry,
     rememberActive,
@@ -101,6 +107,9 @@ export function TerminalWorkspace({
     path: scopedPath,
     initialize: visible && !terminalTaskRequest(location.state),
   });
+  useEffect(() => {
+    onStartupStateChange?.({ ready: startupReady, error: restoreError, retry });
+  }, [startupReady, restoreError, retry, onStartupStateChange]);
   const scopeKey = workspace ? terminalScopeKey(scopedProject, scopedPath) : "";
   const activeId = activeIds[scopeKey] ?? "";
   const setActiveId = (id: string) => {

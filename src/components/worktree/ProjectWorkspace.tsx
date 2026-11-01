@@ -18,8 +18,16 @@ import {
   GitEditorVisibilityContext,
 } from "../../hooks/gitEditorVisibility";
 
+import type { TerminalStartupState } from "../terminal/useTerminalLayout";
+
 /** Remains mounted with Layout so switching worktrees/pages preserves PTYs. */
-export function ProjectWorkspace({ page }: { page?: ReactNode }) {
+export function ProjectWorkspace({
+  page,
+  onStartupStateChange,
+}: {
+  page?: ReactNode;
+  onStartupStateChange?: (state: TerminalStartupState) => void;
+}) {
   const { t } = useTranslation();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
   const [gitTabsContainer, setGitTabsContainer] =
@@ -98,6 +106,7 @@ export function ProjectWorkspace({ page }: { page?: ReactNode }) {
       <div className="flex min-h-0 min-w-0 flex-1">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TerminalWorkspace
+            onStartupStateChange={onStartupStateChange}
             projects={projects}
             tools={tools}
             onProjectSkills={

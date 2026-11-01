@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
@@ -15,6 +21,12 @@ import {
 } from "../../lib/terminalLayout";
 import { worktreeUrl } from "../../lib/worktreeApi";
 
+export interface TerminalStartupState {
+  ready: boolean;
+  error: string;
+  retry: () => void;
+}
+
 /** Reconcile the previous webview's PTYs before creating any restored shells. */
 export function useTerminalLayout(
   projects: Project[],
@@ -30,6 +42,9 @@ export function useTerminalLayout(
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [activeIds, setActiveIds] = useState<Record<string, string>>({});
   const [ready, setReady] = useState(false);
+  const [startupDestination, setStartupDestination] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [lastActiveId, rememberActive] = useState(saved.lastActiveId);
@@ -127,7 +142,12 @@ export function useTerminalLayout(
           layout.tabs.find((tab) => tab.id === layout.lastActiveId) ??
           layout.tabs.at(-1);
         if (location.pathname === "/" && active) {
-          navigate(worktreeUrl(active.projectId, active.worktreePath), {
+          const destination = worktreeUrl(
+            active.projectId,
+            active.worktreePath,
+          );
+          setStartupDestination(destination);
+          navigate(destination, {
             replace: true,
           });
         }
@@ -166,6 +186,11 @@ export function useTerminalLayout(
     if (ready) writeTerminalLayout({ tabs, activeIds, lastActiveId });
   }, [tabs, activeIds, ready, lastActiveId]);
 
+  const retry = useCallback(() => {
+    bootstrap.current = null;
+    setError("");
+    setAttempt((value) => value + 1);
+  }, []);
   return {
     tabs,
     scopedTabs,
@@ -173,12 +198,12 @@ export function useTerminalLayout(
     activeIds,
     setActiveIds,
     ready,
+    startupReady:
+      ready &&
+      (!startupDestination ||
+        `${location.pathname}${location.search}` === startupDestination),
     error,
     rememberActive,
-    retry: () => {
-      bootstrap.current = null;
-      setError("");
-      setAttempt((value) => value + 1);
-    },
+    retry,
   };
 }
