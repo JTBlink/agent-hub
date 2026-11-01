@@ -55,11 +55,13 @@ Object.assign(window, {
             available_count: 2,
             credits: [
               {
+                id: "reset-preview-1",
                 reset_type: "codexRateLimits",
-                title: null,
+                title: "Full reset",
                 expires_at: now + 2 * 86400,
               },
               {
+                id: "reset-preview-2",
                 reset_type: "codexRateLimits",
                 title: null,
                 expires_at: now + 10 * 86400,

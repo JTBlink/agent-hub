@@ -12,9 +12,17 @@
   },
   "agentUsage": {
     "resetCredits": {
+      "use": "使用重置额度",
+      "confirm": "将消耗 1 次重置额度，恢复符合条件的 Codex 使用限额。确定使用吗？",
+      "failed": "未能确认重置结果。重试会复用本次请求，避免重复消耗。",
+      "already_redeemed": "本次重置此前已完成，用量已刷新。",
+      "nothing_to_reset": "当前没有可重置的限额，未消耗重置额度。",
+      "no_credit": "该重置额度已不可用，请查看最新额度。",
+      "refreshFailed": "重置已完成，但刷新用量失败，请稍后刷新。",
+      "completed": "重置已成功，用量已刷新。",
       "title": "使用限额重置",
       "available": "可用 {{count}} 次",
-      "fullReset": "完全重置",
+      "fullReset": "完整重置",
       "reset": "限额重置",
       "expiresAt": "到期：{{time}}",
       "expiryUnknown": "未提供到期时间",

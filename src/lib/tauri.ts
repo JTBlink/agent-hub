@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { ProviderUsage } from "./agentUsage";
+import type { ProviderUsage, ResetResult } from "./agentUsage";
 import type { SystemLoadSnapshot } from "./systemLoad";
 
 export const getSystemLoad = () =>
@@ -8,6 +8,16 @@ export const getSystemLoad = () =>
 
 export const getAgentUsage = (refresh = false) =>
   invoke<ProviderUsage[]>("get_agent_usage", { refresh });
+
+/** Consume one earned reset only after an explicit user confirmation. */
+export const consumeCodexResetCredit = (
+  idempotencyKey: string,
+  creditId?: string,
+) =>
+  invoke<ResetResult>("consume_codex_reset_credit", {
+    idempotencyKey,
+    creditId,
+  });
 
 /** Open the current window's local developer tools, or toggle them where supported. */
 export function toggleDeveloperTools(): Promise<void> {

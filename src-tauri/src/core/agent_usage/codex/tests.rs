@@ -148,7 +148,7 @@ fn reads_available_reset_credits_without_inventing_counts_or_expiry() {
     let snapshot = parse(&json!({
         "rateLimits": {},
         "rateLimitResetCredits": {"availableCount": 4, "credits": [
-            {"status":"available", "resetType":"codexRateLimits", "expiresAt":1793491200},
+            {"id":"reset-example", "status":"available", "resetType":"codexRateLimits", "expiresAt":1793491200},
             {"status":"available", "resetType":"futureType", "title":"Example reset", "expiresAt":null},
             {"status":"redeemed", "resetType":"codexRateLimits"}
         ]}
@@ -158,6 +158,7 @@ fn reads_available_reset_credits_without_inventing_counts_or_expiry() {
     assert_eq!(resets.available_count, 4);
     let credits = resets.credits.unwrap();
     assert_eq!(credits.len(), 2);
+    assert_eq!(credits[0].id.as_deref(), Some("reset-example"));
     assert_eq!(credits[0].expires_at, Some(1793491200));
     assert_eq!(credits[0].title, None);
     assert_eq!(credits[1].expires_at, None);

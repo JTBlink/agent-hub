@@ -1070,6 +1070,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::agent_usage::get_agent_usage,
+            commands::agent_usage::consume_codex_reset_credit,
             commands::system_load::get_system_load,
             commands::herdr_tools::herdr_detect,
             commands::herdr_tools::herdr_install,

@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use std::{path::Path, process::Stdio, time::Duration};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 
-const MAX_RPC_BYTES: u64 = 2 * 1024 * 1024;
+pub(super) const MAX_RPC_BYTES: u64 = 2 * 1024 * 1024;
 
 #[cfg(unix)]
 struct ProbeGroup(Option<u32>);
@@ -39,6 +39,19 @@ async fn query_command(
     deadline: Duration,
     proxy: Option<&str>,
 ) -> Result<ProviderUsage, UsageStatus> {
+    run_command(executable, deadline, proxy, exchange).await
+}
+
+pub(super) async fn run_command<T, F, Fut>(
+    executable: &Path,
+    deadline: Duration,
+    proxy: Option<&str>,
+    operation: F,
+) -> Result<T, UsageStatus>
+where
+    F: FnOnce(tokio::process::ChildStdin, tokio::process::ChildStdout) -> Fut,
+    Fut: std::future::Future<Output = Result<T, UsageStatus>>,
+{
     let mut command = tokio::process::Command::new(executable);
     if let Some(proxy) = proxy {
         reqwest::Proxy::all(proxy).map_err(|_| UsageStatus::NetworkError)?;
@@ -54,7 +67,7 @@ async fn query_command(
     }
     command
         // Override legacy approval settings before config validation; this probe
-        // only reads account metadata and must not prompt or permit writes.
+        // never starts turns or permits filesystem writes; account actions are explicit.
         .args([
             "-c",
             "approval_policy=never",
@@ -75,7 +88,7 @@ async fn query_command(
     #[cfg(unix)]
     let group = ProbeGroup(child.id());
     let result = match (child.stdin.take(), child.stdout.take()) {
-        (Some(stdin), Some(stdout)) => tokio::time::timeout(deadline, exchange(stdin, stdout))
+        (Some(stdin), Some(stdout)) => tokio::time::timeout(deadline, operation(stdin, stdout))
             .await
             .unwrap_or(Err(UsageStatus::NetworkError)),
         _ => Err(UsageStatus::QueryFailed),
@@ -100,7 +113,10 @@ async fn query_command(
     result
 }
 
-async fn send(writer: &mut (impl AsyncWrite + Unpin), message: Value) -> Result<(), UsageStatus> {
+pub(super) async fn send(
+    writer: &mut (impl AsyncWrite + Unpin),
+    message: Value,
+) -> Result<(), UsageStatus> {
     let mut bytes = serde_json::to_vec(&message).map_err(|_| UsageStatus::InvalidResponse)?;
     bytes.push(b'\n');
     writer
@@ -110,7 +126,7 @@ async fn send(writer: &mut (impl AsyncWrite + Unpin), message: Value) -> Result<
     writer.flush().await.map_err(|_| UsageStatus::QueryFailed)
 }
 
-async fn response(
+pub(super) async fn response(
     reader: &mut (impl tokio::io::AsyncBufRead + Unpin),
     id: u64,
 ) -> Result<Value, UsageStatus> {
@@ -163,15 +179,28 @@ async fn exchange(
     output: impl AsyncRead + Unpin,
 ) -> Result<ProviderUsage, UsageStatus> {
     let mut reader = BufReader::new(output.take(MAX_RPC_BYTES));
-    send(&mut writer, json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"agent_hub_usage","version":env!("CARGO_PKG_VERSION")}}})).await?;
-    response(&mut reader, 1).await?;
-    send(&mut writer, json!({"jsonrpc":"2.0","method":"initialized"})).await?;
+    initialize_account(&mut writer, &mut reader).await?;
     send(
         &mut writer,
+        json!({"jsonrpc":"2.0","id":3,"method":"account/rateLimits/read"}),
+    )
+    .await?;
+    parse(&response(&mut reader, 3).await?)
+}
+
+pub(super) async fn initialize_account(
+    writer: &mut (impl AsyncWrite + Unpin),
+    reader: &mut (impl tokio::io::AsyncBufRead + Unpin),
+) -> Result<(), UsageStatus> {
+    send(writer, json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"agent_hub_usage","version":env!("CARGO_PKG_VERSION")}}})).await?;
+    response(reader, 1).await?;
+    send(writer, json!({"jsonrpc":"2.0","method":"initialized"})).await?;
+    send(
+        writer,
         json!({"jsonrpc":"2.0","id":2,"method":"account/read","params":{"refreshToken":false}}),
     )
     .await?;
-    let account = response(&mut reader, 2).await?;
+    let account = response(reader, 2).await?;
     let identity = account.get("account").ok_or(UsageStatus::InvalidResponse)?;
     if identity.is_null() {
         return Err(if account["requiresOpenaiAuth"] == false {
@@ -185,15 +214,10 @@ async fn exchange(
     if identity["type"] != "chatgpt" {
         return Err(UsageStatus::Unsupported);
     }
-    send(
-        &mut writer,
-        json!({"jsonrpc":"2.0","id":3,"method":"account/rateLimits/read"}),
-    )
-    .await?;
-    parse(&response(&mut reader, 3).await?)
+    Ok(())
 }
 
-fn parse(data: &Value) -> Result<ProviderUsage, UsageStatus> {
+pub(super) fn parse(data: &Value) -> Result<ProviderUsage, UsageStatus> {
     let limits = data
         .pointer("/rateLimitsByLimitId/codex")
         .filter(|v| v.is_object())
@@ -235,6 +259,10 @@ fn parse_reset_credits(raw: &Value) -> Option<ResetCredits> {
         rows.iter()
             .filter(|row| row["status"] == "available")
             .map(|row| ResetCredit {
+                id: row["id"]
+                    .as_str()
+                    .filter(|id| !id.trim().is_empty())
+                    .map(str::to_owned),
                 reset_type: row["resetType"].as_str().unwrap_or_default().to_owned(),
                 title: row["title"]
                     .as_str()

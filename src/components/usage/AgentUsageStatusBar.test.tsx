@@ -5,11 +5,14 @@ import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../../i18n/zh.json";
-import { getAgentUsage } from "../../lib/tauri";
+import { consumeCodexResetCredit, getAgentUsage } from "../../lib/tauri";
 import type { ProviderUsage } from "../../lib/agentUsage";
 import { AgentUsageStatusBar } from "./AgentUsageStatusBar";
 
-vi.mock("../../lib/tauri", () => ({ getAgentUsage: vi.fn() }));
+vi.mock("../../lib/tauri", () => ({
+  getAgentUsage: vi.fn(),
+  consumeCodexResetCredit: vi.fn(),
+}));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
 let container: HTMLDivElement;
@@ -87,6 +90,7 @@ beforeEach(() => {
     visible ? "visible" : "hidden",
   );
   vi.mocked(getAgentUsage).mockReset().mockResolvedValue(fixture());
+  vi.mocked(consumeCodexResetCredit).mockReset();
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -279,7 +283,7 @@ it("prioritizes Codex and warns in the status bar and reset details before expir
     credits: [
       {
         reset_type: "codexRateLimits",
-        title: null,
+        title: "Full reset",
         expires_at: codex.updated_at + 86400,
       },
       {
@@ -308,6 +312,9 @@ it("prioritizes Codex and warns in the status bar and reset details before expir
   const resets = panel.querySelector('section[aria-label="使用限额重置"]')!;
   expect(resets.textContent).toContain("可用 4 次");
   expect(resets.querySelectorAll("li")).toHaveLength(4);
+  expect(resets.textContent).toContain("完整重置");
+  expect(resets.textContent).not.toContain("Full reset");
+  expect(resets.textContent).toContain("Example reset");
   expect(resets.textContent).toContain("未提供到期时间");
   expect(resets.textContent).toContain("已到期");
   expect(resets.querySelectorAll("li.text-danger")).toHaveLength(1);
@@ -362,4 +369,127 @@ it("starts the expiry reminder as the clock enters the three-day window without 
   await act(async () => vi.advanceTimersByTime(60_000));
   expect(button("Agent 用量").textContent).toContain("重置额度即将到期");
   expect(getAgentUsage).toHaveBeenCalledTimes(queries);
+});
+
+function resetFixture() {
+  const snapshots = fixture();
+  const codex = snapshots.find((item) => item.provider === "codex")!;
+  codex.reset_credits = {
+    available_count: 2,
+    credits: [
+      {
+        id: "reset-one",
+        reset_type: "codexRateLimits",
+        title: null,
+        expires_at: codex.updated_at + 86400,
+      },
+      {
+        id: "reset-two",
+        reset_type: "codexRateLimits",
+        title: null,
+        expires_at: codex.updated_at + 10 * 86400,
+      },
+    ],
+  };
+  return snapshots;
+}
+const useButtons = () => [
+  ...document.querySelectorAll<HTMLButtonElement>(
+    'section[aria-label="使用限额重置"] button',
+  ),
+];
+const confirmUse = () =>
+  [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((button) => button.textContent === "使用重置额度")!;
+
+it("requires confirmation for the selected reset, cancels safely, and replaces quota with the server result", async () => {
+  const snapshots = resetFixture();
+  vi.mocked(getAgentUsage).mockResolvedValue(snapshots);
+  const after = {
+    ...snapshots[1],
+    reset_credits: {
+      available_count: 1,
+      credits: [snapshots[1].reset_credits!.credits![1]],
+    },
+  };
+  vi.mocked(consumeCodexResetCredit).mockResolvedValue({
+    outcome: "reset",
+    snapshot: after,
+    refresh_error: null,
+  });
+  await render();
+  await click("Agent 用量");
+  expect(useButtons()).toHaveLength(2);
+  await act(async () => useButtons()[0].click());
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+  expect(consumeCodexResetCredit).not.toHaveBeenCalled();
+  await act(async () =>
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[role="alertdialog"] button',
+      ),
+    ]
+      .find((button) => button.textContent === "取消")!
+      .click(),
+  );
+  expect(consumeCodexResetCredit).not.toHaveBeenCalled();
+  await act(async () => useButtons()[0].click());
+  await act(async () => confirmUse().click());
+  expect(consumeCodexResetCredit).toHaveBeenCalledWith(
+    expect.any(String),
+    "reset-one",
+  );
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+    "可用 1 次",
+  );
+  expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+    "重置已成功，用量已刷新",
+  );
+  expect(useButtons()).toHaveLength(1);
+});
+
+it("keeps confirmation open on uncertain failure and reuses its key without duplicate submissions", async () => {
+  vi.mocked(getAgentUsage).mockResolvedValue(resetFixture());
+  let reject!: (error: unknown) => void;
+  vi.mocked(consumeCodexResetCredit).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+  );
+  await render();
+  await click("Agent 用量");
+  await act(async () => useButtons()[0].click());
+  await act(async () => confirmUse().click());
+  const pendingConfirm = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].at(-1)!;
+  expect(pendingConfirm.disabled).toBe(true);
+  await act(async () => pendingConfirm.click());
+  expect(consumeCodexResetCredit).toHaveBeenCalledTimes(1);
+  await act(async () => reject("network_error"));
+  expect(
+    document.querySelector('[role="alertdialog"] [role="alert"]')?.textContent,
+  ).toContain("重试会复用本次请求");
+  const key = vi.mocked(consumeCodexResetCredit).mock.calls[0][0];
+  vi.mocked(consumeCodexResetCredit).mockResolvedValueOnce({
+    outcome: "already_redeemed",
+    snapshot: null,
+    refresh_error: "network_error",
+  });
+  await act(async () => confirmUse().click());
+  expect(consumeCodexResetCredit).toHaveBeenLastCalledWith(key, "reset-one");
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+    "重置已完成，但刷新用量失败",
+  );
+  expect(
+    document.querySelector('section[aria-label="使用限额重置"]'),
+  ).toBeNull();
 });

@@ -3,6 +3,8 @@
 mod claude;
 mod codex;
 mod credentials;
+mod reset;
+pub use reset::{ResetOutcome, ResetResult};
 
 use serde::Serialize;
 use std::{
@@ -46,6 +48,7 @@ pub struct UsageWindow {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct ResetCredit {
+    pub id: Option<String>,
     pub reset_type: String,
     pub title: Option<String>,
     pub expires_at: Option<i64>,
@@ -107,6 +110,27 @@ pub struct AgentUsage {
 }
 
 impl AgentUsage {
+    /// Serialize redemption with Codex queries and replace the cached quota immediately.
+    pub async fn consume_reset(
+        &self,
+        idempotency_key: String,
+        credit_id: Option<String>,
+        proxy: Option<String>,
+    ) -> Result<ResetResult, UsageStatus> {
+        let mut cache = self.codex.lock().await;
+        let result = reset::consume(idempotency_key, credit_id, proxy.as_deref()).await;
+        // Even an interrupted response may have consumed a credit. Do not serve stale data.
+        *cache = result
+            .as_ref()
+            .ok()
+            .and_then(|result| result.snapshot.clone())
+            .map(|snapshot| CachedUsage {
+                snapshot,
+                checked_at: Instant::now(),
+            });
+        result
+    }
+
     pub async fn query(&self, refresh: bool, proxy: Option<String>) -> Vec<ProviderUsage> {
         let (claude, codex) = tokio::join!(
             cached_query(&self.claude, refresh, || claude::query(proxy.as_deref())),

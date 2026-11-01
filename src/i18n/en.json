@@ -12,6 +12,14 @@
   },
   "agentUsage": {
     "resetCredits": {
+      "use": "Use reset credit",
+      "confirm": "This uses one reset credit to restore eligible Codex limits. Continue?",
+      "failed": "The reset could not be confirmed. Retrying reuses this request to avoid consuming another credit.",
+      "already_redeemed": "This reset was already completed. Usage refreshed.",
+      "nothing_to_reset": "No eligible limits to reset. No credit was consumed.",
+      "no_credit": "This reset credit is no longer available. Check the updated credits.",
+      "refreshFailed": "Reset completed, but usage could not be refreshed. Refresh again shortly.",
+      "completed": "Reset completed. Usage refreshed.",
       "title": "Usage limit resets",
       "available": "{{count}} available",
       "fullReset": "Full reset",

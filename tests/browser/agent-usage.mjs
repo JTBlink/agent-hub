@@ -79,6 +79,35 @@ try {
     assert.equal(resets.urgent, 1);
     assert.notEqual(resets.colors[0], resets.colors[1]);
     assert.equal(resets.reminder, true);
+    const resetRows = await evaluate(
+      `(()=>{const d=${doc};return [...d.querySelectorAll('[role="dialog"] li')].map(row=>{const info=row.firstElementChild,nodes=[info.children[0],info.children[1],row.querySelector('button')],rects=nodes.map(n=>n.getBoundingClientRect());return {title:info.children[0].textContent,centers:rects.map(r=>(r.top+r.bottom)/2),overflow:row.scrollWidth>row.clientWidth}})})()`,
+    );
+    for (const row of resetRows) {
+      assert.equal(row.overflow, false, JSON.stringify(row));
+      assert.ok(
+        Math.max(...row.centers) - Math.min(...row.centers) < 1,
+        JSON.stringify(row),
+      );
+      assert.equal(row.title, language === "en" ? "Full reset" : "完整重置");
+    }
+    await evaluate(`${doc}.querySelector('li button').click();true`);
+    await until(`!!${doc}.querySelector('[role="alertdialog"]')`);
+    const confirmation = await evaluate(
+      `(()=>{const d=${doc},p=d.querySelector('[role="alertdialog"]'),r=p.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:d.defaultView.innerWidth,height:d.defaultView.innerHeight,overflow:d.documentElement.scrollWidth>d.defaultView.innerWidth}})()`,
+    );
+    assert.equal(confirmation.overflow, false);
+    assert.ok(
+      confirmation.left >= 0 &&
+        confirmation.top >= 0 &&
+        confirmation.right <= confirmation.width &&
+        confirmation.bottom <= confirmation.height,
+      JSON.stringify(confirmation),
+    );
+    await evaluate(
+      `(()=>{const d=${doc};d.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true})()`,
+    );
+    await until(`!${doc}.querySelector('[role="alertdialog"]')`);
+    assert.ok(await evaluate(`!!${doc}.querySelector('[role="dialog"]')`));
     await evaluate(
       `(()=>{const d=${doc};d.dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true})()`,
     );
@@ -90,7 +119,7 @@ try {
     );
   }
   console.log(
-    "PASS: Agent usage details, reset times, zero usage, both themes, three languages, 120% text, 480px viewport and Escape focus restoration.",
+    "PASS: Codex reset rows, confirmation cancellation, expiry warnings, both themes, three languages, 120% text, 480px viewport and Escape focus restoration.",
   );
 } finally {
   await request(`/close?target=${targetId}`);

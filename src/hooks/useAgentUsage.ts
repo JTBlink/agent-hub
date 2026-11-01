@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isTransientUsageFailure, type ProviderUsage } from "../lib/agentUsage";
-import { getAgentUsage } from "../lib/tauri";
+import { consumeCodexResetCredit, getAgentUsage } from "../lib/tauri";
 
 const POLL_MS = 5 * 60_000;
 const RETRY_MS = 30_000;
@@ -43,6 +43,38 @@ export function useAgentUsage() {
     }
   }, []);
 
+  const consumeReset = useCallback(async (key: string, creditId?: string) => {
+    if (pending.current) throw new Error("query_pending");
+    const request = generation.current;
+    pending.current = true;
+    setLoading(true);
+    try {
+      const result = await consumeCodexResetCredit(key, creditId);
+      if (request === generation.current) {
+        setSnapshots((previous) => [
+          ...previous.filter((snapshot) => snapshot.provider !== "codex"),
+          ...(result.snapshot ? [result.snapshot] : []),
+        ]);
+        nextPoll.current = Date.now() + (result.snapshot ? POLL_MS : RETRY_MS);
+        setFailed(false);
+      }
+      return result;
+    } catch (error) {
+      if (request === generation.current) {
+        setSnapshots((previous) =>
+          previous.filter((snapshot) => snapshot.provider !== "codex"),
+        );
+        nextPoll.current = Date.now() + RETRY_MS;
+      }
+      throw error;
+    } finally {
+      if (request === generation.current) {
+        pending.current = false;
+        setLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const refreshActive = () => {
       if (document.visibilityState === "visible" && document.hasFocus())
@@ -63,5 +95,5 @@ export function useAgentUsage() {
     };
   }, [refresh]);
 
-  return { snapshots, loading, failed, refresh };
+  return { snapshots, loading, failed, refresh, consumeReset };
 }

@@ -19,6 +19,8 @@ export function AgentUsagePanel({
   titleId,
   onRefresh,
   onClose,
+  onUseReset,
+  resetNotice,
 }: {
   now: number;
   snapshots: ProviderUsage[];
@@ -27,6 +29,8 @@ export function AgentUsagePanel({
   titleId: string;
   onRefresh: () => void;
   onClose: () => void;
+  onUseReset: (creditId?: string) => void;
+  resetNotice: string;
 }) {
   const { t, i18n } = useTranslation();
   return (
@@ -62,6 +66,11 @@ export function AgentUsagePanel({
       <p className="mb-3 text-xs leading-relaxed text-muted">
         {t("agentUsage.description")}
       </p>
+      {resetNotice && (
+        <p role="status" className="mb-3 text-xs text-secondary">
+          {resetNotice}
+        </p>
+      )}
       <div className="space-y-4" aria-busy={loading}>
         {USAGE_PROVIDERS.map((provider) => {
           const snapshot = snapshots.find((item) => item.provider === provider);
@@ -142,6 +151,8 @@ export function AgentUsagePanel({
                   <ResetCreditsSection
                     credits={snapshot.reset_credits}
                     now={now}
+                    busy={loading}
+                    onUse={onUseReset}
                   />
                 )}
               {snapshot && (

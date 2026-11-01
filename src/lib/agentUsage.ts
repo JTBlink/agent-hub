@@ -20,6 +20,7 @@ export interface UsageWindow {
   window_minutes: number | null;
 }
 export interface ResetCredit {
+  id?: string | null;
   reset_type: string;
   title: string | null;
   expires_at: number | null;
@@ -35,6 +36,11 @@ export interface ProviderUsage {
   reset_credits?: ResetCredits | null;
   updated_at: number;
   retry_after_seconds: number | null;
+}
+export interface ResetResult {
+  outcome: "reset" | "already_redeemed" | "nothing_to_reset" | "no_credit";
+  snapshot: ProviderUsage | null;
+  refresh_error: UsageStatus | null;
 }
 export const USAGE_PROVIDERS: UsageProvider[] = ["codex", "claude"];
 export const isTransientUsageFailure = (status: UsageStatus) =>
