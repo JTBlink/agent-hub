@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import type { Project } from "../../lib/tauri";
@@ -45,6 +45,84 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+it("opens the most recently visited project once, after loading and entering the terminal", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "terminal_create"
+      ? { id: "default-pty", cwd: "<workspace>" }
+      : undefined,
+  );
+  const base: Project = {
+    id: "first",
+    name: "First",
+    path: "<workspace>",
+    workspace_type: "project",
+    linked_agent_name: null,
+    supports_skill_toggle: true,
+    sort_order: 0,
+    skill_count: 0,
+    sync_health: {
+      in_sync: 0,
+      project_newer: 0,
+      center_newer: 0,
+      diverged: 0,
+      project_only: 0,
+    },
+    created_at: 0,
+    updated_at: 0,
+    visited_at: null,
+  };
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const render = (projects: Project[]) =>
+    root.render(
+      <StrictMode>
+        <MemoryRouter initialEntries={["/tasks"]}>
+          <Link to="/terminal" data-nav="terminal">
+            Open
+          </Link>
+          <Link to="/tasks" data-nav="tasks">
+            Tasks
+          </Link>
+          <TerminalWorkspace projects={projects} onMaximizedChange={() => {}} />
+        </MemoryRouter>
+      </StrictMode>,
+    );
+  const creations = () =>
+    vi.mocked(invoke).mock.calls.filter(([name]) => name === "terminal_create");
+  const click = async (selector: string) => {
+    const element = host.querySelector<HTMLElement>(selector);
+    expect(element).not.toBeNull();
+    await act(async () => element?.click());
+  };
+  await act(async () => render([]));
+  await click('[data-nav="terminal"]');
+  expect(creations()).toHaveLength(0);
+  await click('[data-nav="tasks"]');
+  await act(async () =>
+    render([
+      base,
+      { ...base, id: "recent", name: "Recent", visited_at: 200 },
+      { ...base, id: "older", visited_at: 100 },
+    ]),
+  );
+  expect(creations()).toHaveLength(0);
+  await click('[data-nav="terminal"]');
+  expect(creations()).toHaveLength(1);
+  expect(creations()[0][1]).toMatchObject({ projectId: "recent" });
+  expect(host.querySelector('[role="tab"]')?.textContent).toContain("Recent");
+  await click('[data-nav="tasks"]');
+  await click('[data-nav="terminal"]');
+  expect(creations()).toHaveLength(1);
+  await click('button[aria-label="terminal.closeTab"]');
+  expect(host.querySelector('[role="tab"]')).toBeNull();
+  await click('[data-nav="tasks"]');
+  await click('[data-nav="terminal"]');
+  expect(creations()).toHaveLength(1);
+  await act(async () => root.unmount());
+  host.remove();
 });
 
 it("offers a project terminal without requiring Herdr", async () => {
@@ -105,6 +183,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
     finishUpdate = resolve;
   });
   let created = 0;
+  let herdrActive = false;
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "terminal_project_directory") return "<workspace>";
     if (command === "terminal_create")
@@ -115,7 +194,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
         exited: false,
       };
     if (command === "terminal_launch_state")
-      return { ready: true, revision: 0, herdr_active: false };
+      return { ready: true, revision: 0, herdr_active: herdrActive };
     if (command === "herdr_detect") return null;
     if (command === "herdr_install") return installing;
     if (command === "herdr_check_update")
@@ -175,6 +254,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
     expect(button).not.toBeNull();
     await act(async () => button?.click());
   };
+  expect(created).toBe(1);
   expect(
     host.querySelector('button[aria-label="tasks.context"]'),
   ).not.toBeNull();
@@ -188,7 +268,12 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
     '[role="tabpanel"]:not([hidden]) textarea[aria-label="Shell input"]',
   );
   expect(first).not.toBeNull();
-  await click("terminal.splitHorizontal");
+  await click("terminal.split");
+  const splitOption = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((button) => button.textContent === "terminal.splitHorizontal");
+  expect(splitOption).toBeDefined();
+  await act(async () => splitOption?.click());
   const panes = host.querySelectorAll<HTMLTextAreaElement>(
     '[role="tabpanel"]:not([hidden]) textarea[aria-label="Shell input"]',
   );
@@ -246,9 +331,130 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   expect(second.isConnected).toBe(true);
   expect(second.value).toBe("draft");
   expect(document.activeElement).toBe(projectControl);
+  const writesBeforeSidebar = vi
+    .mocked(invoke)
+    .mock.calls.filter(([command]) => command === "terminal_write").length;
+  await click("terminal.herdrSidebar");
+  expect(host.textContent).toContain("terminal.herdrNotRunning");
+  expect(
+    vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === "terminal_write"),
+  ).toHaveLength(writesBeforeSidebar);
+  herdrActive = true;
+  await click("terminal.herdrSidebar");
+  expect(invoke).toHaveBeenCalledWith("terminal_write", {
+    id: "pty-3",
+    data: "\u0002b",
+  });
+  expect(document.activeElement).toBe(second);
   await click("terminal.closePane");
   expect(first?.isConnected).toBe(false);
   expect(second.isConnected).toBe(true);
+  await act(async () => root.unmount());
+  host.remove();
+});
+
+it("keeps terminals, split panes and the selected tab independent for each worktree", async () => {
+  const { makeProject } = await import("../../../tests/fixtures/workspace");
+  const project = makeProject();
+  let next = 0;
+  vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "terminal_create")
+      return {
+        id: `pty-${++next}`,
+        cwd:
+          args && typeof args === "object" && "worktreePath" in args
+            ? args.worktreePath
+            : "<workspace>",
+      };
+    return undefined;
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const main = `/project/${project.id}?${new URLSearchParams({ worktree: project.path })}`;
+  const topicPath = "<workspace>/topic checkout";
+  const topic = `/project/${project.id}?${new URLSearchParams({ worktree: topicPath })}`;
+  await act(async () =>
+    root.render(
+      <StrictMode>
+        <MemoryRouter initialEntries={[main]}>
+          <Link data-nav="main" to={main}>
+            Main
+          </Link>
+          <Link data-nav="topic" to={topic}>
+            Topic
+          </Link>
+          <Link data-nav="skills" to={`/project/${project.id}/skills`}>
+            Skills
+          </Link>
+          <TerminalWorkspace
+            projects={[project]}
+            onMaximizedChange={() => {}}
+          />
+        </MemoryRouter>
+      </StrictMode>,
+    ),
+  );
+  const click = async (selector: string) => {
+    const node = host.querySelector<HTMLElement>(selector);
+    expect(node).not.toBeNull();
+    await act(async () => node?.click());
+  };
+  const inputs = () => [
+    ...host.querySelectorAll<HTMLTextAreaElement>(
+      '[role="tabpanel"]:not([hidden]) textarea',
+    ),
+  ];
+  const creations = () =>
+    vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === "terminal_create");
+  expect(creations().at(-1)?.[1]).toMatchObject({
+    projectId: project.id,
+    worktreePath: project.path,
+  });
+  expect(
+    host.querySelector('[aria-label="terminal.chooseProject"]'),
+  ).toBeNull();
+  await click('[aria-label="terminal.split"]');
+  const option = [
+    ...document.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+  ].find((node) => node.textContent === "terminal.splitHorizontal")!;
+  await act(async () => option.click());
+  const original = inputs();
+  expect(original).toHaveLength(2);
+  original[1].value = "unfinished command";
+  await click('[aria-label="terminal.new"]');
+  const selectedTab = host.querySelector(
+    '[role="tab"][aria-selected="true"]',
+  )?.textContent;
+  const beforeSwitch = creations().length;
+  await click('[data-nav="topic"]');
+  expect(inputs()).toHaveLength(1);
+  expect(creations().at(-1)?.[1]).toMatchObject({ worktreePath: topicPath });
+  await click('[data-nav="skills"]');
+  expect(
+    host
+      .querySelector('section[aria-label="terminal.title"]')
+      ?.hasAttribute("hidden"),
+  ).toBe(true);
+  await click('[data-nav="main"]');
+  expect(
+    host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+  ).toBe(selectedTab);
+  const first = host.querySelector<HTMLElement>('[role="tab"]')!;
+  await act(async () => first.click());
+  expect(inputs()).toEqual(original);
+  expect(inputs()[1].value).toBe("unfinished command");
+  expect(creations()).toHaveLength(beforeSwitch + 1);
+  await click('[data-nav="topic"]');
+  await click('[aria-label="terminal.closeTab"]');
+  await click('[data-nav="main"]');
+  await click('[data-nav="topic"]');
+  expect(host.querySelector('[role="tab"]')).toBeNull();
+  expect(creations()).toHaveLength(beforeSwitch + 1);
   await act(async () => root.unmount());
   host.remove();
 });

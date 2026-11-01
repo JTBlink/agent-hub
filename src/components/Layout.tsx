@@ -6,17 +6,20 @@ import { CommandPalette } from "./CommandPalette";
 import { useApp } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { useDragWindow } from "../hooks/useDragWindow";
-import { TerminalWorkspace } from "./terminal/TerminalWorkspace";
+import { ProjectWorkspace } from "./worktree/ProjectWorkspace";
+import { projectWorkspaceRoute } from "../lib/worktreeApi";
 import { cn } from "../utils";
 
 export function Layout() {
   const { t } = useTranslation();
-  const { appError, refreshAppData, projects } = useApp();
+  const { appError, refreshAppData } = useApp();
   const onDrag = useDragWindow();
   const navigate = useNavigate();
-  const pathname = useLocation().pathname;
+  const { pathname, search } = useLocation();
+  const workspacePage =
+    !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
   const [terminalMaximized, setTerminalMaximized] = useState(false);
-  const hideSidebar = pathname === "/terminal" && terminalMaximized;
+  const hideSidebar = workspacePage && terminalMaximized;
   const fullHeightPage =
     pathname === "/settings" ||
     pathname === "/backup/diff" ||
@@ -63,7 +66,7 @@ export function Layout() {
       <div
         className={cn(
           "relative min-w-0 flex-1 flex-col overflow-hidden",
-          pathname === "/terminal" ? "hidden" : "flex",
+          workspacePage ? "hidden" : "flex",
         )}
       >
         <div
@@ -76,7 +79,10 @@ export function Layout() {
         >
           <div
             className={cn(
-              "mx-auto flex w-full max-w-[1200px] flex-col gap-4",
+              "mx-auto flex w-full flex-col gap-4",
+              pathname === "/tasks"
+                ? "max-w-none"
+                : "max-w-[1200px]",
               fullHeightPage ? "min-h-0 flex-1" : "min-h-full",
             )}
           >
@@ -94,8 +100,8 @@ export function Layout() {
           </div>
         </div>
       </div>
-      <TerminalWorkspace
-        projects={projects}
+      <ProjectWorkspace
+        maximized={terminalMaximized}
         onMaximizedChange={setTerminalMaximized}
       />
       <CommandPalette />

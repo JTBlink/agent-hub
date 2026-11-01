@@ -19,11 +19,13 @@ export function createTerminal(
   projectId: string,
   size: TerminalSize,
   onEvent: (event: TerminalEvent) => void,
+  worktreePath?: string,
 ) {
   const events = new Channel<TerminalEvent>();
   events.onmessage = onEvent;
   return invoke<TerminalSession>("terminal_create", {
     projectId,
+    worktreePath,
     size,
     events,
   });
@@ -62,5 +64,7 @@ export const terminalLaunchState = (id: string) =>
   invoke<TerminalLaunchState>("terminal_launch_state", { id });
 export const launchTerminalHerdr = (id: string, revision: number) =>
   invoke<boolean>("terminal_launch_herdr", { id, revision });
-export const resolveTerminalProject = (projectId: string) =>
-  invoke<string>("terminal_project_directory", { projectId });
+export const resolveTerminalProject = (
+  projectId: string,
+  worktreePath?: string,
+) => invoke<string>("terminal_project_directory", { projectId, worktreePath });

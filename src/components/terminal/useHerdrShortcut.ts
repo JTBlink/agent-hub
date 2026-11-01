@@ -119,5 +119,30 @@ export function useHerdrShortcut(
       setBusy(false);
     }
   };
-  return { busy, notice, update, launch, upgrade };
+  const toggleSidebar = async () => {
+    if (inFlight.current) return;
+    const pane = target.current();
+    if (!pane) return;
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      const state = await api.terminalLaunchState(pane.sessionId);
+      if (target.current() !== pane) return;
+      if (!state.herdr_active) {
+        setNotice(t("terminal.herdrNotRunning"));
+        return;
+      }
+      // Herdr's default prefix+b toggles its own sidebar, not AgentHub's.
+      // One PTY write keeps the chord together and never executes a command.
+      await api.writeTerminal(pane.sessionId, "\u0002b");
+      setNotice("");
+      if (target.current() === pane) pane.focus();
+    } catch (error) {
+      setNotice(getErrorMessage(error, t("common.error")));
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
+  return { busy, notice, update, launch, upgrade, toggleSidebar };
 }

@@ -1815,10 +1815,13 @@
     "sessions": "終端分頁",
     "closeTab": "關閉終端分頁 {{number}}",
     "closePane": "關閉目前窗格",
+    "split": "分割終端",
     "splitHorizontal": "左右分割",
     "splitVertical": "上下分割",
     "maximize": "最大化終端",
     "restore": "還原終端",
+    "herdrSidebar": "展開／隱藏 Herdr 側邊欄",
+    "herdrNotRunning": "請先在目前窗格啟動 Herdr",
     "herdrLaunch": "在目前窗格啟動 Herdr",
     "herdrWait": "終端準備中，請稍後重試",
     "herdrInstalling": "正在安裝 Herdr，可繼續使用終端…",
@@ -1976,5 +1979,22 @@
       "modified": "修改",
       "removed": "刪除"
     }
+  },
+  "worktree": {
+    "title": "工作樹",
+    "main": "主要工作樹",
+    "locked": "已鎖定",
+    "toggleProject": "展開或收合 {{name}}",
+    "removeProject": "移除專案 {{name}}",
+    "list": "{{name}} 的工作樹",
+    "refresh": "重新整理工作樹",
+    "refreshFiles": "重新整理檔案樹",
+    "projectSkills": "專案技能",
+    "back": "返回工作區",
+    "emptyDirectory": "空資料夾",
+    "symlink": "符號連結，請在外部編輯器中開啟",
+    "unavailable": "此工作樹無法使用，請重新整理清單後重新選擇。",
+    "terminalLimit": "已達到 8 個終端窗格上限，請先關閉其他工作樹中的終端。",
+    "unsaved": "未儲存"
   }
 }

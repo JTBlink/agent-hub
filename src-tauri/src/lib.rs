@@ -1217,6 +1217,10 @@ pub fn run() {
             commands::git_backup::git_backup_resolve_conflict,
             commands::git_backup::git_backup_sync,
             // Projects
+            commands::project_worktrees::get_project_worktrees,
+            commands::project_worktrees::get_worktree_files,
+            commands::project_worktrees::read_worktree_file,
+            commands::project_worktrees::write_worktree_file,
             commands::projects::get_projects,
             commands::projects::add_project,
             commands::projects::add_linked_workspace,

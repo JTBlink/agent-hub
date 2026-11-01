@@ -12,12 +12,7 @@ import {
   RefreshCw,
   Settings,
   Plus,
-  Trash2,
-  FolderOpen,
-  GripVertical,
-  Link2,
   CalendarClock,
-  TerminalSquare,
   ListTodo,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -30,33 +25,8 @@ import { useSidebarSections } from "../hooks/useSidebarSections";
 import { SidebarSectionHeader } from "./SidebarSectionHeader";
 import { SidebarAgentWorkspaces } from "./SidebarAgentWorkspaces";
 import * as api from "../lib/tauri";
-import type { SyncHealth } from "../lib/tauri";
+import { ProjectTreeRow } from "./worktree/ProjectTreeRow";
 import { SidebarSkillGroups } from "./SidebarSkillGroups";
-
-function getSyncHealthIndicator(
-  health: SyncHealth,
-  skillCount: number,
-): { color: string; title: string } | null {
-  if (skillCount === 0) return null;
-  if (health.diverged > 0)
-    return { color: "bg-red-400", title: `${health.diverged} diverged` };
-  if (health.project_newer > 0 || health.center_newer > 0) {
-    const parts: string[] = [];
-    if (health.project_newer > 0)
-      parts.push(`${health.project_newer} project newer`);
-    if (health.center_newer > 0)
-      parts.push(`${health.center_newer} center newer`);
-    return { color: "bg-amber-400", title: parts.join(", ") };
-  }
-  if (health.project_only > 0)
-    return {
-      color: "bg-blue-400",
-      title: `${health.project_only} project only`,
-    };
-  if (health.in_sync === skillCount)
-    return { color: "bg-emerald-400", title: "All in sync" };
-  return null;
-}
 
 export function Sidebar() {
   const { t } = useTranslation();
@@ -98,14 +68,43 @@ export function Sidebar() {
       });
   };
 
-  const NAV_ITEMS = [
+  const primaryNavItems = [
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
+    { name: t("tasks.title"), path: "/tasks", icon: ListTodo },
+    { name: t("automation.title"), path: "/automation", icon: CalendarClock },
+  ];
+  const utilityNavItems = [
     { name: t("discovery.title"), path: "/discover", icon: Compass },
     { name: t("sidebar.backup"), path: "/backup", icon: RefreshCw },
-    { name: t("automation.title"), path: "/automation", icon: CalendarClock },
-    { name: t("tasks.title"), path: "/tasks", icon: ListTodo },
-    { name: t("terminal.title"), path: "/terminal", icon: TerminalSquare },
   ];
+
+  const renderNavItems = (items: typeof primaryNavItems) =>
+    items.map((item) => {
+      const Icon = item.icon;
+      const isActive =
+        location.pathname === item.path ||
+        (item.path === "/discover" && location.pathname === "/install");
+      return (
+        <Link
+          key={item.path}
+          to={item.path}
+          className={cn(
+            "flex items-center gap-2.5 px-2.5 py-[7px] rounded-md text-sm font-medium transition-colors outline-none",
+            isActive
+              ? "bg-surface-active text-primary"
+              : "text-tertiary hover:text-secondary hover:bg-surface-hover",
+          )}
+        >
+          <Icon
+            className={cn(
+              "w-4 h-4 shrink-0",
+              isActive ? "text-accent" : "text-muted",
+            )}
+          />
+          {item.name}
+        </Link>
+      );
+    });
 
   const handleDeleteProject = async () => {
     if (!deleteProjectTarget) return;
@@ -136,32 +135,7 @@ export function Sidebar() {
 
         {/* Nav */}
         <div className="px-2.5 space-y-0.5 shrink-0">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              location.pathname === item.path ||
-              (item.path === "/discover" && location.pathname === "/install");
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-2.5 px-2.5 py-[7px] rounded-md text-sm font-medium transition-colors outline-none",
-                  isActive
-                    ? "bg-surface-active text-primary"
-                    : "text-tertiary hover:text-secondary hover:bg-surface-hover",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "w-4 h-4 shrink-0",
-                    isActive ? "text-accent" : "text-muted",
-                  )}
-                />
-                {item.name}
-              </Link>
-            );
-          })}
+          {renderNavItems(primaryNavItems)}
         </div>
 
         {/* Divider */}
@@ -169,23 +143,6 @@ export function Sidebar() {
 
         {/* Scrollable section */}
         <div className="px-2.5 flex-1 overflow-y-auto scrollbar-hide min-h-0">
-          <SidebarSkillGroups
-            isOpen={expandedSection === "skills"}
-            onToggle={() => toggleSection("skills")}
-          />
-
-          {/* Divider */}
-          <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
-
-          <SidebarAgentWorkspaces
-            tools={tools}
-            isOpen={expandedSection === "agents"}
-            onToggle={() => toggleSection("agents")}
-          />
-
-          {/* Divider */}
-          <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
-
           {/* ── Projects ── */}
           <SidebarSectionHeader
             label={t("sidebar.projects")}
@@ -202,116 +159,26 @@ export function Sidebar() {
                       ref={droppableProvided.innerRef}
                       {...droppableProvided.droppableProps}
                     >
-                      {orderedProjects.map((project, index) => {
-                        const isActive =
-                          location.pathname === `/project/${project.id}`;
-                        const healthIndicator = getSyncHealthIndicator(
-                          project.sync_health,
-                          project.skill_count,
-                        );
-                        return (
-                          <Draggable
-                            key={project.id}
-                            draggableId={project.id}
-                            index={index}
-                          >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={cn(
-                                  "group relative flex items-center rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-surface-active"
-                                    : "hover:bg-surface-hover",
-                                )}
-                              >
-                                <button
-                                  onClick={() => {
-                                    void api.touchProjectVisited(project.id);
-                                    navigate(`/project/${project.id}`);
-                                  }}
-                                  className={cn(
-                                    "flex min-w-0 flex-1 items-center gap-2 px-2.5 py-[7px] text-left text-sm leading-5 outline-none",
-                                    isActive
-                                      ? "font-medium text-primary"
-                                      : "text-tertiary group-hover:text-secondary",
-                                  )}
-                                >
-                                  <span
-                                    className={cn(
-                                      "flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded border",
-                                      isActive
-                                        ? project.workspace_type === "linked"
-                                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                                          : "border-blue-500/30 bg-blue-500/10 text-blue-500"
-                                        : "border-border bg-surface text-muted group-hover:border-border group-hover:text-tertiary",
-                                    )}
-                                  >
-                                    {project.workspace_type === "linked" ? (
-                                      <Link2 className="h-3 w-3" />
-                                    ) : (
-                                      <FolderOpen className="h-3 w-3" />
-                                    )}
-                                  </span>
-                                  <span className="flex-1 truncate">
-                                    {project.name}
-                                  </span>
-                                  <span className="ml-auto flex h-[18px] w-[52px] shrink-0 items-center justify-end gap-2 group-hover:hidden">
-                                    {healthIndicator && (
-                                      <span
-                                        className={cn(
-                                          "h-1.5 w-1.5 shrink-0 rounded-full",
-                                          healthIndicator.color,
-                                        )}
-                                        title={healthIndicator.title}
-                                      />
-                                    )}
-                                    {project.skill_count > 0 && (
-                                      <span
-                                        className={cn(
-                                          "min-w-[24px] rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
-                                          isActive
-                                            ? "bg-accent-bg text-accent-light"
-                                            : "bg-surface-hover text-muted",
-                                        )}
-                                      >
-                                        {project.skill_count}
-                                      </span>
-                                    )}
-                                  </span>
-                                </button>
-                                <div
-                                  className={cn(
-                                    "absolute right-1 flex items-center rounded-md invisible opacity-0 transition-opacity group-hover:visible group-hover:opacity-100",
-                                    isActive
-                                      ? "bg-surface-active"
-                                      : "bg-surface-hover",
-                                  )}
-                                >
-                                  <div
-                                    {...provided.dragHandleProps}
-                                    className="rounded p-1 text-faint cursor-grab active:cursor-grabbing"
-                                  >
-                                    <GripVertical className="h-3 w-3" />
-                                  </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setDeleteProjectTarget(project);
-                                    }}
-                                    className="rounded p-1 text-faint transition hover:text-red-400"
-                                    title={t("common.delete")}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
+                      {orderedProjects.map((project, index) => (
+                        <Draggable
+                          key={project.id}
+                          draggableId={project.id}
+                          index={index}
+                        >
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                            >
+                              <ProjectTreeRow
+                                project={project}
+                                dragHandleProps={provided.dragHandleProps}
+                                onRemove={() => setDeleteProjectTarget(project)}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
                       {droppableProvided.placeholder}
                     </div>
                   )}
@@ -326,6 +193,27 @@ export function Sidebar() {
               </button>
             </>
           )}
+
+          <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
+
+          <SidebarAgentWorkspaces
+            tools={tools}
+            isOpen={expandedSection === "agents"}
+            onToggle={() => toggleSection("agents")}
+          />
+
+          {/* Divider */}
+          <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
+
+          <SidebarSkillGroups
+            isOpen={expandedSection === "skills"}
+            onToggle={() => toggleSection("skills")}
+          />
+
+          {/* Divider */}
+          <div className="mx-0.5 mt-3.5 mb-2.5 border-t border-border-subtle" />
+
+          {renderNavItems(utilityNavItems)}
         </div>
 
         {/* Settings */}

@@ -14,7 +14,7 @@ import {
 } from "./views/workspaceConfigs";
 import { Discover } from "./views/Discover";
 import { Settings } from "./views/Settings";
-import { ProjectDetail } from "./views/ProjectDetail";
+import { ProjectSkills } from "./views/ProjectSkills";
 import { Backup } from "./views/Backup";
 import BackupDiff from "./views/BackupDiff";
 import { Help } from "./views/Help";
@@ -71,7 +71,8 @@ function App() {
               <Route path="/automation" element={<Automation />} />
               <Route path="/backup" element={<Backup />} />
               <Route path="/backup/diff" element={<BackupDiff />} />
-              <Route path="/project/:id" element={<ProjectDetail />} />
+              <Route path="/project/:id" element={null} />
+              <Route path="/project/:id/skills" element={<ProjectSkills />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/help" element={<Help />} />
               <Route path="/help/:articleId" element={<Help />} />

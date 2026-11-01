@@ -22,12 +22,18 @@ export interface PaneControl {
 }
 interface Props {
   projectId: string;
+  worktreePath?: string;
   active: boolean;
   onReady: (control: PaneControl | null) => void;
 }
 
 /** Owns one emulator and one PTY. Visibility changes never recreate either. */
-export function TerminalPane({ projectId, active, onReady }: Props) {
+export function TerminalPane({
+  projectId,
+  worktreePath,
+  active,
+  onReady,
+}: Props) {
   const { t } = useTranslation();
   const element = useRef<HTMLDivElement>(null);
   const fitNow = useRef<() => void>(() => {});
@@ -182,6 +188,7 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
               } else if (event.kind === "exit") setExitCode(event.code);
               else setError(event.message);
             },
+            worktreePath,
           )
           .then((session) => {
             if (disposed) {
@@ -216,7 +223,7 @@ export function TerminalPane({ projectId, active, onReady }: Props) {
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };
-  }, [projectId]);
+  }, [projectId, worktreePath]);
   useEffect(() => {
     if (active) {
       fitNow.current();

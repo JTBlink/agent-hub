@@ -28,3 +28,5 @@ pub mod terminal;
 pub mod herdr_tools;
 
 pub mod task_browser;
+
+pub mod project_worktrees;

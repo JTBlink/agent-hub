@@ -11,7 +11,8 @@ agent-hub/
 │   │   ├── Dashboard.tsx           #   仪表盘主页
 │   │   ├── Automation.tsx          #   本机系统与 Hermes 自动化列表及页面导航
 │   │   ├── WorkspaceView.tsx       #   工作空间视图
-│   │   ├── ProjectDetail.tsx       #   项目详情
+│   │   ├── ProjectDetail.tsx       #   项目技能管理内容
+│   │   ├── ProjectSkills.tsx       #   项目技能二级入口与工作树返回导航
 │   │   ├── Settings.tsx            #   设置页
 │   │   ├── Backup.tsx              #   Git 备份管理
 │   │   ├── MySkills.tsx            #   已安装技能
@@ -23,6 +24,7 @@ agent-hub/
 │   │   ├── CommandPalette.tsx      #   命令面板
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗
+│   │   ├── worktree/               #   项目／工作树导航、持久终端工作区与惰性文件浏览
 │   │   ├── file-reader/            #   通用文件阅读器、弹窗壳、目录树与文本内容区
 │   │   ├── MarkdownContent.tsx     #   通用 Markdown 正文渲染
 │   │   ├── StatusBanner.tsx        #   状态横幅
@@ -51,6 +53,8 @@ agent-hub/
 │   │   ├── useLocalSkillManagement.ts # 本地内容读取与删除状态
 │   │   ├── useGitRepositories.ts  #   仓库目录持久化、并发状态与安装请求
 │   │   ├── useWorkspaceSkills.ts #   按页面作用域扫描与显式刷新工作空间状态
+│   │   ├── useWorktreeDocument.ts #   工作树文本草稿、保存与冲突处理
+│   │   ├── useProjectWorktrees.ts #   工作树快照、并发读取合并与刷新
 │   │   ├── useProjectSkillRestore.ts # 项目恢复确认、批量执行与刷新
 │   │   ├── useAutomationNextRunRefresh.ts # 按下次日程边界刷新任务视图
 │   │   ├── useMultiSelect.ts       #   多选逻辑
@@ -59,6 +63,7 @@ agent-hub/
 │   ├── lib/                        # 工具函数与 Tauri Bindings
 │   │   ├── localSkillScan.ts       #   扫描分组标识与筛选纯函数
 │   │   ├── tauri.ts                #   Tauri IPC 封装
+│   │   ├── worktreeApi.ts          #   工作树／文件 IPC、显示标签与路由转换
 │   │   ├── error.ts                #   错误处理
 │   │   ├── gitErrors.ts            #   Git 错误映射
 │   │   ├── gitRepositories.ts      #   仓库标识、目录设置与安装来源匹配
@@ -92,6 +97,7 @@ agent-hub/
 │   │   │   ├── mod.rs
 │   │   │   ├── agent_workspace.rs  #     Agent 工作空间管理
 │   │   │   ├── projects.rs         #     项目管理
+│   │   │   ├── project_worktrees.rs #    工作树、文件浏览与保存 IPC
 │   │   │   ├── project_library.rs  #     项目技能库桌面命令
 │   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
 │   │   │   ├── local_cleanup.rs   #     本机 Agent Skills 预览与批量清理（桌面/CLI 共用）
@@ -119,6 +125,9 @@ agent-hub/
 │   │       ├── tool_detection.rs   #     Agent 程序、桌面应用与 IDE 扩展安装检测
 │   │       ├── scanner.rs          #     Agent 目录扫描
 │   │       ├── project_scanner.rs  #     项目扫描器
+│   │       ├── project_file_edit.rs #    复用文件读取边界、冲突检查与原子保存
+│   │       ├── task_browser/        #    平台任务、开发元数据、评审及 CI 适配
+│   │       ├── project_worktrees.rs #    Git 工作树发现、目录授权与有界文件读取
 │   │       ├── project_library.rs  #     团队项目技能安装、更新、入口修复与启停
 │   │       ├── project_library/   #     可移植清单、文件发布恢复及行为回归
 │   │       ├── sync_engine.rs      #     配置同步引擎

@@ -1873,10 +1873,13 @@
     "sessions": "Terminal tabs",
     "closeTab": "Close terminal tab {{number}}",
     "closePane": "Close pane",
+    "split": "Split terminal",
     "splitHorizontal": "Split left / right",
     "splitVertical": "Split top / bottom",
     "maximize": "Maximize terminal",
     "restore": "Restore terminal",
+    "herdrSidebar": "Show / hide Herdr sidebar",
+    "herdrNotRunning": "Start Herdr in this pane first",
     "herdrLaunch": "Start Herdr in this pane",
     "herdrWait": "Terminal is starting; try again shortly",
     "herdrInstalling": "Installing Herdr; continue using your terminal…",
@@ -2034,5 +2037,22 @@
       "modified": "Modified",
       "removed": "Deleted"
     }
+  },
+  "worktree": {
+    "title": "Worktree",
+    "main": "Main",
+    "locked": "Locked",
+    "toggleProject": "Expand or collapse {{name}}",
+    "removeProject": "Remove project {{name}}",
+    "list": "Worktrees in {{name}}",
+    "refresh": "Refresh worktrees",
+    "refreshFiles": "Refresh files",
+    "projectSkills": "Project skills",
+    "back": "Back to workspace",
+    "emptyDirectory": "Empty folder",
+    "symlink": "Symbolic link. Open in an external editor.",
+    "unavailable": "This worktree is unavailable. Refresh the list and select another worktree.",
+    "terminalLimit": "The limit of 8 terminal panes has been reached. Close a terminal in another worktree first.",
+    "unsaved": "Unsaved"
   }
 }

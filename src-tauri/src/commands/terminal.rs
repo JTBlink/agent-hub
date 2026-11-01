@@ -20,6 +20,7 @@ pub async fn terminal_create(
     store: State<'_, Arc<SkillStore>>,
     manager: State<'_, Arc<TerminalManager>>,
     project_id: String,
+    worktree_path: Option<String>,
     size: TerminalSize,
     events: Channel<TerminalEvent>,
 ) -> Result<TerminalSession, AppError> {
@@ -27,8 +28,12 @@ pub async fn terminal_create(
     let store = store.inner().clone();
     let manager = manager.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let cwd = crate::core::project_paths::project_directory(&store, &project_id)
-            .map_err(AppError::io)?;
+        let cwd = crate::core::project_worktrees::directory(
+            &store,
+            &project_id,
+            worktree_path.as_deref(),
+        )
+        .map_err(AppError::io)?;
         let (command, integration) = terminal::prepare_shell(None, None).map_err(AppError::io)?;
         manager
             .create(
@@ -139,11 +144,12 @@ pub async fn terminal_project_directory(
     window: WebviewWindow,
     store: State<'_, Arc<SkillStore>>,
     project_id: String,
+    worktree_path: Option<String>,
 ) -> Result<String, AppError> {
     owner(&window)?;
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        crate::core::project_paths::project_directory(&store, &project_id)
+        crate::core::project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
             .map(|path| path.to_string_lossy().into_owned())
             .map_err(AppError::io)
     })

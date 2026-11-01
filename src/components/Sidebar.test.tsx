@@ -13,6 +13,13 @@ import { makeTool, makeProject } from "../../tests/fixtures/workspace";
 import { Sidebar } from "./Sidebar";
 import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
 
+const worktreeMocks = vi.hoisted(() => ({
+  list: vi.fn().mockResolvedValue([]),
+}));
+vi.mock("../lib/worktreeApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/worktreeApi")>()),
+  getProjectWorktrees: worktreeMocks.list,
+}));
 vi.mock("../lib/tauri", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/tauri")>()),
   getGlobalLocalSkills: vi.fn().mockResolvedValue([]),
@@ -116,6 +123,26 @@ it("provides a permanent automation entry independent of installed agents", asyn
   expect(container.querySelector("output")?.textContent).toBe("/automation");
 });
 
+it("prioritizes Tasks, Automation and project workspaces with terminals inside worktrees", async () => {
+  await render("/");
+  const sidebar = container.firstElementChild!;
+  const entries = [...sidebar.querySelectorAll("a, button[aria-expanded]")].map(
+    (element) => element.textContent,
+  );
+  expect(entries.slice(0, 8)).toEqual([
+    "工作台",
+    "任务",
+    "自动化",
+    "项目工作区",
+    "全局工作区",
+    "技能库0",
+    "发现",
+    "云端同步",
+  ]);
+  await click(container.querySelector<HTMLAnchorElement>('a[href="/tasks"]')!);
+  expect(container.querySelector("output")?.textContent).toBe("/tasks");
+  expect(container.querySelector('a[href="/terminal"]')).toBeNull();
+});
 function expanded() {
   return [...container.querySelectorAll('[aria-expanded="true"]')].map(
     (element) => element.textContent,
@@ -327,3 +354,54 @@ it.each(["edit", "delete", "create"])(
       );
   },
 );
+
+it("expands projects into worktrees and navigates by checkout path", async () => {
+  const project = { ...makeProject(), id: "tree-demo" };
+  Object.assign(app, { projects: [project] });
+  worktreeMocks.list.mockResolvedValueOnce([
+    {
+      path: project.path,
+      branch: "main",
+      head: "abc",
+      is_main: true,
+      locked: false,
+      available: true,
+    },
+    {
+      path: "<workspace>/topic",
+      branch: "feature/topic",
+      head: "def",
+      is_main: false,
+      locked: true,
+      available: true,
+    },
+    {
+      path: "<workspace>/missing",
+      branch: "missing",
+      head: "def",
+      is_main: false,
+      locked: false,
+      available: false,
+    },
+  ]);
+  await render(`/project/${project.id}`);
+  expect(worktreeMocks.list).toHaveBeenCalledWith(project.id);
+  expect(button("demo · main主工作树").getAttribute("aria-current")).toBe(
+    "page",
+  );
+  expect(button("missing").disabled).toBe(true);
+  await click(button("topic · feature/topic"));
+  expect(container.querySelector("output")?.textContent).toBe(
+    `/project/${project.id}`,
+  );
+  expect(button("topic · feature/topic").getAttribute("aria-current")).toBe(
+    "page",
+  );
+  expect(button("demo · main主工作树").getAttribute("aria-current")).toBeNull();
+  const toggle = container.querySelector<HTMLButtonElement>(
+    `[aria-label="展开或收起 ${project.name}"]`,
+  )!;
+  await click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(container.textContent).not.toContain("feature/topic");
+});

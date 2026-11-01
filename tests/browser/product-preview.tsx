@@ -1,3 +1,4 @@
+import { worktreeFixture } from "./worktree-fixture";
 import { taskTerminalFixture } from "./task-terminal-fixture";
 import networkManifestCatalog from "../../automations/system/network-reset/catalog.json";
 import diskCleanupManifestPackage from "../../automations/system/disk-cleanup/task.json";
@@ -434,6 +435,8 @@ Object.assign(window, {
         draft?: AutomationDraft;
       },
     ) => {
+      const worktreePreview = worktreeFixture(command, args);
+      if (worktreePreview.handled) return worktreePreview.value;
       const taskPreview = taskTerminalFixture(command, args);
       if (taskPreview.handled) return taskPreview.value;
       switch (command) {
@@ -677,6 +680,7 @@ const { AppProvider } = await import("../../src/context/AppContext");
 const { ThemeProvider } = await import("../../src/context/ThemeContext");
 const { Layout } = await import("../../src/components/Layout");
 const { Dashboard } = await import("../../src/views/Dashboard");
+const { ProjectSkills } = await import("../../src/views/ProjectSkills");
 const { Tasks } = await import("../../src/views/Tasks");
 const { Automation } = await import("../../src/views/Automation");
 const { Discover } = await import("../../src/views/Discover");
@@ -685,17 +689,19 @@ const { WorkspaceView } = await import("../../src/views/WorkspaceView");
 const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
   await import("../../src/views/workspaceConfigs");
 const initialRoute =
-  new URLSearchParams(location.search).get("view") === "dashboard"
-    ? "/"
-    : previewParams.get("view") === "discover"
-      ? `/discover?type=${previewParams.get("type") ?? "automations"}&source=${previewParams.get("source") ?? "recommended"}`
-      : previewParams.get("view") === "tasks"
-        ? "/tasks"
-        : previewParams.get("view") === "terminal"
-          ? "/terminal"
-          : previewParams.get("view") === "automation"
-            ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
-            : "/my-skills";
+  previewParams.get("view") === "worktree"
+      ? "/project/project-0"
+      : new URLSearchParams(location.search).get("view") === "dashboard"
+        ? "/"
+        : previewParams.get("view") === "discover"
+          ? `/discover?type=${previewParams.get("type") ?? "automations"}&source=${previewParams.get("source") ?? "recommended"}`
+          : previewParams.get("view") === "tasks"
+            ? "/tasks"
+            : previewParams.get("view") === "terminal"
+              ? "/terminal"
+              : previewParams.get("view") === "automation"
+                ? `/automation${previewParams.has("task") ? `?task=${encodeURIComponent(previewParams.get("task") ?? "")}` : ""}`
+                : "/my-skills";
 createRoot(document.getElementById("root")!).render(
   <MemoryRouter initialEntries={[initialRoute]}>
     <ThemeProvider>
@@ -725,10 +731,8 @@ createRoot(document.getElementById("root")!).render(
               path="/lobster-workspace/:agentKey"
               element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
             />
-            <Route
-              path="/project/:id"
-              element={<div className="app-page">Demo project workspace</div>}
-            />
+            <Route path="/project/:id" element={null} />
+            <Route path="/project/:id/skills" element={<ProjectSkills />} />
           </Route>
         </Routes>
       </AppProvider>

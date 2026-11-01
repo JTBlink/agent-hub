@@ -1,15 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  Plus,
-  X,
-  Columns2,
-  Rows2,
-  Maximize,
-  Minimize,
-  FileText,
-  Copy,
-} from "lucide-react";
+import { Plus, X, FileText, Copy } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import * as api from "../../lib/tauri";
@@ -21,29 +12,67 @@ import { getErrorMessage } from "../../lib/error";
 import type { Project } from "../../lib/tauri";
 import { ThemedSelect } from "../ThemedSelect";
 import { TerminalPane, type PaneControl } from "./TerminalPane";
+import { TerminalPanelTools } from "./TerminalPanelTools";
 import { useHerdrShortcut } from "./useHerdrShortcut";
 import { cn } from "../../utils";
+import { projectWorkspaceRoute } from "../../lib/worktreeApi";
 
 interface Props {
   projects: Project[];
   onMaximizedChange: (maximized: boolean) => void;
+  shown?: boolean;
 }
 interface Tab {
   id: string;
   projectId: string;
+  worktreePath?: string;
   panes: string[];
   activePane: string;
   direction: "horizontal" | "vertical";
   context?: TerminalTaskContext;
 }
-export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
+function createTab(
+  projectId: string,
+  context?: TerminalTaskContext,
+  worktreePath?: string,
+): Tab {
+  const pane = crypto.randomUUID();
+  return {
+    id: crypto.randomUUID(),
+    projectId,
+    worktreePath,
+    panes: [pane],
+    activePane: pane,
+    direction: "horizontal",
+    context,
+  };
+}
+const toolbarAction = "app-button-ghost h-7 w-7 shrink-0 p-0";
+
+export function TerminalWorkspace({
+  projects,
+  onMaximizedChange,
+  shown = true,
+}: Props) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const visible = location.pathname === "/terminal";
+  const workspace = projectWorkspaceRoute(location.pathname, location.search);
+  const scopedProject = workspace?.projectId;
+  const scopedPath = workspace
+    ? (workspace.worktreePath ??
+      projects.find((project) => project.id === scopedProject)?.path)
+    : undefined;
+  const legacy = location.pathname === "/terminal";
+  const visible = shown && (legacy || !!workspace);
   const [projectId, setProjectId] = useState("");
   const [tabs, setTabs] = useState<Tab[]>([]);
-  const [activeId, setActiveId] = useState("");
+  const scopeKey = workspace ? JSON.stringify([scopedProject, scopedPath]) : "";
+  const [activeIds, setActiveIds] = useState<Record<string, string>>({});
+  const activeId = activeIds[scopeKey] ?? "";
+  const setActiveId = (id: string) => {
+    setActiveIds((previous) => ({ ...previous, [scopeKey]: id }));
+  };
   const [maximized, setMaximized] = useState(false);
   const controls = useRef(new Map<string, PaneControl>());
   const activeTarget = useRef<PaneControl | null>(null);
@@ -52,6 +81,8 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
     tabsRef.current = tabs;
   }, [tabs]);
   const consumed = useRef("");
+  const initialized = useRef(false);
+  const [initializedScopes, setInitializedScopes] = useState<string[]>([]);
   const [bridgeError, setBridgeError] = useState("");
   const [contextVisible, setContextVisible] = useState(false);
   useEffect(() => {
@@ -59,14 +90,16 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
     if (!visible || !request || consumed.current === location.key) return;
     let cancelled = false;
     void api
-      .resolveTerminalProject(request.projectId)
+      .resolveTerminalProject(request.projectId, scopedPath)
       .then((cwd) => {
         if (cancelled) return;
         consumed.current = location.key;
+        initialized.current = true;
         setBridgeError("");
         const existing = tabsRef.current.find(
           (tab) =>
             tab.projectId === request.projectId &&
+            tab.worktreePath === scopedPath &&
             controls.current.get(tab.activePane)?.cwd === cwd,
         );
         if (existing) {
@@ -77,26 +110,21 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
                 : tab,
             ),
           );
-          setActiveId(existing.id);
-        } else {
-          const pane = crypto.randomUUID();
-          const id = crypto.randomUUID();
-          setTabs((previous) => [
+          setActiveIds((previous) => ({
             ...previous,
-            {
-              id,
-              projectId: request.projectId,
-              panes: [pane],
-              activePane: pane,
-              direction: "horizontal",
-              context: request.context,
-            },
-          ]);
-          setActiveId(id);
+            [scopeKey]: existing.id,
+          }));
+        } else {
+          const tab = createTab(request.projectId, request.context, scopedPath);
+          setTabs((previous) => [...previous, tab]);
+          setActiveIds((previous) => ({ ...previous, [scopeKey]: tab.id }));
         }
         setProjectId(request.projectId);
         setContextVisible(false);
-        navigate("/terminal", { replace: true, state: null });
+        navigate(`${location.pathname}${location.search}`, {
+          replace: true,
+          state: null,
+        });
       })
       .catch((error) => {
         if (!cancelled)
@@ -105,9 +133,78 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [location.key, location.state, visible, navigate, t]);
-  const selected = projectId || projects[0]?.id || "";
-  const active = tabs.find((tab) => tab.id === activeId);
+  }, [
+    location.key,
+    location.pathname,
+    location.search,
+    location.state,
+    visible,
+    navigate,
+    t,
+    scopedPath,
+    scopeKey,
+  ]);
+  const recent = projects.reduce<Project | undefined>(
+    (latest, project) =>
+      !latest || (project.visited_at ?? 0) > (latest.visited_at ?? 0)
+        ? project
+        : latest,
+    undefined,
+  );
+  const selected = projectId || recent?.id || "";
+  useEffect(() => {
+    if (
+      !visible ||
+      !legacy ||
+      initialized.current ||
+      !selected ||
+      terminalTaskRequest(location.state)
+    )
+      return;
+    let cancelled = false;
+    void api
+      .resolveTerminalProject(selected)
+      .then(() => {
+        if (cancelled || initialized.current) return;
+        initialized.current = true;
+        const tab = createTab(selected);
+        setTabs((previous) => [...previous, tab]);
+        setActiveIds((previous) => ({ ...previous, [scopeKey]: tab.id }));
+        setProjectId(selected);
+      })
+      .catch((error) => {
+        if (!cancelled)
+          setBridgeError(getErrorMessage(error, t("common.error")));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, legacy, selected, location.state, t, scopeKey]);
+  const scopedTabs = workspace
+    ? tabs.filter(
+        (tab) =>
+          tab.projectId === scopedProject && tab.worktreePath === scopedPath,
+      )
+    : tabs;
+  const active =
+    scopedTabs.find((tab) => tab.id === activeId) ?? scopedTabs.at(-1);
+  const displayedId = active?.id ?? "";
+  const count = tabs.reduce((sum, tab) => sum + tab.panes.length, 0);
+  if (
+    scopeKey &&
+    scopedProject &&
+    scopedPath &&
+    !terminalTaskRequest(location.state) &&
+    !initializedScopes.includes(scopeKey) &&
+    count < 8
+  ) {
+    setInitializedScopes([...initializedScopes, scopeKey]);
+    if (!scopedTabs.length) {
+      const tab = createTab(scopedProject, undefined, scopedPath);
+      setTabs([...tabs, tab]);
+      setActiveIds({ ...activeIds, [scopeKey]: tab.id });
+    }
+  }
   useLayoutEffect(() => {
     activeTarget.current =
       visible && active
@@ -118,17 +215,10 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
     () => activeTarget.current,
     `${visible}:${activeId}:${active?.activePane ?? ""}`,
   );
-  const count = tabs.reduce((sum, tab) => sum + tab.panes.length, 0);
   const add = () => {
-    if (!selected || count >= 8) return;
-    const pane = crypto.randomUUID();
-    const tab = {
-      id: crypto.randomUUID(),
-      projectId: selected,
-      panes: [pane],
-      activePane: pane,
-      direction: "horizontal" as const,
-    };
+    if (!(scopedProject || selected) || count >= 8) return;
+    initialized.current = true;
+    const tab = createTab(scopedProject || selected, undefined, scopedPath);
     setTabs((previous) => [...previous, tab]);
     setActiveId(tab.id);
   };
@@ -137,7 +227,7 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
     const pane = crypto.randomUUID();
     setTabs((previous) =>
       previous.map((tab) =>
-        tab.id === activeId
+        tab.id === displayedId
           ? { ...tab, panes: [...tab.panes, pane], activePane: pane, direction }
           : tab,
       ),
@@ -156,7 +246,10 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
     } else {
       const next = tabs.filter((item) => item.id !== tab.id);
       setTabs(next);
-      if (activeId === tab.id) setActiveId(next.at(-1)?.id || "");
+      if (displayedId === tab.id)
+        setActiveId(
+          scopedTabs.filter((item) => item.id !== tab.id).at(-1)?.id || "",
+        );
     }
   };
   const toggleMaximize = () => {
@@ -170,22 +263,25 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
       hidden={!visible}
       className={
         visible
-          ? "relative flex min-h-0 min-w-0 flex-1 flex-col pt-[28px]"
+          ? cn(
+              "relative flex min-h-0 min-w-0 flex-1 flex-col",
+              legacy && "pt-[28px]",
+            )
           : "hidden"
       }
     >
-      <div className="flex min-h-9 shrink-0 items-center gap-1 border-b border-border px-2">
+      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
         <div
           role="tablist"
           aria-label={t("terminal.sessions")}
           className="flex min-w-0 flex-1 overflow-x-auto"
         >
-          {tabs.map((tab, index) => (
+          {scopedTabs.map((tab, index) => (
             <div
               key={tab.id}
               className={cn(
                 "flex shrink-0 items-center rounded-t border-b-2",
-                tab.id === activeId
+                tab.id === displayedId
                   ? "border-accent bg-surface"
                   : "border-transparent",
               )}
@@ -193,17 +289,25 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
               <button
                 type="button"
                 role="tab"
-                aria-selected={tab.id === activeId}
-                className="px-3 py-2 text-xs"
-                onClick={() => setActiveId(tab.id)}
+                aria-selected={tab.id === displayedId}
+                className="h-8 max-w-48 truncate px-3 text-xs"
+                title={
+                  projects.find((project) => project.id === tab.projectId)?.name
+                }
+                onClick={() => {
+                  setActiveId(tab.id);
+                  setProjectId(tab.projectId);
+                }}
               >
-                {projects.find((project) => project.id === tab.projectId)
-                  ?.name || t("terminal.title")}{" "}
+                {(workspace
+                  ? t("terminal.title")
+                  : projects.find((project) => project.id === tab.projectId)
+                      ?.name) || t("terminal.title")}{" "}
                 {index + 1}
               </button>
               <button
                 type="button"
-                className="app-button-ghost mr-1"
+                className="app-button-ghost mr-1 h-6 w-6 shrink-0 p-0"
                 aria-label={t("terminal.closeTab", { number: index + 1 })}
                 onClick={() => close(tab)}
               >
@@ -212,27 +316,30 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
             </div>
           ))}
         </div>
-        <ThemedSelect
-          aria-label={t("terminal.chooseProject")}
-          value={selected}
-          onChange={(event) => setProjectId(event.target.value)}
-          className="max-w-48 text-xs"
-        >
-          {!projects.length && (
-            <option value="">{t("terminal.chooseProject")}</option>
-          )}
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </ThemedSelect>
+        {!workspace && (
+          <ThemedSelect
+            aria-label={t("terminal.chooseProject")}
+            value={selected}
+            title={projects.find((project) => project.id === selected)?.name}
+            onChange={(event) => setProjectId(event.target.value)}
+            className="h-7 max-w-40 gap-2 rounded-md border-transparent bg-transparent px-2 py-0 text-xs"
+          >
+            {!projects.length && (
+              <option value="">{t("terminal.chooseProject")}</option>
+            )}
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </ThemedSelect>
+        )}
         <button
           type="button"
-          className="app-button-ghost"
+          className={toolbarAction}
           aria-label={t("terminal.new")}
           title={t("terminal.new")}
-          disabled={!selected || count >= 8}
+          disabled={!(scopedProject || selected) || count >= 8}
           onClick={add}
         >
           <Plus size={15} />
@@ -240,7 +347,7 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
         {active?.context && (
           <button
             type="button"
-            className="app-button-ghost"
+            className={toolbarAction}
             aria-label={t("tasks.context")}
             title={active.context.title}
             onClick={() => setContextVisible((value) => !value)}
@@ -248,48 +355,22 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
             <FileText size={15} />
           </button>
         )}
-        <button
-          type="button"
-          className="app-button-ghost text-xs"
-          disabled={!active || herdr.busy}
-          onClick={() => void herdr.launch()}
-          title={t("terminal.herdrLaunch")}
-        >
-          Herdr{herdr.update?.has_update ? " •" : ""}
-        </button>
-        <button
-          type="button"
-          className="app-button-ghost"
-          aria-label={t("terminal.splitHorizontal")}
-          title={t("terminal.splitHorizontal")}
-          disabled={!active || active.panes.length >= 2 || count >= 8}
-          onClick={() => split("horizontal")}
-        >
-          <Columns2 size={15} />
-        </button>
-        <button
-          type="button"
-          className="app-button-ghost"
-          aria-label={t("terminal.splitVertical")}
-          title={t("terminal.splitVertical")}
-          disabled={!active || active.panes.length >= 2 || count >= 8}
-          onClick={() => split("vertical")}
-        >
-          <Rows2 size={15} />
-        </button>
-        <button
-          type="button"
-          className="app-button-ghost"
-          aria-label={t(maximized ? "terminal.restore" : "terminal.maximize")}
-          title={t(maximized ? "terminal.restore" : "terminal.maximize")}
-          onClick={toggleMaximize}
-        >
-          {maximized ? <Minimize size={16} /> : <Maximize size={16} />}
-        </button>
+        <TerminalPanelTools
+          key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
+          hasTerminal={!!active}
+          herdrBusy={herdr.busy}
+          hasUpdate={!!herdr.update?.has_update}
+          canSplit={!!active && active.panes.length < 2 && count < 8}
+          maximized={maximized}
+          onHerdr={() => void herdr.launch()}
+          onHerdrSidebar={() => void herdr.toggleSidebar()}
+          onSplit={split}
+          onMaximize={toggleMaximize}
+        />
       </div>
-      {!tabs.length && (
+      {!scopedTabs.length && (
         <div className="flex flex-1 items-center justify-center text-sm text-muted">
-          {t("terminal.chooseProject")}
+          {t(count >= 8 ? "worktree.terminalLimit" : "terminal.chooseProject")}
         </div>
       )}
       {tabs.map((tab) => (
@@ -300,9 +381,11 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
             projects.find((project) => project.id === tab.projectId)?.name ||
             t("terminal.title")
           }
-          hidden={tab.id !== activeId}
+          hidden={tab.id !== displayedId || !scopedTabs.includes(tab)}
           className={cn(
-            tab.id === activeId ? "flex" : "hidden",
+            tab.id === displayedId && scopedTabs.includes(tab)
+              ? "flex"
+              : "hidden",
             "min-h-0 flex-1",
             tab.direction === "vertical" && "flex-col",
           )}
@@ -338,15 +421,16 @@ export function TerminalWorkspace({ projects, onMaximizedChange }: Props) {
               )}
               <TerminalPane
                 projectId={tab.projectId}
+                worktreePath={tab.worktreePath}
                 active={
-                  visible && activeId === tab.id && tab.activePane === pane
+                  visible && displayedId === tab.id && tab.activePane === pane
                 }
                 onReady={(control) => {
                   if (control) {
                     controls.current.set(pane, control);
                     if (
                       visible &&
-                      activeId === tab.id &&
+                      displayedId === tab.id &&
                       tab.activePane === pane
                     )
                       activeTarget.current = control;

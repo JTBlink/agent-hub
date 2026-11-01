@@ -1870,10 +1870,13 @@
     "sessions": "终端标签",
     "closeTab": "关闭终端标签 {{number}}",
     "closePane": "关闭当前窗格",
+    "split": "分屏",
     "splitHorizontal": "左右分屏",
     "splitVertical": "上下分屏",
     "maximize": "最大化终端",
     "restore": "还原终端",
+    "herdrSidebar": "展开／隐藏 Herdr 侧边栏",
+    "herdrNotRunning": "请先在当前窗格启动 Herdr",
     "herdrLaunch": "在当前窗格启动 Herdr",
     "herdrWait": "终端准备中，请稍后重试",
     "herdrInstalling": "正在安装 Herdr，可继续使用终端…",
@@ -2031,5 +2034,22 @@
       "modified": "修改",
       "removed": "删除"
     }
+  },
+  "worktree": {
+    "title": "工作树",
+    "main": "主工作树",
+    "locked": "已锁定",
+    "toggleProject": "展开或收起 {{name}}",
+    "removeProject": "移除项目 {{name}}",
+    "list": "{{name}} 的工作树",
+    "refresh": "刷新工作树",
+    "refreshFiles": "刷新文件树",
+    "projectSkills": "项目技能",
+    "back": "返回工作区",
+    "emptyDirectory": "空文件夹",
+    "symlink": "符号链接，请在外部编辑器中打开",
+    "unavailable": "该工作树不可用，请刷新列表后重新选择。",
+    "terminalLimit": "已达到 8 个终端窗格上限，请先关闭其他工作树中的终端。",
+    "unsaved": "未保存"
   }
 }

@@ -7,7 +7,7 @@ import { getAppScale } from "../lib/textScale";
 export interface CardAction {
   key: string;
   label: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   onSelect: () => void;
   danger?: boolean;
   disabled?: boolean;
@@ -18,6 +18,9 @@ interface Props {
   label: string;
   className?: string;
   onOpenChange?: (open: boolean) => void;
+  triggerIcon?: React.ReactNode;
+  triggerClassName?: string;
+  disabled?: boolean;
 }
 
 interface MenuPos {
@@ -30,6 +33,9 @@ export function CardActionMenu({
   label,
   className,
   onOpenChange,
+  triggerIcon,
+  triggerClassName,
+  disabled,
 }: Props) {
   const [pos, setPos] = useState<MenuPos | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -121,6 +127,7 @@ export function CardActionMenu({
         <button
           ref={triggerRef}
           type="button"
+          disabled={disabled}
           title={label}
           aria-label={label}
           aria-haspopup="menu"
@@ -137,11 +144,12 @@ export function CardActionMenu({
             handleToggle();
           }}
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-md text-muted outline-none transition-colors hover:bg-surface-hover hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent",
+            "flex h-5 w-5 items-center justify-center rounded-md text-muted outline-none transition-colors hover:bg-surface-hover hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+            triggerClassName,
             open && "bg-surface-hover text-secondary",
           )}
         >
-          <MoreHorizontal className="h-3.5 w-3.5" />
+          {triggerIcon ?? <MoreHorizontal className="h-3.5 w-3.5" />}
         </button>
       </div>
       {open &&
@@ -210,9 +218,11 @@ export function CardActionMenu({
                       : "text-secondary hover:bg-surface-hover",
                   )}
                 >
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
-                    {action.icon}
-                  </span>
+                  {action.icon && (
+                    <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
+                      {action.icon}
+                    </span>
+                  )}
                   {action.label}
                 </button>
               ))}
