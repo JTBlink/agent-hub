@@ -47,7 +47,7 @@ export function Git() {
   const [selection, setSelection] = useState<GitSelection>();
   const [commitSha, setCommitSha] = useState<string>();
   const [graphOpen, setGraphOpen] = useState(false);
-  const [historyExpanded, setHistoryExpanded] = useState(true);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [actionType, setActionType] = useState<
     "stage" | "commit" | "sync" | GitRepositoryAction
   >();
@@ -404,30 +404,32 @@ export function Git() {
             </>
           }
           bottom={
-            <GitHistory
-              key={`${scope}:history`}
-              status={status}
-              loading={loading}
-              expanded={historyExpanded}
-              onExpandedChange={setHistoryExpanded}
-              onRefresh={refresh}
-              target={
-                activeId
-                  ? { projectId: activeId, worktreePath: root }
-                  : undefined
-              }
-              selected={
-                commitSha && selection
-                  ? { sha: commitSha, path: selection.path }
-                  : undefined
-              }
-              onSelect={({ sha, path }) => {
-                setGraphOpen(false);
-                setCommitSha(sha);
-                setSelection({ path, staged: false });
-                setFileView(false);
-              }}
-            />
+            historyExpanded ? (
+              <GitHistory
+                key={`${scope}:history`}
+                status={status}
+                loading={loading}
+                expanded={historyExpanded}
+                onExpandedChange={setHistoryExpanded}
+                onRefresh={refresh}
+                target={
+                  activeId
+                    ? { projectId: activeId, worktreePath: root }
+                    : undefined
+                }
+                selected={
+                  commitSha && selection
+                    ? { sha: commitSha, path: selection.path }
+                    : undefined
+                }
+                onSelect={({ sha, path }) => {
+                  setGraphOpen(false);
+                  setCommitSha(sha);
+                  setSelection({ path, staged: false });
+                  setFileView(false);
+                }}
+              />
+            ) : null
           }
         />
       </aside>

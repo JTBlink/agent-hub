@@ -514,6 +514,12 @@ it("opens committed file diffs separately from working changes", async () => {
   const root = createRoot(host);
   try {
     await act(async () => root.render(<TestGit />));
+    expect(host.querySelector('[aria-label="git.commits"]')).toBeNull();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="git.actions.history"]')!
+        .click(),
+    );
     await act(async () => {
       const details = host.querySelector<HTMLDetailsElement>(
         ".git-history-commit",
@@ -800,10 +806,20 @@ it("runs toolbar operations against the selected checkout and switches change la
     expect(button("git.actions.layout").getAttribute("aria-pressed")).toBe(
       "false",
     );
+    expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+    expect(host.querySelector('[aria-label="git.commits"]')).toBeNull();
+    await act(async () => button("git.actions.history").click());
+    expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(host.querySelector('[aria-label="git.commits"]')).not.toBeNull();
     await act(async () => button("git.actions.history").click());
     expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
       "false",
     );
+    expect(host.querySelector('[aria-label="git.commits"]')).toBeNull();
     await act(async () => button("git.actions.branches").click());
     expect(document.querySelector('[role="alertdialog"]')).toBeNull();
     const topic = () =>
