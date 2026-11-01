@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Throwaway UI prototype: three Herdr sidebar organizations in the AgentHub terminal shell.
+<!-- Throwaway UI prototype: workspace and Agent quick switching in the AgentHub terminal shell.
      Open this file directly, or visit /docs/prototypes/herdr-sidebar.html?variant=A on the existing Vite server.
      All operations use synthetic in-memory state. No application data, CLI, PTY or account access. -->
 <html lang="zh-CN">
@@ -375,8 +375,8 @@
         display: none;
       }
       .panel-title {
-        height: 40px;
-        padding: 0 12px 0 17px;
+        height: 38px;
+        padding: 0 10px 0 14px;
         font-size: 12px;
         display: flex;
         align-items: center;
@@ -388,30 +388,516 @@
         letter-spacing: 0.02em;
       }
       .session {
-        padding: 0 12px 12px;
+        padding: 0 10px 10px;
         border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 5px;
       }
-      .session-label {
+      .session-switch {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+      }
+      .session-switch summary {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 6px 9px;
+        font-size: 11px;
+        cursor: pointer;
+        list-style: none;
+      }
+      summary::-webkit-details-marker {
+        display: none;
+      }
+      summary:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+      .session-switch summary svg {
+        width: 12px;
+        height: 12px;
+        color: var(--faint);
+      }
+      .session-options {
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 0;
+        right: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 4px;
+        box-shadow: var(--shadow);
+        z-index: 20;
+      }
+      .session-options button {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 8px;
+        padding: 8px;
+        text-align: left;
+        font-size: 11px;
+        border-radius: 3px;
+      }
+      .session-options .session-check {
+        width: 12px;
+        color: var(--accent);
+      }
+      .connection-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10px;
+        color: var(--faint);
+        margin-right: 5px;
+      }
+      .summary-strip {
+        display: flex;
+        gap: 6px;
+        padding: 11px 12px 0;
+        flex-shrink: 0;
+      }
+      .summary-strip button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        flex: 1;
+        height: 29px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
         font-size: 11px;
         color: var(--muted);
-        margin-bottom: 6px;
       }
-      .session select {
-        padding: 5px 7px;
-        background: var(--side);
-        height: 30px;
+      .summary-strip button[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
       }
-      .session .primary {
-        width: 100%;
-        margin-top: 9px;
-        font-size: 12px;
-        height: 30px;
+      .summary-strip .attention-count {
+        color: var(--amber);
+      }
+      .summary-strip .done-count {
+        color: var(--green);
+      }
+      .summary-strip button:disabled {
+        opacity: 0.45;
+      }
+      .sidebar > .filter {
+        flex-shrink: 0;
+        margin-bottom: 8px;
       }
       .panel-body {
         flex: 1;
         min-height: 0;
         overflow: auto;
         padding-bottom: 12px;
+      }
+      .quick-switch {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+      .switch-section {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .spaces-section {
+        flex: 0 0 var(--spaces-share, 47%);
+      }
+      .agents-section {
+        flex: 1;
+      }
+      .quick-switch.agents-collapsed .spaces-section {
+        flex: 1;
+      }
+      .quick-switch.agents-collapsed .agents-section {
+        flex: 0 0 auto;
+      }
+      .agents-list[hidden],
+      .list-separator[hidden] {
+        display: none;
+      }
+      .section-toggle {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 100%;
+        text-align: left;
+      }
+      .switch-heading {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 31px;
+        padding: 0 13px;
+        flex-shrink: 0;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .switch-heading .count {
+        color: var(--faint);
+        font-size: 10px;
+        font-weight: 400;
+      }
+      .group-switch {
+        font-size: 10px;
+        color: var(--faint);
+        border-radius: 3px;
+        padding: 3px 5px;
+      }
+      .switch-list {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+        padding: 1px 0 6px;
+        scrollbar-width: thin;
+      }
+      .quick-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 5px 13px;
+        min-height: 42px;
+        text-align: left;
+        position: relative;
+      }
+      .quick-item.selected {
+        background: var(--accent-soft);
+      }
+      .quick-item.selected::before {
+        content: "";
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        left: 0;
+        width: 2px;
+        background: var(--accent);
+      }
+      .quick-item .quick-name {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 18px;
+      }
+      .quick-item .quick-subtext {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        line-height: 17px;
+        color: var(--faint);
+      }
+      .quick-item .quick-subtext svg {
+        width: 10px;
+        height: 10px;
+      }
+      .quick-item .quick-subtext .agent-glyph {
+        width: 13px;
+        height: 13px;
+        font-size: 8px;
+      }
+      .quick-item .quick-subtext .agent-glyph.claude {
+        font-size: 13px;
+      }
+      .quick-state {
+        width: 12px;
+        flex-shrink: 0;
+        font:
+          12px ui-monospace,
+          monospace;
+        text-align: center;
+        color: var(--muted);
+      }
+      .quick-state.working {
+        color: var(--accent);
+      }
+      .quick-state.blocked {
+        color: var(--amber);
+      }
+      .quick-state.done {
+        color: var(--green);
+      }
+      .quick-state.unknown {
+        color: var(--faint);
+      }
+      .quick-item .agent-status-label {
+        margin-left: auto;
+        padding-left: 4px;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .agent-status-label.blocked {
+        color: var(--amber);
+      }
+      .agent-status-label.working {
+        color: var(--accent);
+      }
+      .agent-status-label.done {
+        color: var(--green);
+      }
+      .quick-item .current-pointer {
+        width: 11px;
+        height: 11px;
+        color: var(--accent);
+      }
+      .quick-item.linked {
+        min-height: 29px;
+        padding: 3px 15px 3px 44px;
+      }
+      .quick-item.linked::after {
+        content: "└";
+        position: absolute;
+        left: 28px;
+        color: var(--border);
+      }
+      .quick-item.linked .quick-name {
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .quick-item.linked .quick-state {
+        font-size: 10px;
+      }
+      .list-separator {
+        height: 9px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: row-resize;
+        outline: none;
+        touch-action: none;
+      }
+      .list-separator::before {
+        content: "";
+        width: calc(100% - 24px);
+        border-top: 1px solid var(--line);
+      }
+      .list-separator:hover::before,
+      .list-separator:focus-visible::before {
+        border-color: var(--accent);
+      }
+      .agent-status-group {
+        position: sticky;
+        top: 0;
+        padding: 5px 13px;
+        background: var(--side);
+        color: var(--faint);
+        font-size: 10px;
+        z-index: 1;
+      }
+      .agent-shortcuts {
+        display: flex;
+        gap: 6px;
+        padding: 0 12px 10px;
+        flex-shrink: 0;
+      }
+      .agent-shortcuts button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 29px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 11px;
+        padding: 0 9px;
+      }
+      .agent-shortcuts .new-agent {
+        flex: 1;
+      }
+      .agent-shortcuts svg {
+        width: 13px;
+        height: 13px;
+      }
+      .agent-shortcuts button[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .agent-switch-row {
+        position: relative;
+      }
+      .agent-row-actions {
+        display: flex;
+        align-items: center;
+        position: absolute;
+        right: 8px;
+        top: 10px;
+        gap: 1px;
+        padding: 1px 2px;
+        border-radius: 3px;
+        background: var(--side);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .agent-row-actions button {
+        width: 23px;
+        height: 23px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+      }
+      .agent-row-actions svg {
+        width: 13px;
+        height: 13px;
+      }
+      .agent-switch-row.current .agent-row-actions {
+        background: var(--selected);
+      }
+      .agent-switch-row:hover .agent-row-actions,
+      .agent-switch-row:focus-within .agent-row-actions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .agent-switch-row:hover > .quick-item,
+      .agent-switch-row:focus-within > .quick-item {
+        padding-right: 85px;
+      }
+      .agent-row-actions .interrupt:hover:not(:disabled) {
+        color: var(--danger);
+      }
+      .agent-dialog-context {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 8px 10px;
+        font-size: 11px;
+        line-height: 1.7;
+      }
+      .agent-form-fields {
+        padding: 16px 22px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        font-size: 12px;
+      }
+      #agent-dialog form {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(85dvh - 2px);
+      }
+      #agent-dialog .agent-form-fields {
+        min-height: 0;
+        overflow: auto;
+      }
+      #agent-dialog .dialog-head,
+      #agent-dialog .dialog-footer {
+        flex-shrink: 0;
+      }
+      .agent-form-fields label.field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .agent-form-fields textarea {
+        width: 100%;
+        min-height: 92px;
+        resize: vertical;
+        line-height: 1.6;
+      }
+      .choice-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .choice-grid.directions {
+        grid-template-columns: 1fr 1fr;
+      }
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 8px;
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .choice:has(input:checked) {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+      }
+      .choice input,
+      .check-option input {
+        width: auto;
+        accent-color: var(--accent);
+        padding: 0;
+        margin: 0;
+      }
+      .check-option {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .task-templates {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .task-templates button {
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 3px 8px;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .agent-form-fields fieldset {
+        border: 0;
+        padding: 0;
+        margin: 0;
+        min-width: 0;
+      }
+      .agent-form-fields fieldset[hidden] {
+        display: none;
+      }
+      #agent-name-field[hidden],
+      #agent-focus-field[hidden] {
+        display: none;
+      }
+      .agent-form-fields legend {
+        margin-bottom: 1px;
+        padding: 0;
+      }
+      .output-preview {
+        margin: 16px 22px;
+        padding: 14px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font:
+          11px/1.8 ui-monospace,
+          monospace;
+        max-height: 45dvh;
+        overflow: auto;
+      }
+      @media (hover: none) {
+        .agent-row-actions {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .agent-switch-row > .quick-item {
+          padding-right: 85px;
+        }
+      }
+      .quick-empty {
+        margin: 8px 13px;
+        color: var(--faint);
+        font-size: 11px;
       }
       .filter {
         position: relative;
@@ -439,6 +925,139 @@
         padding: 0 12px;
         font-size: 11px;
         font-weight: 600;
+      }
+      .section-heading .heading-count {
+        font-size: 10px;
+        font-weight: 400;
+        color: var(--faint);
+      }
+      .workspace-group {
+        margin-bottom: 6px;
+      }
+      .workspace-heading {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        padding-right: 9px;
+      }
+      .workspace-toggle {
+        width: 26px;
+        align-self: stretch;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 4px 0 0;
+      }
+      .workspace-toggle svg {
+        width: 11px;
+        height: 11px;
+        color: var(--faint);
+      }
+      .workspace-label {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+        gap: 8px;
+        text-align: left;
+        align-self: stretch;
+        padding: 4px 5px 4px 2px;
+      }
+      .workspace-label > svg {
+        width: 15px;
+        height: 15px;
+        color: var(--muted);
+      }
+      .workspace-label strong {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .workspace-branch {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        line-height: 16px;
+        color: var(--faint);
+      }
+      .workspace-branch svg {
+        width: 10px;
+        height: 10px;
+      }
+      .workspace-heading .current-mark {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 9px;
+        padding: 0 5px;
+        border-radius: 3px;
+        white-space: nowrap;
+      }
+      .context-tool {
+        opacity: 0;
+        transition: opacity 0.1s;
+      }
+      .workspace-heading:hover .context-tool,
+      .tab-heading:hover .context-tool,
+      .context-tool:focus-visible,
+      .workspace-heading:focus-within .context-tool,
+      .tab-heading:focus-within .context-tool {
+        opacity: 1;
+      }
+      .context-tool.icon {
+        width: 23px;
+        height: 23px;
+      }
+      .context-tool svg {
+        width: 13px;
+        height: 13px;
+      }
+      .tab-heading {
+        display: flex;
+        align-items: center;
+        margin-left: 28px;
+        border-left: 1px solid var(--line);
+        padding-right: 9px;
+      }
+      .tab-heading .tree-row {
+        flex: 1;
+        min-width: 0;
+        width: auto;
+        padding-left: 10px;
+      }
+      .tab-agents {
+        margin-left: 28px;
+        border-left: 1px solid var(--line);
+      }
+      .tab-agents .tree-row {
+        padding-left: 25px;
+        height: 32px;
+        padding-right: 13px;
+      }
+      .agent-glyph {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        font:
+          9px ui-monospace,
+          monospace;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .agent-glyph.codex {
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+      }
+      .agent-glyph.claude {
+        color: var(--amber);
+        font-size: 16px;
+      }
+      .agent-glyph.gemini {
+        color: var(--accent);
+        font-size: 14px;
       }
       .section-heading .icon {
         height: 23px;
@@ -567,25 +1186,48 @@
         height: 16px;
         color: var(--muted);
       }
-      .target-actions {
-        display: flex;
-        gap: 3px;
-        padding: 10px 12px;
+      .selected-target {
         border-top: 1px solid var(--line);
+        padding: 12px;
         flex-shrink: 0;
-        align-items: center;
       }
-      .target-actions .icon {
-        flex: 1;
+      .selected-target strong {
+        font-size: 12px;
+        font-weight: 500;
       }
-      .panel-note {
+      .selected-target .target-path {
         font-size: 10px;
         color: var(--faint);
-        padding: 0 12px 8px;
+        margin: 4px 0 9px 26px;
+      }
+      .target-task {
+        font-size: 11px;
+        line-height: 1.6;
+        color: var(--muted);
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        margin: 0 0 10px;
+      }
+      .target-buttons {
+        display: flex;
+        gap: 6px;
+      }
+      .target-buttons > button {
+        flex: 1;
+        font-size: 11px;
+        padding: 5px 8px;
+      }
+      .target-buttons svg {
+        width: 13px;
+        height: 13px;
+      }
+      .target-buttons .primary {
+        flex: 0 0 auto;
       }
       .composer {
-        padding: 11px 12px;
-        border-top: 1px solid var(--line);
+        margin-top: 10px;
       }
       .composer label {
         display: block;
@@ -596,7 +1238,7 @@
       .composer textarea {
         width: 100%;
         resize: vertical;
-        min-height: 62px;
+        min-height: 70px;
         max-height: 120px;
         font-size: 11px;
         background: var(--bg);
@@ -609,8 +1251,7 @@
         font-size: 11px;
       }
       .connection {
-        height: 30px;
-        border-top: 1px solid var(--line);
+        height: 25px;
         display: flex;
         align-items: center;
         gap: 6px;
@@ -618,6 +1259,54 @@
         font-size: 10px;
         color: var(--muted);
         flex-shrink: 0;
+      }
+      .terminal-bottom {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px;
+        padding: 5px 10px;
+        border-top: 1px solid var(--line);
+        background: var(--side);
+        flex-shrink: 0;
+        min-height: 39px;
+      }
+      .terminal-bottom button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 28px;
+        border-radius: 4px;
+        padding: 0 8px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .terminal-bottom button svg {
+        width: 14px;
+        height: 14px;
+        color: var(--muted);
+      }
+      .terminal-bottom button[aria-pressed="true"] {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .terminal-bottom button[aria-pressed="true"] svg {
+        color: var(--accent);
+      }
+      .terminal-bottom .tool-divider {
+        border-left: 1px solid var(--border);
+        height: 15px;
+        margin: 0 6px;
+      }
+      .terminal-bottom .bottom-target {
+        font:
+          10px ui-monospace,
+          monospace;
+        color: var(--faint);
+        margin-left: auto;
+        padding-left: 8px;
+        white-space: nowrap;
       }
       .dot {
         width: 5px;
@@ -894,7 +1583,7 @@
       }
       .switcher {
         position: fixed;
-        bottom: 38px;
+        bottom: calc(var(--terminal-tool-height, 39px) + 38px);
         left: 50%;
         transform: translateX(-50%);
         display: flex;
@@ -924,13 +1613,10 @@
         margin: 0 5px;
       }
       .switcher .arrow {
-        font-size: 15px;
-        padding: 4px 8px;
+        display: none;
       }
       .switcher .switch-label {
-        font-size: 10px;
-        color: var(--faint);
-        padding: 0 8px;
+        display: none;
       }
       .toast {
         position: fixed;
@@ -1064,6 +1750,9 @@
         gap: 5px;
         color: var(--muted);
       }
+      .form-stack label[hidden] {
+        display: none;
+      }
       .dialog-footer {
         padding: 13px 22px;
         border-top: 1px solid var(--line);
@@ -1075,6 +1764,94 @@
         padding: 20px 16px;
         color: var(--muted);
         font-size: 12px;
+      }
+      .welcome {
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: auto;
+        padding: 64px 28px 100px;
+      }
+      .welcome-content {
+        width: min(100%, 400px);
+        text-align: center;
+      }
+      .welcome-logo {
+        width: 104px;
+        height: 104px;
+        margin-bottom: 13px;
+      }
+      .welcome h1 {
+        margin: 0;
+        font-size: 36px;
+        font-weight: 600;
+        letter-spacing: -1.2px;
+        line-height: 1.3;
+      }
+      .welcome-description {
+        margin: 18px 0 25px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .welcome-actions {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .welcome-actions button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        border-radius: 6px;
+      }
+      .welcome-shortcuts {
+        display: grid;
+        gap: 6px;
+        margin: 39px auto 0;
+        width: min(100%, 320px);
+      }
+      .welcome-shortcuts button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 5px 7px;
+        color: var(--faint);
+        border-radius: 4px;
+        text-align: left;
+      }
+      .welcome-shortcuts button:hover {
+        color: var(--text);
+      }
+      .welcome-keys {
+        display: flex;
+        gap: 4px;
+      }
+      .welcome-keys kbd {
+        min-width: 24px;
+        text-align: center;
+        background: var(--surface);
+      }
+      .welcome-help {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: absolute;
+        bottom: 68px;
+        color: var(--faint);
+        font-size: 12px;
+      }
+      @media (max-height: 640px) {
+        .welcome {
+          justify-content: flex-start;
+          padding-top: 32px;
+        }
+        .welcome-help {
+          position: static;
+          margin-top: 30px;
+        }
       }
       @media (min-width: 1700px) {
         .sidebar {
@@ -1090,6 +1867,15 @@
         }
       }
       @media (max-width: 850px) {
+        .terminal-bottom .bottom-target {
+          display: none;
+        }
+        .terminal-bottom button {
+          padding: 0 6px;
+        }
+        .terminal-bottom .tool-divider {
+          margin: 0 3px;
+        }
         .command-search {
           display: none;
         }
@@ -1120,6 +1906,24 @@
         }
       }
       @media (max-width: 600px) {
+        .choice-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .terminal-bottom {
+          gap: 3px;
+          padding: 6px;
+        }
+        .terminal-bottom button {
+          flex: 1 0 32px;
+          padding: 0 6px;
+        }
+        .terminal-bottom button span,
+        .terminal-bottom .tool-divider {
+          display: none;
+        }
+        .context-tool {
+          opacity: 1;
+        }
         .sidebar {
           width: 254px;
           max-width: calc(100vw - 48px);
@@ -1212,34 +2016,46 @@
         <h3>首版要做什么</h3>
         <ol>
           <li>选择明确的本机会话，显示连接状态并支持刷新。</li>
-          <li>查找工作空间、标签页和 Agent；点击后定位主终端。</li>
-          <li>突出等待输入及已完成的 Agent，保留 Herdr 的状态语义。</li>
-          <li>新建工作空间、标签页，左右／上下分屏，放大／还原窗格。</li>
-          <li>保留 Herdr 原生侧栏开关，允许用户继续使用 TUI。</li>
-          <li>可选：向所选 Agent 发送任务；等待确认时由用户在终端处理。</li>
+          <li>侧边栏上半部分显示工作空间、分支及关联工作树，单击直接切换。</li>
+          <li>
+            下半部分显示 Agent、所属空间、标签页和状态，单击定位对应窗格。
+          </li>
+          <li>两组列表独立滚动，中间分隔线可拖动调整高度。</li>
+          <li>
+            支持搜索、按空间／状态排列 Agent，以及上下方向键定位、Enter 切换。
+          </li>
+          <li>
+            侧边栏提供新建 Agent、待处理筛选，以及发送任务、查看输出和中断。
+          </li>
+          <li>新建标签、分屏和放大等操作集中在终端底部。</li>
         </ol>
-        <h3>比较三个方案</h3>
-        <table>
-          <tr>
-            <th>A 工作空间树</th>
-            <td>空间归属清晰，适合经常切换项目。推荐作为首版。</td>
-          </tr>
-          <tr>
-            <th>B Agent 待处理</th>
-            <td>先显示需要介入的 Agent，适合多个 Agent 同时工作。</td>
-          </tr>
-          <tr>
-            <th>C 常用操作</th>
-            <td>先显示当前目标和常用操作，适合单一主工作空间。</td>
-          </tr>
-        </table>
+        <h3>本轮优化</h3>
+        <p>
+          以“工作空间 +
+          Agent”两组快速切换列表为主，补充轻量的手动操作。任务输入按需打开弹窗，不常驻挤占列表空间。切换时保留滚动位置，并记住每个工作空间上次选中的窗格。
+        </p>
+        <p>
+          终端底部按常用顺序排列：新建标签、左右分屏、上下分屏、复制输出、放大／还原窗格、清屏、Herdr
+          侧栏。右侧标明操作目标；清屏只清空显示，不改变 Agent 状态。
+        </p>
+        <h3>自动监控与决策</h3>
+        <p>
+          归入现有自动化／定时任务，侧边栏不增加监控开关。巡检读取状态和新输出，核实仍存在的问题，再按已配置范围给原
+          Agent
+          发送具体下一步；审批和缺少授权的问题交给用户。本轮仅确定归属，不启动真实监控或定时任务。
+        </p>
+        <h3>当前方案</h3>
+        <p>
+          入口与布局已确定，以快速切换为主。本轮评审重点是列表密度、上下列表比例、当前目标高亮，以及切换是否准确顺手。
+        </p>
         <h3>关键验收</h3>
         <ul>
           <li>入口在终端下方；打开、收起、筛选不影响进程和输入。</li>
           <li>切换会话时，旧响应不覆盖当前目标。</li>
           <li>工作空间、标签、Agent 的切换定位准确，不关闭其他终端。</li>
           <li>未安装、未运行、空内容、连接失败有各自提示。</li>
-          <li>等待确认时定位终端，不自动批准；任务不重复发送。</li>
+          <li>等待确认时定位终端，由用户处理，不自动批准。</li>
+          <li>切换工作空间回到上次使用的窗格，不把列表重置到顶部。</li>
           <li>明暗主题、长名称、窄窗口、键盘操作和放大文字均可用。</li>
         </ul>
         <h3>后续再考虑</h3>
@@ -1249,8 +2065,8 @@
         </p>
         <p>
           <strong>本页全部为模拟数据。</strong
-          >安装、创建、分屏、任务发送和终端确认不会调用本机
-          Herdr。底部方案切换条及顶部演示工具不属于产品界面。
+          >安装、创建、分屏和终端确认不会调用本机
+          Herdr。底部原型标识及顶部演示工具不属于产品界面。
         </p>
         <p>
           <a href="herdr-sidebar.md" target="_blank" rel="noreferrer"
@@ -1287,9 +2103,140 @@
         </div>
         <div class="dialog-footer">
           <button type="button" class="secondary" data-close-dialog>取消</button
-          ><button class="primary" type="submit">创建并进入</button>
+          ><button class="primary" id="create-submit" type="submit">
+            创建并进入
+          </button>
         </div>
       </form>
+    </dialog>
+    <dialog id="agent-dialog" aria-labelledby="agent-dialog-title">
+      <form id="agent-form">
+        <div class="dialog-head">
+          <h2 id="agent-dialog-title">新建 Agent</h2>
+          <button
+            type="button"
+            class="icon"
+            data-close-dialog
+            aria-label="关闭 Agent 操作"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="agent-form-fields">
+          <div class="agent-dialog-context" id="agent-context"></div>
+          <fieldset id="new-agent-fields">
+            <legend>Agent</legend>
+            <div class="choice-grid">
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="kind"
+                  value="codex"
+                  checked
+                />Codex</label
+              ><label class="choice"
+                ><input type="radio" name="kind" value="claude" />Claude</label
+              ><label class="choice"
+                ><input type="radio" name="kind" value="gemini" />Gemini</label
+              ><label class="choice"
+                ><input type="radio" name="kind" value="hermes" />Hermes</label
+              >
+            </div>
+          </fieldset>
+          <label class="field" id="agent-name-field"
+            >名称<input
+              name="agentName"
+              id="agent-name"
+              maxlength="32"
+              autocomplete="off"
+              placeholder="例如 coder、reviewer"
+            /><span class="tiny faint"
+              >使用小写字母、数字、下划线或连字符。</span
+            ></label
+          >
+          <fieldset id="agent-position-fields">
+            <legend>新窗格位置</legend>
+            <div class="choice-grid directions">
+              <label class="choice"
+                ><input
+                  type="radio"
+                  name="direction"
+                  value="right"
+                  checked
+                />右侧</label
+              ><label class="choice"
+                ><input type="radio" name="direction" value="down" />下方</label
+              >
+            </div>
+          </fieldset>
+          <label class="field"
+            ><span id="agent-task-label">初始任务（可选）</span
+            ><textarea
+              name="task"
+              id="agent-task"
+              placeholder="描述要完成的工作…"
+            ></textarea>
+          </label>
+          <div class="task-templates" aria-label="任务示例">
+            <button type="button" data-task-template="review">
+              审查当前改动</button
+            ><button type="button" data-task-template="test">
+              补充回归测试</button
+            ><button type="button" data-task-template="debug">
+              排查构建失败
+            </button>
+          </div>
+          <label class="check-option" id="agent-focus-field"
+            ><input type="checkbox" name="focusAgent" />创建后切换到新
+            Agent</label
+          >
+          <p class="tiny faint" style="margin: 0">
+            交互原型，仅模拟启动和任务发送。
+          </p>
+        </div>
+        <div class="dialog-footer">
+          <button type="button" class="secondary" data-close-dialog>取消</button
+          ><button type="submit" class="primary" id="agent-submit">
+            创建 Agent
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="agent-output-dialog" aria-labelledby="agent-output-title">
+      <div class="dialog-head">
+        <h2 id="agent-output-title">Agent 输出</h2>
+        <button class="icon" data-close-dialog aria-label="关闭输出">✕</button>
+      </div>
+      <div
+        class="tiny muted"
+        id="agent-output-context"
+        style="padding: 14px 22px 0"
+      ></div>
+      <pre class="output-preview" id="agent-output-text"></pre>
+      <div class="dialog-footer">
+        <button class="secondary" data-action="copy-agent-output">
+          复制输出</button
+        ><button class="primary" data-action="focus-output-agent">
+          定位终端
+        </button>
+      </div>
+    </dialog>
+    <dialog id="agent-interrupt-dialog" aria-labelledby="agent-interrupt-title">
+      <div class="dialog-head">
+        <h2 id="agent-interrupt-title">中断任务</h2>
+        <button class="icon" data-close-dialog aria-label="取消中断">✕</button>
+      </div>
+      <div class="dialog-content">
+        <p id="agent-interrupt-context"></p>
+        <p>向这个 Agent 发送 Ctrl+C，保留其窗格和会话。</p>
+        <p class="tiny faint">本次仅模拟中断，不操作本机进程。</p>
+      </div>
+      <div class="dialog-footer">
+        <button class="secondary" data-close-dialog>取消</button
+        ><button class="primary" data-action="confirm-agent-interrupt">
+          发送中断
+        </button>
+      </div>
     </dialog>
     <script>
       const paths = {
@@ -1333,6 +2280,9 @@
         cloud:
           '<path d="M6 19a5 5 0 0 1-1-10 7 7 0 0 1 13-2 6 6 0 0 1 0 12z"/>',
         close: '<path d="m6 6 12 12M6 18 18 6"/>',
+        copy: '<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
+        clear: '<path d="m4 16 9-12 8 6-9 12H9zm5 6h13M9 10l8 6"/>',
+        stop: '<rect x="6" y="6" width="12" height="12" rx="1"/>',
       };
       const icon = (name, cls = "") =>
         `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.terminal}</svg>`;
@@ -1348,7 +2298,7 @@
               "'": "&#39;",
             })[c],
         );
-      const names = { A: "工作空间树", B: "Agent 待处理", C: "常用操作" };
+      const names = { A: "工作空间 / Agent 快速切换" };
       const statuses = {
         idle: "空闲",
         working: "工作中",
@@ -1438,6 +2388,46 @@
           ],
         },
       ];
+      for (const [id, name, branch, agent, kind, agentState, tab] of [
+        ["w4", "api-service", "dev", "Hermes", "hermes", "working", "后端"],
+        ["w5", "mobile-client", "dev", "Claude", "claude", "idle", "客户端"],
+        ["w6", "playground", "main", "Codex", "codex", "unknown", "实验"],
+        ["w7", "team-docs", "main", "Coordinator", "codex", "idle", "文档"],
+        [
+          "w8",
+          "demo-app",
+          "fix/terminal-focus",
+          "Codex",
+          "codex",
+          "idle",
+          "修复",
+        ],
+      ]) {
+        workspaces.push({
+          id,
+          name,
+          branch,
+          linkedTo: id === "w8" ? "w1" : null,
+          tabs: [
+            {
+              id: `${id}:t1`,
+              name: tab,
+              agents: [
+                {
+                  id: `${id}:p1`,
+                  name: agent,
+                  kind,
+                  status: agentState,
+                  task:
+                    agentState === "working"
+                      ? "正在处理当前任务。"
+                      : "等待下一项任务。",
+                },
+              ],
+            },
+          ],
+        });
+      }
       const alternate = [
         {
           id: "r1",
@@ -1467,7 +2457,7 @@
         theme: "dark",
         session: "default",
         panel: "herdr",
-        scenario: "ready",
+        scenario: "loading",
         selected: "w1:p1",
         expanded: new Set(["w1", "w1:t1", "w1:t2"]),
         search: "",
@@ -1475,12 +2465,23 @@
         nativeSidebar: false,
         zoom: false,
         readout: false,
-        draft: "",
+        drafts: {},
+        statusFilter: "",
+        composing: "",
+        cleared: new Set(),
         shellLog: [],
+        shellDrafts: {},
         lastAction: "打开原型",
         createType: "workspace",
+        grouping: "space",
+        agentsOpen: false,
+        spacesShare: 47,
+        lastPanes: {},
+        scrollPositions: {},
+        agentMode: "new",
+        actionTarget: null,
       };
-      let toastTimer, taskTimer;
+      let toastTimer;
       const currentSpaces = () =>
         state.scenario === "empty"
           ? []
@@ -1494,18 +2495,62 @@
           ),
         );
       const selected = () =>
-        allAgents().find((a) => a.id === state.selected) || allAgents()[0];
+        state.scenario === "loading"
+          ? undefined
+          : allAgents().find((a) => a.id === state.selected) || allAgents()[0];
+      const workspaceStorageKey = "agent-hub.prototype.herdr.last-workspace";
+      function rememberWorkspace() {
+        try {
+          localStorage.setItem(
+            workspaceStorageKey,
+            JSON.stringify({
+              session: state.session,
+              selected: state.selected,
+              lastPanes: state.lastPanes,
+            }),
+          );
+        } catch {
+          // The prototype remains usable when browser storage is unavailable.
+        }
+      }
+      function restoreWorkspace() {
+        try {
+          const saved = JSON.parse(
+            localStorage.getItem(workspaceStorageKey) || "null",
+          );
+          if (!saved || !["default", "sandbox"].includes(saved.session)) return;
+          const spaces = saved.session === "sandbox" ? alternate : workspaces;
+          if (
+            !spaces.some((w) =>
+              w.tabs.some((t) => t.agents.some((a) => a.id === saved.selected)),
+            )
+          )
+            return;
+          state.session = saved.session;
+          state.selected = saved.selected;
+          if (saved.lastPanes && typeof saved.lastPanes === "object")
+            state.lastPanes = saved.lastPanes;
+        } catch {
+          // Invalid or stale saved selections fall back to an available workspace.
+        }
+      }
       const status = (a) =>
         `<span class="status ${esc(a.status)}">${statuses[a.status]}</span>`;
       const tool = (act, label, name, disabled = false) =>
         `<button class="icon" data-action="${act}" title="${label}" aria-label="${label}" ${disabled ? "disabled" : ""}>${icon(name)}</button>`;
       const isConnected = () => ["ready", "empty"].includes(state.scenario);
       const filtered = (a) =>
-        !state.search ||
-        [a.name, a.workspace.name, a.tab.name, a.task]
-          .join(" ")
-          .toLowerCase()
-          .includes(state.search.toLowerCase());
+        (!state.statusFilter || a.status === state.statusFilter) &&
+        (!state.search ||
+          [a.name, a.workspace.name, a.tab.name, a.task]
+            .join(" ")
+            .toLowerCase()
+            .includes(state.search.toLowerCase()));
+      const draftKey = (a) => `${state.session}:${a.id}`;
+      const shellDraftKey = () =>
+        `${state.session}:${selected()?.workspace.id || "none"}`;
+      const agentGlyph = (a) =>
+        `<span class="agent-glyph ${esc(a.kind)}" aria-hidden="true">${{ codex: "›_", claude: "✳", gemini: "✦", shell: "›" }[a.kind] || "›"}</span>`;
       function showToast(message) {
         const node = document.getElementById("toast");
         node.textContent = message;
@@ -1515,12 +2560,15 @@
       }
       function navigateAgent(id) {
         state.selected = id;
+        state.composing = "";
         const a = selected();
         if (a) {
+          state.lastPanes[`${state.session}:${a.workspace.id}`] = a.id;
           state.expanded.add(a.workspace.id);
           state.expanded.add(a.tab.id);
         }
         state.lastAction = `定位 ${a?.name ?? "窗格"} ${id}`;
+        rememberWorkspace();
         render();
       }
       function renderActivity() {
@@ -1544,45 +2592,38 @@
           )}<div class="grow"></div><button data-action="requirements" title="需求说明" aria-label="需求说明">${icon("help")}</button><button data-action="theme" title="切换主题" aria-label="切换主题">${icon("settings")}</button></nav>`;
       }
       function renderTree() {
-        const query = state.search.toLowerCase();
         return currentSpaces()
           .map((w) => {
-            const matching = w.tabs
-              .flatMap((t) => t.agents)
-              .some((a) =>
-                [a.name, w.name, a.task]
-                  .join(" ")
-                  .toLowerCase()
-                  .includes(query),
-              );
-            if (query && !matching) return "";
-            const open = state.expanded.has(w.id) || !!query;
-            return `<button class="tree-row" data-expand="${w.id}" aria-expanded="${open}">${icon(open ? "down" : "chevron", "caret")}${icon("folder", "row-icon")}<strong class="truncate grow" style="font-weight:500">${esc(w.name)}</strong><span class="path">${w.tabs.flatMap((t) => t.agents).filter((a) => a.kind !== "shell").length} Agent</span></button>${
+            const matching = w.tabs.some((t) =>
+              t.agents.some((a) => filtered({ ...a, workspace: w, tab: t })),
+            );
+            if (!matching) return "";
+            const filterOpen = !!state.search || !!state.statusFilter;
+            const open = state.expanded.has(w.id) || filterOpen;
+            const first = w.tabs[0].agents[0];
+            const active = selected()?.workspace.id === w.id;
+            return `<section class="workspace-group" aria-label="${esc(w.name)}"><div class="workspace-heading"><button class="workspace-toggle" data-expand="${w.id}" aria-expanded="${open}" aria-label="${open ? "收起" : "展开"} ${esc(w.name)}">${icon(open ? "down" : "chevron")}</button><button class="workspace-label" data-space="${w.id}" title="定位工作空间 ${esc(w.name)}">${icon("folder")}<span class="grow truncate"><strong class="truncate">${esc(w.name)}</strong><span class="workspace-branch">${icon("git")}<span class="truncate">${esc(w.branch)}</span></span></span></button>${active ? '<span class="current-mark">当前</span>' : ""}<button class="context-tool icon" data-action="new-tab" data-context="${first.id}" aria-label="在 ${esc(w.name)} 新建标签页" title="新建标签页">${icon("plus")}</button></div>${
               open
                 ? w.tabs
                     .map((t) => {
-                      const opened = state.expanded.has(t.id) || !!query;
-                      return `<button class="tree-row depth1" data-expand="${t.id}" aria-expanded="${opened}">${icon(opened ? "down" : "chevron", "caret")}${icon("tab", "row-icon")}<span class="truncate grow">${esc(t.name)}</span><span class="path">${t.agents.length}</span></button>${
+                      const agents = t.agents.filter((a) =>
+                        filtered({ ...a, workspace: w, tab: t }),
+                      );
+                      if (!agents.length) return "";
+                      const opened = state.expanded.has(t.id) || filterOpen;
+                      return `<div class="tab-heading"><button class="tree-row" data-expand="${t.id}" aria-expanded="${opened}">${icon(opened ? "down" : "chevron", "caret")}${icon("tab", "row-icon")}<span class="truncate grow">${esc(t.name)}</span><span class="path">${t.agents.length} 窗格</span></button><button class="context-tool icon" data-action="split-right" data-context="${t.agents[0].id}" title="在此标签页左右分屏" aria-label="在 ${esc(t.name)} 左右分屏">${icon("split")}</button></div>${
                         opened
-                          ? t.agents
+                          ? `<div class="tab-agents">${agents
                               .map((a) => {
-                                if (
-                                  query &&
-                                  ![a.name, w.name, a.task]
-                                    .join(" ")
-                                    .toLowerCase()
-                                    .includes(query)
-                                )
-                                  return "";
-                                return `<button class="tree-row depth2 ${selected()?.id === a.id ? "selected" : ""}" data-agent="${a.id}" title="${esc(a.task)}" aria-pressed="${selected()?.id === a.id}">${icon("terminal", "row-icon")}<span class="truncate grow">${esc(a.name)}</span>${status(a)}</button>`;
+                                return `<button class="tree-row ${selected()?.id === a.id ? "selected" : ""}" data-agent="${a.id}" title="${esc(a.task)}" aria-pressed="${selected()?.id === a.id}">${agentGlyph(a)}<span class="truncate grow">${esc(a.name)}</span>${status(a)}</button>`;
                               })
-                              .join("")
+                              .join("")}</div>`
                           : ""
                       }`;
                     })
                     .join("")
                 : ""
-            }`;
+            }</section>`;
           })
           .join("");
       }
@@ -1626,6 +2667,8 @@
           .join("")}`;
       }
       function renderEmpty() {
+        if (state.scenario === "loading")
+          return '<div class="empty" role="status" aria-live="polite"><p>加载中…</p></div>';
         const data = {
           missing: [
             "terminal",
@@ -1658,15 +2701,114 @@
         if (!state.panel) return "";
         if (state.panel !== "herdr")
           return `<aside class="sidebar"><div class="panel-title"><strong>${state.panel === "terminal" ? "终端" : "AgentHub"}</strong></div><div class="nav-placeholder">此原型聚焦 Herdr 功能区。<p>点击下方 Herdr 图标，主终端内容会继续保留。</p><button class="secondary" data-nav="herdr">打开 Herdr</button></div></aside>`;
-        const a = selected(),
-          blocked = allAgents().find((a) => a.status === "blocked"),
-          connected = isConnected(),
-          hasAgent = connected && a;
-        return `<aside class="sidebar" aria-label="Herdr 功能区"><div class="panel-title"><strong class="grow">Herdr</strong>${tool("refresh", "刷新", "refresh")}${tool("collapse", "收起 Herdr 面板", "collapse")}</div><div class="session"><div class="session-label row"><span class="dot" style="${connected ? "" : "background:var(--faint)"}"></span>本机<span class="grow"></span><span class="tiny faint">${connected ? "已连接" : "未连接"}</span></div><select aria-label="Herdr 会话" id="session-select"><option value="default" ${state.session === "default" ? "selected" : ""}>default — 开发会话</option><option value="sandbox" ${state.session === "sandbox" ? "selected" : ""}>sandbox — 实验会话</option></select><button class="primary" data-action="open-terminal">${icon("terminal")}打开终端</button></div><div class="panel-body">${!hasAgent ? renderEmpty() : `${state.variant === "A" && blocked ? `<button class="attention" data-agent="${blocked.id}"><span class="status blocked"></span><span>1 个 Agent 等待你输入</span><span class="arrow">›</span></button>` : ""}<div class="filter">${icon("search")}<input aria-label="筛选工作空间和 Agent" id="filter" placeholder="搜索工作空间、Agent…" value="${esc(state.search)}" /></div>${state.search && !allAgents().some(filtered) ? '<div class="empty small">没有匹配结果，试试其他名称。</div>' : state.variant === "A" ? `<div class="section-heading"><span class="grow">工作空间</span>${tool("new-workspace", "新建工作空间", "plus")}</div>${renderTree()}` : state.variant === "B" ? renderQueue() : renderQuick()}`}</div>${hasAgent ? `${state.variant !== "C" ? `<div class="target-actions">${tool("new-workspace", "新建工作空间", "folder")}${tool("new-tab", "新建标签页", "tab")}${tool("split-right", "左右分屏", "split")}${tool("split-down", "上下分屏", "splitDown")}${tool("zoom", state.zoom ? "还原窗格" : "放大窗格", "zoom")}${tool("native", state.nativeSidebar ? "隐藏 Herdr 原生侧栏" : "显示 Herdr 原生侧栏", "sidebar")}</div><div class="panel-note truncate">操作目标：${esc(a.workspace.name)} / ${esc(a.name)}</div>` : ""}<form class="composer" id="prompt-form"><label for="agent-prompt">发送给 ${esc(a.name)}</label>${a.status === "blocked" ? `<div class="tiny muted" style="margin-bottom:8px">需要你先在终端回答确认。</div>` : ""}<textarea id="agent-prompt" name="prompt" placeholder="输入下一项任务…" ${a.kind === "shell" || a.status === "blocked" || a.status === "working" ? "disabled" : ""}>${esc(state.draft)}</textarea><div class="row"><span class="tiny faint grow">${a.status === "working" ? "当前任务进行中" : a.status === "blocked" ? "等待确认" : a.kind === "shell" ? "当前目标是 Shell" : "仅发送至所选 Agent"}</span><button class="primary" type="submit" ${["blocked", "working"].includes(a.status) || a.kind === "shell" ? "disabled" : ""}>${icon("send")}发送</button></div></form>` : ""}<div class="connection"><span class="dot" style="${connected ? "" : "background:var(--faint)"}"></span><span>${connected ? "Herdr 0.9.3" : "连接不可用"}</span><span class="grow"></span><span>本机 / ${esc(state.session)}</span></div></aside>`;
+        const connected = isConnected(),
+          hasAgent = connected && allAgents().length > 0;
+        return `<aside class="sidebar" aria-label="Herdr 功能区">
+          <div class="panel-title"><strong class="grow">Herdr</strong><span class="connection-label"><span class="dot" style="${connected ? "" : "background:var(--faint)"}"></span>${state.scenario === "loading" ? "加载中…" : connected ? "已连接" : "未连接"}</span>${tool("refresh", "刷新会话", "refresh")}${tool("collapse", "收起 Herdr 面板", "collapse")}</div>
+          <div class="session"><details class="session-switch"><summary aria-label="选择 Herdr 会话"><span class="muted">本机</span><span class="faint">/</span><strong class="grow truncate" style="font-weight:500">${esc(state.session)}</strong>${icon("down")}</summary><div class="session-options">${[
+            ["default", "开发会话"],
+            ["sandbox", "实验会话"],
+          ]
+            .map(
+              ([id, label]) =>
+                `<button data-session="${id}"><span class="session-check">${state.session === id ? "✓" : ""}</span><span class="grow">${id}</span><span class="faint">${label}</span></button>`,
+            )
+            .join(
+              "",
+            )}</div></details>${tool("open-terminal", "定位 Herdr 终端", "terminal")}</div>
+          ${hasAgent ? `<div class="filter">${icon("search")}<input aria-label="筛选工作空间和 Agent" id="filter" placeholder="快速查找工作空间、Agent…" value="${esc(state.search)}" /></div>` : ""}
+          ${hasAgent ? `<div class="agent-shortcuts"><button class="new-agent" data-action="new-agent">${icon("plus")}新建 Agent</button><button data-action="pending-agents" aria-pressed="${state.statusFilter === "blocked"}" ${allAgents().some((a) => a.status === "blocked") ? "" : "disabled"}>${icon("help")}待处理 ${allAgents().filter((a) => a.status === "blocked").length}</button></div>` : ""}
+          ${hasAgent ? renderSwitchLists() : `<div class="panel-body">${renderEmpty()}</div>`}
+          <div class="connection"><span>${state.scenario === "loading" ? "加载中…" : connected ? `${allAgents().filter((a) => a.kind !== "shell").length} Agent · ${currentSpaces().length} 工作空间` : "连接不可用"}</span><span class="grow"></span><span>Herdr 0.9.3</span></div>
+        </aside>`;
+      }
+      function switchState(agentState) {
+        return `<span class="quick-state ${agentState}" role="img" aria-label="${statuses[agentState]}" title="${statuses[agentState]}">${{ idle: "○", working: "◌", blocked: "?", done: "✓", unknown: "—" }[agentState] || "—"}</span>`;
+      }
+      function workspaceState(w) {
+        const agents = w.tabs.flatMap((t) => t.agents);
+        return (
+          ["blocked", "working", "done", "idle", "unknown"].find((s) =>
+            agents.some((a) => a.status === s),
+          ) || "unknown"
+        );
+      }
+      function renderSwitchLists() {
+        const q = state.search.toLowerCase();
+        const spaces = currentSpaces();
+        const ordered = spaces
+          .filter((w) => !w.linkedTo)
+          .flatMap((w) => [
+            w,
+            ...spaces.filter((child) => child.linkedTo === w.id),
+          ]);
+        const visibleSpaces = ordered.filter((w) =>
+          [
+            w.name,
+            w.branch,
+            ...w.tabs.flatMap((t) => t.agents.map((a) => a.name)),
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(q),
+        );
+        const agents = allAgents().filter(
+          (a) => a.kind !== "shell" && filtered(a),
+        );
+        if (state.grouping === "status") {
+          const order = ["blocked", "done", "working", "idle", "unknown"];
+          agents.sort(
+            (a, b) => order.indexOf(a.status) - order.indexOf(b.status),
+          );
+        }
+        let previousStatus = "";
+        return `<div class="quick-switch ${state.agentsOpen ? "" : "agents-collapsed"}" data-session="${esc(state.session)}" style="--spaces-share:${state.spacesShare}%">
+          <section class="switch-section spaces-section" aria-label="工作空间快速切换"><div class="switch-heading"><span class="grow">工作空间</span><span class="count">${visibleSpaces.length}</span></div><div class="switch-list spaces-list" aria-label="工作空间列表">${visibleSpaces.map((w) => `<button class="quick-item ${w.linkedTo ? "linked" : ""} ${selected()?.workspace.id === w.id ? "selected" : ""}" data-space="${w.id}" aria-pressed="${selected()?.workspace.id === w.id}" title="切换到 ${esc(w.name)} / ${esc(w.branch)}">${switchState(workspaceState(w))}<span class="grow truncate"><span class="quick-name truncate">${esc(w.linkedTo ? w.branch : w.name)}</span>${w.linkedTo ? "" : `<span class="quick-subtext">${icon("git")}<span class="truncate">${esc(w.branch)}</span></span>`}</span>${selected()?.workspace.id === w.id ? icon("chevron", "current-pointer") : ""}</button>`).join("") || '<p class="quick-empty">没有匹配的工作空间</p>'}</div></section>
+          <div class="list-separator" ${state.agentsOpen ? "" : "hidden"} role="separator" aria-label="调整工作空间与 Agent 列表高度" aria-orientation="horizontal" aria-valuemin="25" aria-valuemax="65" aria-valuenow="${state.spacesShare}" tabindex="0"></div>
+          <section class="switch-section agents-section" aria-label="Agent 快速切换"><div class="switch-heading"><button class="section-toggle grow" data-action="toggle-agents" aria-expanded="${state.agentsOpen}" aria-controls="agents-list">${icon(state.agentsOpen ? "down" : "chevron")}<span>Agent</span><span class="count">${agents.length}</span></button><button class="group-switch" data-action="group-agents" title="切换 Agent 排列方式">${state.grouping === "space" ? "按空间" : "按状态"} ▾</button></div><div id="agents-list" class="switch-list agents-list" ${state.agentsOpen ? "" : "hidden"} aria-label="Agent 列表">${
+            agents
+              .map((a) => {
+                let heading = "";
+                if (
+                  state.grouping === "status" &&
+                  previousStatus !== a.status
+                ) {
+                  previousStatus = a.status;
+                  heading = `<div class="agent-status-group">${statuses[a.status]}</div>`;
+                }
+                const ready = ["idle", "done"].includes(a.status);
+                const actionButton = (action, label, name, disabled = false) =>
+                  `<button data-action="${action}" data-agent-target="${a.id}" title="${esc(label)}" aria-label="${esc(label)}" ${disabled ? "disabled" : ""} class="${action === "interrupt-agent" ? "interrupt" : ""}">${icon(name)}</button>`;
+                return `${heading}<div class="agent-switch-row ${selected()?.id === a.id ? "current" : ""}"><button class="quick-item ${selected()?.id === a.id ? "selected" : ""}" data-agent="${a.id}" aria-pressed="${selected()?.id === a.id}" title="切换到 ${esc(a.workspace.name)} / ${esc(a.tab.name)} / ${esc(a.name)}">${switchState(a.status)}<span class="grow truncate"><span class="row"><span class="quick-name grow truncate">${esc(a.workspace.name)}</span><span class="tiny faint truncate">${esc(a.tab.name)}</span></span><span class="quick-subtext">${agentGlyph(a)}<span class="truncate">${esc(a.name)}</span><span class="agent-status-label ${a.status}">${statuses[a.status]}</span></span></span></button><div class="agent-row-actions" aria-label="${esc(a.name)} 操作">${actionButton("send-agent-task", ready ? `向 ${a.name} 发送任务` : `${a.name} ${statuses[a.status]}，请先处理当前任务`, "send", !ready)}${actionButton("view-agent-output", `查看 ${a.name} 输出`, "files")}${actionButton("interrupt-agent", `中断 ${a.name} 当前任务`, "stop", a.status !== "working")}</div></div>`;
+              })
+              .join("") || '<p class="quick-empty">没有匹配的 Agent</p>'
+          }</div></section>
+        </div>`;
+      }
+      function renderSummary() {
+        return `<div class="summary-strip" aria-label="按 Agent 状态筛选">${[
+          ["blocked", "待处理", "attention-count"],
+          ["working", "工作中", ""],
+          ["done", "已完成", "done-count"],
+        ]
+          .map(([key, label, cls]) => {
+            const count = allAgents().filter(
+              (a) => a.kind !== "shell" && a.status === key,
+            ).length;
+            return `<button class="${cls}" data-status-filter="${key}" aria-pressed="${state.statusFilter === key}" ${count ? "" : "disabled"}><span class="status ${key}"></span><strong>${count}</strong>${label}</button>`;
+          })
+          .join("")}</div>`;
+      }
+      function renderTarget(a) {
+        const ready = a.kind !== "shell" && ["idle", "done"].includes(a.status);
+        const open = state.composing === draftKey(a) && ready;
+        return `<section class="selected-target" aria-label="当前目标"><div class="row">${agentGlyph(a)}<strong class="grow truncate">${esc(a.name)}</strong>${status(a)}</div><div class="target-path truncate" title="${esc(a.workspace.name + " / " + a.tab.name)}">${esc(a.workspace.name)} / ${esc(a.tab.name)}</div><p class="target-task" title="${esc(a.task)}">${esc(a.task)}</p><div class="target-buttons"><button class="${a.status === "blocked" ? "primary" : "secondary"}" data-action="open-terminal">${icon("terminal")}${a.status === "blocked" ? "前往终端确认" : "打开终端"}</button>${ready ? `<button class="secondary" data-action="compose" aria-expanded="${open}">${icon("send")}${open ? "收起输入" : "发送任务"}</button>` : ""}</div>${open ? `<form class="composer" id="prompt-form"><label for="agent-prompt">发送给 ${esc(a.name)}</label><textarea id="agent-prompt" name="prompt" placeholder="描述下一项任务…">${esc(state.drafts[draftKey(a)] || "")}</textarea><div class="row"><span class="tiny faint grow">仅发送至当前 Agent</span><button class="primary" type="submit">发送</button></div></form>` : ""}</section>`;
       }
       function terminalContent(a) {
         if (!a)
           return `<h1>Herdr</h1><p class="faint">工作空间就绪后，终端会显示在这里。</p>`;
+        if (state.cleared.has(draftKey(a)))
+          return `<p class="faint">当前窗格的显示内容已清空。</p><p class="faint tiny">${esc(a.name)} 仍${a.status === "working" ? "在工作" : "保持当前状态"}，后续输出会继续显示。</p><button class="secondary" data-action="restore-output">恢复模拟输出</button>`;
         if (a.kind === "shell")
           return `<p class="faint">~/projects/${esc(a.workspace.name)}</p><div class="shell-input row"><span>❯</span><span>npm run dev</span></div><p><span class="check">VITE</span> ready in 214 ms<br/><span class="code">Local: http://localhost:1420/</span></p><p class="faint">等待文件变化…</p>`;
         if (a.status === "blocked")
@@ -1674,10 +2816,52 @@
         if (a.status === "done")
           return `<h1>${esc(a.name)}</h1><p class="faint">${esc(a.workspace.name)} / ${esc(a.tab.name)}</p><div class="prompt-bubble">${esc(a.lastPrompt || "检查当前改动的文档与交互。")}</div><p><span class="check">✓</span> ${esc(a.lastPrompt ? "模拟任务已完成。" : "文档链接和目录结构检查完成。")}</p><p><span class="bullet">•</span> 未发现需要修复的问题。<br/><span class="bullet">•</span> 验证结果已整理，可继续下一项工作。</p><div class="rule"></div><p class="faint">本轮已完成，等待新的输入。</p>`;
         if (a.status === "idle")
-          return `<h1>${esc(a.name)}</h1><p class="faint">~/projects/${esc(a.workspace.name)}</p><div class="rule"></div><p>工作空间已就绪。</p><p class="faint">可以从左侧输入下一项任务，也可以直接在终端继续对话。</p>`;
+          return `<h1>${esc(a.name)}</h1><p class="faint">~/projects/${esc(a.workspace.name)}</p><div class="rule"></div><p>工作空间已就绪。</p><p class="faint">在终端中继续对话，左侧可快速切换工作空间或 Agent。</p>`;
         return `<h1>${esc(a.name)}</h1><p class="faint">~/projects/${esc(a.workspace.name)} <span class="tag">${esc(a.workspace.branch)}</span></p><div class="prompt-bubble">${esc(a.lastPrompt || "完善侧边面板交互，检查类型与构建。")}</div><p><span class="bullet">•</span> 正在检查当前组件和已有交互。</p><p><span class="bullet">•</span> 复用工作空间及终端选择逻辑。<br/><span class="code">工作空间 → 标签页 → Agent</span></p><p><span class="check">✓</span> 已确认侧边栏入口位置<br/><span class="check">✓</span> 已保留主区域终端布局<br/><span class="bullet">◌</span> 正在验证键盘和焦点切换…</p><div class="rule"></div><p class="faint">左侧切换 Agent，终端会定位到对应窗格。</p>`;
       }
       function renderEditor() {
+        if (state.scenario === "loading" || currentSpaces().length === 0)
+          return renderWelcome();
+        return renderEditorContent()
+          .replace(
+            'placeholder="输入模拟命令"',
+            `placeholder="输入模拟命令" value="${esc(state.shellDrafts[shellDraftKey()] || "")}"`,
+          )
+          .replace("</main>", `${renderTerminalTools()}</main>`);
+      }
+      function renderWelcome() {
+        const loading = state.scenario === "loading";
+        const keys = (...values) =>
+          `<span class="welcome-keys" aria-hidden="true">${values.map((value) => `<kbd>${value}</kbd>`).join("")}</span>`;
+        return `<main class="editor welcome" aria-label="启动页"><div class="welcome-content"><img class="welcome-logo" src="../../public/icons/app-icon.svg" alt="" /><h1>AgentHub</h1><p class="welcome-description" role="status" aria-live="polite">${loading ? "加载中…" : "添加项目或创建工作空间，开始工作。"}</p>${loading ? "" : `<div class="welcome-actions"><button class="secondary" data-action="add-project">${icon("folder")}添加项目</button><button class="primary" data-action="new-workspace">${icon("git")}创建工作空间</button></div><div class="welcome-shortcuts" aria-label="常用快捷键"><button data-action="new-workspace" aria-keyshortcuts="Meta+N">创建工作空间${keys("⌘", "N")}</button><button data-action="previous-workspace" disabled aria-keyshortcuts="Meta+Shift+ArrowUp">上一个工作空间${keys("⌘", "⇧", "↑")}</button><button data-action="next-workspace" disabled aria-keyshortcuts="Meta+Shift+ArrowDown">下一个工作空间${keys("⌘", "⇧", "↓")}</button></div>`}</div><button class="welcome-help" data-action="requirements">${icon("help")} 查看使用说明</button></main>`;
+      }
+      function navigateWorkspace(direction) {
+        const spaces = currentSpaces();
+        if (!isConnected() || !spaces.length) return;
+        const index = spaces.findIndex(
+          (w) => w.id === selected()?.workspace.id,
+        );
+        const next =
+          index < 0
+            ? direction > 0
+              ? 0
+              : spaces.length - 1
+            : (index + direction + spaces.length) % spaces.length;
+        const w = spaces[next];
+        const previous = state.lastPanes[`${state.session}:${w.id}`];
+        const target =
+          allAgents().find((a) => a.id === previous) ||
+          allAgents().find((a) => a.workspace.id === w.id);
+        if (target) navigateAgent(target.id);
+      }
+      function renderTerminalTools() {
+        const a = selected(),
+          enabled = isConnected() && !!a;
+        const button = (action, label, name, pressed) =>
+          `<button data-action="${action}" title="${label}" aria-label="${label}" ${pressed === undefined ? "" : `aria-pressed="${pressed}"`} ${enabled ? "" : "disabled"}>${icon(name)}<span>${label}</span></button>`;
+        return `<nav class="terminal-bottom" aria-label="终端快捷操作">${button("new-tab", "新建标签", "plus")}${button("split-right", "左右分屏", "split")}${button("split-down", "上下分屏", "splitDown")}<span class="tool-divider"></span>${button("copy-output", "复制输出", "copy")}${button("zoom", state.zoom ? "还原窗格" : "放大窗格", "zoom", state.zoom)}${button("clear-output", "清屏", "clear")}<span class="tool-divider"></span>${button("native", "Herdr 侧栏", "sidebar", state.nativeSidebar)}<span class="bottom-target" title="当前操作目标">${esc(a?.name ?? "Herdr")} / ${esc(a?.id ?? "无窗格")}</span></nav>`;
+      }
+      function renderEditorContent() {
         const a = selected(),
           split = state.split && !state.zoom;
         return `<main class="editor" aria-label="主终端"><div class="tabs"><button class="tab selected" data-action="open-terminal">${icon("terminal")}终端 1 <span class="tiny faint">Herdr</span><span class="cross">×</span></button><button class="tab" data-action="shell-tab">${icon("terminal")}终端 2<span class="cross">×</span></button><div class="tools"><span class="optional">${icon("plus")}</span><span class="tag">Herdr</span>${tool("native", "切换 Herdr 原生侧栏", "sidebar")}${tool("zoom", "放大或还原窗格", "zoom")}</div></div><div class="breadcrumb">${icon("folder")}<span>当前项目：demo-app</span><span class="faint">›</span><span class="truncate selected-crumb">${esc(a?.workspace.name ?? "Herdr")}</span><span class="grow"></span><span class="tiny faint">本机 / ${esc(state.session)}</span></div><div class="terminal-area"><aside class="native-sidebar" ${state.nativeSidebar ? "" : "hidden"}><strong>spaces</strong>${currentSpaces()
@@ -1690,19 +2874,28 @@
           )}</aside><div class="terminal-grid ${state.split === "down" ? "down" : ""} ${state.zoom ? "zoom" : ""}"><section class="terminal-pane"><div class="pane-heading active">${icon("terminal")}<span class="grow">${esc(a?.name ?? "Herdr")} <span class="faint">${esc(a?.tab.name ?? "")}</span></span>${a ? status(a) : ""}<span class="mono faint">${esc(a?.id ?? "")}</span></div><div class="terminal-copy">${terminalContent(a)}</div><div class="terminal-input"><span>›</span><span class="cursor"></span><span>${a?.status === "blocked" ? "等待确认" : a?.status === "working" ? "正在处理任务…" : "继续对话…"}</span></div></section>${split ? `<section class="terminal-pane"><div class="pane-heading">${icon("terminal")}<span class="grow">Shell</span><span class="faint">${esc(a?.workspace.name ?? "demo-app")}</span></div><div class="terminal-copy"><p class="faint">~/projects/${esc(a?.workspace.name ?? "demo-app")}</p><div class="shell-input row"><span>❯</span><span>npm run dev</span></div><p><span class="check">VITE</span> v7.3.1 ready in 214 ms</p><span class="code">Local: http://localhost:1420/</span><div class="rule"></div><p class="faint">${state.shellLog.length ? state.shellLog.map(esc).join("<br/>") : "开发服务器运行中。"}</p></div><form class="terminal-input shell-input" style="margin-left:24px;margin-right:24px" id="shell-form"><span>❯</span><input name="command" aria-label="模拟 Shell 命令" placeholder="输入模拟命令" autocomplete="off" /></form></section>` : ""}</div></div></main>`;
       }
       function render() {
+        const prior = document.querySelector(".quick-switch");
+        if (prior)
+          state.scrollPositions[prior.dataset.session] = {
+            spaces: prior.querySelector(".spaces-list").scrollTop,
+            agents: prior.querySelector(".agents-list").hidden
+              ? (state.scrollPositions[prior.dataset.session]?.agents ?? 0)
+              : prior.querySelector(".agents-list").scrollTop,
+          };
         document.documentElement.dataset.theme = state.theme;
         const a = selected();
         document.getElementById("app").innerHTML =
-          `<div class="app"><header class="titlebar"><div class="traffic"><i></i><i></i><i></i></div><span class="tiny muted">AgentHub</span><div class="command-search">${icon("search")}demo-app<span class="grow"></span><kbd>⌘ K</kbd></div><div class="title-actions"><span class="prototype-mark">交互原型 · 模拟数据</span><button data-action="requirements">需求说明</button><button data-action="theme">${state.theme === "dark" ? "浅色" : "深色"}</button><button data-action="scenario" aria-expanded="false">演示状态 ▾</button></div></header><div class="workbench">${renderActivity()}${renderSidebar()}${renderEditor()}</div><footer class="statusbar"><span class="row">${icon("git")}feat/sidebar</span><span class="optional">当前项目 demo-app</span><span class="grow"></span><span>${a ? `${esc(a.name)} · ${statuses[a.status]}` : "无 Agent"}</span><span class="optional">Herdr / ${esc(state.session)}</span><span>模拟数据</span></footer></div><div class="switcher" aria-label="原型方案切换"><span class="switch-label">比较面板结构</span><button class="arrow" data-cycle="-1" aria-label="上一个方案">‹</button>${Object.entries(
+          `<div class="app"><header class="titlebar"><div class="traffic"><i></i><i></i><i></i></div><span class="tiny muted">AgentHub</span><div class="command-search">${icon("search")}${esc(a?.workspace.name || "搜索工作空间…")}<span class="grow"></span><kbd>⌘ K</kbd></div><div class="title-actions"><span class="prototype-mark">交互原型 · 模拟数据</span><button data-action="requirements">需求说明</button><button data-action="theme">${state.theme === "dark" ? "浅色" : "深色"}</button><button data-action="scenario" aria-expanded="false">演示状态 ▾</button></div></header><div class="workbench">${renderActivity()}${renderSidebar()}${renderEditor()}</div><footer class="statusbar"><span class="row">${icon("git")}feat/sidebar</span><span class="optional">${a ? `当前工作空间 ${esc(a.workspace.name)}` : "未打开工作空间"}</span><span class="grow"></span><span>${a ? `${esc(a.name)} · ${statuses[a.status]}` : "无 Agent"}</span><span class="optional">Herdr / ${esc(state.session)}</span><span>模拟数据</span></footer></div><div class="switcher" aria-label="原型方案切换"><span class="switch-label">比较面板结构</span><button class="arrow" data-cycle="-1" aria-label="上一个方案">‹</button>${Object.entries(
             names,
           )
             .map(
               ([key, name]) =>
-                `<button data-variant="${key}" aria-pressed="${state.variant === key}" class="${state.variant === key ? "current" : ""}">${key} ${name}${key === "A" ? " · 推荐" : ""}</button>`,
+                `<button data-variant="${key}" aria-pressed="${state.variant === key}" class="current">${name}</button>`,
             )
             .join(
               "",
             )}<button class="arrow" data-cycle="1" aria-label="下一个方案">›</button><span class="divider"></span><button data-action="readout" aria-pressed="${state.readout}">状态</button></div><div class="state-readout" ${state.readout ? "" : "hidden"}><div>方案：${state.variant} / ${names[state.variant]}</div><div>会话：本机 / ${esc(state.session)}</div><div>目标：${esc(a?.id ?? "无")}</div><div>Agent：${esc(a?.name ?? "无")} / ${a ? statuses[a.status] : "无"}</div><div>面板：${esc(state.panel || "已收起")}；分屏：${state.zoom ? "已放大" : state.split || "无"}</div><div>状态：${esc(state.scenario)}</div><div>最近操作：${esc(state.lastAction)}</div></div><div class="scenario-popover" id="scenario-popover" hidden>${[
+            ["loading", "加载中"],
             ["ready", "已连接"],
             ["missing", "尚未安装"],
             ["stopped", "会话未运行"],
@@ -1714,7 +2907,24 @@
                 `<button data-scenario="${key}">${state.scenario === key ? "✓ " : ""}${label}</button>`,
             )
             .join("")}</div>`;
+        const restored = document.querySelector(".quick-switch");
+        const scroll = state.scrollPositions[state.session];
+        if (restored && scroll) {
+          restored.querySelector(".spaces-list").scrollTop = scroll.spaces;
+          restored.querySelector(".agents-list").scrollTop = scroll.agents;
+        }
+        positionReviewTools();
       }
+      function positionReviewTools() {
+        const height =
+          document.querySelector(".terminal-bottom")?.getBoundingClientRect()
+            .height || 39;
+        document.documentElement.style.setProperty(
+          "--terminal-tool-height",
+          `${height}px`,
+        );
+      }
+      window.addEventListener("resize", positionReviewTools);
       function cycle(delta) {
         const keys = Object.keys(names),
           i = keys.indexOf(state.variant);
@@ -1732,14 +2942,286 @@
       function openCreate(type) {
         state.createType = type;
         document.getElementById("create-title").textContent =
-          type === "workspace" ? "新建工作空间" : "新建标签页";
-        document.getElementById("directory-field").hidden =
-          type !== "workspace";
+          type === "project"
+            ? "添加项目"
+            : type === "workspace"
+              ? "创建工作空间"
+              : "新建标签页";
+        document.getElementById("directory-field").hidden = type === "tab";
+        document.getElementById("create-submit").textContent =
+          type === "project" ? "添加并进入" : "创建并进入";
         document.getElementById("create-name").value = "";
         document.getElementById("create-dialog").showModal();
+        document.getElementById("create-name").focus();
+      }
+      const taskTemplates = {
+        review:
+          "审查当前未提交改动，重点检查正确性、兼容性和测试覆盖。报告具体问题及文件位置，先不要修改代码。",
+        test: "为当前改动补充必要的回归测试，覆盖可观察行为和关键边界，并运行相关测试。",
+        debug:
+          "定位当前构建失败的原因，给出证据，完成最小修复并重新运行构建验证。",
+      };
+      function actionAgent() {
+        if (state.actionTarget?.session !== state.session) return null;
+        return allAgents().find((a) => a.id === state.actionTarget.id) || null;
+      }
+      function openAgentDialog(mode, id) {
+        const a =
+          allAgents().find((a) => a.id === id) ||
+          selected() ||
+          (mode === "new" ? allAgents()[0] : null);
+        if (!isConnected() || !a) return;
+        if (mode === "prompt" && !["idle", "done"].includes(a.status)) {
+          showToast("当前 Agent 还不能接收任务，请先查看终端");
+          return;
+        }
+        state.agentMode = mode;
+        state.actionTarget = { session: state.session, id: a.id };
+        const create = mode === "new",
+          form = document.getElementById("agent-form");
+        form.reset();
+        for (const id of ["new-agent-fields", "agent-position-fields"]) {
+          const node = document.getElementById(id);
+          node.hidden = !create;
+          node.disabled = !create;
+        }
+        document.getElementById("agent-name-field").hidden = !create;
+        document.getElementById("agent-focus-field").hidden = !create;
+        const name = document.getElementById("agent-name");
+        name.disabled = !create;
+        name.required = create;
+        name.setCustomValidity("");
+        let candidate = "coder",
+          n = 2;
+        while (allAgents().some((a) => a.name.toLowerCase() === candidate))
+          candidate = `coder-${n++}`;
+        name.value = candidate;
+        const task = document.getElementById("agent-task");
+        task.required = !create;
+        task.setCustomValidity("");
+        task.value = create ? "" : state.drafts[draftKey(a)] || "";
+        document.getElementById("agent-dialog-title").textContent = create
+          ? "新建 Agent"
+          : `发送任务给 ${a.name}`;
+        document.getElementById("agent-submit").textContent = create
+          ? "创建 Agent"
+          : "发送任务";
+        document.getElementById("agent-task-label").textContent = create
+          ? "初始任务（可选）"
+          : "任务";
+        document.getElementById("agent-context").textContent =
+          `本机 / ${state.session} · ${a.workspace.name} / ${a.tab.name}${create ? "" : ` · ${a.name}`}`;
+        document.getElementById("agent-dialog").showModal();
+        (create ? name : task).focus();
+      }
+      function runMockTask(original, prompt) {
+        original.status = "working";
+        original.task = prompt;
+        original.lastPrompt = prompt;
+        original.runRevision = (original.runRevision || 0) + 1;
+        const revision = original.runRevision;
+        setTimeout(() => {
+          if (
+            original.runRevision === revision &&
+            original.status === "working"
+          ) {
+            original.status = "done";
+            state.lastAction = `${original.name} 模拟任务完成`;
+            render();
+          }
+        }, 2200);
+      }
+      function submitAgentForm(data) {
+        const target = actionAgent();
+        if (!target || !isConnected()) {
+          showToast("目标已不可用，请重新选择 Agent");
+          return;
+        }
+        const prompt = String(data.get("task") || "").trim();
+        if (state.agentMode === "new") {
+          const name = String(data.get("agentName") || "").trim(),
+            input = document.getElementById("agent-name");
+          if (
+            !/^[a-z][a-z0-9_-]{0,31}$/.test(name) ||
+            allAgents().some((a) => a.name.toLowerCase() === name)
+          ) {
+            input.setCustomValidity(
+              "名称需以小写字母开头，最多 32 个字符，且不能与现有 Agent 重名。",
+            );
+            input.reportValidity();
+            return;
+          }
+          const id = `${target.workspace.id}:p${Date.now()}`;
+          const original = {
+            id,
+            name,
+            kind: String(data.get("kind") || "codex"),
+            status: "idle",
+            task: "Agent 已就绪，等待任务。",
+          };
+          target.tab.agents.push(original);
+          if (prompt) runMockTask(original, prompt);
+          state.split = String(data.get("direction") || "right");
+          state.zoom = false;
+          state.agentsOpen = true;
+          state.search = "";
+          state.statusFilter = "";
+          document.getElementById("agent-dialog").close();
+          state.lastAction = `在 ${target.workspace.name} / ${target.tab.name} 创建 ${name}`;
+          if (data.get("focusAgent")) navigateAgent(id);
+          else render();
+          showToast(`已模拟创建 ${name}${prompt ? "并发送初始任务" : ""}`);
+        } else {
+          if (!prompt) {
+            const t = document.getElementById("agent-task");
+            t.setCustomValidity("请输入任务内容");
+            t.reportValidity();
+            return;
+          }
+          if (!["idle", "done"].includes(target.status)) {
+            showToast("目标状态已变化，请先查看输出");
+            return;
+          }
+          runMockTask(
+            target.tab.agents.find((a) => a.id === target.id),
+            prompt,
+          );
+          state.drafts[draftKey(target)] = "";
+          document.getElementById("agent-dialog").close();
+          state.lastAction = `向 ${target.name} 发送模拟任务`;
+          render();
+          showToast("模拟任务已发送");
+        }
+      }
+      function viewAgentOutput(id) {
+        const a = allAgents().find((a) => a.id === id);
+        if (!a) return;
+        state.actionTarget = { session: state.session, id: a.id };
+        document.getElementById("agent-output-title").textContent =
+          `${a.name} 的输出`;
+        document.getElementById("agent-output-context").textContent =
+          `本机 / ${state.session} · ${a.workspace.name} / ${a.tab.name} · 可见输出（模拟快照）`;
+        const content = document.createElement("div");
+        content.innerHTML = terminalContent(a);
+        for (const n of content.querySelectorAll("p,h1,div")) n.append("\n");
+        document.getElementById("agent-output-text").textContent =
+          content.textContent.trim();
+        document.getElementById("agent-output-dialog").showModal();
       }
       const actions = {
+        "add-project": () => openCreate("project"),
+        "previous-workspace": () => navigateWorkspace(-1),
+        "next-workspace": () => navigateWorkspace(1),
         requirements: () => document.getElementById("requirements").showModal(),
+        "new-agent": () => openAgentDialog("new"),
+        "send-agent-task": (id) => openAgentDialog("prompt", id),
+        "view-agent-output": viewAgentOutput,
+        "pending-agents": () => {
+          state.statusFilter =
+            state.statusFilter === "blocked" ? "" : "blocked";
+          state.agentsOpen = true;
+          state.lastAction = state.statusFilter
+            ? "筛选等待输入的 Agent"
+            : "显示全部 Agent";
+          render();
+        },
+        "interrupt-agent": (id) => {
+          const a = allAgents().find((a) => a.id === id);
+          if (!a || a.status !== "working") return;
+          state.actionTarget = { session: state.session, id };
+          document.getElementById("agent-interrupt-context").textContent =
+            `${a.workspace.name} / ${a.tab.name} · ${a.name}`;
+          document.getElementById("agent-interrupt-dialog").showModal();
+        },
+        "confirm-agent-interrupt": () => {
+          const a = actionAgent();
+          if (!a || a.status !== "working") {
+            document.getElementById("agent-interrupt-dialog").close();
+            showToast("目标状态已变化，未发送中断");
+            return;
+          }
+          const original = a.tab.agents.find((x) => x.id === a.id);
+          original.runRevision = (original.runRevision || 0) + 1;
+          original.status = "idle";
+          original.task = "本轮任务已模拟中断，等待下一项任务。";
+          document.getElementById("agent-interrupt-dialog").close();
+          state.lastAction = `模拟中断 ${a.name}`;
+          render();
+          showToast("已模拟发送 Ctrl+C，窗格和会话保持打开");
+        },
+        "copy-agent-output": async () => {
+          try {
+            await navigator.clipboard.writeText(
+              document.getElementById("agent-output-text").textContent,
+            );
+            showToast("已复制模拟输出");
+          } catch {
+            showToast("浏览器未允许复制，可选择文字后复制");
+          }
+        },
+        "focus-output-agent": () => {
+          const a = actionAgent();
+          document.getElementById("agent-output-dialog").close();
+          if (a) navigateAgent(a.id);
+        },
+        "toggle-agents": () => {
+          state.agentsOpen = !state.agentsOpen;
+          state.lastAction = state.agentsOpen
+            ? "展开 Agent 列表"
+            : "收起 Agent 列表";
+          render();
+          document.querySelector('[data-action="toggle-agents"]').focus();
+        },
+        "group-agents": () => {
+          state.grouping = state.grouping === "space" ? "status" : "space";
+          state.lastAction =
+            state.grouping === "space"
+              ? "按空间排列 Agent"
+              : "按状态排列 Agent";
+          render();
+          document
+            .querySelector('.agents-list [aria-pressed="true"]')
+            ?.scrollIntoView({ block: "nearest" });
+        },
+        "clear-filter": () => {
+          state.search = "";
+          state.statusFilter = "";
+          state.lastAction = "清除筛选";
+          render();
+        },
+        compose: () => {
+          const a = selected();
+          if (!a || a.kind === "shell" || !["idle", "done"].includes(a.status))
+            return;
+          state.composing = state.composing === draftKey(a) ? "" : draftKey(a);
+          render();
+          document.getElementById("agent-prompt")?.focus();
+        },
+        "copy-output": async () => {
+          const output =
+            document.querySelector(".terminal-pane .terminal-copy")
+              ?.innerText || "";
+          try {
+            await navigator.clipboard.writeText(output);
+            state.lastAction = "复制当前窗格输出";
+            showToast("已复制当前窗格的模拟输出");
+          } catch {
+            showToast("浏览器未允许复制，可在终端中选择文字复制");
+          }
+        },
+        "clear-output": () => {
+          const a = selected();
+          if (!a) return;
+          state.cleared.add(draftKey(a));
+          state.lastAction = "清空当前窗格显示";
+          render();
+          showToast("已清空模拟显示，Agent 状态保持不变");
+        },
+        "restore-output": () => {
+          const a = selected();
+          if (a) state.cleared.delete(draftKey(a));
+          render();
+        },
         theme: () => {
           state.theme = state.theme === "dark" ? "light" : "dark";
           render();
@@ -1823,6 +3305,8 @@
         },
       };
       document.addEventListener("click", (event) => {
+        const picker = document.querySelector(".session-switch[open]");
+        if (picker && !picker.contains(event.target)) picker.open = false;
         const close = event.target.closest("[data-close-dialog]");
         if (close) {
           close.closest("dialog").close();
@@ -1838,9 +3322,59 @@
           variant,
           cycle: delta,
           scenario,
+          session,
+          space,
+          statusFilter,
+          context,
+          agentTarget,
+          taskTemplate,
         } = button.dataset;
-        if (action && actions[action]) actions[action]();
-        else if (nav) {
+        if (taskTemplate && taskTemplates[taskTemplate]) {
+          const input = document.getElementById("agent-task");
+          input.value = taskTemplates[taskTemplate];
+          input.setCustomValidity("");
+          if (state.agentMode === "prompt" && actionAgent())
+            state.drafts[draftKey(actionAgent())] = input.value;
+          input.focus();
+        } else if (action && actions[action]) {
+          if (context) navigateAgent(context);
+          actions[action](agentTarget);
+        } else if (session) {
+          state.session = session;
+          state.selected =
+            Object.entries(state.lastPanes).find(([key]) =>
+              key.startsWith(`${session}:`),
+            )?.[1] || (session === "sandbox" ? "r1:p1" : "w1:p1");
+          state.search = "";
+          state.statusFilter = "";
+          state.composing = "";
+          state.expanded = new Set(
+            session === "sandbox" ? ["r1", "r1:t1"] : ["w1", "w1:t1", "w1:t2"],
+          );
+          state.lastAction = `选择会话 ${session}`;
+          rememberWorkspace();
+          render();
+        } else if (space) {
+          const previous = state.lastPanes[`${state.session}:${space}`];
+          const a =
+            allAgents().find((a) => a.id === previous) ||
+            allAgents().find((a) => a.workspace.id === space);
+          if (a) navigateAgent(a.id);
+          document
+            .querySelector('.agents-list [aria-pressed="true"]')
+            ?.scrollIntoView({ block: "nearest" });
+        } else if (statusFilter) {
+          state.statusFilter =
+            state.statusFilter === statusFilter ? "" : statusFilter;
+          state.lastAction = state.statusFilter
+            ? `筛选 ${statuses[statusFilter]}`
+            : "显示全部 Agent";
+          const target = allAgents().find(
+            (a) => a.kind !== "shell" && filtered(a),
+          );
+          if (target && state.statusFilter) navigateAgent(target.id);
+          else render();
+        } else if (nav) {
           state.panel = state.panel === nav ? "" : nav;
           state.lastAction = `切换功能区 ${nav}`;
           render();
@@ -1849,8 +3383,9 @@
           const target = allAgents().find(
             (a) => a.workspace.id === expand || a.tab.id === expand,
           );
-          if (target) {
+          if (target?.tab.id === expand) {
             state.selected = target.id;
+            state.composing = "";
             state.lastAction = `定位 ${target.workspace.name} / ${target.tab.name}`;
           }
           state.expanded.has(expand)
@@ -1869,8 +3404,18 @@
         }
       });
       document.addEventListener("input", (event) => {
+        if (["agent-name", "agent-task"].includes(event.target.id))
+          event.target.setCustomValidity("");
+        if (
+          event.target.id === "agent-task" &&
+          state.agentMode === "prompt" &&
+          actionAgent()
+        )
+          state.drafts[draftKey(actionAgent())] = event.target.value;
+        if (event.target.closest("#shell-form"))
+          state.shellDrafts[shellDraftKey()] = event.target.value;
         if (event.target.id === "agent-prompt")
-          state.draft = event.target.value;
+          state.drafts[draftKey(selected())] = event.target.value;
         if (event.target.id === "filter") {
           state.search = event.target.value;
           const cursor = event.target.selectionStart;
@@ -1880,24 +3425,13 @@
           input.setSelectionRange(cursor, cursor);
         }
       });
-      document.addEventListener("change", (event) => {
-        if (event.target.id === "session-select") {
-          state.session = event.target.value;
-          state.selected = state.session === "sandbox" ? "r1:p1" : "w1:p1";
-          state.search = "";
-          state.draft = "";
-          state.expanded = new Set(
-            state.session === "sandbox"
-              ? ["r1", "r1:t1"]
-              : ["w1", "w1:t1", "w1:t2"],
-          );
-          state.lastAction = `选择会话 ${state.session}`;
-          render();
-        }
-      });
       document.addEventListener("submit", (event) => {
         event.preventDefault();
         const data = new FormData(event.target);
+        if (event.target.id === "agent-form") {
+          submitAgentForm(data);
+          return;
+        }
         if (event.target.id === "prompt-form") {
           const prompt = String(data.get("prompt") || "").trim(),
             a = selected();
@@ -1912,12 +3446,13 @@
           original.status = "working";
           original.lastPrompt = prompt;
           original.task = prompt;
-          state.draft = "";
+          state.drafts[draftKey(a)] = "";
+          state.composing = "";
+          state.cleared.delete(draftKey(a));
           state.lastAction = `模拟发送任务给 ${a.name}`;
           render();
           showToast("模拟任务已发送至所选 Agent");
-          clearTimeout(taskTimer);
-          taskTimer = setTimeout(() => {
+          setTimeout(() => {
             original.status = "done";
             state.lastAction = "模拟任务完成";
             render();
@@ -1927,7 +3462,7 @@
           if (!name) return;
           const spaces = state.session === "sandbox" ? alternate : workspaces;
           let w = selected()?.workspace;
-          if (state.createType === "workspace" || !w) {
+          if (state.createType !== "tab" || !w) {
             w = { id: `w${Date.now()}`, name, branch: "main", tabs: [] };
             spaces.push(w);
             state.scenario = "ready";
@@ -1936,7 +3471,7 @@
             p = `${w.id}:p${Date.now()}`;
           w.tabs.push({
             id,
-            name: state.createType === "workspace" ? "终端" : name,
+            name: state.createType === "tab" ? name : "终端",
             agents: [
               {
                 id: p,
@@ -1948,15 +3483,21 @@
             ],
           });
           state.selected = p;
+          state.search = "";
+          state.statusFilter = "";
+          state.composing = "";
           state.expanded.add(w.id);
           state.expanded.add(id);
           state.lastAction = `模拟创建 ${name}`;
+          state.lastPanes[`${state.session}:${w.id}`] = p;
+          rememberWorkspace();
           document.getElementById("create-dialog").close();
           render();
           showToast(`已在当前模拟会话创建 ${name}`);
         } else if (event.target.id === "shell-form") {
           const command = String(data.get("command") || "").trim();
           if (command) {
+            state.shellDrafts[shellDraftKey()] = "";
             state.shellLog.push(
               `❯ ${command}`,
               "模拟命令已接收，没有执行本机命令。",
@@ -1966,13 +3507,125 @@
           }
         }
       });
+      let listDrag = null;
+      document.addEventListener("pointerdown", (event) => {
+        if (!event.target.closest(".list-separator")) return;
+        const container = document.querySelector(".quick-switch");
+        listDrag = container.getBoundingClientRect();
+        event.preventDefault();
+        document.body.style.cursor = "row-resize";
+      });
+      document.addEventListener("pointermove", (event) => {
+        if (!listDrag) return;
+        state.spacesShare = Math.round(
+          Math.max(
+            25,
+            Math.min(
+              65,
+              ((event.clientY - listDrag.top) / listDrag.height) * 100,
+            ),
+          ),
+        );
+        document
+          .querySelector(".quick-switch")
+          ?.style.setProperty("--spaces-share", `${state.spacesShare}%`);
+        document
+          .querySelector(".list-separator")
+          ?.setAttribute("aria-valuenow", String(state.spacesShare));
+      });
+      document.addEventListener("pointerup", () => {
+        if (listDrag) {
+          listDrag = null;
+          document.body.style.cursor = "";
+          state.lastAction = "调整快速切换列表高度";
+        }
+      });
       document.addEventListener("keydown", (event) => {
+        if (document.querySelector("dialog[open]")) return;
+        if (state.scenario === "loading") return;
+        if (event.metaKey && !event.altKey && !event.ctrlKey) {
+          if (event.key.toLowerCase() === "n" && !event.shiftKey) {
+            event.preventDefault();
+            openCreate("workspace");
+            return;
+          }
+          if (event.shiftKey && ["ArrowUp", "ArrowDown"].includes(event.key)) {
+            event.preventDefault();
+            navigateWorkspace(event.key === "ArrowUp" ? -1 : 1);
+            return;
+          }
+        }
+        if (
+          event.target.matches(".list-separator") &&
+          ["ArrowUp", "ArrowDown"].includes(event.key)
+        ) {
+          event.preventDefault();
+          state.spacesShare = Math.max(
+            25,
+            Math.min(
+              65,
+              state.spacesShare + (event.key === "ArrowUp" ? -5 : 5),
+            ),
+          );
+          render();
+          document.querySelector(".list-separator").focus();
+          return;
+        }
+        const list = event.target.closest(".switch-list");
+        if (
+          list &&
+          ["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
+        ) {
+          event.preventDefault();
+          const buttons = [
+              ...list.querySelectorAll(
+                "button[data-agent], button[data-space]",
+              ),
+            ],
+            current =
+              event.target
+                .closest(".agent-switch-row")
+                ?.querySelector("[data-agent]") ||
+              event.target.closest("button"),
+            index = buttons.indexOf(current);
+          const next =
+            event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? buttons.length - 1
+                : Math.max(
+                    0,
+                    Math.min(
+                      buttons.length - 1,
+                      index + (event.key === "ArrowUp" ? -1 : 1),
+                    ),
+                  );
+          buttons[next]?.focus();
+          return;
+        }
+        const picker = document.querySelector(".session-switch[open]");
+        if (picker) {
+          if (event.key === "Escape") {
+            picker.open = false;
+            picker.querySelector("summary").focus();
+          }
+          return;
+        }
+        if (event.key === "Escape" && state.composing) {
+          state.composing = "";
+          render();
+          document.querySelector('[data-action="compose"]')?.focus();
+          return;
+        }
         if (
           document.querySelector("dialog[open]") ||
           event.target.closest("input,textarea,select,[contenteditable]")
         )
           return;
-        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        if (
+          Object.keys(names).length > 1 &&
+          (event.key === "ArrowLeft" || event.key === "ArrowRight")
+        ) {
           event.preventDefault();
           cycle(event.key === "ArrowLeft" ? -1 : 1);
         }
@@ -1981,7 +3634,14 @@
           if (p) p.hidden = true;
         }
       });
+      restoreWorkspace();
       render();
+      // Simulate the initial workspace request; keep explicit demo states intact.
+      setTimeout(() => {
+        if (state.scenario !== "loading") return;
+        state.scenario = "ready";
+        render();
+      }, 700);
     </script>
   </body>
 </html>
