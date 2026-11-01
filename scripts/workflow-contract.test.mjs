@@ -227,6 +227,18 @@ describe("GitHub Actions workflow contract", () => {
     );
   });
 
+  it("uses the configured macOS app bundle for installation and notarization", () => {
+    const config = JSON.parse(
+      readText(new URL("../src-tauri/tauri.conf.json", import.meta.url)),
+    );
+    const bundle = `${config.productName}.app`;
+    expect(installers).toContain(`app_path="$RUNNER_TEMP/${bundle}"`);
+    expect(installers).toContain(`ditto "$mount_point/${bundle}" "$app_path"`);
+    expect(installers).toContain(
+      `app="src-tauri/target/universal-apple-darwin/release/bundle/macos/${bundle}"`,
+    );
+  });
+
   it("validates notarization only for signed tag builds", () => {
     expect(installers).toContain("name: Verify macOS notarization");
     expect(installers).toContain("xcrun stapler validate");

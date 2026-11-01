@@ -274,10 +274,10 @@ jobs:
           dmg="$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name '*.dmg' -print -quit)"
           test -n "$dmg"
           mount_point="$RUNNER_TEMP/agent-hub-dmg"
-          app_path="$RUNNER_TEMP/agent-hub.app"
+          app_path="$RUNNER_TEMP/AgentHub.app"
           mkdir -p "$mount_point"
           hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point"
-          ditto "$mount_point/agent-hub.app" "$app_path"
+          ditto "$mount_point/AgentHub.app" "$app_path"
           hdiutil detach "$mount_point"
           "$app_path/Contents/MacOS/agent-hub" --smoke
           open "$app_path"
@@ -289,7 +289,7 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && runner.os == 'macOS' && vars.ENABLE_APPLE_SIGNING == 'true'
         shell: bash
         run: |
-          app="src-tauri/target/universal-apple-darwin/release/bundle/macos/agent-hub.app"
+          app="src-tauri/target/universal-apple-darwin/release/bundle/macos/AgentHub.app"
           test -d "$app"
           xcrun stapler validate "$app"
           spctl --assess --type execute --verbose "$app"

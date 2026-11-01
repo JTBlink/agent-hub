@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "agent-hub",
+  "productName": "AgentHub",
   "version": "0.1.12",
   "identifier": "com.jtstudio.agenthub",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "agent-hub",
+        "title": "AgentHub",
         "maximized": true,
         "minWidth": 1100,
         "minHeight": 640,
