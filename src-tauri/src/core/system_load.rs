@@ -1,4 +1,4 @@
-//! Local machine CPU and RAM sampling, shared across status-bar requests.
+//! Local machine CPU, RAM and home-volume disk sampling, shared across status-bar requests.
 use serde::Serialize;
 use std::time::{Duration, Instant};
 use sysinfo::System;
@@ -12,6 +12,8 @@ pub struct SystemLoadSnapshot {
     pub cpu_percent: Option<f32>,
     pub memory_used_bytes: u64,
     pub memory_total_bytes: u64,
+    pub disk_available_bytes: Option<u64>,
+    pub disk_total_bytes: Option<u64>,
 }
 
 #[derive(Default)]
@@ -21,7 +23,7 @@ pub struct SystemLoad {
 }
 
 impl SystemLoad {
-    /// Refresh only CPU and memory. The first CPU reading needs a second sample.
+    /// Refresh CPU, memory and home-volume capacity without scanning directories. The first CPU reading needs a second sample.
     pub fn sample(&mut self) -> SystemLoadSnapshot {
         if let Some((at, snapshot)) = &self.latest {
             if at.elapsed() < INTERVAL {
@@ -30,6 +32,7 @@ impl SystemLoad {
         }
         self.system.refresh_cpu_usage();
         self.system.refresh_memory();
+        let disk = dirs::home_dir().and_then(|path| fs2::statvfs(path).ok());
         let snapshot = SystemLoadSnapshot {
             cpu_percent: self.latest.as_ref().and_then(|_| {
                 let value = self.system.global_cpu_info().cpu_usage();
@@ -37,6 +40,8 @@ impl SystemLoad {
             }),
             memory_used_bytes: self.system.used_memory(),
             memory_total_bytes: self.system.total_memory(),
+            disk_available_bytes: disk.as_ref().map(fs2::FsStats::available_space),
+            disk_total_bytes: disk.as_ref().map(fs2::FsStats::total_space),
         };
         self.latest = Some((Instant::now(), snapshot.clone()));
         snapshot
@@ -54,7 +59,10 @@ mod tests {
         assert_eq!(first.cpu_percent, None);
         assert!(first.memory_total_bytes > 0);
         assert!(first.memory_used_bytes <= first.memory_total_bytes);
+        assert!(first.disk_total_bytes.is_some_and(|total| total > 0));
+        assert!(first.disk_available_bytes <= first.disk_total_bytes);
         let second = monitor.sample();
+        assert_eq!(second.disk_available_bytes, first.disk_available_bytes);
         assert_eq!(second.cpu_percent, None);
         assert_eq!(second.memory_used_bytes, first.memory_used_bytes);
     }

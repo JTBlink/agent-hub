@@ -3,6 +3,10 @@
     "title": "系统负载",
     "cpu": "本机 CPU：{{percent}}",
     "memory": "本机内存：{{percent}}（{{used}} / {{total}} GiB）",
+    "disk": "用户主目录所在磁盘：剩余 {{available}}，总计 {{total}}",
+    "diskLowSpace": "磁盘空间不足：剩余 {{available}}，低于 10 GiB；总计 {{total}}",
+    "diskFree": "{{available}} 可用",
+    "diskUnavailable": "磁盘空间暂不可用",
     "sampling": "正在采样系统负载…",
     "unavailable": "系统负载暂不可用"
   },

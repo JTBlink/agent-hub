@@ -445,6 +445,8 @@ Object.assign(window, {
             cpu_percent: 37,
             memory_used_bytes: 23.68 * 1024 ** 3,
             memory_total_bytes: 32 * 1024 ** 3,
+            disk_available_bytes: 128 * 1024 ** 3,
+            disk_total_bytes: 1024 ** 4,
           };
         case "get_agent_usage":
           return [

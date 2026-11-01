@@ -3,6 +3,10 @@
     "title": "System load",
     "cpu": "System CPU: {{percent}}",
     "memory": "System memory: {{percent}} ({{used}} / {{total}} GiB)",
+    "disk": "Home volume: {{available}} free of {{total}}",
+    "diskLowSpace": "Low disk space: {{available}} free (below 10 GiB), {{total}} total",
+    "diskFree": "{{available}} free",
+    "diskUnavailable": "Disk space unavailable",
     "sampling": "Sampling system load…",
     "unavailable": "System load unavailable"
   },

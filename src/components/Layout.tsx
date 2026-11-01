@@ -13,8 +13,7 @@ import { ProjectWorkspace } from "./worktree/ProjectWorkspace";
 import { projectWorkspaceRoute } from "../lib/worktreeApi";
 import { cn } from "../utils";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
-import { AgentUsageStatusBar } from "./usage/AgentUsageStatusBar";
-import { SystemLoadStatus } from "./SystemLoadStatus";
+import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
 
 export function Layout() {
   const { t } = useTranslation();
@@ -153,19 +152,7 @@ export function Layout() {
             </div>
             <ProjectWorkspace onMaximizedChange={setTerminalMaximized} />
           </div>
-          <footer className="workbench-statusbar flex shrink-0 items-center gap-3 bg-bg-secondary px-2 text-xs text-muted">
-            <div
-              ref={setStatusContainer}
-              className="workbench-status-content flex min-w-0 flex-1 items-center"
-            />
-            <span className="workbench-status-fallback truncate">
-              {t("app.name")}
-            </span>
-            <div className="ml-auto flex h-full shrink-0 items-center gap-3">
-              <AgentUsageStatusBar />
-              <SystemLoadStatus />
-            </div>
-          </footer>
+          <WorkbenchStatusBar statusRef={setStatusContainer} />
           <AddProjectDialog
             open={manageWorkspaces}
             onClose={() => setManageWorkspaces(false)}
