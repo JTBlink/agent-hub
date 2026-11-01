@@ -31,15 +31,15 @@ export function TerminalNewMenu({
           onSelect: () => onNew(),
         },
         ...herdrAgents
-          .filter(({ icon }) =>
-            tools.some((tool) => tool.key === icon && tool.installed),
+          .filter(({ toolKey }) =>
+            tools.some((tool) => tool.key === toolKey && tool.installed),
           )
-          .map(({ id, label, icon }) => ({
+          .map(({ id, label, toolKey }) => ({
             key: id,
             label,
             icon: (
               <AgentIcon
-                agentKey={icon}
+                agentKey={toolKey}
                 className="h-4 w-4 border-0 bg-transparent"
               />
             ),
