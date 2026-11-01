@@ -1902,7 +1902,7 @@
     "launcherArgsInvalid": "启动参数须为字符串组成的 JSON 数组",
     "allProviders": "全部平台",
     "allProjects": "全部项目",
-    "issues": "议题",
+    "issues": "任务",
     "titleContext": "标题 / 上下文",
     "merged": "已合并",
     "kind": "任务类型",
@@ -1985,7 +1985,7 @@
       "draft": "草稿",
       "checks": "CI / 状态检查",
       "reviews": "评审与代码讨论",
-      "related": "关联议题 / 代码",
+      "related": "关联任务 / 代码",
       "closes": "合并后关闭",
       "partial": "部分信息未能读取：",
       "truncated": "仅展示首批结果，请到平台查看完整内容："

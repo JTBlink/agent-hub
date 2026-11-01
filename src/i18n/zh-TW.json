@@ -1847,7 +1847,7 @@
     "launcherArgsInvalid": "啟動參數須為字串組成的 JSON 陣列",
     "allProviders": "全部平台",
     "allProjects": "全部專案",
-    "issues": "議題",
+    "issues": "任務",
     "titleContext": "標題 / 上下文",
     "merged": "已合併",
     "kind": "任務類型",
@@ -1930,7 +1930,7 @@
       "draft": "草稿",
       "checks": "CI / 狀態檢查",
       "reviews": "評審與程式碼討論",
-      "related": "關聯議題 / 程式碼",
+      "related": "關聯任務 / 程式碼",
       "closes": "合併後關閉",
       "partial": "部分資訊未能讀取：",
       "truncated": "僅顯示首批結果，請到平台查看完整內容："
