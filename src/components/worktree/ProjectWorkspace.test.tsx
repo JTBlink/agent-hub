@@ -16,6 +16,7 @@ import { WorkspaceFilesProvider } from "./WorkspaceFilesContext";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { ProjectSkills } from "../../views/ProjectSkills";
 import { worktreeUrl } from "../../lib/worktreeApi";
+import { GitFileEditor } from "../git/GitFileEditor";
 import { GitEditorVisibilityContext } from "../../hooks/gitEditorVisibility";
 
 function RouteProbe() {
@@ -37,9 +38,15 @@ function GitEditor() {
   return (
     <div data-git-editor>
       {open && (
-        <button data-close-change onClick={() => setOpen(false)}>
-          Close change
-        </button>
+        <GitFileEditor
+          activeId={project.id}
+          selection={{ path: "src/changed.ts", staged: false }}
+          fileView={false}
+          diff=""
+          files={[]}
+          onFileViewChange={() => {}}
+          onClose={() => setOpen(false)}
+        />
       )}
       {createPortal(
         <button data-git-change onClick={() => setOpen(true)}>
@@ -342,6 +349,15 @@ it("omits the fixed source control tab and preserves terminal, file, and change 
   expect(
     host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
   ).toBe(false);
+  const changeTab = () =>
+    host.querySelector<HTMLButtonElement>(
+      '[role="tab"][title="src/changed.ts"]',
+    )!;
+  expect(changeTab().closest('[role="tablist"]')).toBe(
+    fileTab().closest('[role="tablist"]'),
+  );
+  expect(changeTab().getAttribute("aria-selected")).toBe("true");
+  expect(host.querySelector('[data-git-editor] [role="tablist"]')).toBeNull();
   const terminalTab = Array.from(host.querySelectorAll("button")).find(
     (node) => node.textContent === "terminal.title",
   )!;
@@ -349,14 +365,14 @@ it("omits the fixed source control tab and preserves terminal, file, and change 
   expect(terminal?.hasAttribute("hidden")).toBe(false);
   expect(host.querySelector("[data-terminal]")).toBe(terminal);
   expect(fileTab().getAttribute("aria-selected")).toBe("false");
-  await act(async () =>
-    document.querySelector<HTMLButtonElement>("[data-git-change]")!.click(),
-  );
+  expect(changeTab().getAttribute("aria-selected")).toBe("false");
+  await act(async () => changeTab().click());
+  expect(changeTab().getAttribute("aria-selected")).toBe("true");
   expect(gitTab()).toBeUndefined();
   expect(
     host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
   ).toBe(false);
-  await click("[data-close-change]");
+  await click('[aria-label="common.close"]');
   expect(terminal?.hasAttribute("hidden")).toBe(false);
   expect(
     host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,

@@ -1,4 +1,9 @@
-import { FileCode2, X } from "lucide-react";
+import { useContext } from "react";
+import { createPortal } from "react-dom";
+import { GitEditorTabsContext } from "../../hooks/gitEditorVisibility";
+import { TabCloseButton } from "../TabCloseButton";
+import { cn } from "../../utils";
+import { FileCode2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitFile } from "../../lib/gitApi";
 import type { GitSelection } from "./GitChanges";
@@ -29,30 +34,50 @@ export function GitFileEditor({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const sharedTabs = useContext(GitEditorTabsContext);
+  const active = sharedTabs?.active ?? true;
+  const tab = (
+    <div
+      className={cn(
+        "flex h-full shrink-0 items-center border-b-2",
+        active ? "border-accent text-primary" : "border-transparent text-muted",
+      )}
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={active}
+        title={selection.path}
+        onClick={() => sharedTabs?.onSelect()}
+        className="flex h-full max-w-64 items-center gap-1.5 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+      >
+        <FileCode2 size={13} className="shrink-0" />
+        <span className="truncate">{selection.path.split("/").pop()}</span>
+        <span className="shrink-0 text-muted">
+          {commitSha
+            ? commitSha.slice(0, 7)
+            : t(selection.staged ? "git.staged" : "git.unstaged")}
+        </span>
+      </button>
+      <TabCloseButton
+        aria-label={t("common.close")}
+        title={t("common.close")}
+        onClick={onClose}
+      />
+    </div>
+  );
   return (
     <>
-      <div className="flex shrink-0 items-center border-b border-border-subtle bg-bg-secondary">
-        <div className="flex min-w-0 items-center gap-2 border-r border-border-subtle border-t-2 border-t-accent bg-background px-3 py-2 text-xs">
-          <FileCode2 size={14} className="shrink-0 text-accent-light" />
-          <span className="truncate" title={selection.path}>
-            {selection.path.split("/").pop()}
-          </span>
-          <span className="shrink-0 text-muted">
-            {commitSha
-              ? commitSha.slice(0, 7)
-              : t(selection.staged ? "git.staged" : "git.unstaged")}
-          </span>
-          <button
-            type="button"
-            aria-label={t("common.close")}
-            title={t("common.close")}
-            className="app-button-ghost h-5 w-5 shrink-0 p-0"
-            onClick={onClose}
-          >
-            <X size={12} />
-          </button>
+      {sharedTabs ? (
+        sharedTabs.container && createPortal(tab, sharedTabs.container)
+      ) : (
+        <div
+          role="tablist"
+          className="flex h-9 shrink-0 items-center border-b border-border-subtle bg-bg-secondary"
+        >
+          {tab}
         </div>
-      </div>
+      )}
       {fileView && (
         <div className="flex shrink-0 items-center border-b border-border-subtle px-2 py-1">
           <button

@@ -49,7 +49,7 @@ export function Git() {
   const [graphOpen, setGraphOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(true);
   const [actionType, setActionType] = useState<
-    "stage" | "commit" | GitRepositoryAction
+    "stage" | "commit" | "sync" | GitRepositoryAction
   >();
   const [tree, setTree] = useState(true);
   const [actionNotice, setActionNotice] = useState<string>();
@@ -158,7 +158,7 @@ export function Git() {
   const branch = status?.branch ?? status?.head?.slice(0, 8) ?? t("git.unborn");
   async function runAction(
     action: () => Promise<void>,
-    type: "stage" | "commit" | GitRepositoryAction = "stage",
+    type: "stage" | "commit" | "sync" | GitRepositoryAction = "stage",
   ) {
     if (actionLock.current) return false;
     actionLock.current = true;
@@ -170,9 +170,14 @@ export function Git() {
       await action();
       if (
         currentScope.current === actionScope &&
-        ["fetch", "pull", "push", "switch_branch", "create_branch"].includes(
-          type,
-        )
+        [
+          "fetch",
+          "pull",
+          "push",
+          "sync",
+          "switch_branch",
+          "create_branch",
+        ].includes(type)
       )
         setActionNotice(t("git.actions.completed"));
       refresh();
@@ -187,6 +192,14 @@ export function Git() {
       setActionType(undefined);
     }
   }
+  const syncChanges = () => {
+    if (!activeId) return;
+    void runAction(async () => {
+      await runProjectGitAction(activeId, root, "pull");
+      if (currentScope.current !== scope) return;
+      await runProjectGitAction(activeId, root, "push");
+    }, "sync");
+  };
   // A refresh may move a file between groups or remove it after a commit.
   useEffect(() => {
     if (
@@ -256,6 +269,22 @@ export function Git() {
                 branch={branch}
                 busy={busy}
                 committing={actionType === "commit"}
+                sync={
+                  status?.upstream &&
+                  files.length === 0 &&
+                  ((status.ahead ?? 0) > 0 || (status.behind ?? 0) > 0)
+                    ? {
+                        ahead: status.ahead ?? 0,
+                        behind: status.behind ?? 0,
+                        enabled:
+                          !loading &&
+                          !status.truncated &&
+                          !!status.branch &&
+                          status.state === "Clean",
+                        onSync: syncChanges,
+                      }
+                    : undefined
+                }
                 toolbar={(canCommit) => (
                   <GitSourceControlToolbar
                     disabled={!status || loading || busy}

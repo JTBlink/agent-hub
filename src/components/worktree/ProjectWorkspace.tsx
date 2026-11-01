@@ -13,12 +13,17 @@ import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { ProjectSkillsPanel, ProjectSkillsToolbar } from "./ProjectSkillsPanel";
 import { WorktreeFilePreview } from "./WorktreeFilePreview";
-import { GitEditorVisibilityContext } from "../../hooks/gitEditorVisibility";
+import {
+  GitEditorTabsContext,
+  GitEditorVisibilityContext,
+} from "../../hooks/gitEditorVisibility";
 
 /** Remains mounted with Layout so switching worktrees/pages preserves PTYs. */
 export function ProjectWorkspace({ page }: { page?: ReactNode }) {
   const { t } = useTranslation();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
+  const [gitTabsContainer, setGitTabsContainer] =
+    useState<HTMLDivElement | null>(null);
   const [fileToolbar, setFileToolbar] = useState<HTMLDivElement | null>(null);
   const { projects, loading: projectsLoading, appError } = useApp();
   const location = useLocation();
@@ -110,6 +115,7 @@ export function ProjectWorkspace({ page }: { page?: ReactNode }) {
             }}
             extraTabs={
               <>
+                <div ref={setGitTabsContainer} className="contents" />
                 {route && file && path && (
                   <div
                     className={cn(
@@ -197,7 +203,18 @@ export function ProjectWorkspace({ page }: { page?: ReactNode }) {
                       <GitEditorVisibilityContext.Provider
                         value={setGitEditorVisible}
                       >
-                        {page}
+                        <GitEditorTabsContext.Provider
+                          value={{
+                            container: gitTabsContainer,
+                            active: pageShown,
+                            onSelect: () => {
+                              setSkillsSelection(null);
+                              setPageSelection(location.key);
+                            },
+                          }}
+                        >
+                          {page}
+                        </GitEditorTabsContext.Provider>
                       </GitEditorVisibilityContext.Provider>
                     </SidebarVisibilityContext.Provider>
                   </div>

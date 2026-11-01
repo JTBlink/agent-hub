@@ -2149,6 +2149,8 @@
     "unsaved": "Unsaved"
   },
   "git": {
+    "syncChanges": "Sync Changes",
+    "syncChangesHint": "Pull upstream changes with fast-forward only, then push local commits.",
     "noProjects": "No projects added. Use File → Open Project… to add a project and view Git changes.",
     "actions": {
       "label": "Source control actions",

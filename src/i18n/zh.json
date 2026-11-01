@@ -2146,6 +2146,8 @@
     "unsaved": "未保存"
   },
   "git": {
+    "syncChanges": "同步更改",
+    "syncChangesHint": "先拉取上游更改（仅快进），成功后推送本地提交。",
     "noProjects": "尚未关联项目。请通过“文件 → 打开项目…”添加项目后查看 Git 更改。",
     "actions": {
       "label": "源代码管理操作",

@@ -22,12 +22,10 @@ export function WorktreeFileCloseButton({
     <>
       {document.dirty && (
         <span
-          className="px-1 text-xs text-muted"
+          className="mx-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-light/70"
           role="status"
           aria-label={t("worktree.unsaved")}
-        >
-          ●
-        </span>
+        />
       )}
       <TabCloseButton
         aria-label={t("fileReader.closeFile", { path })}
