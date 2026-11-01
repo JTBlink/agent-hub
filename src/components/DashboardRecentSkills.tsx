@@ -22,7 +22,7 @@ export function DashboardRecentSkills({
   const [expanded, setExpanded] = useState(false);
   const visibleSkills = expanded ? skills : skills.slice(0, 3);
   return (
-    <section className="min-w-0" aria-labelledby="recent-skills-title">
+    <section className="dashboard-recent" aria-labelledby="recent-skills-title">
       <div className="dashboard-section-heading">
         <h2 id="recent-skills-title">{t("dashboard.recentActivity")}</h2>
         <Link
@@ -113,7 +113,7 @@ function RecentSkillCard({
           >
             {skill.name}
           </span>
-          <span className="text-xs text-muted">
+          <span className="dashboard-skill-source">
             {t(`mySkills.sourceFilter.${skill.source_type}`, {
               defaultValue: skill.source_type,
             })}

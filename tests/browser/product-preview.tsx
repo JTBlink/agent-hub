@@ -24,7 +24,7 @@ import herdrScript from "../../automations/_shared/herdr-agent.py?raw";
 import maintenancePrompt from "../../automations/engineering/agent-maintenance/prompt.md?raw";
 import maintenanceConfig from "../../automations/engineering/agent-maintenance/herdr.json?raw";
 import { createRoot } from "react-dom/client";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, Outlet } from "react-router-dom";
 import { PreviewRouteMarker } from "./PreviewRouteMarker";
 import type {
   ManagedSkill,
@@ -440,6 +440,49 @@ Object.assign(window, {
       const taskPreview = taskTerminalFixture(command, args);
       if (taskPreview.handled) return taskPreview.value;
       switch (command) {
+        case "get_system_load":
+          return {
+            cpu_percent: 37,
+            memory_used_bytes: 23.68 * 1024 ** 3,
+            memory_total_bytes: 32 * 1024 ** 3,
+          };
+        case "get_agent_usage":
+          return [
+            {
+              provider: "claude",
+              status: "ready",
+              windows: [
+                {
+                  key: "five_hour",
+                  used_percent: 23,
+                  resets_at: Math.floor(Date.now() / 1000) + 7200,
+                  window_minutes: 300,
+                },
+                {
+                  key: "seven_day",
+                  used_percent: 81,
+                  resets_at: Math.floor(Date.now() / 1000) + 172800,
+                  window_minutes: 10080,
+                },
+              ],
+              updated_at: Math.floor(Date.now() / 1000),
+              retry_after_seconds: null,
+            },
+            {
+              provider: "codex",
+              status: "ready",
+              windows: [
+                {
+                  key: "five_hour",
+                  used_percent: 0,
+                  resets_at: Math.floor(Date.now() / 1000) + 3600,
+                  window_minutes: 300,
+                },
+              ],
+              updated_at: Math.floor(Date.now() / 1000),
+              retry_after_seconds: null,
+            },
+          ];
         case "set_automation_installation":
           return;
         case "run_automation":
@@ -711,7 +754,21 @@ createRoot(document.getElementById("root")!).render(
       <AppProvider>
         <PreviewRouteMarker />
         <Routes>
-          <Route element={<Layout />}>
+          <Route
+            element={
+              previewParams.has("dashboard-only") ? (
+                <div className="flex h-full flex-col overflow-hidden bg-background text-primary">
+                  <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                    <div className="flex min-h-full flex-col">
+                      <Outlet />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Layout />
+              )
+            }
+          >
             <Route path="/" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/git" element={<Git />} />

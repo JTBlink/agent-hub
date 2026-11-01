@@ -12,8 +12,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 
-import { DashboardLibraryArt } from "./DashboardLibraryArt";
-
 type OverviewScope = "library" | "undeployed" | "ungrouped";
 interface OverviewCard {
   id: OverviewScope;
@@ -122,6 +120,7 @@ export function DashboardOverview() {
       aria-label={t("dashboard.overview")}
       aria-busy={loading}
     >
+      <h2 className="dashboard-overview-title">{t("dashboard.overview")}</h2>
       <div className="dashboard-overview-grid">
         {cards.map((card) => (
           <DashboardOverviewCard
@@ -156,7 +155,6 @@ function DashboardOverviewCard({
       aria-describedby={`dashboard-${card.id}-count dashboard-${card.id}-hint`}
       className={`dashboard-stat dashboard-stat-${card.id === "library" ? "library" : "task"} group ${card.tone}`}
     >
-      {card.id === "library" && <DashboardLibraryArt />}
       <span className="dashboard-stat-heading">
         <span
           id={`dashboard-${card.id}-title`}

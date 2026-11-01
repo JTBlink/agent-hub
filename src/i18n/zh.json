@@ -337,6 +337,12 @@
     }
   },
   "dashboard": {
+    "availableAgents": "已启用的 Agent",
+    "projectLocalHint": "项目文件与终端，集中在一个工作区",
+    "openProjectHint": "通过“文件 → 打开项目…”关联你的项目。",
+    "startProject": "从一个项目开始",
+    "resumeAction": "打开工作区",
+    "resumeTitle": "继续工作",
     "searchWorkspaces": "搜索名称或路径",
     "clearWorkspaceSearch": "清除工作空间搜索",
     "noWorkspaceMatches": "没有匹配的工作空间，请换个名称或路径，或清除搜索。",
@@ -368,7 +374,7 @@
     "projects": "项目工作空间",
     "projectSkills": "{{count}} 个技能",
     "noAgents": "尚未启用 Agent。在设置中选择已安装的工具，开始部署技能。",
-    "noProjects": "在侧栏点击“关联项目”，为项目配置需要的技能。",
+    "noProjects": "通过“文件 → 打开项目…”关联项目，为项目配置需要的技能。",
     "deployedTo": "已部署至 {{count}} 个 Agent",
     "noDescription": "暂无技能描述",
     "emptyTitle": "从你的第一个 Skill 开始",

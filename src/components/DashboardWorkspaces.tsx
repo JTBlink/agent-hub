@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bot, ChevronRight, FolderOpen, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { compactHomePath } from "../utils";
 import { AgentIcon } from "./AgentIcon";
 import type { Project, ToolInfo } from "../lib/tauri";
 import { touchProjectVisited } from "../lib/tauri";
@@ -193,8 +194,11 @@ function AgentWorkspaceLink({ agent }: { agent: ToolInfo }) {
           {agent.display_name}
         </span>
         {agent.skills_dir && (
-          <span className="dashboard-workspace-path" title={agent.skills_dir}>
-            {agent.skills_dir}
+          <span
+            className="dashboard-workspace-path"
+            title={compactHomePath(agent.skills_dir)}
+          >
+            {compactHomePath(agent.skills_dir)}
           </span>
         )}
       </span>
@@ -224,8 +228,11 @@ function ProjectWorkspaceLink({ project }: { project: Project }) {
         >
           {project.name}
         </span>
-        <span className="dashboard-workspace-path" title={project.path}>
-          {project.path}
+        <span
+          className="dashboard-workspace-path"
+          title={compactHomePath(project.path)}
+        >
+          {compactHomePath(project.path)}
         </span>
       </span>
       <span className="dashboard-workspace-meta">

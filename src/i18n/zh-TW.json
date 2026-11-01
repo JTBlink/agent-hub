@@ -337,6 +337,12 @@
     }
   },
   "dashboard": {
+    "availableAgents": "已啟用的 Agent",
+    "projectLocalHint": "專案檔案與終端，集中在一個工作區",
+    "openProjectHint": "透過「檔案 → 開啟專案…」關聯你的專案。",
+    "startProject": "從一個專案開始",
+    "resumeAction": "開啟工作區",
+    "resumeTitle": "繼續工作",
     "searchWorkspaces": "搜尋名稱或路徑",
     "clearWorkspaceSearch": "清除工作空間搜尋",
     "noWorkspaceMatches": "沒有符合的工作空間，請換個名稱或路徑，或清除搜尋。",
@@ -368,7 +374,7 @@
     "projects": "專案工作空間",
     "projectSkills": "{{count}} 個技能",
     "noAgents": "尚未啟用 Agent。在設定中選擇已安裝的工具，開始部署技能。",
-    "noProjects": "在側欄點擊「關聯專案」，為專案配置需要的技能。",
+    "noProjects": "透過「檔案 → 開啟專案…」關聯專案，為專案設定需要的技能。",
     "deployedTo": "已部署至 {{count}} 個 Agent",
     "noDescription": "暫無技能描述",
     "emptyTitle": "從你的第一個 Skill 開始",

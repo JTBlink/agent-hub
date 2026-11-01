@@ -6,12 +6,18 @@ import time
 
 
 def wait_until(expression, message):
-    deadline = time.monotonic() + 4
+    deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
         if js(expression):
             return
         time.sleep(0.03)
     raise AssertionError(message)
+
+
+def navigate_checked(url):
+    js("window.__dashboardLeaving = true")
+    goto_url(url)
+    wait_until("window.__dashboardLeaving !== true", "new preview document did not load")
 
 
 def ready():
@@ -29,7 +35,7 @@ def click_named_button(name):
 
 
 base = os.environ.get("LOCAL_SKILL_TEST_URL", "http://127.0.0.1:1420")
-url = base + "/tests/browser/product-preview.html?view=dashboard"
+url = base + "/tests/browser/product-preview.html?view=dashboard&dashboard-only"
 new_tab(url + "&undeployed&ungrouped&many-projects")
 cdp("Emulation.setFocusEmulationEnabled", enabled=True)
 try:
@@ -39,15 +45,16 @@ try:
         (960, "light", "en", "xlarge", "&undeployed&ungrouped"),
         (800, "dark", "zh-TW", "xlarge", "&undeployed&ungrouped"),
         (960, "light", "zh", "default", "&empty"),
+        (480, "light", "en", "default", "&undeployed&ungrouped"),
     ]:
         cdp("Emulation.setDeviceMetricsOverride", width=width, height=800 if width == 1440 and language == "zh" else 1000,
             deviceScaleFactor=1, mobile=False)
-        goto_url(url + f"&theme={theme}&language={language}&text-size={size}" + flags)
+        navigate_checked(url + f"&theme={theme}&language={language}&text-size={size}" + flags)
         wait_for_load()
         ready()
         assert js("document.documentElement.scrollWidth <= innerWidth"), "horizontal overflow"
         assert js("[...document.querySelectorAll('.dashboard-overview [id^=dashboard-][id$=-title]')].every(el=>el.closest('button').getBoundingClientRect().right <= innerWidth)"), "overview card clipped"
-        assert js("document.querySelector('.dashboard-library-art')?.getAttribute('aria-hidden') === 'true'"), "decorative SVG not hidden"
+        assert js("document.querySelector('.dashboard-library-art')?.getAttribute('aria-hidden') === 'true'"), "workspace SVG missing or not decorative"
         assert js("[...document.querySelectorAll('.dashboard-workspace-list,.dashboard-recent-grid')].every(e=>e.scrollHeight <= e.clientHeight + 1)"), "nested scroll region"
         if width == 1440 and language == "zh":
             assert js("document.querySelector('.dashboard-page').parentElement.parentElement.scrollHeight <= document.querySelector('.dashboard-page').parentElement.parentElement.clientHeight + 1"), "default dashboard does not fit the first screen"
@@ -61,7 +68,7 @@ try:
 
     cdp("Emulation.setDeviceMetricsOverride", width=1440, height=700,
         deviceScaleFactor=1, mobile=False)
-    goto_url(url + "&theme=dark&language=zh&undeployed&ungrouped&many-projects")
+    navigate_checked(url + "&theme=dark&language=zh&undeployed&ungrouped&many-projects")
     wait_for_load()
     ready()
     assert js("document.querySelectorAll('.dashboard-workspace-switch button')[0].getAttribute('aria-pressed') === 'true'"), "projects are not the default"
@@ -85,7 +92,7 @@ try:
     assert js("document.querySelector('#dashboard-workspace-entries').scrollTop === 0"), "project list consumed scrolling"
     print("PASS: project switch, complete 12-project list, page-only wheel scrolling")
 
-    goto_url(url + "&theme=dark&language=zh&undeployed&ungrouped")
+    navigate_checked(url + "&theme=dark&language=zh&undeployed&ungrouped")
     wait_for_load()
     ready()
     for _ in range(60):

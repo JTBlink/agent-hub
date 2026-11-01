@@ -8,6 +8,7 @@ import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
 import { DashboardRecentSkills } from "../components/DashboardRecentSkills";
 import "../styles/dashboard.css";
 import { DashboardWorkspaces } from "../components/DashboardWorkspaces";
+import { DashboardResume } from "../components/DashboardResume";
 import { DashboardOverview } from "../components/DashboardOverview";
 
 export function Dashboard() {
@@ -15,6 +16,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const {
     tools,
+    loading,
     projects,
     managedSkills,
     openSkillDetailById,
@@ -34,14 +36,10 @@ export function Dashboard() {
     <div className="app-page dashboard-page">
       <header className="dashboard-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-primary">
-            {t("dashboard.title")}
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-tertiary">
-            {t("dashboard.subtitle")}
-          </p>
+          <h1 className="text-primary">{t("dashboard.title")}</h1>
+          <p className="text-tertiary">{t("dashboard.subtitle")}</p>
         </div>
-        <div className="flex flex-wrap gap-2.5">
+        <div className="dashboard-header-actions">
           <Link
             to="/automation"
             className="app-button-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
@@ -66,7 +64,14 @@ export function Dashboard() {
         </div>
       </header>
       <AgentControlSetupCard />
-      <DashboardOverview />
+      <div className="dashboard-launch">
+        <DashboardResume
+          projects={projects}
+          agents={enabledAgents}
+          loading={loading}
+        />
+        <DashboardOverview />
+      </div>
       <div className="dashboard-content">
         <DashboardWorkspaces agents={enabledAgents} projects={projects} />
         <DashboardRecentSkills

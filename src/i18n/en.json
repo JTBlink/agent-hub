@@ -337,6 +337,12 @@
     }
   },
   "dashboard": {
+    "availableAgents": "Enabled agents",
+    "projectLocalHint": "Project files and terminals in one workspace",
+    "openProjectHint": "Choose File → Open Project… to connect your project.",
+    "startProject": "Start with a project",
+    "resumeAction": "Open workspace",
+    "resumeTitle": "Continue working",
     "searchWorkspaces": "Search by name or path",
     "clearWorkspaceSearch": "Clear workspace search",
     "noWorkspaceMatches": "No matching workspaces. Try another name or path, or clear the search.",
@@ -370,7 +376,7 @@
     "projects": "Project workspaces",
     "projectSkills": "{{count}} skills",
     "noAgents": "No agents enabled yet. Choose installed tools in Settings to start deploying skills.",
-    "noProjects": "Use Link project in the sidebar to configure skills for a project.",
+    "noProjects": "Choose File → Open Project… to connect a project and configure its skills.",
     "deployedTo": "Deployed to {{count}} agents",
     "noDescription": "No skill description",
     "emptyTitle": "Start with your first skill",

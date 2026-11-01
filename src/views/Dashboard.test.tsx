@@ -6,6 +6,8 @@ import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
 import type { ManagedSkill, Project, ToolInfo } from "../lib/tauri";
+import { createTerminalTab, writeTerminalLayout } from "../lib/terminalLayout";
+import { worktreeUrl } from "../lib/worktreeApi";
 import { Dashboard } from "./Dashboard";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
 import { useLocation } from "react-router-dom";
@@ -42,6 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   app.managedSkills = [];
   app.loading = false;
+  localStorage.clear();
   app.projects = [];
   app.tools = [];
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -433,4 +436,37 @@ it("finds project and Agent workspaces by directory as well as name", async () =
   expect(
     entries.querySelector('[title="<workspace>/agent-3/skills"]')?.textContent,
   ).toBe("<workspace>/agent-3/skills");
+});
+
+it("continues the last saved checkout from the launch surface", async () => {
+  app.projects = [project(0), project(1)];
+  const tab = createTerminalTab("project-1", undefined, "<workspace>/topic");
+  writeTerminalLayout({ tabs: [tab], lastActiveId: tab.id, activeIds: {} });
+  await render();
+  const open = container.querySelector<HTMLAnchorElement>(
+    ".dashboard-resume-open",
+  )!;
+  expect(open.getAttribute("href")).toBe(
+    worktreeUrl("project-1", "<workspace>/topic"),
+  );
+  expect(container.querySelector(".dashboard-resume")?.textContent).toContain(
+    "demo-project-1",
+  );
+  await act(async () => open.click());
+  expect(container.textContent).toContain("/project/project-1");
+});
+it("offers a useful empty state and waits for projects before enabling the launch action", async () => {
+  await render();
+  expect(container.querySelector(".dashboard-resume")?.textContent).toContain(
+    "文件 → 打开项目",
+  );
+  expect(
+    container.querySelector(".dashboard-resume-open")?.getAttribute("href"),
+  ).toBe("/install");
+  app.loading = true;
+  await render();
+  expect(
+    container.querySelector(".dashboard-resume")?.getAttribute("aria-busy"),
+  ).toBe("true");
+  expect(container.querySelector(".dashboard-resume-open")).toBeNull();
 });
