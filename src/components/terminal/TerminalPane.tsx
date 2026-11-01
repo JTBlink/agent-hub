@@ -6,6 +6,7 @@ import { createTerminalRenderer } from "./terminalRenderer";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
+import { createTerminalInputQueue } from "../../lib/terminalInput";
 import {
   loadTerminalFonts,
   terminalAppearance,
@@ -74,13 +75,14 @@ export function TerminalPane({
     let sessionId: string | null = null;
     let pendingAck = 0;
     let frame = 0;
-    let writing = Promise.resolve();
     let revision = 0;
-    let queued = 0;
     const fail = (reason: unknown) => {
       if (!disposed)
         setError(getErrorMessage(reason, translate.current("terminal.error")));
     };
+    const inputQueue = createTerminalInputQueue(fail, () =>
+      fail(new Error(translate.current("terminal.inputFull"))),
+    );
     const measure = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -128,24 +130,9 @@ export function TerminalPane({
     document.fonts?.addEventListener("loadingdone", redrawFonts);
     recolor();
     const input = terminal.onData((data) => {
-      if (!sessionId || disposed) return;
+      if (disposed) return;
       revision += 1;
-      const id = sessionId;
-      // Preserve input ordering even when an IPC round-trip is slow.
-      if (queued + data.length > 1024 * 1024) {
-        fail(new Error(translate.current("terminal.inputFull")));
-        return;
-      }
-      queued += data.length;
-      writing = writing
-        .then(async () => {
-          for (const chunk of data.match(/[\s\S]{1,8192}/gu) ?? [])
-            await api.writeTerminal(id, chunk);
-        })
-        .catch(fail)
-        .finally(() => {
-          queued -= data.length;
-        });
+      inputQueue.enqueue(data);
     });
     terminal.attachCustomKeyEventHandler((event) => {
       if (
@@ -198,6 +185,7 @@ export function TerminalPane({
               return;
             }
             sessionId = session.id;
+            inputQueue.connect((data) => api.writeTerminal(session.id, data));
             callback.current({
               sessionId,
               cwd: session.cwd,
@@ -222,6 +210,7 @@ export function TerminalPane({
       theme.disconnect();
       document.fonts?.removeEventListener("loadingdone", redrawFonts);
       input.dispose();
+      inputQueue.dispose();
       showNow.current = () => {};
       renderer.dispose();
       terminal.dispose();

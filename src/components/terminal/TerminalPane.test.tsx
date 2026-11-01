@@ -20,6 +20,7 @@ vi.mock("../../lib/tauri", () => ({
   createTerminal: vi.fn(async () => ({ id: "pty-1", cwd: "<workspace>" })),
   closeTerminal: vi.fn(async () => {}),
   resizeTerminal: vi.fn(async () => {}),
+  writeTerminal: vi.fn(async () => {}),
 }));
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
 vi.mock("@xterm/xterm", async () => {
@@ -176,4 +177,36 @@ it("keeps the DOM terminal usable when hardware rendering is unavailable", async
   expect(api.createTerminal).toHaveBeenCalledOnce();
   expect(host.querySelector("textarea")).not.toBeNull();
   expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+
+it("retains fast keystrokes received before the PTY creation response", async () => {
+  let finishSession = () => {};
+  vi.mocked(api.createTerminal).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishSession = () =>
+        resolve({
+          id: "starting-pty",
+          cwd: "<workspace>",
+          project_id: "demo",
+          exited: false,
+        });
+    }),
+  );
+  await act(async () => {
+    root.render(<TerminalPane projectId="demo" active onReady={() => {}} />);
+    finishFonts();
+  });
+  const textarea = host.querySelector("textarea")!;
+  await act(async () => {
+    for (const key of "git branch") {
+      textarea.value = key;
+      textarea.dispatchEvent(new Event("input"));
+    }
+  });
+  expect(api.writeTerminal).not.toHaveBeenCalled();
+  await act(async () => finishSession());
+  expect(api.writeTerminal).toHaveBeenCalledExactlyOnceWith(
+    "starting-pty",
+    "git branch",
+  );
 });

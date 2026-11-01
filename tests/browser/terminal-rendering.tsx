@@ -11,13 +11,22 @@ window.requestAnimationFrame = (callback) =>
 window.cancelAnimationFrame = (id) => window.clearTimeout(id);
 let created = 0;
 let closed = 0;
+let writeDelay = 0;
+let written = "";
+let writeCalls = 0;
 Object.assign(window, {
   __TAURI_INTERNALS__: {
     transformCallback: () => 1,
-    invoke: async (command: string) => {
+    invoke: async (command: string, args: Record<string, unknown>) => {
       if (command === "terminal_create")
         return { id: `preview-${++created}`, cwd: "<workspace>" };
       if (command === "terminal_close") closed++;
+      if (command === "terminal_write" && typeof args.data === "string") {
+        writeCalls++;
+        await new Promise((resolve) => setTimeout(resolve, writeDelay));
+        await write(terminals[0], args.data);
+        written += args.data;
+      }
     },
   },
 });
@@ -68,6 +77,54 @@ async function snapshot(terminal: Terminal): Promise<string> {
 const write = (terminal: Terminal, data: string) =>
   new Promise<void>((resolve) => terminal.write(data, resolve));
 Object.assign(window, {
+  runTerminalInputRegression: async () => {
+    render(false);
+    while (created < 1) await pause();
+    const terminal = terminals[0];
+    writeDelay = 25;
+    const command = `${"git branch ".repeat(30)}\r`;
+    const started = performance.now();
+    for (const key of command) {
+      const keyCode = key === "\r" ? 13 : key.toUpperCase().charCodeAt(0);
+      const event = new KeyboardEvent("keydown", {
+        key: key === "\r" ? "Enter" : key,
+        keyCode,
+        bubbles: true,
+        cancelable: true,
+      });
+      terminal.textarea!.dispatchEvent(event);
+      if (!event.defaultPrevented) {
+        terminal.textarea!.dispatchEvent(
+          new KeyboardEvent("keypress", {
+            key,
+            keyCode,
+            charCode: key.charCodeAt(0),
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+      terminal.textarea!.dispatchEvent(
+        new KeyboardEvent("keyup", { key, keyCode }),
+      );
+    }
+    while (written.length < command.length) {
+      if (performance.now() - started > 15000) throw new Error("Input stalled");
+      await pause();
+    }
+    const displayed = terminal.buffer.active
+      .getLine(0)!
+      .translateToString(true);
+    return {
+      complete: written === command,
+      displayed: displayed.startsWith("git branch git branch"),
+      characters: command.length,
+      writeCalls,
+      elapsed: Math.round(performance.now() - started),
+      created,
+      closed,
+    };
+  },
   runTerminalRenderingRegression: async () => {
     document.documentElement.dataset.stage = "initial";
     render(false);
