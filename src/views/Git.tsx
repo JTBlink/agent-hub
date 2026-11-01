@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useContext } from "react";
 import { FileCode2, GitBranch, RefreshCw, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ResizableSidebar } from "../components/ResizableSidebar";
+import { VerticalSplit } from "../components/VerticalSplit";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { useApp } from "../context/AppContext";
 import {
@@ -15,14 +16,12 @@ import {
 } from "../lib/gitApi";
 import { getErrorMessage } from "../lib/error";
 import { groupGitChanges } from "../lib/gitChanges";
-import { FileContent } from "../components/file-reader/FileContent";
 import { WorktreeFilePreview } from "../components/worktree/WorktreeFilePreview";
 import { cn } from "../utils";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
 import { GitHistory } from "../components/git/GitHistory";
 import { GitCommitForm } from "../components/git/GitCommitForm";
 import { GitDiffViewer } from "../components/git/GitDiffViewer";
-import { TaskFilterGroup } from "../components/tasks/TaskFilterGroup";
 import "../components/git/git.css";
 
 export function Git() {
@@ -33,7 +32,7 @@ export function Git() {
   const activeId = project?.id;
   const [revision, setRevision] = useState(0);
   const [selection, setSelection] = useState<GitSelection>();
-  const [split, setSplit] = useState(true);
+  const [historyExpanded, setHistoryExpanded] = useState(true);
   const [actionType, setActionType] = useState<"stage" | "commit">();
   const busy = actionType !== undefined;
   const actionLock = useRef(false);
@@ -102,12 +101,13 @@ export function Git() {
   useEffect(() => {
     if (!activeId || !selection || fileView) return;
     let cancelled = false;
-    void getProjectGitDiff(
+    const request = getProjectGitDiff(
       activeId,
       root,
       selection.path,
       selection.staged,
-    ).then(
+    );
+    void request.then(
       (content) => {
         if (!cancelled) setDiffResult({ key: diffKey, content });
       },
@@ -228,56 +228,75 @@ export function Git() {
       </header>
       <aside
         ref={changesRef}
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-md bg-bg-secondary"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md bg-bg-secondary"
         aria-label={t("git.sourceControl")}
       >
-        <GitCommitForm
-          key={`${scope}:commit`}
-          branch={branch}
-          busy={busy}
-          committing={actionType === "commit"}
-          enabled={
-            !!status &&
-            !loading &&
-            !status.truncated &&
-            stagedFiles.length > 0 &&
-            !files.some((file) => file.conflicted) &&
-            status.state === "Clean"
+        <VerticalSplit
+          storageKey="agent-hub:git-sidebar-split"
+          label={t("git.resizePanels")}
+          hint={t("git.resizePanelsHint")}
+          bottomCollapsed={!historyExpanded}
+          top={
+            <>
+              <GitCommitForm
+                key={`${scope}:commit`}
+                branch={branch}
+                busy={busy}
+                committing={actionType === "commit"}
+                enabled={
+                  !!status &&
+                  !loading &&
+                  !status.truncated &&
+                  stagedFiles.length > 0 &&
+                  !files.some((file) => file.conflicted) &&
+                  status.state === "Clean"
+                }
+                onCommit={(message) =>
+                  activeId
+                    ? runAction(
+                        () => commitProjectGit(activeId, root, message),
+                        "commit",
+                      )
+                    : Promise.resolve(false)
+                }
+              />
+              {loading && (
+                <p role="status" className="px-3 pb-3 text-xs text-muted">
+                  {t("common.loading")}
+                </p>
+              )}
+              {status && (
+                <div className="pb-4">
+                  <GitChanges
+                    key={`${scope}:staged`}
+                    {...changeProps}
+                    staged
+                    files={stagedFiles}
+                  />
+                  <GitChanges
+                    key={`${scope}:unstaged`}
+                    {...changeProps}
+                    staged={false}
+                    files={unstagedFiles}
+                  />
+                  {status.truncated && (
+                    <p className="p-3 text-xs text-muted">
+                      {t("git.truncated")}
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           }
-          onCommit={(message) =>
-            activeId
-              ? runAction(
-                  () => commitProjectGit(activeId, root, message),
-                  "commit",
-                )
-              : Promise.resolve(false)
+          bottom={
+            <GitHistory
+              key={`${scope}:history`}
+              commits={status?.commits ?? []}
+              expanded={historyExpanded}
+              onExpandedChange={setHistoryExpanded}
+            />
           }
         />
-        {loading && (
-          <p role="status" className="px-3 pb-3 text-xs text-muted">
-            {t("common.loading")}
-          </p>
-        )}
-        {status && (
-          <div className="pb-4">
-            <GitChanges
-              key={`${scope}:staged`}
-              {...changeProps}
-              staged
-              files={stagedFiles}
-            />
-            <GitChanges
-              key={`${scope}:unstaged`}
-              {...changeProps}
-              staged={false}
-              files={unstagedFiles}
-            />
-            {status.truncated && (
-              <p className="p-3 text-xs text-muted">{t("git.truncated")}</p>
-            )}
-          </div>
-        )}
-        <GitHistory key={`${scope}:history`} commits={status?.commits ?? []} />
       </aside>
     </ResizableSidebar>
   );
@@ -351,49 +370,17 @@ export function Git() {
                         </button>
                       </div>
                     </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle px-3 py-1.5 text-xs">
-                      <span
-                        className="mr-auto min-w-0 truncate text-muted"
-                        title={selection.path}
-                      >
-                        {selection.path}
-                      </span>
-                      {!fileView && (
-                        <TaskFilterGroup
-                          label={t("git.diffLayout")}
-                          value={split ? "split" : "unified"}
-                          options={[
-                            { value: "split", label: t("git.split") },
-                            { value: "unified", label: t("git.unified") },
-                          ]}
-                          onChange={(value) => setSplit(value === "split")}
-                        />
-                      )}
-                      <button
-                        type="button"
-                        className={cn(
-                          "app-button-ghost px-2 py-1",
-                          !fileView && "bg-surface-active",
-                        )}
-                        onClick={() => setFileView(false)}
-                      >
-                        {t("git.diff")}
-                      </button>
-                      <button
-                        type="button"
-                        className={cn(
-                          "app-button-ghost px-2 py-1",
-                          fileView && "bg-surface-active",
-                        )}
-                        disabled={
-                          files.find((file) => file.path === selection.path)
-                            ?.status === "deleted"
-                        }
-                        onClick={() => setFileView(true)}
-                      >
-                        {t("git.file")}
-                      </button>
-                    </div>
+                    {fileView && (
+                      <div className="flex shrink-0 items-center border-b border-border-subtle px-2 py-1">
+                        <button
+                          type="button"
+                          className="app-button-ghost px-2 py-1 text-xs"
+                          onClick={() => setFileView(false)}
+                        >
+                          {t("git.diff")}
+                        </button>
+                      </div>
+                    )}
                     {fileView && root ? (
                       <WorktreeFilePreview
                         key={`${activeId}:${root}:${selection.path}`}
@@ -402,16 +389,17 @@ export function Git() {
                         path={selection.path}
                       />
                     ) : diff !== undefined ? (
-                      split ? (
-                        <GitDiffViewer patch={diff} staged={selection.staged} />
-                      ) : (
-                        <FileContent
-                          file={{
-                            path: `${selection.path}.diff`,
-                            content: diff || t("git.noDiff"),
-                          }}
-                        />
-                      )
+                      <GitDiffViewer
+                        patch={diff}
+                        path={selection.path}
+                        staged={selection.staged}
+                        onOpenFile={
+                          files.find((file) => file.path === selection.path)
+                            ?.status !== "deleted"
+                            ? () => setFileView(true)
+                            : undefined
+                        }
+                      />
                     ) : (
                       <p role="status" className="p-6 text-xs text-muted">
                         {diffError || t("common.loading")}

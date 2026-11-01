@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { getAppScale } from "../lib/textScale";
 import { cn } from "../utils";
 
-type Mark = { top: number; height: number; kind: string };
+export type OverviewMark = { top: number; height: number; kind: string };
 interface Metrics {
   top: number;
   viewport: number;
@@ -18,19 +18,23 @@ export function ScrollOverview({
   controls,
   label,
   hint,
+  marks,
+  getMarks,
 }: {
-  scrollRef: RefObject<HTMLDivElement | null>;
+  scrollRef: RefObject<HTMLElement | null>;
   contentKey: string;
   controls: string;
   label: string;
   hint?: string;
+  marks?: readonly OverviewMark[];
+  getMarks?: () => OverviewMark[];
 }) {
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef<{ offset: number; pointer: number } | undefined>(
     undefined,
   );
   const [metrics, setMetrics] = useState(empty);
-  const [marks, setMarks] = useState<Mark[]>([]);
+  const [measuredMarks, setMarks] = useState<OverviewMark[]>([]);
   const [dragging, setDragging] = useState(false);
   useEffect(() => {
     const viewport = scrollRef.current;
@@ -44,19 +48,24 @@ export function ScrollOverview({
           content: viewport.scrollHeight,
           track: rail.clientHeight,
         };
-        return Object.keys(next).every(
-          (key) =>
-            previous[key as keyof Metrics] === next[key as keyof Metrics],
-        )
+        return previous.top === next.top &&
+          previous.viewport === next.viewport &&
+          previous.content === next.content &&
+          previous.track === next.track
           ? previous
           : next;
       });
     const measure = () => {
       position();
+      if (getMarks) {
+        setMarks(getMarks());
+        return;
+      }
+      if (marks) return;
       const origin = viewport.getBoundingClientRect().top;
       const height = Math.max(1, viewport.scrollHeight);
       const scale = getAppScale();
-      const next: Mark[] = [];
+      const next: OverviewMark[] = [];
       viewport
         .querySelectorAll<HTMLElement>("[data-overview-kind]")
         .forEach((row) => {
@@ -107,7 +116,7 @@ export function ScrollOverview({
       window.removeEventListener("resize", measure);
       observer?.disconnect();
     };
-  }, [scrollRef, contentKey]);
+  }, [scrollRef, contentKey, marks, getMarks]);
   const range = Math.max(0, metrics.content - metrics.viewport);
   const thumbHeight = Math.min(
     metrics.track,
@@ -206,7 +215,7 @@ export function ScrollOverview({
           style={{ top: thumbTop, height: thumbHeight }}
         />
       )}
-      {marks.map((mark, index) => (
+      {(marks ?? measuredMarks).map((mark, index) => (
         <span
           key={index}
           aria-hidden="true"

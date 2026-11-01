@@ -22,7 +22,7 @@ export function RecommendedSkillCard({
   const avatarUrl = `https://github.com/${owner}.png?size=32`;
 
   return (
-    <div className="app-panel flex flex-col gap-2 p-3 transition-colors hover:border-border">
+    <div className="app-panel catalog-card flex flex-col gap-2 p-3 transition-colors hover:border-border">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <img
@@ -68,16 +68,16 @@ export function RecommendedSkillCard({
       <div className="flex flex-wrap items-center gap-1">
         <span
           className={cn(
-            "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-sm leading-4 font-medium text-accent-light",
+            "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-xs leading-4 font-medium text-accent-light",
           )}
         >
           @{skill.source}
         </span>
-        <span className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-sm leading-4 text-muted">
+        <span className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-xs leading-4 text-muted">
           {skill.tag}
         </span>
         {isInstalled && (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-sm leading-4 font-medium text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-xs leading-4 font-medium text-emerald-400">
             <Check className="h-3 w-3" />
             {t("install.installed")}
           </span>

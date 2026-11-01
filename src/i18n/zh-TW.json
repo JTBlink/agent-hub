@@ -2077,7 +2077,14 @@
     "diffTruncated": "差異較大，僅預覽前 3000 行；可切換統一檢視繼續閱讀。",
     "localRefs": "本機參照",
     "changeOverview": "差異捲動概覽",
-    "overviewHint": "點選或拖曳定位；方向鍵捲動，Page Up／Down 翻頁，Home／End 到首尾"
+    "overviewHint": "點選或拖曳定位；方向鍵捲動，Page Up／Down 翻頁，Home／End 到首尾",
+    "resizePanels": "調整變更與最近提交的高度",
+    "resizePanelsHint": "上下拖曳調整高度；按兩下還原預設；方向鍵微調，Home／End 到邊界",
+    "diffTools": "差異工具",
+    "previousChange": "上一處變更",
+    "nextChange": "下一處變更",
+    "showWhitespace": "顯示空白字元",
+    "changePosition": "第 {{current}} 處變更，共 {{count}} 處"
   },
   "workspaceSearch": {
     "title": "搜尋",

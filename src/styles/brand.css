@@ -2,6 +2,8 @@
 @layer base {
   :root {
     --color-scheme: light;
+    --color-editor-selection: rgb(18 113 207 / 26%);
+    --color-editor-selection-inactive: rgb(96 117 149 / 20%);
     --app-scale: 1;
     --color-bg: #f3f7ff;
     --color-bg-secondary: #eaf1fc;
@@ -47,6 +49,8 @@
 
   .dark {
     --color-scheme: dark;
+    --color-editor-selection: rgb(44 137 205 / 46%);
+    --color-editor-selection-inactive: rgb(96 117 149 / 30%);
     --color-bg: #08101f;
     --color-bg-secondary: #0c162b;
     --color-surface: #111d35;

@@ -8,52 +8,18 @@
 .git-workbench {
   display: flex;
 }
-.git-diff-table {
-  width: 100%;
-  min-width: 560px;
-  table-layout: fixed;
-  border-collapse: collapse;
-  font-family: var(--font-family-code);
-  font-size: var(--font-size-code);
-  line-height: var(--line-height-code);
+.diff-code-pane {
+  background: var(--color-bg);
 }
-.git-diff-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-muted);
-  text-align: left;
-  font-family: var(--font-family-ui);
-  font-size: var(--font-size-caption);
-  font-weight: 400;
+.diff-code-pane .cm-line.diff-code-added {
+  background: color-mix(in srgb, var(--color-brand-teal) 14%, transparent);
+  box-shadow: inset 2px 0 var(--color-brand-teal);
 }
-.git-diff-table th + th,
-.git-diff-cell + .git-diff-cell {
-  border-left: 1px solid var(--color-border-subtle);
+.diff-code-pane .cm-line.diff-code-removed {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  box-shadow: inset 2px 0 var(--color-danger);
 }
-.git-diff-cell {
-  position: relative;
-  padding: 0 12px 0 68px;
-  vertical-align: top;
-  color: var(--color-text-secondary);
-}
-.git-diff-number {
-  position: absolute;
-  left: 0;
-  width: 44px;
-  text-align: right;
-  color: var(--color-text-faint);
-  user-select: none;
-}
-.git-diff-marker {
-  position: absolute;
-  left: 51px;
-  user-select: none;
-}
-.git-diff-empty {
+.diff-code-spacer {
   background: repeating-linear-gradient(
     135deg,
     transparent,
@@ -61,19 +27,45 @@
     var(--color-border-faint) 4px,
     var(--color-border-faint) 5px
   );
+  user-select: none;
 }
-.git-diff-added {
-  background: color-mix(in srgb, var(--color-brand-teal) 15%, var(--color-bg));
-  box-shadow: inset 2px 0 var(--color-brand-teal);
-}
-.git-diff-removed {
-  background: color-mix(in srgb, var(--color-danger) 13%, var(--color-bg));
-  box-shadow: inset 2px 0 var(--color-danger);
-}
-.git-diff-hunk {
-  padding: 4px 12px;
+.diff-code-hunk {
+  overflow: hidden;
+  padding: 0 10px;
   background: var(--color-accent-bg);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-caption);
-  overflow-wrap: anywhere;
+  color: var(--color-text-faint);
+  font: var(--font-size-caption)/calc(
+      var(--font-size-code) * var(--line-height-code)
+    )
+    var(--font-family-code);
+  white-space: nowrap;
+  user-select: none;
+}
+.diff-code-pane[data-empty] .cm-line {
+  height: 0;
+  min-height: 0;
+  line-height: 0;
+}
+
+.diff-code-pane .cm-scroller {
+  scrollbar-width: thin;
+}
+@supports selector(::-webkit-scrollbar) {
+  .diff-code-pane .cm-scroller {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+}
+.diff-code-pane .cm-editor .cm-scroller {
+  overflow-x: scroll;
+}
+.diff-code-pane .cm-editor .cm-content {
+  padding: 0;
+}
+.diff-code-pane .cm-editor .cm-line {
+  padding: 0 12px;
+}
+.diff-code-pane .cm-editor .cm-gutters {
+  border-right: 0;
+  background: var(--color-bg);
 }

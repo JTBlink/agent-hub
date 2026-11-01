@@ -2126,7 +2126,14 @@
     "diffTruncated": "Preview limited to 3000 lines. Switch to unified view to read more.",
     "localRefs": "Local refs",
     "changeOverview": "Diff scroll overview",
-    "overviewHint": "Click or drag to navigate; arrows scroll, Page Up/Down page, Home/End go to the edges"
+    "overviewHint": "Click or drag to navigate; arrows scroll, Page Up/Down page, Home/End go to the edges",
+    "resizePanels": "Resize changes and recent commits",
+    "resizePanelsHint": "Drag vertically to resize; double-click to reset; arrow keys to adjust, Home/End for limits",
+    "diffTools": "Diff tools",
+    "previousChange": "Previous change",
+    "nextChange": "Next change",
+    "showWhitespace": "Show whitespace",
+    "changePosition": "Change {{current}} of {{count}}"
   },
   "workspaceSearch": {
     "title": "Search",

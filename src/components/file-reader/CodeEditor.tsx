@@ -4,6 +4,7 @@ import {
   Compartment,
   EditorState,
   Transaction,
+  Text,
   type Extension,
 } from "@codemirror/state";
 import {
@@ -27,6 +28,9 @@ interface CodeEditorProps {
   wrap: boolean;
   maxLength?: number;
   onChange?: (content: string) => void;
+  extensions?: Extension;
+  ariaLabel?: string;
+  onViewReady?: (view: EditorView | null) => void;
 }
 
 function contentConfiguration({
@@ -34,13 +38,14 @@ function contentConfiguration({
   wrap,
   maxLength,
   onChange,
+  ariaLabel,
 }: CodeEditorProps): Extension[] {
   return [
     EditorState.readOnly.of(!onChange),
     EditorState.lineSeparator.of(file.content.includes("\r\n") ? "\r\n" : "\n"),
     EditorView.editable.of(!!onChange),
     EditorView.contentAttributes.of({
-      "aria-label": file.path,
+      "aria-label": ariaLabel ?? file.path,
       "aria-readonly": String(!onChange),
       role: "textbox",
       "aria-multiline": "true",
@@ -78,12 +83,20 @@ export function CodeEditor({
   wrap,
   maxLength,
   onChange,
+  extensions,
+  ariaLabel,
+  onViewReady,
 }: CodeEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const configuration = useRef(new Compartment());
   const language = useRef(new Compartment());
   const positioned = useRef<ReaderLocation | undefined>(undefined);
+  const features = useRef(new Compartment());
+  const viewCallback = useRef(onViewReady);
+  useLayoutEffect(() => {
+    viewCallback.current = onViewReady;
+  }, [onViewReady]);
 
   useLayoutEffect(() => {
     if (!host.current) return;
@@ -100,10 +113,13 @@ export function CodeEditor({
         codeTheme,
         configuration.current.of([]),
         language.current.of([]),
+        features.current.of([]),
       ],
     });
     view.current = editor;
+    viewCallback.current?.(editor);
     return () => {
+      viewCallback.current?.(null);
       view.current = null;
       editor.destroy();
     };
@@ -112,20 +128,33 @@ export function CodeEditor({
   useLayoutEffect(() => {
     const editor = view.current;
     if (!editor) return;
+    const changed = editor.state.sliceDoc() !== file.content;
     editor.dispatch({
-      effects: configuration.current.reconfigure(
-        contentConfiguration({ file, wrap, maxLength, onChange }),
-      ),
+      effects: [
+        configuration.current.reconfigure(
+          contentConfiguration({ file, wrap, maxLength, onChange, ariaLabel }),
+        ),
+        features.current.reconfigure(extensions ?? []),
+      ],
+      ...(changed
+        ? {
+            changes: {
+              from: 0,
+              to: editor.state.doc.length,
+              insert: Text.of(
+                file.content.split(
+                  file.content.includes("\r\n") ? "\r\n" : "\n",
+                ),
+              ),
+            },
+            annotations: [
+              externalChange.of(true),
+              Transaction.addToHistory.of(false),
+            ],
+          }
+        : {}),
     });
-    if (editor.state.sliceDoc() !== file.content)
-      editor.dispatch({
-        changes: { from: 0, to: editor.state.doc.length, insert: file.content },
-        annotations: [
-          externalChange.of(true),
-          Transaction.addToHistory.of(false),
-        ],
-      });
-  }, [file, wrap, maxLength, onChange]);
+  }, [file, wrap, maxLength, onChange, extensions, ariaLabel]);
 
   useLayoutEffect(() => {
     const editor = view.current;

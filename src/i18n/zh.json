@@ -2123,7 +2123,14 @@
     "diffTruncated": "差异较大，仅预览前 3000 行；可切换统一视图查看。",
     "localRefs": "本地引用",
     "changeOverview": "差异滚动概览",
-    "overviewHint": "点击或拖动定位；方向键滚动，Page Up／Down 翻页，Home／End 到首尾"
+    "overviewHint": "点击或拖动定位；方向键滚动，Page Up／Down 翻页，Home／End 到首尾",
+    "resizePanels": "调整更改与最近提交的高度",
+    "resizePanelsHint": "上下拖动调整高度；双击恢复默认；方向键微调，Home／End 到边界",
+    "diffTools": "差异工具",
+    "previousChange": "上一处更改",
+    "nextChange": "下一处更改",
+    "showWhitespace": "显示空白字符",
+    "changePosition": "第 {{current}} 处更改，共 {{count}} 处"
   },
   "workspaceSearch": {
     "title": "搜索",

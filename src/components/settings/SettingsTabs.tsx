@@ -22,7 +22,7 @@ export function SettingsTabs({
       <div
         role="tablist"
         aria-label={t("settings.title")}
-        className="flex shrink-0 gap-5 overflow-x-auto border-b border-border-subtle scrollbar-hide"
+        className="workbench-editor-tabs shrink-0"
       >
         {tabs.map((tab) => (
           <button
@@ -81,7 +81,7 @@ export function SettingsTabs({
           aria-labelledby={`settings-tab-${tab}`}
           tabIndex={0}
           hidden={tab !== active}
-          className="min-h-0 flex-1 space-y-6 overflow-y-auto pb-8 pt-5 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pt-3 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
         >
           {children[tab]}
         </div>

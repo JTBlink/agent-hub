@@ -165,8 +165,8 @@ export function AutomationDiscovery({
           package: entry.package,
         }));
   return (
-    <div className="space-y-4 pb-8">
-      <p className="text-sm text-muted">{t("discovery.taskDescription")}</p>
+    <div className="min-w-0 space-y-3 pb-3">
+      <p className="text-xs text-muted">{t("discovery.taskDescription")}</p>
       {overview.error && (
         <StatusBanner
           compact
@@ -179,7 +179,7 @@ export function AutomationDiscovery({
       )}
       {source === "recommended" && (
         <>
-          <label className="relative block max-w-xl">
+          <label className="relative block w-full max-w-[480px]">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted"
@@ -219,7 +219,7 @@ export function AutomationDiscovery({
             <FolderUp aria-hidden="true" className="h-4 w-4" />
             {t("automation.importPackage")}
           </h2>
-          <p className="text-xs leading-6 text-muted">
+          <p className="text-xs leading-5 text-muted">
             {t("discovery.localDescription")}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -259,7 +259,7 @@ export function AutomationDiscovery({
             <GitBranch aria-hidden="true" className="h-4 w-4" />
             {t("install.gitInstall")}
           </h2>
-          <p className="text-xs leading-6 text-muted">
+          <p className="text-xs leading-5 text-muted">
             {t("discovery.gitDescription")}
           </p>
           <AutomationGitFormatHelp />
@@ -324,7 +324,7 @@ export function AutomationDiscovery({
         </div>
       )}
       {source !== "local" && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2.5">
+        <div className="workbench-catalog-grid">
           {cards.map((task, index) => {
             const installedTasks =
               overview.data?.tasks.filter(
@@ -364,7 +364,7 @@ export function AutomationDiscovery({
       {source === "git" && git && !cards.length && (
         <p className="text-sm text-muted">{t("discovery.noPackages")}</p>
       )}
-      <p className="text-xs leading-6 text-muted">
+      <p className="text-xs leading-5 text-muted">
         {t("discovery.pausedInstall")}
       </p>
       {selected && (

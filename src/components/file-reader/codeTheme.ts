@@ -63,8 +63,13 @@ export const codeTheme = EditorView.theme({
   ".cm-cursor, .cm-dropCursor": {
     borderLeftColor: "var(--color-text-primary)",
   },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
-    { backgroundColor: "var(--color-surface-active)" },
+  ".cm-selectionBackground": {
+    backgroundColor: "var(--color-editor-selection-inactive)",
+  },
+  "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-content ::selection":
+    {
+      backgroundColor: "var(--color-editor-selection)",
+    },
   ".cm-matchingBracket": {
     backgroundColor: "var(--color-surface-active)",
     outline: "1px solid var(--color-accent-border)",

@@ -60,7 +60,7 @@ export function Discover() {
   const sources = (active: boolean) => (
     <div
       aria-label={t("discovery.sources")}
-      className="mb-4 flex flex-wrap gap-1 border-b border-border-subtle"
+      className="discovery-source-toolbar mb-3 flex flex-wrap items-center gap-1"
     >
       {(active ? skillSources : taskSources).map((source) => {
         const Icon = sourceIcons[source];
@@ -72,10 +72,10 @@ export function Discover() {
             aria-pressed={selected}
             onClick={() => selectSource(source)}
             className={cn(
-              "mr-4 flex items-center gap-1.5 border-b-2 px-1 pb-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+              "flex h-7 shrink-0 items-center gap-1.5 rounded-sm px-2 text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
               selected
-                ? "border-accent text-accent"
-                : "border-transparent text-muted hover:text-tertiary",
+                ? "bg-surface-active text-accent-light"
+                : "text-muted hover:bg-surface-hover hover:text-primary",
             )}
           >
             <Icon aria-hidden="true" className="h-3.5 w-3.5" />
@@ -86,13 +86,13 @@ export function Discover() {
     </div>
   );
   return (
-    <div className="app-page gap-4">
-      <header className="app-page-header border-b-0 pb-0">
-        <h1 className="app-page-title mb-4">{t("discovery.title")}</h1>
+    <div className="app-page discovery-page">
+      <header className="discovery-editor-header">
+        <h1 className="sr-only">{t("discovery.title")}</h1>
         <div
           role="tablist"
           aria-label={t("discovery.title")}
-          className="flex gap-5 border-b border-border-subtle"
+          className="workbench-editor-tabs"
         >
           {kinds.map((value, index) => {
             const Icon = value === "skills" ? Box : CalendarClock;
@@ -123,10 +123,10 @@ export function Discover() {
                   document.getElementById(`discover-${kinds[next]}`)?.focus();
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  "flex shrink-0 items-center gap-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
                   kind === value
-                    ? "border-accent text-accent-light"
-                    : "border-transparent text-muted hover:text-primary",
+                    ? "text-primary"
+                    : "text-muted hover:text-primary",
                 )}
               >
                 <Icon aria-hidden="true" className="h-4 w-4" />
@@ -137,6 +137,7 @@ export function Discover() {
         </div>
       </header>
       <section
+        className="min-w-0"
         hidden={kind !== "skills"}
         role="tabpanel"
         id="discover-panel-skills"
@@ -146,6 +147,7 @@ export function Discover() {
         <InstallSkills activeTab={skillsSource} active={kind === "skills"} />
       </section>
       <section
+        className="min-w-0"
         hidden={kind !== "automations"}
         role="tabpanel"
         id="discover-panel-automations"

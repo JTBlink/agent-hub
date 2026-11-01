@@ -1,6 +1,7 @@
 @import "./styles/brand.css";
 @import "./styles/typography.css";
 @import "./styles/scrollbars.css";
+@import "./styles/workbench-pages.css";
 
 @tailwind base;
 @tailwind components;
@@ -47,19 +48,19 @@
   }
 
   .app-page {
-    @apply flex min-h-full w-full min-w-0 flex-col gap-6 pb-8;
+    @apply flex min-h-full w-full min-w-0 flex-col gap-3 pb-4;
   }
 
   .app-page-header {
-    @apply border-b border-border-subtle pb-4;
+    @apply border-b border-border-subtle pb-2;
   }
 
   .app-page-title {
-    @apply text-xl font-semibold tracking-tight text-primary;
+    @apply text-base font-semibold text-primary;
   }
 
   .app-page-subtitle {
-    @apply mt-1.5 text-sm leading-5 text-muted;
+    @apply mt-1 text-xs leading-5 text-muted;
   }
 
   .app-section-title {
@@ -67,23 +68,23 @@
   }
 
   .app-panel {
-    @apply rounded-xl border border-border-subtle bg-surface;
+    @apply rounded-md border border-border-subtle bg-surface;
   }
 
   .app-panel-muted {
-    @apply rounded-xl border border-border-subtle bg-bg-secondary;
+    @apply rounded-md border border-border-subtle bg-bg-secondary;
   }
 
   .app-toolbar {
-    @apply flex flex-wrap items-center justify-between gap-3;
+    @apply flex flex-wrap items-center justify-between gap-2;
   }
 
   .app-toolbar-segmented {
-    @apply h-10;
+    @apply h-8;
   }
 
   .app-toolbar-button {
-    @apply inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg text-sm font-medium transition-colors outline-none;
+    @apply inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm text-sm font-medium transition-colors outline-none;
   }
 
   .app-toolbar-button-secondary {
@@ -95,15 +96,15 @@
   }
 
   .app-input {
-    @apply h-10 rounded-lg border border-border-subtle bg-surface px-3 text-sm text-secondary outline-none transition-colors placeholder:text-faint focus:border-border;
+    @apply h-8 rounded-sm border border-border-subtle bg-surface px-3 text-sm text-secondary outline-none transition-colors placeholder:text-faint focus:border-border;
   }
 
   .app-segmented {
-    @apply flex rounded-lg border border-border-subtle bg-surface p-0.5;
+    @apply flex rounded-sm border border-border-subtle bg-surface p-0.5;
   }
 
   .app-segmented-button {
-    @apply whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors outline-none hover:text-tertiary;
+    @apply whitespace-nowrap rounded-sm px-2.5 py-1 text-sm font-medium text-muted transition-colors outline-none hover:text-tertiary;
   }
 
   .app-segmented-button-active {
@@ -111,15 +112,15 @@
   }
 
   .app-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-accent-border bg-accent-dark px-4 py-2.5 text-sm font-medium text-white transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-accent-border bg-accent-dark px-2.5 py-1 text-sm font-medium text-white transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-button-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-md p-2 text-muted transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm p-1.5 text-muted transition-colors hover:bg-surface-hover hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .app-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm font-medium text-secondary transition-colors outline-none hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-secondary transition-colors outline-none hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-badge {

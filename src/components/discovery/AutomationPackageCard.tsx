@@ -34,7 +34,7 @@ export function AutomationPackageCard({
     ...automationRequirements(task),
   ];
   return (
-    <article className="app-panel flex min-w-0 flex-col gap-2 p-3 transition-colors hover:border-border">
+    <article className="app-panel catalog-card flex min-w-0 flex-col gap-2 p-3 transition-colors hover:border-border">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-accent-border bg-accent-bg text-accent-light">
@@ -66,7 +66,12 @@ export function AutomationPackageCard({
           )}
         </button>
       </div>
-      <p className="text-xs leading-relaxed text-muted">{task.description}</p>
+      <p
+        className="line-clamp-2 text-xs leading-5 text-muted"
+        title={task.description}
+      >
+        {task.description}
+      </p>
       <div className="flex flex-wrap items-center gap-1">
         {installed && (
           <span className="text-xs text-accent-light">
@@ -79,14 +84,14 @@ export function AutomationPackageCard({
         )}
         <span
           title={task.source}
-          className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-sm font-medium leading-4 text-accent-light"
+          className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-xs font-medium leading-4 text-accent-light"
         >
           {task.source}
         </span>
         {tags.map((tag) => (
           <span
             key={tag}
-            className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-sm leading-4 text-muted"
+            className="max-w-full truncate rounded-sm border border-border-faint bg-bg-secondary px-1.5 py-0.5 text-xs leading-4 text-muted"
           >
             {tag}
           </span>

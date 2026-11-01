@@ -15,7 +15,7 @@
 }
 
 .dashboard-header h1 {
-  font-size: var(--font-size-display);
+  font-size: var(--font-size-heading);
   line-height: 1.25;
   font-weight: 650;
   letter-spacing: -0.035em;
@@ -24,7 +24,7 @@
 .dashboard-header p {
   margin-top: 0.25rem;
   color: var(--color-text-tertiary);
-  font-size: var(--font-size-code);
+  font-size: var(--font-size-ui);
 }
 
 .dashboard-overview-grid,

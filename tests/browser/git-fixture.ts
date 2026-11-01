@@ -120,8 +120,27 @@ export function gitFixture(
   }
   if (command === "get_project_git_status")
     return { handled: true, value: structuredClone(snapshot) };
-  if (command === "get_project_git_diff")
+  if (command === "get_project_git_diff") {
+    if (new URLSearchParams(location.search).has("wrap-diff"))
+      return {
+        handled: true,
+        value: `@@ -1,5 +1,6 @@\n start\n-${"old source ".repeat(25)}\n-old short\n+new short\n+${"updated source ".repeat(30)}\n+extra line\n middle\n-end\n+finish\n`,
+      };
+    if (new URLSearchParams(location.search).has("long-diff")) {
+      const body = Array.from({ length: 480 }, (_, index) =>
+        index % 80 === 40
+          ? `-const previous${index} = ${index};\n+const updated${index} = ${index + 1};`
+          : index % 80 === 5
+            ? ` const longLine${index} = "${"example-source-".repeat(18)}";`
+            : ` const line${index} = ${index};`,
+      ).join("\n");
+      return {
+        handled: true,
+        value: `diff --git a/demo.ts b/demo.ts\n--- a/demo.ts\n+++ b/demo.ts\n@@ -1,480 +1,480 @@\n${body}\n`,
+      };
+    }
     return { handled: true, value: patch };
+  }
   if (command === "set_project_git_staged") {
     const paths =
       "paths" in args && Array.isArray(args.paths) ? args.paths : [];

@@ -16,6 +16,7 @@
 @supports selector(::-webkit-scrollbar) {
   * {
     scrollbar-width: auto;
+    scrollbar-color: auto;
   }
   ::-webkit-scrollbar {
     width: 12px;
@@ -91,7 +92,7 @@
   );
 }
 .editor-overview-content {
-  scrollbar-width: none;
+  scrollbar-width: thin;
 }
 .editor-overview-content::-webkit-scrollbar {
   width: 0;
@@ -103,5 +104,12 @@
   }
   .scroll-overview-mark {
     background: Highlight;
+  }
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .editor-overview-content {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
   }
 }

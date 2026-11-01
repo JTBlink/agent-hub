@@ -122,16 +122,16 @@ export function Layout() {
             >
               <div
                 className={cn(
-                  "min-h-0 flex-1 scrollbar-hide",
-                  pathname === "/git" ? "p-0" : "p-5",
+                  "workbench-page-host min-h-0 flex-1",
+                  pathname === "/git" ? "p-0" : "p-3",
                   fullHeightPage
                     ? "flex flex-col overflow-hidden"
-                    : "overflow-y-auto",
+                    : "workbench-page-scroll overflow-y-auto",
                 )}
               >
                 <div
                   className={cn(
-                    "flex w-full min-w-0 flex-col gap-4",
+                    "workbench-page-stack flex w-full min-w-0 flex-col gap-3",
                     fullHeightPage ? "min-h-0 flex-1" : "min-h-full",
                   )}
                 >
