@@ -180,7 +180,14 @@ export interface GitGraphCommit {
   author: string;
   time: number;
   parents: string[];
-  refs: { name: string; remote: boolean }[];
+  refs: {
+    name: string;
+    remote: boolean;
+    kind?: "branch" | "remote" | "tag";
+    remote_name?: string | null;
+    current?: boolean;
+  }[];
+  head?: boolean;
 }
 export interface GitGraphData {
   commits: GitGraphCommit[];

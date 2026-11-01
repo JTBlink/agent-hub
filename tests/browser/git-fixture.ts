@@ -139,6 +139,7 @@ export function gitFixture(
         has_more: false,
         commits: ids.map((sha, i) => ({
           sha,
+          head: i === 0,
           summary:
             i === 0
               ? "Merge feature/parser into main"
@@ -158,13 +159,33 @@ export function gitFixture(
           refs:
             i === 0
               ? [
-                  { name: "main", remote: false },
-                  ...(remote ? [{ name: "origin/main", remote: true }] : []),
+                  {
+                    name: "main",
+                    remote: false,
+                    kind: "branch",
+                    current: true,
+                  },
+                  ...(remote
+                    ? [
+                        {
+                          name: "origin/main",
+                          remote: true,
+                          kind: "remote",
+                          remote_name: "origin",
+                        },
+                        {
+                          name: "origin/HEAD",
+                          remote: true,
+                          kind: "remote",
+                          remote_name: "origin",
+                        },
+                      ]
+                    : []),
                 ]
               : i === 1
                 ? [{ name: "feature/parser", remote: false }]
                 : i === 3
-                  ? [{ name: "v1.0.0", remote: false }]
+                  ? [{ name: "v1.0.0", remote: false, kind: "tag" }]
                   : [],
         })),
       },

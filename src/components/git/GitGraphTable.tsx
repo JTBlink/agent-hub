@@ -10,7 +10,8 @@ import type { GitGraphCommit } from "../../lib/gitApi";
 import { layoutGitGraph } from "../../lib/gitGraph";
 import { formatGitCommitTime } from "../../lib/gitTime";
 import { cn } from "../../utils";
-import { GitGraphLines } from "./GitGraphLines";
+import { GitGraphLines, GitGraphWorkingLine } from "./GitGraphLines";
+import { GitGraphRefBadges } from "./GitGraphRefBadges";
 import { GRAPH_ROW_HEIGHT, useGitGraphViewport } from "./useGitGraphViewport";
 
 /** Presentation boundary: accepts repository data and emits a SHA, never performs IPC. */
@@ -30,7 +31,13 @@ export function GitGraphTable({
   loading: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const graph = useMemo(() => layoutGitGraph(commits), [commits]);
+  const workingHead = changedFiles
+    ? commits.find((commit) => commit.head)?.sha
+    : undefined;
+  const graph = useMemo(
+    () => layoutGitGraph(commits, workingHead),
+    [commits, workingHead],
+  );
   const width = Math.max(56, graph.width * 16 + 16);
   const {
     ref: viewportRef,
@@ -74,7 +81,7 @@ export function GitGraphTable({
       <table
         ref={table}
         aria-rowcount={commits.length + 1 + (changedFiles ? 1 : 0)}
-        className="git-graph-table w-full table-fixed border-collapse text-xs"
+        className="git-graph-table w-full border-collapse text-xs"
         style={{ minWidth: 680 + width }}
       >
         <colgroup>
@@ -96,8 +103,8 @@ export function GitGraphTable({
         <tbody>
           {!!changedFiles && (
             <tr className="text-muted" aria-rowindex={2}>
-              <td>
-                <span className="block px-2">◯</span>
+              <td className="p-0">
+                <GitGraphWorkingLine width={width} connected={!!workingHead} />
               </td>
               <td colSpan={4}>
                 {t("git.graph.uncommitted", { count: changedFiles })}
@@ -122,7 +129,11 @@ export function GitGraphTable({
                 )}
               >
                 <td className="p-0">
-                  <GitGraphLines row={graph.rows[index]} width={width} />
+                  <GitGraphLines
+                    row={graph.rows[index]}
+                    width={width}
+                    head={commit.head}
+                  />
                 </td>
                 <td>
                   <button
@@ -132,21 +143,18 @@ export function GitGraphTable({
                     onClick={() => onSelect(commit.sha)}
                     aria-pressed={selected === commit.sha}
                     className={cn(
-                      "flex h-[30px] w-full items-center gap-2 overflow-hidden text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                      "flex h-[30px] w-full items-center gap-1.5 whitespace-nowrap text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
                       !match && "opacity-30",
                     )}
                     title={commit.summary}
                   >
-                    {commit.refs.map((ref) => (
-                      <span
-                        key={ref.name}
-                        className="max-w-36 shrink-0 truncate rounded border border-accent-border bg-accent-bg px-1 text-accent-light"
-                        title={ref.name}
-                      >
-                        {ref.name}
-                      </span>
-                    ))}
-                    <span className="truncate">{commit.summary}</span>
+                    <GitGraphRefBadges
+                      refs={commit.refs}
+                      color={graph.rows[index].color}
+                    />
+                    <span className="min-w-24 flex-1 truncate">
+                      {commit.summary}
+                    </span>
                   </button>
                 </td>
                 <td

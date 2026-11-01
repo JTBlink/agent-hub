@@ -17,7 +17,7 @@ it("draws merge lanes that converge at their shared parent", () => {
     commit("base", []),
   ]);
   expect(width).toBe(2);
-  expect(rows.map((row) => row.lane)).toEqual([0, 1, 0, 1]);
+  expect(rows.map((row) => row.lane)).toEqual([0, 1, 0, 0]);
   expect(rows[0].edges).toContainEqual({
     from: 0,
     to: 1,
@@ -26,9 +26,9 @@ it("draws merge lanes that converge at their shared parent", () => {
   });
   expect(rows[2].edges).toContainEqual({
     from: 0,
-    to: 1,
+    to: 0,
     half: "bottom",
-    color: 1,
+    color: 0,
   });
   expect(rows[3].edges.filter((edge) => edge.half === "bottom")).toEqual([]);
 });
@@ -38,7 +38,55 @@ it("reuses an empty lane for independent history without inventing an incoming e
     commit("two", []),
   ]);
   expect(width).toBe(1);
-  expect(rows[1]).toEqual({ lane: 0, edges: [] });
+  expect(rows[1]).toEqual({ lane: 0, color: 1, edges: [] });
+});
+
+it("connects working changes to HEAD while independent branch tips keep distinct colors", () => {
+  const nodes = [
+    commit("docs-a", ["head"]),
+    commit("docs-b", ["head"]),
+    commit("head", ["base"]),
+    commit("base", []),
+  ];
+  const { rows } = layoutGitGraph(nodes, "head");
+  expect(rows.map((row) => row.lane)).toEqual([1, 2, 0, 0]);
+  expect(rows.map((row) => row.color)).toEqual([1, 2, 0, 0]);
+  expect(rows[0].edges).toContainEqual({
+    from: 0,
+    to: 0,
+    half: "top",
+    color: -1,
+  });
+  expect(rows[1].edges).toContainEqual({
+    from: 0,
+    to: 0,
+    half: "bottom",
+    color: -1,
+  });
+  expect(rows[2].edges).toContainEqual({
+    from: 0,
+    to: 0,
+    half: "top",
+    color: -1,
+  });
+  expect(rows[2].edges).toContainEqual({
+    from: 0,
+    to: 0,
+    half: "bottom",
+    color: 0,
+  });
+  expect(rows[2].edges).toContainEqual({
+    from: 1,
+    to: 0,
+    half: "top",
+    color: 1,
+  });
+  expect(rows[2].edges).toContainEqual({
+    from: 2,
+    to: 0,
+    half: "top",
+    color: 2,
+  });
 });
 
 it("keeps existing geometry when a truncated history is extended, including an octopus merge", () => {
