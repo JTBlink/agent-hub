@@ -781,47 +781,27 @@ it("runs toolbar operations against the selected checkout and switches change la
       "false",
     );
     await act(async () => button("git.actions.branches").click());
-    const picker = host.querySelector<HTMLButtonElement>(
-      '[role="alertdialog"] [role="combobox"]',
-    )!;
-    await act(async () => {
-      picker.focus();
-      picker.click();
-    });
-    expect(document.querySelector('[role="listbox"]')).not.toBeNull();
-    await act(async () =>
-      picker.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-      ),
-    );
-    expect(document.querySelector('[role="listbox"]')).toBeNull();
-    expect(host.querySelector('[role="alertdialog"]')).not.toBeNull();
-    const select = host.querySelector<HTMLSelectElement>("select")!;
-    await act(async () => {
-      select.value = "topic";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    const confirm = () =>
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+    const topic = () =>
       [
-        ...host.querySelectorAll<HTMLButtonElement>(
-          '[role="alertdialog"] button',
-        ),
-      ].find((e) => e.textContent === "git.actions.switchBranch")!;
+        ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+      ].find((item) => item.textContent === "topic")!;
     vi.mocked(runProjectGitAction).mockRejectedValueOnce(
       new Error("Branch is checked out elsewhere"),
     );
-    await act(async () => confirm().click());
+    await act(async () => topic().click());
     expect(runProjectGitAction).toHaveBeenLastCalledWith(
       "first",
       "<workspace>/demo",
       "switch_branch",
       "topic",
     );
-    expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
       "Branch is checked out elsewhere",
     );
-    await act(async () => confirm().click());
-    expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+    await act(async () => button("git.actions.branches").click());
+    await act(async () => topic().click());
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     await act(async () => button("git.actions.more").click());
     const menuFetch = [
       ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),

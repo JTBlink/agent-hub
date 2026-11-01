@@ -11,6 +11,7 @@ export interface CardAction {
   onSelect: () => void;
   danger?: boolean;
   disabled?: boolean;
+  keepOpen?: boolean;
 }
 
 interface Props {
@@ -61,6 +62,10 @@ export function CardActionMenu({
     const menuH =
       (panelRef.current?.getBoundingClientRect().height ?? 0) / scale ||
       actions.length * 32 + 8;
+    const menuW = Math.min(
+      (panelRef.current?.getBoundingClientRect().width ?? 0) / scale || 156,
+      window.innerWidth / scale - 16,
+    );
     setOpenState({
       top: Math.max(
         8,
@@ -69,9 +74,23 @@ export function CardActionMenu({
           window.innerHeight / scale - menuH - 8,
         ),
       ),
-      right: Math.max((window.innerWidth - rect.right) / scale, 8),
+      right: Math.max(
+        8,
+        Math.min(
+          (window.innerWidth - rect.right) / scale,
+          window.innerWidth / scale - menuW - 8,
+        ),
+      ),
     });
   }, [actions.length, setOpenState]);
+
+  const attachPanel = useCallback(
+    (node: HTMLDivElement | null) => {
+      panelRef.current = node;
+      if (node) locate();
+    },
+    [locate],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -163,7 +182,7 @@ export function CardActionMenu({
               }}
             />
             <div
-              ref={panelRef}
+              ref={attachPanel}
               id={menuId}
               role="menu"
               aria-label={label}
@@ -205,10 +224,13 @@ export function CardActionMenu({
                   type="button"
                   role="menuitem"
                   disabled={action.disabled}
+                  title={action.label}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setOpenState(null);
-                    triggerRef.current?.focus();
+                    if (!action.keepOpen) {
+                      setOpenState(null);
+                      triggerRef.current?.focus();
+                    }
                     action.onSelect();
                   }}
                   className={cn(
@@ -223,7 +245,7 @@ export function CardActionMenu({
                       {action.icon}
                     </span>
                   )}
-                  {action.label}
+                  <span className="min-w-0 truncate">{action.label}</span>
                 </button>
               ))}
             </div>

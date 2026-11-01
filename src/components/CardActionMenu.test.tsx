@@ -102,3 +102,38 @@ it("anchors the portal at enlarged text size and follows viewport changes", asyn
   );
   expect(document.querySelector('[role="menu"]')).toBeNull();
 });
+
+it("keeps a wide menu inside the viewport when its trigger is near the left edge", async () => {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      return this.getAttribute("role") === "menu"
+        ? DOMRect.fromRect({ width: 420, height: 140 })
+        : DOMRect.fromRect({
+            x: 8,
+            y: window.innerHeight - 32,
+            width: 180,
+            height: 24,
+          });
+    },
+  );
+  await act(async () =>
+    root.render(
+      <CardActionMenu
+        label="Branches"
+        actions={[
+          {
+            key: "long",
+            label: "feature/a-very-long-branch-name",
+            onSelect: vi.fn(),
+          },
+        ]}
+      />,
+    ),
+  );
+  await act(async () => container.querySelector("button")!.click());
+  const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+  expect(window.innerWidth - Number.parseFloat(menu.style.right) - 420).toBe(8);
+  expect(Number.parseFloat(menu.style.top) + 140).toBeLessThanOrEqual(
+    window.innerHeight - 8,
+  );
+});

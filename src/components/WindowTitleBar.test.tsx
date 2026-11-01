@@ -292,25 +292,21 @@ it("selects worktrees above and changes branches below without navigating to ano
     new Error("Local changes would be overwritten"),
   );
   await act(async () => branch().click());
-  const dialog = () => document.querySelector('[role="alertdialog"]')!;
-  const chooseBranch = () => {
-    const select = dialog().querySelector("select")!;
-    select.value = "main";
-    select.dispatchEvent(new Event("change", { bubbles: true }));
-  };
-  const confirm = () =>
-    [...dialog().querySelectorAll<HTMLButtonElement>("button")].find(
-      (button) => button.textContent === "切换分支",
+  const chooseBranch = () =>
+    [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
+      (button) => button.textContent === "main",
     )!;
-  await act(async () => chooseBranch());
-  await act(async () => confirm().click());
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  await act(async () => chooseBranch().click());
   expect(runProjectGitAction).toHaveBeenLastCalledWith(
     "demo",
     "<workspace>/demo-topic",
     "switch_branch",
     "main",
   );
-  expect(dialog().textContent).toContain("Local changes would be overwritten");
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "Local changes would be overwritten",
+  );
   expect(container.querySelector("output")!.textContent).toBe(route);
   vi.mocked(runProjectGitAction).mockImplementationOnce(async () => {
     vi.mocked(getProjectWorktrees).mockResolvedValueOnce([
@@ -325,7 +321,8 @@ it("selects worktrees above and changes branches below without navigating to ano
     ]);
     window.dispatchEvent(new Event("project-git-changed"));
   });
-  await act(async () => confirm().click());
+  await act(async () => branch().click());
+  await act(async () => chooseBranch().click());
   expect(document.querySelector('[role="alertdialog"]')).toBeNull();
   expect(branch().textContent).toContain("main");
   expect(checkout().selectedOptions[0].text).toBe(

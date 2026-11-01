@@ -27,7 +27,7 @@ import { GitHistory } from "../components/git/GitHistory";
 import { GitCommitForm } from "../components/git/GitCommitForm";
 import { GitStatusBar } from "../components/git/GitStatusBar";
 import { GitSourceControlToolbar } from "../components/git/GitSourceControlToolbar";
-import { GitBranchDialog } from "../components/git/GitBranchDialog";
+import { GitBranchMenu } from "../components/git/GitBranchMenu";
 import { GitFileEditor } from "../components/git/GitFileEditor";
 import "../components/git/git.css";
 
@@ -51,7 +51,6 @@ export function Git() {
     "stage" | "commit" | GitRepositoryAction
   >();
   const [tree, setTree] = useState(true);
-  const [branchDialog, setBranchDialog] = useState(false);
   const [actionNotice, setActionNotice] = useState<string>();
   const busy = actionType !== undefined;
   const actionLock = useRef(false);
@@ -70,7 +69,6 @@ export function Git() {
     setFileView(false);
     setActionError(undefined);
     setDiscardTarget(undefined);
-    setBranchDialog(false);
     setActionNotice(undefined);
   }
   const statusKey = JSON.stringify([scope, revision]);
@@ -273,10 +271,38 @@ export function Git() {
                           action,
                         );
                     }}
-                    onBranch={() => {
-                      setActionError(undefined);
-                      setBranchDialog(true);
-                    }}
+                    branchControl={
+                      activeId && (
+                        <GitBranchMenu
+                          key={scope}
+                          projectId={activeId}
+                          worktreePath={root}
+                          current={branch}
+                          label={t("git.actions.branches")}
+                          disabled={!status || loading || busy}
+                          triggerIcon={
+                            <span
+                              aria-hidden="true"
+                              className="codicon codicon-source-control"
+                              style={{ fontSize: 14, lineHeight: 1 }}
+                            />
+                          }
+                          triggerClassName="app-button-ghost h-6 w-6 p-0"
+                          onRun={(action, name) =>
+                            runAction(
+                              () =>
+                                runProjectGitAction(
+                                  activeId,
+                                  root,
+                                  action,
+                                  name,
+                                ),
+                              action,
+                            )
+                          }
+                        />
+                      )
+                    }
                     onRefresh={refresh}
                     onTree={() => setTree((value) => !value)}
                     onHistory={() => setHistoryExpanded((value) => !value)}
@@ -373,22 +399,6 @@ export function Git() {
   );
   return (
     <>
-      {branchDialog && activeId && (
-        <GitBranchDialog
-          key={scope}
-          projectId={activeId}
-          worktreePath={root}
-          current={branch}
-          actionError={actionError}
-          onClose={() => setBranchDialog(false)}
-          onRun={(action, name) =>
-            runAction(
-              () => runProjectGitAction(activeId, root, action, name),
-              action,
-            )
-          }
-        />
-      )}
       <ConfirmDialog
         open={!!discardTarget}
         title={t("git.discardChanges")}

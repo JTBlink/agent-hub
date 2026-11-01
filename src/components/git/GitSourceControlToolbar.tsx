@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from "react";
 import { Download, GitGraph, Plus, Minus } from "lucide-react";
 import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
@@ -14,7 +15,7 @@ export function GitSourceControlToolbar({
   graph,
   onGraph,
   onRemote,
-  onBranch,
+  branchControl,
   onRefresh,
   onTree,
   onHistory,
@@ -32,7 +33,7 @@ export function GitSourceControlToolbar({
   graph: boolean;
   onGraph: () => void;
   onRemote: (action: "fetch" | "pull" | "push") => void;
-  onBranch: () => void;
+  branchControl: ReactNode;
   onRefresh: () => void;
   onTree: () => void;
   onHistory: () => void;
@@ -55,7 +56,7 @@ export function GitSourceControlToolbar({
       onClick: () => onRemote("push"),
       disabled: disabled || !canSync,
     },
-    { key: "branches", icon: "source-control", onClick: onBranch, disabled },
+    { key: "branches", icon: "source-control", disabled },
     { key: "commit", icon: "check", disabled: !canCommit },
     { key: "history", icon: "history", onClick: onHistory, pressed: history },
     {
@@ -87,41 +88,44 @@ export function GitSourceControlToolbar({
       <div
         role="group"
         aria-label={t("git.actions.label")}
-        className="ml-auto flex items-center"
+        className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end"
       >
         {actions.map(
-          ({ key, icon: Icon, onClick, disabled: inactive, pressed, spin }) => (
-            <button
-              key={key}
-              type={key === "commit" ? "submit" : "button"}
-              aria-label={t(
-                key === "graph" ? "git.graph.open" : `git.actions.${key}`,
-              )}
-              title={t(
-                key === "graph" ? "git.graph.open" : `git.actions.${key}`,
-              )}
-              aria-pressed={pressed}
-              disabled={inactive}
-              onClick={onClick}
-              className={cn(
-                "app-button-ghost h-6 w-6 shrink-0 p-0",
-                pressed && "bg-surface-active text-accent-light",
-              )}
-            >
-              {typeof Icon === "string" ? (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    `codicon codicon-${Icon}`,
-                    spin && "animate-spin",
-                  )}
-                  style={{ fontSize: 14, lineHeight: 1 }}
-                />
-              ) : (
-                <Icon size={14} aria-hidden="true" />
-              )}
-            </button>
-          ),
+          ({ key, icon: Icon, onClick, disabled: inactive, pressed, spin }) =>
+            key === "branches" ? (
+              <Fragment key={key}>{branchControl}</Fragment>
+            ) : (
+              <button
+                key={key}
+                type={key === "commit" ? "submit" : "button"}
+                aria-label={t(
+                  key === "graph" ? "git.graph.open" : `git.actions.${key}`,
+                )}
+                title={t(
+                  key === "graph" ? "git.graph.open" : `git.actions.${key}`,
+                )}
+                aria-pressed={pressed}
+                disabled={inactive}
+                onClick={onClick}
+                className={cn(
+                  "app-button-ghost h-6 w-6 shrink-0 p-0",
+                  pressed && "bg-surface-active text-accent-light",
+                )}
+              >
+                {typeof Icon === "string" ? (
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      `codicon codicon-${Icon}`,
+                      spin && "animate-spin",
+                    )}
+                    style={{ fontSize: 14, lineHeight: 1 }}
+                  />
+                ) : (
+                  <Icon size={14} aria-hidden="true" />
+                )}
+              </button>
+            ),
         )}
         <CardActionMenu
           label={t("git.actions.more")}
