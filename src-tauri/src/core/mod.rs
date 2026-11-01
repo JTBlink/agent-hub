@@ -66,4 +66,5 @@ pub mod task_browser;
 pub mod project_paths;
 
 pub mod project_file_edit;
+pub mod project_git;
 pub mod project_worktrees;

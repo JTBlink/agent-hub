@@ -23,7 +23,8 @@ export function Layout() {
   const fullHeightPage =
     pathname === "/settings" ||
     pathname === "/backup/diff" ||
-    pathname === "/tasks";
+    pathname === "/tasks" ||
+    pathname === "/git";
 
   // Cmd+, to open Settings
   useEffect(() => {
@@ -80,7 +81,7 @@ export function Layout() {
           <div
             className={cn(
               "mx-auto flex w-full flex-col gap-4",
-              pathname === "/tasks"
+              pathname === "/tasks" || pathname === "/git"
                 ? "max-w-none"
                 : "max-w-[1200px]",
               fullHeightPage ? "min-h-0 flex-1" : "min-h-full",

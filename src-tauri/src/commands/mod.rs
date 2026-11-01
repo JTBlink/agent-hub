@@ -29,4 +29,5 @@ pub mod herdr_tools;
 
 pub mod task_browser;
 
+pub mod project_git;
 pub mod project_worktrees;

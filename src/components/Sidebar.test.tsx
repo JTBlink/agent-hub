@@ -129,10 +129,11 @@ it("prioritizes Tasks, Automation and project workspaces with terminals inside w
   const entries = [...sidebar.querySelectorAll("a, button[aria-expanded]")].map(
     (element) => element.textContent,
   );
-  expect(entries.slice(0, 8)).toEqual([
+  expect(entries.slice(0, 9)).toEqual([
     "工作台",
     "任务",
     "自动化",
+    "Git",
     "项目工作区",
     "全局工作区",
     "技能库0",

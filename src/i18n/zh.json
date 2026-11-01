@@ -2026,6 +2026,18 @@
     }
   },
   "git": {
+    "worktree": "工作目录",
+    "unborn": "尚无提交",
+    "cachedRefs": "远端比较基于本地缓存引用",
+    "changes": "工作区改动",
+    "clean": "没有工作区改动",
+    "staged": "暂存",
+    "unstaged": "未暂存",
+    "commits": "最近提交",
+    "truncated": "文件过多，仅显示前 1000 项",
+    "file": "查看文件",
+    "chooseFile": "选择文件查看暂存或工作区 diff",
+    "noDiff": "无文本差异，可能是二进制文件或文件模式变化",
     "states": {
       "conflict": "冲突",
       "deleted": "删除",
@@ -2033,7 +2045,8 @@
       "added": "新增",
       "modified": "修改",
       "removed": "删除"
-    }
+    },
+    "operation": "仓库操作状态"
   },
   "worktree": {
     "title": "工作树",

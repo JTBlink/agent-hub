@@ -19,6 +19,7 @@ import { Backup } from "./views/Backup";
 import BackupDiff from "./views/BackupDiff";
 import { Help } from "./views/Help";
 import { Tasks } from "./views/Tasks";
+import { Git } from "./views/Git";
 import { Automation } from "./views/Automation";
 
 function ThemedToaster() {
@@ -67,6 +68,7 @@ function App() {
               <Route path="/discover" element={<Discover />} />
               <Route path="/install" element={<Discover />} />
               <Route path="/tasks" element={<Tasks />} />
+              <Route path="/git" element={<Git />} />
               <Route path="/terminal" element={null} />
               <Route path="/automation" element={<Automation />} />
               <Route path="/backup" element={<Backup />} />

@@ -14,6 +14,7 @@ agent-hub/
 │   │   ├── ProjectDetail.tsx       #   项目技能管理内容
 │   │   ├── ProjectSkills.tsx       #   项目技能二级入口与工作树返回导航
 │   │   ├── Settings.tsx            #   设置页
+│   │   ├── Git.tsx                 #   独立项目 Git 状态、差异与提交历史
 │   │   ├── Backup.tsx              #   Git 备份管理
 │   │   ├── MySkills.tsx            #   已安装技能
 │   │   ├── InstallSkills.tsx       #   技能市场/安装
@@ -63,6 +64,7 @@ agent-hub/
 │   ├── lib/                        # 工具函数与 Tauri Bindings
 │   │   ├── localSkillScan.ts       #   扫描分组标识与筛选纯函数
 │   │   ├── tauri.ts                #   Tauri IPC 封装
+│   │   ├── gitApi.ts               #   项目 Git 只读状态与差异 IPC
 │   │   ├── worktreeApi.ts          #   工作树／文件 IPC、显示标签与路由转换
 │   │   ├── error.ts                #   错误处理
 │   │   ├── gitErrors.ts            #   Git 错误映射
@@ -97,6 +99,7 @@ agent-hub/
 │   │   │   ├── mod.rs
 │   │   │   ├── agent_workspace.rs  #     Agent 工作空间管理
 │   │   │   ├── projects.rs         #     项目管理
+│   │   │   ├── project_git.rs       #    独立 Git 状态与差异 IPC
 │   │   │   ├── project_worktrees.rs #    工作树、文件浏览与保存 IPC
 │   │   │   ├── project_library.rs  #     项目技能库桌面命令
 │   │   │   ├── scan.rs             #     本地 Skill 扫描与导入
@@ -125,6 +128,7 @@ agent-hub/
 │   │       ├── tool_detection.rs   #     Agent 程序、桌面应用与 IDE 扩展安装检测
 │   │       ├── scanner.rs          #     Agent 目录扫描
 │   │       ├── project_scanner.rs  #     项目扫描器
+│   │       ├── project_git.rs       #    授权仓库只读状态、差异与提交历史
 │   │       ├── project_file_edit.rs #    复用文件读取边界、冲突检查与原子保存
 │   │       ├── task_browser/        #    平台任务、开发元数据、评审及 CI 适配
 │   │       ├── project_worktrees.rs #    Git 工作树发现、目录授权与有界文件读取

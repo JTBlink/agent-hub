@@ -14,6 +14,7 @@ import {
   Plus,
   CalendarClock,
   ListTodo,
+  GitBranch,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -72,6 +73,7 @@ export function Sidebar() {
     { name: t("sidebar.dashboard"), path: "/", icon: LayoutDashboard },
     { name: t("tasks.title"), path: "/tasks", icon: ListTodo },
     { name: t("automation.title"), path: "/automation", icon: CalendarClock },
+    { name: "Git", path: "/git", icon: GitBranch },
   ];
   const utilityNavItems = [
     { name: t("discovery.title"), path: "/discover", icon: Compass },

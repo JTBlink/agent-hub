@@ -1971,6 +1971,18 @@
     }
   },
   "git": {
+    "worktree": "工作目錄",
+    "unborn": "尚無提交",
+    "cachedRefs": "遠端比較基於本機快取引用",
+    "changes": "工作區變更",
+    "clean": "沒有工作區變更",
+    "staged": "暫存",
+    "unstaged": "未暫存",
+    "commits": "最近提交",
+    "truncated": "檔案過多，僅顯示前 1000 項",
+    "file": "檢視檔案",
+    "chooseFile": "選擇檔案檢視暫存或工作區 diff",
+    "noDiff": "無文字差異，可能是二進位檔案或檔案模式變更",
     "states": {
       "conflict": "衝突",
       "deleted": "刪除",
@@ -1978,7 +1990,8 @@
       "added": "新增",
       "modified": "修改",
       "removed": "刪除"
-    }
+    },
+    "operation": "儲存庫操作狀態"
   },
   "worktree": {
     "title": "工作樹",

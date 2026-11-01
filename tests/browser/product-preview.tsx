@@ -682,6 +682,7 @@ const { Layout } = await import("../../src/components/Layout");
 const { Dashboard } = await import("../../src/views/Dashboard");
 const { ProjectSkills } = await import("../../src/views/ProjectSkills");
 const { Tasks } = await import("../../src/views/Tasks");
+const { Git } = await import("../../src/views/Git");
 const { Automation } = await import("../../src/views/Automation");
 const { Discover } = await import("../../src/views/Discover");
 const { MySkills } = await import("../../src/views/MySkills");
@@ -689,7 +690,9 @@ const { WorkspaceView } = await import("../../src/views/WorkspaceView");
 const { CODING_WORKSPACE_CONFIG, LOBSTER_WORKSPACE_CONFIG } =
   await import("../../src/views/workspaceConfigs");
 const initialRoute =
-  previewParams.get("view") === "worktree"
+  previewParams.get("view") === "git"
+    ? "/git"
+    : previewParams.get("view") === "worktree"
       ? "/project/project-0"
       : new URLSearchParams(location.search).get("view") === "dashboard"
         ? "/"
@@ -711,6 +714,7 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/git" element={<Git />} />
             <Route path="/terminal" element={null} />
             <Route path="/automation" element={<Automation />} />
             <Route path="/discover" element={<Discover />} />
