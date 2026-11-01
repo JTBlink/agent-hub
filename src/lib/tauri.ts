@@ -1,6 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+/** Open the current window's local developer tools, or toggle them where supported. */
+export function toggleDeveloperTools(): Promise<void> {
+  return invoke("toggle_developer_tools");
+}
+
 /** Prepare a session-scoped copy for opening unsaved preview text externally. */
 export function prepareFilePreview(
   path: string,

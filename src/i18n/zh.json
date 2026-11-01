@@ -1,5 +1,6 @@
 {
   "menu": {
+    "developerMode": "开发者模式",
     "file": "文件",
     "edit": "编辑",
     "view": "视图",

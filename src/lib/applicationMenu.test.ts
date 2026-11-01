@@ -16,6 +16,7 @@ function setup(mac = true) {
     commands: vi.fn(),
     closeWindow: vi.fn(),
     quit: vi.fn(),
+    developerTools: vi.fn(),
   };
   return {
     actions,
@@ -65,4 +66,22 @@ it("puts Quit under File on other platforms", () => {
   expect(
     items(options).filter((item) => "id" in item && item.id === "app-quit"),
   ).toHaveLength(1);
+});
+
+it.each([true, false])("opens developer tools from Help on macOS=%s", (mac) => {
+  const { options, actions } = setup(mac);
+  const help = options.items?.find(
+    (item) => "text" in item && item.text === "帮助",
+  );
+  if (!help || !("items" in help) || !Array.isArray(help.items))
+    throw new Error("Missing Help menu");
+  const developer = help.items.find(
+    (item) => "id" in item && item.id === "developer-mode",
+  );
+  if (!developer || !("action" in developer))
+    throw new Error("Missing developer mode");
+  expect(developer.text).toBe("开发者模式");
+  expect(developer.accelerator).toBe("CmdOrCtrl+Alt+I");
+  developer.action?.("developer-mode");
+  expect(actions.developerTools).toHaveBeenCalledOnce();
 });

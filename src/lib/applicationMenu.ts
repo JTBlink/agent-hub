@@ -10,6 +10,7 @@ interface Actions {
   commands: () => void;
   closeWindow: () => void;
   quit: () => void;
+  developerTools: () => void;
 }
 
 /** Native menus keep OS editing, window management and accessibility behavior. */
@@ -154,6 +155,13 @@ export function applicationMenuOptions(
           {
             text: t("help.pageTitle"),
             action: () => actions.navigate("/help"),
+          },
+          separator,
+          {
+            id: "developer-mode",
+            text: t("menu.developerMode"),
+            accelerator: "CmdOrCtrl+Alt+I",
+            action: actions.developerTools,
           },
         ],
       },

@@ -3,6 +3,7 @@ pub mod agent_workspace;
 pub mod app_updates;
 pub mod automation;
 pub mod browse;
+pub mod developer_tools;
 pub mod dialog;
 pub mod discovered_skills;
 pub mod file_preview;

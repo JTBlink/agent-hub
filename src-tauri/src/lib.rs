@@ -1192,6 +1192,7 @@ pub fn run() {
             commands::settings::check_last_panic,
             commands::settings::clear_last_panic,
             commands::settings::app_exit,
+            commands::developer_tools::toggle_developer_tools,
             commands::settings::restart_app,
             commands::settings::hide_to_tray,
             // Git Backup

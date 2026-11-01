@@ -10,7 +10,11 @@ import {
   installApplicationMenu,
 } from "../lib/applicationMenu";
 import { openProjectFolder } from "../lib/openProject";
-import { touchProjectVisited, type Project } from "../lib/tauri";
+import {
+  toggleDeveloperTools,
+  touchProjectVisited,
+  type Project,
+} from "../lib/tauri";
 import { worktreeUrl } from "../lib/worktreeApi";
 import { getErrorMessage } from "../lib/error";
 
@@ -27,6 +31,11 @@ export function useApplicationMenu(
       void navigate(path);
     },
     commands: onCommands,
+    developerTools: () => {
+      void toggleDeveloperTools().catch((error) => {
+        toast.error(getErrorMessage(error, t("common.requestFailed")));
+      });
+    },
     manageWorkspaces: onManageWorkspaces,
     openRecent: (project: Project) => {
       navigate(worktreeUrl(project.id, project.path));
@@ -70,6 +79,7 @@ export function useApplicationMenu(
     const actions: typeof handlers = {
       navigate: (path) => latest.current.navigate(path),
       commands: () => latest.current.commands(),
+      developerTools: () => latest.current.developerTools(),
       manageWorkspaces: () => latest.current.manageWorkspaces(),
       openRecent: (project) => latest.current.openRecent(project),
       openProject: () => latest.current.openProject(),

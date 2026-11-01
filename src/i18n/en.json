@@ -1,5 +1,6 @@
 {
   "menu": {
+    "developerMode": "Developer Mode",
     "file": "File",
     "edit": "Edit",
     "view": "View",
