@@ -26,6 +26,10 @@
 
 ### Changed
 
+- AgentHub 整体界面与终端统一采用 Catppuccin 色调，弱化侧栏、编辑区和选中行的色差；色板、状态、标签、差异视图、滚动条与按钮前景统一在 `brand.css` 配置。
+
+- 终端采用 WezTerm 风格的 Catppuccin 配色：深色 Mocha、浅色 Latte，统一背景、文字、光标、选区与 ANSI 色，并增加内容留白。
+
 - 终端新建菜单与设置页共用 Agent 安装检测结果，仅显示已安装的受支持 Agent；Claude Agent Teams 跟随 Claude Code 的安装状态，名称与设置页保持一致。
 
 - 终端“+”按钮紧跟终端标签并展开新建菜单，支持普通终端、Codex、Claude、Claude Agent Teams、OpenCode 与 Hermes；Agent 由独立 Herdr 模块在当前工作树以 YOLO 模式启动，重启应用不重放启动请求。

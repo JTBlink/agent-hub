@@ -14,11 +14,11 @@ interface Props {
 
 const STATUS_TONE: Record<SkillSourceDiffEntry["status"], string> = {
   added:
-    "border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    "border-emerald-300 bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
   removed:
-    "border-red-300 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300",
+    "border-red-300 bg-red-500/10 text-red-700 dark:bg-red-500/10 dark:text-red-300",
   modified:
-    "border-sky-300 bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
+    "border-sky-300 bg-sky-500/10 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
 };
 
 export function SkillSourceDiffViewer({

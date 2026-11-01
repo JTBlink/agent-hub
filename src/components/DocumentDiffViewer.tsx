@@ -187,20 +187,17 @@ function createHunk(
 function cellTone(type: DiffRow["type"], version: "original" | "updated") {
   if (type === "removed" && version === "original") {
     return {
-      lineNoClass:
-        "bg-[#ffd7d5] text-red-900 dark:bg-[#3c1618] dark:text-red-200",
-      codeClass: "bg-[#ffebe9] text-red-950 dark:bg-[#2d1013] dark:text-red-50",
-      codeStyle: { boxShadow: "inset 3px 0 0 #cf222e" },
+      lineNoClass: "bg-[var(--color-diff-removed-gutter)] text-danger",
+      codeClass: "bg-[var(--color-diff-removed)] text-primary",
+      codeStyle: { boxShadow: "inset 3px 0 0 var(--color-danger)" },
       markerClass: "text-red-700 dark:text-red-300",
     };
   }
   if (type === "added" && version === "updated") {
     return {
-      lineNoClass:
-        "bg-[#aceebb] text-emerald-900 dark:bg-[#1b4721] dark:text-emerald-200",
-      codeClass:
-        "bg-[#dafbe1] text-emerald-950 dark:bg-[#12261e] dark:text-emerald-50",
-      codeStyle: { boxShadow: "inset 3px 0 0 #1a7f37" },
+      lineNoClass: "bg-[var(--color-diff-added-gutter)] text-success",
+      codeClass: "bg-[var(--color-diff-added)] text-primary",
+      codeStyle: { boxShadow: "inset 3px 0 0 var(--color-success)" },
       markerClass: "text-emerald-700 dark:text-emerald-300",
     };
   }
@@ -300,7 +297,7 @@ export function DocumentDiffViewer({
           key={hunk.id}
           className="overflow-hidden rounded-xl border border-border-subtle bg-bg-secondary"
         >
-          <div className="grid grid-cols-2 border-b border-border-subtle bg-[#ddf4ff] dark:bg-[#0c2d40]">
+          <div className="grid grid-cols-2 border-b border-border-subtle bg-[var(--color-info-bg)]">
             <div className="border-r border-border-subtle px-3 py-2 font-mono text-xs text-sky-800 dark:text-sky-300">
               {updatedOnLeft
                 ? `@@ +${hunk.rightStart},${hunk.rightCount}`

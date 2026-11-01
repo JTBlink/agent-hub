@@ -509,7 +509,7 @@ export function TerminalWorkspace({
                 className={cn(
                   "relative flex min-h-0 min-w-0 flex-1 overflow-hidden border",
                   tab.activePane === pane
-                    ? "border-accent"
+                    ? "border-accent-border"
                     : "border-border-subtle",
                 )}
                 onFocusCapture={() =>

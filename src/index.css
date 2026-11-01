@@ -93,7 +93,8 @@
   }
 
   .app-toolbar-button-primary {
-    @apply border border-accent-border bg-accent-dark px-3 text-white hover:bg-accent;
+    color: var(--color-on-accent);
+    @apply border border-accent-border bg-accent-dark px-3 hover:bg-accent;
   }
 
   .app-input {
@@ -113,7 +114,8 @@
   }
 
   .app-button-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-accent-border bg-accent-dark px-2.5 py-1 text-sm font-medium text-white transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
+    color: var(--color-on-accent);
+    @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-accent-border bg-accent-dark px-2.5 py-1 text-sm font-medium transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-button-ghost {
@@ -241,4 +243,16 @@
   left: 0;
   width: calc(2px / var(--app-scale));
   background: var(--color-accent);
+}
+
+/* Filled accents use a theme-aware foreground, including existing utility buttons. */
+@layer utilities {
+  .bg-red-600.text-white,
+  .bg-red-600\/90.text-white,
+  .bg-accent.text-white,
+  .bg-accent-dark.text-white,
+  .dark .dark\:bg-accent.dark\:text-white,
+  .hover\:bg-accent.text-white:hover {
+    color: var(--color-on-accent);
+  }
 }

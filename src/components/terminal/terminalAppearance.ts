@@ -18,6 +18,7 @@ export function terminalAppearance(
     fontWeight: "400",
     fontWeightBold: "700",
     customGlyphs: true,
+    drawBoldTextInBrightColors: true,
     cursorStyle: "bar",
     cursorInactiveStyle: "outline",
   };
@@ -47,10 +48,13 @@ export function terminalTheme(styles: CSSStyleDeclaration): ITheme {
   const color = (token: string) =>
     styles.getPropertyValue(token).trim() || undefined;
   return {
-    background: color("--color-bg"),
-    foreground: color("--color-text-primary"),
-    cursor: color("--color-accent"),
-    selectionBackground: color("--color-surface-active"),
+    background: color("--terminal-background"),
+    foreground: color("--terminal-foreground"),
+    cursor: color("--terminal-cursor"),
+    cursorAccent: color("--terminal-cursor-accent"),
+    selectionBackground: color("--terminal-selection"),
+    selectionInactiveBackground: color("--terminal-selection-inactive"),
+    selectionForeground: color("--terminal-selection-foreground"),
     black: color("--terminal-black"),
     red: color("--terminal-red"),
     green: color("--terminal-green"),

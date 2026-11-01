@@ -1,14 +1,4 @@
 /* Desktop workbench scrollbars keep the track quiet and reveal a neutral thumb. */
-:root {
-  --scrollbar-thumb: rgb(96 108 126 / 35%);
-  --scrollbar-thumb-hover: rgb(96 108 126 / 55%);
-  --scrollbar-thumb-active: rgb(96 108 126 / 75%);
-}
-.dark {
-  --scrollbar-thumb: rgb(164 171 183 / 28%);
-  --scrollbar-thumb-hover: rgb(164 171 183 / 45%);
-  --scrollbar-thumb-active: rgb(164 171 183 / 60%);
-}
 * {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }

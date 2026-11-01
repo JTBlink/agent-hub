@@ -47,7 +47,7 @@ export function ToggleSwitch({
     >
       <span
         className={cn(
-          "absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-all",
+          "absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-[var(--shadow-switch-knob)] transition-all",
           checked ? "left-[16px]" : "left-0.5",
         )}
       >

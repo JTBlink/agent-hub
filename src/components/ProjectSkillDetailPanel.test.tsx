@@ -375,7 +375,7 @@ it("marks lines added locally with a green plus on the left", async () => {
     node.textContent?.includes("license: MIT"),
   );
   expect(cell?.textContent).toContain("+");
-  expect(cell?.className).toContain("bg-[#dafbe1]");
+  expect(cell?.className).toContain("bg-[var(--color-diff-added)]");
   expect(document.body.textContent).toContain("@@ +");
 });
 
@@ -396,7 +396,7 @@ it("marks lines deleted locally with a red minus on the right", async () => {
     node.textContent?.includes("old content"),
   );
   expect(cell?.textContent).toContain("-");
-  expect(cell?.className).toContain("bg-[#ffebe9]");
+  expect(cell?.className).toContain("bg-[var(--color-diff-removed)]");
 });
 
 it("counts a center-only file as deleted locally and keeps it on the right", async () => {
@@ -422,5 +422,5 @@ it("counts a center-only file as deleted locally and keeps it on the right", asy
     node.textContent?.includes("center-only content"),
   );
   expect(right?.textContent).toContain("-");
-  expect(right?.className).toContain("bg-[#ffebe9]");
+  expect(right?.className).toContain("bg-[var(--color-diff-removed)]");
 });

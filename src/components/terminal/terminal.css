@@ -12,4 +12,7 @@
    Cancel inherited app zoom here and apply text scaling through its font size. */
 .terminal-emulator {
   zoom: calc(1 / var(--app-scale, 1));
+  background: var(--terminal-background);
+  color: var(--terminal-foreground);
+  padding: 8px 12px;
 }

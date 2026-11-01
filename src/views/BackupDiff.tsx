@@ -351,7 +351,7 @@ export default function BackupDiff() {
           )}
 
           {diffError && !diffLoading && (
-            <div className="m-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+            <div className="m-4 rounded-lg border border-red-300 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-500/10 dark:text-red-300">
               {diffError}
             </div>
           )}

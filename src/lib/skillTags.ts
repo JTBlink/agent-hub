@@ -35,14 +35,14 @@ const TAG_COLOR_CLASSES = [
 ];
 
 const TAG_ACTIVE_CLASSES = [
-  "bg-blue-500 text-white dark:bg-blue-500",
-  "bg-emerald-500 text-white dark:bg-emerald-500",
-  "bg-violet-500 text-white dark:bg-violet-500",
-  "bg-amber-500 text-white dark:bg-amber-500",
-  "bg-rose-500 text-white dark:bg-rose-500",
-  "bg-cyan-500 text-white dark:bg-cyan-500",
-  "bg-orange-500 text-white dark:bg-orange-500",
-  "bg-pink-500 text-white dark:bg-pink-500",
+  "bg-blue-500 text-[var(--color-on-accent)] dark:bg-blue-500",
+  "bg-emerald-500 text-[var(--color-on-accent)] dark:bg-emerald-500",
+  "bg-violet-500 text-[var(--color-on-accent)] dark:bg-violet-500",
+  "bg-amber-500 text-[var(--color-on-accent)] dark:bg-amber-500",
+  "bg-rose-500 text-[var(--color-on-accent)] dark:bg-rose-500",
+  "bg-cyan-500 text-[var(--color-on-accent)] dark:bg-cyan-500",
+  "bg-orange-500 text-[var(--color-on-accent)] dark:bg-orange-500",
+  "bg-pink-500 text-[var(--color-on-accent)] dark:bg-pink-500",
 ];
 
 function resolveColorIndex(tag: string, allTags: string[]) {
