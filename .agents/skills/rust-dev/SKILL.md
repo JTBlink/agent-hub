@@ -1,9 +1,9 @@
 ---
 name: rust-dev
-description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、模块边界、测试、兼容性和提交要求。
+description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、性能、复用设计、测试、兼容性和提交要求。
 license: MIT
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # 项目开发规范
@@ -22,23 +22,23 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 
 ## 按任务读取规则
 
-| 任务                               | 必要资料                                                                                                                |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 开发环境、构建与 CLI               | [开发指南](references/development.md)                                                                                   |
-| Rust、前端逻辑、契约、持久化与重构 | [开发规范：SOLID 与模块边界](references/coding-standards.md)                                                            |
-| 页面、交互、样式与文案             | [UI 规范](references/ui-guidelines.md)与[组件规范](references/component-guidelines.md)；涉及代码同时读开发规范          |
-| Logo、平台图标与导出               | [图标规范](references/icon-assets.md)                                                                                   |
+| 任务                               | 必要资料                                                                                                                                              |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 开发环境、构建与 CLI               | [开发指南](references/development.md)                                                                                                                 |
+| Rust、前端逻辑、契约、持久化与重构 | [开发规范：SOLID 与模块边界](references/coding-standards.md)                                                                                          |
+| 页面、交互、样式与文案             | [UI 规范](references/ui-guidelines.md)与[组件规范](references/component-guidelines.md)；涉及代码同时读开发规范                                        |
+| Logo、平台图标与导出               | [图标规范](references/icon-assets.md)                                                                                                                 |
 | 测试、审查与收尾                   | [测试目录与精简规则](references/coding-standards.md#测试与变更范围)、[交付规范](references/delivery.md)、[提交规范](references/commit-conventions.md) |
-| 需求、状态与领域文档               | [Issue tracker](references/issue-tracker.md)、[分诊状态](references/triage-labels.md)、[领域文档](references/domain.md) |
-| GitHub Device Flow、凭据与授权品牌 | [OAuth 维护](references/github-oauth-setup.md)                                                                          |
+| 需求、状态与领域文档               | [Issue tracker](references/issue-tracker.md)、[分诊状态](references/triage-labels.md)、[领域文档](references/domain.md)                               |
+| GitHub Device Flow、凭据与授权品牌 | [OAuth 维护](references/github-oauth-setup.md)                                                                                                        |
 
 只读当前任务所需资料；本 skill 独立执行开发任务，普通开发不触发发布，版本 tag、Actions 与 Release 不属于本技能范围。
 
 ## 执行与交付
 
 1. 确认需求、验收条件和影响边界。先找现有组件、纯函数、bindings、适配器和安全校验，再设计变更。
-2. 按职责实现最小完整改动。路径、安全校验和领域状态复用权威实现；变更跨端契约时检查注册、DTO、bindings 和调用方。
+2. 按职责实现最小完整改动。按[复用设计与性能规则](references/coding-standards.md#复用设计)检查现有实现、数据来源、执行成本和资源生命周期；变更跨端契约时检查注册、DTO、bindings 和调用方。
 3. 用可观察行为验证验收条件。缺陷修复增加回归测试；UI 检查主题、缩放、键盘与异步反馈；仅文档改动检查结构、链接与规则一致性。
 4. 回写对应 GitHub Issue 的结果和里程碑；按实际影响决定是否记录 `CHANGELOG.md`。汇报修改结果、执行过的验证以及尚未完成的验收。创建 skill 或完成实现本身不授权提交、部署或发布。
 
-审查时分别判断 **Standards**（规范、复用、安全、兼容性）和 **Spec**（需求与验收行为）。指出具体文件、影响和修复建议，不用“已遵循规范”代替证据。
+审查时分别判断 **Standards**（规范、性能、复用设计、安全、兼容性）和 **Spec**（需求与验收行为）。按[审查证据要求](references/coding-standards.md#审查与交付证据)指出具体文件、影响和修复建议，不用“已遵循规范”代替证据。
