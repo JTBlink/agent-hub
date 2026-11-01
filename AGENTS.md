@@ -57,7 +57,9 @@
 
 ## 测试规范
 
-Rust 单元测试应放在被测模块相邻的独立测试文件中（如 `<module>/tests.rs`），实现文件仅保留 `#[cfg(test)] mod tests;` 声明；公开行为和端到端流程放入 `tests/*.rs`。测试名称应描述具体行为，例如 `creates_workspace_with_default_settings`。每次修复缺陷都应添加回归测试。提交拉取请求前，请运行 `cargo test`、格式检查和 Clippy 检查。
+测试采用“单元测试就近、跨模块流程集中”的规则：前端 `*.test.ts(x)` 与源码同目录，Rust 模块测试放相邻独立测试文件，Rust 公共接口与 CLI 集成测试放 `src-tauri/tests/`，浏览器验收放 `tests/browser/`，构建脚本测试与脚本同目录。详细的命名、辅助代码、fixture 与清理规则统一见[开发规范：测试与变更范围](.agents/skills/rust-dev/references/coding-standards.md#测试与变更范围)。
+
+测试代码保持精简，覆盖可观察行为和关键边界；清理失效或无额外覆盖价值的测试脚本，保留缺陷回归与独有覆盖。测试名称应描述具体行为，例如 `creates_workspace_with_default_settings`。每次修复缺陷都应添加回归测试。提交拉取请求前，请运行 `cargo test`、格式检查和 Clippy 检查。
 
 ## 提交与变更审查规范
 
