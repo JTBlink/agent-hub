@@ -22,7 +22,7 @@ export function WorktreeFileCloseButton({
     <>
       {document.dirty && (
         <span
-          className="mx-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-light/70"
+          className="mx-1 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-light"
           role="status"
           aria-label={t("worktree.unsaved")}
         />
