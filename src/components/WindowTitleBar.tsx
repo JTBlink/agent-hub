@@ -1,4 +1,3 @@
-import { WorkspaceSelectionValue } from "./worktree/WorkspaceSelectionValue";
 import { OpenProjectInVscode } from "./OpenProjectInVscode";
 import { Link, useLocation, useMatch } from "react-router-dom";
 import { CircleHelp, Search } from "lucide-react";
@@ -56,19 +55,12 @@ export function WindowTitleBar({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <ThemedSelect
-          aria-label={t("sidebar.switchProject")}
+          aria-label={t("worktree.selectCheckout")}
           title={
             selectedProject
               ? `${selection.selectedLabel}\n${compactHomePath(selection.path ?? selectedProject.path)}`
               : t("sidebar.switchProject")
           }
-          renderValue={() => (
-            <WorkspaceSelectionValue
-              project={selectedProject?.name ?? t("sidebar.switchProject")}
-              branch={selection.branchLabel}
-              truncate={false}
-            />
-          )}
           value={selection.value}
           onChange={(event) => selection.select(event.target.value)}
           leadingIcon={

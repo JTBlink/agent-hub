@@ -2061,6 +2061,7 @@
     }
   },
   "worktree": {
+    "selectCheckout": "切换项目／工作树",
     "saveBeforeCloseTitle": "保存更改？",
     "saveBeforeCloseMessage": "关闭前是否保存以下文件的更改？不保存将丢失这些更改。",
     "dontSave": "不保存",

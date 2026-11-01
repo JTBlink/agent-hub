@@ -7,7 +7,18 @@ import { useActiveWorkspace } from "./useActiveWorkspace";
 import { useProjectWorktrees } from "./useProjectWorktrees";
 import { WorkspaceFilesContext } from "./useWorkspaceFiles";
 
-/** Title bar and sidebar consume the same checkout options and selection rules. */
+function checkoutLabel(project: Project, path: string) {
+  const directory =
+    path
+      .replace(/[\\/]+$/, "")
+      .split(/[\\/]/)
+      .at(-1) || path;
+  return directory === project.name
+    ? project.name
+    : `${project.name} · ${directory}`;
+}
+
+/** The title bar selects a checkout; branch operations keep that directory selected. */
 export function useWorkspaceSelection(projects: readonly Project[]) {
   const route = useMatch("/project/:id/*");
   const { search } = useLocation();
@@ -46,7 +57,7 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
       ];
     return worktrees.map((worktree) => ({
       value: JSON.stringify([item.id, worktree.path]),
-      label: `${item.name} · ${worktree.branch ?? worktree.head?.slice(0, 8) ?? worktree.path.split(/[\\/]/).filter(Boolean).at(-1)}`,
+      label: checkoutLabel(item, worktree.path),
       disabled: !worktree.available,
       projectId: item.id,
       worktreePath: worktree.path,
@@ -61,7 +72,7 @@ export function useWorkspaceSelection(projects: readonly Project[]) {
   )
     options.push({
       value,
-      label: `${project?.name} · ${path?.split(/[\\/]/).filter(Boolean).at(-1)}`,
+      label: checkoutLabel(project, path),
       disabled: true,
       projectId: project.id,
       worktreePath: path,

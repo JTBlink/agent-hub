@@ -2015,6 +2015,7 @@
     }
   },
   "worktree": {
+    "selectCheckout": "切換專案／工作樹",
     "saveBeforeCloseTitle": "儲存變更？",
     "saveBeforeCloseMessage": "關閉前是否儲存以下檔案的變更？不儲存將遺失這些變更。",
     "dontSave": "不儲存",

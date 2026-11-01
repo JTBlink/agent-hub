@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { createInstance } from "i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
@@ -11,8 +11,13 @@ import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CommandPalette } from "./CommandPalette";
 import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
+import { getProjectGitReferences, runProjectGitAction } from "../lib/gitApi";
 import { getProjectWorktrees } from "../lib/worktreeApi";
 
+vi.mock("../lib/gitApi", () => ({
+  getProjectGitReferences: vi.fn(),
+  runProjectGitAction: vi.fn(),
+}));
 vi.mock("../lib/worktreeApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/worktreeApi")>();
   return {
@@ -73,8 +78,9 @@ vi.mock("../context/AppContext", () => ({
 }));
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
+const translate = i18n.t.bind(i18n);
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: i18n.t.bind(i18n) }),
+  useTranslation: () => ({ t: translate }),
 }));
 
 let root: Root;
@@ -203,7 +209,7 @@ it("drags from the title bar background while its controls remain clickable", as
 it("switches projects from the title bar without dragging the window", async () => {
   await render();
   const selector = container.querySelector<HTMLButtonElement>(
-    '[role="combobox"][aria-label="切换项目"]',
+    '[role="combobox"][aria-label="切换项目／工作树"]',
   )!;
   await act(async () =>
     selector.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })),
@@ -221,7 +227,7 @@ it("switches projects from the title bar without dragging the window", async () 
 it("places the VS Code icon beside the project selector and opens the route worktree", async () => {
   await render("/project/demo?worktree=%2Fworkspace%2Ftopic");
   const selector = container.querySelector(
-    '[role="combobox"][aria-label="切换项目"]',
+    '[role="combobox"][aria-label="切换项目／工作树"]',
   )!;
   const button = container.querySelector<HTMLButtonElement>(
     'header button[aria-label="在 VS Code 中打开"]',
@@ -238,17 +244,13 @@ it("places the VS Code icon beside the project selector and opens the route work
   expect(openDirectoryInVscode).toHaveBeenLastCalledWith("/workspace/topic");
 });
 
-it("shares checkout options, selection and branch refresh between the title bar and sidebar", async () => {
+it("selects worktrees above and changes branches below without navigating to another checkout", async () => {
   function SharedShell() {
     const location = useLocation();
-    const navigate = useNavigate();
     return (
       <>
         <WindowTitleBar onOpenCommands={() => {}} />
         <ProjectSwitcher onRemove={() => {}} />
-        <button data-open-git onClick={() => navigate("/git")}>
-          Git
-        </button>
         <output>
           {location.pathname}
           {location.search}
@@ -267,45 +269,69 @@ it("shares checkout options, selection and branch refresh between the title bar 
       </MemoryRouter>,
     ),
   );
-  const selectors = () => [
-    ...container.querySelectorAll<HTMLSelectElement>("select"),
-  ];
-  const assertShared = (path: string) => {
-    const [header, sidebar] = selectors();
-    expect(header.value).toBe(
-      JSON.stringify([path.includes("other") ? "other" : "demo", path]),
-    );
-    expect(sidebar.value).toBe(header.value);
-    expect(
-      [...sidebar.options]
-        .filter((option) => option.value)
-        .map((option) => [option.value, option.text, option.disabled]),
-    ).toEqual(
-      [...header.options].map((option) => [
-        option.value,
-        option.text,
-        option.disabled,
-      ]),
-    );
-  };
-  const choose = async (index: number, id: string, path: string) => {
-    await act(async () => {
-      const select = selectors()[index];
-      select.value = JSON.stringify([id, path]);
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-  };
-  assertShared("<workspace>/demo-topic");
-  await choose(1, "other", "~/projects/other");
-  assertShared("~/projects/other");
-  await choose(0, "demo", "<workspace>/demo");
-  assertShared("<workspace>/demo");
-  await choose(0, "demo", "<workspace>/demo-topic");
-  assertShared("<workspace>/demo-topic");
-  await act(async () =>
-    container.querySelector<HTMLButtonElement>("[data-open-git]")!.click(),
+  const checkout = () =>
+    container.querySelector<HTMLSelectElement>("header select")!;
+  const branch = () =>
+    container.querySelector<HTMLButtonElement>(
+      'button[aria-label="切换分支"]',
+    )!;
+  expect(checkout().selectedOptions[0].text).toBe(
+    "Demo workspace · demo-topic",
   );
-  assertShared("<workspace>/demo-topic");
+  expect(branch().textContent).toContain("feature/shared");
+  expect(container.querySelectorAll("select")).toHaveLength(1);
+  const route = container.querySelector("output")!.textContent;
+  vi.mocked(getProjectGitReferences).mockResolvedValue({
+    entries: [
+      { kind: "branches", name: "main", sha: "abcdef" },
+      { kind: "branches", name: "feature/shared", sha: "fedcba" },
+    ],
+    truncated: false,
+  });
+  vi.mocked(runProjectGitAction).mockRejectedValueOnce(
+    new Error("Local changes would be overwritten"),
+  );
+  await act(async () => branch().click());
+  const dialog = () => document.querySelector('[role="alertdialog"]')!;
+  const chooseBranch = () => {
+    const select = dialog().querySelector("select")!;
+    select.value = "main";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const confirm = () =>
+    [...dialog().querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "切换分支",
+    )!;
+  await act(async () => chooseBranch());
+  await act(async () => confirm().click());
+  expect(runProjectGitAction).toHaveBeenLastCalledWith(
+    "demo",
+    "<workspace>/demo-topic",
+    "switch_branch",
+    "main",
+  );
+  expect(dialog().textContent).toContain("Local changes would be overwritten");
+  expect(container.querySelector("output")!.textContent).toBe(route);
+  vi.mocked(runProjectGitAction).mockImplementationOnce(async () => {
+    vi.mocked(getProjectWorktrees).mockResolvedValueOnce([
+      {
+        path: "<workspace>/demo-topic",
+        branch: "main",
+        head: "abcdef",
+        is_main: false,
+        locked: false,
+        available: true,
+      },
+    ]);
+    window.dispatchEvent(new Event("project-git-changed"));
+  });
+  await act(async () => confirm().click());
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  expect(branch().textContent).toContain("main");
+  expect(checkout().selectedOptions[0].text).toBe(
+    "Demo workspace · demo-topic",
+  );
+  expect(container.querySelector("output")!.textContent).toBe(route);
   await act(async () =>
     container
       .querySelector<HTMLButtonElement>(
@@ -316,40 +342,4 @@ it("shares checkout options, selection and branch refresh between the title bar 
   expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
     "<workspace>/demo-topic",
   );
-  const calls = vi.mocked(getProjectWorktrees).mock.calls.length;
-  vi.mocked(getProjectWorktrees).mockResolvedValueOnce([
-    {
-      path: "<workspace>/demo",
-      branch: "main",
-      head: "abcdef",
-      is_main: true,
-      locked: false,
-      available: true,
-    },
-    {
-      path: "<workspace>/demo-topic",
-      branch: "feature/workspace-navigation-and-editor-improvements",
-      head: "fedcba",
-      is_main: false,
-      locked: false,
-      available: true,
-    },
-  ]);
-  await act(async () => window.dispatchEvent(new Event("project-git-changed")));
-  expect(getProjectWorktrees).toHaveBeenCalledTimes(calls + 1);
-  assertShared("<workspace>/demo-topic");
-  expect(selectors()[0].selectedOptions[0].text).toBe(
-    "Demo workspace · feature/workspace-navigation-and-editor-improvements",
-  );
-  for (const trigger of container.querySelectorAll<HTMLButtonElement>(
-    '[role="combobox"]',
-  )) {
-    expect(trigger.title).toContain(
-      "feature/workspace-navigation-and-editor-improvements",
-    );
-    expect(trigger.title).toContain("<workspace>/demo-topic");
-    expect(trigger.textContent).toContain(
-      "feature/workspace-navigation-and-editor-improvements",
-    );
-  }
 });

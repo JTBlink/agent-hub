@@ -1,11 +1,9 @@
-import { WorkspaceSelectionValue } from "./WorkspaceSelectionValue";
-import { GitBranch, RefreshCw, Trash2 } from "lucide-react";
+import { WorktreeBranchSwitcher } from "./WorktreeBranchSwitcher";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { ThemedSelect } from "../ThemedSelect";
 import { useApp } from "../../context/AppContext";
 import type { Project } from "../../lib/tauri";
 import { useWorkspaceSelection } from "../../hooks/useWorkspaceSelection";
-import { compactHomePath } from "../../utils";
 import { cn } from "../../utils";
 
 export function ProjectSwitcher({
@@ -27,38 +25,18 @@ export function ProjectSwitcher({
         {project && (
           <>
             <div className="min-w-0 flex-1">
-              <ThemedSelect
-                aria-label={t("worktree.title")}
-                title={
-                  selection.path
-                    ? `${selection.selectedLabel}\n${compactHomePath(selection.path)}`
-                    : t("worktree.title")
+              <WorktreeBranchSwitcher
+                key={`${project.id}:${selection.path}`}
+                projectId={project.id}
+                worktreePath={selection.path}
+                branch={selection.current?.branch ?? undefined}
+                label={selection.branchLabel ?? t("git.unborn")}
+                disabled={
+                  loading ||
+                  !selection.path ||
+                  selection.current?.available === false
                 }
-                renderValue={() => (
-                  <WorkspaceSelectionValue
-                    project={project.name}
-                    branch={selection.branchLabel}
-                  />
-                )}
-                value={selection.value}
-                disabled={loading || selection.options.length === 0}
-                onChange={(event) => selection.select(event.target.value)}
-                leadingIcon={<GitBranch size={13} className="shrink-0" />}
-                className="h-7 w-full gap-1 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:text-secondary"
-              >
-                <option value="" disabled>
-                  {t(loading ? "common.loading" : "worktree.title")}
-                </option>
-                {selection.options.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                    disabled={option.disabled}
-                  >
-                    {option.label}
-                  </option>
-                ))}
-              </ThemedSelect>
+              />
             </div>
             <button
               type="button"

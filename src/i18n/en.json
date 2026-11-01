@@ -2064,6 +2064,7 @@
     }
   },
   "worktree": {
+    "selectCheckout": "Switch project / worktree",
     "saveBeforeCloseTitle": "Save changes?",
     "saveBeforeCloseMessage": "Save changes to these files before closing? Unsaved changes will be lost.",
     "dontSave": "Don’t Save",

@@ -588,7 +588,7 @@ it.each(["edit", "delete", "create"])(
   },
 );
 
-it("switches worktrees from a menu and disables unavailable checkouts", async () => {
+it("shows branch controls instead of a second worktree selector", async () => {
   const project = { ...makeProject(), id: "tree-demo" };
   Object.assign(app, { projects: [project] });
   worktreeMocks.list.mockResolvedValueOnce([
@@ -600,47 +600,15 @@ it("switches worktrees from a menu and disables unavailable checkouts", async ()
       locked: false,
       available: true,
     },
-    {
-      path: "<workspace>/topic",
-      branch: "feature/topic",
-      head: "def",
-      is_main: false,
-      locked: true,
-      available: true,
-    },
-    {
-      path: "<workspace>/missing",
-      branch: "missing",
-      head: "def",
-      is_main: false,
-      locked: false,
-      available: false,
-    },
   ]);
   await render(`/project/${project.id}`);
   expect(worktreeMocks.list).toHaveBeenCalledWith(project.id);
-  const worktreeMenu = () =>
-    container.querySelector<HTMLButtonElement>(
-      '[role="combobox"][aria-label="工作树"]',
-    )!;
-  expect(worktreeMenu().textContent).toContain("Demo Project · main");
-  await click(worktreeMenu());
-  const options = [
-    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
-  ];
   expect(
-    options.find((item) => item.textContent === "Demo Project · missing")
-      ?.disabled,
-  ).toBe(true);
-  await click(
-    options.find(
-      (item) => item.textContent === "Demo Project · feature/topic",
-    )!,
-  );
-  expect(worktreeMenu().textContent).toContain("Demo Project · feature/topic");
-  expect(container.querySelector("output")?.textContent).toBe(
-    `/project/${project.id}`,
-  );
+    container.querySelector('[role="combobox"][aria-label="工作树"]'),
+  ).toBeNull();
+  expect(
+    container.querySelector('[aria-label="切换分支"]')?.textContent,
+  ).toContain("main");
 });
 
 it.each(["/automation", "/global-workspace/codex", "/my-skills"])(
@@ -696,16 +664,14 @@ it("puts Projects first and separates project files from the skills panel", asyn
   expect(skillsHeading.closest("[hidden]")).not.toBeNull();
 });
 
-it("uses the top menu for project switching and keeps the worktree controls", async () => {
+it("uses the top menu for project switching and keeps the branch controls", async () => {
   const project = { ...makeProject(), id: "menu-project", name: "Demo" };
   Object.assign(app, { projects: [project] });
   await render(`/project/${project.id}`);
   expect(
     container.querySelector('[role="combobox"][aria-label="切换项目"]'),
   ).toBeNull();
-  expect(
-    container.querySelector('[role="combobox"][aria-label="工作树"]'),
-  ).not.toBeNull();
+  expect(container.querySelector('[aria-label="切换分支"]')).not.toBeNull();
   expect(container.querySelector('[aria-label="刷新工作树"]')).not.toBeNull();
 });
 
