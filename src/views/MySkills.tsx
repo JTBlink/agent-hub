@@ -1192,7 +1192,7 @@ export function MySkills() {
                   type="button"
                   onClick={() => navigate("/backup")}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-3 py-2 text-[13px] font-medium transition-colors hover:bg-surface-hover hover:text-secondary",
+                    "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-hover hover:text-secondary",
                     meta.className,
                   )}
                   title={t("sidebar.backup")}
@@ -1205,7 +1205,7 @@ export function MySkills() {
             <button
               onClick={handleCheckAllUpdates}
               disabled={checkingAll}
-              className="ml-2 mr-2 inline-flex items-center gap-1 rounded-md border-l border-border-subtle pl-4 pr-3 py-2 text-[13px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
+              className="ml-2 mr-2 inline-flex items-center gap-1 rounded-md border-l border-border-subtle pl-4 pr-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
             >
               <RefreshCw
                 className={cn("h-3.5 w-3.5", checkingAll && "animate-spin")}
@@ -1215,7 +1215,7 @@ export function MySkills() {
             <button
               onClick={handleUpdateAvailableSkills}
               disabled={batchUpdating || availableUpdateCount === 0}
-              className="mr-2 inline-flex items-center gap-1 rounded-md px-3 py-2 text-[13px] font-medium text-accent-light transition-colors hover:bg-accent-bg disabled:opacity-50"
+              className="mr-2 inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-accent-light transition-colors hover:bg-accent-bg disabled:opacity-50"
             >
               <RotateCcw
                 className={cn("h-3.5 w-3.5", batchUpdating && "animate-spin")}
@@ -1387,10 +1387,10 @@ export function MySkills() {
       {filtered.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
           <Layers className="mb-4 h-12 w-12 text-faint" />
-          <h3 className="mb-1.5 text-[14px] font-semibold text-tertiary">
+          <h3 className="mb-1.5 text-base font-semibold text-tertiary">
             {t("mySkills.noSkills")}
           </h3>
-          <p className="text-[13px] text-muted">
+          <p className="text-sm text-muted">
             {skills.length === 0
               ? t("mySkills.addFirst")
               : t("mySkills.noMatch")}
@@ -1508,7 +1508,7 @@ export function MySkills() {
                               )}
                             </div>
                             <h3
-                              className="flex-1 truncate text-[14px] font-semibold text-primary group-hover:text-accent-light"
+                              className="flex-1 truncate text-base font-semibold text-primary group-hover:text-accent-light"
                               title={displayName}
                             >
                               {displayName}
@@ -1520,7 +1520,7 @@ export function MySkills() {
                                   handleRefreshSkill(skill);
                                 }}
                                 disabled={updatingSkillId === skill.id}
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-medium text-amber-600 outline-none transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-xs font-medium text-amber-600 outline-none transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400"
                                 title={refreshLabel(skill)}
                               >
                                 <RotateCcw
@@ -1613,7 +1613,7 @@ export function MySkills() {
                           </div>
 
                           <div className="px-3.5 pb-3">
-                            <p className="text-[13px] leading-[18px] text-muted truncate">
+                            <p className="text-sm leading-[18px] text-muted truncate">
                               {skill.description || "—"}
                             </p>
                             {((badge && !showUpdatePill) ||
@@ -1625,7 +1625,7 @@ export function MySkills() {
                                       e.stopPropagation();
                                       navigate("/backup");
                                     }}
-                                    className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[13px] font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+                                    className="rounded-full bg-amber-500/12 px-2 py-0.5 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
                                     title={t("mySkills.needsAttentionHint")}
                                   >
                                     {t("mySkills.needsAttention")}
@@ -1634,7 +1634,7 @@ export function MySkills() {
                                 {badge && !showUpdatePill && (
                                   <span
                                     className={cn(
-                                      "rounded-full px-2 py-0.5 text-[13px] font-medium",
+                                      "rounded-full px-2 py-0.5 text-sm font-medium",
                                       badge.className,
                                     )}
                                   >
@@ -1648,7 +1648,7 @@ export function MySkills() {
                                 <span
                                   key={tag}
                                   className={cn(
-                                    "group/tag inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                    "group/tag inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium",
                                     getTagColor(tag, allTags),
                                   )}
                                 >
@@ -1693,7 +1693,7 @@ export function MySkills() {
                                       }
                                     }}
                                     placeholder={t("mySkills.tags.addTag")}
-                                    className="h-5 w-28 rounded-full border border-border-subtle bg-transparent px-1.5 text-[11px] text-secondary outline-none focus:border-accent"
+                                    className="h-5 w-28 rounded-full border border-border-subtle bg-transparent px-1.5 text-xs text-secondary outline-none focus:border-accent"
                                     autoCapitalize="none"
                                     autoCorrect="off"
                                     autoComplete="off"
@@ -1715,7 +1715,7 @@ export function MySkills() {
                                               e.stopPropagation();
                                               handleAddTag(skill, tagOption);
                                             }}
-                                            className="w-full truncate rounded px-1.5 py-1 text-left text-[11px] text-secondary hover:bg-surface-hover"
+                                            className="w-full truncate rounded px-1.5 py-1 text-left text-xs text-secondary hover:bg-surface-hover"
                                             title={tagOption}
                                           >
                                             {tagOption}
@@ -1743,7 +1743,7 @@ export function MySkills() {
 
                           <div className="mt-auto flex items-center justify-between gap-2 border-t border-border-faint px-3.5 py-2.5">
                             <div className="flex min-w-0 items-center gap-1.5">
-                              <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-muted">
+                              <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted">
                                 {sourceIcon(skill.source_type)}
                                 {sourceTypeLabel(skill)}
                               </span>
@@ -1751,7 +1751,7 @@ export function MySkills() {
                                 <>
                                   <span className="text-faint">·</span>
                                   <span
-                                    className="truncate text-[12px] text-faint"
+                                    className="truncate text-xs text-faint"
                                     title={skill.source_ref ?? undefined}
                                   >
                                     {sourceRefLabel(skill)}
@@ -1859,13 +1859,13 @@ export function MySkills() {
                         </div>
 
                         <h3
-                          className="w-[180px] shrink-0 truncate text-[14px] font-semibold text-secondary group-hover:text-primary"
+                          className="w-[180px] shrink-0 truncate text-base font-semibold text-secondary group-hover:text-primary"
                           title={displayName}
                         >
                           {displayName}
                         </h3>
 
-                        <p className="min-w-0 flex-1 truncate text-[13px] text-muted">
+                        <p className="min-w-0 flex-1 truncate text-sm text-muted">
                           {skill.description || "—"}
                         </p>
 
@@ -1874,7 +1874,7 @@ export function MySkills() {
                             <span
                               key={tag}
                               className={cn(
-                                "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                                "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
                                 getTagColor(tag, allTags),
                               )}
                             >
@@ -1890,7 +1890,7 @@ export function MySkills() {
                                 e.stopPropagation();
                                 navigate("/backup");
                               }}
-                              className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[12px] font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+                              className="rounded-full bg-amber-500/12 px-2 py-0.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
                               title={t("mySkills.needsAttentionHint")}
                             >
                               {t("mySkills.needsAttention")}
@@ -1903,7 +1903,7 @@ export function MySkills() {
                                 handleRefreshSkill(skill);
                               }}
                               disabled={updatingSkillId === skill.id}
-                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-medium text-amber-600 outline-none transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400"
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-xs font-medium text-amber-600 outline-none transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400"
                               title={refreshLabel(skill)}
                             >
                               <RotateCcw
@@ -1919,7 +1919,7 @@ export function MySkills() {
                             badge && (
                               <span
                                 className={cn(
-                                  "rounded-full px-2 py-0.5 text-[12px] font-medium",
+                                  "rounded-full px-2 py-0.5 text-xs font-medium",
                                   badge.className,
                                 )}
                               >
@@ -1948,13 +1948,13 @@ export function MySkills() {
                                 : null
                             }
                           />
-                          <span className="inline-flex items-center gap-1 text-[13px] text-muted">
+                          <span className="inline-flex items-center gap-1 text-sm text-muted">
                             {sourceIcon(skill.source_type)}
                             {sourceTypeLabel(skill)}
                           </span>
                           {sourceRefLabel(skill) && (
                             <span
-                              className="text-[13px] text-faint"
+                              className="text-sm text-faint"
                               title={skill.source_ref ?? undefined}
                             >
                               {sourceRefLabel(skill)}
@@ -1966,7 +1966,7 @@ export function MySkills() {
                             groupNameMap={groupNameMap}
                             onSwitch={handleSwitchSkillGroup}
                             onRemove={handleRemoveFromGroup}
-                            fontSize="text-[13px]"
+                            fontSize="text-sm"
                           />
                         </div>
 
@@ -2201,7 +2201,7 @@ export function MySkills() {
                 setTagToRename(tagMenu.tag);
                 setTagMenu(null);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-secondary hover:bg-surface-hover"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-secondary hover:bg-surface-hover"
             >
               <Pencil className="h-3.5 w-3.5" />
               {t("mySkills.tags.renameTag")}
@@ -2211,7 +2211,7 @@ export function MySkills() {
                 setTagToDelete(tagMenu.tag);
                 setTagMenu(null);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-red-400 hover:bg-surface-hover"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-red-400 hover:bg-surface-hover"
             >
               <Trash2 className="h-3.5 w-3.5" />
               {t("mySkills.tags.deleteTag")}

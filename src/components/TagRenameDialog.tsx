@@ -42,7 +42,7 @@ export function TagRenameDialog({
   };
 
   const inputClass =
-    "w-full bg-background border border-border-subtle rounded-lg px-3 py-2 text-[13px] text-secondary focus:outline-none focus:border-border transition-all placeholder-faint";
+    "w-full bg-background border border-border-subtle rounded-lg px-3 py-2 text-sm text-secondary focus:outline-none focus:border-border transition-all placeholder-faint";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -52,7 +52,7 @@ export function TagRenameDialog({
       />
       <div className="relative z-10 bg-surface border border-border rounded-xl w-full max-w-[400px] p-5 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[13px] font-semibold text-primary">
+          <h2 className="text-sm font-semibold text-primary">
             {t("mySkills.tags.renameTag")}
           </h2>
           <button
@@ -65,7 +65,7 @@ export function TagRenameDialog({
 
         <div className="space-y-3">
           <div>
-            <label className="block text-[13px] font-medium text-tertiary mb-1">
+            <label className="block text-sm font-medium text-tertiary mb-1">
               {t("mySkills.tags.tagName")}
             </label>
             <input
@@ -80,14 +80,14 @@ export function TagRenameDialog({
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
             >
               {t("common.cancel")}
             </button>
             <button
               onClick={handleRename}
               disabled={!canSave || loading}
-              className="px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
+              className="px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
             >
               {loading ? t("common.loading") : t("common.save")}
             </button>

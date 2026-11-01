@@ -40,7 +40,7 @@ export const codeTheme = EditorView.theme({
     height: "100%",
     color: "var(--color-text-secondary)",
     backgroundColor: "var(--color-bg)",
-    fontSize: "12px",
+    fontSize: "var(--font-size-code)",
   },
   "&.cm-focused": {
     outline: "1px solid var(--color-accent)",
@@ -48,8 +48,9 @@ export const codeTheme = EditorView.theme({
   },
   ".cm-scroller": {
     overflow: "auto",
-    fontFamily: "inherit",
-    lineHeight: "24px",
+    fontFamily: "var(--font-family-code)",
+    lineHeight: "var(--line-height-code)",
+    fontVariantLigatures: "none",
   },
   ".cm-content": { padding: "16px 0", caretColor: "var(--color-text-primary)" },
   ".cm-line": { padding: "0 16px" },

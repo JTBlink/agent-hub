@@ -62,7 +62,7 @@ export function AgentSettingsCard({
           <div className="flex items-center gap-2">
             <h3
               className={cn(
-                "truncate text-[14px] font-semibold",
+                "truncate text-base font-semibold",
                 agent.installed ? "text-primary" : "text-muted",
               )}
             >
@@ -70,7 +70,7 @@ export function AgentSettingsCard({
             </h3>
             {/* Enabled/disabled is carried by the switch; only "not installed" adds info. */}
             {!agent.installed && (
-              <span className="shrink-0 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-muted">
+              <span className="shrink-0 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-muted">
                 {t("settings.notInstalled")}
               </span>
             )}
@@ -78,17 +78,17 @@ export function AgentSettingsCard({
 
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
             {agent.is_custom && (
-              <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300">
+              <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-700 dark:text-sky-300">
                 {t("settings.customAgent")}
               </span>
             )}
             {agent.is_custom && agent.project_relative_skills_dir && (
-              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                 {t("settings.projectAgentSupported")}
               </span>
             )}
             {agent.has_path_override && !agent.is_custom && (
-              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                 {t("settings.pathOverridden")}
               </span>
             )}
@@ -132,7 +132,7 @@ export function AgentSettingsCard({
               aria-label={t("settings.skillsPath")}
               value={editingPathValue}
               onChange={(e) => setEditingPathValue(e.target.value)}
-              className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-[12px] font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
+              className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-xs font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSavePath();
@@ -164,7 +164,7 @@ export function AgentSettingsCard({
         ) : (
           <div className="flex items-center gap-1">
             <p
-              className="min-w-0 flex-1 truncate text-[12px] font-mono leading-tight text-muted"
+              className="min-w-0 flex-1 truncate text-xs font-mono leading-tight text-muted"
               title={agent.skills_dir}
             >
               {compactHomePath(agent.skills_dir)}
@@ -200,7 +200,7 @@ export function AgentSettingsCard({
               value={editingProjectPathValue}
               onChange={(e) => setEditingProjectPathValue(e.target.value)}
               placeholder={t("settings.projectSkillsPathPlaceholder")}
-              className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-[12px] font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
+              className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-xs font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSaveProjectPath();
@@ -225,7 +225,7 @@ export function AgentSettingsCard({
         ) : (
           <div className="flex items-center gap-1">
             <p
-              className="min-w-0 flex-1 truncate text-[12px] font-mono leading-tight text-muted"
+              className="min-w-0 flex-1 truncate text-xs font-mono leading-tight text-muted"
               title={
                 agent.project_relative_skills_dir ??
                 t("settings.projectSkillsPathDesc")

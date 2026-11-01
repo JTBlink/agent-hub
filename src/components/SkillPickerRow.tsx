@@ -74,15 +74,15 @@ export function SkillPickerRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-[13px] font-medium text-primary">
+          <span className="truncate text-sm font-medium text-primary">
             {skill.name}
           </span>
-          <span className="shrink-0 rounded-full bg-surface-hover px-1.5 py-0.5 text-[11px] font-medium text-muted">
+          <span className="shrink-0 rounded-full bg-surface-hover px-1.5 py-0.5 text-xs font-medium text-muted">
             {sourceLabel}
           </span>
         </div>
         {skill.description && (
-          <div className="mt-0.5 truncate text-[12px] text-muted">
+          <div className="mt-0.5 truncate text-xs text-muted">
             {skill.description}
           </div>
         )}
@@ -92,7 +92,7 @@ export function SkillPickerRow({
               <span
                 key={tag}
                 className={cn(
-                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10.5px] font-medium",
+                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
                   getTagColor(tag, allTags),
                 )}
               >
@@ -108,7 +108,7 @@ export function SkillPickerRow({
       ) : status !== "available" ? (
         <span
           className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
             status === "installed" &&
               "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
             status === "conflict" &&

@@ -61,7 +61,7 @@ export function TaskDevelopmentView({
                 label={status(check.status)}
               />
               {check.sha && (
-                <code className="text-[10px] text-muted" title={check.sha}>
+                <code className="text-xs text-muted" title={check.sha}>
                   {check.sha.slice(0, 8)}
                 </code>
               )}
@@ -110,7 +110,7 @@ export function TaskDevelopmentView({
                   label={status(review.state)}
                 />
                 {review.submitted_at && (
-                  <span className="text-[11px] text-muted">
+                  <span className="text-xs text-muted">
                     {new Date(review.submitted_at).toLocaleString()}
                   </span>
                 )}
@@ -125,7 +125,7 @@ export function TaskDevelopmentView({
                 )}
               </p>
               {review.path && (
-                <p className="break-all font-mono text-[11px] text-muted">
+                <p className="break-all font-mono text-xs text-muted">
                   {review.path}
                   {review.line != null ? `:${review.line}` : ""}
                 </p>

@@ -24,11 +24,11 @@ export function SkillDocumentMetadata({
       aria-label={t("mySkills.documentMetadata.title")}
       className="mb-5 rounded-xl border border-border-subtle bg-surface/70 p-4"
     >
-      <h3 className="mb-3 text-[13px] font-medium text-primary">
+      <h3 className="mb-3 text-sm font-medium text-primary">
         {t("mySkills.documentMetadata.title")}
       </h3>
       {rawMetadata ? (
-        <pre className="whitespace-pre-wrap break-words font-mono text-[12px] text-secondary">
+        <pre className="whitespace-pre-wrap break-words font-mono text-code text-secondary">
           {rawMetadata}
         </pre>
       ) : (
@@ -40,10 +40,10 @@ export function SkillDocumentMetadata({
                 key={key}
                 className={`min-w-0 ${["summary", "description"].includes(labelKey) || value.includes("\n") ? "sm:col-span-2" : ""}`}
               >
-                <dt className="text-[12px] text-muted" title={key}>
+                <dt className="text-xs text-muted" title={key}>
                   {Object.hasOwn(labels, labelKey) ? labels[labelKey] : key}
                 </dt>
-                <dd className="mt-0.5 whitespace-pre-wrap break-words text-[13px] text-secondary">
+                <dd className="mt-0.5 whitespace-pre-wrap break-words text-sm text-secondary">
                   {value}
                 </dd>
               </div>

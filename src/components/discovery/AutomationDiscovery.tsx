@@ -166,7 +166,7 @@ export function AutomationDiscovery({
         }));
   return (
     <div className="space-y-4 pb-8">
-      <p className="text-[13px] text-muted">{t("discovery.taskDescription")}</p>
+      <p className="text-sm text-muted">{t("discovery.taskDescription")}</p>
       {overview.error && (
         <StatusBanner
           compact
@@ -205,7 +205,7 @@ export function AutomationDiscovery({
           {catalogLoading && (
             <p
               role="status"
-              className="flex items-center gap-2 py-4 text-[13px] text-muted"
+              className="flex items-center gap-2 py-4 text-sm text-muted"
             >
               <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
               {t("common.loading")}
@@ -215,11 +215,11 @@ export function AutomationDiscovery({
       )}
       {source === "local" && (
         <section className="app-panel space-y-3 p-4">
-          <h2 className="flex items-center gap-2 text-[13px] font-semibold text-secondary">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-secondary">
             <FolderUp aria-hidden="true" className="h-4 w-4" />
             {t("automation.importPackage")}
           </h2>
-          <p className="text-[12px] leading-6 text-muted">
+          <p className="text-xs leading-6 text-muted">
             {t("discovery.localDescription")}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -240,7 +240,7 @@ export function AutomationDiscovery({
               {t("automation.importFile")}
             </button>
           </div>
-          <pre className="overflow-x-auto rounded-lg bg-background p-3 text-[12px] text-secondary">
+          <pre className="overflow-x-auto rounded-lg bg-background p-3 text-xs text-secondary">
             {
               "example-task/\n├── task.json\n├── README.md\n├── prompt.md / herdr.json\n└── scripts/"
             }
@@ -255,16 +255,16 @@ export function AutomationDiscovery({
             void preview();
           }}
         >
-          <h2 className="flex items-center gap-2 text-[13px] font-semibold text-secondary">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-secondary">
             <GitBranch aria-hidden="true" className="h-4 w-4" />
             {t("install.gitInstall")}
           </h2>
-          <p className="text-[12px] leading-6 text-muted">
+          <p className="text-xs leading-6 text-muted">
             {t("discovery.gitDescription")}
           </p>
           <AutomationGitFormatHelp />
           <label className="block space-y-1.5">
-            <span className="text-[12px] text-muted">
+            <span className="text-xs text-muted">
               {t("discovery.repository")}
             </span>
             <input
@@ -277,7 +277,7 @@ export function AutomationDiscovery({
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-[12px] text-muted">
+            <span className="text-xs text-muted">
               {t("discovery.reference")}
             </span>
             <input
@@ -297,21 +297,18 @@ export function AutomationDiscovery({
         </form>
       )}
       {busy && (
-        <p
-          role="status"
-          className="flex items-center gap-2 text-[13px] text-muted"
-        >
+        <p role="status" className="flex items-center gap-2 text-sm text-muted">
           <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
           {t("common.loading")}
         </p>
       )}
       {error && (
-        <p role="alert" className="break-words text-[13px] text-danger">
+        <p role="alert" className="break-words text-sm text-danger">
           {error}
         </p>
       )}
       {source === "git" && git && (
-        <div className="space-y-2 text-[12px] text-muted">
+        <div className="space-y-2 text-xs text-muted">
           <p className="break-all">
             {t("discovery.fixedRevision")}: {git.catalog.revision}
           </p>
@@ -360,14 +357,14 @@ export function AutomationDiscovery({
         !catalogLoading &&
         !catalogError &&
         !cards.length && (
-          <p className="text-[13px] text-muted">
+          <p className="text-sm text-muted">
             {t(query ? "automation.noMatches" : "automation.noTemplates")}
           </p>
         )}
       {source === "git" && git && !cards.length && (
-        <p className="text-[13px] text-muted">{t("discovery.noPackages")}</p>
+        <p className="text-sm text-muted">{t("discovery.noPackages")}</p>
       )}
-      <p className="text-[12px] leading-6 text-muted">
+      <p className="text-xs leading-6 text-muted">
         {t("discovery.pausedInstall")}
       </p>
       {selected && (

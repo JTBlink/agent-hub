@@ -53,7 +53,7 @@ export function AutomationExecution({
   const runStatus =
     selected &&
     (saved ? (
-      <span className="text-[12px] text-muted">
+      <span className="text-xs text-muted">
         {t("automation.history.saved")}
       </span>
     ) : (
@@ -62,7 +62,7 @@ export function AutomationExecution({
   return (
     <section className="space-y-4" aria-label={t("automation.history.title")}>
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-secondary">
+        <div className="flex items-center gap-2 text-sm font-semibold text-secondary">
           {selectedId ? (
             <button
               type="button"
@@ -83,14 +83,14 @@ export function AutomationExecution({
             </>
           )}
         </div>
-        <p className="text-[12px] text-muted">
+        <p className="text-xs text-muted">
           {t("automation.history.localOnly")}
         </p>
       </header>
       {error && (
         <div
           role="alert"
-          className="flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 px-4 py-3 text-[12px] text-danger"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-danger/30 px-4 py-3 text-xs text-danger"
         >
           <p>
             {t("automation.history.loadFailed")}: {error}
@@ -105,28 +105,28 @@ export function AutomationExecution({
         </div>
       )}
       {saved && (
-        <p className="text-[12px] leading-6 text-muted">
+        <p className="text-xs leading-6 text-muted">
           {t("automation.history.hermesNote")}
         </p>
       )}
       {!history ? (
         !error && (
-          <p role="status" className="p-5 text-[13px] text-muted">
+          <p role="status" className="p-5 text-sm text-muted">
             {t("common.loading")}
           </p>
         )
       ) : selectedId ? (
         selected ? (
           <>
-            <dl className="grid grid-cols-2 gap-5 rounded-lg border border-border-subtle bg-surface px-5 py-4 text-[13px] lg:grid-cols-4">
+            <dl className="grid grid-cols-2 gap-5 rounded-lg border border-border-subtle bg-surface px-5 py-4 text-sm lg:grid-cols-4">
               <div>
-                <dt className="text-[11px] text-muted">
+                <dt className="text-xs text-muted">
                   {t("automation.columns.status")}
                 </dt>
                 <dd className="mt-2">{runStatus}</dd>
               </div>
               <div>
-                <dt className="text-[11px] text-muted">
+                <dt className="text-xs text-muted">
                   {t(
                     saved
                       ? "automation.history.savedAt"
@@ -140,7 +140,7 @@ export function AutomationExecution({
               {!saved && (
                 <>
                   <div>
-                    <dt className="text-[11px] text-muted">
+                    <dt className="text-xs text-muted">
                       {t("automation.history.finishedAt")}
                     </dt>
                     <dd className="mt-2 text-secondary">
@@ -148,7 +148,7 @@ export function AutomationExecution({
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[11px] text-muted">
+                    <dt className="text-xs text-muted">
                       {t("automation.history.exitCode")}
                     </dt>
                     <dd className="mt-2 text-secondary">
@@ -166,14 +166,14 @@ export function AutomationExecution({
             />
           </>
         ) : (
-          <p role="status" className="py-10 text-center text-[13px] text-muted">
+          <p role="status" className="py-10 text-center text-sm text-muted">
             {t("automation.history.unavailable")}
           </p>
         )
       ) : !history.runs.length ? (
         <p
           role="status"
-          className="rounded-lg border border-border-subtle bg-surface px-5 py-12 text-center text-[13px] text-muted"
+          className="rounded-lg border border-border-subtle bg-surface px-5 py-12 text-center text-sm text-muted"
         >
           {t(
             history.kind === "unsupported"
@@ -183,7 +183,7 @@ export function AutomationExecution({
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface">
-          <table className="w-full min-w-[520px] text-left text-[12px]">
+          <table className="w-full min-w-[520px] text-left text-xs">
             <caption className="sr-only">
               {t("automation.history.title")}
             </caption>
@@ -256,7 +256,7 @@ export function AutomationExecution({
               ))}
             </tbody>
           </table>
-          <p className="border-t border-border-subtle px-5 py-3 text-[11px] text-muted">
+          <p className="border-t border-border-subtle px-5 py-3 text-xs text-muted">
             {t("automation.history.retention")}
           </p>
         </div>

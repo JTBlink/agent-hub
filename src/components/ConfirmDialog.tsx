@@ -115,7 +115,7 @@ export function ConfirmDialog({
         <div className="flex items-center justify-between mb-4">
           <h2
             id={titleId}
-            className="text-[13px] font-semibold text-primary flex items-center gap-2"
+            className="text-sm font-semibold text-primary flex items-center gap-2"
           >
             <AlertTriangle className="w-4 h-4 text-amber-400" />
             {title || t("common.confirm")}
@@ -130,7 +130,7 @@ export function ConfirmDialog({
           </button>
         </div>
 
-        <p id={messageId} className="text-[13px] text-tertiary mb-5">
+        <p id={messageId} className="text-sm text-tertiary mb-5">
           {message}
         </p>
         {details && details.length > 0 ? (
@@ -138,7 +138,7 @@ export function ConfirmDialog({
             {details.map((detail) => (
               <span
                 key={detail}
-                className="rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-[13px] text-secondary"
+                className="rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-sm text-secondary"
               >
                 {detail}
               </span>
@@ -155,7 +155,7 @@ export function ConfirmDialog({
             ref={cancel}
             onClick={close}
             disabled={loading}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
           >
             {t("common.cancel")}
           </button>
@@ -164,8 +164,8 @@ export function ConfirmDialog({
             disabled={loading || confirmDisabled}
             className={
               tone === "warning"
-                ? "px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
-                : "px-3 py-1.5 rounded-lg bg-red-600/90 hover:bg-red-500 text-white text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-red-500/50 outline-none"
+                ? "px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
+                : "px-3 py-1.5 rounded-lg bg-red-600/90 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-red-500/50 outline-none"
             }
           >
             {loading ? t("common.loading") : confirmLabel || t("common.delete")}

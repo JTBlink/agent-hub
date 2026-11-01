@@ -72,7 +72,7 @@ export function Discover() {
             aria-pressed={selected}
             onClick={() => selectSource(source)}
             className={cn(
-              "mr-4 flex items-center gap-1.5 border-b-2 px-1 pb-1.5 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+              "mr-4 flex items-center gap-1.5 border-b-2 px-1 pb-1.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
               selected
                 ? "border-accent text-accent"
                 : "border-transparent text-muted hover:text-tertiary",
@@ -123,7 +123,7 @@ export function Discover() {
                   document.getElementById(`discover-${kinds[next]}`)?.focus();
                 }}
                 className={cn(
-                  "flex items-center gap-1.5 border-b-2 px-1 pb-2 text-[13px] font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  "flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
                   kind === value
                     ? "border-accent text-accent-light"
                     : "border-transparent text-muted hover:text-primary",

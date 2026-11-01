@@ -115,7 +115,7 @@ export function AutomationToolbar({
           )}
         </ThemedSelect>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <div className="flex items-center gap-2">
           <ToggleSwitch
             checked={hideBuiltin}

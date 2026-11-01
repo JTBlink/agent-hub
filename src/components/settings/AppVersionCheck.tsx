@@ -96,7 +96,7 @@ export function AppVersionCheck() {
           </button>
         )}
       </div>
-      <p role="status" aria-live="polite" className="text-[12px] text-muted">
+      <p role="status" aria-live="polite" className="text-xs text-muted">
         {state.status === "checked" &&
           t(
             state.info.has_update

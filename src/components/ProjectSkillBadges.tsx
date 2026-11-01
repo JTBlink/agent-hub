@@ -23,14 +23,14 @@ export function ProjectSkillBadges({
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
       <span
         className={cn(
-          "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[12px] font-medium",
+          "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
           status.className,
         )}
       >
         {status.label}
       </span>
       {disabled && (
-        <span className="shrink-0 whitespace-nowrap rounded-full bg-red-500/10 px-2 py-0.5 text-[12px] font-medium text-red-600 dark:text-red-300">
+        <span className="shrink-0 whitespace-nowrap rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-300">
           {t("project.disabled")}
         </span>
       )}
@@ -53,7 +53,7 @@ export function ProjectSkillBadges({
                 : undefined
             }
             className={cn(
-              "inline-flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[11px] font-medium",
+              "inline-flex max-w-full shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-xs font-medium",
               isActive ? "ring-1 ring-accent border-accent" : "",
               option.activeClass,
               option.colorClass,

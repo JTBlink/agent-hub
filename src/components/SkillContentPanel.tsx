@@ -81,7 +81,7 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
                   buttons.current.get(tabs[next])?.focus();
                 }}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
                   content.tab === tab
                     ? "bg-accent text-white"
                     : "bg-surface-hover text-muted hover:text-secondary",
@@ -99,7 +99,7 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
           type="button"
           onClick={content.refresh}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] text-muted hover:bg-surface-hover disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-muted hover:bg-surface-hover disabled:opacity-50"
         >
           <RefreshCw className={cn("h-3.5 w-3.5", busy && "animate-spin")} />
           {t("mySkills.contentComparison.refresh")}
@@ -108,7 +108,7 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
       {content.comparable && (
         <div
           aria-live="polite"
-          className="rounded-xl border border-border-subtle bg-surface px-3 py-2 text-[12px] text-secondary"
+          className="rounded-xl border border-border-subtle bg-surface px-3 py-2 text-xs text-secondary"
         >
           {content.diff.loading
             ? t("mySkills.contentComparison.comparing")
@@ -130,7 +130,7 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
         aria-busy={active.loading}
         className="space-y-3"
       >
-        <div className="text-[12px] font-medium text-muted">
+        <div className="text-xs font-medium text-muted">
           {content.tab === "diff"
             ? t("mySkills.contentComparison.diffTitle")
             : t(
@@ -142,11 +142,11 @@ export function SkillContentPanel({ skill }: { skill: ManagedSkill }) {
               )}
         </div>
         {active.loading ? (
-          <p className="py-8 text-center text-[13px] text-muted">
+          <p className="py-8 text-center text-sm text-muted">
             {t("common.loading")}
           </p>
         ) : active.error ? (
-          <div role="alert" className="space-y-2 text-[13px] text-muted">
+          <div role="alert" className="space-y-2 text-sm text-muted">
             <p>
               {content.tab === "central"
                 ? t("common.documentMissing")

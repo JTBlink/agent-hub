@@ -8,7 +8,7 @@ export function ProjectSkillEntryIssues({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="basis-full min-w-0 text-[12px] text-secondary">
+    <div className="basis-full min-w-0 text-xs text-secondary">
       {status.stale_targets.length > 0 && (
         <p>{t("projectLibrary.entryIssuesHelp")}</p>
       )}

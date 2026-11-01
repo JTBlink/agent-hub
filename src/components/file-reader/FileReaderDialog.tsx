@@ -61,7 +61,7 @@ export function FileReaderDialog({
           />
           <h2
             id={titleId}
-            className="min-w-0 flex-1 truncate text-[13px] font-semibold"
+            className="min-w-0 flex-1 truncate text-sm font-semibold"
             title={title}
           >
             {title ?? t("fileReader.title")}
@@ -94,7 +94,7 @@ export function FileReaderDialog({
         {description && (
           <p
             id={descriptionId}
-            className="shrink-0 border-t border-border-subtle bg-bg-secondary px-3 py-2 text-[11px] text-muted"
+            className="shrink-0 border-t border-border-subtle bg-bg-secondary px-3 py-2 text-xs text-muted"
           >
             {description}
           </p>

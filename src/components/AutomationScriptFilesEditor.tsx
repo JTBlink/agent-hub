@@ -22,10 +22,10 @@ export function AutomationScriptFilesEditor({
   return (
     <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface p-4">
       <div className="min-w-0 flex-1">
-        <h3 className="text-[13px] font-medium text-primary">
+        <h3 className="text-sm font-medium text-primary">
           {t("automation.scriptFiles", { count: files.length })}
         </h3>
-        <p className="mt-1 text-[12px] leading-6 text-muted">
+        <p className="mt-1 text-xs leading-6 text-muted">
           {t("automation.scriptFilesHint")}
         </p>
       </div>

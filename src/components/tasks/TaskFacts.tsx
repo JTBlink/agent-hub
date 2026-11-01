@@ -19,13 +19,13 @@ export function TaskSummaryFacts({ task }: { task: RepositoryTask }) {
         <span
           key={`${fact}:${index}`}
           title={fact ?? ""}
-          className="max-w-[130px] shrink-0 truncate rounded bg-surface-hover px-1.5 py-px text-[10px] text-muted"
+          className="max-w-[130px] shrink-0 truncate rounded bg-surface-hover px-1.5 py-px text-xs text-muted"
         >
           {fact}
         </span>
       ))}
       {metadata.comment_count != null && (
-        <span className="shrink-0 text-[10px]" title={t("tasks.discussion")}>
+        <span className="shrink-0 text-xs" title={t("tasks.discussion")}>
           ◌ {metadata.comment_count}
         </span>
       )}
@@ -142,7 +142,7 @@ export function TaskFacts({
           {m.labels.map((label) => (
             <span
               key={label}
-              className="rounded bg-surface-hover px-2 py-0.5 text-[11px] text-secondary"
+              className="rounded bg-surface-hover px-2 py-0.5 text-xs text-secondary"
             >
               {label}
             </span>

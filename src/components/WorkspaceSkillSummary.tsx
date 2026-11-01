@@ -30,7 +30,7 @@ export function WorkspaceSkillSummary({
         )}
         onClick={() => onChange(!onlyUnmanaged)}
         className={cn(
-          "rounded-full border px-2 py-0.5 text-[12px] transition-colors focus-visible:ring-2 focus-visible:ring-accent",
+          "rounded-full border px-2 py-0.5 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-accent",
           onlyUnmanaged
             ? "border-accent-border bg-accent-bg text-accent"
             : "border-border-subtle text-muted hover:bg-surface-hover hover:text-secondary",

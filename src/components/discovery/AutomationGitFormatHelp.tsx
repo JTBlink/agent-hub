@@ -13,7 +13,7 @@ export function AutomationGitFormatHelp() {
   return (
     <section
       aria-labelledby={title}
-      className="space-y-3 rounded-lg border border-border-subtle bg-background p-3 text-[12px] leading-6"
+      className="space-y-3 rounded-lg border border-border-subtle bg-background p-3 text-xs leading-6"
     >
       <h3 id={title} className="font-medium text-secondary">
         {t("discovery.gitFormatTitle")}

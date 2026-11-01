@@ -24,7 +24,7 @@ export function AddCustomAgentForm({
   return (
     <div className="app-panel p-4 mb-3 space-y-2.5">
       <div className="flex items-center justify-between">
-        <h3 className="text-[13px] font-medium text-secondary">
+        <h3 className="text-sm font-medium text-secondary">
           {t("settings.addCustomAgent")}
         </h3>
         <button
@@ -36,7 +36,7 @@ export function AddCustomAgentForm({
         </button>
       </div>
       <div>
-        <label className="text-[12px] text-muted mb-1 block">
+        <label className="text-xs text-muted mb-1 block">
           {t("settings.agentName")}
         </label>
         <input
@@ -49,7 +49,7 @@ export function AddCustomAgentForm({
         />
       </div>
       <div>
-        <label className="text-[12px] text-muted mb-1 block">
+        <label className="text-xs text-muted mb-1 block">
           {t("settings.skillsPath")}
         </label>
         <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +71,7 @@ export function AddCustomAgentForm({
         </div>
       </div>
       <div>
-        <label className="text-[12px] text-muted mb-1 block">
+        <label className="text-xs text-muted mb-1 block">
           {t("settings.projectSkillsPath")}
         </label>
         <input
@@ -82,7 +82,7 @@ export function AddCustomAgentForm({
           placeholder={t("settings.projectSkillsPathPlaceholder")}
           className={`${fieldClass} w-full font-mono`}
         />
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="mt-1 text-xs text-muted">
           {t("settings.projectSkillsPathDesc")}
         </p>
       </div>

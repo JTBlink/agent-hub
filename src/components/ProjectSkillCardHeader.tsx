@@ -19,14 +19,14 @@ export function ProjectSkillCardHeader({
         {leading}
       </div>
       <h3
-        className="min-w-0 flex-1 truncate text-[14px] font-semibold text-primary"
+        className="min-w-0 flex-1 truncate text-base font-semibold text-primary"
         title={title}
       >
         {title}
       </h3>
       <div className="flex shrink-0 items-center gap-2">
         {fileCount > 0 && (
-          <span className="flex shrink-0 items-center gap-1 text-[12px] tabular-nums text-faint">
+          <span className="flex shrink-0 items-center gap-1 text-xs tabular-nums text-faint">
             <FileText aria-hidden="true" className="h-3 w-3" />
             {fileCount}
           </span>

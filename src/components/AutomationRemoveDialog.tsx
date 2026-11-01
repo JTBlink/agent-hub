@@ -31,13 +31,13 @@ export function AutomationRemoveDialog({
     >
       <AutomationAdminNotice required={task.requires_admin} />
       {!owned && (
-        <p className="text-[12px] leading-6 text-muted">
+        <p className="text-xs leading-6 text-muted">
           {t("automation.externalDeleteHelp")}
         </p>
       )}
       {owned && (
         <div className="space-y-2 rounded-lg border border-border-subtle bg-bg-secondary p-3">
-          <label className="flex items-start gap-2 text-[13px] text-primary">
+          <label className="flex items-start gap-2 text-sm text-primary">
             <input
               type="checkbox"
               checked={deleteLocalData}
@@ -48,13 +48,13 @@ export function AutomationRemoveDialog({
             />
             {t("automation.deleteLocalData")}
           </label>
-          <p id={helpId} className="text-[12px] leading-relaxed text-tertiary">
+          <p id={helpId} className="text-xs leading-relaxed text-tertiary">
             {t("automation.deleteLocalDataHelp")}
           </p>
         </div>
       )}
       {error && (
-        <p role="alert" className="mt-3 text-[13px] text-danger">
+        <p role="alert" className="mt-3 text-sm text-danger">
           {error}
         </p>
       )}

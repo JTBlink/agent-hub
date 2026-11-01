@@ -56,7 +56,7 @@ function FileList({
               aria-current={selected === node.path ? "page" : undefined}
               onClick={() => onSelect(node.path)}
               className={cn(
-                "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
                 selected === node.path
                   ? "bg-surface-active text-accent-light"
                   : "text-secondary hover:bg-surface-hover",
@@ -70,7 +70,7 @@ function FileList({
               open
               className="[&[open]>summary>svg:first-child]:rotate-90"
             >
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
                 <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0" />
                 <Folder
                   aria-hidden="true"

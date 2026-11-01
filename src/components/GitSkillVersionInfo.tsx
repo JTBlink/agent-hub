@@ -20,7 +20,7 @@ export function GitSkillVersionInfo({
   );
   const unknown = t("install.gitBrowser.versionNotDeclared");
   return (
-    <div className="space-y-1 text-[12px] leading-5">
+    <div className="space-y-1 text-xs leading-5">
       <p className="break-words text-muted">
         {repositoryVersion === undefined
           ? t("install.gitBrowser.versionRefreshNeeded")

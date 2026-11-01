@@ -100,7 +100,7 @@ function FileTreeNode({
       <>
         <button
           type="button"
-          className="flex w-full items-center gap-1 px-1 py-0.5 text-left text-[12px] text-secondary hover:bg-surface-hover"
+          className="flex w-full items-center gap-1 px-1 py-0.5 text-left text-xs text-secondary hover:bg-surface-hover"
           style={{ paddingLeft: `${depth * 12 + 4}px` }}
           onClick={() => onToggleDir(node.fullPath)}
         >
@@ -133,7 +133,7 @@ function FileTreeNode({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-1 px-1 py-0.5 text-left text-[12px] transition-colors",
+        "flex w-full items-center gap-1 px-1 py-0.5 text-left text-xs transition-colors",
         isSelected
           ? "bg-accent-bg/60 text-primary"
           : "text-secondary hover:bg-surface-hover",
@@ -146,7 +146,7 @@ function FileTreeNode({
       {change && (
         <span
           className={cn(
-            "shrink-0 px-1 text-[11px] font-semibold",
+            "shrink-0 px-1 text-xs font-semibold",
             KIND_TONE[change.kind] ?? "",
           )}
           title={t(`backup.changes.${change.kind}`)}
@@ -277,21 +277,21 @@ export default function BackupDiff() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={() => navigate("/backup")}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             {t("backup.changes.backToBackup")}
           </button>
-          <h1 className="text-[14px] font-semibold text-primary">
+          <h1 className="text-base font-semibold text-primary">
             {t("backup.changes.diffTitle")}
           </h1>
-          <span className="rounded-full bg-surface-active px-2 py-0.5 text-[11px] text-muted">
+          <span className="rounded-full bg-surface-active px-2 py-0.5 text-xs text-muted">
             {changes.length}
           </span>
           <button
             type="button"
-            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60"
+            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-wait disabled:opacity-60"
             onClick={refresh}
             disabled={refreshing}
             aria-busy={refreshing}
@@ -307,7 +307,7 @@ export default function BackupDiff() {
       {pageError && (
         <div
           role="alert"
-          className="shrink-0 bg-danger-bg px-4 py-2 text-[12px] text-danger"
+          className="shrink-0 bg-danger-bg px-4 py-2 text-xs text-danger"
         >
           {pageError}
         </div>
@@ -329,7 +329,7 @@ export default function BackupDiff() {
               />
             ))}
             {changes.length === 0 && !pageLoading && !pageError && (
-              <div className="px-3 py-4 text-center text-[12px] text-muted">
+              <div className="px-3 py-4 text-center text-xs text-muted">
                 {t("backup.changes.noContent")}
               </div>
             )}
@@ -339,19 +339,19 @@ export default function BackupDiff() {
         {/* Right: diff viewer */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {!selectedPath && !diffLoading && !pageLoading && (
-            <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted">
               {t("backup.changes.selectFile")}
             </div>
           )}
 
           {(diffLoading || (pageLoading && !selectedPath)) && (
-            <div className="flex flex-1 items-center justify-center text-[13px] text-muted">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted">
               Loading…
             </div>
           )}
 
           {diffError && !diffLoading && (
-            <div className="m-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-[13px] text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+            <div className="m-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
               {diffError}
             </div>
           )}
@@ -362,33 +362,33 @@ export default function BackupDiff() {
                 <div className="flex items-center gap-2 border-r border-border-subtle px-3 py-1.5">
                   <span
                     className={cn(
-                      "shrink-0 text-[11px] font-semibold",
+                      "shrink-0 text-xs font-semibold",
                       KIND_TONE[diff.status] ?? "",
                     )}
                   >
                     {KIND_LETTER[diff.status] ?? "?"}
                   </span>
-                  <span className="shrink-0 text-[11px] font-medium text-muted">
+                  <span className="shrink-0 text-xs font-medium text-muted">
                     {t("backup.changes.originalVersion")}
                   </span>
                   <span
-                    className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-secondary"
+                    className="min-w-0 flex-1 truncate font-mono text-xs text-secondary"
                     title={diff.path}
                   >
                     {diff.path}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5">
-                  <span className="shrink-0 text-[11px] font-medium text-muted">
+                  <span className="shrink-0 text-xs font-medium text-muted">
                     {t("backup.changes.currentVersion")}
                   </span>
                   <span
-                    className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-secondary"
+                    className="min-w-0 flex-1 truncate font-mono text-xs text-secondary"
                     title={diff.path}
                   >
                     {diff.path}
                   </span>
-                  <span className="shrink-0 rounded bg-surface-active px-1.5 py-0.5 text-[11px] text-muted">
+                  <span className="shrink-0 rounded bg-surface-active px-1.5 py-0.5 text-xs text-muted">
                     {t(`backup.changes.${diff.status}`)}
                   </span>
                 </div>
@@ -402,7 +402,7 @@ export default function BackupDiff() {
                     className="!space-y-0 !rounded-none !border-0"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-[13px] text-muted">
+                  <div className="flex h-full items-center justify-center text-sm text-muted">
                     {t(
                       diff.content_kind === "binary"
                         ? "backup.changes.binaryFile"

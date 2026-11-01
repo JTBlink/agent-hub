@@ -99,7 +99,7 @@ export function AutomationTemplatePicker({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1.5 rounded text-[13px] text-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-accent"
+        className="inline-flex items-center gap-1.5 rounded text-sm text-muted hover:text-primary focus-visible:ring-2 focus-visible:ring-accent"
       >
         <ChevronLeft className="h-4 w-4" />
         {t(
@@ -117,7 +117,7 @@ export function AutomationTemplatePicker({
           )}
           {title}
         </h3>
-        <p className="mt-2 text-[12px] leading-6 text-muted">
+        <p className="mt-2 text-xs leading-6 text-muted">
           {t(
             source === "backup"
               ? "automation.backupSourceHelp"
@@ -126,7 +126,7 @@ export function AutomationTemplatePicker({
         </p>
       </div>
       {!!errors.length && (
-        <div role="alert" className="text-[12px] text-danger">
+        <div role="alert" className="text-xs text-danger">
           <p>{errors.join("; ")}</p>
           <button
             type="button"
@@ -142,7 +142,7 @@ export function AutomationTemplatePicker({
         </div>
       )}
       {loading ? (
-        <p role="status" className="text-[13px] text-muted">
+        <p role="status" className="text-sm text-muted">
           {t("common.loading")}
         </p>
       ) : (
@@ -157,7 +157,7 @@ export function AutomationTemplatePicker({
               onClick={() => onChoose(card.draft)}
               className="flex min-w-0 flex-col items-start gap-2 rounded-lg border border-border-subtle bg-surface p-4 text-left hover:border-accent-border hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="flex items-center gap-2 text-[13px] font-medium text-primary">
+              <span className="flex items-center gap-2 text-sm font-medium text-primary">
                 {card.draft.provider === "hermes" ||
                 automationPromptFile(card.draft) ? (
                   <Bot className="h-4 w-4 text-accent-light" />
@@ -166,10 +166,10 @@ export function AutomationTemplatePicker({
                 )}
                 <span className="break-words">{card.title}</span>
               </span>
-              <span className="text-[12px] leading-6 text-muted">
+              <span className="text-xs leading-6 text-muted">
                 {card.disabled ? t("automation.otherShell") : card.description}
               </span>
-              <span className="mt-auto pt-1 text-[11px] text-muted">
+              <span className="mt-auto pt-1 text-xs text-muted">
                 {automationHerdrConfig(card.draft)
                   ? "Herdr"
                   : card.draft.provider === "hermes"
@@ -179,7 +179,7 @@ export function AutomationTemplatePicker({
             </button>
           ))}
           {!visibleCards.length && (
-            <p className="py-4 text-[13px] text-muted">
+            <p className="py-4 text-sm text-muted">
               {t(
                 source === "backup"
                   ? "automation.noBackupTemplates"

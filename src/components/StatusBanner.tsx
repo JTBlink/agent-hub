@@ -39,11 +39,9 @@ export function StatusBanner({
             <AlertTriangle className={cn("h-4 w-4", iconClass)} />
           </div>
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-primary">{title}</p>
+            <p className="text-sm font-semibold text-primary">{title}</p>
             {description ? (
-              <p className="mt-1 text-[13px] leading-5 text-muted">
-                {description}
-              </p>
+              <p className="mt-1 text-sm leading-5 text-muted">{description}</p>
             ) : null}
           </div>
         </div>
@@ -52,7 +50,7 @@ export function StatusBanner({
           <button
             type="button"
             onClick={onAction}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/10 px-3 py-1.5 text-[13px] font-medium text-primary transition-colors hover:bg-black/20"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/10 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-black/20"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             {actionLabel}

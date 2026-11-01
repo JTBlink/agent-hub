@@ -13,7 +13,7 @@ export function AutomationStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap text-[12px]",
+        "inline-flex items-center gap-1.5 whitespace-nowrap text-xs",
         status === "error"
           ? "text-danger"
           : status === "active" || status === "running"

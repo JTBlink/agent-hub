@@ -237,12 +237,12 @@ export function SkillProjectsSection({
 
   return (
     <div className="mb-4 rounded-xl border border-border-subtle">
-      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-6 py-2.5 text-[13px]">
+      <div className="flex items-center justify-between gap-2 border-b border-border-subtle px-6 py-2.5 text-sm">
         <div className="flex min-w-0 items-center gap-2">
           <span className="font-medium text-secondary">
             {t("addFromLibrary.projectsTitle")}
           </span>
-          <span className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[12px] text-muted">
+          <span className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-xs text-muted">
             {t("addFromLibrary.projectsSummary", {
               installed: installedCount,
               total: projects.length,
@@ -253,7 +253,7 @@ export function SkillProjectsSection({
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="text-[12px] text-muted hover:text-secondary"
+            className="text-xs text-muted hover:text-secondary"
           >
             {expanded ? t("common.collapse") : t("common.expandAll")}
           </button>
@@ -271,7 +271,7 @@ export function SkillProjectsSection({
             <div
               key={project.id}
               className={cn(
-                "rounded-md border border-border-subtle bg-background px-3 py-2 text-[12.5px]",
+                "rounded-md border border-border-subtle bg-background px-3 py-2 text-xs",
                 row?.state === "installed" &&
                   "border-emerald-500/30 bg-emerald-500/5",
               )}
@@ -299,7 +299,7 @@ export function SkillProjectsSection({
                 {row && row.state !== "loading" && row.state !== "error" && (
                   <div className="flex min-w-0 flex-wrap gap-1.5">
                     {activeTargets.length === 0 ? (
-                      <span className="text-[12px] text-muted">
+                      <span className="text-xs text-muted">
                         {t("addFromLibrary.status.unavailable")}
                       </span>
                     ) : (
@@ -337,7 +337,7 @@ export function SkillProjectsSection({
                               agentPending
                             }
                             className={cn(
-                              "inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[12px] font-semibold transition-colors disabled:cursor-default",
+                              "inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs font-semibold transition-colors disabled:cursor-default",
                               agentState === "available" &&
                                 "text-accent-light hover:bg-accent-bg",
                               agentState === "installed" &&

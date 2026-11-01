@@ -44,10 +44,7 @@ export function GitBrowserDialog({
       className="m-auto max-h-[80vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2
-          id={titleId}
-          className="min-w-0 break-words text-[15px] font-semibold"
-        >
+        <h2 id={titleId} className="min-w-0 break-words text-lg font-semibold">
           {title}
         </h2>
         <button

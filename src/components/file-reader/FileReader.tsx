@@ -45,7 +45,7 @@ export function FileReader({
         aria-label={t("fileReader.explorer")}
         className="w-[32%] min-w-[110px] max-w-[280px] shrink-0 overflow-y-auto border-r border-border-subtle bg-bg-secondary p-2"
       >
-        <h3 className="px-2 py-2 text-[11px] font-semibold text-muted">
+        <h3 className="px-2 py-2 text-xs font-semibold text-muted">
           {t("fileReader.explorer")} · {files.length}
         </h3>
         <FileTree files={files} selected={file?.path} onSelect={select} />
@@ -85,7 +85,7 @@ export function FileReader({
                   aria-label={t("fileReader.switchFile", { path })}
                   aria-pressed={path === file?.path}
                   onClick={() => select(path)}
-                  className="flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                  className="flex min-w-0 items-center gap-2 px-3 py-2 text-xs text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                 >
                   <FileText
                     aria-hidden="true"
@@ -117,7 +117,7 @@ export function FileReader({
         ) : (
           <div
             role="status"
-            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-[13px] text-muted"
+            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted"
           >
             <FileText aria-hidden="true" className="h-8 w-8" />
             {t(files.length ? "fileReader.selectFile" : "fileReader.empty")}

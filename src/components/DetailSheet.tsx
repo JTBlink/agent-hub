@@ -26,7 +26,7 @@ export function DetailSheet({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed top-[28px] right-0 bottom-0 left-[220px] z-40 isolate">
+    <div className="fixed top-[var(--app-titlebar-height)] right-0 bottom-0 left-[var(--app-sidebar-width)] z-40 isolate">
       <div
         className={
           IS_MACOS
@@ -39,7 +39,7 @@ export function DetailSheet({
         <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-5 py-2.5">
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
@@ -55,12 +55,12 @@ export function DetailSheet({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-5 pb-6 scrollbar-hide">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="min-w-0 text-[28px] font-semibold leading-tight tracking-tight text-primary">
+            <h2 className="min-w-0 text-3xl font-semibold leading-tight tracking-tight text-primary">
               <span className="block break-words">{title}</span>
             </h2>
           </div>
           {description ? (
-            <div className="text-[15px] leading-7 text-secondary">
+            <div className="text-lg leading-7 text-secondary">
               {description}
             </div>
           ) : null}

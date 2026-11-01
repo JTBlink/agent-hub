@@ -17,8 +17,8 @@ const tabs = ["overview", "runs", "technical"] as const;
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-medium text-muted">{label}</dt>
-      <dd className="mt-1.5 whitespace-pre-wrap break-words text-[13px] font-medium leading-6 text-secondary">
+      <dt className="text-xs font-medium text-muted">{label}</dt>
+      <dd className="mt-1.5 whitespace-pre-wrap break-words text-sm font-medium leading-6 text-secondary">
         {value}
       </dd>
     </div>
@@ -81,7 +81,7 @@ export function AutomationTaskDetail({
     <div className="app-page gap-5">
       <nav
         aria-label={t("automation.breadcrumb")}
-        className="flex min-w-0 items-center gap-1.5 text-[13px]"
+        className="flex min-w-0 items-center gap-1.5 text-sm"
       >
         <button
           type="button"
@@ -145,7 +145,7 @@ export function AutomationTaskDetail({
                   ?.focus();
               }}
               className={cn(
-                "whitespace-nowrap border-b-2 px-1 py-3 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
+                "whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
                 tab === value
                   ? "border-accent text-primary"
                   : "border-transparent text-muted hover:text-primary",
@@ -153,9 +153,7 @@ export function AutomationTaskDetail({
             >
               {t(`automation.detailTabs.${value}`)}
               {value === "runs" && runCount !== null && (
-                <span className="ml-1.5 text-[11px] text-muted">
-                  {runCount}
-                </span>
+                <span className="ml-1.5 text-xs text-muted">{runCount}</span>
               )}
             </button>
           ))}
@@ -186,7 +184,7 @@ export function AutomationTaskDetail({
             {task && (
               <p
                 title={task.project ?? undefined}
-                className="mt-1.5 break-all text-[13px] leading-6 text-muted"
+                className="mt-1.5 break-all text-sm leading-6 text-muted"
               >
                 {projectName || t("automation.noProject")}
               </p>
@@ -212,7 +210,7 @@ export function AutomationTaskDetail({
       <AutomationAdminNotice required={task?.requires_admin} />
       {children}
       {!task ? (
-        <p role="status" className="py-10 text-center text-[13px] text-muted">
+        <p role="status" className="py-10 text-center text-sm text-muted">
           {loading
             ? t("common.loading")
             : readFailed
@@ -271,11 +269,11 @@ export function AutomationTaskDetail({
             </dl>
             {task.prompt && (
               <section className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
-                <h2 className="border-b border-border-subtle px-5 py-3 text-[13px] font-semibold text-secondary">
+                <h2 className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-secondary">
                   {t("automation.prompt")}
                 </h2>
                 <div className="px-5 py-4">
-                  <p className="max-w-[90ch] whitespace-pre-wrap break-words text-[13px] leading-7 text-secondary">
+                  <p className="max-w-[90ch] whitespace-pre-wrap break-words text-sm leading-7 text-secondary">
                     {task.prompt}
                   </p>
                 </div>
@@ -283,21 +281,21 @@ export function AutomationTaskDetail({
             )}
             {task.command && (
               <section className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
-                <h2 className="border-b border-border-subtle px-5 py-3 text-[13px] font-semibold text-secondary">
+                <h2 className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-secondary">
                   {t("automation.command")}
                 </h2>
-                <pre className="whitespace-pre-wrap break-all px-5 py-4 text-[12px] leading-6 text-secondary">
+                <pre className="whitespace-pre-wrap break-all px-5 py-4 text-xs leading-6 text-secondary">
                   {task.command}
                 </pre>
               </section>
             )}
             {!task.can_edit && (
-              <p className="text-[12px] leading-6 text-muted">
+              <p className="text-xs leading-6 text-muted">
                 {t("automation.externalReadOnly")}
               </p>
             )}
             {!task.prompt && !task.command && (
-              <p className="py-3 text-[13px] text-muted">
+              <p className="py-3 text-sm text-muted">
                 {t("automation.noContent")}
               </p>
             )}
@@ -333,11 +331,11 @@ export function AutomationTaskDetail({
                   key={field.key}
                   className="grid gap-2 px-5 py-4 sm:grid-cols-[160px_minmax(0,1fr)]"
                 >
-                  <dt className="text-[12px] text-muted">
+                  <dt className="text-xs text-muted">
                     {t(`automation.columns.${field.key}`)}
                   </dt>
                   <dd className="flex min-w-0 items-start gap-2 text-secondary">
-                    <span className="min-w-0 select-text break-all font-mono text-[12px] leading-6">
+                    <span className="min-w-0 select-text break-all font-mono text-xs leading-6">
                       {field.value}
                     </span>
                     {field.copy && <CopyPathButton path={field.value} />}

@@ -115,7 +115,7 @@ export function BatchTagDialog({
       />
       <div className="relative bg-surface border border-border rounded-xl w-full max-w-[440px] p-5 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[13px] font-semibold text-primary flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-primary flex items-center gap-2">
             <Tag className="w-4 h-4 text-accent-light" />
             {t("mySkills.batchTagDialog.title", { count: skills.length })}
           </h2>
@@ -128,18 +128,18 @@ export function BatchTagDialog({
         </div>
 
         {note && (
-          <p className="mb-4 rounded-lg bg-surface-hover px-3 py-2 text-[12px] leading-snug text-muted">
+          <p className="mb-4 rounded-lg bg-surface-hover px-3 py-2 text-xs leading-snug text-muted">
             {note}
           </p>
         )}
 
         <div className="space-y-4">
           <div>
-            <label className="block text-[12px] font-medium text-tertiary mb-1.5">
+            <label className="block text-xs font-medium text-tertiary mb-1.5">
               {t("mySkills.batchTagDialog.currentTags")}
             </label>
             {tagCounts.length === 0 ? (
-              <p className="text-[12px] text-faint">
+              <p className="text-xs text-faint">
                 {t("mySkills.batchTagDialog.noTags")}
               </p>
             ) : (
@@ -151,7 +151,7 @@ export function BatchTagDialog({
                       key={tag}
                       onClick={() => toggleRemove(tag)}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium transition-colors",
+                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors",
                         marked
                           ? "bg-red-500/15 text-red-500 line-through"
                           : "bg-accent-bg text-accent-light hover:bg-red-500/10 hover:text-red-500",
@@ -163,7 +163,7 @@ export function BatchTagDialog({
                       }
                     >
                       {tag}
-                      <span className="text-[10px] opacity-70">
+                      <span className="text-xs opacity-70">
                         {count}/{skills.length}
                       </span>
                       <X className="h-2.5 w-2.5" />
@@ -175,14 +175,14 @@ export function BatchTagDialog({
           </div>
 
           <div>
-            <label className="block text-[12px] font-medium text-tertiary mb-1.5">
+            <label className="block text-xs font-medium text-tertiary mb-1.5">
               {t("mySkills.batchTagDialog.toAdd")}
             </label>
             <div className="flex flex-wrap items-center gap-1.5">
               {adds.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[12px] font-medium text-emerald-600 dark:text-emerald-400"
+                  className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
                 >
                   {tag}
                   <button
@@ -208,7 +208,7 @@ export function BatchTagDialog({
                     }
                   }}
                   placeholder={t("mySkills.tags.addTag")}
-                  className="h-6 w-32 rounded-full border border-border-subtle bg-transparent px-2 text-[12px] text-secondary outline-none focus:border-accent"
+                  className="h-6 w-32 rounded-full border border-border-subtle bg-transparent px-2 text-xs text-secondary outline-none focus:border-accent"
                 />
                 {suggestions.length > 0 && input && (
                   <div className="absolute left-0 top-7 z-10 min-w-[140px] max-w-[220px] rounded-md border border-border-subtle bg-surface p-1 shadow-lg">
@@ -218,7 +218,7 @@ export function BatchTagDialog({
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => addTag(suggestion)}
-                        className="w-full truncate rounded px-1.5 py-1 text-left text-[12px] text-secondary hover:bg-surface-hover"
+                        className="w-full truncate rounded px-1.5 py-1 text-left text-xs text-secondary hover:bg-surface-hover"
                       >
                         {suggestion}
                       </button>
@@ -241,14 +241,14 @@ export function BatchTagDialog({
         <div className="flex justify-end gap-2 pt-5">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none"
           >
             {t("common.cancel")}
           </button>
           <button
             onClick={handleApply}
             disabled={loading || !hasChanges}
-            className="px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
+            className="px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
           >
             {loading ? t("common.loading") : t("mySkills.batchTagDialog.apply")}
           </button>

@@ -40,10 +40,10 @@ export function AboutSettings({
             <Settings2 className="w-4 h-4 text-accent" />
           </div>
           <div>
-            <h3 className="text-[13px] font-semibold text-primary">
+            <h3 className="text-sm font-semibold text-primary">
               {t("settings.version", { version: appVersion })}
             </h3>
-            <p className="text-muted text-[13px]">{t("settings.tagline")}</p>
+            <p className="text-muted text-sm">{t("settings.tagline")}</p>
           </div>
         </div>
         <AppVersionCheck />

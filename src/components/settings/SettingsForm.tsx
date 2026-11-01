@@ -19,10 +19,7 @@ export function SettingsForm({
   return (
     <div className="space-y-4" aria-busy={form.loading || form.saving}>
       {form.loading && (
-        <p
-          role="status"
-          className="flex items-center gap-2 text-[13px] text-muted"
-        >
+        <p role="status" className="flex items-center gap-2 text-sm text-muted">
           <Loader2 className="h-3 w-3 animate-spin" />
           {t("common.loading")}
         </p>
@@ -30,7 +27,7 @@ export function SettingsForm({
       {form.failed && (
         <div
           role="alert"
-          className="app-panel flex flex-wrap items-center justify-between gap-2 p-3 text-[13px] text-danger"
+          className="app-panel flex flex-wrap items-center justify-between gap-2 p-3 text-sm text-danger"
         >
           <span>{t("settings.loadFailed")}</span>
           <button

@@ -34,13 +34,13 @@ export function LocalSkillLocation({
               <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
             </span>
           )}
-          <code className="min-w-0 break-all text-[12px] text-muted">
+          <code className="min-w-0 break-all text-xs text-muted">
             {compactHomePath(location.found_path)}
           </code>
           <CopyPathButton path={location.found_path} disabled={busy} />
         </div>
         {location.resolved_path && (
-          <div className="mt-1 min-w-0 break-all pl-5 text-[11px] text-tertiary">
+          <div className="mt-1 min-w-0 break-all pl-5 text-xs text-tertiary">
             {t("install.scan.resolvedPath", {
               path: compactHomePath(location.resolved_path),
             })}
@@ -50,13 +50,13 @@ export function LocalSkillLocation({
           className="mt-1 flex flex-wrap items-center gap-1"
           title={t("install.scan.applicableAgentsHint")}
         >
-          <span className="mr-0.5 text-[11px] text-muted">
+          <span className="mr-0.5 text-xs text-muted">
             {t("install.scan.applicableAgents")}
           </span>
           {location.tools.map((tool) => (
             <span
               key={tool}
-              className="rounded border border-border-subtle bg-surface px-1.5 py-px text-[11px] text-tertiary"
+              className="rounded border border-border-subtle bg-surface px-1.5 py-px text-xs text-tertiary"
             >
               {tool}
             </span>
@@ -68,7 +68,7 @@ export function LocalSkillLocation({
           type="button"
           disabled={busy}
           onClick={() => void onView(selection)}
-          className="app-button-secondary !px-2 !py-1 text-[12px] focus-visible:ring-2 focus-visible:ring-accent"
+          className="app-button-secondary !px-2 !py-1 text-xs focus-visible:ring-2 focus-visible:ring-accent"
         >
           <FileText className="h-3.5 w-3.5" />
           {t("install.scan.viewContent")}

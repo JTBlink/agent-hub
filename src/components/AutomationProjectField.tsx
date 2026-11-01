@@ -49,7 +49,7 @@ export function AutomationProjectField({
         onChange={onChange}
       />
       {error && (
-        <div role="alert" className="text-[11px] text-danger">
+        <div role="alert" className="text-xs text-danger">
           {error}{" "}
           <button
             type="button"

@@ -106,13 +106,13 @@ export function SkillGroupErrorsDialog({
       }}
       className="m-auto w-[calc(100%-2rem)] max-w-xl rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm"
     >
-      <h2 id={titleId} className="mb-4 text-[14px] font-semibold">
+      <h2 id={titleId} className="mb-4 text-base font-semibold">
         {t("skillGroupActions.operationDetails")}
       </h2>
       <div className="max-h-[calc(65vh/var(--app-scale))] space-y-4 overflow-y-auto">
         {notices.map((notice) => (
           <section key={notice.kind}>
-            <h3 className="mb-2 text-[13px] font-medium">
+            <h3 className="mb-2 text-sm font-medium">
               {t(
                 notice.kind === "conflict"
                   ? "skillGroupActions.partialSkippedToast"
@@ -132,10 +132,10 @@ export function SkillGroupErrorsDialog({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="break-all text-[13px] font-medium">
+                        <div className="break-all text-sm font-medium">
                           {item.skillName} · {item.agentKey}
                         </div>
-                        <p className="mt-1 whitespace-pre-wrap break-all text-[12px] leading-5 text-secondary">
+                        <p className="mt-1 whitespace-pre-wrap break-all text-xs leading-5 text-secondary">
                           {item.message}
                         </p>
                       </div>
@@ -146,7 +146,7 @@ export function SkillGroupErrorsDialog({
                             type="button"
                             onClick={() => void handleForceOverride([item])}
                             disabled={busy}
-                            className="shrink-0 rounded-md border border-amber-400/50 bg-amber-500/8 px-2.5 py-1 text-[12px] font-medium text-amber-600 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
+                            className="shrink-0 rounded-md border border-amber-400/50 bg-amber-500/8 px-2.5 py-1 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
                           >
                             {forcing ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
@@ -156,7 +156,7 @@ export function SkillGroupErrorsDialog({
                           </button>
                         )}
                       {resolved && (
-                        <span className="shrink-0 text-[12px] text-green-600 dark:text-green-400">
+                        <span className="shrink-0 text-xs text-green-600 dark:text-green-400">
                           {t("skillGroupActions.overridden")}
                         </span>
                       )}
@@ -189,7 +189,7 @@ export function SkillGroupErrorsDialog({
             onClick={() => void handleForceOverride(unresolvedConflicts, true)}
             disabled={busy}
             aria-busy={forcingAll}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-400/50 bg-amber-500/8 px-3 py-1.5 text-[12px] font-medium text-amber-600 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-400/50 bg-amber-500/8 px-3 py-1.5 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-400"
           >
             {forcingAll && (
               <Loader2

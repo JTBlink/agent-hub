@@ -190,11 +190,11 @@ export function AutomationInstaller({
               data-heading
               tabIndex={-1}
               id={titleId}
-              className="text-[15px] font-semibold outline-none"
+              className="text-lg font-semibold outline-none"
             >
               {t("automation.installPackage")}
             </h2>
-            <p className="mt-1 break-words text-[12px] text-muted">
+            <p className="mt-1 break-words text-xs text-muted">
               {task.title} · {task.source}
             </p>
           </div>
@@ -210,7 +210,7 @@ export function AutomationInstaller({
         </header>
         <ol
           aria-label={t("discovery.installSteps")}
-          className="flex shrink-0 flex-wrap gap-4 border-b border-border-subtle bg-bg-secondary px-5 py-3 text-[12px] text-muted"
+          className="flex shrink-0 flex-wrap gap-4 border-b border-border-subtle bg-bg-secondary px-5 py-3 text-xs text-muted"
         >
           {["preview", "configure", "result"].map((label, i) => (
             <li
@@ -225,8 +225,8 @@ export function AutomationInstaller({
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
           {step === 0 && (
             <>
-              <p className="text-[13px] text-secondary">{task.description}</p>
-              <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-[12px]">
+              <p className="text-sm text-secondary">{task.description}</p>
+              <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
                 <dt className="text-muted">{t("automation.packageVersion")}</dt>
                 <dd className="font-mono">{version}</dd>
                 <dt className="text-muted">
@@ -240,15 +240,15 @@ export function AutomationInstaller({
                 </dd>
               </dl>
               {task.requiresAdmin && (
-                <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                <p className="text-xs text-amber-700 dark:text-amber-400">
                   {t("discovery.requiresAdmin")}
                 </p>
               )}
               <details>
-                <summary className="cursor-pointer text-[13px] text-secondary">
+                <summary className="cursor-pointer text-sm text-secondary">
                   {t("automation.command")}
                 </summary>
-                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-[12px]">
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-xs">
                   {draft.content}
                 </pre>
               </details>
@@ -258,12 +258,12 @@ export function AutomationInstaller({
                   className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-bg-secondary p-4"
                 >
                   <div className="min-w-0 flex-1">
-                    <h3 id={filesTitleId} className="text-[13px] font-medium">
+                    <h3 id={filesTitleId} className="text-sm font-medium">
                       {t("automation.scriptFiles", {
                         count: draft.files.length,
                       })}
                     </h3>
-                    <p className="mt-1 text-[12px] text-muted">
+                    <p className="mt-1 text-xs text-muted">
                       {t("discovery.previewFilesHint")}
                     </p>
                   </div>
@@ -286,7 +286,7 @@ export function AutomationInstaller({
                 className="space-y-4 disabled:opacity-70"
               >
                 <label className="block space-y-2">
-                  <span className="text-[12px] text-secondary">
+                  <span className="text-xs text-secondary">
                     {t("automation.columns.name")}
                   </span>
                   <input
@@ -311,11 +311,11 @@ export function AutomationInstaller({
                   onChange={(schedule) => setDraft({ ...draft, schedule })}
                 />
               </fieldset>
-              <p className="rounded-lg border border-accent-border bg-accent-bg p-3 text-[12px] leading-6 text-secondary">
+              <p className="rounded-lg border border-accent-border bg-accent-bg p-3 text-xs leading-6 text-secondary">
                 {t("discovery.pausedInstall")}
               </p>
               {!!instanceId && !!error && (
-                <p className="text-[12px] text-muted">
+                <p className="text-xs text-muted">
                   {t("discovery.retryExisting")}
                 </p>
               )}
@@ -330,20 +330,20 @@ export function AutomationInstaller({
               <h3 className="text-lg font-semibold">
                 {t("discovery.installedPaused")}
               </h3>
-              <p className="text-[13px] text-muted">
+              <p className="text-sm text-muted">
                 {t("discovery.installedHelp")}
               </p>
             </div>
           )}
           {error && (
-            <p role="alert" className="break-words text-[13px] text-danger">
+            <p role="alert" className="break-words text-sm text-danger">
               {error}
             </p>
           )}
           {busy && (
             <p
               role="status"
-              className="flex items-center gap-2 text-[12px] text-muted"
+              className="flex items-center gap-2 text-xs text-muted"
             >
               <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
               {t("discovery.installing")}
@@ -435,7 +435,7 @@ export function AutomationInstaller({
           return install(replacement);
         }}
       >
-        <div className="space-y-3 text-[12px] text-secondary">
+        <div className="space-y-3 text-xs text-secondary">
           {conflicts.map((existing) => (
             <label
               key={existing.id}

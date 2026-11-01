@@ -161,16 +161,16 @@ export function AgentControlSetupCard({
           <Terminal className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-[14px] font-semibold text-primary">
+          <h3 className="text-base font-semibold text-primary">
             {t(`agentControl.${mode}Title`)}
           </h3>
-          <p className="mt-0.5 text-[12px] leading-5 text-muted">
+          <p className="mt-0.5 text-xs leading-5 text-muted">
             {t(`agentControl.${mode}Body`, {
               version: status.bundled_version,
             })}
           </p>
 
-          <div className="mt-2 space-y-1 text-[11px] text-faint">
+          <div className="mt-2 space-y-1 text-xs text-faint">
             <p className="break-all select-text">
               {t("agentControl.sourcePath")}:{" "}
               {source || t("agentControl.sourceUnknown")}
@@ -194,7 +194,7 @@ export function AgentControlSetupCard({
                   .map((agent) => (
                     <p
                       key={agent.key}
-                      className="mt-1 break-all text-[11px] text-faint"
+                      className="mt-1 break-all text-xs text-faint"
                     >
                       {agent.display_name}: {agent.path}
                     </p>
@@ -204,7 +204,7 @@ export function AgentControlSetupCard({
                   <p className="app-section-title mb-2 mt-3">
                     {t("agentControl.pickAgents")}
                     {selected.length === 0 && (
-                      <span className="ml-2 text-[11px] font-normal normal-case tracking-normal text-muted">
+                      <span className="ml-2 text-xs font-normal normal-case tracking-normal text-muted">
                         {t("agentControl.confirmEmpty")}
                       </span>
                     )}
@@ -220,7 +220,7 @@ export function AgentControlSetupCard({
                           disabled={busy}
                           aria-pressed={on}
                           title={agent.path}
-                          className={`rounded-md border px-2.5 py-1 text-left text-[11px] transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
+                          className={`rounded-md border px-2.5 py-1 text-left text-xs transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 ${
                             on
                               ? "border-accent bg-accent-bg text-accent"
                               : "border-border-subtle bg-surface text-muted"

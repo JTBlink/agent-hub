@@ -387,7 +387,7 @@ function AddSkillsSheetBody({
           <span
             className={cn(
               dim,
-              "inline-flex items-center justify-center rounded-[4px] border border-bg-secondary bg-surface text-[10px] font-semibold text-muted shadow-[0_0_0_1px_var(--color-border-subtle)]",
+              "inline-flex items-center justify-center rounded-[4px] border border-bg-secondary bg-surface text-xs font-semibold text-muted shadow-[0_0_0_1px_var(--color-border-subtle)]",
             )}
             title={`+${hiddenCount}`}
           >
@@ -513,9 +513,9 @@ function AddSkillsSheetBody({
   const targetSummary = (() => {
     if (target.kind === "global") {
       return (
-        <div className="flex items-center gap-2 text-[12px] text-muted">
+        <div className="flex items-center gap-2 text-xs text-muted">
           <span className="shrink-0">{t("addFromLibrary.targetLabel")}</span>
-          <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-[12px] font-medium text-secondary">
+          <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-xs font-medium text-secondary">
             {renderAgentIcons(
               [{ key: target.agentKey, display_name: target.agentDisplayName }],
               {
@@ -542,7 +542,7 @@ function AddSkillsSheetBody({
 
     return (
       <div className="space-y-2">
-        <div className="flex items-start gap-2 text-[12px]">
+        <div className="flex items-start gap-2 text-xs">
           <span className="shrink-0 pt-1 text-muted">
             {t(
               isTeamProject
@@ -567,7 +567,7 @@ function AddSkillsSheetBody({
                       aria-pressed={active}
                       title={tt.display_name}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                        "inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                         active
                           ? "border-accent-border bg-accent-bg text-accent-light"
                           : "border-border-subtle bg-surface text-muted hover:bg-surface-hover hover:text-secondary",
@@ -602,7 +602,7 @@ function AddSkillsSheetBody({
             <button
               type="button"
               onClick={toggleAll}
-              className="shrink-0 pt-1 text-[12px] text-accent-light transition-colors hover:underline"
+              className="shrink-0 pt-1 text-xs text-accent-light transition-colors hover:underline"
             >
               {allSelected
                 ? t("addFromLibrary.clearTargets")
@@ -611,7 +611,7 @@ function AddSkillsSheetBody({
           )}
         </div>
         {isTeamProject && (
-          <p className="text-[12px] text-muted">
+          <p className="text-xs text-muted">
             {t("projectLibrary.teamAgentsHelp")}
           </p>
         )}
@@ -628,7 +628,7 @@ function AddSkillsSheetBody({
       <div className="absolute right-0 top-0 flex h-full w-full max-w-[480px] flex-col overflow-hidden border-l border-border-subtle bg-bg-secondary shadow-2xl">
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-subtle px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[14px] font-semibold text-primary">
+            <h2 className="text-base font-semibold text-primary">
               {target.kind === "project"
                 ? t("projectLibrary.installTitle", {
                     project: target.projectName,
@@ -662,13 +662,13 @@ function AddSkillsSheetBody({
 
           {(allTags.length > 0 || skillsHaveUntagged) && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-[12px] text-muted">
+              <span className="text-xs text-muted">
                 {t("mySkills.tags.filter")}
               </span>
               <button
                 onClick={() => setTagFilters(new Set())}
                 className={cn(
-                  "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                  "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                   tagFilters.size === 0
                     ? "bg-accent text-white dark:bg-accent dark:text-white"
                     : "bg-surface-hover text-muted hover:text-secondary",
@@ -680,7 +680,7 @@ function AddSkillsSheetBody({
                 <button
                   onClick={() => toggleTagFilter(UNTAGGED_FILTER)}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                    "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                     tagFilters.has(UNTAGGED_FILTER)
                       ? "bg-surface-active text-primary"
                       : "border border-dashed border-border text-muted hover:text-secondary",
@@ -698,7 +698,7 @@ function AddSkillsSheetBody({
                     key={tag}
                     onClick={() => toggleTagFilter(tag)}
                     className={cn(
-                      "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                      "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                       active
                         ? getTagActiveColor(tag, allTags)
                         : getTagColor(tag, allTags),
@@ -713,7 +713,7 @@ function AddSkillsSheetBody({
 
           {sourceTypes.length > 1 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-[12px] text-muted">
+              <span className="text-xs text-muted">
                 {t("mySkills.sourceType")}
               </span>
               {sourceTypes.map((source) => {
@@ -723,7 +723,7 @@ function AddSkillsSheetBody({
                     key={source}
                     onClick={() => toggleSourceFilter(source)}
                     className={cn(
-                      "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                      "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                       active
                         ? "bg-accent text-white dark:bg-accent dark:text-white"
                         : "bg-surface-hover text-muted hover:text-secondary",
@@ -739,7 +739,7 @@ function AddSkillsSheetBody({
 
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
           {ordered.length === 0 ? (
-            <div className="px-5 py-12 text-center text-[13px] text-muted">
+            <div className="px-5 py-12 text-center text-sm text-muted">
               {managedSkills.length === 0
                 ? t("addFromLibrary.emptyLibrary")
                 : t("addFromLibrary.emptyMatch")}
@@ -773,7 +773,7 @@ function AddSkillsSheetBody({
             />
           )}
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="truncate text-[12px] text-muted">
+            <span className="truncate text-xs text-muted">
               {selectableSelected.length > 0
                 ? t("addFromLibrary.selectedCount", {
                     count: selectableSelected.length,
@@ -784,7 +784,7 @@ function AddSkillsSheetBody({
               type="button"
               onClick={toggleSelectAll}
               disabled={availableIds.length === 0}
-              className="shrink-0 rounded-md px-2.5 py-1 text-[12px] font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
+              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
             >
               {allAvailableSelected
                 ? t("addFromLibrary.deselectAllSkills")
@@ -799,7 +799,7 @@ function AddSkillsSheetBody({
               selectableSelected.length === 0 ||
               (target.kind === "project" && selectedAgents.length === 0)
             }
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {installing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {ctaLabel}

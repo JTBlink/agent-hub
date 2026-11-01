@@ -39,7 +39,7 @@ export function SkillGroupNavigationRow({
   return (
     <div
       className={cn(
-        "group flex min-w-0 items-center rounded-md",
+        "group flex min-w-0 items-center rounded-sm",
         active
           ? "bg-surface-active"
           : "hover:bg-surface-hover focus-within:bg-surface-hover",
@@ -51,7 +51,7 @@ export function SkillGroupNavigationRow({
         aria-current={active ? "page" : undefined}
         title={description ? `${name}\n${description}` : name}
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 py-[7px] text-left text-sm leading-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "flex min-w-0 flex-1 items-center gap-1.5 rounded-sm px-1 py-1 text-left text-sm leading-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
           active
             ? "font-medium text-primary"
             : "text-tertiary hover:text-secondary",
@@ -59,7 +59,7 @@ export function SkillGroupNavigationRow({
       >
         <span
           className={cn(
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+            "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
             active
               ? `${option.activeClass} ${option.colorClass}`
               : "border-border bg-surface text-muted",
@@ -71,7 +71,7 @@ export function SkillGroupNavigationRow({
         {group.skill_count > 0 && (
           <span
             className={cn(
-              "min-w-[18px] shrink-0 rounded-full px-1.5 text-center text-[12px] font-medium leading-[18px] tabular-nums",
+              "min-w-[18px] shrink-0 rounded-full px-1.5 text-center text-xs font-medium leading-[18px] tabular-nums",
               active
                 ? "bg-accent-bg text-accent-light"
                 : "bg-surface-hover text-muted",

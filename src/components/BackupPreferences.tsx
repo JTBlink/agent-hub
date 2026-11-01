@@ -18,7 +18,7 @@ export function BackupPreferences({
   const { t } = useTranslation();
   return (
     <section className="app-panel p-4">
-      <h2 className="mb-3 text-[14px] font-semibold text-secondary">
+      <h2 className="mb-3 text-base font-semibold text-secondary">
         {t("backup.preferencesTitle")}
       </h2>
       <div className="divide-y divide-border-subtle">
@@ -27,10 +27,10 @@ export function BackupPreferences({
         </div>
         <div className="flex items-start justify-between gap-3 pt-4">
           <div className="min-w-0">
-            <h3 className="text-[13px] font-medium text-secondary">
+            <h3 className="text-sm font-medium text-secondary">
               {t("backup.auto.title")}
             </h3>
-            <p className="mt-1 text-[12px] leading-5 text-muted">
+            <p className="mt-1 text-xs leading-5 text-muted">
               {t("backup.auto.desc")}
             </p>
           </div>

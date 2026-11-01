@@ -199,7 +199,7 @@ export function AutomationAgentField({
   return (
     <div className="space-y-2">
       <label className="block space-y-2">
-        <span className="text-[12px] font-medium text-muted">
+        <span className="text-xs font-medium text-muted">
           {t("automation.optionalAgent")}
         </span>
         <ThemedSelect
@@ -239,16 +239,16 @@ export function AutomationAgentField({
         </ThemedSelect>
       </label>
       {pending && (
-        <p role="status" className="text-[11px] text-muted">
+        <p role="status" className="text-xs text-muted">
           {t("common.loading")}
         </p>
       )}
       {error && (
-        <p role="alert" className="text-[11px] text-danger">
+        <p role="alert" className="text-xs text-danger">
           {error}
         </p>
       )}
-      <p className="text-[11px] leading-5 text-muted">
+      <p className="text-xs leading-5 text-muted">
         {t(
           agent
             ? agent === "native-hermes"
@@ -259,7 +259,7 @@ export function AutomationAgentField({
       </p>
       {config && (
         <details className="pt-2">
-          <summary className="cursor-pointer text-[12px] font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
+          <summary className="cursor-pointer text-xs font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
             {t("automation.advanced")}
           </summary>
           <div className="mt-4 space-y-4">

@@ -98,7 +98,7 @@ export function AutomationImportDialog({
         </div>
         {preview && (
           <>
-            <div className="space-y-2 rounded-lg border border-border-subtle bg-bg-secondary p-3 text-[12px] text-secondary">
+            <div className="space-y-2 rounded-lg border border-border-subtle bg-bg-secondary p-3 text-xs text-secondary">
               <p className="font-medium text-primary">{preview.draft.name}</p>
               <pre className="max-h-36 overflow-auto whitespace-pre-wrap break-words">
                 {preview.draft.content}
@@ -125,7 +125,7 @@ export function AutomationImportDialog({
           </>
         )}
         {error && (
-          <p role="alert" className="text-[13px] text-danger">
+          <p role="alert" className="text-sm text-danger">
             {error}
           </p>
         )}

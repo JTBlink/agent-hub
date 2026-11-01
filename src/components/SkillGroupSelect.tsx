@@ -96,7 +96,7 @@ export function SkillGroupSelect({
           } else if (event.key === "Tab") setOpen(false);
         }}
         className={cn(
-          "flex w-full items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 text-left text-[12px] font-medium text-secondary transition-colors hover:border-border hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+          "flex w-full items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 text-left text-xs font-medium text-secondary transition-colors hover:border-border hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
           open ? "border-accent/50" : "border-border-subtle",
         )}
       >
@@ -131,7 +131,7 @@ export function SkillGroupSelect({
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => select(option)}
               className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[12px] transition-colors",
+                "flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs transition-colors",
                 option.id === value
                   ? "font-medium text-accent-light"
                   : "text-secondary",

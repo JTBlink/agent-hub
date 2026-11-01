@@ -88,17 +88,17 @@ export function FirstRunRestoreDialog() {
             <CloudDownload className="h-5 w-5 text-muted" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold text-primary">
+            <h2 className="text-lg font-semibold text-primary">
               {t("firstRun.title")}
             </h2>
-            <p className="mt-1 text-[13px] leading-5 text-muted">
+            <p className="mt-1 text-sm leading-5 text-muted">
               {t("firstRun.subtitle")}
             </p>
           </div>
         </div>
 
         <div className="mt-4">
-          <label className="text-[12px] font-medium text-tertiary">
+          <label className="text-xs font-medium text-tertiary">
             {t("firstRun.urlLabel")}
           </label>
           <input
@@ -110,13 +110,13 @@ export function FirstRunRestoreDialog() {
             }}
             placeholder={t("settings.gitRemoteUrlPlaceholder")}
             disabled={busy}
-            className="mt-1.5 h-8 w-full rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-[13px] text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
+            className="mt-1.5 h-8 w-full rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-sm text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
           />
           {error && (
-            <div className="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] leading-5 text-red-600 dark:text-red-300">
+            <div className="mt-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs leading-5 text-red-600 dark:text-red-300">
               {error}
             </div>
           )}
@@ -127,7 +127,7 @@ export function FirstRunRestoreDialog() {
             type="button"
             onClick={dismiss}
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50 outline-none"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50 outline-none"
           >
             <Sparkles className="h-3.5 w-3.5" />
             {t("firstRun.startFresh")}
@@ -136,7 +136,7 @@ export function FirstRunRestoreDialog() {
             type="button"
             onClick={handleRestore}
             disabled={busy || !url.trim()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none"
           >
             {busy ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -147,7 +147,7 @@ export function FirstRunRestoreDialog() {
           </button>
         </div>
 
-        <p className="mt-3 text-[12px] leading-5 text-faint">
+        <p className="mt-3 text-xs leading-5 text-faint">
           {t("firstRun.hint")}
         </p>
       </div>

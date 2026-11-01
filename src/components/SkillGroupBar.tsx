@@ -233,7 +233,7 @@ export function SkillGroupBar({
   return (
     <>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <span className="shrink-0 text-[12px] text-muted">
+        <span className="shrink-0 text-xs text-muted">
           {t("sidebar.skillGroups")}
         </span>
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -258,7 +258,7 @@ export function SkillGroupBar({
                     : getSkillGroupDisplayName(skillGroup.name, t)
                 }
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12px] font-medium transition-colors disabled:opacity-50",
+                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-50",
                   s.status === "active"
                     ? `${skillGroupIcon.activeClass} ${skillGroupIcon.colorClass}`
                     : s.status === "partial"
@@ -278,7 +278,7 @@ export function SkillGroupBar({
                   <Check className="h-3 w-3 shrink-0" />
                 )}
                 {s.status === "partial" && (
-                  <span className="rounded-full bg-amber-500/20 px-1.5 py-px text-[10px] font-semibold">
+                  <span className="rounded-full bg-amber-500/20 px-1.5 py-px text-xs font-semibold">
                     {s.installed}/{s.total}
                   </span>
                 )}

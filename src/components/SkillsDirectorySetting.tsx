@@ -30,10 +30,10 @@ export function SkillsDirectorySetting({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-4">
       <div className="min-w-0">
-        <p className="text-[13px] font-medium text-secondary">
+        <p className="text-sm font-medium text-secondary">
           {t(backup ? "settings.backupDirectory" : "settings.skillsDirectory")}
         </p>
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="mt-1 text-xs text-muted">
           {t(
             backup
               ? "settings.backupDirectoryHint"
@@ -41,7 +41,7 @@ export function SkillsDirectorySetting({
           )}
         </p>
         <div className="mt-1 flex items-center gap-1.5">
-          <code className="min-w-0 break-all text-[12px] text-secondary">
+          <code className="min-w-0 break-all text-xs text-secondary">
             {compactHomePath(path)}
           </code>
           <CopyPathButton path={path} />

@@ -110,14 +110,14 @@ export function ProjectSkillConflictPreview({
           onSelectGroup={onSelectGroup}
         />
       )}
-      <p className="text-[12px] leading-5 text-muted">
+      <p className="text-xs leading-5 text-muted">
         {t("project.updateCenterConflictHint")}
       </p>
       <div className="space-y-1.5">
         {variants.map((variant) => (
           <label
             key={variant.agent}
-            className="flex cursor-pointer items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-[12px] text-secondary hover:bg-surface-hover"
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-xs text-secondary hover:bg-surface-hover"
           >
             <input
               type="radio"
@@ -135,13 +135,13 @@ export function ProjectSkillConflictPreview({
         ))}
       </div>
       {loading ? (
-        <div className="flex items-center justify-center gap-2 py-4 text-[12px] text-muted">
+        <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           {t("common.loading")}
         </div>
       ) : selectedVariant && compareVariant ? (
         <>
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
             <span className="rounded bg-accent/10 px-2 py-1 text-accent">
               {t("project.updateCenterSelectedVersion", {
                 agent: selectedVariant.agent_display_name,
@@ -175,7 +175,7 @@ export function ProjectSkillConflictPreview({
                     type="button"
                     onClick={() => setActiveFile(filename)}
                     className={cn(
-                      "rounded px-2 py-1 font-mono text-[11px]",
+                      "rounded px-2 py-1 font-mono text-xs",
                       file === filename
                         ? "bg-accent text-white"
                         : "bg-surface-hover text-secondary",
@@ -187,7 +187,7 @@ export function ProjectSkillConflictPreview({
               </div>
               {file ? (
                 <div>
-                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted">
+                  <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
                     <span className="font-mono">{file}</span>
                     <span>{t("project.updateCenterDiffLegend")}</span>
                   </div>
@@ -200,7 +200,7 @@ export function ProjectSkillConflictPreview({
               ) : null}
             </>
           ) : (
-            <div className="rounded-lg border border-border-subtle px-3 py-4 text-center text-[12px] text-muted">
+            <div className="rounded-lg border border-border-subtle px-3 py-4 text-center text-xs text-muted">
               {t("project.updateCenterNoDiff")}
             </div>
           )}

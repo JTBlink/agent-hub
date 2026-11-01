@@ -18,7 +18,7 @@ export function SkillImportProvenance({
   const { t } = useTranslation();
   if (!isLocalSkillSource(skill) || !skill.source_ref) return null;
   return (
-    <div className="mb-4 rounded-lg border border-border-subtle px-3 py-2 text-[12px] text-muted">
+    <div className="mb-4 rounded-lg border border-border-subtle px-3 py-2 text-xs text-muted">
       <p className="font-medium text-secondary">
         {t("mySkills.importProvenance.title")}
       </p>

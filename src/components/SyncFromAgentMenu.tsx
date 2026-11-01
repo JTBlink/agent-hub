@@ -157,7 +157,7 @@ export function SyncFromAgentMenu({
             className="fixed z-50 max-h-[60vh] overflow-y-auto min-w-[240px] rounded-lg border border-border bg-surface p-1.5 shadow-xl"
             style={{ top: pos.top, left: pos.left }}
           >
-            <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-wider text-faint">
+            <div className="px-2 pb-1.5 pt-1 text-xs font-medium uppercase tracking-wider text-faint">
               {t("globalWorkspace.syncFromAgent.heading")}
             </div>
             {otherAgents.map((agent) => (
@@ -167,7 +167,7 @@ export function SyncFromAgentMenu({
                 type="button"
                 disabled={agent.missingCount === 0}
                 onClick={() => void handleSync(agent)}
-                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-surface-hover disabled:opacity-40"
+                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface-hover disabled:opacity-40"
               >
                 <AgentIcon
                   agentKey={agent.key}
@@ -178,11 +178,11 @@ export function SyncFromAgentMenu({
                   {agent.displayName}
                 </span>
                 {agent.missingCount > 0 ? (
-                  <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                  <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-xs font-medium text-accent">
                     +{agent.missingCount}
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[11px] text-faint">
+                  <span className="shrink-0 text-xs text-faint">
                     {t("globalWorkspace.syncFromAgent.upToDate")}
                   </span>
                 )}

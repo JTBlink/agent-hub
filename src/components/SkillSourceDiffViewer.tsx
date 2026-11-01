@@ -40,7 +40,7 @@ export function SkillSourceDiffViewer({
           className,
         )}
       >
-        <div className="text-[13px] font-medium text-secondary">
+        <div className="text-sm font-medium text-secondary">
           {t("mySkills.sourceDiff.noChanges")}
         </div>
       </div>
@@ -49,7 +49,7 @@ export function SkillSourceDiffViewer({
 
   return (
     <div className={cn("space-y-4", className)}>
-      <p className="text-[12px] text-muted">
+      <p className="text-xs text-muted">
         {!sourceOnLeft && (
           <>
             {t(
@@ -71,21 +71,21 @@ export function SkillSourceDiffViewer({
           <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle bg-surface px-3 py-2">
             <span
               className={cn(
-                "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
                 STATUS_TONE[entry.status],
               )}
             >
               {t(`mySkills.sourceDiff.status.${entry.status}`)}
             </span>
             <span
-              className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-secondary"
+              className="min-w-0 flex-1 truncate font-mono text-xs text-secondary"
               title={entry.relative_path}
             >
               {entry.relative_path}
             </span>
             {entry.status === "modified" &&
               entry.executable_before !== entry.executable_after && (
-                <span className="inline-flex items-center rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[11px] text-muted">
+                <span className="inline-flex items-center rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-xs text-muted">
                   {t("mySkills.sourceDiff.execBit", {
                     before: entry.executable_before ? "0755" : "0644",
                     after: entry.executable_after ? "0755" : "0644",
@@ -114,7 +114,7 @@ export function SkillSourceDiffViewer({
                   data-diff-side={side}
                   className="min-w-0 px-3 py-3 first:border-r first:border-border-subtle"
                 >
-                  <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold text-secondary">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-secondary">
                     <span>
                       {side === "source" && sourceTitle
                         ? sourceTitle
@@ -134,13 +134,13 @@ export function SkillSourceDiffViewer({
                     )}
                   </div>
                   <div
-                    className="mt-1 break-all font-mono text-[11px] text-muted"
+                    className="mt-1 break-all font-mono text-xs text-muted"
                     title={`${path?.replace(/[\\/]$/, "")}/${entry.relative_path}`}
                   >
                     {path?.replace(/[\\/]$/, "")}/{entry.relative_path}
                   </div>
                   {missing && (
-                    <div className="mt-1 text-[11px] text-muted">
+                    <div className="mt-1 text-xs text-muted">
                       {t("mySkills.contentComparison.fileMissing")}
                     </div>
                   )}
@@ -157,7 +157,7 @@ export function SkillSourceDiffViewer({
               className="!space-y-0 !rounded-none !border-0"
             />
           ) : (
-            <div className="px-4 py-4 text-[12.5px] text-muted">
+            <div className="px-4 py-4 text-xs text-muted">
               {t(`mySkills.sourceDiff.summary.${entry.content_kind}`)}
             </div>
           )}

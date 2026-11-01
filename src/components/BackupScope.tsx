@@ -18,11 +18,11 @@ export function BackupScope({
     <section className="app-panel p-4">
       <div className="mb-3 flex items-center gap-2">
         <ShieldCheck className="h-4 w-4 text-muted" />
-        <h2 className="text-[14px] font-semibold text-secondary">
+        <h2 className="text-base font-semibold text-secondary">
           {t("backup.scope.title")}
         </h2>
       </div>
-      <div className="space-y-2 text-[13px]">
+      <div className="space-y-2 text-sm">
         {["skills", "automations", "metadata"].map((key) => (
           <div key={key} className="flex items-start gap-2 text-tertiary">
             <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
@@ -39,7 +39,7 @@ export function BackupScope({
       {sizeReport &&
       (sizeReport.oversized.length > 0 ||
         sizeReport.total_bytes > sizeReport.repo_warn_bytes) ? (
-        <div className="mt-3 space-y-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] leading-5 text-amber-700 dark:text-amber-300">
+        <div className="mt-3 space-y-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-700 dark:text-amber-300">
           {sizeReport.total_bytes > sizeReport.repo_warn_bytes && (
             <div>
               {t("backup.scope.repoTooLarge", {
@@ -62,7 +62,7 @@ export function BackupScope({
           ))}
         </div>
       ) : (
-        <div className="mt-3 rounded-md border border-border-subtle bg-bg-secondary px-3 py-2 text-[12px] leading-5 text-muted">
+        <div className="mt-3 rounded-md border border-border-subtle bg-bg-secondary px-3 py-2 text-xs leading-5 text-muted">
           {t("backup.scope.sizeHint")}
         </div>
       )}

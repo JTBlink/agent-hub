@@ -47,10 +47,6 @@ export function AppearanceSettings() {
     form.save(async () => {
       await api.setSettings("show_tray_icon", enabled ? "true" : "false");
       setShowTrayIcon(enabled);
-      if (!enabled && closeAction === "hide") {
-        await api.setSettings("close_action", "close");
-        setCloseAction("close");
-      }
     });
   const handleLanguageChange = (lng: string) =>
     form.save(async () => {
@@ -80,10 +76,10 @@ export function AppearanceSettings() {
           {/* Theme */}
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.theme")}
               </h3>
-              <p className="mt-0.5 text-[12px] text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("settings.themeDesc")}
               </p>
             </div>
@@ -111,10 +107,10 @@ export function AppearanceSettings() {
           {/* Text size */}
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.textSize")}
               </h3>
-              <p className="mt-0.5 text-[12px] text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("settings.textSizeDesc")}
               </p>
             </div>
@@ -150,7 +146,7 @@ export function AppearanceSettings() {
           {/* Language */}
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.language")}
               </h3>
             </div>
@@ -181,14 +177,14 @@ export function AppearanceSettings() {
           {/* Close action */}
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.closeAction")}
               </h3>
-              <p className="mt-0.5 text-[12px] text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("settings.closeActionDesc")}
               </p>
               {!showTrayIcon && (
-                <p className="text-[12px] text-muted mt-1">
+                <p className="text-xs text-muted mt-1">
                   {t("settings.trayIconOffHint")}
                 </p>
               )}
@@ -218,10 +214,10 @@ export function AppearanceSettings() {
           {/* Tray icon */}
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.trayIcon")}
               </h3>
-              <p className="mt-0.5 text-[12px] text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("settings.trayIconDesc")}
               </p>
             </div>

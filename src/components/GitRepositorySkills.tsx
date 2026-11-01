@@ -233,11 +233,11 @@ export function GitRepositorySkills({
           }}
         />
       )}
-      <p role="status" className="text-[12px] text-muted">
+      <p role="status" className="text-xs text-muted">
         {t("install.gitBrowser.count", { count: filtered.length })}
       </p>
       {filtered.length === 0 ? (
-        <div className="app-panel px-5 py-12 text-center text-[13px] text-muted">
+        <div className="app-panel px-5 py-12 text-center text-sm text-muted">
           {t(
             repository.skills.length === 0
               ? "install.gitPreview.empty"
@@ -269,7 +269,7 @@ export function GitRepositorySkills({
       )}
       {detail && (
         <GitBrowserDialog title={detail.name} onClose={() => setDetail(null)}>
-          <p className="whitespace-pre-wrap break-words text-[13px] leading-6 text-secondary">
+          <p className="whitespace-pre-wrap break-words text-sm leading-6 text-secondary">
             {detail.description || t("install.gitBrowser.noDescription")}
           </p>
           <GitSkillVersionInfo
@@ -277,7 +277,7 @@ export function GitRepositorySkills({
             installedVersion={detailInstallation?.skill.version}
             installed={!!detailInstallation}
           />
-          <dl className="mt-4 space-y-2 break-all text-[12px] text-muted">
+          <dl className="mt-4 space-y-2 break-all text-xs text-muted">
             <div>
               <dt className="font-medium text-tertiary">
                 {t("install.repoUrl")}
@@ -292,7 +292,7 @@ export function GitRepositorySkills({
             </div>
           </dl>
           {detailInstallation && !detailInstallation.fromCurrentRepository && (
-            <p className="mt-4 rounded-lg border border-border-subtle bg-background p-3 text-[13px] text-tertiary">
+            <p className="mt-4 rounded-lg border border-border-subtle bg-background p-3 text-sm text-tertiary">
               {t("install.gitBrowser.otherSourceHint")}
             </p>
           )}
@@ -310,7 +310,7 @@ export function GitRepositorySkills({
               </button>
             )}
             {repositoryOlder && repository.kind === "remote" && (
-              <p className="w-full text-[12px] text-muted">
+              <p className="w-full text-xs text-muted">
                 {t("install.gitBrowser.syncRemoteHint")}
               </p>
             )}
@@ -366,7 +366,7 @@ export function GitRepositorySkills({
           busy={disabled}
           onClose={() => setPlan(null)}
         >
-          <p className="mb-4 text-[13px] text-muted">
+          <p className="mb-4 text-sm text-muted">
             {t(
               overwriting
                 ? "install.gitBrowser.overwriteConfirmation"
@@ -389,7 +389,7 @@ export function GitRepositorySkills({
               {plan.map((item, index) => (
                 <label
                   key={item.repo_path}
-                  className="block text-[12px] text-muted"
+                  className="block text-xs text-muted"
                 >
                   <span className="block truncate" title={item.repo_path}>
                     {item.repo_path || "/"}

@@ -55,7 +55,7 @@ export function TaskCodeChanges({
           {commits.map((commit) => (
             <div key={commit.sha} className="space-y-1 text-xs">
               <p className="break-words">{commit.message}</p>
-              <p className="text-[11px] text-muted">
+              <p className="text-xs text-muted">
                 <code title={commit.sha}>{commit.sha.slice(0, 12)}</code> ·{" "}
                 {commit.author}
                 {commit.created_at

@@ -15,12 +15,12 @@ export function BackupPendingChanges({
   return (
     <div className="mt-4 min-w-0 border-t border-border-subtle pt-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[12px] font-medium text-secondary">
+        <span className="text-xs font-medium text-secondary">
           {t("backup.changes.title", { count: changes.length })}
         </span>
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
           onClick={() => navigate("/backup/diff", { state: { changes } })}
         >
           <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />
@@ -36,7 +36,7 @@ export function BackupPendingChanges({
         {changes.map((change) => (
           <li
             key={change.path}
-            className="flex items-start gap-2 rounded-md border border-border-subtle px-2 py-1.5 text-[12px]"
+            className="flex items-start gap-2 rounded-md border border-border-subtle px-2 py-1.5 text-xs"
           >
             <span className="shrink-0 text-tertiary">
               {t(`backup.changes.${change.kind}`)}

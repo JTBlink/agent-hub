@@ -47,7 +47,7 @@ export function GitImportPanel({
     return (
       <div className="app-panel p-5" aria-busy={!browser.loadError}>
         {browser.loadError ? (
-          <div role="alert" className="space-y-3 text-[13px] text-danger">
+          <div role="alert" className="space-y-3 text-sm text-danger">
             <p>
               {t("install.gitBrowser.loadFailed")}: {browser.loadError}
             </p>
@@ -186,7 +186,7 @@ export function GitImportPanel({
       {browser.saveError && (
         <div
           role="alert"
-          className="app-panel flex flex-wrap items-center justify-between gap-2 p-3 text-[13px] text-danger"
+          className="app-panel flex flex-wrap items-center justify-between gap-2 p-3 text-sm text-danger"
         >
           <span>
             {t("install.gitBrowser.saveFailed")}: {browser.saveError}
@@ -218,7 +218,7 @@ export function GitImportPanel({
           }}
         >
           <div>
-            <h2 className="text-[14px] font-semibold text-primary">
+            <h2 className="text-base font-semibold text-primary">
               {t(
                 form === "rename"
                   ? "install.gitBrowser.rename"
@@ -226,7 +226,7 @@ export function GitImportPanel({
               )}
             </h2>
             {form !== "rename" && (
-              <p className="mt-1 text-[13px] text-muted">
+              <p className="mt-1 text-sm text-muted">
                 {t(
                   kind === "local"
                     ? "install.gitBrowser.localDescription"
@@ -237,7 +237,7 @@ export function GitImportPanel({
           </div>
           <fieldset disabled={browser.adding} className="space-y-3">
             {form !== "rename" && (
-              <label className="block text-[13px] text-tertiary">
+              <label className="block text-sm text-tertiary">
                 {t("install.gitBrowser.sourceType")}
                 <ThemedSelect
                   value={kind}
@@ -261,7 +261,7 @@ export function GitImportPanel({
               {form !== "rename" && (
                 <div>
                   <label
-                    className="text-[13px] text-tertiary"
+                    className="text-sm text-tertiary"
                     htmlFor="git-repository-location"
                   >
                     {t(
@@ -305,7 +305,7 @@ export function GitImportPanel({
                   </div>
                 </div>
               )}
-              <label className="text-[13px] text-tertiary">
+              <label className="text-sm text-tertiary">
                 {t("install.gitBrowser.repositoryName")}
                 <input
                   type="text"
@@ -321,7 +321,7 @@ export function GitImportPanel({
             <p
               id="git-repository-error"
               role="alert"
-              className="text-[13px] text-danger"
+              className="text-sm text-danger"
             >
               {formError}
             </p>
@@ -362,11 +362,11 @@ export function GitImportPanel({
         <>
           <div className="flex flex-wrap items-start justify-between gap-2 px-1">
             <div className="min-w-0 flex-1">
-              <p title={active.url} className="truncate text-[12px] text-muted">
+              <p title={active.url} className="truncate text-xs text-muted">
                 {active.url}
               </p>
               {active.refreshedAt && (
-                <p className="mt-1 text-[12px] text-muted">
+                <p className="mt-1 text-xs text-muted">
                   {t("install.gitBrowser.refreshedAt", {
                     time: new Date(active.refreshedAt).toLocaleString(),
                   })}
@@ -390,10 +390,7 @@ export function GitImportPanel({
             )}
           </div>
           {refreshing && (
-            <p
-              role="status"
-              className="break-words px-1 text-[13px] text-muted"
-            >
+            <p role="status" className="break-words px-1 text-sm text-muted">
               {active.kind === "local"
                 ? t("install.gitBrowser.working")
                 : refreshing}
@@ -402,7 +399,7 @@ export function GitImportPanel({
           {browser.errors[active.id] && (
             <div
               role="alert"
-              className="app-panel flex flex-wrap items-center justify-between gap-2 p-3 text-[13px] text-danger"
+              className="app-panel flex flex-wrap items-center justify-between gap-2 p-3 text-sm text-danger"
             >
               <span className="min-w-0 flex-1 break-words">
                 {browser.errors[active.id]}
@@ -437,7 +434,7 @@ export function GitImportPanel({
             />
           ) : (
             !refreshing && (
-              <div className="app-panel p-10 text-center text-[13px] text-muted">
+              <div className="app-panel p-10 text-center text-sm text-muted">
                 <p>{t("install.gitBrowser.notLoaded")}</p>
                 <button
                   type="button"

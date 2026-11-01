@@ -1,10 +1,18 @@
 @import "./styles/brand.css";
+@import "./styles/typography.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Keep the native window chrome at a stable height when text is zoomed. */
+    --app-titlebar-height: calc(36px / var(--app-scale));
+    --app-activitybar-width: calc(48px / var(--app-scale));
+    --app-sidebar-width: 200px;
+  }
+
   html,
   body,
   #root {
@@ -13,8 +21,8 @@
   }
 
   body {
-    @apply bg-background text-primary font-sans antialiased overflow-hidden;
-    letter-spacing: -0.005em;
+    @apply bg-background text-primary font-sans text-sm antialiased overflow-hidden;
+    letter-spacing: 0;
   }
 }
 
@@ -40,15 +48,15 @@
   }
 
   .app-page-title {
-    @apply text-[17px] font-semibold tracking-tight text-primary;
+    @apply text-xl font-semibold tracking-tight text-primary;
   }
 
   .app-page-subtitle {
-    @apply mt-1.5 text-[13px] leading-5 text-muted;
+    @apply mt-1.5 text-sm leading-5 text-muted;
   }
 
   .app-section-title {
-    @apply text-[12px] font-semibold uppercase tracking-[0.08em] text-muted;
+    @apply text-xs font-semibold uppercase tracking-[0.08em] text-muted;
   }
 
   .app-panel {
@@ -68,7 +76,7 @@
   }
 
   .app-toolbar-button {
-    @apply inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg text-[13px] font-medium transition-colors outline-none;
+    @apply inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg text-sm font-medium transition-colors outline-none;
   }
 
   .app-toolbar-button-secondary {
@@ -80,7 +88,7 @@
   }
 
   .app-input {
-    @apply h-10 rounded-lg border border-border-subtle bg-surface px-3 text-[13px] text-secondary outline-none transition-colors placeholder:text-faint focus:border-border;
+    @apply h-10 rounded-lg border border-border-subtle bg-surface px-3 text-sm text-secondary outline-none transition-colors placeholder:text-faint focus:border-border;
   }
 
   .app-segmented {
@@ -88,7 +96,7 @@
   }
 
   .app-segmented-button {
-    @apply whitespace-nowrap rounded-md px-3 py-2 text-[13px] font-medium text-muted transition-colors outline-none hover:text-tertiary;
+    @apply whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors outline-none hover:text-tertiary;
   }
 
   .app-segmented-button-active {
@@ -96,7 +104,7 @@
   }
 
   .app-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-accent-border bg-accent-dark px-4 py-2.5 text-[13px] font-medium text-white transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-accent-border bg-accent-dark px-4 py-2.5 text-sm font-medium text-white transition-colors outline-none hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-button-ghost {
@@ -104,10 +112,97 @@
   }
 
   .app-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-[13px] font-medium text-secondary transition-colors outline-none hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm font-medium text-secondary transition-colors outline-none hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .app-badge {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-hover px-2.5 py-1 text-[12px] font-medium text-tertiary;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-hover px-2.5 py-1 text-xs font-medium text-tertiary;
   }
+}
+
+/* Workbench panels have their own perimeter; the gutter remains draggable. */
+.workbench-sidebar-panel {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0 6px 6px 0;
+  border-left: 0;
+  background: var(--color-bg-secondary);
+}
+.workbench-sidebar-panel > .sidebar-resize-handle {
+  right: -5px;
+  width: 6px;
+}
+.workbench-sidebar-panel > .sidebar-resize-handle::before {
+  left: 2px;
+}
+.sidebar-resize-grip {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 2px;
+  height: 20px;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-faint) 0 2px,
+    transparent 2px 5px
+  );
+}
+.sidebar-resize-handle:hover .sidebar-resize-grip,
+.sidebar-resize-handle:focus-visible .sidebar-resize-grip {
+  background: var(--color-accent);
+}
+
+.workbench-activity-bar {
+  width: var(--app-activitybar-width);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px 0 0 6px;
+}
+.workbench-editor-panel {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+}
+.workbench-statusbar {
+  min-height: calc(24px / var(--app-scale));
+}
+.workbench-status-content:empty {
+  display: none;
+}
+.workbench-status-content:not(:empty) + .workbench-status-fallback {
+  display: none;
+}
+
+/* Navigation uses stable screen pixels, independently of reading text size. */
+.activity-bar-item {
+  height: var(--app-activitybar-width);
+}
+.workbench-activity-bar .codicon.activity-bar-icon {
+  width: calc(24px / var(--app-scale));
+  height: calc(24px / var(--app-scale));
+  font-size: calc(24px / var(--app-scale));
+  line-height: 1;
+  flex-shrink: 0;
+}
+.activity-bar-item::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: calc(32px / var(--app-scale));
+  height: calc(32px / var(--app-scale));
+  border-radius: calc(4px / var(--app-scale));
+}
+.activity-bar-item:hover::before {
+  background: var(--color-surface-hover);
+}
+.activity-bar-item-active::before,
+.activity-bar-item-active:hover::before {
+  background: var(--color-surface-active);
+}
+.activity-bar-item-active::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: calc(2px / var(--app-scale));
+  background: var(--color-accent);
 }

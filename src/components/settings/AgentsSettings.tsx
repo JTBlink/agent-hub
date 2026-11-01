@@ -58,27 +58,27 @@ export function AgentsSettings() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowAddCustom(true)}
-            className="flex items-center gap-1 text-[13px] text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex items-center gap-1 text-sm text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Plus className="w-3.5 h-3.5" />
             {t("settings.addCustomAgent")}
           </button>
           <button
             onClick={() => handleToggleAllTools(true)}
-            className="text-[13px] text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="text-sm text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {t("settings.enableAll")}
           </button>
           <button
             onClick={() => handleToggleAllTools(false)}
-            className="text-[13px] text-muted hover:text-secondary transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="text-sm text-muted hover:text-secondary transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {t("settings.disableAll")}
           </button>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-1.5 text-[13px] text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             {refreshing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -90,7 +90,7 @@ export function AgentsSettings() {
         </div>
       </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-3 text-[13px] text-muted">
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-muted">
         <span>
           {t("settings.detectedAgents")}{" "}
           <span className="font-medium text-secondary">
@@ -117,10 +117,10 @@ export function AgentsSettings() {
         {detectedTools.length > 0 && (
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-[13px] font-medium text-secondary">
+              <h3 className="text-sm font-medium text-secondary">
                 {t("settings.detectedAgentsSection")}
               </h3>
-              <span className="text-[12px] text-muted tabular-nums">
+              <span className="text-xs text-muted tabular-nums">
                 {detectedTools.length}
               </span>
             </div>
@@ -139,7 +139,7 @@ export function AgentsSettings() {
             <button
               type="button"
               onClick={() => setShowMoreAgents((value) => !value)}
-              className="mb-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {showMoreAgents ? (
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -165,12 +165,10 @@ export function AgentsSettings() {
         {customTools.length > 0 && (
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-[13px] font-medium text-secondary">
+              <h3 className="text-sm font-medium text-secondary">
                 {t("settings.customAgentsSection")}
               </h3>
-              <span className="text-[12px] text-muted">
-                {customTools.length}
-              </span>
+              <span className="text-xs text-muted">{customTools.length}</span>
             </div>
             <AgentGroupDnd
               items={customTools}

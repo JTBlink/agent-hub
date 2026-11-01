@@ -12,7 +12,7 @@ export function AutomationOriginBadge({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium leading-4",
+        "inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium leading-4",
         origin === "agent_hub"
           ? "border-accent-border bg-accent-bg text-accent-light"
           : "border-border-subtle text-muted",

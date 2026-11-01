@@ -11,7 +11,7 @@ export function AutomationVersionField({
   const { t } = useTranslation();
   return (
     <label className="block space-y-2">
-      <span className="text-[12px] font-medium text-muted">
+      <span className="text-xs font-medium text-muted">
         {t("automation.packageVersion")}
       </span>
       <input
@@ -19,7 +19,7 @@ export function AutomationVersionField({
         maxLength={128}
         aria-label={t("automation.packageVersion")}
         placeholder={t("automation.unversioned")}
-        className="app-input w-full font-mono text-[12px]"
+        className="app-input w-full font-mono text-xs"
         onChange={(event) =>
           onChange({
             package_options: {
@@ -30,7 +30,7 @@ export function AutomationVersionField({
           })
         }
       />
-      <span className="block text-[12px] leading-6 text-muted">
+      <span className="block text-xs leading-6 text-muted">
         {t("automation.packageVersionHelp")}
       </span>
     </label>

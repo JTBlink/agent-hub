@@ -162,7 +162,7 @@ export function ProjectSkillCollection({
 
               <div className="px-3.5 pb-3">
                 <ProjectEnabledAgents variants={skill.variants} />
-                <p className="text-[13px] leading-[18px] text-muted truncate">
+                <p className="text-sm leading-[18px] text-muted truncate">
                   {skill.description || "\u2014"}
                 </p>
                 {teamStatusControl}
@@ -172,7 +172,7 @@ export function ProjectSkillCollection({
                       <span
                         key={tag}
                         className={cn(
-                          "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
                           getTagColor(tag, allTags),
                         )}
                       >
@@ -273,14 +273,14 @@ export function ProjectSkillCollection({
               )}
             </div>
             <h3
-              className="w-[180px] shrink-0 truncate text-[14px] font-semibold text-secondary"
+              className="w-[180px] shrink-0 truncate text-base font-semibold text-secondary"
               title={skill.name}
             >
               {skill.name}
             </h3>
 
             <div className="min-w-0 flex-[1_1_200px]">
-              <p className="truncate text-[13px] text-muted">
+              <p className="truncate text-sm text-muted">
                 {skill.description || "\u2014"}
               </p>
               {teamStatusControl}
@@ -292,7 +292,7 @@ export function ProjectSkillCollection({
                   <span
                     key={tag}
                     className={cn(
-                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                      "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
                       getTagColor(tag, allTags),
                     )}
                   >
@@ -309,7 +309,7 @@ export function ProjectSkillCollection({
                 groups={skillGroupsForEntry.get(skill.id) ?? []}
               />
               {skill.files.length > 0 && (
-                <span className="flex items-center gap-1 text-[12px] text-faint">
+                <span className="flex items-center gap-1 text-xs text-faint">
                   <FileText className="w-3 h-3" />
                   {skill.files.length}
                 </span>

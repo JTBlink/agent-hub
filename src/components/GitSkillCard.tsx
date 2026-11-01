@@ -56,7 +56,7 @@ export function GitSkillCard({
             type="button"
             onClick={onDetails}
             title={skill.name}
-            className="min-w-0 truncate text-left text-[13px] font-semibold text-secondary hover:text-accent-light focus-visible:outline-accent"
+            className="min-w-0 truncate text-left text-sm font-semibold text-secondary hover:text-accent-light focus-visible:outline-accent"
           >
             {skill.name}
           </button>
@@ -117,7 +117,7 @@ export function GitSkillCard({
       {skill.description && (
         <p
           title={skill.description}
-          className="line-clamp-2 text-[12px] leading-5 text-muted"
+          className="line-clamp-2 text-xs leading-5 text-muted"
         >
           {skill.description}
         </p>
@@ -125,12 +125,12 @@ export function GitSkillCard({
       <div className="mt-auto flex flex-wrap items-center gap-1">
         <span
           title={source}
-          className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-[13px] font-medium leading-4 text-accent-light"
+          className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-sm font-medium leading-4 text-accent-light"
         >
           {source}
         </span>
         {installed && (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] leading-4 text-emerald-700 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-sm leading-4 text-emerald-700 dark:text-emerald-400">
             <Check aria-hidden="true" className="h-3 w-3" />
             {t(
               otherSource
@@ -145,10 +145,7 @@ export function GitSkillCard({
         installedVersion={installedVersion}
         installed={installed}
       />
-      <p
-        title={skill.repo_path || "/"}
-        className="truncate text-[12px] text-muted"
-      >
+      <p title={skill.repo_path || "/"} className="truncate text-xs text-muted">
         {skill.repo_path || "/"}
       </p>
     </article>

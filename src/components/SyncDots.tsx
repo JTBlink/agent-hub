@@ -84,9 +84,7 @@ export function SyncDots({
   const visible = onToggle && expanded ? dots : collapsedDots;
 
   const dim =
-    size === "sm"
-      ? "h-[16px] w-[16px] text-[8px]"
-      : "h-[18px] w-[18px] text-[9px]";
+    size === "sm" ? "h-[16px] w-[16px] text-xs" : "h-[18px] w-[18px] text-xs";
 
   const iconStateClass: Record<DotState, string> = {
     synced: "bg-surface",

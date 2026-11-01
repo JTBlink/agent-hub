@@ -96,7 +96,7 @@ export function BatchSyncAgentDialog({
       />
       <div className="relative w-full max-w-[440px] rounded-xl border border-border bg-surface p-5 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-[13px] font-semibold text-primary">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-primary">
             <Share2 className="h-4 w-4 text-accent-light" />
             {t("mySkills.batchSyncDialog.title", { count: skills.length })}
           </h2>
@@ -108,12 +108,12 @@ export function BatchSyncAgentDialog({
           </button>
         </div>
 
-        <p className="mb-3 text-[12px] text-muted">
+        <p className="mb-3 text-xs text-muted">
           {t("mySkills.batchSyncDialog.description")}
         </p>
 
         {rows.length === 0 ? (
-          <p className="text-[12px] text-faint">
+          <p className="text-xs text-faint">
             {t("mySkills.batchSyncDialog.noAgents")}
           </p>
         ) : (
@@ -128,7 +128,7 @@ export function BatchSyncAgentDialog({
                   onClick={() => toggle(row.key)}
                   disabled={allSynced}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[12px] transition-colors",
+                    "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-xs transition-colors",
                     checked
                       ? "border-border bg-surface"
                       : "border-border-subtle bg-bg-secondary",
@@ -155,7 +155,7 @@ export function BatchSyncAgentDialog({
                   <span className="min-w-0 flex-1 truncate font-medium text-secondary">
                     {row.displayName}
                   </span>
-                  <span className="shrink-0 tabular-nums text-[11px] text-muted">
+                  <span className="shrink-0 tabular-nums text-xs text-muted">
                     {t("mySkills.syncSummary", {
                       synced: row.synced,
                       total: skills.length,
@@ -170,14 +170,14 @@ export function BatchSyncAgentDialog({
         <div className="flex justify-end gap-2 pt-5">
           <button
             onClick={onClose}
-            className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-tertiary outline-none transition-colors hover:bg-surface-hover hover:text-secondary"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-tertiary outline-none transition-colors hover:bg-surface-hover hover:text-secondary"
           >
             {t("common.cancel")}
           </button>
           <button
             onClick={handleApply}
             disabled={loading || pendingCount === 0}
-            className="rounded-lg border border-accent-border bg-accent-dark px-3 py-1.5 text-[13px] font-medium text-white outline-none transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg border border-accent-border bg-accent-dark px-3 py-1.5 text-sm font-medium text-white outline-none transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
               ? t("common.loading")

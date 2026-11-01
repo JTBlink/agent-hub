@@ -42,21 +42,19 @@ export function Help() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-secondary hover:bg-surface-hover hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             {t("common.back")}
           </button>
         </div>
-        <p className="text-[12px] font-semibold text-faint">
-          {t("help.eyebrow")}
-        </p>
+        <p className="text-xs font-semibold text-faint">{t("help.eyebrow")}</p>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <h1 className="app-page-title">{t("help.pageTitle")}</h1>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 text-[12px] text-secondary hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="inline-flex items-center gap-1.5 text-xs text-secondary hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={() =>
               openUrl(`${helpCatalog.siteUrl}${locale}/`).catch(() =>
                 toast.error(t("help.openFailed")),
@@ -68,7 +66,7 @@ export function Help() {
           </button>
         </div>
         <p className="app-page-subtitle">{t("help.pageDescription")}</p>
-        <p className="mt-1 text-[12px] text-muted">
+        <p className="mt-1 text-xs text-muted">
           {t("help.version", { version: helpCatalog.version })} ·{" "}
           {t("help.offlineAvailable")}
         </p>
@@ -83,7 +81,7 @@ export function Help() {
           aria-label={t("help.searchLabel")}
           value={query}
           placeholder={t("help.searchPlaceholder")}
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-primary outline-none placeholder:text-muted"
+          className="min-w-0 flex-1 bg-transparent text-sm text-primary outline-none placeholder:text-muted"
           onChange={(event) =>
             setParams(
               event.target.value
@@ -101,7 +99,7 @@ export function Help() {
         {query && (
           <button
             type="button"
-            className="text-[12px] text-muted hover:text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="text-xs text-muted hover:text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={() =>
               setParams(
                 selectedCategory ? { category: selectedCategory } : {},
@@ -119,7 +117,7 @@ export function Help() {
             type="button"
             aria-expanded={navigationOpen}
             aria-controls="help-navigation"
-            className="flex w-full items-center gap-2 text-[13px] font-semibold text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent lg:hidden"
+            className="flex w-full items-center gap-2 text-sm font-semibold text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent lg:hidden"
             onClick={() => setNavigationOpen(!navigationOpen)}
           >
             <BookOpen className="h-4 w-4" />
@@ -143,7 +141,7 @@ export function Help() {
             <>
               <nav
                 aria-label={t("help.breadcrumb")}
-                className="mb-4 flex flex-wrap items-center gap-2 text-[12px] text-muted"
+                className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted"
               >
                 <Link
                   className="hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
@@ -165,11 +163,11 @@ export function Help() {
             </>
           ) : articleId ? (
             <div role="status" className="py-10 text-center">
-              <h2 className="text-[16px] font-semibold text-primary">
+              <h2 className="text-lg font-semibold text-primary">
                 {t("help.articleNotFound")}
               </h2>
               <Link
-                className="mt-3 inline-block text-[13px] text-accent-light underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                className="mt-3 inline-block text-sm text-accent-light underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                 to="/help"
               >
                 {t("help.allArticles")}
@@ -180,7 +178,7 @@ export function Help() {
           )}
         </main>
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-muted">
+      <footer className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
         <span>{t("help.feedbackDescription")}</span>
         <button
           type="button"

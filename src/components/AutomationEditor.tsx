@@ -174,7 +174,7 @@ export function AutomationEditor({
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-6 py-4">
           <h2
             id="automation-editor-title"
-            className="text-[15px] font-semibold text-primary"
+            className="text-lg font-semibold text-primary"
           >
             {t(
               task
@@ -263,7 +263,7 @@ export function AutomationEditor({
                   file.path === "network-reset/setup.sh" ||
                   file.path === "scripts/setup.sh",
               ) && (
-                <p className="rounded-lg border border-border-subtle bg-surface p-3 text-[12px] leading-6 text-secondary">
+                <p className="rounded-lg border border-border-subtle bg-surface p-3 text-xs leading-6 text-secondary">
                   {t("automation.networkSetupHelp")}
                 </p>
               )}
@@ -296,7 +296,7 @@ export function AutomationEditor({
                 allowManual={!externalNative}
                 onChange={(schedule) => update({ schedule })}
               />
-              <div className="flex items-center justify-between gap-3 text-[12px] text-secondary">
+              <div className="flex items-center justify-between gap-3 text-xs text-secondary">
                 <span>{t("automation.enableSchedule")}</span>
                 <ToggleSwitch
                   checked={draft.enabled}
@@ -306,11 +306,11 @@ export function AutomationEditor({
                 />
               </div>
               {task?.status === "running" && (
-                <p role="status" className="text-[12px] leading-6 text-muted">
+                <p role="status" className="text-xs leading-6 text-muted">
                   {t("automation.editRunning")}
                 </p>
               )}
-              <p className="text-[12px] leading-6 text-muted">
+              <p className="text-xs leading-6 text-muted">
                 {t(
                   herdrConfig
                     ? "automation.herdrScheduleHelp"
@@ -321,7 +321,7 @@ export function AutomationEditor({
           </div>
         )}
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border-subtle px-6 py-4">
-          <div className="min-w-0 flex-1 text-[12px] leading-6 text-muted">
+          <div className="min-w-0 flex-1 text-xs leading-6 text-muted">
             {error ? (
               <p role="alert" className="break-words text-danger">
                 {error}

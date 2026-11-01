@@ -47,7 +47,7 @@ function toggle(values: Set<string>, value: string) {
 
 const focusClass =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
-const chipClass = `inline-flex min-h-8 items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors ${focusClass}`;
+const chipClass = `inline-flex min-h-8 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${focusClass}`;
 
 function FilterChoice({
   active,
@@ -90,7 +90,7 @@ function FilterRow({
     >
       <span
         aria-hidden="true"
-        className="w-20 shrink-0 whitespace-nowrap pt-2 text-[12px] text-muted"
+        className="w-20 shrink-0 whitespace-nowrap pt-2 text-xs text-muted"
       >
         {label}
       </span>
@@ -163,11 +163,7 @@ export function SkillLibraryFilterPanel(props: Props) {
           </FilterRow>
         )}
         <div className="ml-auto flex min-h-8 items-center gap-3">
-          <span
-            role="status"
-            aria-atomic="true"
-            className="text-[12px] text-muted"
-          >
+          <span role="status" aria-atomic="true" className="text-xs text-muted">
             {t("mySkills.filterPanel.results", { count: props.resultCount })}
           </span>
           <button
@@ -176,7 +172,7 @@ export function SkillLibraryFilterPanel(props: Props) {
             aria-controls={filtersId}
             onClick={() => setFiltersExpanded(!filtersExpanded)}
             className={cn(
-              "inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-secondary hover:bg-surface-hover",
+              "inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-secondary hover:bg-surface-hover",
               focusClass,
             )}
           >
@@ -202,7 +198,7 @@ export function SkillLibraryFilterPanel(props: Props) {
               type="button"
               onClick={props.onClear}
               className={cn(
-                "inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-[12px] text-secondary hover:bg-surface-hover",
+                "inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs text-secondary hover:bg-surface-hover",
                 focusClass,
               )}
             >
@@ -232,7 +228,7 @@ export function SkillLibraryFilterPanel(props: Props) {
           ))}
         </FilterRow>
         {props.deployment === "undeployed" && (
-          <p className="mt-1 text-[12px] leading-5 text-muted sm:pl-[92px]">
+          <p className="mt-1 text-xs leading-5 text-muted sm:pl-[92px]">
             {t("mySkills.filterPanel.undeployedHint")}
           </p>
         )}
@@ -310,7 +306,7 @@ export function SkillLibraryFilterPanel(props: Props) {
                 aria-controls={tagsId}
                 onClick={() => setExpanded(!expanded)}
                 className={cn(
-                  "inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-[12px] text-accent-light hover:bg-surface-hover",
+                  "inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs text-accent-light hover:bg-surface-hover",
                   focusClass,
                 )}
               >

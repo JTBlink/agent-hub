@@ -20,7 +20,7 @@ export function MarkdownContent({
   return (
     <article
       className={cn(
-        "mx-auto w-full max-w-[1240px] text-[13px] leading-6 text-secondary",
+        "mx-auto w-full max-w-[1240px] text-sm leading-6 text-secondary",
         className,
       )}
     >
@@ -31,7 +31,7 @@ export function MarkdownContent({
           h1: ({ className, ...props }) => (
             <h1
               className={cn(
-                "mb-4 text-[28px] font-semibold leading-tight text-primary",
+                "mb-4 text-3xl font-semibold leading-tight text-primary",
                 className,
               )}
               {...props}
@@ -40,7 +40,7 @@ export function MarkdownContent({
           h2: ({ className, ...props }) => (
             <h2
               className={cn(
-                "mb-3 mt-8 text-[20px] font-semibold leading-tight text-primary",
+                "mb-3 mt-8 text-2xl font-semibold leading-tight text-primary",
                 className,
               )}
               {...props}
@@ -49,7 +49,7 @@ export function MarkdownContent({
           h3: ({ className, ...props }) => (
             <h3
               className={cn(
-                "mb-2 mt-6 text-[16px] font-semibold leading-tight text-primary",
+                "mb-2 mt-6 text-lg font-semibold leading-tight text-primary",
                 className,
               )}
               {...props}
@@ -57,10 +57,7 @@ export function MarkdownContent({
           ),
           p: ({ className, ...props }) => (
             <p
-              className={cn(
-                "mb-4 text-[13px] leading-6 text-secondary",
-                className,
-              )}
+              className={cn("mb-4 text-sm leading-6 text-secondary", className)}
               {...props}
             />
           ),
@@ -126,7 +123,7 @@ export function MarkdownContent({
               return (
                 <SyntaxCode
                   className={cn(
-                    "block text-[13px] leading-6 text-secondary",
+                    "block font-mono text-code leading-6 text-secondary",
                     className,
                   )}
                   content={String(children ?? "")}
@@ -140,7 +137,7 @@ export function MarkdownContent({
             return (
               <code
                 className={cn(
-                  "rounded bg-surface-hover px-1.5 py-0.5 font-mono text-[13px] text-accent-light",
+                  "rounded bg-surface-hover px-1.5 py-0.5 font-mono text-sm text-accent-light",
                   className,
                 )}
                 {...props}
@@ -162,7 +159,7 @@ export function MarkdownContent({
             <div className="mb-4 overflow-x-auto rounded-xl border border-border-subtle">
               <table
                 className={cn(
-                  "min-w-full border-collapse text-left text-[13px]",
+                  "min-w-full border-collapse text-left text-sm",
                   className,
                 )}
                 {...props}

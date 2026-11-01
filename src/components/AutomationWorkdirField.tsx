@@ -80,7 +80,7 @@ export function AutomationWorkdirField({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <label htmlFor={inputId} className="text-[12px] font-medium text-muted">
+        <label htmlFor={inputId} className="text-xs font-medium text-muted">
           {t(`automation.${kind}`)}
         </label>
         <button
@@ -183,19 +183,16 @@ export function AutomationWorkdirField({
         )}
       </div>
       {kind === "projectWorkspace" && path && (
-        <p
-          className="break-all text-[11px] leading-5 text-secondary"
-          title={path}
-        >
+        <p className="break-all text-xs leading-5 text-secondary" title={path}>
           {path}
         </p>
       )}
       {error && (
-        <p role="alert" className="text-[11px] text-danger">
+        <p role="alert" className="text-xs text-danger">
           {error}
         </p>
       )}
-      <p className="break-words text-[11px] leading-5 text-muted">
+      <p className="break-words text-xs leading-5 text-muted">
         {helpText ??
           t(
             kind === "scriptDir"

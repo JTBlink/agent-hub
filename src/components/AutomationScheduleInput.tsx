@@ -37,7 +37,7 @@ export function AutomationScheduleInput({
   return (
     <div className="space-y-3">
       <label className="block space-y-2">
-        <span className="text-[12px] font-medium text-muted">
+        <span className="text-xs font-medium text-muted">
           {t("automation.columns.schedule")}
         </span>
         <ThemedSelect
@@ -65,7 +65,7 @@ export function AutomationScheduleInput({
       </label>
       {schedule.kind === "daily" && (
         <label className="block space-y-2">
-          <span className="text-[12px] font-medium text-muted">
+          <span className="text-xs font-medium text-muted">
             {t("automation.localTime")}
           </span>
           <input
@@ -83,7 +83,7 @@ export function AutomationScheduleInput({
       )}
       {schedule.kind === "interval" && (
         <label className="block space-y-2">
-          <span className="text-[12px] font-medium text-muted">
+          <span className="text-xs font-medium text-muted">
             {t("automation.intervalMinutes")}
           </span>
           <input
@@ -102,7 +102,7 @@ export function AutomationScheduleInput({
       )}
       {schedule.kind === "hourly" && (
         <label className="block space-y-2">
-          <span className="text-[12px] font-medium text-muted">
+          <span className="text-xs font-medium text-muted">
             {t("automation.hourlyMinute")}
           </span>
           <input
@@ -121,7 +121,7 @@ export function AutomationScheduleInput({
       )}
       {schedule.kind === "custom" && (
         <label className="block space-y-2">
-          <span className="text-[12px] font-medium text-muted">
+          <span className="text-xs font-medium text-muted">
             {t("automation.expression")}
           </span>
           <input
@@ -135,7 +135,7 @@ export function AutomationScheduleInput({
           />
         </label>
       )}
-      <p className="text-[11px] leading-5 text-muted">
+      <p className="text-xs leading-5 text-muted">
         {Intl.DateTimeFormat().resolvedOptions().timeZone}
       </p>
     </div>

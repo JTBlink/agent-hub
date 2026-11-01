@@ -40,7 +40,7 @@ export function InstallToast({ skillName, phase }: InstallToastProps) {
           <Icon className="h-4 w-4 text-emerald-400" />
         )}
       </div>
-      <span className="text-[13px] text-secondary">
+      <span className="text-sm text-secondary">
         {t(config.i18nKey, { name: skillName })}
       </span>
     </div>

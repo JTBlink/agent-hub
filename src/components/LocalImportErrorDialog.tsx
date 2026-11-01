@@ -30,14 +30,14 @@ export function LocalImportErrorDialog({
     >
       <h2
         id={titleId}
-        className="mb-3 flex items-center gap-2 text-[14px] font-semibold"
+        className="mb-3 flex items-center gap-2 text-base font-semibold"
       >
         <AlertTriangle className="h-4 w-4 text-amber-400" aria-hidden="true" />
         {t("install.local.importFailed")}
       </h2>
       <p
         id={descriptionId}
-        className="mb-5 text-[13px] leading-relaxed text-tertiary"
+        className="mb-5 text-sm leading-relaxed text-tertiary"
       >
         {message}
       </p>

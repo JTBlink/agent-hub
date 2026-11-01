@@ -14,7 +14,7 @@ export function AutomationReadFeedback({
       {error !== null && (
         <div
           role="alert"
-          className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-[13px] text-danger"
+          className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-sm text-danger"
         >
           <p>{t("automation.loadFailed")}</p>
           <p className="mt-1 break-words">{error}</p>
@@ -23,10 +23,10 @@ export function AutomationReadFeedback({
       {!!issues.length && (
         <div
           role="alert"
-          className="rounded-lg border border-border bg-surface p-3 text-[13px] text-secondary"
+          className="rounded-lg border border-border bg-surface p-3 text-sm text-secondary"
         >
           <p className="font-medium">{t("automation.partialFailure")}</p>
-          <ul className="mt-1 list-inside list-disc space-y-1 break-words text-[12px] text-muted">
+          <ul className="mt-1 list-inside list-disc space-y-1 break-words text-xs text-muted">
             {issues.map((issue, index) => (
               <li key={`${issue.source}-${index}`}>
                 {t(`automation.sources.${issue.source}`)}: {issue.message}

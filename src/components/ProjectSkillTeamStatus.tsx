@@ -19,7 +19,7 @@ export function ProjectSkillTeamStatus({
   const { t } = useTranslation();
   if (!status || !needsTeamRefresh(status)) return null;
   return (
-    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-accent-bg px-2 py-1.5 text-[12px] text-accent-light">
+    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-accent-bg px-2 py-1.5 text-xs text-accent-light">
       <span>{t("projectLibrary.stale")}</span>
       {onRepair && (
         <button

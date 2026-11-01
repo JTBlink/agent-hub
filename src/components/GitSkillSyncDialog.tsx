@@ -55,19 +55,19 @@ export function GitSkillSyncDialog({
       busy={busy}
       onClose={onClose}
     >
-      <p className="text-[13px] leading-6 text-secondary">
+      <p className="text-sm leading-6 text-secondary">
         {t("install.gitBrowser.syncDescription")}
       </p>
-      <p className="my-3 break-all text-[12px] text-muted">{target}</p>
+      <p className="my-3 break-all text-xs text-muted">{target}</p>
       {busy && <p role="status">{t("common.loading")}</p>}
       {error && (
-        <p role="alert" className="my-3 break-words text-[13px] text-danger">
+        <p role="alert" className="my-3 break-words text-sm text-danger">
           {error}
         </p>
       )}
       {plan && (
         <>
-          <p className="text-[13px] text-secondary">
+          <p className="text-sm text-secondary">
             {t("install.gitBrowser.repositoryVersion", {
               version:
                 plan.repository_version ||
@@ -81,12 +81,12 @@ export function GitSkillSyncDialog({
             })}
           </p>
           {!plan.approval && (
-            <p role="status" className="mt-3 text-[13px] text-secondary">
+            <p role="status" className="mt-3 text-sm text-secondary">
               {t(`install.gitBrowser.syncUnavailable.${comparison}`)}
             </p>
           )}
           {plan.approval && plan.approval.removed_paths.length > 0 && (
-            <div className="mt-3 text-[13px] text-danger">
+            <div className="mt-3 text-sm text-danger">
               <p>{t("install.gitBrowser.syncRemovals")}</p>
               <ul className="max-h-40 list-disc overflow-auto break-all pl-5">
                 {plan.approval.removed_paths.map((path) => (

@@ -52,11 +52,11 @@ export function SkillTargetConflictDialog({
         {conflict?.conflicts.map((item) => (
           <span
             key={item.path}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-[13px] text-secondary"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-sm text-secondary"
           >
             {item.path}
             {item.is_skill && (
-              <span className="rounded-full bg-accent-dark/20 px-1.5 py-0.5 text-[11px] font-medium text-accent">
+              <span className="rounded-full bg-accent-dark/20 px-1.5 py-0.5 text-xs font-medium text-accent">
                 Skill
               </span>
             )}

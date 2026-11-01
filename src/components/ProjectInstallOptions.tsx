@@ -13,7 +13,7 @@ export function ProjectInstallOptions({
   const { t } = useTranslation();
   return (
     <>
-      <label className="mb-2 flex items-start gap-2 text-[12px] text-muted">
+      <label className="mb-2 flex items-start gap-2 text-xs text-muted">
         <input
           type="checkbox"
           checked={copy}
@@ -23,7 +23,7 @@ export function ProjectInstallOptions({
         />
         {t("projectLibrary.copyEntries")}
       </label>
-      <p className="mb-2 text-[12px] text-muted">
+      <p className="mb-2 text-xs text-muted">
         {t(
           copy
             ? "projectLibrary.installPlanCopy"

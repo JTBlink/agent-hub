@@ -58,7 +58,7 @@ export function MultiSelectToolbar({
 
   return (
     <div className="flex items-center gap-2 px-1 py-1.5">
-      <span className="text-[13px] text-muted tabular-nums">
+      <span className="text-sm text-muted tabular-nums">
         {hasSelection ? labels.selected : labels.hint}
       </span>
 
@@ -68,7 +68,7 @@ export function MultiSelectToolbar({
           onClick={action.onSelect}
           disabled={action.disabled || action.busy}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+            "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
             TONE_CLASS[action.tone ?? "secondary"],
           )}
         >
@@ -101,13 +101,13 @@ export function MultiSelectToolbar({
 
       <button
         onClick={onSelectAll}
-        className="rounded-md px-2.5 py-1 text-[13px] font-medium text-muted hover:text-secondary hover:bg-surface-hover transition-colors"
+        className="rounded-md px-2.5 py-1 text-sm font-medium text-muted hover:text-secondary hover:bg-surface-hover transition-colors"
       >
         {isAllSelected ? labels.deselectAll : labels.selectAll}
       </button>
       <button
         onClick={onCancel}
-        className="rounded-md px-2.5 py-1 text-[13px] font-medium text-muted hover:text-secondary hover:bg-surface-hover transition-colors"
+        className="rounded-md px-2.5 py-1 text-sm font-medium text-muted hover:text-secondary hover:bg-surface-hover transition-colors"
       >
         {labels.cancel}
       </button>

@@ -69,12 +69,12 @@ export function WorkspaceSkillCard({
           {leadingSlot}
         </div>
         <h3
-          className="w-[180px] shrink-0 truncate text-[14px] font-semibold text-secondary group-hover:text-primary"
+          className="w-[180px] shrink-0 truncate text-base font-semibold text-secondary group-hover:text-primary"
           title={title}
         >
           {title}
         </h3>
-        <p className="min-w-0 flex-1 truncate text-[13px] text-muted">
+        <p className="min-w-0 flex-1 truncate text-sm text-muted">
           {description || "-"}
         </p>
         {tags.length > 0 && (
@@ -83,7 +83,7 @@ export function WorkspaceSkillCard({
               <span
                 key={tag.label}
                 className={cn(
-                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-[11px] font-medium",
+                  "inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium",
                   tag.className,
                 )}
               >
@@ -96,14 +96,14 @@ export function WorkspaceSkillCard({
           <span
             title={status.label}
             className={cn(
-              "min-w-0 truncate rounded-full px-2 py-0.5 text-[12px] font-medium",
+              "min-w-0 truncate rounded-full px-2 py-0.5 text-xs font-medium",
               status.className,
             )}
           >
             {status.label}
           </span>
           {fileCount > 0 && (
-            <span className="flex shrink-0 items-center gap-1 text-[12px] text-faint">
+            <span className="flex shrink-0 items-center gap-1 text-xs text-faint">
               <FileText className="h-3 w-3" />
               {fileCount}
             </span>
@@ -137,20 +137,20 @@ export function WorkspaceSkillCard({
           {leadingSlot}
         </div>
         <h3
-          className="flex-1 truncate text-[14px] font-semibold text-primary group-hover:text-accent-light"
+          className="flex-1 truncate text-base font-semibold text-primary group-hover:text-accent-light"
           title={title}
         >
           {title}
         </h3>
         {fileCount > 0 && (
-          <span className="flex shrink-0 items-center gap-1 text-[12px] text-faint">
+          <span className="flex shrink-0 items-center gap-1 text-xs text-faint">
             <FileText className="h-3 w-3" />
             {fileCount}
           </span>
         )}
       </div>
       <div className="px-3.5 pb-3">
-        <p className="truncate text-[13px] leading-[18px] text-muted">
+        <p className="truncate text-sm leading-[18px] text-muted">
           {description || "-"}
         </p>
         {tags.length > 0 && (
@@ -159,7 +159,7 @@ export function WorkspaceSkillCard({
               <span
                 key={tag.label}
                 className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
                   tag.className,
                 )}
               >
@@ -173,7 +173,7 @@ export function WorkspaceSkillCard({
         <span
           title={status.label}
           className={cn(
-            "min-w-0 truncate rounded-full px-2 py-0.5 text-[12px] font-medium",
+            "min-w-0 truncate rounded-full px-2 py-0.5 text-xs font-medium",
             status.className,
           )}
         >

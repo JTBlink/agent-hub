@@ -822,7 +822,7 @@ export function InstallSkills({
       />
       {activeTab === "recommended" && (
         <div className="animate-in fade-in duration-300">
-          <p className="mb-3 text-[13px] text-muted">
+          <p className="mb-3 text-sm text-muted">
             {t("install.recommendedDesc")}
           </p>
           <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
@@ -1026,10 +1026,10 @@ export function InstallSkills({
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-background text-muted">
                     <Search className="h-5 w-5" />
                   </div>
-                  <h3 className="mt-4 text-[14px] font-semibold text-secondary">
+                  <h3 className="mt-4 text-base font-semibold text-secondary">
                     {t("install.noResults.title")}
                   </h3>
-                  <p className="mt-1 max-w-md text-[13px] text-muted">
+                  <p className="mt-1 max-w-md text-sm text-muted">
                     {t("install.noResults.description")}
                   </p>
                 </div>
@@ -1081,7 +1081,7 @@ export function InstallSkills({
                           changeMarketPage(Math.max(1, currentMarketPage - 1))
                         }
                         disabled={currentMarketPage === 1}
-                        className="inline-flex items-center gap-1 rounded-[6px] border border-border-subtle bg-surface px-3 py-1.5 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-[6px] border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
                       >
                         <ChevronLeft className="h-3.5 w-3.5" />
                         {t("install.pagination.previous")}
@@ -1094,14 +1094,14 @@ export function InstallSkills({
                         return (
                           <div key={page} className="flex items-center gap-1.5">
                             {showGap ? (
-                              <span className="px-1 text-[13px] text-faint">
+                              <span className="px-1 text-sm text-faint">
                                 ...
                               </span>
                             ) : null}
                             <button
                               onClick={() => changeMarketPage(page)}
                               className={cn(
-                                "min-w-8 rounded-[6px] border px-2.5 py-1.5 text-[13px] font-semibold transition-colors",
+                                "min-w-8 rounded-[6px] border px-2.5 py-1.5 text-sm font-semibold transition-colors",
                                 page === currentMarketPage
                                   ? "border-accent-border bg-accent-dark text-white"
                                   : "border-border-subtle bg-surface text-secondary hover:bg-surface-hover",
@@ -1120,7 +1120,7 @@ export function InstallSkills({
                           )
                         }
                         disabled={currentMarketPage === totalMarketPages}
-                        className="inline-flex items-center gap-1 rounded-[6px] border border-border-subtle bg-surface px-3 py-1.5 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-[6px] border border-border-subtle bg-surface px-3 py-1.5 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
                       >
                         {t("install.pagination.next")}
                         <ChevronRight className="h-3.5 w-3.5" />
@@ -1138,7 +1138,7 @@ export function InstallSkills({
                           )
                         }
                         disabled={!canLoadMoreSearch || marketLoading}
-                        className="inline-flex items-center gap-2 rounded-[6px] border border-border-subtle bg-surface px-3.5 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center gap-2 rounded-[6px] border border-border-subtle bg-surface px-3.5 py-2 text-sm font-medium text-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {marketLoading ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1164,17 +1164,17 @@ export function InstallSkills({
             <div className="border-b border-border-subtle px-4 py-3.5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="max-w-xl">
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted">
                     <span className="inline-flex items-center gap-1.5 rounded-[5px] border border-accent-border bg-accent-bg px-2 py-1 font-medium text-accent-light">
                       <FolderUp className="h-3.5 w-3.5" />
                       {t("install.local.title")}
                     </span>
                   </div>
 
-                  <h2 className="text-[14px] font-semibold text-secondary">
+                  <h2 className="text-base font-semibold text-secondary">
                     {t("install.local.title")}
                   </h2>
-                  <p className="mt-1 text-[13px] leading-5 text-muted">
+                  <p className="mt-1 text-sm leading-5 text-muted">
                     {t("install.local.description")}
                   </p>
                 </div>

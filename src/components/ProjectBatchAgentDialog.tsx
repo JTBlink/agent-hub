@@ -98,7 +98,7 @@ export function ProjectBatchAgentDialog({
         <div className="mb-3 flex items-center justify-between">
           <h2
             id="batch-agent-title"
-            className="text-[14px] font-semibold text-primary"
+            className="text-base font-semibold text-primary"
           >
             {t(
               enabled
@@ -114,7 +114,7 @@ export function ProjectBatchAgentDialog({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="mb-3 text-[12px] text-muted">
+        <p className="mb-3 text-xs text-muted">
           {t(
             enabled
               ? "project.batchAgents.enableHint"
@@ -133,7 +133,7 @@ export function ProjectBatchAgentDialog({
             return (
               <label
                 key={target.key}
-                className="flex items-center gap-2 rounded-lg border border-border-subtle p-2 text-[13px]"
+                className="flex items-center gap-2 rounded-lg border border-border-subtle p-2 text-sm"
               >
                 <input
                   type="checkbox"
@@ -165,7 +165,7 @@ export function ProjectBatchAgentDialog({
             );
           })}
           {errors.length > 0 && (
-            <div role="alert" className="space-y-1 text-[12px] text-danger">
+            <div role="alert" className="space-y-1 text-xs text-danger">
               {errors.map((error, index) => (
                 <p key={index} className="whitespace-pre-wrap break-words">
                   {error}
@@ -185,7 +185,7 @@ export function ProjectBatchAgentDialog({
           <button
             disabled={busy || selected.length === 0}
             onClick={() => void apply()}
-            className="rounded-lg bg-accent-dark px-3 py-1.5 text-[13px] text-white disabled:opacity-50"
+            className="rounded-lg bg-accent-dark px-3 py-1.5 text-sm text-white disabled:opacity-50"
           >
             {busy
               ? t("common.loading")

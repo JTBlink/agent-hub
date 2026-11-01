@@ -50,10 +50,10 @@ export function GitSetupDialog({
       <div className="relative bg-surface border border-border rounded-xl w-full max-w-lg p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-primary">
+            <h2 className="text-base font-semibold text-primary">
               {t("settings.gitSetupTitle")}
             </h2>
-            <p className="mt-1 text-[12px] text-muted">
+            <p className="mt-1 text-xs text-muted">
               {t("settings.gitSetupSubtitle")}
             </p>
           </div>
@@ -67,7 +67,7 @@ export function GitSetupDialog({
         </div>
 
         {!hasRemote && (
-          <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-600 dark:text-amber-400">
+          <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
             {t("settings.gitSetupNeedRemote")}
           </div>
         )}
@@ -97,14 +97,14 @@ export function GitSetupDialog({
           <button
             onClick={() => !loading && onClose()}
             disabled={loading}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none disabled:opacity-50"
           >
             {t("common.cancel")}
           </button>
           <button
             onClick={handleConfirm}
             disabled={loading || !hasRemote}
-            className="px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
+            className="px-3 py-1.5 rounded-lg bg-accent-dark hover:bg-accent text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-accent-border outline-none"
           >
             {loading ? t("common.loading") : t("settings.gitSetupConfirm")}
           </button>
@@ -155,12 +155,12 @@ function ChoiceCard({
         >
           {icon}
         </span>
-        <span className="text-[13px] font-semibold text-primary">{title}</span>
-        <span className="ml-auto rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[11px] text-muted">
+        <span className="text-sm font-semibold text-primary">{title}</span>
+        <span className="ml-auto rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-xs text-muted">
           {badge}
         </span>
       </div>
-      <p className="mt-1.5 pl-7 text-[12px] text-tertiary leading-relaxed">
+      <p className="mt-1.5 pl-7 text-xs text-tertiary leading-relaxed">
         {description}
       </p>
     </button>

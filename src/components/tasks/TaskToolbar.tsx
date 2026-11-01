@@ -144,7 +144,7 @@ export function TaskToolbar({
         {context && (
           <span
             title={context}
-            className="min-w-0 flex-1 truncate text-[11px] text-faint"
+            className="min-w-0 flex-1 truncate text-xs text-faint"
           >
             {context}
           </span>

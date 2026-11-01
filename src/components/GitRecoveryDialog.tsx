@@ -51,11 +51,11 @@ export function GitRecoveryDialog({ open, reason, onClose, onReclone }: Props) {
       <div className="relative bg-surface border border-border rounded-xl w-full max-w-lg p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-[14px] font-semibold text-primary">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-primary">
               <AlertTriangle className="h-4 w-4 text-red-500" />
               {t("settings.gitRecoveryTitle")}
             </h2>
-            <p className="mt-1 text-[12px] text-muted leading-relaxed">
+            <p className="mt-1 text-xs text-muted leading-relaxed">
               {t(subtitleKey)}
             </p>
           </div>
@@ -82,13 +82,13 @@ export function GitRecoveryDialog({ open, reason, onClose, onReclone }: Props) {
               <span className="rounded-full bg-accent/20 p-1 text-accent-light">
                 <RotateCcw className="h-4 w-4" />
               </span>
-              <span className="text-[13px] font-semibold text-primary">
+              <span className="text-sm font-semibold text-primary">
                 {loading === "reclone"
                   ? t("settings.gitRecoveryRecloning")
                   : t("settings.gitRecoveryCardRecloneTitle")}
               </span>
             </div>
-            <p className="mt-1.5 pl-7 text-[12px] text-tertiary leading-relaxed">
+            <p className="mt-1.5 pl-7 text-xs text-tertiary leading-relaxed">
               {t("settings.gitRecoveryCardRecloneDesc")}
             </p>
           </button>
@@ -104,11 +104,11 @@ export function GitRecoveryDialog({ open, reason, onClose, onReclone }: Props) {
                 <span className="rounded-full bg-surface p-1 text-muted">
                   <GitBranch className="h-4 w-4" />
                 </span>
-                <span className="text-[13px] font-semibold text-primary">
+                <span className="text-sm font-semibold text-primary">
                   {t("settings.gitRecoveryCardKeepLocalTitle")}
                 </span>
               </div>
-              <p className="mt-1.5 pl-7 text-[12px] text-tertiary leading-relaxed">
+              <p className="mt-1.5 pl-7 text-xs text-tertiary leading-relaxed">
                 {t("settings.gitRecoveryCardKeepLocalDesc")}
               </p>
             </button>
@@ -119,7 +119,7 @@ export function GitRecoveryDialog({ open, reason, onClose, onReclone }: Props) {
           <button
             onClick={() => !loading && onClose()}
             disabled={!!loading}
-            className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-tertiary hover:text-secondary hover:bg-surface-hover transition-colors outline-none disabled:opacity-50"
           >
             {t("common.cancel")}
           </button>

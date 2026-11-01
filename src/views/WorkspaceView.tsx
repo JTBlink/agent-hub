@@ -567,7 +567,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
     const removing = removingLocalSkillId === skill.relative_path;
     const buttonClassName =
       variant === "grid"
-        ? "rounded px-2 py-1 text-[13px] font-medium text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
+        ? "rounded px-2 py-1 text-sm font-medium text-muted transition-colors outline-none hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
         : "rounded p-0.5 text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50";
 
     if (isInSync && !isManaged) return null;
@@ -668,10 +668,10 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-hover">
             <Globe className="h-5 w-5 text-muted" />
           </div>
-          <p className="text-[13px] font-medium text-secondary">
+          <p className="text-sm font-medium text-secondary">
             {t(config.i18nKeys.noAgents)}
           </p>
-          <p className="mt-1 max-w-[260px] text-[12px] leading-relaxed text-muted">
+          <p className="mt-1 max-w-[260px] text-xs leading-relaxed text-muted">
             {t(config.i18nKeys.noAgentsHint)}
           </p>
         </div>
@@ -722,10 +722,10 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                   className="h-9 w-9 rounded-lg transition-colors group-hover:border-border"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-secondary">
+                  <p className="truncate text-sm font-semibold text-secondary">
                     {tool.display_name}
                   </p>
-                  <p className="text-[12px] text-muted">
+                  <p className="text-xs text-muted">
                     {t("globalWorkspace.skillCount", { count })}
                   </p>
                 </div>
@@ -753,7 +753,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
               {currentTool.display_name}
               <span className="app-badge">{localSkills.length}</span>
             </h1>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted">
               <span className="min-w-0 truncate" title={currentTool.skills_dir}>
                 {compactHomePath(currentTool.skills_dir)}
               </span>
@@ -874,13 +874,13 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
 
         {allLocalTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] text-muted">
+            <span className="text-xs text-muted">
               {t("mySkills.tags.filter")}
             </span>
             <button
               onClick={() => setTagFilters(new Set())}
               className={cn(
-                "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                 tagFilters.size === 0
                   ? "bg-accent text-white dark:bg-accent dark:text-white"
                   : "bg-surface-hover text-muted hover:text-secondary",
@@ -903,7 +903,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                       });
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                       isActive
                         ? "bg-surface-active text-primary"
                         : "border border-dashed border-border text-muted hover:text-secondary",
@@ -929,7 +929,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                     });
                   }}
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                    "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                     active
                       ? getTagActiveColor(tag, allLocalTags)
                       : getTagColor(tag, allLocalTags),
@@ -958,14 +958,14 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
       </div>
 
       {localSkillsLoading && !Object.hasOwn(skillsByAgent, currentTool.key) ? (
-        <div className="flex items-center gap-2 py-4 text-[13px] text-muted">
+        <div className="flex items-center gap-2 py-4 text-sm text-muted">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           {t("common.loading")}
         </div>
       ) : visibleLocalSkills.length === 0 ? (
         <div className="flex min-h-[260px] flex-col items-center justify-center px-4 text-center">
           <Globe className="mb-4 h-12 w-12 text-faint" />
-          <h3 className="mb-1.5 text-[14px] font-semibold text-tertiary">
+          <h3 className="mb-1.5 text-base font-semibold text-tertiary">
             {localSkills.length === 0
               ? t("globalWorkspace.localSkills.empty")
               : t("mySkills.noMatch")}
@@ -973,7 +973,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
           {localSkills.length === 0 && (
             <button
               onClick={() => setAddDialogOpen(true)}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               <Plus className="h-3.5 w-3.5" />
               {t("globalWorkspace.addSkill")}
@@ -1107,13 +1107,13 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className={cn(
-                  "rounded-full px-2.5 py-1 text-[12px] font-medium",
+                  "rounded-full px-2.5 py-1 text-xs font-medium",
                   getLocalStatusMeta(t, localDetailSkill.sync_status).className,
                 )}
               >
                 {getLocalStatusMeta(t, localDetailSkill.sync_status).label}
               </span>
-              <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[12px] text-muted">
+              <span className="rounded-full bg-surface-hover px-2.5 py-1 text-xs text-muted">
                 {localDetailSkill.relative_path}
               </span>
             </div>
@@ -1129,7 +1129,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
                 type="button"
                 onClick={() => setLocalContentTab(tab)}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   localContentTab === tab
                     ? "bg-accent text-white"
                     : "bg-surface-hover text-muted hover:text-secondary",
@@ -1149,7 +1149,7 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
         )}
 
         {localDocLoading ? (
-          <div className="mt-12 text-center text-[13px] text-muted">
+          <div className="mt-12 text-center text-sm text-muted">
             {t("common.loading")}
           </div>
         ) : localContentTab === "diff" ? (
@@ -1159,30 +1159,30 @@ export function WorkspaceView({ config }: { config: WorkspaceConfig }) {
               updated={localCenterDocContent}
             />
           ) : localCenterDocLoading ? (
-            <div className="mt-12 text-center text-[13px] text-muted">
+            <div className="mt-12 text-center text-sm text-muted">
               {t("common.loading")}
             </div>
           ) : (
-            <div className="mt-12 text-center text-[13px] text-muted">
+            <div className="mt-12 text-center text-sm text-muted">
               {t("mySkills.sourceDiffUnavailable")}
             </div>
           )
         ) : localContentTab === "center" ? (
           localCenterDocLoading ? (
-            <div className="mt-12 text-center text-[13px] text-muted">
+            <div className="mt-12 text-center text-sm text-muted">
               {t("common.loading")}
             </div>
           ) : localCenterDocContent ? (
             <SkillMarkdown content={localCenterDocContent} />
           ) : (
-            <div className="mt-12 text-center text-[13px] text-muted">
+            <div className="mt-12 text-center text-sm text-muted">
               {t("mySkills.sourceDiffUnavailable")}
             </div>
           )
         ) : localDocContent ? (
           <SkillMarkdown content={localDocContent} />
         ) : (
-          <div className="mt-12 text-center text-[13px] text-muted">
+          <div className="mt-12 text-center text-sm text-muted">
             {t("common.documentMissing")}
           </div>
         )}

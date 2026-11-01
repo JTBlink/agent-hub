@@ -40,7 +40,7 @@ export function SkillDirectoryActions({
         className={
           compact
             ? "rounded p-0.5 text-faint transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent"
-            : "app-button-secondary !px-2 !py-1 text-[12px] focus-visible:ring-2 focus-visible:ring-accent"
+            : "app-button-secondary !px-2 !py-1 text-xs focus-visible:ring-2 focus-visible:ring-accent"
         }
       >
         <FolderOpen className="h-3.5 w-3.5" />
@@ -55,7 +55,7 @@ export function SkillDirectoryActions({
         className={
           compact
             ? "rounded p-0.5 text-faint transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent"
-            : "app-button-secondary !px-2 !py-1 text-[12px] focus-visible:ring-2 focus-visible:ring-accent"
+            : "app-button-secondary !px-2 !py-1 text-xs focus-visible:ring-2 focus-visible:ring-accent"
         }
       >
         <Code2 className="h-3.5 w-3.5" />

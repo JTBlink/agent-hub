@@ -230,13 +230,13 @@ export function Automation() {
       {actionError && !removing && (
         <p
           role="alert"
-          className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-[13px] text-danger"
+          className="rounded-lg border border-danger/30 bg-danger-bg p-3 text-sm text-danger"
         >
           {actionError}
         </p>
       )}
       {notice && (
-        <p role="status" className="text-[13px] text-accent-light">
+        <p role="status" className="text-sm text-accent-light">
           {notice}
         </p>
       )}
@@ -406,7 +406,7 @@ export function Automation() {
         aria-busy={loading}
         className="overflow-x-auto rounded-xl border border-border-subtle bg-surface"
       >
-        <table className="w-full min-w-[1000px] border-collapse text-left text-[12px]">
+        <table className="w-full min-w-[1000px] border-collapse text-left text-xs">
           <caption className="sr-only">{t("automation.title")}</caption>
           <thead className="border-b border-border-subtle bg-bg-secondary text-muted">
             <tr>
@@ -431,14 +431,14 @@ export function Automation() {
                     type="button"
                     onClick={() => openTask(task.id)}
                     data-automation-id={task.id}
-                    className="flex w-full min-w-0 items-center gap-2.5 text-left text-[13px] font-medium text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    className="flex w-full min-w-0 items-center gap-2.5 text-left text-sm font-medium text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                     title={task.name}
                   >
                     <AutomationTaskIcon task={task} className="h-7 w-7" />
                     <span className="min-w-0">
                       <span className="block truncate">{task.name}</span>
                       {task.installation && (
-                        <span className="block text-[11px] font-normal text-muted">
+                        <span className="block text-xs font-normal text-muted">
                           {t(`automation.installStates.${task.installation}`)}
                         </span>
                       )}
@@ -475,7 +475,7 @@ export function Automation() {
                   {task.last_result && (
                     <span
                       className={cn(
-                        "mt-1 block max-w-[160px] truncate text-[11px]",
+                        "mt-1 block max-w-[160px] truncate text-xs",
                         ["ok", "0"].includes(task.last_result)
                           ? "text-accent-light"
                           : ["skipped", "no_change"].includes(task.last_result)
@@ -520,7 +520,7 @@ export function Automation() {
           </div>
         )}
       </div>
-      <p className="text-[12px] leading-6 text-muted">
+      <p className="text-xs leading-6 text-muted">
         {t("automation.managementNote")}
       </p>
       {overlays}

@@ -97,10 +97,10 @@ export function SkillsSettings() {
         <div className="app-panel overflow-hidden divide-y divide-border-faint">
           <div className="flex items-center justify-between gap-4 px-4 py-2.5">
             <div className="min-w-0">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.autoUpdate.intervalLabel")}
               </h3>
-              <p className="text-[12px] text-muted">
+              <p className="text-xs text-muted">
                 {t("settings.autoUpdate.intervalDesc")}
                 {autoUpdateLastRun
                   ? ` · ${t("settings.autoUpdate.lastRun", {
@@ -130,10 +130,10 @@ export function SkillsSettings() {
           </div>
           <div className="flex items-center justify-between gap-4 px-4 py-2.5">
             <div className="min-w-0">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.autoUpdate.applyLabel")}
               </h3>
-              <p className="text-[12px] text-muted">
+              <p className="text-xs text-muted">
                 {t("settings.autoUpdate.applyDesc")}
               </p>
             </div>

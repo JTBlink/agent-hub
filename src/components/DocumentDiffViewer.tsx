@@ -237,7 +237,7 @@ function DiffCell({
     <>
       <td
         className={cn(
-          "w-14 select-none border-r border-border-subtle px-3 text-right font-mono text-[12px]",
+          "w-14 select-none border-r border-border-subtle px-3 text-right font-mono text-xs",
           tone.lineNoClass,
         )}
       >
@@ -245,7 +245,7 @@ function DiffCell({
       </td>
       <td
         className={cn(
-          "border-r border-border-subtle px-3 font-mono text-[12.5px] leading-6",
+          "border-r border-border-subtle px-3 font-mono text-code leading-6",
           tone.codeClass,
         )}
         style={tone.codeStyle}
@@ -286,7 +286,7 @@ export function DocumentDiffViewer({
           className,
         )}
       >
-        <div className="text-[13px] font-medium text-secondary">
+        <div className="text-sm font-medium text-secondary">
           No content changes
         </div>
       </div>
@@ -301,12 +301,12 @@ export function DocumentDiffViewer({
           className="overflow-hidden rounded-xl border border-border-subtle bg-bg-secondary"
         >
           <div className="grid grid-cols-2 border-b border-border-subtle bg-[#ddf4ff] dark:bg-[#0c2d40]">
-            <div className="border-r border-border-subtle px-3 py-2 font-mono text-[11px] text-sky-800 dark:text-sky-300">
+            <div className="border-r border-border-subtle px-3 py-2 font-mono text-xs text-sky-800 dark:text-sky-300">
               {updatedOnLeft
                 ? `@@ +${hunk.rightStart},${hunk.rightCount}`
                 : `@@ -${hunk.leftStart},${hunk.leftCount}`}
             </div>
-            <div className="px-3 py-2 font-mono text-[11px] text-sky-800 dark:text-sky-300">
+            <div className="px-3 py-2 font-mono text-xs text-sky-800 dark:text-sky-300">
               {updatedOnLeft
                 ? `@@ -${hunk.leftStart},${hunk.leftCount}`
                 : `@@ +${hunk.rightStart},${hunk.rightCount}`}

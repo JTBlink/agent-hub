@@ -67,7 +67,7 @@ export function ProjectSkillDetailPanel({
   };
   const meta = (
     <>
-      <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <ProjectAgentDots
           assignedAgents={getAssignedAgents(skill.variants)}
           targets={getAgentDotTargets(skill.variants).map((t) => ({
@@ -84,7 +84,7 @@ export function ProjectSkillDetailPanel({
             {skill.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-[11px] font-medium text-secondary"
+                className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-secondary"
               >
                 {tag}
               </span>
@@ -92,7 +92,7 @@ export function ProjectSkillDetailPanel({
           </>
         )}
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-[12.5px] text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted">
         <div className="flex min-w-0 items-center gap-1.5">
           <FolderOpen className="h-3.5 w-3.5 shrink-0" />
           <span className="font-mono truncate" title={variant.path}>
@@ -132,7 +132,7 @@ export function ProjectSkillDetailPanel({
       meta={meta}
       onClose={onClose}
     >
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px]">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
         <span className="font-medium text-secondary">
           {t("project.comparison.copy")}
         </span>
@@ -209,7 +209,7 @@ export function ProjectSkillDetailPanel({
                   tabButtons?.item(next)?.focus();
                 }}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
                   contentTab === tab
                     ? "bg-accent text-white"
                     : "bg-surface-hover text-muted hover:text-secondary",
@@ -228,7 +228,7 @@ export function ProjectSkillDetailPanel({
           </div>
           <div
             aria-live="polite"
-            className="mb-3 rounded-xl border border-border-subtle bg-surface px-3 py-2 text-[12px] text-secondary"
+            className="mb-3 rounded-xl border border-border-subtle bg-surface px-3 py-2 text-xs text-secondary"
           >
             {content.diff.loading
               ? t("mySkills.contentComparison.comparing")
@@ -244,11 +244,11 @@ export function ProjectSkillDetailPanel({
       )}
       <div role="tabpanel" aria-busy={active.loading} className="space-y-3">
         {active.loading ? (
-          <p className="py-8 text-center text-[13px] text-muted">
+          <p className="py-8 text-center text-sm text-muted">
             {t("common.loading")}
           </p>
         ) : active.error ? (
-          <div role="alert" className="space-y-2 text-[13px] text-muted">
+          <div role="alert" className="space-y-2 text-sm text-muted">
             <p>{active.error}</p>
             <button
               type="button"

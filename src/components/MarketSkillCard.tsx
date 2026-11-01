@@ -82,11 +82,11 @@ export function MarketSkillCard({
             loading="lazy"
           />
           <div className="min-w-0">
-            <h3 className="truncate text-[13px] font-semibold text-secondary">
+            <h3 className="truncate text-sm font-semibold text-secondary">
               {displayName}
             </h3>
             {showSkillId ? (
-              <p className="truncate text-[13px] leading-4 text-muted">
+              <p className="truncate text-sm leading-4 text-muted">
                 {skill.skill_id}
               </p>
             ) : null}
@@ -126,7 +126,7 @@ export function MarketSkillCard({
               aria-label={t("install.cancel")}
             >
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span className="text-[11px] leading-none font-medium">
+              <span className="text-xs leading-none font-medium">
                 {t("install.cancel")}
               </span>
             </button>
@@ -168,7 +168,7 @@ export function MarketSkillCard({
           disabled={marketSourceFilter === skill.source}
           title={t("install.onlyThisContributor")}
           className={cn(
-            "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-[13px] leading-4 font-medium text-accent-light transition-colors",
+            "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-sm leading-4 font-medium text-accent-light transition-colors",
             marketSourceFilter === skill.source
               ? "cursor-default opacity-90"
               : "hover:bg-accent-bg/80",
@@ -177,7 +177,7 @@ export function MarketSkillCard({
           @{skill.source}
         </button>
         {skill.installs > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-sm leading-4 text-muted">
             <DownloadCloud className="h-3 w-3" />
             {skill.installs >= 1_000_000
               ? `${(skill.installs / 1_000_000).toFixed(1)}M`
@@ -187,17 +187,17 @@ export function MarketSkillCard({
           </span>
         )}
         {isMarketInstalled ? (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-sm leading-4 font-medium text-emerald-400">
             <Check className="h-3 w-3" />
             {t("install.installed")}
           </span>
         ) : installedFromSource ? (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-sm leading-4 text-muted">
             <Check className="h-3 w-3" />
             {t("install.installedFrom", { source: installedFromSource })}
           </span>
         ) : isLocalMatch ? (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-amber-400">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-sm leading-4 font-medium text-amber-400">
             <Link2 className="h-3 w-3" />
             {t("install.localMatch")}
           </span>

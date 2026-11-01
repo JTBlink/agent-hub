@@ -122,10 +122,10 @@ export function AppDataDirectorySetting() {
         <div className="app-panel">
           <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
             <div className="min-w-0 flex-1">
-              <h3 className="text-[14px] font-semibold text-primary">
+              <h3 className="text-base font-semibold text-primary">
                 {t("settings.repoPath")}
               </h3>
-              <p className="mt-0.5 text-[12px] text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("settings.repoPathDesc")}
               </p>
             </div>
@@ -191,7 +191,7 @@ export function AppDataDirectorySetting() {
               ) : (
                 <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border-subtle bg-background px-3 py-2">
                   <Folder className="w-3 h-3 text-muted" />
-                  <span className="truncate text-[13px] font-mono text-tertiary">
+                  <span className="truncate text-sm font-mono text-tertiary">
                     {displayedRepoPath}
                   </span>
                 </div>
@@ -240,7 +240,7 @@ export function AppDataDirectorySetting() {
                 {t("settings.openInFinder")}
               </button>
             </div>
-            <div className="w-full text-[12px] text-muted">
+            <div className="w-full text-xs text-muted">
               {centralRepoPendingPath ? (
                 <span className="text-amber-600 dark:text-amber-400">
                   {t("settings.repoPathPendingHint", {

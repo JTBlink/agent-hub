@@ -58,7 +58,7 @@ export function SettingsTabs({
               buttons?.[next]?.focus();
             }}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
+              "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
               tab === active
                 ? "border-accent text-accent-light"
                 : "border-transparent text-muted hover:text-primary",
@@ -66,7 +66,7 @@ export function SettingsTabs({
           >
             {t(`settings.tabs.${tab}`)}
             {tab === "agents" && (
-              <span className="rounded bg-surface-active px-1.5 py-0.5 text-[11px] tabular-nums">
+              <span className="rounded bg-surface-active px-1.5 py-0.5 text-xs tabular-nums">
                 {agentCount}
               </span>
             )}

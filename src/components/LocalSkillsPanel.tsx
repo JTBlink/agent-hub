@@ -79,10 +79,10 @@ export function LocalSkillsPanel({
       <section className="app-panel overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle px-4 py-3.5">
           <div>
-            <h2 className="text-[13px] font-semibold text-secondary">
+            <h2 className="text-sm font-semibold text-secondary">
               {t("install.scan.title")}
             </h2>
-            <p className="mt-0.5 text-[13px] text-muted">
+            <p className="mt-0.5 text-sm text-muted">
               {scanResult
                 ? t("install.scan.summary", counts)
                 : t("install.scan.initial")}
@@ -98,7 +98,7 @@ export function LocalSkillsPanel({
             <button
               onClick={runScan}
               disabled={scanLoading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-2 text-[13px] font-medium text-secondary transition-colors hover:bg-surface-active disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-3 py-2 text-sm font-medium text-secondary transition-colors hover:bg-surface-active disabled:opacity-50"
             >
               <RefreshCw
                 className={cn("h-3.5 w-3.5", scanLoading && "animate-spin")}
@@ -110,7 +110,7 @@ export function LocalSkillsPanel({
               disabled={
                 scanLoading || importingAll || pendingGroups.length === 0
               }
-              className="inline-flex items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
             >
               {importingAll ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -135,17 +135,17 @@ export function LocalSkillsPanel({
           {scanLoading ? (
             <div className="flex items-center justify-center gap-2.5 py-12 text-muted">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-[13px]">{t("install.scan.scanning")}</span>
+              <span className="text-sm">{t("install.scan.scanning")}</span>
             </div>
           ) : scanResult && visibleGroups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-surface-hover">
                 <FolderSearch className="h-5 w-5 text-muted" />
               </div>
-              <h3 className="mb-1 text-[13px] font-semibold text-tertiary">
+              <h3 className="mb-1 text-sm font-semibold text-tertiary">
                 {t("install.scan.noResults")}
               </h3>
-              <p className="text-[13px] text-muted">
+              <p className="text-sm text-muted">
                 {t("install.scan.noResultsHint")}
               </p>
             </div>
@@ -207,10 +207,10 @@ export function LocalSkillsPanel({
                                     (e.target as HTMLInputElement).blur();
                                   }
                                 }}
-                                className="min-w-0 max-w-[220px] rounded border border-accent-border bg-surface px-1.5 py-0.5 text-[13px] font-semibold text-secondary outline-none focus:ring-1 focus:ring-accent"
+                                className="min-w-0 max-w-[220px] rounded border border-accent-border bg-surface px-1.5 py-0.5 text-sm font-semibold text-secondary outline-none focus:ring-1 focus:ring-accent"
                               />
                             ) : (
-                              <h3 className="truncate text-[13px] font-semibold text-secondary">
+                              <h3 className="truncate text-sm font-semibold text-secondary">
                                 {group.name}
                               </h3>
                             )}
@@ -229,17 +229,17 @@ export function LocalSkillsPanel({
                               </button>
                             ) : null}
                             {group.imported ? (
-                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[13px] font-semibold text-emerald-400">
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-sm font-semibold text-emerald-400">
                                 <Check className="h-3 w-3" />
                                 {t("install.scan.imported")}
                               </span>
                             ) : null}
-                            <span className="shrink-0 rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[13px] text-muted">
+                            <span className="shrink-0 rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-sm text-muted">
                               {t("install.scan.locations", {
                                 count: group.locations.length,
                               })}
                             </span>
-                            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted">
+                            <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted">
                               <Calendar className="h-3 w-3" />
                               {foundDate}
                             </span>
@@ -264,7 +264,7 @@ export function LocalSkillsPanel({
                                 handleImportDiscovered(primaryPath, importName)
                               }
                               disabled={!primaryPath || isImporting}
-                              className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-accent-border bg-accent-dark px-2.5 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-[6px] border border-accent-border bg-accent-dark px-2.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
                             >
                               {isImporting ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -279,7 +279,7 @@ export function LocalSkillsPanel({
 
                       {otherLocations.length > 0 ? (
                         <details className="group border-t border-border-subtle bg-surface/40 px-3 py-1.5">
-                          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded py-1 text-[12px] text-muted hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
+                          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded py-1 text-xs text-muted hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent [&::-webkit-details-marker]:hidden">
                             <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
                             {t("install.scan.otherLocations", {
                               count: otherLocations.length,

@@ -30,7 +30,7 @@ export function ProjectLibraryPanel({
       : "text-secondary";
 
   return (
-    <details className="group/sharing mb-3 rounded-lg border border-border-subtle bg-surface text-[12px] text-muted">
+    <details className="group/sharing mb-3 rounded-lg border border-border-subtle bg-surface text-xs text-muted">
       <summary
         className={cn(
           "flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-border [&::-webkit-details-marker]:hidden",

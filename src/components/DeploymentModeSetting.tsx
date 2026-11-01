@@ -64,19 +64,19 @@ export function DeploymentModeSetting() {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
       <div className="min-w-0 flex-1">
-        <h3 className="text-[14px] font-semibold text-primary">
+        <h3 className="text-base font-semibold text-primary">
           {t("settings.deploymentMode")}
         </h3>
-        <p className="mt-0.5 text-[12px] text-muted">
+        <p className="mt-0.5 text-xs text-muted">
           {t("settings.deploymentModeDesc")}
         </p>
         {!loading && !error && mode === null && (
-          <p className="mt-1 text-[12px] text-amber-600 dark:text-amber-400">
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
             {t("settings.deploymentModeLegacy")}
           </p>
         )}
         {error && (
-          <div role="alert" className="mt-1 text-[12px] text-danger">
+          <div role="alert" className="mt-1 text-xs text-danger">
             {t("common.error")}
             <button
               type="button"
@@ -104,7 +104,7 @@ export function DeploymentModeSetting() {
               disabled={loading || saving || error}
               onClick={() => void choose(value)}
               className={cn(
-                "app-segmented-button inline-flex items-center justify-center gap-1.5 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-border disabled:opacity-50",
+                "app-segmented-button inline-flex items-center justify-center gap-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-border disabled:opacity-50",
                 mode === value
                   ? "bg-surface-active text-secondary"
                   : "text-muted hover:text-tertiary",

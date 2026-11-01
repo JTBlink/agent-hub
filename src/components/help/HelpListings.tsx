@@ -14,12 +14,8 @@ function HelpArticleCard({ article }: { article: Article }) {
       to={`/help/${article.id}`}
       className="block rounded-xl border border-border-subtle bg-surface p-4 transition-colors hover:border-accent-border hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
     >
-      <h3 className="text-[13px] font-semibold text-secondary">
-        {article.title}
-      </h3>
-      <p className="mt-1 text-[12px] leading-5 text-muted">
-        {article.description}
-      </p>
+      <h3 className="text-sm font-semibold text-secondary">{article.title}</h3>
+      <p className="mt-1 text-xs leading-5 text-muted">{article.description}</p>
     </Link>
   );
 }
@@ -35,14 +31,14 @@ export function HelpSearchResults({ locale }: { locale: HelpLocale }) {
   );
   return (
     <>
-      <h2 className="text-[16px] font-semibold text-primary">
+      <h2 className="text-lg font-semibold text-primary">
         {searching
           ? t("help.searchResults", { count: results.length })
           : helpCatalog.navigation.categories.find(
               (item) => item.id === category,
             )?.titles[locale]}
       </h2>
-      <label className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-muted">
+      <label className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
         {t("help.filterCategory")}
         <ThemedSelect
           aria-label={t("help.filterCategory")}
@@ -74,10 +70,10 @@ export function HelpSearchResults({ locale }: { locale: HelpLocale }) {
         </div>
       ) : (
         <div role="status" className="py-10 text-center">
-          <p className="text-[13px] text-muted">{t("help.noResults")}</p>
+          <p className="text-sm text-muted">{t("help.noResults")}</p>
           <button
             type="button"
-            className="mt-3 text-[13px] text-accent-light underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="mt-3 text-sm text-accent-light underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={() => setParams({})}
           >
             {t("help.resetFilters")}
@@ -92,7 +88,7 @@ export function HelpHome({ locale }: { locale: HelpLocale }) {
   const { t } = useTranslation();
   return (
     <>
-      <h2 className="text-[16px] font-semibold text-primary">
+      <h2 className="text-lg font-semibold text-primary">
         {t("help.recommendedArticles")}
       </h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -101,7 +97,7 @@ export function HelpHome({ locale }: { locale: HelpLocale }) {
           return item ? <HelpArticleCard key={id} article={item} /> : null;
         })}
       </div>
-      <h2 className="mb-3 mt-6 text-[16px] font-semibold text-primary">
+      <h2 className="mb-3 mt-6 text-lg font-semibold text-primary">
         {t("help.browseCategories")}
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -111,10 +107,10 @@ export function HelpHome({ locale }: { locale: HelpLocale }) {
             to={`/help?category=${item.id}`}
             className="rounded-xl border border-border-subtle p-4 hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
           >
-            <h3 className="text-[13px] font-semibold text-secondary">
+            <h3 className="text-sm font-semibold text-secondary">
               {item.titles[locale]}
             </h3>
-            <p className="mt-1 text-[12px] text-muted">
+            <p className="mt-1 text-xs text-muted">
               {t("help.articleCount", { count: item.articles.length })}
             </p>
           </Link>

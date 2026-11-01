@@ -28,7 +28,7 @@ export function TaskListTable({
   const { t } = useTranslation();
   return (
     <table className="w-full min-w-[580px] table-fixed text-left text-xs">
-      <thead className="sticky top-0 z-10 bg-bg-secondary text-[11px] font-medium text-muted">
+      <thead className="sticky top-0 z-10 bg-bg-secondary text-xs font-medium text-muted">
         <tr>
           <th scope="col" className="w-[100px] px-4 py-2.5">
             ID
@@ -78,7 +78,7 @@ export function TaskListTable({
               )}
             >
               <td className="px-4 py-3 align-top">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-2 py-0.5 text-[11px] tabular-nums text-secondary">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-2 py-0.5 text-xs tabular-nums text-secondary">
                   <Icon
                     size={12}
                     aria-hidden="true"
@@ -100,7 +100,7 @@ export function TaskListTable({
                 <button
                   type="button"
                   title={task.title}
-                  className="block w-full truncate rounded text-left text-[13px] font-medium text-secondary outline-none hover:text-accent-light focus-visible:ring-2 focus-visible:ring-accent"
+                  className="block w-full truncate rounded text-left text-sm font-medium text-secondary outline-none hover:text-accent-light focus-visible:ring-2 focus-visible:ring-accent"
                   onClick={(event) => onOpen(task, true, event.currentTarget)}
                   onKeyDown={(event) => {
                     if (event.key === " ") {
@@ -111,7 +111,7 @@ export function TaskListTable({
                 >
                   {task.title}
                 </button>
-                <div className="mt-1.5 flex min-w-0 items-center gap-2 overflow-hidden text-[11px] text-muted">
+                <div className="mt-1.5 flex min-w-0 items-center gap-2 overflow-hidden text-xs text-muted">
                   <span
                     title={`${task.host}/${task.repository}`}
                     className="min-w-0 truncate"

@@ -25,7 +25,7 @@ export function AutomationTaskContent({
   return (
     <>
       <label className="flex flex-col gap-2">
-        <span className="text-[12px] font-medium text-muted">
+        <span className="text-xs font-medium text-muted">
           {t("automation.command")}
         </span>
         <textarea
@@ -42,11 +42,11 @@ export function AutomationTaskContent({
           }
           onChange={(event) => onChange({ content: event.target.value })}
           placeholder={t("automation.commandPlaceholder")}
-          className="app-input min-h-[42px] w-full resize-y px-3 py-2.5 font-mono text-[12px] leading-6 read-only:bg-bg-secondary read-only:text-muted"
+          className="app-input min-h-[42px] w-full resize-y px-3 py-2.5 font-mono text-xs leading-6 read-only:bg-bg-secondary read-only:text-muted"
         />
       </label>
       <label className="flex min-h-[300px] flex-1 flex-col gap-3 md:min-h-[380px]">
-        <span className="text-[12px] font-medium text-muted">
+        <span className="text-xs font-medium text-muted">
           {t("automation.prompt")}
         </span>
         <textarea
@@ -71,10 +71,10 @@ export function AutomationTaskContent({
               ? "automation.agentPromptPlaceholder"
               : "automation.chooseAgentPrompt",
           )}
-          className="app-input min-h-[280px] w-full flex-1 resize-y p-5 text-[13px] leading-7 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-muted"
+          className="app-input min-h-[280px] w-full flex-1 resize-y p-5 text-sm leading-7 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-muted"
         />
       </label>
-      <p className="text-[12px] leading-6 text-muted">
+      <p className="text-xs leading-6 text-muted">
         {t(
           usesAgent
             ? "automation.agentPromptHelp"

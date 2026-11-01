@@ -31,11 +31,11 @@ export function AutomationHerdrFields({
   return (
     <>
       <label className="block space-y-2">
-        <span className="text-[12px] font-medium text-muted">
+        <span className="text-xs font-medium text-muted">
           {t("automation.extraAgentArguments")}
         </span>
         <textarea
-          className="app-input w-full resize-y font-mono text-[12px]"
+          className="app-input w-full resize-y font-mono text-xs"
           aria-label={t("automation.extraAgentArguments")}
           aria-describedby={helpId}
           disabled={disabled}
@@ -50,12 +50,12 @@ export function AutomationHerdrFields({
           }
           onChange={(event) => update({ extra_arguments: event.target.value })}
         />
-        <span id={helpId} className="block text-[11px] leading-5 text-muted">
+        <span id={helpId} className="block text-xs leading-5 text-muted">
           {t("automation.extraAgentArgumentsHelp")}
         </span>
       </label>
       <label className="block space-y-2">
-        <span className="text-[12px] font-medium text-muted">
+        <span className="text-xs font-medium text-muted">
           {t("automation.herdrSession")}
         </span>
         <input

@@ -60,7 +60,7 @@ export function AutomationRunOutputPanel({
   return (
     <section className="min-w-0 overflow-hidden rounded-lg border border-border-subtle bg-surface">
       <header className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3">
-        <h3 className="text-[13px] font-semibold text-secondary">
+        <h3 className="text-sm font-semibold text-secondary">
           {t("automation.history.output")}
         </h3>
         <CopyTextButton
@@ -72,7 +72,7 @@ export function AutomationRunOutputPanel({
         />
       </header>
       {result?.error !== undefined && (
-        <div role="alert" className="space-y-3 p-5 text-[12px] text-danger">
+        <div role="alert" className="space-y-3 p-5 text-xs text-danger">
           <p>
             {t("automation.execution.outputFailed")}: {result.error}
           </p>
@@ -87,25 +87,25 @@ export function AutomationRunOutputPanel({
         </div>
       )}
       {!run.has_output ? (
-        <p className="p-5 text-[13px] text-muted">
+        <p className="p-5 text-sm text-muted">
           {t("automation.execution.noOutput")}
         </p>
       ) : !output ? (
         !result?.error && (
-          <p role="status" className="p-5 text-[13px] text-muted">
+          <p role="status" className="p-5 text-sm text-muted">
             {t("common.loading")}
           </p>
         )
       ) : (
         <>
           {output.truncated && (
-            <p className="border-b border-border-subtle px-5 py-2 text-[12px] text-muted">
+            <p className="border-b border-border-subtle px-5 py-2 text-xs text-muted">
               {t("automation.execution.truncated")}
             </p>
           )}
           <pre
             tabIndex={0}
-            className="max-h-[560px] min-h-[240px] overflow-auto whitespace-pre-wrap break-words bg-bg-secondary p-5 font-mono text-[12px] leading-6 text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="max-h-[560px] min-h-[240px] overflow-auto whitespace-pre-wrap break-words bg-bg-secondary p-5 font-mono text-code leading-6 text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
           >
             {output.content || t("automation.execution.emptyOutput")}
           </pre>

@@ -54,14 +54,14 @@ export function HelpArticle({
         <h1
           id={article.headings[0]?.id}
           tabIndex={-1}
-          className="scroll-mt-6 text-[23px] font-semibold text-primary"
+          className="scroll-mt-6 text-3xl font-semibold text-primary"
         >
           {article.title}
         </h1>
-        <p className="mt-2 text-[13px] leading-6 text-tertiary">
+        <p className="mt-2 text-sm leading-6 text-tertiary">
           {article.description}
         </p>
-        <p className="mt-2 text-[12px] text-muted">
+        <p className="mt-2 text-xs text-muted">
           {t("help.version", { version: helpCatalog.version })} ·{" "}
           {t("help.since", { version: article.since })}
           {article.reviewed
@@ -71,7 +71,7 @@ export function HelpArticle({
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[12px] text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={() =>
               openUrl(shareUrl).catch(() => toast.error(t("help.openFailed")))
             }
@@ -82,7 +82,7 @@ export function HelpArticle({
           <button
             type="button"
             disabled={copying}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-[12px] text-secondary hover:bg-surface-hover disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-secondary hover:bg-surface-hover disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
             onClick={async () => {
               if (copying) return;
               setCopying(true);
@@ -104,7 +104,7 @@ export function HelpArticle({
       {article.locale !== locale && (
         <p
           role="status"
-          className="mt-4 rounded-lg border border-accent-border bg-accent/10 p-3 text-[13px] text-secondary"
+          className="mt-4 rounded-lg border border-accent-border bg-accent/10 p-3 text-sm text-secondary"
         >
           {t("help.translationFallback")}
         </p>
@@ -113,7 +113,7 @@ export function HelpArticle({
         {toc.length > 0 && (
           <nav
             aria-label={t("help.onThisPage")}
-            className="order-first mt-5 text-[12px] xl:order-last"
+            className="order-first mt-5 text-xs xl:order-last"
           >
             <details open className="xl:sticky xl:top-4">
               <summary className="cursor-pointer font-semibold text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
@@ -140,14 +140,14 @@ export function HelpArticle({
               aria-label={t("help.related")}
               className="mt-6 border-t border-border-subtle pt-4"
             >
-              <h2 className="text-[14px] font-semibold text-primary">
+              <h2 className="text-base font-semibold text-primary">
                 {t("help.related")}
               </h2>
               <div className="mt-2 flex flex-wrap gap-3">
                 {related.map((item) => (
                   <Link
                     key={item.id}
-                    className="text-[13px] text-accent-light underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    className="text-sm text-accent-light underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                     to={`/help/${item.id}`}
                   >
                     {item.title}

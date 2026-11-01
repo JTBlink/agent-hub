@@ -36,7 +36,7 @@ export function HelpNavigation({
     <nav aria-label={t("help.categoriesLabel")} className="space-y-3">
       <Link
         aria-current={!articleId && !categoryId ? "page" : undefined}
-        className="flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] font-semibold text-secondary hover:bg-surface-hover hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-secondary hover:bg-surface-hover hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         to="/help"
       >
         <Library aria-hidden="true" className="h-4 w-4 shrink-0" />
@@ -56,7 +56,7 @@ export function HelpNavigation({
                 aria-current={
                   !articleId && categoryId === category.id ? "page" : undefined
                 }
-                className="flex items-center gap-2 rounded-lg bg-bg-secondary px-2 py-2 text-[13px] font-semibold text-secondary hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                className="flex items-center gap-2 rounded-lg bg-bg-secondary px-2 py-2 text-sm font-semibold text-secondary hover:text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
               >
                 <Icon
                   aria-hidden="true"
@@ -74,7 +74,7 @@ export function HelpNavigation({
                       key={id}
                       to={`/help/${id}`}
                       aria-current={articleId === id ? "page" : undefined}
-                      className={`block rounded-r-lg border-l-2 px-2 py-1.5 text-[12px] leading-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${articleId === id ? "border-accent bg-surface-active font-medium text-accent-light" : "border-transparent text-tertiary hover:bg-surface-hover hover:text-secondary"}`}
+                      className={`block rounded-r-lg border-l-2 px-2 py-1.5 text-xs leading-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${articleId === id ? "border-accent bg-surface-active font-medium text-accent-light" : "border-transparent text-tertiary hover:bg-surface-hover hover:text-secondary"}`}
                     >
                       {article.title}
                     </Link>

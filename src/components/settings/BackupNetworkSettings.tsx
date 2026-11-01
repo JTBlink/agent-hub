@@ -100,11 +100,11 @@ export function BackupNetworkSettings() {
         </h2>
         <div className="app-panel overflow-hidden divide-y divide-border-faint">
           <div className="px-4 py-3">
-            <h3 className="text-[14px] font-semibold text-primary">
+            <h3 className="text-base font-semibold text-primary">
               {t("settings.gitRemoteUrl")}
             </h3>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="mt-0.5 text-[12px] text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("settings.gitSyncConfigDesc")}
                 <span className="mt-1 block">
                   {t("settings.backupRecoveryHint")}
@@ -153,19 +153,19 @@ export function BackupNetworkSettings() {
                 {t("settings.gitDisconnect")}
               </button>
             </div>
-            <p className="text-[12px] text-muted mt-2">
+            <p className="text-xs text-muted mt-2">
               {t("settings.gitDisconnectHint")}
             </p>
             <details className="mt-4 border-t border-border-faint pt-3">
-              <summary className="cursor-pointer text-[13px] font-medium text-secondary">
+              <summary className="cursor-pointer text-sm font-medium text-secondary">
                 {t("settings.advancedSettings")}
               </summary>
               <div className="mt-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[14px] font-semibold text-primary">
+                  <div className="text-base font-semibold text-primary">
                     {t("settings.gitEngineGit2")}
                   </div>
-                  <p className="mt-0.5 text-[12px] text-muted">
+                  <p className="mt-0.5 text-xs text-muted">
                     {t("settings.gitEngineGit2Desc")}
                   </p>
                 </div>
@@ -193,10 +193,10 @@ export function BackupNetworkSettings() {
               </div>
               <div className="mt-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[14px] font-semibold text-primary">
+                  <div className="text-base font-semibold text-primary">
                     {t("settings.gitMergeEngineObject")}
                   </div>
-                  <p className="mt-0.5 text-[12px] text-muted">
+                  <p className="mt-0.5 text-xs text-muted">
                     {t("settings.gitMergeEngineObjectDesc")}
                   </p>
                 </div>
@@ -230,10 +230,10 @@ export function BackupNetworkSettings() {
         <h2 className="app-section-title mb-3">{t("settings.proxyConfig")}</h2>
         <div className="app-panel overflow-hidden divide-y divide-border-faint">
           <div className="px-4 py-3">
-            <h3 className="text-[14px] font-semibold text-primary">
+            <h3 className="text-base font-semibold text-primary">
               {t("settings.proxyUrl")}
             </h3>
-            <p className="mt-0.5 mb-2 text-[12px] text-muted">
+            <p className="mt-0.5 mb-2 text-xs text-muted">
               {t("settings.proxyUrlDesc")}
             </p>
             <div className="flex flex-wrap items-center gap-2">

@@ -150,14 +150,14 @@ export function SourceFilterBar({
   return (
     <div className="border-t border-border-subtle pt-2">
       <div className="flex items-center gap-3">
-        <span className="shrink-0 text-[13px] font-medium text-tertiary">
+        <span className="shrink-0 text-sm font-medium text-tertiary">
           {t("install.filters.source")}
         </span>
         <button
           type="button"
           onClick={onInstalledFilterToggle}
           className={cn(
-            "shrink-0 rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
+            "shrink-0 rounded-full border px-2.5 py-1 text-sm font-medium whitespace-nowrap transition-colors",
             installedFilter
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
               : "border-border-subtle bg-background text-muted hover:text-secondary",
@@ -174,7 +174,7 @@ export function SourceFilterBar({
             <button
               ref={allBtnRef}
               tabIndex={-1}
-              className="rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap"
+              className="rounded-full border px-2.5 py-1 text-sm font-medium whitespace-nowrap"
             >
               {t("install.filters.allSources")}
             </button>
@@ -185,7 +185,7 @@ export function SourceFilterBar({
                   measureRefs.current[i] = el;
                 }}
                 tabIndex={-1}
-                className="rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap"
+                className="rounded-full border px-2.5 py-1 text-sm font-medium whitespace-nowrap"
               >
                 @{source}
               </button>
@@ -204,7 +204,7 @@ export function SourceFilterBar({
               type="button"
               onClick={() => onChange("all")}
               className={cn(
-                "rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
+                "rounded-full border px-2.5 py-1 text-sm font-medium whitespace-nowrap transition-colors",
                 value === "all"
                   ? "border-accent-border bg-accent-bg text-accent-light"
                   : "border-border-subtle bg-background text-muted hover:text-secondary",
@@ -218,7 +218,7 @@ export function SourceFilterBar({
                 type="button"
                 onClick={() => onChange(source)}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-[13px] font-medium whitespace-nowrap transition-colors",
+                  "rounded-full border px-2.5 py-1 text-sm font-medium whitespace-nowrap transition-colors",
                   value === source
                     ? "border-accent-border bg-accent-bg text-accent-light"
                     : "border-border-subtle bg-background text-muted hover:text-secondary",
@@ -249,7 +249,7 @@ export function SourceFilterBar({
                     });
                   }}
                   className={cn(
-                    "flex items-center rounded-full border px-2 py-1 text-[13px] font-medium transition-colors",
+                    "flex items-center rounded-full border px-2 py-1 text-sm font-medium transition-colors",
                     overflowOpen
                       ? "border-accent-border bg-accent-bg text-accent-light"
                       : "border-border-subtle bg-background text-muted hover:text-secondary",
@@ -301,7 +301,7 @@ export function SourceFilterBar({
                             }
                           }}
                           placeholder={t("common.search")}
-                          className="app-input w-full bg-background py-1 pl-6 pr-2 text-[12px]"
+                          className="app-input w-full bg-background py-1 pl-6 pr-2 text-xs"
                           autoFocus
                           autoCapitalize="none"
                           autoCorrect="off"
@@ -324,7 +324,7 @@ export function SourceFilterBar({
                             resetOverflow();
                           }}
                           className={cn(
-                            "flex w-full items-center px-3 py-1.5 text-left text-[13px] transition-colors",
+                            "flex w-full items-center px-3 py-1.5 text-left text-sm transition-colors",
                             idx === focusedIndex
                               ? "bg-surface-hover text-primary"
                               : value === source

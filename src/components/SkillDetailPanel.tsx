@@ -161,9 +161,9 @@ function SkillDetailPanelContent({
 
   const meta = (
     <>
-      <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         {skill.version?.trim() && (
-          <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-surface-hover px-2 py-0.5 text-[12px] text-secondary">
+          <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border-subtle bg-surface-hover px-2 py-0.5 text-xs text-secondary">
             {t("dashboard.version")}
             <span className="break-all font-mono">{skill.version}</span>
           </span>
@@ -190,7 +190,7 @@ function SkillDetailPanelContent({
             {skill.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-[11px] font-medium text-secondary"
+                className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-secondary"
               >
                 {tag}
               </span>
@@ -200,9 +200,7 @@ function SkillDetailPanelContent({
       </div>
       {belongsToGroups.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] text-faint">
-            {t("sidebar.skillGroups")}
-          </span>
+          <span className="text-xs text-faint">{t("sidebar.skillGroups")}</span>
           {belongsToGroups.map((group) => {
             const opt = getSkillGroupIconOption(group);
             const Icon = opt.icon;
@@ -210,7 +208,7 @@ function SkillDetailPanelContent({
               <span
                 key={group.id}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
                   opt.activeClass,
                   opt.colorClass,
                 )}
@@ -222,7 +220,7 @@ function SkillDetailPanelContent({
           })}
         </div>
       )}
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Folder className="h-3.5 w-3.5 shrink-0" />
           <span className="font-mono truncate" title={skill.central_path}>
@@ -242,15 +240,15 @@ function SkillDetailPanelContent({
             className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
           >
             <span className="flex min-w-0 items-center gap-2">
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2 py-1 text-[12px] text-muted">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2 py-1 text-xs text-muted">
                 {sourceIcon(skill.source_type)}
                 {sourceTypeLabel(skill.source_type)}
               </span>
-              <span className="truncate text-[13px] font-medium text-secondary">
+              <span className="truncate text-sm font-medium text-secondary">
                 {t("mySkills.sourceType")}
               </span>
             </span>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-muted">
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs text-muted">
               <span>
                 {isMetadataExpanded
                   ? t("mySkills.collapseAgentToggles")
@@ -271,11 +269,11 @@ function SkillDetailPanelContent({
               <div className="grid gap-2 md:grid-cols-2">
                 {metadataItems.map((item) => (
                   <div key={item.label} className="min-w-0">
-                    <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
+                    <div className="text-xs font-medium uppercase tracking-[0.08em] text-faint">
                       {item.label}
                     </div>
                     <div
-                      className="mt-0.5 truncate font-mono text-[12.5px] text-secondary"
+                      className="mt-0.5 truncate font-mono text-xs text-secondary"
                       title={item.value ?? undefined}
                     >
                       {item.value}

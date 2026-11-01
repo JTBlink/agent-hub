@@ -124,7 +124,7 @@ export function SkillFileBrowser({
                 className="flex flex-wrap items-center gap-1"
               >
                 {group.dir && (
-                  <span className="ml-1 mr-0.5 text-[11px] text-faint">
+                  <span className="ml-1 mr-0.5 text-xs text-faint">
                     {group.dir}/
                   </span>
                 )}
@@ -139,7 +139,7 @@ export function SkillFileBrowser({
                       onClick={() => setSelectedFile(entry.relative_path)}
                       title={entry.relative_path}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded px-2 py-1 font-mono text-[11px] transition-colors",
+                        "inline-flex items-center gap-1 rounded px-2 py-1 font-mono text-code transition-colors",
                         selectedFile === entry.relative_path
                           ? "bg-accent text-white"
                           : "bg-surface-hover text-secondary hover:text-primary",
@@ -157,15 +157,15 @@ export function SkillFileBrowser({
       )}
 
       {loadingContent ? (
-        <div className="flex items-center justify-center gap-2 py-8 text-[13px] text-muted">
+        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
           <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       ) : fileContent.content_kind === "binary" ? (
-        <div className="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-6 text-center text-[13px] text-muted">
+        <div className="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-6 text-center text-sm text-muted">
           {t("mySkills.fileBrowser.binary")}
         </div>
       ) : fileContent.content_kind === "too_large" ? (
-        <div className="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-6 text-center text-[13px] text-muted">
+        <div className="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-6 text-center text-sm text-muted">
           {t("mySkills.fileBrowser.tooLarge", {
             size: formatSize(
               files?.find((f) => f.relative_path === selectedFile)?.size ?? 0,
@@ -176,12 +176,12 @@ export function SkillFileBrowser({
         isMarkdown(selectedFile) ? (
           <SkillMarkdown content={fileContent.content} />
         ) : (
-          <pre className="overflow-x-auto rounded-xl border border-border-subtle bg-background px-4 py-3 font-mono text-[13px] leading-6 text-secondary">
+          <pre className="overflow-x-auto rounded-xl border border-border-subtle bg-background px-4 py-3 font-mono text-code leading-6 text-secondary">
             {fileContent.content}
           </pre>
         )
       ) : (
-        <div className="mt-12 text-center text-[13px] text-muted">
+        <div className="mt-12 text-center text-sm text-muted">
           {t("mySkills.fileBrowser.loadFailed")}
         </div>
       )}

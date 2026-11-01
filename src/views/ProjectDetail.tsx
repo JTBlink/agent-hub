@@ -949,7 +949,7 @@ export function ProjectDetail() {
               {project.name}
               <span className="app-badge">{groupedSkills.length}</span>
             </h1>
-            <div className="mt-1 flex items-center gap-1.5 text-[12px] leading-5 text-muted">
+            <div className="mt-1 flex items-center gap-1.5 text-xs leading-5 text-muted">
               <span
                 className="min-w-0 truncate"
                 title={compactHomePath(project.path)}
@@ -1064,7 +1064,7 @@ export function ProjectDetail() {
                 {t("project.addSkill")}
               </button>
               {showAddCallout && groupedSkills.length > 0 && (
-                <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-md border border-border bg-surface p-3 text-[12px] leading-snug shadow-lg">
+                <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-md border border-border bg-surface p-3 text-xs leading-snug shadow-lg">
                   <button
                     onClick={dismissAddCallout}
                     className="absolute right-1.5 top-1.5 rounded p-0.5 text-faint hover:text-secondary"
@@ -1083,14 +1083,14 @@ export function ProjectDetail() {
 
         {agentFilterOptions.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] text-muted">
+            <span className="text-xs text-muted">
               {t("project.agentFilter.label")}
             </span>
             <button
               type="button"
               onClick={() => setAgentFilters(new Set())}
               className={cn(
-                "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                 agentFilters.size === 0
                   ? "bg-accent text-white dark:bg-accent dark:text-white"
                   : "bg-surface-hover text-muted hover:text-secondary",
@@ -1114,7 +1114,7 @@ export function ProjectDetail() {
                     });
                   }}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium transition-colors",
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors",
                     active
                       ? "bg-accent text-white dark:bg-accent dark:text-white"
                       : "bg-surface-hover text-muted hover:text-secondary",
@@ -1135,13 +1135,13 @@ export function ProjectDetail() {
 
         {allTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[12px] text-muted">
+            <span className="text-xs text-muted">
               {t("mySkills.tags.filter")}
             </span>
             <button
               onClick={() => setTagFilters(new Set())}
               className={cn(
-                "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                 tagFilters.size === 0
                   ? "bg-accent text-white dark:bg-accent dark:text-white"
                   : "bg-surface-hover text-muted hover:text-secondary",
@@ -1164,7 +1164,7 @@ export function ProjectDetail() {
                       });
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                      "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                       isActive
                         ? "bg-surface-active text-primary"
                         : "border border-dashed border-border text-muted hover:text-secondary",
@@ -1190,7 +1190,7 @@ export function ProjectDetail() {
                     });
                   }}
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[12px] font-medium transition-colors",
+                    "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
                     active
                       ? getTagActiveColor(tag, allTags)
                       : getTagColor(tag, allTags),
@@ -1308,17 +1308,17 @@ export function ProjectDetail() {
 
       {loading ? (
         <div className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
-          <div className="text-[13px] text-muted">{t("common.loading")}</div>
+          <div className="text-sm text-muted">{t("common.loading")}</div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center pb-20 text-center">
           <Layers className="mb-4 h-12 w-12 text-faint" />
-          <h3 className="mb-1.5 text-[14px] font-semibold text-tertiary">
+          <h3 className="mb-1.5 text-base font-semibold text-tertiary">
             {groupedSkills.length === 0
               ? t("project.noSkills")
               : t("mySkills.noMatch")}
           </h3>
-          <p className="max-w-md text-[13px] text-muted">
+          <p className="max-w-md text-sm text-muted">
             {groupedSkills.length === 0 ? t("project.noSkillsHint") : ""}
           </p>
           {groupedSkills.length === 0 && (
@@ -1327,7 +1327,7 @@ export function ProjectDetail() {
                 setShowExportDialog(true);
                 dismissAddCallout();
               }}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-accent-hover"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               <Plus className="h-3.5 w-3.5" />
               {t("project.addSkillsCta")}

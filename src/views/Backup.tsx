@@ -878,13 +878,13 @@ export function Backup() {
       <div className="app-page-header pr-2 pb-1 flex items-center justify-between gap-3">
         <div>
           <h1 className="app-page-title">{t("backup.title")}</h1>
-          <p className="mt-1 text-[13px] text-muted">{t("backup.subtitle")}</p>
+          <p className="mt-1 text-sm text-muted">{t("backup.subtitle")}</p>
         </div>
         <button
           type="button"
           onClick={() => refreshGitStatus(true)}
           disabled={!!loading}
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-hover disabled:opacity-50"
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-hover disabled:opacity-50"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           {t("settings.refresh")}
@@ -903,13 +903,13 @@ export function Backup() {
                   />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-[15px] font-semibold text-primary">
+                  <h2 className="text-lg font-semibold text-primary">
                     {statusMeta.title}
                   </h2>
-                  <p className="mt-1 text-[13px] leading-5 text-muted">
+                  <p className="mt-1 text-sm leading-5 text-muted">
                     {statusMeta.description}
                   </p>
-                  <div className="mt-3 grid gap-2 text-[12px] text-tertiary sm:grid-cols-2">
+                  <div className="mt-3 grid gap-2 text-xs text-tertiary sm:grid-cols-2">
                     <div className="min-w-0">
                       <div className="text-faint">
                         {t("backup.connection.repository")}
@@ -949,7 +949,7 @@ export function Backup() {
                             }}
                             autoFocus
                             maxLength={64}
-                            className="h-6 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-1.5 text-[12px] text-secondary outline-none focus:border-border"
+                            className="h-6 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-1.5 text-xs text-secondary outline-none focus:border-border"
                           />
                           <button
                             type="button"
@@ -989,7 +989,7 @@ export function Backup() {
                     type="button"
                     onClick={() => setReconnectMode(true)}
                     disabled={!!loading}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 text-[13px] font-medium text-amber-700 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-300"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-500/15 disabled:opacity-50 dark:text-amber-300"
                   >
                     <Github className="h-3.5 w-3.5" />
                     {t("backup.github.reconnect")}
@@ -1005,7 +1005,7 @@ export function Backup() {
                       setRecoveryOpen(true);
                     }}
                     disabled={!!loading}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-[13px] font-medium text-red-600 transition-colors hover:bg-red-500/15 disabled:opacity-50 dark:text-red-300"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-500/15 disabled:opacity-50 dark:text-red-300"
                   >
                     <Wrench className="h-3.5 w-3.5" />
                     {t("settings.gitRecoveryTitle")}
@@ -1015,7 +1015,7 @@ export function Backup() {
                     type="button"
                     onClick={() => setSetupOpen(true)}
                     disabled={!!loading || !remoteConfig}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-sm font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
                   >
                     {loading === "start" ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1029,7 +1029,7 @@ export function Backup() {
                     type="button"
                     onClick={handleBackupNow}
                     disabled={!!loading || !canBackupNow}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-sm font-medium text-white transition-colors hover:bg-accent disabled:opacity-50"
                   >
                     {loading === "sync" ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1054,14 +1054,14 @@ export function Backup() {
             <section className="app-panel border-amber-500/40 bg-amber-500/5 p-4">
               <div className="mb-1 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-300" />
-                <h2 className="text-[14px] font-semibold text-secondary">
+                <h2 className="text-base font-semibold text-secondary">
                   {t("backup.conflicts.title")}
                 </h2>
-                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                   {pendingConflicts.length}
                 </span>
               </div>
-              <p className="mb-3 text-[13px] leading-5 text-muted">
+              <p className="mb-3 text-sm leading-5 text-muted">
                 {t("backup.conflicts.desc")}
                 {(gitStatus?.behind ?? 0) > 0 && (
                   <> {t("backup.conflicts.autoPaused")}</>
@@ -1076,10 +1076,10 @@ export function Backup() {
                       className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-bg-secondary px-3 py-2"
                     >
                       <div className="min-w-0">
-                        <div className="truncate text-[13px] font-medium text-primary">
+                        <div className="truncate text-sm font-medium text-primary">
                           {conflictDisplayName(conflict)}
                         </div>
-                        <div className="text-[12px] text-muted">
+                        <div className="text-xs text-muted">
                           {t("backup.conflicts.itemDesc")}
                         </div>
                       </div>
@@ -1097,7 +1097,7 @@ export function Backup() {
                                 )
                               }
                               disabled={!!resolvingConflict || !!loading}
-                              className="rounded-lg border border-border-subtle px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                              className="rounded-lg border border-border-subtle px-2.5 py-1 text-xs font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
                             >
                               {t("backup.conflicts.keepLocal")}
                             </button>
@@ -1110,7 +1110,7 @@ export function Backup() {
                                 )
                               }
                               disabled={!!resolvingConflict || !!loading}
-                              className="rounded-lg border border-border-subtle px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                              className="rounded-lg border border-border-subtle px-2.5 py-1 text-xs font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
                             >
                               {t("backup.conflicts.useRemote")}
                             </button>
@@ -1123,7 +1123,7 @@ export function Backup() {
                                 )
                               }
                               disabled={!!resolvingConflict || !!loading}
-                              className="rounded-lg border border-border-subtle px-2.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                              className="rounded-lg border border-border-subtle px-2.5 py-1 text-xs font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
                             >
                               {t("backup.conflicts.keepBoth")}
                             </button>
@@ -1141,20 +1141,20 @@ export function Backup() {
             <section className="app-panel p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Github className="h-4 w-4 text-muted" />
-                <h2 className="text-[14px] font-semibold text-secondary">
+                <h2 className="text-base font-semibold text-secondary">
                   {reconnectMode
                     ? t("backup.github.reconnectTitle")
                     : t("backup.github.title")}
                 </h2>
               </div>
-              <p className="mb-3 text-[13px] leading-5 text-muted">
+              <p className="mb-3 text-sm leading-5 text-muted">
                 {t("backup.github.desc")}
               </p>
 
               {deviceInfo ? (
                 <div className="space-y-3">
                   <div className="flex flex-col items-center gap-2 rounded-md border border-border-subtle bg-bg-secondary px-4 py-4">
-                    <div className="font-mono text-[26px] font-bold tracking-[0.25em] text-primary">
+                    <div className="font-mono text-3xl font-bold tracking-[0.25em] text-primary">
                       {deviceInfo.user_code}
                     </div>
                     <button
@@ -1163,26 +1163,26 @@ export function Backup() {
                         void clipboardWriteText(deviceInfo.user_code);
                         toast.success(t("backup.github.deviceCodeCopied"));
                       }}
-                      className="inline-flex items-center gap-1 text-[12px] text-muted transition-colors hover:text-secondary"
+                      className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-secondary"
                     >
                       <Copy className="h-3 w-3" />
                       {t("backup.github.deviceCopyCode")}
                     </button>
                   </div>
-                  <p className="text-[13px] leading-5 text-muted">
+                  <p className="text-sm leading-5 text-muted">
                     {t("backup.github.deviceWaitDesc", {
                       uri: deviceInfo.verification_uri,
                     })}
                   </p>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-[12px] text-muted">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       {t("backup.github.deviceWaiting")}
                     </span>
                     <button
                       type="button"
                       onClick={cancelDeviceFlow}
-                      className="rounded-lg px-2.5 py-1 text-[12px] font-medium text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary"
+                      className="rounded-lg px-2.5 py-1 text-xs font-medium text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary"
                     >
                       {t("common.cancel")}
                     </button>
@@ -1195,7 +1195,7 @@ export function Backup() {
                       type="button"
                       onClick={handleDeviceFlow}
                       disabled={!!loading}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-sm font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {loading === "github" ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1214,7 +1214,7 @@ export function Backup() {
                       }
                       disabled={loading === "github"}
                       title={t("backup.github.repoLabel")}
-                      className="h-8 w-52 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-[13px] text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
+                      className="h-8 w-52 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-sm text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
@@ -1233,7 +1233,7 @@ export function Backup() {
                           }}
                           placeholder={t("backup.github.tokenPlaceholder")}
                           disabled={loading === "github"}
-                          className="h-8 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-[13px] text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
+                          className="h-8 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-sm text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
                           autoCapitalize="none"
                           autoCorrect="off"
                           spellCheck={false}
@@ -1242,7 +1242,7 @@ export function Backup() {
                           type="button"
                           onClick={handleGithubConnect}
                           disabled={!!loading || !githubToken.trim()}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-active disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-active disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {t("backup.github.connect")}
                         </button>
@@ -1250,7 +1250,7 @@ export function Backup() {
                       <button
                         type="button"
                         onClick={() => void openUrl(GITHUB_TOKEN_URL)}
-                        className="inline-flex items-center gap-1 text-[12px] text-muted transition-colors hover:text-secondary"
+                        className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-secondary"
                       >
                         <ExternalLink className="h-3 w-3" />
                         {t("backup.github.tokenHint")}
@@ -1260,14 +1260,14 @@ export function Backup() {
                     <button
                       type="button"
                       onClick={() => setPatMode(true)}
-                      className="text-[12px] text-muted transition-colors hover:text-secondary"
+                      className="text-xs text-muted transition-colors hover:text-secondary"
                     >
                       {t("backup.github.patToggle")}
                     </button>
                   )}
 
                   {githubError && (
-                    <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] leading-5 text-red-600 dark:text-red-300">
+                    <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs leading-5 text-red-600 dark:text-red-300">
                       {githubError}
                     </div>
                   )}
@@ -1279,11 +1279,11 @@ export function Backup() {
           <section className="app-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <Cloud className="h-4 w-4 text-muted" />
-              <h2 className="text-[14px] font-semibold text-secondary">
+              <h2 className="text-base font-semibold text-secondary">
                 {t("backup.connection.title")}
               </h2>
             </div>
-            <p className="mb-3 text-[13px] leading-5 text-muted">
+            <p className="mb-3 text-sm leading-5 text-muted">
               {t("backup.connection.desc")}
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -1292,7 +1292,7 @@ export function Backup() {
                 value={remoteInput}
                 onChange={(event) => setRemoteInput(event.target.value)}
                 placeholder={t("settings.gitRemoteUrlPlaceholder")}
-                className="h-8 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-[13px] text-secondary outline-none transition-colors focus:border-border"
+                className="h-8 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-sm text-secondary outline-none transition-colors focus:border-border"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
@@ -1301,7 +1301,7 @@ export function Backup() {
                 type="button"
                 onClick={handleSaveRemote}
                 disabled={loading === "save"}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
               >
                 {loading === "save" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1335,11 +1335,11 @@ export function Backup() {
           <section className="app-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <Unlink className="h-4 w-4 text-muted" />
-              <h2 className="text-[14px] font-semibold text-secondary">
+              <h2 className="text-base font-semibold text-secondary">
                 {t("backup.disconnect.title")}
               </h2>
             </div>
-            <p className="text-[13px] leading-5 text-muted">
+            <p className="text-sm leading-5 text-muted">
               {t("backup.disconnect.desc")}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1350,7 +1350,7 @@ export function Backup() {
                   loading === "disconnect" ||
                   (!remoteConfig && !gitStatus?.remote_url)
                 }
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
               >
                 {loading === "disconnect" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1364,7 +1364,7 @@ export function Backup() {
                   type="button"
                   onClick={() => setRevokeConfirmOpen(true)}
                   disabled={loading === "disconnect"}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-[13px] font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   {t("backup.disconnect.revoke")}
@@ -1372,7 +1372,7 @@ export function Backup() {
               )}
             </div>
             {isGithubRemote && (
-              <p className="mt-2 text-[12px] leading-4 text-faint">
+              <p className="mt-2 text-xs leading-4 text-faint">
                 {authMethod === "pat"
                   ? t("backup.disconnect.revokeHintPat")
                   : authMethod === "oauth"
@@ -1382,16 +1382,16 @@ export function Backup() {
             )}
             {githubRepoWebUrl && (
               <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2.5">
-                <div className="text-[13px] font-medium text-red-700 dark:text-red-300">
+                <div className="text-sm font-medium text-red-700 dark:text-red-300">
                   {t("backup.disconnect.deleteRemote")}
                 </div>
-                <p className="mt-1 text-[12px] leading-4 text-red-700/80 dark:text-red-300/80">
+                <p className="mt-1 text-xs leading-4 text-red-700/80 dark:text-red-300/80">
                   {t("backup.disconnect.deleteRemoteDesc")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setDeleteRemoteConfirmOpen(true)}
-                  className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-lg border border-red-500/50 px-2.5 text-[12px] font-medium text-red-700 transition-colors hover:bg-red-500/15 dark:text-red-300"
+                  className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-lg border border-red-500/50 px-2.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-500/15 dark:text-red-300"
                 >
                   <ExternalLink className="h-3 w-3" />
                   {t("backup.disconnect.deleteRemoteAction")}
@@ -1401,13 +1401,13 @@ export function Backup() {
           </section>
 
           <section className="app-panel p-4">
-            <h2 className="text-[14px] font-semibold text-secondary">
+            <h2 className="text-base font-semibold text-secondary">
               {t("backup.summary.title")}
             </h2>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-md border border-border-subtle bg-bg-secondary px-3 py-2">
                 <div className="text-faint">{t("backup.summary.skills")}</div>
-                <div className="mt-1 text-[18px] font-semibold text-primary">
+                <div className="mt-1 text-xl font-semibold text-primary">
                   {managedSkills.length}
                 </div>
               </div>
@@ -1415,7 +1415,7 @@ export function Backup() {
                 <div className="text-faint">
                   {t("backup.summary.snapshots")}
                 </div>
-                <div className="mt-1 text-[18px] font-semibold text-primary">
+                <div className="mt-1 text-xl font-semibold text-primary">
                   {versions.length}
                 </div>
               </div>

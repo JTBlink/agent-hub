@@ -7,7 +7,7 @@ export function AutomationAdminNotice({ required }: { required?: boolean }) {
   return (
     <aside
       role="note"
-      className="flex items-start gap-2 rounded-lg border border-border-subtle bg-bg-secondary p-3 text-[12px] leading-6 text-secondary"
+      className="flex items-start gap-2 rounded-lg border border-border-subtle bg-bg-secondary p-3 text-xs leading-6 text-secondary"
     >
       <ShieldCheck
         aria-hidden="true"

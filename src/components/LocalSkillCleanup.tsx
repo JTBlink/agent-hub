@@ -83,7 +83,7 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
         type="button"
         onClick={preview}
         disabled={disabled || loading}
-        className="app-button-secondary text-[13px] disabled:opacity-50"
+        className="app-button-secondary text-sm disabled:opacity-50"
       >
         {loading ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -104,7 +104,7 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
         message={t("install.scan.cleanupHint", { count: selected.length })}
         children={
           <div className="space-y-3">
-            <label className="block text-[13px]">
+            <label className="block text-sm">
               <span className="mb-1 block">
                 {t("install.scan.cleanupAgent")}
               </span>
@@ -123,7 +123,7 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
                 ))}
               </ThemedSelect>
             </label>
-            <ul className="max-h-56 overflow-y-auto space-y-2 text-[13px]">
+            <ul className="max-h-56 overflow-y-auto space-y-2 text-sm">
               {selected.map((entry) => (
                 <li key={entry.id} className="break-all">
                   <span className="font-medium">{entry.tool}</span>
@@ -133,7 +133,7 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
                 </li>
               ))}
             </ul>
-            <p className="text-[13px] text-muted">
+            <p className="text-sm text-muted">
               {t("install.scan.cleanupSafety")}
             </p>
           </div>
@@ -145,18 +145,18 @@ export function LocalSkillCleanup({ disabled, runScan, onChanged }: Props) {
           className="fixed bottom-4 right-4 z-50 max-w-lg rounded-lg border border-border bg-surface p-4 shadow-xl"
         >
           <div className="flex justify-between gap-4">
-            <p className="text-[13px] font-semibold">
+            <p className="text-sm font-semibold">
               {t("install.scan.cleanupFailures")}
             </p>
             <button
               type="button"
               onClick={() => setFailures([])}
-              className="text-[13px] text-muted"
+              className="text-sm text-muted"
             >
               {t("common.close")}
             </button>
           </div>
-          <ul className="mt-2 max-h-52 overflow-y-auto text-[12px] text-muted">
+          <ul className="mt-2 max-h-52 overflow-y-auto text-xs text-muted">
             {failures.map((failure, index) => (
               <li className="mb-2 break-all" key={index}>
                 <p className="font-mono">{compactHomePath(failure.path)}</p>

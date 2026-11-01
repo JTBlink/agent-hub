@@ -37,12 +37,12 @@ export function AgentToggleSection({
   return (
     <div className={cn("rounded-xl border border-border-subtle", className)}>
       <div className="border-b border-border-subtle px-6 py-2.5">
-        <div className="flex items-center justify-between gap-2 text-[13px]">
+        <div className="flex items-center justify-between gap-2 text-sm">
           <div className="flex min-w-0 items-center gap-2">
             <span className="font-medium text-secondary">
               {t("mySkills.agentTogglesTitle")}
             </span>
-            <span className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[12px] text-muted">
+            <span className="rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-xs text-muted">
               {t("mySkills.syncSummary", {
                 synced: enabledAvailableCount,
                 total: availableItems.length,
@@ -134,7 +134,7 @@ function AgentToggle({
       onClick={() => onToggle(item.key, !item.enabled)}
       disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-[12px] transition-colors",
+        "flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left text-xs transition-colors",
         item.enabled
           ? "border-border bg-surface"
           : "border-border-subtle bg-bg-secondary",
@@ -157,11 +157,11 @@ function AgentToggle({
         displayName={item.displayName}
         className="h-5 w-5 rounded-[4px]"
       />
-      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-secondary">
+      <span className="min-w-0 flex-1 truncate text-xs font-medium text-secondary">
         {item.displayName}
       </span>
       {item.badgeLabel && (
-        <span className="shrink-0 rounded-full border border-border-subtle bg-bg-secondary px-1.5 py-0.5 text-[11px] text-muted">
+        <span className="shrink-0 rounded-full border border-border-subtle bg-bg-secondary px-1.5 py-0.5 text-xs text-muted">
           {item.badgeLabel}
         </span>
       )}

@@ -41,7 +41,7 @@ export function AutomationPackageCard({
             <Icon aria-hidden="true" className="h-4 w-4" />
           </span>
           <h3
-            className="truncate text-[13px] font-semibold text-secondary"
+            className="truncate text-sm font-semibold text-secondary"
             title={task.title}
           >
             {task.title}
@@ -66,12 +66,10 @@ export function AutomationPackageCard({
           )}
         </button>
       </div>
-      <p className="text-[12px] leading-relaxed text-muted">
-        {task.description}
-      </p>
+      <p className="text-xs leading-relaxed text-muted">{task.description}</p>
       <div className="flex flex-wrap items-center gap-1">
         {installed && (
-          <span className="text-[12px] text-accent-light">
+          <span className="text-xs text-accent-light">
             {t(
               updateAvailable
                 ? "automation.updateAvailable"
@@ -81,20 +79,20 @@ export function AutomationPackageCard({
         )}
         <span
           title={task.source}
-          className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-[13px] font-medium leading-4 text-accent-light"
+          className="max-w-full truncate rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-sm font-medium leading-4 text-accent-light"
         >
           {task.source}
         </span>
         {tags.map((tag) => (
           <span
             key={tag}
-            className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted"
+            className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-sm leading-4 text-muted"
           >
             {tag}
           </span>
         ))}
         {task.requiresAdmin && (
-          <span className="rounded-[5px] border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[12px] text-amber-700 dark:text-amber-400">
+          <span className="rounded-[5px] border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-700 dark:text-amber-400">
             {t("discovery.requiresAdmin")}
           </span>
         )}

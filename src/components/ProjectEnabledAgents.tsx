@@ -14,7 +14,7 @@ export function ProjectEnabledAgents({
   const names = enabledProjectAgentNames(variants);
   return (
     <p
-      className="mt-1 text-[11px] leading-4 text-muted"
+      className="mt-1 text-xs leading-4 text-muted"
       title={t("project.batchAgents.statusHint")}
     >
       {t("project.batchAgents.enabledOn", {

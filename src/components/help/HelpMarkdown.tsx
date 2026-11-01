@@ -69,7 +69,7 @@ export function HelpMarkdown({ article }: { article: HelpArticle }) {
         {
           id: heading?.id,
           tabIndex: -1,
-          className: `scroll-mt-6 font-semibold text-primary ${"mb-3 mt-7 text-[17px]"}`,
+          className: `scroll-mt-6 font-semibold text-primary ${"mb-3 mt-7 text-xl"}`,
         },
         children,
       );

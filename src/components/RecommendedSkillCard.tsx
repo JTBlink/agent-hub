@@ -32,7 +32,7 @@ export function RecommendedSkillCard({
             loading="lazy"
           />
           <div className="min-w-0">
-            <h3 className="truncate text-[13px] font-semibold text-secondary">
+            <h3 className="truncate text-sm font-semibold text-secondary">
               {skill.name}
             </h3>
           </div>
@@ -64,22 +64,20 @@ export function RecommendedSkillCard({
           )}
         </div>
       </div>
-      <p className="text-[12px] leading-relaxed text-muted">
-        {skill.description}
-      </p>
+      <p className="text-xs leading-relaxed text-muted">{skill.description}</p>
       <div className="flex flex-wrap items-center gap-1">
         <span
           className={cn(
-            "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-[13px] leading-4 font-medium text-accent-light",
+            "rounded-[5px] bg-accent-bg px-1.5 py-0.5 text-sm leading-4 font-medium text-accent-light",
           )}
         >
           @{skill.source}
         </span>
-        <span className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-[13px] leading-4 text-muted">
+        <span className="rounded-[5px] border border-border-subtle bg-background px-1.5 py-0.5 text-sm leading-4 text-muted">
           {skill.tag}
         </span>
         {isInstalled && (
-          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[13px] leading-4 font-medium text-emerald-400">
+          <span className="inline-flex items-center gap-1 rounded-[5px] border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-sm leading-4 font-medium text-emerald-400">
             <Check className="h-3 w-3" />
             {t("install.installed")}
           </span>
