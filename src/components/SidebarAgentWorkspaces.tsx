@@ -9,7 +9,8 @@ import {
 import { Globe, GripVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
-import type { ManagedSkill, ToolInfo } from "../lib/tauri";
+import type { ToolInfo } from "../lib/tauri";
+import { useWorkspaceSkills } from "../hooks/useWorkspaceSkills";
 import {
   agentWorkspacePath,
   orderedWorkspaceAgents,
@@ -24,12 +25,10 @@ const LOBSTER_ORDER_KEY = WORKSPACE_AGENT_ORDER_KEYS.lobster;
 
 export function SidebarAgentWorkspaces({
   tools,
-  managedSkills,
   isOpen,
   onToggle,
 }: {
   tools: ToolInfo[];
-  managedSkills: ManagedSkill[];
   isOpen: boolean;
   onToggle: () => void;
 }) {
@@ -46,17 +45,9 @@ export function SidebarAgentWorkspaces({
     () => orderedWorkspaceAgents(tools, codingOrder, lobsterOrder),
     [tools, codingOrder, lobsterOrder],
   );
-  const globalSkillsByAgent = useMemo(
-    () =>
-      Object.fromEntries(
-        orderedTools.map((tool) => [
-          tool.key,
-          managedSkills.filter((skill) =>
-            skill.targets.some((target) => target.tool === tool.key),
-          ).length,
-        ]),
-      ),
-    [orderedTools, managedSkills],
+  const { skillsByAgent } = useWorkspaceSkills(
+    orderedTools.map((tool) => tool.key),
+    null,
   );
 
   const handleDragEnd = (result: DropResult) => {
@@ -142,7 +133,7 @@ export function SidebarAgentWorkspaces({
                     {...droppableProvided.droppableProps}
                   >
                     {group.tools.map((tool, index) => {
-                      const skillCount = globalSkillsByAgent[tool.key] ?? 0;
+                      const skillCount = skillsByAgent[tool.key]?.length ?? 0;
                       const isActive =
                         location.pathname === agentWorkspacePath(tool);
                       return (

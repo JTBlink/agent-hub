@@ -8,6 +8,8 @@ import { createProjectSkill } from "../../tests/fixtures/projectSkill";
 import type { ManagedSkill, ToolInfo } from "../lib/tauri";
 import { WorkspaceView } from "./WorkspaceView";
 import { CODING_WORKSPACE_CONFIG } from "./workspaceConfigs";
+import { SidebarAgentWorkspaces } from "../components/SidebarAgentWorkspaces";
+import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
 
 const mocks = vi.hoisted(() => ({
   scan: vi.fn(),
@@ -61,6 +63,8 @@ const local = (index: number) =>
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
+  workspaceSkillsCache.clear();
+  localStorage.clear();
   skills = [makeSkill(1, true), makeSkill(2, true)];
   app = {
     tools: [tool],
@@ -80,10 +84,17 @@ afterEach(async () => {
   container.remove();
   vi.unstubAllGlobals();
 });
-async function render(agent = "codex") {
+async function render(agent = "codex", withSidebar = false) {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={[`/global-workspace/${agent}`]}>
+        {withSidebar && (
+          <SidebarAgentWorkspaces
+            tools={app.tools}
+            isOpen
+            onToggle={() => {}}
+          />
+        )}
         <Navigation />
         <Routes>
           <Route
@@ -125,6 +136,49 @@ function group() {
 it("counts actual workspace copies instead of stale deployment records", async () => {
   await render();
   expect(group().textContent).toBe("Demo1/2");
+});
+
+it("includes unmanaged skills in matching sidebar and page totals and refreshes both together", async () => {
+  app.managedSkills = Array.from({ length: 108 }, (_, index) =>
+    makeSkill(index + 1, true),
+  );
+  const localSkills = Array.from({ length: 114 }, (_, index) =>
+    index < 108
+      ? local(index + 1)
+      : createProjectSkill({
+          name: `local-${index}`,
+          relative_path: `local-${index}`,
+          center_skill_id: null,
+          in_center: false,
+          sync_status: "project_only",
+        }),
+  );
+  mocks.scan.mockResolvedValue(localSkills);
+  await render("codex", true);
+  const sidebarCount = () =>
+    container.querySelector('[data-rfd-draggable-id="codex"] button')
+      ?.textContent;
+  const headerCount = () =>
+    container.querySelector("h1 .app-badge")?.textContent;
+  expect(sidebarCount()).toBe("Codex114");
+  expect(headerCount()).toBe("114");
+  expect(mocks.scan).toHaveBeenCalledTimes(1);
+
+  mocks.scan.mockResolvedValue(localSkills.slice(0, -1));
+  await act(async () => refreshButton().click());
+  expect(sidebarCount()).toBe("Codex113");
+  expect(headerCount()).toBe("113");
+  expect(mocks.scan).toHaveBeenCalledTimes(2);
+
+  mocks.scan.mockRejectedValueOnce(new Error("scan unavailable"));
+  await act(async () => refreshButton().click());
+  expect(sidebarCount()).toBe("Codex113");
+  expect(headerCount()).toBe("113");
+
+  mocks.scan.mockResolvedValue([]);
+  await act(async () => refreshButton().click());
+  expect(sidebarCount()).toBe("Codex");
+  expect(headerCount()).toBe("0");
 });
 
 it("does not rescan for library notifications or equivalent Agent objects", async () => {

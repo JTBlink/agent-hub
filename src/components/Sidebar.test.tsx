@@ -11,6 +11,13 @@ import { makeSkillGroup } from "../../tests/fixtures/skillGroup";
 import type { SkillGroup } from "../lib/tauri";
 import { makeTool, makeProject } from "../../tests/fixtures/workspace";
 import { Sidebar } from "./Sidebar";
+import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
+
+vi.mock("../lib/tauri", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/tauri")>()),
+  getGlobalLocalSkills: vi.fn().mockResolvedValue([]),
+  touchProjectVisited: vi.fn().mockResolvedValue(undefined),
+}));
 
 const app = vi.hoisted(() => ({
   skillGroups: [] as SkillGroup[],
@@ -28,6 +35,7 @@ const app = vi.hoisted(() => ({
   refreshProjects: vi.fn(),
 }));
 vi.mock("../context/AppContext", () => ({ useApp: () => app }));
+vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 const i18n = createInstance();
 await i18n.init({
   lng: "zh",
@@ -45,8 +53,11 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(async () => {
   vi.clearAllMocks();
+  workspaceSkillsCache.clear();
   await i18n.changeLanguage("zh");
   app.skillGroups = [];
+  app.tools = [];
+  app.projects = [];
   localStorage.clear();
   app.viewedSkillGroup = null;
   app.viewingUngrouped = false;
@@ -104,6 +115,7 @@ it("provides a permanent automation entry independent of installed agents", asyn
   await click(link);
   expect(container.querySelector("output")?.textContent).toBe("/automation");
 });
+
 function expanded() {
   return [...container.querySelectorAll('[aria-expanded="true"]')].map(
     (element) => element.textContent,
@@ -165,9 +177,7 @@ it("uses the library title solely to toggle and All Skills to clear both group f
   };
   app.viewingUngrouped = true;
   await render("/settings");
-  const heading = container.querySelector<HTMLButtonElement>(
-    "button[aria-expanded]",
-  )!;
+  const heading = button("技能库0");
   expect(heading.textContent).toBe("技能库0");
   await click(heading);
   expect(container.querySelector("output")?.textContent).toBe("/settings");

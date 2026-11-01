@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { toast } from "sonner";
 import i18n from "../i18n";
 import { getErrorMessage } from "../lib/error";
-import {
-  getGlobalLocalSkills,
-  type ManagedSkill,
-  type ProjectSkill,
-} from "../lib/tauri";
+import type { ManagedSkill } from "../lib/tauri";
+import { workspaceSkillsCache as cache } from "../lib/workspaceSkillsCache";
 
 /** Share one filesystem snapshot between workspace counts, cards and group chips. */
 export function useWorkspaceSkills(
@@ -16,50 +20,47 @@ export function useWorkspaceSkills(
   // Context refreshes create new Tool objects and arrays. Only a different
   // visible Agent scope should automatically trigger another directory scan.
   const scope = JSON.stringify([...agentKeys].sort());
-  const [skillsByAgent, setSkillsByAgent] = useState<
-    Record<string, ProjectSkill[]>
-  >({});
+  const skillsByAgent = useSyncExternalStore(
+    cache.subscribe,
+    cache.getSnapshot,
+  );
   const [loading, setLoading] = useState(false);
   const requestRef = useRef(0);
 
-  const refresh = useCallback(async () => {
-    const request = ++requestRef.current;
-    setLoading(true);
-    const agents: string[] = JSON.parse(scope);
-    const results = await Promise.all(
-      agents.map(async (agent) => {
-        try {
-          return [agent, await getGlobalLocalSkills(agent)] as const;
-        } catch (error) {
-          if (requestRef.current === request && agent === currentAgent) {
+  const load = useCallback(
+    async (force: boolean) => {
+      const request = ++requestRef.current;
+      setLoading(true);
+      const agents: string[] = JSON.parse(scope);
+      await Promise.all(
+        agents.map(async (agent) => {
+          const error = await cache.load(agent, force);
+          if (
+            error &&
+            requestRef.current === request &&
+            agent === currentAgent
+          ) {
             toast.error(getErrorMessage(error, i18n.t("common.error")));
           }
-          return [agent, null] as const;
-        }
-      }),
-    );
-    if (requestRef.current !== request) return;
-    const next: Record<string, ProjectSkill[]> = {};
-    for (const [agent, skills] of results) {
-      // A failed scan must not replace a valid snapshot with an empty directory.
-      if (skills !== null) next[agent] = skills;
-    }
-    // Failed refreshes retain the last successful snapshot. Before a first
-    // successful scan, presence still falls back to deployment records.
-    setSkillsByAgent((previous) => ({ ...previous, ...next }));
-    setLoading(false);
-  }, [scope, currentAgent]);
+        }),
+      );
+      if (requestRef.current !== request) return;
+      setLoading(false);
+    },
+    [scope, currentAgent],
+  );
+  const refresh = useCallback(() => load(true), [load]);
 
   useEffect(() => {
     let cancelled = false;
     void Promise.resolve().then(() => {
-      if (!cancelled) return refresh();
+      if (!cancelled) return load(false);
     });
     return () => {
       cancelled = true;
       requestRef.current += 1;
     };
-  }, [refresh]);
+  }, [load]);
 
   const installedIdsByAgent = useMemo(
     () =>

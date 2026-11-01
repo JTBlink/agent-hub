@@ -24,6 +24,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { withSkillGroupMembership } from "../lib/skillGroupMembership";
 import { applyTextSize } from "../lib/textScale";
 import { toast } from "sonner";
+import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
 
 interface AppState {
   skillGroups: SkillGroup[];
@@ -165,6 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const skills = await api.getManagedSkills();
       setManagedSkills(skills);
+      void workspaceSkillsCache.refreshLoaded();
       setAppError(null);
     } catch (e) {
       console.error("Failed to load managed skills:", e);

@@ -62,8 +62,7 @@ export function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { projects, refreshProjects, tools, managedSkills, appUpdate } =
-    useApp();
+  const { projects, refreshProjects, tools, appUpdate } = useApp();
   const [showAddProject, setShowAddProject] = useState(false);
   const [deleteProjectTarget, setDeleteProjectTarget] = useState<{
     id: string;
@@ -180,7 +179,6 @@ export function Sidebar() {
 
           <SidebarAgentWorkspaces
             tools={tools}
-            managedSkills={managedSkills}
             isOpen={expandedSection === "agents"}
             onToggle={() => toggleSection("agents")}
           />
