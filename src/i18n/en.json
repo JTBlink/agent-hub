@@ -270,12 +270,10 @@
     "dashboard": "Dashboard",
     "mySkills": "Library",
     "allSkills": "All Skills",
-    "moreGroups": "More...",
-    "lessGroups": "Show less",
     "editGroup": "Edit {{name}}",
     "deleteGroup": "Delete {{name}}",
     "reorderGroup": "Reorder {{name}}",
-    "globalWorkspace": "Global Workspace",
+    "globalWorkspace": "Agent Workspaces",
     "lobsterAgents": "Lobster Agents",
     "installSkills": "Discover",
     "backup": "Cloud Sync",
@@ -894,7 +892,7 @@
       "retry": "Retry",
       "comparing": "Comparing source with central library…",
       "notCompared": "Not compared yet. Open Diff to compare.",
-      "summary": "{{count}} changed files · Added {{added}} · Modified {{modified}} · Removed {{removed}}",
+      "summary": "{{count}} changes · Added {{added}} · Modified {{modified}} · Removed {{removed}}",
       "centralVersion": "Central library copy",
       "localVersion": "Local source content",
       "sourceVersion": "Remote source content",
@@ -2084,6 +2082,8 @@
     "unsaved": "Unsaved"
   },
   "git": {
+    "changedFiles": "{{count}} changes",
+    "changedFilesTruncated": "At least {{count}} changes",
     "worktree": "Worktree",
     "unborn": "No commits yet",
     "cachedRefs": "Remote comparison uses locally cached refs",
@@ -2124,7 +2124,9 @@
     "indexVersion": "Index",
     "workingVersion": "Working tree",
     "diffTruncated": "Preview limited to 3000 lines. Switch to unified view to read more.",
-    "localRefs": "Local refs"
+    "localRefs": "Local refs",
+    "changeOverview": "Diff scroll overview",
+    "overviewHint": "Click or drag to navigate; arrows scroll, Page Up/Down page, Home/End go to the edges"
   },
   "workspaceSearch": {
     "title": "Search",

@@ -270,12 +270,10 @@
     "dashboard": "工作台",
     "mySkills": "技能库",
     "allSkills": "全部技能",
-    "moreGroups": "更多...",
-    "lessGroups": "收起",
     "editGroup": "编辑 {{name}}",
     "deleteGroup": "删除 {{name}}",
     "reorderGroup": "调整 {{name}} 的排序",
-    "globalWorkspace": "全局工作区",
+    "globalWorkspace": "Agent 工作区",
     "lobsterAgents": "龙虾 Agent",
     "installSkills": "发现",
     "backup": "云端同步",
@@ -2081,6 +2079,8 @@
     "unsaved": "未保存"
   },
   "git": {
+    "changedFiles": "{{count}} 项变更",
+    "changedFilesTruncated": "至少 {{count}} 项变更",
     "worktree": "工作目录",
     "unborn": "尚无提交",
     "cachedRefs": "远端比较基于本地缓存引用",
@@ -2121,7 +2121,9 @@
     "indexVersion": "暂存区",
     "workingVersion": "工作区",
     "diffTruncated": "差异较大，仅预览前 3000 行；可切换统一视图查看。",
-    "localRefs": "本地引用"
+    "localRefs": "本地引用",
+    "changeOverview": "差异滚动概览",
+    "overviewHint": "点击或拖动定位；方向键滚动，Page Up／Down 翻页，Home／End 到首尾"
   },
   "workspaceSearch": {
     "title": "搜索",

@@ -9,6 +9,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { makeProject } from "../../../tests/fixtures/workspace";
 import type { RepositoryTask, TaskBinding } from "../../lib/tauri";
 import { TaskBrowser } from "./TaskBrowser";
+import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -475,4 +476,69 @@ it("supports keyboard platform switching and ignores a previous platform's late 
   expect(host.querySelector('[role="radio"][aria-label="PR"]')).not.toBeNull();
   await act(async () => root.unmount());
   host.remove();
+});
+
+it("follows the selected workspace on entry and changes while retaining task filters", async () => {
+  localStorage.setItem(
+    "agent-hub.taskView",
+    JSON.stringify({
+      provider: "all",
+      projectId: "all",
+      filters: { kind: "review", state: "closed", personal: "all", text: "" },
+    }),
+  );
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "task_bindings") return scopedBindings;
+    if (command === "task_list")
+      return { items: [], identity: "demo", has_more: false, limited: false };
+    return undefined;
+  });
+  const projects = scopedBindings.map((binding, index) => ({
+    ...makeProject(),
+    id: binding.project_id,
+    name: `Project ${index}`,
+  }));
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const render = (index: number) => (
+    <MemoryRouter>
+      <WorkspaceFilesContext.Provider
+        value={{
+          files: {},
+          setFiles: vi.fn(),
+          checkout: {
+            projectId: projects[index].id,
+            worktreePath: projects[index].path,
+          },
+          setCheckout: vi.fn(),
+        }}
+      >
+        <TaskBrowser projects={projects} />
+      </WorkspaceFilesContext.Provider>
+    </MemoryRouter>
+  );
+  const requests = () =>
+    vi.mocked(invoke).mock.calls.filter(([command]) => command === "task_list");
+  try {
+    await act(async () => root.render(render(1)));
+    expect(
+      host.querySelector('[role="combobox"][aria-label="tasks.project"]')
+        ?.textContent,
+    ).toBe("Project 1");
+    expect(requests().at(-1)?.[1]).toMatchObject({
+      bindingId: "binding-1",
+      filters: { kind: "review", state: "closed" },
+    });
+    await act(async () => root.render(render(0)));
+    expect(
+      host.querySelector('[role="combobox"][aria-label="tasks.project"]')
+        ?.textContent,
+    ).toBe("Project 0");
+    expect(requests().at(-1)?.[1]).toMatchObject({
+      bindingId: "binding-0",
+      filters: { kind: "review", state: "closed" },
+    });
+  } finally {
+    await act(async () => root.unmount());
+  }
 });

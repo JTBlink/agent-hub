@@ -31,21 +31,30 @@ export const getProjectGitDiff = (
     path,
     staged,
   });
-export const setProjectGitStaged = (
+export const setProjectGitStaged = async (
   projectId: string,
   worktreePath: string | undefined,
   paths: string[],
   staged: boolean,
-) =>
-  invoke<void>("set_project_git_staged", {
+) => {
+  await invoke<void>("set_project_git_staged", {
     projectId,
     worktreePath,
     paths,
     staged,
   });
+  window.dispatchEvent(new Event("project-git-changed"));
+};
 
-export const commitProjectGit = (
+export const commitProjectGit = async (
   projectId: string,
   worktreePath: string | undefined,
   message: string,
-) => invoke<void>("commit_project_git", { projectId, worktreePath, message });
+) => {
+  await invoke<void>("commit_project_git", {
+    projectId,
+    worktreePath,
+    message,
+  });
+  window.dispatchEvent(new Event("project-git-changed"));
+};

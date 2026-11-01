@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, X, FileText, Copy } from "lucide-react";
@@ -36,6 +37,8 @@ interface Props {
   onMaximizedChange: (maximized: boolean) => void;
   shown?: boolean;
   projectsReady?: boolean;
+  toolbarStart?: ReactNode;
+  toolbarEnd?: ReactNode;
 }
 const toolbarAction = "app-button-ghost h-7 w-7 shrink-0 p-0";
 
@@ -44,6 +47,8 @@ export function TerminalWorkspace({
   onMaximizedChange,
   shown = true,
   projectsReady = true,
+  toolbarStart,
+  toolbarEnd,
 }: Props) {
   const { t } = useTranslation();
   const statusContainer = useContext(SidebarVisibilityContext)?.statusContainer;
@@ -373,6 +378,7 @@ export function TerminalWorkspace({
       }
     >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
+        {toolbarStart}
         <TerminalTabs
           tabs={scopedTabs}
           projects={projects}
@@ -402,6 +408,7 @@ export function TerminalWorkspace({
             ))}
           </ThemedSelect>
         )}
+        {toolbarEnd}
         <TerminalSessions
           tabs={tabs}
           projects={projects}

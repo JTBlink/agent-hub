@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import type { Project, RepositoryTask, TaskFilters } from "../../lib/tauri";
@@ -14,6 +21,8 @@ import {
 } from "../../lib/taskViewPreferences";
 import { getAppScale } from "../../lib/textScale";
 import { cn } from "../../utils";
+import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
+import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
 
 export function TaskBrowser({ projects }: { projects: Project[] }) {
   const { t } = useTranslation();
@@ -22,14 +31,32 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [settingsError, setSettingsError] = useState("");
   const [discovering, setDiscovering] = useState(true);
   const [initial] = useState(readTaskViewPreferences);
+  const workspace = useActiveWorkspace(projects);
+  const inWorkspace = useContext(WorkspaceFilesContext) !== null;
+  const workspaceId = inWorkspace ? workspace.project?.id : undefined;
+  const workspaceKey = JSON.stringify([
+    workspaceId,
+    inWorkspace ? workspace.path : undefined,
+  ]);
   const [provider, setProvider] = useState(initial.provider);
-  const [projectId, setProjectId] = useState(initial.projectId);
+  const [projectScope, setProjectScope] = useState({
+    workspaceKey,
+    projectId: workspaceId ?? initial.projectId,
+  });
+  const projectId = projectScope.projectId;
   const [filters, setFilters] = useState<TaskFilters>(initial.filters);
   const [search, setSearch] = useState(initial.filters.text);
   const [selection, setSelection] = useState<{
     task: RepositoryTask;
     full: boolean;
   } | null>(null);
+  if (projectScope.workspaceKey !== workspaceKey) {
+    setProjectScope({
+      workspaceKey,
+      projectId: workspaceId ?? initial.projectId,
+    });
+    setSelection(null);
+  }
   const returnFocus = useRef<HTMLElement | null>(null);
   const refreshBindings = useCallback(async () => {
     setDiscovering(true);
@@ -128,7 +155,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           setSelection(null);
         }}
         onProject={(value) => {
-          setProjectId(value);
+          setProjectScope({ workspaceKey, projectId: value });
           setSelection(null);
         }}
         onFilters={(patch) => {

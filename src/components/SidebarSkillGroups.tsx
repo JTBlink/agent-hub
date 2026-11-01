@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DragDropContext,
   Draggable,
@@ -7,7 +7,7 @@ import {
   type DraggableProvidedDragHandleProps,
 } from "@hello-pangea/dnd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronUp, Ellipsis, Layers, Plus } from "lucide-react";
+import { Layers, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
@@ -21,7 +21,6 @@ import { CreateSkillGroupDialog } from "./CreateSkillGroupDialog";
 import { RenameSkillGroupDialog } from "./RenameSkillGroupDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-const COMMON_GROUP_LIMIT = 5;
 const navClass =
   "flex w-full items-center gap-1.5 rounded-sm px-2 py-1 text-left text-sm leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
 const badgeClass =
@@ -51,25 +50,17 @@ export function SidebarSkillGroups({
   const [ordered, setOrdered] = useState(skillGroups);
   const [pending, setPending] = useState(false);
   const reordering = useRef(false);
-  const [showAll, setShowAll] = useState(false);
-  const listId = useId();
   const [showCreate, setShowCreate] = useState(false);
   const [renameTarget, setRenameTarget] = useState<SkillGroup | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SkillGroup | null>(null);
-  const moreRef = useRef<HTMLButtonElement>(null);
+  const createRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setOrdered(skillGroups);
   }, [skillGroups]);
-  const common = ordered.slice(0, COMMON_GROUP_LIMIT);
-  const visible = showAll ? ordered : common;
-  const commonIds = new Set(common.map((group) => group.id));
   const inLibrary = location.pathname === "/my-skills";
   const activeId =
     inLibrary && !viewingUngrouped ? viewedSkillGroup?.id : undefined;
-  const extraActive = ordered.find(
-    (group) => group.id === activeId && !commonIds.has(group.id),
-  );
   const ungroupedCount = managedSkills.filter(
     (skill) => skill.skill_group_ids.length === 0,
   ).length;
@@ -139,7 +130,7 @@ export function SidebarSkillGroups({
   const openCreate = () => {
     setShowCreate(true);
   };
-  const restoreFocus = () => moreRef.current?.focus();
+  const restoreFocus = () => createRef.current?.focus();
   const row = (
     group: SkillGroup,
     dragHandleProps?: DraggableProvidedDragHandleProps | null,
@@ -195,12 +186,11 @@ export function SidebarSkillGroups({
             <Droppable droppableId="skillGroups">
               {(drop) => (
                 <div
-                  id={listId}
                   ref={drop.innerRef}
                   {...drop.droppableProps}
                   className="px-1"
                 >
-                  {visible.map((group, index) => (
+                  {ordered.map((group, index) => (
                     <Draggable
                       key={group.id}
                       draggableId={group.id}
@@ -222,31 +212,6 @@ export function SidebarSkillGroups({
               )}
             </Droppable>
           </DragDropContext>
-          {!showAll && extraActive && row(extraActive)}
-          {ordered.length > COMMON_GROUP_LIMIT && (
-            <button
-              ref={moreRef}
-              type="button"
-              aria-controls={listId}
-              aria-expanded={showAll}
-              disabled={pending}
-              onClick={() => setShowAll((value) => !value)}
-              className={cn(
-                navClass,
-                "text-muted hover:text-secondary hover:bg-surface-hover",
-              )}
-            >
-              {showAll ? (
-                <ChevronUp className="h-4 w-4 shrink-0" />
-              ) : (
-                <Ellipsis className="h-4 w-4 shrink-0" />
-              )}
-              <span className="flex-1 truncate">
-                {t(showAll ? "sidebar.lessGroups" : "sidebar.moreGroups")}
-              </span>
-              <span className={badgeClass}>{ordered.length}</span>
-            </button>
-          )}
           {ungroupedCount > 0 && (
             <button
               type="button"
@@ -273,6 +238,7 @@ export function SidebarSkillGroups({
           )}
           <button
             type="button"
+            ref={createRef}
             onClick={openCreate}
             className={cn(
               navClass,

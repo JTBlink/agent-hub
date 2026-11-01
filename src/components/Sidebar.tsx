@@ -15,10 +15,11 @@ import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { SidebarSkillGroups } from "./SidebarSkillGroups";
 import { SidebarProjectFiles } from "./worktree/SidebarProjectFiles";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
-import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
-import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { worktreeUrl } from "../lib/worktreeApi";
+import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { SidebarActivityBar } from "./SidebarActivityBar";
+import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
+import { useGitChangeCount } from "../hooks/useGitChangeCount";
 
 const PANEL_STORAGE_KEY = "agent-hub:sidebar-panel-open";
 
@@ -26,9 +27,18 @@ export function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { projects, refreshProjects, tools, appUpdate } = useApp();
+  const {
+    projects,
+    refreshProjects,
+    tools,
+    appUpdate,
+    closeSkillDetail,
+    setViewedSkillGroupId,
+    setViewingUngrouped,
+  } = useApp();
   const { project: activeProject, path: activePath } =
     useActiveWorkspace(projects);
+  const gitChanges = useGitChangeCount(activeProject?.id, activePath);
   const panelId = useId();
   const setResourcePanelVisible = useContext(
     SidebarVisibilityContext,
@@ -69,11 +79,20 @@ export function Sidebar() {
     setResourcePanelVisible?.(panelVisible);
   }, [setResourcePanelVisible, panelVisible]);
   const selectPanel = (panel: SidebarPanel) => {
+    if (selectedPanel === panel && panelVisible) {
+      togglePanel();
+      return;
+    }
+    if (panel === "skills") {
+      closeSkillDetail();
+      setViewedSkillGroupId("");
+      setViewingUngrouped(false);
+      if (location.pathname !== "/my-skills") navigate("/my-skills");
+    }
     if (panel === "search") {
       setSearchOpened(true);
       setSearchFocusRequest((value) => value + 1);
     }
-    if (selectedPanel === panel && panelVisible) return;
     setPanelSelection({ routeKey: location.key, panel, manual: true });
     setPanelOpen(true);
     if (panel === "projects" && !location.pathname.startsWith("/project/")) {
@@ -168,6 +187,7 @@ export function Sidebar() {
         )}
       >
         <SidebarActivityBar
+          gitChanges={gitChanges}
           panelOpen={panelVisible}
           panelId={panelId}
           selectedPanel={selectedPanel}
@@ -265,15 +285,14 @@ export function Sidebar() {
               <SidebarProjectFiles />
             </div>
             <div hidden={selectedPanel !== "skills"}>
+              <SidebarSkillGroups
+                isOpen={expandedSection === "skills"}
+                onToggle={() => toggleSection("skills")}
+              />
               <SidebarAgentWorkspaces
                 tools={tools}
                 isOpen={expandedSection === "agents"}
                 onToggle={() => toggleSection("agents")}
-              />
-
-              <SidebarSkillGroups
-                isOpen={expandedSection === "skills"}
-                onToggle={() => toggleSection("skills")}
               />
             </div>
           </div>

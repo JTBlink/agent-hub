@@ -16,7 +16,7 @@ export function Settings() {
   const { tools } = useApp();
   const diagnostics = useSettingsDiagnostics();
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1040px] flex-1 flex-col">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
       <header className="shrink-0 pb-3">
         <h1 className="app-page-title flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-accent" />

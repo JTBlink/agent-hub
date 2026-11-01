@@ -1,9 +1,20 @@
 @import "./styles/brand.css";
 @import "./styles/typography.css";
+@import "./styles/scrollbars.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.activity-bar-count {
+  right: calc(4px / var(--app-scale));
+  bottom: calc(4px / var(--app-scale));
+  min-width: calc(17px / var(--app-scale));
+  height: calc(17px / var(--app-scale));
+  padding: 0 calc(4px / var(--app-scale));
+  font-size: calc(11px / var(--app-scale));
+  line-height: 1;
+}
 
 @layer base {
   :root {
@@ -36,11 +47,7 @@
   }
 
   .app-page {
-    @apply mx-auto flex min-h-full w-full max-w-[1200px] flex-col gap-6 pb-8;
-  }
-
-  .app-page-narrow {
-    @apply max-w-[1040px];
+    @apply flex min-h-full w-full min-w-0 flex-col gap-6 pb-8;
   }
 
   .app-page-header {

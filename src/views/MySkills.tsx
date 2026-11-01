@@ -1422,7 +1422,7 @@ export function MySkills() {
               className={cn(
                 "pb-8",
                 viewMode === "grid"
-                  ? "grid grid-cols-2 gap-3 lg:grid-cols-3"
+                  ? "grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-3"
                   : "flex flex-col gap-0.5",
               )}
             >

@@ -228,6 +228,9 @@ it("hides the dashboard resource panel until requested and hides it again on ret
   await click(button("Go settings"));
   expect(getComputedStyle(panel).display).toBe("none");
   await click(button("Go back"));
+  expect(container.querySelector("output")?.textContent).toBe("/my-skills");
+  expect(getComputedStyle(panel).display).not.toBe("none");
+  await click(button("Go /"));
   expect(getComputedStyle(panel).display).toBe("none");
   expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("true");
 });
@@ -263,7 +266,7 @@ it.each([
     ).toBe("false");
     await click(toggle);
     expect(panel.hidden).toBe(false);
-    expect(container.querySelector("output")?.textContent).toBe(path);
+    expect(container.querySelector("output")?.textContent).toBe("/my-skills");
     await click(button("Go settings"));
     expect(panel.hidden).toBe(true);
     await click(button("Go project"));
@@ -302,11 +305,11 @@ it.each([
     checkSelection();
     const wasOpen = explorer().getAttribute("aria-expanded") === "true";
     await click(explorer());
-    expect(explorer().getAttribute("aria-expanded")).toBe("true");
+    expect(explorer().getAttribute("aria-expanded")).toBe(String(!wasOpen));
     const expected = wasOpen ? label : "技能面板";
     checkSelection(expected);
     await click(explorer());
-    expect(explorer().getAttribute("aria-expanded")).toBe("true");
+    expect(explorer().getAttribute("aria-expanded")).toBe(String(wasOpen));
     checkSelection(expected);
   },
 );
@@ -328,6 +331,33 @@ it("moves the single activity selection between Git and workspace routes on navi
   await click(button("Go back"));
   expect(selection()).toEqual(["Git"]);
 });
+
+it.each([
+  ["/my-skills", "skills"],
+  ["/project/demo", "projects"],
+  ["/project/demo", "search"],
+])(
+  "toggles the active %s / %s panel from its activity icon",
+  async (path, panel) => {
+    await render(path);
+    const trigger = container.querySelector<HTMLButtonElement>(
+      `[data-sidebar-panel="${panel}"]`,
+    )!;
+    if (panel === "search") await click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    app.setViewedSkillGroupId.mockClear();
+    app.closeSkillDetail.mockClear();
+    await click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("false");
+    expect(container.querySelector("output")?.textContent).toBe(path);
+    expect(app.setViewedSkillGroupId).not.toHaveBeenCalled();
+    expect(app.closeSkillDetail).not.toHaveBeenCalled();
+    await click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("true");
+  },
+);
 
 it("collapses the skill panel, returns focus to Skills and keeps navigation usable", async () => {
   await render("/my-skills");
@@ -359,8 +389,7 @@ it("restores the collapsed preference while keeping all resource sections mounte
   expect(explorer().getAttribute("aria-expanded")).toBe("false");
   await click(explorer());
   expect(explorer().getAttribute("aria-expanded")).toBe("true");
-  expect(groupOrder()).toEqual(groups(5).map((group) => group.id));
-  await click(more());
+  expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
   await click(
     container.querySelector<HTMLButtonElement>('[aria-label="收起技能面板"]')!,
   );
@@ -400,12 +429,12 @@ it("appends assistants to one workspace with existing orders and working detail 
     "/lobster-workspace/hermes",
   );
   expect(button("hermes").getAttribute("aria-current")).toBe("page");
-  expect(expanded()).toEqual(["全局工作区"]);
+  expect(expanded()).toEqual(["Agent 工作区"]);
 });
 
 it("opens only the active region on navigation, including history return after a manual toggle", async () => {
   await render("/lobster-workspace/hermes");
-  expect(expanded()).toEqual(["全局工作区"]);
+  expect(expanded()).toEqual(["Agent 工作区"]);
   await click(
     container.querySelector<HTMLButtonElement>(
       '[data-sidebar-panel="projects"]',
@@ -419,7 +448,7 @@ it("opens only the active region on navigation, including history return after a
   await click(button("Go settings"));
   expect(expanded()).toEqual([]);
   await click(button("Go back"));
-  expect(expanded()).toEqual(["全局工作区"]);
+  expect(expanded()).toEqual(["Agent 工作区"]);
   await click(button("Go project"));
   expect(
     container
@@ -478,89 +507,57 @@ function groupOrder() {
 }
 
 it.each([0, 5, 6, 13])(
-  "shows five common groups with More only when needed (%i groups)",
+  "shows every skill group without a More toggle (%i groups)",
   async (count) => {
     app.skillGroups = groups(count);
     await render("/my-skills");
-    expect(groupOrder()).toEqual(
-      app.skillGroups.slice(0, 5).map((group) => group.id),
-    );
-    expect(Boolean(more())).toBe(count > 5);
-    if (count > 5) expect(more().textContent).toBe(`更多...${count}`);
+    expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
+    expect(more()).toBeNull();
   },
 );
 
 it.each(["zh", "en", "zh-TW"])(
-  "expands the same sidebar list and collapses it with focus preserved in %s",
+  "shows all groups directly in %s",
   async (language) => {
     await i18n.changeLanguage(language);
     app.skillGroups = groups(8);
     await render("/my-skills");
-    const trigger = more();
-    expect(trigger.textContent).toBe(`${i18n.t("sidebar.moreGroups")}8`);
-    trigger.focus();
-    await click(trigger);
     expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
-    expect(container.querySelector('[role="dialog"], dialog')).toBeNull();
-    expect(more()).toBe(trigger);
-    expect(more().getAttribute("aria-expanded")).toBe("true");
-    expect(
-      document
-        .getElementById(more().getAttribute("aria-controls")!)
-        ?.getAttribute("data-rfd-droppable-id"),
-    ).toBe("skillGroups");
-    expect(more().textContent).toBe(`${i18n.t("sidebar.lessGroups")}8`);
-    expect(document.activeElement).toBe(trigger);
-    await click(trigger);
-    expect(groupOrder()).toEqual(
-      app.skillGroups.slice(0, 5).map((group) => group.id),
-    );
-    expect(more().getAttribute("aria-expanded")).toBe("false");
-    expect(document.activeElement).toBe(trigger);
+    expect(more()).toBeNull();
   },
 );
 
-it("keeps the selected extra group visible when collapsed without duplicating or reordering it", async () => {
+it("keeps the selected group in its original position without duplicating it", async () => {
   app.skillGroups = groups(8);
   app.viewedSkillGroup = app.skillGroups[7];
   await render("/my-skills");
   expect(button("Group 78").getAttribute("aria-current")).toBe("page");
-  expect(groupOrder()).toEqual(groups(5).map((group) => group.id));
-  await click(more());
   expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
   expect(
     [...container.querySelectorAll("button")].filter(
       (item) => item.textContent === "Group 78",
     ),
   ).toHaveLength(1);
-  await click(more());
-  expect(button("Group 78").getAttribute("aria-current")).toBe("page");
   app.viewedSkillGroup = null;
   await render("/my-skills");
-  expect(container.textContent).not.toContain("Group 7");
+  expect(button("Group 78").getAttribute("aria-current")).toBeNull();
 });
 
-it("switches to an expanded group without navigating on More or changing common order", async () => {
+it("switches directly to a group beyond the first five", async () => {
   app.skillGroups = groups(8);
   await render("/settings");
   await click(button("技能库0"));
-  await click(more());
-  expect(container.querySelector("output")?.textContent).toBe("/settings");
-  expect(app.setViewedSkillGroupId).not.toHaveBeenCalled();
   await click(button("Group 78"));
   expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("group-7");
   expect(app.setViewingUngrouped).toHaveBeenCalledWith(false);
   expect(app.closeSkillDetail).toHaveBeenCalledOnce();
   expect(container.querySelector("output")?.textContent).toBe("/my-skills");
-  expect(more().getAttribute("aria-expanded")).toBe("true");
-  await click(more());
-  expect(groupOrder()).toEqual(groups(5).map((group) => group.id));
+  expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
 });
 
-it("updates expanded rows and removes More when the group count falls to five", async () => {
+it("updates rows when the group count changes", async () => {
   app.skillGroups = groups(8);
   await render("/my-skills");
-  await click(more());
   app.skillGroups = app.skillGroups.slice(0, 5);
   await render("/my-skills");
   expect(groupOrder()).toEqual(app.skillGroups.map((group) => group.id));
@@ -569,11 +566,10 @@ it("updates expanded rows and removes More when the group count falls to five", 
 });
 
 it.each(["edit", "delete", "create"])(
-  "keeps %s available after expanding the sidebar",
+  "keeps %s available with all sidebar groups visible",
   async (action) => {
     app.skillGroups = groups(8);
     await render("/my-skills");
-    await click(more());
     const target =
       action === "create"
         ? button("新建技能组")
@@ -644,7 +640,27 @@ it("switches worktrees from a menu and disables unavailable checkouts", async ()
   );
 });
 
-it("puts Projects first and separates project files from the skills panel without navigating", async () => {
+it.each(["/automation", "/global-workspace/codex", "/my-skills"])(
+  "opens the complete skill library from the skills activity entry on %s",
+  async (path) => {
+    localStorage.setItem("agent-hub:sidebar-panel-open", "false");
+    app.viewedSkillGroup = makeSkillGroup("previous-group", "Previous group");
+    app.viewingUngrouped = true;
+    await render(path);
+    await click(explorer());
+    expect(container.querySelector("output")?.textContent).toBe("/my-skills");
+    expect(app.closeSkillDetail).toHaveBeenCalledOnce();
+    expect(app.setViewedSkillGroupId).toHaveBeenCalledWith("");
+    expect(app.setViewingUngrouped).toHaveBeenCalledWith(false);
+    expect(explorer().getAttribute("aria-expanded")).toBe("true");
+    expect(
+      button("技能库0").compareDocumentPosition(button("Agent 工作区")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  },
+);
+
+it("puts Projects first and separates project files from the skills panel", async () => {
   await render("/my-skills");
   const nav = container.querySelector('nav[aria-label="主导航"]')!;
   expect(nav.querySelector("button, a")?.getAttribute("aria-label")).toBe(
@@ -659,7 +675,7 @@ it("puts Projects first and separates project files from the skills panel withou
   const projectHeading = container.querySelector<HTMLElement>(
     '[role="combobox"][aria-label="切换项目"]',
   )!;
-  const skillsHeading = button("全局工作区");
+  const skillsHeading = button("Agent 工作区");
   expect(projectHeading.closest("[hidden]")).not.toBeNull();
   expect(skillsHeading.closest("[hidden]")).toBeNull();
   await click(projectToggle);

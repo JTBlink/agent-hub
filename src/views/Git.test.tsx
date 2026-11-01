@@ -4,6 +4,11 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { Git } from "./Git";
+import { WorkspaceFilesProvider } from "../components/worktree/WorkspaceFilesContext";
+import {
+  useWorkspaceFiles,
+  WorkspaceFilesContext,
+} from "../hooks/useWorkspaceFiles";
 import {
   commitProjectGit,
   setProjectGitStaged,
@@ -13,6 +18,29 @@ import {
 } from "../lib/gitApi";
 import { makeProject } from "../../tests/fixtures/workspace";
 import { installCodeEditorGeometry } from "../test/codeEditor";
+
+function WorkspaceControl() {
+  const { setCheckout } = useWorkspaceFiles();
+  return (
+    <button
+      data-select-workspace
+      onClick={() =>
+        setCheckout({ projectId: "second", worktreePath: "<workspace>/demo" })
+      }
+    >
+      Switch workspace
+    </button>
+  );
+}
+function TestGit() {
+  return (
+    <WorkspaceFilesProvider>
+      <WorkspaceControl />
+      <Git />
+    </WorkspaceFilesProvider>
+  );
+}
+
 const translate = (key: string) => key;
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: translate }),
@@ -35,6 +63,56 @@ vi.mock("../lib/gitApi", () => ({
   getProjectGitStatus: vi.fn(),
   getProjectGitDiff: vi.fn(),
 }));
+
+it("follows the shared checkout on entry and when the workspace changes without overwriting it", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitStatus).mockClear();
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "topic",
+    head: null,
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    state: "Clean",
+    files: [],
+    commits: [],
+    truncated: false,
+  });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const setCheckout = vi.fn();
+  const render = (path: string) => (
+    <WorkspaceFilesContext.Provider
+      value={{
+        files: {},
+        setFiles: vi.fn(),
+        checkout: { projectId: "second", worktreePath: path },
+        setCheckout,
+      }}
+    >
+      <Git />
+    </WorkspaceFilesContext.Provider>
+  );
+  try {
+    await act(async () => root.render(render("<workspace>/topic")));
+    expect(getProjectGitStatus).toHaveBeenCalledTimes(1);
+    expect(getProjectGitStatus).toHaveBeenLastCalledWith(
+      "second",
+      "<workspace>/topic",
+    );
+    expect(host.querySelector('[aria-label="tasks.project"]')).toBeNull();
+    expect(host.querySelector('[aria-label="git.worktree"]')).toBeNull();
+    await act(async () => root.render(render("<workspace>/other")));
+    expect(getProjectGitStatus).toHaveBeenLastCalledWith(
+      "second",
+      "<workspace>/other",
+    );
+    expect(setCheckout).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
 
 it("keeps staged and unstaged diffs separate and ignores an older project's result", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -72,7 +150,7 @@ it("keeps staged and unstaged diffs separate and ignores an older project's resu
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  await act(async () => root.render(<Git />));
+  await act(async () => root.render(<TestGit />));
   expect(host.textContent).toContain("feature/parser");
   const change = (staged: boolean) =>
     [...host.querySelectorAll<HTMLButtonElement>("button")].find(
@@ -87,17 +165,12 @@ it("keeps staged and unstaged diffs separate and ignores an older project's resu
     "src/parser.rs",
     true,
   );
+  expect(
+    host.querySelector('[role="combobox"][aria-label="tasks.project"]'),
+  ).toBeNull();
   await act(async () =>
-    host
-      .querySelector<HTMLButtonElement>(
-        '[role="combobox"][aria-label="tasks.project"]',
-      )!
-      .click(),
+    host.querySelector<HTMLButtonElement>("[data-select-workspace]")!.click(),
   );
-  const second = [
-    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
-  ].find((option) => option.textContent === "Second")!;
-  await act(async () => second.click());
   await act(async () => change(false).click());
   expect(getProjectGitDiff).toHaveBeenLastCalledWith(
     "second",
@@ -141,7 +214,7 @@ it("stages the selected file and keeps the message when a commit fails", async (
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  await act(async () => root.render(<Git />));
+  await act(async () => root.render(<TestGit />));
   await act(async () =>
     host
       .querySelector<HTMLButtonElement>(
@@ -234,7 +307,7 @@ it("blocks duplicate staging and commits without staged changes", async () => {
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  await act(async () => root.render(<Git />));
+  await act(async () => root.render(<TestGit />));
   expect(
     host.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled,
   ).toBe(true);
@@ -253,16 +326,12 @@ it("blocks duplicate staging and commits without staged changes", async () => {
   });
   expect(setProjectGitStaged).toHaveBeenCalledTimes(1);
   expect(
-    host.querySelector<HTMLButtonElement>(
-      '[role="combobox"][aria-label="tasks.project"]',
-    )!.disabled,
-  ).toBe(true);
+    host.querySelector('[role="combobox"][aria-label="tasks.project"]'),
+  ).toBeNull();
   await act(async () => finish());
   expect(
-    host.querySelector<HTMLButtonElement>(
-      '[role="combobox"][aria-label="tasks.project"]',
-    )!.disabled,
-  ).toBe(false);
+    host.querySelector('[role="combobox"][aria-label="git.worktree"]'),
+  ).toBeNull();
   await act(async () => root.unmount());
   host.remove();
   vi.unstubAllGlobals();
@@ -292,7 +361,7 @@ it("hides its change sidebar when the shared shell displays another sidebar", as
           setResourcePanelVisible: () => {},
         }}
       >
-        <Git />
+        <TestGit />
       </SidebarVisibilityContext.Provider>,
     );
   try {
@@ -348,7 +417,7 @@ it("renders source control in the shell sidebar while keeping diffs in the edito
             statusContainer,
           }}
         >
-          <Git />
+          <TestGit />
         </SidebarVisibilityContext.Provider>,
       ),
     );
@@ -358,7 +427,7 @@ it("renders source control in the shell sidebar while keeping diffs in the edito
     expect(host.textContent).not.toContain("git.localRefs");
     expect(
       sidebarContainer.querySelector('[aria-label="tasks.project"]'),
-    ).not.toBeNull();
+    ).toBeNull();
     expect(sidebarContainer.querySelector("form")).not.toBeNull();
     await act(async () =>
       sidebarContainer

@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { parseGitDiff, type GitDiffLine } from "../../lib/gitDiff";
+import { ScrollOverview } from "../ScrollOverview";
 import { cn } from "../../utils";
 
 function DiffCell({
@@ -40,6 +41,8 @@ export function GitDiffViewer({
   staged: boolean;
 }) {
   const { t } = useTranslation();
+  const scroll = useRef<HTMLDivElement>(null);
+  const id = useId();
   const { rows, truncated } = useMemo(() => parseGitDiff(patch), [patch]);
   if (!rows.length)
     return (
@@ -48,44 +51,66 @@ export function GitDiffViewer({
       </p>
     );
   return (
-    <div
-      className="min-h-0 flex-1 overflow-auto"
-      tabIndex={0}
-      aria-label={t("git.diff")}
-    >
-      <table className="git-diff-table">
-        <thead>
-          <tr>
-            <th scope="col">
-              {t(staged ? "git.headVersion" : "git.indexVersion")}
-            </th>
-            <th scope="col">
-              {t(staged ? "git.indexVersion" : "git.workingVersion")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) =>
-            row.type === "hunk" ? (
-              <tr key={index}>
-                <td colSpan={2} className="git-diff-hunk">
-                  {row.text}
-                </td>
-              </tr>
-            ) : (
-              <tr key={index}>
-                <DiffCell line={row.left} side="left" />
-                <DiffCell line={row.right} side="right" />
-              </tr>
-            ),
-          )}
-        </tbody>
-      </table>
-      {truncated && (
-        <p role="status" className="p-3 text-xs text-muted">
-          {t("git.diffTruncated")}
-        </p>
-      )}
+    <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div
+        id={id}
+        ref={scroll}
+        className="editor-overview-content min-h-0 min-w-0 flex-1 overflow-auto"
+        tabIndex={0}
+        aria-label={t("git.diff")}
+      >
+        <table className="git-diff-table">
+          <thead>
+            <tr>
+              <th scope="col">
+                {t(staged ? "git.headVersion" : "git.indexVersion")}
+              </th>
+              <th scope="col">
+                {t(staged ? "git.indexVersion" : "git.workingVersion")}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) =>
+              row.type === "hunk" ? (
+                <tr key={index}>
+                  <td colSpan={2} className="git-diff-hunk">
+                    {row.text}
+                  </td>
+                </tr>
+              ) : (
+                <tr
+                  key={index}
+                  data-overview-kind={
+                    row.left?.changed && row.right?.changed
+                      ? "modified"
+                      : row.left?.changed
+                        ? "removed"
+                        : row.right?.changed
+                          ? "added"
+                          : undefined
+                  }
+                >
+                  <DiffCell line={row.left} side="left" />
+                  <DiffCell line={row.right} side="right" />
+                </tr>
+              ),
+            )}
+          </tbody>
+        </table>
+        {truncated && (
+          <p role="status" className="p-3 text-xs text-muted">
+            {t("git.diffTruncated")}
+          </p>
+        )}
+      </div>
+      <ScrollOverview
+        scrollRef={scroll}
+        contentKey={patch}
+        controls={id}
+        label={t("git.changeOverview")}
+        hint={t("git.overviewHint")}
+      />
     </div>
   );
 }

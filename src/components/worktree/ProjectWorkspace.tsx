@@ -45,6 +45,44 @@ export function ProjectWorkspace({
   }, [routeProjectId, path, setCheckout]);
   const file = files[scope];
   const visible = !!route || location.pathname === "/terminal";
+  const workspaceContext = route && (
+    <div
+      className="flex min-w-0 max-w-[30%] items-center gap-1.5 pr-2 text-xs text-muted"
+      title={path && compactHomePath(path)}
+    >
+      <GitBranch size={13} className="shrink-0" />
+      <span className="truncate">
+        {worktree
+          ? worktreeLabel(worktree)
+          : project?.name || t("worktree.title")}
+      </span>
+      {worktree?.is_main && (
+        <span className="sr-only">{t("worktree.main")}</span>
+      )}
+    </div>
+  );
+  const workspaceActions = route && (
+    <>
+      <button
+        type="button"
+        disabled={loading}
+        aria-label={t("worktree.refresh")}
+        title={t("worktree.refresh")}
+        onClick={() => void refresh()}
+        className="app-button-ghost h-7 w-7 shrink-0 p-0 text-muted"
+      >
+        <RefreshCw size={13} className={cn(loading && "animate-spin")} />
+      </button>
+      <Link
+        to={`/project/${route.projectId}/skills${location.search}`}
+        aria-label={t("worktree.projectSkills")}
+        title={t("worktree.projectSkills")}
+        className="app-button-ghost h-7 w-7 shrink-0 p-0 text-muted"
+      >
+        <BookOpen size={13} />
+      </Link>
+    </>
+  );
   return (
     <section
       hidden={!visible}
@@ -53,41 +91,12 @@ export function ProjectWorkspace({
         "workbench-editor-panel min-h-0 min-w-0 flex-1 flex-col overflow-hidden mr-1",
       )}
     >
-      {route && (
-        <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-secondary px-3">
-          <span className="max-w-[30%] truncate text-xs text-muted">
-            {project?.name}
-          </span>
-          <ChevronSeparator />
-          <GitBranch size={13} className="shrink-0 text-accent" />
-          <span
-            title={path && compactHomePath(path)}
-            className="min-w-0 flex-1 truncate text-xs font-medium"
-          >
-            {worktree ? worktreeLabel(worktree) : t("worktree.title")}
-          </span>
-          {worktree?.is_main && (
-            <span className="rounded border border-border px-1 text-xs text-muted">
-              {t("worktree.main")}
-            </span>
-          )}
-          <button
-            type="button"
-            disabled={loading}
-            aria-label={t("worktree.refresh")}
-            title={t("worktree.refresh")}
-            onClick={() => void refresh()}
-            className="app-button-ghost h-7 w-7 shrink-0 p-0"
-          >
-            <RefreshCw size={13} className={cn(loading && "animate-spin")} />
-          </button>
-          <Link
-            to={`/project/${route.projectId}/skills${location.search}`}
-            className="app-button-ghost shrink-0 gap-1.5 text-xs"
-          >
-            <BookOpen size={13} />
-            {t("worktree.projectSkills")}
-          </Link>
+      {route && file?.shown && (
+        <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-secondary px-2">
+          {workspaceContext}
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {workspaceActions}
+          </div>
         </header>
       )}
       {route &&
@@ -169,6 +178,8 @@ export function ProjectWorkspace({
             projectsReady={!projectsLoading && !appError}
             shown={!file?.shown || !route}
             onMaximizedChange={onMaximizedChange}
+            toolbarStart={workspaceContext}
+            toolbarEnd={workspaceActions}
           />
           {route && project && path && file?.shown && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -184,13 +195,5 @@ export function ProjectWorkspace({
         </div>
       </div>
     </section>
-  );
-}
-
-function ChevronSeparator() {
-  return (
-    <span className="text-xs text-muted" aria-hidden="true">
-      /
-    </span>
   );
 }

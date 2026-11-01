@@ -87,7 +87,7 @@ export function AgentGroupDnd({
       onDragEnd={(e) => onDragEnd(e, groupKeys)}
     >
       <SortableContext items={groupKeys} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-1.5">
           {items.map((agent) => (
             <SortableAgentCard
               key={agent.key}

@@ -23,7 +23,7 @@ export function GitCommitForm({
   };
   return (
     <form
-      className="git-commit-form space-y-2 p-3"
+      className="git-commit-form space-y-1.5 px-3 pb-2 pt-1"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -34,7 +34,7 @@ export function GitCommitForm({
         placeholder={t("git.commitPlaceholder", { branch })}
         value={message}
         disabled={busy}
-        rows={2}
+        rows={1}
         onChange={(event) => setMessage(event.target.value)}
         onKeyDown={(event) => {
           if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -42,13 +42,13 @@ export function GitCommitForm({
             void submit();
           }
         }}
-        className="block w-full resize-y rounded border border-border bg-background px-2 py-1.5 text-xs text-primary placeholder:text-faint focus:border-accent focus:outline-none disabled:opacity-50"
+        className="block h-7 min-h-7 w-full resize-y rounded-sm border border-border bg-background px-2 py-1 text-xs text-primary placeholder:text-faint focus:border-accent focus:outline-none disabled:opacity-50"
       />
       <button
         type="submit"
         disabled={!enabled || busy || !message.trim()}
         title={t("git.commitStagedHint")}
-        className="app-button-primary flex w-full items-center justify-center gap-1.5 py-1.5 text-xs"
+        className="app-button-primary flex h-7 w-full items-center justify-center gap-1.5 rounded-sm py-0 text-xs"
       >
         {committing ? (
           <LoaderCircle size={14} className="animate-spin" />
@@ -57,7 +57,6 @@ export function GitCommitForm({
         )}
         {t("git.commit")}
       </button>
-      <p className="text-xs text-muted">{t("git.commitStagedHint")}</p>
     </form>
   );
 }

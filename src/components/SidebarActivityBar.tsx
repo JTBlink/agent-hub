@@ -32,6 +32,7 @@ export function SidebarActivityBar({
   manualSelection,
   onSelectPanel,
   updateVersion,
+  gitChanges,
 }: {
   panelOpen: boolean;
   panelId: string;
@@ -39,6 +40,7 @@ export function SidebarActivityBar({
   manualSelection: boolean;
   onSelectPanel: (panel: SidebarPanel) => void;
   updateVersion?: string;
+  gitChanges?: { count: number; truncated: boolean };
 }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -69,6 +71,28 @@ export function SidebarActivityBar({
       >
         <ActivityBarIcon name={item.icon} />
         <span className="sr-only">{item.name}</span>
+        {item.path === "/git" && gitChanges && gitChanges.count > 0 && (
+          <span
+            role="status"
+            aria-label={t(
+              gitChanges.truncated
+                ? "git.changedFilesTruncated"
+                : "git.changedFiles",
+              { count: gitChanges.count },
+            )}
+            title={t(
+              gitChanges.truncated
+                ? "git.changedFilesTruncated"
+                : "git.changedFiles",
+              { count: gitChanges.count },
+            )}
+            className="activity-bar-count absolute flex items-center justify-center rounded-full bg-accent text-white tabular-nums"
+          >
+            {gitChanges.count > 999
+              ? "999+"
+              : `${gitChanges.count}${gitChanges.truncated ? "+" : ""}`}
+          </span>
+        )}
         {item.update && updateVersion && (
           <span
             className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400"

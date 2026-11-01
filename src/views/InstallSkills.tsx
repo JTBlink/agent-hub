@@ -825,7 +825,7 @@ export function InstallSkills({
           <p className="mb-3 text-sm text-muted">
             {t("install.recommendedDesc")}
           </p>
-          <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2.5">
             {RECOMMENDED_SKILLS.map((skill) => {
               const sourceRef = `${skill.source}/${skill.skill_id}`;
               const isInstalled =
@@ -1035,7 +1035,7 @@ export function InstallSkills({
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2.5">
                     {paginatedMarketSkills.map((skill) => {
                       const sourceRef = `${skill.source}/${skill.skill_id}`;
                       const isMarketInstalled =

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -30,8 +30,20 @@ vi.mock("../../lib/worktreeApi", async (importOriginal) => ({
   readWorktreeFile: mocks.read,
 }));
 vi.mock("../terminal/TerminalWorkspace", () => ({
-  TerminalWorkspace: ({ shown }: { shown: boolean }) => (
+  TerminalWorkspace: ({
+    shown,
+    toolbarStart,
+    toolbarEnd,
+  }: {
+    shown: boolean;
+    toolbarStart?: ReactNode;
+    toolbarEnd?: ReactNode;
+  }) => (
     <div hidden={!shown} data-terminal>
+      <div data-terminal-toolbar>
+        {toolbarStart}
+        {toolbarEnd}
+      </div>
       Shell
     </div>
   ),
@@ -108,6 +120,8 @@ it("keeps skills secondary and returns to the same worktree without unmounting i
   await click("[data-topic]");
   const terminal = host.querySelector("[data-terminal]");
   const skills = host.querySelector<HTMLAnchorElement>('a[href*="/skills"]')!;
+  expect(skills.closest("[data-terminal-toolbar]")).not.toBeNull();
+  expect(host.querySelector("header")).toBeNull();
   expect(skills.getAttribute("href")).toBe(
     `/project/${project.id}/skills?${new URLSearchParams({ worktree: topic })}`,
   );

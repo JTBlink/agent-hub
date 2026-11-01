@@ -270,12 +270,10 @@
     "dashboard": "工作台",
     "mySkills": "技能庫",
     "allSkills": "全部技能",
-    "moreGroups": "更多...",
-    "lessGroups": "收合",
     "editGroup": "編輯 {{name}}",
     "deleteGroup": "刪除 {{name}}",
     "reorderGroup": "調整 {{name}} 的排序",
-    "globalWorkspace": "全域工作區",
+    "globalWorkspace": "Agent 工作區",
     "lobsterAgents": "龍蝦 Agent",
     "installSkills": "發現",
     "backup": "雲端同步",
@@ -2035,6 +2033,8 @@
     "unsaved": "未儲存"
   },
   "git": {
+    "changedFiles": "{{count}} 項變更",
+    "changedFilesTruncated": "至少 {{count}} 項變更",
     "worktree": "工作目錄",
     "unborn": "尚無提交",
     "cachedRefs": "遠端比較基於本機快取引用",
@@ -2075,7 +2075,9 @@
     "indexVersion": "暫存區",
     "workingVersion": "工作區",
     "diffTruncated": "差異較大，僅預覽前 3000 行；可切換統一檢視繼續閱讀。",
-    "localRefs": "本機參照"
+    "localRefs": "本機參照",
+    "changeOverview": "差異捲動概覽",
+    "overviewHint": "點選或拖曳定位；方向鍵捲動，Page Up／Down 翻頁，Home／End 到首尾"
   },
   "workspaceSearch": {
     "title": "搜尋",

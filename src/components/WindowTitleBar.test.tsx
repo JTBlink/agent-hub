@@ -81,7 +81,7 @@ it.each([
   ["/tasks", "任务"],
   ["/project/demo", "Demo workspace"],
   ["/project/demo/skills", "Demo workspace"],
-  ["/global-workspace/codex", "全局工作区"],
+  ["/global-workspace/codex", "Agent 工作区"],
   ["/help/example", "帮助中心"],
 ])("shows current context for %s", async (path, title) => {
   await render(path);

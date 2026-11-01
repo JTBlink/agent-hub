@@ -1,4 +1,4 @@
-import { WorkspaceFilesContext } from "../hooks/useWorkspaceFiles";
+import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
 import { FileCode2, GitBranch, RefreshCw, X } from "lucide-react";
@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { ResizableSidebar } from "../components/ResizableSidebar";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { useApp } from "../context/AppContext";
-import { useProjectWorktrees } from "../hooks/useProjectWorktrees";
 import {
   commitProjectGit,
   setProjectGitStaged,
@@ -14,9 +13,8 @@ import {
   getProjectGitStatus,
   type GitStatus,
 } from "../lib/gitApi";
-import { worktreeLabel } from "../lib/worktreeApi";
 import { getErrorMessage } from "../lib/error";
-import { ThemedSelect } from "../components/ThemedSelect";
+import { groupGitChanges } from "../lib/gitChanges";
 import { FileContent } from "../components/file-reader/FileContent";
 import { WorktreeFilePreview } from "../components/worktree/WorktreeFilePreview";
 import { cn } from "../utils";
@@ -31,14 +29,8 @@ export function Git() {
   const { t } = useTranslation();
   const { projects } = useApp();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
-  const [projectId, setProjectId] = useState("");
-  const activeId = projects.some((project) => project.id === projectId)
-    ? projectId
-    : projects[0]?.id;
-  const project = projects.find((project) => project.id === activeId);
-  const { worktrees } = useProjectWorktrees(activeId);
-  const [paths, setPaths] = useState<Record<string, string>>({});
-  const root = activeId ? (paths[activeId] ?? project?.path) : undefined;
+  const { project, path: root } = useActiveWorkspace(projects);
+  const activeId = project?.id;
   const [revision, setRevision] = useState(0);
   const [selection, setSelection] = useState<GitSelection>();
   const [split, setSplit] = useState(true);
@@ -48,11 +40,6 @@ export function Git() {
   const changesRef = useRef<HTMLElement>(null);
   const [actionError, setActionError] = useState<string>();
   const [fileView, setFileView] = useState(false);
-  const setCheckout = useContext(WorkspaceFilesContext)?.setCheckout;
-  useEffect(() => {
-    if (activeId && root)
-      setCheckout?.({ projectId: activeId, worktreePath: root });
-  }, [activeId, root, setCheckout]);
   const scope = JSON.stringify([activeId, root]);
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {
@@ -137,10 +124,7 @@ export function Git() {
     };
   }, [activeId, root, selection, fileView, diffKey, t]);
   const files = status?.files ?? [];
-  const stagedFiles = files.filter((file) => file.staged);
-  const unstagedFiles = files.filter(
-    (file) => file.unstaged || file.conflicted,
-  );
+  const { stagedFiles, unstagedFiles } = groupGitChanges(files);
   const branch = status?.branch ?? status?.head?.slice(0, 8) ?? t("git.unborn");
   async function runAction(
     action: () => Promise<void>,
@@ -227,8 +211,7 @@ export function Git() {
       hidden={sidebarVisibility?.resourcePanelVisible}
       className="git-sidebar workbench-sidebar-panel mr-1"
     >
-      <header className="flex shrink-0 flex-wrap items-center gap-2 rounded-t-md border-b border-border-subtle bg-bg-secondary px-3 py-2">
-        <GitBranch size={16} className="shrink-0 text-accent-light" />
+      <header className="flex h-9 shrink-0 items-center gap-2 bg-bg-secondary px-3">
         <h1 className="mr-auto text-xs font-semibold">
           {t("git.sourceControl")}
         </h1>
@@ -242,63 +225,12 @@ export function Git() {
         >
           <RefreshCw size={14} className={cn(loading && "animate-spin")} />
         </button>
-        <div className="w-full">
-          <ThemedSelect
-            aria-label={t("tasks.project")}
-            value={activeId ?? ""}
-            disabled={busy}
-            className="h-7 w-full py-0 text-xs"
-            onChange={(event) => setProjectId(event.target.value)}
-          >
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </ThemedSelect>
-        </div>
-        <div className="w-full">
-          <ThemedSelect
-            aria-label={t("git.worktree")}
-            value={root ?? ""}
-            disabled={busy}
-            className="h-7 w-full py-0 text-xs"
-            onChange={(event) =>
-              activeId &&
-              setPaths((previous) => ({
-                ...previous,
-                [activeId]: event.target.value,
-              }))
-            }
-          >
-            {!worktrees.length && root && (
-              <option value={root}>{project?.name}</option>
-            )}
-            {worktrees.map((worktree) => (
-              <option key={worktree.path} value={worktree.path}>
-                {worktreeLabel(worktree)}
-              </option>
-            ))}
-          </ThemedSelect>
-        </div>
       </header>
       <aside
         ref={changesRef}
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-md bg-bg-secondary"
         aria-label={t("git.sourceControl")}
       >
-        <div className="flex items-center gap-1.5 px-3 pt-3 text-xs text-secondary">
-          <GitBranch size={13} className="shrink-0 text-accent-light" />
-          <span title={branch} className="min-w-0 flex-1 truncate font-medium">
-            {branch}
-          </span>
-          <span
-            title={t("git.changes")}
-            className="rounded-full bg-surface-active px-1.5 font-mono tabular-nums"
-          >
-            {files.length}
-          </span>
-        </div>
         <GitCommitForm
           key={`${scope}:commit`}
           branch={branch}

@@ -324,7 +324,7 @@ export function AutomationDiscovery({
         </div>
       )}
       {source !== "local" && (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-2.5">
           {cards.map((task, index) => {
             const installedTasks =
               overview.data?.tasks.filter(

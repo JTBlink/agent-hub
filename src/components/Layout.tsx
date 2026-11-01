@@ -131,10 +131,7 @@ export function Layout() {
               >
                 <div
                   className={cn(
-                    "mx-auto flex w-full flex-col gap-4",
-                    pathname === "/tasks" || pathname === "/git"
-                      ? "max-w-none"
-                      : "max-w-[1200px]",
+                    "flex w-full min-w-0 flex-col gap-4",
                     fullHeightPage ? "min-h-0 flex-1" : "min-h-full",
                   )}
                 >

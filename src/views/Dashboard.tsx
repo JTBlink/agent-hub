@@ -31,7 +31,7 @@ export function Dashboard() {
   );
 
   return (
-    <div className="app-page app-page-narrow dashboard-page">
+    <div className="app-page dashboard-page">
       <header className="dashboard-header">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-primary">

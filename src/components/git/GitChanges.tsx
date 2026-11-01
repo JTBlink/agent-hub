@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { ChevronRight, FileCode2, Folder, Minus, Plus } from "lucide-react";
+import { ChevronRight, FileCode2, Minus, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitFile } from "../../lib/gitApi";
 import { cn } from "../../utils";
@@ -86,7 +86,7 @@ function ChangeTree({
                     ? "true"
                     : undefined
                 }
-                className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pr-1 text-left text-xs text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                className="flex h-6 min-w-0 flex-1 items-center gap-1.5 pr-1 text-left text-xs text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                 style={{ paddingLeft: 14 + depth * 12 }}
                 onClick={() =>
                   props.onSelect({ path: node.path, staged: props.staged })
@@ -128,10 +128,9 @@ function ChangeTree({
               <summary
                 title={node.path}
                 style={{ paddingLeft: 8 + depth * 12 }}
-                className="flex cursor-pointer list-none items-center gap-1.5 py-1 pr-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
+                className="flex h-6 cursor-pointer list-none items-center gap-1.5 pr-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
               >
                 <ChevronRight size={12} className="shrink-0" />
-                <Folder size={13} className="shrink-0 text-muted" />
                 <span className="truncate">{node.name}</span>
               </summary>
               <ChangeTree {...props} nodes={node.children} depth={depth + 1} />
@@ -152,7 +151,7 @@ export function GitChanges({
   if (!files.length && props.staged) return null;
   return (
     <section>
-      <div className="flex items-center border-y border-border-faint bg-surface/50">
+      <div className="group flex h-7 items-center hover:bg-surface-hover">
         <button
           type="button"
           aria-expanded={expanded}
@@ -174,7 +173,7 @@ export function GitChanges({
           disabled={props.busy || !files.length || props.batchLimited}
           title={t(props.staged ? "git.unstageAll" : "git.stageAll")}
           aria-label={t(props.staged ? "git.unstageAll" : "git.stageAll")}
-          className="app-button-ghost mx-1 h-6 w-6 p-0"
+          className="app-button-ghost mx-1 h-6 w-6 p-0 text-muted sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
           onClick={() =>
             props.onStage(
               files.map((file) => file.path),
