@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Maximize2,
   TerminalSquare,
+  RefreshCw,
 } from "lucide-react";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -15,6 +16,10 @@ import type { RepositoryTask, RepositoryTaskDetail } from "../../lib/tauri";
 import { taskContext } from "../../lib/taskContext";
 import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
+import { TaskFacts } from "./TaskFacts";
+import { TaskDevelopmentView } from "./TaskDevelopmentView";
+import { TaskCodeChanges } from "./TaskCodeChanges";
+import { TaskStatusBadge } from "./TaskStatusBadge";
 
 interface Props {
   task: RepositoryTask;
@@ -44,6 +49,11 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
   useEffect(() => {
     first.current?.focus();
     const escape = (event: KeyboardEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest("dialog[open]")
+      )
+        return;
       if (event.key === "Escape") {
         event.preventDefault();
         close.current();
@@ -64,6 +74,17 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
           page > 1 && previous?.summary.key === next.summary.key
             ? {
                 ...next,
+                development: previous.development
+                  ? {
+                      ...previous.development,
+                      warnings: [
+                        ...new Set([
+                          ...previous.development.warnings,
+                          ...(next.development?.warnings ?? []),
+                        ]),
+                      ],
+                    }
+                  : next.development,
                 comments: [
                   ...new Map(
                     [...previous.comments, ...next.comments].map((comment) => [
@@ -88,7 +109,7 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
     };
   }, [task, page, retry]);
   const current = detail?.summary ?? task;
-  const context = taskContext(current, detail?.body || "");
+  const context = taskContext(current, detail?.body || "", detail?.development);
   const copy = async () => {
     try {
       await writeText(context.text);
@@ -141,8 +162,25 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
           className="min-w-0 flex-1 truncate text-xs"
           title={`${task.host}/${task.repository}`}
         >
-          {task.repository} · #{task.number}
+          {task.repository} ·{" "}
+          {task.kind === "review" && task.provider === "gitlab" ? "!" : "#"}
+          {task.number}
         </span>
+        <button
+          type="button"
+          className="app-button-ghost"
+          aria-label={t("settings.refresh")}
+          title={t("settings.refresh")}
+          disabled={loading}
+          onClick={() => {
+            setLoading(true);
+            setError("");
+            setPage(1);
+            setRetry((value) => value + 1);
+          }}
+        >
+          <RefreshCw size={14} />
+        </button>
         {!full && (
           <button
             type="button"
@@ -171,9 +209,14 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
       <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
         <h2 className="text-base font-semibold">{current.title}</h2>
         <p className="text-xs text-muted">
-          {task.host} · {detail?.summary.state || task.state} ·{" "}
-          {task.assignees.join(", ") || "—"}
+          {task.host} · <TaskStatusBadge state={current.state} /> ·{" "}
+          {current.assignees.join(", ") || "—"}
         </p>
+        <TaskFacts
+          task={current}
+          development={detail?.development}
+          compact={!full}
+        />
         {loading && (
           <p role="status" className="text-xs text-muted">
             {t("common.loading")}
@@ -198,6 +241,17 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
         {detail && (
           <>
             <MarkdownContent content={detail.body} components={components} />
+            <TaskDevelopmentView
+              detail={detail}
+              components={components}
+              onOpen={(url) => {
+                if (safeLink(url))
+                  void openUrl(url).catch((reason) =>
+                    setError(api.taskFailure(reason).message),
+                  );
+              }}
+            />
+            <TaskCodeChanges development={detail.development} />
             <h3 className="text-xs font-medium">{t("tasks.discussion")}</h3>
             {detail.comments.map((comment) => (
               <div
@@ -264,7 +318,7 @@ export function TaskDetails({ task, full, onClose, onExpand }: Props) {
           disabled={!detail}
           className="app-button-primary text-xs"
           onClick={() =>
-            navigate("/terminal", {
+            navigate(`/project/${task.project_id}`, {
               state: { projectId: task.project_id, context },
             })
           }

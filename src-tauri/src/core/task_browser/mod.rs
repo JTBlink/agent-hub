@@ -1,6 +1,8 @@
 //! Read-only repository work, explicitly bound to registered local projects.
 mod adapter;
+mod development;
 mod discovery;
+mod metadata;
 mod types;
 use anyhow::{bail, Context, Result};
 pub use discovery::{remote_candidates, RemoteCandidate};
@@ -281,7 +283,7 @@ impl<R: CliReader> TaskClient<R> {
             ));
         }
         let endpoint = adapter::object_endpoint(binding, kind, number);
-        let item = self.api(binding, endpoint, cancel)?;
+        let item = self.api(binding, endpoint.clone(), cancel)?;
         let comments = self.api(
             binding,
             format!(
@@ -289,10 +291,22 @@ impl<R: CliReader> TaskClient<R> {
                 adapter::comments_endpoint(binding, kind, number)
             ),
             cancel,
-        )?;
-        let comments = comments
-            .as_array()
-            .ok_or_else(|| TaskFailure::new("invalid_response", "Invalid discussion response"))?;
+        );
+        let (comments, discussion_unavailable) = match comments {
+            Ok(Value::Array(items)) => (items, false),
+            Err(error) if error.kind == "cancelled" => return Err(error),
+            _ => (Vec::new(), true),
+        };
+        let mut development = if comments_page == 1 {
+            development::load(binding.provider, kind, &endpoint, &item, |endpoint| {
+                self.api(binding, endpoint, cancel)
+            })?
+        } else {
+            TaskDevelopment::default()
+        };
+        if discussion_unavailable {
+            development.warnings.push("discussion".into());
+        }
         Ok(TaskDetail {
             summary: adapter::summary(binding, kind, &item)?,
             body: adapter::string(
@@ -308,6 +322,7 @@ impl<R: CliReader> TaskClient<R> {
                 .iter()
                 .map(|item| adapter::comment(binding.provider, item))
                 .collect(),
+            development,
         })
     }
 }

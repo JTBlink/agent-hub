@@ -59,6 +59,109 @@ pub struct TaskSummary {
     pub updated_at: String,
     pub assignees: Vec<String>,
     pub url: String,
+    #[serde(default)]
+    pub metadata: TaskMetadata,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct TaskMetadata {
+    pub author: Option<String>,
+    pub labels: Vec<String>,
+    pub milestone: Option<String>,
+    pub created_at: Option<String>,
+    pub closed_at: Option<String>,
+    pub due_date: Option<String>,
+    pub comment_count: Option<u64>,
+    pub task_count: Option<u64>,
+    pub completed_tasks: Option<u64>,
+    pub priority: Option<String>,
+    pub severity: Option<String>,
+    pub weight: Option<u64>,
+    pub issue_type: Option<String>,
+    pub confidential: Option<bool>,
+    pub locked: Option<bool>,
+    pub estimated_seconds: Option<u64>,
+    pub spent_seconds: Option<u64>,
+    pub review: Option<ReviewMetadata>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ReviewMetadata {
+    pub source_branch: Option<String>,
+    pub target_branch: Option<String>,
+    pub head_sha: Option<String>,
+    pub draft: Option<bool>,
+    pub merge_status: Option<String>,
+    pub has_conflicts: Option<bool>,
+    pub discussions_resolved: Option<bool>,
+    pub additions: Option<u64>,
+    pub deletions: Option<u64>,
+    pub changed_files: Option<u64>,
+    pub commits: Option<u64>,
+    pub changes_count: Option<String>,
+    pub merged_by: Option<String>,
+    pub merged_at: Option<String>,
+    pub reviewers: Vec<String>,
+    pub pipeline: Option<TaskCheck>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TaskCheck {
+    pub name: String,
+    pub status: String,
+    pub url: String,
+    pub sha: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TaskReview {
+    pub author: String,
+    pub state: String,
+    pub body: String,
+    pub url: String,
+    pub submitted_at: Option<String>,
+    pub path: Option<String>,
+    pub line: Option<u64>,
+    pub resolved: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TaskLink {
+    pub title: String,
+    pub url: String,
+    pub kind: String,
+    pub number: Option<u64>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct TaskDevelopment {
+    pub reviews: Vec<TaskReview>,
+    pub checks: Vec<TaskCheck>,
+    pub related: Vec<TaskLink>,
+    pub files: Vec<TaskChangedFile>,
+    pub commits: Vec<TaskCommit>,
+    pub approvals_required: Option<u64>,
+    pub approvals_left: Option<u64>,
+    pub warnings: Vec<String>,
+    pub truncated: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TaskChangedFile {
+    pub path: String,
+    pub status: String,
+    pub additions: Option<u64>,
+    pub deletions: Option<u64>,
+    pub patch: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TaskCommit {
+    pub sha: String,
+    pub message: String,
+    pub author: String,
+    pub created_at: Option<String>,
+    pub url: String,
 }
 #[derive(Debug, Serialize)]
 pub struct TaskPage {
@@ -80,6 +183,7 @@ pub struct TaskDetail {
     pub body: String,
     pub comments: Vec<TaskComment>,
     pub has_more_comments: bool,
+    pub development: TaskDevelopment,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TaskFailure {

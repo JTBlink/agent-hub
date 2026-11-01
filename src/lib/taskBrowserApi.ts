@@ -29,6 +29,87 @@ export interface RepositoryTask {
   updated_at: string;
   assignees: string[];
   url: string;
+  metadata?: TaskMetadata;
+}
+export interface TaskCheck {
+  name: string;
+  status: string;
+  url: string;
+  sha: string | null;
+}
+export interface TaskMetadata {
+  author: string | null;
+  labels: string[];
+  milestone: string | null;
+  created_at: string | null;
+  closed_at: string | null;
+  due_date: string | null;
+  comment_count: number | null;
+  task_count: number | null;
+  completed_tasks: number | null;
+  priority: string | null;
+  severity: string | null;
+  weight: number | null;
+  issue_type: string | null;
+  confidential: boolean | null;
+  locked: boolean | null;
+  estimated_seconds: number | null;
+  spent_seconds: number | null;
+  review: {
+    source_branch: string | null;
+    target_branch: string | null;
+    head_sha: string | null;
+    draft: boolean | null;
+    merge_status: string | null;
+    has_conflicts: boolean | null;
+    discussions_resolved: boolean | null;
+    additions: number | null;
+    deletions: number | null;
+    changed_files: number | null;
+    commits: number | null;
+    changes_count: string | null;
+    merged_by: string | null;
+    merged_at: string | null;
+    reviewers: string[];
+    pipeline: TaskCheck | null;
+  } | null;
+}
+export interface TaskDevelopment {
+  files: {
+    path: string;
+    status: string;
+    additions: number | null;
+    deletions: number | null;
+    patch: string | null;
+  }[];
+  commits: {
+    sha: string;
+    message: string;
+    author: string;
+    created_at: string | null;
+    url: string;
+  }[];
+  reviews: {
+    author: string;
+    state: string;
+    body: string;
+    url: string;
+    submitted_at: string | null;
+    path: string | null;
+    line: number | null;
+    resolved: boolean | null;
+  }[];
+  checks: TaskCheck[];
+  related: {
+    title: string;
+    url: string;
+    kind: string;
+    number: number | null;
+  }[];
+  approvals_required: number | null;
+  approvals_left: number | null;
+  warnings: string[];
+  truncated: string[];
 }
 export interface RepositoryTaskPage {
   items: RepositoryTask[];
@@ -47,6 +128,7 @@ export interface RepositoryTaskDetail {
   body: string;
   comments: RepositoryTaskComment[];
   has_more_comments: boolean;
+  development?: TaskDevelopment;
 }
 export interface TaskFailure {
   kind: string;

@@ -188,6 +188,7 @@ pub(super) fn summary(
                 "web_url"
             },
         ),
+        metadata: super::metadata::extract(binding.provider, kind, item),
     })
 }
 pub(super) fn page(

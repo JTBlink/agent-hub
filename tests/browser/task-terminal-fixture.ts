@@ -1,4 +1,9 @@
 import type { RepositoryTask, TaskBinding } from "../../src/lib/tauri";
+import {
+  makeTaskMetadata,
+  makeReviewMetadata,
+  makeTaskDevelopment,
+} from "../fixtures/repositoryTask";
 
 const bindings: TaskBinding[] = ["github", "gitlab"].map((provider, index) => ({
   id: `00000000-0000-4000-8000-00000000000${index + 1}`,
@@ -45,6 +50,32 @@ function task(
     state: index % 3 ? "open" : "closed",
     updated_at: "2026-10-31T09:00:00Z",
     assignees: ["demo"],
+    metadata: makeTaskMetadata({
+      author: "demo",
+      labels: ["parser", "priority::high"],
+      milestone: "v2.0",
+      created_at: "2026-10-29T09:00:00Z",
+      due_date: review ? null : "2026-11-05",
+      comment_count: 4,
+      task_count: review ? null : 5,
+      completed_tasks: review ? null : 3,
+      review: review
+        ? makeReviewMetadata({
+            source_branch: "feature/parser",
+            target_branch: "main",
+            head_sha: "abcdef1234567890",
+            draft: false,
+            merge_status: "blocked",
+            has_conflicts: false,
+            discussions_resolved: false,
+            reviewers: ["reviewer"],
+            additions: 42,
+            deletions: 8,
+            changed_files: 3,
+            commits: 2,
+          })
+        : null,
+    }),
     url: `https://${binding.host}/${binding.repository}/issues/${120 + index}`,
   };
 }
@@ -54,6 +85,55 @@ export function taskTerminalFixture(
   raw: unknown,
 ): { handled: boolean; value?: unknown } {
   const args = typeof raw === "object" && raw !== null ? raw : {};
+  if (command === "get_project_git_status")
+    return {
+      handled: true,
+      value: {
+        branch: "feature/parser",
+        head: "abcdef1234567890",
+        upstream: "origin/feature/parser",
+        ahead: 2,
+        behind: 1,
+        state: "Clean",
+        truncated: false,
+        files: [
+          {
+            path: "src/parser.rs",
+            staged: false,
+            unstaged: true,
+            conflicted: false,
+            status: "modified",
+          },
+          {
+            path: "README.md",
+            staged: true,
+            unstaged: false,
+            conflicted: false,
+            status: "modified",
+          },
+        ],
+        commits: [
+          {
+            sha: "abcdef1234567890",
+            summary: "Handle empty parser input",
+            author: "demo",
+            time: 1793408400,
+          },
+          {
+            sha: "123456abcdef7890",
+            summary: "Add parser regression coverage",
+            author: "demo",
+            time: 1793322000,
+          },
+        ],
+      },
+    };
+  if (command === "get_project_git_diff")
+    return {
+      handled: true,
+      value:
+        'diff --git a/src/parser.rs b/src/parser.rs\n--- a/src/parser.rs\n+++ b/src/parser.rs\n@@ -1,3 +1,4 @@\n pub fn parse(input: &str) -> Result<&str, &\'static str> {\n+    if input.is_empty() { return Err("empty input"); }\n     Ok(input.trim())\n }\n',
+    };
   if (command === "task_bindings") return { handled: true, value: bindings };
   if (command === "task_list") {
     const binding =
@@ -109,6 +189,63 @@ export function taskTerminalFixture(
           },
         ],
         has_more_comments: false,
+        development: makeTaskDevelopment({
+          files: [
+            {
+              path: "src/parser.rs",
+              status: "modified",
+              additions: 1,
+              deletions: 0,
+              patch:
+                '@@ -1,3 +1,4 @@\n pub fn parse(input: &str) -> Result<&str, &\'static str> {\n+    if input.is_empty() { return Err("empty input"); }\n     Ok(input.trim())\n }\n',
+            },
+          ],
+          commits: [
+            {
+              sha: "abcdef1234567890",
+              message: "Handle empty parser input",
+              author: "demo",
+              created_at: "2026-10-31T09:00:00Z",
+              url: "",
+            },
+          ],
+          approvals_required: 2,
+          approvals_left: 1,
+          checks: [
+            {
+              name: "Unit tests",
+              status: "failure",
+              url: "https://git.example.invalid/checks/1",
+              sha: "abcdef1234567890",
+            },
+            {
+              name: "Build",
+              status: "success",
+              url: "https://git.example.invalid/checks/2",
+              sha: "abcdef1234567890",
+            },
+          ],
+          related: [
+            {
+              title: "Handle empty parser input",
+              kind: "closes",
+              number: 3,
+              url: "https://git.example.invalid/demo/parser/issues/3",
+            },
+          ],
+          reviews: [
+            {
+              author: "reviewer",
+              state: "CHANGES_REQUESTED",
+              body: 'Handle the empty input before trimming.\n\n```rust\nif input.is_empty() { return Err("empty input"); }\n```',
+              url: "",
+              submitted_at: "2026-10-31T10:00:00Z",
+              path: "src/parser.rs",
+              line: 2,
+              resolved: false,
+            },
+          ],
+        }),
       },
     };
   }
@@ -119,7 +256,10 @@ export function taskTerminalFixture(
   )
     return { handled: true };
   if (command === "terminal_project_directory")
-    return { handled: true, value: "~/projects/demo-web" };
+    return {
+      handled: true,
+      value: "worktreePath" in args ? args.worktreePath : "~/projects/demo-web",
+    };
   if (command === "terminal_create") {
     const id = `preview-${++nextTerminal}`;
     if (
@@ -147,7 +287,7 @@ export function taskTerminalFixture(
       value: {
         id,
         project_id: "project-0",
-        cwd: "~/projects/demo-web",
+        cwd: "worktreePath" in args ? args.worktreePath : "~/projects/demo-web",
         exited: false,
       },
     };
