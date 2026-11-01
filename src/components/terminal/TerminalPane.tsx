@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
 import { createTerminalRenderer } from "./terminalRenderer";
+import { bindTerminalPaste } from "./terminalClipboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
@@ -69,6 +70,7 @@ export function TerminalPane({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
+    const unbindPaste = bindTerminalPaste(node, terminal);
     const renderer = createTerminalRenderer(terminal);
     let fontsReady = false;
     let disposed = false;
@@ -112,6 +114,7 @@ export function TerminalPane({
     focusNow.current = () => terminal.focus();
     const recolor = () => {
       const styles = getComputedStyle(document.documentElement);
+      terminal.options = terminalAppearance(styles);
       terminal.options.theme = terminalTheme(styles);
       measure();
     };
@@ -210,6 +213,7 @@ export function TerminalPane({
       theme.disconnect();
       document.fonts?.removeEventListener("loadingdone", redrawFonts);
       input.dispose();
+      unbindPaste();
       inputQueue.dispose();
       showNow.current = () => {};
       renderer.dispose();
@@ -236,6 +240,8 @@ export function TerminalPane({
       <div
         ref={element}
         className="terminal-emulator min-h-0 flex-1 overflow-hidden p-1"
+        // Keep mouse handling in xterm (including TUI mouse reporting).
+        onContextMenu={(event) => event.preventDefault()}
       />
       {exitCode !== null && (
         <div role="status" className="px-2 text-xs text-muted">

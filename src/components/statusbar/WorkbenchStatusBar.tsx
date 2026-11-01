@@ -5,13 +5,19 @@ import { SystemLoadStatus } from "./SystemLoadStatus";
 
 /** Owns the footer layout; workspace-specific status is rendered into its slots. */
 export function WorkbenchStatusBar({
+  branchRef,
   statusRef,
 }: {
+  branchRef: Ref<HTMLDivElement>;
   statusRef: Ref<HTMLDivElement>;
 }) {
   const { t } = useTranslation();
   return (
     <footer className="workbench-statusbar flex shrink-0 items-center gap-3 bg-bg-secondary px-2 text-xs text-muted">
+      <div
+        ref={branchRef}
+        className="workbench-branch-content h-full min-w-0 shrink-0"
+      />
       <div
         ref={statusRef}
         className="workbench-status-content flex min-w-0 flex-1 items-center"

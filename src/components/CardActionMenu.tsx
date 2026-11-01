@@ -70,7 +70,9 @@ export function CardActionMenu({
       top: Math.max(
         8,
         Math.min(
-          rect.bottom / scale + 4,
+          rect.bottom / scale + 4 + menuH <= window.innerHeight / scale - 8
+            ? rect.bottom / scale + 4
+            : rect.top / scale - menuH - 4,
           window.innerHeight / scale - menuH - 8,
         ),
       ),

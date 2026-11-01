@@ -23,10 +23,21 @@
   letter-spacing: 0;
 }
 .discovery-page {
-  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+  padding-bottom: 0;
 }
 .discovery-editor-header {
-  margin: -12px -12px 0;
+  flex-shrink: 0;
+}
+.discovery-page > [role="tabpanel"] {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 12px;
 }
 .workbench-editor-tabs {
   display: flex;

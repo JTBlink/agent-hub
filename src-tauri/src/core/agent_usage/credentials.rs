@@ -5,6 +5,18 @@ use tokio::io::AsyncReadExt;
 
 const MAX_CREDENTIAL_BYTES: u64 = 1024 * 1024;
 
+#[cfg(any(target_os = "macos", test))]
+fn keychain_account(candidate: Option<String>) -> String {
+    candidate
+        .filter(|value| {
+            !value.is_empty()
+                && value
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+        })
+        .unwrap_or_else(|| "claude-code-user".into())
+}
+
 pub(super) fn config_directory(variable: &str, default: &str) -> Result<PathBuf, UsageStatus> {
     if let Some(path) = std::env::var_os(variable).filter(|p| !p.is_empty()) {
         return Ok(PathBuf::from(path));
@@ -94,16 +106,13 @@ async fn keychain_token(config: &Path) -> Result<Option<String>, UsageStatus> {
     } else {
         "Claude Code-credentials".into()
     };
-    let account = std::env::var("USER")
-        .ok()
-        .filter(|value| {
-            !value.is_empty()
-                && value
-                    .bytes()
-                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
-        })
-        .unwrap_or_else(|| "claude-code-user".into());
     tokio::task::spawn_blocking(move || {
+        // Finder-launched apps may lack USER; resolve the OS account on this worker.
+        let account = keychain_account(std::env::var("USER").ok().or_else(|| {
+            crate::core::cli_process::command_with_timeout("/usr/bin/id", &["-un"], &[], 3)
+                .ok()
+                .map(|name| name.trim().to_owned())
+        }));
         // Reuse the bounded process runner; never surface command output/errors.
         let result = crate::core::cli_process::read_command(
             "/usr/bin/security",
@@ -147,63 +156,4 @@ pub(super) async fn claude_token(config: &Path) -> Result<String, UsageStatus> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn detects_explicit_api_billing_in_claude_settings() {
-        let dir = tempfile::tempdir().unwrap();
-        assert!(!claude_uses_api_config(dir.path()).await.unwrap());
-        let path = dir.path().join("settings.json");
-        tokio::fs::write(
-            &path,
-            br#"{"env":{"ANTHROPIC_BASE_URL":"https://api.anthropic.com/"}}"#,
-        )
-        .await
-        .unwrap();
-        assert!(!claude_uses_api_config(dir.path()).await.unwrap());
-        tokio::fs::write(&path, br#"{"env":{"ANTHROPIC_AUTH_TOKEN":"fixture-key"}}"#)
-            .await
-            .unwrap();
-        assert!(claude_uses_api_config(dir.path()).await.unwrap());
-        tokio::fs::write(
-            &path,
-            br#"{"env":{"ANTHROPIC_BASE_URL":"https://example.invalid"}}"#,
-        )
-        .await
-        .unwrap();
-        assert!(claude_uses_api_config(dir.path()).await.unwrap());
-    }
-
-    #[tokio::test]
-    async fn reads_only_oauth_and_distinguishes_missing_corrupt_and_oversized_files() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("credentials.json");
-        assert_eq!(file_token(&path).await.unwrap(), None);
-        tokio::fs::write(
-            &path,
-            br#"{"claudeAiOauth":{"accessToken":"fixture-token"},"apiKey":"fixture-key"}"#,
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            file_token(&path).await.unwrap().as_deref(),
-            Some("fixture-token")
-        );
-        tokio::fs::write(&path, br#"{"apiKey":"fixture-key"}"#)
-            .await
-            .unwrap();
-        assert_eq!(file_token(&path).await.unwrap(), None);
-        tokio::fs::write(&path, b"invalid").await.unwrap();
-        assert_eq!(
-            file_token(&path).await.unwrap_err(),
-            UsageStatus::CredentialsUnavailable
-        );
-        let file = std::fs::File::create(&path).unwrap();
-        file.set_len(MAX_CREDENTIAL_BYTES + 1).unwrap();
-        assert_eq!(
-            file_token(&path).await.unwrap_err(),
-            UsageStatus::CredentialsUnavailable
-        );
-    }
-}
+mod tests;

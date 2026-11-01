@@ -31,6 +31,7 @@ import {
 import { useTerminalLayout } from "./useTerminalLayout";
 import { TerminalSessions } from "./TerminalSessions";
 import { TerminalTabs } from "./TerminalTabs";
+import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { TerminalStatus } from "./TerminalStatus";
 
 interface Props {
@@ -38,6 +39,7 @@ interface Props {
   onMaximizedChange: (maximized: boolean) => void;
   shown?: boolean;
   projectsReady?: boolean;
+  toolbar?: ReactNode;
   toolbarEnd?: ReactNode;
   extraTabs?: ReactNode;
   content?: ReactNode;
@@ -50,6 +52,7 @@ export function TerminalWorkspace({
   onMaximizedChange,
   shown = true,
   projectsReady = true,
+  toolbar,
   toolbarEnd,
   extraTabs,
   content,
@@ -59,14 +62,23 @@ export function TerminalWorkspace({
   const statusContainer = useContext(SidebarVisibilityContext)?.statusContainer;
   const location = useLocation();
   const navigate = useNavigate();
-  const workspace = projectWorkspaceRoute(location.pathname, location.search);
+  const activeWorkspace = useActiveWorkspace(projects);
+  const gitPage = location.pathname === "/git";
+  const workspace =
+    projectWorkspaceRoute(location.pathname, location.search) ??
+    (gitPage && activeWorkspace.project
+      ? {
+          projectId: activeWorkspace.project.id,
+          worktreePath: activeWorkspace.path,
+        }
+      : null);
   const scopedProject = workspace?.projectId;
   const scopedPath = workspace
     ? (workspace.worktreePath ??
       projects.find((project) => project.id === scopedProject)?.path)
     : undefined;
   const legacy = location.pathname === "/terminal";
-  const workspaceVisible = legacy || !!workspace;
+  const workspaceVisible = legacy || gitPage || !!workspace;
   const visible = shown && workspaceVisible;
   const panelVisible = workspaceVisible && (shown || !!content);
   const [projectId, setProjectId] = useState("");
@@ -356,96 +368,98 @@ export function TerminalWorkspace({
           : "hidden"
       }
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
-        <TerminalTabs
-          tabs={scopedTabs}
-          projects={projects}
-          activeId={shown ? displayedId : ""}
-          scoped={!!workspace}
-          onClose={close}
-          onSelect={(tab) => {
-            onSelectTerminal?.();
-            setActiveId(tab.id);
-            setProjectId(tab.projectId);
-          }}
-        >
-          {extraTabs}
-        </TerminalTabs>
-        {!workspace && (
-          <ThemedSelect
-            aria-label={t("terminal.chooseProject")}
-            value={selected}
-            title={projects.find((project) => project.id === selected)?.name}
-            onChange={(event) => setProjectId(event.target.value)}
-            className="h-7 max-w-40 gap-2 rounded-md border-transparent bg-transparent px-2 py-0 text-xs"
+      {toolbar ?? (
+        <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
+          <TerminalTabs
+            tabs={scopedTabs}
+            projects={projects}
+            activeId={shown ? displayedId : ""}
+            scoped={!!workspace}
+            onClose={close}
+            onSelect={(tab) => {
+              onSelectTerminal?.();
+              setActiveId(tab.id);
+              setProjectId(tab.projectId);
+            }}
           >
-            {!projects.length && (
-              <option value="">{t("terminal.chooseProject")}</option>
-            )}
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </ThemedSelect>
-        )}
-        {toolbarEnd}
-        {shown && (
-          <>
-            <TerminalSessions
-              tabs={tabs}
-              projects={projects}
-              activeId={displayedId}
-              onSelect={selectSession}
-              onClose={close}
-            />
-            <button
-              type="button"
-              className={toolbarAction}
-              aria-label={t("terminal.new")}
-              title={t("terminal.new")}
-              disabled={
-                !ready ||
-                !(scopedProject || selected) ||
-                count >= TERMINAL_PANE_LIMIT
-              }
-              onClick={add}
+            {extraTabs}
+          </TerminalTabs>
+          {!workspace && (
+            <ThemedSelect
+              aria-label={t("terminal.chooseProject")}
+              value={selected}
+              title={projects.find((project) => project.id === selected)?.name}
+              onChange={(event) => setProjectId(event.target.value)}
+              className="h-7 max-w-40 gap-2 rounded-md border-transparent bg-transparent px-2 py-0 text-xs"
             >
-              <Plus size={15} />
-            </button>
-            {active?.context && (
+              {!projects.length && (
+                <option value="">{t("terminal.chooseProject")}</option>
+              )}
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </ThemedSelect>
+          )}
+          {toolbarEnd}
+          {shown && (
+            <>
+              <TerminalSessions
+                tabs={tabs}
+                projects={projects}
+                activeId={displayedId}
+                onSelect={selectSession}
+                onClose={close}
+              />
               <button
                 type="button"
                 className={toolbarAction}
-                aria-label={t("tasks.context")}
-                title={active.context.title}
-                onClick={() => setContextVisible((value) => !value)}
+                aria-label={t("terminal.new")}
+                title={t("terminal.new")}
+                disabled={
+                  !ready ||
+                  !(scopedProject || selected) ||
+                  count >= TERMINAL_PANE_LIMIT
+                }
+                onClick={add}
               >
-                <FileText size={15} />
+                <Plus size={15} />
               </button>
-            )}
-          </>
-        )}
-        <TerminalPanelTools
-          showTerminalActions={shown}
-          key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
-          hasTerminal={shown && !!active}
-          herdrBusy={herdr.busy}
-          hasUpdate={!!herdr.update?.has_update}
-          canSplit={
-            shown &&
-            ready &&
-            !!active &&
-            active.panes.length < 2 &&
-            count < TERMINAL_PANE_LIMIT
-          }
-          maximized={maximized}
-          onHerdr={() => void herdr.launch()}
-          onHerdrSidebar={() => void herdr.toggleSidebar()}
-          onSplit={split}
-          onMaximize={toggleMaximize}
-        />
-      </div>
+              {active?.context && (
+                <button
+                  type="button"
+                  className={toolbarAction}
+                  aria-label={t("tasks.context")}
+                  title={active.context.title}
+                  onClick={() => setContextVisible((value) => !value)}
+                >
+                  <FileText size={15} />
+                </button>
+              )}
+            </>
+          )}
+          <TerminalPanelTools
+            showTerminalActions={shown}
+            key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
+            hasTerminal={shown && !!active}
+            herdrBusy={herdr.busy}
+            hasUpdate={!!herdr.update?.has_update}
+            canSplit={
+              shown &&
+              ready &&
+              !!active &&
+              active.panes.length < 2 &&
+              count < TERMINAL_PANE_LIMIT
+            }
+            maximized={maximized}
+            onHerdr={() => void herdr.launch()}
+            onHerdrSidebar={() => void herdr.toggleSidebar()}
+            onSplit={split}
+            onMaximize={toggleMaximize}
+          />
+        </div>
+      )}
       {content}
       <div
         hidden={!shown}

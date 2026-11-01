@@ -1,15 +1,16 @@
 import type { ITerminalOptions, ITheme } from "@xterm/xterm";
+import { getAppScale } from "../../lib/textScale";
 import "./terminal.css";
 
 /** Canvas text consumes the same CSS typography tokens as the code editor. */
 export function terminalAppearance(
   styles: CSSStyleDeclaration,
 ): ITerminalOptions {
+  const fontSize = parseFloat(styles.getPropertyValue("--font-size-code"));
   return {
     fontFamily:
       styles.getPropertyValue("--font-family-code").trim() || undefined,
-    fontSize:
-      parseFloat(styles.getPropertyValue("--font-size-code")) || undefined,
+    fontSize: fontSize > 0 ? fontSize * getAppScale() : undefined,
     lineHeight:
       parseFloat(styles.getPropertyValue("--line-height-terminal")) ||
       undefined,
@@ -25,10 +26,10 @@ export function terminalAppearance(
 /** Load both text styles and private-use icons before measuring the PTY grid. */
 export async function loadTerminalFonts(): Promise<void> {
   if (!document.fonts) return;
-  const size =
-    getComputedStyle(document.documentElement)
-      .getPropertyValue("--font-size-code")
-      .trim() || "1em";
+  const fontSize = terminalAppearance(
+    getComputedStyle(document.documentElement),
+  ).fontSize;
+  const size = fontSize ? `${fontSize}px` : "1em";
   await Promise.all([
     document.fonts.load(`${size} "AgentHub Mono"`),
     document.fonts.load(`bold ${size} "AgentHub Mono"`),

@@ -36,3 +36,12 @@ it("loads text styles and symbols at the configured code size before PTY measure
     '16px "AgentHub Symbols"',
   ]);
 });
+
+it("scales terminal cells through font size so mouse reporting uses visible pixels", () => {
+  const styles = document.documentElement.style;
+  styles.setProperty("--font-size-code", "16px");
+  styles.setProperty("--app-scale", "1.2");
+  expect(terminalAppearance(styles).fontSize).toBe(19.2);
+  styles.setProperty("--app-scale", "0.9");
+  expect(terminalAppearance(styles).fontSize).toBe(14.4);
+});

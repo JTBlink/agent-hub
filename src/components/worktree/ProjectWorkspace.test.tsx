@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
-import { act, type ReactNode } from "react";
+import { act, useContext, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
-import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
+import {
+  Link,
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { makeProject } from "../../../tests/fixtures/workspace";
 import { SidebarProjectFiles } from "./SidebarProjectFiles";
@@ -9,6 +16,40 @@ import { WorkspaceFilesProvider } from "./WorkspaceFilesContext";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { ProjectSkills } from "../../views/ProjectSkills";
 import { worktreeUrl } from "../../lib/worktreeApi";
+import { GitEditorVisibilityContext } from "../../hooks/gitEditorVisibility";
+
+function RouteProbe() {
+  const location = useLocation();
+  return (
+    <output data-route>
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+}
+
+function GitEditor() {
+  const setVisible = useContext(GitEditorVisibilityContext);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    setVisible?.(open);
+  }, [open, setVisible]);
+  return (
+    <div data-git-editor>
+      {open && (
+        <button data-close-change onClick={() => setOpen(false)}>
+          Close change
+        </button>
+      )}
+      {createPortal(
+        <button data-git-change onClick={() => setOpen(true)}>
+          Changed file
+        </button>,
+        document.body,
+      )}
+    </div>
+  );
+}
 
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
@@ -32,27 +73,31 @@ vi.mock("../../lib/worktreeApi", async (importOriginal) => ({
 vi.mock("../terminal/TerminalWorkspace", () => ({
   TerminalWorkspace: ({
     shown,
+    toolbar,
     toolbarEnd,
     extraTabs,
     content,
     onSelectTerminal,
   }: {
     shown: boolean;
+    toolbar?: ReactNode;
     toolbarEnd?: ReactNode;
     extraTabs?: ReactNode;
     content?: ReactNode;
     onSelectTerminal?: () => void;
   }) => (
     <div>
-      <div data-terminal-toolbar>
-        <div role="tablist">
-          <button role="tab" aria-selected={shown} onClick={onSelectTerminal}>
-            terminal.title
-          </button>
-          {extraTabs}
+      {toolbar ?? (
+        <div data-terminal-toolbar>
+          <div role="tablist">
+            <button role="tab" aria-selected={shown} onClick={onSelectTerminal}>
+              terminal.title
+            </button>
+            {extraTabs}
+          </div>
+          {toolbarEnd}
         </div>
-        {toolbarEnd}
-      </div>
+      )}
       <div hidden={!shown} data-terminal>
         Shell
       </div>
@@ -109,11 +154,16 @@ async function render() {
         <Link data-topic to={worktreeUrl(project.id, topic)}>
           Topic
         </Link>
+        <Link data-git to="/git">
+          Git
+        </Link>
+        <RouteProbe />
         <WorkspaceFilesProvider>
           <SidebarProjectFiles />
-          <ProjectWorkspace onMaximizedChange={() => {}} />
+          <ProjectWorkspace onMaximizedChange={() => {}} page={<GitEditor />} />
         </WorkspaceFilesProvider>
         <Routes>
+          <Route path="/git" element={null} />
           <Route path="/project/:id" element={null} />
           <Route path="/project/:id/skills" element={<ProjectSkills />} />
         </Routes>
@@ -130,18 +180,27 @@ async function click(selector: string) {
 it("keeps skills secondary and returns to the same worktree without unmounting its terminal", async () => {
   await render();
   await click("[data-topic]");
+  await click('aside button[title="src"]');
+  const explorer = host.querySelector("aside");
+  const fileRequests = mocks.files.mock.calls.length;
   const terminal = host.querySelector("[data-terminal]");
-  const skills = host.querySelector<HTMLAnchorElement>('a[href*="/skills"]')!;
+  const skills = host.querySelector<HTMLButtonElement>(
+    '[aria-label="worktree.projectSkills"]',
+  )!;
   expect(skills.closest("[data-terminal-toolbar]")).not.toBeNull();
   expect(host.querySelector("header")).toBeNull();
-  expect(skills.getAttribute("href")).toBe(
-    `/project/${project.id}/skills?${new URLSearchParams({ worktree: topic })}`,
-  );
+  const routeBefore = host.querySelector("[data-route]")?.textContent;
   await act(async () => skills.click());
   expect(host.textContent).toContain("Project skills panel");
-  const back = host.querySelector<HTMLAnchorElement>(
-    `a[href="${worktreeUrl(project.id, topic)}"]`,
+  expect(host.querySelector("[data-terminal-toolbar]")).toBeNull();
+  expect(host.querySelector("aside")).toBe(explorer);
+  expect(host.querySelector('aside button[title="src/app.ts"]')).not.toBeNull();
+  expect(mocks.files.mock.calls.length).toBe(fileRequests);
+  expect(host.querySelector("[data-route]")?.textContent).toBe(routeBefore);
+  const back = [...host.querySelectorAll("button")].find(
+    (button) => button.textContent === "worktree.back",
   )!;
+  expect(back.closest('[role="toolbar"]')).not.toBeNull();
   await act(async () => back.click());
   expect(host.querySelector("[data-terminal]")).toBe(terminal);
   expect(host.querySelector("aside")?.textContent).toContain("src");
@@ -239,4 +298,90 @@ it("omits duplicate branch context and refresh from the terminal/file toolbar", 
   expectCompactToolbar();
   await click("[data-topic]");
   expectCompactToolbar();
+});
+
+it("omits the fixed source control tab and preserves terminal, file, and change navigation", async () => {
+  await render();
+  await click("[data-topic]");
+  await click('aside button[title="src"]');
+  await click('aside button[title="src/app.ts"]');
+  const terminal = host.querySelector("[data-terminal]");
+  await click("[data-git]");
+  const gitTab = () =>
+    Array.from(host.querySelectorAll('[role="tab"]')).find(
+      (node) => node.textContent === "git.sourceControl",
+    );
+  const fileTab = () => host.querySelector('[role="tab"][title="src/app.ts"]')!;
+  expect(terminal?.closest("section")?.hidden).toBe(false);
+  expect(gitTab()).toBeUndefined();
+  expect(fileTab().getAttribute("aria-selected")).toBe("true");
+  expect(
+    host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
+  ).toBe(true);
+  await act(async () =>
+    fileTab().dispatchEvent(new MouseEvent("click", { bubbles: true })),
+  );
+  expect(host.querySelector('output[aria-label="src/app.ts"]')).not.toBeNull();
+  expect(mocks.read).toHaveBeenLastCalledWith(project.id, topic, "src/app.ts");
+  expect(
+    host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
+  ).toBe(true);
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>("[data-git-change]")!.click(),
+  );
+  expect(
+    host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
+  ).toBe(false);
+  const terminalTab = Array.from(host.querySelectorAll("button")).find(
+    (node) => node.textContent === "terminal.title",
+  )!;
+  await act(async () => terminalTab.click());
+  expect(terminal?.hasAttribute("hidden")).toBe(false);
+  expect(host.querySelector("[data-terminal]")).toBe(terminal);
+  expect(fileTab().getAttribute("aria-selected")).toBe("false");
+  await act(async () =>
+    document.querySelector<HTMLButtonElement>("[data-git-change]")!.click(),
+  );
+  expect(gitTab()).toBeUndefined();
+  expect(
+    host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
+  ).toBe(false);
+  await click("[data-close-change]");
+  expect(terminal?.hasAttribute("hidden")).toBe(false);
+  expect(
+    host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
+  ).toBe(true);
+});
+
+it("keeps the terminal visible when entering source control without an open file", async () => {
+  await render();
+  const terminal = host.querySelector("[data-terminal]");
+  await click("[data-git]");
+  expect(terminal?.hasAttribute("hidden")).toBe(false);
+  expect(host.querySelector("[data-terminal]")).toBe(terminal);
+  expect(
+    host.querySelector<HTMLElement>("[data-git-editor]")?.parentElement?.hidden,
+  ).toBe(true);
+});
+
+it("opens project skills from source control without replacing its sidebar or navigating", async () => {
+  await render();
+  await click("[data-git]");
+  const change = document.querySelector("[data-git-change]");
+  const editor = host.querySelector("[data-git-editor]");
+  const terminal = host.querySelector("[data-terminal]");
+  await click('[aria-label="worktree.projectSkills"]');
+  expect(host.textContent).toContain("Project skills panel");
+  expect(host.querySelector("[data-route]")?.textContent).toBe("/git");
+  expect(document.querySelector("[data-git-change]")).toBe(change);
+  expect(host.querySelector("[data-git-editor]")).toBe(editor);
+  expect(host.querySelector("[data-terminal]")).toBe(terminal);
+  const back = [...host.querySelectorAll("button")].find(
+    (button) => button.textContent === "worktree.back",
+  )!;
+  await act(async () => back.click());
+  expect(host.textContent).not.toContain("Project skills panel");
+  expect(host.querySelector("[data-route]")?.textContent).toBe("/git");
+  expect(document.querySelector("[data-git-change]")).toBe(change);
+  expect(terminal?.hasAttribute("hidden")).toBe(false);
 });

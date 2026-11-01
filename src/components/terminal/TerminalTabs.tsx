@@ -38,10 +38,10 @@ export function TerminalTabs({
           <div
             key={tab.id}
             className={cn(
-              "flex h-full shrink-0 items-center rounded-t border-b-2",
+              "flex h-full shrink-0 items-center border-b-2",
               tab.id === activeId
-                ? "border-accent bg-surface"
-                : "border-transparent",
+                ? "border-accent text-primary"
+                : "border-transparent text-muted",
             )}
           >
             <button

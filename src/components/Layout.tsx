@@ -10,7 +10,10 @@ import { useApp } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { WindowTitleBar } from "./WindowTitleBar";
 import { ProjectWorkspace } from "./worktree/ProjectWorkspace";
-import { projectWorkspaceRoute } from "../lib/worktreeApi";
+import {
+  projectCheckoutRoute,
+  projectWorkspaceRoute,
+} from "../lib/worktreeApi";
 import { cn } from "../utils";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
@@ -22,6 +25,8 @@ export function Layout() {
   const { pathname, search } = useLocation();
   const workspacePage =
     !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
+  const projectSkillsPage =
+    !!projectCheckoutRoute(pathname, search) && !workspacePage;
   const [terminalMaximized, setTerminalMaximized] = useState(false);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [manageWorkspaces, setManageWorkspaces] = useState(false);
@@ -34,9 +39,15 @@ export function Layout() {
   const [statusContainer, setStatusContainer] = useState<HTMLDivElement | null>(
     null,
   );
+  const [branchContainer, setBranchContainer] = useState<HTMLDivElement | null>(
+    null,
+  );
   const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
   const hideSidebar = workspacePage && terminalMaximized;
+  const discoveryPage = pathname === "/discover" || pathname === "/install";
   const fullHeightPage =
+    projectSkillsPage ||
+    discoveryPage ||
     pathname === "/settings" ||
     pathname === "/backup/diff" ||
     pathname === "/tasks" ||
@@ -98,13 +109,16 @@ export function Layout() {
         setResourcePanelVisible,
         sidebarContainer,
         statusContainer,
+        branchContainer,
       }}
     >
       <WorkspaceFilesProvider>
         <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary">
           <WindowTitleBar onOpenCommands={() => setCommandsOpen(true)} />
           <div className="flex min-h-0 flex-1 overflow-hidden">
-            {!hideSidebar && <Sidebar />}
+            <div className={hideSidebar ? "hidden" : "contents"}>
+              <Sidebar />
+            </div>
             <div
               ref={setSidebarContainer}
               hidden={pathname !== "/git" || resourcePanelVisible}
@@ -118,13 +132,15 @@ export function Layout() {
             <div
               className={cn(
                 "workbench-editor-panel relative min-w-0 flex-1 flex-col overflow-hidden mr-1",
-                workspacePage ? "hidden" : "flex",
+                workspacePage || pathname === "/git" ? "hidden" : "flex",
               )}
             >
               <div
                 className={cn(
                   "workbench-page-host min-h-0 flex-1",
-                  pathname === "/git" ? "p-0" : "p-3",
+                  pathname === "/git" || discoveryPage || projectSkillsPage
+                    ? "p-0"
+                    : "p-3",
                   fullHeightPage
                     ? "flex flex-col overflow-hidden"
                     : "workbench-page-scroll overflow-y-auto",
@@ -146,13 +162,19 @@ export function Layout() {
                       tone="danger"
                     />
                   ) : null}
-                  <Outlet />
+                  {pathname !== "/git" && <Outlet />}
                 </div>
               </div>
             </div>
-            <ProjectWorkspace onMaximizedChange={setTerminalMaximized} />
+            <ProjectWorkspace
+              onMaximizedChange={setTerminalMaximized}
+              page={pathname === "/git" ? <Outlet /> : undefined}
+            />
           </div>
-          <WorkbenchStatusBar statusRef={setStatusContainer} />
+          <WorkbenchStatusBar
+            branchRef={setBranchContainer}
+            statusRef={setStatusContainer}
+          />
           <AddProjectDialog
             open={manageWorkspaces}
             onClose={() => setManageWorkspaces(false)}

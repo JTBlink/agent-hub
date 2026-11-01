@@ -72,7 +72,14 @@ export const writeWorktreeFile = (
   });
 
 export function projectWorkspaceRoute(pathname: string, search: string) {
-  const match = /^\/project\/([^/]+)$/.exec(pathname);
+  return /^\/project\/[^/]+$/.test(pathname)
+    ? projectCheckoutRoute(pathname, search)
+    : null;
+}
+
+/** Project pages that retain the checkout file explorer. */
+export function projectCheckoutRoute(pathname: string, search: string) {
+  const match = /^\/project\/([^/]+)(?:\/skills)?$/.exec(pathname);
   return match
     ? {
         projectId: decodeURIComponent(match[1]),

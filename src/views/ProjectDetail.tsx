@@ -69,8 +69,9 @@ import { AgentIcon } from "../components/AgentIcon";
 const projectLastUsedAgentsKey = (projectId: string) =>
   `project_last_used_export_agents:${projectId}`;
 
-export function ProjectDetail() {
-  const { id } = useParams<{ id: string }>();
+export function ProjectDetail({ projectId }: { projectId?: string } = {}) {
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = projectId ?? routeId;
   const navigate = useNavigate();
   const { t } = useTranslation();
   const {

@@ -12,6 +12,8 @@ const renderer = vi.hoisted(() => ({
   redraw: vi.fn(),
   created: vi.fn(),
   clearAtlas: vi.fn(),
+  paste: vi.fn(),
+  input: vi.fn(),
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -29,6 +31,8 @@ vi.mock("@xterm/xterm", async () => {
     Terminal: class extends TerminalEmulator {
       refresh = renderer.redraw;
       clearTextureAtlas = renderer.clearAtlas;
+      paste = renderer.paste;
+      input = renderer.input;
     },
   };
 });
@@ -84,6 +88,75 @@ afterEach(async () => {
   host.remove();
   Reflect.deleteProperty(document, "fonts");
   vi.unstubAllGlobals();
+});
+
+it.each([
+  {
+    types: ["text/plain", "text/html"],
+    text: "first\r\n第二行\n",
+    image: false,
+  },
+  {
+    types: ["image/png", "text/plain"],
+    text: "image description",
+    image: true,
+  },
+  { types: ["image/tiff"], text: "", image: true },
+])(
+  "routes clipboard $types through terminal paste exactly once",
+  async ({ types, text, image }) => {
+    await act(async () =>
+      root.render(<TerminalPane projectId="demo" active onReady={() => {}} />),
+    );
+    const event = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", {
+      value: { types, getData: () => text, items: [] },
+    });
+    host.querySelector("textarea")!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    if (image) {
+      expect(renderer.input).toHaveBeenCalledExactlyOnceWith("\x16", true);
+      expect(renderer.paste).not.toHaveBeenCalled();
+    } else {
+      expect(renderer.paste).toHaveBeenCalledExactlyOnceWith(text);
+      expect(renderer.input).not.toHaveBeenCalled();
+    }
+  },
+);
+
+it("suppresses the native context menu only inside the terminal and preserves mouse events", async () => {
+  await act(async () =>
+    root.render(<TerminalPane projectId="demo" active onReady={() => {}} />),
+  );
+  const input = host.querySelector("textarea")!;
+  const mouseDown = vi.fn();
+  const contextMenu = vi.fn();
+  input.addEventListener("mousedown", mouseDown);
+  input.addEventListener("contextmenu", contextMenu);
+
+  const down = new MouseEvent("mousedown", {
+    button: 2,
+    bubbles: true,
+    cancelable: true,
+  });
+  const menu = new MouseEvent("contextmenu", {
+    button: 2,
+    bubbles: true,
+    cancelable: true,
+  });
+  input.dispatchEvent(down);
+  input.dispatchEvent(menu);
+  expect(mouseDown).toHaveBeenCalledOnce();
+  expect(contextMenu).toHaveBeenCalledOnce();
+  expect(down.defaultPrevented).toBe(false);
+  expect(menu.defaultPrevented).toBe(true);
+
+  const outside = new MouseEvent("contextmenu", {
+    bubbles: true,
+    cancelable: true,
+  });
+  host.dispatchEvent(outside);
+  expect(outside.defaultPrevented).toBe(false);
 });
 
 it("waits for bundled fonts before starting the PTY and redraws without restarting it", async () => {

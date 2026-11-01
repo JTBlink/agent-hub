@@ -201,6 +201,9 @@
 .workbench-status-content:empty {
   display: none;
 }
+.workbench-branch-content:empty {
+  display: none;
+}
 .workbench-status-content:not(:empty) + .workbench-status-fallback {
   display: none;
 }

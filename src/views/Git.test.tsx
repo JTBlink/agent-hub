@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
+import { GitEditorVisibilityContext } from "../hooks/gitEditorVisibility";
 import { Git } from "./Git";
 import { WorkspaceFilesProvider } from "../components/worktree/WorkspaceFilesContext";
 import {
@@ -47,7 +48,11 @@ function TestGit() {
   );
 }
 
-const emptyState = vi.hoisted(() => ({ noProjects: false }));
+const emptyState = vi.hoisted(() => ({
+  noProjects: false,
+  loading: false,
+  appError: null as string | null,
+}));
 
 const translate = (key: string) => key;
 vi.mock("react-i18next", () => ({
@@ -56,6 +61,8 @@ vi.mock("react-i18next", () => ({
 vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("../context/AppContext", () => ({
   useApp: () => ({
+    loading: emptyState.loading,
+    appError: emptyState.appError,
     projects: emptyState.noProjects
       ? []
       : [
@@ -648,8 +655,18 @@ it("opens Git Graph from source control and returns to the selected diff on clos
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
+  const setEditorVisible = vi.fn();
   try {
-    await act(async () => root.render(<TestGit />));
+    await act(async () =>
+      root.render(
+        <GitEditorVisibilityContext.Provider value={setEditorVisible}>
+          <TestGit />
+        </GitEditorVisibilityContext.Provider>,
+      ),
+    );
+    expect(setEditorVisible).toHaveBeenLastCalledWith(false);
+    expect(host.textContent).not.toContain("git.chooseFile");
+    expect(host.textContent).not.toContain("git.reviewHint");
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>(
@@ -660,6 +677,7 @@ it("opens Git Graph from source control and returns to the selected diff on clos
     const graphButton = host.querySelector<HTMLButtonElement>(
       '[aria-label="git.graph.open"]',
     )!;
+    expect(setEditorVisible).toHaveBeenLastCalledWith(true);
     const actions = graphButton.closest(
       '[role="group"][aria-label="git.actions.label"]',
     );
@@ -711,6 +729,12 @@ it("opens Git Graph from source control and returns to the selected diff on clos
     );
     expect(host.querySelector("table")).toBeNull();
     expect(host.querySelector(".cm-editor")).not.toBeNull();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="common.close"]')!
+        .click(),
+    );
+    expect(setEditorVisible).toHaveBeenLastCalledWith(false);
   } finally {
     await act(async () => root.unmount());
     host.remove();
@@ -831,6 +855,41 @@ it("runs toolbar operations against the selected checkout and switches change la
   } finally {
     await act(async () => root.unmount());
     host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("waits for project loading and distinguishes failure from an empty project list", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  emptyState.noProjects = true;
+  emptyState.loading = true;
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<TestGit />));
+    expect(host.textContent).not.toContain("git.noProjects");
+    expect(
+      [...host.querySelectorAll('[role="status"]')].map(
+        (node) => node.textContent,
+      ),
+    ).toContain("common.loading");
+
+    emptyState.loading = false;
+    emptyState.appError = "Unable to load projects";
+    await act(async () => root.render(<TestGit />));
+    expect(host.textContent).not.toContain("git.noProjects");
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+      emptyState.appError,
+    );
+
+    emptyState.appError = null;
+    await act(async () => root.render(<TestGit />));
+    expect(host.textContent).toContain("git.noProjects");
+  } finally {
+    await act(async () => root.unmount());
+    emptyState.noProjects = false;
+    emptyState.loading = false;
+    emptyState.appError = null;
     vi.unstubAllGlobals();
   }
 });

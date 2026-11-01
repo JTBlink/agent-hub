@@ -53,6 +53,18 @@ try {
           true,
           `${theme}, scale ${scale}, active tab ${active}`,
         );
+        const backgrounds = await evaluate(`(() => {
+          return [...document.querySelectorAll('[role=tab]')].every(tab => {
+            const container = tab.parentElement;
+            return [tab, container].every(element =>
+              getComputedStyle(element).backgroundColor === 'rgba(0, 0, 0, 0)');
+          });
+        })()`);
+        assert.equal(
+          backgrounds,
+          true,
+          `${theme}/${scale}/${active}: filled tab background`,
+        );
       }
     }
   }

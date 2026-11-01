@@ -1,4 +1,6 @@
 import { RefreshCw, Trash2, BookOpen } from "lucide-react";
+import { useContext } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
@@ -7,8 +9,9 @@ import { useWorkspaceSelection } from "../../hooks/useWorkspaceSelection";
 import { cn } from "../../utils";
 import { CardActionMenu } from "../CardActionMenu";
 import { WorktreeBranchSwitcher } from "./WorktreeBranchSwitcher";
+import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 
-/** The title bar selects a worktree; this row changes its branch in place. */
+/** The title bar selects a worktree; the footer changes its branch in place. */
 export function ProjectSwitcher({
   onRemove,
 }: {
@@ -19,14 +22,26 @@ export function ProjectSwitcher({
   const { projects } = useApp();
   const selection = useWorkspaceSelection(projects);
   const { project, loading, error, refresh } = selection;
-  return (
+  const branchContainer = useContext(SidebarVisibilityContext)?.branchContainer;
+  const compact = !!branchContainer;
+  if (compact && !project) return null;
+  const content = (
     <div
       role="group"
       aria-label={t("worktree.title")}
-      className="shrink-0 border-b border-border-subtle px-2 py-1"
+      className={
+        compact
+          ? "relative flex h-full max-w-[280px] min-w-0 items-center"
+          : "shrink-0 border-b border-border-subtle px-2 py-1"
+      }
     >
       {project && (
-        <div className="flex h-7 min-w-0 items-center gap-1">
+        <div
+          className={cn(
+            "flex min-w-0 items-center gap-1",
+            compact ? "h-full" : "h-7",
+          )}
+        >
           <div className="min-w-0 flex-1">
             <WorktreeBranchSwitcher
               key={`${project.id}:${selection.path}`}
@@ -41,6 +56,7 @@ export function ProjectSwitcher({
               disabled={
                 loading || !selection.path || !selection.current?.available
               }
+              compact={compact}
             />
           </div>
           <button
@@ -78,7 +94,14 @@ export function ProjectSwitcher({
         </div>
       )}
       {error && (
-        <p role="alert" className="break-words text-xs text-danger">
+        <p
+          role="alert"
+          className={cn(
+            "break-words text-xs text-danger",
+            compact &&
+              "absolute bottom-full left-0 z-50 w-72 rounded border border-border bg-surface p-2 shadow-card",
+          )}
+        >
           {error}
         </p>
       )}
@@ -87,4 +110,5 @@ export function ProjectSwitcher({
       )}
     </div>
   );
+  return branchContainer ? createPortal(content, branchContainer) : content;
 }

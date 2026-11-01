@@ -1,11 +1,11 @@
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
-import { GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ResizableSidebar } from "../components/ResizableSidebar";
 import { VerticalSplit } from "../components/VerticalSplit";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
+import { GitEditorVisibilityContext } from "../hooks/gitEditorVisibility";
 import { useApp } from "../context/AppContext";
 import {
   commitProjectGit,
@@ -33,8 +33,9 @@ import "../components/git/git.css";
 
 export function Git() {
   const { t } = useTranslation();
-  const { projects } = useApp();
+  const { projects, loading: projectsLoading, appError } = useApp();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
+  const setGitEditorVisible = useContext(GitEditorVisibilityContext);
   const { project, path: root } = useActiveWorkspace(projects);
   const activeId = project?.id;
   const [discardTarget, setDiscardTarget] = useState<{
@@ -82,6 +83,12 @@ export function Git() {
   const error =
     statusResult?.key === statusKey ? statusResult.error : undefined;
   const loading = !!activeId && statusResult?.key !== statusKey;
+  const editorVisible =
+    !activeId || graphOpen || !!selection || !!error || !!actionError;
+  useEffect(() => {
+    setGitEditorVisible?.(editorVisible);
+    return () => setGitEditorVisible?.(false);
+  }, [editorVisible, setGitEditorVisible]);
   const diffKey = JSON.stringify([scope, selection, commitSha, revision]);
   const [diffResult, setDiffResult] = useState<{
     key: string;
@@ -442,7 +449,17 @@ export function Git() {
         {!activeId ? (
           <>
             {!sidebarVisibility?.sidebarContainer && sidebar}
-            <p className="p-8 text-sm text-muted">{t("git.noProjects")}</p>
+            {projectsLoading ? (
+              <p role="status" className="p-8 text-sm text-muted">
+                {t("common.loading")}
+              </p>
+            ) : appError ? (
+              <p role="alert" className="p-8 text-sm text-danger">
+                {appError}
+              </p>
+            ) : (
+              <p className="p-8 text-sm text-muted">{t("git.noProjects")}</p>
+            )}
           </>
         ) : (
           <>
@@ -505,19 +522,7 @@ export function Git() {
                       setFileView(false);
                     }}
                   />
-                ) : (
-                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-muted">
-                    <GitBranch
-                      size={40}
-                      strokeWidth={1}
-                      className="text-faint"
-                    />
-                    <p className="text-sm text-secondary">
-                      {t("git.chooseFile")}
-                    </p>
-                    <p className="text-xs">{t("git.reviewHint")}</p>
-                  </div>
-                )}
+                ) : null}
               </section>
             </div>
             {!sidebarVisibility?.statusContainer && statusBar}

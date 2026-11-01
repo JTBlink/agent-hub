@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { GitBranchMenu } from "../git/GitBranchMenu";
 import { runProjectGitAction } from "../../lib/gitApi";
 import { getErrorMessage } from "../../lib/error";
+import { cn } from "../../utils";
 
 /** Switch Git branches within the selected checkout without navigating away. */
 export function WorktreeBranchSwitcher({
@@ -12,12 +13,14 @@ export function WorktreeBranchSwitcher({
   branch,
   label,
   disabled,
+  compact = false,
 }: {
   projectId: string;
   worktreePath?: string;
   branch?: string;
   label: string;
   disabled: boolean;
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
@@ -32,7 +35,12 @@ export function WorktreeBranchSwitcher({
         label={t("git.actions.switchBranch")}
         disabled={disabled || busy}
         className="w-full min-w-0"
-        triggerClassName="app-button-ghost h-7 w-full min-w-0 gap-1.5 rounded border border-border-subtle bg-surface px-2 text-xs text-secondary hover:text-primary"
+        triggerClassName={cn(
+          "app-button-ghost w-full min-w-0 gap-1.5 rounded px-2 text-xs text-secondary hover:text-primary",
+          compact
+            ? "h-[calc(26px/var(--app-scale))]"
+            : "h-7 border border-border-subtle bg-surface",
+        )}
         triggerIcon={
           <>
             {busy ? (
@@ -64,7 +72,14 @@ export function WorktreeBranchSwitcher({
         }}
       />
       {error && (
-        <p role="alert" className="break-words text-xs text-danger">
+        <p
+          role="alert"
+          className={cn(
+            "break-words text-xs text-danger",
+            compact &&
+              "absolute bottom-full left-0 z-50 w-72 rounded border border-border bg-surface p-2 shadow-card",
+          )}
+        >
           {error}
         </p>
       )}

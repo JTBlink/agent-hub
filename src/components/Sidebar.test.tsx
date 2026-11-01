@@ -95,6 +95,13 @@ function Navigation() {
       <output>{useLocation().pathname}</output>
       <button onClick={() => navigate("/project/demo")}>Go project</button>
       <button onClick={() => navigate("/settings")}>Go settings</button>
+      <button
+        onClick={() =>
+          navigate("/project/demo/skills", { state: { preserveSidebar: true } })
+        }
+      >
+        Open project skills
+      </button>
       <button onClick={() => navigate(-1)}>Go back</button>
       {[
         "/",
@@ -150,6 +157,38 @@ function button(name: string) {
 async function click(element: HTMLElement) {
   await act(async () => element.click());
 }
+
+it.each(["projects", "skills", "search"])(
+  "preserves the %s sidebar and its visibility when opening project skills",
+  async (panel) => {
+    await render("/project/demo");
+    const trigger = container.querySelector<HTMLButtonElement>(
+      `button[data-sidebar-panel="${panel}"]`,
+    )!;
+    if (panel !== "projects") await click(trigger);
+    const sidebar = container.querySelector(".workbench-sidebar-panel")!;
+    const expandedSections = () =>
+      [...sidebar.querySelectorAll("button[aria-expanded][title]")].map(
+        (button) => [
+          button.getAttribute("title"),
+          button.getAttribute("aria-expanded"),
+        ],
+      );
+    const before = expandedSections();
+    expect(sidebar.hasAttribute("hidden")).toBe(false);
+    await click(button("Open project skills"));
+    expect(container.querySelector("output")?.textContent).toBe(
+      "/project/demo/skills",
+    );
+    expect(trigger.getAttribute("aria-current")).toBe("page");
+    expect(sidebar.hasAttribute("hidden")).toBe(false);
+    expect(expandedSections()).toEqual(before);
+    await click(trigger);
+    expect(sidebar.hasAttribute("hidden")).toBe(true);
+    await click(button("Open project skills"));
+    expect(sidebar.hasAttribute("hidden")).toBe(true);
+  },
+);
 
 it("provides a permanent automation entry independent of installed agents", async () => {
   await render();

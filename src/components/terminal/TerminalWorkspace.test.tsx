@@ -77,20 +77,30 @@ it("dismisses the session overview with Escape and outside clicks", async () => 
     const trigger = host.querySelector("button")!;
     await act(async () => trigger.click());
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    const overview = host.querySelector("section")!;
+    const overview = document.querySelector(
+      '[aria-label="terminal.sessionsOverview"]',
+    )!;
+    await act(async () =>
+      overview.dispatchEvent(new Event("pointerdown", { bubbles: true })),
+    );
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
     await act(async () =>
       overview.dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       ),
     );
-    expect(host.querySelector("section")).toBeNull();
+    expect(
+      document.querySelector('[aria-label="terminal.sessionsOverview"]'),
+    ).toBeNull();
     expect(document.activeElement).toBe(trigger);
     await act(async () => trigger.click());
     await act(async () =>
       document.body.dispatchEvent(new Event("pointerdown", { bubbles: true })),
     );
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    expect(host.querySelector("section")).toBeNull();
+    expect(
+      document.querySelector('[aria-label="terminal.sessionsOverview"]'),
+    ).toBeNull();
   } finally {
     await act(async () => root.unmount());
     host.remove();

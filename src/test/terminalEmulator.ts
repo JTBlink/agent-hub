@@ -3,18 +3,18 @@ export class TerminalEmulator {
   cols = 80;
   rows = 24;
   options: Record<string, unknown> = {};
-  private input: HTMLTextAreaElement | null = null;
+  private textarea: HTMLTextAreaElement | null = null;
   private data: ((value: string) => void) | null = null;
   loadAddon() {}
   clearTextureAtlas() {}
   refresh() {}
   open(element: HTMLElement) {
-    this.input = document.createElement("textarea");
-    this.input.setAttribute("aria-label", "Shell input");
-    this.input.addEventListener("input", () =>
-      this.data?.(this.input?.value || ""),
+    this.textarea = document.createElement("textarea");
+    this.textarea.setAttribute("aria-label", "Shell input");
+    this.textarea.addEventListener("input", () =>
+      this.data?.(this.textarea?.value || ""),
     );
-    element.append(this.input);
+    element.append(this.textarea);
   }
   onData(callback: (value: string) => void) {
     this.data = callback;
@@ -26,7 +26,7 @@ export class TerminalEmulator {
   }
   attachCustomKeyEventHandler() {}
   focus() {
-    this.input?.focus();
+    this.textarea?.focus();
   }
   hasSelection() {
     return false;
@@ -38,6 +38,6 @@ export class TerminalEmulator {
     complete();
   }
   dispose() {
-    this.input?.remove();
+    this.textarea?.remove();
   }
 }

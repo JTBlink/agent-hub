@@ -8,3 +8,8 @@
 .terminal-emulator .xterm:focus-within {
   outline: none;
 }
+/* xterm compares viewport mouse coordinates to unzoomed cell dimensions.
+   Cancel inherited app zoom here and apply text scaling through its font size. */
+.terminal-emulator {
+  zoom: calc(1 / var(--app-scale, 1));
+}

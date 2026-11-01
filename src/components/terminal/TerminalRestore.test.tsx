@@ -120,7 +120,7 @@ async function render(
   );
 }
 async function click(label: string) {
-  const element = [...host.querySelectorAll<HTMLElement>("button, a")].find(
+  const element = [...document.querySelectorAll<HTMLElement>("button, a")].find(
     (button) =>
       button.getAttribute("aria-label") === label ||
       button.textContent === label,
@@ -158,10 +158,10 @@ it("restores worktree tabs, split layout and the last location after restarting 
   ).toContain("终端 1");
   await click("全部终端 3/8");
   expect(
-    host.querySelector('[aria-label="所有项目的终端"]')?.textContent,
+    document.querySelector('[aria-label="所有项目的终端"]')?.textContent,
   ).toContain(project.path);
   expect(
-    host.querySelector('[aria-label="所有项目的终端"]')?.textContent,
+    document.querySelector('[aria-label="所有项目的终端"]')?.textContent,
   ).toContain(topic);
   await click(`切换到 ${project.name} · 终端 1 · ${project.path}`);
   expect(host.querySelector("output")?.textContent).toBe(
@@ -191,7 +191,7 @@ it("restores worktree tabs, split layout and the last location after restarting 
     host.querySelectorAll('[role="tabpanel"]:not([hidden]) textarea'),
   ).toHaveLength(2);
   await click("全部终端 3/8");
-  const overview = host.querySelector<HTMLElement>(
+  const overview = document.querySelector<HTMLElement>(
     '[aria-label="所有项目的终端"]',
   )!;
   await act(async () =>
@@ -199,7 +199,7 @@ it("restores worktree tabs, split layout and the last location after restarting 
       new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     ),
   );
-  expect(host.querySelector('[aria-label="所有项目的终端"]')).toBeNull();
+  expect(document.querySelector('[aria-label="所有项目的终端"]')).toBeNull();
   expect(document.activeElement?.getAttribute("aria-label")).toBe(
     "全部终端 3/8",
   );
@@ -244,7 +244,7 @@ it("waits for projects and all eight leftover PTYs to close before recreating sa
   ).toBe(true);
   await click("全部终端 8/8");
   expect(
-    host.querySelectorAll('[aria-label="所有项目的终端"] button[title]'),
+    document.querySelectorAll('[aria-label="所有项目的终端"] button[title]'),
   ).toHaveLength(8);
   await click(`关闭 ${project.name} · 终端 1 · ${topic}`);
   expect(readTerminalLayout().tabs).toHaveLength(7);
@@ -349,7 +349,7 @@ it("closes all panes of the previous project, frees capacity and opens a fresh s
   expect(host.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
   await click("全部终端 1/8");
   expect(
-    host.querySelector('[aria-label="所有项目的终端"]')?.textContent,
+    document.querySelector('[aria-label="所有项目的终端"]')?.textContent,
   ).not.toContain(project.name);
   await click("全部终端 1/8");
   await click(`Open ${project.id}`);

@@ -10,11 +10,17 @@ async function request(path, body) {
 }
 const { targetId } = await request(
   "/new",
-  "http://127.0.0.1:1420/tests/browser/agent-usage.html?view=usage",
+  "http://127.0.0.1:1420/tests/browser/agent-usage-host.html",
 );
 async function evaluate(code) {
   const result = await request(`/eval?target=${targetId}`, code);
-  assert.equal(result.error, undefined, JSON.stringify(result));
+  if (result.error) {
+    const diagnostic = await request(
+      `/eval?target=${targetId}`,
+      `(()=>{try{return eval(${JSON.stringify(code)})}catch(error){return {message:String(error),url:location.href,frames:[...document.querySelectorAll('iframe')].map(f=>({src:f.src,body:f.contentDocument?.body?.innerText}))}}})()`,
+    );
+    assert.fail(JSON.stringify({ result, diagnostic }));
+  }
   return result.value;
 }
 async function until(code) {
@@ -27,21 +33,16 @@ async function until(code) {
   );
 }
 try {
-  await until("!!document.querySelector('footer')");
-  await evaluate(
-    "document.querySelector('#root').style.display='none';const f=document.createElement('iframe');f.id='usage-preview';f.style.cssText='position:fixed;inset:0;height:700px;border:0';document.body.append(f);true",
-  );
-  const doc = "document.querySelector('#usage-preview').contentDocument";
+  await until("!!document.querySelector('#root')");
+  const doc = "document.querySelector('#usage-preview')?.contentDocument";
+  let statusHeight;
   for (const [width, language, theme, textSize] of [
     [1440, "zh", "dark", "default"],
     [960, "en", "light", "xlarge"],
     [480, "zh-TW", "dark", "xlarge"],
   ]) {
-    await evaluate(
-      `(()=>{const f=document.querySelector('#usage-preview');f.style.width='${width}px';f.src='/tests/browser/agent-usage.html?view=usage&language=${language}&theme=${theme}&text-size=${textSize}';return true})()`,
-    );
     await until(
-      `(()=>{const d=${doc};return d?.location.search.includes('language=${language}')&&!!d.querySelector('footer button[aria-haspopup="dialog"]')})()`,
+      `(()=>{const f=document.querySelector('#usage-preview');if(!f)return false;f.style.width='${width}px';const src='/tests/browser/agent-usage.html?language=${language}&theme=${theme}&text-size=${textSize}';if(f.getAttribute('src')!==src){f.src=src;return false}const d=f.contentDocument;return d?.location.search.includes('language=${language}')&&!!d.querySelector('footer button[aria-haspopup="dialog"]')})()`,
     );
     await evaluate(
       `${doc}.querySelector('footer button[aria-haspopup="dialog"]').click();true`,

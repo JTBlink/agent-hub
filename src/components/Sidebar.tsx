@@ -27,6 +27,7 @@ export function Sidebar() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const preserveSidebar = location.state?.preserveSidebar === true;
   const {
     projects,
     refreshProjects,
@@ -60,13 +61,15 @@ export function Sidebar() {
     setPanelSelection({
       routeKey: location.key,
       panel:
-        panelSelection.panel === "search" &&
-        location.pathname.startsWith("/project/")
-          ? "search"
+        preserveSidebar ||
+        (panelSelection.panel === "search" &&
+          location.pathname.startsWith("/project/"))
+          ? panelSelection.panel
           : (activeSidebarPanel(location.pathname) ?? "skills"),
       manual:
-        panelSelection.panel === "search" &&
-        location.pathname.startsWith("/project/"),
+        preserveSidebar ||
+        (panelSelection.panel === "search" &&
+          location.pathname.startsWith("/project/")),
     });
   }
   const selectedPanel = panelSelection.panel;
@@ -120,6 +123,7 @@ export function Sidebar() {
   } | null>(null);
   const { expandedSection, toggleSection } = useSidebarSections(
     location.pathname,
+    preserveSidebar,
   );
 
   useEffect(() => {

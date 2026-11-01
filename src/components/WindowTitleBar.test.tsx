@@ -10,6 +10,7 @@ import { refreshProjectWorktrees } from "../hooks/useProjectWorktrees";
 import { WindowTitleBar } from "./WindowTitleBar";
 import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CommandPalette } from "./CommandPalette";
+import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { getProjectGitReferences, runProjectGitAction } from "../lib/gitApi";
@@ -531,4 +532,66 @@ it("cancels worktree creation without changing the current checkout", async () =
   expect(createProjectWorktree).not.toHaveBeenCalled();
   expect(trigger.textContent).toContain("demo");
   expect(document.activeElement).toBe(trigger);
+});
+
+it("places branch actions in the footer and opens the menu above the bottom trigger", async () => {
+  function FooterShell() {
+    const [branchContainer, setBranchContainer] =
+      useState<HTMLDivElement | null>(null);
+    return (
+      <SidebarVisibilityContext.Provider
+        value={{
+          resourcePanelVisible: false,
+          setResourcePanelVisible: () => {},
+          branchContainer,
+        }}
+      >
+        <aside>
+          <ProjectSwitcher onRemove={() => {}} />
+        </aside>
+        <footer>
+          <div ref={setBranchContainer} />
+        </footer>
+      </SidebarVisibilityContext.Provider>
+    );
+  }
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={["/project/demo"]}>
+        <WorkspaceFilesProvider>
+          <FooterShell />
+        </WorkspaceFilesProvider>
+      </MemoryRouter>,
+    ),
+  );
+  expect(container.querySelector("aside button")).toBeNull();
+  const branch = container.querySelector<HTMLButtonElement>(
+    'footer button[aria-label="切换分支"]',
+  )!;
+  expect(branch.textContent).toContain("main");
+  vi.spyOn(branch, "getBoundingClientRect").mockReturnValue({
+    x: 8,
+    y: 740,
+    top: 740,
+    bottom: 766,
+    left: 8,
+    right: 160,
+    width: 152,
+    height: 26,
+    toJSON: () => ({}),
+  });
+  await act(async () => branch.click());
+  const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+  expect(menu).not.toBeNull();
+  expect(Number.parseFloat(menu.style.top)).toBeLessThan(740);
+  const option = [
+    ...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((item) => item.textContent === "feature/shared")!;
+  await act(async () => option.click());
+  expect(runProjectGitAction).toHaveBeenLastCalledWith(
+    "demo",
+    "<workspace>/demo",
+    "switch_branch",
+    "feature/shared",
+  );
 });

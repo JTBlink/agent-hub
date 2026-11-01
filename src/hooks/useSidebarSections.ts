@@ -4,14 +4,22 @@ import {
   type SidebarSection,
 } from "../lib/sidebarSections";
 
-/** Manual expansion applies to the current route; navigation opens its section. */
-export function useSidebarSections(pathname: string) {
+/** Navigation opens its section unless the caller preserves the current sidebar. */
+export function useSidebarSections(
+  pathname: string,
+  preserveSelection = false,
+) {
   const [selection, setSelection] = useState<{
     pathname: string;
     section: SidebarSection | null;
   }>({ pathname, section: activeSidebarSection(pathname) });
   if (selection.pathname !== pathname) {
-    setSelection({ pathname, section: activeSidebarSection(pathname) });
+    setSelection({
+      pathname,
+      section: preserveSelection
+        ? selection.section
+        : activeSidebarSection(pathname),
+    });
   }
   const expandedSection =
     selection.pathname === pathname
