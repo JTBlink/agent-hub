@@ -29,7 +29,7 @@ export const codeHighlightStyle = HighlightStyle.define([
     color: "var(--color-brand-violet)",
   },
   { tag: tags.comment, color: "var(--color-text-muted)", fontStyle: "italic" },
-  { tag: tags.invalid, color: "var(--color-danger)" },
+  { tag: [tags.invalid, tags.deleted], color: "var(--color-danger)" },
   { tag: tags.strong, fontWeight: "bold" },
   { tag: tags.emphasis, fontStyle: "italic" },
 ]);

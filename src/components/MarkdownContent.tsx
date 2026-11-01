@@ -2,6 +2,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import type { ReactNode } from "react";
 import remarkGfm from "remark-gfm";
 import { cn } from "../utils";
+import { SyntaxCode } from "./file-reader/SyntaxCode";
 
 interface MarkdownContentProps {
   content: string;
@@ -123,15 +124,16 @@ export function MarkdownContent({
             const isBlock = String(className || "").includes("language-");
             if (isBlock) {
               return (
-                <code
+                <SyntaxCode
                   className={cn(
                     "block text-[13px] leading-6 text-secondary",
                     className,
                   )}
-                  {...props}
-                >
-                  {children}
-                </code>
+                  content={String(children ?? "")}
+                  language={
+                    /language-([^\s]+)/.exec(className ?? "")?.[1] ?? ""
+                  }
+                />
               );
             }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Code2, Loader2, WrapText } from "lucide-react";
 import { getErrorMessage } from "../../lib/error";
@@ -13,8 +13,10 @@ export function FileContent({
   onOpenInVscode,
   openInVscodeHint,
   maxLength,
+  actions,
 }: {
   file: ReaderFile;
+  actions?: ReactNode;
 } & Pick<
   FileReaderProps,
   "onContentChange" | "onOpenInVscode" | "openInVscodeHint" | "maxLength"
@@ -59,6 +61,7 @@ export function FileContent({
           {file.path}
         </span>
         <div className="flex shrink-0 items-center gap-1">
+          {actions}
           <button
             type="button"
             aria-label={t("install.scan.openInVscode")}

@@ -24,6 +24,8 @@ const files: ReaderFile[] = [{ path: "docs/README.md", content: "# Example" }];
 
 接入方负责读取、加载、错误反馈及保存。原生 `dialog` 管理焦点、背景不可操作和 Escape 取消；若父弹窗监听全局键盘事件，应跳过目标位于 `dialog[open]` 内的事件。点击背景不关闭，避免意外中断阅读。
 
-源码阅读与编辑共用 CodeMirror 6，语言按文件扩展名从本地打包资源加载，支持 Python、Shell、PowerShell、JSON、YAML、TOML、JS/TS、Rust 和 Markdown；未知类型显示纯文本。行号、换行、选择复制和撤销由编辑器统一处理，配色引用应用明暗主题 token。宿主仍持有草稿并决定保存时机和长度限制。
+源码阅读与编辑共用 CodeMirror 6，语言按文件扩展名从本地打包资源加载，支持 Python、Shell、PowerShell、JSON、YAML、TOML、JS/TS、Rust、C/C++、C#、Java、Go、SQL、HTML/XML、CSS、Diff/Patch、Dockerfile、CMake 和 Markdown；未知类型显示纯文本。行号、换行、选择复制和撤销由编辑器统一处理，配色引用应用明暗主题 token。宿主仍持有草稿并决定保存时机和长度限制。
 
-Markdown 预览复用通用 `MarkdownContent`，其中的代码块暂不高亮。此文本接口不加载图片，也不解析附件或相对链接；不提供二进制文件查看或操作系统级独立窗口。
+Markdown 预览复用通用 `MarkdownContent`，代码块与编辑器共用语言解析器和高亮主题。此文本接口不加载图片，也不解析附件或相对链接；不提供二进制文件查看或操作系统级独立窗口。
+
+直接嵌入 `FileContent` 的宿主可通过 `actions` 扩展同一工具栏。Worktree 文件面板在此接入编辑、保存、取消与刷新，并通过 `useWorktreeDocument` 统一保留会话内草稿、处理磁盘内容冲突；Git 页面复用该面板，MR/PR 文件差异复用 `FileReaderDialog`。模块自身不决定保存位置。

@@ -51,6 +51,27 @@ it("highlights Python while keeping read-only text focusable and selectable", as
   expect(editor.state.sliceDoc()).toBe(content);
 });
 
+it.each([
+  ["parser.cpp", "int main() { return 0; }", "int"],
+  ["change.diff", "+added line\n-removed line\n", "+added line"],
+  ["service.go", "package main\nfunc main() {}", "package"],
+])(
+  "highlights programmer files using shared language definitions: %s",
+  async (path, content, token) => {
+    await act(async () =>
+      root.render(<CodeEditor file={{ path, content }} wrap={false} />),
+    );
+    await vi.waitFor(() =>
+      expect(
+        [...host.querySelectorAll(".cm-line span")].some((node) =>
+          node.textContent?.includes(token),
+        ),
+      ).toBe(true),
+    );
+    expect(codeEditor(host).state.sliceDoc()).toBe(content);
+  },
+);
+
 it("preserves edits and undo across wrapping and callback updates, enforcing the host's length limit", async () => {
   const first = vi.fn();
   const next = vi.fn();
