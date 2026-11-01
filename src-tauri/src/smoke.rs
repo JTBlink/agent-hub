@@ -13,9 +13,4 @@ pub fn run_package_smoke() -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn package_smoke_reopens_an_isolated_database() {
-        super::run_package_smoke().unwrap();
-    }
-}
+mod tests;

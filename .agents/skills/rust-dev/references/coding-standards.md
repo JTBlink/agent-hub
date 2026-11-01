@@ -56,6 +56,8 @@
 
 ## 测试与变更范围
 
+- Rust 单元测试放在被测模块相邻的独立测试文件（如 `<module>/tests.rs`），实现文件只保留 `#[cfg(test)] mod tests;` 声明；保留平台条件和私有成员访问边界，不为拆分测试扩大生产接口。前端测试沿用独立的 `*.test.ts` / `*.test.tsx` 文件。
+
 - 缺陷修复添加能重现问题的回归测试。纯转换用单元测试；跨 command、SQLite 或文件系统边界用对应集成测试。避免只重复实现细节的测试。
 - 修改前确认调用方、序列化字段、持久化数据和平台差异；删除旧分支前查引用并验证用户数据和已发布版本的兼容性。不可仅凭 `legacy`、`deprecated`、`allow(dead_code)` 或文件行数判定可删。
 - 运行与改动相关的 `npm run lint`、`npm test`、`npm run build`、`cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`、`cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings` 和 `cargo test --manifest-path src-tauri/Cargo.toml`；提交前检查 `git diff --check`。文档改动至少验证引用链接、格式和 tracker 状态。

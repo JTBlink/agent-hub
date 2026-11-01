@@ -57,7 +57,7 @@
 
 ## 测试规范
 
-单元测试应与被测代码放在一起，并使用 `#[cfg(test)]`；公开行为和端到端流程放入 `tests/*.rs`。测试名称应描述具体行为，例如 `creates_workspace_with_default_settings`。每次修复缺陷都应添加回归测试。提交拉取请求前，请运行 `cargo test`、格式检查和 Clippy 检查。
+Rust 单元测试应放在被测模块相邻的独立测试文件中（如 `<module>/tests.rs`），实现文件仅保留 `#[cfg(test)] mod tests;` 声明；公开行为和端到端流程放入 `tests/*.rs`。测试名称应描述具体行为，例如 `creates_workspace_with_default_settings`。每次修复缺陷都应添加回归测试。提交拉取请求前，请运行 `cargo test`、格式检查和 Clippy 检查。
 
 ## 提交与变更审查规范
 
