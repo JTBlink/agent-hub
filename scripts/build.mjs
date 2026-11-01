@@ -116,7 +116,8 @@ function runTest(args, runner, cleanup) {
   return status;
 }
 
-function runLint(runner) {
+function runLint(runner, cleanup) {
+  const before = Date.now();
   if (!requireCargo(runner)) return 1;
   let status = runNpm(["run", "lint"], runner);
   if (status === 0)
@@ -146,6 +147,7 @@ function runLint(runner) {
       ],
       runner,
     );
+  if (status === 0) cleanup({ before });
   return status;
 }
 
@@ -181,7 +183,7 @@ export function runCommand(
     case "test":
       return runTest(args, runner, cleanup);
     case "lint":
-      return runLint(runner);
+      return runLint(runner, cleanup);
     case "version":
       return printVersion();
     case "-V":

@@ -13,6 +13,8 @@ npm run app:dev
 
 `npm run app:build` 构建当前平台安装包。macOS 本地调试包可用 `npm run tauri -- build --debug --bundles app`。所有打包入口自动编译 `agent-hub-cli`；不要绕过包装脚本直接构建发布包。
 
+命令、产物目录、安装步骤与自动清理范围见[编译、打包与安装](../../../../docs/build-and-install.md)。
+
 ## 检查
 
 ```bash

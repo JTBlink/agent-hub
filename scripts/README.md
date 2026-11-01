@@ -39,13 +39,17 @@ node scripts/verify-release-bundle.mjs <bundle-dir>
 
 ## 主应用与 CLI
 
+完整操作说明见[编译、打包与安装](../docs/build-and-install.md)。
+
 `primary-app.mjs` 统一开发和打包流程，提前构建并放置 `agent-hub-cli` sidecar。`run-rust-cli.mjs` 提供 CLI 运行、构建和安装入口。前端、桌面与 CLI 均使用根目录工程。
 
 `./agent-hub.sh install` 默认进入 Tauri 打包流程。Unix 开发环境如需只更新 CLI，可运行 `./agent-hub.sh install --dev`：它会将 `${CARGO_HOME:-~/.cargo}/bin/agent-hub-cli` 链接到仓库的 debug 构建产物，并刷新 `~/.agent-hub/bin/agent-hub-cli` bridge，使 `agent-hub-cli` 立即使用本次构建；追加 `release` 可构建 release CLI。`AGENT_HUB_CLI_BIN_DIR` 可指定链接目录，`AGENT_HUB_BRIDGE_DIR` 可指定开发 bridge 目录。已有普通文件或指向其他位置的 Cargo 软链接不会被覆盖。
 
 ### 构建缓存自动清理
 
-桌面打包（`npm run app:build` / `npm run tauri -- build`）、CLI 构建/安装和 `npm run app:test` 成功后自动调用 `build-cache.mjs`。失败时保留已有产物；开发服务器运行期间不清理。
+桌面打包（`npm run app:build` / `npm run tauri -- build`）、CLI 构建/安装/运行和 `npm run app:test`、`npm run app:lint` 成功后自动调用 `build-cache.mjs`。桌面开发会话正常退出后清理，开发服务器运行期间不清理。失败或被信号中断时保留已有产物。
+
+CLI 构建、运行与安装统一使用项目构建目录；`cli:install` 复用依赖缓存，不再使用 Cargo 临时构建目录。支持 `CARGO_TARGET_DIR`，CLI 构建和安装的 `--target-dir` 参数优先。Unix 开发安装复用同一 Node 构建入口，但保持固定使用仓库 `src-tauri/target/` 的现有链接约定。
 
 - 按架构、debug/release、编译模式和 feature 配置保留最新应用产物；共享依赖、Cargo build-script 输出和增量缓存继续复用。
 - 从当前 `libapp_lib.rlib` 的归档清单识别仍被引用的目标文件，删除历史编译遗留的 `app_lib.*.rcgu.o`；归档缺失时跳过这些文件，归档损坏时停止本次清理并提示。

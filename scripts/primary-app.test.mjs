@@ -28,7 +28,7 @@ describe("primary application packaging", () => {
       );
     },
   );
-  it.each(["dev", "--help"])("does not clean during %s", (command) => {
+  it.each(["--help"])("does not clean during %s", (command) => {
     const events = [];
     const runner = () => ({
       status: 0,
@@ -42,6 +42,30 @@ describe("primary application packaging", () => {
     );
     expect(events).toEqual([]);
   });
+  it.each([0, 17])(
+    "cleans after a successful dev session exits (status=%s)",
+    (status) => {
+      const events = [];
+      const runner = (_command, args) => {
+        if (args.some((arg) => arg.endsWith("tauri.js"))) {
+          events.push("dev-exit");
+          return { status };
+        }
+        return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+      };
+      expect(
+        main(
+          ["dev"],
+          runner,
+          () => 0,
+          () => events.push("cleanup"),
+        ),
+      ).toBe(status);
+      expect(events).toEqual(
+        status === 0 ? ["dev-exit", "cleanup"] : ["dev-exit"],
+      );
+    },
+  );
   it("honors explicit target syntax", () => {
     expect(
       requestedTarget(["build", "--target=universal-apple-darwin"], "host"),

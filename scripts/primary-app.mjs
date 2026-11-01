@@ -88,8 +88,10 @@ export function main(
 ) {
   const command = args[0];
   const before = Date.now();
-  const build =
-    command === "build" && !args.includes("--help") && !args.includes("-h");
+  const buildsRust =
+    ["dev", "build"].includes(command) &&
+    !args.includes("--help") &&
+    !args.includes("-h");
   if (
     ["dev", "build"].includes(command) &&
     !args.includes("--help") &&
@@ -116,7 +118,7 @@ export function main(
     [resolve(ROOT_DIR, "node_modules/@tauri-apps/cli/tauri.js"), ...args],
     runner,
   );
-  if (status === 0 && build) cleanup({ before });
+  if (status === 0 && buildsRust) cleanup({ before });
   return status;
 }
 

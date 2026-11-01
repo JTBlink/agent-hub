@@ -17,7 +17,7 @@
     "rust-dev": {
       "id": "4e68ae9f-b61b-45ba-8d22-2d3d436d7357",
       "name": "rust-dev",
-      "content_hash": "100d8f662585e1d900ef63de6d8d49802bcfcab8047a99f3588f1016f66ea68a",
+      "content_hash": "876b06e90bc2e2653da9bc27f6a11286ee70c65fe2eb3baaec27bb0ddbe264c4",
       "targets": {
         "claude_code": ".claude/skills/rust-dev",
         "codex": ".codex/skills/rust-dev"

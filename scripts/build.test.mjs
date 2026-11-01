@@ -77,6 +77,27 @@ describe("build command orchestrator", () => {
     expect(cleaned).toBe(false);
   });
 
+  it.each([0, 17])(
+    "cleans after successful lint compilation (status=%s)",
+    (status) => {
+      const events = [];
+      const runner = (_command, args) => {
+        if (args[0] === "clippy") {
+          events.push("clippy");
+          return { status };
+        }
+        return { status: 0 };
+      };
+      expect(
+        runCommand("lint", [], {
+          runner,
+          cleanup: () => events.push("cleanup"),
+        }),
+      ).toBe(status);
+      expect(events).toEqual(status === 0 ? ["clippy", "cleanup"] : ["clippy"]);
+    },
+  );
+
   it("rejects unknown commands and documents the stable interface", () => {
     expect(main(["unknown"], { runner: fakeRunner() })).toBe(1);
     expect(usage()).toContain("build     编译当前平台安装包");

@@ -133,7 +133,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 `./agent-hub.sh install` 默认构建当前平台安装包；只更新开发 CLI 时使用 `./agent-hub.sh install --dev`，追加 `release` 可构建 release CLI。
 
-开发和打包入口会先编译并放置 `agent-hub-cli`，再启动或构建桌面应用。`npm run dev` 仅启动前端服务器，文件系统和数据库功能需要 Tauri 桌面运行时。完整说明见[开发指南](.agents/skills/rust-dev/references/development.md)。
+开发和打包入口会先编译并放置 `agent-hub-cli`，再启动或构建桌面应用。`npm run dev` 仅启动前端服务器，文件系统和数据库功能需要 Tauri 桌面运行时。命令、安装包位置与自动清理规则见[编译、打包与安装](docs/build-and-install.md)，工程约定见[开发指南](.agents/skills/rust-dev/references/development.md)。
 
 ### 产品主页
 

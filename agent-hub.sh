@@ -70,19 +70,12 @@ install_cli() {
     return 1
   fi
 
-  local cargo_args=(
-    build
-    --manifest-path "${ROOT_DIR}/src-tauri/Cargo.toml"
-    --locked
-    --bin agent-hub-cli
-    --target-dir "${ROOT_DIR}/src-tauri/target"
-  )
+  local cargo_args=(--locked --target-dir "${ROOT_DIR}/src-tauri/target")
   if [[ "${profile}" == "release" ]]; then
     cargo_args+=(--release)
   fi
 
-  cargo "${cargo_args[@]}"
-  CARGO_TARGET_DIR="${ROOT_DIR}/src-tauri/target" node "${ROOT_DIR}/scripts/build-cache.mjs" || true
+  node "${ROOT_DIR}/scripts/run-rust-cli.mjs" build "${cargo_args[@]}"
   if [[ ! -x "${binary}" ]]; then
     echo "构建完成但未找到 CLI: ${binary}" >&2
     return 1

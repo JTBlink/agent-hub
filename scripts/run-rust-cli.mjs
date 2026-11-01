@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
-import { delimiter, dirname, join } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
@@ -7,6 +8,8 @@ function canRun(command, args = ["--version"]) {
   const result = spawnSync(command, args, { stdio: "ignore" });
   return result.status === 0;
 }
+
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 function resolveCargo() {
   if (process.env.CARGO && existsSync(process.env.CARGO)) {
@@ -33,26 +36,36 @@ function resolveCargo() {
   console.error(
     "cargo not found. Install Rust or ensure cargo/rustup is on PATH.",
   );
-  process.exit(127);
+  return null;
 }
 
-const mode = process.argv[2];
-const extraArgs = process.argv.slice(3);
-const cargo = resolveCargo();
-
-const baseArgs = [
-  "--manifest-path",
-  "src-tauri/Cargo.toml",
-  "--bin",
-  "agent-hub-cli",
-];
-const cargoArgs =
-  mode === "cli"
-    ? ["run", "--quiet", ...baseArgs, "--", ...extraArgs]
-    : mode === "build"
-      ? ["build", ...baseArgs, ...extraArgs]
-      : mode === "install"
-        ? [
+/** Use one persistent target directory for builds, runs and Cargo installs. */
+export function cliBuildPlan(mode, extraArgs, env = process.env) {
+  if (!["cli", "build", "install"].includes(mode)) return null;
+  // Arguments after `cli` belong to the application, not to Cargo.
+  const targetIndex = mode === "cli" ? -1 : extraArgs.indexOf("--target-dir");
+  const targetOption =
+    mode === "cli"
+      ? undefined
+      : extraArgs.find((arg) => arg.startsWith("--target-dir="));
+  const targetDir = resolve(
+    ROOT,
+    targetOption?.slice(13) ??
+      (targetIndex >= 0 ? extraArgs[targetIndex + 1] : undefined) ??
+      cargoTargetDir(ROOT, env),
+  );
+  const baseArgs = [
+    "--manifest-path",
+    "src-tauri/Cargo.toml",
+    "--bin",
+    "agent-hub-cli",
+  ];
+  const args =
+    mode === "cli"
+      ? ["run", "--quiet", ...baseArgs, "--", ...extraArgs]
+      : mode === "build"
+        ? ["build", ...baseArgs, ...extraArgs]
+        : [
             "install",
             "--path",
             "src-tauri",
@@ -61,38 +74,51 @@ const cargoArgs =
             "--locked",
             "--force",
             ...extraArgs,
-          ]
-        : null;
-
-if (!cargoArgs) {
-  console.error(`unknown mode: ${mode}`);
-  process.exit(2);
+          ];
+  return { args, targetDir };
 }
 
-const before = Date.now();
-const result = spawnSync(cargo, cargoArgs, {
-  stdio: "inherit",
-  env: {
-    ...process.env,
-    PATH: `${dirname(cargo)}${delimiter}${process.env.PATH ?? ""}`,
-  },
-});
-
-if (result.error) {
-  console.error(result.error.message);
-  process.exit(1);
-}
-
-const status = result.status ?? 1;
-if (status === 0 && mode !== "cli") {
-  const targetIndex = extraArgs.indexOf("--target-dir");
-  const targetOption = extraArgs.find((arg) => arg.startsWith("--target-dir="));
-  cleanupBuildCache({
-    before,
-    targetDir:
-      targetOption?.slice(13) ??
-      (targetIndex >= 0 ? extraArgs[targetIndex + 1] : undefined) ??
-      cargoTargetDir(),
+export function main(
+  argv = process.argv.slice(2),
+  {
+    runner = spawnSync,
+    cleanup = cleanupBuildCache,
+    cargo,
+    env = process.env,
+  } = {},
+) {
+  const [mode, ...extraArgs] = argv;
+  const plan = cliBuildPlan(mode, extraArgs, env);
+  if (!plan) {
+    console.error(`unknown mode: ${mode}`);
+    return 2;
+  }
+  cargo ??= resolveCargo();
+  if (!cargo) return 127;
+  const before = Date.now();
+  const result = runner(cargo, plan.args, {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: {
+      ...env,
+      // Cargo install otherwise uses a temporary target directory and rebuilds
+      // all dependencies on every install. Share the project build cache.
+      CARGO_TARGET_DIR: plan.targetDir,
+      PATH: `${dirname(cargo)}${delimiter}${env.PATH ?? ""}`,
+    },
   });
+  if (result.error) {
+    console.error(result.error.message);
+    return 1;
+  }
+  const status = result.status ?? 1;
+  if (status === 0) cleanup({ before, targetDir: plan.targetDir });
+  return status;
 }
-process.exit(status);
+
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  process.exitCode = main();
+}
