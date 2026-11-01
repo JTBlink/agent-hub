@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, RefreshCw, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import type { Project, RepositoryTask, TaskFilters } from "../../lib/tauri";
-import { ThemedSelect } from "../ThemedSelect";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { TaskToolbar } from "./TaskToolbar";
+import { TaskListTable } from "./TaskListTable";
 import { TaskConnections } from "./TaskConnections";
 import { TaskDetails } from "./TaskDetails";
 import { useRepositoryTasks } from "./useRepositoryTasks";
@@ -25,9 +26,6 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [projectId, setProjectId] = useState(initial.projectId);
   const [filters, setFilters] = useState<TaskFilters>(initial.filters);
   const [search, setSearch] = useState(initial.filters.text);
-  useEffect(() => {
-    saveTaskViewPreferences({ provider, projectId, filters });
-  }, [provider, projectId, filters]);
   const [selection, setSelection] = useState<{
     task: RepositoryTask;
     full: boolean;
@@ -70,14 +68,27 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     );
     return () => clearTimeout(timer);
   }, [search]);
+  const activeProjectId =
+    projectId === "all" ||
+    discovering ||
+    bindings.some(
+      (binding) =>
+        binding.project_id === projectId &&
+        (provider === "all" || binding.provider === provider),
+    )
+      ? projectId
+      : "all";
+  useEffect(() => {
+    saveTaskViewPreferences({ provider, projectId: activeProjectId, filters });
+  }, [provider, activeProjectId, filters]);
   const selectedBindings = useMemo(
     () =>
       bindings.filter(
         (binding) =>
           (provider === "all" || binding.provider === provider) &&
-          (projectId === "all" || binding.project_id === projectId),
+          (activeProjectId === "all" || binding.project_id === activeProjectId),
       ),
-    [bindings, provider, projectId],
+    [bindings, provider, activeProjectId],
   );
   const { sources, items, load } = useRepositoryTasks(
     selectedBindings,
@@ -98,21 +109,59 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   };
   const loading = discovering || sources.some((source) => source.loading);
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h1 className="app-page-title">{t("tasks.title")}</h1>
-        <button
-          type="button"
-          className="app-button-secondary"
-          aria-label={t("tasks.connections")}
-          onClick={() => setConnections((value) => !value)}
-        >
-          <Settings2 size={14} />
-          {t("tasks.connections")}
-        </button>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-0">
+      <TaskToolbar
+        provider={provider}
+        projectId={activeProjectId}
+        projects={projects}
+        bindings={bindings}
+        identities={[
+          ...new Set(
+            sources.map(
+              (source) =>
+                `${source.binding.host} · ${source.identity || t("tasks.checkingIdentity")}`,
+            ),
+          ),
+        ]}
+        filters={filters}
+        search={search}
+        loading={loading}
+        connections={connections}
+        onProvider={(value) => {
+          setProvider(value);
+          if (
+            !bindings.some(
+              (binding) =>
+                binding.project_id === projectId &&
+                (value === "all" || binding.provider === value),
+            )
+          )
+            setProjectId("all");
+          setSelection(null);
+        }}
+        onProject={(value) => {
+          setProjectId(value);
+          setSelection(null);
+        }}
+        onFilters={(patch) => {
+          setFilters((previous) => ({ ...previous, ...patch }));
+          setSelection(null);
+        }}
+        onSearch={setSearch}
+        onRefresh={() =>
+          void refreshBindings().catch((error) =>
+            setSettingsError(api.taskFailure(error).message),
+          )
+        }
+        onConnections={() => setConnections((value) => !value)}
+        onOpenRepository={(binding) =>
+          void openUrl(
+            `https://${binding.host}/${binding.repository.split("/").map(encodeURIComponent).join("/")}`,
+          ).catch((error) => setSettingsError(api.taskFailure(error).message))
+        }
+      />
       {settingsError && (
-        <p role="alert" className="text-xs text-danger">
+        <p role="alert" className="my-3 text-xs text-danger">
           {settingsError}
           <button
             type="button"
@@ -134,119 +183,13 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           onClose={() => setConnections(false)}
         />
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        <ThemedSelect
-          aria-label={t("tasks.provider")}
-          value={provider}
-          onChange={(event) => setProvider(event.target.value)}
-        >
-          <option value="all">{t("tasks.allProviders")}</option>
-          <option value="github">GitHub</option>
-          <option value="gitlab">GitLab</option>
-        </ThemedSelect>
-        <ThemedSelect
-          aria-label={t("tasks.project")}
-          value={projectId}
-          onChange={(event) => setProjectId(event.target.value)}
-        >
-          <option value="all">{t("tasks.allProjects")}</option>
-          {projects.map((project) => (
-            <option value={project.id} key={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </ThemedSelect>
-        <ThemedSelect
-          aria-label={t("tasks.kind")}
-          value={filters.kind}
-          onChange={(event) =>
-            setFilters((previous) => ({
-              ...previous,
-              kind: event.target.value === "review" ? "review" : "issue",
-            }))
-          }
-        >
-          <option value="issue">Issues</option>
-          <option value="review">PR / MR</option>
-        </ThemedSelect>
-        <ThemedSelect
-          aria-label={t("tasks.state")}
-          value={filters.state}
-          onChange={(event) =>
-            setFilters((previous) => ({
-              ...previous,
-              state:
-                event.target.value === "closed"
-                  ? "closed"
-                  : event.target.value === "all"
-                    ? "all"
-                    : "open",
-            }))
-          }
-        >
-          <option value="open">{t("tasks.open")}</option>
-          <option value="closed">{t("tasks.closed")}</option>
-          <option value="all">{t("tasks.allStates")}</option>
-        </ThemedSelect>
-        <ThemedSelect
-          aria-label={t("tasks.personal")}
-          value={filters.personal}
-          onChange={(event) =>
-            setFilters((previous) => ({
-              ...previous,
-              personal:
-                event.target.value === "assigned"
-                  ? "assigned"
-                  : event.target.value === "created"
-                    ? "created"
-                    : "all",
-            }))
-          }
-        >
-          <option value="all">{t("tasks.everyone")}</option>
-          <option value="assigned">{t("tasks.assigned")}</option>
-          <option value="created">{t("tasks.created")}</option>
-        </ThemedSelect>
-        <input
-          aria-label={t("tasks.search")}
-          className="app-input min-w-32 flex-1"
-          value={search}
-          placeholder={t("tasks.search")}
-          maxLength={256}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <button
-          type="button"
-          className="app-button-ghost"
-          aria-label={t("common.refresh")}
-          disabled={loading}
-          onClick={() =>
-            void refreshBindings().catch((error) =>
-              setSettingsError(api.taskFailure(error).message),
-            )
-          }
-        >
-          <RefreshCw size={15} />
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
-        {sources.map((source) => (
-          <span
-            key={source.binding.id}
-            title={`${source.binding.host}/${source.binding.repository}`}
-          >
-            {source.binding.host} ·{" "}
-            {source.identity || t("tasks.checkingIdentity")}
-          </span>
-        ))}
-      </div>
       {sources
         .filter((source) => source.error)
         .map((source) => (
           <div
             role="alert"
             key={source.binding.id}
-            className="flex flex-wrap items-center gap-2 text-xs text-danger"
+            className="my-2 flex flex-wrap items-center gap-2 text-xs text-danger"
           >
             <span>
               {source.binding.repository} ·{" "}
@@ -268,101 +211,41 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
       {sources.some((source) => source.limited) && (
         <p className="text-xs text-muted">{t("tasks.limited")}</p>
       )}
-      {!bindings.length && !loading && !settingsError && (
-        <p className="py-12 text-center text-sm text-muted">
-          {t("tasks.notConnected")}
-        </p>
-      )}
-      {!!bindings.length &&
-        !items.length &&
-        !loading &&
-        !sources.some((source) => source.error) && (
-          <p className="py-12 text-center text-sm text-muted">
-            {t("tasks.empty")}
-          </p>
-        )}
-      {loading && (
-        <p role="status" className="text-xs text-muted">
-          {t("common.loading")}
-        </p>
-      )}
       <div className="flex min-h-0 flex-1 gap-3">
         <div
           hidden={selection?.full}
           className={cn(
-            "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border-subtle",
+            "min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-border-subtle [color-scheme:var(--color-scheme)]",
             selection?.full && "hidden",
           )}
         >
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-bg-secondary text-muted">
-              <tr>
-                <th className="p-2">{t("tasks.task")}</th>
-                <th className="p-2">{t("tasks.project")}</th>
-                <th className="p-2">{t("tasks.state")}</th>
-                <th className="p-2">{t("tasks.assignee")}</th>
-                <th className="p-2">{t("tasks.updated")}</th>
-                <th>
-                  <span className="sr-only">{t("tasks.preview")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((task) => (
-                <tr
-                  key={`${task.binding_id}/${task.key}`}
-                  className="border-t border-border-subtle hover:bg-surface-hover"
-                >
-                  <td className="max-w-md p-2">
-                    <button
-                      type="button"
-                      className="text-left"
-                      onClick={(event) => open(task, true, event.currentTarget)}
-                      onKeyDown={(event) => {
-                        if (event.key === " ") {
-                          event.preventDefault();
-                          open(task, false, event.currentTarget);
-                        }
-                      }}
-                    >
-                      <span className="mr-2 text-muted">
-                        {task.kind === "review" && task.provider === "gitlab"
-                          ? "!"
-                          : "#"}
-                        {task.number}
-                      </span>
-                      {task.title}
-                    </button>
-                  </td>
-                  <td
-                    className="max-w-40 truncate p-2"
-                    title={`${task.host}/${task.repository}`}
+          <TaskListTable
+            items={items}
+            projects={projects}
+            selectedKey={selection?.task.key}
+            onOpen={open}
+            empty={
+              loading ? (
+                <p role="status">{t("common.loading")}</p>
+              ) : settingsError ||
+                sources.some(
+                  (source) => source.error,
+                ) ? null : selectedBindings.length ? (
+                t("tasks.empty")
+              ) : (
+                <div className="mx-auto max-w-md space-y-3">
+                  <p>{t("tasks.notConnected")}</p>
+                  <button
+                    type="button"
+                    className="app-button-secondary"
+                    onClick={() => setConnections(true)}
                   >
-                    {task.repository}
-                  </td>
-                  <td className="p-2">{task.state}</td>
-                  <td className="p-2">{task.assignees.join(", ") || "—"}</td>
-                  <td className="whitespace-nowrap p-2">
-                    {task.updated_at
-                      ? new Date(task.updated_at).toLocaleDateString()
-                      : "—"}
-                  </td>
-                  <td className="p-1">
-                    <button
-                      type="button"
-                      className="app-button-ghost"
-                      aria-label={t("tasks.preview")}
-                      onClick={(event) =>
-                        open(task, false, event.currentTarget)
-                      }
-                    >
-                      <Eye size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {t("tasks.connections")}
+                  </button>
+                </div>
+              )
+            }
+          />
           {sources.some((source) => source.hasMore) && (
             <button
               type="button"

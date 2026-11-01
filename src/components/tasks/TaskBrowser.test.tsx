@@ -5,6 +5,8 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { makeProject } from "../../../tests/fixtures/workspace";
 import type { RepositoryTask, TaskBinding } from "../../lib/tauri";
 import { TaskBrowser } from "./TaskBrowser";
 vi.mock("react-i18next", () => ({
@@ -182,7 +184,7 @@ it("waits for CLI source discovery and refreshes discovered repositories", async
   expect(element.textContent).toContain("tasks.notConnected");
   await act(async () =>
     element
-      .querySelector<HTMLButtonElement>('button[aria-label="common.refresh"]')
+      .querySelector<HTMLButtonElement>('button[aria-label="settings.refresh"]')
       ?.click(),
   );
   expect(reads).toBe(2);
@@ -255,4 +257,221 @@ it("uses CLI host discovery to select GitLab when choosing a self-hosted remote"
     }),
   });
   await act(async () => root.unmount());
+});
+
+const scopedBindings: TaskBinding[] = ["github", "gitlab"].map(
+  (provider, index) => ({
+    id: `binding-${index}`,
+    project_id: `project-${index}`,
+    provider: provider === "github" ? "github" : "gitlab",
+    host: `${provider}.example.invalid`,
+    repository: `team/project-${index}`,
+    launcher: null,
+  }),
+);
+
+it("offers repository setup when the selected platform has no discovered source", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "task_bindings") return [scopedBindings[0]];
+    if (command === "task_list")
+      return { items: [], identity: "demo", has_more: false, limited: false };
+    return undefined;
+  });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser projects={[]} />
+      </MemoryRouter>,
+    ),
+  );
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>('[role="radio"][aria-label="GitLab"]')!
+      .click(),
+  );
+  expect(host.textContent).toContain("tasks.notConnected");
+  expect(host.textContent).not.toContain("tasks.empty");
+  const setup = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+    (button) => button.textContent === "tasks.connections",
+  )!;
+  await act(async () => setup.click());
+  expect(
+    host.querySelector('section[aria-label="tasks.connections"] form'),
+  ).not.toBeNull();
+  await act(async () => root.unmount());
+});
+
+it("switches platform and kind filters, resets an incompatible project, and opens the selected repository", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "task_bindings") return scopedBindings;
+    if (command === "task_list")
+      return { items: [], identity: "demo", has_more: false, limited: false };
+    return undefined;
+  });
+  vi.mocked(openUrl).mockResolvedValue();
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser
+          projects={scopedBindings.map((binding, index) => ({
+            ...makeProject(),
+            id: binding.project_id,
+            name: `Project ${index}`,
+          }))}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const radio = (name: string) =>
+    host.querySelector<HTMLButtonElement>(
+      `[role="radio"][aria-label="${name}"]`,
+    )!;
+  const projectMenu = () =>
+    host.querySelector<HTMLButtonElement>(
+      '[role="combobox"][aria-label="tasks.project"]',
+    )!;
+  const choose = async (label: string, value: string) => {
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          `[role="combobox"][aria-label="${label}"]`,
+        )!
+        .click(),
+    );
+    const option = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ].find((option) => option.textContent === value)!;
+    await act(async () => option.click());
+  };
+  await choose("tasks.project", "Project 0");
+  expect(projectMenu().textContent).toBe("Project 0");
+  await act(async () => radio("GitLab").click());
+  expect(projectMenu().textContent).toBe("tasks.allProjects");
+  await act(async () => projectMenu().click());
+  expect(
+    [...document.querySelectorAll('[role="option"]')].map(
+      (option) => option.textContent,
+    ),
+  ).toEqual(["tasks.allProjects", "Project 1"]);
+  await act(async () =>
+    document.querySelectorAll<HTMLButtonElement>('[role="option"]')[1].click(),
+  );
+  await act(async () => radio("MR").click());
+  await act(async () => radio("tasks.closed").click());
+  await choose("tasks.personal", "tasks.assigned");
+  expect(vi.mocked(invoke)).toHaveBeenLastCalledWith(
+    "task_list",
+    expect.objectContaining({
+      bindingId: "binding-1",
+      filters: {
+        kind: "review",
+        state: "closed",
+        personal: "assigned",
+        text: "",
+      },
+    }),
+  );
+  expect(JSON.parse(localStorage.getItem("agent-hub.taskView")!)).toMatchObject(
+    {
+      provider: "gitlab",
+      projectId: "project-1",
+      filters: { kind: "review", personal: "assigned" },
+    },
+  );
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="tasks.openRemote"]',
+      )!
+      .click(),
+  );
+  expect(openUrl).toHaveBeenCalledWith(
+    "https://gitlab.example.invalid/team/project-1",
+  );
+  await act(async () => root.unmount());
+  host.remove();
+});
+
+it("supports keyboard platform switching and ignores a previous platform's late result", async () => {
+  let resolveOld!: (value: unknown) => void;
+  const old = new Promise((resolve) => {
+    resolveOld = resolve;
+  });
+  vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "task_bindings") return scopedBindings;
+    if (
+      command === "task_list" &&
+      args &&
+      "bindingId" in args &&
+      args.bindingId === "binding-0"
+    )
+      return old;
+    if (command === "task_list")
+      return { items: [], identity: "demo", has_more: false, limited: false };
+    return undefined;
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <TaskBrowser projects={[]} />
+      </MemoryRouter>,
+    ),
+  );
+  const all = host.querySelector<HTMLButtonElement>(
+    '[role="radio"][aria-label="tasks.allProviders"]',
+  )!;
+  await act(async () => {
+    all.focus();
+    all.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    );
+  });
+  const gitlab = host.querySelector<HTMLButtonElement>(
+    '[role="radio"][aria-label="GitLab"]',
+  )!;
+  expect(document.activeElement).toBe(gitlab);
+  expect(gitlab.getAttribute("aria-checked")).toBe("true");
+  await act(async () =>
+    resolveOld({
+      items: [
+        {
+          key: "old",
+          binding_id: "binding-0",
+          project_id: "project-0",
+          provider: "github",
+          host: "github.example.invalid",
+          repository: "team/project-0",
+          kind: "issue",
+          number: 1,
+          title: "Stale task",
+          state: "open",
+          updated_at: "",
+          assignees: [],
+          url: "https://github.example.invalid/team/project-0/issues/1",
+        },
+      ],
+      identity: "old",
+      has_more: false,
+      limited: false,
+    }),
+  );
+  expect(host.textContent).not.toContain("Stale task");
+  expect(host.textContent).toContain("tasks.empty");
+  await act(async () =>
+    gitlab.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+    ),
+  );
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("GitHub");
+  expect(host.querySelector('[role="radio"][aria-label="PR"]')).not.toBeNull();
+  await act(async () => root.unmount());
+  host.remove();
 });

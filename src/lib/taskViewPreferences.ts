@@ -1,6 +1,6 @@
-import type { TaskFilters } from "./taskBrowserApi";
+import type { TaskFilters, TaskProvider } from "./taskBrowserApi";
 export interface TaskViewPreferences {
-  provider: string;
+  provider: "all" | TaskProvider;
   projectId: string;
   filters: TaskFilters;
 }

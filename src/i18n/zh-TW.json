@@ -1847,6 +1847,9 @@
     "launcherArgsInvalid": "啟動參數須為字串組成的 JSON 陣列",
     "allProviders": "全部平台",
     "allProjects": "全部專案",
+    "issues": "議題",
+    "titleContext": "標題 / 上下文",
+    "merged": "已合併",
     "kind": "任務類型",
     "state": "遠端狀態",
     "open": "未關閉",
@@ -1970,6 +1973,23 @@
       "opened": "未關閉"
     }
   },
+  "worktree": {
+    "title": "工作樹",
+    "main": "主要工作樹",
+    "locked": "已鎖定",
+    "toggleProject": "展開或收合 {{name}}",
+    "removeProject": "移除專案 {{name}}",
+    "list": "{{name}} 的工作樹",
+    "refresh": "重新整理工作樹",
+    "refreshFiles": "重新整理檔案樹",
+    "projectSkills": "專案技能",
+    "back": "返回工作區",
+    "emptyDirectory": "空資料夾",
+    "symlink": "符號連結，請在外部編輯器中開啟",
+    "unavailable": "此工作樹無法使用，請重新整理清單後重新選擇。",
+    "terminalLimit": "已達到 8 個終端窗格上限，請先關閉其他工作樹中的終端。",
+    "unsaved": "未儲存"
+  },
   "git": {
     "worktree": "工作目錄",
     "unborn": "尚無提交",
@@ -1992,22 +2012,5 @@
       "removed": "刪除"
     },
     "operation": "儲存庫操作狀態"
-  },
-  "worktree": {
-    "title": "工作樹",
-    "main": "主要工作樹",
-    "locked": "已鎖定",
-    "toggleProject": "展開或收合 {{name}}",
-    "removeProject": "移除專案 {{name}}",
-    "list": "{{name}} 的工作樹",
-    "refresh": "重新整理工作樹",
-    "refreshFiles": "重新整理檔案樹",
-    "projectSkills": "專案技能",
-    "back": "返回工作區",
-    "emptyDirectory": "空資料夾",
-    "symlink": "符號連結，請在外部編輯器中開啟",
-    "unavailable": "此工作樹無法使用，請重新整理清單後重新選擇。",
-    "terminalLimit": "已達到 8 個終端窗格上限，請先關閉其他工作樹中的終端。",
-    "unsaved": "未儲存"
   }
 }

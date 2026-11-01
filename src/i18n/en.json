@@ -1905,6 +1905,9 @@
     "launcherArgsInvalid": "Launcher arguments must be a JSON array of strings",
     "allProviders": "All platforms",
     "allProjects": "All projects",
+    "issues": "Issues",
+    "titleContext": "Title / Context",
+    "merged": "Merged",
     "kind": "Task type",
     "state": "Remote state",
     "open": "Open",
@@ -2028,6 +2031,23 @@
       "opened": "Open"
     }
   },
+  "worktree": {
+    "title": "Worktree",
+    "main": "Main",
+    "locked": "Locked",
+    "toggleProject": "Expand or collapse {{name}}",
+    "removeProject": "Remove project {{name}}",
+    "list": "Worktrees in {{name}}",
+    "refresh": "Refresh worktrees",
+    "refreshFiles": "Refresh files",
+    "projectSkills": "Project skills",
+    "back": "Back to workspace",
+    "emptyDirectory": "Empty folder",
+    "symlink": "Symbolic link. Open in an external editor.",
+    "unavailable": "This worktree is unavailable. Refresh the list and select another worktree.",
+    "terminalLimit": "The limit of 8 terminal panes has been reached. Close a terminal in another worktree first.",
+    "unsaved": "Unsaved"
+  },
   "git": {
     "worktree": "Worktree",
     "unborn": "No commits yet",
@@ -2050,22 +2070,5 @@
       "removed": "Deleted"
     },
     "operation": "Repository operation"
-  },
-  "worktree": {
-    "title": "Worktree",
-    "main": "Main",
-    "locked": "Locked",
-    "toggleProject": "Expand or collapse {{name}}",
-    "removeProject": "Remove project {{name}}",
-    "list": "Worktrees in {{name}}",
-    "refresh": "Refresh worktrees",
-    "refreshFiles": "Refresh files",
-    "projectSkills": "Project skills",
-    "back": "Back to workspace",
-    "emptyDirectory": "Empty folder",
-    "symlink": "Symbolic link. Open in an external editor.",
-    "unavailable": "This worktree is unavailable. Refresh the list and select another worktree.",
-    "terminalLimit": "The limit of 8 terminal panes has been reached. Close a terminal in another worktree first.",
-    "unsaved": "Unsaved"
   }
 }

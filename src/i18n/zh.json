@@ -1902,6 +1902,9 @@
     "launcherArgsInvalid": "启动参数须为字符串组成的 JSON 数组",
     "allProviders": "全部平台",
     "allProjects": "全部项目",
+    "issues": "议题",
+    "titleContext": "标题 / 上下文",
+    "merged": "已合并",
     "kind": "任务类型",
     "state": "远端状态",
     "open": "未关闭",
@@ -2025,6 +2028,23 @@
       "opened": "未关闭"
     }
   },
+  "worktree": {
+    "title": "工作树",
+    "main": "主工作树",
+    "locked": "已锁定",
+    "toggleProject": "展开或收起 {{name}}",
+    "removeProject": "移除项目 {{name}}",
+    "list": "{{name}} 的工作树",
+    "refresh": "刷新工作树",
+    "refreshFiles": "刷新文件树",
+    "projectSkills": "项目技能",
+    "back": "返回工作区",
+    "emptyDirectory": "空文件夹",
+    "symlink": "符号链接，请在外部编辑器中打开",
+    "unavailable": "该工作树不可用，请刷新列表后重新选择。",
+    "terminalLimit": "已达到 8 个终端窗格上限，请先关闭其他工作树中的终端。",
+    "unsaved": "未保存"
+  },
   "git": {
     "worktree": "工作目录",
     "unborn": "尚无提交",
@@ -2047,22 +2067,5 @@
       "removed": "删除"
     },
     "operation": "仓库操作状态"
-  },
-  "worktree": {
-    "title": "工作树",
-    "main": "主工作树",
-    "locked": "已锁定",
-    "toggleProject": "展开或收起 {{name}}",
-    "removeProject": "移除项目 {{name}}",
-    "list": "{{name}} 的工作树",
-    "refresh": "刷新工作树",
-    "refreshFiles": "刷新文件树",
-    "projectSkills": "项目技能",
-    "back": "返回工作区",
-    "emptyDirectory": "空文件夹",
-    "symlink": "符号链接，请在外部编辑器中打开",
-    "unavailable": "该工作树不可用，请刷新列表后重新选择。",
-    "terminalLimit": "已达到 8 个终端窗格上限，请先关闭其他工作树中的终端。",
-    "unsaved": "未保存"
   }
 }
