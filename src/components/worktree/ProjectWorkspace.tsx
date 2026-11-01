@@ -6,8 +6,8 @@ import {
   GitBranch,
   RefreshCw,
   TerminalSquare,
-  X,
 } from "lucide-react";
+import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
@@ -91,14 +91,6 @@ export function ProjectWorkspace({
         "workbench-editor-panel min-h-0 min-w-0 flex-1 flex-col overflow-hidden mr-1",
       )}
     >
-      {route && file?.shown && (
-        <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-secondary px-2">
-          {workspaceContext}
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {workspaceActions}
-          </div>
-        </header>
-      )}
       {route &&
         (error ||
           (worktrees.length > 0 && (!worktree || !worktree.available))) && (
@@ -139,38 +131,51 @@ export function ProjectWorkspace({
                 <TerminalSquare size={13} />
                 {t("terminal.title")}
               </button>
-              <button
-                type="button"
-                title={file.path}
-                aria-pressed={file.shown}
-                onClick={() =>
-                  setFiles((previous) => ({
-                    ...previous,
-                    [scope]: { ...file, shown: true },
-                  }))
-                }
+              <div
                 className={cn(
-                  "app-button-ghost min-w-0 gap-1.5 text-xs",
-                  file.shown && "bg-surface-active",
+                  "flex h-full min-w-0 items-center rounded-t border-b-2",
+                  file.shown
+                    ? "border-accent bg-surface"
+                    : "border-transparent",
                 )}
               >
-                <FileCode2 size={13} className="shrink-0" />
-                <span className="truncate">{file.path.split("/").at(-1)}</span>
-              </button>
-              <button
-                type="button"
-                aria-label={t("fileReader.closeFile", { path: file.path })}
-                onClick={() =>
-                  setFiles((previous) => {
-                    const next = { ...previous };
-                    delete next[scope];
-                    return next;
-                  })
-                }
-                className="app-button-ghost h-6 w-6 shrink-0 p-0"
-              >
-                <X size={12} />
-              </button>
+                <button
+                  type="button"
+                  title={file.path}
+                  aria-pressed={file.shown}
+                  onClick={() =>
+                    setFiles((previous) => ({
+                      ...previous,
+                      [scope]: { ...file, shown: true },
+                    }))
+                  }
+                  className="flex h-full min-w-0 items-center gap-1.5 px-2 text-xs text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                >
+                  <FileCode2 size={13} className="shrink-0" />
+                  <span className="truncate">
+                    {file.path.split("/").at(-1)}
+                  </span>
+                </button>
+                <TabCloseButton
+                  aria-label={t("fileReader.closeFile", { path: file.path })}
+                  title={t("fileReader.closeFile", { path: file.path })}
+                  onClick={() =>
+                    setFiles((previous) => {
+                      const next = { ...previous };
+                      delete next[scope];
+                      return next;
+                    })
+                  }
+                />
+              </div>
+              {file.shown && (
+                <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1">
+                  {workspaceContext}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {workspaceActions}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <TerminalWorkspace

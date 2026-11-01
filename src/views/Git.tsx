@@ -11,6 +11,7 @@ import {
   commitProjectGit,
   setProjectGitStaged,
   getProjectGitDiff,
+  getProjectGitCommitDiff,
   getProjectGitStatus,
   type GitStatus,
 } from "../lib/gitApi";
@@ -32,6 +33,7 @@ export function Git() {
   const activeId = project?.id;
   const [revision, setRevision] = useState(0);
   const [selection, setSelection] = useState<GitSelection>();
+  const [commitSha, setCommitSha] = useState<string>();
   const [historyExpanded, setHistoryExpanded] = useState(true);
   const [actionType, setActionType] = useState<"stage" | "commit">();
   const busy = actionType !== undefined;
@@ -44,6 +46,7 @@ export function Git() {
   if (previousScope !== scope) {
     setPreviousScope(scope);
     setSelection(undefined);
+    setCommitSha(undefined);
     setFileView(false);
     setActionError(undefined);
   }
@@ -58,7 +61,7 @@ export function Git() {
   const error =
     statusResult?.key === statusKey ? statusResult.error : undefined;
   const loading = !!activeId && statusResult?.key !== statusKey;
-  const diffKey = JSON.stringify([scope, selection, revision]);
+  const diffKey = JSON.stringify([scope, selection, commitSha, revision]);
   const [diffResult, setDiffResult] = useState<{
     key: string;
     content?: string;
@@ -101,12 +104,9 @@ export function Git() {
   useEffect(() => {
     if (!activeId || !selection || fileView) return;
     let cancelled = false;
-    const request = getProjectGitDiff(
-      activeId,
-      root,
-      selection.path,
-      selection.staged,
-    );
+    const request = commitSha
+      ? getProjectGitCommitDiff(activeId, root, commitSha, selection.path)
+      : getProjectGitDiff(activeId, root, selection.path, selection.staged);
     void request.then(
       (content) => {
         if (!cancelled) setDiffResult({ key: diffKey, content });
@@ -122,7 +122,7 @@ export function Git() {
     return () => {
       cancelled = true;
     };
-  }, [activeId, root, selection, fileView, diffKey, t]);
+  }, [activeId, root, selection, commitSha, fileView, diffKey, t]);
   const files = status?.files ?? [];
   const { stagedFiles, unstagedFiles } = groupGitChanges(files);
   const branch = status?.branch ?? status?.head?.slice(0, 8) ?? t("git.unborn");
@@ -152,6 +152,7 @@ export function Git() {
     if (
       status &&
       selection &&
+      !commitSha &&
       !status.files.some(
         (file) =>
           file.path === selection.path &&
@@ -161,13 +162,14 @@ export function Git() {
       setSelection(undefined);
       setFileView(false);
     }
-  }, [status, selection]);
+  }, [status, selection, commitSha]);
   const changeProps = {
-    selection,
+    selection: commitSha ? undefined : selection,
     busy: busy || loading,
     batchLimited: !!status?.truncated,
     onSelect: (next: GitSelection) => {
       setSelection(next);
+      setCommitSha(undefined);
       setFileView(false);
     },
     onStage: (paths: string[], staged: boolean) => {
@@ -291,9 +293,26 @@ export function Git() {
           bottom={
             <GitHistory
               key={`${scope}:history`}
-              commits={status?.commits ?? []}
+              status={status}
+              loading={loading}
               expanded={historyExpanded}
               onExpandedChange={setHistoryExpanded}
+              onRefresh={refresh}
+              target={
+                activeId
+                  ? { projectId: activeId, worktreePath: root }
+                  : undefined
+              }
+              selected={
+                commitSha && selection
+                  ? { sha: commitSha, path: selection.path }
+                  : undefined
+              }
+              onSelect={({ sha, path }) => {
+                setCommitSha(sha);
+                setSelection({ path, staged: false });
+                setFileView(false);
+              }}
             />
           }
         />
@@ -349,7 +368,13 @@ export function Git() {
                           {selection.path.split("/").pop()}
                         </span>
                         <span className="shrink-0 text-muted">
-                          {t(selection.staged ? "git.staged" : "git.unstaged")}
+                          {commitSha
+                            ? commitSha.slice(0, 7)
+                            : t(
+                                selection.staged
+                                  ? "git.staged"
+                                  : "git.unstaged",
+                              )}
                         </span>
                         <button
                           type="button"
@@ -363,6 +388,7 @@ export function Git() {
                               )
                               ?.focus();
                             setSelection(undefined);
+                            setCommitSha(undefined);
                             setFileView(false);
                           }}
                         >
@@ -393,7 +419,9 @@ export function Git() {
                         patch={diff}
                         path={selection.path}
                         staged={selection.staged}
+                        historical={!!commitSha}
                         onOpenFile={
+                          !commitSha &&
                           files.find((file) => file.path === selection.path)
                             ?.status !== "deleted"
                             ? () => setFileView(true)

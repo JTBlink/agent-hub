@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Code2, Loader2, WrapText } from "lucide-react";
+import {
+  ChevronRight,
+  Code2,
+  FileCode2,
+  Loader2,
+  WrapText,
+} from "lucide-react";
 import { getErrorMessage } from "../../lib/error";
 import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
@@ -58,13 +64,39 @@ export function FileContent({
   const lines = file.content.split("\n").length;
   return (
     <>
-      <div className="flex min-h-10 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-3 py-1.5">
-        <span
+      <div className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border-subtle px-3 py-0.5">
+        <div
           title={file.path}
-          className="min-w-0 flex-1 truncate font-mono text-xs text-muted"
+          aria-label={file.path}
+          className="flex min-w-0 flex-1 items-center overflow-hidden text-xs text-muted"
         >
-          {file.path}
-        </span>
+          {file.path.split("/").map((part, index, parts) => (
+            <span key={index} className="flex min-w-0 items-center">
+              {index > 0 && (
+                <ChevronRight
+                  aria-hidden="true"
+                  size={12}
+                  className="mx-1 shrink-0 text-faint"
+                />
+              )}
+              {index === parts.length - 1 && (
+                <FileCode2
+                  aria-hidden="true"
+                  size={13}
+                  className="mr-1.5 shrink-0"
+                />
+              )}
+              <span
+                className={cn(
+                  "truncate",
+                  index === parts.length - 1 && "text-secondary",
+                )}
+              >
+                {part}
+              </span>
+            </span>
+          ))}
+        </div>
         <div className="flex shrink-0 items-center gap-1">
           {actions}
           <button

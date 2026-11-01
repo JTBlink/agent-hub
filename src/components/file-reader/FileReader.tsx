@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
-import { FileText, PanelLeft, X } from "lucide-react";
+import { FileText, PanelLeft } from "lucide-react";
+import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
 import { FileTree } from "./FileTree";
 import { FileContent } from "./FileContent";
@@ -93,14 +94,11 @@ export function FileReader({
                   />
                   <span className="truncate">{path.split("/").at(-1)}</span>
                 </button>
-                <button
-                  type="button"
+                <TabCloseButton
                   aria-label={t("fileReader.closeFile", { path })}
+                  title={t("fileReader.closeFile", { path })}
                   onClick={() => closeTab(path)}
-                  className="app-button-ghost mr-1 shrink-0 p-1"
-                >
-                  <X aria-hidden="true" className="h-3 w-3" />
-                </button>
+                />
               </div>
             ))}
           </nav>

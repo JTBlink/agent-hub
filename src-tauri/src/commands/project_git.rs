@@ -71,3 +71,68 @@ pub async fn commit_project_git(
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn get_project_git_commit(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    sha: String,
+) -> Result<project_git::GitCommitDetails, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::commit_details(&root, &sha).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn get_project_git_commit_diff(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    sha: String,
+    path: String,
+) -> Result<String, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::commit_diff(&root, &sha, &path).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn get_project_git_references(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+) -> Result<project_git::GitReferences, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::references(&root).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn get_project_git_history(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    sha: String,
+    offset: usize,
+) -> Result<project_git::GitHistoryPage, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::commit_history(&root, &sha, offset).map_err(AppError::io)
+    })
+    .await?
+}

@@ -23,6 +23,10 @@ export function gitFixture(
   if (
     ![
       "get_project_git_status",
+      "get_project_git_history",
+      "get_project_git_references",
+      "get_project_git_commit",
+      "get_project_git_commit_diff",
       "get_project_git_diff",
       "set_project_git_staged",
       "commit_project_git",
@@ -118,6 +122,68 @@ export function gitFixture(
     };
     snapshots.set(key, snapshot);
   }
+  if (command === "get_project_git_history")
+    return {
+      handled: true,
+      value: { commits: snapshot.commits, has_more: false },
+    };
+  if (command === "get_project_git_references")
+    return {
+      handled: true,
+      value: {
+        entries: [
+          { kind: "branches", name: "feature/parser", sha: snapshot.head },
+          {
+            kind: "remotes",
+            name: "origin/feature/parser",
+            sha: snapshot.head,
+          },
+          {
+            kind: "tags",
+            name: "v1.0.0",
+            sha: snapshot.head,
+            summary: "Release v1.0.0",
+          },
+          {
+            kind: "stashes",
+            name: "stash@{0}: Example changes",
+            sha: snapshot.head,
+          },
+        ],
+        truncated: false,
+      },
+    };
+  if (command === "get_project_git_commit") {
+    const sha = "sha" in args ? String(args.sha) : snapshot.commits[0].sha;
+    const commit =
+      snapshot.commits.find((commit) => commit.sha === sha) ??
+      snapshot.commits[0];
+    return {
+      handled: true,
+      value: {
+        ...commit,
+        message:
+          commit.summary +
+          "\n\nPreserve workspace context and cover empty input.",
+        committer: "example",
+        parents: ["123456abcdef7890123456abcdef7890123456abcd"],
+        additions: 18,
+        deletions: 4,
+        truncated: false,
+        files: [
+          { path: "src/parser.rs", old_path: null, status: "modified" },
+          {
+            path: "src/components/Workspace.tsx",
+            old_path: null,
+            status: "modified",
+          },
+          { path: "tests/parser.rs", old_path: null, status: "added" },
+        ],
+      },
+    };
+  }
+  if (command === "get_project_git_commit_diff")
+    return { handled: true, value: patch };
   if (command === "get_project_git_status")
     return { handled: true, value: structuredClone(snapshot) };
   if (command === "get_project_git_diff") {

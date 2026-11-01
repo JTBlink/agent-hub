@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { ChevronRight, FileCode2, Minus, Plus } from "lucide-react";
+import { ChevronRight, FileCode2, Folder, Minus, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitFile } from "../../lib/gitApi";
 import { cn } from "../../utils";
@@ -54,7 +54,8 @@ type ChangeProps = {
   busy: boolean;
   batchLimited: boolean;
   onSelect: (selection: GitSelection) => void;
-  onStage: (paths: string[], staged: boolean) => void;
+  onStage?: (paths: string[], staged: boolean) => void;
+  fileLabel?: string;
 };
 function ChangeTree({
   nodes,
@@ -78,15 +79,26 @@ function ChangeTree({
             >
               <button
                 type="button"
-                title={node.path}
-                aria-label={`${t(props.staged ? "git.staged" : "git.unstaged")}: ${node.path}`}
+                title={
+                  node.file.old_path
+                    ? `${node.file.old_path} → ${node.path}`
+                    : node.path
+                }
+                aria-label={`${props.fileLabel ?? t(props.staged ? "git.staged" : "git.unstaged")}: ${node.path}`}
                 aria-current={
                   props.selection?.path === node.path &&
                   props.selection.staged === props.staged
                     ? "true"
                     : undefined
                 }
-                className="flex h-6 min-w-0 flex-1 items-center gap-1.5 pr-1 text-left text-xs text-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                className={cn(
+                  "flex h-6 min-w-0 flex-1 items-center gap-1.5 pr-1 text-left text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                  node.file.conflicted || node.file.status === "deleted"
+                    ? "text-danger"
+                    : node.file.status === "added"
+                      ? "text-[var(--color-brand-teal)]"
+                      : "text-[var(--terminal-yellow)]",
+                )}
                 style={{ paddingLeft: 14 + depth * 12 }}
                 onClick={() =>
                   props.onSelect({ path: node.path, staged: props.staged })
@@ -97,28 +109,23 @@ function ChangeTree({
                 <span
                   title={t(`git.states.${node.file.status}`)}
                   aria-label={t(`git.states.${node.file.status}`)}
-                  className={cn(
-                    "w-4 shrink-0 text-center font-mono",
-                    node.file.conflicted || node.file.status === "deleted"
-                      ? "text-danger"
-                      : node.file.status === "added"
-                        ? "text-[var(--color-brand-teal)]"
-                        : "text-[var(--terminal-yellow)]",
-                  )}
+                  className="w-4 shrink-0 text-center font-mono"
                 >
                   {markers[node.file.status] ?? "M"}
                 </span>
               </button>
-              <button
-                type="button"
-                disabled={props.busy}
-                title={t(props.staged ? "git.unstageFile" : "git.stageFile")}
-                aria-label={`${t(props.staged ? "git.unstageFile" : "git.stageFile")}: ${node.path}`}
-                className="app-button-ghost mr-1 h-6 w-6 shrink-0 p-0 text-muted sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                onClick={() => props.onStage([node.path], !props.staged)}
-              >
-                {props.staged ? <Minus size={14} /> : <Plus size={14} />}
-              </button>
+              {props.onStage && (
+                <button
+                  type="button"
+                  disabled={props.busy}
+                  title={t(props.staged ? "git.unstageFile" : "git.stageFile")}
+                  aria-label={`${t(props.staged ? "git.unstageFile" : "git.stageFile")}: ${node.path}`}
+                  className="app-button-ghost mr-1 h-6 w-6 shrink-0 p-0 text-muted sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                  onClick={() => props.onStage?.([node.path], !props.staged)}
+                >
+                  {props.staged ? <Minus size={14} /> : <Plus size={14} />}
+                </button>
+              )}
             </div>
           ) : (
             <details
@@ -131,6 +138,7 @@ function ChangeTree({
                 className="flex h-6 cursor-pointer list-none items-center gap-1.5 pr-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
               >
                 <ChevronRight size={12} className="shrink-0" />
+                <Folder size={14} className="shrink-0 text-muted" />
                 <span className="truncate">{node.name}</span>
               </summary>
               <ChangeTree {...props} nodes={node.children} depth={depth + 1} />
@@ -144,7 +152,10 @@ function ChangeTree({
 export function GitChanges({
   files,
   ...props
-}: ChangeProps & { files: GitFile[] }) {
+}: ChangeProps & {
+  files: GitFile[];
+  onStage: NonNullable<ChangeProps["onStage"]>;
+}) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const id = useId();
@@ -175,7 +186,7 @@ export function GitChanges({
           aria-label={t(props.staged ? "git.unstageAll" : "git.stageAll")}
           className="app-button-ghost mx-1 h-6 w-6 p-0 text-muted sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
           onClick={() =>
-            props.onStage(
+            props.onStage?.(
               files.map((file) => file.path),
               !props.staged,
             )
@@ -193,4 +204,11 @@ export function GitChanges({
       </div>
     </section>
   );
+}
+
+export function GitChangeFiles({
+  files,
+  ...props
+}: ChangeProps & { files: GitFile[] }) {
+  return <ChangeTree {...props} nodes={changeTree(files)} />;
 }

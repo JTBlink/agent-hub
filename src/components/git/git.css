@@ -56,11 +56,11 @@
     scrollbar-color: auto;
   }
 }
-.diff-code-pane .cm-editor .cm-scroller {
-  overflow-x: scroll;
-}
 .diff-code-pane .cm-editor .cm-content {
   padding: 0;
+}
+.diff-code-pane .cm-editor .cm-scroller {
+  overflow-x: scroll;
 }
 .diff-code-pane .cm-editor .cm-line {
   padding: 0 12px;
@@ -68,4 +68,31 @@
 .diff-code-pane .cm-editor .cm-gutters {
   border-right: 0;
   background: var(--color-bg);
+}
+
+.git-history {
+  container: git-history / inline-size;
+}
+.git-history-summary {
+  list-style: none;
+}
+.git-history-summary::marker {
+  content: "";
+}
+.git-history-summary::-webkit-details-marker {
+  display: none;
+}
+.git-history details[open] > .git-history-summary > .git-history-chevron {
+  transform: rotate(90deg);
+}
+@container git-history (max-width: 420px) {
+  .git-history-author {
+    display: none;
+  }
+}
+
+@container git-history (max-width: 320px) {
+  .git-history-date {
+    display: none;
+  }
 }

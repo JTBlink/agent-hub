@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
 import type { Project } from "../../lib/tauri";
 import type { TerminalTab } from "../../lib/terminalLayout";
@@ -52,14 +52,11 @@ export function TerminalTabs({
                 t("terminal.title")}{" "}
               {index + 1}
             </button>
-            <button
-              type="button"
-              className="app-button-ghost mr-1 h-6 w-6 shrink-0 p-0"
+            <TabCloseButton
               aria-label={t("terminal.closeTab", { number: index + 1 })}
+              title={t("terminal.closeTab", { number: index + 1 })}
               onClick={() => onClose(tab)}
-            >
-              <X size={12} />
-            </button>
+            />
           </div>
         );
       })}

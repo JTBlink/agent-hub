@@ -1,7 +1,11 @@
 //! Git inspection and explicit local changes within an authorized registered checkout.
 mod actions;
+mod history;
+mod references;
 pub use actions::{commit, set_staged};
 use anyhow::{bail, Result};
+pub use history::{commit_details, commit_diff, commit_history, GitCommitDetails, GitHistoryPage};
+pub use references::{references, GitReferences};
 use serde::Serialize;
 use std::path::Path;
 
@@ -31,6 +35,22 @@ pub struct GitStatus {
     pub files: Vec<GitFile>,
     pub commits: Vec<GitCommit>,
     pub truncated: bool,
+}
+
+fn summarize_commit(commit: &git2::Commit<'_>) -> GitCommit {
+    GitCommit {
+        sha: commit.id().to_string(),
+        summary: commit.summary().unwrap_or_default().into(),
+        author: commit.author().name().unwrap_or_default().into(),
+        time: commit.time().seconds(),
+    }
+}
+
+fn history_walk(repo: &git2::Repository, head: git2::Oid) -> Result<git2::Revwalk<'_>> {
+    let mut walk = repo.revwalk()?;
+    walk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
+    walk.push(head)?;
+    Ok(walk)
 }
 
 pub fn status(root: &Path) -> Result<GitStatus> {
@@ -98,16 +118,10 @@ pub fn status(root: &Path) -> Result<GitStatus> {
         .collect();
     let mut commits = Vec::new();
     if let Some(oid) = oid {
-        let mut walk = repo.revwalk()?;
-        walk.push(oid)?;
+        let walk = history_walk(&repo, oid)?;
         for oid in walk.take(30) {
             let commit = repo.find_commit(oid?)?;
-            commits.push(GitCommit {
-                sha: commit.id().to_string(),
-                summary: commit.summary().unwrap_or_default().into(),
-                author: commit.author().name().unwrap_or_default().into(),
-                time: commit.time().seconds(),
-            });
+            commits.push(summarize_commit(&commit));
         }
     }
     Ok(GitStatus {
@@ -140,9 +154,24 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
     } else {
         repo.diff_index_to_workdir(None, Some(&mut options))?
     };
+    render_diff(&diff)
+}
+
+fn render_diff(diff: &git2::Diff<'_>) -> Result<String> {
+    render_diff_for_path(diff, None)
+}
+
+fn render_diff_for_path(diff: &git2::Diff<'_>, path: Option<&str>) -> Result<String> {
     let mut bytes = Vec::new();
     let mut oversized = false;
-    diff.print(git2::DiffFormat::Patch, |_, _, line| {
+    diff.print(git2::DiffFormat::Patch, |delta, _, line| {
+        if let Some(path) = path {
+            if delta.new_file().path() != Some(Path::new(path))
+                && delta.old_file().path() != Some(Path::new(path))
+            {
+                return true;
+            }
+        }
         if bytes.len() + line.content().len() > 1024 * 1024 {
             oversized = true;
             return false;

@@ -13,6 +13,8 @@ import {
   commitProjectGit,
   setProjectGitStaged,
   getProjectGitDiff,
+  getProjectGitCommit,
+  getProjectGitCommitDiff,
   getProjectGitStatus,
   type GitStatus,
 } from "../lib/gitApi";
@@ -43,7 +45,7 @@ function TestGit() {
 
 const translate = (key: string) => key;
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: translate }),
+  useTranslation: () => ({ t: translate, i18n: { language: "en" } }),
 }));
 vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("../context/AppContext", () => ({
@@ -62,6 +64,8 @@ vi.mock("../lib/gitApi", () => ({
   setProjectGitStaged: vi.fn(),
   getProjectGitStatus: vi.fn(),
   getProjectGitDiff: vi.fn(),
+  getProjectGitCommit: vi.fn(),
+  getProjectGitCommitDiff: vi.fn(),
 }));
 
 it("follows the shared checkout on entry and when the workspace changes without overwriting it", async () => {
@@ -448,6 +452,74 @@ it("renders source control in the shell sidebar while keeping diffs in the edito
     host.remove();
     sidebarContainer.remove();
     statusContainer.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("opens committed file diffs separately from working changes", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
+  const sha = "a".repeat(40);
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "main",
+    head: sha,
+    upstream: null,
+    ahead: null,
+    behind: null,
+    state: "Clean",
+    truncated: false,
+    files: [],
+    commits: [
+      { sha, summary: "Historical update", author: "example", time: 1000 },
+    ],
+  });
+  vi.mocked(getProjectGitCommit).mockResolvedValue({
+    sha,
+    message: "Historical update",
+    author: "example",
+    committer: "example",
+    time: 1000,
+    parents: [],
+    additions: 1,
+    deletions: 0,
+    truncated: false,
+    files: [{ path: "src/demo.ts", old_path: null, status: "added" }],
+  });
+  vi.mocked(getProjectGitCommitDiff).mockResolvedValue(
+    "@@ -0,0 +1 @@\n+historical content\n",
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<TestGit />));
+    await act(async () => {
+      const details = host.querySelector<HTMLDetailsElement>(
+        ".git-history-commit",
+      )!;
+      details.open = true;
+      details.dispatchEvent(new Event("toggle"));
+    });
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="git.commitFile: src/demo.ts"]',
+        )!
+        .click(),
+    );
+    expect(getProjectGitCommitDiff).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      sha,
+      "src/demo.ts",
+    );
+    expect(host.textContent).toContain("historical content");
+    expect(host.textContent).toContain("git.parentVersion");
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    expect(host.textContent).toContain("src/demo.ts");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });
