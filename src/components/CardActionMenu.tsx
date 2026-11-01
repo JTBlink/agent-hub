@@ -22,6 +22,7 @@ interface Props {
   triggerIcon?: React.ReactNode;
   triggerClassName?: string;
   disabled?: boolean;
+  align?: "start" | "end";
 }
 
 interface MenuPos {
@@ -37,6 +38,7 @@ export function CardActionMenu({
   triggerIcon,
   triggerClassName,
   disabled,
+  align = "end",
 }: Props) {
   const [pos, setPos] = useState<MenuPos | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -79,12 +81,14 @@ export function CardActionMenu({
       right: Math.max(
         8,
         Math.min(
-          (window.innerWidth - rect.right) / scale,
+          align === "start"
+            ? (window.innerWidth - rect.left) / scale - menuW
+            : (window.innerWidth - rect.right) / scale,
           window.innerWidth / scale - menuW - 8,
         ),
       ),
     });
-  }, [actions.length, setOpenState]);
+  }, [actions.length, align, setOpenState]);
 
   const attachPanel = useCallback(
     (node: HTMLDivElement | null) => {

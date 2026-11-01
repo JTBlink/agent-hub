@@ -6,6 +6,41 @@ use portable_pty::CommandBuilder;
 use std::{sync::mpsc, time::Duration};
 
 #[test]
+fn reserves_capacity_before_program_preparation_and_releases_failed_requests() {
+    fn reserve(manager: &TerminalManager, depth: usize) {
+        let result = manager.create_with(
+            "main",
+            || {
+                assert!(
+                    depth < 8,
+                    "External startup must not run beyond terminal capacity"
+                );
+                reserve(manager, depth + 1);
+                anyhow::bail!("preparation failed")
+            },
+            |_| true,
+        );
+        assert!(result.is_err());
+    }
+    let manager = TerminalManager::default();
+    reserve(&manager, 0);
+    let mut prepared = false;
+    let result = manager.create_with(
+        "main",
+        || {
+            prepared = true;
+            anyhow::bail!("preparation failed")
+        },
+        |_| true,
+    );
+    assert!(result.is_err());
+    assert!(
+        prepared,
+        "Failed preparation must release all reserved slots"
+    );
+}
+
+#[test]
 fn project_terminal_accepts_input_resizes_and_reports_real_exit() {
     let manager = TerminalManager::default();
     let directory = tempfile::tempdir().unwrap();

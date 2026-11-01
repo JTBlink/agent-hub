@@ -19,6 +19,10 @@ pub struct TerminalSize {
     pub cols: u16,
 }
 impl TerminalSize {
+    pub fn validate(self) -> Result<()> {
+        self.pty().map(|_| ())
+    }
+
     fn pty(self) -> Result<PtySize> {
         if self.rows == 0 || self.cols == 0 || self.rows > 1000 || self.cols > 2000 {
             bail!("Terminal dimensions are outside the supported range");
@@ -75,6 +79,16 @@ impl TerminalManager {
         spec: TerminalSpec,
         sink: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
     ) -> Result<TerminalSession> {
+        self.create_with(owner, || Ok(spec), sink)
+    }
+
+    /// Reserve capacity before preparing a slow external program.
+    pub fn create_with(
+        &self,
+        owner: &str,
+        prepare: impl FnOnce() -> Result<TerminalSpec>,
+        sink: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
+    ) -> Result<TerminalSession> {
         {
             let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
             if sessions.shutting_down {
@@ -85,7 +99,7 @@ impl TerminalManager {
             }
             sessions.pending += 1;
         }
-        let created = Session::spawn(owner, spec, Arc::new(sink));
+        let created = prepare().and_then(|spec| Session::spawn(owner, spec, Arc::new(sink)));
         let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         sessions.pending -= 1;
         let session = created?;

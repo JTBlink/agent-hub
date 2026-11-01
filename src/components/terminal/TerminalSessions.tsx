@@ -9,6 +9,7 @@ import {
 } from "../../lib/terminalLayout";
 import { compactHomePath, cn } from "../../utils";
 import { getAppScale } from "../../lib/textScale";
+import { herdrAgentLabel } from "../../lib/herdrAgents";
 
 export function TerminalSessions({
   tabs,
@@ -142,7 +143,7 @@ export function TerminalSessions({
                       item.worktreePath === tab.worktreePath,
                   )
                   .indexOf(tab) + 1;
-              const name = `${project?.name ?? tab.projectId} · ${t("terminal.title")} ${number}`;
+              const name = `${project?.name ?? tab.projectId} · ${tab.agent ? herdrAgentLabel(tab.agent) : t("terminal.title")} ${number}`;
               return (
                 <div
                   key={tab.id}

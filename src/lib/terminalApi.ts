@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import type { HerdrAgent } from "./herdrAgents";
 
 export interface TerminalSize {
   rows: number;
@@ -22,6 +23,7 @@ export async function createTerminal(
   size: TerminalSize,
   onEvent: (event: TerminalEvent) => void,
   worktreePath?: string,
+  agent?: HerdrAgent,
 ) {
   // A tab can be closed and replaced before its PTY close IPC has completed.
   await Promise.all(closingTerminals);
@@ -32,6 +34,7 @@ export async function createTerminal(
     worktreePath,
     size,
     events,
+    ...(agent ? { agent } : {}),
   });
 }
 export const writeTerminal = (id: string, data: string) =>

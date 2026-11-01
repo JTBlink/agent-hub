@@ -1967,6 +1967,8 @@
     "title": "Terminal",
     "chooseProject": "Choose a project to open a terminal",
     "new": "New terminal",
+    "newMenu": "New terminal or agent",
+    "startingAgent": "Starting {{agent}}…",
     "close": "Close terminal",
     "exited": "Process exited · {{code}}",
     "sessions": "Terminal tabs",

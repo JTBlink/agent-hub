@@ -58,6 +58,18 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+async function openNew(host: HTMLElement, label = "terminal.new") {
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>('[aria-label="terminal.newMenu"]')!
+      .click(),
+  );
+  const item = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((item) => item.textContent === label)!;
+  await act(async () => item.click());
+}
+
 it("dismisses the session overview with Escape and outside clicks", async () => {
   const host = document.createElement("div");
   document.body.append(host);
@@ -200,7 +212,7 @@ it("offers a project terminal without requiring Herdr", async () => {
   );
   expect(host.textContent).toContain("terminal.chooseProject");
   expect(
-    host.querySelector('button[aria-label="terminal.new"]'),
+    host.querySelector('button[aria-label="terminal.newMenu"]'),
   ).not.toBeNull();
   await act(async () => root.unmount());
   host.remove();
@@ -318,7 +330,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
       .mocked(invoke)
       .mock.calls.some(([command]) => command === "terminal_write"),
   ).toBe(false);
-  await click("terminal.new");
+  await openNew(host);
   const first = host.querySelector<HTMLTextAreaElement>(
     '[role="tabpanel"]:not([hidden]) textarea[aria-label="Shell input"]',
   );
@@ -474,7 +486,7 @@ it("keeps terminals, split panes and the selected tab independent for each workt
   const original = inputs();
   expect(original).toHaveLength(2);
   original[1].value = "unfinished command";
-  await click('[aria-label="terminal.new"]');
+  await openNew(host);
   const selectedTab = host.querySelector(
     '[role="tab"][aria-selected="true"]',
   )?.textContent;
@@ -604,16 +616,12 @@ it("switches between peer file and terminal tabs without replacing running panes
     );
     expect(panels[1].hasAttribute("hidden")).toBe(false);
     await act(async () => tabButtons[2].click());
-    expect(host.querySelector('[aria-label="terminal.new"]')).toBeNull();
+    expect(host.querySelector('[aria-label="terminal.newMenu"]')).toBeNull();
     expect(
       host.querySelector('[aria-label="terminal.herdrSidebar"]'),
     ).toBeNull();
     await act(async () => tabButtons[1].click());
-    await act(async () =>
-      host
-        .querySelector<HTMLButtonElement>('[aria-label="terminal.new"]')!
-        .click(),
-    );
+    await openNew(host);
     expect(host.querySelector("output")).toBeNull();
     expect(tablist.querySelectorAll('[role="tab"]')).toHaveLength(4);
     expect(
@@ -680,3 +688,72 @@ it("launches installed Herdr from the toolbar in the selected shell", async () =
     host.remove();
   }
 });
+
+it.each([
+  ["Codex", "codex"],
+  ["Claude", "claude"],
+  ["Claude Agent Teams", "claude_teams"],
+  ["OpenCode", "opencode"],
+  ["Hermes", "hermes"],
+])(
+  "opens %s only after selecting it from the new menu, in the current worktree",
+  async (label, agent) => {
+    const project = makeProject();
+    const topic = "<workspace>/topic";
+    vi.mocked(invoke).mockImplementation(async (command) =>
+      command === "terminal_list"
+        ? []
+        : command === "terminal_create"
+          ? { id: crypto.randomUUID(), cwd: topic }
+          : undefined,
+    );
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          <MemoryRouter
+            initialEntries={[
+              `/project/${project.id}?worktree=${encodeURIComponent(topic)}`,
+            ]}
+          >
+            <TerminalWorkspace projects={[project]} />
+          </MemoryRouter>,
+        ),
+      );
+      const creations = () =>
+        vi
+          .mocked(invoke)
+          .mock.calls.filter(([command]) => command === "terminal_create");
+      expect(creations()).toHaveLength(1);
+      const plus = host.querySelector<HTMLButtonElement>(
+        '[aria-label="terminal.newMenu"]',
+      )!;
+      await act(async () => plus.click());
+      expect(creations()).toHaveLength(1);
+      const option = [
+        ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+      ].find((item) => item.textContent === label)!;
+      await act(async () => option.click());
+      expect(creations()).toHaveLength(2);
+      expect(creations()[1][1]).toMatchObject({
+        projectId: project.id,
+        worktreePath: topic,
+        agent,
+      });
+      expect(
+        host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+      ).toContain(label);
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+      expect(
+        vi
+          .mocked(invoke)
+          .mock.calls.filter(([command]) => command === "terminal_write"),
+      ).toHaveLength(0);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  },
+);

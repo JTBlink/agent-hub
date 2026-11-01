@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { Project } from "../../lib/tauri";
 import type { TerminalTab } from "../../lib/terminalLayout";
 import { cn } from "../../utils";
+import { herdrAgentLabel } from "../../lib/herdrAgents";
 
 export function TerminalTabs({
   tabs,
@@ -54,8 +55,11 @@ export function TerminalTabs({
             >
               <TerminalSquare size={13} className="shrink-0" />
               <span className="truncate">
-                {(scoped ? t("terminal.title") : project?.name) ||
-                  t("terminal.title")}{" "}
+                {(tab.agent
+                  ? herdrAgentLabel(tab.agent)
+                  : scoped
+                    ? t("terminal.title")
+                    : project?.name) || t("terminal.title")}{" "}
                 {index + 1}
               </span>
             </button>

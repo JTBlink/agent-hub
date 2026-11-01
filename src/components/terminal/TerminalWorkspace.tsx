@@ -9,9 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, X, FileText, Copy } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import * as api from "../../lib/tauri";
 import { terminalTaskRequest } from "../../lib/taskContext";
 import { getErrorMessage } from "../../lib/error";
@@ -33,6 +32,9 @@ import { TerminalSessions } from "./TerminalSessions";
 import { TerminalTabs } from "./TerminalTabs";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { TerminalStatus } from "./TerminalStatus";
+import { TerminalTaskContextPanel } from "./TerminalTaskContextPanel";
+import { TerminalNewMenu } from "./TerminalNewMenu";
+import type { HerdrAgent } from "../../lib/herdrAgents";
 
 interface Props {
   projects: Project[];
@@ -272,7 +274,7 @@ export function TerminalWorkspace({
     () => activeTarget.current,
     `${visible}:${activeId}:${active?.activePane ?? ""}`,
   );
-  const add = () => {
+  const add = (agent?: HerdrAgent) => {
     if (!ready || !(scopedProject || selected) || count >= TERMINAL_PANE_LIMIT)
       return;
     onSelectTerminal?.();
@@ -283,6 +285,7 @@ export function TerminalWorkspace({
       undefined,
       scopedPath ?? projects.find((project) => project.id === target)?.path,
     );
+    tab.agent = agent;
     setTabs((previous) => [...previous, tab]);
     setActiveId(tab.id);
   };
@@ -290,6 +293,7 @@ export function TerminalWorkspace({
     if (
       !ready ||
       !active ||
+      active.agent ||
       active.panes.length >= 2 ||
       count >= TERMINAL_PANE_LIMIT
     )
@@ -371,6 +375,16 @@ export function TerminalWorkspace({
               setProjectId(tab.projectId);
             }}
           >
+            {shown && (
+              <TerminalNewMenu
+                disabled={
+                  !ready ||
+                  !(scopedProject || selected) ||
+                  count >= TERMINAL_PANE_LIMIT
+                }
+                onNew={add}
+              />
+            )}
             {extraTabs}
           </TerminalTabs>
           {!workspace && (
@@ -394,20 +408,6 @@ export function TerminalWorkspace({
           <div className="flex shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap">
             {shown && (
               <>
-                <button
-                  type="button"
-                  className={toolbarAction}
-                  aria-label={t("terminal.new")}
-                  title={t("terminal.new")}
-                  disabled={
-                    !ready ||
-                    !(scopedProject || selected) ||
-                    count >= TERMINAL_PANE_LIMIT
-                  }
-                  onClick={add}
-                >
-                  <Plus size={15} />
-                </button>
                 <TerminalSessions
                   tabs={tabs}
                   projects={projects}
@@ -433,7 +433,7 @@ export function TerminalWorkspace({
               showTerminalActions={shown}
               onProjectSkills={onProjectSkills}
               key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
-              hasTerminal={shown && !!active}
+              hasTerminal={shown && !!active && !active.agent}
               herdrBusy={herdr.busy}
               updateVersion={
                 herdr.update?.has_update
@@ -445,6 +445,7 @@ export function TerminalWorkspace({
                 shown &&
                 ready &&
                 !!active &&
+                !active.agent &&
                 active.panes.length < 2 &&
                 count < TERMINAL_PANE_LIMIT
               }
@@ -531,6 +532,7 @@ export function TerminalWorkspace({
                 <TerminalPane
                   projectId={tab.projectId}
                   worktreePath={tab.worktreePath}
+                  agent={tab.agent}
                   visible={visible && displayedId === tab.id}
                   active={
                     visible && displayedId === tab.id && tab.activePane === pane
@@ -557,48 +559,17 @@ export function TerminalWorkspace({
           </div>
         ))}
         {contextVisible && active?.context && (
-          <section
-            aria-label={t("tasks.context")}
-            className="absolute bottom-7 right-3 z-20 flex max-h-[calc(50vh/var(--app-scale))] w-[480px] max-w-[90%] flex-col gap-2 rounded-lg border border-border bg-surface p-3 shadow-card"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                setContextVisible(false);
-                controls.current.get(active.activePane)?.focus();
-              }
+          <TerminalTaskContextPanel
+            context={active.context}
+            onClose={() => setContextVisible(false)}
+            onDismiss={() => {
+              setContextVisible(false);
+              controls.current.get(active.activePane)?.focus();
             }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="min-w-0 flex-1 truncate text-xs">
-                {active.context.title}
-              </span>
-              <button
-                type="button"
-                aria-label={t("common.close")}
-                className="app-button-ghost"
-                onClick={() => setContextVisible(false)}
-              >
-                <X size={13} />
-              </button>
-            </div>
-            <textarea
-              aria-label={t("tasks.context")}
-              readOnly
-              value={active.context.text}
-              className="app-input min-h-32 flex-1 font-mono text-xs"
-            />
-            <button
-              type="button"
-              className="app-button-secondary self-start text-xs"
-              onClick={() =>
-                void writeText(active.context?.text || "").catch((error) =>
-                  setBridgeError(getErrorMessage(error, t("common.error"))),
-                )
-              }
-            >
-              <Copy size={13} />
-              {t("tasks.copy")}
-            </button>
-          </section>
+            onError={(error) =>
+              setBridgeError(getErrorMessage(error, t("common.error")))
+            }
+          />
         )}
         {statusContainer
           ? visible && createPortal(statusBar, statusContainer)

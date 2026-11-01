@@ -1924,6 +1924,8 @@
     "title": "終端",
     "chooseProject": "選擇專案以開啟終端",
     "new": "新增終端",
+    "newMenu": "新增終端或 Agent",
+    "startingAgent": "正在啟動 {{agent}}…",
     "close": "關閉終端",
     "exited": "程序已結束 · {{code}}",
     "sessions": "終端分頁",

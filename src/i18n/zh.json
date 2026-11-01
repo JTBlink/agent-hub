@@ -1964,6 +1964,8 @@
     "title": "终端",
     "chooseProject": "选择项目以打开终端",
     "new": "新建终端",
+    "newMenu": "新建终端或 Agent",
+    "startingAgent": "正在启动 {{agent}}…",
     "close": "关闭终端",
     "exited": "进程已退出 · {{code}}",
     "sessions": "终端标签",

@@ -25,6 +25,7 @@ it("saves only terminal layout and restores split direction, focus and scoped se
   tab.panes.push("second-pane");
   tab.activePane = "second-pane";
   tab.direction = "vertical";
+  tab.agent = "codex";
   const activeIds = {
     [terminalScopeKey(tab.projectId, tab.worktreePath)]: tab.id,
   };
@@ -33,8 +34,12 @@ it("saves only terminal layout and restores split direction, focus and scoped se
     "private prompt",
   );
   expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("context");
+  expect(
+    JSON.parse(localStorage.getItem(TERMINAL_LAYOUT_KEY)!).tabs[0].agent,
+  ).toBeUndefined();
   const layout = { ...tab };
   delete layout.context;
+  delete layout.agent;
   expect(readTerminalLayout()).toEqual({
     tabs: [layout],
     activeIds,

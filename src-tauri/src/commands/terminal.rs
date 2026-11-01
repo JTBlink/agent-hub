@@ -1,10 +1,12 @@
 use crate::core::{
     error::AppError,
+    herdr_agents::{self, HerdrAgent},
+    herdr_tools::HerdrTools,
     skill_store::SkillStore,
     terminal::{self, TerminalEvent, TerminalManager, TerminalSession, TerminalSize, TerminalSpec},
 };
 use std::sync::Arc;
-use tauri::{ipc::Channel, State, WebviewWindow};
+use tauri::{ipc::Channel, Manager, State, WebviewWindow};
 
 fn owner(window: &WebviewWindow) -> Result<String, AppError> {
     if window.label() != "main" {
@@ -17,37 +19,64 @@ fn owner(window: &WebviewWindow) -> Result<String, AppError> {
 #[tauri::command]
 pub async fn terminal_create(
     window: WebviewWindow,
-    store: State<'_, Arc<SkillStore>>,
     manager: State<'_, Arc<TerminalManager>>,
     project_id: String,
     worktree_path: Option<String>,
+    agent: Option<HerdrAgent>,
     size: TerminalSize,
     events: Channel<TerminalEvent>,
 ) -> Result<TerminalSession, AppError> {
     let owner = owner(&window)?;
-    let store = store.inner().clone();
+    let store = window.state::<Arc<SkillStore>>().inner().clone();
     let manager = manager.inner().clone();
+    let tools = window.state::<Arc<HerdrTools>>().inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let cwd = crate::core::project_worktrees::directory(
-            &store,
-            &project_id,
-            worktree_path.as_deref(),
-        )
-        .map_err(AppError::io)?;
-        let (command, integration) = terminal::prepare_shell(None, None).map_err(AppError::io)?;
-        manager
-            .create(
+        let mut startup = None;
+        let output = events.clone();
+        let session = manager
+            .create_with(
                 &owner,
-                TerminalSpec {
-                    project_id,
-                    cwd,
-                    command,
-                    integration: Some(integration),
-                    size,
+                || {
+                    size.validate()?;
+                    let cwd = crate::core::project_worktrees::directory(
+                        &store,
+                        &project_id,
+                        worktree_path.as_deref(),
+                    )?;
+                    let (command, integration) = if let Some(agent) = agent {
+                        let installed = tools.install(store.proxy_url().as_deref())?;
+                        let prepared = herdr_agents::prepare(
+                            std::path::Path::new(&installed.path),
+                            &cwd,
+                            agent,
+                        )?;
+                        startup = Some(prepared.startup);
+                        (prepared.attachment.command(), None)
+                    } else {
+                        let (command, integration) = terminal::prepare_shell(None, None)?;
+                        (command, Some(integration))
+                    };
+                    Ok(TerminalSpec {
+                        project_id,
+                        cwd,
+                        command,
+                        integration,
+                        size,
+                    })
                 },
-                move |event| events.send(event).is_ok(),
+                move |event| output.send(event).is_ok(),
             )
-            .map_err(AppError::io)
+            .map_err(AppError::io)?;
+        if let Some(startup) = startup {
+            std::thread::spawn(move || {
+                if let Err(error) = startup.start() {
+                    let _ = events.send(TerminalEvent::Error {
+                        message: error.to_string(),
+                    });
+                }
+            });
+        }
+        Ok(session)
     })
     .await?
 }

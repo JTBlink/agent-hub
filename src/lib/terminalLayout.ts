@@ -1,4 +1,5 @@
 import type { TerminalTaskContext } from "./taskContext";
+import type { HerdrAgent } from "./herdrAgents";
 
 export const TERMINAL_PANE_LIMIT = 8;
 export const TERMINAL_LAYOUT_KEY = "agent-hub:terminal-layout";
@@ -11,6 +12,8 @@ export interface TerminalTab {
   activePane: string;
   direction: "horizontal" | "vertical";
   context?: TerminalTaskContext;
+  // Launch intent belongs only to this run, and is omitted from saved layouts.
+  agent?: HerdrAgent;
 }
 
 export interface TerminalLayout {

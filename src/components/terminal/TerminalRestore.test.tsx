@@ -241,7 +241,8 @@ it("waits for projects and all eight leftover PTYs to close before recreating sa
   expect(creations()).toHaveLength(8);
   expect(host.querySelector('[role="alert"]')).toBeNull();
   expect(
-    host.querySelector<HTMLButtonElement>('[aria-label="新建终端"]')?.disabled,
+    host.querySelector<HTMLButtonElement>('[aria-label="新建终端或 Agent"]')
+      ?.disabled,
   ).toBe(true);
   await click("全部终端 8/8");
   expect(
@@ -250,9 +251,14 @@ it("waits for projects and all eight leftover PTYs to close before recreating sa
   await click(`关闭 ${project.name} · 终端 1 · ${topic}`);
   expect(readTerminalLayout().tabs).toHaveLength(7);
   expect(
-    host.querySelector<HTMLButtonElement>('[aria-label="新建终端"]')?.disabled,
+    host.querySelector<HTMLButtonElement>('[aria-label="新建终端或 Agent"]')
+      ?.disabled,
   ).toBe(false);
-  await click("新建终端");
+  await click("新建终端或 Agent");
+  const item = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((item) => item.textContent === "新建终端")!;
+  await act(async () => item.click());
   expect(creations()).toHaveLength(9);
   expect(readTerminalLayout().tabs).toHaveLength(8);
 });

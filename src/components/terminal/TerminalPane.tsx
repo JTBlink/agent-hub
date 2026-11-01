@@ -7,6 +7,7 @@ import { bindTerminalPaste } from "./terminalClipboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
+import { herdrAgentLabel, type HerdrAgent } from "../../lib/herdrAgents";
 import { createTerminalInputQueue } from "../../lib/terminalInput";
 import {
   loadTerminalFonts,
@@ -25,6 +26,7 @@ export interface PaneControl {
 interface Props {
   projectId: string;
   worktreePath?: string;
+  agent?: HerdrAgent;
   active: boolean;
   visible?: boolean;
   onReady: (control: PaneControl | null) => void;
@@ -34,6 +36,7 @@ interface Props {
 export function TerminalPane({
   projectId,
   worktreePath,
+  agent,
   active,
   visible = true,
   onReady,
@@ -56,6 +59,7 @@ export function TerminalPane({
     callback.current = onReady;
   }, [active, visible, onReady]);
   const [error, setError] = useState("");
+  const [started, setStarted] = useState(false);
   const [exitCode, setExitCode] = useState<number | null>(null);
 
   useEffect(() => {
@@ -181,6 +185,7 @@ export function TerminalPane({
               else setError(event.message);
             },
             worktreePath,
+            agent,
           )
           .then((session) => {
             if (disposed) {
@@ -188,6 +193,7 @@ export function TerminalPane({
               return;
             }
             sessionId = session.id;
+            setStarted(true);
             inputQueue.connect((data) => api.writeTerminal(session.id, data));
             callback.current({
               sessionId,
@@ -220,7 +226,7 @@ export function TerminalPane({
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };
-  }, [projectId, worktreePath]);
+  }, [projectId, worktreePath, agent]);
   useEffect(() => {
     showNow.current();
   }, [visible]);
@@ -232,6 +238,11 @@ export function TerminalPane({
   }, [active]);
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      {agent && !started && !error && (
+        <div role="status" className="px-2 py-1 text-xs text-muted">
+          {t("terminal.startingAgent", { agent: herdrAgentLabel(agent) })}
+        </div>
+      )}
       {error && (
         <div role="alert" className="px-2 text-xs text-danger">
           {error}
@@ -239,7 +250,7 @@ export function TerminalPane({
       )}
       <div
         ref={element}
-        className="terminal-emulator min-h-0 flex-1 overflow-hidden p-1"
+        className="terminal-emulator min-h-0 flex-1 overflow-hidden"
         // Keep mouse handling in xterm (including TUI mouse reporting).
         onContextMenu={(event) => event.preventDefault()}
       />

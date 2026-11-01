@@ -76,6 +76,7 @@ agent-hub/
 │   │   ├── exportAgents.ts         #   Agent 导出
 │   │   ├── agentIcons.ts           #   Agent 图标映射
 │   │   ├── agentUsage.ts           #   额度快照类型与展示计算
+│   │   ├── herdrAgents.ts          #   Herdr Agent 类型、菜单名称与图标映射
 │   │   ├── skillTags.ts            #   技能标签
 │   │   ├── skillPickerStatus.ts    #   技能选择状态
 │   │   ├── skillGroupStatus.ts      #   技能组状态
@@ -128,6 +129,8 @@ agent-hub/
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
 │   │       ├── agent_usage/        #     独立 Claude／Codex 额度、凭据与缓存
+│   │       ├── herdr_agents/       #     独立 Herdr Agent 启动、调用环境隔离与终端连接
+│   │       ├── herdr_tools/        #     Herdr 安装检测、下载与版本更新
 │   │       ├── app_state.rs        #     全局应用状态
 │   │       ├── error.rs            #     统一错误类型
 │   │       ├── tool_detection.rs   #     Agent 程序、桌面应用与 IDE 扩展安装检测

@@ -59,6 +59,7 @@ pub mod tool_service;
 
 pub mod terminal;
 
+pub mod herdr_agents;
 pub mod herdr_tools;
 
 pub(crate) mod cli_process;
