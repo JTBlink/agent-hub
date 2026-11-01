@@ -157,7 +157,7 @@ it("retains successful sources, loaded rows and copyable context through details
   host.remove();
 });
 
-it("waits for CLI source discovery and refreshes discovered repositories", async () => {
+it("refreshes repositories without discarding the cached login identity", async () => {
   let resolveSources: (bindings: TaskBinding[]) => void = () => {};
   const pending = new Promise<TaskBinding[]>((resolve) => {
     resolveSources = resolve;
@@ -194,8 +194,23 @@ it("waits for CLI source discovery and refreshes discovered repositories", async
     .mock.calls.filter(([command]) => command === "task_bindings");
   expect(discoveries.map(([, args]) => args)).toEqual([
     { refresh: false },
-    { refresh: true },
+    { refresh: false },
   ]);
+  await act(async () =>
+    element
+      .querySelector<HTMLButtonElement>('[aria-label="tasks.connections"]')!
+      .click(),
+  );
+  const refreshIdentity = [...element.querySelectorAll("button")].find(
+    (button) => button.textContent === "tasks.refreshIdentity",
+  )!;
+  await act(async () => refreshIdentity.click());
+  expect(
+    vi
+      .mocked(invoke)
+      .mock.calls.filter(([command]) => command === "task_bindings")
+      .at(-1)?.[1],
+  ).toEqual({ refresh: true });
   await act(async () => root.unmount());
 });
 
@@ -545,6 +560,64 @@ it("follows the selected workspace on entry and changes while retaining task fil
       bindingId: "binding-0",
       filters: { kind: "review", state: "closed" },
     });
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("keeps the known identity visible while refreshing task rows", async () => {
+  const binding: TaskBinding = {
+    id: "cached-login",
+    project_id: "demo",
+    provider: "github",
+    host: "github.example.invalid",
+    repository: "team/demo",
+    launcher: null,
+  };
+  let reads = 0;
+  let finish: (value: unknown) => void = () => {};
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "task_bindings") return [binding];
+    if (command === "task_list") {
+      reads += 1;
+      if (reads > 1)
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      return {
+        identity: "cached-account",
+        items: [],
+        has_more: false,
+        limited: false,
+      };
+    }
+  });
+  const element = document.createElement("div");
+  const root = createRoot(element);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <TaskBrowser projects={[]} />
+        </MemoryRouter>,
+      ),
+    );
+    expect(element.textContent).toContain("cached-account");
+    await act(async () =>
+      element
+        .querySelector<HTMLButtonElement>('[aria-label="settings.refresh"]')!
+        .click(),
+    );
+    expect(element.textContent).toContain("cached-account");
+    expect(element.textContent).not.toContain("tasks.checkingIdentity");
+    await act(async () =>
+      finish({
+        identity: "cached-account",
+        items: [],
+        has_more: false,
+        limited: false,
+      }),
+    );
   } finally {
     await act(async () => root.unmount());
   }

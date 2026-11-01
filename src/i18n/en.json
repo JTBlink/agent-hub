@@ -2023,6 +2023,7 @@
     "assigned": "Assigned to me",
     "created": "Created by me",
     "search": "Search tasks",
+    "refreshIdentity": "Recheck login identity",
     "checkingIdentity": "Checking identity",
     "limited": "Platform search results are capped or incomplete. Narrow your filters.",
     "notConnected": "No task repositories could be detected. Add a local project or select a remote in Repository connections. This does not indicate that the CLI is signed out.",

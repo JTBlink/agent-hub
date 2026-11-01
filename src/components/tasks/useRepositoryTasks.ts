@@ -16,6 +16,7 @@ export function useRepositoryTasks(
 ) {
   const [sources, setSources] = useState<TaskSource[]>([]);
   const generation = useRef(0);
+  const knownIdentities = useRef(new Map<string, string>());
   const requests = useRef(new Map<string, string>());
   const load = useCallback(
     async (binding: api.TaskBinding, page: number) => {
@@ -38,6 +39,7 @@ export function useRepositoryTasks(
           requestId,
         );
         if (scope !== generation.current) return;
+        knownIdentities.current.set(JSON.stringify(binding), response.identity);
         setSources((previous) =>
           previous.map((source) => {
             if (source.binding.id !== binding.id) return source;
@@ -59,10 +61,19 @@ export function useRepositoryTasks(
         );
       } catch (error) {
         if (scope !== generation.current) return;
+        const failure = api.taskFailure(error);
+        if (failure.kind === "authentication")
+          knownIdentities.current.delete(JSON.stringify(binding));
         setSources((previous) =>
           previous.map((source) =>
             source.binding.id === binding.id
-              ? { ...source, loading: false, error: api.taskFailure(error) }
+              ? {
+                  ...source,
+                  loading: false,
+                  error: failure,
+                  identity:
+                    failure.kind === "authentication" ? "" : source.identity,
+                }
               : source,
           ),
         );
@@ -79,7 +90,7 @@ export function useRepositoryTasks(
       bindings.map((binding) => ({
         binding,
         items: [],
-        identity: "",
+        identity: knownIdentities.current.get(JSON.stringify(binding)) ?? "",
         nextPage: 1,
         hasMore: false,
         limited: false,

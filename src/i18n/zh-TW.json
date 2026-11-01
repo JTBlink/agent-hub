@@ -1980,6 +1980,7 @@
     "assigned": "指派給我",
     "created": "我建立的",
     "search": "搜尋任務",
+    "refreshIdentity": "重新讀取登入身分",
     "checkingIdentity": "讀取身分中",
     "limited": "平台搜尋結果達到上限或不完整，請縮小篩選範圍。",
     "notConnected": "未找到可自動識別的任務儲存庫。請新增本機專案，或在「儲存庫連線」中選擇遠端；此狀態不表示 CLI 未登入。",

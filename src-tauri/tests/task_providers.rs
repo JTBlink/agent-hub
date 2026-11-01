@@ -125,7 +125,7 @@ fn ported_gitlab_routes_through_environment_instead_of_rejected_hostname_flag() 
 #[test]
 fn list_queries_share_identity_across_clients_and_refresh_after_auth_failure_or_manual_refresh() {
     use app_lib::core::skill_store::SkillStore;
-    use app_lib::core::task_browser::{refresh_bindings, CliReader};
+    use app_lib::core::task_browser::{bindings, refresh_bindings, CliReader};
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -195,6 +195,9 @@ fn list_queries_share_identity_across_clients_and_refresh_after_auth_failure_or_
             ..Filters::default()
         };
         assert_eq!(query(&assigned, 2).unwrap().identity, "account-1");
+        assert_eq!(users.load(Ordering::SeqCst), 1);
+        bindings(&store).unwrap();
+        assert_eq!(query(&assigned, 1).unwrap().identity, "account-1");
         assert_eq!(users.load(Ordering::SeqCst), 1);
         reject.store(true, Ordering::SeqCst);
         assert_eq!(query(&assigned, 1).unwrap_err().kind, "authentication");

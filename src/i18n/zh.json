@@ -2020,6 +2020,7 @@
     "assigned": "指派给我",
     "created": "我创建的",
     "search": "搜索任务",
+    "refreshIdentity": "重新读取登录身份",
     "checkingIdentity": "读取身份中",
     "limited": "平台搜索结果达到上限或不完整，请缩小筛选范围。",
     "notConnected": "未找到可自动识别的任务仓库。请添加本地项目，或在“仓库连接”中选择远端；此状态不表示 CLI 未登录。",

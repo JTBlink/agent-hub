@@ -58,10 +58,10 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     setSelection(null);
   }
   const returnFocus = useRef<HTMLElement | null>(null);
-  const refreshBindings = useCallback(async () => {
+  const refreshBindings = useCallback(async (recheckIdentity = false) => {
     setDiscovering(true);
     try {
-      const next = await api.getTaskBindings(true);
+      const next = await api.getTaskBindings(recheckIdentity);
       setBindings(next);
       setSettingsError("");
     } finally {
@@ -140,10 +140,9 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
         bindings={bindings}
         identities={[
           ...new Set(
-            sources.map(
-              (source) =>
-                `${source.binding.host} · ${source.identity || t("tasks.checkingIdentity")}`,
-            ),
+            sources
+              .filter((source) => source.identity)
+              .map((source) => `${source.binding.host} · ${source.identity}`),
           ),
         ]}
         filters={filters}
@@ -195,6 +194,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           projects={projects}
           bindings={bindings}
           onChanged={refreshBindings}
+          onRefreshIdentity={() => refreshBindings(true)}
           onClose={() => setConnections(false)}
         />
       )}
