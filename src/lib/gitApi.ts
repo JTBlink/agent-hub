@@ -31,3 +31,21 @@ export const getProjectGitDiff = (
     path,
     staged,
   });
+export const setProjectGitStaged = (
+  projectId: string,
+  worktreePath: string | undefined,
+  paths: string[],
+  staged: boolean,
+) =>
+  invoke<void>("set_project_git_staged", {
+    projectId,
+    worktreePath,
+    paths,
+    staged,
+  });
+
+export const commitProjectGit = (
+  projectId: string,
+  worktreePath: string | undefined,
+  message: string,
+) => invoke<void>("commit_project_git", { projectId, worktreePath, message });

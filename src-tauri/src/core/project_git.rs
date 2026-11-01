@@ -1,4 +1,6 @@
-//! Read-only Git inspection within an authorized registered checkout.
+//! Git inspection and explicit local changes within an authorized registered checkout.
+mod actions;
+pub use actions::{commit, set_staged};
 use anyhow::{bail, Result};
 use serde::Serialize;
 use std::path::Path;
@@ -122,13 +124,7 @@ pub fn status(root: &Path) -> Result<GitStatus> {
 }
 
 pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
-    if Path::new(path)
-        .components()
-        .any(|part| !matches!(part, std::path::Component::Normal(_)))
-        || path.is_empty()
-    {
-        bail!("Invalid repository file path");
-    }
+    validate_file_path(path)?;
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let mut options = git2::DiffOptions::new();
@@ -162,6 +158,17 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
         bail!("Diff exceeds the 1 MiB preview limit");
     }
     Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+fn validate_file_path(path: &str) -> Result<()> {
+    if Path::new(path)
+        .components()
+        .any(|part| !matches!(part, std::path::Component::Normal(_)))
+        || path.is_empty()
+    {
+        bail!("Invalid repository file path");
+    }
+    Ok(())
 }
 
 #[cfg(test)]

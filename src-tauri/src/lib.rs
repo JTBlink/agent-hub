@@ -1223,6 +1223,8 @@ pub fn run() {
             commands::project_worktrees::write_worktree_file,
             commands::project_git::get_project_git_status,
             commands::project_git::get_project_git_diff,
+            commands::project_git::set_project_git_staged,
+            commands::project_git::commit_project_git,
             commands::projects::get_projects,
             commands::projects::add_project,
             commands::projects::add_linked_workspace,
