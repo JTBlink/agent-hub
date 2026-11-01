@@ -153,7 +153,7 @@ export function Layout() {
             </div>
             <ProjectWorkspace onMaximizedChange={setTerminalMaximized} />
           </div>
-          <footer className="workbench-statusbar flex shrink-0 items-center gap-3 border-t border-border-subtle bg-bg-secondary px-2 text-xs text-muted">
+          <footer className="workbench-statusbar flex shrink-0 items-center gap-3 bg-bg-secondary px-2 text-xs text-muted">
             <div
               ref={setStatusContainer}
               className="workbench-status-content flex min-w-0 flex-1 items-center"

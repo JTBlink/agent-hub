@@ -21,7 +21,7 @@
   :root {
     /* Keep the native window chrome at a stable height when text is zoomed. */
     --app-titlebar-height: calc(36px / var(--app-scale));
-    --app-statusbar-height: calc(28px / var(--app-scale));
+    --app-statusbar-height: calc(32px / var(--app-scale));
     --app-activitybar-width: calc(48px / var(--app-scale));
     --app-sidebar-width: 200px;
   }
