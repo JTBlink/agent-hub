@@ -1413,6 +1413,7 @@
     "remember": "記住關閉偏好（退出前仍會確認）"
   },
   "common": {
+    "more": "更多操作",
     "close": "關閉",
     "copyPath": "複製路徑",
     "pathCopied": "路徑已複製",
@@ -1924,7 +1925,7 @@
     "herdrLaunch": "在目前窗格啟動 Herdr",
     "herdrWait": "終端準備中，請稍後重試",
     "herdrInstalling": "正在安裝 Herdr，可繼續使用終端…",
-    "herdrReady": "Herdr 已就緒，點擊 Herdr 啟動",
+    "herdrReady": "Herdr 已就緒，請從 Herdr 選單啟動",
     "herdrUpdating": "正在準備新版 Herdr，目前工作階段繼續執行…",
     "herdrUpdated": "Herdr 已更新，下次啟動使用新版",
     "herdrExternalUpdate": "請透過原安裝管道更新 Herdr；目前工作階段繼續執行",

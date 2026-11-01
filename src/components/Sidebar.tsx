@@ -41,9 +41,18 @@ export function Sidebar() {
     useActiveWorkspace(projects);
   const gitChanges = useGitChangeCount(activeProject?.id, activePath);
   const panelId = useId();
-  const setResourcePanelVisible = useContext(
-    SidebarVisibilityContext,
-  )?.setResourcePanelVisible;
+  const sidebarVisibility = useContext(SidebarVisibilityContext);
+  const setResourcePanelVisible = sidebarVisibility?.setResourcePanelVisible;
+  const setGitSidebarVisible = sidebarVisibility?.setGitSidebarVisible;
+  const [gitSidebarState, setGitSidebarState] = useState({
+    routeKey: location.key,
+    open: true,
+  });
+  const gitSidebarOpen =
+    gitSidebarState.routeKey !== location.key || gitSidebarState.open;
+  useEffect(() => {
+    setGitSidebarVisible?.(gitSidebarOpen);
+  }, [gitSidebarOpen, setGitSidebarVisible]);
   const [panelWidth, setPanelWidth] = useState(280);
   const [panelOpen, setPanelOpen] = useState(() => {
     try {
@@ -192,6 +201,14 @@ export function Sidebar() {
       >
         <SidebarActivityBar
           gitChanges={gitChanges}
+          gitSidebarOpen={gitSidebarOpen && !panelVisible}
+          onSelectGit={() => {
+            setGitSidebarState({
+              routeKey: location.key,
+              open: panelVisible || !gitSidebarOpen,
+            });
+            setPanelSelection((selection) => ({ ...selection, manual: false }));
+          }}
           panelOpen={panelVisible}
           panelId={panelId}
           selectedPanel={selectedPanel}

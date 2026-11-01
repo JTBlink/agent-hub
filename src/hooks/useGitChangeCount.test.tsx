@@ -96,6 +96,8 @@ it("shows the Git badge on other pages and hides it for a clean checkout", async
       <SidebarActivityBar
         panelOpen={false}
         panelId="resources"
+        gitSidebarOpen
+        onSelectGit={vi.fn()}
         selectedPanel="projects"
         manualSelection={false}
         onSelectPanel={vi.fn()}

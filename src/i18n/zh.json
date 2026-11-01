@@ -1441,6 +1441,7 @@
     "remember": "记住关闭偏好（退出前仍会确认）"
   },
   "common": {
+    "more": "更多操作",
     "close": "关闭",
     "copyPath": "复制路径",
     "pathCopied": "路径已复制",
@@ -1964,7 +1965,7 @@
     "herdrLaunch": "在当前窗格启动 Herdr",
     "herdrWait": "终端准备中，请稍后重试",
     "herdrInstalling": "正在安装 Herdr，可继续使用终端…",
-    "herdrReady": "Herdr 已就绪，点击 Herdr 启动",
+    "herdrReady": "Herdr 已就绪，请从 Herdr 菜单启动",
     "herdrUpdating": "正在准备新版 Herdr，现有会话继续运行…",
     "herdrUpdated": "Herdr 已更新，下次启动使用新版",
     "herdrExternalUpdate": "请通过原安装渠道更新 Herdr；当前会话继续运行",

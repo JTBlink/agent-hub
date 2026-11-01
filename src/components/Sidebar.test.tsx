@@ -124,12 +124,20 @@ function Navigation() {
 
 function TestSidebar() {
   const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
+  const [gitSidebarVisible, setGitSidebarVisible] = useState(true);
   return (
     <SidebarVisibilityContext.Provider
-      value={{ resourcePanelVisible, setResourcePanelVisible }}
+      value={{
+        resourcePanelVisible,
+        setResourcePanelVisible,
+        setGitSidebarVisible,
+      }}
     >
       <Sidebar />
       <div data-resource-visible={String(resourcePanelVisible)} />
+      <div
+        data-git-visible={String(gitSidebarVisible && !resourcePanelVisible)}
+      />
     </SidebarVisibilityContext.Provider>
   );
 }
@@ -712,6 +720,31 @@ it("uses the top menu for project switching and keeps the branch controls", asyn
   ).toBeNull();
   expect(container.querySelector('[aria-label="切换分支"]')).not.toBeNull();
   expect(container.querySelector('[aria-label="刷新工作树"]')).not.toBeNull();
+});
+
+it("toggles the Git sidebar without navigating away from its editor", async () => {
+  await render("/git");
+  const trigger = container.querySelector<HTMLAnchorElement>('a[href="/git"]')!;
+  const visible = () =>
+    container
+      .querySelector("[data-git-visible]")
+      ?.getAttribute("data-git-visible");
+  expect(visible()).toBe("true");
+  await click(trigger);
+  expect(visible()).toBe("false");
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(container.querySelector("output")?.textContent).toBe("/git");
+  await click(trigger);
+  expect(visible()).toBe("true");
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  await click(
+    container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="search"]',
+    )!,
+  );
+  expect(visible()).toBe("false");
+  await click(trigger);
+  expect(visible()).toBe("true");
 });
 
 it("replaces the Git sidebar when another panel opens and restores Git on its activity click", async () => {

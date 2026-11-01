@@ -109,11 +109,7 @@ async function render(
               {`Open ${project.id}`}
             </Link>
           ))}
-          <TerminalWorkspace
-            projects={projects}
-            projectsReady={ready}
-            onMaximizedChange={() => {}}
-          />
+          <TerminalWorkspace projects={projects} projectsReady={ready} />
         </MemoryRouter>
       </StrictMode>,
     ),
@@ -156,6 +152,11 @@ it("restores worktree tabs, split layout and the last location after restarting 
   expect(
     host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
   ).toContain("终端 1");
+  const sessionsTrigger = host.querySelector<HTMLButtonElement>(
+    '[aria-label="全部终端 3/8"]',
+  )!;
+  expect(sessionsTrigger.textContent).toBe("3");
+  expect(sessionsTrigger.title).toBe("全部终端 3/8");
   await click("全部终端 3/8");
   expect(
     document.querySelector('[aria-label="所有项目的终端"]')?.textContent,

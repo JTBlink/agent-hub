@@ -1443,6 +1443,7 @@
     "remember": "Remember this preference (quitting still requires confirmation)"
   },
   "common": {
+    "more": "More actions",
     "close": "Close",
     "copyPath": "Copy path",
     "pathCopied": "Path copied",
@@ -1967,7 +1968,7 @@
     "herdrLaunch": "Start Herdr in this pane",
     "herdrWait": "Terminal is starting; try again shortly",
     "herdrInstalling": "Installing Herdr; continue using your terminal…",
-    "herdrReady": "Herdr is ready; click Herdr to start",
+    "herdrReady": "Herdr is ready; start it from the Herdr menu",
     "herdrUpdating": "Preparing Herdr update; current sessions keep running…",
     "herdrUpdated": "Herdr updated for the next launch",
     "herdrExternalUpdate": "Update Herdr through its original installation channel; current sessions keep running",

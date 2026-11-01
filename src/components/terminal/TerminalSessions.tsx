@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { List, X } from "lucide-react";
+import { TerminalSquare, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Project } from "../../lib/tauri";
 import {
@@ -106,10 +106,12 @@ export function TerminalSessions({
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={() => setOpen(!open)}
-        className="app-button-ghost h-7 gap-1.5 px-1.5 text-xs text-muted"
+        className="app-button-ghost h-7 shrink-0 gap-1.5 whitespace-nowrap px-1.5 text-xs text-muted"
       >
-        <List size={13} />
-        {label}
+        <TerminalSquare size={16} aria-hidden="true" />
+        <span className="tabular-nums" aria-hidden="true">
+          {count}
+        </span>
       </button>
       {open &&
         createPortal(

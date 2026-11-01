@@ -1,9 +1,11 @@
 import {
+  ChevronDown,
+  Download,
   LayoutGrid,
+  Layers,
   Loader2,
-  Maximize2,
-  Minimize2,
   PanelLeft,
+  TerminalSquare,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
@@ -12,13 +14,13 @@ interface Props {
   showTerminalActions?: boolean;
   hasTerminal: boolean;
   herdrBusy: boolean;
-  hasUpdate: boolean;
+  updateVersion?: string;
+  onHerdrUpgrade?: () => void;
   canSplit: boolean;
-  maximized: boolean;
+  onProjectSkills?: () => void;
   onHerdr: () => void;
   onHerdrSidebar: () => void;
   onSplit: (direction: "horizontal" | "vertical") => void;
-  onMaximize: () => void;
 }
 
 /** Compact panel controls; Herdr runs inside the selected terminal. */
@@ -26,80 +28,100 @@ export function TerminalPanelTools({
   showTerminalActions = true,
   hasTerminal,
   herdrBusy,
-  hasUpdate,
+  updateVersion,
+  onHerdrUpgrade,
   canSplit,
-  maximized,
+  onProjectSkills,
   onHerdr,
   onHerdrSidebar,
   onSplit,
-  onMaximize,
 }: Props) {
   const { t } = useTranslation();
   return (
     <div className="flex shrink-0 items-center gap-1">
       {showTerminalActions && (
         <>
-          <button
-            type="button"
-            className="app-button-ghost h-7 shrink-0 gap-1 px-2 py-0 text-xs aria-disabled:opacity-50"
-            // Keep native focus stable during preparation. Disabling the clicked
-            // button can move focus to the WebView document and cancel launch.
-            disabled={!hasTerminal}
-            aria-disabled={!hasTerminal || herdrBusy}
-            aria-busy={herdrBusy}
-            onClick={() => {
-              if (!herdrBusy) onHerdr();
-            }}
-            title={t("terminal.herdrLaunch")}
-          >
-            {herdrBusy && (
-              <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-            )}
-            Herdr{hasUpdate ? " •" : ""}
-          </button>
-          <button
-            type="button"
-            className="app-button-ghost h-7 w-7 shrink-0 p-0"
-            aria-label={t("terminal.herdrSidebar")}
-            title={`${t("terminal.herdrSidebar")} · Ctrl+B B`}
-            disabled={!hasTerminal || herdrBusy}
-            onClick={onHerdrSidebar}
-          >
-            <PanelLeft size={16} />
-          </button>
           <CardActionMenu
-            label={t("terminal.split")}
-            disabled={!canSplit}
-            triggerIcon={<LayoutGrid size={16} />}
-            triggerClassName="h-7 w-7"
+            label="Herdr"
+            disabled={!hasTerminal}
+            triggerClassName="h-7 w-auto gap-1 px-2 text-xs"
+            triggerIcon={
+              <>
+                {herdrBusy && (
+                  <Loader2
+                    size={12}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
+                <span>Herdr{updateVersion ? " •" : ""}</span>
+                <ChevronDown size={12} aria-hidden="true" />
+              </>
+            }
             actions={[
               {
-                key: "horizontal",
-                label: t("terminal.splitHorizontal"),
-                onSelect: () => onSplit("horizontal"),
+                key: "launch",
+                label: t("terminal.herdrLaunch"),
+                icon: <TerminalSquare size={14} />,
+                disabled: herdrBusy,
+                onSelect: onHerdr,
               },
               {
-                key: "vertical",
-                label: t("terminal.splitVertical"),
-                onSelect: () => onSplit("vertical"),
+                key: "sidebar",
+                label: t("terminal.herdrSidebar"),
+                icon: <PanelLeft size={14} />,
+                disabled: herdrBusy,
+                onSelect: onHerdrSidebar,
               },
+              ...(updateVersion && onHerdrUpgrade
+                ? [
+                    {
+                      key: "upgrade",
+                      label: t("terminal.herdrUpdateAvailable", {
+                        version: updateVersion,
+                      }),
+                      icon: <Download size={14} />,
+                      disabled: herdrBusy,
+                      onSelect: onHerdrUpgrade,
+                    },
+                  ]
+                : []),
             ]}
           />
         </>
       )}
-      <button
-        type="button"
-        className="app-button-ghost h-7 w-7 shrink-0 p-0"
-        aria-label={t(
-          `${showTerminalActions ? "terminal" : "fileReader"}.${maximized ? "restore" : "maximize"}`,
-        )}
-        title={t(
-          `${showTerminalActions ? "terminal" : "fileReader"}.${maximized ? "restore" : "maximize"}`,
-        )}
-        onClick={onMaximize}
-      >
-        {maximized ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-      </button>
+      {(showTerminalActions || onProjectSkills) && (
+        <CardActionMenu
+          label={t("common.more")}
+          disabled={!canSplit && !onProjectSkills}
+          triggerIcon={<LayoutGrid size={16} />}
+          triggerClassName="h-7 w-7"
+          actions={[
+            ...(onProjectSkills
+              ? [
+                  {
+                    key: "project-skills",
+                    label: t("worktree.projectSkills"),
+                    icon: <Layers size={14} />,
+                    onSelect: onProjectSkills,
+                  },
+                ]
+              : []),
+            {
+              key: "horizontal",
+              label: t("terminal.splitHorizontal"),
+              disabled: !canSplit,
+              onSelect: () => onSplit("horizontal"),
+            },
+            {
+              key: "vertical",
+              label: t("terminal.splitVertical"),
+              disabled: !canSplit,
+              onSelect: () => onSplit("vertical"),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

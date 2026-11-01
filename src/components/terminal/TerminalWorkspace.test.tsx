@@ -148,7 +148,7 @@ it("opens the most recently visited project once, after loading and entering the
           <Link to="/tasks" data-nav="tasks">
             Tasks
           </Link>
-          <TerminalWorkspace projects={projects} onMaximizedChange={() => {}} />
+          <TerminalWorkspace projects={projects} />
         </MemoryRouter>
       </StrictMode>,
     );
@@ -194,7 +194,7 @@ it("offers a project terminal without requiring Herdr", async () => {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={["/terminal"]}>
-        <TerminalWorkspace projects={[]} onMaximizedChange={() => {}} />
+        <TerminalWorkspace projects={[]} />
       </MemoryRouter>,
     ),
   );
@@ -206,31 +206,23 @@ it("offers a project terminal without requiring Herdr", async () => {
   host.remove();
 });
 
-it("toggles terminal maximize and restore without moving keyboard focus", async () => {
+it("omits the redundant terminal maximize control", async () => {
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
-  const change = vi.fn();
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={["/terminal"]}>
-        <TerminalWorkspace projects={[]} onMaximizedChange={change} />
+        <TerminalWorkspace projects={[]} />
       </MemoryRouter>,
     ),
   );
-  const maximize = host.querySelector<HTMLButtonElement>(
-    'button[aria-label="terminal.maximize"]',
-  );
-  expect(maximize).not.toBeNull();
-  maximize?.focus();
-  await act(async () => maximize?.click());
-  expect(change).toHaveBeenLastCalledWith(true);
-  const restore = host.querySelector<HTMLButtonElement>(
-    'button[aria-label="terminal.restore"]',
-  );
-  expect(restore).toBe(document.activeElement);
-  await act(async () => restore?.click());
-  expect(change).toHaveBeenLastCalledWith(false);
+  expect(
+    host.querySelector('button[aria-label="terminal.maximize"]'),
+  ).toBeNull();
+  expect(
+    host.querySelector('button[aria-label="terminal.restore"]'),
+  ).toBeNull();
   await act(async () => root.unmount());
   host.remove();
 });
@@ -306,7 +298,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
           },
         ]}
       >
-        <TerminalWorkspace projects={[project]} onMaximizedChange={() => {}} />
+        <TerminalWorkspace projects={[project]} />
       </MemoryRouter>,
     ),
   );
@@ -331,7 +323,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
     '[role="tabpanel"]:not([hidden]) textarea[aria-label="Shell input"]',
   );
   expect(first).not.toBeNull();
-  await click("terminal.split");
+  await click("common.more");
   const splitOption = [
     ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
   ].find((button) => button.textContent === "terminal.splitHorizontal");
@@ -342,10 +334,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   );
   const second = panes[1];
   expect(second).toBeDefined();
-  const herdr = host.querySelector<HTMLButtonElement>(
-    'button[title="terminal.herdrLaunch"]',
-  );
-  await act(async () => herdr?.click());
+  await selectHerdrAction(host, "terminal.herdrLaunch");
   await act(async () => {
     second.value = "draft";
     second.focus();
@@ -365,7 +354,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   installing = new Promise((resolve) => {
     finishInstall = resolve;
   });
-  await act(async () => herdr?.click());
+  await selectHerdrAction(host, "terminal.herdrLaunch");
   const projectControl = host.querySelector<HTMLButtonElement>(
     'button[aria-label="terminal.chooseProject"]',
   );
@@ -379,11 +368,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
       .mock.calls.some(([command]) => command === "terminal_launch_herdr"),
   ).toBe(false);
   expect(document.activeElement).toBe(projectControl);
-  const update = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
-    (button) => button.textContent === "terminal.herdrUpdateAvailable",
-  );
-  expect(update).toBeDefined();
-  await act(async () => update?.click());
+  await selectHerdrAction(host, "terminal.herdrUpdateAvailable");
   await act(async () =>
     finishUpdate({
       path: "<managed>/new/herdr",
@@ -393,11 +378,13 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   );
   expect(second.isConnected).toBe(true);
   expect(second.value).toBe("draft");
-  expect(document.activeElement).toBe(projectControl);
+  expect(document.activeElement).toBe(
+    host.querySelector('[aria-label="Herdr"]'),
+  );
   const writesBeforeSidebar = vi
     .mocked(invoke)
     .mock.calls.filter(([command]) => command === "terminal_write").length;
-  await click("terminal.herdrSidebar");
+  await selectHerdrAction(host, "terminal.herdrSidebar");
   expect(host.textContent).toContain("terminal.herdrNotRunning");
   expect(
     vi
@@ -405,7 +392,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
       .mock.calls.filter(([command]) => command === "terminal_write"),
   ).toHaveLength(writesBeforeSidebar);
   herdrActive = true;
-  await click("terminal.herdrSidebar");
+  await selectHerdrAction(host, "terminal.herdrSidebar");
   expect(invoke).toHaveBeenCalledWith("terminal_write", {
     id: "pty-3",
     data: "\u0002b",
@@ -453,10 +440,7 @@ it("keeps terminals, split panes and the selected tab independent for each workt
           <Link data-nav="skills" to={`/project/${project.id}/skills`}>
             Skills
           </Link>
-          <TerminalWorkspace
-            projects={[project]}
-            onMaximizedChange={() => {}}
-          />
+          <TerminalWorkspace projects={[project]} />
         </MemoryRouter>
       </StrictMode>,
     ),
@@ -482,7 +466,7 @@ it("keeps terminals, split panes and the selected tab independent for each workt
   expect(
     host.querySelector('[aria-label="terminal.chooseProject"]'),
   ).toBeNull();
-  await click('[aria-label="terminal.split"]');
+  await click('[aria-label="common.more"]');
   const option = [
     ...document.querySelectorAll<HTMLElement>('[role="menuitem"]'),
   ].find((node) => node.textContent === "terminal.splitHorizontal")!;
@@ -540,7 +524,7 @@ it("moves terminal status into the window footer and clears it when navigating a
             }}
           >
             <Link to="/settings">Settings</Link>
-            <TerminalWorkspace projects={[]} onMaximizedChange={() => {}} />
+            <TerminalWorkspace projects={[]} />
           </SidebarVisibilityContext.Provider>
         </MemoryRouter>,
       ),
@@ -576,7 +560,7 @@ it("switches between peer file and terminal tabs without replacing running panes
       <TerminalWorkspace
         projects={[project]}
         shown={shown}
-        onMaximizedChange={() => {}}
+
         onSelectTerminal={() => setShown(true)}
         extraTabs={
           <button
@@ -643,6 +627,18 @@ it("switches between peer file and terminal tabs without replacing running panes
   }
 });
 
+async function selectHerdrAction(host: HTMLElement, label: string) {
+  const trigger = host.querySelector<HTMLButtonElement>(
+    'button[aria-label="Herdr"]',
+  )!;
+  await act(async () => trigger.click());
+  const action = document.querySelector<HTMLButtonElement>(
+    `[role="menuitem"][title="${label}"]`,
+  )!;
+  expect(action).not.toBeNull();
+  await act(async () => action.click());
+}
+
 it("launches installed Herdr from the toolbar in the selected shell", async () => {
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "terminal_list") return [];
@@ -670,19 +666,11 @@ it("launches installed Herdr from the toolbar in the selected shell", async () =
         >
           <TerminalWorkspace
             projects={[{ ...makeProject(), path: "<workspace>" }]}
-            onMaximizedChange={() => {}}
           />
         </MemoryRouter>,
       ),
     );
-    const button = host.querySelector<HTMLButtonElement>(
-      'button[title="terminal.herdrLaunch"]',
-    )!;
-    expect(button.disabled).toBe(false);
-    await act(async () => {
-      button.focus();
-      button.click();
-    });
+    await selectHerdrAction(host, "terminal.herdrLaunch");
     expect(invoke).toHaveBeenCalledWith("terminal_launch_herdr", {
       id: "launch-pty",
       revision: 9,

@@ -27,7 +27,7 @@ export function Layout() {
     !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
   const projectSkillsPage =
     !!projectCheckoutRoute(pathname, search) && !workspacePage;
-  const [terminalMaximized, setTerminalMaximized] = useState(false);
+  const [gitSidebarVisible, setGitSidebarVisible] = useState(true);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [manageWorkspaces, setManageWorkspaces] = useState(false);
   useApplicationMenu(
@@ -43,7 +43,6 @@ export function Layout() {
     null,
   );
   const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
-  const hideSidebar = workspacePage && terminalMaximized;
   const discoveryPage = pathname === "/discover" || pathname === "/install";
   const fullHeightPage =
     projectSkillsPage ||
@@ -55,22 +54,7 @@ export function Layout() {
 
   // Cmd+, to open Settings
   useEffect(() => {
-    const revealSearch = () => {
-      if (!hideSidebar) return;
-      setTerminalMaximized(false);
-      requestAnimationFrame(() =>
-        window.dispatchEvent(new Event("workspace-search-open")),
-      );
-    };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        e.key.toLowerCase() === "f"
-      ) {
-        e.preventDefault();
-        revealSearch();
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         const target = e.target as HTMLElement;
         if (
@@ -95,17 +79,16 @@ export function Layout() {
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("workspace-search-open", revealSearch);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("workspace-search-open", revealSearch);
     };
-  }, [navigate, refreshAppData, hideSidebar]);
+  }, [navigate, refreshAppData]);
 
   return (
     <SidebarVisibilityContext.Provider
       value={{
         resourcePanelVisible,
+        setGitSidebarVisible,
         setResourcePanelVisible,
         sidebarContainer,
         statusContainer,
@@ -116,15 +99,19 @@ export function Layout() {
         <div className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary">
           <WindowTitleBar onOpenCommands={() => setCommandsOpen(true)} />
           <div className="flex min-h-0 flex-1 overflow-hidden">
-            <div className={hideSidebar ? "hidden" : "contents"}>
-              <Sidebar />
-            </div>
+            <Sidebar />
             <div
               ref={setSidebarContainer}
-              hidden={pathname !== "/git" || resourcePanelVisible}
+              hidden={
+                pathname !== "/git" ||
+                resourcePanelVisible ||
+                !gitSidebarVisible
+              }
               className={cn(
                 "min-h-0 shrink-0",
-                pathname === "/git" && !resourcePanelVisible
+                pathname === "/git" &&
+                  !resourcePanelVisible &&
+                  gitSidebarVisible
                   ? "flex"
                   : "hidden",
               )}
@@ -167,7 +154,6 @@ export function Layout() {
               </div>
             </div>
             <ProjectWorkspace
-              onMaximizedChange={setTerminalMaximized}
               page={pathname === "/git" ? <Outlet /> : undefined}
             />
           </div>

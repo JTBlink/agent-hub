@@ -36,11 +36,11 @@ import { TerminalStatus } from "./TerminalStatus";
 
 interface Props {
   projects: Project[];
-  onMaximizedChange: (maximized: boolean) => void;
   shown?: boolean;
   projectsReady?: boolean;
   toolbar?: ReactNode;
   toolbarEnd?: ReactNode;
+  onProjectSkills?: () => void;
   extraTabs?: ReactNode;
   content?: ReactNode;
   onSelectTerminal?: () => void;
@@ -49,11 +49,11 @@ const toolbarAction = "app-button-ghost h-7 w-7 shrink-0 p-0";
 
 export function TerminalWorkspace({
   projects,
-  onMaximizedChange,
   shown = true,
   projectsReady = true,
   toolbar,
   toolbarEnd,
+  onProjectSkills,
   extraTabs,
   content,
   onSelectTerminal,
@@ -103,7 +103,6 @@ export function TerminalWorkspace({
     rememberActive(id);
     setActiveIds((previous) => ({ ...previous, [scopeKey]: id }));
   };
-  const [maximized, setMaximized] = useState(false);
   const controls = useRef(new Map<string, PaneControl>());
   const activeTarget = useRef<PaneControl | null>(null);
   const tabsRef = useRef(tabs);
@@ -335,11 +334,6 @@ export function TerminalWorkspace({
     }));
     navigate(worktreeUrl(tab.projectId, tab.worktreePath));
   };
-  const toggleMaximize = () => {
-    const next = !maximized;
-    setMaximized(next);
-    onMaximizedChange(next);
-  };
   const statusBar = (
     <TerminalStatus
       message={
@@ -351,11 +345,6 @@ export function TerminalWorkspace({
         t("terminal.title")
       }
       notice={bridgeError || herdr.notice}
-      updateVersion={
-        herdr.update?.has_update ? herdr.update.latest_version : undefined
-      }
-      busy={herdr.busy}
-      onUpgrade={() => void herdr.upgrade()}
     />
   );
   return (
@@ -369,7 +358,7 @@ export function TerminalWorkspace({
       }
     >
       {toolbar ?? (
-        <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-bg-secondary px-2">
+        <div className="flex h-9 shrink-0 flex-nowrap items-center gap-1 border-b border-border bg-bg-secondary px-2">
           <TerminalTabs
             tabs={scopedTabs}
             projects={projects}
@@ -402,62 +391,68 @@ export function TerminalWorkspace({
               ))}
             </ThemedSelect>
           )}
-          {toolbarEnd}
-          {shown && (
-            <>
-              <TerminalSessions
-                tabs={tabs}
-                projects={projects}
-                activeId={displayedId}
-                onSelect={selectSession}
-                onClose={close}
-              />
-              <button
-                type="button"
-                className={toolbarAction}
-                aria-label={t("terminal.new")}
-                title={t("terminal.new")}
-                disabled={
-                  !ready ||
-                  !(scopedProject || selected) ||
-                  count >= TERMINAL_PANE_LIMIT
-                }
-                onClick={add}
-              >
-                <Plus size={15} />
-              </button>
-              {active?.context && (
+          <div className="flex shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap">
+            {shown && (
+              <>
                 <button
                   type="button"
                   className={toolbarAction}
-                  aria-label={t("tasks.context")}
-                  title={active.context.title}
-                  onClick={() => setContextVisible((value) => !value)}
+                  aria-label={t("terminal.new")}
+                  title={t("terminal.new")}
+                  disabled={
+                    !ready ||
+                    !(scopedProject || selected) ||
+                    count >= TERMINAL_PANE_LIMIT
+                  }
+                  onClick={add}
                 >
-                  <FileText size={15} />
+                  <Plus size={15} />
                 </button>
-              )}
-            </>
-          )}
-          <TerminalPanelTools
-            showTerminalActions={shown}
-            key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
-            hasTerminal={shown && !!active}
-            herdrBusy={herdr.busy}
-            hasUpdate={!!herdr.update?.has_update}
-            canSplit={
-              shown &&
-              ready &&
-              !!active &&
-              active.panes.length < 2 &&
-              count < TERMINAL_PANE_LIMIT
-            }
-            maximized={maximized}
-            onHerdr={() => void herdr.launch()}
-            onHerdrSidebar={() => void herdr.toggleSidebar()}
-            onSplit={split}
-            onMaximize={toggleMaximize}
-          />
+                <TerminalSessions
+                  tabs={tabs}
+                  projects={projects}
+                  activeId={displayedId}
+                  onSelect={selectSession}
+                  onClose={close}
+                />
+                {active?.context && (
+                  <button
+                    type="button"
+                    className={toolbarAction}
+                    aria-label={t("tasks.context")}
+                    title={active.context.title}
+                    onClick={() => setContextVisible((value) => !value)}
+                  >
+                    <FileText size={15} />
+                  </button>
+                )}
+              </>
+            )}
+            {toolbarEnd}
+            <TerminalPanelTools
+              showTerminalActions={shown}
+              onProjectSkills={onProjectSkills}
+              key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
+              hasTerminal={shown && !!active}
+              herdrBusy={herdr.busy}
+              updateVersion={
+                herdr.update?.has_update
+                  ? herdr.update.latest_version
+                  : undefined
+              }
+              onHerdrUpgrade={() => void herdr.upgrade()}
+              canSplit={
+                shown &&
+                ready &&
+                !!active &&
+                active.panes.length < 2 &&
+                count < TERMINAL_PANE_LIMIT
+              }
+              onHerdr={() => void herdr.launch()}
+              onHerdrSidebar={() => void herdr.toggleSidebar()}
+              onSplit={split}
+            />
+          </div>
         </div>
       )}
       {content}

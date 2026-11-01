@@ -78,6 +78,7 @@ vi.mock("../terminal/TerminalWorkspace", () => ({
     extraTabs,
     content,
     onSelectTerminal,
+    onProjectSkills,
   }: {
     shown: boolean;
     toolbar?: ReactNode;
@@ -85,6 +86,7 @@ vi.mock("../terminal/TerminalWorkspace", () => ({
     extraTabs?: ReactNode;
     content?: ReactNode;
     onSelectTerminal?: () => void;
+    onProjectSkills?: () => void;
   }) => (
     <div>
       {toolbar ?? (
@@ -96,6 +98,14 @@ vi.mock("../terminal/TerminalWorkspace", () => ({
             {extraTabs}
           </div>
           {toolbarEnd}
+          {onProjectSkills && (
+            <button
+              aria-label="worktree.projectSkills"
+              onClick={onProjectSkills}
+            >
+              Skills action
+            </button>
+          )}
         </div>
       )}
       <div hidden={!shown} data-terminal>
@@ -160,7 +170,7 @@ async function render() {
         <RouteProbe />
         <WorkspaceFilesProvider>
           <SidebarProjectFiles />
-          <ProjectWorkspace onMaximizedChange={() => {}} page={<GitEditor />} />
+          <ProjectWorkspace page={<GitEditor />} />
         </WorkspaceFilesProvider>
         <Routes>
           <Route path="/git" element={null} />
@@ -270,19 +280,19 @@ it("omits duplicate branch context and refresh from the terminal/file toolbar", 
     Array.from(host.querySelectorAll("button")).find(
       (button) => button.textContent === "terminal.title",
     )!;
-  const expectCompactToolbar = (fileShown = false) => {
+  const expectCompactToolbar = () => {
     const toolbar = terminalButton().closest("[data-terminal-toolbar]")!;
     expect(toolbar.textContent).not.toContain("main");
     expect(toolbar.textContent).not.toContain("topic");
     expect(toolbar.querySelector('[aria-label="worktree.refresh"]')).toBeNull();
     expect(
       toolbar.querySelector('[aria-label="worktree.projectSkills"]') === null,
-    ).toBe(fileShown);
+    ).toBe(false);
   };
   expectCompactToolbar();
   await click('aside button[title="src"]');
   await click('aside button[title="src/app.ts"]');
-  expectCompactToolbar(true);
+  expectCompactToolbar();
   const fileTab = host.querySelector('[role="tab"][title="src/app.ts"]')!;
   expect(fileTab.closest('[role="tablist"]')).toBe(
     terminalButton().closest('[role="tablist"]'),

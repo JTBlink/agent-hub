@@ -16,13 +16,7 @@ import { WorktreeFilePreview } from "./WorktreeFilePreview";
 import { GitEditorVisibilityContext } from "../../hooks/gitEditorVisibility";
 
 /** Remains mounted with Layout so switching worktrees/pages preserves PTYs. */
-export function ProjectWorkspace({
-  onMaximizedChange,
-  page,
-}: {
-  onMaximizedChange: (value: boolean) => void;
-  page?: ReactNode;
-}) {
+export function ProjectWorkspace({ page }: { page?: ReactNode }) {
   const { t } = useTranslation();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
   const [fileToolbar, setFileToolbar] = useState<HTMLDivElement | null>(null);
@@ -69,17 +63,6 @@ export function ProjectWorkspace({
   }, [routeProjectId, path, setCheckout]);
   const file = files[scope];
   const visible = gitPage || !!route || location.pathname === "/terminal";
-  const workspaceActions = route && (
-    <button
-      type="button"
-      onClick={() => setSkillsSelection(skillsKey)}
-      aria-label={t("worktree.projectSkills")}
-      title={t("worktree.projectSkills")}
-      className="app-button-ghost h-7 w-7 shrink-0 p-0 text-muted"
-    >
-      <span className="codicon codicon-layers text-[16px]" aria-hidden="true" />
-    </button>
-  );
   return (
     <section
       hidden={!visible}
@@ -111,9 +94,11 @@ export function ProjectWorkspace({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TerminalWorkspace
             projects={projects}
+            onProjectSkills={
+              route ? () => setSkillsSelection(skillsKey) : undefined
+            }
             projectsReady={!projectsLoading && !appError}
             shown={!skillsShown && !pageShown && (!file?.shown || !route)}
-            onMaximizedChange={onMaximizedChange}
             onSelectTerminal={() => {
               setSkillsSelection(null);
               setPageSelection("");
@@ -184,9 +169,7 @@ export function ProjectWorkspace({
                   ref={setFileToolbar}
                   className="flex shrink-0 items-center"
                 />
-              ) : (
-                workspaceActions
-              )
+              ) : undefined
             }
             content={
               <>

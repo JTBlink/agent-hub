@@ -136,7 +136,7 @@ it("launches when WebView delays terminal focus until after the toolbar click", 
     const shortcut = useHerdrShortcut(() => control, "demo");
     useLayoutEffect(() => {
       const button = mount.querySelector<HTMLButtonElement>(
-        'button[title="terminal.herdrLaunch"]',
+        'button[aria-label="Herdr"]',
       );
       if (
         shortcut.busy &&
@@ -152,27 +152,28 @@ it("launches when WebView delays terminal focus until after the toolbar click", 
       <TerminalPanelTools
         hasTerminal
         herdrBusy={shortcut.busy}
-        hasUpdate={false}
         canSplit={false}
-        maximized={false}
+
         onHerdr={() => void shortcut.launch()}
         onHerdrSidebar={() => {}}
         onSplit={() => {}}
-        onMaximize={() => {}}
       />
     );
   }
   try {
     await act(async () => root.render(<Harness />));
     const button = mount.querySelector<HTMLButtonElement>(
-      'button[title="terminal.herdrLaunch"]',
+      'button[aria-label="Herdr"]',
     )!;
     await act(async () => {
       button.focus();
       button.click();
     });
-    expect(button.getAttribute("aria-busy")).toBe("true");
-    await act(async () => button.click());
+    const launch = document.querySelector<HTMLButtonElement>(
+      '[role="menuitem"][title="terminal.herdrLaunch"]',
+    )!;
+    await act(async () => launch.click());
+    expect(button.disabled).toBe(false);
     expect(api.detectHerdr).toHaveBeenCalledTimes(1);
     await act(async () =>
       finishDetection({

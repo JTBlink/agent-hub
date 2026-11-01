@@ -33,6 +33,8 @@ export function SidebarActivityBar({
   onSelectPanel,
   updateVersion,
   gitChanges,
+  gitSidebarOpen,
+  onSelectGit,
 }: {
   panelOpen: boolean;
   panelId: string;
@@ -41,6 +43,8 @@ export function SidebarActivityBar({
   onSelectPanel: (panel: SidebarPanel) => void;
   updateVersion?: string;
   gitChanges?: { count: number; truncated: boolean };
+  gitSidebarOpen: boolean;
+  onSelectGit: () => void;
 }) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
@@ -64,6 +68,20 @@ export function SidebarActivityBar({
       <Link
         key={item.path}
         to={item.path}
+        aria-expanded={
+          item.path === "/git"
+            ? pathname === "/git" && gitSidebarOpen
+            : undefined
+        }
+        onClick={
+          item.path === "/git"
+            ? (event) => {
+                if (pathname !== "/git") return;
+                event.preventDefault();
+                onSelectGit();
+              }
+            : undefined
+        }
         title={item.name}
         aria-label={item.name}
         aria-current={active ? "page" : undefined}
