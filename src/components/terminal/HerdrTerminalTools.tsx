@@ -4,6 +4,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
 import { TerminalActionBar } from "./TerminalActionBar";
+import { herdrFocusedPane } from "../../lib/herdrFocusedPane";
 import { herdrTarget } from "../../lib/herdrControlApi";
 import { ConfirmDialog } from "../ConfirmDialog";
 import type { PaneControl } from "./TerminalPane";
@@ -81,15 +82,14 @@ export function HerdrTerminalTools({
       }
       const snapshot = await api.getHerdrSnapshot(requested.session);
       if (!unchanged()) return false;
-      const workspace = snapshot.workspaces.find(
-        (space) => space.workspace_id === requested.workspace_id,
-      );
-      const focused = snapshot.panes.find(
-        (pane) =>
-          pane.workspace_id === requested.workspace_id &&
-          pane.tab_id === workspace?.active_tab_id &&
-          pane.focused,
-      );
+      const focused = confirmed
+        ? snapshot.panes.find(
+            (pane) =>
+              pane.workspace_id === confirmed.workspace_id &&
+              pane.pane_id === confirmed.pane_id &&
+              pane.terminal_id === confirmed.terminal_id,
+          )
+        : herdrFocusedPane(snapshot, requested);
       if (!focused) throw new Error(t("terminal.herdrFocusUnavailable"));
       const resolved = confirmed ?? herdrTarget(requested.session, focused);
       if (action === "close" && !confirmed) {
