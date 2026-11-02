@@ -22,13 +22,20 @@ function publish(id: string, snapshot: Snapshot) {
   cache.set(id, snapshot);
   listeners.forEach((listener) => listener());
 }
+/** Reuse a validated discovery result from explicit open/remove actions. */
+export function cacheProjectWorktrees(
+  id: string,
+  worktrees: ProjectWorktree[],
+) {
+  publish(id, { worktrees, loading: false, error: "" });
+}
 export function refreshProjectWorktrees(id: string) {
   const existing = pending.get(id);
   if (existing) return existing;
   publish(id, { ...(cache.get(id) ?? empty), loading: true, error: "" });
   const request = getProjectWorktrees(id)
     .then(
-      (worktrees) => publish(id, { worktrees, loading: false, error: "" }),
+      (worktrees) => cacheProjectWorktrees(id, worktrees),
       (cause) =>
         publish(id, {
           ...(cache.get(id) ?? empty),

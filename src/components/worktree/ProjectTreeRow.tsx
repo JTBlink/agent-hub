@@ -105,7 +105,7 @@ export function ProjectTreeRow({
           )}
           {error && (
             <div className="p-2 text-xs text-danger" role="alert">
-              <p>{error}</p>
+              <p>{t("worktree.missingDirectory.accessDescription")}</p>
               <button
                 type="button"
                 onClick={() => void refresh()}
@@ -148,6 +148,11 @@ export function ProjectTreeRow({
                     <span className="min-w-0 flex-1 truncate">
                       {worktreeLabel(worktree)}
                     </span>
+                    {!worktree.available && (
+                      <span className="text-xs text-muted">
+                        {t("worktree.missingDirectory.title")}
+                      </span>
+                    )}
                     {worktree.locked && (
                       <LockKeyhole
                         size={11}

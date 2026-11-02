@@ -30,7 +30,32 @@ pub struct WorktreeFileEntry {
 }
 
 pub fn list(store: &SkillStore, project_id: &str) -> Result<Vec<ProjectWorktree>> {
+    let project = store
+        .get_project_by_id(project_id)?
+        .context("Project is no longer registered")?;
+    let path = Path::new(&project.path);
+    let available = match path.metadata() {
+        Ok(metadata) => metadata.is_dir(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => false,
+        Err(error) => return Err(error.into()),
+    };
+    if !available {
+        // Discovery reports a missing registered root without authorizing it
+        // for terminal or file operations. Never recreate or unregister it.
+        return Ok(vec![plain_directory(path, false)]);
+    }
     list_directory(&project_paths::project_directory(store, project_id)?)
+}
+
+fn plain_directory(directory: &Path, available: bool) -> ProjectWorktree {
+    ProjectWorktree {
+        path: directory.to_string_lossy().into_owned(),
+        branch: None,
+        head: None,
+        is_main: true,
+        locked: false,
+        available,
+    }
 }
 
 fn list_directory(directory: &Path) -> Result<Vec<ProjectWorktree>> {
@@ -44,14 +69,7 @@ fn list_directory(directory: &Path) -> Result<Vec<ProjectWorktree>> {
         Ok(repo) if repo.workdir().is_some() => {}
         Ok(_) => bail!("A bare repository has no workspace directory"),
         Err(error) if error.code() == git2::ErrorCode::NotFound => {
-            return Ok(vec![ProjectWorktree {
-                path: directory.to_string_lossy().into_owned(),
-                branch: None,
-                head: None,
-                is_main: true,
-                locked: false,
-                available: true,
-            }]);
+            return Ok(vec![plain_directory(directory, true)]);
         }
         Err(error) => return Err(error.into()),
     }

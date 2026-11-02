@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import { useApplicationMenu } from "./useApplicationMenu";
 import { makeProject } from "../../tests/fixtures/workspace";
+vi.mock("./useProjectWorktrees", () => ({ cacheProjectWorktrees: vi.fn() }));
 const mocks = vi.hoisted(() => ({
   open: vi.fn(),
   refresh: vi.fn().mockResolvedValue(undefined),

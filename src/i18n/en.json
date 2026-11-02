@@ -16,6 +16,8 @@
     "completed": "File operation completed"
   },
   "herdr": {
+    "workspaceUnavailable": "This workspace could not be opened. Check its local directory and try again.",
+    "sessionUnavailable": "Herdr session is temporarily unavailable. Refresh to try again.",
     "deleteWorktree": "Delete worktree checkout…",
     "deleteWorktreeHelp": "Delete worktree “{{path}}”? Terminals, Agents and processes in its Herdr workspace will close and the checkout directory will be removed. The Git branch is retained. Locked worktrees or those with local files cannot be deleted.",
     "moreActions": "More Herdr actions",
@@ -2339,6 +2341,20 @@
     }
   },
   "worktree": {
+    "missingDirectory": {
+      "removeInvalidProject": "Remove unavailable project",
+      "removeTitle": "Remove unavailable project",
+      "removeConfirm": "The local directory for “{{name}}” no longer exists. Remove this unavailable project entry from recent projects and workspaces?",
+      "removeRecord": "Remove unavailable project",
+      "removeFailed": "Could not remove the project entry. Please try again.",
+      "title": "Workspace directory unavailable",
+      "description": "The directory may have been moved or deleted. Restore it and check again, or open another workspace.",
+      "accessTitle": "Workspace temporarily inaccessible",
+      "accessDescription": "Check the directory path and access permissions, then try again.",
+      "retry": "Check again",
+      "checking": "Checking…",
+      "openOther": "Open another workspace"
+    },
     "create": "Create worktree",
     "createMenu": "Create worktree…",
     "createHint": "Create a new branch and separate working directory from the current worktree’s HEAD, then switch to it.",

@@ -8,6 +8,7 @@ import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { Sidebar } from "./Sidebar";
 import { StatusBanner } from "./StatusBanner";
 import { CommandPalette } from "./CommandPalette";
+import { MissingProjectDialog } from "./worktree/MissingProjectDialog";
 import { useApp } from "../context/AppContext";
 import { useTranslation } from "react-i18next";
 import { WindowTitleBar } from "./WindowTitleBar";
@@ -19,6 +20,7 @@ import {
 import { cn } from "../utils";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
+import { readTerminalLayout } from "../lib/terminalLayout";
 
 export function Layout() {
   const { t } = useTranslation();
@@ -26,10 +28,17 @@ export function Layout() {
     useApp();
   const [started, setStarted] = useState(false);
   const [startup, setStartup] = useState<TerminalStartupState | null>(null);
-  // Initial hydration is one-shot; normal refreshes keep the current page mounted.
-  if (!started && !loading && startup?.ready) setStarted(true);
-  const navigate = useNavigate();
+  const [initialTerminals] = useState(readTerminalLayout);
   const { pathname, search } = useLocation();
+  const welcomeReady =
+    pathname === "/" &&
+    !initialTerminals.tabs.some((tab) =>
+      projects?.some((project) => project.id === tab.projectId),
+    );
+  // Initial hydration is one-shot; normal refreshes keep the current page mounted.
+  if (!started && !loading && (startup?.ready || welcomeReady))
+    setStarted(true);
+  const navigate = useNavigate();
   const workspacePage =
     !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
   const projectSkillsPage =
@@ -37,7 +46,7 @@ export function Layout() {
   const [gitSidebarVisible, setGitSidebarVisible] = useState(true);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [manageWorkspaces, setManageWorkspaces] = useState(false);
-  useApplicationMenu(
+  const applicationMenu = useApplicationMenu(
     () => setCommandsOpen(true),
     () => setManageWorkspaces(true),
   );
@@ -182,6 +191,14 @@ export function Layout() {
             onAdded={refreshProjects}
           />
           <CommandPalette open={commandsOpen} onOpenChange={setCommandsOpen} />
+          <MissingProjectDialog
+            project={applicationMenu?.missingProject ?? null}
+            error={applicationMenu?.removalError ?? ""}
+            onClose={() => applicationMenu?.dismissMissingProject()}
+            onConfirm={async () =>
+              await applicationMenu?.removeMissingProject()
+            }
+          />
         </div>
         {!started && (
           <div

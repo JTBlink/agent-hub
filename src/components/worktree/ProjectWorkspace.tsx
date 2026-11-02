@@ -1,8 +1,14 @@
-import { useContext, useEffect, useState, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { FileCode2 } from "lucide-react";
 import { WorktreeFileCloseButton } from "./WorktreeFileCloseButton";
-import { useTranslation } from "react-i18next";
+import { useOpenProject } from "../../hooks/useOpenProject";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { projectWorkspaceRoute } from "../../lib/worktreeApi";
@@ -14,6 +20,9 @@ import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { ProjectSkillsPanel, ProjectSkillsToolbar } from "./ProjectSkillsPanel";
 import { WorktreeFilePreview } from "./WorktreeFilePreview";
+import { WorkspaceUnavailable } from "./WorkspaceUnavailable";
+import { MissingProjectDialog } from "./MissingProjectDialog";
+import { useRecentProject } from "../../hooks/useRecentProject";
 import {
   GitEditorTabsContext,
   GitEditorVisibilityContext,
@@ -29,13 +38,15 @@ export function ProjectWorkspace({
   page?: ReactNode;
   onStartupStateChange?: (state: TerminalStartupState) => void;
 }) {
-  const { t } = useTranslation();
+  const { openProject, isOpening } = useOpenProject();
+  const removal = useRecentProject();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
   const [gitTabsContainer, setGitTabsContainer] =
     useState<HTMLDivElement | null>(null);
   const [fileToolbar, setFileToolbar] = useState<HTMLDivElement | null>(null);
   const { projects, tools, loading: projectsLoading, appError } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
   const activeWorkspace = useActiveWorkspace(projects);
   const gitPage = location.pathname === "/git";
   const route =
@@ -54,12 +65,35 @@ export function ProjectWorkspace({
   }
   const [gitEditorVisible, setGitEditorVisible] = useState(false);
   const project = projects.find((item) => item.id === route?.projectId);
-  const { worktrees, error, refresh } = useProjectWorktrees(project?.id);
+  const routeProjectId = route?.projectId;
+  useEffect(() => {
+    if (routeProjectId && !project && !projectsLoading && !appError)
+      navigate("/", { replace: true });
+  }, [routeProjectId, project, projectsLoading, appError, navigate]);
+  const {
+    worktrees,
+    error,
+    loading: worktreesLoading,
+    refresh,
+  } = useProjectWorktrees(project?.id);
   const requestedPath = route?.worktreePath ?? project?.path;
   const worktree =
     worktrees.find((item) => item.path === requestedPath) ??
     (!route?.worktreePath ? worktrees.find((item) => item.is_main) : undefined);
   const path = worktree?.path ?? requestedPath;
+  const unavailable =
+    !!route &&
+    !!project &&
+    (!!error || (worktrees.length > 0 && !worktree?.available));
+  const reportStartup = useCallback(
+    (state: TerminalStartupState) => {
+      // A missing directory is a usable recovery page, not an app startup failure.
+      onStartupStateChange?.(
+        unavailable ? { ...state, ready: true, error: "" } : state,
+      );
+    },
+    [onStartupStateChange, unavailable],
+  );
   const scope = JSON.stringify([project?.id, path]);
   const [skillsSelection, setSkillsSelection] = useState<string | null>(null);
   const skillsKey = JSON.stringify([scope, location.key]);
@@ -70,7 +104,6 @@ export function ProjectWorkspace({
     gitEditorVisible &&
     pageSelection === location.key;
   const { files, setFiles, setCheckout } = useWorkspaceFiles();
-  const routeProjectId = route?.projectId;
   useEffect(() => {
     if (routeProjectId && path)
       setCheckout({ projectId: routeProjectId, worktreePath: path });
@@ -94,38 +127,53 @@ export function ProjectWorkspace({
         "workbench-editor-panel min-h-0 min-w-0 flex-1 flex-col overflow-hidden mr-1",
       )}
     >
-      {route &&
-        (error ||
-          (worktrees.length > 0 && (!worktree || !worktree.available))) && (
-          <div
-            role="alert"
-            className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-2 text-xs text-danger"
-          >
-            <span className="min-w-0 flex-1">
-              {error || t("worktree.unavailable")}
-            </span>
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              className="app-button-ghost"
-            >
-              {t("common.retry")}
-            </button>
-          </div>
-        )}
-      <div className="flex min-h-0 min-w-0 flex-1">
+      {unavailable && (
+        <WorkspaceUnavailable
+          path={path ?? project.path}
+          loading={worktreesLoading}
+          missing={!error}
+          onRetry={() => void refresh()}
+          onOpenOther={() => void openProject()}
+          opening={isOpening}
+          onRemove={
+            project &&
+            !error &&
+            worktrees.length > 0 &&
+            worktrees.every((tree) => !tree.available)
+              ? () => void removal.openRecent(project)
+              : undefined
+          }
+          checkingRemoval={removal.checking}
+        />
+      )}
+      <MissingProjectDialog
+        project={removal.missingProject}
+        error={removal.removalError}
+        onClose={removal.dismissMissingProject}
+        onConfirm={removal.removeMissingProject}
+      />
+      <div
+        hidden={unavailable}
+        className={unavailable ? "hidden" : "flex min-h-0 min-w-0 flex-1"}
+      >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TerminalWorkspace
-            onStartupStateChange={onStartupStateChange}
+            onStartupStateChange={reportStartup}
             projects={projects}
             tools={tools}
             onProjectSkills={
               route ? () => setSkillsSelection(skillsKey) : undefined
             }
-            projectsReady={!projectsLoading && !appError}
+            projectsReady={
+              !projectsLoading &&
+              !appError &&
+              !unavailable &&
+              (!route || worktrees.length > 0)
+            }
             shown={
-              !!herdrNavigation(location.state) ||
-              (!skillsShown && !pageShown && (!file?.shown || !route))
+              !unavailable &&
+              (!!herdrNavigation(location.state) ||
+                (!skillsShown && !pageShown && (!file?.shown || !route)))
             }
             onSelectTerminal={selectTerminal}
             extraTabs={

@@ -12,6 +12,9 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Layout } from "./Layout";
 import type { TerminalStartupState } from "./terminal/useTerminalLayout";
+import type { Project } from "../lib/tauri";
+import { createTerminalTab, writeTerminalLayout } from "../lib/terminalLayout";
+import { makeProject } from "../../tests/fixtures/workspace";
 
 const state = vi.hoisted(() => ({
   loading: true,
@@ -21,6 +24,7 @@ const state = vi.hoisted(() => ({
   startup: { ready: false, error: "", retry: vi.fn() },
   destination: "/",
   dashboardMounts: 0,
+  projects: [] as Project[],
 }));
 vi.mock("../context/AppContext", () => ({ useApp: () => state }));
 vi.mock("react-i18next", () => ({
@@ -84,7 +88,9 @@ beforeEach(() => {
     startup: { ready: false, error: "", retry: vi.fn() },
     destination: "/",
     dashboardMounts: 0,
+    projects: [],
   });
+  localStorage.clear();
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -114,7 +120,7 @@ async function render() {
     ),
   );
 }
-it("waits for app data and terminal reconciliation before mounting the dashboard", async () => {
+it("shows welcome as soon as app data is ready when no project needs restoring", async () => {
   await render();
   expect(host.querySelector('[role="status"]')?.textContent).toContain(
     "common.loading",
@@ -122,7 +128,7 @@ it("waits for app data and terminal reconciliation before mounting the dashboard
   expect(state.dashboardMounts).toBe(0);
   state.loading = false;
   await render();
-  expect(state.dashboardMounts).toBe(0);
+  expect(state.dashboardMounts).toBe(1);
   state.startup = { ...state.startup, ready: true };
   await render();
   expect(state.dashboardMounts).toBe(1);
@@ -133,6 +139,9 @@ it("waits for app data and terminal reconciliation before mounting the dashboard
   expect(host.querySelector('[role="status"]')).toBeNull();
 });
 it("restores the project without ever mounting the dashboard", async () => {
+  state.projects = [makeProject()];
+  const tab = createTerminalTab(state.projects[0].id);
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
   await render();
   state.loading = false;
   state.destination = "/project/demo";
@@ -142,6 +151,9 @@ it("restores the project without ever mounting the dashboard", async () => {
   expect(host.querySelector('[role="status"]')).toBeNull();
 });
 it("offers retry on startup failure without mounting the dashboard", async () => {
+  state.projects = [makeProject()];
+  const tab = createTerminalTab(state.projects[0].id);
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
   state.loading = false;
   state.startup = { ...state.startup, error: "Cannot read terminal sessions" };
   await render();
@@ -154,4 +166,14 @@ it("offers retry on startup failure without mounting the dashboard", async () =>
   state.startup = { ...state.startup, error: "", ready: true };
   await render();
   expect(state.dashboardMounts).toBe(1);
+});
+
+it("shows welcome immediately when the saved terminal belongs to a removed project", async () => {
+  const tab = createTerminalTab("removed-project");
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
+  state.projects = [makeProject()];
+  state.loading = false;
+  await render();
+  expect(state.dashboardMounts).toBe(1);
+  expect(host.querySelector('[role="status"]')).toBeNull();
 });

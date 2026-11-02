@@ -109,9 +109,8 @@ function HerdrWorkspaceGroup({
         if (tree && project) onOpenWorktree?.(project.id, tree.path);
         else onOpen(space.workspace_id);
       }}
-      unavailable={missing.some(
-        (tree) =>
-          `worktree:${tree.path}` === space.workspace_id && !tree.available,
+      unavailable={worktrees.some(
+        (tree) => tree.path === space.directory && !tree.available,
       )}
     />
   );

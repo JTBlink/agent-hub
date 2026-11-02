@@ -5,6 +5,7 @@ import { projectCheckoutRoute } from "../../lib/worktreeApi";
 import { WorktreeExplorer } from "./WorktreeExplorer";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
 import type { GitFile } from "../../lib/gitApi";
+import { WorkspaceUnavailable } from "./WorkspaceUnavailable";
 
 export function SidebarProjectFiles({
   changes,
@@ -15,13 +16,26 @@ export function SidebarProjectFiles({
   const route = projectCheckoutRoute(pathname, search);
   const { projects } = useApp();
   const project = projects.find((item) => item.id === route?.projectId);
-  const { worktrees } = useProjectWorktrees(project?.id);
+  const { worktrees, loading, error, refresh } = useProjectWorktrees(
+    project?.id,
+  );
   const { files, setFiles } = useWorkspaceFiles();
   const requested = route?.worktreePath ?? project?.path;
   const worktree =
     worktrees.find((item) => item.path === requested) ??
     (!route?.worktreePath ? worktrees.find((item) => item.is_main) : undefined);
-  if (!route || !project || !worktree?.available) return null;
+  if (!route || !project) return null;
+  if (error || (worktrees.length > 0 && !worktree?.available))
+    return (
+      <WorkspaceUnavailable
+        compact
+        path={requested ?? project.path}
+        loading={loading}
+        missing={!error}
+        onRetry={() => void refresh()}
+      />
+    );
+  if (!worktree?.available) return null;
   const scope = JSON.stringify([project.id, worktree.path]);
   return (
     <WorktreeExplorer

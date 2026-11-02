@@ -45,6 +45,21 @@ fn resolves_only_worktrees_of_the_registered_repository() {
     assert_eq!(list_directory(&checkout).unwrap().len(), 2);
     std::fs::create_dir(root.join("subdirectory")).unwrap();
     assert_eq!(list_directory(&root.join("subdirectory")).unwrap().len(), 1);
+    drop(repo);
+    let moved = temp.path().join("moved-main");
+    std::fs::rename(&root, &moved).unwrap();
+    let missing = list(&store, "demo").unwrap();
+    assert_eq!(missing.len(), 1);
+    assert_eq!(Path::new(&missing[0].path), root);
+    assert!(!missing[0].available);
+    assert!(missing[0].is_main);
+    assert!(directory(&store, "demo", None).is_err());
+    assert!(store.get_project_by_id("demo").unwrap().is_some());
+    std::fs::rename(&moved, &root).unwrap();
+    assert!(list(&store, "demo")
+        .unwrap()
+        .iter()
+        .all(|tree| tree.available));
 }
 
 #[test]

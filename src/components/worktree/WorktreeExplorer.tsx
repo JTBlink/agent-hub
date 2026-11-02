@@ -22,6 +22,7 @@ import {
   worktreeDecorations,
   type WorktreeDecoration,
 } from "../../lib/worktreeDecorations";
+import { WorkspaceUnavailable } from "./WorkspaceUnavailable";
 
 interface Props {
   projectId: string;
@@ -143,7 +144,10 @@ function Directory({
           }
         },
         (cause) => {
-          if (!cancelled) setError(getErrorMessage(cause, t("common.error")));
+          if (!cancelled) {
+            setError(getErrorMessage(cause, t("common.error")));
+            if (!path) window.dispatchEvent(new Event("project-git-changed"));
+          }
         },
       )
       .finally(() => {
@@ -159,10 +163,25 @@ function Directory({
         {t("common.loading")}
       </p>
     );
+  if (error && !path)
+    return (
+      <WorkspaceUnavailable
+        compact
+        path={props.worktreePath}
+        loading={loading}
+        missing={false}
+        onRetry={() => {
+          setLoading(true);
+          setAttempt(attempt + 1);
+        }}
+      />
+    );
   if (error)
     return (
-      <div role="alert" className="px-2 py-1.5 text-xs text-danger">
-        <p className="break-words">{error}</p>
+      <div role="status" className="px-2 py-1.5 text-xs text-muted">
+        <p className="break-words">
+          {t("worktree.missingDirectory.accessDescription")}
+        </p>
         <button
           type="button"
           className="app-button-ghost mt-1"

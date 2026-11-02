@@ -194,7 +194,7 @@ it("dismisses the session overview with Escape and outside clicks", async () => 
   }
 });
 
-it("opens the most recently visited project once, after loading and entering the terminal", async () => {
+it("returns to the welcome page when no project is open instead of opening a recent project", async () => {
   vi.mocked(invoke).mockImplementation(async (command) =>
     command === "terminal_list"
       ? []
@@ -259,17 +259,15 @@ it("opens the most recently visited project once, after loading and entering the
   );
   expect(creations()).toHaveLength(0);
   await click('[data-nav="terminal"]');
-  expect(creations()).toHaveLength(1);
-  expect(creations()[0][1]).toMatchObject({ projectId: "recent" });
-  expect(host.querySelector('[role="tab"]')?.textContent).toContain("Recent");
+  expect(creations()).toHaveLength(0);
+  expect(host.querySelector("section")?.hidden).toBe(true);
   await click('[data-nav="tasks"]');
   await click('[data-nav="terminal"]');
-  expect(creations()).toHaveLength(1);
-  await click('button[aria-label="terminal.closeTab"]');
+  expect(creations()).toHaveLength(0);
   expect(host.querySelector('[role="tab"]')).toBeNull();
   await click('[data-nav="tasks"]');
   await click('[data-nav="terminal"]');
-  expect(creations()).toHaveLength(1);
+  expect(creations()).toHaveLength(0);
   await act(async () => root.unmount());
   host.remove();
 });
@@ -604,7 +602,7 @@ it("moves terminal status into the window footer and clears it when navigating a
   try {
     await act(async () =>
       root.render(
-        <MemoryRouter initialEntries={["/terminal"]}>
+        <MemoryRouter initialEntries={["/project/demo"]}>
           <SidebarVisibilityContext.Provider
             value={{
               resourcePanelVisible: false,
@@ -613,7 +611,7 @@ it("moves terminal status into the window footer and clears it when navigating a
             }}
           >
             <Link to="/settings">Settings</Link>
-            <TerminalWorkspace projects={[]} />
+            <TerminalWorkspace projects={[makeProject()]} />
           </SidebarVisibilityContext.Provider>
         </MemoryRouter>,
       ),

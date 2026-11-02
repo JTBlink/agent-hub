@@ -51,7 +51,9 @@ export function ProjectSwitcher({
               label={
                 selection.current?.head && !selection.current.branch
                   ? `${t("worktree.detached")} · ${selection.current.head.slice(0, 8)}`
-                  : (selection.branchLabel ?? t("git.unborn"))
+                  : selection.current && !selection.current.available
+                    ? t("worktree.missingDirectory.title")
+                    : (selection.branchLabel ?? t("git.unborn"))
               }
               disabled={
                 loading || !selection.path || !selection.current?.available
@@ -102,7 +104,7 @@ export function ProjectSwitcher({
               "absolute bottom-full left-0 z-50 w-72 rounded border border-border bg-surface p-2 shadow-card",
           )}
         >
-          {error}
+          {t("worktree.missingDirectory.accessDescription")}
         </p>
       )}
       {!projects.length && (

@@ -11,7 +11,6 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import * as api from "../../lib/tauri";
 import { terminalTaskRequest } from "../../lib/taskContext";
 import { getErrorMessage } from "../../lib/error";
 import type { Project, ToolInfo } from "../../lib/tauri";
@@ -177,54 +176,24 @@ export function TerminalWorkspace({
       !visible ||
       !ready ||
       !legacy ||
-      initialized.current ||
-      !selected ||
-      terminalTaskRequest(location.state)
+      tabs.length ||
+      terminalTaskRequest(location.state) ||
+      herdrNavigation(location.state)
     )
       return;
-    let cancelled = false;
-    void api
-      .resolveTerminalProject(selected)
-      .then(() => {
-        if (cancelled || initialized.current) return;
-        initialized.current = true;
-        const existing = tabsRef.current.at(-1);
-        if (existing) {
-          setActiveIds((previous) => ({
-            ...previous,
-            [scopeKey]: existing.id,
-          }));
-          setProjectId(existing.projectId);
-          return;
-        }
-        const tab = createTab(
-          selected,
-          undefined,
-          projects.find((project) => project.id === selected)?.path,
-        );
-        setTabs((previous) => [...previous, tab]);
-        setActiveIds((previous) => ({ ...previous, [scopeKey]: tab.id }));
-        setProjectId(selected);
-      })
-      .catch((error) => {
-        if (!cancelled)
-          setBridgeError(getErrorMessage(error, t("common.error")));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    visible,
-    legacy,
-    selected,
-    location.state,
-    t,
-    scopeKey,
-    ready,
-    projects,
-    setTabs,
-    setActiveIds,
-  ]);
+    const request: unknown = location.state;
+    const requestedId =
+      typeof request === "object" &&
+      request !== null &&
+      "projectId" in request &&
+      typeof request.projectId === "string"
+        ? request.projectId
+        : undefined;
+    const requested = projects.find((project) => project.id === requestedId);
+    navigate(requested ? worktreeUrl(requested.id, requested.path) : "/", {
+      replace: true,
+    });
+  }, [visible, ready, legacy, tabs.length, location.state, projects, navigate]);
   const active =
     scopedTabs.find((tab) => tab.id === activeId) ?? scopedTabs.at(-1);
   const displayedId = active?.id ?? "";

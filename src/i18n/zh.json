@@ -16,6 +16,8 @@
     "completed": "文件操作已完成"
   },
   "herdr": {
+    "workspaceUnavailable": "暂时无法打开该工作空间，请检查本地目录后重试。",
+    "sessionUnavailable": "暂时无法读取 Herdr 会话，请刷新重试。",
     "deleteWorktree": "删除工作树…",
     "deleteWorktreeHelp": "删除工作树“{{path}}”？对应 Herdr 工作空间中的终端、Agent 和运行进程将被关闭，checkout 目录将被移除，Git 分支保留。有本地文件或锁定的工作树无法删除。",
     "moreActions": "Herdr 更多操作",
@@ -2336,6 +2338,20 @@
     }
   },
   "worktree": {
+    "missingDirectory": {
+      "removeInvalidProject": "删除无效项目",
+      "removeTitle": "删除无效项目",
+      "removeConfirm": "“{{name}}”的本地目录已不存在。是否从最近项目和工作空间列表中删除这条无效项目记录？",
+      "removeRecord": "删除无效项目",
+      "removeFailed": "暂时无法移除项目记录，请重试。",
+      "title": "工作空间目录不可用",
+      "description": "目录可能已被移动或删除。恢复目录后重新检查，或打开其他工作空间。",
+      "accessTitle": "暂时无法访问工作空间",
+      "accessDescription": "请检查目录路径和访问权限，然后重新检查。",
+      "retry": "重新检查",
+      "checking": "正在检查…",
+      "openOther": "打开其他工作空间"
+    },
     "create": "创建工作树",
     "createMenu": "创建工作树…",
     "createHint": "从当前工作树的 HEAD 创建新分支和独立工作目录，创建后自动切换。",

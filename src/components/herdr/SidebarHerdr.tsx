@@ -21,7 +21,8 @@ import { useApp } from "../../context/AppContext";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { useHerdrProjectWorkspace } from "../../hooks/useHerdrProjectWorkspace";
 import { useHerdrSnapshot } from "../../hooks/useHerdrSnapshot";
-import { getErrorMessage } from "../../lib/error";
+import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
+import { WorkspaceUnavailable } from "../worktree/WorkspaceUnavailable";
 import * as api from "../../lib/tauri";
 import {
   lastHerdrAttachment,
@@ -48,6 +49,19 @@ export function SidebarHerdr({ active }: { active: boolean }) {
   const navigate = useNavigate();
   const { projects, refreshProjects } = useApp();
   const workspace = useActiveWorkspace(projects);
+  const projectFiles = useProjectWorktrees(
+    active ? workspace.project?.id : undefined,
+  );
+  const selectedPath = workspace.path ?? workspace.project?.path;
+  const unavailable =
+    !!workspace.project &&
+    (!!projectFiles.error ||
+      (projectFiles.worktrees.length > 0 &&
+        !projectFiles.worktrees.some(
+          (tree) =>
+            normalized(tree.path) === normalized(selectedPath) &&
+            tree.available,
+        )));
   const source = useHerdrSnapshot(active);
   const { session, snapshot } = source;
   const [workspaceFilter, setWorkspaceFilter] = useState({
@@ -63,14 +77,19 @@ export function SidebarHerdr({ active }: { active: boolean }) {
   const [opened, setOpened] = useState<api.HerdrOpenedWorkspace | null>(() =>
     lastHerdrAttachment(readTerminalLayout()),
   );
-  const mappingFallback = t("common.error");
-  const mappingError = useCallback(
-    (error: unknown) => setNotice(getErrorMessage(error, mappingFallback)),
-    [mappingFallback],
-  );
+  const mappingFallback = t("herdr.workspaceUnavailable");
+  const mappingError = useCallback(() => {
+    setNotice(mappingFallback);
+    window.dispatchEvent(new Event("project-git-changed"));
+  }, [mappingFallback]);
   useHerdrProjectWorkspace({
     enabled:
-      active && !!source.managedSession && session === source.managedSession,
+      active &&
+      !unavailable &&
+      !projectFiles.loading &&
+      projectFiles.worktrees.length > 0 &&
+      !!source.managedSession &&
+      session === source.managedSession,
     session,
     projectId: workspace.project?.id,
     path: workspace.path,
@@ -159,12 +178,12 @@ export function SidebarHerdr({ active }: { active: boolean }) {
     setNotice("");
     try {
       await job();
-    } catch (error) {
+    } catch {
       if (
         scope.session === latest.current.session &&
         scope.route === latest.current.route
       )
-        setNotice(getErrorMessage(error, t("common.error")));
+        setNotice(t("herdr.workspaceUnavailable"));
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -233,7 +252,13 @@ export function SidebarHerdr({ active }: { active: boolean }) {
           className={cn(button, "ml-auto shrink-0")}
           aria-label={t("herdr.openCurrent")}
           title={t("herdr.openCurrent")}
-          disabled={!workspace.project || !session || busy}
+          disabled={
+            !workspace.project ||
+            !session ||
+            busy ||
+            unavailable ||
+            projectFiles.loading
+          }
           onClick={() =>
             void transact(async () => {
               const scope = latest.current;
@@ -292,16 +317,26 @@ export function SidebarHerdr({ active }: { active: boolean }) {
             {t("common.loading")}
           </p>
         )}
-      {(notice || source.error) && (
-        <div
-          role="alert"
-          className="shrink-0 px-3 py-2 text-xs text-danger whitespace-pre-wrap"
-        >
-          {notice || source.error}
-          <button className="app-button-ghost ml-1" onClick={source.refresh}>
-            {t("common.retry")}
-          </button>
-        </div>
+      {unavailable ? (
+        <WorkspaceUnavailable
+          compact
+          path={selectedPath ?? ""}
+          loading={projectFiles.loading}
+          missing={!projectFiles.error}
+          onRetry={() => {
+            void projectFiles.refresh();
+            source.refresh();
+          }}
+        />
+      ) : (
+        (notice || source.error) && (
+          <div role="status" className="shrink-0 px-3 py-2 text-xs text-muted">
+            {notice || t("herdr.sessionUnavailable")}
+            <button className="app-button-ghost ml-1" onClick={source.refresh}>
+              {t("common.retry")}
+            </button>
+          </div>
+        )
       )}
       {source.inventory?.installed &&
         !source.inventory.sessions.some((s) => s.running) && (
@@ -332,7 +367,7 @@ export function SidebarHerdr({ active }: { active: boolean }) {
           <div className="flex shrink-0 gap-1 px-3 pb-2">
             <button
               className="app-button-secondary flex min-w-0 flex-1 items-center justify-center gap-1 px-2 py-1 text-xs"
-              disabled={!currentTarget || busy}
+              disabled={!currentTarget || busy || unavailable}
               onClick={() => {
                 if (pane) request("new", pane);
               }}

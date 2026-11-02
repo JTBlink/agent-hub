@@ -13,6 +13,8 @@ const app = vi.hoisted(() => {
     projects,
     tools: [],
     refreshProjects: vi.fn().mockResolvedValue(undefined),
+    missing: false,
+    refreshWorktrees: vi.fn().mockResolvedValue(undefined),
   };
 });
 vi.mock("../../context/AppContext", () => ({ useApp: () => app }));
@@ -20,6 +22,20 @@ vi.mock("../../hooks/useActiveWorkspace", () => ({
   useActiveWorkspace: () => ({
     project: app.projects[0],
     path: app.projects[0]?.path,
+  }),
+}));
+vi.mock("../../hooks/useProjectWorktrees", () => ({
+  useProjectWorktrees: (projectId?: string) => ({
+    worktrees: app.projects
+      .filter((project) => project.id === projectId)
+      .map((project) => ({
+        path: project.path,
+        is_main: true,
+        available: !app.missing || project.id !== app.projects[0]?.id,
+      })),
+    loading: false,
+    error: "",
+    refresh: app.refreshWorktrees,
   }),
 }));
 vi.mock("react-i18next", async (original) => ({
@@ -37,6 +53,7 @@ vi.mock("../../lib/tauri", async (original) => ({
   deleteHerdrSession: vi.fn(),
 }));
 beforeEach(() => {
+  app.missing = false;
   vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
   vi.mocked(api.getHerdrInventory).mockResolvedValue({
     installed: true,
@@ -348,3 +365,58 @@ it.each([true, false])(
     }
   },
 );
+
+it("keeps other workspaces usable while showing friendly recovery for a deleted project", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  const { makeProject } = await import("../../../tests/fixtures/workspace");
+  app.projects.push({
+    ...makeProject(),
+    id: "missing-herdr-project",
+    path: "/projects/missing",
+  });
+  app.missing = true;
+  const ensured = vi.mocked(api.ensureHerdrWorkspace).mock.calls.length;
+  vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
+    version: "test",
+    workspaces: [
+      {
+        workspace_id: "other",
+        label: "Other workspace",
+        directory: "/projects/other",
+        active_tab_id: "",
+        branch: "main",
+      },
+    ],
+    tabs: [],
+    panes: [],
+    agents: [],
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={["/project/missing-herdr-project"]}>
+          <SidebarHerdr active />
+        </MemoryRouter>,
+      ),
+    );
+    expect(host.textContent).toContain("worktree.missingDirectory.title");
+    expect(host.textContent).not.toContain("os error");
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    const other = host.querySelector<HTMLButtonElement>(
+      '[data-herdr-workspace="other"]',
+    )!;
+    expect(other).not.toBeNull();
+    expect(other.disabled).toBe(false);
+    expect(api.ensureHerdrWorkspace).toHaveBeenCalledTimes(ensured);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    app.projects.length = 0;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});

@@ -16,6 +16,8 @@
     "completed": "檔案操作已完成"
   },
   "herdr": {
+    "workspaceUnavailable": "暫時無法開啟此工作空間，請檢查本機目錄後重試。",
+    "sessionUnavailable": "暫時無法讀取 Herdr 工作階段，請重新整理再試。",
     "deleteWorktree": "刪除工作樹…",
     "deleteWorktreeHelp": "刪除工作樹「{{path}}」？對應 Herdr 工作空間中的終端、Agent 與執行中程序將關閉，checkout 目錄將移除，Git 分支保留。有本機檔案或鎖定的工作樹無法刪除。",
     "moreActions": "Herdr 更多操作",
@@ -2296,6 +2298,20 @@
     }
   },
   "worktree": {
+    "missingDirectory": {
+      "removeInvalidProject": "刪除無效專案",
+      "removeTitle": "刪除無效專案",
+      "removeConfirm": "「{{name}}」的本機目錄已不存在。是否從最近專案和工作空間清單中刪除這筆無效專案記錄？",
+      "removeRecord": "刪除無效專案",
+      "removeFailed": "暫時無法移除專案記錄，請重試。",
+      "title": "工作空間目錄無法使用",
+      "description": "目錄可能已被移動或刪除。還原目錄後重新檢查，或開啟其他工作空間。",
+      "accessTitle": "暫時無法存取工作空間",
+      "accessDescription": "請檢查目錄路徑和存取權限，然後重新檢查。",
+      "retry": "重新檢查",
+      "checking": "正在檢查…",
+      "openOther": "開啟其他工作空間"
+    },
     "create": "建立工作樹",
     "createMenu": "建立工作樹…",
     "createHint": "從目前工作樹的 HEAD 建立新分支與獨立工作目錄，建立後自動切換。",

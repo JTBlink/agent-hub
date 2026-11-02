@@ -69,6 +69,12 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   files: vi.fn(),
   read: vi.fn(),
+  open: vi.fn().mockResolvedValue(undefined),
+  remove: vi.fn().mockResolvedValue(undefined),
+  refresh: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../hooks/useOpenProject", () => ({
+  useOpenProject: () => ({ openProject: mocks.open, isOpening: false }),
 }));
 const t = (key: string) => key;
 const project = { ...makeProject(), id: "workspace-interaction" };
@@ -76,7 +82,11 @@ const topic = "<workspace>/topic";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("../../context/AppContext", () => ({
-  useApp: () => ({ projects: [project] }),
+  useApp: () => ({ projects: [project], refreshProjects: mocks.refresh }),
+}));
+vi.mock("../../lib/tauri", async (original) => ({
+  ...(await original<typeof import("../../lib/tauri")>()),
+  removeProject: mocks.remove,
 }));
 vi.mock("../../lib/worktreeApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/worktreeApi")>()),
@@ -93,6 +103,8 @@ vi.mock("../terminal/TerminalWorkspace", () => ({
     content,
     onSelectTerminal,
     onProjectSkills,
+    projectsReady,
+    onStartupStateChange,
   }: {
     shown: boolean;
     toolbar?: ReactNode;
@@ -101,33 +113,52 @@ vi.mock("../terminal/TerminalWorkspace", () => ({
     content?: ReactNode;
     onSelectTerminal?: () => void;
     onProjectSkills?: () => void;
-  }) => (
-    <div>
-      {toolbar ?? (
-        <div data-terminal-toolbar>
-          <div role="tablist">
-            <button role="tab" aria-selected={shown} onClick={onSelectTerminal}>
-              terminal.title
-            </button>
-            {extraTabs}
+    projectsReady: boolean;
+    onStartupStateChange?: (state: {
+      ready: boolean;
+      error: string;
+      retry: () => void;
+    }) => void;
+  }) => {
+    useEffect(() => {
+      onStartupStateChange?.({
+        ready: projectsReady,
+        error: "",
+        retry: () => {},
+      });
+    }, [projectsReady, onStartupStateChange]);
+    return (
+      <div>
+        {toolbar ?? (
+          <div data-terminal-toolbar>
+            <div role="tablist">
+              <button
+                role="tab"
+                aria-selected={shown}
+                onClick={onSelectTerminal}
+              >
+                terminal.title
+              </button>
+              {extraTabs}
+            </div>
+            {toolbarEnd}
+            {onProjectSkills && (
+              <button
+                aria-label="worktree.projectSkills"
+                onClick={onProjectSkills}
+              >
+                Skills action
+              </button>
+            )}
           </div>
-          {toolbarEnd}
-          {onProjectSkills && (
-            <button
-              aria-label="worktree.projectSkills"
-              onClick={onProjectSkills}
-            >
-              Skills action
-            </button>
-          )}
+        )}
+        <div hidden={!shown} data-terminal>
+          Shell
         </div>
-      )}
-      <div hidden={!shown} data-terminal>
-        Shell
+        {content}
       </div>
-      {content}
-    </div>
-  ),
+    );
+  },
 }));
 vi.mock("../file-reader/FileContent", () => ({
   FileContent: ({ file }: { file: { path: string; content: string } }) => (
@@ -168,7 +199,13 @@ afterEach(async () => {
   host.remove();
   vi.unstubAllGlobals();
 });
-async function render() {
+async function render(
+  onStartupStateChange?: (state: {
+    ready: boolean;
+    error: string;
+    retry: () => void;
+  }) => void,
+) {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={[worktreeUrl(project.id, project.path)]}>
@@ -184,9 +221,13 @@ async function render() {
         <RouteProbe />
         <WorkspaceFilesProvider>
           <SidebarProjectFiles />
-          <ProjectWorkspace page={<GitEditor />} />
+          <ProjectWorkspace
+            page={<GitEditor />}
+            onStartupStateChange={onStartupStateChange}
+          />
         </WorkspaceFilesProvider>
         <Routes>
+          <Route path="/" element={<p>Welcome</p>} />
           <Route path="/git" element={null} />
           <Route path="/project/:id" element={null} />
           <Route path="/project/:id/skills" element={<ProjectSkills />} />
@@ -439,4 +480,112 @@ it("opens the current terminal from a Git editor without closing the editor or c
   expect(gitTab).toBeTruthy();
   await act(async () => gitTab.click());
   expect(terminal.hidden).toBe(true);
+});
+
+it("shows a recovery page for a missing workspace and returns to its files after retry", async () => {
+  await render();
+  mocks.list.mockResolvedValue([
+    { path: project.path, is_main: true, available: false },
+  ]);
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  const editor = host.querySelector(".workbench-editor-panel")!;
+  expect(editor.textContent).toContain("worktree.missingDirectory.title");
+  expect(editor.textContent).toContain("worktree.missingDirectory.description");
+  expect(
+    editor.querySelector("[data-terminal]")?.closest("[hidden]"),
+  ).not.toBeNull();
+  expect(
+    host.querySelector('aside[aria-label="fileReader.explorer"]'),
+  ).toBeNull();
+  const openOther = [
+    ...editor.querySelectorAll<HTMLButtonElement>("button"),
+  ].find(
+    (button) => button.textContent === "worktree.missingDirectory.openOther",
+  )!;
+  await act(async () => openOther.click());
+  expect(mocks.open).toHaveBeenCalledOnce();
+  let finish!: (
+    worktrees: { path: string; is_main: boolean; available: boolean }[],
+  ) => void;
+  mocks.list.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const retry = [...editor.querySelectorAll<HTMLButtonElement>("button")].find(
+    (button) => button.textContent?.includes("worktree.missingDirectory.retry"),
+  )!;
+  await act(async () => retry.click());
+  expect(editor.querySelector('[aria-busy="true"]')).not.toBeNull();
+  expect(retry.disabled).toBe(true);
+  await act(async () =>
+    finish([{ path: project.path, is_main: true, available: true }]),
+  );
+  expect(editor.textContent).not.toContain("worktree.missingDirectory.title");
+  expect(
+    host.querySelector('aside[aria-label="fileReader.explorer"]'),
+  ).not.toBeNull();
+});
+
+it("replaces inaccessible workspace system errors with friendly recovery guidance", async () => {
+  await render();
+  mocks.list.mockRejectedValueOnce(
+    new Error("No such file or directory (os error 2)"),
+  );
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  expect(host.textContent).toContain("worktree.missingDirectory.accessTitle");
+  expect(host.textContent).not.toContain("os error 2");
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+
+it("keeps the recovery page interactive when startup restores a deleted project", async () => {
+  const startup = vi.fn();
+  mocks.list.mockResolvedValue([
+    { path: project.path, is_main: true, available: false },
+  ]);
+  await render(startup);
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  expect(startup).toHaveBeenLastCalledWith({
+    ready: true,
+    error: "",
+    retry: expect.any(Function),
+  });
+});
+
+it("removes an invalid project only after confirmation and returns to the welcome page", async () => {
+  await render();
+  mocks.list.mockResolvedValue([
+    { path: project.path, is_main: true, available: false },
+  ]);
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  const remove = () =>
+    [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) =>
+      button.textContent?.includes(
+        "worktree.missingDirectory.removeInvalidProject",
+      ),
+    )!;
+  await act(async () => remove().click());
+  expect(mocks.remove).not.toHaveBeenCalled();
+  const dialog = document.querySelector('[role="alertdialog"]')!;
+  expect(dialog.textContent).toContain(
+    "worktree.missingDirectory.removeConfirm",
+  );
+  const cancel = [...dialog.querySelectorAll<HTMLButtonElement>("button")].find(
+    (button) => button.textContent === "common.cancel",
+  )!;
+  await act(async () => cancel.click());
+  expect(mocks.remove).not.toHaveBeenCalled();
+  await act(async () => remove().click());
+  const confirm = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find(
+    (button) => button.textContent === "worktree.missingDirectory.removeRecord",
+  )!;
+  await act(async () => confirm.click());
+  expect(mocks.remove).toHaveBeenCalledExactlyOnceWith(project.id);
+  expect(mocks.refresh).toHaveBeenCalledOnce();
+  expect(host.querySelector("[data-route]")?.textContent).toBe("/");
 });

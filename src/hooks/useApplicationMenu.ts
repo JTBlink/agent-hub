@@ -10,12 +10,8 @@ import {
   installApplicationMenu,
 } from "../lib/applicationMenu";
 import { useOpenProject } from "./useOpenProject";
-import {
-  toggleDeveloperTools,
-  touchProjectVisited,
-  type Project,
-} from "../lib/tauri";
-import { worktreeUrl } from "../lib/worktreeApi";
+import { useRecentProject } from "./useRecentProject";
+import { toggleDeveloperTools, type Project } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 
 export function useApplicationMenu(
@@ -23,9 +19,10 @@ export function useApplicationMenu(
   onManageWorkspaces: () => void,
 ) {
   const { t } = useTranslation();
-  const { projects, refreshProjects } = useApp();
+  const { projects } = useApp();
   const navigate = useNavigate();
   const { openProject } = useOpenProject();
+  const recent = useRecentProject();
   const handlers = {
     navigate: (path: string) => {
       void navigate(path);
@@ -37,12 +34,7 @@ export function useApplicationMenu(
       });
     },
     manageWorkspaces: onManageWorkspaces,
-    openRecent: (project: Project) => {
-      navigate(worktreeUrl(project.id, project.path));
-      void touchProjectVisited(project.id)
-        .then(refreshProjects)
-        .catch(() => {});
-    },
+    openRecent: (project: Project) => void recent.openRecent(project),
     openProject: () => void openProject(),
     closeWindow: () => {
       void emit("window-close-requested").catch(console.error);
@@ -94,4 +86,5 @@ export function useApplicationMenu(
       void installed?.close().catch(console.error);
     };
   }, [projects, t]);
+  return recent;
 }
