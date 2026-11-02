@@ -1,5 +1,15 @@
 {
   "herdr": {
+    "moreActions": "Herdr 更多操作",
+    "externalUpdate": "请通过原安装渠道更新 Herdr；当前会话继续运行",
+    "checkUpdate": "检查更新",
+    "updateVersion": "更新到 {{version}}",
+    "upToDate": "已是最新安装版本。",
+    "updatedRestart": "新版已安装，重启所选会话后生效。",
+    "restartSession": "重启会话",
+    "restartHelp": "重启会话“{{name}}”？其中所有终端、Agent 和运行中的进程将被中断；不自动继续任务，项目文件保留。",
+    "filterWorkspace": "筛选工作空间",
+    "allWorkspaces": "全部工作空间",
     "worktrees": "{{name}} 的工作树",
     "deleteSession": "删除会话",
     "keepDefault": "保留默认会话，无法删除",

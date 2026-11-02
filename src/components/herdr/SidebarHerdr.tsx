@@ -1,9 +1,15 @@
-import { Fragment, useLayoutEffect, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Plus,
   RefreshCw,
-  PanelLeftClose,
   TerminalSquare,
   Send,
   FileText,
@@ -14,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useApp } from "../../context/AppContext";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
+import { useHerdrProjectWorkspace } from "../../hooks/useHerdrProjectWorkspace";
 import { useHerdrSnapshot } from "../../hooks/useHerdrSnapshot";
 import { getErrorMessage } from "../../lib/error";
 import * as api from "../../lib/tauri";
@@ -24,6 +31,7 @@ import {
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { cn } from "../../utils";
 import { ThemedSelect } from "../ThemedSelect";
+import { HerdrMaintenance } from "./HerdrMaintenance";
 import { HerdrDeleteSession } from "./HerdrDeleteSession";
 import { HerdrWorkspaceList } from "./HerdrWorkspaceList";
 import { HerdrStatus } from "./HerdrStatus";
@@ -34,21 +42,19 @@ const button =
 const normalized = (path?: string | null) =>
   path?.replace(/\\/g, "/").replace(/\/+$/, "");
 
-export function SidebarHerdr({
-  active,
-  onHide,
-}: {
-  active: boolean;
-  onHide: () => void;
-}) {
+export function SidebarHerdr({ active }: { active: boolean }) {
   const { t } = useTranslation();
+  const sessionLabelId = useId();
   const location = useLocation();
   const navigate = useNavigate();
   const { projects, refreshProjects } = useApp();
   const workspace = useActiveWorkspace(projects);
   const source = useHerdrSnapshot(active);
   const { session, snapshot } = source;
-  const [query, setQuery] = useState("");
+  const [workspaceFilter, setWorkspaceFilter] = useState({
+    session: "",
+    id: "",
+  });
   const [pendingOnly, setPendingOnly] = useState(false);
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [grouped, setGrouped] = useState(false);
@@ -58,6 +64,21 @@ export function SidebarHerdr({
   const [opened, setOpened] = useState<api.HerdrOpenedWorkspace | null>(() =>
     lastHerdrAttachment(readTerminalLayout()),
   );
+  const mappingFallback = t("common.error");
+  const mappingError = useCallback(
+    (error: unknown) => setNotice(getErrorMessage(error, mappingFallback)),
+    [mappingFallback],
+  );
+  useHerdrProjectWorkspace({
+    enabled:
+      active && !!source.managedSession && session === source.managedSession,
+    session,
+    projectId: workspace.project?.id,
+    path: workspace.path,
+    onReady: setOpened,
+    onError: mappingError,
+    refresh: source.refresh,
+  });
   const [dialog, setDialog] = useState<HerdrDialogRequest | null>(null);
   const mounted = useRef(false);
   useLayoutEffect(() => {
@@ -84,19 +105,20 @@ export function SidebarHerdr({
     (p) => p.pane_id === current?.target.pane_id,
   );
   const currentTarget = pane ? api.herdrTarget(session, pane) : undefined;
-  const filtered = (value: string) =>
-    value.toLowerCase().includes(query.toLowerCase());
+  const filterId =
+    workspaceFilter.session === session &&
+    snapshot?.workspaces.some((w) => w.workspace_id === workspaceFilter.id)
+      ? workspaceFilter.id
+      : "";
   const spaces =
-    snapshot?.workspaces.filter((w) =>
-      filtered(`${w.label} ${w.branch ?? ""} ${w.directory ?? ""}`),
+    snapshot?.workspaces.filter(
+      (w) => !filterId || w.workspace_id === filterId,
     ) ?? [];
   const agents =
     snapshot?.agents.filter(
       (a) =>
         (!pendingOnly || a.agent_status === "blocked") &&
-        filtered(
-          `${a.name ?? ""} ${a.agent ?? ""} ${snapshot.workspaces.find((w) => w.workspace_id === a.workspace_id)?.label ?? ""}`,
-        ),
+        (!filterId || a.workspace_id === filterId),
     ) ?? [];
   const group = (agent: api.HerdrPane) =>
     grouped
@@ -227,28 +249,17 @@ export function SidebarHerdr({
   };
   return (
     <div className="flex h-full min-h-0 flex-col" aria-label="Herdr">
-      <div className="flex h-9 shrink-0 items-center gap-1 px-3">
-        <strong className="grow text-xs font-semibold">Herdr</strong>
-        <button
-          className={button}
-          aria-label={t("common.refresh")}
-          disabled={busy || source.loading}
-          onClick={source.refresh}
+      <div className="flex min-h-9 shrink-0 items-center gap-1 px-2 py-1">
+        <span
+          id={sessionLabelId}
+          className="shrink-0 text-xs font-semibold text-secondary"
         >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          className={button}
-          aria-label={t("herdr.hide")}
-          onClick={onHide}
-        >
-          <PanelLeftClose size={14} />
-        </button>
-      </div>
-      <div className="flex shrink-0 items-center gap-1 px-3 pb-2">
+          {t("herdr.session")}
+        </span>
         <ThemedSelect
           aria-label={t("herdr.session")}
-          className="min-w-0 flex-1 text-xs"
+          aria-labelledby={sessionLabelId}
+          className="min-w-0 flex-1 gap-1 px-1.5 py-1 text-xs"
           value={session}
           disabled={busy}
           onChange={(e) => source.setSession(e.target.value)}
@@ -257,7 +268,7 @@ export function SidebarHerdr({
             <option value="">{t("herdr.noSessions")}</option>
           )}
           {source.inventory?.sessions.map((s) => (
-            <option key={s.name} value={s.name} disabled={!s.running}>
+            <option key={s.name} value={s.name}>
               {s.name}
               {s.running ? "" : ` · ${t("herdr.stopped")}`}
             </option>
@@ -273,7 +284,7 @@ export function SidebarHerdr({
           }}
         />
         <button
-          className={button}
+          className={cn(button, "ml-auto shrink-0")}
           aria-label={t("herdr.openCurrent")}
           title={t("herdr.openCurrent")}
           disabled={!workspace.project || !session || busy}
@@ -297,6 +308,21 @@ export function SidebarHerdr({
         >
           <TerminalSquare size={15} />
         </button>
+        <button
+          className={button}
+          aria-label={t("common.refresh")}
+          disabled={busy || source.loading}
+          onClick={source.refresh}
+        >
+          <RefreshCw size={14} />
+        </button>
+        {source.inventory?.installed && (
+          <HerdrMaintenance
+            session={session}
+            disabled={busy}
+            onRefresh={source.refresh}
+          />
+        )}
       </div>
       {source.inventory?.installed === false && (
         <div className="p-3 text-xs text-muted">
@@ -340,13 +366,22 @@ export function SidebarHerdr({
       {snapshot && (
         <>
           <div className="shrink-0 px-3 pb-2">
-            <input
-              className="app-input w-full text-xs"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label={t("herdr.search")}
-              placeholder={t("herdr.search")}
-            />
+            <ThemedSelect
+              className="w-full text-xs"
+              value={filterId}
+              onChange={(e) =>
+                setWorkspaceFilter({ session, id: e.target.value })
+              }
+              aria-label={t("herdr.filterWorkspace")}
+            >
+              <option value="">{t("herdr.allWorkspaces")}</option>
+              {snapshot.workspaces.map((w) => (
+                <option key={w.workspace_id} value={w.workspace_id}>
+                  {w.label}
+                  {w.branch ? ` · ${w.branch}` : ""}
+                </option>
+              ))}
+            </ThemedSelect>
           </div>
           <div className="flex shrink-0 gap-1 px-3 pb-2">
             <button
@@ -393,7 +428,7 @@ export function SidebarHerdr({
                 <span className="text-muted">{spaces.length}</span>
               </div>
               <div
-                className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-1 pb-2"
+                className="min-h-0 flex-1 overflow-y-auto px-1 pb-1"
                 onKeyDown={keyNavigation}
               >
                 <HerdrWorkspaceList
@@ -407,7 +442,7 @@ export function SidebarHerdr({
                 />
                 {!spaces.length && (
                   <p className="px-3 py-2 text-xs text-muted">
-                    {t(query ? "herdr.noMatches" : "herdr.noWorkspaces")}
+                    {t("herdr.noWorkspaces")}
                   </p>
                 )}
               </div>

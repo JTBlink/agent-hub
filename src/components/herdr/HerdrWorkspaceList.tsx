@@ -63,12 +63,15 @@ export function HerdrWorkspaceList({
           )}
         </div>
         {expanded && linked.length > 0 && (
-          <div className="ml-5 border-l border-border pl-1.5">
+          <div className="ml-4 pl-3">
             {linked.map((child) => (
-              <div key={child.workspace_id} className="relative">
+              <div
+                key={child.workspace_id}
+                className="relative before:pointer-events-none before:absolute before:-left-3 before:bottom-0 before:top-0 before:border-l-2 before:border-current before:text-muted last:before:bottom-auto last:before:h-3"
+              >
                 <span
                   aria-hidden="true"
-                  className="absolute -left-1.5 top-3.5 w-1.5 border-t border-border"
+                  className="pointer-events-none absolute -left-3 top-3 h-0 w-3 border-t-2 border-current text-muted"
                 />
                 {row(child)}
               </div>

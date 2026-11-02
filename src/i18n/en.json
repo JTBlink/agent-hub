@@ -1,5 +1,15 @@
 {
   "herdr": {
+    "moreActions": "More Herdr actions",
+    "externalUpdate": "Update Herdr through its original installation channel; current sessions keep running",
+    "checkUpdate": "Check updates",
+    "updateVersion": "Update to {{version}}",
+    "upToDate": "The installed version is up to date.",
+    "updatedRestart": "Update installed. Restart the selected session to use it.",
+    "restartSession": "Restart session",
+    "restartHelp": "Restart session “{{name}}”? All its terminals, agents and running processes will be interrupted. Tasks will not resume automatically. Project files are kept.",
+    "filterWorkspace": "Filter workspaces",
+    "allWorkspaces": "All workspaces",
     "worktrees": "Worktrees of {{name}}",
     "deleteSession": "Delete session",
     "keepDefault": "The default session cannot be deleted",

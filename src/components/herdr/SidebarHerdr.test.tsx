@@ -31,8 +31,11 @@ vi.mock("../../lib/tauri", async (original) => ({
   getHerdrSnapshot: vi.fn(),
   openHerdrWorkspace: vi.fn(),
   ensureHerdrWorkspace: vi.fn(),
+  installHerdr: vi.fn(),
+  prepareHerdrSession: vi.fn(),
 }));
 beforeEach(() => {
+  vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
   vi.mocked(api.getHerdrInventory).mockResolvedValue({
     installed: true,
     sessions: [{ name: "default", default: true, running: true }],
@@ -92,7 +95,7 @@ it("opens the checkout returned by Herdr and navigates with an explicit attachme
     await act(async () =>
       root.render(
         <MemoryRouter>
-          <SidebarHerdr active onHide={() => {}} />
+          <SidebarHerdr active />
           <Location />
         </MemoryRouter>,
       ),
@@ -137,7 +140,7 @@ it("does not navigate back when an earlier open-current request finishes after c
     await act(async () =>
       root.render(
         <MemoryRouter initialEntries={["/project/demo"]}>
-          <SidebarHerdr active onHide={() => {}} />
+          <SidebarHerdr active />
           <Link to="/project/other" data-next>
             Other
           </Link>
@@ -177,6 +180,127 @@ it("does not navigate back when an earlier open-current request finishes after c
     await act(async () => root.unmount());
     host.remove();
     app.projects.length = 0;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("filters workspaces by selection and restores all entries", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  localStorage.clear();
+  vi.mocked(api.getHerdrSnapshot).mockResolvedValue({
+    version: "0.9.3",
+    tabs: [],
+    panes: [],
+    agents: [],
+    workspaces: ["first", "second"].map((name) => ({
+      workspace_id: name,
+      label: name,
+      active_tab_id: `${name}:t1`,
+      directory: `/projects/${name}`,
+      branch: "main",
+    })),
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <SidebarHerdr active />
+        </MemoryRouter>,
+      ),
+    );
+    const picker = host.querySelector<HTMLButtonElement>(
+      '[role="combobox"][aria-label="herdr.filterWorkspace"]',
+    )!;
+    await act(async () => picker.click());
+    const option = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ].find((o) => o.textContent?.includes("second"))!;
+    await act(async () => option.click());
+    expect(host.querySelector('[data-herdr-workspace="first"]')).toBeNull();
+    expect(host.querySelector('[data-herdr-workspace="second"]')).toBeTruthy();
+    await act(async () => picker.click());
+    const all = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ].find((o) => o.textContent === "herdr.allWorkspaces")!;
+    await act(async () => all.click());
+    expect(host.querySelectorAll("[data-herdr-workspace]")).toHaveLength(2);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("guides installation inside the Herdr panel when the tool is missing", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.clear();
+  vi.mocked(api.getHerdrInventory).mockResolvedValue({
+    installed: false,
+    sessions: [],
+  });
+  vi.mocked(api.installHerdr).mockResolvedValue({
+    path: "/tools/herdr",
+    version: "1.2.3",
+    managed: true,
+  });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <SidebarHerdr active />
+        </MemoryRouter>,
+      ),
+    );
+    expect(host.textContent).toContain("herdr.missing");
+    const install = [...host.querySelectorAll("button")].find(
+      (b) => b.textContent === "herdr.install",
+    )!;
+    await act(async () => install.click());
+    expect(api.installHerdr).toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it("defaults to the prepared AgentHub session while retaining the session picker", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  vi.mocked(api.prepareHerdrSession).mockResolvedValue("agent-hub");
+  vi.mocked(api.getHerdrInventory).mockResolvedValue({
+    installed: true,
+    sessions: [
+      { name: "default", running: true, default: true },
+      { name: "agent-hub", running: true, default: false },
+    ],
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <SidebarHerdr active />
+        </MemoryRouter>,
+      ),
+    );
+    expect(
+      host.querySelector('[role="combobox"][aria-label="herdr.session"]')
+        ?.textContent,
+    ).toContain("agent-hub");
+    expect(api.getHerdrSnapshot).toHaveBeenLastCalledWith("agent-hub");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   }

@@ -15,9 +15,7 @@ fn controller(tools: &HerdrTools) -> Result<HerdrControl, AppError> {
         .map_err(AppError::io)?
         .map(|i| HerdrControl::new(i.path.into()))
         .ok_or_else(|| {
-            AppError::not_found(
-                "Herdr is not installed; use the terminal Herdr launcher to install it",
-            )
+            AppError::not_found("Herdr is not installed; install it from the Herdr panel")
         })
 }
 #[derive(Serialize)]
@@ -53,6 +51,33 @@ pub async fn herdr_inventory(
                 .sessions()
                 .map_err(AppError::io)?,
         })
+    })
+    .await?
+}
+#[tauri::command]
+pub async fn herdr_prepare_session(
+    window: WebviewWindow,
+    tools: State<'_, Arc<HerdrTools>>,
+) -> Result<String, AppError> {
+    super::terminal::owner(&window)?;
+    let tools = tools.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        controller(&tools)?.prepare_session().map_err(AppError::io)
+    })
+    .await?
+}
+#[tauri::command]
+pub async fn herdr_restart_session(
+    window: WebviewWindow,
+    tools: State<'_, Arc<HerdrTools>>,
+    session: String,
+) -> Result<(), AppError> {
+    super::terminal::owner(&window)?;
+    let tools = tools.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        controller(&tools)?
+            .restart_session(&session)
+            .map_err(AppError::io)
     })
     .await?
 }

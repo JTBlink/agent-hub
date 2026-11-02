@@ -1,5 +1,15 @@
 {
   "herdr": {
+    "moreActions": "Herdr 更多操作",
+    "externalUpdate": "請透過原安裝管道更新 Herdr；目前工作階段繼續執行",
+    "checkUpdate": "檢查更新",
+    "updateVersion": "更新至 {{version}}",
+    "upToDate": "已是最新安裝版本。",
+    "updatedRestart": "新版已安裝，重新啟動所選工作階段後生效。",
+    "restartSession": "重新啟動",
+    "restartHelp": "重新啟動工作階段「{{name}}」？其中所有終端、Agent 和執行中的程序將中斷；不會自動繼續任務，專案檔案保留。",
+    "filterWorkspace": "篩選工作空間",
+    "allWorkspaces": "全部工作空間",
     "worktrees": "{{name}} 的工作樹",
     "deleteSession": "刪除工作階段",
     "keepDefault": "保留預設工作階段，無法刪除",

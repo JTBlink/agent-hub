@@ -1075,6 +1075,8 @@ pub fn run() {
             commands::herdr_tools::herdr_detect,
             commands::herdr_control::herdr_inventory,
             commands::herdr_control::herdr_delete_session,
+            commands::herdr_control::herdr_restart_session,
+            commands::herdr_control::herdr_prepare_session,
             commands::herdr_control::herdr_sidebar_keys,
             commands::herdr_control::herdr_snapshot,
             commands::herdr_control::herdr_open,

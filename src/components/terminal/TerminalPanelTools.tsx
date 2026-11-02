@@ -1,12 +1,7 @@
-import {
-  Download,
-  LayoutGrid,
-  Layers,
-  Loader2,
-  TerminalSquare,
-} from "lucide-react";
+import { Download, LayoutGrid, Layers, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
+import { HerdrIcon } from "../HerdrIcon";
 
 interface Props {
   showTerminalActions?: boolean;
@@ -43,7 +38,7 @@ export function TerminalPanelTools({
             title={t("terminal.herdrLaunch")}
             aria-busy={herdrBusy}
             disabled={!hasTerminal}
-            className="app-button-ghost flex h-7 items-center gap-1 rounded px-2 text-xs"
+            className="app-button-ghost flex h-7 w-7 items-center justify-center rounded"
             onClick={() => {
               if (!herdrBusy) onHerdr();
             }}
@@ -51,9 +46,8 @@ export function TerminalPanelTools({
             {herdrBusy ? (
               <Loader2 size={12} className="animate-spin" aria-hidden="true" />
             ) : (
-              <TerminalSquare size={14} aria-hidden="true" />
+              <HerdrIcon width={20} height={20} />
             )}
-            <span>Herdr</span>
           </button>
           {updateVersion && onHerdrUpgrade && (
             <button

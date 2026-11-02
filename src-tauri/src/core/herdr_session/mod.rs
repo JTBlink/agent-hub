@@ -7,7 +7,7 @@ use std::{
     sync::Mutex,
     time::{Duration, Instant},
 };
-pub(crate) const SESSION: &str = "agent-hub-agents";
+pub(crate) const SESSION: &str = "agent-hub";
 static SERVER_START: Mutex<()> = Mutex::new(());
 pub(crate) const INHERITED_CONTEXT: &[&str] = &[
     "HERDR_ENV",
@@ -79,13 +79,7 @@ impl Client<'_> {
             use std::os::windows::process::CommandExt;
             server.creation_flags(0x08000000);
         }
-        let mut child = server
-            .spawn()
-            .context("Cannot start the AgentHub Herdr session")?;
-        // The daemon owns its lifetime; closing a terminal only detaches its client.
-        std::thread::spawn(move || {
-            let _ = child.wait();
-        });
+        spawn_server(server)?;
         let deadline = Instant::now() + Duration::from_secs(8);
         while Instant::now() < deadline {
             if self.call(&["workspace", "list"], 1).is_ok() {
@@ -93,8 +87,17 @@ impl Client<'_> {
             }
             std::thread::sleep(Duration::from_millis(100));
         }
-        bail!("Herdr session agent-hub-agents did not become ready; open it in Herdr and retry")
+        bail!("Herdr session agent-hub did not become ready; open it in Herdr and retry")
     }
+}
+
+/// Start an isolated daemon and reap its launcher without owning its lifetime.
+pub(crate) fn spawn_server(mut server: Command) -> Result<()> {
+    let mut child = server.spawn().context("Cannot start the Herdr session")?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 /// Select the current project's workspace before attaching an interactive client.

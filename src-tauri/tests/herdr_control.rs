@@ -400,3 +400,25 @@ fn closes_only_the_verified_pane() {
     let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
     assert_eq!(calls.matches("pane close").count(), 1);
 }
+
+#[test]
+fn restarting_a_session_stops_only_the_selected_server_without_deleting_it() {
+    let root = tempfile::tempdir().unwrap();
+    let cli = fake_cli(root.path(), root.path());
+    let control = HerdrControl::new(cli.clone());
+    assert!(control.restart_session("missing").is_err());
+    let script = r#"#!/bin/sh
+printf '%s\n' "$*" >> "$0.calls"
+case "$1 $2" in
+  'session list') echo '{"sessions":[{"name":"default","running":true,"default":true}]}' ;;
+  'session stop') echo '{"stopped":true}' ;;
+  '--session default') echo '{"result":{"workspaces":[]}}' ;;
+esac
+"#;
+    fs::write(&cli, script).unwrap();
+    control.restart_session("default").unwrap();
+    let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
+    assert!(calls.contains("session stop default --json"));
+    assert!(calls.contains("--session default workspace list"));
+    assert!(!calls.contains("session delete"));
+}

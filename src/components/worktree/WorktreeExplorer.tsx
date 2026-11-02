@@ -162,7 +162,7 @@ function Directory({
               onClick={() => props.onSelect(file.path)}
               style={{ paddingLeft: 28 + depth * 12 }}
               className={cn(
-                "flex h-[22px] w-full min-w-0 items-center gap-1.5 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
+                "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
                 props.selected === file.path
                   ? "bg-surface-active text-primary"
                   : "text-secondary hover:bg-surface-hover",
@@ -202,7 +202,7 @@ function FolderEntry({
         title={file.path}
         onClick={() => setOpen(!open)}
         style={{ paddingLeft: 12 + depth * 12 }}
-        className="flex h-[22px] w-full min-w-0 items-center gap-1 pr-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         <ChevronRight
           size={12}

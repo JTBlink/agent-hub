@@ -39,7 +39,7 @@ export function HerdrWorkspaceRow({
       title={workspace.directory ?? t("herdr.directoryUnknown")}
       onClick={onOpen}
       className={cn(
-        "flex w-full items-start gap-1.5 rounded-md border px-2 py-1.5 text-left font-mono text-xs transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+        "flex w-full items-start gap-1.5 rounded-md border px-1.5 py-1 text-left font-mono text-xs transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
         selected
           ? "border-border bg-surface-active"
           : "border-transparent hover:bg-surface-hover",

@@ -304,7 +304,7 @@ export function Sidebar() {
             hidden={selectedPanel !== "herdr"}
             className={cn("min-h-0 flex-1 flex-col",selectedPanel === "herdr" ? "flex" : "hidden")}
           >
-            {herdrOpened && <SidebarHerdr active={panelVisible && selectedPanel === "herdr"} onHide={togglePanel}/>}
+            {herdrOpened && <SidebarHerdr active={panelVisible && selectedPanel === "herdr"}/>}
           </div>
           <div
             hidden={selectedPanel === "search" || selectedPanel === "herdr"}

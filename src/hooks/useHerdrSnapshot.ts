@@ -1,22 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
 import { useTranslation } from "react-i18next";
 
-const SESSION_KEY = "agent-hub:herdr-session";
 export function useHerdrSnapshot(active: boolean) {
   const { t } = useTranslation();
   const fallback = t("common.error");
   const [inventory, setInventory] = useState<Awaited<
     ReturnType<typeof api.getHerdrInventory>
   > | null>(null);
-  const [session, setSessionValue] = useState(() => {
-    try {
-      return localStorage.getItem(SESSION_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  const [session, setSessionValue] = useState("");
+  const [managedSession, setManagedSession] = useState("");
+  const prepared = useRef(false);
   const [data, setData] = useState<{
     session: string;
     value: api.HerdrSnapshot;
@@ -24,23 +19,26 @@ export function useHerdrSnapshot(active: boolean) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [revision, setRevision] = useState(0);
-  const refresh = () => setRevision((v) => v + 1);
+  const refresh = useCallback(() => setRevision((v) => v + 1), []);
   const generation = useRef(0);
-  const setSession = (name: string) => {
-    setSessionValue(name);
-    try {
-      localStorage.setItem(SESSION_KEY, name);
-    } catch {
-      /* Session remains usable. */
-    }
-  };
+  const setSession = setSessionValue;
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
     void api
       .getHerdrInventory()
-      .then((value) => {
+      .then(async (value) => {
         if (cancelled) return;
+        if (value.installed && !prepared.current) {
+          const name = await api.prepareHerdrSession();
+          if (cancelled) return;
+          prepared.current = true;
+          setManagedSession(name);
+          setSessionValue(name);
+          const inventory = await api.getHerdrInventory();
+          if (!cancelled) setInventory(inventory);
+          return;
+        }
         setInventory(value);
         if (!value.sessions.some((s) => s.name === session))
           setSessionValue(
@@ -106,6 +104,7 @@ export function useHerdrSnapshot(active: boolean) {
   }, [active, session, revision, fallback]);
   return {
     inventory,
+    managedSession,
     session,
     setSession,
     snapshot: data?.session === session ? data.value : null,

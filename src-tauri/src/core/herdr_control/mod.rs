@@ -52,6 +52,59 @@ impl HerdrControl {
         )
         .map_err(Into::into)
     }
+    /// Prepare the AgentHub-owned session without touching other sessions.
+    pub fn prepare_session(&self) -> Result<String> {
+        let cwd = std::env::current_dir()?;
+        super::herdr_session::Client {
+            executable: &self.executable,
+            cwd: &cwd,
+        }
+        .ensure_server()?;
+        Ok(super::herdr_session::SESSION.to_owned())
+    }
+    /// Restart only the explicitly selected session using the detected binary.
+    pub fn restart_session(&self, session: &str) -> Result<()> {
+        let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
+        let info = self
+            .sessions()?
+            .into_iter()
+            .find(|s| s.name == session)
+            .context("Herdr session no longer exists; refresh the sidebar")?;
+        if info.running {
+            let result = self.call(None, &["session", "stop", session, "--json"], 10)?;
+            if result.get("stopped").and_then(Value::as_bool) != Some(true) {
+                bail!("Herdr did not confirm the session was stopped")
+            }
+        }
+        let mut command = Command::new(&self.executable);
+        for key in super::herdr_session::INHERITED_CONTEXT {
+            command.env_remove(key);
+        }
+        command
+            .args(["--session", session, "server"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        super::herdr_session::spawn_server(command)?;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while std::time::Instant::now() < deadline {
+            if self.call(Some(session), &["workspace", "list"], 1).is_ok() {
+                return Ok(());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        bail!("Herdr did not become ready after restart; refresh to inspect the session before retrying")
+    }
     /// Stop and remove an explicitly selected named session. The default is retained.
     pub fn delete_session(&self, session: &str) -> Result<()> {
         let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());

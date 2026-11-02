@@ -160,3 +160,9 @@ export const getHerdrSidebarKeys = () => invoke<string>("herdr_sidebar_keys");
 
 export const deleteHerdrSession = (session: string) =>
   invoke<void>("herdr_delete_session", { session });
+
+export const restartHerdrSession = (session: string) =>
+  invoke<void>("herdr_restart_session", { session });
+
+export const prepareHerdrSession = () =>
+  invoke<string>("herdr_prepare_session");
