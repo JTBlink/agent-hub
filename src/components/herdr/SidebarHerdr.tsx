@@ -1,7 +1,6 @@
 import {
   Fragment,
   useCallback,
-  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -31,8 +30,9 @@ import {
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { cn } from "../../utils";
 import { ThemedSelect } from "../ThemedSelect";
+import { navigateHerdrList } from "./herdrListNavigation";
+import { HerdrSessionPicker } from "./HerdrSessionPicker";
 import { HerdrMaintenance } from "./HerdrMaintenance";
-import { HerdrDeleteSession } from "./HerdrDeleteSession";
 import { HerdrWorkspaceList } from "./HerdrWorkspaceList";
 import { HerdrStatus } from "./HerdrStatus";
 import { HerdrAgentDialog, type HerdrDialogRequest } from "./HerdrAgentDialog";
@@ -44,7 +44,6 @@ const normalized = (path?: string | null) =>
 
 export function SidebarHerdr({ active }: { active: boolean }) {
   const { t } = useTranslation();
-  const sessionLabelId = useId();
   const location = useLocation();
   const navigate = useNavigate();
   const { projects, refreshProjects } = useApp();
@@ -220,68 +219,15 @@ export function SidebarHerdr({ active }: { active: boolean }) {
       });
     else setDialog({ mode, target, label });
   };
-  const keyNavigation = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return;
-    const nodes = [
-      ...e.currentTarget.querySelectorAll<HTMLButtonElement>(
-        "button[data-herdr-item]",
-      ),
-    ];
-    const index = nodes.indexOf(
-      document.activeElement instanceof HTMLButtonElement
-        ? document.activeElement
-        : nodes[0],
-    );
-    const next =
-      e.key === "Home"
-        ? 0
-        : e.key === "End"
-          ? nodes.length - 1
-          : Math.max(
-              0,
-              Math.min(
-                nodes.length - 1,
-                index + (e.key === "ArrowUp" ? -1 : 1),
-              ),
-            );
-    e.preventDefault();
-    nodes[next]?.focus();
-  };
   return (
     <div className="flex h-full min-h-0 flex-col" aria-label="Herdr">
       <div className="flex min-h-9 shrink-0 items-center gap-1 px-2 py-1">
-        <span
-          id={sessionLabelId}
-          className="shrink-0 text-xs font-semibold text-secondary"
-        >
-          {t("herdr.session")}
-        </span>
-        <ThemedSelect
-          aria-label={t("herdr.session")}
-          aria-labelledby={sessionLabelId}
-          className="min-w-0 flex-1 gap-1 px-1.5 py-1 text-xs"
-          value={session}
+        <HerdrSessionPicker
+          session={session}
+          inventory={source.inventory}
           disabled={busy}
-          onChange={(e) => source.setSession(e.target.value)}
-        >
-          {!source.inventory?.sessions.length && (
-            <option value="">{t("herdr.noSessions")}</option>
-          )}
-          {source.inventory?.sessions.map((s) => (
-            <option key={s.name} value={s.name}>
-              {s.name}
-              {s.running ? "" : ` · ${t("herdr.stopped")}`}
-            </option>
-          ))}
-        </ThemedSelect>
-        <HerdrDeleteSession
-          session={source.inventory?.sessions.find((s) => s.name === session)}
-          disabled={busy}
-          onDeleted={() => {
-            source.setSession("");
-            setOpened(null);
-            source.refresh();
-          }}
+          onChange={source.setSession}
+          onRefresh={source.refresh}
         />
         <button
           className={cn(button, "ml-auto shrink-0")}
@@ -429,9 +375,38 @@ export function SidebarHerdr({ active }: { active: boolean }) {
               </div>
               <div
                 className="min-h-0 flex-1 overflow-y-auto px-1 pb-1"
-                onKeyDown={keyNavigation}
+                onKeyDown={navigateHerdrList}
               >
                 <HerdrWorkspaceList
+                  session={session}
+                  onWorktreeDeleted={(projectId, path) => {
+                    if (
+                      workspace.project?.id === projectId &&
+                      normalized(workspace.path) === normalized(path)
+                    )
+                      navigate(worktreeUrl(projectId), {
+                        state: { preserveSidebar: true },
+                      });
+                    source.refresh();
+                  }}
+                  projects={active ? projects : []}
+                  onOpenWorktree={(projectId, path) =>
+                    void transact(async () => {
+                      const scope = latest.current;
+                      const value = await api.ensureHerdrWorkspace(
+                        session,
+                        projectId,
+                        path,
+                      );
+                      if (
+                        scope.session === latest.current.session &&
+                        scope.route === latest.current.route
+                      ) {
+                        await move(value);
+                        source.refresh();
+                      }
+                    })
+                  }
                   spaces={spaces}
                   agents={snapshot.agents}
                   selected={current?.target.workspace_id}
@@ -523,7 +498,7 @@ export function SidebarHerdr({ active }: { active: boolean }) {
                   "min-h-0 flex-1 overflow-y-auto",
                   !agentsOpen && "hidden",
                 )}
-                onKeyDown={keyNavigation}
+                onKeyDown={navigateHerdrList}
               >
                 {agents.map((a, index) => (
                   <Fragment key={a.pane_id}>

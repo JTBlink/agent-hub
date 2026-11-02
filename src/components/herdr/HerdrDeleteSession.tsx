@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  deleteHerdrSession,
-  type HerdrSessionInfo,
-} from "../../lib/herdrControlApi";
+import { deleteHerdrSession, type HerdrSessionInfo } from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
 import { ConfirmDialog } from "../ConfirmDialog";
 

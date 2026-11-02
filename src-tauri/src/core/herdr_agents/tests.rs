@@ -36,7 +36,7 @@ fn fake_herdr(mode: &str) -> (tempfile::TempDir, PathBuf) {
         r##"#!/bin/sh
 printf '%s\n' "$@" >> "$0.log"
 case "$3 $4" in
-  'session list') printf '%s' '{{"sessions":[{{"name":"agent-hub","running":true}}]}}' ;;
+  'session list') printf '%s' '{{"sessions":[{{"name":"default","running":true}}]}}' ;;
   'workspace create') printf '%s' '{{"ok":true,"result":{{"root_pane":{{"pane_id":"w9:p3","terminal_id":"term_demo"}}}}}}' ;;
   'agent start')
     if [ '{mode}' != 'ready' ]; then printf '%s' 'agent_not_ready' >&2; exit 1; fi
@@ -78,7 +78,7 @@ fn starts_each_yolo_agent_in_an_explicit_workspace_and_attaches_only_its_identit
         assert_eq!(log.matches("\nstart\n").count(), 1);
         assert_eq!(
             attachment.arguments[..4],
-            ["--session", "agent-hub", "terminal", "attach"]
+            ["--session", "default", "terminal", "attach"]
         );
         assert_eq!(attachment.arguments[4], "term_demo");
         assert_eq!(
@@ -131,6 +131,6 @@ fn exposes_the_herdr_terminal_before_waiting_for_agent_readiness() {
     );
     assert_eq!(
         prepared.attachment.arguments,
-        ["--session", "agent-hub", "terminal", "attach", "term_demo"]
+        ["--session", "default", "terminal", "attach", "term_demo"]
     );
 }

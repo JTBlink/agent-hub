@@ -1,5 +1,7 @@
 {
   "herdr": {
+    "deleteWorktree": "Delete worktree checkout…",
+    "deleteWorktreeHelp": "Delete worktree “{{path}}”? Terminals, Agents and processes in its Herdr workspace will close and the checkout directory will be removed. The Git branch is retained. Locked worktrees or those with local files cannot be deleted.",
     "moreActions": "More Herdr actions",
     "externalUpdate": "Update Herdr through its original installation channel; current sessions keep running",
     "checkUpdate": "Check updates",

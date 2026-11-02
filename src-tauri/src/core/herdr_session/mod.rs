@@ -7,7 +7,7 @@ use std::{
     sync::Mutex,
     time::{Duration, Instant},
 };
-pub(crate) const SESSION: &str = "agent-hub";
+pub(crate) const SESSION: &str = "default";
 static SERVER_START: Mutex<()> = Mutex::new(());
 pub(crate) const INHERITED_CONTEXT: &[&str] = &[
     "HERDR_ENV",
@@ -87,7 +87,7 @@ impl Client<'_> {
             }
             std::thread::sleep(Duration::from_millis(100));
         }
-        bail!("Herdr session agent-hub did not become ready; open it in Herdr and retry")
+        bail!("Herdr session default did not become ready; open it in Herdr and retry")
     }
 }
 

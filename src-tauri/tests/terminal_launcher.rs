@@ -25,7 +25,7 @@ fn verify_shell_launch(program: &str) {
         r##"#!/bin/sh
 printf '%s\n' "$@" >> "$0.log"
 case "$3 $4" in
-  'session list') echo '{"sessions":[{"name":"agent-hub","running":true}]}' ;;
+  'session list') echo '{"sessions":[{"name":"default","running":true}]}' ;;
   'workspace list') echo '{"result":{"workspaces":[]}}' ;;
   'workspace create') echo '{"result":{"workspace":{"workspace_id":"w-project"}}}' ;;
   'workspace focus') echo '{"result":{}}' ;;
@@ -81,7 +81,7 @@ esac
         directory.path().canonicalize().unwrap().display()
     )));
     assert!(log.contains("\nfocus\nw-project\n"));
-    assert!(log.ends_with("--session\nagent-hub\n"));
+    assert!(log.ends_with("--session\ndefault\n"));
     let state = manager.launch_state("main", &session.id).unwrap();
     manager
         .write("main", &session.id, b"unfinished".to_vec())

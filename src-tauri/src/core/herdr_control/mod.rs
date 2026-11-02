@@ -4,6 +4,7 @@ mod focus;
 mod models;
 mod operations;
 mod shortcuts;
+mod worktree_removal;
 use anyhow::{bail, Context, Result};
 pub use models::*;
 use serde_json::Value;
@@ -52,7 +53,7 @@ impl HerdrControl {
         )
         .map_err(Into::into)
     }
-    /// Prepare the AgentHub-owned session without touching other sessions.
+    /// Prepare the native default session without creating an app-specific session.
     pub fn prepare_session(&self) -> Result<String> {
         let cwd = std::env::current_dir()?;
         super::herdr_session::Client {

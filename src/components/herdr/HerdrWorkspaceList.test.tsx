@@ -4,8 +4,11 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { HerdrWorkspaceList } from "./HerdrWorkspaceList";
 import { groupHerdrWorkspaces } from "../../lib/herdrWorkspaces";
+import { makeProject } from "../../../tests/fixtures/workspace";
+import * as worktreeApi from "../../lib/worktreeApi";
 import type { HerdrWorkspace } from "../../lib/herdrControlApi";
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (original) => ({
+  ...(await original<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 const spaces: HerdrWorkspace[] = [
@@ -75,6 +78,113 @@ it("opens child workspaces and collapses and expands their group", async () => {
     expect(host.querySelector('[data-herdr-workspace="child"]')).toBeTruthy();
   } finally {
     await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it("automatically lists unopened worktrees, avoids duplicates and opens the selected checkout", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const load = vi.spyOn(worktreeApi, "getProjectWorktrees").mockResolvedValue([
+    {
+      path: "/projects/demo",
+      branch: "main",
+      head: null,
+      is_main: true,
+      available: true,
+      locked: false,
+    },
+    {
+      path: "/projects/feature",
+      branch: "feature",
+      head: null,
+      is_main: false,
+      available: true,
+      locked: false,
+    },
+    {
+      path: "/projects/new",
+      branch: "new",
+      head: null,
+      is_main: false,
+      available: true,
+      locked: false,
+    },
+    {
+      path: "/projects/missing",
+      branch: "missing",
+      head: null,
+      is_main: false,
+      available: false,
+      locked: false,
+    },
+  ]);
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const onOpenWorktree = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <HerdrWorkspaceList
+          spaces={spaces}
+          agents={[]}
+          disabled={false}
+          onOpen={vi.fn()}
+          projects={[
+            { ...makeProject(), id: "discover", path: "/projects/demo" },
+          ]}
+          onOpenWorktree={onOpenWorktree}
+        />,
+      ),
+    );
+    expect(load).toHaveBeenCalledWith("discover");
+    expect(
+      host.querySelectorAll('[data-herdr-workspace="child"]'),
+    ).toHaveLength(1);
+    expect(
+      host.querySelector('[data-herdr-workspace="worktree:/projects/feature"]'),
+    ).toBeNull();
+    expect(
+      host
+        .querySelector('[data-herdr-workspace="worktree:/projects/missing"]')
+        ?.hasAttribute("disabled"),
+    ).toBe(true);
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[data-herdr-workspace="worktree:/projects/new"]',
+        )!
+        .click(),
+    );
+    expect(onOpenWorktree).toHaveBeenCalledWith("discover", "/projects/new");
+    expect(onOpenWorktree).toHaveBeenCalledTimes(1);
+    const checkout = host.querySelector<HTMLButtonElement>(
+      '[data-herdr-workspace="worktree:/projects/new"]',
+    )!;
+    await act(async () =>
+      checkout.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 100,
+          clientY: 100,
+        }),
+      ),
+    );
+    expect(document.querySelector('[role="menuitem"]')?.textContent).toBe(
+      "herdr.deleteWorktree",
+    );
+    expect(onOpenWorktree).toHaveBeenCalledTimes(1);
+    await act(async () =>
+      document
+        .querySelector('[role="menu"]')!
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        ),
+    );
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    load.mockRestore();
     vi.unstubAllGlobals();
   }
 });

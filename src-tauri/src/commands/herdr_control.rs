@@ -230,3 +230,41 @@ pub struct TerminalAttachmentRequest {
     target: Target,
     size: TerminalSize,
 }
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteWorktreeInput {
+    session: String,
+    workspace_id: Option<String>,
+    project_id: String,
+    path: String,
+}
+
+#[tauri::command]
+pub async fn herdr_delete_worktree(
+    window: WebviewWindow,
+    tools: State<'_, Arc<HerdrTools>>,
+    store: State<'_, Arc<SkillStore>>,
+    input: DeleteWorktreeInput,
+) -> Result<(), AppError> {
+    super::terminal::owner(&window)?;
+    let tools = tools.inner().clone();
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if let Some(workspace_id) = input.workspace_id {
+            controller(&tools)?
+                .remove_worktree(
+                    &store,
+                    &input.session,
+                    &workspace_id,
+                    &input.project_id,
+                    &input.path,
+                )
+                .map_err(AppError::io)
+        } else {
+            crate::core::project_worktrees::remove(&store, &input.project_id, &input.path)
+                .map_err(AppError::io)
+        }
+    })
+    .await?
+}

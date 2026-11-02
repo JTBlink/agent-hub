@@ -1,5 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
+/** All AgentHub Herdr entry points share the native default session. */
+export const DEFAULT_HERDR_SESSION = "default";
+
 export interface HerdrSessionInfo {
   name: string;
   running: boolean;
@@ -166,3 +169,13 @@ export const restartHerdrSession = (session: string) =>
 
 export const prepareHerdrSession = () =>
   invoke<string>("herdr_prepare_session");
+
+export const deleteHerdrWorktree = (
+  session: string,
+  projectId: string,
+  path: string,
+  workspaceId?: string,
+) =>
+  invoke<void>("herdr_delete_worktree", {
+    input: { session, projectId, path, workspaceId },
+  });

@@ -1,5 +1,7 @@
 {
   "herdr": {
+    "deleteWorktree": "删除工作树…",
+    "deleteWorktreeHelp": "删除工作树“{{path}}”？对应 Herdr 工作空间中的终端、Agent 和运行进程将被关闭，checkout 目录将被移除，Git 分支保留。有本地文件或锁定的工作树无法删除。",
     "moreActions": "Herdr 更多操作",
     "externalUpdate": "请通过原安装渠道更新 Herdr；当前会话继续运行",
     "checkUpdate": "检查更新",

@@ -1,4 +1,7 @@
 //! Project worktrees and bounded, lazy file browsing.
+mod removal;
+pub use removal::{remove, validate_removal};
+
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use std::{

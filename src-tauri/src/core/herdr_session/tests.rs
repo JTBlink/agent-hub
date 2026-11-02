@@ -9,7 +9,7 @@ fn fixture(cwd: &Path, workspaces: Value, panes: Value, fail_focus: bool) -> Pat
         r##"#!/bin/sh
 printf '%s\n' "$@" >> "$0.log"
 case "$3 $4" in
-  'session list') echo '{{"sessions":[{{"name":"agent-hub","running":true}}]}}' ;;
+  'session list') echo '{{"sessions":[{{"name":"default","running":true}}]}}' ;;
   'workspace list') cat <<'JSON'
 {workspaces}
 JSON

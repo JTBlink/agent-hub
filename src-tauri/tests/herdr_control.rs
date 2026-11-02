@@ -422,3 +422,110 @@ esac
     assert!(calls.contains("--session default workspace list"));
     assert!(!calls.contains("session delete"));
 }
+
+#[test]
+fn worktree_deletion_protects_local_files_and_identity_then_closes_and_removes_checkout() {
+    use app_lib::core::{project_worktrees, skill_store::ProjectRecord};
+    let temp = tempfile::tempdir().unwrap();
+    let main = temp.path().join("main");
+    let checkout = temp.path().join("topic checkout");
+    let repo = git2::Repository::init(&main).unwrap();
+    let signature = git2::Signature::now("Example", "user@example.invalid").unwrap();
+    let tree_id = repo.index().unwrap().write_tree().unwrap();
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Initial",
+        &repo.find_tree(tree_id).unwrap(),
+        &[],
+    )
+    .unwrap();
+    let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
+    store
+        .insert_project(&ProjectRecord {
+            id: "demo".into(),
+            name: "Demo".into(),
+            path: main.to_string_lossy().into_owned(),
+            workspace_type: "project".into(),
+            linked_agent_key: None,
+            linked_agent_name: None,
+            disabled_path: None,
+            sort_order: 0,
+            created_at: 0,
+            updated_at: 0,
+            visited_at: None,
+        })
+        .unwrap();
+    let tree = project_worktrees::create(
+        &store,
+        "demo",
+        main.to_str().unwrap(),
+        "topic",
+        checkout.to_str().unwrap(),
+    )
+    .unwrap();
+    let control = HerdrControl::new(fake_cli(temp.path(), &checkout));
+    assert!(control
+        .remove_worktree(&store, "default", "w1", "demo", main.to_str().unwrap())
+        .is_err());
+    assert!(control
+        .remove_worktree(
+            &store,
+            "default",
+            "w1",
+            "demo",
+            temp.path().to_str().unwrap()
+        )
+        .is_err());
+    fs::write(checkout.join("local.txt"), "keep").unwrap();
+    assert!(control
+        .remove_worktree(&store, "default", "w1", "demo", &tree.path)
+        .is_err());
+    assert_eq!(
+        fs::read_to_string(checkout.join("local.txt")).unwrap(),
+        "keep"
+    );
+    // Even ignored files must survive a deletion attempt.
+    fs::write(repo.path().join("info/exclude"), "local.txt\n").unwrap();
+    assert!(control
+        .remove_worktree(&store, "default", "w1", "demo", &tree.path)
+        .is_err());
+    fs::remove_file(checkout.join("local.txt")).unwrap();
+    assert!(std::process::Command::new("git")
+        .arg("-C")
+        .arg(&main)
+        .args(["worktree", "lock", "--", &tree.path])
+        .status()
+        .unwrap()
+        .success());
+    assert!(control
+        .remove_worktree(&store, "default", "w1", "demo", &tree.path)
+        .is_err());
+    assert!(std::process::Command::new("git")
+        .arg("-C")
+        .arg(&main)
+        .args(["worktree", "unlock", "--", &tree.path])
+        .status()
+        .unwrap()
+        .success());
+    // A reused workspace ID must never close a different checkout.
+    fake_cli(temp.path(), &main);
+    assert!(control
+        .remove_worktree(&store, "default", "w1", "demo", &tree.path)
+        .is_err());
+    assert!(!fs::read_to_string(temp.path().join("herdr.calls"))
+        .unwrap()
+        .contains("workspace close"));
+    fake_cli(temp.path(), &checkout);
+    control
+        .remove_worktree(&store, "default", "w1", "demo", &tree.path)
+        .unwrap();
+    assert!(!checkout.exists());
+    assert!(main.exists());
+    assert!(repo.find_branch("topic", git2::BranchType::Local).is_ok());
+    assert_eq!(project_worktrees::list(&store, "demo").unwrap().len(), 1);
+    assert!(fs::read_to_string(temp.path().join("herdr.calls"))
+        .unwrap()
+        .contains("--session default workspace close w1"));
+}

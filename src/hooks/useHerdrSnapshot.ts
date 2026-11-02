@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../lib/tauri";
+import { DEFAULT_HERDR_SESSION } from "../lib/herdrControlApi";
 import { getErrorMessage } from "../lib/error";
 import { useTranslation } from "react-i18next";
 
@@ -9,7 +10,13 @@ export function useHerdrSnapshot(active: boolean) {
   const [inventory, setInventory] = useState<Awaited<
     ReturnType<typeof api.getHerdrInventory>
   > | null>(null);
-  const [session, setSessionValue] = useState("");
+  const [selectedSession, setSelectedSession] = useState(DEFAULT_HERDR_SESSION);
+  const session = inventory?.sessions.some((s) => s.name === selectedSession)
+    ? selectedSession
+    : DEFAULT_HERDR_SESSION;
+  const running = inventory?.sessions.some(
+    (s) => s.name === session && s.running,
+  );
   const [managedSession, setManagedSession] = useState("");
   const prepared = useRef(false);
   const [data, setData] = useState<{
@@ -18,10 +25,14 @@ export function useHerdrSnapshot(active: boolean) {
   } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const setSession = (name: string) => {
+    setSelectedSession(name);
+    setError("");
+    setLoading(false);
+  };
   const [revision, setRevision] = useState(0);
   const refresh = useCallback(() => setRevision((v) => v + 1), []);
   const generation = useRef(0);
-  const setSession = setSessionValue;
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
@@ -30,23 +41,15 @@ export function useHerdrSnapshot(active: boolean) {
       .then(async (value) => {
         if (cancelled) return;
         if (value.installed && !prepared.current) {
-          const name = await api.prepareHerdrSession();
+          await api.prepareHerdrSession();
           if (cancelled) return;
           prepared.current = true;
-          setManagedSession(name);
-          setSessionValue(name);
+          setManagedSession(DEFAULT_HERDR_SESSION);
           const inventory = await api.getHerdrInventory();
           if (!cancelled) setInventory(inventory);
           return;
         }
         setInventory(value);
-        if (!value.sessions.some((s) => s.name === session))
-          setSessionValue(
-            value.sessions.find((s) => s.default && s.running)?.name ??
-              value.sessions.find((s) => s.running)?.name ??
-              value.sessions[0]?.name ??
-              "",
-          );
       })
       .catch((error) => {
         if (!cancelled) setError(getErrorMessage(error, fallback));
@@ -54,9 +57,9 @@ export function useHerdrSnapshot(active: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [active, revision, session, fallback]);
+  }, [active, revision, fallback]);
   useEffect(() => {
-    if (!active || !session) return;
+    if (!active || !managedSession || !running) return;
     const token = ++generation.current;
     let stopped = false,
       pending = false;
@@ -101,13 +104,13 @@ export function useHerdrSnapshot(active: boolean) {
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("focus", wake);
     };
-  }, [active, session, revision, fallback]);
+  }, [active, session, managedSession, running, revision, fallback]);
   return {
     inventory,
     managedSession,
     session,
     setSession,
-    snapshot: data?.session === session ? data.value : null,
+    snapshot: running && data?.session === session ? data.value : null,
     error,
     loading,
     refresh,

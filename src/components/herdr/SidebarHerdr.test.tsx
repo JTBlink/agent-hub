@@ -22,7 +22,8 @@ vi.mock("../../hooks/useActiveWorkspace", () => ({
     path: app.projects[0]?.path,
   }),
 }));
-vi.mock("react-i18next", () => ({
+vi.mock("react-i18next", async (original) => ({
+  ...(await original<typeof import("react-i18next")>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock("../../lib/tauri", async (original) => ({
@@ -33,6 +34,7 @@ vi.mock("../../lib/tauri", async (original) => ({
   ensureHerdrWorkspace: vi.fn(),
   installHerdr: vi.fn(),
   prepareHerdrSession: vi.fn(),
+  deleteHerdrSession: vi.fn(),
 }));
 beforeEach(() => {
   vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
@@ -271,37 +273,78 @@ it("guides installation inside the Herdr panel when the tool is missing", async 
   }
 });
 
-it("defaults to the prepared AgentHub session while retaining the session picker", async () => {
-  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  vi.spyOn(document, "hasFocus").mockReturnValue(true);
-  vi.mocked(api.prepareHerdrSession).mockResolvedValue("agent-hub");
-  vi.mocked(api.getHerdrInventory).mockResolvedValue({
-    installed: true,
-    sessions: [
-      { name: "default", running: true, default: true },
-      { name: "agent-hub", running: true, default: false },
-    ],
-  });
-  const host = document.createElement("div");
-  document.body.append(host);
-  const root = createRoot(host);
-  try {
-    await act(async () =>
-      root.render(
-        <MemoryRouter>
-          <SidebarHerdr active />
-        </MemoryRouter>,
-      ),
-    );
-    expect(
-      host.querySelector('[role="combobox"][aria-label="herdr.session"]')
-        ?.textContent,
-    ).toContain("agent-hub");
-    expect(api.getHerdrSnapshot).toHaveBeenLastCalledWith("agent-hub");
-  } finally {
-    await act(async () => root.unmount());
-    host.remove();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  }
-});
+it.each([true, false])(
+  "selects and deletes extra sessions (running: %s) while protecting default and retaining failed deletions",
+  async (running) => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
+    vi.mocked(api.getHerdrInventory).mockResolvedValue({
+      installed: true,
+      sessions: [
+        { name: "default", running: true, default: true },
+        { name: "agent-hub", running, default: false },
+      ],
+    });
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(async () =>
+        root.render(
+          <MemoryRouter>
+            <SidebarHerdr active />
+          </MemoryRouter>,
+        ),
+      );
+      const picker = host.querySelector<HTMLButtonElement>(
+        '[role="combobox"][aria-label="herdr.session"]',
+      )!;
+      const deleteButton = () =>
+        host.querySelector<HTMLButtonElement>(
+          '[aria-label="herdr.deleteSession"]',
+        )!;
+      expect(deleteButton().disabled).toBe(true);
+      expect(api.getHerdrSnapshot).toHaveBeenLastCalledWith("default");
+      await act(async () => picker.click());
+      await act(async () =>
+        [...document.querySelectorAll<HTMLButtonElement>('[role="option"]')]
+          .find((o) => o.textContent?.startsWith("agent-hub"))!
+          .click(),
+      );
+      expect(api.getHerdrSnapshot).toHaveBeenLastCalledWith(
+        running ? "agent-hub" : "default",
+      );
+      expect(deleteButton().disabled).toBe(false);
+      await act(async () => deleteButton().click());
+      const confirm = () =>
+        [
+          ...host.querySelectorAll<HTMLButtonElement>(
+            '[role="alertdialog"] button',
+          ),
+        ].find((b) => b.textContent === "common.delete")!;
+      vi.mocked(api.deleteHerdrSession).mockRejectedValueOnce(
+        new Error("Delete failed"),
+      );
+      await act(async () => confirm().click());
+      expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain(
+        "Delete failed",
+      );
+      vi.mocked(api.deleteHerdrSession).mockResolvedValueOnce(undefined);
+      vi.mocked(api.getHerdrInventory).mockResolvedValue({
+        installed: true,
+        sessions: [{ name: "default", running: true, default: true }],
+      });
+      await act(async () => confirm().click());
+      expect(api.deleteHerdrSession).toHaveBeenLastCalledWith("agent-hub");
+      expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+      expect(picker.textContent).toContain("default");
+      expect(deleteButton().disabled).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
+  },
+);
