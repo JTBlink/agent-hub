@@ -2,6 +2,7 @@ import type { TerminalTaskContext } from "./taskContext";
 import type { HerdrAgent } from "./herdrAgents";
 import {
   herdrNavigation,
+  DEFAULT_HERDR_SESSION,
   type HerdrOpenedWorkspace,
   type HerdrTarget,
 } from "./herdrControlApi";
@@ -16,6 +17,9 @@ export interface TerminalTab {
   panes: string[];
   activePane: string;
   direction: "horizontal" | "vertical";
+  title?: string;
+  herdrSession?: string;
+  paneAttachments?: Record<string, HerdrOpenedWorkspace>;
   context?: TerminalTaskContext;
   // Launch intent belongs only to this run, and is omitted from saved layouts.
   agent?: HerdrAgent;
@@ -99,6 +103,16 @@ export function readTerminalLayout(): TerminalLayout {
           target: tab.herdrTarget,
         },
       });
+      const paneAttachments: Record<string, HerdrOpenedWorkspace> = {};
+      if (record(tab.paneAttachments)) {
+        for (const pane of panes) {
+          const value = herdrNavigation({
+            herdrAttachment: tab.paneAttachments[pane],
+          });
+          if (value?.target.session === DEFAULT_HERDR_SESSION)
+            paneAttachments[pane] = value;
+        }
+      }
       tabs.push({
         id: tab.id,
         projectId: tab.projectId,
@@ -109,7 +123,13 @@ export function readTerminalLayout(): TerminalLayout {
             ? tab.activePane
             : panes[0],
         direction: tab.direction,
-        ...(attachment ? { herdrTarget: attachment.target } : {}),
+        ...(typeof tab.title === "string" && tab.title.trim()
+          ? { title: tab.title.trim() }
+          : {}),
+        ...(Object.keys(paneAttachments).length ? { paneAttachments } : {}),
+        ...(attachment?.target.session === DEFAULT_HERDR_SESSION
+          ? { herdrTarget: attachment.target }
+          : {}),
       });
     }
     const activeIds: Record<string, string> = {};
@@ -158,6 +178,8 @@ export function writeTerminalLayout(layout: TerminalLayout) {
             activePane,
             direction,
             herdrTarget,
+            title,
+            paneAttachments,
           }) => ({
             id,
             projectId,
@@ -165,6 +187,26 @@ export function writeTerminalLayout(layout: TerminalLayout) {
             panes,
             activePane,
             direction,
+            ...(title?.trim() ? { title: title.trim() } : {}),
+            ...(paneAttachments
+              ? {
+                  paneAttachments: Object.fromEntries(
+                    Object.entries(paneAttachments)
+                      .filter(([pane]) => panes.includes(pane))
+                      .map(([pane, attachment]) => [
+                        pane,
+                        {
+                          ...attachment,
+                          target: {
+                            ...attachment.target,
+                            revision: 0,
+                            agent_session: null,
+                          },
+                        },
+                      ]),
+                  ),
+                }
+              : {}),
             ...(herdrTarget
               ? {
                   herdrTarget: {
@@ -188,6 +230,8 @@ export function lastHerdrAttachment(
   layout: TerminalLayout,
 ): HerdrOpenedWorkspace | null {
   const tab = layout.tabs.find((tab) => tab.id === layout.lastActiveId);
+  const paneAttachment = tab?.paneAttachments?.[tab.activePane];
+  if (paneAttachment) return paneAttachment;
   return tab?.herdrTarget && tab.worktreePath
     ? {
         project_id: tab.projectId,

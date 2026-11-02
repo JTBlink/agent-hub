@@ -338,8 +338,10 @@ it("distinguishes absent reset data, a known zero, and count-only results", asyn
     await click("Agent 用量");
     await click("刷新用量");
     const resets = document.querySelector('section[aria-label="使用限额重置"]');
-    if (!reset_credits) expect(resets).toBeNull();
-    else {
+    if (!reset_credits) {
+      expect(resets?.textContent).toContain("服务暂未提供重置额度信息");
+      expect(resets?.textContent).not.toContain("可用 0 次");
+    } else {
       expect(resets?.textContent).toContain(
         `可用 ${reset_credits.available_count} 次`,
       );
@@ -348,6 +350,61 @@ it("distinguishes absent reset data, a known zero, and count-only results", asyn
     }
     await click("关闭");
   }
+});
+
+it("shows a reset-credit loading state before the first snapshot arrives", async () => {
+  let finish!: (snapshots: ProviderUsage[]) => void;
+  vi.mocked(getAgentUsage).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await render();
+  await click("Agent 用量");
+  const section = document.querySelector('section[aria-label="使用限额重置"]')!;
+  expect(section.getAttribute("aria-busy")).toBe("true");
+  expect(section.querySelector('[role="status"]')?.textContent).toContain(
+    "正在查询重置额度",
+  );
+  expect(section.textContent).not.toContain("可用 0 次");
+  await act(async () => finish(resetFixture()));
+  expect(section.getAttribute("aria-busy")).toBe("false");
+  expect(section.querySelectorAll("li")).toHaveLength(2);
+  expect(section.textContent).not.toContain("正在查询重置额度");
+});
+
+it("retains reset details during refresh, reports failure and recovers on retry", async () => {
+  vi.mocked(getAgentUsage).mockResolvedValue(resetFixture());
+  await render();
+  await click("Agent 用量");
+  let fail!: (error: Error) => void;
+  vi.mocked(getAgentUsage).mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+  );
+  await click("刷新用量");
+  const section = () =>
+    document.querySelector('section[aria-label="使用限额重置"]')!;
+  expect(section().querySelector('[role="status"]')?.textContent).toContain(
+    "正在查询重置额度",
+  );
+  expect(section().querySelectorAll("li")).toHaveLength(2);
+  expect(
+    [...section().querySelectorAll("button")].every(
+      (button) => button.disabled,
+    ),
+  ).toBe(true);
+  await act(async () => fail(new Error("request failed")));
+  expect(section().querySelector('[role="alert"]')?.textContent).toBe(
+    "重置额度查询失败，请刷新重试。",
+  );
+  expect(section().querySelectorAll("li")).toHaveLength(0);
+  await click("刷新用量");
+  expect(section().querySelectorAll("li")).toHaveLength(2);
+  expect(section().querySelector('[role="alert"]')).toBeNull();
 });
 
 it("starts the expiry reminder as the clock enters the three-day window without another query", async () => {
@@ -493,5 +550,5 @@ it("keeps confirmation open on uncertain failure and reuses its key without dupl
   );
   expect(
     document.querySelector('section[aria-label="使用限额重置"]'),
-  ).toBeNull();
+  ).not.toBeNull();
 });

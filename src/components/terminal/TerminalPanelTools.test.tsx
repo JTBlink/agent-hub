@@ -27,13 +27,14 @@ async function render(
   busy = false,
   hasTerminal = true,
   onProjectSkills?: () => void,
+  updateVersion: string | undefined = "1.2.3",
 ) {
   await act(async () =>
     root.render(
       <TerminalPanelTools
         hasTerminal={hasTerminal}
         herdrBusy={busy}
-        updateVersion="1.2.3"
+        updateVersion={updateVersion}
         onProjectSkills={onProjectSkills}
         canSplit
 
@@ -61,11 +62,22 @@ it("launches Herdr directly without opening a menu", async () => {
 it("offers an available update as a separate button", async () => {
   await render();
   const update = host.querySelector<HTMLButtonElement>(
-    '[aria-label="terminal.herdrUpdateAvailable"]',
+    'button[aria-label="terminal.herdrUpdateAvailable"]',
   )!;
   await act(async () => update.click());
   expect(upgrade).toHaveBeenCalledOnce();
   expect(launch).not.toHaveBeenCalled();
+});
+
+it("shows an update indicator beside Herdr only when a newer version is available", async () => {
+  await render();
+  expect(
+    trigger().querySelector('[role="img"]')?.getAttribute("aria-label"),
+  ).toBe("terminal.herdrUpdateAvailable");
+  expect(trigger().title).toContain("terminal.herdrUpdateAvailable");
+  await render(false, true, undefined, "");
+  expect(trigger().querySelector('[role="img"]')).toBeNull();
+  expect(trigger().title).toBe("terminal.herdrLaunch");
 });
 
 it("prevents repeated launch while preparing and launch without a terminal", async () => {

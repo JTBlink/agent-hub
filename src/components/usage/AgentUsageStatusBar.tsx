@@ -7,6 +7,7 @@ import { useCurrentTime } from "../../hooks/useCurrentTime";
 import { useAgentUsage } from "../../hooks/useAgentUsage";
 import {
   highestUsage,
+  isUsageWarning,
   hasExpiringResetCredits,
   USAGE_PROVIDERS,
   usageAgentKey,
@@ -114,7 +115,7 @@ export function AgentUsageStatusBar() {
                 agentKey={usageAgentKey(provider)}
                 className="h-3.5 w-3.5 border-0 bg-transparent"
               />
-              <span className={percent >= 80 ? "text-danger" : ""}>
+              <span className={isUsageWarning(percent) ? "text-danger" : ""}>
                 {`${Math.round(percent)}%`}
               </span>
             </span>

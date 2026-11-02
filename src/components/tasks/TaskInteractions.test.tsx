@@ -56,6 +56,38 @@ async function input(
   });
 }
 
+it("opens a dedicated MR operation without starting an Agent or mutating the remote", async () => {
+  const start = vi.fn();
+  await render(
+    <TaskRowActions
+      task={makeRepositoryTask()}
+      canStart
+      onPreview={vi.fn()}
+      onStart={start}
+    />,
+  );
+  await click("tasks.moreActions");
+  await click("tasks.reviewActions.review");
+  expect(start).toHaveBeenCalledExactlyOnceWith("review");
+  expect(invoke).not.toHaveBeenCalled();
+});
+
+it("does not offer repair or merge for a closed MR", async () => {
+  await render(
+    <TaskRowActions
+      task={makeRepositoryTask({ state: "closed" })}
+      canStart
+      onPreview={vi.fn()}
+      onStart={vi.fn()}
+    />,
+  );
+  await click("tasks.moreActions");
+  expect(document.body.textContent).toContain("tasks.reviewActions.review");
+  expect(document.body.textContent).toContain("tasks.reviewActions.ci");
+  expect(document.body.textContent).not.toContain("tasks.reviewActions.merge");
+  expect(document.body.textContent).not.toContain("tasks.reviewActions.repair");
+});
+
 it("writes GitHub close reasons and duplicate targets, blocks repeated submissions and retains failures", async () => {
   const task = makeRepositoryTask({
     kind: "issue",

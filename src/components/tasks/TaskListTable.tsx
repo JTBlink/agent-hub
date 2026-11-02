@@ -15,6 +15,7 @@ import { TaskSummaryFacts } from "./TaskFacts";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 import { TaskIssueStatus } from "./TaskIssueStatus";
 import { TaskRowActions } from "./TaskRowActions";
+import type { ReviewAction } from "../../lib/taskReviewActions";
 
 export function TaskListTable({
   items,
@@ -33,7 +34,7 @@ export function TaskListTable({
   onOpen: (task: RepositoryTask, full: boolean, trigger: HTMLElement) => void;
   onOpenRepository: (task: RepositoryTask) => void;
   onUpdated: (task: RepositoryTask) => void;
-  onStart: (task: RepositoryTask) => void;
+  onStart: (task: RepositoryTask, action?: ReviewAction) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -181,7 +182,7 @@ export function TaskListTable({
                 <TaskRowActions
                   task={task}
                   canStart={!!project}
-                  onStart={() => onStart(task)}
+                  onStart={(action) => onStart(task, action)}
                   onPreview={(trigger) => onOpen(task, false, trigger)}
                 />
               </td>

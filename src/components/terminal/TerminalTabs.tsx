@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { TerminalSquare } from "lucide-react";
 import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
 import type { Project } from "../../lib/tauri";
 import type { TerminalTab } from "../../lib/terminalLayout";
 import { cn } from "../../utils";
 import { herdrAgentLabel } from "../../lib/herdrAgents";
+import { terminalTabName } from "../../lib/terminalTabName";
+import { TerminalTabButton } from "./TerminalTabButton";
 
 export function TerminalTabs({
   tabs,
@@ -14,6 +15,7 @@ export function TerminalTabs({
   scoped,
   onSelect,
   onClose,
+  onRename,
   children,
 }: {
   children?: ReactNode;
@@ -23,6 +25,7 @@ export function TerminalTabs({
   scoped: boolean;
   onSelect: (tab: TerminalTab) => void;
   onClose: (tab: TerminalTab) => void;
+  onRename?: (tab: TerminalTab, name: string) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -45,24 +48,15 @@ export function TerminalTabs({
                 : "border-transparent text-muted",
             )}
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab.id === activeId}
-              className="flex h-full max-w-48 items-center gap-1.5 px-3 text-xs"
-              title={project?.name}
-              onClick={() => onSelect(tab)}
-            >
-              <TerminalSquare size={13} className="shrink-0" />
-              <span className="truncate">
-                {(tab.agent
-                  ? herdrAgentLabel(tab.agent)
-                  : scoped
-                    ? t("terminal.title")
-                    : project?.name) || t("terminal.title")}{" "}
-                {index + 1}
-              </span>
-            </button>
+            <TerminalTabButton
+              name={
+                terminalTabName(tab) ??
+                `${(tab.agent ? herdrAgentLabel(tab.agent) : scoped ? t("terminal.title") : project?.name) || t("terminal.title")} ${index + 1}`
+              }
+              selected={tab.id === activeId}
+              onSelect={() => onSelect(tab)}
+              onRename={onRename ? (name) => onRename(tab, name) : undefined}
+            />
             <TabCloseButton
               aria-label={t("terminal.closeTab", { number: index + 1 })}
               title={t("terminal.closeTab", { number: index + 1 })}

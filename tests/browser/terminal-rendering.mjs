@@ -35,6 +35,11 @@ try {
   }
   assert.equal(result.error, undefined, result.error);
   assert.equal(
+    result.mediumTextReady,
+    true,
+    "Normal and italic terminal text must use real Medium glyphs, distinct from Regular",
+  );
+  assert.equal(
     result.sessionMenuFits,
     true,
     "Single-session menu must fit without scrolling",

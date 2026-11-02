@@ -12,6 +12,37 @@ import {
 
 beforeEach(() => localStorage.clear());
 
+it("preserves custom tab names and independent pane attachments without persisting agent identity", () => {
+  const tab = createTerminalTab("demo", undefined, "/projects/demo");
+  tab.title = "  Review  ";
+  tab.paneAttachments = {
+    [tab.activePane]: {
+      project_id: "other",
+      path: "/projects/other",
+      target: {
+        session: "default",
+        workspace_id: "w1",
+        pane_id: "w1:p1",
+        terminal_id: "term1",
+        revision: 9,
+        agent_session: { private: true },
+      },
+    },
+  };
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
+  const restored = readTerminalLayout().tabs[0];
+  expect(restored.title).toBe("Review");
+  expect(restored.paneAttachments?.[tab.activePane]).toEqual({
+    ...tab.paneAttachments[tab.activePane],
+    target: {
+      ...tab.paneAttachments[tab.activePane].target,
+      revision: 0,
+      agent_session: null,
+    },
+  });
+  expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("private");
+});
+
 it("saves only terminal layout and restores split direction, focus and scoped selection", () => {
   const tab = createTerminalTab(
     "demo",

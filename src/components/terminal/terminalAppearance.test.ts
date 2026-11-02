@@ -7,14 +7,15 @@ afterEach(() => {
   Reflect.deleteProperty(document, "fonts");
 });
 
-it("uses the shared code font and size when measuring a terminal grid", () => {
+it("uses the shared code font with the terminal reading size when measuring a grid", () => {
   const styles = document.documentElement.style;
   styles.setProperty("--font-family-code", '"AgentHub Mono", monospace');
   styles.setProperty("--font-size-code", "16px");
+  styles.setProperty("--font-size-terminal", "15px");
   styles.setProperty("--line-height-terminal", "1");
   expect(terminalAppearance(styles)).toMatchObject({
     fontFamily: '"AgentHub Mono", monospace',
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 1,
     letterSpacing: 0,
   });
@@ -22,6 +23,7 @@ it("uses the shared code font and size when measuring a terminal grid", () => {
 
 it("loads text styles and symbols at the configured code size before PTY measurement", async () => {
   document.documentElement.style.setProperty("--font-size-code", "16px");
+  document.documentElement.style.setProperty("--font-size-terminal", "15px");
   const load = vi.fn().mockResolvedValue([]);
   Object.defineProperty(document, "fonts", {
     configurable: true,
@@ -29,10 +31,10 @@ it("loads text styles and symbols at the configured code size before PTY measure
   });
   await loadTerminalFonts();
   expect(load.mock.calls).toHaveLength(8);
-  for (const style of ["", "bold ", "italic ", "bold italic "]) {
-    expect(load).toHaveBeenCalledWith(`${style}16px "AgentHub Mono"`, "M");
+  for (const style of ["500 ", "700 ", "italic 500 ", "italic 700 "]) {
+    expect(load).toHaveBeenCalledWith(`${style}15px "AgentHub Mono"`, "M");
     expect(load).toHaveBeenCalledWith(
-      `${style}16px "AgentHub Symbols"`,
+      `${style}15px "AgentHub Symbols"`,
       expect.stringContaining("\uf002\uf126\uf06e\uf013"),
     );
   }

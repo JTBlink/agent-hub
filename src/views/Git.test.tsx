@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  Link,
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { toast } from "sonner";
 import { expect, it, vi } from "vitest";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
@@ -146,6 +153,79 @@ it("follows the shared checkout on entry and when the workspace changes without 
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();
+  }
+});
+
+it("opens source control for the newly navigated project without waiting for the terminal page to publish a checkout", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.clear();
+  vi.mocked(getProjectGitStatus).mockClear();
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "new-project",
+    head: null,
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    state: "Clean",
+    files: [],
+    commits: [],
+    truncated: false,
+  });
+  const projects = [
+    { ...makeProject(), id: "first", path: "/projects/first" },
+    { ...makeProject(), id: "second", path: "/projects/second" },
+  ];
+  function RoutedWorkspace() {
+    const { pathname, search } = useLocation();
+    return (
+      <WorkspaceFilesProvider
+        projects={projects}
+        pathname={pathname}
+        search={search}
+      >
+        <Link
+          to="/project/second?worktree=%2Fprojects%2Fsecond-topic"
+          data-next-project
+        >
+          Second
+        </Link>
+        <Link to="/git" data-open-git>
+          Git
+        </Link>
+        <Routes>
+          <Route path="/project/:id" element={<div />} />
+          <Route path="/git" element={<Git />} />
+        </Routes>
+      </WorkspaceFilesProvider>
+    );
+  }
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={["/project/first"]}>
+          <RoutedWorkspace />
+        </MemoryRouter>,
+      ),
+    );
+    await act(async () =>
+      host.querySelector<HTMLAnchorElement>("[data-next-project]")!.click(),
+    );
+    await act(async () =>
+      host.querySelector<HTMLAnchorElement>("[data-open-git]")!.click(),
+    );
+    expect(getProjectGitStatus).toHaveBeenLastCalledWith(
+      "second",
+      "/projects/second-topic",
+    );
+    expect(
+      host.querySelector("textarea")?.getAttribute("placeholder"),
+    ).not.toContain("first");
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+    localStorage.clear();
   }
 });
 

@@ -206,10 +206,19 @@ export function useTerminalLayout(
     setError("");
     setAttempt((value) => value + 1);
   }, []);
+  const renameTab = (tab: TerminalTab, title: string) =>
+    setTabs((items) =>
+      items.map((item) =>
+        item.id === tab.id
+          ? { ...item, title: title.trim() || undefined }
+          : item,
+      ),
+    );
   return {
     tabs,
     scopedTabs,
     setTabs,
+    renameTab,
     activeIds,
     setActiveIds,
     ready,

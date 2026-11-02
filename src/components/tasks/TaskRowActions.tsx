@@ -4,6 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { taskFailure, type RepositoryTask } from "../../lib/taskBrowserApi";
 import { CardActionMenu } from "../CardActionMenu";
+import { reviewActions, type ReviewAction } from "../../lib/taskReviewActions";
 
 export function TaskRowActions({
   task,
@@ -14,7 +15,7 @@ export function TaskRowActions({
   task: RepositoryTask;
   canStart: boolean;
   onPreview: (trigger: HTMLElement) => void;
-  onStart: () => void;
+  onStart: (action?: ReviewAction) => void;
 }) {
   const { t } = useTranslation();
   const [error, setError] = useState("");
@@ -26,7 +27,7 @@ export function TaskRowActions({
           className="app-button-secondary h-7 gap-1 px-2 text-xs"
           disabled={!canStart}
           title={t("tasks.launch.title")}
-          onClick={onStart}
+          onClick={() => onStart()}
         >
           {t("tasks.start")}
           <ArrowRight size={12} />
@@ -44,6 +45,12 @@ export function TaskRowActions({
           label={t("tasks.moreActions")}
           triggerClassName="h-7 w-6"
           actions={[
+            ...reviewActions(task).map((action) => ({
+              key: action,
+              label: t(`tasks.reviewActions.${action}`),
+              disabled: !canStart,
+              onSelect: () => onStart(action),
+            })),
             {
               key: "browser",
               label: t("tasks.openInBrowser"),

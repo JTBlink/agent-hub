@@ -52,6 +52,9 @@ export const usageAgentKey = (provider: UsageProvider) =>
 export const usageProviderName = (provider: UsageProvider) =>
   provider === "claude" ? "Claude" : "Codex";
 
+/** Warn when at most a quarter of the quota remains. */
+export const isUsageWarning = (usedPercent: number) => usedPercent >= 75;
+
 /** Ignore expired cached windows until the provider supplies the new quota. */
 export function currentUsageWindows(
   snapshot: ProviderUsage | undefined,

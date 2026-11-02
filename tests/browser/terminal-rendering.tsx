@@ -77,6 +77,45 @@ async function snapshot(terminal: Terminal): Promise<string> {
 }
 const write = (terminal: Terminal, data: string) =>
   new Promise<void>((resolve) => terminal.write(data, resolve));
+
+// Compare real pixels to an independent font face: matching a CSS weight alone
+// would also pass if a missing Medium file silently fell back to Regular.
+async function usesMediumText(terminal: Terminal): Promise<boolean> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 480;
+  canvas.height = 48;
+  const context = canvas.getContext("2d")!;
+  const pixels = (font: string) => {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.font = font;
+    context.fillText("Il1 O0 {} [] != -> git status", 0, 32);
+    return canvas.toDataURL();
+  };
+  const stack = terminal.options.fontFamily;
+  for (const italic of [false, true]) {
+    const reference = new FontFace(
+      "MediumReference",
+      `url("/fonts/JetBrainsMono-Medium${italic ? "Italic" : ""}.woff2")`,
+      { weight: "500", style: italic ? "italic" : "normal" },
+    );
+    document.fonts.add(await reference.load());
+    try {
+      const style = italic ? "italic " : "";
+      await document.fonts.load(`${style}400 24px ${stack}`, "M");
+      const actual = pixels(
+        `${style}${terminal.options.fontWeight} 24px ${stack}`,
+      );
+      if (
+        actual !== pixels(`${style}500 24px MediumReference`) ||
+        actual === pixels(`${style}400 24px ${stack}`)
+      )
+        return false;
+    } finally {
+      document.fonts.delete(reference);
+    }
+  }
+  return true;
+}
 Object.assign(window, {
   runTerminalInputRegression: async (
     inputEvents: boolean | "ime" | "ime-composition" = false,
@@ -270,6 +309,7 @@ Object.assign(window, {
       )
     ).every(Boolean);
     const first = terminals[0];
+    const mediumTextReady = await usesMediumText(first);
     await write(
       first,
       "\x1b[?25l\x1b[31mABCDEFGHIJKLMNOPQRSTUVWXYZ\x1b[0m\r\n╭── pane ──╮\r\n│ stable   │\r\n╰──────────╯\r\n JSON    folder    markdown\r\n new file    new folder    refresh    collapse\r\n files    search    Git    review    settings\r\n\x1b[1m \x1b[0m  \x1b[3m \x1b[0m  \x1b[1;3m \x1b[0m",
@@ -354,6 +394,7 @@ Object.assign(window, {
     picker.unmount();
     pickerHost.remove();
     const result = {
+      mediumTextReady,
       sessionMenuFits,
       noOuterInsets,
       gutterMatchesBackground,

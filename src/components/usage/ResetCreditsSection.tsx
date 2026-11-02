@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import {
   quotaTime,
   resetCreditExpiring,
@@ -11,11 +11,13 @@ export function ResetCreditsSection({
   credits,
   now,
   busy,
+  error,
   onUse,
 }: {
-  credits: ResetCredits;
+  credits?: ResetCredits | null;
   now: number;
   busy: boolean;
+  error?: string;
   onUse: (creditId?: string) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -23,16 +25,37 @@ export function ResetCreditsSection({
     <section
       className="mt-3 border-t border-border-subtle pt-2"
       aria-label={t("agentUsage.resetCredits.title")}
+      aria-busy={busy}
     >
       <div className="flex justify-between gap-2 text-xs font-medium">
         <span>{t("agentUsage.resetCredits.title")}</span>
-        <span>
-          {t("agentUsage.resetCredits.available", {
-            count: credits.available_count,
-          })}
-        </span>
+        {credits && (
+          <span>
+            {t("agentUsage.resetCredits.available", {
+              count: credits.available_count,
+            })}
+          </span>
+        )}
       </div>
-      {!credits.credits?.some((credit) => credit.id) &&
+      {busy && (
+        <p
+          role="status"
+          className="mt-2 flex items-center gap-1.5 text-xs text-muted"
+        >
+          <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+          {t("agentUsage.resetCredits.loading")}
+        </p>
+      )}
+      {!busy && !credits && (
+        <p
+          role={error ? "alert" : "status"}
+          className="mt-2 text-xs text-muted"
+        >
+          {error ?? t("agentUsage.resetCredits.unavailable")}
+        </p>
+      )}
+      {credits &&
+        !credits.credits?.some((credit) => credit.id) &&
         credits.available_count > 0 && (
           <button
             type="button"
@@ -43,12 +66,12 @@ export function ResetCreditsSection({
             {t("agentUsage.resetCredits.use")}
           </button>
         )}
-      {credits.credits === null && credits.available_count > 0 && (
+      {credits && !credits.credits?.length && credits.available_count > 0 && (
         <p className="mt-1 text-xs text-muted">
           {t("agentUsage.resetCredits.detailsUnavailable")}
         </p>
       )}
-      {credits.credits && credits.credits.length > 0 && (
+      {credits?.credits && credits.credits.length > 0 && (
         <ul className="mt-2 space-y-2">
           {credits.credits.map((credit, index) => {
             const expiring = resetCreditExpiring(credit, now);

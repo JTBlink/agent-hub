@@ -2,8 +2,20 @@ import { expect, it } from "vitest";
 import {
   currentUsageWindows,
   highestUsage,
+  isUsageWarning,
   type ProviderUsage,
 } from "./agentUsage";
+
+it.each([
+  [0, false],
+  [74.99, false],
+  [75, true],
+  [75.01, true],
+  [80, true],
+  [100, true],
+])("warns at a quarter of quota remaining: %s used", (percent, warning) => {
+  expect(isUsageWarning(percent)).toBe(warning);
+});
 
 it("uses the tightest live window, preserving zero and excluding expired or failed quota", () => {
   const snapshot: ProviderUsage = {

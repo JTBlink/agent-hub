@@ -305,15 +305,31 @@ impl HerdrControl {
         let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
         let directory = super::project_worktrees::directory(store, project_id, Some(path))?;
         let snapshot = self.snapshot(&target.session)?;
-        let pane = self.verify(&snapshot, target, false)?;
         let workspace = snapshot
             .workspaces
             .iter()
-            .find(|w| w.workspace_id == pane.workspace_id)
+            .find(|w| w.workspace_id == target.workspace_id)
             .context("Workspace was closed")?;
         if directory_for(workspace, &snapshot.panes)? != directory {
             bail!("Herdr target no longer belongs to the selected checkout")
         }
+        // The client attaches to a workspace, whereas saved pane/terminal IDs
+        // can expire when a pane is closed. Re-resolve only for attachment;
+        // explicit actions must continue to use verify's exact identity fence.
+        let pane = self
+            .verify(&snapshot, target, false)
+            .ok()
+            .or_else(|| {
+                snapshot
+                    .panes
+                    .iter()
+                    .filter(|p| {
+                        p.workspace_id == workspace.workspace_id
+                            && p.tab_id == workspace.active_tab_id
+                    })
+                    .max_by_key(|p| p.focused)
+            })
+            .context("Herdr workspace has no available pane; refresh the sidebar")?;
         self.focus(&target.session, &snapshot, pane)?;
         let mut command = portable_pty::CommandBuilder::new(&self.executable);
         command.args(["session", "attach", &target.session]);

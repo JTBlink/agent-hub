@@ -101,6 +101,70 @@ async function submit() {
   );
 }
 
+it.each(["review", "repair", "ci", "merge"] as const)(
+  "previews and explicitly launches the selected %s operation for the exact MR",
+  async (action) => {
+    const task = makeRepositoryTask({ project_id: project.id });
+    vi.mocked(invoke).mockImplementation(async (command) => {
+      if (command === "get_managed_skills" || command === "get_project_skills")
+        return [];
+      if (command === "task_detail")
+        return {
+          summary: task,
+          body: "Current MR requirements",
+          comments: [],
+          has_more_comments: false,
+        };
+      if (command === "get_tool_status") return [makeTool("codex")];
+      if (command === "herdr_inventory")
+        return { installed: true, sessions: [] };
+      if (command === "task_prepare_herdr_workspace")
+        return { project_id: project.id, path: source.path, target };
+      if (command === "herdr_start_agent")
+        return { target: agent, warning: null };
+      if (command === "herdr_open")
+        return { project_id: project.id, path: source.path, target: agent };
+    });
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <TaskStartDialog
+            task={task}
+            action={action}
+            projects={[project]}
+            onClose={vi.fn()}
+          />
+        </MemoryRouter>,
+      ),
+    );
+    const preview = host.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="herdr.initialTask"]',
+    )!.value;
+    expect(preview).toContain(`tasks.reviewActions.prompt.${action}`);
+    expect(preview).toContain("tasks.reviewActions.instructions");
+    expect(preview).toContain(task.url);
+    expect(preview).not.toContain("tasks.launch.promptInstruction");
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.some(([command]) => command === "herdr_start_agent"),
+    ).toBe(false);
+    await submit();
+    expect(invoke).toHaveBeenCalledWith(
+      "herdr_start_agent",
+      expect.objectContaining({
+        input: expect.objectContaining({ prompt: preview }),
+      }),
+    );
+    expect(readTaskStartPreferences(project.id).promptTemplate).toBeNull();
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.some(([command]) => command === "create_project_worktree"),
+    ).toBe(false);
+  },
+);
+
 it.each(["github", "gitlab"] as const)(
   "starts the %s task in the selected worktree by default without creating a checkout",
   async (provider) => {

@@ -16,6 +16,7 @@ import { TaskToolbar } from "./TaskToolbar";
 import { TaskListTable } from "./TaskListTable";
 import { TaskConnections } from "./TaskConnections";
 import { TaskDetails } from "./TaskDetails";
+import type { ReviewAction } from "../../lib/taskReviewActions";
 const TaskStartDialog = lazy(() =>
   import("./TaskStartDialog").then((module) => ({
     default: module.TaskStartDialog,
@@ -71,7 +72,12 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     full: boolean;
   } | null>(null);
   const [taskRefresh, setTaskRefresh] = useState(0);
-  const [startingTask, setStartingTask] = useState<RepositoryTask | null>(null);
+  const [startingTask, setStartingTask] = useState<{
+    task: RepositoryTask;
+    action?: ReviewAction;
+  } | null>(null);
+  const startTask = (task: RepositoryTask, action?: ReviewAction) =>
+    setStartingTask({ task, action });
   if (projectScope.workspaceKey !== workspaceKey) {
     setProjectScope({
       workspaceKey,
@@ -298,7 +304,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
             onOpen={open}
             onOpenRepository={openRepository}
             onUpdated={taskUpdated}
-            onStart={setStartingTask}
+            onStart={startTask}
             empty={
               loading ? (
                 <p role="status">{t("common.loading")}</p>
@@ -346,7 +352,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
             onClose={close}
             onExpand={() => setSelection({ ...selection, full: true })}
             onUpdated={taskUpdated}
-            onStart={setStartingTask}
+            onStart={startTask}
           />
         )}
       </div>
@@ -359,8 +365,9 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           }
         >
           <TaskStartDialog
-            key={startingTask.key}
-            task={startingTask}
+            key={`${startingTask.task.key}/${startingTask.action ?? "start"}`}
+            task={startingTask.task}
+            action={startingTask.action}
             projects={projects}
             onClose={() => setStartingTask(null)}
           />

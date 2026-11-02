@@ -213,8 +213,8 @@ fn live_workspace_layout_and_pty_attachment_keep_the_server_running() {
         .create(
             "main",
             TerminalSpec {
-                project_id: opened.project_id,
-                cwd: directory,
+                project_id: opened.project_id.clone(),
+                cwd: directory.clone(),
                 command,
                 integration: None,
                 size: TerminalSize {
@@ -256,6 +256,31 @@ fn live_workspace_layout_and_pty_attachment_keep_the_server_running() {
         .panes
         .iter()
         .any(|pane| pane.pane_id == split.pane_id));
+    let recovered_command = control
+        .attachment(&store, &opened.project_id, &opened.path, &split)
+        .expect("The workspace must remain attachable after its saved pane closes");
+    let (recovered_tx, recovered_rx) = mpsc::channel();
+    let recovered = manager
+        .create(
+            "main",
+            TerminalSpec {
+                project_id: opened.project_id,
+                cwd: directory,
+                command: recovered_command,
+                integration: None,
+                size: TerminalSize {
+                    rows: 24,
+                    cols: 100,
+                },
+            },
+            move |event| recovered_tx.send(event).is_ok(),
+        )
+        .unwrap();
+    assert!(
+        recovered_rx.recv_timeout(Duration::from_secs(10)).is_ok(),
+        "Recovered attachment produced no output"
+    );
+    manager.close("main", &recovered.id).unwrap();
     manager.close("main", &terminal.id).unwrap();
     assert!(control
         .sessions()
@@ -421,6 +446,69 @@ esac
     assert!(calls.contains("session stop default --json"));
     assert!(calls.contains("--session default workspace list"));
     assert!(!calls.contains("session delete"));
+}
+
+#[test]
+fn attachment_recovers_a_closed_pane_in_the_same_checkout_without_replaying_actions() {
+    use app_lib::core::herdr_control::Action;
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    fs::create_dir(&directory).unwrap();
+    let control = HerdrControl::new(fake_cli(root.path(), &directory));
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let opened = control.open(&store, "default", "w1", None).unwrap();
+    let file = root.path().join("herdr.snapshot");
+    let mut fixture: serde_json::Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+    fixture["result"]["snapshot"]["panes"][0]["pane_id"] = json!("w1:p2");
+    fixture["result"]["snapshot"]["panes"][0]["terminal_id"] = json!("terminal-2");
+    fs::write(&file, fixture.to_string()).unwrap();
+    let result = control.attachment(&store, &opened.project_id, &opened.path, &opened.target);
+    assert!(
+        result.is_ok(),
+        "Restoring the workspace client failed: {result:?}"
+    );
+    // A reconnect may resolve a fresh pane, but explicit actions must keep identity fencing.
+    assert!(control.action(&opened.target, Action::Close, None).is_err());
+    let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
+    assert!(!calls.contains("pane close"));
+    assert!(!calls.contains("agent prompt"));
+    assert!(!calls.contains("workspace create"));
+    assert!(!calls.contains("session stop"));
+}
+
+#[test]
+fn stale_attachments_do_not_reconnect_to_a_different_checkout_or_missing_workspace() {
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    let other = root.path().join("other");
+    fs::create_dir(&directory).unwrap();
+    fs::create_dir(&other).unwrap();
+    let control = HerdrControl::new(fake_cli(root.path(), &directory));
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let opened = control.open(&store, "default", "w1", None).unwrap();
+    let file = root.path().join("herdr.snapshot");
+    let original: serde_json::Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+    for missing_workspace in [false, true] {
+        let mut fixture = original.clone();
+        fixture["result"]["snapshot"]["panes"][0]["terminal_id"] = json!("new-terminal");
+        if missing_workspace {
+            fixture["result"]["snapshot"]["workspaces"][0]["workspace_id"] = json!("w2");
+            fixture["result"]["snapshot"]["panes"][0]["workspace_id"] = json!("w2");
+        } else {
+            fixture["result"]["snapshot"]["panes"][0]["cwd"] = json!(other);
+        }
+        fs::write(&file, fixture.to_string()).unwrap();
+        fs::write(root.path().join("herdr.calls"), "").unwrap();
+        assert!(control
+            .attachment(&store, &opened.project_id, &opened.path, &opened.target)
+            .is_err());
+        let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
+        assert!(
+            !calls.contains(" focus "),
+            "An invalid attachment changed focus: {calls}"
+        );
+        assert!(!calls.contains("workspace create"));
+    }
 }
 
 #[test]

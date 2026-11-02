@@ -4,6 +4,7 @@ import { AgentIcon } from "../AgentIcon";
 import { ResetCreditsSection } from "./ResetCreditsSection";
 import {
   currentUsageWindows,
+  isUsageWarning,
   quotaTime,
   USAGE_PROVIDERS,
   usageAgentKey,
@@ -102,7 +103,7 @@ export function AgentUsagePanel({
                         </span>
                         <span
                           className={
-                            window.used_percent >= 80
+                            isUsageWarning(window.used_percent)
                               ? "text-danger"
                               : "text-secondary"
                           }
@@ -121,7 +122,7 @@ export function AgentUsagePanel({
                         className="h-1.5 overflow-hidden rounded-full bg-surface-active"
                       >
                         <div
-                          className={`h-full rounded-full ${window.used_percent >= 80 ? "bg-danger" : "bg-accent"}`}
+                          className={`h-full rounded-full ${isUsageWarning(window.used_percent) ? "bg-danger" : "bg-accent"}`}
                           style={{ width: `${window.used_percent}%` }}
                         />
                       </div>
@@ -146,12 +147,27 @@ export function AgentUsagePanel({
                 </p>
               )}
               {provider === "codex" &&
-                snapshot?.status === "ready" &&
-                snapshot.reset_credits && (
+                (loading ||
+                  failed ||
+                  !snapshot ||
+                  !["not_installed", "signed_out", "unsupported"].includes(
+                    snapshot.status,
+                  )) && (
                   <ResetCreditsSection
-                    credits={snapshot.reset_credits}
+                    credits={
+                      snapshot?.status === "ready"
+                        ? snapshot.reset_credits
+                        : undefined
+                    }
                     now={now}
                     busy={loading}
+                    error={
+                      failed ||
+                      (snapshot &&
+                        !["ready", "no_data"].includes(snapshot.status))
+                        ? t("agentUsage.resetCredits.queryFailed")
+                        : undefined
+                    }
                     onUse={onUseReset}
                   />
                 )}

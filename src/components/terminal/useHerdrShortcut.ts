@@ -1,4 +1,10 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
@@ -7,6 +13,7 @@ import type { PaneControl } from "./TerminalPane";
 export function useHerdrShortcut(
   current: () => PaneControl | null,
   selectionKey: string,
+  enabled = true,
 ) {
   const { t } = useTranslation();
   const target = useRef(current);
@@ -26,7 +33,7 @@ export function useHerdrShortcut(
   const [notice, setNotice] = useState("");
   const [update, setUpdate] = useState<api.HerdrUpdate | null>(null);
   const checkRevision = useRef(0);
-  const check = () => {
+  const check = useCallback(() => {
     const revision = ++checkRevision.current;
     void api
       .checkHerdrUpdate()
@@ -36,7 +43,11 @@ export function useHerdrShortcut(
       .catch(() => {
         // Optional background checks do not interrupt terminal use.
       });
-  };
+  }, []);
+  useEffect(() => {
+    if (!enabled) return;
+    check();
+  }, [enabled, check]);
   const launch = async () => {
     if (inFlight.current) return;
     const pane = target.current();

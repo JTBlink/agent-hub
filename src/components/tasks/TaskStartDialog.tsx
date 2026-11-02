@@ -33,13 +33,16 @@ import { GitBrowserDialog } from "../GitBrowserDialog";
 import { ThemedSelect } from "../ThemedSelect";
 import { TaskSkillPicker } from "./TaskSkillPicker";
 import { TaskPromptPanel } from "./TaskPromptPanel";
+import { reviewActions, type ReviewAction } from "../../lib/taskReviewActions";
 
 export function TaskStartDialog({
   task,
+  action: initialAction,
   projects,
   onClose,
 }: {
   task: RepositoryTask;
+  action?: ReviewAction;
   projects: Project[];
   onClose: () => void;
 }) {
@@ -61,7 +64,13 @@ export function TaskStartDialog({
   const source = sourcePath
     ? trees.worktrees.find((tree) => tree.path === sourcePath)
     : (trees.worktrees.find((tree) => tree.is_main) ?? trees.worktrees[0]);
-  const [branch, setBranch] = useState(`issue-${task.number}`);
+  const [branch, setBranch] = useState(
+    `${task.kind === "review" ? "review" : "issue"}-${task.number}`,
+  );
+  const [detail, setDetail] = useState<RepositoryTaskDetail | null>(null);
+  const actions = reviewActions(detail?.summary ?? task);
+  const [action, setAction] = useState<ReviewAction | undefined>(initialAction);
+  const actionAllowed = !action || actions.includes(action);
   const [customPath, setCustomPath] = useState<string>();
   const destination =
     customPath ??
@@ -91,11 +100,19 @@ export function TaskStartDialog({
   const [name, setName] = useState(
     () => `task-${task.number}-${crypto.randomUUID().slice(0, 6)}`,
   );
-  const [detail, setDetail] = useState<RepositoryTaskDetail | null>(null);
   const template =
-    preferences.promptTemplate ?? t("tasks.launch.promptInstruction");
+    preferences.promptTemplate ??
+    (action ? "" : t("tasks.launch.promptInstruction"));
   const prompt = composeTaskPrompt(
-    template,
+    [
+      template,
+      ...(action
+        ? [
+            t("tasks.reviewActions.instructions"),
+            t(`tasks.reviewActions.prompt.${action}`),
+          ]
+        : []),
+    ].join("\n\n"),
     selectedSkills,
     detail
       ? taskContext(detail.summary, detail.body, detail.development).text
@@ -166,6 +183,7 @@ export function TaskStartDialog({
     }
     if (
       !project ||
+      !actionAllowed ||
       !source?.available ||
       !kindAvailable ||
       !sessionAvailable ||
@@ -215,7 +233,9 @@ export function TaskStartDialog({
   const pathLocked = locked || !!created;
   return (
     <GitBrowserDialog
-      title={t("tasks.launch.title")}
+      title={
+        action ? t(`tasks.reviewActions.${action}`) : t("tasks.launch.title")
+      }
       busy={busy}
       onClose={close}
       className="max-h-[calc(90vh/var(--app-scale))] max-w-5xl"
@@ -229,6 +249,29 @@ export function TaskStartDialog({
       >
         <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(17rem,0.8fr)_minmax(0,1.5fr)]">
           <div className="min-w-0 space-y-4">
+            {task.kind === "review" && (
+              <label className="block space-y-1">
+                <span>{t("tasks.reviewActions.operation")}</span>
+                <ThemedSelect
+                  aria-label={t("tasks.reviewActions.operation")}
+                  value={action ?? ""}
+                  disabled={locked}
+                  className="w-full"
+                  onChange={(event) =>
+                    setAction(
+                      actions.find((item) => item === event.target.value),
+                    )
+                  }
+                >
+                  <option value="">{t("tasks.start")}</option>
+                  {actions.map((item) => (
+                    <option key={item} value={item}>
+                      {t(`tasks.reviewActions.${item}`)}
+                    </option>
+                  ))}
+                </ThemedSelect>
+              </label>
+            )}
             <div className="space-y-1">
               <span>{t("tasks.project")}</span>
               <p className="break-words font-medium">
@@ -263,7 +306,10 @@ export function TaskStartDialog({
             </label>
             <div className="flex items-center gap-2 rounded border border-border-subtle bg-bg-secondary p-2">
               <span className="min-w-0 flex-1 break-words text-xs">
-                {task.provider === "github" ? "GitHub" : "GitLab"} · #
+                {task.provider === "github" ? "GitHub" : "GitLab"} ·{" "}
+                {task.kind === "review" && task.provider === "gitlab"
+                  ? "!"
+                  : "#"}
                 {task.number} {task.title}
               </span>
               <button
@@ -509,6 +555,7 @@ export function TaskStartDialog({
               busy ||
               (!result &&
                 (loading ||
+                  !actionAllowed ||
                   trees.loading ||
                   !detail ||
                   !inventory?.installed ||

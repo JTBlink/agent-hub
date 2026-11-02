@@ -22,7 +22,8 @@ import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
 
 export function Layout() {
   const { t } = useTranslation();
-  const { appError, refreshAppData, refreshProjects, loading } = useApp();
+  const { appError, refreshAppData, refreshProjects, loading, projects } =
+    useApp();
   const [started, setStarted] = useState(false);
   const [startup, setStartup] = useState<TerminalStartupState | null>(null);
   // Initial hydration is one-shot; normal refreshes keep the current page mounted.
@@ -101,7 +102,11 @@ export function Layout() {
         branchContainer,
       }}
     >
-      <WorkspaceFilesProvider>
+      <WorkspaceFilesProvider
+        projects={projects}
+        pathname={pathname}
+        search={search}
+      >
         <div
           inert={!started}
           className="relative flex h-full w-full flex-col overflow-hidden bg-background text-primary"

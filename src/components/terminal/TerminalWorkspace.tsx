@@ -19,6 +19,7 @@ import { ThemedSelect } from "../ThemedSelect";
 import { TerminalPane, type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
 import { useHerdrShortcut } from "./useHerdrShortcut";
+import { useHerdrSessions } from "./useHerdrSessions";
 import { cn } from "../../utils";
 import { projectWorkspaceRoute, worktreeUrl } from "../../lib/worktreeApi";
 import {
@@ -100,6 +101,7 @@ export function TerminalWorkspace({
     tabs,
     scopedTabs,
     setTabs,
+    renameTab,
     activeIds,
     setActiveIds,
     ready,
@@ -239,7 +241,15 @@ export function TerminalWorkspace({
   const herdr = useHerdrShortcut(
     () => activeTarget.current,
     `${visible}:${activeId}:${active?.activePane ?? ""}`,
+    visible,
   );
+  const herdrSessions = useHerdrSessions(
+    visible,
+    active,
+    () => activeTarget.current,
+    setTabs,
+  );
+  const activeHerdrTarget = herdrSessions.target ?? active?.herdrTarget;
   const add = (agent?: HerdrAgent) => {
     if (!ready || !(scopedProject || selected) || count >= TERMINAL_PANE_LIMIT)
       return;
@@ -308,14 +318,15 @@ export function TerminalWorkspace({
     <TerminalStatus
       message={
         bridgeError ||
+        herdrSessions.notice ||
         herdr.notice ||
         projects.find(
           (project) => project.id === (active?.projectId ?? scopedProject),
         )?.name ||
         t("terminal.title")
       }
-      error={!!bridgeError}
-      notice={bridgeError || herdr.notice}
+      error={!!(bridgeError || herdrSessions.notice)}
+      notice={bridgeError || herdrSessions.notice || herdr.notice}
     />
   );
   return (
@@ -331,6 +342,7 @@ export function TerminalWorkspace({
       {toolbar ?? (
         <div className="flex h-9 shrink-0 flex-nowrap items-center overflow-x-auto gap-1 border-b border-border bg-bg-secondary px-2">
           <TerminalTabs
+            onRename={renameTab}
             tabs={scopedTabs}
             projects={projects}
             activeId={shown ? displayedId : ""}
@@ -360,7 +372,12 @@ export function TerminalWorkspace({
               aria-label={t("terminal.chooseProject")}
               value={selected}
               title={projects.find((project) => project.id === selected)?.name}
-              onChange={(event) => setProjectId(event.target.value)}
+              onChange={(event) => {
+                const project = projects.find(
+                  (item) => item.id === event.target.value,
+                );
+                if (project) navigate(worktreeUrl(project.id, project.path));
+              }}
               className="h-7 max-w-40 gap-2 rounded-md border-transparent bg-transparent px-2 py-0 text-xs"
             >
               {!projects.length && (
@@ -402,7 +419,7 @@ export function TerminalWorkspace({
               onProjectSkills={onProjectSkills}
               key={`${visible}:${activeId}:${active?.panes.length ?? 0}`}
               hasTerminal={shown && !!active && !active.agent}
-              herdrBusy={herdr.busy}
+              herdrBusy={herdr.busy || herdrSessions.busy}
               updateVersion={
                 herdr.update?.has_update
                   ? herdr.update.latest_version
@@ -417,7 +434,7 @@ export function TerminalWorkspace({
                 active.panes.length < 2 &&
                 count < TERMINAL_PANE_LIMIT
               }
-              onHerdr={() => void herdr.launch()}
+              onHerdr={() => void herdrSessions.openDefault(herdr.launch)}
               onSplit={split}
             />
           </div>
@@ -501,10 +518,7 @@ export function TerminalWorkspace({
                   </button>
                 )}
                 <TerminalPane
-                  projectId={tab.projectId}
-                  worktreePath={tab.worktreePath}
-                  agent={tab.agent}
-                  herdrTarget={tab.herdrTarget}
+                  {...herdrSessions.paneProps(tab, pane)}
                   visible={visible && displayedId === tab.id}
                   active={
                     visible && displayedId === tab.id && tab.activePane === pane
@@ -543,7 +557,7 @@ export function TerminalWorkspace({
             }
           />
         )}
-        {shown && active && !active.herdrTarget && (
+        {shown && active && !activeHerdrTarget && (
           <LocalTerminalTools
             current={() => activeTarget.current}
             onNew={() => add()}
@@ -566,9 +580,9 @@ export function TerminalWorkspace({
             canZoom={active.panes.length > 1}
           />
         )}
-        {shown && active?.herdrTarget && (
+        {shown && activeHerdrTarget && (
           <HerdrTerminalTools
-            target={active.herdrTarget}
+            target={activeHerdrTarget}
             current={() => activeTarget.current}
             onError={setBridgeError}
             onOpen={(opened) =>

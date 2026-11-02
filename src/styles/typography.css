@@ -10,6 +10,15 @@
 
 @font-face {
   font-family: "AgentHub Mono";
+  src: url("/fonts/JetBrainsMono-Medium.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
+}
+
+@font-face {
+  font-family: "AgentHub Mono";
   src: url("/fonts/JetBrainsMono-Bold.woff2") format("woff2");
   font-style: normal;
   font-weight: 700;
@@ -22,6 +31,15 @@
   src: url("/fonts/JetBrainsMono-Italic.woff2") format("woff2");
   font-style: italic;
   font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
+}
+
+@font-face {
+  font-family: "AgentHub Mono";
+  src: url("/fonts/JetBrainsMono-MediumItalic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 500;
   font-display: swap;
   unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
 }
@@ -84,6 +102,7 @@
     --font-size-caption: 12px;
     --font-size-ui: 13px;
     --font-size-code: 14px;
+    --font-size-terminal: 15px;
     --font-size-heading: 16px;
     --font-size-title: 18px;
     --font-size-section: 20px;

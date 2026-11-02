@@ -16,7 +16,7 @@ it("maps projects and worktrees, ignores stale results and leaves other sessions
     onError = vi.fn(),
     refresh = vi.fn();
   const target = {
-    session: "agent-hub",
+    session: "default",
     workspace_id: "w1",
     pane_id: "w1:p1",
     terminal_id: "term1",
@@ -50,7 +50,7 @@ it("maps projects and worktrees, ignores stale results and leaves other sessions
   }) {
     useHerdrProjectWorkspace({
       enabled,
-      session: "agent-hub",
+      session: "default",
       projectId: "demo",
       path,
       onReady,
@@ -63,7 +63,7 @@ it("maps projects and worktrees, ignores stale results and leaves other sessions
     await act(async () => root.render(<Harness path={first.path} />));
     await act(async () => root.render(<Harness path={second.path} />));
     expect(ensureHerdrWorkspace).toHaveBeenLastCalledWith(
-      "agent-hub",
+      "default",
       "demo",
       second.path,
     );

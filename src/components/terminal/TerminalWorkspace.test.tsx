@@ -337,6 +337,8 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
       };
     if (command === "terminal_launch_state")
       return { ready: true, revision: 0, herdr_active: herdrActive };
+    if (command === "herdr_inventory")
+      return { installed: false, sessions: [] };
     if (command === "herdr_detect") return null;
     if (command === "herdr_install") return installing;
     if (command === "herdr_check_update")
@@ -725,9 +727,26 @@ async function selectHerdrAction(host: HTMLElement, label: string) {
   await act(async () => action.click());
 }
 
-it("launches installed Herdr from the toolbar in the selected shell", async () => {
+it("attaches the selected checkout through default without adding a tab", async () => {
+  const opened = {
+    project_id: "demo",
+    path: "<workspace>",
+    target: {
+      session: "default",
+      workspace_id: "w1",
+      pane_id: "w1:p1",
+      terminal_id: "native-1",
+      revision: 1,
+      agent_session: null,
+    },
+  };
   vi.mocked(invoke).mockImplementation(async (command) => {
     if (command === "terminal_list") return [];
+    if (command === "herdr_inventory") return { installed: true, sessions: [] };
+    if (command === "herdr_prepare_session") return "default";
+    if (command === "herdr_ensure") return opened;
+    if (command === "herdr_terminal_create")
+      return { id: "attached-pty", cwd: "<workspace>" };
     if (command === "terminal_project_directory") return "<workspace>";
     if (command === "terminal_create")
       return { id: "launch-pty", cwd: "<workspace>" };
@@ -757,10 +776,25 @@ it("launches installed Herdr from the toolbar in the selected shell", async () =
       ),
     );
     await selectHerdrAction(host, "terminal.herdrLaunch");
-    expect(invoke).toHaveBeenCalledWith("terminal_launch_herdr", {
-      id: "launch-pty",
-      revision: 9,
+    expect(invoke).toHaveBeenCalledWith("herdr_ensure", {
+      session: "default",
+      projectId: "demo",
+      worktreePath: "<workspace>",
     });
+    expect(invoke).toHaveBeenCalledWith(
+      "herdr_terminal_create",
+      expect.objectContaining({
+        request: expect.objectContaining({
+          project_id: "demo",
+          target: opened.target,
+        }),
+      }),
+    );
+    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(1);
+    expect(invoke).not.toHaveBeenCalledWith(
+      "terminal_launch_herdr",
+      expect.anything(),
+    );
   } finally {
     await act(async () => root.unmount());
     host.remove();

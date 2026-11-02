@@ -28,6 +28,34 @@ export function TerminalPanelTools({
   onSplit,
 }: Props) {
   const { t } = useTranslation();
+  const herdrIcon = (
+    <span
+      className="relative flex h-7 w-7 items-center justify-center"
+      title={
+        updateVersion
+          ? t("terminal.herdrUpdateAvailable", { version: updateVersion })
+          : undefined
+      }
+    >
+      {herdrBusy ? (
+        <Loader2 size={12} className="animate-spin" aria-hidden="true" />
+      ) : (
+        <HerdrIcon width={20} height={20} />
+      )}
+      {updateVersion && (
+        <span
+          role="img"
+          aria-label={t("terminal.herdrUpdateAvailable", {
+            version: updateVersion,
+          })}
+          className="pointer-events-none absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-accent-light"
+        />
+      )}
+    </span>
+  );
+  const herdrTitle = updateVersion
+    ? `${t("terminal.herdrLaunch")} · ${t("terminal.herdrUpdateAvailable", { version: updateVersion })}`
+    : t("terminal.herdrLaunch");
   return (
     <div className="flex shrink-0 items-center gap-1">
       {showTerminalActions && (
@@ -35,19 +63,15 @@ export function TerminalPanelTools({
           <button
             type="button"
             aria-label="Herdr"
-            title={t("terminal.herdrLaunch")}
+            title={herdrTitle}
             aria-busy={herdrBusy}
             disabled={!hasTerminal}
-            className="app-button-ghost flex h-7 w-7 items-center justify-center rounded"
+            className="app-button-ghost relative flex h-7 w-7 items-center justify-center rounded"
             onClick={() => {
               if (!herdrBusy) onHerdr();
             }}
           >
-            {herdrBusy ? (
-              <Loader2 size={12} className="animate-spin" aria-hidden="true" />
-            ) : (
-              <HerdrIcon width={20} height={20} />
-            )}
+            {herdrIcon}
           </button>
           {updateVersion && onHerdrUpgrade && (
             <button

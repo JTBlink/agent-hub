@@ -2,11 +2,13 @@ import type { ITerminalOptions, ITheme } from "@xterm/xterm";
 import { getAppScale } from "../../lib/textScale";
 import "./terminal.css";
 
-/** Canvas text consumes the same CSS typography tokens as the code editor. */
+/** Share the code font, with a larger terminal size for sustained TUI reading. */
 export function terminalAppearance(
   styles: CSSStyleDeclaration,
 ): ITerminalOptions {
-  const fontSize = parseFloat(styles.getPropertyValue("--font-size-code"));
+  const fontSize =
+    parseFloat(styles.getPropertyValue("--font-size-terminal")) ||
+    parseFloat(styles.getPropertyValue("--font-size-code"));
   return {
     fontFamily:
       styles.getPropertyValue("--font-family-code").trim() || undefined,
@@ -15,8 +17,9 @@ export function terminalAppearance(
       parseFloat(styles.getPropertyValue("--line-height-terminal")) ||
       undefined,
     letterSpacing: 0,
-    fontWeight: "400",
+    fontWeight: "500",
     fontWeightBold: "700",
+    minimumContrastRatio: 4.5,
     customGlyphs: true,
     drawBoldTextInBrightColors: true,
     cursorStyle: "bar",
@@ -27,15 +30,20 @@ export function terminalAppearance(
 /** Load both text styles and private-use icons before measuring the PTY grid. */
 export async function loadTerminalFonts(): Promise<void> {
   if (!document.fonts) return;
-  const fontSize = terminalAppearance(
+  const appearance = terminalAppearance(
     getComputedStyle(document.documentElement),
-  ).fontSize;
-  const size = fontSize ? `${fontSize}px` : "1em";
+  );
+  const size = appearance.fontSize ? `${appearance.fontSize}px` : "1em";
   // FontFaceSet.load defaults to a space, which never selects a unicode-range
   // icon face. Include text, BMP icons and supplementary icons in every style.
   const sample = "\ue0a0\ue60b\uf07b\uf002\uf126\uf06e\uf013\ueb37\udb80\udc01";
   await Promise.all(
-    ["", "bold ", "italic ", "bold italic "].flatMap((style) => [
+    [
+      `${appearance.fontWeight} `,
+      `${appearance.fontWeightBold} `,
+      `italic ${appearance.fontWeight} `,
+      `italic ${appearance.fontWeightBold} `,
+    ].flatMap((style) => [
       document.fonts.load(`${style}${size} "AgentHub Mono"`, "M"),
       document.fonts.load(`${style}${size} "AgentHub Symbols"`, sample),
     ]),
