@@ -1,4 +1,20 @@
 {
+  "fileTree": {
+    "actions": "File actions",
+    "open": "Open file",
+    "newFile": "New file…",
+    "newDirectory": "New folder…",
+    "reveal": "Reveal in file manager",
+    "copyPath": "Copy path",
+    "copyRelativePath": "Copy relative path",
+    "rename": "Rename…",
+    "name": "Name",
+    "deleteTitle": "Delete file or folder",
+    "deleteMessage": "Permanently delete “{{path}}” and all its contents? This cannot be undone.",
+    "saveFirst": "This file or folder has unsaved changes or a save in progress. Save or close the files before retrying.",
+    "copied": "Path copied",
+    "completed": "File operation completed"
+  },
   "herdr": {
     "deleteWorktree": "Delete worktree checkout…",
     "deleteWorktreeHelp": "Delete worktree “{{path}}”? Terminals, Agents and processes in its Herdr workspace will close and the checkout directory will be removed. The Git branch is retained. Locked worktrees or those with local files cannot be deleted.",

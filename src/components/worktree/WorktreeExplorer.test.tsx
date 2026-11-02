@@ -7,6 +7,9 @@ import { getWorktreeFiles } from "../../lib/worktreeApi";
 import type { GitFile } from "../../lib/gitApi";
 
 vi.mock("../../lib/worktreeApi", () => ({ getWorktreeFiles: vi.fn() }));
+vi.mock("../../hooks/useWorktreeDocument", () => ({
+  hasPendingWorktreeDocument: vi.fn(),
+}));
 const t = (key: string, options?: { count: number }) =>
   options ? `${key}: ${options.count}` : key;
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));

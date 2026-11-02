@@ -1,4 +1,20 @@
 {
+  "fileTree": {
+    "actions": "檔案操作",
+    "open": "開啟檔案",
+    "newFile": "新增檔案…",
+    "newDirectory": "新增資料夾…",
+    "reveal": "在系統檔案管理員中顯示",
+    "copyPath": "複製路徑",
+    "copyRelativePath": "複製相對路徑",
+    "rename": "重新命名…",
+    "name": "名稱",
+    "deleteTitle": "刪除檔案或資料夾",
+    "deleteMessage": "確定永久刪除「{{path}}」及其全部內容？此操作無法復原。",
+    "saveFirst": "此檔案或資料夾中有尚未儲存內容或正在儲存的檔案，請先儲存或關閉後重試。",
+    "copied": "已複製路徑",
+    "completed": "檔案操作已完成"
+  },
   "herdr": {
     "deleteWorktree": "刪除工作樹…",
     "deleteWorktreeHelp": "刪除工作樹「{{path}}」？對應 Herdr 工作空間中的終端、Agent 與執行中程序將關閉，checkout 目錄將移除，Git 分支保留。有本機檔案或鎖定的工作樹無法刪除。",

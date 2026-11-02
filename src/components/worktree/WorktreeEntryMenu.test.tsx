@@ -1,0 +1,258 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { WorktreeEntryMenu } from "./WorktreeEntryMenu";
+import {
+  modifyWorktreeEntry,
+  revealWorktreeEntry,
+} from "../../lib/worktreeApi";
+import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+
+vi.mock("../../lib/worktreeApi", () => ({
+  modifyWorktreeEntry: vi.fn(),
+  revealWorktreeEntry: vi.fn(),
+}));
+vi.mock("../../hooks/useWorktreeDocument", () => ({
+  hasPendingWorktreeDocument: vi.fn(),
+}));
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const t = (key: string) => key;
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
+let host: HTMLDivElement;
+let root: Root;
+const changed = vi.fn();
+const refresh = vi.fn();
+const select = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  HTMLDialogElement.prototype.showModal = vi.fn();
+  HTMLDialogElement.prototype.close = vi.fn();
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(false);
+});
+afterEach(async () => {
+  await act(async () => root.unmount());
+  host.remove();
+  vi.unstubAllGlobals();
+  vi.resetAllMocks();
+});
+async function render(
+  path = "src/notes.md",
+  directory = false,
+  symlink = false,
+) {
+  await act(async () =>
+    root.render(
+      <WorktreeEntryMenu
+        projectId="demo"
+        worktreePath="/workspace/demo"
+        path={path}
+        directory={directory}
+        symlink={symlink}
+        onChanged={changed}
+        onRefresh={refresh}
+        onSelect={select}
+      >
+        <button id="entry">{path || "demo"}</button>
+      </WorktreeEntryMenu>,
+    ),
+  );
+}
+const menuItems = () => [
+  ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+];
+async function open(keyboard = false) {
+  await act(async () =>
+    host.querySelector("#entry")!.dispatchEvent(
+      keyboard
+        ? new KeyboardEvent("keydown", {
+            key: "F10",
+            shiftKey: true,
+            bubbles: true,
+          })
+        : new MouseEvent("contextmenu", {
+            clientX: 900,
+            clientY: 700,
+            bubbles: true,
+            cancelable: true,
+          }),
+    ),
+  );
+}
+async function choose(label: string) {
+  await act(async () =>
+    menuItems()
+      .find((item) => item.textContent === label)!
+      .click(),
+  );
+}
+async function input(value: string) {
+  await act(async () => {
+    const element = host.querySelector("input")!;
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+async function submit() {
+  await act(async () =>
+    host
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+}
+
+it("opens a root menu by keyboard and restores focus after escape", async () => {
+  await render("", true);
+  await open(true);
+  expect(menuItems().map((item) => item.textContent)).toEqual([
+    "fileTree.newFile",
+    "fileTree.newDirectory",
+    "fileTree.reveal",
+    "fileTree.copyPath",
+    "fileTree.copyRelativePath",
+    "worktree.refreshFiles",
+  ]);
+  expect(document.activeElement).toBe(menuItems()[0]);
+  await act(async () =>
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+    ),
+  );
+  expect(document.activeElement?.textContent).toBe("worktree.refreshFiles");
+  await act(async () =>
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    ),
+  );
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(document.activeElement).toBe(host.querySelector("#entry"));
+});
+
+it("copies absolute and relative paths, reveals the exact target and opens files", async () => {
+  await render();
+  await open();
+  await choose("fileTree.copyPath");
+  expect(writeText).toHaveBeenLastCalledWith("/workspace/demo/src/notes.md");
+  await open();
+  await choose("fileTree.copyRelativePath");
+  expect(writeText).toHaveBeenLastCalledWith("src/notes.md");
+  await open();
+  await choose("fileTree.reveal");
+  expect(revealWorktreeEntry).toHaveBeenCalledWith(
+    "demo",
+    "/workspace/demo",
+    "src/notes.md",
+  );
+  await open();
+  await choose("fileTree.open");
+  expect(select).toHaveBeenCalledWith("src/notes.md");
+});
+
+it("creates a sibling file, prevents duplicate requests and preserves input on failure", async () => {
+  await render();
+  await open();
+  await choose("fileTree.newFile");
+  await input("draft.md");
+  let reject!: (reason: Error) => void;
+  vi.mocked(modifyWorktreeEntry).mockReturnValueOnce(
+    new Promise((_, fail) => {
+      reject = fail;
+    }),
+  );
+  await submit();
+  await submit();
+  expect(modifyWorktreeEntry).toHaveBeenCalledTimes(1);
+  expect(modifyWorktreeEntry).toHaveBeenCalledWith(
+    "demo",
+    "/workspace/demo",
+    "src",
+    { kind: "new_file", name: "draft.md" },
+  );
+  await act(async () => reject(new Error("Already exists")));
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    "Already exists",
+  );
+  expect(host.querySelector("input")?.value).toBe("draft.md");
+  expect(changed).not.toHaveBeenCalled();
+  vi.mocked(modifyWorktreeEntry).mockResolvedValueOnce("src/draft.md");
+  await submit();
+  expect(changed).toHaveBeenCalledWith({
+    kind: "new_file",
+    path: "src",
+    nextPath: "src/draft.md",
+  });
+  expect(select).toHaveBeenCalledWith("src/draft.md");
+  expect(refresh).toHaveBeenCalledOnce();
+  expect(host.querySelector("dialog")).toBeNull();
+});
+
+it("requires delete confirmation and keeps unsaved descendants intact", async () => {
+  await render("src", true);
+  await open();
+  await choose("common.delete");
+  expect(modifyWorktreeEntry).not.toHaveBeenCalled();
+  expect(host.querySelector('[role="alertdialog"]')).not.toBeNull();
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(true);
+  await act(async () =>
+    [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find((item) => item.textContent === "common.delete")!
+      .click(),
+  );
+  expect(modifyWorktreeEntry).not.toHaveBeenCalled();
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    "fileTree.saveFirst",
+  );
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(false);
+  vi.mocked(modifyWorktreeEntry).mockResolvedValueOnce("src");
+  await act(async () =>
+    [...host.querySelectorAll<HTMLButtonElement>("button")]
+      .find((item) => item.textContent === "common.delete")!
+      .click(),
+  );
+  expect(modifyWorktreeEntry).toHaveBeenCalledWith(
+    "demo",
+    "/workspace/demo",
+    "src",
+    { kind: "delete" },
+  );
+  expect(changed).toHaveBeenCalledWith({
+    kind: "delete",
+    path: "src",
+    nextPath: "src",
+  });
+});
+
+it("renames directories and blocks unsafe link operations while allowing path copying", async () => {
+  await render("src", true);
+  await open();
+  await choose("fileTree.rename");
+  expect(host.querySelector("input")?.value).toBe("src");
+  await input("source");
+  vi.mocked(modifyWorktreeEntry).mockResolvedValueOnce("source");
+  await submit();
+  expect(changed).toHaveBeenCalledWith({
+    kind: "rename",
+    path: "src",
+    nextPath: "source",
+  });
+  await render("link", false, true);
+  await open();
+  expect(
+    menuItems().find((item) => item.textContent === "fileTree.open")?.disabled,
+  ).toBe(true);
+  expect(
+    menuItems().find((item) => item.textContent === "common.delete")?.disabled,
+  ).toBe(true);
+  expect(
+    menuItems().find((item) => item.textContent === "fileTree.copyPath")
+      ?.disabled,
+  ).toBe(false);
+});

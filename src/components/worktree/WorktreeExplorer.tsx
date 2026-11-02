@@ -15,6 +15,10 @@ import { getErrorMessage } from "../../lib/error";
 import { cn } from "../../utils";
 import type { GitFile } from "../../lib/gitApi";
 import {
+  WorktreeEntryMenu,
+  type WorktreeEntryChange,
+} from "./WorktreeEntryMenu";
+import {
   worktreeDecorations,
   type WorktreeDecoration,
 } from "../../lib/worktreeDecorations";
@@ -25,10 +29,14 @@ interface Props {
   selected?: string;
   onSelect: (path: string) => void;
   gitFiles?: readonly GitFile[];
+  onEntryChange?: (change: WorktreeEntryChange) => void;
 }
 
 type TreeProps = Props & {
   decorations: ReadonlyMap<string, WorktreeDecoration>;
+  revision: number;
+  onRefresh: () => void;
+  onChanged: (change: WorktreeEntryChange) => void;
 };
 
 export function WorktreeExplorer(props: Props) {
@@ -36,6 +44,10 @@ export function WorktreeExplorer(props: Props) {
   const [revision, setRevision] = useState(0);
   const [collapse, setCollapse] = useState(0);
   const [open, setOpen] = useState(true);
+  const refresh = () => {
+    setRevision((value) => value + 1);
+    window.dispatchEvent(new Event("project-git-changed"));
+  };
   const decorations = useMemo(
     () => worktreeDecorations(props.gitFiles ?? []),
     [props.gitFiles],
@@ -50,50 +62,59 @@ export function WorktreeExplorer(props: Props) {
       aria-label={t("fileReader.explorer")}
       className="flex min-h-0 flex-col bg-bg-secondary"
     >
-      <div className="group flex h-7 shrink-0 items-center pr-1">
-        <button
-          type="button"
-          aria-expanded={open}
-          title={rootName}
-          onClick={() => setOpen(!open)}
-          className="flex h-full min-w-0 flex-1 items-center gap-1 px-2 text-left text-sm font-semibold text-primary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-        >
-          <ChevronRight
-            size={14}
-            className={cn("shrink-0", open && "rotate-90")}
-          />
-          <span className="truncate">{rootName}</span>
-        </button>
-        <button
-          type="button"
-          aria-label={t("worktree.refreshFiles")}
-          title={t("worktree.refreshFiles")}
-          className="app-button-ghost h-6 w-6 p-0"
-          onClick={() => {
-            setRevision((value) => value + 1);
-            window.dispatchEvent(new Event("project-git-changed"));
-          }}
-        >
-          <RefreshCw size={14} />
-        </button>
-        <button
-          type="button"
-          aria-label={t("worktree.collapseFiles")}
-          title={t("worktree.collapseFiles")}
-          className="app-button-ghost h-6 w-6 p-0"
-          onClick={() => setCollapse((value) => value + 1)}
-        >
-          <CopyMinus size={14} />
-        </button>
-      </div>
+      <WorktreeEntryMenu
+        {...props}
+        path=""
+        directory
+        onRefresh={refresh}
+        onChanged={(change) => props.onEntryChange?.(change)}
+        onCreated={() => setOpen(true)}
+      >
+        <div className="group flex h-7 shrink-0 items-center pr-1">
+          <button
+            type="button"
+            aria-expanded={open}
+            title={rootName}
+            onClick={() => setOpen(!open)}
+            className="flex h-full min-w-0 flex-1 items-center gap-1 px-2 text-left text-sm font-semibold text-primary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          >
+            <ChevronRight
+              size={14}
+              className={cn("shrink-0", open && "rotate-90")}
+            />
+            <span className="truncate">{rootName}</span>
+          </button>
+          <button
+            type="button"
+            aria-label={t("worktree.refreshFiles")}
+            title={t("worktree.refreshFiles")}
+            className="app-button-ghost h-6 w-6 p-0"
+            onClick={refresh}
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            aria-label={t("worktree.collapseFiles")}
+            title={t("worktree.collapseFiles")}
+            className="app-button-ghost h-6 w-6 p-0"
+            onClick={() => setCollapse((value) => value + 1)}
+          >
+            <CopyMinus size={14} />
+          </button>
+        </div>
+      </WorktreeEntryMenu>
       <div hidden={!open} className="min-h-0 flex-1 overflow-auto pb-2">
         <Directory
-          key={`${props.projectId}:${props.worktreePath}:${revision}`}
+          key={`${props.projectId}:${props.worktreePath}`}
           {...props}
           path=""
           depth={0}
           collapse={collapse}
           decorations={decorations}
+          revision={revision}
+          onRefresh={refresh}
+          onChanged={(change) => props.onEntryChange?.(change)}
         />
       </div>
     </aside>
@@ -131,7 +152,7 @@ function Directory({
     return () => {
       cancelled = true;
     };
-  }, [props.projectId, props.worktreePath, path, attempt, t]);
+  }, [props.projectId, props.worktreePath, path, props.revision, attempt, t]);
   if (loading)
     return (
       <p role="status" className="px-2 py-1.5 text-xs text-muted">
@@ -174,40 +195,47 @@ function Directory({
                 collapse={collapse}
               />
             ) : (
-              <button
-                type="button"
-                disabled={file.is_symlink}
-                title={file.is_symlink ? t("worktree.symlink") : file.path}
-                aria-pressed={props.selected === file.path}
-                onClick={() => props.onSelect(file.path)}
-                style={{ paddingLeft: 28 + depth * 12 }}
-                className={cn(
-                  "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
-                  props.selected === file.path
-                    ? "bg-surface-active"
-                    : "hover:bg-surface-hover",
-                  decoration?.color ??
-                    (props.selected === file.path
-                      ? "text-primary"
-                      : "text-secondary"),
-                )}
+              <WorktreeEntryMenu
+                {...props}
+                path={file.path}
+                directory={false}
+                symlink={file.is_symlink}
               >
-                {file.is_symlink ? (
-                  <Link2 size={13} className="shrink-0 text-muted" />
-                ) : (
-                  <FileCode2 size={13} className="shrink-0 text-muted" />
-                )}
-                <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                {decoration && (
-                  <span
-                    title={t(`git.states.${decoration.status}`)}
-                    aria-label={t(`git.states.${decoration.status}`)}
-                    className="w-4 shrink-0 text-center font-mono text-xs"
-                  >
-                    {decoration.marker}
-                  </span>
-                )}
-              </button>
+                <button
+                  type="button"
+                  disabled={file.is_symlink}
+                  title={file.is_symlink ? t("worktree.symlink") : file.path}
+                  aria-pressed={props.selected === file.path}
+                  onClick={() => props.onSelect(file.path)}
+                  style={{ paddingLeft: 28 + depth * 12 }}
+                  className={cn(
+                    "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
+                    props.selected === file.path
+                      ? "bg-surface-active"
+                      : "hover:bg-surface-hover",
+                    decoration?.color ??
+                      (props.selected === file.path
+                        ? "text-primary"
+                        : "text-secondary"),
+                  )}
+                >
+                  {file.is_symlink ? (
+                    <Link2 size={13} className="shrink-0 text-muted" />
+                  ) : (
+                    <FileCode2 size={13} className="shrink-0 text-muted" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                  {decoration && (
+                    <span
+                      title={t(`git.states.${decoration.status}`)}
+                      aria-label={t(`git.states.${decoration.status}`)}
+                      className="w-4 shrink-0 text-center font-mono text-xs"
+                    >
+                      {decoration.marker}
+                    </span>
+                  )}
+                </button>
+              </WorktreeEntryMenu>
             )}
           </li>
         );
@@ -232,35 +260,43 @@ function FolderEntry({
   }
   return (
     <>
-      <button
-        type="button"
-        aria-expanded={open}
-        title={file.path}
-        onClick={() => setOpen(!open)}
-        style={{ paddingLeft: 12 + depth * 12 }}
-        className={cn(
-          "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
-          decoration?.color ?? "text-secondary",
-        )}
+      <WorktreeEntryMenu
+        {...props}
+        path={file.path}
+        directory
+        symlink={file.is_symlink}
+        onCreated={() => setOpen(true)}
       >
-        <ChevronRight
-          size={12}
-          className={cn("shrink-0", open && "rotate-90")}
-        />
-        <span className="min-w-0 flex-1 truncate">{file.name}</span>
-        {decoration && (
-          <span
-            title={t("git.changedFiles", { count: decoration.count })}
-            aria-label={t("git.changedFiles", { count: decoration.count })}
-            className="flex w-4 shrink-0 justify-center"
-          >
+        <button
+          type="button"
+          aria-expanded={open}
+          title={file.path}
+          onClick={() => setOpen(!open)}
+          style={{ paddingLeft: 12 + depth * 12 }}
+          className={cn(
+            "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+            decoration?.color ?? "text-secondary",
+          )}
+        >
+          <ChevronRight
+            size={12}
+            className={cn("shrink-0", open && "rotate-90")}
+          />
+          <span className="min-w-0 flex-1 truncate">{file.name}</span>
+          {decoration && (
             <span
-              aria-hidden="true"
-              className="h-1.5 w-1.5 rounded-full bg-current"
-            />
-          </span>
-        )}
-      </button>
+              title={t("git.changedFiles", { count: decoration.count })}
+              aria-label={t("git.changedFiles", { count: decoration.count })}
+              className="flex w-4 shrink-0 justify-center"
+            >
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-current"
+              />
+            </span>
+          )}
+        </button>
+      </WorktreeEntryMenu>
       {open && (
         <Directory
           {...props}

@@ -7,6 +7,42 @@ use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
+pub async fn modify_worktree_entry(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: String,
+    relative_path: String,
+    action: crate::core::project_file_actions::FileAction,
+) -> Result<String, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, Some(&worktree_path))
+            .map_err(AppError::io)?;
+        crate::core::project_file_actions::apply(&root, &relative_path, action)
+            .map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn reveal_worktree_entry(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: String,
+    relative_path: String,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, Some(&worktree_path))
+            .map_err(AppError::io)?;
+        let path = crate::core::project_file_actions::existing_path(&root, &relative_path)
+            .map_err(AppError::io)?;
+        tauri_plugin_opener::reveal_item_in_dir(path).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn get_project_worktrees(
     store: State<'_, Arc<SkillStore>>,
     project_id: String,

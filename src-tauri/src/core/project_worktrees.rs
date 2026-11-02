@@ -199,7 +199,7 @@ pub fn create(
     })
 }
 
-fn file_path(root: &Path, relative: &str) -> Result<PathBuf> {
+pub(crate) fn file_path(root: &Path, relative: &str) -> Result<PathBuf> {
     if Path::new(relative)
         .components()
         .any(|part| !matches!(part, Component::Normal(_)))

@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -19,6 +20,7 @@ export interface CardAction {
   danger?: boolean;
   disabled?: boolean;
   keepOpen?: boolean;
+  separatorBefore?: boolean;
 }
 
 interface Props {
@@ -138,7 +140,9 @@ export function CardActionMenu({
     if (!target || disabled) return;
     const show = (x: number, y: number) => {
       contextPoint.current = { x, y };
-      contextOrigin.current = target;
+      contextOrigin.current = target.matches("button, [tabindex]")
+        ? target
+        : (target.querySelector<HTMLElement>("button, [tabindex]") ?? target);
       locate();
     };
     const onContext = (event: MouseEvent) => {
@@ -333,34 +337,41 @@ export function CardActionMenu({
               {renderContent
                 ? renderContent(() => setOpenState(null))
                 : actions.map((action) => (
-                    <button
-                      key={action.key}
-                      type="button"
-                      role="menuitem"
-                      disabled={action.disabled}
-                      title={action.label}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!action.keepOpen) {
-                          setOpenState(null);
-                          restoreFocus();
-                        }
-                        action.onSelect();
-                      }}
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-                        action.danger
-                          ? "text-danger hover:bg-danger-bg"
-                          : "text-secondary hover:bg-surface-hover",
+                    <Fragment key={action.key}>
+                      {action.separatorBefore && (
+                        <div
+                          role="separator"
+                          className="my-1 border-t border-border-subtle"
+                        />
                       )}
-                    >
-                      {action.icon && (
-                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
-                          {action.icon}
-                        </span>
-                      )}
-                      <span className="min-w-0 truncate">{action.label}</span>
-                    </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={action.disabled}
+                        title={action.label}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!action.keepOpen) {
+                            setOpenState(null);
+                            restoreFocus();
+                          }
+                          action.onSelect();
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+                          action.danger
+                            ? "text-danger hover:bg-danger-bg"
+                            : "text-secondary hover:bg-surface-hover",
+                        )}
+                      >
+                        {action.icon && (
+                          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
+                            {action.icon}
+                          </span>
+                        )}
+                        <span className="min-w-0 truncate">{action.label}</span>
+                      </button>
+                    </Fragment>
                   ))}
             </div>
           </>,

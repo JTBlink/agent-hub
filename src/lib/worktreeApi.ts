@@ -1,5 +1,33 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export type WorktreeFileAction =
+  | { kind: "new_file" | "new_directory" | "rename"; name: string }
+  | { kind: "delete" };
+
+export const modifyWorktreeEntry = (
+  projectId: string,
+  worktreePath: string,
+  relativePath: string,
+  action: WorktreeFileAction,
+) =>
+  invoke<string>("modify_worktree_entry", {
+    projectId,
+    worktreePath,
+    relativePath,
+    action,
+  });
+
+export const revealWorktreeEntry = (
+  projectId: string,
+  worktreePath: string,
+  relativePath: string,
+) =>
+  invoke<void>("reveal_worktree_entry", {
+    projectId,
+    worktreePath,
+    relativePath,
+  });
+
 export interface ProjectWorktree {
   path: string;
   branch: string | null;

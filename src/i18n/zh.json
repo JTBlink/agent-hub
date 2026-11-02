@@ -1,4 +1,20 @@
 {
+  "fileTree": {
+    "actions": "文件操作",
+    "open": "打开文件",
+    "newFile": "新建文件…",
+    "newDirectory": "新建文件夹…",
+    "reveal": "在系统文件管理器中显示",
+    "copyPath": "复制路径",
+    "copyRelativePath": "复制相对路径",
+    "rename": "重命名…",
+    "name": "名称",
+    "deleteTitle": "删除文件或文件夹",
+    "deleteMessage": "确定永久删除「{{path}}」及其全部内容？此操作无法撤销。",
+    "saveFirst": "此文件或文件夹中有未保存内容或正在保存的文件，请先保存或关闭后重试。",
+    "copied": "路径已复制",
+    "completed": "文件操作已完成"
+  },
   "herdr": {
     "deleteWorktree": "删除工作树…",
     "deleteWorktreeHelp": "删除工作树“{{path}}”？对应 Herdr 工作空间中的终端、Agent 和运行进程将被关闭，checkout 目录将被移除，Git 分支保留。有本地文件或锁定的工作树无法删除。",

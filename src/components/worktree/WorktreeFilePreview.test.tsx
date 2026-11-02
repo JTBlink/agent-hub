@@ -5,6 +5,7 @@ import { expect, it, vi } from "vitest";
 import { WorktreeFilePreview } from "./WorktreeFilePreview";
 import { readWorktreeFile, writeWorktreeFile } from "../../lib/worktreeApi";
 import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
+import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -51,6 +52,21 @@ it("edits highlighted worktree code, preserves a failed-save draft across remoun
       },
     });
   });
+  expect(
+    hasPendingWorktreeDocument("edit-demo", "~/projects/demo", "src"),
+  ).toBe(true);
+  expect(
+    hasPendingWorktreeDocument("edit-demo", "~/projects/demo", "src/main.rs"),
+  ).toBe(true);
+  expect(hasPendingWorktreeDocument("edit-demo", "~/projects/demo", "sr")).toBe(
+    false,
+  );
+  expect(hasPendingWorktreeDocument("other", "~/projects/demo", "src")).toBe(
+    false,
+  );
+  expect(
+    hasPendingWorktreeDocument("edit-demo", "~/projects/other", "src"),
+  ).toBe(false);
   await act(async () => button("common.save").click());
   expect(host.textContent).toContain("File changed on disk");
   expect(codeEditor(host).state.sliceDoc()).toBe("fn updated() {}\n");
@@ -68,6 +84,9 @@ it("edits highlighted worktree code, preserves a failed-save draft across remoun
     "fn updated() {}\n",
   );
   expect(host.textContent).not.toContain("worktree.unsaved");
+  expect(
+    hasPendingWorktreeDocument("edit-demo", "~/projects/demo", "src"),
+  ).toBe(false);
   expect(codeEditor(host).contentDOM.getAttribute("contenteditable")).toBe(
     "true",
   );

@@ -137,3 +137,20 @@ export function discardWorktreeDocument(key: string) {
   if (document && !document.saving)
     publish(key, { draft: document.original, error: "" });
 }
+
+/** File tree mutations must not orphan drafts or race an in-progress save. */
+export function hasPendingWorktreeDocument(
+  projectId: string,
+  worktreePath: string,
+  path: string,
+) {
+  return [...documents.entries()].some(([key, document]) => {
+    const [project, worktree, file]: string[] = JSON.parse(key);
+    return (
+      project === projectId &&
+      worktree === worktreePath &&
+      (file === path || file.startsWith(`${path}/`)) &&
+      (document.saving || document.draft !== document.original)
+    );
+  });
+}

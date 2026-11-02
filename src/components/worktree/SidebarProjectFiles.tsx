@@ -30,6 +30,26 @@ export function SidebarProjectFiles({
       worktreePath={worktree.path}
       gitFiles={changes?.key === scope ? changes.files : undefined}
       selected={files[scope]?.path}
+      onEntryChange={(change) => {
+        if (change.kind !== "rename" && change.kind !== "delete") return;
+        setFiles((previous) => {
+          const file = previous[scope];
+          if (
+            !file ||
+            (file.path !== change.path &&
+              !file.path.startsWith(`${change.path}/`))
+          )
+            return previous;
+          const next = { ...previous };
+          if (change.kind === "delete") delete next[scope];
+          else
+            next[scope] = {
+              ...file,
+              path: change.nextPath + file.path.slice(change.path.length),
+            };
+          return next;
+        });
+      }}
       onSelect={(path) =>
         setFiles((previous) => ({
           ...previous,
