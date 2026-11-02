@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   getProjectGitReferences,
@@ -13,6 +12,7 @@ import {
   type CommitFileSelection,
   type CommitTarget,
 } from "./GitCommitDetails";
+import { GitReferenceSummary } from "./GitReferenceSummary";
 import { GitTagHistory } from "./GitTagHistory";
 import type { GitBrowseView } from "./GitHistoryToolbar";
 
@@ -139,6 +139,7 @@ export function GitRepositoryPanel({
       </p>
       {entries.map((entry) => (
         <details
+          className="relative"
           key={`${entry.kind}:${entry.name}`}
           open={opened.has(entry.name)}
           onToggle={(event) => {
@@ -147,36 +148,7 @@ export function GitRepositoryPanel({
             setOpen(entry.name, open);
           }}
         >
-          <summary
-            className="git-history-summary flex min-w-0 cursor-pointer items-center gap-1.5 px-2 py-1 text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-            title={entry.name}
-          >
-            <ChevronRight
-              size={12}
-              className="git-history-chevron shrink-0 text-muted"
-            />
-            <span
-              className={
-                view === "tags"
-                  ? "max-w-[40%] shrink-0 truncate font-medium"
-                  : "min-w-0 flex-1 truncate"
-              }
-            >
-              {entry.name}
-            </span>
-            {view === "tags" ? (
-              <span
-                className="min-w-0 flex-1 truncate text-muted"
-                title={entry.summary ?? undefined}
-              >
-                {entry.summary}
-              </span>
-            ) : (
-              <span className="shrink-0 font-mono text-muted">
-                {entry.sha?.slice(0, 7)}
-              </span>
-            )}
-          </summary>
+          <GitReferenceSummary entry={entry} />
           {entry.sha && onSelect ? (
             opened.has(entry.name) &&
             (view === "tags" ? (

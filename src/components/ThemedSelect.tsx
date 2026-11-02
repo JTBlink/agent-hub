@@ -92,6 +92,7 @@ export function ThemedSelect({
   optionIcon,
   renderValue,
   fitContent = false,
+  singleLineOptions = false,
   ...props
 }: Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
@@ -103,6 +104,8 @@ export function ThemedSelect({
   renderValue?: (value: string, label: string) => ReactNode;
   /** Let the menu fit complete labels and all rows when the viewport allows. */
   fitContent?: boolean;
+  /** Keep compact option rows on one line and expose full labels on hover. */
+  singleLineOptions?: boolean;
 }) {
   const options = optionsFrom(children);
   const [position, setPosition] = useState<{
@@ -313,6 +316,7 @@ export function ThemedSelect({
               <button
                 type="button"
                 role="option"
+                title={singleLineOptions ? option.label : undefined}
                 aria-selected={option.value === value}
                 aria-disabled={option.disabled}
                 id={`${id}-${index}`}
@@ -341,8 +345,13 @@ export function ThemedSelect({
                 {optionIcon?.(option.value)}
                 <span
                   className={cn(
-                    "min-w-0 break-words",
-                    fitContent && "[overflow-wrap:anywhere]",
+                    "min-w-0",
+                    singleLineOptions
+                      ? "truncate whitespace-nowrap"
+                      : "break-words",
+                    fitContent &&
+                      !singleLineOptions &&
+                      "[overflow-wrap:anywhere]",
                   )}
                 >
                   {option.label}

@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState, useContext } from "react";
@@ -52,7 +53,6 @@ export function Git() {
     "stage" | "commit" | "sync" | GitRepositoryAction
   >();
   const [tree, setTree] = useState(true);
-  const [actionNotice, setActionNotice] = useState<string>();
   const busy = actionType !== undefined;
   const actionLock = useRef(false);
   const changesRef = useRef<HTMLElement>(null);
@@ -70,7 +70,6 @@ export function Git() {
     setFileView(false);
     setActionError(undefined);
     setDiscardTarget(undefined);
-    setActionNotice(undefined);
   }
   const statusKey = JSON.stringify([scope, revision]);
   const [statusResult, setStatusResult] = useState<{
@@ -164,22 +163,18 @@ export function Git() {
     actionLock.current = true;
     setActionType(type);
     setActionError(undefined);
-    setActionNotice(undefined);
     const actionScope = scope;
+    const noticeId =
+      type !== "stage" && type !== "commit"
+        ? toast.loading(t("git.actions.running"))
+        : undefined;
+    let completed = false;
     try {
       await action();
-      if (
-        currentScope.current === actionScope &&
-        [
-          "fetch",
-          "pull",
-          "push",
-          "sync",
-          "switch_branch",
-          "create_branch",
-        ].includes(type)
-      )
-        setActionNotice(t("git.actions.completed"));
+      if (noticeId !== undefined && currentScope.current === actionScope) {
+        toast.success(t("git.actions.completed"), { id: noticeId });
+        completed = true;
+      }
       refresh();
       return true;
     } catch (cause) {
@@ -188,6 +183,7 @@ export function Git() {
       refresh();
       return false;
     } finally {
+      if (noticeId !== undefined && !completed) toast.dismiss(noticeId);
       actionLock.current = false;
       setActionType(undefined);
     }
@@ -404,32 +400,30 @@ export function Git() {
             </>
           }
           bottom={
-            historyExpanded ? (
-              <GitHistory
-                key={`${scope}:history`}
-                status={status}
-                loading={loading}
-                expanded={historyExpanded}
-                onExpandedChange={setHistoryExpanded}
-                onRefresh={refresh}
-                target={
-                  activeId
-                    ? { projectId: activeId, worktreePath: root }
-                    : undefined
-                }
-                selected={
-                  commitSha && selection
-                    ? { sha: commitSha, path: selection.path }
-                    : undefined
-                }
-                onSelect={({ sha, path }) => {
-                  setGraphOpen(false);
-                  setCommitSha(sha);
-                  setSelection({ path, staged: false });
-                  setFileView(false);
-                }}
-              />
-            ) : null
+            <GitHistory
+              key={`${scope}:history`}
+              status={status}
+              loading={loading}
+              expanded={historyExpanded}
+              onExpandedChange={setHistoryExpanded}
+              onRefresh={refresh}
+              target={
+                activeId
+                  ? { projectId: activeId, worktreePath: root }
+                  : undefined
+              }
+              selected={
+                commitSha && selection
+                  ? { sha: commitSha, path: selection.path }
+                  : undefined
+              }
+              onSelect={({ sha, path }) => {
+                setGraphOpen(false);
+                setCommitSha(sha);
+                setSelection({ path, staged: false });
+                setFileView(false);
+              }}
+            />
           }
         />
       </aside>
@@ -468,15 +462,6 @@ export function Git() {
       {sidebarVisibility?.sidebarContainer &&
         createPortal(sidebar, sidebarVisibility.sidebarContainer)}
       <div className="git-panel flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
-        {(actionNotice ||
-          (busy && actionType !== "stage" && actionType !== "commit")) && (
-          <p
-            role="status"
-            className="shrink-0 px-3 py-1 text-xs text-secondary"
-          >
-            {busy ? t("git.actions.running") : actionNotice}
-          </p>
-        )}
         {!activeId ? (
           <>
             {!sidebarVisibility?.sidebarContainer && sidebar}
@@ -523,6 +508,15 @@ export function Git() {
                     target={{ projectId: activeId, worktreePath: root }}
                     revision={revision}
                     changedFiles={files.length}
+                    busy={busy || loading}
+                    fetching={actionType === "fetch"}
+                    onFetch={() => {
+                      void runAction(
+                        () => runProjectGitAction(activeId, root, "fetch"),
+                        "fetch",
+                      );
+                    }}
+                    onRefresh={refresh}
                     onClose={() => setGraphOpen(false)}
                     onSelect={({ sha, path }) => {
                       setGraphOpen(false);

@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { toast } from "sonner";
 import { expect, it, vi } from "vitest";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
-import { GitEditorVisibilityContext } from "../hooks/gitEditorVisibility";
+import {
+  GitEditorVisibilityContext,
+  GitEditorTabsContext,
+} from "../hooks/gitEditorVisibility";
 import { Git } from "./Git";
 import { WorkspaceFilesProvider } from "../components/worktree/WorkspaceFilesContext";
 import {
@@ -25,6 +29,14 @@ import {
 } from "../lib/gitApi";
 import { makeProject } from "../../tests/fixtures/workspace";
 import { installCodeEditorGeometry } from "../test/codeEditor";
+
+vi.mock("sonner", () => ({
+  toast: {
+    loading: vi.fn(() => "git-notice"),
+    success: vi.fn(),
+    dismiss: vi.fn(),
+  },
+}));
 
 function WorkspaceControl() {
   const { setCheckout } = useWorkspaceFiles();
@@ -514,7 +526,12 @@ it("opens committed file diffs separately from working changes", async () => {
   const root = createRoot(host);
   try {
     await act(async () => root.render(<TestGit />));
-    expect(host.querySelector('[aria-label="git.commits"]')).toBeNull();
+    expect(
+      host
+        .querySelector('[aria-label="git.commits"] button[aria-expanded]')
+        ?.getAttribute("aria-expanded"),
+    ).toBe("false");
+    expect(host.querySelector(".git-history-commit")).toBeNull();
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>('[aria-label="git.actions.history"]')!
@@ -660,13 +677,27 @@ it("opens Git Graph from source control and returns to the selected diff on clos
   });
   const host = document.createElement("div");
   document.body.append(host);
-  const root = createRoot(host);
+  const tablist = document.createElement("div");
+  tablist.setAttribute("role", "tablist");
+  const terminalTab = document.createElement("button");
+  terminalTab.setAttribute("role", "tab");
+  terminalTab.textContent = "herdr-demo";
+  tablist.append(terminalTab);
+  host.append(tablist);
+  const content = document.createElement("div");
+  host.append(content);
+  const root = createRoot(content);
+  const selectEditor = vi.fn();
   const setEditorVisible = vi.fn();
   try {
     await act(async () =>
       root.render(
         <GitEditorVisibilityContext.Provider value={setEditorVisible}>
-          <TestGit />
+          <GitEditorTabsContext.Provider
+            value={{ container: tablist, active: true, onSelect: selectEditor }}
+          >
+            <TestGit />
+          </GitEditorTabsContext.Provider>
         </GitEditorVisibilityContext.Provider>,
       ),
     );
@@ -713,11 +744,32 @@ it("opens Git Graph from source control and returns to the selected diff on clos
     expect(host.querySelector("table")?.textContent).toContain(
       "Example graph commit",
     );
+    const graphTab = [
+      ...tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+    ].find((tab) => tab.textContent === "git.graph.title")!;
+    expect(graphTab).toBeTruthy();
+    expect(tablist.querySelector('[role="tab"]')).toBe(terminalTab);
+    expect(content.querySelector('[role="tablist"]')).toBeNull();
+    await act(async () => graphTab.click());
+    expect(selectEditor).toHaveBeenCalledOnce();
     expect(getProjectGitGraph).toHaveBeenLastCalledWith(
       "first",
       "<workspace>/demo",
       true,
       200,
+    );
+    vi.mocked(runProjectGitAction).mockResolvedValue();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="git.graph.tools"] [aria-label="git.actions.fetch"]',
+        )!
+        .click(),
+    );
+    expect(runProjectGitAction).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      "fetch",
     );
     await act(async () =>
       host.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click(),
@@ -784,7 +836,25 @@ it("runs toolbar operations against the selected checkout and switches change la
     host.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
   try {
     await act(async () => root.render(<TestGit />));
+    let finishPull!: () => void;
+    vi.mocked(runProjectGitAction).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishPull = resolve;
+        }),
+    );
     await act(async () => button("git.actions.pull").click());
+    expect(toast.loading).toHaveBeenCalledWith("git.actions.running");
+    expect(host.querySelector(".git-panel")?.textContent).not.toContain(
+      "git.actions.running",
+    );
+    await act(async () => finishPull());
+    expect(toast.success).toHaveBeenCalledWith("git.actions.completed", {
+      id: "git-notice",
+    });
+    expect(host.querySelector(".git-panel")?.textContent).not.toContain(
+      "git.actions.completed",
+    );
     expect(runProjectGitAction).toHaveBeenLastCalledWith(
       "first",
       "<workspace>/demo",
@@ -809,17 +879,35 @@ it("runs toolbar operations against the selected checkout and switches change la
     expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
       "false",
     );
-    expect(host.querySelector('[aria-label="git.commits"]')).toBeNull();
+    expect(
+      host
+        .querySelector('[aria-label="git.commits"] button[aria-expanded]')
+        ?.getAttribute("aria-expanded"),
+    ).toBe("false");
     await act(async () => button("git.actions.history").click());
     expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
       "true",
     );
-    expect(host.querySelector('[aria-label="git.commits"]')).not.toBeNull();
+    const historyHeader = host.querySelector<HTMLButtonElement>(
+      '[aria-label="git.commits"] button[aria-expanded]',
+    )!;
+    expect(historyHeader.getAttribute("aria-expanded")).toBe("true");
+    await act(async () => historyHeader.click());
+    expect(historyHeader.getAttribute("aria-expanded")).toBe("false");
+    expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
+      "false",
+    );
+    await act(async () => historyHeader.click());
+    expect(historyHeader.getAttribute("aria-expanded")).toBe("true");
     await act(async () => button("git.actions.history").click());
     expect(button("git.actions.history").getAttribute("aria-pressed")).toBe(
       "false",
     );
-    expect(host.querySelector('[aria-label="git.commits"]')).toBeNull();
+    expect(
+      host
+        .querySelector('[aria-label="git.commits"] button[aria-expanded]')
+        ?.getAttribute("aria-expanded"),
+    ).toBe("false");
     await act(async () => button("git.actions.branches").click());
     expect(document.querySelector('[role="alertdialog"]')).toBeNull();
     const topic = () =>

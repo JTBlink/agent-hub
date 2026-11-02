@@ -1,21 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 // CSS pixels scale with the application's zoom. Keep geometry shared with the SVG.
 export const GRAPH_ROW_HEIGHT = 30;
 const OVERSCAN = 8;
 
 /** Window rows without changing the topology computed for the complete history. */
-export function useGitGraphViewport(count: number, leadingRows: number) {
+export function useGitGraphViewport(
+  count: number,
+  leadingRows: number,
+  resetKey = "",
+) {
   const ref = useRef<HTMLDivElement>(null);
-  const [viewport, setViewport] = useState({ top: 0, height: 600 });
+  const [viewport, setViewport] = useState({ resetKey, top: 0, height: 600 });
+  if (viewport.resetKey !== resetKey)
+    setViewport({ resetKey, top: 0, height: viewport.height });
+  useLayoutEffect(() => {
+    if (ref.current) ref.current.scrollTop = 0;
+  }, [resetKey]);
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
     const measure = () =>
-      setViewport({
+      setViewport((previous) => ({
+        ...previous,
         top: element.scrollTop,
         height: element.clientHeight || 600,
-      });
+      }));
     measure();
     const observer =
       typeof ResizeObserver === "undefined"

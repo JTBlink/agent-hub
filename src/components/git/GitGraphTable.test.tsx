@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { GitGraphTable } from "./GitGraphTable";
+import { GitGraphToolbar } from "./GitGraphToolbar";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -10,6 +11,116 @@ vi.mock("react-i18next", () => ({
     i18n: { language: "en" },
   }),
 }));
+
+it("filters all loaded commits by message, author, SHA and ref, resets scrolling and restores history on Escape", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const commits = Array.from({ length: 500 }, (_, index) => ({
+    sha: `sha-${index}`,
+    summary: `Commit ${index}`,
+    author: "Example",
+    time: 0,
+    refs: index === 400 ? [{ name: "feature/search", remote: false }] : [],
+    parents: index < 499 ? [`sha-${index + 1}`] : [],
+  }));
+  commits[400] = {
+    ...commits[400],
+    summary: "Repair search",
+    author: "Contributor",
+  };
+  const onSelect = vi.fn();
+  function SearchGraph() {
+    const [query, setQuery] = useState("");
+    return (
+      <>
+        <GitGraphToolbar
+          remotes
+          onRemotes={() => {}}
+          query={query}
+          onQuery={setQuery}
+          limit={500}
+          onLimit={() => {}}
+          loading={false}
+          busy={false}
+          fetching={false}
+          onFetch={() => {}}
+          onRefresh={() => {}}
+        />
+        <GitGraphTable
+          commits={commits}
+          query={query}
+          changedFiles={2}
+          loading={false}
+          onSelect={onSelect}
+        />
+      </>
+    );
+  }
+  try {
+    await act(async () => root.render(<SearchGraph />));
+    const input = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    const scroller = host.querySelector("table")!.parentElement!;
+    await act(async () => {
+      scroller.scrollTop = 12000;
+      scroller.dispatchEvent(new Event("scroll"));
+    });
+    for (const query of [
+      "  REPAIR SEARCH  ",
+      "contributor",
+      "sha-400",
+      "FEATURE/SEARCH",
+    ]) {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        )!.set!.call(input, query);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      const rows = host.querySelectorAll<HTMLButtonElement>(
+        "[data-commit-index]",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].textContent).toContain("Repair search");
+      expect(scroller.scrollTop).toBe(0);
+      expect(host.querySelector("table")?.getAttribute("aria-rowcount")).toBe(
+        "2",
+      );
+      await act(async () => rows[0].click());
+      expect(onSelect).toHaveBeenLastCalledWith("sha-400");
+    }
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input, "missing");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(host.querySelectorAll("[data-commit-index]")).toHaveLength(0);
+    expect(host.querySelector('[role="status"]')?.textContent).toBe(
+      "git.noMatchingCommits",
+    );
+    await act(async () =>
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      ),
+    );
+    expect(input.value).toBe("");
+    expect(host.querySelector("table")?.getAttribute("aria-rowcount")).toBe(
+      "502",
+    );
+    expect(
+      host.querySelector('[data-commit-index="0"]')?.textContent,
+    ).toContain("Commit 0");
+    expect(host.querySelector("tbody svg path")).not.toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
 it("windows a large history, preserves full topology and navigates to unmounted rows with the keyboard", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");

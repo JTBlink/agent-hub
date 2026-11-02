@@ -1,13 +1,9 @@
-import { useContext } from "react";
-import { createPortal } from "react-dom";
-import { GitEditorTabsContext } from "../../hooks/gitEditorVisibility";
-import { TabCloseButton } from "../TabCloseButton";
-import { cn } from "../../utils";
 import { FileCode2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitFile } from "../../lib/gitApi";
 import type { GitSelection } from "./GitChanges";
 import { GitDiffViewer } from "./GitDiffViewer";
+import { GitEditorTab } from "./GitEditorTab";
 import { WorktreeFilePreview } from "../worktree/WorktreeFilePreview";
 
 export function GitFileEditor({
@@ -34,50 +30,19 @@ export function GitFileEditor({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const sharedTabs = useContext(GitEditorTabsContext);
-  const active = sharedTabs?.active ?? true;
-  const tab = (
-    <div
-      className={cn(
-        "flex h-full shrink-0 items-center border-b-2",
-        active ? "border-accent text-primary" : "border-transparent text-muted",
-      )}
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active}
-        title={selection.path}
-        onClick={() => sharedTabs?.onSelect()}
-        className="flex h-full max-w-64 items-center gap-1.5 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-      >
-        <FileCode2 size={13} className="shrink-0" />
-        <span className="truncate">{selection.path.split("/").pop()}</span>
-        <span className="shrink-0 text-muted">
-          {commitSha
-            ? commitSha.slice(0, 7)
-            : t(selection.staged ? "git.staged" : "git.unstaged")}
-        </span>
-      </button>
-      <TabCloseButton
-        aria-label={t("common.close")}
-        title={t("common.close")}
-        onClick={onClose}
-      />
-    </div>
-  );
   return (
     <>
-      {sharedTabs ? (
-        sharedTabs.container && createPortal(tab, sharedTabs.container)
-      ) : (
-        <div
-          role="tablist"
-          className="flex h-9 shrink-0 items-center border-b border-border-subtle bg-bg-secondary"
-        >
-          {tab}
-        </div>
-      )}
+      <GitEditorTab
+        label={selection.path.split("/").pop() ?? selection.path}
+        title={selection.path}
+        detail={
+          commitSha
+            ? commitSha.slice(0, 7)
+            : t(selection.staged ? "git.staged" : "git.unstaged")
+        }
+        icon={<FileCode2 size={13} className="shrink-0" />}
+        onClose={onClose}
+      />
       {fileView && (
         <div className="flex shrink-0 items-center border-b border-border-subtle px-2 py-1">
           <button

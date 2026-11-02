@@ -5,9 +5,10 @@ export const GitEditorVisibilityContext = createContext<
   ((visible: boolean) => void) | null
 >(null);
 
-/** Mounts the selected Git file alongside terminal and workspace file tabs. */
+/** Mounts Git files and Graph alongside terminal and workspace file tabs. */
 export const GitEditorTabsContext = createContext<{
   container: HTMLDivElement | null;
   active: boolean;
   onSelect: () => void;
+  onTerminal?: () => void;
 } | null>(null);

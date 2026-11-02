@@ -17,7 +17,10 @@ import { ProjectWorkspace } from "./ProjectWorkspace";
 import { ProjectSkills } from "../../views/ProjectSkills";
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { GitFileEditor } from "../git/GitFileEditor";
-import { GitEditorVisibilityContext } from "../../hooks/gitEditorVisibility";
+import {
+  GitEditorTabsContext,
+  GitEditorVisibilityContext,
+} from "../../hooks/gitEditorVisibility";
 
 function RouteProbe() {
   const location = useLocation();
@@ -31,12 +34,16 @@ function RouteProbe() {
 
 function GitEditor() {
   const setVisible = useContext(GitEditorVisibilityContext);
+  const tabs = useContext(GitEditorTabsContext);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     setVisible?.(open);
   }, [open, setVisible]);
   return (
     <div data-git-editor>
+      <button data-git-terminal onClick={tabs?.onTerminal}>
+        Open terminal
+      </button>
       {open && (
         <GitFileEditor
           activeId={project.id}
@@ -410,4 +417,26 @@ it("opens project skills from source control without replacing its sidebar or na
   expect(host.querySelector("[data-route]")?.textContent).toBe("/git");
   expect(document.querySelector("[data-git-change]")).toBe(change);
   expect(terminal?.hasAttribute("hidden")).toBe(false);
+});
+
+it("opens the current terminal from a Git editor without closing the editor or changing the checkout", async () => {
+  await render();
+  await click("[data-topic]");
+  await click("[data-git]");
+  await act(async () =>
+    document.querySelector<HTMLElement>("[data-git-change]")!.click(),
+  );
+  const terminal = host.querySelector<HTMLElement>("[data-terminal]")!;
+  expect(terminal.hidden).toBe(true);
+  const routeBefore = host.querySelector("[data-route]")?.textContent;
+  await click("[data-git-terminal]");
+  expect(terminal.hidden).toBe(false);
+  expect(host.querySelector("[data-terminal]")).toBe(terminal);
+  expect(host.querySelector("[data-route]")?.textContent).toBe(routeBefore);
+  const gitTab = [
+    ...host.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+  ].find((tab) => tab.textContent?.includes("changed.ts"))!;
+  expect(gitTab).toBeTruthy();
+  await act(async () => gitTab.click());
+  expect(terminal.hidden).toBe(true);
 });

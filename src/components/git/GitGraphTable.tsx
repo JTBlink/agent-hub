@@ -11,7 +11,7 @@ import { layoutGitGraph } from "../../lib/gitGraph";
 import { formatGitCommitTime } from "../../lib/gitTime";
 import { cn } from "../../utils";
 import { GitGraphLines, GitGraphWorkingLine } from "./GitGraphLines";
-import { GitGraphRefBadges } from "./GitGraphRefBadges";
+import { GitGraphCommitButton } from "./GitGraphCommitButton";
 import { GRAPH_ROW_HEIGHT, useGitGraphViewport } from "./useGitGraphViewport";
 
 /** Presentation boundary: accepts repository data and emits a SHA, never performs IPC. */
@@ -31,6 +31,21 @@ export function GitGraphTable({
   loading: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const needle = query.trim().toLocaleLowerCase();
+  const entries = useMemo(
+    () =>
+      commits
+        .map((commit, graphIndex) => ({ commit, graphIndex }))
+        .filter(
+          ({ commit }) =>
+            !needle ||
+            `${commit.summary} ${commit.author} ${commit.sha} ${commit.refs.map((ref) => ref.name).join(" ")}`
+              .toLocaleLowerCase()
+              .includes(needle),
+        ),
+    [commits, needle],
+  );
+  const showWorking = changedFiles > 0 && !needle;
   const workingHead = changedFiles
     ? commits.find((commit) => commit.head)?.sha
     : undefined;
@@ -44,10 +59,9 @@ export function GitGraphTable({
     start,
     end,
     reveal,
-  } = useGitGraphViewport(commits.length, changedFiles ? 1 : 0);
+  } = useGitGraphViewport(entries.length, showWorking ? 1 : 0, needle);
   const table = useRef<HTMLTableElement>(null);
   const [focus, setFocus] = useState<{ index: number }>();
-  const needle = query.trim().toLocaleLowerCase();
   useLayoutEffect(() => {
     if (focus)
       table.current
@@ -59,13 +73,13 @@ export function GitGraphTable({
   const navigate = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const target =
       event.key === "ArrowDown"
-        ? Math.min(commits.length - 1, index + 1)
+        ? Math.min(entries.length - 1, index + 1)
         : event.key === "ArrowUp"
           ? Math.max(0, index - 1)
           : event.key === "Home"
             ? 0
             : event.key === "End"
-              ? commits.length - 1
+              ? entries.length - 1
               : undefined;
     if (target === undefined) return;
     event.preventDefault();
@@ -80,7 +94,7 @@ export function GitGraphTable({
     >
       <table
         ref={table}
-        aria-rowcount={commits.length + 1 + (changedFiles ? 1 : 0)}
+        aria-rowcount={entries.length + 1 + (showWorking ? 1 : 0)}
         className="git-graph-table w-full border-collapse text-xs"
         style={{ minWidth: 680 + width }}
       >
@@ -101,7 +115,7 @@ export function GitGraphTable({
           </tr>
         </thead>
         <tbody>
-          {!!changedFiles && (
+          {showWorking && (
             <tr className="text-muted" aria-rowindex={2}>
               <td className="p-0">
                 <GitGraphWorkingLine width={width} connected={!!workingHead} />
@@ -112,17 +126,13 @@ export function GitGraphTable({
             </tr>
           )}
           <Spacer height={start * GRAPH_ROW_HEIGHT} />
-          {commits.slice(start, end).map((commit, offset) => {
+          {entries.slice(start, end).map(({ commit, graphIndex }, offset) => {
             const index = start + offset;
-            const match =
-              !needle ||
-              `${commit.summary} ${commit.author} ${commit.sha} ${commit.refs.map((ref) => ref.name).join(" ")}`
-                .toLocaleLowerCase()
-                .includes(needle);
+            const row = graph.rows[graphIndex];
             return (
               <tr
                 key={commit.sha}
-                aria-rowindex={index + 2 + (changedFiles ? 1 : 0)}
+                aria-rowindex={index + 2 + (showWorking ? 1 : 0)}
                 className={cn(
                   "hover:bg-surface-hover",
                   selected === commit.sha && "bg-surface-active",
@@ -130,32 +140,22 @@ export function GitGraphTable({
               >
                 <td className="p-0">
                   <GitGraphLines
-                    row={graph.rows[index]}
+                    // Filtered commits keep their lanes and colors, without
+                    // drawing connections across omitted history.
+                    row={needle ? { ...row, edges: [] } : row}
                     width={width}
                     head={commit.head}
                   />
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    data-commit-index={index}
+                  <GitGraphCommitButton
+                    commit={commit}
+                    index={index}
+                    color={row.color}
+                    selected={selected === commit.sha}
+                    onSelect={() => onSelect(commit.sha)}
                     onKeyDown={(event) => navigate(event, index)}
-                    onClick={() => onSelect(commit.sha)}
-                    aria-pressed={selected === commit.sha}
-                    className={cn(
-                      "flex h-[30px] w-full items-center gap-1.5 whitespace-nowrap text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
-                      !match && "opacity-30",
-                    )}
-                    title={commit.summary}
-                  >
-                    <GitGraphRefBadges
-                      refs={commit.refs}
-                      color={graph.rows[index].color}
-                    />
-                    <span className="min-w-24 flex-1 truncate">
-                      {commit.summary}
-                    </span>
-                  </button>
+                  />
                 </td>
                 <td
                   className="truncate text-muted"
@@ -172,12 +172,12 @@ export function GitGraphTable({
               </tr>
             );
           })}
-          <Spacer height={(commits.length - end) * GRAPH_ROW_HEIGHT} />
+          <Spacer height={(entries.length - end) * GRAPH_ROW_HEIGHT} />
         </tbody>
       </table>
-      {!commits.length && (
+      {!entries.length && !loading && (
         <p role="status" className="p-4 text-xs text-muted">
-          {t("git.unborn")}
+          {t(needle ? "git.noMatchingCommits" : "git.unborn")}
         </p>
       )}
     </div>

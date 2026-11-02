@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "../utils";
@@ -15,6 +22,9 @@ export interface CardAction {
 }
 
 interface Props {
+  contextTarget?: RefObject<HTMLElement | null>;
+  contextOnly?: boolean;
+  shouldOpenContextMenu?: () => boolean;
   actions: CardAction[];
   label: string;
   className?: string;
@@ -32,6 +42,9 @@ interface MenuPos {
 }
 
 export function CardActionMenu({
+  contextTarget,
+  contextOnly = false,
+  shouldOpenContextMenu,
   actions,
   label,
   className,
@@ -47,6 +60,11 @@ export function CardActionMenu({
   const panelRef = useRef<HTMLDivElement>(null);
   const openChangeRef = useRef(onOpenChange);
   const wasOpen = useRef(false);
+  const contextPoint = useRef<{ x: number; y: number } | null>(null);
+  const contextOrigin = useRef<HTMLElement | null>(null);
+  const restoreFocus = useCallback(() => {
+    (contextOrigin.current ?? triggerRef.current)?.focus();
+  }, []);
   const menuId = useId();
 
   const open = pos !== null;
@@ -64,7 +82,7 @@ export function CardActionMenu({
 
   const locate = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (!rect && !contextPoint.current) return;
     const scale = getAppScale();
     const menuH =
       (panelRef.current?.getBoundingClientRect().height ?? 0) / scale ||
@@ -73,6 +91,26 @@ export function CardActionMenu({
       (panelRef.current?.getBoundingClientRect().width ?? 0) / scale || 156,
       window.innerWidth / scale - 16,
     );
+    if (contextPoint.current) {
+      setOpenState({
+        top: Math.max(
+          8,
+          Math.min(
+            contextPoint.current.y / scale,
+            window.innerHeight / scale - menuH - 8,
+          ),
+        ),
+        right: Math.max(
+          8,
+          Math.min(
+            window.innerWidth / scale - contextPoint.current.x / scale - menuW,
+            window.innerWidth / scale - menuW - 8,
+          ),
+        ),
+      });
+      return;
+    }
+    if (!rect) return;
     setOpenState({
       top: Math.max(
         8,
@@ -94,6 +132,40 @@ export function CardActionMenu({
       ),
     });
   }, [actions.length, align, setOpenState]);
+
+  useEffect(() => {
+    const target = contextTarget?.current;
+    if (!target || disabled) return;
+    const show = (x: number, y: number) => {
+      contextPoint.current = { x, y };
+      contextOrigin.current = target;
+      locate();
+    };
+    const onContext = (event: MouseEvent) => {
+      if (shouldOpenContextMenu && !shouldOpenContextMenu()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      show(event.clientX, event.clientY);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key !== "ContextMenu" &&
+        !(event.shiftKey && event.key === "F10")
+      )
+        return;
+      if (shouldOpenContextMenu && !shouldOpenContextMenu()) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = target.getBoundingClientRect();
+      show(rect.left, rect.bottom);
+    };
+    target.addEventListener("contextmenu", onContext);
+    target.addEventListener("keydown", onKey);
+    return () => {
+      target.removeEventListener("contextmenu", onContext);
+      target.removeEventListener("keydown", onKey);
+    };
+  }, [contextTarget, disabled, locate, shouldOpenContextMenu]);
 
   const attachPanel = useCallback(
     (node: HTMLDivElement | null) => {
@@ -124,7 +196,7 @@ export function CardActionMenu({
       e.preventDefault();
       e.stopPropagation();
       setOpenState(null);
-      triggerRef.current?.focus();
+      restoreFocus();
     };
     document.addEventListener("mousedown", handlePointer);
     document.addEventListener("keydown", handleEscape);
@@ -137,14 +209,14 @@ export function CardActionMenu({
       window.removeEventListener("resize", locate);
       window.removeEventListener("scroll", locate, true);
     };
-  }, [open, locate, setOpenState]);
+  }, [open, locate, setOpenState, restoreFocus]);
 
   useEffect(() => () => openChangeRef.current?.(false), []);
   useEffect(() => {
     if (wasOpen.current && !open && document.activeElement === document.body)
-      triggerRef.current?.focus();
+      restoreFocus();
     wasOpen.current = open;
-  }, [open]);
+  }, [open, restoreFocus]);
 
   useEffect(() => {
     if (open && !renderContent)
@@ -158,6 +230,8 @@ export function CardActionMenu({
       setOpenState(null);
       return;
     }
+    contextPoint.current = null;
+    contextOrigin.current = null;
     locate();
   }, [open, locate, setOpenState]);
 
@@ -165,35 +239,41 @@ export function CardActionMenu({
 
   return (
     <>
-      <div className={cn("shrink-0", className)}>
-        <button
-          ref={triggerRef}
-          type="button"
-          disabled={disabled}
-          title={label}
-          aria-label={label}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-controls={open ? menuId : undefined}
-          onKeyDown={(event) => {
-            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-              event.preventDefault();
-              if (!open) locate();
-            }
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleToggle();
-          }}
-          className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-md text-muted outline-none transition-colors hover:bg-surface-hover hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-            triggerClassName,
-            open && "bg-surface-hover text-secondary",
-          )}
-        >
-          {triggerIcon ?? <MoreHorizontal className="h-3.5 w-3.5" />}
-        </button>
-      </div>
+      {!contextOnly && (
+        <div className={cn("shrink-0", className)}>
+          <button
+            ref={triggerRef}
+            type="button"
+            disabled={disabled}
+            title={label}
+            aria-label={label}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-controls={open ? menuId : undefined}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                if (!open) {
+                  contextPoint.current = null;
+                  contextOrigin.current = null;
+                  locate();
+                }
+              }
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggle();
+            }}
+            className={cn(
+              "flex h-5 w-5 items-center justify-center rounded-md text-muted outline-none transition-colors hover:bg-surface-hover hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+              triggerClassName,
+              open && "bg-surface-hover text-secondary",
+            )}
+          >
+            {triggerIcon ?? <MoreHorizontal className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      )}
       {open &&
         createPortal(
           <>
@@ -213,10 +293,18 @@ export function CardActionMenu({
               style={{ top: pos.top, right: pos.right }}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setOpenState(null);
+                  restoreFocus();
+                  return;
+                }
                 if (renderContent) return;
+                event.stopPropagation();
                 if (event.key === "Tab") {
                   setOpenState(null);
-                  triggerRef.current?.focus();
+                  restoreFocus();
                   return;
                 }
                 const items = [
@@ -255,7 +343,7 @@ export function CardActionMenu({
                         e.stopPropagation();
                         if (!action.keepOpen) {
                           setOpenState(null);
-                          triggerRef.current?.focus();
+                          restoreFocus();
                         }
                         action.onSelect();
                       }}

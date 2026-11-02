@@ -77,6 +77,15 @@ export function ProjectWorkspace({
   }, [routeProjectId, path, setCheckout]);
   const file = files[scope];
   const visible = gitPage || !!route || location.pathname === "/terminal";
+  const selectTerminal = () => {
+    setSkillsSelection(null);
+    setPageSelection("");
+    if (file?.shown)
+      setFiles((previous) => ({
+        ...previous,
+        [scope]: { ...file, shown: false },
+      }));
+  };
   return (
     <section
       hidden={!visible}
@@ -114,16 +123,11 @@ export function ProjectWorkspace({
               route ? () => setSkillsSelection(skillsKey) : undefined
             }
             projectsReady={!projectsLoading && !appError}
-            shown={!!herdrNavigation(location.state) || (!skillsShown && !pageShown && (!file?.shown || !route))}
-            onSelectTerminal={() => {
-              setSkillsSelection(null);
-              setPageSelection("");
-              if (file?.shown)
-                setFiles((previous) => ({
-                  ...previous,
-                  [scope]: { ...file, shown: false },
-                }));
-            }}
+            shown={
+              !!herdrNavigation(location.state) ||
+              (!skillsShown && !pageShown && (!file?.shown || !route))
+            }
+            onSelectTerminal={selectTerminal}
             extraTabs={
               <>
                 <div ref={setGitTabsContainer} className="contents" />
@@ -218,6 +222,7 @@ export function ProjectWorkspace({
                           value={{
                             container: gitTabsContainer,
                             active: pageShown,
+                            onTerminal: selectTerminal,
                             onSelect: () => {
                               setSkillsSelection(null);
                               setPageSelection(location.key);

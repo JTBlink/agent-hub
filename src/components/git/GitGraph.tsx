@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { GitGraph as GraphIcon, RefreshCw, X } from "lucide-react";
+import { GitGraphBranchFilter } from "./GitGraphBranchFilter";
+import {
+  graphBranchOptions,
+  graphBranchHistory,
+} from "../../lib/gitGraphBranches";
+import { useContext, useState } from "react";
+import { GitGraph as GraphIcon, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useGitGraph } from "../../hooks/useGitGraph";
 import { GitGraphTable } from "./GitGraphTable";
@@ -9,7 +14,9 @@ import {
   type CommitFileSelection,
   type CommitTarget,
 } from "./GitCommitDetails";
-import { cn } from "../../utils";
+import { GitGraphToolbar } from "./GitGraphToolbar";
+import { GitEditorTabsContext } from "../../hooks/gitEditorVisibility";
+import { GitEditorTab } from "./GitEditorTab";
 
 /** Editor-sized repository graph; commit details reuse the sidebar inspection flow. */
 export function GitGraph({
@@ -18,14 +25,24 @@ export function GitGraph({
   changedFiles,
   onSelect,
   onClose,
+  busy,
+  fetching,
+  onFetch,
+  onRefresh,
 }: {
   target: CommitTarget;
   revision: number;
   changedFiles: number;
   onSelect: (selection: CommitFileSelection) => void;
   onClose: () => void;
+  busy: boolean;
+  fetching: boolean;
+  onFetch: () => void;
+  onRefresh: () => void;
 }) {
   const { t } = useTranslation();
+  const sharedTabs = useContext(GitEditorTabsContext);
+  const [branchFilter, setBranchFilter] = useState("");
   const [remotes, setRemotes] = useState(true);
   const [limit, setLimit] = useState(200);
   const [refresh, setRefresh] = useState(0);
@@ -39,57 +56,42 @@ export function GitGraph({
     revision + refresh,
   );
   const commits = result?.data?.commits;
+  const branchOption = graphBranchOptions(commits ?? []).find(
+    (option) => option.value === branchFilter,
+  );
+  const visibleCommits = graphBranchHistory(commits ?? [], branchOption?.sha);
   return (
     <section
       className="flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label={t("git.graph.title")}
     >
-      <div className="flex h-9 shrink-0 items-center border-b border-border-subtle bg-bg-secondary">
-        <span className="flex h-full items-center gap-2 border-r border-border-subtle border-t-2 border-t-accent bg-background px-3 text-xs">
-          <GraphIcon size={14} className="text-accent-light" />
-          {t("git.graph.title")}
-          <button
-            type="button"
-            className="app-button-ghost h-5 w-5 p-0"
-            onClick={onClose}
-            aria-label={t("git.graph.close")}
-            title={t("git.graph.close")}
-          >
-            <X size={12} />
-          </button>
-        </span>
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border-subtle px-3 py-2 text-xs">
-        <label className="flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={remotes}
-            onChange={(event) => setRemotes(event.target.checked)}
+      <GitEditorTab
+        label={t("git.graph.title")}
+        icon={<GraphIcon size={14} className="shrink-0 text-accent-light" />}
+        closeLabel={t("git.graph.close")}
+        onClose={onClose}
+      />
+      <GitGraphToolbar
+        branchControl={
+          <GitGraphBranchFilter
+            commits={commits ?? []}
+            value={branchOption ? branchFilter : ""}
+            onChange={setBranchFilter}
           />
-          {t("git.graph.remotes")}
-        </label>
-        <input
-          type="search"
-          className="min-w-32 flex-1 rounded border border-border bg-surface px-2 py-1 text-primary outline-none focus:border-accent"
-          aria-label={t("git.filterCommits")}
-          placeholder={t("git.filterCommitsHint")}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <button
-          type="button"
-          className="app-button-ghost h-6 w-6 p-0"
-          disabled={!result || result.loading}
-          onClick={() => setRefresh((value) => value + 1)}
-          aria-label={t("settings.refresh")}
-          title={t("settings.refresh")}
-        >
-          <RefreshCw
-            size={14}
-            className={cn((!result || result.loading) && "animate-spin")}
-          />
-        </button>
-      </div>
+        }
+        remotes={remotes}
+        onRemotes={setRemotes}
+        query={query}
+        onQuery={setQuery}
+        limit={limit}
+        onLimit={setLimit}
+        loading={!result || result.loading}
+        busy={busy}
+        fetching={fetching}
+        onTerminal={sharedTabs?.onTerminal}
+        onFetch={onFetch}
+        onRefresh={onRefresh}
+      />
       {!result ? (
         <p role="status" className="p-4 text-xs text-muted">
           {t("common.loading")}
@@ -125,8 +127,10 @@ export function GitGraph({
               target.worktreePath,
               remotes,
             ])}
-            commits={commits ?? []}
-            changedFiles={changedFiles}
+            commits={visibleCommits}
+            changedFiles={
+              visibleCommits.some((commit) => commit.head) ? changedFiles : 0
+            }
             query={query}
             selected={selected}
             onSelect={setSelected}
