@@ -1,7 +1,12 @@
 // Requires Vite on :1420 and the shared browser CDP proxy on :3456.
-// Run: node tests/browser/terminal-input.mjs [--input-events]
+// Run: node tests/browser/terminal-input.mjs [--input-events | --ime | --ime-composition]
 import assert from "node:assert/strict";
 
+const inputMode = process.argv.includes("--ime-composition")
+  ? "ime-composition"
+  : process.argv.includes("--ime")
+    ? "ime"
+    : process.argv.includes("--input-events");
 const proxy = "http://localhost:3456";
 async function request(path, body) {
   const response = await fetch(`${proxy}${path}`, {
@@ -27,7 +32,7 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   await evaluate(
-    `window.runTerminalInputRegression(${process.argv.includes("--input-events")}).then(result => window.inputResult = result).catch(error => window.inputResult = {error: String(error)}); "started"`,
+    `window.runTerminalInputRegression(${JSON.stringify(inputMode)}).then(result => window.inputResult = result).catch(error => window.inputResult = {error: String(error)}); "started"`,
   );
   let result;
   while (!result) {
@@ -41,7 +46,7 @@ try {
     true,
     `Keystrokes were lost, duplicated or reordered: ${result.received ?? ""}`,
   );
-  if (!process.argv.includes("--input-events"))
+  if (!inputMode)
     assert.equal(
       result.displayed,
       true,
@@ -54,7 +59,7 @@ try {
   assert.equal(result.created, 1, "The PTY was recreated");
   assert.equal(result.closed, 0, "The PTY was closed");
   console.log(
-    `PASS: ${result.characters} keystrokes ${process.argv.includes("--input-events") ? "generated" : "echoed"} in order, ${result.writeCalls} IPC writes, ${result.elapsed} ms (25 ms per IPC)`,
+    `PASS: ${result.characters} keystrokes ${process.argv.includes("--input-events") || process.argv.includes("--ime") ? "generated" : "echoed"} in order, ${result.writeCalls} IPC writes, ${result.elapsed} ms (25 ms per IPC)`,
   );
 } finally {
   await request(`/close?target=${targetId}`);

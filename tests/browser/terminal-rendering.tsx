@@ -78,7 +78,9 @@ async function snapshot(terminal: Terminal): Promise<string> {
 const write = (terminal: Terminal, data: string) =>
   new Promise<void>((resolve) => terminal.write(data, resolve));
 Object.assign(window, {
-  runTerminalInputRegression: async (inputEvents = false) => {
+  runTerminalInputRegression: async (
+    inputEvents: boolean | "ime" | "ime-composition" = false,
+  ) => {
     render(false);
     while (created < 1) await pause();
     const terminal = terminals[0];
@@ -91,11 +93,13 @@ Object.assign(window, {
     const started = performance.now();
     for (const key of command) {
       const keyCode =
-        inputEvents && key === "a"
-          ? 0
-          : key === "\r"
-            ? 13
-            : key.toUpperCase().charCodeAt(0);
+        typeof inputEvents === "string"
+          ? 229
+          : inputEvents && key === "a"
+            ? 0
+            : key === "\r"
+              ? 13
+              : key.toUpperCase().charCodeAt(0);
       const event = new KeyboardEvent("keydown", {
         key: key === "\r" ? "Enter" : key,
         keyCode,
@@ -103,7 +107,39 @@ Object.assign(window, {
         cancelable: true,
       });
       terminal.textarea!.dispatchEvent(event);
-      if (!event.defaultPrevented && inputEvents && key === "a") {
+      if (!event.defaultPrevented && inputEvents === "ime-composition") {
+        terminal.textarea!.dispatchEvent(
+          new CompositionEvent("compositionstart", { bubbles: true }),
+        );
+        terminal.textarea!.dispatchEvent(
+          new CompositionEvent("compositionupdate", {
+            data: key,
+            bubbles: true,
+          }),
+        );
+        terminal.textarea!.value = key;
+        terminal.textarea!.dispatchEvent(
+          new CompositionEvent("compositionend", { data: key, bubbles: true }),
+        );
+        terminal.textarea!.dispatchEvent(
+          new InputEvent("input", {
+            inputType: "insertCompositionText",
+            data: key,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else if (!event.defaultPrevented && inputEvents === "ime") {
+        terminal.textarea!.value += key;
+        terminal.textarea!.dispatchEvent(
+          new InputEvent("input", {
+            inputType: "insertText",
+            data: key,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else if (!event.defaultPrevented && inputEvents && key === "a") {
         terminal.textarea!.dispatchEvent(
           new InputEvent("input", {
             inputType: "insertText",
@@ -127,6 +163,7 @@ Object.assign(window, {
         new KeyboardEvent("keyup", { key, keyCode }),
       );
     }
+    if (typeof inputEvents === "string") await pause();
     generatedInput.dispose();
     if (inputEvents)
       return {
@@ -159,11 +196,15 @@ Object.assign(window, {
     document.documentElement.dataset.stage = "initial";
     render(false);
     while (created < 1) await pause();
-    // Every icon must be supplied by the primary bundled family, including
+    // Every icon must be supplied by the explicit bundled symbol family, including
     // supplementary-plane symbols and all ANSI styles, without OS fallback.
     const icons = [
       "\ue60b",
       "\uf07b",
+      "\uf002", // Sidebar search
+      "\uf126", // Sidebar source control
+      "\uf06e", // Sidebar review
+      "\uf013", // Sidebar settings
       "\uf07c",
       "\uf48a",
       "\uea7f",
@@ -177,11 +218,12 @@ Object.assign(window, {
         ["", "bold ", "italic ", "bold italic "].flatMap((style) =>
           icons.map(async (icon) => {
             const faces = await document.fonts.load(
-              `${style}14px "AgentHub Mono"`,
+              `${style}14px "AgentHub Symbols"`,
               icon,
             );
             return faces.some(
               (face) =>
+                face.family === "AgentHub Symbols" &&
                 face.status === "loaded" &&
                 face.unicodeRange.toUpperCase().includes("E000"),
             );
@@ -230,7 +272,7 @@ Object.assign(window, {
     const first = terminals[0];
     await write(
       first,
-      "\x1b[?25l\x1b[31mABCDEFGHIJKLMNOPQRSTUVWXYZ\x1b[0m\r\n╭── pane ──╮\r\n│ stable   │\r\n╰──────────╯\r\n JSON    folder    markdown\r\n new file    new folder    refresh    collapse",
+      "\x1b[?25l\x1b[31mABCDEFGHIJKLMNOPQRSTUVWXYZ\x1b[0m\r\n╭── pane ──╮\r\n│ stable   │\r\n╰──────────╯\r\n JSON    folder    markdown\r\n new file    new folder    refresh    collapse\r\n files    search    Git    review    settings\r\n\x1b[1m \x1b[0m  \x1b[3m \x1b[0m  \x1b[1;3m \x1b[0m",
     );
     // Reserve both pane widths from the start, so only cache changes are tested.
     first.element!.parentElement!.parentElement!.style.width = "500px";

@@ -9,7 +9,7 @@ import {
 } from "./terminalClipboard";
 import { TerminalContextMenu } from "./TerminalContextMenu";
 import { toast } from "sonner";
-import { handleTerminalTextKey } from "./terminalKeyboard";
+import { bindTerminalTextInput } from "./terminalKeyboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import type { HerdrTarget } from "../../lib/herdrControlApi";
@@ -95,6 +95,7 @@ export function TerminalPane({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
+    const keyboard = bindTerminalTextInput(node, terminal);
     emulator.current = terminal;
     let disposed = false;
     const copySelection = () => {
@@ -203,7 +204,7 @@ export function TerminalPane({
         event.preventDefault();
         return false;
       }
-      return handleTerminalTextKey(event, terminal);
+      return keyboard.handle(event);
     });
     void loadTerminalFonts()
       .catch(fail)
@@ -286,6 +287,7 @@ export function TerminalPane({
       theme.disconnect();
       document.fonts?.removeEventListener("loadingdone", redrawFonts);
       input.dispose();
+      keyboard.dispose();
       unbindPaste();
       inputQueue.dispose();
       showNow.current = () => {};
