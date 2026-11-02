@@ -2376,6 +2376,7 @@
     "chooseFile": "选择文件查看更改",
     "noDiff": "无文本差异，可能是二进制文件或文件模式变化",
     "states": {
+      "untracked": "未跟踪",
       "conflict": "冲突",
       "deleted": "删除",
       "renamed": "重命名",

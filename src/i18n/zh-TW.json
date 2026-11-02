@@ -2336,6 +2336,7 @@
     "chooseFile": "選擇檔案查看變更",
     "noDiff": "無文字差異，可能是二進位檔案或檔案模式變更",
     "states": {
+      "untracked": "未追蹤",
       "conflict": "衝突",
       "deleted": "刪除",
       "renamed": "重新命名",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getProjectGitStatus } from "../lib/gitApi";
+import { getProjectGitStatus, type GitFile } from "../lib/gitApi";
 import { groupGitChanges } from "../lib/gitChanges";
 
 /** Hide previous checkout counts and discard stale status responses. */
@@ -9,6 +9,7 @@ export function useGitChangeCount(projectId?: string, worktreePath?: string) {
     key: string;
     count: number;
     truncated: boolean;
+    files: GitFile[];
   }>();
   useEffect(() => {
     if (!projectId) return;
@@ -24,6 +25,7 @@ export function useGitChangeCount(projectId?: string, worktreePath?: string) {
               key,
               count: groupGitChanges(status.files).count,
               truncated: status.truncated,
+              files: status.files,
             });
         },
         () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronRight,
   FileCode2,
@@ -13,19 +13,33 @@ import {
 } from "../../lib/worktreeApi";
 import { getErrorMessage } from "../../lib/error";
 import { cn } from "../../utils";
+import type { GitFile } from "../../lib/gitApi";
+import {
+  worktreeDecorations,
+  type WorktreeDecoration,
+} from "../../lib/worktreeDecorations";
 
 interface Props {
   projectId: string;
   worktreePath: string;
   selected?: string;
   onSelect: (path: string) => void;
+  gitFiles?: readonly GitFile[];
 }
+
+type TreeProps = Props & {
+  decorations: ReadonlyMap<string, WorktreeDecoration>;
+};
 
 export function WorktreeExplorer(props: Props) {
   const { t } = useTranslation();
   const [revision, setRevision] = useState(0);
   const [collapse, setCollapse] = useState(0);
   const [open, setOpen] = useState(true);
+  const decorations = useMemo(
+    () => worktreeDecorations(props.gitFiles ?? []),
+    [props.gitFiles],
+  );
   const rootName =
     props.worktreePath
       .replace(/[\\/]+$/, "")
@@ -55,7 +69,10 @@ export function WorktreeExplorer(props: Props) {
           aria-label={t("worktree.refreshFiles")}
           title={t("worktree.refreshFiles")}
           className="app-button-ghost h-6 w-6 p-0"
-          onClick={() => setRevision((value) => value + 1)}
+          onClick={() => {
+            setRevision((value) => value + 1);
+            window.dispatchEvent(new Event("project-git-changed"));
+          }}
         >
           <RefreshCw size={14} />
         </button>
@@ -76,6 +93,7 @@ export function WorktreeExplorer(props: Props) {
           path=""
           depth={0}
           collapse={collapse}
+          decorations={decorations}
         />
       </div>
     </aside>
@@ -87,7 +105,7 @@ function Directory({
   depth,
   collapse,
   ...props
-}: Props & { path: string; depth: number; collapse: number }) {
+}: TreeProps & { path: string; depth: number; collapse: number }) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<WorktreeFileEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,40 +162,56 @@ function Directory({
     );
   return (
     <ul>
-      {files.map((file) => (
-        <li key={file.path}>
-          {file.is_dir ? (
-            <FolderEntry
-              {...props}
-              file={file}
-              depth={depth}
-              collapse={collapse}
-            />
-          ) : (
-            <button
-              type="button"
-              disabled={file.is_symlink}
-              title={file.is_symlink ? t("worktree.symlink") : file.path}
-              aria-pressed={props.selected === file.path}
-              onClick={() => props.onSelect(file.path)}
-              style={{ paddingLeft: 28 + depth * 12 }}
-              className={cn(
-                "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
-                props.selected === file.path
-                  ? "bg-surface-active text-primary"
-                  : "text-secondary hover:bg-surface-hover",
-              )}
-            >
-              {file.is_symlink ? (
-                <Link2 size={13} className="shrink-0 text-muted" />
-              ) : (
-                <FileCode2 size={13} className="shrink-0 text-muted" />
-              )}
-              <span className="truncate">{file.name}</span>
-            </button>
-          )}
-        </li>
-      ))}
+      {files.map((file) => {
+        const decoration = props.decorations.get(file.path);
+        return (
+          <li key={file.path}>
+            {file.is_dir ? (
+              <FolderEntry
+                {...props}
+                file={file}
+                depth={depth}
+                collapse={collapse}
+              />
+            ) : (
+              <button
+                type="button"
+                disabled={file.is_symlink}
+                title={file.is_symlink ? t("worktree.symlink") : file.path}
+                aria-pressed={props.selected === file.path}
+                onClick={() => props.onSelect(file.path)}
+                style={{ paddingLeft: 28 + depth * 12 }}
+                className={cn(
+                  "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40",
+                  props.selected === file.path
+                    ? "bg-surface-active"
+                    : "hover:bg-surface-hover",
+                  decoration?.color ??
+                    (props.selected === file.path
+                      ? "text-primary"
+                      : "text-secondary"),
+                )}
+              >
+                {file.is_symlink ? (
+                  <Link2 size={13} className="shrink-0 text-muted" />
+                ) : (
+                  <FileCode2 size={13} className="shrink-0 text-muted" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                {decoration && (
+                  <span
+                    title={t(`git.states.${decoration.status}`)}
+                    aria-label={t(`git.states.${decoration.status}`)}
+                    className="w-4 shrink-0 text-center font-mono text-xs"
+                  >
+                    {decoration.marker}
+                  </span>
+                )}
+              </button>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -187,7 +221,9 @@ function FolderEntry({
   depth,
   collapse,
   ...props
-}: Props & { file: WorktreeFileEntry; depth: number; collapse: number }) {
+}: TreeProps & { file: WorktreeFileEntry; depth: number; collapse: number }) {
+  const { t } = useTranslation();
+  const decoration = props.decorations.get(file.path);
   const [open, setOpen] = useState(false);
   const [previousCollapse, setPreviousCollapse] = useState(collapse);
   if (previousCollapse !== collapse) {
@@ -202,13 +238,28 @@ function FolderEntry({
         title={file.path}
         onClick={() => setOpen(!open)}
         style={{ paddingLeft: 12 + depth * 12 }}
-        className="flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className={cn(
+          "flex h-5 w-full min-w-0 items-center gap-1 pr-2 text-left text-sm hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+          decoration?.color ?? "text-secondary",
+        )}
       >
         <ChevronRight
           size={12}
           className={cn("shrink-0", open && "rotate-90")}
         />
-        <span className="truncate">{file.name}</span>
+        <span className="min-w-0 flex-1 truncate">{file.name}</span>
+        {decoration && (
+          <span
+            title={t("git.changedFiles", { count: decoration.count })}
+            aria-label={t("git.changedFiles", { count: decoration.count })}
+            className="flex w-4 shrink-0 justify-center"
+          >
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 rounded-full bg-current"
+            />
+          </span>
+        )}
       </button>
       {open && (
         <Directory

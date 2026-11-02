@@ -4,8 +4,13 @@ import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { projectCheckoutRoute } from "../../lib/worktreeApi";
 import { WorktreeExplorer } from "./WorktreeExplorer";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
+import type { GitFile } from "../../lib/gitApi";
 
-export function SidebarProjectFiles() {
+export function SidebarProjectFiles({
+  changes,
+}: {
+  changes?: { key: string; files: GitFile[] };
+}) {
   const { pathname, search } = useLocation();
   const route = projectCheckoutRoute(pathname, search);
   const { projects } = useApp();
@@ -23,6 +28,7 @@ export function SidebarProjectFiles() {
       key={scope}
       projectId={project.id}
       worktreePath={worktree.path}
+      gitFiles={changes?.key === scope ? changes.files : undefined}
       selected={files[scope]?.path}
       onSelect={(path) =>
         setFiles((previous) => ({

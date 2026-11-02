@@ -314,7 +314,7 @@ export function Sidebar() {
             )}
           >
             <div hidden={selectedPanel !== "projects"}>
-              <SidebarProjectFiles />
+              <SidebarProjectFiles changes={gitChanges} />
             </div>
             <div hidden={selectedPanel !== "skills"}>
               <SidebarSkillGroups
