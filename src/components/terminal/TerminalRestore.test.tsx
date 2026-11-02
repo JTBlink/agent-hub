@@ -114,6 +114,8 @@ async function render(
               {`Open ${project.id}`}
             </Link>
           ))}
+          <Link to={worktreeUrl(project.id, topic)}>Open topic</Link>
+          <Link to="/settings">Settings</Link>
           <TerminalWorkspace projects={projects} projectsReady={ready} />
         </MemoryRouter>
       </StrictMode>,
@@ -146,69 +148,36 @@ function savedTabs() {
   return [main, other];
 }
 
-it("restores worktree tabs, split layout and the last location after restarting without replaying commands", async () => {
+it("restores only the selected checkout and closes every old pane when switching worktrees", async () => {
   const [main, other] = savedTabs();
-  await render();
+  await render(worktreeUrl(project.id, project.path));
+  expect(creations()).toHaveLength(2);
+  expect(readTerminalLayout().tabs).toEqual([main]);
+  expect(host.querySelectorAll("textarea")).toHaveLength(2);
+  const input = host.querySelector("textarea");
+  await click("Settings");
+  await click(`Open ${project.id}`);
+  expect(host.querySelector("textarea")).toBe(input);
+  expect(creations()).toHaveLength(2);
+
+  await click("Open topic");
+  for (let i = 1; i <= 2; i++)
+    expect(invoke).toHaveBeenCalledWith("terminal_close", { id: `new-${i}` });
   expect(creations()).toHaveLength(3);
-  expect(host.querySelector("output")?.textContent).toBe(
-    worktreeUrl(project.id, topic),
-  );
-  expect(readTerminalLayout().tabs).toEqual([main, other]);
-  expect(
-    host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
-  ).toContain("终端 1");
-  const sessionsTrigger = host.querySelector<HTMLButtonElement>(
-    '[aria-label="全部终端 3/8"]',
-  )!;
-  expect(sessionsTrigger.textContent).toBe("3");
-  expect(sessionsTrigger.title).toBe("全部终端 3/8");
-  await click("全部终端 3/8");
-  expect(
-    document.querySelector('[aria-label="所有项目的终端"]')?.textContent,
-  ).toContain(project.path);
-  expect(
-    document.querySelector('[aria-label="所有项目的终端"]')?.textContent,
-  ).toContain(topic);
-  await click(`切换到 ${project.name} · 终端 1 · ${project.path}`);
-  expect(host.querySelector("output")?.textContent).toBe(
-    worktreeUrl(project.id, project.path),
-  );
-  expect(
-    host.querySelectorAll('[role="tabpanel"]:not([hidden]) textarea'),
-  ).toHaveLength(2);
-  expect(
-    host
-      .querySelector('[role="tabpanel"]:not([hidden])')
-      ?.classList.contains("flex-col"),
-  ).toBe(true);
-  expect(readTerminalLayout().lastActiveId).toBe(main.id);
+  expect(readTerminalLayout().tabs).toHaveLength(1);
+  expect(readTerminalLayout().tabs[0].worktreePath).toBe(topic);
+  expect(readTerminalLayout().tabs[0].id).not.toBe(other.id);
+  expect(host.querySelectorAll("textarea")).toHaveLength(1);
+
+  await click(`Open ${project.id}`);
+  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-3" });
+  expect(readTerminalLayout().tabs).toHaveLength(1);
+  expect(readTerminalLayout().tabs[0].id).not.toBe(main.id);
+  expect(readTerminalLayout().tabs[0].worktreePath).toBe(project.path);
+  expect(creations()).toHaveLength(4);
   expect(
     vi.mocked(invoke).mock.calls.some(([name]) => name === "terminal_write"),
   ).toBe(false);
-
-  await act(async () => root.unmount());
-  root = createRoot(host);
-  await render();
-  expect(host.querySelector("output")?.textContent).toBe(
-    worktreeUrl(project.id, project.path),
-  );
-  expect(creations()).toHaveLength(6);
-  expect(
-    host.querySelectorAll('[role="tabpanel"]:not([hidden]) textarea'),
-  ).toHaveLength(2);
-  await click("全部终端 3/8");
-  const overview = document.querySelector<HTMLElement>(
-    '[aria-label="所有项目的终端"]',
-  )!;
-  await act(async () =>
-    overview.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    ),
-  );
-  expect(document.querySelector('[aria-label="所有项目的终端"]')).toBeNull();
-  expect(document.activeElement?.getAttribute("aria-label")).toBe(
-    "全部终端 3/8",
-  );
 });
 
 it("waits for projects and all eight leftover PTYs to close before recreating saved panes", async () => {
@@ -281,7 +250,7 @@ it("keeps the saved layout when startup reconciliation fails and allows retry", 
   expect(readTerminalLayout().tabs).toHaveLength(2);
   await click("重试");
   expect(host.querySelector('[role="alert"]')).toBeNull();
-  expect(creations()).toHaveLength(3);
+  expect(creations()).toHaveLength(1);
 });
 
 it("does not reopen removed projects or unavailable worktrees", async () => {
@@ -316,7 +285,7 @@ it("does not reopen removed projects or unavailable worktrees", async () => {
   );
 });
 
-it("keeps split panes and each project's active tab when switching projects repeatedly", async () => {
+it("closes all old project panes and starts fresh when returning", async () => {
   const other = {
     ...makeProject(),
     id: "other",
@@ -332,56 +301,28 @@ it("keeps split panes and each project's active tab when switching projects repe
     tab.panes.push(`split-${index}`);
     return tab;
   });
-  writeTerminalLayout({
-    tabs,
-    activeIds: { [terminalScopeKey(project.id, project.path)]: tabs[0].id },
-    lastActiveId: tabs[0].id,
-  });
+  writeTerminalLayout({ tabs, activeIds: {}, lastActiveId: tabs[0].id });
   await render(worktreeUrl(project.id, project.path), [project, other]);
-  const panels = [...host.querySelectorAll('[role="tabpanel"]')];
-  const input = panels[0].querySelector("textarea")!;
-  expect(creations()).toHaveLength(6);
+  expect(creations()).toHaveLength(4);
+  await click(`Open ${other.id}`);
+  for (let i = 1; i <= 4; i++)
+    expect(invoke).toHaveBeenCalledWith("terminal_close", { id: `new-${i}` });
+  expect(readTerminalLayout().tabs.map((tab) => tab.projectId)).toEqual([
+    other.id,
+  ]);
   for (let i = 0; i < 3; i++) {
-    await click(`Open ${other.id}`);
-    expect(panels.every((panel) => panel.hasAttribute("hidden"))).toBe(true);
-    expect(creations()).toHaveLength(7);
-    expect(readTerminalLayout().tabs.map((tab) => tab.id)).toEqual([
-      ...tabs.map((tab) => tab.id),
-      readTerminalLayout().tabs.at(-1)?.id,
-    ]);
     await click(`Open ${project.id}`);
-    expect(host.querySelector('[role="tabpanel"]:not([hidden])')).toBe(
-      panels[0],
-    );
-    expect(panels[0].querySelector("textarea")).toBe(input);
-    expect(creations()).toHaveLength(7);
-    expect(invoke).not.toHaveBeenCalledWith(
-      "terminal_close",
-      expect.anything(),
-    );
+    expect(readTerminalLayout().tabs).toHaveLength(1);
+    expect(readTerminalLayout().tabs[0].projectId).toBe(project.id);
+    expect(readTerminalLayout().tabs[0].id).not.toBe(tabs[0].id);
+    await click(`Open ${other.id}`);
+    expect(readTerminalLayout().tabs).toHaveLength(1);
+    expect(readTerminalLayout().tabs[0].projectId).toBe(other.id);
   }
-  await act(async () => {
-    input.value = "echo still-running";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  expect(invoke).toHaveBeenCalledWith("terminal_write", {
-    id: "new-1",
-    data: "echo still-running",
-  });
-  await click("全部终端 7/8");
-  await click(`切换到 ${other.name} · 终端 1 · ${other.path}`);
-  expect(host.querySelector("output")?.textContent).toBe(
-    worktreeUrl(other.id, other.path),
-  );
-  expect(creations()).toHaveLength(7);
-  await click("全部终端 7/8");
-  await click(`关闭 ${project.name} · 终端 1 · ${project.path}`);
-  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
-  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-2" });
-  expect(readTerminalLayout().tabs).toHaveLength(3);
+  expect(creations()).toHaveLength(11);
 });
 
-it("reuses a Herdr attachment when returning through the sidebar with a refreshed target", async () => {
+it("opens a fresh Herdr client when returning through the sidebar with a refreshed target", async () => {
   const other = {
     ...makeProject(),
     id: "other",
@@ -390,7 +331,7 @@ it("reuses a Herdr attachment when returning through the sidebar with a refreshe
   };
   const tab = createTerminalTab(project.id, undefined, project.path);
   const target = {
-    session: "isolated",
+    session: "default",
     workspace_id: "w1",
     pane_id: "w1:p1",
     terminal_id: "native-1",
@@ -432,23 +373,30 @@ it("reuses a Herdr attachment when returning through the sidebar with a refreshe
   for (let i = 0; i < 3; i++) {
     await click("Other workspace");
     await click("Herdr workspace");
-    expect(creations()).toHaveLength(2);
-    expect(host.querySelector('[role="tabpanel"]:not([hidden]) textarea')).toBe(
-      input,
-    );
-    expect(invoke).not.toHaveBeenCalledWith(
-      "terminal_close",
-      expect.anything(),
-    );
+    expect(creations()).toHaveLength(3 + i * 2);
+    expect(
+      host.querySelector('[role="tabpanel"]:not([hidden]) textarea'),
+    ).not.toBe(input);
+    expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
+    expect(creations().at(-1)?.[1]).toMatchObject({
+      request: {
+        target: {
+          ...target,
+          pane_id: "w1:p2",
+          terminal_id: "native-2",
+          revision: 4,
+        },
+      },
+    });
     expect(invoke).not.toHaveBeenCalledWith(
       "terminal_write",
       expect.anything(),
     );
-    expect(readTerminalLayout().tabs).toHaveLength(2);
+    expect(readTerminalLayout().tabs).toHaveLength(1);
   }
 });
 
-it("keeps all eight panes at capacity until the user explicitly closes a terminal", async () => {
+it("releases a full project's eight panes before opening the next project", async () => {
   const other = {
     ...makeProject(),
     id: "other",
@@ -461,14 +409,11 @@ it("keeps all eight panes at capacity until the user explicitly closes a termina
   writeTerminalLayout({ tabs, activeIds: {}, lastActiveId: tabs[0].id });
   await render(worktreeUrl(project.id, project.path), [project, other]);
   await click(`Open ${other.id}`);
-  expect(creations()).toHaveLength(8);
-  expect(invoke).not.toHaveBeenCalledWith("terminal_close", expect.anything());
-  expect(host.querySelector('[role="tabpanel"]:not([hidden])')).toBeNull();
-  await click("全部终端 8/8");
-  await click(`关闭 ${project.name} · 终端 1 · ${project.path}`);
   expect(creations()).toHaveLength(9);
-  expect(invoke).toHaveBeenCalledWith("terminal_close", { id: "new-1" });
-  expect(readTerminalLayout().tabs).toHaveLength(8);
+  for (let i = 1; i <= 8; i++)
+    expect(invoke).toHaveBeenCalledWith("terminal_close", { id: `new-${i}` });
+  expect(readTerminalLayout().tabs).toHaveLength(1);
+  expect(readTerminalLayout().tabs[0].projectId).toBe(other.id);
   expect(
     host
       .querySelector('[role="tabpanel"]:not([hidden])')
@@ -476,7 +421,7 @@ it("keeps all eight panes at capacity until the user explicitly closes a termina
   ).toBe(other.name);
 });
 
-it("restores only the selected project from an older layout containing multiple projects", async () => {
+it("restores only the selected checkout from an older layout containing multiple projects", async () => {
   const other = {
     ...makeProject(),
     id: "other",
@@ -491,7 +436,7 @@ it("restores only the selected project from an older layout containing multiple 
     lastActiveId: foreign.id,
   });
   await render(worktreeUrl(project.id, project.path), [project, other]);
-  expect(creations()).toHaveLength(3);
+  expect(creations()).toHaveLength(2);
   expect(
     creations().every(
       ([, args]) =>
@@ -501,5 +446,5 @@ it("restores only the selected project from an older layout containing multiple 
         args.projectId === project.id,
     ),
   ).toBe(true);
-  expect(readTerminalLayout().tabs).toEqual([main, checkout]);
+  expect(readTerminalLayout().tabs).toEqual([main]);
 });

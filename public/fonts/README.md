@@ -12,3 +12,8 @@ No system font installation or runtime network request is required.
 
 The text font preserves a monospaced terminal grid. Symbols Only supplies Git,
 file, folder, Powerline and other private-use icons without replacing CJK text.
+
+The CSS family `AgentHub Mono` is composite: its private-use Unicode ranges
+select Symbols Only directly, including bold and italic ANSI text. Terminal
+startup explicitly loads text and icon samples before measuring or rendering
+cells, so icon rendering does not depend on system font fallback.

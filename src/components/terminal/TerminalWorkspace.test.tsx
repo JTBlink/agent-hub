@@ -490,7 +490,7 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   host.remove();
 });
 
-it("keeps terminals, split panes and the selected tab independent for each worktree", async () => {
+it("closes old tabs and splits when switching worktrees and preserves the current checkout on other pages", async () => {
   const { makeProject } = await import("../../../tests/fixtures/workspace");
   const project = makeProject();
   let next = 0;
@@ -560,34 +560,36 @@ it("keeps terminals, split panes and the selected tab independent for each workt
   expect(original).toHaveLength(2);
   original[1].value = "unfinished command";
   await openNew(host);
-  const selectedTab = host.querySelector(
-    '[role="tab"][aria-selected="true"]',
-  )?.textContent;
   const beforeSwitch = creations().length;
   await click('[data-nav="topic"]');
   expect(inputs()).toHaveLength(1);
+  expect(original.every((input) => !input.isConnected)).toBe(true);
+  for (let i = 1; i <= beforeSwitch; i++)
+    expect(invoke).toHaveBeenCalledWith("terminal_close", { id: `pty-${i}` });
   expect(creations().at(-1)?.[1]).toMatchObject({ worktreePath: topicPath });
+  const topicInput = inputs()[0];
   await click('[data-nav="skills"]');
   expect(
     host
       .querySelector('section[aria-label="terminal.title"]')
       ?.hasAttribute("hidden"),
   ).toBe(true);
-  await click('[data-nav="main"]');
-  expect(
-    host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
-  ).toBe(selectedTab);
-  const first = host.querySelector<HTMLElement>('[role="tab"]')!;
-  await act(async () => first.click());
-  expect(inputs()).toEqual(original);
-  expect(inputs()[1].value).toBe("unfinished command");
+  await click('[data-nav="topic"]');
+  expect(inputs()[0]).toBe(topicInput);
   expect(creations()).toHaveLength(beforeSwitch + 1);
+  await click('[data-nav="main"]');
+  expect(topicInput.isConnected).toBe(false);
+  expect(inputs()).toHaveLength(1);
+  expect(inputs()[0].value).toBe("");
+  expect(host.querySelectorAll('[role="tab"]')).toHaveLength(1);
+  expect(creations()).toHaveLength(beforeSwitch + 2);
   await click('[data-nav="topic"]');
   await click('[aria-label="terminal.closeTab"]');
+  expect(host.querySelector('[role="tab"]')).toBeNull();
   await click('[data-nav="main"]');
   await click('[data-nav="topic"]');
-  expect(host.querySelector('[role="tab"]')).toBeNull();
-  expect(creations()).toHaveLength(beforeSwitch + 1);
+  expect(inputs()).toHaveLength(1);
+  expect(creations()).toHaveLength(beforeSwitch + 5);
   await act(async () => root.unmount());
   host.remove();
 });

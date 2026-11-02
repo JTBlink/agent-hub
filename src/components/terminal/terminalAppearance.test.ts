@@ -33,8 +33,12 @@ it("loads text styles and symbols at the configured code size before PTY measure
     'bold 16px "AgentHub Mono"',
     'italic 16px "AgentHub Mono"',
     'bold italic 16px "AgentHub Mono"',
-    '16px "AgentHub Symbols"',
   ]);
+  for (const [, sample] of load.mock.calls) {
+    expect(sample).toContain("M");
+    expect(sample).toContain("\ue60b");
+    expect(sample).toContain("\udb80\udc01");
+  }
 });
 
 it("scales terminal cells through font size so mouse reporting uses visible pixels", () => {

@@ -31,16 +31,14 @@ export async function loadTerminalFonts(): Promise<void> {
     getComputedStyle(document.documentElement),
   ).fontSize;
   const size = fontSize ? `${fontSize}px` : "1em";
-  await Promise.all([
-    document.fonts.load(`${size} "AgentHub Mono"`),
-    document.fonts.load(`bold ${size} "AgentHub Mono"`),
-    document.fonts.load(`italic ${size} "AgentHub Mono"`),
-    document.fonts.load(`bold italic ${size} "AgentHub Mono"`),
-    document.fonts.load(
-      `${size} "AgentHub Symbols"`,
-      "\ue0a0\uf07b\udb80\udc01",
+  // FontFaceSet.load defaults to a space, which never selects a unicode-range
+  // icon face. Include text, BMP icons and supplementary icons in every style.
+  const sample = "M\ue0a0\ue60b\uf07b\ueb37\udb80\udc01";
+  await Promise.all(
+    ["", "bold ", "italic ", "bold italic "].map((style) =>
+      document.fonts.load(`${style}${size} "AgentHub Mono"`, sample),
     ),
-  ]);
+  );
 }
 
 /** ANSI colors are theme tokens, independent of the shell or running TUI. */

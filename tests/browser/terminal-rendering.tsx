@@ -1,4 +1,5 @@
 import React from "react";
+import { HerdrSessionPicker } from "../../src/components/herdr/HerdrSessionPicker";
 import { createRoot } from "react-dom/client";
 import { Terminal } from "@xterm/xterm";
 import "../../src/i18n";
@@ -77,15 +78,24 @@ async function snapshot(terminal: Terminal): Promise<string> {
 const write = (terminal: Terminal, data: string) =>
   new Promise<void>((resolve) => terminal.write(data, resolve));
 Object.assign(window, {
-  runTerminalInputRegression: async () => {
+  runTerminalInputRegression: async (inputEvents = false) => {
     render(false);
     while (created < 1) await pause();
     const terminal = terminals[0];
     writeDelay = 25;
-    const command = `${"git branch ".repeat(30)}\r`;
+    let generated = "";
+    const generatedInput = terminal.onData((data) => {
+      generated += data;
+    });
+    const command = inputEvents ? "clear" : `${"git branch ".repeat(30)}\r`;
     const started = performance.now();
     for (const key of command) {
-      const keyCode = key === "\r" ? 13 : key.toUpperCase().charCodeAt(0);
+      const keyCode =
+        inputEvents && key === "a"
+          ? 0
+          : key === "\r"
+            ? 13
+            : key.toUpperCase().charCodeAt(0);
       const event = new KeyboardEvent("keydown", {
         key: key === "\r" ? "Enter" : key,
         keyCode,
@@ -93,7 +103,16 @@ Object.assign(window, {
         cancelable: true,
       });
       terminal.textarea!.dispatchEvent(event);
-      if (!event.defaultPrevented) {
+      if (!event.defaultPrevented && inputEvents && key === "a") {
+        terminal.textarea!.dispatchEvent(
+          new InputEvent("input", {
+            inputType: "insertText",
+            data: key,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else if (!event.defaultPrevented) {
         terminal.textarea!.dispatchEvent(
           new KeyboardEvent("keypress", {
             key,
@@ -108,8 +127,19 @@ Object.assign(window, {
         new KeyboardEvent("keyup", { key, keyCode }),
       );
     }
+    generatedInput.dispose();
+    if (inputEvents)
+      return {
+        complete: generated === command,
+        received: generated,
+        characters: command.length,
+        writeCalls,
+        elapsed: Math.round(performance.now() - started),
+        created,
+        closed,
+      };
     while (written.length < command.length) {
-      if (performance.now() - started > 15000) throw new Error("Input stalled");
+      if (performance.now() - started > 15000) break;
       await pause();
     }
     const displayed = terminal.buffer.active
@@ -129,10 +159,78 @@ Object.assign(window, {
     document.documentElement.dataset.stage = "initial";
     render(false);
     while (created < 1) await pause();
+    // Every icon must be supplied by the primary bundled family, including
+    // supplementary-plane symbols and all ANSI styles, without OS fallback.
+    const icons = [
+      "\ue60b",
+      "\uf07b",
+      "\uf07c",
+      "\uf48a",
+      "\uea7f",
+      "\uea80",
+      "\ueb37",
+      "\ueac5",
+      "\udb80\udc01",
+    ];
+    const iconsReady = (
+      await Promise.all(
+        ["", "bold ", "italic ", "bold italic "].flatMap((style) =>
+          icons.map(async (icon) => {
+            const faces = await document.fonts.load(
+              `${style}14px "AgentHub Mono"`,
+              icon,
+            );
+            return faces.some(
+              (face) =>
+                face.status === "loaded" &&
+                face.unicodeRange.toUpperCase().includes("E000"),
+            );
+          }),
+        ),
+      )
+    ).every(Boolean);
+    const canvas = document.createElement("canvas");
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext("2d")!;
+    const pixels = (font: string, glyph: string) => {
+      context.clearRect(0, 0, 64, 64);
+      context.font = font;
+      context.fillText(glyph, 8, 40);
+      return canvas.toDataURL();
+    };
+    const stack = getComputedStyle(document.documentElement).getPropertyValue(
+      "--font-family-code",
+    );
+    const iconPixelsCorrect = (
+      await Promise.all(
+        ["", "bold ", "italic ", "bold italic "].map(async (style, index) => {
+          const family = `IconReference${index}`;
+          const face = new FontFace(
+            family,
+            'url("/fonts/SymbolsNerdFontMono-Regular.ttf")',
+            {
+              style: style.includes("italic") ? "italic" : "normal",
+              weight: style.includes("bold") ? "700" : "400",
+            },
+          );
+          document.fonts.add(await face.load());
+          try {
+            return icons.every(
+              (icon) =>
+                pixels(`${style}24px ${stack}`, icon) ===
+                pixels(`${style}24px ${family}`, icon),
+            );
+          } finally {
+            document.fonts.delete(face);
+          }
+        }),
+      )
+    ).every(Boolean);
     const first = terminals[0];
     await write(
       first,
-      "\x1b[?25l\x1b[31mABCDEFGHIJKLMNOPQRSTUVWXYZ\x1b[0m\r\n╭── pane ──╮\r\n│ stable   │\r\n╰──────────╯",
+      "\x1b[?25l\x1b[31mABCDEFGHIJKLMNOPQRSTUVWXYZ\x1b[0m\r\n╭── pane ──╮\r\n│ stable   │\r\n╰──────────╯\r\n JSON    folder    markdown\r\n new file    new folder    refresh    collapse",
     );
     // Reserve both pane widths from the start, so only cache changes are tested.
     first.element!.parentElement!.parentElement!.style.width = "500px";
@@ -149,8 +247,78 @@ Object.assign(window, {
     await pause();
     const after = await snapshot(first);
     const cacheStable = before === after;
+    let gridFits = true;
+    let noOuterInsets = true;
+    for (const scale of [1, 1.2]) {
+      document.documentElement.style.zoom = String(scale);
+      document.documentElement.style.setProperty("--app-scale", String(scale));
+      await pause();
+      for (const terminal of terminals) {
+        const screen = terminal
+          .element!.querySelector(".xterm-screen")!
+          .getBoundingClientRect();
+        const container =
+          terminal.element!.parentElement!.getBoundingClientRect();
+        noOuterInsets &&=
+          Math.abs(screen.left - container.left) < 1 &&
+          Math.abs(screen.top - container.top) < 1;
+        gridFits &&=
+          screen.bottom <= container.bottom + 1 &&
+          container.bottom - screen.bottom <
+            screen.height / terminal.rows + 1 &&
+          screen.right <= container.right - 11;
+      }
+    }
+    let gutterMatchesBackground = true;
+    for (const dark of [false, true]) {
+      document.documentElement.classList.toggle("dark", dark);
+      await pause();
+      for (const terminal of terminals) {
+        // TUIs may change their default background through OSC 11.
+        terminal.options.theme = {
+          ...terminal.options.theme,
+          background: "#000000",
+        };
+        const container = terminal.element!.parentElement!;
+        const gutter = terminal.element!.querySelector(
+          ".xterm-scrollable-element",
+        )!;
+        gutterMatchesBackground &&=
+          getComputedStyle(gutter).backgroundColor ===
+          getComputedStyle(container).backgroundColor;
+      }
+    }
+    const pickerHost = document.createElement("div");
+    pickerHost.className = "flex w-64 items-center";
+    document.body.append(pickerHost);
+    const picker = createRoot(pickerHost);
+    picker.render(
+      <HerdrSessionPicker
+        session="default"
+        inventory={{
+          installed: true,
+          sessions: [{ name: "default", default: true, running: true }],
+        }}
+        disabled={false}
+        onChange={() => {}}
+        onRefresh={() => {}}
+      />,
+    );
+    await pause();
+    pickerHost.querySelector<HTMLButtonElement>('[role="combobox"]')!.click();
+    await pause();
+    const menu = document.querySelector<HTMLElement>('[role="listbox"]')!;
+    const sessionMenuFits = menu.scrollHeight === menu.clientHeight;
+    picker.unmount();
+    pickerHost.remove();
     const result = {
+      sessionMenuFits,
+      noOuterInsets,
+      gutterMatchesBackground,
+      gridFits,
       cacheStable,
+      iconsReady,
+      iconPixelsCorrect,
       created,
       closed,
       webglPanes: Array.from(document.querySelectorAll(".xterm canvas")).filter(

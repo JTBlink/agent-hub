@@ -31,7 +31,11 @@ export interface TerminalStartupState {
 export function useTerminalLayout(
   projects: Project[],
   projectsReady: boolean,
-  scope: { projectId?: string; path?: string; initialize: boolean },
+  scope: {
+    projectId?: string;
+    path?: string;
+    initialize: boolean;
+  },
 ) {
   const { projectId, path, initialize } = scope;
   const { t } = useTranslation();
@@ -49,16 +53,26 @@ export function useTerminalLayout(
   const [attempt, setAttempt] = useState(0);
   const [lastActiveId, rememberActive] = useState(saved.lastActiveId);
   const [initializedScopes, setInitializedScopes] = useState<string[]>([]);
-  // Scope changes only select visible panes; their emulator and PTY stay owned
-  // by the mounted workspace until the user closes them or the app exits.
+  const scopeKey = terminalScopeKey(projectId, path);
+  const [owner, setOwner] = useState(scopeKey);
+  // Only the selected checkout owns terminals. Unmounting old panes closes
+  // their PTYs; leaving for a non-workspace page keeps the current owner.
+  const scopeChanged = ready && !!projectId && !!path && scopeKey !== owner;
+  if (scopeChanged) {
+    setOwner(scopeKey);
+    setTabs([]);
+    setActiveIds({});
+    setInitializedScopes([]);
+    rememberActive("");
+  }
   const scopedTabs = projectId
     ? tabs.filter(
         (tab) => tab.projectId === projectId && tab.worktreePath === path,
       )
     : tabs;
-  const scopeKey = terminalScopeKey(projectId, path);
   if (
     ready &&
+    !scopeChanged &&
     initialize &&
     projectId &&
     path &&
@@ -117,12 +131,14 @@ export function useTerminalLayout(
         const previous =
           layout.tabs.find((tab) => tab.id === layout.lastActiveId) ??
           layout.tabs.at(-1);
-        // On restart, open shells only for the entry project. During this run,
-        // tabs from every visited project remain mounted and share the limit.
+        // On restart, open shells only for the entry project.
         const entryProject = projectId ?? previous?.projectId;
+        const entryPath = path ?? previous?.worktreePath;
         const restoredTabs = layout.tabs.filter(
-          (tab) => tab.projectId === entryProject,
+          (tab) =>
+            tab.projectId === entryProject && tab.worktreePath === entryPath,
         );
+        setOwner(terminalScopeKey(entryProject, entryPath));
         const restoredIds = new Set(restoredTabs.map((tab) => tab.id));
         setTabs(restoredTabs);
         setActiveIds(
@@ -170,6 +186,7 @@ export function useTerminalLayout(
     };
   }, [
     projectId,
+    path,
     projects,
     projectsReady,
     ready,

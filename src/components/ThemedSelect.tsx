@@ -57,7 +57,7 @@ function positionFor(
   const above = rect.top / scale - 8;
   const desired = fitContent
     ? Math.max(count * 36 + 10, (menu?.scrollHeight ?? 0) + 2)
-    : Math.min(256, count * 36 + 8);
+    : Math.min(256, count * 36 + 10);
   const upwards = below < desired && above > below;
   const height = Math.max(
     36,
@@ -304,6 +304,7 @@ export function ThemedSelect({
               width: fitContent ? "max-content" : position.width,
               minWidth: fitContent ? position.width : undefined,
               maxWidth: "calc(100vw / var(--app-scale) - 16px)",
+              height: position.height,
               maxHeight: position.height,
             }}
             className="z-[100] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-xl"

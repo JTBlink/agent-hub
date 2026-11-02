@@ -1,5 +1,7 @@
 /* The application uses negative tracking; terminal cells must remain exact. */
 .terminal-emulator .xterm {
+  padding: 0;
+  background: var(--terminal-background);
   letter-spacing: 0;
   font-kerning: none;
   font-variant-ligatures: none;
@@ -14,5 +16,11 @@
   zoom: calc(1 / var(--app-scale, 1));
   background: var(--terminal-background);
   color: var(--terminal-foreground);
-  padding: 8px 12px;
+}
+
+/* The scrollbar gutter sits outside the painted character grid. Keep it on
+   the workbench background even when a TUI changes xterm's default color. */
+.terminal-emulator .xterm-scrollable-element,
+.terminal-emulator .xterm-viewport {
+  background-color: var(--terminal-background) !important;
 }

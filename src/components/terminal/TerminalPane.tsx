@@ -4,6 +4,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
 import { createTerminalRenderer } from "./terminalRenderer";
 import { bindTerminalPaste } from "./terminalClipboard";
+import { handleTerminalTextKey } from "./terminalKeyboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import type { HerdrTarget } from "../../lib/herdrControlApi";
@@ -168,7 +169,7 @@ export function TerminalPane({
         event.preventDefault();
         return false;
       }
-      return true;
+      return handleTerminalTextKey(event, terminal);
     });
     void loadTerminalFonts()
       .catch(fail)

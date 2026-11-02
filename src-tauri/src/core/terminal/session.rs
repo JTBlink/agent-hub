@@ -221,6 +221,8 @@ impl Session {
         #[cfg(not(unix))]
         let foreground_program = false;
         shell.input(&bytes, foreground_program);
+        // Output parsing also needs this lock while the PTY drains input.
+        drop(shell);
         self.enqueue(bytes)
     }
     fn enqueue(&self, bytes: Vec<u8>) -> Result<()> {
@@ -230,13 +232,17 @@ impl Session {
         if self.exited.load(Ordering::Acquire) || self.is_closed() {
             bail!("Terminal has exited");
         }
-        self.input
+        // Wait for capacity instead of rejecting a transient burst. Clone the
+        // sender first so close() can drop its handle and terminate the PTY
+        // while a writer is waiting for the receiver to drain.
+        let sender = self
+            .input
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .as_ref()
             .context("Terminal input is closed")?
-            .try_send(bytes)
-            .context("Terminal input queue is full or closed")
+            .clone();
+        sender.send(bytes).context("Terminal input is closed")
     }
     pub fn launch_state(&self) -> super::LaunchState {
         self.shell

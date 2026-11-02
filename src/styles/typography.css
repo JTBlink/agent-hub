@@ -5,6 +5,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
 }
 
 @font-face {
@@ -13,6 +14,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
+  unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
 }
 
 @font-face {
@@ -21,6 +23,7 @@
   font-style: italic;
   font-weight: 400;
   font-display: swap;
+  unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
 }
 
 @font-face {
@@ -29,14 +32,44 @@
   font-style: italic;
   font-weight: 700;
   font-display: swap;
+  unicode-range: U+0-DFFF, U+F900-FFFF, U+10000-EFFFF;
 }
 
+/* Route private-use icons through the primary family for every ANSI style. */
 @font-face {
-  font-family: "AgentHub Symbols";
+  font-family: "AgentHub Mono";
   src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  unicode-range: U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD;
+}
+
+@font-face {
+  font-family: "AgentHub Mono";
+  src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD;
+}
+
+@font-face {
+  font-family: "AgentHub Mono";
+  src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD;
+}
+
+@font-face {
+  font-family: "AgentHub Mono";
+  src: url("/fonts/SymbolsNerdFontMono-Regular.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD;
 }
 
 @layer base {
@@ -46,8 +79,8 @@
       "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei",
       system-ui, sans-serif;
     --font-family-code:
-      "AgentHub Mono", "AgentHub Symbols", "SF Mono", Menlo, Consolas,
-      "PingFang SC", "Microsoft YaHei", monospace;
+      "AgentHub Mono", "SF Mono", Menlo, Consolas, "PingFang SC",
+      "Microsoft YaHei", monospace;
     --font-size-caption: 12px;
     --font-size-ui: 13px;
     --font-size-code: 14px;

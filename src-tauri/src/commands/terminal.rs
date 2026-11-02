@@ -87,9 +87,15 @@ pub async fn terminal_write(
     id: String,
     data: String,
 ) -> Result<(), AppError> {
-    manager
-        .write(&owner(&window)?, &id, data.into_bytes())
-        .map_err(AppError::io)
+    let owner = owner(&window)?;
+    let manager = manager.inner().clone();
+    // Input backpressure must never block the async IPC executor.
+    tauri::async_runtime::spawn_blocking(move || {
+        manager
+            .write(&owner, &id, data.into_bytes())
+            .map_err(AppError::io)
+    })
+    .await?
 }
 #[tauri::command]
 pub async fn terminal_resize(

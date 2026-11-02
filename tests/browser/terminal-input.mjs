@@ -1,5 +1,5 @@
 // Requires Vite on :1420 and the shared browser CDP proxy on :3456.
-// Run: node tests/browser/terminal-input.mjs
+// Run: node tests/browser/terminal-input.mjs [--input-events]
 import assert from "node:assert/strict";
 
 const proxy = "http://localhost:3456";
@@ -27,7 +27,7 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   await evaluate(
-    'window.runTerminalInputRegression().then(result => window.inputResult = result).catch(error => window.inputResult = {error: String(error)}); "started"',
+    `window.runTerminalInputRegression(${process.argv.includes("--input-events")}).then(result => window.inputResult = result).catch(error => window.inputResult = {error: String(error)}); "started"`,
   );
   let result;
   while (!result) {
@@ -39,9 +39,14 @@ try {
   assert.equal(
     result.complete,
     true,
-    "Keystrokes were lost, duplicated or reordered",
+    `Keystrokes were lost, duplicated or reordered: ${result.received ?? ""}`,
   );
-  assert.equal(result.displayed, true, "The emulator did not echo the command");
+  if (!process.argv.includes("--input-events"))
+    assert.equal(
+      result.displayed,
+      true,
+      "The emulator did not echo the command",
+    );
   assert.ok(
     result.writeCalls <= 3,
     "Queued keys waited for individual IPC calls",
@@ -49,7 +54,7 @@ try {
   assert.equal(result.created, 1, "The PTY was recreated");
   assert.equal(result.closed, 0, "The PTY was closed");
   console.log(
-    `PASS: ${result.characters} keystrokes echoed in order, ${result.writeCalls} IPC writes, ${result.elapsed} ms (25 ms per IPC)`,
+    `PASS: ${result.characters} keystrokes ${process.argv.includes("--input-events") ? "generated" : "echoed"} in order, ${result.writeCalls} IPC writes, ${result.elapsed} ms (25 ms per IPC)`,
   );
 } finally {
   await request(`/close?target=${targetId}`);

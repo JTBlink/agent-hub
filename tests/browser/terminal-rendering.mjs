@@ -35,9 +35,39 @@ try {
   }
   assert.equal(result.error, undefined, result.error);
   assert.equal(
+    result.sessionMenuFits,
+    true,
+    "Single-session menu must fit without scrolling",
+  );
+  assert.equal(
+    result.noOuterInsets,
+    true,
+    "Terminal content has outer top or side padding",
+  );
+  assert.equal(
+    result.gutterMatchesBackground,
+    true,
+    "Scrollbar gutter shows a black background",
+  );
+  assert.equal(
+    result.gridFits,
+    true,
+    "Terminal grid clips the last row or column at default or enlarged text size",
+  );
+  assert.equal(
     result.cacheStable,
     true,
     "Opening a peer pane corrupted existing glyphs",
+  );
+  assert.equal(
+    result.iconsReady,
+    true,
+    "Private-use icons are missing from the bundled primary font",
+  );
+  assert.equal(
+    result.iconPixelsCorrect,
+    true,
+    "Terminal icons differ from the bundled symbol glyphs",
   );
   assert.equal(result.created, 2, "A PTY was unexpectedly recreated");
   assert.equal(result.closed, 0, "An existing PTY was closed");
@@ -47,7 +77,7 @@ try {
     "Both panes must use real WebGL renderers",
   );
   console.log(
-    "PASS: peer pane preserves pixels; real WebGL; both PTYs retained",
+    "PASS: bundled icons match pixels in all ANSI styles; peer pane preserves pixels; real WebGL; both PTYs retained",
   );
 } finally {
   await request(`/close?target=${targetId}`);
