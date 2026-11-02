@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +9,7 @@ import {
   applicationMenuOptions,
   installApplicationMenu,
 } from "../lib/applicationMenu";
-import { openProjectFolder } from "../lib/openProject";
+import { useOpenProject } from "./useOpenProject";
 import {
   toggleDeveloperTools,
   touchProjectVisited,
@@ -25,7 +25,7 @@ export function useApplicationMenu(
   const { t } = useTranslation();
   const { projects, refreshProjects } = useApp();
   const navigate = useNavigate();
-  const opening = useRef(false);
+  const { openProject } = useOpenProject();
   const handlers = {
     navigate: (path: string) => {
       void navigate(path);
@@ -43,25 +43,7 @@ export function useApplicationMenu(
         .then(refreshProjects)
         .catch(() => {});
     },
-    openProject: () => {
-      if (opening.current) return;
-      opening.current = true;
-      void (async () => {
-        try {
-          const project = await openProjectFolder();
-          if (!project) return;
-          await refreshProjects();
-          navigate(worktreeUrl(project.id, project.path));
-          void touchProjectVisited(project.id)
-            .then(refreshProjects)
-            .catch(() => {});
-        } catch (error) {
-          toast.error(getErrorMessage(error, t("common.requestFailed")));
-        } finally {
-          opening.current = false;
-        }
-      })();
-    },
+    openProject: () => void openProject(),
     closeWindow: () => {
       void emit("window-close-requested").catch(console.error);
     },
@@ -70,7 +52,9 @@ export function useApplicationMenu(
     },
   };
   const latest = useRef(handlers);
-  latest.current = handlers;
+  useLayoutEffect(() => {
+    latest.current = handlers;
+  });
   useEffect(() => {
     if (!isTauri()) return;
     let disposed = false;

@@ -11,6 +11,11 @@ import { worktreeUrl } from "../lib/worktreeApi";
 import { Dashboard } from "./Dashboard";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
 import { useLocation } from "react-router-dom";
+import { openProjectFolder } from "../lib/openProject";
+import { toast } from "sonner";
+
+vi.mock("../lib/openProject", () => ({ openProjectFolder: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 const app = vi.hoisted(() => ({
   managedSkills: [] as ManagedSkill[],
@@ -21,6 +26,7 @@ const app = vi.hoisted(() => ({
   loading: false,
   projects: [] as Project[],
   tools: [] as ToolInfo[],
+  refreshProjects: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../context/AppContext", () => ({
   useApp: () => app,
@@ -103,6 +109,54 @@ it("opens the automation overview from the dashboard", async () => {
   expect(link.textContent).toBe("自动化");
   await act(async () => link.click());
   expect(container.textContent).toBe("/automation");
+});
+
+function openWorkspaceButton() {
+  return container.querySelector<HTMLButtonElement>(
+    ".dashboard-workspaces .dashboard-section-heading button",
+  )!;
+}
+
+it("opens a selected workspace from the empty project list and prevents repeat clicks", async () => {
+  let finish!: (value: Project) => void;
+  vi.mocked(openProjectFolder).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  await render();
+  const button = openWorkspaceButton();
+  expect(button.textContent).toBe("打开工作空间");
+  await act(async () => {
+    button.click();
+    button.click();
+  });
+  expect(button.disabled).toBe(true);
+  expect(openProjectFolder).toHaveBeenCalledOnce();
+  await act(async () => finish(project(0)));
+  expect(app.refreshProjects).toHaveBeenCalled();
+  expect(container.textContent).toBe("/project/project-0");
+});
+
+it("keeps the workspace entry available after cancelling or failing, including on the Agent tab", async () => {
+  vi.mocked(openProjectFolder)
+    .mockResolvedValueOnce(null)
+    .mockRejectedValueOnce(new Error("directory unavailable"));
+  await render();
+  await act(async () => openWorkspaceButton().click());
+  expect(openWorkspaceButton().disabled).toBe(false);
+  expect(app.refreshProjects).not.toHaveBeenCalled();
+  await act(async () =>
+    container
+      .querySelectorAll<HTMLButtonElement>(
+        '[role="group"][aria-label="工作空间类型"] button',
+      )[1]
+      .click(),
+  );
+  await act(async () => openWorkspaceButton().click());
+  expect(toast.error).toHaveBeenCalledWith("directory unavailable");
+  expect(openWorkspaceButton().disabled).toBe(false);
+  expect(container.querySelector(".dashboard-workspaces")).not.toBeNull();
 });
 
 it("opens the full library undeployed filter without a dialog or a stale group", async () => {

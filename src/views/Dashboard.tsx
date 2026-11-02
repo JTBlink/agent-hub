@@ -10,10 +10,12 @@ import "../styles/dashboard.css";
 import { DashboardWorkspaces } from "../components/DashboardWorkspaces";
 import { DashboardResume } from "../components/DashboardResume";
 import { DashboardOverview } from "../components/DashboardOverview";
+import { useOpenProject } from "../hooks/useOpenProject";
 
 export function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { openProject, isOpening } = useOpenProject();
   const {
     tools,
     loading,
@@ -73,7 +75,12 @@ export function Dashboard() {
         <DashboardOverview />
       </div>
       <div className="dashboard-content">
-        <DashboardWorkspaces agents={enabledAgents} projects={projects} />
+        <DashboardWorkspaces
+          agents={enabledAgents}
+          projects={projects}
+          onOpenWorkspace={() => void openProject()}
+          openingWorkspace={isOpening}
+        />
         <DashboardRecentSkills
           skills={recentSkills}
           tools={tools}

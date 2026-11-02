@@ -10,12 +10,16 @@ import { touchProjectVisited } from "../lib/tauri";
 interface DashboardWorkspacesProps {
   agents: ToolInfo[];
   projects: Project[];
+  onOpenWorkspace: () => void;
+  openingWorkspace: boolean;
 }
 type WorkspaceType = "agents" | "projects";
 
 export function DashboardWorkspaces({
   agents,
   projects,
+  onOpenWorkspace,
+  openingWorkspace,
 }: DashboardWorkspacesProps) {
   const { t } = useTranslation();
   const [type, setType] = useState<WorkspaceType>("projects");
@@ -43,14 +47,26 @@ export function DashboardWorkspaces({
     >
       <div className="dashboard-section-heading">
         <h2 id="dashboard-workspaces-title">{t("dashboard.workspaces")}</h2>
-        {type === "agents" && (
-          <Link
-            to="/settings#agents"
-            className="rounded text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {type === "agents" && (
+            <Link
+              to="/settings#agents"
+              className="rounded text-xs text-accent-light hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              {t("dashboard.manageAgents")}
+            </Link>
+          )}
+          <button
+            type="button"
+            className="app-button-secondary shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={onOpenWorkspace}
+            disabled={openingWorkspace}
+            aria-busy={openingWorkspace}
           >
-            {t("dashboard.manageAgents")}
-          </Link>
-        )}
+            <FolderOpen aria-hidden="true" className="h-4 w-4" />
+            {t("dashboard.openWorkspace")}
+          </button>
+        </div>
       </div>
       <WorkspaceSwitcher
         type={type}
