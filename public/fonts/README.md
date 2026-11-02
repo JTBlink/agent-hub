@@ -13,7 +13,8 @@ No system font installation or runtime network request is required.
 The text font preserves a monospaced terminal grid. Symbols Only supplies Git,
 file, folder, Powerline and other private-use icons without replacing CJK text.
 
-The CSS stack explicitly names `AgentHub Mono` followed by `AgentHub Symbols`.
+The CSS stack selects `AgentHub Symbols` before `AgentHub Mono`, so terminal
+canvas rendering resolves private-use glyphs before consulting text fonts.
 The symbol family is restricted to private-use Unicode ranges, including bold
 and italic ANSI text, while JetBrains Mono excludes those ranges and supplies
 text metrics. Keeping the families separate avoids depending on same-family
@@ -24,3 +25,9 @@ including the search, source-control, review and settings sidebar glyphs.
 The terminal uses the real Medium (500) and Medium Italic faces at 15px, with
 Bold (700) for ANSI emphasis. The code editor retains its regular 14px default.
 All terminal text styles are loaded before measuring the grid.
+
+Font declarations and typography tokens live in `src/fonts/fonts.css`, imported
+once by `src/index.css`. The `src/fonts/index.ts` module exposes terminal font
+metrics and preloading without depending on xterm or Herdr. Terminal rendering
+options consume that API; editors and other code surfaces consume the same CSS
+tokens. Font assets and upstream licenses stay in this directory.

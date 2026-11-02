@@ -93,6 +93,7 @@ agent-hub/
 │   │   ├── zh.json                 #   简体中文
 │   │   ├── zh-TW.json              #   繁体中文
 │   │   └── en.json                 #   英文
+│   ├── fonts/                      # 字体声明、共享排版变量、终端字体参数与预加载
 │   ├── styles/brand.css            # 明暗主题与色调变量
 │   ├── App.tsx                     # 应用根组件
 │   ├── main.tsx                    # 前端入口

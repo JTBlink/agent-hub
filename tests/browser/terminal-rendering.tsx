@@ -254,19 +254,20 @@ Object.assign(window, {
     ];
     const iconsReady = (
       await Promise.all(
-        ["", "bold ", "italic ", "bold italic "].flatMap((style) =>
-          icons.map(async (icon) => {
-            const faces = await document.fonts.load(
-              `${style}14px "AgentHub Symbols"`,
-              icon,
-            );
-            return faces.some(
-              (face) =>
-                face.family === "AgentHub Symbols" &&
-                face.status === "loaded" &&
-                face.unicodeRange.toUpperCase().includes("E000"),
-            );
-          }),
+        ["", "500 ", "bold ", "italic ", "italic 500 ", "bold italic "].flatMap(
+          (style) =>
+            icons.map(async (icon) => {
+              const faces = await document.fonts.load(
+                `${style}14px "AgentHub Symbols"`,
+                icon,
+              );
+              return faces.some(
+                (face) =>
+                  face.family === "AgentHub Symbols" &&
+                  face.status === "loaded" &&
+                  face.unicodeRange.toUpperCase().includes("E000"),
+              );
+            }),
         ),
       )
     ).every(Boolean);
@@ -285,27 +286,33 @@ Object.assign(window, {
     );
     const iconPixelsCorrect = (
       await Promise.all(
-        ["", "bold ", "italic ", "bold italic "].map(async (style, index) => {
-          const family = `IconReference${index}`;
-          const face = new FontFace(
-            family,
-            'url("/fonts/SymbolsNerdFontMono-Regular.ttf")',
-            {
-              style: style.includes("italic") ? "italic" : "normal",
-              weight: style.includes("bold") ? "700" : "400",
-            },
-          );
-          document.fonts.add(await face.load());
-          try {
-            return icons.every(
-              (icon) =>
-                pixels(`${style}24px ${stack}`, icon) ===
-                pixels(`${style}24px ${family}`, icon),
+        ["", "500 ", "bold ", "italic ", "italic 500 ", "bold italic "].map(
+          async (style, index) => {
+            const family = `IconReference${index}`;
+            const face = new FontFace(
+              family,
+              'url("/fonts/SymbolsNerdFontMono-Regular.ttf")',
+              {
+                style: style.includes("italic") ? "italic" : "normal",
+                weight: style.includes("bold")
+                  ? "700"
+                  : style.includes("500")
+                    ? "500"
+                    : "400",
+              },
             );
-          } finally {
-            document.fonts.delete(face);
-          }
-        }),
+            document.fonts.add(await face.load());
+            try {
+              return icons.every(
+                (icon) =>
+                  pixels(`${style}24px ${stack}`, icon) ===
+                  pixels(`${style}24px ${family}`, icon),
+              );
+            } finally {
+              document.fonts.delete(face);
+            }
+          },
+        ),
       )
     ).every(Boolean);
     const first = terminals[0];

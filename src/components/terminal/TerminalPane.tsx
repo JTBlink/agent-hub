@@ -14,13 +14,13 @@ import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
 import type { HerdrTarget } from "../../features/herdr/lib/herdrControlApi";
 import { getErrorMessage } from "../../lib/error";
-import { herdrAgentLabel, type HerdrAgent } from "../../features/herdr/lib/herdrAgents";
-import { createTerminalInputQueue } from "../../lib/terminalInput";
 import {
-  loadTerminalFonts,
-  terminalAppearance,
-  terminalTheme,
-} from "./terminalAppearance";
+  herdrAgentLabel,
+  type HerdrAgent,
+} from "../../features/herdr/lib/herdrAgents";
+import { createTerminalInputQueue } from "../../lib/terminalInput";
+import { terminalAppearance, terminalTheme } from "./terminalAppearance";
+import { loadTerminalFonts } from "../../fonts";
 import "@xterm/xterm/css/xterm.css";
 
 export interface PaneControl {
