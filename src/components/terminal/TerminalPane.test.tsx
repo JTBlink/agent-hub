@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { TerminalPane } from "./TerminalPane";
 import * as api from "../../lib/tauri";
+import { writeText, readText } from "@tauri-apps/plugin-clipboard-manager";
+import { toast } from "sonner";
 
 const renderer = vi.hoisted(() => ({
   lost: () => {},
@@ -14,6 +16,11 @@ const renderer = vi.hoisted(() => ({
   clearAtlas: vi.fn(),
   paste: vi.fn(),
   input: vi.fn(),
+  selection: "",
+  selectionChanged: () => {},
+  modes: { mouseTrackingMode: "none" },
+  selectAll: vi.fn(),
+  clear: vi.fn(),
 }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -24,7 +31,11 @@ vi.mock("../../lib/tauri", () => ({
   resizeTerminal: vi.fn(async () => {}),
   writeTerminal: vi.fn(async () => {}),
 }));
-vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  writeText: vi.fn().mockResolvedValue(undefined),
+  readText: vi.fn().mockResolvedValue("pasted text"),
+}));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@xterm/xterm", async () => {
   const { TerminalEmulator } = await import("../../test/terminalEmulator");
   return {
@@ -33,6 +44,23 @@ vi.mock("@xterm/xterm", async () => {
       clearTextureAtlas = renderer.clearAtlas;
       paste = renderer.paste;
       input = renderer.input;
+      modes = renderer.modes;
+      selectAll = renderer.selectAll;
+      clear = renderer.clear;
+      hasSelection() {
+        return !!renderer.selection;
+      }
+      getSelection() {
+        return renderer.selection;
+      }
+      onSelectionChange(callback: () => void) {
+        renderer.selectionChanged = callback;
+        return {
+          dispose() {
+            renderer.selectionChanged = () => {};
+          },
+        };
+      }
     },
   };
 });
@@ -61,6 +89,8 @@ let root: ReturnType<typeof createRoot>;
 beforeEach(() => {
   vi.clearAllMocks();
   renderer.unsupported = false;
+  renderer.selection = "";
+  renderer.modes.mouseTrackingMode = "none";
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.stubGlobal(
     "ResizeObserver",
@@ -144,12 +174,15 @@ it("suppresses the native context menu only inside the terminal and preserves mo
     bubbles: true,
     cancelable: true,
   });
-  input.dispatchEvent(down);
-  input.dispatchEvent(menu);
+  await act(async () => {
+    input.dispatchEvent(down);
+    input.dispatchEvent(menu);
+  });
   expect(mouseDown).toHaveBeenCalledOnce();
   expect(contextMenu).toHaveBeenCalledOnce();
   expect(down.defaultPrevented).toBe(false);
   expect(menu.defaultPrevented).toBe(true);
+  expect(document.querySelector('[role="menu"]')).not.toBeNull();
 
   const outside = new MouseEvent("contextmenu", {
     bubbles: true,
@@ -157,6 +190,77 @@ it("suppresses the native context menu only inside the terminal and preserves mo
   });
   host.dispatchEvent(outside);
   expect(outside.defaultPrevented).toBe(false);
+});
+
+it("copies selected text with a success toast, reports failures and exposes shell clipboard actions", async () => {
+  await act(async () =>
+    root.render(<TerminalPane projectId="demo" active onReady={() => {}} />),
+  );
+  await act(async () => {
+    renderer.selection = "selected output";
+    renderer.selectionChanged();
+  });
+  expect(writeText).toHaveBeenCalledExactlyOnceWith("selected output");
+  expect(toast.success).toHaveBeenCalledWith("terminal.selectionCopied", {
+    id: "terminal-selection-copy",
+  });
+  const input = host.querySelector("textarea")!;
+  const openMenu = async () =>
+    act(async () =>
+      input.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      ),
+    );
+  const choose = async (label: string) =>
+    act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+        .find((button) => button.textContent === label)!
+        .click(),
+    );
+  await openMenu();
+  await choose("terminal.paste");
+  expect(readText).toHaveBeenCalledOnce();
+  expect(renderer.paste).toHaveBeenCalledExactlyOnceWith("pasted text");
+  expect(document.activeElement).toBe(input);
+  await openMenu();
+  await choose("terminal.selectAll");
+  expect(renderer.selectAll).toHaveBeenCalledOnce();
+  await openMenu();
+  await choose("herdr.clear");
+  expect(renderer.clear).toHaveBeenCalledOnce();
+  vi.mocked(writeText).mockRejectedValueOnce(
+    new Error("clipboard unavailable"),
+  );
+  await openMenu();
+  await choose("terminal.copySelection");
+  expect(toast.error).toHaveBeenCalledWith("clipboard unavailable");
+});
+
+it("leaves mouse-aware TUIs in control of right-click and restores the shell menu when mouse reporting ends", async () => {
+  await act(async () =>
+    root.render(<TerminalPane projectId="demo" active onReady={() => {}} />),
+  );
+  const input = host.querySelector("textarea")!;
+  renderer.modes.mouseTrackingMode = "any";
+  const down = vi.fn();
+  input.addEventListener("mousedown", down);
+  await act(async () => {
+    input.dispatchEvent(
+      new MouseEvent("mousedown", { button: 2, bubbles: true }),
+    );
+    input.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+    );
+  });
+  expect(down).toHaveBeenCalledOnce();
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  renderer.modes.mouseTrackingMode = "none";
+  await act(async () =>
+    input.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+    ),
+  );
+  expect(document.querySelector('[role="menu"]')).not.toBeNull();
 });
 
 it("waits for bundled fonts before starting the PTY and redraws without restarting it", async () => {

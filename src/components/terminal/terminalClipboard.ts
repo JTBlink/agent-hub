@@ -24,3 +24,37 @@ export function bindTerminalPaste(node: HTMLElement, terminal: Terminal) {
   node.addEventListener("paste", paste, true);
   return () => node.removeEventListener("paste", paste, true);
 }
+
+/** Copy completed selections once, without copying every intermediate drag range. */
+export function bindTerminalSelectionCopy(
+  node: HTMLElement,
+  terminal: Terminal,
+  copy: () => void,
+) {
+  let dragging = false;
+  let disposed = false;
+  let previous = "";
+  const flush = () => {
+    if (disposed || dragging) return;
+    const selection = terminal.getSelection();
+    if (selection && selection !== previous) copy();
+    previous = selection;
+  };
+  const down = (event: MouseEvent) => {
+    if (event.button === 0) dragging = true;
+  };
+  const up = (event: MouseEvent) => {
+    if (event.button !== 0 || !dragging) return;
+    dragging = false;
+    queueMicrotask(flush);
+  };
+  const selection = terminal.onSelectionChange(() => queueMicrotask(flush));
+  node.addEventListener("mousedown", down, true);
+  document.addEventListener("mouseup", up);
+  return () => {
+    disposed = true;
+    selection.dispose();
+    node.removeEventListener("mousedown", down, true);
+    document.removeEventListener("mouseup", up);
+  };
+}

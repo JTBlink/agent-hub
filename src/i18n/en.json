@@ -2049,6 +2049,12 @@
     "commandTask": "Command task"
   },
   "terminal": {
+    "contextMenu": "Terminal actions",
+    "copySelection": "Copy selection",
+    "paste": "Paste",
+    "selectAll": "Select all",
+    "selectionCopied": "Selection copied to clipboard",
+    "clipboardFailed": "Clipboard operation failed. Please try again.",
     "title": "Terminal",
     "chooseProject": "Choose a project to open a terminal",
     "new": "New terminal",

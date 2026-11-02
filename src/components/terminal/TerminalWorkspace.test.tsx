@@ -677,6 +677,11 @@ it("switches between peer file and terminal tabs without replacing running panes
     const tabButtons =
       tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]');
     expect(tabButtons).toHaveLength(3);
+    const newMenu = tablist.querySelector('[aria-label="terminal.newMenu"]')!;
+    expect(
+      tabButtons[2].compareDocumentPosition(newMenu) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     const panels = Array.from(host.querySelectorAll('[role="tabpanel"]'));
     await act(async () => tabButtons[2].click());
     expect(host.querySelector("section")?.hidden).toBe(false);

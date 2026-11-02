@@ -2046,6 +2046,12 @@
     "commandTask": "命令任务"
   },
   "terminal": {
+    "contextMenu": "终端操作",
+    "copySelection": "复制选中内容",
+    "paste": "粘贴",
+    "selectAll": "全选",
+    "selectionCopied": "选中内容已复制到剪贴板",
+    "clipboardFailed": "剪贴板操作失败，请重试。",
     "title": "终端",
     "chooseProject": "选择项目以打开终端",
     "new": "新建终端",

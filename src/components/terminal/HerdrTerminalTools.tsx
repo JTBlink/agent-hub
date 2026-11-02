@@ -147,7 +147,7 @@ export function HerdrTerminalTools({
         onAction={(action) => void run(action)}
       >
         <span
-          className="ml-auto min-w-0 truncate pl-2 text-xs text-muted"
+          className="ml-auto min-w-0 max-w-32 truncate pl-2 text-xs text-muted"
           title={`${target.session} / ${target.workspace_id} / ${target.pane_id}`}
         >
           {target.pane_id}

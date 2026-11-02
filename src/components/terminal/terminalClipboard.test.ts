@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Terminal } from "@xterm/xterm";
-import { bindTerminalPaste } from "./terminalClipboard";
+import {
+  bindTerminalPaste,
+  bindTerminalSelectionCopy,
+} from "./terminalClipboard";
 
 let terminal: Terminal;
 let node: HTMLDivElement;
@@ -61,4 +64,37 @@ it("pastes into a shell without adding Enter or bracket markers", () => {
   terminal.onData(data);
   paste(["text/plain"], "echo hello");
   expect(data).toHaveBeenCalledExactlyOnceWith("echo hello");
+});
+
+it("copies completed selections once, skips intermediate drag ranges and cleans up subscriptions", async () => {
+  await new Promise<void>((resolve) =>
+    terminal.write("first second third", resolve),
+  );
+  const copy = vi.fn();
+  const cleanup = bindTerminalSelectionCopy(node, terminal, copy);
+  try {
+    node.dispatchEvent(
+      new MouseEvent("mousedown", { button: 0, bubbles: true }),
+    );
+    terminal.select(0, 0, 5);
+    await Promise.resolve();
+    terminal.select(0, 0, 12);
+    await Promise.resolve();
+    expect(copy).not.toHaveBeenCalled();
+    document.dispatchEvent(new MouseEvent("mouseup", { button: 0 }));
+    await Promise.resolve();
+    expect(copy).toHaveBeenCalledOnce();
+    expect(terminal.getSelection()).toBe("first second");
+    terminal.clearSelection();
+    await Promise.resolve();
+    expect(copy).toHaveBeenCalledOnce();
+    terminal.select(0, 0, 5);
+    await Promise.resolve();
+    expect(copy).toHaveBeenCalledTimes(2);
+  } finally {
+    cleanup();
+  }
+  terminal.select(6, 0, 6);
+  await Promise.resolve();
+  expect(copy).toHaveBeenCalledTimes(2);
 });

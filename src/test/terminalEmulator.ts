@@ -3,8 +3,10 @@ export class TerminalEmulator {
   cols = 80;
   rows = 24;
   options: Record<string, unknown> = {};
+  modes = { mouseTrackingMode: "none" };
   private textarea: HTMLTextAreaElement | null = null;
   private data: ((value: string) => void) | null = null;
+  private selectionChanged: (() => void) | null = null;
   loadAddon() {}
   clearTextureAtlas() {}
   refresh() {}
@@ -23,6 +25,17 @@ export class TerminalEmulator {
         this.data = null;
       },
     };
+  }
+  onSelectionChange(callback: () => void) {
+    this.selectionChanged = callback;
+    return {
+      dispose: () => {
+        this.selectionChanged = null;
+      },
+    };
+  }
+  selectAll() {
+    this.selectionChanged?.();
   }
   attachCustomKeyEventHandler() {}
   focus() {

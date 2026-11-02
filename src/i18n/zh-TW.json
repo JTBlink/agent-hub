@@ -2006,6 +2006,12 @@
     "commandTask": "命令任務"
   },
   "terminal": {
+    "contextMenu": "終端操作",
+    "copySelection": "複製選取內容",
+    "paste": "貼上",
+    "selectAll": "全選",
+    "selectionCopied": "選取內容已複製到剪貼簿",
+    "clipboardFailed": "剪貼簿操作失敗，請重試。",
     "title": "終端",
     "chooseProject": "選擇專案以開啟終端",
     "new": "新增終端",

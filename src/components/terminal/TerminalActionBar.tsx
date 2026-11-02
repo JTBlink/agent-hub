@@ -1,14 +1,5 @@
 import { useState, type ReactNode } from "react";
-import {
-  X,
-  Plus,
-  Columns2,
-  Rows2,
-  Copy,
-  Maximize2,
-  Minimize2,
-  PanelLeft,
-} from "lucide-react";
+import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { getErrorMessage } from "../../lib/error";
@@ -36,14 +27,18 @@ export function TerminalActionBar({
 }) {
   const { t } = useTranslation();
   const items = [
-    { action: "new_tab", label: "herdr.newTab", icon: Plus },
+    { action: "new_tab", label: "herdr.newTab", icon: "add" },
     {
       action: "split_right",
       label: "terminal.splitHorizontal",
-      icon: Columns2,
+      icon: "split-horizontal",
     },
-    { action: "split_down", label: "terminal.splitVertical", icon: Rows2 },
-    { action: "copy", label: "herdr.copyOutput", icon: Copy },
+    {
+      action: "split_down",
+      label: "terminal.splitVertical",
+      icon: "split-vertical",
+    },
+    { action: "copy", label: "herdr.copyOutput", icon: "copy" },
     {
       action: "zoom",
       label:
@@ -52,28 +47,32 @@ export function TerminalActionBar({
           : zoomed
             ? "herdr.restorePane"
             : "herdr.zoomPane",
-      icon: zoomed ? Minimize2 : Maximize2,
+      icon: zoomed ? "screen-normal" : "screen-full",
     },
-    { action: "close", label: "terminal.closePane", icon: X },
-    { action: "sidebar", label: "terminal.herdrSidebar", icon: PanelLeft },
+    { action: "close", label: "terminal.closePane", icon: "chrome-close" },
+    {
+      action: "sidebar",
+      label: "terminal.herdrSidebar",
+      icon: "layout-sidebar-left",
+    },
   ] as const;
   return (
     <nav
       aria-label={t("herdr.terminalTools")}
-      className="flex shrink-0 flex-wrap items-center gap-0.5 border-t border-border-subtle bg-bg-secondary px-2 py-1"
+      className="flex shrink-0 items-center gap-1 overflow-x-auto bg-bg-secondary px-1"
     >
-      {items.map(({ action, label, icon: Icon }) => (
+      {items.map(({ action, label, icon }) => (
         <button
           type="button"
           key={action}
-          className="app-button-ghost flex h-7 w-7 items-center justify-center rounded"
+          className="app-button-ghost flex h-7 w-7 shrink-0 items-center justify-center rounded"
           title={t(label)}
           aria-label={t(label)}
           aria-pressed={action === "zoom" ? zoomed : undefined}
           disabled={busy || disabled.includes(action)}
           onClick={() => onAction(action)}
         >
-          <Icon size={13} />
+          <span className={`codicon codicon-${icon}`} aria-hidden="true" />
         </button>
       ))}
       {children}

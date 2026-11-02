@@ -3,7 +3,12 @@ import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FitAddon } from "@xterm/addon-fit";
 import { createTerminalRenderer } from "./terminalRenderer";
-import { bindTerminalPaste } from "./terminalClipboard";
+import {
+  bindTerminalPaste,
+  bindTerminalSelectionCopy,
+} from "./terminalClipboard";
+import { TerminalContextMenu } from "./TerminalContextMenu";
+import { toast } from "sonner";
 import { handleTerminalTextKey } from "./terminalKeyboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
@@ -50,6 +55,8 @@ export function TerminalPane({
 }: Props) {
   const { t } = useTranslation();
   const element = useRef<HTMLDivElement>(null);
+  const emulator = useRef<Terminal | null>(null);
+  const copyNow = useRef<() => void>(() => {});
   const fitNow = useRef<() => void>(() => {});
   const focusNow = useRef<() => void>(() => {});
   const callback = useRef(onReady);
@@ -88,10 +95,37 @@ export function TerminalPane({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
+    emulator.current = terminal;
+    let disposed = false;
+    const copySelection = () => {
+      const text = terminal.getSelection();
+      if (!text || disposed) return;
+      void writeText(text)
+        .then(() => {
+          if (!disposed)
+            toast.success(translate.current("terminal.selectionCopied"), {
+              id: "terminal-selection-copy",
+            });
+        })
+        .catch((reason) => {
+          if (!disposed)
+            toast.error(
+              getErrorMessage(
+                reason,
+                translate.current("terminal.clipboardFailed"),
+              ),
+            );
+        });
+    };
+    copyNow.current = copySelection;
+    const unbindSelectionCopy = bindTerminalSelectionCopy(
+      node,
+      terminal,
+      copySelection,
+    );
     const unbindPaste = bindTerminalPaste(node, terminal);
     const renderer = createTerminalRenderer(terminal);
     let fontsReady = false;
-    let disposed = false;
     let sessionId: string | null = null;
     let pendingAck = 0;
     let frame = 0;
@@ -165,7 +199,7 @@ export function TerminalPane({
         event.key.toLowerCase() === "c" &&
         terminal.hasSelection()
       ) {
-        void writeText(terminal.getSelection()).catch(fail);
+        copySelection();
         event.preventDefault();
         return false;
       }
@@ -243,6 +277,9 @@ export function TerminalPane({
       .catch(fail);
     return () => {
       disposed = true;
+      emulator.current = null;
+      copyNow.current = () => {};
+      unbindSelectionCopy();
       callback.current(null);
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -283,6 +320,12 @@ export function TerminalPane({
         className="terminal-emulator min-h-0 flex-1 overflow-hidden"
         // Keep mouse handling in xterm (including TUI mouse reporting).
         onContextMenu={(event) => event.preventDefault()}
+      />
+      <TerminalContextMenu
+        target={element}
+        terminal={emulator}
+        herdr={!!herdrTarget}
+        onCopy={() => copyNow.current()}
       />
       {exitCode !== null && (
         <div role="status" className="px-2 text-xs text-muted">

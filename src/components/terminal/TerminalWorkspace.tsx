@@ -342,6 +342,7 @@ export function TerminalWorkspace({
               setProjectId(tab.projectId);
             }}
           >
+            {extraTabs}
             {shown && (
               <TerminalNewMenu
                 tools={tools}
@@ -353,7 +354,6 @@ export function TerminalWorkspace({
                 onNew={add}
               />
             )}
-            {extraTabs}
           </TerminalTabs>
           {!workspace && (
             <ThemedSelect
