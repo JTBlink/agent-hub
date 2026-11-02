@@ -33,11 +33,12 @@ export async function loadTerminalFonts(): Promise<void> {
   const size = fontSize ? `${fontSize}px` : "1em";
   // FontFaceSet.load defaults to a space, which never selects a unicode-range
   // icon face. Include text, BMP icons and supplementary icons in every style.
-  const sample = "M\ue0a0\ue60b\uf07b\ueb37\udb80\udc01";
+  const sample = "\ue0a0\ue60b\uf07b\uf002\uf126\uf06e\uf013\ueb37\udb80\udc01";
   await Promise.all(
-    ["", "bold ", "italic ", "bold italic "].map((style) =>
-      document.fonts.load(`${style}${size} "AgentHub Mono"`, sample),
-    ),
+    ["", "bold ", "italic ", "bold italic "].flatMap((style) => [
+      document.fonts.load(`${style}${size} "AgentHub Mono"`, "M"),
+      document.fonts.load(`${style}${size} "AgentHub Symbols"`, sample),
+    ]),
   );
 }
 

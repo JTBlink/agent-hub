@@ -28,16 +28,13 @@ it("loads text styles and symbols at the configured code size before PTY measure
     value: { load },
   });
   await loadTerminalFonts();
-  expect(load.mock.calls.map(([font]) => font)).toEqual([
-    '16px "AgentHub Mono"',
-    'bold 16px "AgentHub Mono"',
-    'italic 16px "AgentHub Mono"',
-    'bold italic 16px "AgentHub Mono"',
-  ]);
-  for (const [, sample] of load.mock.calls) {
-    expect(sample).toContain("M");
-    expect(sample).toContain("\ue60b");
-    expect(sample).toContain("\udb80\udc01");
+  expect(load.mock.calls).toHaveLength(8);
+  for (const style of ["", "bold ", "italic ", "bold italic "]) {
+    expect(load).toHaveBeenCalledWith(`${style}16px "AgentHub Mono"`, "M");
+    expect(load).toHaveBeenCalledWith(
+      `${style}16px "AgentHub Symbols"`,
+      expect.stringContaining("\uf002\uf126\uf06e\uf013"),
+    );
   }
 });
 

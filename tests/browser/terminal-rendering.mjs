@@ -62,7 +62,7 @@ try {
   assert.equal(
     result.iconsReady,
     true,
-    "Private-use icons are missing from the bundled primary font",
+    "Private-use icons are missing from the bundled symbol font",
   );
   assert.equal(
     result.iconPixelsCorrect,
