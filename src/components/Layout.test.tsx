@@ -11,6 +11,7 @@ import {
 } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Layout } from "./Layout";
+import { SettingsTabs } from "./settings/SettingsTabs";
 import type { TerminalStartupState } from "./terminal/useTerminalLayout";
 import type { Project } from "../lib/tauri";
 import { createTerminalTab, writeTerminalLayout } from "../lib/terminalLayout";
@@ -114,6 +115,22 @@ async function render() {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/project/demo" element={<Outlet />} />
+            <Route
+              path="/settings"
+              element={
+                <SettingsTabs agentCount={2}>
+                  {{
+                    agents: "Agents",
+                    skills: "Skills",
+                    appearance: "Appearance",
+                    backup: "Backup",
+                    network: "Network",
+                    hosts: "Hosts",
+                    about: "About",
+                  }}
+                </SettingsTabs>
+              }
+            />
           </Route>
         </Routes>
       </MemoryRouter>,
@@ -176,4 +193,27 @@ it("shows welcome immediately when the saved terminal belongs to a removed proje
   await render();
   expect(state.dashboardMounts).toBe(1);
   expect(host.querySelector('[role="status"]')).toBeNull();
+});
+
+it("places settings navigation in the workbench sidebar outside the editor", async () => {
+  state.loading = false;
+  state.destination = "/settings";
+  state.startup = { ...state.startup, ready: true };
+  await render();
+  const navigation = host.querySelector('[role="tablist"]')!;
+  const editor = host.querySelector(".workbench-editor-panel")!;
+  expect(navigation).not.toBeNull();
+  expect(editor.contains(navigation)).toBe(false);
+  expect(navigation.closest("[hidden]")).toBeNull();
+  expect(editor.querySelectorAll('[role="separator"]')).toHaveLength(0);
+  expect(
+    editor.querySelector('[role="tabpanel"]:not([hidden])')?.textContent,
+  ).toBe("Agents");
+  await act(async () =>
+    host.querySelector<HTMLButtonElement>("#settings-tab-hosts")!.click(),
+  );
+  expect(
+    editor.querySelector('[role="tabpanel"]:not([hidden])')?.textContent,
+  ).toBe("Hosts");
+  expect(navigation.closest("[hidden]")).toBeNull();
 });

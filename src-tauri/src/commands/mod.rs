@@ -10,6 +10,7 @@ pub mod discovered_skills;
 pub mod file_preview;
 pub mod git_backup;
 pub mod git_repositories;
+pub mod hosts;
 pub mod project_library;
 pub mod project_skill_diff;
 pub mod project_skill_update;

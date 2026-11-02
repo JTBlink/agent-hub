@@ -1,7 +1,10 @@
-import { type ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "../../utils";
+import { ResizableSidebar } from "../ResizableSidebar";
 
 const tabs = [
   "agents",
@@ -9,6 +12,7 @@ const tabs = [
   "appearance",
   "backup",
   "network",
+  "hosts",
   "about",
 ] as const;
 type SettingsTab = (typeof tabs)[number];
@@ -21,15 +25,28 @@ export function SettingsTabs({
   children: Record<SettingsTab, ReactNode>;
 }) {
   const { t } = useTranslation();
+  const sidebarVisibility = useContext(SidebarVisibilityContext);
   const { hash } = useLocation();
   const navigate = useNavigate();
   const active = tabs.find((tab) => hash === `#${tab}`) ?? "agents";
-  return (
-    <>
+  const sidebar = (
+    <ResizableSidebar
+      storageKey="agent-hub:settings-sidebar-width"
+      label={t("settings.title")}
+      reserveWidth={360}
+      hidden={sidebarVisibility?.resourcePanelVisible}
+      className="workbench-sidebar-panel mr-1"
+    >
+      <header className="flex h-9 shrink-0 items-center px-3">
+        <h2 className="truncate text-xs font-semibold text-secondary">
+          {t("settings.title")}
+        </h2>
+      </header>
       <div
         role="tablist"
+        aria-orientation="vertical"
         aria-label={t("settings.title")}
-        className="workbench-editor-tabs shrink-0"
+        className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5"
       >
         {tabs.map((tab) => (
           <button
@@ -46,9 +63,9 @@ export function SettingsTabs({
             onKeyDown={(event) => {
               const index = tabs.indexOf(tab);
               const next =
-                event.key === "ArrowRight"
+                event.key === "ArrowDown"
                   ? (index + 1) % tabs.length
-                  : event.key === "ArrowLeft"
+                  : event.key === "ArrowUp"
                     ? (index + tabs.length - 1) % tabs.length
                     : event.key === "Home"
                       ? 0
@@ -65,13 +82,18 @@ export function SettingsTabs({
               buttons?.[next]?.focus();
             }}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2",
+              "flex min-w-0 shrink-0 items-center gap-1.5 rounded-sm px-2 py-1 text-left text-sm leading-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
               tab === active
-                ? "border-accent text-accent-light"
-                : "border-transparent text-muted hover:text-primary",
+                ? "bg-surface-active font-medium text-primary"
+                : "text-tertiary hover:bg-surface-hover hover:text-secondary",
             )}
           >
-            {t(`settings.tabs.${tab}`)}
+            <span
+              className="min-w-0 flex-1 truncate"
+              title={t(`settings.tabs.${tab}`)}
+            >
+              {t(`settings.tabs.${tab}`)}
+            </span>
             {tab === "agents" && (
               <span className="rounded bg-surface-active px-1.5 py-0.5 text-xs tabular-nums">
                 {agentCount}
@@ -80,6 +102,13 @@ export function SettingsTabs({
           </button>
         ))}
       </div>
+    </ResizableSidebar>
+  );
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 gap-4">
+      {sidebarVisibility?.sidebarContainer
+        ? createPortal(sidebar, sidebarVisibility.sidebarContainer)
+        : sidebar}
       {tabs.map((tab) => (
         <div
           key={tab}
@@ -88,11 +117,11 @@ export function SettingsTabs({
           aria-labelledby={`settings-tab-${tab}`}
           tabIndex={0}
           hidden={tab !== active}
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pt-3 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent"
+          className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto pb-4 pt-3 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         >
           {children[tab]}
         </div>
       ))}
-    </>
+    </div>
   );
 }

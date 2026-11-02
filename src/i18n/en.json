@@ -1,4 +1,32 @@
 {
+  "hosts": {
+    "filePath": "Configuration file path",
+    "pathUnavailable": "File path unavailable. Reload to try again.",
+    "permissionFailed": "Access to the hosts file was not granted. Open system permission settings to review access, then retry. Your draft was preserved. Details: {{message}}",
+    "permissions": {
+      "title": "Write permission",
+      "open": "Open system permission settings",
+      "intro": "Open your system’s permission settings to review file access. Return here and retry saving after making changes. Saving may still require administrator authentication.",
+      "retry": "Authorize and save again",
+      "unavailable": "This desktop has no supported permission settings shortcut. Check your administrator account and authentication service in system settings, then retry.",
+      "openFailed": "Unable to open system permission settings. Open system settings manually and retry. Details: {{message}}"
+    },
+    "title": "System hosts",
+    "help": "Edit local IP-to-hostname mappings. Saving requests administrator access when needed and backs up the original file.",
+    "unsaved": "Unsaved",
+    "reload": "Reload",
+    "working": "Working…",
+    "failed": "Unable to read or save the hosts file.",
+    "failedDetails": "Operation failed. Check permissions or retry. Your draft was preserved. Details: {{message}}",
+    "conflict": "Another program changed hosts. Keep the edits you need, reload the latest file, then save again.",
+    "encoding": "This file is not UTF-8 text. Convert it with a system editor first.",
+    "tooLarge": "The hosts file exceeds the 1 MiB editing limit.",
+    "invalidLine": "Invalid format on line {{line}}: enter a valid IPv4/IPv6 address and at least one hostname.",
+    "saved": "Hosts saved.",
+    "savedBackup": "Hosts saved. Original file backup: {{path}}",
+    "syntax": "Enter an IP address and one or more hostnames per line, separated by spaces. Use # for comments or to disable a mapping.",
+    "discard": "Reloading will discard your unsaved edits. Continue?"
+  },
   "fileTree": {
     "actions": "File actions",
     "open": "Open file",
@@ -1323,6 +1351,7 @@
       "appearance": "Appearance & behavior",
       "backup": "Sync & backup",
       "network": "Network",
+      "hosts": "Hosts",
       "about": "About & diagnostics"
     },
     "skillStorage": "Skill directory",

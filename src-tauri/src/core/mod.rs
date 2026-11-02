@@ -25,6 +25,7 @@ pub(crate) mod git_failure;
 pub mod git_fetcher;
 pub mod git_skill_sync;
 pub mod github_api;
+pub mod hosts;
 pub mod install_cancel;
 pub mod installer;
 pub mod log_sanitize;

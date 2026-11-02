@@ -1,3 +1,5 @@
+import { useLocation } from "react-router-dom";
+import { HostsSettings } from "../components/settings/HostsSettings";
 import { Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
@@ -14,6 +16,7 @@ import { useSettingsDiagnostics } from "../components/settings/useSettingsDiagno
 
 export function Settings() {
   const { t } = useTranslation();
+  const { hash } = useLocation();
   const { tools } = useApp();
   const diagnostics = useSettingsDiagnostics();
   return (
@@ -33,6 +36,7 @@ export function Settings() {
           appearance: <AppearanceSettings />,
           backup: <BackupSettings />,
           network: <NetworkSettings />,
+          hosts: <HostsSettings active={hash === "#hosts"} />,
           about: (
             <>
               <AboutSettings diagnostics={diagnostics} />

@@ -1191,6 +1191,9 @@ pub fn run() {
             commands::browse::search_skillssh,
             // Dialog
             commands::dialog::pick_directory,
+            commands::hosts::open_hosts_permission_settings,
+            commands::hosts::read_system_hosts,
+            commands::hosts::save_system_hosts,
             // Settings
             commands::settings::get_settings,
             commands::settings::set_settings,

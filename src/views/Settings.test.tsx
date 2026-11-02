@@ -97,7 +97,7 @@ it("groups existing settings and retains an unsaved proxy across tabs and locale
     setter.call(proxy, "http://127.0.0.1:8080");
     proxy.dispatchEvent(new Event("input", { bubbles: true }));
   });
-  await act(async () => tabs()[5].click());
+  await act(async () => tabs()[6].click());
   expect(visiblePanel().textContent).toContain("检查更新");
   expect(visiblePanel().textContent).toContain("应用数据目录");
   await act(async () => i18n.changeLanguage("en"));

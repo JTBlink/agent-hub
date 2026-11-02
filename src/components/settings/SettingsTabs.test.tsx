@@ -12,6 +12,7 @@ let container: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.removeItem("agent-hub:settings-sidebar-width");
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -33,6 +34,7 @@ function Subject() {
           appearance: <p>Appearance</p>,
           backup: <p>Backup</p>,
           network: <input aria-label="Proxy" />,
+          hosts: <p>Hosts editor</p>,
           about: <p>About</p>,
         }}
       </SettingsTabs>
@@ -58,7 +60,7 @@ const tabs = () => [
 
 it("opens the Agent deep link and preserves drafts and scroll across tab switches and back", async () => {
   await render();
-  expect(tabs()).toHaveLength(6);
+  expect(tabs()).toHaveLength(7);
   expect(tabs()[0].getAttribute("aria-selected")).toBe("true");
   const panel = container.querySelector<HTMLElement>('[role="tabpanel"]')!;
   const input = panel.querySelector<HTMLInputElement>("input")!;
@@ -76,11 +78,11 @@ it("opens the Agent deep link and preserves drafts and scroll across tab switche
 
 it("supports keyboard navigation and opens the update deep link directly", async () => {
   await render("/settings#about");
-  expect(tabs()[5].getAttribute("aria-selected")).toBe("true");
-  tabs()[5].focus();
+  expect(tabs()[6].getAttribute("aria-selected")).toBe("true");
+  tabs()[6].focus();
   await act(async () =>
-    tabs()[5].dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    tabs()[6].dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
     ),
   );
   expect(tabs()[0].getAttribute("aria-selected")).toBe("true");
@@ -90,9 +92,9 @@ it("supports keyboard navigation and opens the update deep link directly", async
       new KeyboardEvent("keydown", { key: "End", bubbles: true }),
     ),
   );
-  expect(document.activeElement).toBe(tabs()[5]);
+  expect(document.activeElement).toBe(tabs()[6]);
   await act(async () =>
-    tabs()[5].dispatchEvent(
+    tabs()[6].dispatchEvent(
       new KeyboardEvent("keydown", { key: "Home", bubbles: true }),
     ),
   );
@@ -109,4 +111,39 @@ it("opens the network deep link with its own panel independently of backup", asy
   expect(
     container.querySelector<HTMLElement>("#settings-panel-backup")?.hidden,
   ).toBe(true);
+});
+
+it("drags the shared sidebar, keeps the selected panel and restores the saved width", async () => {
+  await render("/settings#hosts");
+  const handle = container.querySelector<HTMLElement>('[role="separator"]')!;
+  Object.assign(handle, {
+    setPointerCapture: vi.fn(),
+    hasPointerCapture: () => true,
+    releasePointerCapture: vi.fn(),
+  });
+  const pointer = async (type: string, clientX: number) => {
+    const event = new MouseEvent(type, { bubbles: true, clientX, button: 0 });
+    Object.defineProperty(event, "pointerId", { value: 1 });
+    await act(async () => handle.dispatchEvent(event));
+  };
+  const initial = Number(handle.getAttribute("aria-valuenow"));
+  await pointer("pointerdown", 200);
+  await pointer("pointermove", 260);
+  await pointer("pointerup", 260);
+  expect(Number(handle.getAttribute("aria-valuenow"))).toBe(initial + 60);
+  expect(localStorage.getItem("agent-hub:settings-sidebar-width")).toBe(
+    String(initial + 60),
+  );
+  expect(
+    container.querySelector<HTMLElement>("#settings-panel-hosts")?.hidden,
+  ).toBe(false);
+  await act(async () => root.unmount());
+  root = createRoot(container);
+  await render("/settings#hosts");
+  const restored = container.querySelector<HTMLElement>('[role="separator"]')!;
+  expect(Number(restored.getAttribute("aria-valuenow"))).toBe(initial + 60);
+  await act(async () =>
+    restored.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })),
+  );
+  expect(restored.getAttribute("aria-valuenow")).toBe(String(initial));
 });

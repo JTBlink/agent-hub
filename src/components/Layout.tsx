@@ -126,15 +126,15 @@ export function Layout() {
             <div
               ref={setSidebarContainer}
               hidden={
-                pathname !== "/git" ||
+                (pathname !== "/git" && pathname !== "/settings") ||
                 resourcePanelVisible ||
-                !gitSidebarVisible
+                (pathname === "/git" && !gitSidebarVisible)
               }
               className={cn(
                 "min-h-0 shrink-0",
-                pathname === "/git" &&
+                (pathname === "/git" || pathname === "/settings") &&
                   !resourcePanelVisible &&
-                  gitSidebarVisible
+                  (pathname !== "/git" || gitSidebarVisible)
                   ? "flex"
                   : "hidden",
               )}

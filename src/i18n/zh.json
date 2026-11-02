@@ -1,4 +1,32 @@
 {
+  "hosts": {
+    "filePath": "配置文件路径",
+    "pathUnavailable": "文件路径暂不可用，请重新读取。",
+    "permissionFailed": "未能获得 hosts 文件的访问权限。请点击“打开系统权限设置”检查权限后重试，原稿已保留。详情：{{message}}",
+    "permissions": {
+      "title": "写入权限",
+      "open": "打开系统权限设置",
+      "intro": "直接打开当前系统的权限设置页面，检查相关文件访问权限。调整后返回此处重试保存；保存时仍可能需要管理员认证。",
+      "retry": "重新授权并保存",
+      "unavailable": "当前桌面未提供可直接打开的权限设置页面，请使用系统设置检查管理员账户和认证服务后重试。",
+      "openFailed": "无法打开系统权限设置，请手动打开系统设置后重试。详情：{{message}}"
+    },
+    "title": "系统 Hosts",
+    "help": "编辑本机的 IP 与域名映射。保存时按需请求管理员权限，并自动备份原文件。",
+    "unsaved": "未保存",
+    "reload": "重新读取",
+    "working": "处理中…",
+    "failed": "无法读取或保存 hosts 文件。",
+    "failedDetails": "操作失败，请检查文件权限或重试。原稿已保留。详情：{{message}}",
+    "conflict": "hosts 已被其他程序修改。请保留需要的编辑，重新读取最新文件后再保存。",
+    "encoding": "此文件不是 UTF-8 文本，请先使用系统编辑器转换编码。",
+    "tooLarge": "hosts 文件超过 1 MiB，无法编辑。",
+    "invalidLine": "第 {{line}} 行格式无效：请填写有效的 IPv4／IPv6 地址及至少一个域名。",
+    "saved": "Hosts 已保存。",
+    "savedBackup": "Hosts 已保存。原文件备份：{{path}}",
+    "syntax": "每行填写 IP 地址和一个或多个域名，用空格分隔；# 表示注释，可用于停用映射。",
+    "discard": "重新读取会丢弃尚未保存的编辑，是否继续？"
+  },
   "fileTree": {
     "actions": "文件操作",
     "open": "打开文件",
@@ -1321,6 +1349,7 @@
       "appearance": "外观与行为",
       "backup": "同步与备份",
       "network": "网络",
+      "hosts": "Hosts",
       "about": "关于与诊断"
     },
     "skillStorage": "技能目录",

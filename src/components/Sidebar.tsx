@@ -143,7 +143,7 @@ export function Sidebar() {
       "--app-sidebar-width",
       panelVisible
         ? `calc(${panelWidth + 4}px + var(--app-activitybar-width))`
-        : location.pathname === "/git"
+        : location.pathname === "/git" || location.pathname === "/settings"
           ? "var(--app-activitybar-width)"
           : "calc(var(--app-activitybar-width) + 4px)",
     );
@@ -199,7 +199,10 @@ export function Sidebar() {
       <div
         className={cn(
           "workbench-sidebar-group relative z-10 flex h-full shrink-0 select-none",
-          (panelVisible || location.pathname !== "/git") && "pr-1",
+          (panelVisible ||
+            (location.pathname !== "/git" &&
+              location.pathname !== "/settings")) &&
+            "pr-1",
         )}
       >
         <SidebarActivityBar
@@ -224,11 +227,13 @@ export function Sidebar() {
         <ResizableSidebar
           storageKey="agent-hub:sidebar-width"
           label={t(
-            selectedPanel === "herdr" ? "herdr.title" : selectedPanel === "search"
-              ? "workspaceSearch.title"
-              : selectedPanel === "projects"
-                ? "sidebar.projects"
-                : "sidebar.skillPanel",
+            selectedPanel === "herdr"
+              ? "herdr.title"
+              : selectedPanel === "search"
+                ? "workspaceSearch.title"
+                : selectedPanel === "projects"
+                  ? "sidebar.projects"
+                  : "sidebar.skillPanel",
           )}
           reserveWidth={360}
           onWidthChange={setPanelWidth}
@@ -302,15 +307,23 @@ export function Sidebar() {
           </div>
           <div
             hidden={selectedPanel !== "herdr"}
-            className={cn("min-h-0 flex-1 flex-col",selectedPanel === "herdr" ? "flex" : "hidden")}
+            className={cn(
+              "min-h-0 flex-1 flex-col",
+              selectedPanel === "herdr" ? "flex" : "hidden",
+            )}
           >
-            {herdrOpened && <SidebarHerdr active={panelVisible && selectedPanel === "herdr"}/>}
+            {herdrOpened && (
+              <SidebarHerdr
+                active={panelVisible && selectedPanel === "herdr"}
+              />
+            )}
           </div>
           <div
             hidden={selectedPanel === "search" || selectedPanel === "herdr"}
             className={cn(
               "min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-2",
-              (selectedPanel === "search" || selectedPanel === "herdr") && "hidden",
+              (selectedPanel === "search" || selectedPanel === "herdr") &&
+                "hidden",
             )}
           >
             <div hidden={selectedPanel !== "projects"}>
