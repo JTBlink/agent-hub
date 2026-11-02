@@ -126,7 +126,7 @@ Object.assign(window, {
 const [{ AppProvider }, { SidebarHerdr }, { TerminalWorkspace }, i18n] =
   await Promise.all([
     import("../../src/context/AppContext"),
-    import("../../src/components/herdr/SidebarHerdr"),
+    import("../../src/features/herdr/components/SidebarHerdr"),
     import("../../src/components/terminal/TerminalWorkspace"),
     import("../../src/i18n"),
   ]);

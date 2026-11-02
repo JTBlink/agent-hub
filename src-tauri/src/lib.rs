@@ -872,7 +872,7 @@ pub fn run() {
         .manage(Arc::new(core::agent_usage::AgentUsage::default()))
         .manage(Arc::new(std::sync::Mutex::new(core::system_load::SystemLoad::default())))
         .manage(Arc::new(core::terminal::TerminalManager::default()))
-        .manage(Arc::new(core::herdr_tools::HerdrTools::default()))
+        .manage(Arc::new(core::herdr::tools::HerdrTools::default()))
         .manage(Arc::new(core::file_preview::FilePreviews::default()))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             restore_main_window(app);
@@ -1072,23 +1072,23 @@ pub fn run() {
             commands::agent_usage::get_agent_usage,
             commands::agent_usage::consume_codex_reset_credit,
             commands::system_load::get_system_load,
-            commands::herdr_tools::herdr_detect,
-            commands::herdr_control::herdr_inventory,
-            commands::herdr_control::herdr_delete_session,
-            commands::herdr_control::herdr_restart_session,
-            commands::herdr_control::herdr_prepare_session,
-            commands::herdr_control::herdr_sidebar_keys,
-            commands::herdr_control::herdr_snapshot,
-            commands::herdr_control::herdr_open,
-            commands::herdr_control::herdr_ensure,
-            commands::herdr_control::herdr_action,
-            commands::herdr_control::herdr_start_agent,
-            commands::herdr_control::herdr_terminal_create,
-            commands::herdr_tools::herdr_install,
-            commands::herdr_tools::herdr_check_update,
-            commands::herdr_tools::herdr_update,
+            commands::herdr::tools::herdr_detect,
+            commands::herdr::control::herdr_inventory,
+            commands::herdr::control::herdr_delete_session,
+            commands::herdr::control::herdr_restart_session,
+            commands::herdr::control::herdr_prepare_session,
+            commands::herdr::control::herdr_sidebar_keys,
+            commands::herdr::control::herdr_snapshot,
+            commands::herdr::control::herdr_open,
+            commands::herdr::control::herdr_ensure,
+            commands::herdr::control::herdr_action,
+            commands::herdr::control::herdr_start_agent,
+            commands::herdr::control::herdr_terminal_create,
+            commands::herdr::tools::herdr_install,
+            commands::herdr::tools::herdr_check_update,
+            commands::herdr::tools::herdr_update,
             commands::terminal::terminal_launch_state,
-            commands::terminal::terminal_launch_herdr,
+            commands::herdr::control::terminal_launch_herdr,
             commands::task_browser::task_bindings,
             commands::task_browser::task_save_binding,
             commands::task_browser::task_remove_binding,
@@ -1243,7 +1243,7 @@ pub fn run() {
             // Projects
             commands::project_worktrees::get_project_worktrees,
             commands::project_worktrees::create_project_worktree,
-            commands::herdr_control::herdr_delete_worktree,
+            commands::herdr::control::herdr_delete_worktree,
             commands::project_worktrees::get_worktree_files,
             commands::project_worktrees::read_worktree_file,
             commands::project_worktrees::write_worktree_file,

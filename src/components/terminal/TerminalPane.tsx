@@ -12,9 +12,9 @@ import { toast } from "sonner";
 import { bindTerminalTextInput } from "./terminalKeyboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
-import type { HerdrTarget } from "../../lib/herdrControlApi";
+import type { HerdrTarget } from "../../features/herdr/lib/herdrControlApi";
 import { getErrorMessage } from "../../lib/error";
-import { herdrAgentLabel, type HerdrAgent } from "../../lib/herdrAgents";
+import { herdrAgentLabel, type HerdrAgent } from "../../features/herdr/lib/herdrAgents";
 import { createTerminalInputQueue } from "../../lib/terminalInput";
 import {
   loadTerminalFonts,

@@ -4,7 +4,7 @@ import {
   openHerdrWorkspace,
   startHerdrAgent,
   type HerdrOpenedWorkspace,
-} from "./herdrControlApi";
+} from "../features/herdr/lib/herdrControlApi";
 import { getErrorMessage } from "./error";
 
 export interface TaskLaunchInput {

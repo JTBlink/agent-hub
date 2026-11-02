@@ -158,7 +158,7 @@ pub fn prepare_shell(
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     // A nested launch must not inherit a different Herdr pane's caller identity.
-    for name in super::super::herdr_session::INHERITED_CONTEXT {
+    for name in super::super::herdr::session::INHERITED_CONTEXT {
         command.env_remove(name);
     }
     let mut files = None;

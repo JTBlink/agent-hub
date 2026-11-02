@@ -1473,4 +1473,6 @@ export const setProjectLibrarySkillEnabled = (
 export * from "./terminalApi";
 
 export * from "./taskBrowserApi";
-export * from "./herdrControlApi";
+export * from "../features/herdr/lib/herdrControlApi";
+export * from "../features/herdr/lib/herdrToolsApi";
+export { launchTerminalHerdr } from "../features/herdr/terminal/api";

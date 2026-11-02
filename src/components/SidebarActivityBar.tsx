@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
-import { HerdrIcon } from "./HerdrIcon";
+import { HerdrIcon } from "../features/herdr/components/HerdrIcon";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
 
 type ActivityIcon =

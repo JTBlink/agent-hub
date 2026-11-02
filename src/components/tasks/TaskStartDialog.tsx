@@ -11,7 +11,7 @@ import type {
   Project,
   ToolInfo,
 } from "../../lib/tauri";
-import { getHerdrInventory } from "../../lib/herdrControlApi";
+import { getHerdrInventory } from "../../features/herdr/lib/herdrControlApi";
 import { automationAgentOptions } from "../../lib/automationAgents";
 import { taskContext } from "../../lib/taskContext";
 import { composeTaskPrompt } from "../../lib/taskPrompt";

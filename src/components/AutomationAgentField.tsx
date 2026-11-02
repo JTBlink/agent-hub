@@ -15,7 +15,7 @@ import {
 import { automationHerdrConfig, automationPromptFile } from "../lib/automation";
 import { getErrorMessage } from "../lib/error";
 import { ThemedSelect } from "./ThemedSelect";
-import { AutomationHerdrFields } from "./AutomationHerdrFields";
+import { AutomationHerdrFields } from "../features/herdr/components/AutomationHerdrFields";
 
 type Execution = Pick<AutomationDraft, "provider" | "content" | "files">;
 const execution = ({

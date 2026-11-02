@@ -1,6 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import type { HerdrAgent } from "./herdrAgents";
-import type { HerdrTarget } from "./herdrControlApi";
+import { createHerdrTerminal } from "../features/herdr/terminal/api";
+import type { HerdrAgent } from "../features/herdr/lib/herdrAgents";
+import type { HerdrTarget } from "../features/herdr/lib/herdrControlApi";
 
 export interface TerminalSize {
   rows: number;
@@ -31,9 +32,14 @@ export async function createTerminal(
   await Promise.all(closingTerminals);
   const events = new Channel<TerminalEvent>();
   events.onmessage = onEvent;
-  if (herdrTarget) return invoke<TerminalSession>("herdr_terminal_create", {
-    request: {project_id:projectId,worktree_path:worktreePath ?? "",target:herdrTarget,size}, events,
-  });
+  if (herdrTarget)
+    return createHerdrTerminal(
+      projectId,
+      worktreePath,
+      herdrTarget,
+      size,
+      events,
+    );
   return invoke<TerminalSession>("terminal_create", {
     projectId,
     worktreePath,
@@ -59,30 +65,13 @@ export function closeTerminal(id: string) {
 }
 export const listTerminals = () => invoke<TerminalSession[]>("terminal_list");
 
-export interface HerdrInstallation {
-  path: string;
-  version: string;
-  managed: boolean;
-}
-export interface HerdrUpdate {
-  latest_version: string;
-  has_update: boolean;
-  managed: boolean;
-}
 export interface TerminalLaunchState {
   ready: boolean;
   revision: number;
   herdr_active: boolean;
 }
-export const detectHerdr = () =>
-  invoke<HerdrInstallation | null>("herdr_detect");
-export const installHerdr = () => invoke<HerdrInstallation>("herdr_install");
-export const checkHerdrUpdate = () => invoke<HerdrUpdate>("herdr_check_update");
-export const updateHerdr = () => invoke<HerdrInstallation>("herdr_update");
 export const terminalLaunchState = (id: string) =>
   invoke<TerminalLaunchState>("terminal_launch_state", { id });
-export const launchTerminalHerdr = (id: string, revision: number) =>
-  invoke<boolean>("terminal_launch_herdr", { id, revision });
 export const resolveTerminalProject = (
   projectId: string,
   worktreePath?: string,

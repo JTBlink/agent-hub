@@ -174,10 +174,10 @@ pub async fn task_add_comment(
 pub async fn task_prepare_herdr_workspace(
     window: WebviewWindow,
     store: State<'_, Arc<SkillStore>>,
-    tools: State<'_, Arc<crate::core::herdr_tools::HerdrTools>>,
+    tools: State<'_, Arc<crate::core::herdr::tools::HerdrTools>>,
     project_id: String,
     path: String,
-) -> Result<crate::core::herdr_control::OpenedWorkspace, AppError> {
+) -> Result<crate::core::herdr::control::OpenedWorkspace, AppError> {
     super::terminal::owner(&window)?;
     let store = store.inner().clone();
     let tools = tools.inner().clone();

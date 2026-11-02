@@ -19,6 +19,13 @@ agent-hub/
 │   │   ├── MySkills.tsx            #   已安装技能
 │   │   ├── InstallSkills.tsx       #   技能市场/安装
 │   │   └── workspaceConfigs.ts     #   工作空间配置定义
+│   ├── features/
+│   │   └── herdr/                  #   Herdr 专属集成，见 herdr.md
+│   │       ├── api.ts              #     模块 API：快照、控制、工具与终端挂接
+│   │       ├── components/         #     侧栏、工作树菜单、Agent／会话与自动化配置 UI
+│   │       ├── hooks/              #     快照订阅与项目联动
+│   │       ├── lib/                #     IPC、Agent 定义、工作树分组与焦点解析
+│   │       └── terminal/           #     Herdr 客户端挂接、快捷入口与终端操作栏
 │   ├── components/                 # 共享 UI 组件
 │   │   ├── Layout.tsx              #   主布局框架
 │   │   ├── usage/                  #   Agent 订阅用量摘要与详情
@@ -27,7 +34,6 @@ agent-hub/
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗
 │   │   ├── worktree/               #   项目／工作树导航、持久终端工作区与惰性文件浏览
-│   │   ├── herdr/                  #   Herdr 会话与工作空间切换、Agent 手动操作
 │   │   ├── terminal/               #   PTY 窗格、跨工作树会话总览与本机标签／分屏布局恢复
 │   │   ├── file-reader/            #   通用文件阅读器、弹窗壳、目录树与文本内容区
 │   │   ├── MarkdownContent.tsx     #   通用 Markdown 正文渲染
@@ -77,8 +83,6 @@ agent-hub/
 │   │   ├── exportAgents.ts         #   Agent 导出
 │   │   ├── agentIcons.ts           #   Agent 图标映射
 │   │   ├── agentUsage.ts           #   额度快照类型与展示计算
-│   │   ├── herdrControlApi.ts      #   显式会话的快照、目录联动和 Agent 控制 bindings
-│   │   ├── herdrAgents.ts          #   Herdr Agent 类型、菜单名称与图标映射
 │   │   ├── skillTags.ts            #   技能标签
 │   │   ├── skillPickerStatus.ts    #   技能选择状态
 │   │   ├── skillGroupStatus.ts      #   技能组状态
@@ -124,6 +128,7 @@ agent-hub/
 │   │   │   ├── project_skill_update.rs # 项目从中心更新与显式强制恢复
 │   │   │   ├── sync.rs             #     同步操作
 │   │   │   ├── git_backup.rs       #     Git 备份
+│   │   │   ├── herdr/             #     Herdr 控制与工具管理 IPC
 │   │   │   ├── settings.rs         #     应用设置
 │   │   │   ├── tools.rs            #     工具操作
 │   │   │   ├── browse.rs           #     文件浏览
@@ -131,9 +136,11 @@ agent-hub/
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
 │   │       ├── agent_usage/        #     独立 Claude／Codex 额度、凭据与缓存
-│   │       ├── herdr_control/      #     真实快照、工作空间映射、目标核验及有界 CLI 控制
-│   │       ├── herdr_agents/       #     独立 Herdr Agent 启动、调用环境隔离与终端连接
-│   │       ├── herdr_tools/        #     Herdr 安装检测、下载与版本更新
+│   │       ├── herdr/              #     Herdr 专属领域模块
+│   │       │   ├── control/        #       快照、目标核验、工作树与 Agent 控制
+│   │       │   ├── agents/         #       原生 Agent 启动与调用环境隔离
+│   │       │   ├── session/        #       default 会话与项目 workspace 路由
+│   │       │   └── tools/          #       安装检测、下载与版本更新
 │   │       ├── app_state.rs        #     全局应用状态
 │   │       ├── error.rs            #     统一错误类型
 │   │       ├── tool_detection.rs   #     Agent 程序、桌面应用与 IDE 扩展安装检测

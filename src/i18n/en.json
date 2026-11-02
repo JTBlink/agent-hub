@@ -18,6 +18,9 @@
   "herdr": {
     "workspaceUnavailable": "This workspace could not be opened. Check its local directory and try again.",
     "sessionUnavailable": "Herdr session is temporarily unavailable. Refresh to try again.",
+    "worktreeActions": "Worktree actions",
+    "openProject": "Open project",
+    "openWorktree": "Open worktree",
     "deleteWorktree": "Delete worktree checkout…",
     "deleteWorktreeHelp": "Delete worktree “{{path}}”? Terminals, Agents and processes in its Herdr workspace will close and the checkout directory will be removed. The Git branch is retained. Locked worktrees or those with local files cannot be deleted.",
     "moreActions": "More Herdr actions",

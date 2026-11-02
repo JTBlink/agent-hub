@@ -18,6 +18,9 @@
   "herdr": {
     "workspaceUnavailable": "暂时无法打开该工作空间，请检查本地目录后重试。",
     "sessionUnavailable": "暂时无法读取 Herdr 会话，请刷新重试。",
+    "worktreeActions": "工作树操作",
+    "openProject": "打开项目",
+    "openWorktree": "打开工作树",
     "deleteWorktree": "删除工作树…",
     "deleteWorktreeHelp": "删除工作树“{{path}}”？对应 Herdr 工作空间中的终端、Agent 和运行进程将被关闭，checkout 目录将被移除，Git 分支保留。有本地文件或锁定的工作树无法删除。",
     "moreActions": "Herdr 更多操作",

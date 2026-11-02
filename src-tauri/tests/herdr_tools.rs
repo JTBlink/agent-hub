@@ -1,5 +1,5 @@
 #![cfg(unix)]
-use app_lib::core::herdr_tools::{HerdrTools, ReleaseManifest};
+use app_lib::core::herdr::tools::{HerdrTools, ReleaseManifest};
 use sha2::{Digest, Sha256};
 use std::{collections::HashMap, io::Cursor};
 

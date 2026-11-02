@@ -1,5 +1,5 @@
 #![cfg(unix)]
-use app_lib::core::{herdr_control::HerdrControl, skill_store::SkillStore};
+use app_lib::core::{herdr::control::HerdrControl, skill_store::SkillStore};
 use serde_json::json;
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};
 
@@ -84,7 +84,7 @@ fn identical_labels_in_different_directories_remain_different_projects() {
 #[ignore]
 fn live_workspace_layout_and_pty_attachment_keep_the_server_running() {
     use app_lib::core::{
-        herdr_control::Action,
+        herdr::control::Action,
         terminal::{TerminalManager, TerminalSize, TerminalSpec},
     };
     use std::{
@@ -291,7 +291,7 @@ fn live_workspace_layout_and_pty_attachment_keep_the_server_running() {
 
 #[test]
 fn prompts_require_ready_foreground_and_unchanged_agent_identity() {
-    use app_lib::core::herdr_control::{Action, Target};
+    use app_lib::core::herdr::control::{Action, Target};
     let root = tempfile::tempdir().unwrap();
     let directory = root.path().join("checkout");
     fs::create_dir(&directory).unwrap();
@@ -408,7 +408,7 @@ esac
 
 #[test]
 fn closes_only_the_verified_pane() {
-    use app_lib::core::herdr_control::Action;
+    use app_lib::core::herdr::control::Action;
     let root = tempfile::tempdir().unwrap();
     let directory = root.path().join("checkout");
     fs::create_dir(&directory).unwrap();
@@ -450,7 +450,7 @@ esac
 
 #[test]
 fn attachment_recovers_a_closed_pane_in_the_same_checkout_without_replaying_actions() {
-    use app_lib::core::herdr_control::Action;
+    use app_lib::core::herdr::control::Action;
     let root = tempfile::tempdir().unwrap();
     let directory = root.path().join("checkout");
     fs::create_dir(&directory).unwrap();

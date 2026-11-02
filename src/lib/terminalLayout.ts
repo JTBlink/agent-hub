@@ -1,11 +1,11 @@
 import type { TerminalTaskContext } from "./taskContext";
-import type { HerdrAgent } from "./herdrAgents";
+import type { HerdrAgent } from "../features/herdr/lib/herdrAgents";
 import {
   herdrNavigation,
   DEFAULT_HERDR_SESSION,
   type HerdrOpenedWorkspace,
   type HerdrTarget,
-} from "./herdrControlApi";
+} from "../features/herdr/lib/herdrControlApi";
 
 export const TERMINAL_PANE_LIMIT = 8;
 export const TERMINAL_LAYOUT_KEY = "agent-hub:terminal-layout";

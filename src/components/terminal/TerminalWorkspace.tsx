@@ -17,8 +17,8 @@ import type { Project, ToolInfo } from "../../lib/tauri";
 import { ThemedSelect } from "../ThemedSelect";
 import { TerminalPane, type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
-import { useHerdrShortcut } from "./useHerdrShortcut";
-import { useHerdrSessions } from "./useHerdrSessions";
+import { useHerdrShortcut } from "../../features/herdr/terminal/useHerdrShortcut";
+import { useHerdrSessions } from "../../features/herdr/terminal/useHerdrSessions";
 import { cn } from "../../utils";
 import { projectWorkspaceRoute, worktreeUrl } from "../../lib/worktreeApi";
 import {
@@ -37,12 +37,12 @@ import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { TerminalStatus } from "./TerminalStatus";
 import { TerminalTaskContextPanel } from "./TerminalTaskContextPanel";
 import { TerminalNewMenu } from "./TerminalNewMenu";
-import type { HerdrAgent } from "../../lib/herdrAgents";
-import { herdrNavigation } from "../../lib/herdrControlApi";
+import type { HerdrAgent } from "../../features/herdr/lib/herdrAgents";
+import { herdrNavigation } from "../../features/herdr/lib/herdrControlApi";
 import { useTerminalTaskRequest } from "./useTerminalTaskRequest";
-import { useHerdrAttachment } from "./useHerdrAttachment";
+import { useHerdrAttachment } from "../../features/herdr/terminal/useHerdrAttachment";
 import { LocalTerminalTools } from "./TerminalActionBar";
-import { HerdrTerminalTools } from "./HerdrTerminalTools";
+import { HerdrTerminalTools } from "../../features/herdr/terminal/HerdrTerminalTools";
 
 interface Props {
   projects: Project[];

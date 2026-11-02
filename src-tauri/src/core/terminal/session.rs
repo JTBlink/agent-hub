@@ -276,7 +276,7 @@ impl Session {
         }
         // Validate shell support before touching the persistent Herdr session.
         shell.command(executable, &[])?;
-        let arguments = super::super::herdr_session::prepare_workspace(
+        let arguments = super::super::herdr::session::prepare_workspace(
             executable,
             std::path::Path::new(&self.snapshot.cwd),
         )?;

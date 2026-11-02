@@ -1,7 +1,7 @@
 import { Download, LayoutGrid, Layers, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
-import { HerdrIcon } from "../HerdrIcon";
+import { HerdrIcon } from "../../features/herdr/components/HerdrIcon";
 
 interface Props {
   showTerminalActions?: boolean;

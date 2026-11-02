@@ -1,6 +1,6 @@
 use crate::core::{
-    herdr_control::{HerdrControl, OpenedWorkspace},
-    herdr_session::{Client, SESSION},
+    herdr::control::{HerdrControl, OpenedWorkspace},
+    herdr::session::{Client, SESSION},
     project_worktrees,
     skill_store::SkillStore,
 };

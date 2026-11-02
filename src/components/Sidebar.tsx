@@ -20,7 +20,7 @@ import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { SidebarActivityBar } from "./SidebarActivityBar";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { useGitChangeCount } from "../hooks/useGitChangeCount";
-import { SidebarHerdr } from "./herdr/SidebarHerdr";
+import { SidebarHerdr } from "../features/herdr/components/SidebarHerdr";
 
 const PANEL_STORAGE_KEY = "agent-hub:sidebar-panel-open";
 

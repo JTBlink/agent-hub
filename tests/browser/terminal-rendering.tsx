@@ -1,5 +1,5 @@
 import React from "react";
-import { HerdrSessionPicker } from "../../src/components/herdr/HerdrSessionPicker";
+import { HerdrSessionPicker } from "../../src/features/herdr/components/HerdrSessionPicker";
 import { createRoot } from "react-dom/client";
 import { Terminal } from "@xterm/xterm";
 import "../../src/i18n";

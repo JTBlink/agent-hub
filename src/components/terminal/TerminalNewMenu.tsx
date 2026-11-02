@@ -1,6 +1,6 @@
 import { Plus, TerminalSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { herdrAgents, type HerdrAgent } from "../../lib/herdrAgents";
+import { herdrAgents, type HerdrAgent } from "../../features/herdr/lib/herdrAgents";
 import { AgentIcon } from "../AgentIcon";
 import { CardActionMenu } from "../CardActionMenu";
 import type { ToolInfo } from "../../lib/tauri";

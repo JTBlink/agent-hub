@@ -10,6 +10,7 @@
 
 - `src/views/`、`src/components/`：页面与共享 UI。
 - `src/lib/`、`src/hooks/`、`src/context/`：共享逻辑、Tauri bindings 与状态。
+- `src/features/herdr/`：Herdr 专属 UI、hooks、bindings 与终端适配；后端对应 `core/herdr/` 与 `commands/herdr/`，边界见 `docs/architecture/herdr.md`。
 - `src/i18n/`：国际化资源（中/英/繁体）。
 - `src-tauri/src/commands/`：Tauri IPC 命令层。
 - `src-tauri/src/core/`：核心业务（技能库、同步引擎、Git 备份、合并引擎、扫描器）。

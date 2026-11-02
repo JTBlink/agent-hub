@@ -18,6 +18,9 @@
   "herdr": {
     "workspaceUnavailable": "暫時無法開啟此工作空間，請檢查本機目錄後重試。",
     "sessionUnavailable": "暫時無法讀取 Herdr 工作階段，請重新整理再試。",
+    "worktreeActions": "工作樹操作",
+    "openProject": "開啟專案",
+    "openWorktree": "開啟工作樹",
     "deleteWorktree": "刪除工作樹…",
     "deleteWorktreeHelp": "刪除工作樹「{{path}}」？對應 Herdr 工作空間中的終端、Agent 與執行中程序將關閉，checkout 目錄將移除，Git 分支保留。有本機檔案或鎖定的工作樹無法刪除。",
     "moreActions": "Herdr 更多操作",

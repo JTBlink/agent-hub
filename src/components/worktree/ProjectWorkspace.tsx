@@ -12,7 +12,7 @@ import { useOpenProject } from "../../hooks/useOpenProject";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { projectWorkspaceRoute } from "../../lib/worktreeApi";
-import { herdrNavigation } from "../../lib/herdrControlApi";
+import { herdrNavigation } from "../../features/herdr/lib/herdrControlApi";
 import { cn } from "../../utils";
 import { TerminalWorkspace } from "../terminal/TerminalWorkspace";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";

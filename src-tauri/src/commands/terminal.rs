@@ -1,7 +1,7 @@
 use crate::core::{
     error::AppError,
-    herdr_agents::{self, HerdrAgent},
-    herdr_tools::HerdrTools,
+    herdr::agents::{self as herdr_agents, HerdrAgent},
+    herdr::tools::HerdrTools,
     skill_store::SkillStore,
     terminal::{self, TerminalEvent, TerminalManager, TerminalSession, TerminalSize, TerminalSpec},
 };
@@ -151,29 +151,6 @@ pub fn terminal_launch_state(
         .launch_state(&owner(&window)?, &id)
         .map_err(AppError::io)
 }
-#[tauri::command]
-pub async fn terminal_launch_herdr(
-    window: WebviewWindow,
-    manager: State<'_, Arc<TerminalManager>>,
-    tools: State<'_, Arc<crate::core::herdr_tools::HerdrTools>>,
-    id: String,
-    revision: u64,
-) -> Result<bool, AppError> {
-    let owner = owner(&window)?;
-    let manager = manager.inner().clone();
-    let tools = tools.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        let installed = tools
-            .detect()
-            .map_err(AppError::io)?
-            .ok_or_else(|| AppError::not_found("Herdr is not installed"))?;
-        manager
-            .launch_herdr(&owner, &id, std::path::Path::new(&installed.path), revision)
-            .map_err(AppError::io)
-    })
-    .await?
-}
-
 #[tauri::command]
 pub async fn terminal_project_directory(
     window: WebviewWindow,
