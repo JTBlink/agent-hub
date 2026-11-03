@@ -7,6 +7,7 @@ export interface BrowserProfile {
   endpoint?: string | null;
   proxy?: string | null;
   remote_download_directory?: string | null;
+  remote_transfer_target?: string | null;
   ephemeral?: boolean;
   deleting?: boolean;
 }
@@ -175,6 +176,10 @@ export const previewApi = {
     request<void>({ kind: "save_profile", profile }),
   upload: (id: string, revision: string, token: string, multiple: boolean) =>
     invoke<boolean>("preview_upload", { id, revision, token, multiple }),
+  fetchDownload: (profile: string, id: string) =>
+    request<void>({ kind: "fetch_download", profile, id }),
+  cancelTransfer: (profile: string, id: string) =>
+    request<void>({ kind: "cancel_transfer", profile, id }),
   downloads: () => request<PreviewDownload[]>({ kind: "downloads" }),
   forgetDownload: (profile: string, id: string) =>
     request<void>({ kind: "forget_download", profile, id }),
@@ -214,6 +219,11 @@ export const previewApi = {
 };
 
 export interface PreviewDownload {
+  transfer?: {
+    state: "running" | "canceling" | "completed" | "failed" | "canceled";
+    received: number;
+    error?: string | null;
+  } | null;
   verified?: boolean;
   id: string;
   profile: string;

@@ -2838,7 +2838,27 @@
     "remoteDownloadDirectoryHint": "填写远端浏览器可写的绝对目录；使用隔离子目录保存下载。未配置时不启用远端下载管理。",
     "remoteDownloadLocation": "保存在网络宿主",
     "localDownloadLocation": "保存在本机",
-    "remoteDownloadPendingTransfer": "远端下载已完成，文件尚未传输到本机。",
-    "downloadSourceUnverified": "部分下载事件的来源暂时无法核验，已保留待重试；不会将其误认为本机会话或已完成。"
+    "remoteDownloadPendingTransfer": "文件已保存在服务器，可通过配置的 SSH 主机取回本机。",
+    "downloadSourceUnverified": "部分下载事件的来源暂时无法核验，已保留待重试；不会将其误认为本机会话或已完成。",
+    "remoteTransferTarget": "SSH 传输主机",
+    "remoteTransferTargetHint": "填写现有 SSH 别名或 user@host，主机须能读取下载目录。使用已有密钥和主机校验；目前支持 macOS / Linux，每个文件最多 512 MiB。",
+    "fetchDownload": "取回本机 / 重试",
+    "transferState": {
+      "running": "正在取回本机",
+      "canceling": "正在取消",
+      "completed": "本机副本已就绪",
+      "failed": "取回失败",
+      "canceled": "已取消取回"
+    },
+    "transferError": {
+      "destination": "本机目录不可写或不安全，请检查目录权限。",
+      "source": "远端文件已变更或不可读取，请检查 SSH 主机与目录。",
+      "size": "文件大小与下载记录不一致或超过 512 MiB，请重新下载。",
+      "unavailable": "未找到 OpenSSH SFTP，请先安装。",
+      "host_key": "SSH 主机校验失败，请在终端核实并信任正确的主机密钥。",
+      "authentication": "SSH 认证失败，请检查密钥、SSH agent 与目录权限。",
+      "timeout": "传输超时，可重试。",
+      "failed": "SFTP 传输失败，请检查 SSH 配置和连接后重试。"
+    }
   }
 }

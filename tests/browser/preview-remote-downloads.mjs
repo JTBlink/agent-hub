@@ -57,6 +57,15 @@ try {
     await request(
       `/screenshot?target=${targetId}&file=/tmp/preview-remote-download-${language}.png`,
     );
+    await run("d.querySelector('.preview-note button').click()");
+    await until(`${d}.querySelector('.preview-note button[title]')?.disabled`);
+    await run("d.querySelector('.preview-note button').click()");
+    await until(`!${d}.querySelector('.preview-note button[title]')?.disabled`);
+    await run("d.querySelector('.preview-note button').click()");
+    await until(`${d}.querySelector('.preview-note .lucide-folder-open')`);
+    await request(
+      `/screenshot?target=${targetId}&file=/tmp/preview-retrieved-${language}.png`,
+    );
     await run(
       `const f=document.querySelector('#preview');f.src='./preview-workspace.html?view=remote-settings&language=${language}&theme=${theme}&text-size=${size}'`,
     );
@@ -79,10 +88,11 @@ try {
       await evaluate(`${d}.documentElement.dataset.savedRemoteProfile`),
     );
     assert.equal(saved.remote_download_directory, "/srv/downloads");
+    assert.equal(saved.remote_transfer_target, "browser-host");
     assert.equal(saved.endpoint, "http://127.0.0.1:9222");
   }
   console.log(
-    "PASS: remote artifact location, no false local actions, and remote directory settings in three layouts",
+    "PASS: remote retrieval, cancellation, retry, truthful local actions and SSH settings in three layouts",
   );
 } finally {
   await request(`/close?target=${targetId}`);

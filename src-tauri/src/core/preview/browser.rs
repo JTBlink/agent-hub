@@ -69,6 +69,7 @@ pub(super) struct State {
     pub lost_pages: HashSet<String>,
     pub cookie_gates: HashMap<String, Arc<Mutex<()>>>,
     pub downloads: HashMap<String, super::downloads::Download>,
+    pub transfers: HashMap<String, Arc<super::download_transfer::Transfer>>,
     pub closing: bool,
     pub runtimes: HashMap<String, Arc<Mutex<Runtime>>>,
     pub processes: HashMap<String, Arc<Mutex<OwnedChild>>>,
@@ -667,6 +668,9 @@ impl Browsers {
                 return;
             };
             state.closing = true;
+            for job in state.transfers.values() {
+                job.cancel();
+            }
             state.pages.clear();
             (
                 std::mem::take(&mut state.runtimes),
@@ -680,6 +684,19 @@ impl Browsers {
             }
         }
         drop(detached);
+        // Reap SSH descendants and remove staging files before shutdown returns.
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < deadline {
+            let active = self
+                .state
+                .lock()
+                .map(|state| state.transfers.values().any(|job| job.active()))
+                .unwrap_or(false);
+            if !active {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(30));
+        }
     }
 }
 pub fn validate_url(value: &str) -> Result<(), AppError> {

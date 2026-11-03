@@ -125,4 +125,18 @@ agent-hub-cli preview cancel-download '<download-id>' --profile '<profile-id>'
 agent-hub-cli preview forget-download '<download-id>' --profile '<profile-id>'
 ```
 
-`remote: true` 表示下载来自远端网络宿主，`local: false` 表示尚未拥有可打开的本机文件。`completed` 只表示浏览器报告下载完成，不代表已取回本机。`verified: false` 表示当前状态无法核验；保留已知进度，不推断完成。取消操作绑定原浏览上下文及运行时，不能用于其他或已替换的会话。移除记录不删除本机或远端文件。远端文件取回通道仍在实现，不能用记录列表代替传输结果。
+`remote: true` 表示下载来自远端网络宿主，`local: false` 表示尚未拥有可打开的本机文件。`completed` 只表示浏览器报告下载完成，不代表已取回本机。`verified: false` 表示当前状态无法核验；保留已知进度，不推断完成。取消操作绑定原浏览上下文及运行时，不能用于其他或已替换的会话。移除记录不删除本机或远端文件。取回使用下述独立 SFTP 通道，不能用记录列表代替传输结果。
+
+### 将远端下载取回本机
+
+在「预览 → 浏览器设置」为远端配置填写下载目录和 **SSH 传输主机**。主机填写已有 OpenSSH 别名或 `user@host`，应能读取浏览器写入的下载目录；非默认端口、跳板机等沿用 `~/.ssh/config`。请先在终端验证密钥认证并核实主机密钥，应用不会接受未知主机或弹出密码输入。
+
+```bash
+agent-hub-cli preview fetch-download <download-id> --profile <profile-id>
+agent-hub-cli preview downloads
+agent-hub-cli preview cancel-transfer <download-id> --profile <profile-id>
+```
+
+`fetch-download` 启动后台传输；`downloads` 的 `transfer` 字段返回状态、已取回字节数和错误类别。失败或取消后可重新执行 `fetch-download`，重新传输整个文件。当前支持安装了 OpenSSH SFTP 的 macOS / Linux，单文件上限 512 MiB，最多同时传输两个文件，每次最长五分钟。Windows 取回入口会明确返回不支持，不能将服务器文件当作本机文件打开。
+
+只允许取回当前进程已核实完成的远端下载，不接受任意远端路径。应用继承现有 SSH 配置和 agent，保留严格主机校验，不保存密码或私钥；SSH 别名必须指向保存文件的主机。下载来源的控制端点变更后拒绝取回。临时副本通过大小校验后，以唯一名称原子保存到受管下载目录，成功后方可打开或定位。失败、取消与退出会清理临时副本；不会删除服务器原文件或覆盖已有本机文件。

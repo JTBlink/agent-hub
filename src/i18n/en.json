@@ -2841,7 +2841,27 @@
     "remoteDownloadDirectoryHint": "Use an absolute directory writable by the remote browser. Downloads use a separate subdirectory. Remote download management stays disabled until configured.",
     "remoteDownloadLocation": "Stored on the network host",
     "localDownloadLocation": "Stored on this computer",
-    "remoteDownloadPendingTransfer": "The remote download is complete. The file has not been transferred to this computer.",
-    "downloadSourceUnverified": "Some download sources could not be verified. Events are retained for retry and are not reported as local or completed."
+    "remoteDownloadPendingTransfer": "Saved on the server. Retrieve through the configured SSH host.",
+    "downloadSourceUnverified": "Some download sources could not be verified. Events are retained for retry and are not reported as local or completed.",
+    "remoteTransferTarget": "SSH transfer host",
+    "remoteTransferTargetHint": "Use an existing SSH alias or user@host with access to the download directory. Uses existing keys and host verification. Currently macOS / Linux; up to 512 MiB per file.",
+    "fetchDownload": "Retrieve / retry",
+    "transferState": {
+      "running": "Retrieving to this device",
+      "canceling": "Canceling transfer",
+      "completed": "Local copy ready",
+      "failed": "Transfer failed",
+      "canceled": "Transfer canceled"
+    },
+    "transferError": {
+      "destination": "The local directory is unavailable or unsafe. Check its permissions.",
+      "source": "The remote file changed or is unavailable. Check the SSH host and directory.",
+      "size": "The file size differs from the download record or exceeds 512 MiB. Download it again.",
+      "unavailable": "OpenSSH SFTP was not found. Install it first.",
+      "host_key": "SSH host verification failed. Verify and trust the correct host key in your terminal.",
+      "authentication": "SSH authentication failed. Check your keys, SSH agent and directory permissions.",
+      "timeout": "The transfer timed out. Try again.",
+      "failed": "SFTP transfer failed. Check your SSH configuration and connection, then retry."
+    }
   }
 }

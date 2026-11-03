@@ -24,6 +24,18 @@ const content =
   "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\nThis continuation belongs to the same paragraph.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
 let linkDestination = "system";
 let disconnected = true;
+let fetchAttempts = 0;
+let remoteDownload: PreviewDownload = {
+  id: "remote-artifact",
+  profile: "remote",
+  name: "server-artifact.bin",
+  state: "completed",
+  received: 1024,
+  total: 1024,
+  remote: true,
+  local: false,
+  verified: true,
+};
 let downloads: PreviewDownload[] = [
   {
     id: "completed",
@@ -131,6 +143,7 @@ mockIPC((command, args) => {
                   name: "Remote",
                   endpoint: "http://127.0.0.1:9222",
                   remote_download_directory: "/srv/downloads",
+                  remote_transfer_target: "browser-host",
                 },
               ]
             : [{ id: "default", name: "Default" }],
@@ -152,21 +165,28 @@ mockIPC((command, args) => {
         skipped: { invalid: 0, expired: 0, partitioned: 0, bound: 0 },
       };
     if (request.kind === "cookie_apply") return { imported: 1, removed: 0 };
+    if (request.kind === "fetch_download") {
+      fetchAttempts += 1;
+      remoteDownload =
+        fetchAttempts === 1
+          ? { ...remoteDownload, transfer: { state: "running", received: 512 } }
+          : {
+              ...remoteDownload,
+              local: true,
+              transfer: { state: "completed", received: 1024 },
+            };
+      return null;
+    }
+    if (request.kind === "cancel_transfer") {
+      remoteDownload = {
+        ...remoteDownload,
+        transfer: { state: "canceled", received: 512 },
+      };
+      return null;
+    }
     if (request.kind === "downloads")
       return parameters.get("view") === "remote-downloads"
-        ? [
-            {
-              id: "remote-artifact",
-              profile: "remote",
-              name: "server-artifact.bin",
-              state: "completed",
-              received: 1024,
-              total: 1024,
-              remote: true,
-              local: false,
-              verified: true,
-            },
-          ]
+        ? [remoteDownload]
         : parameters.get("view") === "downloads"
           ? downloads
           : [];

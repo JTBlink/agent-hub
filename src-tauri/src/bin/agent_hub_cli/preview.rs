@@ -15,6 +15,18 @@ pub enum PreviewCommand {
     List,
     /// 列出本机和远端会话的下载记录。
     Downloads,
+    /// 将已完成的远端下载通过配置的 SSH 主机取回本机（后台传输）。
+    FetchDownload {
+        id: String,
+        #[arg(long, default_value = "default")]
+        profile: String,
+    },
+    /// 取消远端下载取回，清理未完成的本机副本。
+    CancelTransfer {
+        id: String,
+        #[arg(long, default_value = "default")]
+        profile: String,
+    },
     /// 取消指定配置中的活动下载。
     CancelDownload {
         id: String,
@@ -85,6 +97,12 @@ fn action(id: &str, value: Value) -> Result<Value> {
 }
 pub fn run(args: &PreviewArgs, json_output: bool) -> Result<()> {
     let value = match &args.command {
+        PreviewCommand::FetchDownload { id, profile } => {
+            request(json!({"kind":"fetch_download","id":id,"profile":profile}))?
+        }
+        PreviewCommand::CancelTransfer { id, profile } => {
+            request(json!({"kind":"cancel_transfer","id":id,"profile":profile}))?
+        }
         PreviewCommand::Downloads => request(json!({"kind":"downloads"}))?,
         PreviewCommand::CancelDownload { id, profile } => {
             request(json!({"kind":"cancel_download","profile":profile,"id":id}))?

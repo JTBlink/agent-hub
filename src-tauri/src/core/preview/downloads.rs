@@ -17,6 +17,9 @@ pub struct Download {
     pub total: f64,
     pub local: bool,
     pub remote: bool,
+    pub transfer: Option<super::download_transfer::Progress>,
+    #[serde(skip)]
+    pub source_endpoint: Option<String>,
     #[serde(skip)]
     pub source_runtime: String,
     #[serde(skip)]
@@ -60,7 +63,7 @@ impl Browsers {
             return self
                 .state
                 .lock()
-                .map(|state| state.downloads.values().cloned().collect())
+                .map(|state| super::download_transfer::snapshot(&state))
                 .map_err(|_| AppError::internal("Browser state unavailable"));
         };
         let previous_downloads = self
@@ -145,6 +148,11 @@ impl Browsers {
                                 total: 0.,
                                 local: runtime.download_dir.is_some(),
                                 remote: runtime.context.is_some(),
+                                transfer: None,
+                                source_endpoint: runtime
+                                    .context
+                                    .as_ref()
+                                    .map(|_| runtime.endpoint.clone()),
                                 source_runtime: runtime.instance_id.clone(),
                                 source_epoch: runtime.download_epoch,
                                 source_context: runtime.context.clone(),
@@ -211,23 +219,38 @@ impl Browsers {
             .state
             .lock()
             .map_err(|_| AppError::internal("Browser state unavailable"))?;
-        state.downloads.extend(updates);
+        for (key, mut update) in updates {
+            if let Some(current) = state.downloads.get(&key) {
+                if current.source_runtime == update.source_runtime
+                    && current.remote
+                    && current.local
+                {
+                    update.local = true;
+                    update.path.clone_from(&current.path);
+                }
+            }
+            state.downloads.insert(key, update);
+        }
         if state.downloads.len() > 200 {
             let completed: Vec<_> = state
                 .downloads
                 .iter()
-                .filter(|(_, item)| item.state != "inProgress")
+                .filter(|(key, item)| {
+                    item.state != "inProgress"
+                        && !state.transfers.get(*key).is_some_and(|job| job.active())
+                })
                 .map(|(key, _)| key.clone())
                 .take(state.downloads.len() - 200)
                 .collect();
             for key in completed {
                 state.downloads.remove(&key);
+                state.transfers.remove(&key);
             }
         }
         if unverified_source {
             return Err(AppError::network("PREVIEW_DOWNLOAD_UNVERIFIED"));
         }
-        Ok(state.downloads.values().cloned().collect())
+        Ok(super::download_transfer::snapshot(&state))
     }
     pub fn cancel_download(&self, profile: &str, id: &str) -> Result<(), AppError> {
         let _poll = self
@@ -292,7 +315,13 @@ impl Browsers {
                 "Cancel the download before removing its record",
             ));
         }
+        if state.transfers.get(&key).is_some_and(|job| job.active()) {
+            return Err(AppError::invalid_input(
+                "Cancel the transfer before removing its record",
+            ));
+        }
         state.downloads.remove(&key);
+        state.transfers.remove(&key);
         Ok(())
     }
     pub fn download_path(&self, profile: &str, id: &str) -> Result<PathBuf, AppError> {

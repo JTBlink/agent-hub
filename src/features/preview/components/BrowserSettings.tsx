@@ -47,6 +47,9 @@ export function BrowserSettings({
         executable: profile.executable || null,
         endpoint: profile.endpoint || null,
         proxy: profile.proxy || null,
+        remote_transfer_target: profile.endpoint
+          ? profile.remote_transfer_target || null
+          : null,
         remote_download_directory: profile.endpoint
           ? profile.remote_download_directory || null
           : null,
@@ -175,6 +178,24 @@ export function BrowserSettings({
               />
               <small className="text-xs leading-5 text-muted">
                 {t("preview.remoteDownloadDirectoryHint")}
+              </small>
+            </label>
+          )}
+          {profile.endpoint && (
+            <label>
+              {t("preview.remoteTransferTarget")}
+              <input
+                value={profile.remote_transfer_target ?? ""}
+                placeholder="browser-host"
+                onChange={(event) =>
+                  setProfile({
+                    ...profile,
+                    remote_transfer_target: event.target.value,
+                  })
+                }
+              />
+              <small className="text-xs leading-5 text-muted">
+                {t("preview.remoteTransferTargetHint")}
               </small>
             </label>
           )}

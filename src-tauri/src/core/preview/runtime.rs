@@ -23,6 +23,8 @@ pub struct BrowserProfile {
     #[serde(default)]
     pub remote_download_directory: Option<String>,
     #[serde(default)]
+    pub remote_transfer_target: Option<String>,
+    #[serde(default)]
     pub ephemeral: bool,
     #[serde(default)]
     pub deleting: bool,
@@ -46,6 +48,7 @@ impl Default for BrowserProfile {
             endpoint: None,
             proxy: None,
             remote_download_directory: None,
+            remote_transfer_target: None,
             ephemeral: false,
             deleting: false,
         }
@@ -421,6 +424,14 @@ pub fn validate_profile(profile: &BrowserProfile) -> Result<(), AppError> {
             ));
         }
         super::remote_downloads::managed_directory(directory, "validation")?;
+    }
+    if let Some(target) = &profile.remote_transfer_target {
+        super::download_transfer::validate_target(target)?;
+        if profile.endpoint.is_none() || profile.remote_download_directory.is_none() {
+            return Err(AppError::invalid_input(
+                "Configure the remote endpoint and download directory first",
+            ));
+        }
     }
     Ok(())
 }

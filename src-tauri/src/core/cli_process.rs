@@ -76,7 +76,14 @@ pub(crate) fn capture_prepared(
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x08000000);
     }
+    #[cfg(unix)]
+    if cancel.is_some() {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
     let mut child = command.spawn().map_err(|e| format!("{program}: {e}"))?;
+    #[cfg(unix)]
+    let _group = CancelGroup(cancel.map(|_| child.id()));
     let started = Instant::now();
     let status = loop {
         if cancel.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Acquire)) {
@@ -130,6 +137,20 @@ pub(crate) fn capture_prepared(
                 error.trim().to_string()
             }
         ))
+    }
+}
+
+#[cfg(unix)]
+struct CancelGroup(Option<u32>);
+#[cfg(unix)]
+impl Drop for CancelGroup {
+    fn drop(&mut self) {
+        if let Some(pid) = self.0 {
+            // The child was placed in its own process group before exec.
+            unsafe {
+                libc::kill(-(pid as i32), libc::SIGKILL);
+            }
+        }
     }
 }
 

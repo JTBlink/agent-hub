@@ -2798,7 +2798,27 @@
     "remoteDownloadDirectoryHint": "填寫遠端瀏覽器可寫入的絕對目錄；使用隔離子目錄儲存下載。未設定時不啟用遠端下載管理。",
     "remoteDownloadLocation": "儲存在網路主機",
     "localDownloadLocation": "儲存在本機",
-    "remoteDownloadPendingTransfer": "遠端下載已完成，檔案尚未傳輸到本機。",
-    "downloadSourceUnverified": "部分下載事件的來源暫時無法核驗，已保留待重試；不會將其誤認為本機工作階段或已完成。"
+    "remoteDownloadPendingTransfer": "檔案已儲存在伺服器，可透過設定的 SSH 主機取回本機。",
+    "downloadSourceUnverified": "部分下載事件的來源暫時無法核驗，已保留待重試；不會將其誤認為本機工作階段或已完成。",
+    "remoteTransferTarget": "SSH 傳輸主機",
+    "remoteTransferTargetHint": "填寫現有 SSH 別名或 user@host，主機須能讀取下載目錄。使用既有金鑰和主機驗證；目前支援 macOS / Linux，每個檔案最多 512 MiB。",
+    "fetchDownload": "取回本機 / 重試",
+    "transferState": {
+      "running": "正在取回本機",
+      "canceling": "正在取消",
+      "completed": "本機副本已就緒",
+      "failed": "取回失敗",
+      "canceled": "已取消取回"
+    },
+    "transferError": {
+      "destination": "本機目錄無法寫入或不安全，請檢查權限。",
+      "source": "遠端檔案已變更或無法讀取，請檢查 SSH 主機與目錄。",
+      "size": "檔案大小與下載記錄不一致或超過 512 MiB，請重新下載。",
+      "unavailable": "找不到 OpenSSH SFTP，請先安裝。",
+      "host_key": "SSH 主機驗證失敗，請在終端核實並信任正確的主機金鑰。",
+      "authentication": "SSH 驗證失敗，請檢查金鑰、SSH agent 與目錄權限。",
+      "timeout": "傳輸逾時，可重試。",
+      "failed": "SFTP 傳輸失敗，請檢查 SSH 設定和連線後重試。"
+    }
   }
 }

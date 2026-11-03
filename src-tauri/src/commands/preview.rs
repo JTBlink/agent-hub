@@ -38,6 +38,14 @@ pub enum PreviewRequest {
         clip: Option<Value>,
     },
     Downloads,
+    FetchDownload {
+        profile: String,
+        id: String,
+    },
+    CancelTransfer {
+        profile: String,
+        id: String,
+    },
     ForgetDownload {
         profile: String,
         id: String,
@@ -159,6 +167,14 @@ pub async fn preview_request(
             } => serde_json::to_value(
                 preview.capture_rendered(&html, width, height, &profile, full, clip)?,
             ),
+            PreviewRequest::FetchDownload { profile, id } => {
+                preview.browsers.fetch_download(&profile, &id)?;
+                return Ok(Value::Null);
+            }
+            PreviewRequest::CancelTransfer { profile, id } => {
+                preview.browsers.cancel_transfer(&profile, &id)?;
+                return Ok(Value::Null);
+            }
             PreviewRequest::Downloads => serde_json::to_value(preview.browsers.downloads()?),
             PreviewRequest::ForgetDownload { profile, id } => {
                 preview.browsers.forget_download(&profile, &id)?;

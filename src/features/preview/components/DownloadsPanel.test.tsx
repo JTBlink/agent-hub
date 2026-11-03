@@ -9,6 +9,8 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../api", () => ({
   previewApi: {
     downloads: vi.fn(),
+    fetchDownload: vi.fn(),
+    cancelTransfer: vi.fn(),
     forgetDownload: vi.fn(),
     cancelDownload: vi.fn(),
     openDownload: vi.fn(),
@@ -123,7 +125,7 @@ it("labels completed remote artifacts without offering local file actions", asyn
     );
     expect(
       [...container.querySelectorAll("button")].some(
-        (button) => button.textContent === "common.open",
+        (button) => button.textContent === "fileTree.open",
       ),
     ).toBe(false);
     expect(
@@ -134,6 +136,81 @@ it("labels completed remote artifacts without offering local file actions", asyn
   } finally {
     await act(async () => root.unmount());
     container.remove();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("retrieves remote files, cancels transfer, retries failures and exposes only the completed local copy", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.useFakeTimers();
+  let item: PreviewDownload = {
+    id: "remote-file",
+    profile: "remote",
+    name: "report.bin",
+    state: "completed",
+    received: 2048,
+    total: 2048,
+    local: false,
+    remote: true,
+    verified: true,
+  };
+  vi.mocked(previewApi.downloads).mockImplementation(async () => [item]);
+  vi.mocked(previewApi.fetchDownload).mockImplementation(async () => {
+    item = { ...item, transfer: { state: "running", received: 1024 } };
+  });
+  vi.mocked(previewApi.cancelTransfer).mockImplementation(async () => {
+    item = { ...item, transfer: { state: "canceling", received: 1024 } };
+  });
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const button = (text: string) =>
+    [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes(text),
+    )!;
+  try {
+    await act(async () =>
+      root.render(
+        <DownloadsPanel model={{ report: vi.fn(), setPanelOpen: vi.fn() }} />,
+      ),
+    );
+    await act(async () => button("preview.fetchDownload").click());
+    expect(previewApi.fetchDownload).toHaveBeenCalledWith(
+      "remote",
+      "remote-file",
+    );
+    expect(button("preview.removeDownload").disabled).toBe(true);
+    await act(async () => button("common.cancel").click());
+    expect(previewApi.cancelTransfer).toHaveBeenCalledWith(
+      "remote",
+      "remote-file",
+    );
+    expect(button("common.cancel").disabled).toBe(true);
+    item = {
+      ...item,
+      transfer: { state: "failed", received: 1024, error: "authentication" },
+    };
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "preview.transferError.authentication",
+    );
+    await act(async () => button("preview.fetchDownload").click());
+    item = {
+      ...item,
+      local: true,
+      transfer: { state: "completed", received: 2048 },
+    };
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(button("fileTree.open").disabled).toBe(false);
+    expect(button("preview.revealDownload").disabled).toBe(false);
+    expect(container.textContent).not.toContain(
+      "preview.remoteDownloadPendingTransfer",
+    );
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    vi.useRealTimers();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   }

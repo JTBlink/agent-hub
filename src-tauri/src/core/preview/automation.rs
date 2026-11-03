@@ -33,6 +33,8 @@ enum Request {
     Reopen { id: String },
     Frame { id: String },
     Downloads,
+    FetchDownload { profile: String, id: String },
+    CancelTransfer { profile: String, id: String },
     CancelDownload { profile: String, id: String },
     ForgetDownload { profile: String, id: String },
 }
@@ -118,7 +120,7 @@ fn response(stream: &mut TcpStream, status: u16, value: Value) -> std::io::Resul
     write!(stream,"HTTP/1.1 {status} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n\r\n",if status==200{"OK"}else{"Error"},data.len())?;
     stream.write_all(&data)
 }
-fn serve(mut stream: TcpStream, token: &str, browsers: &Browsers) -> std::io::Result<()> {
+fn serve(mut stream: TcpStream, token: &str, browsers: &Arc<Browsers>) -> std::io::Result<()> {
     stream.set_read_timeout(Some(Duration::from_secs(3)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
     let mut bytes = Vec::new();
@@ -186,6 +188,12 @@ fn serve(mut stream: TcpStream, token: &str, browsers: &Browsers) -> std::io::Re
     }
     let request = serde_json::from_slice::<Request>(&bytes[header_end..header_end + length]);
     let result = match request {
+        Ok(Request::FetchDownload { profile, id }) => {
+            browsers.fetch_download(&profile, &id).map(|_| Value::Null)
+        }
+        Ok(Request::CancelTransfer { profile, id }) => {
+            browsers.cancel_transfer(&profile, &id).map(|_| Value::Null)
+        }
         Ok(Request::Downloads) => browsers
             .downloads()
             .and_then(|value| serde_json::to_value(value).map_err(AppError::io)),

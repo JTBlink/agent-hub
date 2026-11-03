@@ -54,6 +54,15 @@ impl Browsers {
             .state
             .lock()
             .map_err(|_| AppError::internal("Browser state unavailable"))?;
+        if state
+            .transfers
+            .iter()
+            .any(|(key, job)| key.starts_with(&format!("{}:", profile.id)) && job.active())
+        {
+            return Err(AppError::invalid_input(
+                "Wait for the profile transfer to finish",
+            ));
+        }
         if state.closing
             || state.reopening_profiles.contains_key(&profile.id)
             || state.runtimes.contains_key(&profile.id)
@@ -126,6 +135,15 @@ impl Browsers {
             .state
             .lock()
             .map_err(|_| AppError::internal("Browser state unavailable"))?;
+        if state
+            .transfers
+            .iter()
+            .any(|(key, job)| key.starts_with(&format!("{id}:")) && job.active())
+        {
+            return Err(AppError::invalid_input(
+                "Wait for the profile transfer to finish",
+            ));
+        }
         if state.closing
             || state.reopening_profiles.contains_key(id)
             || state.runtimes.contains_key(id)

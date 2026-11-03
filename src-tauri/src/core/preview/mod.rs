@@ -5,6 +5,7 @@ mod capture;
 mod cdp;
 pub mod cookies;
 pub mod documents;
+mod download_transfer;
 pub mod downloads;
 pub mod export;
 mod frames;
