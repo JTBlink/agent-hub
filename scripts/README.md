@@ -4,7 +4,7 @@
 
 ## 需求原型预览
 
-根目录 `./prototype.sh` 启动并打开[原型目录](../prototypes/README.md)。`--list` 列出全部入口，`./prototype.sh preview --layout B` 直达指定原型；共用 `prototypes/catalog.json`，无需另起独立工程。
+`./scripts/prototype.sh` 启动并打开[原型目录](../prototypes/README.md)。`--list` 列出全部入口，`./prototype.sh preview --layout B` 直达指定原型；共用 `prototypes/catalog.json`，无需另起独立工程。根目录 `./prototype.sh` 保留为同一实现的快捷入口。
 
 ## 脚本说明
 

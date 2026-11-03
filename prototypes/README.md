@@ -1,6 +1,6 @@
 # 需求原型目录
 
-统一运行入口位于项目根目录：
+启动实现位于 `scripts/prototype.sh`，项目根目录的 `prototype.sh` 是转发入口，两者参数一致：
 
 ```sh
 ./prototype.sh                       # 启动并打开目录索引
