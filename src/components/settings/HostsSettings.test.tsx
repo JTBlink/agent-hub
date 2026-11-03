@@ -265,7 +265,7 @@ const profile: api.HostsProfile = {
   name: "Development",
   content: "127.0.0.2 app.test\n",
   revision: "profile-first",
-  path: "/workspace/user-config/hosts/profile-1/hosts",
+  path: "/workspace/user-config/hosts/profile-1.hosts",
 };
 async function selectProfile() {
   await act(async () =>
@@ -273,16 +273,111 @@ async function selectProfile() {
   );
 }
 
-it("shows the complete profile path", async () => {
+const profileButtons = () => [
+  ...host.querySelectorAll<HTMLButtonElement>("aside button[aria-pressed]"),
+];
+const activeProfileNames = () =>
+  profileButtons()
+    .filter((item) => item.textContent?.includes("当前生效"))
+    .map((item) => item.querySelector("[title]")?.textContent);
+
+it("attributes identical contents only to the backend ID and switches only after a successful apply", async () => {
+  const first = { ...profile, content: initial.content };
+  const second = { ...first, id: "profile-2", name: "Testing" };
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([first, second]);
+  vi.mocked(api.readSystemHosts).mockResolvedValue({
+    ...initial,
+    applied_profile_id: first.id,
+  });
+  await render();
+  expect(activeProfileNames()).toEqual([first.name]);
+  await act(async () => profileButtons()[1].click());
+  expect(button("应用到系统").disabled).toBe(false);
+  expect(host.querySelector("h3 .text-success")).toBeNull();
+  expect(activeProfileNames()).toEqual([first.name]);
+
+  vi.mocked(api.applyHostsProfile).mockRejectedValueOnce(
+    new Error("Authorization cancelled"),
+  );
+  await act(async () => button("应用到系统").click());
+  expect(activeProfileNames()).toEqual([first.name]);
+
+  const applied = { ...initial, applied_profile_id: second.id };
+  vi.mocked(api.applyHostsProfile).mockResolvedValueOnce({
+    snapshot: applied,
+    backup_path: null,
+  });
+  await act(async () => button("应用到系统").click());
+  expect(api.applyHostsProfile).toHaveBeenLastCalledWith(
+    second,
+    initial.revision,
+  );
+  expect(activeProfileNames()).toEqual([second.name]);
+  expect(button("已应用").disabled).toBe(true);
+
+  vi.mocked(api.readSystemHosts).mockResolvedValue(applied);
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  expect(activeProfileNames()).toEqual([second.name]);
+  await act(async () => profileButtons()[0].click());
+  expect(button("应用到系统").disabled).toBe(false);
+  expect(activeProfileNames()).toEqual([second.name]);
+});
+
+it("does not infer an active profile from identical content when no backend ID is recorded", async () => {
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([
+    { ...profile, content: initial.content },
+    { ...profile, id: "profile-2", name: "Testing", content: initial.content },
+  ]);
+  await render();
+  expect(activeProfileNames()).toEqual([]);
+  expect(
+    host.querySelectorAll("aside button[aria-label^='应用方案']"),
+  ).toHaveLength(0);
+});
+
+it("clears the badge after saving changes to the active profile without changing the system file", async () => {
   vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  vi.mocked(api.readSystemHosts).mockResolvedValue({
+    ...initial,
+    content: profile.content,
+    applied_profile_id: profile.id,
+  });
   await render();
   await selectProfile();
-  expect(
-    [...host.querySelectorAll("code")].some(
-      (node) => node.textContent === profile.path,
-    ),
-  ).toBe(true);
+  await edit("# changed profile\n");
+  vi.mocked(api.updateHostsProfile).mockResolvedValue({
+    ...profile,
+    content: "# changed profile\n",
+    revision: "updated",
+  });
+  await act(async () => button("保存方案").click());
+  expect(activeProfileNames()).toEqual([]);
+  expect(button("应用到系统").disabled).toBe(false);
+  expect(api.saveSystemHosts).not.toHaveBeenCalled();
 });
+
+it.each([
+  [
+    "/workspace/user-config/hosts/12345678-1234-4234-8234-123456789abc.hosts",
+    "…/hosts/12345678….hosts",
+  ],
+  [
+    "C:\\workspace\\user-config\\hosts\\12345678-1234-4234-8234-123456789abc.hosts",
+    "…/hosts/12345678….hosts",
+  ],
+])(
+  "shortens the profile path while keeping the exact location accessible: %s",
+  async (path, display) => {
+    vi.mocked(api.listHostsProfiles).mockResolvedValue([{ ...profile, path }]);
+    await render();
+    await selectProfile();
+    const location = host.querySelector("code[title]");
+    expect(location?.textContent).toBe(display);
+    expect(location?.getAttribute("title")).toBe(path);
+    expect(location?.getAttribute("aria-label")).toBe(path);
+  },
+);
+
 it("saves a profile without writing system hosts, then explicitly applies the saved revision", async () => {
   vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
   await render();
@@ -303,7 +398,12 @@ it("saves a profile without writing system hosts, then explicitly applies the sa
   expect(api.saveSystemHosts).not.toHaveBeenCalled();
   expect(api.applyHostsProfile).not.toHaveBeenCalled();
   vi.mocked(api.applyHostsProfile).mockResolvedValue({
-    snapshot: { ...initial, content: updated.content, revision: "applied" },
+    snapshot: {
+      ...initial,
+      content: updated.content,
+      revision: "applied",
+      applied_profile_id: updated.id,
+    },
     backup_path: null,
   });
   await act(async () => button("应用到系统").click());
@@ -424,35 +524,28 @@ it("deletes only the selected profile and keeps the system content", async () =>
   expect(api.saveSystemHosts).not.toHaveBeenCalled();
 });
 
-it.each([false, true])(
-  "retries the failed quick-apply target instead of the selected editor: %s",
-  async (selectOther) => {
-    const target = {
-      ...profile,
-      id: "profile-2",
-      name: "Testing",
-      revision: "target",
-    };
-    vi.mocked(api.listHostsProfiles).mockResolvedValue([profile, target]);
-    await render();
-    if (selectOther) await selectProfile();
-    vi.mocked(api.applyHostsProfile).mockRejectedValueOnce(
-      new Error("Authorization cancelled"),
-    );
-    await act(async () =>
-      host
-        .querySelector<HTMLButtonElement>('[aria-label="应用方案「Testing」"]')!
-        .click(),
-    );
-    expect(api.applyHostsProfile).toHaveBeenLastCalledWith(target, "first");
-    vi.mocked(api.applyHostsProfile).mockResolvedValueOnce({
-      snapshot: { ...initial, content: target.content, revision: "applied" },
-      backup_path: null,
-    });
-    await act(async () => button("重新授权并保存").click());
-    expect(api.applyHostsProfile).toHaveBeenCalledTimes(2);
-    expect(api.applyHostsProfile).toHaveBeenLastCalledWith(target, "first");
-    expect(api.saveSystemHosts).not.toHaveBeenCalled();
-    expect(api.updateHostsProfile).not.toHaveBeenCalled();
-  },
-);
+it("retries applying the selected saved profile after authorization is cancelled", async () => {
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  await render();
+  await selectProfile();
+  expect(host.textContent).not.toContain("一键应用");
+  expect(api.applyHostsProfile).not.toHaveBeenCalled();
+  vi.mocked(api.applyHostsProfile).mockRejectedValueOnce(
+    new Error("Authorization cancelled"),
+  );
+  await act(async () => button("应用到系统").click());
+  vi.mocked(api.applyHostsProfile).mockResolvedValueOnce({
+    snapshot: {
+      ...initial,
+      content: profile.content,
+      revision: "applied",
+      applied_profile_id: profile.id,
+    },
+    backup_path: null,
+  });
+  await act(async () => button("重新授权并保存").click());
+  expect(api.applyHostsProfile).toHaveBeenCalledTimes(2);
+  expect(api.applyHostsProfile).toHaveBeenLastCalledWith(profile, "first");
+  expect(api.saveSystemHosts).not.toHaveBeenCalled();
+  expect(api.updateHostsProfile).not.toHaveBeenCalled();
+});

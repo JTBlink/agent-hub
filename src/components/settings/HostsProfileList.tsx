@@ -2,7 +2,7 @@ import { Check, FileText, FolderOpen, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { HostsProfile, HostsSnapshot } from "../../lib/hostsApi";
-import { hostsEditorText } from "./hostsPresentation";
+import { appliedHostsProfile } from "./hostsPresentation";
 import { actionButtonClass, fieldClass } from "./settingsStyles";
 
 interface Props {
@@ -10,9 +10,7 @@ interface Props {
   system: HostsSnapshot | null;
   selected: string | null;
   busy: boolean;
-  dirty: boolean;
   onSelect: (profile: HostsProfile) => void;
-  onApply: (profile: HostsProfile) => void;
   onCreate: () => void;
 }
 export function HostsProfileList({
@@ -20,13 +18,12 @@ export function HostsProfileList({
   system,
   selected,
   busy,
-  dirty,
   onSelect,
-  onApply,
   onCreate,
 }: Props) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
+  const appliedId = appliedHostsProfile(profiles, system)?.id;
   const visible = profiles.filter((p) =>
     p.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
   );
@@ -54,10 +51,7 @@ export function HostsProfileList({
       </label>
       <div className="max-h-72 space-y-1 overflow-y-auto md:max-h-[28rem]">
         {visible.map((profile) => {
-          const applied =
-            !!system &&
-            hostsEditorText(profile.content) ===
-              hostsEditorText(system.content);
+          const applied = profile.id === appliedId;
           return (
             <div
               key={profile.id}
@@ -86,21 +80,6 @@ export function HostsProfileList({
                   )}
                 </span>
               </button>
-              {!applied && (
-                <div className="px-2 pb-2 pl-7">
-                  <button
-                    type="button"
-                    aria-label={t("hosts.applyNamed", { name: profile.name })}
-                    disabled={
-                      busy || !system || (selected === profile.id && dirty)
-                    }
-                    className="app-button-ghost min-h-6 px-1 text-[10px]"
-                    onClick={() => onApply(profile)}
-                  >
-                    {t("hosts.quickApply")}
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}

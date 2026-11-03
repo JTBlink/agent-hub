@@ -2,8 +2,8 @@ import { useState } from "react";
 import {
   Check,
   CheckCheck,
-  Code2,
   Copy,
+  Code2,
   Monitor,
   Plus,
   RefreshCw,
@@ -15,7 +15,7 @@ import type { HostsProfile } from "../../lib/hostsApi";
 import { HostsPermissionGuide } from "./HostsPermissionGuide";
 import { HostsProfileList } from "./HostsProfileList";
 import { useHostsSettings } from "./useHostsSettings";
-import { hostsEditorText } from "./hostsPresentation";
+import { appliedHostsProfile, hostsDisplayPath } from "./hostsPresentation";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { actionButtonClass, fieldClass } from "./settingsStyles";
 
@@ -32,17 +32,8 @@ export function HostsSettings({ active }: { active: boolean }) {
   } | null>(null);
   const [nameRequest, setNameRequest] = useState<NameRequest | null>(null);
   const [name, setName] = useState("");
-  const matched = state.system
-    ? state.profiles.find(
-        (p) =>
-          hostsEditorText(p.content) === hostsEditorText(state.system!.content),
-      )
-    : null;
-  const applied =
-    !!state.profile &&
-    !!state.system &&
-    hostsEditorText(state.profile.content) ===
-      hostsEditorText(state.system.content);
+  const matched = appliedHostsProfile(state.profiles, state.system);
+  const applied = !!state.profile && state.profile.id === matched?.id;
   const guard = (action: () => void | Promise<boolean>) => {
     if (state.dirty)
       setConfirm({ message: t("hosts.discardSelection"), action });
@@ -51,11 +42,6 @@ export function HostsSettings({ active }: { active: boolean }) {
   const select = (profile: HostsProfile | null) => {
     if ((profile?.id ?? null) === (state.profile?.id ?? null)) return;
     guard(() => state.select(profile));
-  };
-  const apply = (profile: HostsProfile) => {
-    const action = () => state.apply(profile);
-    if (state.dirty && !state.profile) guard(action);
-    else void action();
   };
   const askName = (mode: NameRequest["mode"]) => {
     const show = () => {
@@ -161,9 +147,7 @@ export function HostsSettings({ active }: { active: boolean }) {
           system={state.system}
           selected={state.profile?.id ?? null}
           busy={state.busy}
-          dirty={state.dirty}
           onSelect={select}
-          onApply={apply}
           onCreate={() => askName("new")}
         />
         <div className="flex min-w-0 flex-col">
@@ -197,10 +181,17 @@ export function HostsSettings({ active }: { active: boolean }) {
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-y border-border-subtle bg-bg-secondary px-3 py-2 text-[10px] text-muted">
-            <code className="min-w-0 break-all">
-              {state.source?.path ?? t("hosts.pathUnavailable")}
+            <code
+              title={state.source?.path}
+              aria-label={state.source?.path}
+              tabIndex={state.source ? 0 : undefined}
+              className="min-w-0 flex-1 truncate"
+            >
+              {state.source
+                ? hostsDisplayPath(state.source.path)
+                : t("hosts.pathUnavailable")}
             </code>
-            <span className={state.dirty ? "text-warning" : ""}>
+            <span className={`shrink-0 ${state.dirty ? "text-warning" : ""}`}>
               {t(state.dirty ? "hosts.unsaved" : "hosts.noChanges")}
             </span>
           </div>
@@ -307,7 +298,7 @@ export function HostsSettings({ active }: { active: boolean }) {
                 type="button"
                 className="app-button-primary gap-1.5"
                 disabled={state.busy || state.dirty || applied || !state.system}
-                onClick={() => apply(state.profile!)}
+                onClick={() => void state.apply(state.profile!)}
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 {t(applied ? "hosts.alreadyApplied" : "hosts.apply")}

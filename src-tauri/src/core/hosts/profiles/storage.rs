@@ -2,10 +2,7 @@
 use super::{legacy_library, library, valid_id};
 use crate::core::{central_repo, user_config};
 use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    io::{Read, Write},
-};
+use std::{fs, io::Read};
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -64,46 +61,4 @@ pub(super) fn recover() -> Result<(), String> {
         fs::remove_dir_all(staged).map_err(|e| e.to_string())?;
     }
     fs::remove_file(journal()).map_err(|e| e.to_string())
-}
-
-pub(super) fn publish(id: &str, stage: tempfile::TempDir, existing: bool) -> Result<(), String> {
-    let target = library().join(id);
-    if !existing {
-        return fs::rename(stage.path(), target).map_err(|e| e.to_string());
-    }
-    let previous = format!("hosts-{}", uuid::Uuid::new_v4());
-    let recovery = central_repo::base_dir().join("recovery").join(&previous);
-    user_config::checked(&recovery)?;
-    fs::create_dir_all(recovery.parent().ok_or("HOSTS_PROFILE_RECOVERY")?)
-        .map_err(|e| e.to_string())?;
-    let staged = stage.keep();
-    let pending = Pending {
-        id: id.to_owned(),
-        staged: staged
-            .file_name()
-            .and_then(|n| n.to_str())
-            .ok_or("HOSTS_PROFILE_RECOVERY")?
-            .to_owned(),
-        previous,
-    };
-    let record = (|| {
-        let mut file =
-            tempfile::NamedTempFile::new_in(central_repo::base_dir()).map_err(|e| e.to_string())?;
-        file.write_all(&serde_json::to_vec(&pending).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
-        file.as_file().sync_all().map_err(|e| e.to_string())?;
-        file.persist(journal()).map_err(|e| e.to_string())?;
-        Ok::<(), String>(())
-    })();
-    if let Err(error) = record {
-        let _ = fs::remove_dir_all(staged);
-        return Err(error);
-    }
-    fs::rename(&target, &recovery).map_err(|e| e.to_string())?;
-    fs::rename(&staged, &target).map_err(|e| e.to_string())?;
-    fs::remove_file(journal()).map_err(|e| e.to_string())?;
-    if let Err(error) = fs::remove_dir_all(recovery) {
-        log::debug!("Profile recovery cleanup: {error}");
-    }
-    Ok(())
 }

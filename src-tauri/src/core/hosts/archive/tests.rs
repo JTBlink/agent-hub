@@ -11,6 +11,7 @@ fn stores_current_and_previous_contents_without_portable_system_paths_or_device_
             content: "# before\n".into(),
             revision: "old".into(),
             backup_warning: None,
+            applied_profile_id: None,
         };
         capture(&before, false).unwrap();
         capture(&before, true).unwrap();

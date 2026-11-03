@@ -47,6 +47,16 @@ try {
             `new Promise(resolve => { const frame=document.querySelector('iframe');frame.style.width='${width}px';frame.onload=()=>resolve(true);frame.src='/tests/browser/settings-hosts.html?theme=${theme}&text-size=${size}&language=${language}'; })`,
           );
           await until(`!!document.querySelector('textarea:not(:disabled)')`);
+          await inside(
+            `document.querySelector('aside button[aria-pressed]').click();true`,
+          );
+          await until(
+            `!!document.querySelector('aside button[aria-pressed="true"]')`,
+          );
+          assert.equal(
+            await inside(`document.querySelector('code[title]').textContent`),
+            "…/hosts/12345678….hosts",
+          );
           const layout = await inside(`(() => {
             const sidebar=document.querySelector('[role=tablist]');
             const panel=document.querySelector('#settings-panel-hosts');
@@ -118,6 +128,17 @@ try {
   await until(
     `document.querySelector('textarea').value==='127.0.0.2 app.test\\n'`,
   );
+  assert.equal(
+    await inside(
+      `document.querySelector('aside').textContent.includes('一键应用')`,
+    ),
+    false,
+  );
+  assert.equal(
+    await inside(`document.querySelector('code[title]').textContent`),
+    "…/hosts/12345678….hosts",
+  );
+
   await inside(
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='应用到系统').click();true`,
   );
@@ -130,12 +151,12 @@ try {
   await until(`!!document.documentElement.dataset.vscodeOpened`);
   assert.ok(
     (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
-      "/user-config/hosts/development",
+      "/user-config/hosts",
     ),
   );
   assert.equal(
     (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
-      "/hosts/development/hosts",
+      ".hosts",
     ),
     false,
   );

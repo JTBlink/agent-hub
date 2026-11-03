@@ -119,10 +119,18 @@ pub(crate) fn validate_tree(root: &Path) -> anyhow::Result<()> {
     anyhow::ensure!(size.bytes <= MAX_BYTES, "USER_CONFIG_TOO_LARGE");
     Ok(())
 }
-pub(crate) fn check_replacement(target: &Path, staged: &Path) -> Result<(), String> {
+pub(crate) fn check_replacements(paths: &[(&Path, &Path)]) -> Result<(), String> {
     let total = size(&root()).map_err(|e| e.to_string())?;
-    let old = size(target).map_err(|e| e.to_string())?;
-    let next = size(staged).map_err(|e| e.to_string())?;
+    let mut old = Size::default();
+    let mut next = Size::default();
+    for (target, staged) in paths {
+        let before = size(target).map_err(|e| e.to_string())?;
+        let after = size(staged).map_err(|e| e.to_string())?;
+        old.bytes += before.bytes;
+        old.entries += before.entries;
+        next.bytes += after.bytes;
+        next.entries += after.entries;
+    }
     if total.bytes.saturating_sub(old.bytes) + next.bytes > MAX_BYTES
         || total.entries.saturating_sub(old.entries) + next.entries > MAX_ENTRIES
     {

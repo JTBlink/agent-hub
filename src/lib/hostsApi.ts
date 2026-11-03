@@ -5,6 +5,7 @@ export interface HostsSnapshot {
   content: string;
   revision: string;
   backup_warning?: string | null;
+  applied_profile_id?: string | null;
 }
 
 export interface HostsSaved {

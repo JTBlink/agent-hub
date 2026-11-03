@@ -24,14 +24,19 @@ let profiles: HostsProfile[] = [
     name: "Development",
     content: "127.0.0.2 app.test\n",
     revision: "profile-first",
-    path: "/workspace/user-config/hosts/development/hosts",
+    path: "/workspace/user-config/hosts/12345678-1234-4234-8234-123456789abc.hosts",
   },
 ];
-const saveSystem = (next: string) => {
+const saveSystem = (next: string, appliedProfileId: string | null = null) => {
   content = next;
   revision += "-saved";
   return {
-    snapshot: { path: "/etc/hosts", content, revision },
+    snapshot: {
+      path: "/etc/hosts",
+      content,
+      revision,
+      applied_profile_id: appliedProfileId,
+    },
     backup_path: null,
   };
 };
@@ -47,7 +52,7 @@ Object.assign(window, {
           name: args.name,
           content: args.content,
           revision: id,
-          path: `/workspace/user-config/hosts/${id}/hosts`,
+          path: `/workspace/user-config/hosts/${id}.hosts`,
         };
         profiles = [...profiles, profile];
         return profile;
@@ -73,7 +78,7 @@ Object.assign(window, {
         if (command === "apply_hosts_profile") {
           if (args.systemRevision !== revision)
             throw { kind: "io", message: "HOSTS_CONFLICT" };
-          return saveSystem(profile.content);
+          return saveSystem(profile.content, profile.id);
         }
         const next = {
           ...profile,

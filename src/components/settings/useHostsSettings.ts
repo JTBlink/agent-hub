@@ -181,6 +181,11 @@ export function useHostsSettings(active: boolean) {
         setModel((m) => ({
           ...m,
           profiles: m.profiles.map((p) => (p.id === next.id ? next : p)),
+          system:
+            m.system?.applied_profile_id === next.id &&
+            hostsEditorText(next.content) !== hostsEditorText(source.content)
+              ? { ...m.system, applied_profile_id: null }
+              : m.system,
           source: next,
           draft: hostsEditorText(next.content),
         }));
@@ -265,6 +270,10 @@ export function useHostsSettings(active: boolean) {
       setModel((m) => ({
         ...m,
         profiles: m.profiles.filter((p) => p.id !== source.id),
+        system:
+          m.system?.applied_profile_id === source.id
+            ? { ...m.system, applied_profile_id: null }
+            : m.system,
         source: m.system,
         draft: hostsEditorText(m.system?.content ?? ""),
       }));

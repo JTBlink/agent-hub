@@ -19,6 +19,7 @@ pub struct HostsSnapshot {
     pub content: String,
     pub revision: String,
     pub backup_warning: Option<String>,
+    pub applied_profile_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -59,6 +60,7 @@ fn read_path(path: &std::path::Path) -> Result<HostsSnapshot, String> {
         content,
         revision,
         backup_warning: None,
+        applied_profile_id: None,
     })
 }
 
@@ -73,7 +75,10 @@ pub fn read_for_editor() -> Result<HostsSnapshot, String> {
     let mut snapshot = read()?;
     snapshot.backup_warning = lock
         .map_err(|e| e.to_string())
-        .and_then(|_lock| archive::capture(&snapshot, false))
+        .and_then(|_lock| {
+            snapshot.applied_profile_id = profiles::applied_id(&snapshot)?;
+            archive::capture(&snapshot, false)
+        })
         .err();
     Ok(snapshot)
 }
@@ -130,10 +135,14 @@ fn encode(content: &str, original: &str) -> String {
 pub fn save(content: &str, expected_revision: &str) -> Result<HostsSaved, String> {
     let _lock = crate::core::repo_lock::RepoLock::acquire_foreground("save system Hosts")
         .map_err(|e| e.to_string())?;
-    save_unlocked(content, expected_revision)
+    save_unlocked(content, expected_revision, None)
 }
 
-pub(super) fn save_unlocked(content: &str, expected_revision: &str) -> Result<HostsSaved, String> {
+pub(super) fn save_unlocked(
+    content: &str,
+    expected_revision: &str,
+    profile_id: Option<&str>,
+) -> Result<HostsSaved, String> {
     let _guard = SAVE_LOCK
         .lock()
         .map_err(|_| "Hosts save lock unavailable")?;
@@ -143,8 +152,19 @@ pub(super) fn save_unlocked(content: &str, expected_revision: &str) -> Result<Ho
     }
     validate(content)?;
     archive::capture(&before, true)?;
+    let applied = profiles::prepare_applied(
+        profile_id,
+        &revision(encode(content, &before.content).as_bytes()),
+    )?;
     let mut result = save_path(&system_path(), content, expected_revision)?;
-    result.snapshot.backup_warning = archive::capture(&result.snapshot, false).err();
+    let state_warning = profiles::commit_applied(applied).err();
+    if state_warning.is_none() {
+        result.snapshot.applied_profile_id = profile_id.map(str::to_owned);
+    }
+    result.snapshot.backup_warning = state_warning
+        .into_iter()
+        .chain(archive::capture(&result.snapshot, false).err())
+        .reduce(|first, next| format!("{first}; {next}"));
     Ok(result)
 }
 

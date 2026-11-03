@@ -4,7 +4,11 @@ use crate::core::{auto_backup, repo_lock::RepoLock, user_config};
 use serde::{Deserialize, Serialize};
 use std::{fs, io::Write, path::Path};
 
+mod applied;
+mod files;
+mod migration;
 mod storage;
+pub(super) use applied::{applied_id, commit_applied, prepare_applied};
 #[cfg(test)]
 mod tests;
 
@@ -30,55 +34,6 @@ fn library() -> std::path::PathBuf {
 fn legacy_library() -> std::path::PathBuf {
     library().join("profiles")
 }
-fn migrate_legacy() -> Result<(), String> {
-    let legacy = legacy_library();
-    if !legacy.try_exists().map_err(|e| e.to_string())? {
-        return Ok(());
-    }
-    user_config::checked(&library())?;
-    user_config::checked(&legacy)?;
-    let entries = fs::read_dir(&legacy)
-        .map_err(|e| e.to_string())?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| e.to_string())?;
-    let mut migrated = false;
-    for entry in entries {
-        let id = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| "HOSTS_PROFILE_INVALID_ID")?;
-        if id == ".DS_Store" {
-            fs::remove_file(entry.path()).map_err(|e| e.to_string())?;
-            continue;
-        }
-        valid_id(&id)?;
-        let source = entry.path();
-        let target = library().join(&id);
-        user_config::checked(&source)?;
-        user_config::checked(&target)?;
-        if target.try_exists().map_err(|e| e.to_string())? {
-            if read_at(&legacy, &id)?.revision != read_at(&library(), &id)?.revision {
-                return Err("HOSTS_PROFILE_CONFLICT".into());
-            }
-            fs::remove_dir_all(source).map_err(|e| e.to_string())?;
-        } else {
-            fs::rename(source, target).map_err(|e| e.to_string())?;
-        }
-        migrated = true;
-    }
-    if legacy
-        .read_dir()
-        .map_err(|e| e.to_string())?
-        .next()
-        .is_none()
-    {
-        fs::remove_dir(legacy).map_err(|e| e.to_string())?;
-    }
-    if migrated {
-        auto_backup::notify_central_change();
-    }
-    Ok(())
-}
 fn valid_id(id: &str) -> Result<(), String> {
     if uuid::Uuid::parse_str(id).is_ok_and(|value| value.to_string() == id) {
         Ok(())
@@ -96,7 +51,25 @@ fn name(value: &str) -> Result<&str, String> {
 fn read_at(root: &Path, id: &str) -> Result<HostsProfile, String> {
     valid_id(id)?;
     let dir = root.join(id);
-    for path in [&dir, &dir.join("profile.json"), &dir.join("hosts")] {
+    let (metadata_path, content_path) = if dir.try_exists().map_err(|e| e.to_string())? {
+        (dir.join("profile.json"), dir.join("hosts"))
+    } else {
+        (
+            root.join(format!("{id}.json")),
+            root.join(format!("{id}.hosts")),
+        )
+    };
+    if dir
+        .symlink_metadata()
+        .is_ok_and(|meta| crate::core::path_guard::is_link_or_reparse_point(&meta))
+    {
+        return Err("USER_CONFIG_LINK".into());
+    }
+    read_files(&metadata_path, &content_path, id)
+}
+
+fn read_files(metadata_path: &Path, content_path: &Path, id: &str) -> Result<HostsProfile, String> {
+    for path in [metadata_path, content_path] {
         if path
             .symlink_metadata()
             .is_ok_and(|meta| crate::core::path_guard::is_link_or_reparse_point(&meta))
@@ -104,7 +77,7 @@ fn read_at(root: &Path, id: &str) -> Result<HostsProfile, String> {
             return Err("USER_CONFIG_LINK".into());
         }
     }
-    let raw = read_path(&dir.join("profile.json"))?.content.into_bytes();
+    let raw = read_path(metadata_path)?.content.into_bytes();
     if raw.len() > 4096 {
         return Err("HOSTS_PROFILE_METADATA".into());
     }
@@ -113,7 +86,7 @@ fn read_at(root: &Path, id: &str) -> Result<HostsProfile, String> {
         return Err("HOSTS_PROFILE_METADATA".into());
     }
     name(&metadata.name)?;
-    let snapshot = read_path(&dir.join("hosts"))?;
+    let snapshot = read_path(content_path)?;
     // Allow externally edited, temporarily invalid text to be displayed and corrected.
     let revision = revision(&[raw, snapshot.content.as_bytes().to_vec()].concat());
     Ok(HostsProfile {
@@ -129,7 +102,8 @@ fn read_at(root: &Path, id: &str) -> Result<HostsProfile, String> {
 pub fn list() -> Result<Vec<HostsProfile>, String> {
     let _lock = RepoLock::acquire_foreground("read Hosts profiles").map_err(|e| e.to_string())?;
     storage::recover()?;
-    migrate_legacy()?;
+    files::recover()?;
+    migration::run()?;
     user_config::checked(&library())?;
     list_at(&library())
 }
@@ -154,6 +128,24 @@ pub(crate) fn list_at(root: &Path) -> Result<Vec<HostsProfile>, String> {
         if matches!(id.as_str(), ".DS_Store" | "profiles" | "systems") {
             continue;
         }
+        let id = if let Some(id) = id.strip_suffix(".hosts") {
+            if root.join(id).exists() {
+                return Err("HOSTS_PROFILE_CONFLICT".into());
+            }
+            id.to_owned()
+        } else if let Some(id) = id.strip_suffix(".json") {
+            valid_id(id)?;
+            if !root
+                .join(format!("{id}.hosts"))
+                .try_exists()
+                .map_err(|e| e.to_string())?
+            {
+                return Err("HOSTS_PROFILE_METADATA".into());
+            }
+            continue;
+        } else {
+            id
+        };
         if result.len() >= 1000 {
             return Err("HOSTS_PROFILE_LIMIT".into());
         }
@@ -179,7 +171,7 @@ fn write(
     user_config::ensure_root()?;
     user_config::checked(&library())?;
     fs::create_dir_all(library()).map_err(|e| e.to_string())?;
-    let target = library().join(id);
+    let target = library().join(format!("{id}.hosts"));
     user_config::checked(&target)?;
     let stage =
         tempfile::tempdir_in(crate::core::central_repo::base_dir()).map_err(|e| e.to_string())?;
@@ -207,8 +199,14 @@ fn write(
     } else if target.exists() {
         return Err("HOSTS_PROFILE_CONFLICT".into());
     }
-    user_config::check_replacement(&target, stage.path())?;
-    storage::publish(id, stage, existing.is_some())?;
+    user_config::check_replacements(&[
+        (&target, &stage.path().join("hosts")),
+        (
+            &library().join(format!("{id}.json")),
+            &stage.path().join("profile.json"),
+        ),
+    ])?;
+    files::publish(id, stage, existing.is_some())?;
     auto_backup::notify_central_change();
     read_at(&library(), id)
 }
@@ -216,7 +214,8 @@ fn write(
 pub fn create(title: &str, content: &str) -> Result<HostsProfile, String> {
     let _lock = RepoLock::acquire_foreground("create Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
-    migrate_legacy()?;
+    files::recover()?;
+    migration::run()?;
     user_config::checked(&library())?;
     if list_at(&library())?.len() >= 1000 {
         return Err("HOSTS_PROFILE_LIMIT".into());
@@ -231,7 +230,8 @@ pub fn update(
 ) -> Result<HostsProfile, String> {
     let _lock = RepoLock::acquire_foreground("save Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
-    migrate_legacy()?;
+    files::recover()?;
+    migration::run()?;
     user_config::checked(&library())?;
     let before = read_at(&library(), id)?;
     if before.revision != expected {
@@ -242,13 +242,14 @@ pub fn update(
 pub fn delete(id: &str, expected: &str) -> Result<(), String> {
     let _lock = RepoLock::acquire_foreground("delete Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
-    migrate_legacy()?;
+    files::recover()?;
+    migration::run()?;
     user_config::checked(&library())?;
     let before = read_at(&library(), id)?;
     if before.revision != expected {
         return Err("HOSTS_PROFILE_CONFLICT".into());
     }
-    fs::remove_dir_all(library().join(id)).map_err(|e| e.to_string())?;
+    files::delete(id)?;
     auto_backup::notify_central_change();
     Ok(())
 }
@@ -259,17 +260,19 @@ pub fn apply(
 ) -> Result<HostsSaved, String> {
     let _lock = RepoLock::acquire_foreground("apply Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
-    migrate_legacy()?;
+    files::recover()?;
+    migration::run()?;
     user_config::checked(&library())?;
     let profile = read_at(&library(), id)?;
     if profile.revision != expected_profile {
         return Err("HOSTS_PROFILE_CONFLICT".into());
     }
-    super::save_unlocked(&profile.content, expected_system)
+    super::save_unlocked(&profile.content, expected_system, Some(id))
 }
 
 /// Complete interrupted profile writes before backup projection. Caller holds RepoLock.
 pub(crate) fn recover_pending() -> Result<(), String> {
     storage::recover()?;
-    migrate_legacy()
+    files::recover()?;
+    migration::run()
 }

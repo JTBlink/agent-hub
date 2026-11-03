@@ -9,7 +9,7 @@ fn saves_complete_profiles_without_changing_identity_and_rejects_stale_edits() {
         let created = create("Development", "127.0.0.1 localhost\n").unwrap();
         assert_eq!(
             std::path::Path::new(&created.path),
-            library().join(&created.id).join("hosts")
+            library().join(format!("{}.hosts", created.id))
         );
         assert!(!library().join("profiles").exists());
         let updated = update(&created.id, "Renamed", "::1 localhost\n", &created.revision).unwrap();
@@ -31,7 +31,7 @@ fn saves_complete_profiles_without_changing_identity_and_rejects_stale_edits() {
 }
 
 #[test]
-fn migrates_legacy_profiles_into_the_single_level_hosts_directory() {
+fn migrates_legacy_profiles_to_flat_files() {
     let _lock = crate::core::central_repo::test_base_dir_lock();
     let dir = tempfile::tempdir().unwrap();
     crate::core::central_repo::set_test_base_dir_override(Some(dir.path().to_owned()));
@@ -54,9 +54,10 @@ fn migrates_legacy_profiles_into_the_single_level_hosts_directory() {
         assert_eq!(profiles.len(), 1);
         assert_eq!(
             std::path::PathBuf::from(&profiles[0].path),
-            library().join(&id).join("hosts")
+            library().join(format!("{id}.hosts"))
         );
         assert!(!library().join("profiles").exists());
+        assert_eq!(list().unwrap().len(), 1);
     });
     crate::core::central_repo::set_test_base_dir_override(None);
     result.unwrap();
@@ -125,7 +126,17 @@ fn recovers_the_original_profile_after_an_interrupted_directory_replacement() {
         let previous = format!("hosts-{}", uuid::Uuid::new_v4());
         let recovery = dir.path().join("recovery").join(&previous);
         fs::create_dir_all(recovery.parent().unwrap()).unwrap();
-        fs::rename(library().join(&original.id), &recovery).unwrap();
+        fs::create_dir_all(&recovery).unwrap();
+        fs::rename(
+            library().join(format!("{}.hosts", original.id)),
+            recovery.join("hosts"),
+        )
+        .unwrap();
+        fs::rename(
+            library().join(format!("{}.json", original.id)),
+            recovery.join("profile.json"),
+        )
+        .unwrap();
         fs::create_dir(dir.path().join(".tmp-interrupted")).unwrap();
         fs::write(dir.path().join("hosts-profile-write.json"), serde_json::to_vec(&serde_json::json!({"id":original.id,"staged":".tmp-interrupted","previous":previous})).unwrap()).unwrap();
         let restored = list().unwrap();
@@ -175,9 +186,10 @@ fn recovers_an_interrupted_legacy_write_before_migrating() {
         assert_eq!(restored[0].content, "127.0.0.1 legacy.test\n");
         assert_eq!(
             std::path::PathBuf::from(&restored[0].path),
-            library().join(&id).join("hosts")
+            library().join(format!("{id}.hosts"))
         );
         assert!(!library().join("profiles").exists());
+        assert_eq!(list().unwrap().len(), 1);
     });
     crate::core::central_repo::set_test_base_dir_override(None);
     result.unwrap();
@@ -205,6 +217,80 @@ fn refuses_writes_that_would_exceed_shared_configuration_capacity() {
         );
         assert_eq!(list().unwrap()[0].content, "# original\n");
         crate::core::user_config::validate_tree(&root).unwrap();
+    });
+    crate::core::central_repo::set_test_base_dir_override(None);
+    result.unwrap();
+}
+
+#[test]
+fn flattens_direct_directories_without_changing_revisions_and_preserves_conflicts() {
+    let _lock = crate::core::central_repo::test_base_dir_lock();
+    let dir = tempfile::tempdir().unwrap();
+    crate::core::central_repo::set_test_base_dir_override(Some(dir.path().to_owned()));
+    let result = std::panic::catch_unwind(|| {
+        let original = create("Original", "# original\r\n").unwrap();
+        let legacy = library().join(&original.id);
+        fs::create_dir(&legacy).unwrap();
+        fs::rename(&original.path, legacy.join("hosts")).unwrap();
+        fs::rename(
+            library().join(format!("{}.json", original.id)),
+            legacy.join("profile.json"),
+        )
+        .unwrap();
+        fs::write(legacy.join("notes.txt"), "# external notes").unwrap();
+        assert_eq!(list().unwrap_err(), "HOSTS_PROFILE_CONFLICT");
+        assert!(legacy.join("notes.txt").exists());
+        fs::remove_file(legacy.join("notes.txt")).unwrap();
+        let migrated = list().unwrap().remove(0);
+        assert_eq!(migrated.id, original.id);
+        assert_eq!(migrated.revision, original.revision);
+        assert_eq!(migrated.content, original.content);
+        assert_eq!(migrated.path, original.path);
+        assert!(!legacy.exists());
+
+        fs::create_dir(&legacy).unwrap();
+        fs::copy(
+            library().join(format!("{}.json", original.id)),
+            legacy.join("profile.json"),
+        )
+        .unwrap();
+        fs::write(legacy.join("hosts"), "# conflicting copy\n").unwrap();
+        assert_eq!(list().unwrap_err(), "HOSTS_PROFILE_CONFLICT");
+        assert_eq!(
+            fs::read_to_string(&original.path).unwrap(),
+            original.content
+        );
+        assert_eq!(
+            fs::read_to_string(legacy.join("hosts")).unwrap(),
+            "# conflicting copy\n"
+        );
+    });
+    crate::core::central_repo::set_test_base_dir_override(None);
+    result.unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn rejects_links_in_either_flat_profile_file() {
+    let _lock = crate::core::central_repo::test_base_dir_lock();
+    let dir = tempfile::tempdir().unwrap();
+    crate::core::central_repo::set_test_base_dir_override(Some(dir.path().to_owned()));
+    let result = std::panic::catch_unwind(|| {
+        for extension in ["hosts", "json"] {
+            let original = create("Original", "# original\n").unwrap();
+            let target = library().join(format!("{}.{extension}", original.id));
+            let outside = dir.path().join("outside");
+            fs::rename(&target, &outside).unwrap();
+            std::os::unix::fs::symlink(&outside, &target).unwrap();
+            assert_eq!(list().unwrap_err(), "USER_CONFIG_LINK");
+            assert_eq!(
+                delete(&original.id, &original.revision).unwrap_err(),
+                "USER_CONFIG_LINK"
+            );
+            fs::remove_file(&target).unwrap();
+            fs::rename(&outside, target).unwrap();
+            delete(&original.id, &original.revision).unwrap();
+        }
     });
     crate::core::central_repo::set_test_base_dir_override(None);
     result.unwrap();
