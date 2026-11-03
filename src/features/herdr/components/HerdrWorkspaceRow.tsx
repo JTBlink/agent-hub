@@ -18,7 +18,7 @@ export function HerdrWorkspaceRow({
   selected: boolean;
   disabled: boolean;
   unavailable?: boolean;
-  connector?: "├" | "└";
+  connector?: "branch" | "last";
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
@@ -42,15 +42,27 @@ export function HerdrWorkspaceRow({
       ]
         .filter(Boolean)
         .join("\n")}
-      onClick={onOpen}
+      onClick={() => {
+        if (!selected) onOpen();
+      }}
       className={cn(
         "flex w-full items-start gap-1.5 rounded px-1.5 py-0.5 text-left font-mono text-xs transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
         selected ? "bg-surface-active" : "hover:bg-surface-hover",
       )}
     >
       {connector && (
-        <span aria-hidden="true" className="w-3 shrink-0 leading-5 text-muted">
-          {connector}
+        <span
+          aria-hidden="true"
+          data-herdr-connector={connector}
+          className="relative -my-0.5 w-3 shrink-0 self-stretch text-border"
+        >
+          <span
+            className={cn(
+              "absolute left-1 top-0 w-px bg-current",
+              connector === "last" ? "h-3" : "bottom-0",
+            )}
+          />
+          <span className="absolute left-1 top-3 h-px w-2 bg-current" />
         </span>
       )}
       {(!connector || state) && (

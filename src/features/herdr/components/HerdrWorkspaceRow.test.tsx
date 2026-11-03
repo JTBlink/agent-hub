@@ -12,6 +12,7 @@ it("shows the checkout directory and branch on separate lines", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
   const root = createRoot(host);
+  const onOpen = vi.fn();
 
   try {
     await act(async () =>
@@ -27,8 +28,8 @@ it("shows the checkout directory and branch on separate lines", async () => {
           agents={[]}
           selected
           disabled={false}
-          connector="└"
-          onOpen={vi.fn()}
+          connector="last"
+          onOpen={onOpen}
         />,
       ),
     );
@@ -48,6 +49,11 @@ it("shows the checkout directory and branch on separate lines", async () => {
     expect(row.getAttribute("aria-label")).toBe(
       "demo-work-issue fix/issue-macos",
     );
+    expect(
+      row.querySelector('[data-herdr-connector="last"]'),
+    ).not.toBeNull();
+    await act(async () => row.click());
+    expect(onOpen).not.toHaveBeenCalled();
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();

@@ -97,6 +97,18 @@ export function bindTerminalTextInput(
       asciiCommitted = false;
       if (composing || finishing || event.isComposing) return true;
       if (
+        event.shiftKey &&
+        event.code === "Slash" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
+        pending = 0;
+        event.preventDefault();
+        terminal.input("?", true);
+        return false;
+      }
+      if (
         event.keyCode === 229 &&
         !event.ctrlKey &&
         !event.metaKey &&

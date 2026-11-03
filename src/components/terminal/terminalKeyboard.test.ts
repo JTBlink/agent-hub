@@ -45,6 +45,27 @@ it("leaves composition, shortcuts, dead keys and terminal controls to xterm", ()
   expect(input).not.toHaveBeenCalled();
 });
 
+it("sends a question mark from Shift+Slash even when WebKit reports an IME key", async () => {
+  const { bindTerminalTextInput } = await import("./terminalKeyboard");
+  const node = document.createElement("div");
+  const textarea = document.createElement("textarea");
+  node.append(textarea);
+  const input = vi.fn();
+  const keyboard = bindTerminalTextInput(node, { input, textarea });
+  const event = new KeyboardEvent("keydown", {
+    key: "Process",
+    code: "Slash",
+    keyCode: 229,
+    shiftKey: true,
+    cancelable: true,
+  });
+
+  expect(keyboard.handle(event)).toBe(false);
+  expect(event.defaultPrevented).toBe(true);
+  expect(input).toHaveBeenCalledExactlyOnceWith("?", true);
+  keyboard.dispose();
+});
+
 it("sends every English IME commit once without waiting for textarea timers", async () => {
   const { bindTerminalTextInput } = await import("./terminalKeyboard");
   const node = document.createElement("div");

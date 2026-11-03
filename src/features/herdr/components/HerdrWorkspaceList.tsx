@@ -224,7 +224,7 @@ function HerdrWorkspaceGroup({
       openWorktree(checkout);
     else onOpen(checkout.workspace_id);
   };
-  const row = (space: HerdrWorkspace, connector?: "├" | "└") => {
+  const row = (space: HerdrWorkspace, connector?: "branch" | "last") => {
     const tree = worktrees.find((tree) => tree.path === space.directory);
     const canDelete =
       project && tree && !tree.is_main && tree.path !== project.path;
@@ -293,7 +293,7 @@ function HerdrWorkspaceGroup({
         <div className="ml-5">
           {linked.map((child, index) => (
             <div key={child.workspace_id}>
-              {row(child, index === linked.length - 1 ? "└" : "├")}
+              {row(child, index === linked.length - 1 ? "last" : "branch")}
             </div>
           ))}
         </div>
