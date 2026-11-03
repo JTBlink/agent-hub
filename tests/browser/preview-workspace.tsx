@@ -1,3 +1,5 @@
+import { DownloadsPanel } from "../../src/features/preview/components/DownloadsPanel";
+import type { PreviewDownload } from "../../src/features/preview/api";
 // Production components with synthetic IPC. Native browser behavior is tested in Rust.
 import { useState } from "react";
 import { CookieImportPanel } from "../../src/features/preview/components/CookieImportPanel";
@@ -13,6 +15,28 @@ document.documentElement.classList.toggle(
 );
 const content =
   "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\nThis continuation belongs to the same paragraph.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
+let downloads: PreviewDownload[] = [
+  {
+    id: "completed",
+    profile: "default",
+    name: "report.txt",
+    state: "completed",
+    received: 1024,
+    total: 1024,
+    local: true,
+    verified: true,
+  },
+  {
+    id: "active",
+    profile: "guest",
+    name: "pending.txt",
+    state: "inProgress",
+    received: 500,
+    total: 2000,
+    local: true,
+    verified: false,
+  },
+];
 mockIPC((command, args) => {
   if (command === "plugin:clipboard-manager|write_text") {
     document.documentElement.dataset.copiedContext = String(args?.text ?? "");
@@ -53,7 +77,19 @@ mockIPC((command, args) => {
         skipped: { invalid: 0, expired: 0, partitioned: 0, bound: 0 },
       };
     if (request.kind === "cookie_apply") return { imported: 1, removed: 0 };
-    if (request.kind === "list" || request.kind === "downloads") return [];
+    if (request.kind === "downloads")
+      return parameters.get("view") === "downloads" ? downloads : [];
+    if (
+      request.kind === "forget_download" &&
+      "id" in request &&
+      "profile" in request
+    ) {
+      downloads = downloads.filter(
+        (item) => item.id !== request.id || item.profile !== request.profile,
+      );
+      return null;
+    }
+    if (request.kind === "list") return [];
     if (request.kind === "save_document")
       return {
         id: "fixture",
@@ -78,6 +114,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <div style={{ height: "calc(100vh / var(--app-scale, 1))", display: "flex" }}>
     {parameters.get("view") === "cookies" ? (
       <CookieFixture />
+    ) : parameters.get("view") === "downloads" ? (
+      <section className="preview-workspace">
+        <DownloadsPanel model={{ report: () => {}, setPanelOpen: () => {} }} />
+      </section>
     ) : (
       <PreviewWorkspace shown />
     )}

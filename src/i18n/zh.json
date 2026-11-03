@@ -2608,6 +2608,9 @@
     "replacing": "正在替换…"
   },
   "preview": {
+    "removeDownload": "移除记录",
+    "removeDownloadHint": "仅移除下载记录，保留已下载文件",
+    "downloadUnverified": "连接中断，当前下载状态无法核验。请恢复连接后再确认进度。",
     "copyFullScreenshot": "复制整页截图",
     "clipboardLimit": "截图过大，无法复制。请保存或截取较小区域。",
     "clipboardInvalid": "截图不是有效的 PNG 图片，请重新抓取。",

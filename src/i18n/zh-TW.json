@@ -2568,6 +2568,9 @@
     "replacing": "正在取代…"
   },
   "preview": {
+    "removeDownload": "移除紀錄",
+    "removeDownloadHint": "只移除下載紀錄，保留已下載檔案",
+    "downloadUnverified": "連線中斷，目前下載狀態無法核驗。請恢復連線後再確認進度。",
     "copyFullScreenshot": "複製整頁截圖",
     "clipboardLimit": "截圖過大，無法複製。請儲存或擷取較小區域。",
     "clipboardInvalid": "截圖不是有效的 PNG 圖片，請重新擷取。",

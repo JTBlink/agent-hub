@@ -1,21 +1,27 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, FolderOpen, X } from "lucide-react";
+import { Download, FolderOpen, Trash2, X } from "lucide-react";
 import { previewApi, type PreviewDownload } from "../api";
 import type { PreviewModel } from "../usePreviewWorkspace";
-export function DownloadsPanel({ model }: { model: PreviewModel }) {
+export function DownloadsPanel({
+  model,
+}: {
+  model: Pick<PreviewModel, "report" | "setPanelOpen">;
+}) {
   const { t } = useTranslation();
   const [items, setItems] = useState<PreviewDownload[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const generation = useRef(0);
   const report = useEffectEvent((error: unknown) => model.report(error));
   useEffect(() => {
     let disposed = false;
     let timer: number | undefined;
     const poll = async () => {
+      const request = ++generation.current;
       try {
         const items = await previewApi.downloads();
-        if (!disposed) setItems(items);
+        if (!disposed && request === generation.current) setItems(items);
       } catch (error) {
         if (!disposed) report(error);
       } finally {
@@ -28,13 +34,18 @@ export function DownloadsPanel({ model }: { model: PreviewModel }) {
     void poll();
     return () => {
       disposed = true;
+      generation.current += 1;
       clearTimeout(timer);
     };
   }, []);
   const run = async (item: PreviewDownload, action: () => Promise<unknown>) => {
-    setBusy(item.id);
+    setBusy(`${item.profile}:${item.id}`);
+    generation.current += 1;
     try {
       await action();
+      const request = ++generation.current;
+      const items = await previewApi.downloads();
+      if (request === generation.current) setItems(items);
     } catch (error) {
       model.report(error);
     } finally {
@@ -69,9 +80,12 @@ export function DownloadsPanel({ model }: { model: PreviewModel }) {
               · {bytes(item.received)}
               {item.total > 0 ? ` / ${bytes(item.total)}` : ""}
             </p>
+            {item.state === "inProgress" && item.verified === false && (
+              <p role="status">{t("preview.downloadUnverified")}</p>
+            )}
             {item.state === "inProgress" ? (
               <button
-                disabled={busy === item.id}
+                disabled={busy !== null}
                 onClick={() =>
                   void run(item, () =>
                     previewApi.cancelDownload(item.profile, item.id),
@@ -83,7 +97,7 @@ export function DownloadsPanel({ model }: { model: PreviewModel }) {
             ) : item.state === "completed" && item.local ? (
               <div className="preview-note-actions">
                 <button
-                  disabled={busy === item.id}
+                  disabled={busy !== null}
                   onClick={() =>
                     void run(item, () =>
                       previewApi.openDownload(item.profile, item.id),
@@ -94,7 +108,7 @@ export function DownloadsPanel({ model }: { model: PreviewModel }) {
                   {t("common.open")}
                 </button>
                 <button
-                  disabled={busy === item.id}
+                  disabled={busy !== null}
                   onClick={() =>
                     void run(item, () =>
                       previewApi.openDownload(item.profile, item.id, true),
@@ -106,6 +120,20 @@ export function DownloadsPanel({ model }: { model: PreviewModel }) {
                 </button>
               </div>
             ) : null}
+            {["completed", "canceled"].includes(item.state) && (
+              <button
+                disabled={busy !== null}
+                title={t("preview.removeDownloadHint")}
+                onClick={() =>
+                  void run(item, () =>
+                    previewApi.forgetDownload(item.profile, item.id),
+                  )
+                }
+              >
+                <Trash2 size={13} />
+                {t("preview.removeDownload")}
+              </button>
+            )}
           </article>
         ))}
         <p>{t("preview.downloadHint")}</p>

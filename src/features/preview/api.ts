@@ -172,6 +172,8 @@ export const previewApi = {
   upload: (id: string, revision: string, token: string, multiple: boolean) =>
     invoke<boolean>("preview_upload", { id, revision, token, multiple }),
   downloads: () => request<PreviewDownload[]>({ kind: "downloads" }),
+  forgetDownload: (profile: string, id: string) =>
+    request<void>({ kind: "forget_download", profile, id }),
   cancelDownload: (profile: string, id: string) =>
     request<void>({ kind: "cancel_download", profile, id }),
   openDownload: (profile: string, id: string, reveal = false) =>
@@ -202,6 +204,7 @@ export const previewApi = {
 };
 
 export interface PreviewDownload {
+  verified?: boolean;
   id: string;
   profile: string;
   name: string;

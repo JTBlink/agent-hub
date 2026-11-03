@@ -16,6 +16,7 @@ pub struct Download {
     pub received: f64,
     pub total: f64,
     pub local: bool,
+    pub verified: bool,
     #[serde(skip)]
     pub path: Option<PathBuf>,
 }
@@ -45,7 +46,15 @@ impl Browsers {
             if runtime.context.is_some() {
                 continue;
             }
-            if runtime.cdp.call("Browser.getVersion", json!({})).is_err() {
+            let verified = runtime.cdp.call("Browser.getVersion", json!({})).is_ok();
+            for (key, item) in &previous_downloads {
+                if !verified && &item.profile == profile && item.state == "inProgress" {
+                    let mut item = item.clone();
+                    item.verified = verified;
+                    updates.insert(key.clone(), item);
+                }
+            }
+            if !verified {
                 continue;
             }
             while let Some(event) = runtime.cdp.events.pop_front() {
@@ -76,6 +85,7 @@ impl Browsers {
                                 received: 0.,
                                 total: 0.,
                                 local: runtime.download_dir.is_some(),
+                                verified: true,
                                 path: runtime
                                     .download_dir
                                     .as_ref()
@@ -87,6 +97,7 @@ impl Browsers {
                         let previous = updates.get(&key).or_else(|| previous_downloads.get(&key));
                         if let Some(previous) = previous {
                             let mut item = previous.clone();
+                            item.verified = true;
                             item.state = params["state"].as_str().unwrap_or("inProgress").into();
                             item.received = params["receivedBytes"].as_f64().unwrap_or(0.);
                             item.total = params["totalBytes"].as_f64().unwrap_or(0.);
@@ -153,6 +164,29 @@ impl Browsers {
         runtime
             .cdp
             .call("Browser.cancelDownload", json!({"guid":id}))?;
+        Ok(())
+    }
+    /// Remove only a terminal history record; keep the downloaded file untouched.
+    pub fn forget_download(&self, profile: &str, id: &str) -> Result<(), AppError> {
+        let _poll = self
+            .downloads_gate
+            .lock()
+            .map_err(|_| AppError::internal("Download history unavailable"))?;
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| AppError::internal("Browser state unavailable"))?;
+        let key = format!("{profile}:{id}");
+        let item = state
+            .downloads
+            .get(&key)
+            .ok_or_else(|| AppError::not_found("Download unavailable"))?;
+        if !matches!(item.state.as_str(), "completed" | "canceled") {
+            return Err(AppError::invalid_input(
+                "Cancel the download before removing its record",
+            ));
+        }
+        state.downloads.remove(&key);
         Ok(())
     }
     pub fn download_path(&self, profile: &str, id: &str) -> Result<PathBuf, AppError> {

@@ -2611,6 +2611,9 @@
     "replacing": "Replacing…"
   },
   "preview": {
+    "removeDownload": "Remove record",
+    "removeDownloadHint": "Remove the record and keep the downloaded file",
+    "downloadUnverified": "Connection lost. Download progress cannot be verified until the connection is restored.",
     "copyFullScreenshot": "Copy full-page screenshot",
     "clipboardLimit": "The screenshot is too large to copy. Save a smaller capture.",
     "clipboardInvalid": "The screenshot is not a valid PNG image. Capture it again.",

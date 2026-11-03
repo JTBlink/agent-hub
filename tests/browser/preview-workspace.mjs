@@ -41,7 +41,9 @@ try {
     await evaluate(
       `(()=>{const f=document.querySelector('#preview');f.style.width='${width}px';f.src=${JSON.stringify(src)};return true})()`,
     );
-    await until(`${documentRef}?.querySelector('.preview-welcome')`);
+    await until(
+      `${documentRef}?.location.search === ${JSON.stringify(`?theme=${theme}&language=${language}&text-size=${size}`)} && ${documentRef}?.querySelector('.preview-welcome') && ${documentRef}?.querySelector('.preview-tabs button:last-child')`,
+    );
     await run(`d.querySelector('.preview-tabs button:last-child').click()`);
     await until(
       `${documentRef}?.querySelectorAll('.preview-markdown h2').length===2`,
@@ -156,6 +158,37 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 150));
     await request(
       `/screenshot?target=${targetId}&file=/tmp/agenthub-cookie-import-${width}-${theme}.png`,
+    );
+    await evaluate(
+      `(()=>{document.querySelector('#preview').src=${JSON.stringify(`./preview-workspace.html?view=downloads&theme=${theme}&language=${language}&text-size=${size}`)};return true})()`,
+    );
+    await until(
+      `${documentRef}?.location.search.includes('view=downloads') && ${documentRef}.querySelectorAll('.preview-note').length===2`,
+    );
+    assert.equal(
+      await evaluate(
+        `${documentRef}.querySelectorAll('.preview-note [role="status"]').length`,
+      ),
+      1,
+    );
+    await run(
+      `const button=d.querySelector('.preview-note .lucide-trash-2').closest('button');button.scrollIntoView({block:'center'});button.click()`,
+    );
+    await until(`${documentRef}.querySelectorAll('.preview-note').length===1`);
+    assert.equal(
+      await evaluate(
+        `${documentRef}.querySelector('.preview-note strong').textContent`,
+      ),
+      "pending.txt",
+    );
+    assert.equal(
+      await evaluate(
+        `${documentRef}.documentElement.scrollWidth>${documentRef}.defaultView.innerWidth+1`,
+      ),
+      false,
+    );
+    await request(
+      `/screenshot?target=${targetId}&file=/tmp/agenthub-downloads-${width}-${theme}.png`,
     );
   }
   console.log(
