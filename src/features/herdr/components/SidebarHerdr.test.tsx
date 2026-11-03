@@ -119,8 +119,8 @@ it("opens the checkout returned by Herdr and navigates with an explicit attachme
         </MemoryRouter>,
       ),
     );
-    const button = [...host.querySelectorAll("button")].find((b) =>
-      b.textContent?.includes("Same label"),
+    const button = host.querySelector<HTMLButtonElement>(
+      '[data-herdr-workspace="w1"]',
     );
     expect(button).toBeTruthy();
     await act(async () => button!.click());
