@@ -1,4 +1,5 @@
 //! Bounded, cancellable retrieval of owned remote downloads through OpenSSH SFTP.
+use super::remote_ssh::validate_target;
 use super::{
     browser::{Browsers, State},
     downloads::Download,
@@ -73,23 +74,6 @@ pub(super) fn snapshot(state: &State) -> Vec<Download> {
             download
         })
         .collect()
-}
-pub(super) fn validate_target(target: &str) -> Result<(), AppError> {
-    if target.is_empty()
-        || target.len() > 255
-        || target.starts_with('-')
-        || !target
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || b"._-@".contains(&c))
-        || target.matches('@').count() > 1
-        || target.starts_with('@')
-        || target.ends_with('@')
-    {
-        return Err(AppError::invalid_input(
-            "Use an SSH host alias or user@host without options or a path",
-        ));
-    }
-    Ok(())
 }
 impl Browsers {
     /// Start a background copy. Only files identified by owned download events are eligible.
@@ -352,21 +336,8 @@ fn sftp_command(target: &str, batch: &Path) -> Result<Command, String> {
         .env("LC_ALL", "C")
         .args(["-q", "-R", "16", "-B", "65536", "-l", "65536", "-b"])
         .arg(batch);
-    for option in [
-        "BatchMode=yes",
-        "StrictHostKeyChecking=yes",
-        "ForwardAgent=no",
-        "ClearAllForwardings=yes",
-        "PermitLocalCommand=no",
-        "RemoteCommand=none",
-        "ControlMaster=no",
-        "ControlPath=none",
-        "ConnectTimeout=10",
-        "ServerAliveInterval=5",
-        "ServerAliveCountMax=2",
-    ] {
-        command.args(["-o", option]);
-    }
+    super::remote_ssh::secure_options(&mut command);
+    command.args(["-oControlMaster=no", "-oControlPath=none"]);
     command.arg(target);
     Ok(command)
 }

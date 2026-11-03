@@ -50,3 +50,19 @@ export async function followDocumentLink({
       profile,
     );
 }
+
+/** A server-side forwarding port is not a client browser address; reissue the grant URL locally. */
+export async function openPreviewAddress(address: string) {
+  const url = new URL(address);
+  const suffix = ".agent-hub.localhost";
+  if (url.protocol === "http:" && url.hostname.endsWith(suffix)) {
+    const id = url.hostname.slice(0, -suffix.length);
+    const local = await previewApi.resourceLink(
+      id,
+      url.pathname + url.search + url.hash,
+    );
+    await openUrl(local);
+    return;
+  }
+  await openUrl(address);
+}

@@ -2,7 +2,11 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { previewApi, type PreviewDocument } from "../api";
 import { getSettings } from "../../../lib/tauri";
-import { documentFragment, followDocumentLink } from "./documentLinks";
+import {
+  documentFragment,
+  followDocumentLink,
+  openPreviewAddress,
+} from "./documentLinks";
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("../../../lib/tauri", () => ({ getSettings: vi.fn() }));
 vi.mock("../api", () => ({
@@ -86,4 +90,31 @@ it("keeps the opener profile for browser resources and respects inversion from a
 });
 it("handles malformed fragment escapes as text without losing the new grant", () => {
   expect(documentFragment("http://127.0.0.1/guide.md#bad%ZZ")).toBe("bad%ZZ");
+});
+
+it("opens forwarded document addresses through a newly validated client grant URL", async () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const client = `http://${id}.agent-hub.localhost:1234/path%20name.html?mode=read#target`;
+  vi.mocked(previewApi.resourceLink).mockResolvedValue(client);
+  await openPreviewAddress(
+    `http://${id}.agent-hub.localhost:4321/path%20name.html?mode=read#target`,
+  );
+  expect(previewApi.resourceLink).toHaveBeenCalledWith(
+    id,
+    "/path%20name.html?mode=read#target",
+  );
+  expect(openUrl).toHaveBeenCalledExactlyOnceWith(client);
+});
+it("refuses expired document grants without opening the remote port, and preserves ordinary website addresses", async () => {
+  vi.mocked(previewApi.resourceLink).mockRejectedValueOnce(
+    new Error("expired"),
+  );
+  await expect(
+    openPreviewAddress("http://expired.agent-hub.localhost:4321/page.html"),
+  ).rejects.toThrow("expired");
+  expect(openUrl).not.toHaveBeenCalled();
+  await openPreviewAddress("https://example.invalid/path");
+  expect(openUrl).toHaveBeenCalledExactlyOnceWith(
+    "https://example.invalid/path",
+  );
 });

@@ -141,7 +141,7 @@ pub(crate) fn capture_prepared(
 }
 
 #[cfg(unix)]
-struct CancelGroup(Option<u32>);
+pub(crate) struct CancelGroup(pub(crate) Option<u32>);
 #[cfg(unix)]
 impl Drop for CancelGroup {
     fn drop(&mut self) {

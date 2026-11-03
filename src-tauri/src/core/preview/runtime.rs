@@ -71,6 +71,9 @@ pub struct Runtime {
     pub(super) remote_download_dir: Option<String>,
     context_proxy: Option<String>,
     pub(super) documents: Option<Arc<super::documents::Documents>>,
+    pub(super) ssh_target: Option<String>,
+    pub(super) document_forward: Option<super::document_forward::Forward>,
+    pub(super) document_forward_gate: Arc<Mutex<()>>,
     child: Option<Arc<Mutex<OwnedChild>>>,
     pub cdp: Cdp,
     pub endpoint: String,
@@ -212,6 +215,9 @@ impl Runtime {
             remote_download_dir,
             context_proxy: profile.proxy.clone(),
             documents: None,
+            ssh_target: profile.remote_transfer_target.clone(),
+            document_forward: None,
+            document_forward_gate: Arc::new(Mutex::new(())),
             child,
             cdp,
             endpoint,
@@ -427,10 +433,10 @@ pub fn validate_profile(profile: &BrowserProfile) -> Result<(), AppError> {
         super::remote_downloads::managed_directory(directory, "validation")?;
     }
     if let Some(target) = &profile.remote_transfer_target {
-        super::download_transfer::validate_target(target)?;
-        if profile.endpoint.is_none() || profile.remote_download_directory.is_none() {
+        super::remote_ssh::validate_target(target)?;
+        if profile.endpoint.is_none() {
             return Err(AppError::invalid_input(
-                "Configure the remote endpoint and download directory first",
+                "Configure the remote endpoint first",
             ));
         }
     }
@@ -503,7 +509,7 @@ fn create_context(cdp: &mut Cdp, proxy: Option<&str>) -> Result<Value, AppError>
     if let Some(proxy) = proxy {
         params["proxyServer"] = json!(proxy);
         // Loopback means the network execution host; it must use an explicit proxy too.
-        params["proxyBypassList"] = json!("<-loopback>");
+        params["proxyBypassList"] = json!("<-loopback>;*.agent-hub.localhost");
     }
     cdp.call("Target.createBrowserContext", params)
 }

@@ -2800,8 +2800,8 @@
     "localDownloadLocation": "儲存在本機",
     "remoteDownloadPendingTransfer": "檔案已儲存在伺服器，可透過設定的 SSH 主機取回本機。",
     "downloadSourceUnverified": "部分下載事件的來源暫時無法核驗，已保留待重試；不會將其誤認為本機工作階段或已完成。",
-    "remoteTransferTarget": "SSH 傳輸主機",
-    "remoteTransferTargetHint": "填寫現有 SSH 別名或 user@host，主機須能讀取下載目錄。使用既有金鑰和主機驗證；目前支援 macOS / Linux，每個檔案最多 512 MiB。",
+    "remoteTransferTarget": "SSH 主機（文件與下載）",
+    "remoteTransferTargetHint": "填寫現有 SSH 別名或 user@host。macOS / Linux 可透過反向轉發載入遠端 HTML 彈窗；取回下載另需設定下載目錄。沿用既有金鑰與主機驗證，單檔取回最多 512 MiB。",
     "fetchDownload": "取回本機 / 重試",
     "transferState": {
       "running": "正在取回本機",

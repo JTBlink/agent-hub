@@ -180,6 +180,7 @@ impl Browsers {
                 }));
                 let page = Arc::new(Mutex::new(Page {
                     connection_generation: 0,
+                    navigation_intent: 0,
                     snapshots: VecDeque::new(),
                     cdp,
                     width: 1200,

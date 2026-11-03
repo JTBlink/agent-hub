@@ -77,7 +77,7 @@ try {
     await run("d.querySelector('.preview-profile-row').click()");
     await until(`${d}?.querySelector('input[placeholder=\"/srv/downloads\"]')`);
     await run(
-      "const input=d.querySelector('input[placeholder=\"/srv/downloads\"]');input.scrollIntoView({block:'center'})",
+      "const input=d.querySelector('input[placeholder=\"browser-host\"]');input.scrollIntoView({block:'center'})",
     );
     await request(
       `/screenshot?target=${targetId}&file=/tmp/preview-remote-download-settings-${language}.png`,

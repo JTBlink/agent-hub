@@ -10,9 +10,47 @@ impl Browsers {
             return self.import_cookie_values(id, cookies.clone());
         }
         let page = self.page(id)?;
+        let intent = if matches!(
+            &action,
+            Action::Navigate { .. }
+                | Action::Back
+                | Action::Forward
+                | Action::Reload { .. }
+                | Action::Stop
+        ) {
+            let mut current = page
+                .lock()
+                .map_err(|_| AppError::internal("Browser page unavailable"))?;
+            current.navigation_intent = current.navigation_intent.wrapping_add(1);
+            Some((current.navigation_intent, current.connection_generation))
+        } else {
+            None
+        };
+        let action = if let Action::Navigate { url } = action {
+            let profile = self
+                .state
+                .lock()
+                .map_err(|_| AppError::internal("Browser state unavailable"))?
+                .pages
+                .get(id)
+                .map(|page| page.profile.clone())
+                .ok_or_else(|| AppError::not_found("Browser page unavailable"))?;
+            Action::Navigate {
+                url: self.resolve_document_url(&profile, &url)?,
+            }
+        } else {
+            action
+        };
         let mut page = page
             .lock()
             .map_err(|_| AppError::internal("Browser page unavailable"))?;
+        if intent
+            .is_some_and(|intent| intent != (page.navigation_intent, page.connection_generation))
+        {
+            return Err(AppError::cancelled(
+                "Navigation was superseded; inspect the current page",
+            ));
+        }
         match action {
             Action::VerifyRevision {expected_revision} => {
                 if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED")); }

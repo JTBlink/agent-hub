@@ -284,7 +284,10 @@ fn context_configuration_failure_is_retried_before_creating_a_page() {
             let result = match command["method"].as_str().unwrap() {
                 "Target.createBrowserContext" => {
                     assert_eq!(command["params"]["proxyServer"], "socks5://127.0.0.1:1080");
-                    assert_eq!(command["params"]["proxyBypassList"], "<-loopback>");
+                    assert_eq!(
+                        command["params"]["proxyBypassList"],
+                        "<-loopback>;*.agent-hub.localhost"
+                    );
                     creates += 1;
                     json!({"browserContextId":if creates==1 {"initial"}else{"replacement"}})
                 }

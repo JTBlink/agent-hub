@@ -4,6 +4,7 @@ pub mod browser;
 mod capture;
 mod cdp;
 pub mod cookies;
+mod document_forward;
 pub mod documents;
 mod download_transfer;
 pub mod downloads;
@@ -18,8 +19,11 @@ mod recovery;
 mod remote_downloads;
 #[cfg(test)]
 mod remote_proxy_tests;
+mod remote_ssh;
 mod resource_bridge;
 pub mod runtime;
+#[cfg(all(test, unix))]
+mod ssh_fixture;
 pub mod uploads;
 use super::error::AppError;
 use serde::Serialize;
@@ -119,6 +123,12 @@ impl Preview {
             .assets
             .lock()
             .map_err(|_| AppError::internal("Document resources unavailable"))?;
+        self.browsers.register_document_origin(
+            &assets
+                .as_ref()
+                .ok_or_else(|| AppError::internal("Document server unavailable"))?
+                .origin,
+        )?;
         let url = assets
             .as_ref()
             .ok_or_else(|| AppError::not_found("Document resources unavailable"))?
@@ -133,6 +143,12 @@ impl Preview {
         if assets.is_none() {
             *assets = Some(assets::Assets::start(self.documents.clone())?);
         }
+        self.browsers.register_document_origin(
+            &assets
+                .as_ref()
+                .ok_or_else(|| AppError::internal("Document server unavailable"))?
+                .origin,
+        )?;
         let url = assets
             .as_ref()
             .ok_or_else(|| AppError::internal("Document resource server unavailable"))?
@@ -173,6 +189,12 @@ impl Preview {
             if assets.is_none() {
                 *assets = Some(assets::Assets::start(self.documents.clone())?);
             }
+            self.browsers.register_document_origin(
+                &assets
+                    .as_ref()
+                    .ok_or_else(|| AppError::internal("Document server unavailable"))?
+                    .origin,
+            )?;
             let url = assets
                 .as_ref()
                 .ok_or_else(|| AppError::internal("Document resource server unavailable"))?

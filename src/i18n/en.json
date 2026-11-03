@@ -2843,8 +2843,8 @@
     "localDownloadLocation": "Stored on this computer",
     "remoteDownloadPendingTransfer": "Saved on the server. Retrieve through the configured SSH host.",
     "downloadSourceUnverified": "Some download sources could not be verified. Events are retained for retry and are not reported as local or completed.",
-    "remoteTransferTarget": "SSH transfer host",
-    "remoteTransferTargetHint": "Use an existing SSH alias or user@host with access to the download directory. Uses existing keys and host verification. Currently macOS / Linux; up to 512 MiB per file.",
+    "remoteTransferTarget": "SSH host for documents and downloads",
+    "remoteTransferTargetHint": "Use an existing SSH alias or user@host. On macOS / Linux, reverse forwarding supports remote HTML popups; download retrieval also needs a download directory. Uses existing keys and host verification; retrieval is limited to 512 MiB per file.",
     "fetchDownload": "Retrieve / retry",
     "transferState": {
       "running": "Retrieving to this device",

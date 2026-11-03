@@ -22,7 +22,7 @@ import {
   FolderOpen,
   Copy,
 } from "lucide-react";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openPreviewAddress } from "./shared/documentLinks";
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
 import { previewApi } from "./api";
 import { BrowserSurface } from "./web/BrowserSurface";
@@ -250,7 +250,8 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
           title={t("preview.openExternal")}
           disabled={!active || !/^https?:/.test(active.address)}
           onClick={() => {
-            if (active) void openUrl(active.address).catch(model.report);
+            if (active)
+              void openPreviewAddress(active.address).catch(model.report);
           }}
         >
           <ExternalLink size={16} />

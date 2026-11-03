@@ -17,6 +17,7 @@ use std::{
 
 pub struct Page {
     pub(super) connection_generation: u64,
+    pub(super) navigation_intent: u64,
     pub(super) snapshots: VecDeque<(String, String)>,
     pub cdp: Cdp,
     pub width: u32,
@@ -70,6 +71,7 @@ pub(super) struct State {
     pub cookie_gates: HashMap<String, Arc<Mutex<()>>>,
     pub downloads: HashMap<String, super::downloads::Download>,
     pub transfers: HashMap<String, Arc<super::download_transfer::Transfer>>,
+    pub document_builds: HashMap<String, Arc<std::sync::atomic::AtomicBool>>,
     pub closing: bool,
     pub runtimes: HashMap<String, Arc<Mutex<Runtime>>>,
     pub processes: HashMap<String, Arc<Mutex<OwnedChild>>>,
@@ -83,6 +85,7 @@ pub(super) struct State {
 pub struct Browsers {
     pub root: PathBuf,
     pub documents: Arc<super::documents::Documents>,
+    pub(super) document_port: std::sync::atomic::AtomicU16,
     pub(super) state: Mutex<State>,
     pub(super) downloads_gate: Mutex<()>,
 }
@@ -235,6 +238,7 @@ impl Browsers {
         Self {
             root,
             documents: Arc::new(super::documents::Documents::default()),
+            document_port: std::sync::atomic::AtomicU16::new(0),
             state: Mutex::new(State::default()),
             downloads_gate: Mutex::new(()),
         }
@@ -431,12 +435,14 @@ impl Browsers {
                 }
             }
         };
+        let mut opened_url = url.to_owned();
         let setup = (|| {
+            opened_url = self.resolve_document_url(profile, url)?;
             cdp.call(
                 "Emulation.setDeviceMetricsOverride",
                 json!({"width":1200,"height":800,"deviceScaleFactor":1,"mobile":false}),
             )?;
-            let result = cdp.call("Page.navigate", json!({"url":url}))?;
+            let result = cdp.call("Page.navigate", json!({"url":opened_url}))?;
             if result.get("errorText").is_some() {
                 return Err(AppError::network(
                     result["errorText"].as_str().unwrap_or("Navigation failed"),
@@ -463,13 +469,14 @@ impl Browsers {
             status: PageStatus::Connected,
             id: id.clone(),
             profile: profile.into(),
-            url: url.into(),
-            title: url.into(),
+            url: opened_url.clone(),
+            title: opened_url,
             revision: String::new(),
             owner,
         }));
         let page = Arc::new(Mutex::new(Page {
             connection_generation: 0,
+            navigation_intent: 0,
             snapshots: VecDeque::new(),
             cdp,
             width: 1200,
@@ -673,6 +680,9 @@ impl Browsers {
                 return;
             };
             state.closing = true;
+            for cancel in state.document_builds.values() {
+                cancel.store(true, std::sync::atomic::Ordering::Release);
+            }
             for job in state.transfers.values() {
                 job.cancel();
             }
