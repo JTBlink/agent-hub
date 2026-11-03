@@ -295,8 +295,7 @@ fn backs_up_and_restores_user_configuration_without_applying_system_hosts() {
     initialize(&e.store).unwrap();
     let root = repo_dir();
     assert_eq!(
-        fs::read_to_string(root.join(format!("user-config/hosts/profiles/{}/hosts", profile.id)))
-            .unwrap(),
+        fs::read_to_string(root.join(format!("user-config/hosts/{}/hosts", profile.id))).unwrap(),
         "127.0.0.1 localhost\n"
     );
     let tag = commit(&e.store, "before profile change").unwrap();
@@ -322,7 +321,7 @@ fn preserves_external_configuration_edits_when_remote_publication_conflicts() {
     initialize(&e.store).unwrap();
     prepare_unlocked(&e.store).unwrap();
     fs::write(
-        repo_dir().join(format!("user-config/hosts/profiles/{}/hosts", profile.id)),
+        repo_dir().join(format!("user-config/hosts/{}/hosts", profile.id)),
         "# incoming\n",
     )
     .unwrap();
@@ -341,7 +340,7 @@ fn rejects_linked_configuration_before_publishing_any_restore() {
     let profile = super::super::hosts::profiles::create("Original", "# original\n").unwrap();
     initialize(&e.store).unwrap();
     prepare_unlocked(&e.store).unwrap();
-    let remote = repo_dir().join(format!("user-config/hosts/profiles/{}/hosts", profile.id));
+    let remote = repo_dir().join(format!("user-config/hosts/{}/hosts", profile.id));
     fs::remove_file(&remote).unwrap();
     let outside = e.tmp.path().join("private");
     fs::write(&outside, "# outside\n").unwrap();
@@ -358,7 +357,7 @@ fn configuration_writers_wait_for_interrupted_restore_recovery() {
     initialize(&e.store).unwrap();
     prepare_unlocked(&e.store).unwrap();
     fs::write(
-        repo_dir().join(format!("user-config/hosts/profiles/{}/hosts", profile.id)),
+        repo_dir().join(format!("user-config/hosts/{}/hosts", profile.id)),
         "# incoming\n",
     )
     .unwrap();

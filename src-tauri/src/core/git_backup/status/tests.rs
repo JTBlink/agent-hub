@@ -175,7 +175,7 @@ fn first_upload_lists_existing_files_and_staged_rename_preserves_both_paths() {
 fn skill_count_excludes_metadata_and_root_files_and_supports_legacy_layout() {
     let changes = [
         "README.md",
-        "user-config/hosts/profiles/example/hosts",
+        "user-config/hosts/example/hosts",
         "user-config/hosts/systems/example/current.hosts",
         ".gitignore",
         ".agent-hub/skills/demo.json",

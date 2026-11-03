@@ -125,14 +125,19 @@ try {
     `!!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='已应用' && b.disabled)`,
   );
   await inside(
-    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='打开所在文件夹').click();true`,
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='用 VS Code 打开所在目录').click();true`,
   );
-  await until(`!!document.documentElement.dataset.revealedHostsPath`);
-  assert.deepEqual(
-    JSON.parse(
-      await inside(`document.documentElement.dataset.revealedHostsPath`),
+  await until(`!!document.documentElement.dataset.vscodeOpened`);
+  assert.ok(
+    (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
+      "/user-config/hosts/development",
     ),
-    ["/workspace/user-config/hosts/profiles/development/hosts"],
+  );
+  assert.equal(
+    (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
+      "/hosts/development/hosts",
+    ),
+    false,
   );
   await inside(
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='新建方案').click();true`,
@@ -159,7 +164,7 @@ try {
     "settings-tab-network",
   );
   console.log(
-    "PASS: 24 theme/scale/width/locale layouts, draft retention, save, profile create/apply, file reveal, settings shortcut, sidebar sizing and vertical keyboard navigation",
+    "PASS: 24 theme/scale/width/locale layouts, draft retention, save, profile create/apply, VS Code directory open, settings shortcut, sidebar sizing and vertical keyboard navigation",
   );
 } finally {
   await request(`/close?target=${targetId}`);

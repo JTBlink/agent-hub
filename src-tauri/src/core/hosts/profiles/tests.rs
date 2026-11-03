@@ -7,6 +7,11 @@ fn saves_complete_profiles_without_changing_identity_and_rejects_stale_edits() {
     crate::core::central_repo::set_test_base_dir_override(Some(dir.path().to_owned()));
     let result = std::panic::catch_unwind(|| {
         let created = create("Development", "127.0.0.1 localhost\n").unwrap();
+        assert_eq!(
+            std::path::Path::new(&created.path),
+            library().join(&created.id).join("hosts")
+        );
+        assert!(!library().join("profiles").exists());
         let updated = update(&created.id, "Renamed", "::1 localhost\n", &created.revision).unwrap();
         assert_eq!(updated.id, created.id);
         assert_eq!(list().unwrap()[0].name, "Renamed");
@@ -20,6 +25,38 @@ fn saves_complete_profiles_without_changing_identity_and_rejects_stale_edits() {
         );
         delete(&updated.id, &updated.revision).unwrap();
         assert!(list().unwrap().is_empty());
+    });
+    crate::core::central_repo::set_test_base_dir_override(None);
+    result.unwrap();
+}
+
+#[test]
+fn migrates_legacy_profiles_into_the_single_level_hosts_directory() {
+    let _lock = crate::core::central_repo::test_base_dir_lock();
+    let dir = tempfile::tempdir().unwrap();
+    crate::core::central_repo::set_test_base_dir_override(Some(dir.path().to_owned()));
+    let result = std::panic::catch_unwind(|| {
+        let id = uuid::Uuid::new_v4().to_string();
+        let legacy = library().join("profiles").join(&id);
+        fs::create_dir_all(&legacy).unwrap();
+        fs::write(
+            legacy.join("profile.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": 1,
+                "id": id,
+                "name": "Legacy"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(legacy.join("hosts"), "127.0.0.1 legacy.test\n").unwrap();
+        let profiles = list().unwrap();
+        assert_eq!(profiles.len(), 1);
+        assert_eq!(
+            std::path::PathBuf::from(&profiles[0].path),
+            library().join(&id).join("hosts")
+        );
+        assert!(!library().join("profiles").exists());
     });
     crate::core::central_repo::set_test_base_dir_override(None);
     result.unwrap();
@@ -96,6 +133,51 @@ fn recovers_the_original_profile_after_an_interrupted_directory_replacement() {
         assert_eq!(restored[0].content, "# original\n");
         assert!(!dir.path().join("hosts-profile-write.json").exists());
         assert!(!dir.path().join(".tmp-interrupted").exists());
+    });
+    crate::core::central_repo::set_test_base_dir_override(None);
+    result.unwrap();
+}
+
+#[test]
+fn recovers_an_interrupted_legacy_write_before_migrating() {
+    let _lock = crate::core::central_repo::test_base_dir_lock();
+    let dir = tempfile::tempdir().unwrap();
+    crate::core::central_repo::set_test_base_dir_override(Some(dir.path().to_owned()));
+    let result = std::panic::catch_unwind(|| {
+        let id = uuid::Uuid::new_v4().to_string();
+        let previous = format!("hosts-{}", uuid::Uuid::new_v4());
+        let recovery = dir.path().join("recovery").join(&previous);
+        fs::create_dir_all(&recovery).unwrap();
+        fs::write(
+            recovery.join("profile.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "schema_version": 1,
+                "id": id,
+                "name": "Legacy"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(recovery.join("hosts"), "127.0.0.1 legacy.test\n").unwrap();
+        fs::create_dir(dir.path().join(".tmp-interrupted")).unwrap();
+        fs::write(
+            dir.path().join("hosts-profile-write.json"),
+            serde_json::to_vec(&serde_json::json!({
+                "id": id,
+                "staged": ".tmp-interrupted",
+                "previous": previous
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let restored = list().unwrap();
+        assert_eq!(restored[0].id, id);
+        assert_eq!(restored[0].content, "127.0.0.1 legacy.test\n");
+        assert_eq!(
+            std::path::PathBuf::from(&restored[0].path),
+            library().join(&id).join("hosts")
+        );
+        assert!(!library().join("profiles").exists());
     });
     crate::core::central_repo::set_test_base_dir_override(None);
     result.unwrap();

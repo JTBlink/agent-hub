@@ -36,7 +36,7 @@
 
 ### 用户配置库与 Hosts 方案管理
 
-多套完整 Hosts、当前系统内容展示、系统文件管理器定位及 Git 自动备份的设计见[用户配置库与 Hosts 方案管理](user-config-hosts.md)。
+多套完整 Hosts、当前系统内容展示、用 VS Code 打开所在目录及 Git 自动备份的设计见[用户配置库与 Hosts 方案管理](user-config-hosts.md)。
 
 ### 项目技能库与团队协作方案
 

@@ -1,5 +1,5 @@
 //! Replayable profile-directory replacement. Callers hold the shared RepoLock.
-use super::{library, valid_id};
+use super::{legacy_library, library, valid_id};
 use crate::core::{central_repo, user_config};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -44,14 +44,17 @@ pub(super) fn recover() -> Result<(), String> {
     }
     valid_id(pending.previous.trim_start_matches("hosts-"))?;
     let target = library().join(&pending.id);
+    let legacy_target = legacy_library().join(&pending.id);
     let staged = central_repo::base_dir().join(&pending.staged);
     let previous = central_repo::base_dir()
         .join("recovery")
         .join(&pending.previous);
-    for path in [&target, &staged, &previous] {
+    for path in [&target, &legacy_target, &staged, &previous] {
         user_config::checked(path)?;
     }
-    if !target.try_exists().map_err(|e| e.to_string())? {
+    if !target.try_exists().map_err(|e| e.to_string())?
+        && !legacy_target.try_exists().map_err(|e| e.to_string())?
+    {
         fs::create_dir_all(library()).map_err(|e| e.to_string())?;
         fs::rename(&previous, &target).map_err(|e| format!("HOSTS_PROFILE_RECOVERY: {e}"))?;
     }

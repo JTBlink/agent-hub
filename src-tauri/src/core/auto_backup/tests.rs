@@ -149,7 +149,7 @@ fn round_commits_and_pushes_without_snapshot_tag() {
             &env.remote,
             &[
                 "show",
-                &format!("main:user-config/hosts/profiles/{}/hosts", profile.id)
+                &format!("main:user-config/hosts/{}/hosts", profile.id)
             ]
         ),
         "127.0.0.1 localhost"

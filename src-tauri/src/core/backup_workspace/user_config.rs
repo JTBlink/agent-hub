@@ -42,8 +42,9 @@ pub(super) fn stage(journal: &Journal, repository: &Path, stage: &Path) -> Resul
         return Ok(false);
     }
     let desired = snapshot(&source)?;
-    crate::core::hosts::profiles::list_at(&source.join("hosts/profiles"))
-        .map_err(anyhow::Error::msg)?;
+    let hosts = source.join("hosts");
+    crate::core::hosts::profiles::list_at(&hosts).map_err(anyhow::Error::msg)?;
+    crate::core::hosts::profiles::list_at(&hosts.join("profiles")).map_err(anyhow::Error::msg)?;
     if before == &desired {
         return Ok(false);
     }

@@ -2,8 +2,8 @@ import { useState } from "react";
 import {
   Check,
   CheckCheck,
+  Code2,
   Copy,
-  FolderOpen,
   Monitor,
   Plus,
   RefreshCw,
@@ -190,10 +190,10 @@ export function HostsSettings({ active }: { active: boolean }) {
               type="button"
               className={actionButtonClass}
               disabled={state.busy || !state.source}
-              onClick={() => void state.revealFile()}
+              onClick={() => void state.openDirectoryInVscode()}
             >
-              <FolderOpen className="h-3.5 w-3.5" />
-              {t("hosts.openFolder")}
+              <Code2 className="h-3.5 w-3.5" />
+              {t("hosts.openDirectoryInVscode")}
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-y border-border-subtle bg-bg-secondary px-3 py-2 text-[10px] text-muted">

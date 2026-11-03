@@ -25,7 +25,59 @@ struct Metadata {
 }
 
 fn library() -> std::path::PathBuf {
-    user_config::root().join("hosts/profiles")
+    user_config::root().join("hosts")
+}
+fn legacy_library() -> std::path::PathBuf {
+    library().join("profiles")
+}
+fn migrate_legacy() -> Result<(), String> {
+    let legacy = legacy_library();
+    if !legacy.try_exists().map_err(|e| e.to_string())? {
+        return Ok(());
+    }
+    user_config::checked(&library())?;
+    user_config::checked(&legacy)?;
+    let entries = fs::read_dir(&legacy)
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    let mut migrated = false;
+    for entry in entries {
+        let id = entry
+            .file_name()
+            .into_string()
+            .map_err(|_| "HOSTS_PROFILE_INVALID_ID")?;
+        if id == ".DS_Store" {
+            fs::remove_file(entry.path()).map_err(|e| e.to_string())?;
+            continue;
+        }
+        valid_id(&id)?;
+        let source = entry.path();
+        let target = library().join(&id);
+        user_config::checked(&source)?;
+        user_config::checked(&target)?;
+        if target.try_exists().map_err(|e| e.to_string())? {
+            if read_at(&legacy, &id)?.revision != read_at(&library(), &id)?.revision {
+                return Err("HOSTS_PROFILE_CONFLICT".into());
+            }
+            fs::remove_dir_all(source).map_err(|e| e.to_string())?;
+        } else {
+            fs::rename(source, target).map_err(|e| e.to_string())?;
+        }
+        migrated = true;
+    }
+    if legacy
+        .read_dir()
+        .map_err(|e| e.to_string())?
+        .next()
+        .is_none()
+    {
+        fs::remove_dir(legacy).map_err(|e| e.to_string())?;
+    }
+    if migrated {
+        auto_backup::notify_central_change();
+    }
+    Ok(())
 }
 fn valid_id(id: &str) -> Result<(), String> {
     if uuid::Uuid::parse_str(id).is_ok_and(|value| value.to_string() == id) {
@@ -77,6 +129,7 @@ fn read_at(root: &Path, id: &str) -> Result<HostsProfile, String> {
 pub fn list() -> Result<Vec<HostsProfile>, String> {
     let _lock = RepoLock::acquire_foreground("read Hosts profiles").map_err(|e| e.to_string())?;
     storage::recover()?;
+    migrate_legacy()?;
     user_config::checked(&library())?;
     list_at(&library())
 }
@@ -93,16 +146,16 @@ pub(crate) fn list_at(root: &Path) -> Result<Vec<HostsProfile>, String> {
     let mut result = Vec::new();
     let mut bytes = 0;
     for entry in fs::read_dir(root).map_err(|e| e.to_string())? {
-        if result.len() >= 1000 {
-            return Err("HOSTS_PROFILE_LIMIT".into());
-        }
         let entry = entry.map_err(|e| e.to_string())?;
         let id = entry
             .file_name()
             .into_string()
             .map_err(|_| "HOSTS_PROFILE_INVALID_ID")?;
-        if id == ".DS_Store" {
+        if matches!(id.as_str(), ".DS_Store" | "profiles" | "systems") {
             continue;
+        }
+        if result.len() >= 1000 {
+            return Err("HOSTS_PROFILE_LIMIT".into());
         }
         let profile = read_at(root, &id)?;
         bytes += profile.content.len();
@@ -163,6 +216,7 @@ fn write(
 pub fn create(title: &str, content: &str) -> Result<HostsProfile, String> {
     let _lock = RepoLock::acquire_foreground("create Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
+    migrate_legacy()?;
     user_config::checked(&library())?;
     if list_at(&library())?.len() >= 1000 {
         return Err("HOSTS_PROFILE_LIMIT".into());
@@ -177,6 +231,7 @@ pub fn update(
 ) -> Result<HostsProfile, String> {
     let _lock = RepoLock::acquire_foreground("save Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
+    migrate_legacy()?;
     user_config::checked(&library())?;
     let before = read_at(&library(), id)?;
     if before.revision != expected {
@@ -187,6 +242,7 @@ pub fn update(
 pub fn delete(id: &str, expected: &str) -> Result<(), String> {
     let _lock = RepoLock::acquire_foreground("delete Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
+    migrate_legacy()?;
     user_config::checked(&library())?;
     let before = read_at(&library(), id)?;
     if before.revision != expected {
@@ -203,6 +259,7 @@ pub fn apply(
 ) -> Result<HostsSaved, String> {
     let _lock = RepoLock::acquire_foreground("apply Hosts profile").map_err(|e| e.to_string())?;
     storage::recover()?;
+    migrate_legacy()?;
     user_config::checked(&library())?;
     let profile = read_at(&library(), id)?;
     if profile.revision != expected_profile {
@@ -213,5 +270,6 @@ pub fn apply(
 
 /// Complete interrupted profile writes before backup projection. Caller holds RepoLock.
 pub(crate) fn recover_pending() -> Result<(), String> {
-    storage::recover()
+    storage::recover()?;
+    migrate_legacy()
 }

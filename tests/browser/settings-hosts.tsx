@@ -24,7 +24,7 @@ let profiles: HostsProfile[] = [
     name: "Development",
     content: "127.0.0.2 app.test\n",
     revision: "profile-first",
-    path: "/workspace/user-config/hosts/profiles/development/hosts",
+    path: "/workspace/user-config/hosts/development/hosts",
   },
 ];
 const saveSystem = (next: string) => {
@@ -47,7 +47,7 @@ Object.assign(window, {
           name: args.name,
           content: args.content,
           revision: id,
-          path: `/workspace/user-config/hosts/profiles/${id}/hosts`,
+          path: `/workspace/user-config/hosts/${id}/hosts`,
         };
         profiles = [...profiles, profile];
         return profile;
@@ -84,10 +84,11 @@ Object.assign(window, {
         profiles = profiles.map((p) => (p.id === next.id ? next : p));
         return next;
       }
-      if (command === "plugin:opener|reveal_item_in_dir") {
-        document.documentElement.dataset.revealedHostsPath = JSON.stringify(
-          args.paths,
-        );
+      if (command === "plugin:path|dirname") {
+        return args.path.slice(0, Math.max(args.path.lastIndexOf("/"), 1));
+      }
+      if (command === "plugin:opener|open_url") {
+        document.documentElement.dataset.vscodeOpened = args.url;
         return;
       }
       if (command === "read_system_hosts")
