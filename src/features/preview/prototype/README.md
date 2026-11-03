@@ -7,10 +7,17 @@
 ## 运行
 
 ```sh
-npm run prototype:preview
+./prototype.sh
 ```
 
-打开 <http://127.0.0.1:4176/tests/browser/preview-module-prototype.html>。
+脚本自动打开 <http://127.0.0.1:4176/tests/browser/preview-module-prototype.html?variant=A>，已有当前项目目录的原型服务时复用；端口被其他服务或其他工作树占用时提示换端口，不终止已有进程。新服务在当前终端运行，按 Ctrl+C 停止。
+
+```sh
+./prototype.sh --layout B               # 直接查看阅读布局
+./prototype.sh --port 4180 --no-open   # 自选端口，不打开浏览器
+```
+
+底层命令 `npm run prototype:preview` 仍可直接使用。正式应用的预览模块随应用启动，不需要单独运行本脚本。
 
 无需启动 Tauri，不读取应用数据库或真实登录配置，不调用真实 Agent。已有前端开发服务也可打开相同路径。
 
