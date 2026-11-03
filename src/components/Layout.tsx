@@ -1,3 +1,4 @@
+import { PreviewHost } from "../features/preview/PreviewHost";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { TerminalStartupState } from "./terminal/useTerminalLayout";
@@ -63,6 +64,7 @@ export function Layout() {
   const fullHeightPage =
     projectSkillsPage ||
     discoveryPage ||
+    pathname === "/preview" ||
     pathname === "/settings" ||
     pathname === "/backup/diff" ||
     pathname === "/tasks" ||
@@ -148,7 +150,10 @@ export function Layout() {
               <div
                 className={cn(
                   "workbench-page-host min-h-0 flex-1",
-                  pathname === "/git" || discoveryPage || projectSkillsPage
+                  pathname === "/git" ||
+                    pathname === "/preview" ||
+                    discoveryPage ||
+                    projectSkillsPage
                     ? "p-0"
                     : "p-3",
                   fullHeightPage
@@ -173,6 +178,7 @@ export function Layout() {
                     />
                   ) : null}
                   {started && pathname !== "/git" && <Outlet />}
+                  {started && <PreviewHost active={pathname === "/preview"} />}
                 </div>
               </div>
             </div>

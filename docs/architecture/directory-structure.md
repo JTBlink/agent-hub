@@ -20,6 +20,11 @@ agent-hub/
 │   │   ├── InstallSkills.tsx       #   技能市场/安装
 │   │   └── workspaceConfigs.ts     #   工作空间配置定义
 │   ├── features/
+│   │   ├── preview/                #   独立网页／HTML／Markdown 宿主，见 preview.md
+│   │   │   ├── web/                #     原生浏览画面、输入、弹窗与页面清单
+│   │   │   ├── markdown/           #     共享 Markdown 阅读、源码位置与截图
+│   │   │   ├── components/         #     批注、Agent 交付、设置与下载
+│   │   │   └── shared/             #     会话、修订、打开请求、查找与输入调度
 │   │   └── herdr/                  #   Herdr 专属集成，见 herdr.md
 │   │       ├── api.ts              #     模块 API：快照、控制、工具与终端挂接
 │   │       ├── components/         #     侧栏、工作树菜单、Agent／会话与自动化配置 UI
@@ -132,10 +137,12 @@ agent-hub/
 │   │   │   ├── herdr/             #     Herdr 控制与工具管理 IPC
 │   │   │   ├── settings.rs         #     应用设置
 │   │   │   ├── tools.rs            #     工具操作
+│   │   │   ├── preview.rs          #     预览授权、原生选择器、导出与浏览 IPC
 │   │   │   ├── browse.rs           #     文件浏览
 │   │   │   └── app_updates.rs      #     应用更新
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
+│   │       ├── preview/            #     浏览宿主、文档授权、传输、截图与 CLI 控制
 │   │       ├── agent_usage/        #     独立 Claude／Codex 额度、凭据与缓存
 │   │       ├── herdr/              #     Herdr 专属领域模块
 │   │       │   ├── control/        #       快照、目标核验、工作树与 Agent 控制

@@ -16,6 +16,7 @@ type ActivityIcon =
   | "extensions"
   | "herdr"
   | "cloud"
+  | "globe"
   | "settings-gear";
 
 function ActivityBarIcon({ name }: { name: ActivityIcon }) {
@@ -168,6 +169,11 @@ export function SidebarActivityBar({
           name: t("automation.title"),
           path: "/automation",
           icon: "clock",
+        })}
+        {renderLink({
+          name: t("preview.title"),
+          path: "/preview",
+          icon: "globe",
         })}
         {renderPanel("skills", t("sidebar.skillPanel"), "layers")}
         {renderLink({

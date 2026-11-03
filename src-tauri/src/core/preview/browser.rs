@@ -19,7 +19,7 @@ pub struct Page {
     pub cdp: Cdp,
     pub width: u32,
     pub height: u32,
-    metadata: Arc<Mutex<BrowserPageInfo>>,
+    pub(super) metadata: Arc<Mutex<BrowserPageInfo>>,
 }
 impl Page {
     pub fn identity(&mut self) -> Result<(String, String), AppError> {
@@ -69,6 +69,7 @@ pub struct BrowserPageInfo {
     pub url: String,
     pub title: String,
     pub revision: String,
+    pub owner: Option<String>,
 }
 #[derive(Serialize)]
 pub struct BrowserInfo {
@@ -112,6 +113,13 @@ impl Drop for Reservation<'_> {
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Action {
+    HandleDialog {
+        accept: bool,
+        prompt: Option<String>,
+    },
+    CancelUpload {
+        token: String,
+    },
     ClickRef {
         reference: String,
     },
@@ -246,12 +254,24 @@ impl Browsers {
         Ok(())
     }
     pub fn create(&self, profile: &str, url: &str) -> Result<String, AppError> {
-        self.create_page(profile, url, false)
+        self.create_page(profile, url, false, None)
     }
     pub(super) fn create_internal(&self, profile: &str, url: &str) -> Result<String, AppError> {
-        self.create_page(profile, url, true)
+        self.create_page(profile, url, true, None)
     }
-    fn create_page(&self, profile: &str, url: &str, internal: bool) -> Result<String, AppError> {
+    pub fn create_owned(&self, profile: &str, url: &str, owner: &str) -> Result<String, AppError> {
+        if owner.len() > 100 {
+            return Err(AppError::invalid_input("Invalid preview owner"));
+        }
+        self.create_page(profile, url, false, Some(owner.into()))
+    }
+    fn create_page(
+        &self,
+        profile: &str,
+        url: &str,
+        internal: bool,
+        owner: Option<String>,
+    ) -> Result<String, AppError> {
         validate_url(url)?;
         if !self.profiles()?.iter().any(|item| item.id == profile) {
             return Err(AppError::not_found("Browser profile unavailable"));
@@ -383,6 +403,7 @@ impl Browsers {
             url: url.into(),
             title: url.into(),
             revision: String::new(),
+            owner,
         }));
         let page = Arc::new(Mutex::new(Page {
             cdp,
@@ -544,6 +565,7 @@ impl Browsers {
                         .take(500)
                         .collect(),
                     revision: String::new(),
+                    owner: None,
                 }));
                 let page = Arc::new(Mutex::new(Page {
                     cdp,
@@ -664,68 +686,6 @@ impl Browsers {
             }
         }
         drop(detached);
-    }
-    pub fn frame(&self, id: &str) -> Result<Frame, AppError> {
-        self.frame_since(id, None)
-    }
-    pub fn frame_since(&self, id: &str, since: Option<u64>) -> Result<Frame, AppError> {
-        let page = self.page(id)?;
-        let mut page = page
-            .lock()
-            .map_err(|_| AppError::internal("Browser page unavailable"))?;
-        let (revision, url) = page.identity()?;
-        let mut info = page.cdp.evaluate("({url:location.href,title:document.title,revision:String(performance.timeOrigin),ready:document.readyState,width:innerWidth,height:innerHeight,scrollX,scrollY,dpr:devicePixelRatio})")?;
-        if !info.is_object() {
-            return Err(AppError::network("Page metadata unavailable"));
-        }
-        info["url"] = json!(url);
-        info["revision"] = json!(revision);
-        info["title"] = json!(info["title"]
-            .as_str()
-            .unwrap_or("")
-            .chars()
-            .take(500)
-            .collect::<String>());
-        info["ready"] = json!(info["ready"].as_str().unwrap_or("loading"));
-        info["layoutWidth"] = info["width"].clone();
-        info["layoutHeight"] = info["height"].clone();
-        info["width"] = json!(page.width);
-        info["height"] = json!(page.height);
-        info["history"] = page.cdp.call("Page.getNavigationHistory", json!({}))?;
-        if page.cdp.frame.is_none() {
-            let result = page.cdp.call(
-                "Page.captureScreenshot",
-                json!({"format":"jpeg","quality":85,"captureBeyondViewport":false}),
-            )?;
-            let image = result["data"]
-                .as_str()
-                .filter(|data| data.len() <= 8 * 1024 * 1024)
-                .ok_or_else(|| AppError::network("Browser frame unavailable"))?
-                .to_owned();
-            page.cdp.frame = Some(image);
-            page.cdp.frame_version += 1;
-        }
-        let version = page.cdp.frame_version;
-        let image = if since == Some(version) {
-            String::new()
-        } else {
-            page.cdp.frame.clone().unwrap_or_default()
-        };
-        if page.identity()?.0 != revision {
-            return Err(AppError::cancelled("Page changed during capture"));
-        }
-        let events = page.cdp.events.drain(..).collect();
-        if let Ok(mut metadata) = page.metadata.lock() {
-            metadata.url = info["url"].as_str().unwrap_or("about:blank").into();
-            metadata.title = info["title"].as_str().unwrap_or("").into();
-            metadata.revision = revision;
-        }
-        Ok(Frame {
-            version,
-            image,
-            info,
-            events,
-        })
     }
 }
 pub fn validate_url(value: &str) -> Result<(), AppError> {

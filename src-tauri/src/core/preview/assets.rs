@@ -131,18 +131,25 @@ fn serve(mut stream: TcpStream, documents: &Documents) -> std::io::Result<()> {
     let Ok(content) = std::fs::read(&path) else {
         return respond(&mut stream, 404, "text/plain", b"Not found", false);
     };
+    respond(&mut stream, 200, mime(&path), &content, method == "HEAD")
+}
+pub(super) fn mime(path: &std::path::Path) -> &'static str {
     let extension = path
         .extension()
         .unwrap_or_default()
         .to_string_lossy()
         .to_ascii_lowercase();
-    let mime = match extension.as_str() {
+    match extension.as_str() {
         "html" | "htm" => "text/html; charset=utf-8",
         "css" => "text/css; charset=utf-8",
         "js" | "mjs" => "application/javascript; charset=utf-8",
         "json" | "map" => "application/json",
         "svg" => "image/svg+xml",
         "png" => "image/png",
+        "pdf" => "application/pdf",
+        "csv" => "text/csv",
+        "avif" => "image/avif",
+        "zip" => "application/zip",
         "jpg" | "jpeg" => "image/jpeg",
         "gif" => "image/gif",
         "webp" => "image/webp",
@@ -151,9 +158,9 @@ fn serve(mut stream: TcpStream, documents: &Documents) -> std::io::Result<()> {
         "woff" => "font/woff",
         "md" | "markdown" | "txt" => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
-    };
-    respond(&mut stream, 200, mime, &content, method == "HEAD")
+    }
 }
+
 fn respond(
     stream: &mut TcpStream,
     code: u16,

@@ -1,0 +1,117 @@
+use super::{
+    super::error::AppError,
+    browser::{Browsers, Frame, Page},
+};
+use serde_json::json;
+impl Browsers {
+    pub fn frame(&self, id: &str) -> Result<Frame, AppError> {
+        self.frame_since(id, None)
+    }
+    pub fn frame_since(&self, id: &str, since: Option<u64>) -> Result<Frame, AppError> {
+        let page = self.page(id)?;
+        let mut page = page
+            .lock()
+            .map_err(|_| AppError::internal("Browser page unavailable"))?;
+        let result = (|| {
+            let identity = if page.cdp.dialog.is_some() {
+                None
+            } else {
+                match page.identity() {
+                    Ok(identity) => Some(identity),
+                    Err(error) if page.cdp.dialog.is_none() => return Err(error),
+                    Err(_) => None,
+                }
+            };
+            if page.cdp.dialog.is_some() {
+                return dialog_frame(&mut page, since);
+            }
+            let (revision, url) =
+                identity.ok_or_else(|| AppError::network("Browser document unavailable"))?;
+            let mut info = if page.cdp.dialog.is_some() {
+                json!({"title":"", "ready":"interactive"})
+            } else {
+                page.cdp.evaluate("({url:location.href,title:document.title,revision:String(performance.timeOrigin),ready:document.readyState,width:innerWidth,height:innerHeight,scrollX,scrollY,dpr:devicePixelRatio})")?
+            };
+            if !info.is_object() {
+                return Err(AppError::network("Page metadata unavailable"));
+            }
+            info["url"] = json!(url);
+            info["revision"] = json!(revision);
+            info["title"] = json!(info["title"]
+                .as_str()
+                .unwrap_or("")
+                .chars()
+                .take(500)
+                .collect::<String>());
+            info["ready"] = json!(info["ready"].as_str().unwrap_or("loading"));
+            info["layoutWidth"] = info["width"].clone();
+            info["layoutHeight"] = info["height"].clone();
+            info["width"] = json!(page.width);
+            info["height"] = json!(page.height);
+            info["chooser"] = json!(page.cdp.chooser);
+            info["dialog"] = json!(page.cdp.dialog);
+            info["history"] = page.cdp.call("Page.getNavigationHistory", json!({}))?;
+            if page.cdp.frame.is_none() {
+                let clip = json!({"x":0,"y":0,"width":page.width,"height":page.height,"scale":1});
+                let result = page.cdp.call(
+                    "Page.captureScreenshot",
+                    json!({"format":"jpeg","quality":85,"captureBeyondViewport":false,"clip":clip}),
+                )?;
+                let image = result["data"]
+                    .as_str()
+                    .filter(|data| data.len() <= 8 * 1024 * 1024)
+                    .ok_or_else(|| AppError::network("Browser frame unavailable"))?
+                    .to_owned();
+                page.cdp.frame = Some(image);
+                page.cdp.frame_version += 1;
+            }
+            let version = page.cdp.frame_version;
+            let image = if since == Some(version) {
+                String::new()
+            } else {
+                page.cdp.frame.clone().unwrap_or_default()
+            };
+            if page.identity()?.0 != revision {
+                return Err(AppError::cancelled("Page changed during capture"));
+            }
+            info["chooser"] = json!(page.cdp.chooser);
+            info["dialog"] = json!(page.cdp.dialog);
+            let events = page.cdp.events.drain(..).collect();
+            if let Ok(mut metadata) = page.metadata.lock() {
+                metadata.url = info["url"].as_str().unwrap_or("about:blank").into();
+                metadata.title = info["title"].as_str().unwrap_or("").into();
+                metadata.revision = revision;
+            }
+            Ok(Frame {
+                version,
+                image,
+                info,
+                events,
+            })
+        })();
+        if result.is_err() && page.cdp.dialog.is_some() {
+            return dialog_frame(&mut page, since);
+        }
+        result
+    }
+}
+fn dialog_frame(page: &mut Page, since: Option<u64>) -> Result<Frame, AppError> {
+    let metadata = page
+        .metadata
+        .lock()
+        .map_err(|_| AppError::internal("Browser metadata unavailable"))?
+        .clone();
+    let info = json!({"url":metadata.url,"title":metadata.title,"revision":metadata.revision,"ready":"interactive","width":page.width,"height":page.height,"dialog":page.cdp.dialog,"chooser":page.cdp.chooser});
+    let version = page.cdp.frame_version;
+    let image = if since == Some(version) {
+        String::new()
+    } else {
+        page.cdp.frame.clone().unwrap_or_default()
+    };
+    Ok(Frame {
+        version,
+        image,
+        info,
+        events: page.cdp.events.drain(..).collect(),
+    })
+}

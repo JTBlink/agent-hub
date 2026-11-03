@@ -1,5 +1,6 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import type { ReactNode } from "react";
+import type { PluggableList } from "unified";
 import remarkGfm from "remark-gfm";
 import { cn } from "../utils";
 import { SyntaxCode } from "./file-reader/SyntaxCode";
@@ -9,6 +10,7 @@ interface MarkdownContentProps {
   className?: string;
   components?: Components;
   children?: ReactNode;
+  rehypePlugins?: PluggableList;
 }
 
 export function MarkdownContent({
@@ -16,6 +18,7 @@ export function MarkdownContent({
   className,
   components,
   children,
+  rehypePlugins,
 }: MarkdownContentProps) {
   return (
     <article
@@ -27,6 +30,7 @@ export function MarkdownContent({
       {children}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={rehypePlugins}
         components={{
           h1: ({ className, ...props }) => (
             <h1

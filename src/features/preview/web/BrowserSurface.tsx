@@ -1,0 +1,478 @@
+import { latestDispatcher } from "../shared/latestDispatcher";
+import { PagePrompts } from "./PagePrompts";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { readText, writeText } from "@tauri-apps/plugin-clipboard-manager";
+import {
+  previewApi,
+  type BrowserAction,
+  type BrowserFrame,
+  type PickedElement,
+} from "../api";
+import { getErrorMessage } from "../../../lib/error";
+
+interface Props {
+  tabId: string;
+  initialId?: string;
+  active: boolean;
+  address: string;
+  profile: string;
+  picking: boolean;
+  viewport: { width: number; height: number; mobile: boolean } | null;
+  onReady: (id: string) => void;
+  onFrame: (frame: BrowserFrame) => void;
+  onCapture: (value: PickedElement) => void;
+  onError: (message: string) => void;
+}
+export function BrowserSurface(props: Props) {
+  const { t } = useTranslation();
+  const [id, setId] = useState<string | null>(props.initialId ?? null);
+  const [frame, setFrame] = useState<BrowserFrame | null>(null);
+  const [hover, setHover] = useState<PickedElement | null>(null);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [size, setSize] = useState({ width: 1200, height: 800 });
+  const container = useRef<HTMLDivElement>(null);
+  const keyboard = useRef<HTMLTextAreaElement>(null);
+  const ownedId = useRef<string | null>(props.initialId ?? null);
+  const queue = useRef(Promise.resolve());
+
+  const motion = useRef<ReturnType<
+    typeof latestDispatcher<{
+      x: number;
+      y: number;
+      button: string;
+      picking: boolean;
+      epoch: number;
+    }>
+  > | null>(null);
+  const pickEpoch = useRef(0);
+  useEffect(() => {
+    pickEpoch.current += 1;
+  }, [props.active, props.picking, id]);
+  const refresh = useRef<(() => void) | null>(null);
+  const fastUntil = useRef(0);
+  const report = useEffectEvent((message: string) => props.onError(message));
+  const ready = useEffectEvent((value: string) => props.onReady(value));
+  const publish = useEffectEvent((value: BrowserFrame) => props.onFrame(value));
+  const send = (action: BrowserAction) => {
+    if (!id) return;
+    const page = id;
+    queue.current = queue.current
+      .then(async () => {
+        if (ownedId.current !== page) return;
+        await previewApi.action(page, action);
+        fastUntil.current = Date.now() + 1000;
+        refresh.current?.();
+      })
+      .catch((error: unknown) =>
+        props.onError(getErrorMessage(error, t("common.error"))),
+      );
+    return queue.current;
+  };
+  const deliverMotion = useEffectEvent(
+    async (value: {
+      x: number;
+      y: number;
+      button: string;
+      picking: boolean;
+      epoch: number;
+    }) => {
+      if (!props.active || value.epoch !== pickEpoch.current || !id) return;
+      if (value.picking) {
+        try {
+          const picked = await previewApi.action<PickedElement>(id, {
+            kind: "pick",
+            x: value.x,
+            y: value.y,
+          });
+          if (value.epoch === pickEpoch.current) setHover(picked);
+        } catch {
+          /* Hover errors do not interrupt selection. */
+        }
+      } else
+        await send({
+          kind: "mouse",
+          event: "mouseMoved",
+          x: value.x,
+          y: value.y,
+          button: value.button,
+        });
+    },
+  );
+  useEffect(() => {
+    const dispatcher = latestDispatcher(
+      (value: {
+        x: number;
+        y: number;
+        button: string;
+        picking: boolean;
+        epoch: number;
+      }) => deliverMotion(value),
+    );
+    motion.current = dispatcher;
+    return () => {
+      dispatcher.dispose();
+      motion.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    if (!props.active || id) return;
+    let disposed = false;
+    previewApi
+      .create(props.profile, props.address, props.tabId)
+      .then((value) => {
+        if (disposed) {
+          void previewApi.close(value).catch(() => {});
+          return;
+        }
+        ownedId.current = value;
+        setId(value);
+        setError("");
+        ready(value);
+      })
+      .catch((error: unknown) => {
+        if (!disposed) setError(getErrorMessage(error, t("common.error")));
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [props.active, props.address, props.profile, props.tabId, id, retry, t]);
+  useEffect(
+    () => () => {
+      const page = ownedId.current;
+      ownedId.current = null;
+      if (page) void previewApi.close(page).catch(() => {});
+    },
+    [],
+  );
+  useEffect(() => {
+    if (!props.active || !id) return;
+    let disposed = false;
+    let timer: number | undefined;
+    let since: number | undefined;
+    let inFlight = false;
+    const poll = async () => {
+      if (inFlight || disposed) return;
+      inFlight = true;
+      try {
+        if (!document.hidden) {
+          const next = await previewApi.frame(id, since);
+          since = next.version;
+          if (!disposed) {
+            setFrame((previous) => {
+              if (!next.image && previous)
+                return { ...next, image: previous.image };
+              return next;
+            });
+            setError("");
+            publish(next);
+          }
+        }
+      } catch (error: unknown) {
+        if (!disposed) setError(getErrorMessage(error, t("common.error")));
+      } finally {
+        inFlight = false;
+        if (!disposed)
+          timer = window.setTimeout(
+            () => void poll(),
+            document.hidden ? 1500 : Date.now() < fastUntil.current ? 100 : 300,
+          );
+      }
+    };
+    refresh.current = () => {
+      clearTimeout(timer);
+      void poll();
+    };
+    void poll();
+    return () => {
+      refresh.current = null;
+      disposed = true;
+      clearTimeout(timer);
+    };
+  }, [props.active, id, retry, t]);
+  useEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() =>
+      setSize({
+        width: Math.max(240, element.clientWidth - 24),
+        height: Math.max(200, element.clientHeight - 24),
+      }),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const width = props.viewport?.width ?? Math.min(3840, Math.round(size.width));
+  const height =
+    props.viewport?.height ?? Math.min(2160, Math.round(size.height));
+  const mobile = props.viewport?.mobile ?? false;
+  useEffect(() => {
+    if (!props.active || !id) return;
+    const timer = window.setTimeout(() => {
+      previewApi
+        .action(id, { kind: "resize", width, height, mobile })
+        .catch((error: unknown) =>
+          report(getErrorMessage(error, t("common.error"))),
+        );
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [id, width, height, mobile, props.active, t]);
+  useEffect(() => {
+    if (props.active && props.picking)
+      container.current?.focus({ preventScroll: true });
+  }, [props.active, props.picking]);
+  const imageWidth = frame?.info.width ?? width,
+    imageHeight = frame?.info.height ?? height;
+  const scale = Math.min(size.width / imageWidth, size.height / imageHeight);
+  const coordinates = (
+    event:
+      React.PointerEvent<HTMLDivElement> | React.WheelEvent<HTMLDivElement>,
+  ) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    return {
+      x: Math.max(
+        0,
+        Math.min(
+          imageWidth - 1,
+          ((event.clientX - bounds.left) * imageWidth) / bounds.width,
+        ),
+      ),
+      y: Math.max(
+        0,
+        Math.min(
+          imageHeight - 1,
+          ((event.clientY - bounds.top) * imageHeight) / bounds.height,
+        ),
+      ),
+    };
+  };
+  return (
+    <div
+      ref={container}
+      className="preview-browser-surface"
+      aria-label={t("preview.browserSurface")}
+      tabIndex={props.picking ? 0 : undefined}
+      onKeyDownCapture={(event) => {
+        if (
+          !props.picking ||
+          !props.active ||
+          !hover ||
+          !id ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey
+        )
+          return;
+        const key = event.key.toLowerCase();
+        if (key !== "c" && key !== "s") return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (key === "c")
+          void writeText(JSON.stringify(hover, null, 2)).catch(
+            (error: unknown) =>
+              props.onError(getErrorMessage(error, t("common.error"))),
+          );
+        else {
+          const epoch = pickEpoch.current;
+          void previewApi
+            .action<{ data: string }>(id, {
+              kind: "screenshot",
+              full: false,
+              clip: hover.documentBounds,
+              expected_revision: hover.revision,
+            })
+            .then((value) => {
+              if (epoch === pickEpoch.current)
+                props.onCapture({ ...hover, screenshot: value.data });
+            })
+            .catch((error: unknown) =>
+              props.onError(getErrorMessage(error, t("common.error"))),
+            );
+        }
+      }}
+    >
+      {id && frame && (
+        <PagePrompts id={id} info={frame.info} onError={props.onError} />
+      )}
+      {error && (
+        <div role="alert" className="preview-browser-error">
+          <p>
+            {error.includes("PREVIEW_BROWSER_NOT_FOUND")
+              ? t("preview.missingBrowser")
+              : error}
+          </p>
+          <button
+            className="app-button-ghost"
+            onClick={() => {
+              setError("");
+              setRetry((value) => value + 1);
+            }}
+          >
+            {t("common.retry")}
+          </button>
+        </div>
+      )}
+      {!frame && !error && (
+        <p role="status" className="text-xs text-muted">
+          {t("common.loading")}
+        </p>
+      )}
+      {frame && (
+        <div
+          className={`preview-browser-image ${props.picking ? "picking" : ""}`}
+          style={{ width: imageWidth * scale, height: imageHeight * scale }}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            keyboard.current?.focus({ preventScroll: true });
+            event.currentTarget.setPointerCapture(event.pointerId);
+            if (!props.picking)
+              send({
+                kind: "mouse",
+                event: "mousePressed",
+                button: event.button === 2 ? "right" : "left",
+                ...coordinates(event),
+              });
+          }}
+          onPointerUp={(event) => {
+            const point = coordinates(event);
+            if (props.picking && id) {
+              const epoch = pickEpoch.current;
+              void previewApi
+                .action<PickedElement>(id, { kind: "pick", ...point })
+                .then((value) => {
+                  if (value && epoch === pickEpoch.current)
+                    props.onCapture(value);
+                })
+                .catch((error: unknown) =>
+                  props.onError(getErrorMessage(error, t("common.error"))),
+                );
+            } else
+              send({
+                kind: "mouse",
+                event: "mouseReleased",
+                button: event.button === 2 ? "right" : "left",
+                ...point,
+              });
+          }}
+          onPointerMove={(event) => {
+            motion.current?.submit({
+              ...coordinates(event),
+              button:
+                event.buttons === 2 ? "right" : event.buttons ? "left" : "none",
+              picking: props.picking,
+              epoch: pickEpoch.current,
+            });
+          }}
+          onPointerLeave={() => {
+            motion.current?.clear();
+            setHover(null);
+          }}
+          onContextMenu={(event) => event.preventDefault()}
+          onWheel={(event) => {
+            event.stopPropagation();
+            send({
+              kind: "mouse",
+              event: "mouseWheel",
+              ...coordinates(event),
+              delta_x: event.deltaX,
+              delta_y: event.deltaY,
+            });
+            setHover(null);
+          }}
+        >
+          <img
+            src={`data:image/jpeg;base64,${frame.image}`}
+            alt={frame.info.title || t("preview.browserSurface")}
+            draggable={false}
+          />
+          {props.picking && hover && (
+            <div
+              className="preview-element-outline"
+              style={{
+                left: (hover.bounds.x / imageWidth) * 100 + "%",
+                top: (hover.bounds.y / imageHeight) * 100 + "%",
+                width: (hover.bounds.width / imageWidth) * 100 + "%",
+                height: (hover.bounds.height / imageHeight) * 100 + "%",
+              }}
+            >
+              <span>
+                {hover.selector} · {Math.round(hover.bounds.width)} ×{" "}
+                {Math.round(hover.bounds.height)}
+              </span>
+            </div>
+          )}
+          <textarea
+            ref={keyboard}
+            className="preview-browser-keyboard"
+            aria-label={t("preview.pageInput")}
+            autoCapitalize="off"
+            autoComplete="off"
+            spellCheck={false}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              if (event.nativeEvent.isComposing) return;
+              const modifier = event.ctrlKey || event.metaKey;
+              if (modifier && event.key.toLowerCase() === "v") {
+                event.preventDefault();
+                void readText()
+                  .then((text) => {
+                    if (text) send({ kind: "text", text });
+                  })
+                  .catch((error: unknown) =>
+                    props.onError(getErrorMessage(error, t("common.error"))),
+                  );
+                return;
+              }
+              if (modifier && event.key.toLowerCase() === "c" && id) {
+                event.preventDefault();
+                void previewApi
+                  .action<string>(id, {
+                    kind: "evaluate",
+                    expression: "String(getSelection())",
+                  })
+                  .then(writeText)
+                  .catch((error: unknown) =>
+                    props.onError(getErrorMessage(error, t("common.error"))),
+                  );
+                return;
+              }
+              if (event.key.length > 1 || modifier) {
+                event.preventDefault();
+                send({
+                  kind: "key",
+                  key: event.key,
+                  code: event.code,
+                  modifiers:
+                    (event.altKey ? 1 : 0) |
+                    (event.ctrlKey ? 2 : 0) |
+                    (event.metaKey ? 4 : 0) |
+                    (event.shiftKey ? 8 : 0),
+                });
+              }
+            }}
+            onInput={(event) => {
+              if (
+                event.nativeEvent instanceof InputEvent &&
+                event.nativeEvent.isComposing
+              )
+                return;
+              const text = event.currentTarget.value;
+              if (text) {
+                send({ kind: "text", text });
+                event.currentTarget.value = "";
+              }
+            }}
+            onCompositionEnd={(event) => {
+              const text = event.currentTarget.value;
+              if (text) {
+                send({ kind: "text", text });
+                event.currentTarget.value = "";
+              }
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,12 +1,15 @@
 mod assets;
 pub mod automation;
 pub mod browser;
+mod capture;
 mod cdp;
 pub mod documents;
 pub mod downloads;
+mod frames;
 pub mod packets;
 mod page_actions;
 pub mod runtime;
+pub mod uploads;
 use super::error::AppError;
 use serde::Serialize;
 use std::sync::{
@@ -126,6 +129,7 @@ impl Preview {
         height: u32,
         profile: &str,
         full: bool,
+        clip: Option<serde_json::Value>,
     ) -> Result<String, AppError> {
         if html.len() > 4 * 1024 * 1024 {
             return Err(AppError::invalid_input(
@@ -164,7 +168,7 @@ impl Preview {
                     &id,
                     browser::Action::Screenshot {
                         full,
-                        clip: None,
+                        clip,
                         expected_revision: None,
                     },
                 )?;
@@ -191,3 +195,6 @@ impl Preview {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

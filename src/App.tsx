@@ -70,6 +70,7 @@ function App() {
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/git" element={<Git />} />
               <Route path="/terminal" element={null} />
+              <Route path="/preview" element={null} />
               <Route path="/automation" element={<Automation />} />
               <Route path="/backup" element={<Backup />} />
               <Route path="/backup/diff" element={<BackupDiff />} />

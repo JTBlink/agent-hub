@@ -17,6 +17,7 @@ pub enum PreviewRequest {
         height: u32,
         profile: String,
         full: bool,
+        clip: Option<Value>,
     },
     Downloads,
     CancelDownload {
@@ -32,6 +33,7 @@ pub enum PreviewRequest {
     Create {
         profile: String,
         url: String,
+        owner: Option<String>,
     },
     Frame {
         id: String,
@@ -78,8 +80,9 @@ pub async fn preview_request(
                 height,
                 profile,
                 full,
+                clip,
             } => serde_json::to_value(
-                preview.capture_rendered(&html, width, height, &profile, full)?,
+                preview.capture_rendered(&html, width, height, &profile, full, clip)?,
             ),
             PreviewRequest::Downloads => serde_json::to_value(preview.browsers.downloads()?),
             PreviewRequest::CancelDownload { profile, id } => {
@@ -94,9 +97,14 @@ pub async fn preview_request(
                 preview.start_automation()?;
                 serde_json::to_value(preview.browsers.info()?)
             }
-            PreviewRequest::Create { profile, url } => {
-                serde_json::to_value(preview.browsers.create(&profile, &url)?)
-            }
+            PreviewRequest::Create {
+                profile,
+                url,
+                owner,
+            } => serde_json::to_value(match owner {
+                Some(owner) => preview.browsers.create_owned(&profile, &url, &owner)?,
+                None => preview.browsers.create(&profile, &url)?,
+            }),
             PreviewRequest::Frame { id, since } => {
                 serde_json::to_value(preview.browsers.frame_since(&id, since)?)
             }
@@ -214,4 +222,39 @@ pub async fn preview_open_project(
         preview.open_at(&root, &relative_path)
     })
     .await?
+}
+
+#[tauri::command]
+pub async fn preview_upload(
+    preview: State<'_, Arc<Preview>>,
+    id: String,
+    revision: String,
+    token: String,
+    multiple: bool,
+) -> Result<bool, AppError> {
+    let dialog = rfd::AsyncFileDialog::new();
+    let paths = if multiple {
+        dialog.pick_files().await.map(|files| {
+            files
+                .into_iter()
+                .map(|file| file.path().to_path_buf())
+                .collect::<Vec<_>>()
+        })
+    } else {
+        dialog
+            .pick_file()
+            .await
+            .map(|file| vec![file.path().to_path_buf()])
+    };
+    let Some(paths) = paths else {
+        return Ok(false);
+    };
+    let preview = preview.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        preview
+            .browsers
+            .upload_files(&id, &revision, &token, &paths)
+    })
+    .await??;
+    Ok(true)
 }

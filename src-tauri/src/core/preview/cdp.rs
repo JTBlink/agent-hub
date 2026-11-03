@@ -1,5 +1,6 @@
 //! Bounded CDP requests on an application-owned browser transport.
 use super::super::error::AppError;
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::{json, Value};
 use std::{
     collections::VecDeque,
@@ -13,7 +14,10 @@ pub struct Cdp {
     sequence: u64,
     pub frame: Option<String>,
     pub frame_version: u64,
+    pub expected_size: Option<(u32, u32)>,
     pub events: VecDeque<Value>,
+    pub chooser: Option<Value>,
+    pub dialog: Option<Value>,
 }
 impl Cdp {
     pub fn connect(address: &str) -> Result<Self, AppError> {
@@ -36,7 +40,10 @@ impl Cdp {
             sequence: 0,
             frame: None,
             frame_version: 0,
+            expected_size: None,
             events: VecDeque::new(),
+            chooser: None,
+            dialog: None,
         })
     }
     #[cfg(test)]
@@ -79,14 +86,54 @@ impl Cdp {
                             .as_str()
                             .filter(|data| data.len() <= 8 * 1024 * 1024)
                         {
-                            self.frame = Some(data.to_owned());
-                            self.frame_version += 1;
+                            let metadata = &reply["params"]["metadata"];
+                            if self.expected_size.map_or(true, |(width, height)| {
+                                metadata["deviceWidth"].as_f64() == Some(f64::from(width))
+                                    && metadata["deviceHeight"].as_f64() == Some(f64::from(height))
+                                    && STANDARD.decode(data).ok().and_then(|bytes| {
+                                        image::ImageReader::with_format(
+                                            std::io::Cursor::new(bytes),
+                                            image::ImageFormat::Jpeg,
+                                        )
+                                        .into_dimensions()
+                                        .ok()
+                                    }) == Some((width, height))
+                            }) {
+                                self.frame = Some(data.to_owned());
+                                self.frame_version += 1;
+                            }
                         }
                         if let Some(session) = reply["params"]["sessionId"].as_u64() {
                             self.sequence += 1;
                             self.socket.send(Message::Text(json!({"id":self.sequence,"method":"Page.screencastFrameAck","params":{"sessionId":session}}).to_string())).map_err(AppError::network)?;
                         }
                         continue;
+                    }
+                    match reply["method"].as_str() {
+                        Some("Page.fileChooserOpened") => {
+                            let mut params = reply["params"].clone();
+                            params["token"] = json!(uuid::Uuid::new_v4().to_string());
+                            self.chooser = Some(params);
+                        }
+                        Some("Page.javascriptDialogOpening") => {
+                            self.dialog = Some(
+                                json!({"type":reply["params"]["type"], "message":reply["params"]["message"].as_str().unwrap_or("").chars().take(2000).collect::<String>(),"defaultPrompt":reply["params"]["defaultPrompt"].as_str().unwrap_or("").chars().take(1000).collect::<String>()}),
+                            );
+                        }
+                        Some("Page.javascriptDialogClosed") => self.dialog = None,
+                        Some("Page.frameNavigated")
+                            if reply["params"]["frame"].get("parentId").is_none() =>
+                        {
+                            self.chooser = None
+                        }
+                        _ => {}
+                    }
+                    if reply["method"] == "Page.javascriptDialogOpening"
+                        && method != "Page.handleJavaScriptDialog"
+                    {
+                        return Err(AppError::cancelled(
+                            "Handle the page dialog before continuing",
+                        ));
                     }
                     if reply.get("method").is_some() {
                         if self.events.len() >= 200 {

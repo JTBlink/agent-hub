@@ -26,9 +26,10 @@ fn navigates_types_resizes_and_captures_a_real_browser_page() {
     let assets = crate::core::preview::assets::Assets::start(documents).unwrap();
     let browsers = Browsers::new(directory.path().join("runtime"));
     let id = browsers
-        .create(
+        .create_owned(
             "default",
             &assets.document_url(&document.id, &document.title),
+            "gui-tab",
         )
         .unwrap();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
@@ -106,6 +107,40 @@ fn navigates_types_resizes_and_captures_a_real_browser_page() {
         .unwrap();
     let pages = browsers.list().unwrap();
     assert_eq!(pages.len(), 2);
+    assert_eq!(
+        pages
+            .iter()
+            .find(|page| page.id == id)
+            .unwrap()
+            .owner
+            .as_deref(),
+        Some("gui-tab")
+    );
+    let position=browsers.action(&id,Action::Evaluate{expression:"(()=>{const r=document.querySelector('h1').getBoundingClientRect();return {x:r.x+10,y:r.y+r.height/2}})()".into()}).unwrap();
+    browsers
+        .action(
+            &id,
+            Action::Mouse {
+                x: position["x"].as_f64().unwrap(),
+                y: position["y"].as_f64().unwrap(),
+                event: "mouseMoved".into(),
+                button: Some("none".into()),
+                delta_x: None,
+                delta_y: None,
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        browsers
+            .action(
+                &id,
+                Action::Evaluate {
+                    expression: "document.querySelector('h1').matches(':hover')".into()
+                }
+            )
+            .unwrap(),
+        true
+    );
     let frame = browsers.frame(&id).unwrap();
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(frame.image)
