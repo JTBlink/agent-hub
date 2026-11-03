@@ -283,6 +283,8 @@ fn context_configuration_failure_is_retried_before_creating_a_page() {
             let command: Value = serde_json::from_str(&text).unwrap();
             let result = match command["method"].as_str().unwrap() {
                 "Target.createBrowserContext" => {
+                    assert_eq!(command["params"]["proxyServer"], "socks5://127.0.0.1:1080");
+                    assert_eq!(command["params"]["proxyBypassList"], "<-loopback>");
                     creates += 1;
                     json!({"browserContextId":if creates==1 {"initial"}else{"replacement"}})
                 }
@@ -317,6 +319,7 @@ fn context_configuration_failure_is_retried_before_creating_a_page() {
         id: "remote".into(),
         name: "Remote".into(),
         endpoint: Some(endpoint),
+        proxy: Some("socks5://127.0.0.1:1080".into()),
         remote_download_directory: Some("/srv/downloads".into()),
         ..Default::default()
     };

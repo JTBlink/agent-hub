@@ -16,6 +16,8 @@ mod page_actions;
 mod profiles;
 mod recovery;
 mod remote_downloads;
+#[cfg(test)]
+mod remote_proxy_tests;
 pub mod runtime;
 pub mod uploads;
 use super::error::AppError;

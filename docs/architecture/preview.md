@@ -82,3 +82,5 @@ Cookie 导入统一由 `core/preview/cookies/` 校验，支持 JSON 数组或 `c
 界面和关键 CLI 区分宿主来源与本机文件可用性。远端 `completed` 是浏览器报告的状态，不等同于实际文件已传输、仍然存在或可在本机打开；当前不提供虚假的本机打开入口。本次 Chromium 资源流实验对 `Network.loadNetworkResource` 的 `file:` 请求返回 `Unsupported URL scheme`，当前没有把该接口视为文件取回能力，取回需独立传输适配器。协议依据：[Browser 下载行为与取消](https://chromedevtools.github.io/devtools-protocol/tot/Browser/)、[Network 资源加载](https://chromedevtools.github.io/devtools-protocol/tot/Network/)。
 
 远端下载取回复用 `download_transfer` core，GUI 与认证 CLI broker 使用相同的有界后台作业。状态独立于 CDP 事件快照，避免慢轮询覆盖传输进度或已发布的本机路径。每次最多两个作业、512 MiB/文件、五分钟；取消信号交给共享进程执行器，Unix 进程组只清理本次任务及其 SSH 子进程。源文件由已核实的远端下载事件绑定，SFTP 仅访问该记录中的唯一下载路径。OpenSSH 主机别名沿用现有配置，不保存认证材料、跳过主机校验或提供任意远端文件读取接口。目前本机取回支持 macOS / Linux，Windows 的进程树回收与原生取回待单独实现和验收。
+
+远端配置的代理在创建隔离 BrowserContext 时通过 CDP `proxyServer` / `proxyBypassList` 设置，恢复已丢失上下文也使用同一策略。未配置代理时沿用远端浏览器默认网络；显式代理包含 loopback 请求，不静默退回直连。代理地址中的 `127.0.0.1` 指远端 Chromium 所在主机，HTTP / WebSocket 请求也由该宿主发起；HTTP 代理接收目标主机名，SOCKS5 的 DNS 行为由 Chromium 与代理实现决定。控制通道始终使用独立回环端点，不跟随页面代理。此策略不提供本机渲染与远端网络的自动切换，该完整选择能力仍需独立完成。

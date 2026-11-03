@@ -69,6 +69,7 @@ pub struct Runtime {
     pub(super) download_epoch: u64,
     pub(super) download_frames: std::collections::VecDeque<String>,
     pub(super) remote_download_dir: Option<String>,
+    context_proxy: Option<String>,
     child: Option<Arc<Mutex<OwnedChild>>>,
     pub cdp: Cdp,
     pub endpoint: String,
@@ -208,6 +209,7 @@ impl Runtime {
             download_epoch: 0,
             download_frames: std::collections::VecDeque::new(),
             remote_download_dir,
+            context_proxy: profile.proxy.clone(),
             child,
             cdp,
             endpoint,
@@ -227,10 +229,7 @@ impl Runtime {
             }
         }
         if profile.endpoint.is_some() {
-            let context = runtime.cdp.call(
-                "Target.createBrowserContext",
-                json!({ "disposeOnDetach": false }),
-            )?;
+            let context = create_context(&mut runtime.cdp, runtime.context_proxy.as_deref())?;
             runtime.context = Some(
                 context["browserContextId"]
                     .as_str()
@@ -271,10 +270,7 @@ impl Runtime {
                 .iter()
                 .any(|value| value.as_str() == Some(context.as_str()))
             {
-                let created = self.cdp.call(
-                    "Target.createBrowserContext",
-                    json!({"disposeOnDetach":false}),
-                )?;
+                let created = create_context(&mut self.cdp, self.context_proxy.as_deref())?;
                 self.context = Some(
                     created["browserContextId"]
                         .as_str()
@@ -494,4 +490,15 @@ pub(super) fn connect_control(endpoint: &str) -> Result<Cdp, AppError> {
     let mut cdp = Cdp::connect(&control_address(endpoint, advertised)?)?;
     cdp.set_timeout(Duration::from_secs(2))?;
     Ok(cdp)
+}
+
+// Keep initial creation and recovery on the same explicit network policy.
+fn create_context(cdp: &mut Cdp, proxy: Option<&str>) -> Result<Value, AppError> {
+    let mut params = json!({"disposeOnDetach": false});
+    if let Some(proxy) = proxy {
+        params["proxyServer"] = json!(proxy);
+        // Loopback means the network execution host; it must use an explicit proxy too.
+        params["proxyBypassList"] = json!("<-loopback>");
+    }
+    cdp.call("Target.createBrowserContext", params)
 }
