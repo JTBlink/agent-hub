@@ -10,24 +10,39 @@ No system font installation or runtime network request is required.
   https://github.com/ryanoasis/nerd-fonts/tree/v3.4.0/patched-fonts/NerdFontsSymbolsOnly
   (MIT, see `LICENSE-NerdFontsSymbols`).
 
-The text font preserves a monospaced terminal grid. Symbols Only supplies Git,
-file, folder, Powerline and other private-use icons without replacing CJK text.
+The original text and symbols families remain available to code surfaces through
+`src/fonts/fonts.css`. Typography tokens live there; the terminal consumes its
+own complete font family through `src/fonts/index.ts`.
 
-The CSS stack selects `AgentHub Symbols` before `AgentHub Mono`, so terminal
-canvas rendering resolves private-use glyphs before consulting text fonts.
-The symbol family is restricted to private-use Unicode ranges, including bold
-and italic ANSI text, while JetBrains Mono excludes those ranges and supplies
-text metrics. Keeping the families separate avoids depending on same-family
-font-face fallback for terminal icons.
-Terminal startup loads both families before measuring or rendering cells,
-including the search, source-control, review and settings sidebar glyphs.
+## Self-contained terminal faces
 
-The terminal uses the real Medium (500) and Medium Italic faces at 15px, with
-Bold (700) for ANSI emphasis. The code editor retains its regular 14px default.
-All terminal text styles are loaded before measuring the grid.
+`src/fonts/terminal-icons/` owns the terminal family, readiness promise and
+checked-in WOFF2 faces. Each face combines the real JetBrains Mono text style
+with **all** private-use Nerd Fonts symbols. Icons scale uniformly into one text cell, retain their original aspect ratio,
+and center against the text cap-height; text outlines, advance widths, ascent and descent remain unchanged.
+The editor keeps the separate original fonts above. The terminal does not rely
+on private-use fallback between families. CSS embeds the four faces as data
+URLs, including in production builds; no additional font URL is fetched. Regeneration writes a content revision into
+each CSS asset URL to invalidate development inline-asset caches.
+This trades roughly 4 MiB of bundled faces for self-contained ANSI styles.
+The original licenses in this directory also cover the generated derivatives;
+the derived family is named `AgentHub Terminal`.
 
-Font declarations and typography tokens live in `src/fonts/fonts.css`, imported
-once by `src/index.css`. The `src/fonts/index.ts` module exposes terminal font
-metrics and preloading without depending on xterm or Herdr. Terminal rendering
-options consume that API; editors and other code surfaces consume the same CSS
-tokens. Font assets and upstream licenses stay in this directory.
+To regenerate after changing either upstream source:
+
+```sh
+python3 -m venv /tmp/terminal-font-tools
+/tmp/terminal-font-tools/bin/pip install 'fonttools[woff]==4.60.1' 'brotli==1.2.1'
+/tmp/terminal-font-tools/bin/python scripts/fonts/build-terminal-fonts.py
+/tmp/terminal-font-tools/bin/python scripts/fonts/build-terminal-fonts.py --check
+```
+
+Generated files are checked in; app builds need no Python or network access.
+The check verifies every source private-use mapping, one-cell icon advances,
+original icon aspect ratios, and unchanged text outlines/metrics in every style. Browser regressions verify
+non-missing icon pixels, Medium/Italic text and actual terminal cell widths:
+`node tests/browser/terminal-rendering.mjs` (CDP proxy) and, on macOS,
+`swift tests/browser/terminal-rendering-webkit.swift`. Both require Vite on
+`:1420`. The native test also covers fonts arriving after xterm has measured
+fallback text. Font readiness is shared by document and retried after failure;
+xterm explicitly remeasures through public font options when fonts arrive.

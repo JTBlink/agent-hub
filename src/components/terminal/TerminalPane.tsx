@@ -22,6 +22,7 @@ import {
 import { createTerminalInputQueue } from "../../lib/terminalInput";
 import { terminalAppearance, terminalTheme } from "./terminalAppearance";
 import { loadTerminalFonts } from "../../fonts";
+import { remeasureTerminalFont } from "./terminalFonts";
 import "@xterm/xterm/css/xterm.css";
 
 export interface PaneControl {
@@ -147,6 +148,7 @@ export function TerminalPane({
       frame = requestAnimationFrame(() => {
         if (
           disposed ||
+          !fontsReady ||
           !visibleRef.current ||
           !node.getBoundingClientRect().width ||
           !node.getBoundingClientRect().height
@@ -186,7 +188,8 @@ export function TerminalPane({
       attributeFilter: ["class", "style"],
     });
     const redrawFonts = () => {
-      if (disposed) return;
+      if (disposed || !fontsReady) return;
+      remeasureTerminalFont(terminal);
       renderer.redraw();
       measure();
     };
@@ -221,6 +224,7 @@ export function TerminalPane({
       })
       .then(() => {
         if (disposed) return;
+        remeasureTerminalFont(terminal);
         fontsReady = true;
         showNow.current();
         if (

@@ -107,7 +107,9 @@ beforeEach(() => {
   fontEvents = new EventTarget();
   Object.defineProperty(document, "fonts", {
     configurable: true,
-    value: Object.assign(fontEvents, { load: vi.fn(() => loaded) }),
+    value: Object.assign(fontEvents, {
+      load: vi.fn(() => loaded.then(() => [{}])),
+    }),
   });
   host = document.createElement("div");
   document.body.append(host);

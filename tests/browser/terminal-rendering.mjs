@@ -3,7 +3,8 @@
 import assert from "node:assert/strict";
 
 const proxy = "http://localhost:3456";
-const page = "http://127.0.0.1:1420/tests/browser/terminal-rendering.html";
+const origin = process.env.TERMINAL_TEST_ORIGIN || "http://127.0.0.1:1420";
+const page = `${origin}/tests/browser/terminal-rendering.html`;
 async function request(path, body) {
   const response = await fetch(`${proxy}${path}`, {
     method: body === undefined ? "GET" : "POST",
@@ -12,10 +13,10 @@ async function request(path, body) {
   assert.ok(response.ok, `Browser proxy returned ${response.status}`);
   return response.json();
 }
-const { targetId } = await request("/new", page);
+const { targetId } = await request("/new", `${page}?regression=${Date.now()}`);
 const evaluate = (code) => request(`/eval?target=${targetId}`, code);
 try {
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + 60000;
   while (
     !(
       await evaluate("typeof window.runTerminalRenderingRegression")
@@ -57,7 +58,7 @@ try {
   assert.equal(
     result.gridFits,
     true,
-    "Terminal grid clips the last row or column at default or enlarged text size",
+    `Terminal grid clips the last row or column: ${JSON.stringify(result.gridMeasurements)}`,
   );
   assert.equal(
     result.cacheStable,
@@ -73,6 +74,21 @@ try {
     result.iconPixelsCorrect,
     true,
     "Terminal icons differ from the bundled symbol glyphs",
+  );
+  assert.equal(
+    result.textGridCorrect,
+    true,
+    "Text cells must retain the real monospaced advance after font loading and scaling",
+  );
+  assert.equal(
+    result.coldFontsRecovered,
+    true,
+    "Late fonts must replace cached fallback cell metrics",
+  );
+  assert.equal(
+    result.iconAspectsCorrect,
+    true,
+    `Icons must retain their original aspect ratios: ${JSON.stringify(result.iconAspectMeasurements)}`,
   );
   assert.equal(result.created, 2, "A PTY was unexpectedly recreated");
   assert.equal(result.closed, 0, "An existing PTY was closed");

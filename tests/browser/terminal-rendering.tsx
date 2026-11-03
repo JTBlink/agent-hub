@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Terminal } from "@xterm/xterm";
 import "../../src/i18n";
 import "../../src/index.css";
+import { remeasureTerminalFont } from "../../src/components/terminal/terminalFonts";
 
 // Real emulators/renderers and product panes; IPC never starts a real process.
 // Keep the render loop running when automation opens this fixture in a background tab.
@@ -92,6 +93,9 @@ async function usesMediumText(terminal: Terminal): Promise<boolean> {
     return canvas.toDataURL();
   };
   const stack = terminal.options.fontFamily;
+  const regularStack = getComputedStyle(
+    document.documentElement,
+  ).getPropertyValue("--font-family-code");
   for (const italic of [false, true]) {
     const reference = new FontFace(
       "MediumReference",
@@ -107,7 +111,7 @@ async function usesMediumText(terminal: Terminal): Promise<boolean> {
       );
       if (
         actual !== pixels(`${style}500 24px MediumReference`) ||
-        actual === pixels(`${style}400 24px ${stack}`)
+        actual === pixels(`${style}400 24px ${regularStack}`)
       )
         return false;
     } finally {
@@ -116,6 +120,94 @@ async function usesMediumText(terminal: Terminal): Promise<boolean> {
   }
   return true;
 }
+// Independent source ratios catch non-uniform scaling even when a generated
+// reference and the product happen to share the same distorted font bytes.
+const iconAspectMeasurements: {
+  style: string;
+  glyph: string;
+  width: number;
+  height: number;
+  expected: number;
+}[] = [];
+function iconAspectsCorrect(stack: string): boolean {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 128;
+  const context = canvas.getContext("2d")!;
+  return ["500", "700", "italic 500", "italic 700"].every((style) =>
+    [
+      ["\uf002", 1],
+      ["\uf013", 1938 / 2048],
+      ["\uf07b", 2048 / 1792],
+      ["\ue73e", 2048 / 1296],
+    ].every(([glyph, ratio]) => {
+      context.clearRect(0, 0, 128, 128);
+      context.font = `${style} 48px ${stack}`;
+      context.fillText(String(glyph), 10, 96);
+      const data = context.getImageData(0, 0, 128, 128).data;
+      let left = 128,
+        right = -1,
+        top = 128,
+        bottom = -1;
+      for (let y = 0; y < 128; y++)
+        for (let x = 0; x < 128; x++) {
+          if (data[(y * 128 + x) * 4 + 3] > 64) {
+            left = Math.min(left, x);
+            right = Math.max(right, x);
+            top = Math.min(top, y);
+            bottom = Math.max(bottom, y);
+          }
+        }
+      iconAspectMeasurements.push({
+        style,
+        glyph: String(glyph),
+        width: right - left + 1,
+        height: bottom - top + 1,
+        expected: Number(ratio),
+      });
+      return (
+        right >= left &&
+        Math.abs((right - left + 1) / (bottom - top + 1) - Number(ratio)) < 0.13
+      );
+    }),
+  );
+}
+
+// A font arriving after open() must replace the cached fallback cell width.
+async function coldFontsRecover(): Promise<boolean> {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const probe = new Terminal({
+    fontFamily: '"LateTerminalReference", serif',
+    fontSize: 15,
+    cols: 20,
+    rows: 2,
+  });
+  open.call(probe, host);
+  const width = () =>
+    parseFloat(
+      probe.element!.querySelector<HTMLElement>(".xterm-screen")!.style.width,
+    ) / probe.cols;
+  const before = width();
+  const face = new FontFace(
+    "LateTerminalReference",
+    `url("${new URL("../../src/fonts/terminal-icons/assets/AgentHubTerminal-Medium.woff2", import.meta.url).href}")`,
+  );
+  document.fonts.add(await face.load());
+  try {
+    const stillCached = width();
+    remeasureTerminalFont(probe);
+    return (
+      Math.abs(before - 9) > 1 &&
+      stillCached === before &&
+      Math.abs(width() - 9) < 1
+    );
+  } finally {
+    probe.dispose();
+    host.remove();
+    document.fonts.delete(face);
+  }
+}
+
 Object.assign(window, {
   runTerminalInputRegression: async (
     inputEvents: boolean | "ime" | "ime-composition" = false,
@@ -128,9 +220,10 @@ Object.assign(window, {
     const generatedInput = terminal.onData((data) => {
       generated += data;
     });
-    const command = inputEvents ? "clear" : `${"git branch ".repeat(30)}\r`;
+    const command = inputEvents ? "clear?" : `${"git branch ".repeat(30)}?\r`;
     const started = performance.now();
     for (const key of command) {
+      const questionMark = key === "?";
       const keyCode =
         typeof inputEvents === "string"
           ? 229
@@ -138,9 +231,18 @@ Object.assign(window, {
             ? 0
             : key === "\r"
               ? 13
-              : key.toUpperCase().charCodeAt(0);
+              : questionMark
+                ? 191
+                : key.toUpperCase().charCodeAt(0);
       const event = new KeyboardEvent("keydown", {
-        key: key === "\r" ? "Enter" : key,
+        key:
+          key === "\r"
+            ? "Enter"
+            : questionMark && typeof inputEvents === "string"
+              ? "Process"
+              : key,
+        code: questionMark ? "Slash" : undefined,
+        shiftKey: questionMark,
         keyCode,
         bubbles: true,
         cancelable: true,
@@ -258,14 +360,13 @@ Object.assign(window, {
           (style) =>
             icons.map(async (icon) => {
               const faces = await document.fonts.load(
-                `${style}14px "AgentHub Symbols"`,
+                `${style}14px "AgentHub Terminal"`,
                 icon,
               );
               return faces.some(
                 (face) =>
-                  face.family === "AgentHub Symbols" &&
-                  face.status === "loaded" &&
-                  face.unicodeRange.toUpperCase().includes("E000"),
+                  face.family === "AgentHub Terminal" &&
+                  face.status === "loaded",
               );
             }),
         ),
@@ -281,9 +382,7 @@ Object.assign(window, {
       context.fillText(glyph, 8, 40);
       return canvas.toDataURL();
     };
-    const stack = getComputedStyle(document.documentElement).getPropertyValue(
-      "--font-family-code",
-    );
+    const stack = terminals[0].options.fontFamily;
     const iconPixelsCorrect = (
       await Promise.all(
         ["", "500 ", "bold ", "italic ", "italic 500 ", "bold italic "].map(
@@ -291,7 +390,7 @@ Object.assign(window, {
             const family = `IconReference${index}`;
             const face = new FontFace(
               family,
-              'url("/fonts/SymbolsNerdFontMono-Regular.ttf")',
+              `url("${new URL(`../../src/fonts/terminal-icons/assets/AgentHubTerminal-${style.includes("bold") ? "Bold" : "Medium"}${style.includes("italic") ? "Italic" : ""}.woff2`, import.meta.url).href}")`,
               {
                 style: style.includes("italic") ? "italic" : "normal",
                 weight: style.includes("bold")
@@ -306,7 +405,9 @@ Object.assign(window, {
               return icons.every(
                 (icon) =>
                   pixels(`${style}24px ${stack}`, icon) ===
-                  pixels(`${style}24px ${family}`, icon),
+                    pixels(`${style}24px ${family}`, icon) &&
+                  pixels(`${style}24px ${family}`, icon) !==
+                    pixels(`${style}24px ${family}`, "\udbff\udffd"),
               );
             } finally {
               document.fonts.delete(face);
@@ -338,6 +439,8 @@ Object.assign(window, {
     const cacheStable = before === after;
     let gridFits = true;
     let noOuterInsets = true;
+    let textGridCorrect = true;
+    const gridMeasurements: unknown[] = [];
     for (const scale of [1, 1.2]) {
       document.documentElement.style.zoom = String(scale);
       document.documentElement.style.setProperty("--app-scale", String(scale));
@@ -348,9 +451,26 @@ Object.assign(window, {
           .getBoundingClientRect();
         const container =
           terminal.element!.parentElement!.getBoundingClientRect();
+        // JetBrains Mono advances exactly 600 / 1000 em. Test the actual
+        // terminal cell width, not just whether an incorrectly spaced grid fits.
+        textGridCorrect &&=
+          Math.abs(
+            screen.width / terminal.cols - terminal.options.fontSize! * 0.6,
+          ) < 1;
         noOuterInsets &&=
           Math.abs(screen.left - container.left) < 1 &&
           Math.abs(screen.top - container.top) < 1;
+        gridMeasurements.push({
+          scale,
+          rows: terminal.rows,
+          cols: terminal.cols,
+          screen: {
+            right: screen.right,
+            bottom: screen.bottom,
+            height: screen.height,
+          },
+          container: { right: container.right, bottom: container.bottom },
+        });
         gridFits &&=
           screen.bottom <= container.bottom + 1 &&
           container.bottom - screen.bottom <
@@ -406,9 +526,14 @@ Object.assign(window, {
       noOuterInsets,
       gutterMatchesBackground,
       gridFits,
+      gridMeasurements,
+      textGridCorrect,
+      coldFontsRecovered: await coldFontsRecover(),
       cacheStable,
       iconsReady,
       iconPixelsCorrect,
+      iconAspectsCorrect: iconAspectsCorrect(first.options.fontFamily!),
+      iconAspectMeasurements,
       created,
       closed,
       webglPanes: Array.from(document.querySelectorAll(".xterm canvas")).filter(

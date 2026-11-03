@@ -1,0 +1,34 @@
+/* Each face contains both text and every bundled private-use icon. Inline the
+   bytes so offline/custom-protocol builds never fetch a separate icon asset. */
+@font-face {
+  font-family: "AgentHub Terminal";
+  src: url("./assets/AgentHubTerminal-Medium.woff2?inline&revision=fee1b040244e9759")
+    format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "AgentHub Terminal";
+  src: url("./assets/AgentHubTerminal-Bold.woff2?inline&revision=fee1b040244e9759")
+    format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "AgentHub Terminal";
+  src: url("./assets/AgentHubTerminal-MediumItalic.woff2?inline&revision=fee1b040244e9759")
+    format("woff2");
+  font-weight: 500;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: "AgentHub Terminal";
+  src: url("./assets/AgentHubTerminal-BoldItalic.woff2?inline&revision=fee1b040244e9759")
+    format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: block;
+}
