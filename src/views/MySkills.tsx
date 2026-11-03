@@ -7,9 +7,6 @@ import { SkillImportProvenance } from "../components/SkillImportProvenance";
 import { getSkillGroupDisplayName } from "../lib/skillGroupDisplay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Search,
-  LayoutGrid,
-  List,
   CheckCircle2,
   Github,
   HardDrive,
@@ -62,6 +59,10 @@ import type {
 import { skillLibraryContentKey } from "../lib/skillGroupMembership";
 import { useSkillLibraryFilters } from "../hooks/useSkillLibraryFilters";
 import { SkillLibraryFilterPanel } from "../components/SkillLibraryFilterPanel";
+import {
+  SkillLibraryToolbar,
+  SkillLibraryViewControls,
+} from "../components/SkillLibraryToolbar";
 import { AgentControlSetupCard } from "../components/AgentControlSetupCard";
 import { getErrorMessage, isAppError } from "../lib/error";
 import {
@@ -1162,152 +1163,79 @@ export function MySkills() {
 
       <AgentControlSetupCard respectDismissal={false} />
 
-      <div className="app-toolbar">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="relative w-full min-w-[200px] max-w-[360px]">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label={t("mySkills.searchPlaceholder")}
-              placeholder={t("mySkills.searchPlaceholder")}
-              className="app-input w-full pl-9 font-medium"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </div>
-        </div>
-
-        {/* Keep all library actions in one toolbar so they wrap together. */}
-        <div className="flex items-center gap-3">
-          <div className="app-segmented app-toolbar-segmented shrink-0">
-            {(() => {
-              const mode = getGitToolbarMode();
-              const meta = getGitStatusMeta(mode);
-              const Icon = meta.icon;
-              return (
-                <button
-                  type="button"
-                  onClick={() => navigate("/backup")}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-hover hover:text-secondary",
-                    meta.className,
-                  )}
-                  title={t("sidebar.backup")}
-                >
-                  <Icon className={cn("h-3.5 w-3.5", meta.iconClassName)} />
-                  {meta.label}
-                </button>
-              );
-            })()}
-            <button
-              onClick={handleCheckAllUpdates}
-              disabled={checkingAll}
-              className="ml-2 mr-2 inline-flex items-center gap-1 rounded-md border-l border-border-subtle pl-4 pr-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover hover:text-secondary disabled:opacity-50"
-            >
-              <RefreshCw
-                className={cn("h-3.5 w-3.5", checkingAll && "animate-spin")}
-              />
-              {t("mySkills.updateActions.checkAll")}
-            </button>
-            <button
-              onClick={handleUpdateAvailableSkills}
-              disabled={batchUpdating || availableUpdateCount === 0}
-              className="mr-2 inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-accent-light transition-colors hover:bg-accent-bg disabled:opacity-50"
-            >
-              <RotateCcw
-                className={cn("h-3.5 w-3.5", batchUpdating && "animate-spin")}
-              />
-              {t("mySkills.updateActions.updateAvailable", {
-                count: availableUpdateCount,
-              })}
-            </button>
-            <span
-              aria-hidden="true"
-              className="mx-1 h-5 w-px shrink-0 self-center bg-border-subtle"
-            />
-            <button
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "rounded-md p-2 transition-colors outline-none",
-                viewMode === "grid"
-                  ? "bg-surface-active text-secondary"
-                  : "text-muted hover:text-tertiary",
-              )}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "rounded-md p-2 transition-colors outline-none",
-                viewMode === "list"
-                  ? "bg-surface-active text-secondary"
-                  : "text-muted hover:text-tertiary",
-              )}
-            >
-              <List className="h-4 w-4" />
-            </button>
-
-            {/* Selection can stay active in either view. */}
-            <span
-              aria-hidden="true"
-              className="mx-1 h-5 w-px shrink-0 self-center bg-border-subtle"
-            />
+      <SkillLibraryToolbar
+        search={search}
+        onSearchChange={setSearch}
+        checking={checkingAll}
+        updating={batchUpdating}
+        updateCount={availableUpdateCount}
+        onCheckUpdates={handleCheckAllUpdates}
+        onUpdate={handleUpdateAvailableSkills}
+        backupStatus={(() => {
+          const meta = getGitStatusMeta(getGitToolbarMode());
+          const Icon = meta.icon;
+          return (
             <button
               type="button"
-              aria-pressed={isMultiSelect}
-              onClick={() =>
+              onClick={() => navigate("/backup")}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-xs transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                meta.className,
+              )}
+              title={t("sidebar.backup")}
+              aria-label={`${t("sidebar.backup")} · ${meta.label}`}
+            >
+              <Icon
+                aria-hidden="true"
+                className={cn("h-3.5 w-3.5", meta.iconClassName)}
+              />
+              {meta.label}
+            </button>
+          );
+        })()}
+      >
+        <SkillLibraryFilterPanel
+          deployment={libraryFilters.deployment}
+          deploymentCounts={libraryFilters.deploymentCounts}
+          onDeploymentChange={libraryFilters.setDeployment}
+          membership={libraryFilters.membership}
+          membershipCounts={libraryFilters.membershipCounts}
+          onMembershipChange={libraryFilters.setMembership}
+          groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
+          viewingUngrouped={viewingUngrouped}
+          ungrouped={libraryFilters.ungrouped}
+          ungroupedCount={libraryFilters.ungroupedCount}
+          onUngroupedChange={() =>
+            libraryFilters.setUngrouped((current) => !current)
+          }
+          sources={libraryFilters.sources}
+          onSourcesChange={libraryFilters.setSources}
+          tags={tagFilters}
+          allTags={allTags}
+          hasUntagged={skills.some((skill) => skill.tags.length === 0)}
+          onTagsChange={setTagFilters}
+          onTagContextMenu={(tag, x, y) =>
+            setTagMenu({
+              tag,
+              x: Math.min(x, window.innerWidth - 160),
+              y: Math.min(y, window.innerHeight - 90),
+            })
+          }
+          resultCount={filtered.length}
+          hasActiveFilters={hasActiveFilters}
+          onClear={clearFilters}
+          actions={
+            <SkillLibraryViewControls
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              isMultiSelect={isMultiSelect}
+              onToggleMultiSelect={() =>
                 isMultiSelect ? exitMultiSelect() : setIsMultiSelect(true)
               }
-              className={cn(
-                "app-segmented-button inline-flex items-center gap-1.5 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-border",
-                isMultiSelect &&
-                  "app-segmented-button-active hover:bg-surface-active hover:text-secondary",
-              )}
-            >
-              <SquareCheck className="h-4 w-4" />
-              {isMultiSelect
-                ? t("mySkills.cancelSelect")
-                : t("mySkills.selectMode")}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <SkillLibraryFilterPanel
-        deployment={libraryFilters.deployment}
-        deploymentCounts={libraryFilters.deploymentCounts}
-        onDeploymentChange={libraryFilters.setDeployment}
-        membership={libraryFilters.membership}
-        membershipCounts={libraryFilters.membershipCounts}
-        onMembershipChange={libraryFilters.setMembership}
-        groupName={viewedSkillGroup ? viewedSkillGroupName : undefined}
-        viewingUngrouped={viewingUngrouped}
-        ungrouped={libraryFilters.ungrouped}
-        ungroupedCount={libraryFilters.ungroupedCount}
-        onUngroupedChange={() =>
-          libraryFilters.setUngrouped((current) => !current)
-        }
-        sources={libraryFilters.sources}
-        onSourcesChange={libraryFilters.setSources}
-        tags={tagFilters}
-        allTags={allTags}
-        hasUntagged={skills.some((skill) => skill.tags.length === 0)}
-        onTagsChange={setTagFilters}
-        onTagContextMenu={(tag, x, y) =>
-          setTagMenu({
-            tag,
-            x: Math.min(x, window.innerWidth - 160),
-            y: Math.min(y, window.innerHeight - 90),
-          })
-        }
-        resultCount={filtered.length}
-        hasActiveFilters={hasActiveFilters}
-        onClear={clearFilters}
-      />
+            />
+          }
+        />
+      </SkillLibraryToolbar>
 
       {isMultiSelect && (
         <MultiSelectToolbar
@@ -1520,7 +1448,7 @@ export function MySkills() {
                                   handleRefreshSkill(skill);
                                 }}
                                 disabled={updatingSkillId === skill.id}
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-xs font-medium text-amber-600 outline-none transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-bg px-2 py-0.5 text-xs font-medium text-accent-light outline-none transition-colors hover:bg-surface-active disabled:opacity-50"
                                 title={refreshLabel(skill)}
                               >
                                 <RotateCcw
@@ -1903,7 +1831,7 @@ export function MySkills() {
                                 handleRefreshSkill(skill);
                               }}
                               disabled={updatingSkillId === skill.id}
-                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/12 px-2 py-0.5 text-xs font-medium text-amber-600 outline-none transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-400"
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent-bg px-2 py-0.5 text-xs font-medium text-accent-light outline-none transition-colors hover:bg-surface-active disabled:opacity-50"
                               title={refreshLabel(skill)}
                             >
                               <RotateCcw

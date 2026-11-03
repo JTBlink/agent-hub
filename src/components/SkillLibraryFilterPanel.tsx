@@ -36,6 +36,7 @@ interface Props {
   resultCount: number;
   hasActiveFilters: boolean;
   onClear: () => void;
+  actions?: ReactNode;
 }
 
 function toggle(values: Set<string>, value: string) {
@@ -53,8 +54,10 @@ function FilterChoice({
   active,
   children,
   onClick,
+  navigation = false,
 }: {
   active: boolean;
+  navigation?: boolean;
   children: ReactNode;
   onClick: () => void;
 }) {
@@ -64,10 +67,16 @@ function FilterChoice({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        chipClass,
-        active
-          ? "border-accent-border bg-surface-active text-accent-light"
-          : "border-transparent text-secondary hover:bg-surface-hover",
+        navigation
+          ? `relative inline-flex min-h-11 items-center gap-2 whitespace-nowrap px-3 text-sm font-medium transition-colors ${focusClass}`
+          : chipClass,
+        navigation
+          ? active
+            ? "text-accent-light after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-accent"
+            : "text-secondary hover:text-primary"
+          : active
+            ? "border-accent-border bg-accent-bg text-accent-light"
+            : "border-transparent text-secondary hover:bg-surface-hover",
       )}
     >
       {children}
@@ -78,8 +87,10 @@ function FilterChoice({
 function FilterRow({
   label,
   children,
+  navigation = false,
 }: {
   label: string;
+  navigation?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -90,7 +101,11 @@ function FilterRow({
     >
       <span
         aria-hidden="true"
-        className="w-20 shrink-0 whitespace-nowrap pt-2 text-xs text-muted"
+        className={
+          navigation
+            ? "sr-only"
+            : "w-20 shrink-0 whitespace-nowrap pt-2 text-xs text-muted"
+        }
       >
         {label}
       </span>
@@ -118,52 +133,59 @@ export function SkillLibraryFilterPanel(props: Props) {
   return (
     <section
       aria-label={t("mySkills.filterPanel.title")}
-      className="-mt-3 rounded-xl border border-border-subtle bg-surface px-4 py-3"
+      className="min-w-0 border-b border-border-subtle"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
         {props.groupName ? (
-          <FilterRow label={t("sidebar.skillGroups")}>
+          <FilterRow label={t("sidebar.skillGroups")} navigation>
             {(["enabled", "all", "available"] as const).map((mode) => (
               <FilterChoice
+                navigation
                 key={mode}
                 active={props.membership === mode}
                 onClick={() => props.onMembershipChange(mode)}
               >
                 {t(`mySkills.filters.${mode}`)}
-                <span className="tabular-nums opacity-70">
+                <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-xs leading-none text-secondary tabular-nums">
                   {props.membershipCounts[mode]}
                 </span>
               </FilterChoice>
             ))}
           </FilterRow>
         ) : (
-          <FilterRow label={t("sidebar.skillGroups")}>
+          <FilterRow label={t("sidebar.skillGroups")} navigation>
             {!props.viewingUngrouped && (
               <FilterChoice
+                navigation
                 active={!props.ungrouped}
                 onClick={() => props.ungrouped && props.onUngroupedChange()}
               >
                 {t("mySkills.filterPanel.all")}
-                <span className="tabular-nums opacity-70">
+                <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-xs leading-none text-secondary tabular-nums">
                   {props.membershipCounts.all}
                 </span>
               </FilterChoice>
             )}
             <FilterChoice
+              navigation
               active={props.ungrouped || props.viewingUngrouped}
               onClick={() =>
                 !props.viewingUngrouped && props.onUngroupedChange()
               }
             >
               {t("mySkills.sourceFilter.ungrouped")}
-              <span className="tabular-nums opacity-70">
+              <span className="rounded-md bg-surface-active px-1.5 py-0.5 text-xs leading-none text-secondary tabular-nums">
                 {props.ungroupedCount}
               </span>
             </FilterChoice>
           </FilterRow>
         )}
-        <div className="ml-auto flex min-h-8 items-center gap-3">
-          <span role="status" aria-atomic="true" className="text-xs text-muted">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5 py-1">
+          <span
+            role="status"
+            aria-atomic="true"
+            className="mr-2 whitespace-nowrap text-xs text-muted"
+          >
             {t("mySkills.filterPanel.results", { count: props.resultCount })}
           </span>
           <button
@@ -172,7 +194,10 @@ export function SkillLibraryFilterPanel(props: Props) {
             aria-controls={filtersId}
             onClick={() => setFiltersExpanded(!filtersExpanded)}
             className={cn(
-              "inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-secondary hover:bg-surface-hover",
+              "inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-medium transition-colors hover:bg-surface-hover",
+              filtersExpanded || secondaryFilterCount > 0
+                ? "bg-accent-bg text-accent-light"
+                : "text-secondary",
               focusClass,
             )}
           >
@@ -198,7 +223,7 @@ export function SkillLibraryFilterPanel(props: Props) {
               type="button"
               onClick={props.onClear}
               className={cn(
-                "inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 text-xs text-secondary hover:bg-surface-hover",
+                "inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-lg px-2 text-xs text-secondary hover:bg-surface-hover",
                 focusClass,
               )}
             >
@@ -206,12 +231,13 @@ export function SkillLibraryFilterPanel(props: Props) {
               {t("mySkills.clearFilters")}
             </button>
           )}
+          {props.actions}
         </div>
       </div>
       <div
         id={filtersId}
         hidden={!filtersExpanded}
-        className="mt-2 space-y-1 border-t border-border-subtle pt-2"
+        className="space-y-2 border-t border-border-subtle bg-surface px-3 py-3"
       >
         <FilterRow label={t("mySkills.filterPanel.deployment")}>
           {(["all", "deployed", "undeployed"] as const).map((mode) => (
