@@ -128,32 +128,20 @@ fn remote_context_routes_http_websocket_and_loopback_through_its_proxy_after_rec
     let page = client
         .create("remote", "http://unresolvable.example.invalid/page")
         .unwrap();
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while client
-        .action(
-            &page,
-            Action::Evaluate {
-                expression: "document.title".into(),
-            },
-        )
-        .unwrap()
-        != "Proxy served"
-    {
-        assert!(
-            Instant::now() < deadline,
-            "page was not loaded through the proxy"
-        );
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    let socket=client.action(&page,Action::Evaluate { expression:"new Promise(resolve=>{const ws=new WebSocket('ws://unresolvable.example.invalid/socket');ws.onmessage=e=>{resolve(e.data);ws.close()};ws.onerror=()=>resolve('failed');setTimeout(()=>resolve('timeout'),4000)})".into() }).unwrap();
+    exercise_proxy(&client, &page, &proxy);
     assert_eq!(
-        socket,
-        "proxy websocket",
-        "requests: {:?}",
-        proxy.requests.lock().unwrap()
+        serde_json::to_value(
+            client
+                .list()
+                .unwrap()
+                .iter()
+                .find(|info| info.id == page)
+                .unwrap()
+                .execution
+        )
+        .unwrap(),
+        serde_json::json!({"render":"server","network":"proxy"})
     );
-    let loopback=client.action(&page,Action::Evaluate { expression:"fetch('http://127.0.0.1:54321/loopback').then(r=>r.text()).then(t=>t.includes('proxy response')).catch(()=>false)".into() }).unwrap();
-    assert_eq!(loopback, true);
     // Discard the original context. The next page must recreate it with the same proxy.
     {
         let runtime = client.runtime_handles().unwrap()["remote"].clone();
@@ -199,4 +187,88 @@ fn remote_context_routes_http_websocket_and_loopback_through_its_proxy_after_rec
         .any(|line| line.contains("127.0.0.1:54321/loopback")));
     client.clear();
     host.clear();
+}
+
+fn exercise_proxy(client: &Browsers, page: &str, proxy: &Proxy) {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while client
+        .action(
+            page,
+            Action::Evaluate {
+                expression: "document.title".into(),
+            },
+        )
+        .unwrap()
+        != "Proxy served"
+    {
+        assert!(
+            Instant::now() < deadline,
+            "page was not loaded through the proxy"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let socket=client.action(page,Action::Evaluate { expression:"new Promise(resolve=>{const ws=new WebSocket('ws://unresolvable.example.invalid/socket');ws.onmessage=e=>{resolve(e.data);ws.close()};ws.onerror=()=>resolve('failed');setTimeout(()=>resolve('timeout'),4000)})".into() }).unwrap();
+    assert_eq!(
+        socket,
+        "proxy websocket",
+        "requests: {:?}",
+        proxy.requests.lock().unwrap()
+    );
+    let loopback=client.action(page,Action::Evaluate { expression:"fetch('http://127.0.0.1:54321/loopback').then(r=>r.text()).then(t=>t.includes('proxy response')).catch(()=>false)".into() }).unwrap();
+    assert_eq!(loopback, true);
+}
+#[test]
+#[ignore = "requires Chromium; verifies a local renderer with proxy-hosted HTTP, WebSocket and loopback traffic"]
+fn local_renderer_uses_the_proxy_for_http_websocket_and_loopback() {
+    let proxy = Proxy::start();
+    let root = tempfile::tempdir().unwrap();
+    let browsers = Browsers::new(root.path().into());
+    browsers
+        .save_profile(BrowserProfile {
+            id: "proxy".into(),
+            name: "Proxy".into(),
+            proxy: Some(proxy.url.clone()),
+            ..Default::default()
+        })
+        .unwrap();
+    let page = browsers
+        .create("proxy", "http://unresolvable.example.invalid/page")
+        .unwrap();
+    exercise_proxy(&browsers, &page, &proxy);
+    assert_eq!(
+        browsers.frame(&page).unwrap().info["execution"],
+        serde_json::json!({"render":"client","network":"proxy"})
+    );
+    assert!(
+        proxy
+            .requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|line| line.contains("unresolvable.example.invalid/page")),
+        "target hostname must reach the proxy instead of being resolved as a direct client request"
+    );
+    drop(proxy);
+    let canary = TcpListener::bind("127.0.0.1:0").unwrap();
+    canary.set_nonblocking(true).unwrap();
+    let result = browsers.action(
+        &page,
+        Action::Navigate {
+            url: format!(
+                "http://127.0.0.1:{}/must-not-go-direct",
+                canary.local_addr().unwrap().port()
+            ),
+        },
+    );
+    if let Ok(result) = result {
+        assert!(
+            result["errorText"].is_string(),
+            "an unavailable proxy must report a network failure"
+        );
+    }
+    assert!(
+        matches!(canary.accept(),Err(error) if error.kind()==std::io::ErrorKind::WouldBlock),
+        "the failed proxy silently fell back to direct client networking"
+    );
+    browsers.clear();
 }

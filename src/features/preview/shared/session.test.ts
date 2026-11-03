@@ -116,3 +116,22 @@ it("includes source range and measured element context in copied feedback", () =
   expect(text).toContain('"scrollY":120');
   expect(text).toContain('"height":80');
 });
+
+it("invalidates execution snapshots across close, restore and deleted-profile reset", () => {
+  const state = openPreview(createSession(), {
+    kind: "web",
+    address: "https://example.invalid",
+    title: "Page",
+    profile: "remote",
+  });
+  const id = state.tabs[0].id;
+  state.tabs[0].execution = { render: "server", network: "proxy" };
+  const closed = closePreview(state, id);
+  expect(closed.closed[0].execution).toBeUndefined();
+  // Old in-memory history can still carry a snapshot; restoration must also clear it.
+  closed.closed[0].execution = { render: "server", network: "proxy" };
+  expect(restorePreview(closed).tabs[0].execution).toBeUndefined();
+  expect(
+    resetDeletedProfile(state, "remote").tabs[0].execution,
+  ).toBeUndefined();
+});

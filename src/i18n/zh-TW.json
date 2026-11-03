@@ -2819,6 +2819,21 @@
       "authentication": "SSH 驗證失敗，請檢查金鑰、SSH agent 與目錄權限。",
       "timeout": "傳輸逾時，可重試。",
       "failed": "SFTP 傳輸失敗，請檢查 SSH 設定和連線後重試。"
-    }
+    },
+    "renderChoice": "頁面渲染位置",
+    "networkChoice": "頁面網路路徑",
+    "renderLocation": {
+      "client": "本機渲染",
+      "server": "外部核心渲染"
+    },
+    "networkLocation": {
+      "client_default": "本機預設網路",
+      "server_default": "外部核心預設網路",
+      "proxy": "指定代理網路"
+    },
+    "executionChoiceHint": "位置由新建頁面使用的設定決定。選擇其他設定會新增分頁，保留目前頁面與表單。",
+    "proxyChoiceHint": "代理位址相對於執行 Chromium 的主機。本機渲染可連接已建立的 SSH SOCKS5 代理；代理無法使用時頁面報錯，不退回預設網路。",
+    "profileNewTabHint": "以其他設定在新分頁開啟目前位址；保留原頁面",
+    "locationPending": "等待驗證網路與渲染位置"
   }
 }

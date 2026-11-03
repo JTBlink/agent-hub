@@ -36,3 +36,5 @@ node tests/browser/preview-remote-downloads.mjs
 ```
 
 脚本检查远端文件位置、没有本机文件时不提供打开／定位操作、远端目录表单提交，以及三语和三种布局。独立 Vite 端口可通过 `PREVIEW_TEST_ORIGIN=http://127.0.0.1:4185` 指定。该界面使用合成 IPC，不代替真实远端上下文、浏览器下载与取消验收。
+
+渲染／网络位置与配置切换验收：复用本页的 Vite 和 web-access CDP Proxy 前置条件，运行 `PREVIEW_TEST_ORIGIN=http://127.0.0.1:4176 node tests/browser/preview-execution.mjs`。场景使用实际组件和合成 IPC，覆盖三语言、明暗主题、放大字号及 1440/960/480 宽度的位置展示、原页面不关闭的新标签切换，以及渲染／网络菜单打开状态；不能替代原生代理验证。后端 `local_renderer_uses_the_proxy_for_http_websocket_and_loopback` 与 `remote_context_routes_http_websocket_and_loopback_through_its_proxy_after_recovery` 是需 Chromium 的 ignored 原生测试，分别显式运行验证。

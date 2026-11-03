@@ -1,3 +1,4 @@
+import type { ExecutionLocation } from "../api";
 import type { CaptureViewport } from "./captureContext";
 export type PreviewKind = "web" | "html" | "markdown";
 export interface PreviewTab {
@@ -9,6 +10,7 @@ export interface PreviewTab {
   revision: string;
   history: string[];
   cursor: number;
+  execution?: ExecutionLocation;
 }
 export interface Annotation {
   id: string;
@@ -86,7 +88,7 @@ export function updatePreview(
   state: PreviewSession,
   id: string,
   patch: Partial<
-    Pick<PreviewTab, "title" | "address" | "revision" | "profile">
+    Pick<PreviewTab, "title" | "address" | "revision" | "profile" | "execution">
   >,
 ): PreviewSession {
   return {
@@ -142,7 +144,7 @@ export function closePreview(
   return {
     ...state,
     tabs,
-    closed: [...state.closed, tab].slice(-20),
+    closed: [...state.closed, { ...tab, execution: undefined }].slice(-20),
     annotations: state.annotations.filter((note) =>
       [...tabs, ...state.closed.slice(-19), tab].some(
         (retained) => retained.id === note.tabId,
@@ -164,7 +166,7 @@ export function restorePreview(
   if (!tab || state.tabs.length >= 12) return state;
   return {
     ...state,
-    tabs: [...state.tabs, tab],
+    tabs: [...state.tabs, { ...tab, execution: undefined }],
     closed: state.closed.filter((item) => item.id !== tab.id),
     activeId: tab.id,
   };
@@ -221,7 +223,12 @@ export function resetDeletedProfile(
   );
   const reset = (tab: PreviewTab) =>
     affected.has(tab.id)
-      ? { ...tab, profile: "default", revision: crypto.randomUUID() }
+      ? {
+          ...tab,
+          profile: "default",
+          revision: crypto.randomUUID(),
+          execution: undefined,
+        }
       : tab;
   return {
     ...state,

@@ -24,7 +24,12 @@ export interface PreviewDocument {
   revision: string;
   url?: string;
 }
+export interface ExecutionLocation {
+  render: "client" | "server";
+  network: "client_default" | "server_default" | "proxy";
+}
 export interface BrowserPageInfo {
+  execution?: ExecutionLocation;
   status?: "connected" | "unverified" | "gone";
   owner?: string | null;
   id: string;
@@ -37,6 +42,7 @@ export interface BrowserFrame {
   version: number;
   image: string;
   info: {
+    execution?: ExecutionLocation;
     url: string;
     title: string;
     revision: string;

@@ -65,6 +65,7 @@ impl Drop for OwnedChild {
     }
 }
 pub struct Runtime {
+    pub(super) execution: super::execution::Execution,
     pub(super) instance_id: String,
     pub(super) download_epoch: u64,
     pub(super) download_frames: std::collections::VecDeque<String>,
@@ -209,6 +210,7 @@ impl Runtime {
             .map(|base| super::remote_downloads::managed_directory(base, &instance_id))
             .transpose()?;
         let mut runtime = Self {
+            execution: super::execution::Execution::from_profile(profile),
             instance_id,
             download_epoch: 0,
             download_frames: std::collections::VecDeque::new(),

@@ -2862,6 +2862,21 @@
       "authentication": "SSH authentication failed. Check your keys, SSH agent and directory permissions.",
       "timeout": "The transfer timed out. Try again.",
       "failed": "SFTP transfer failed. Check your SSH configuration and connection, then retry."
-    }
+    },
+    "renderChoice": "Page renderer",
+    "networkChoice": "Page network route",
+    "renderLocation": {
+      "client": "Rendered on this device",
+      "server": "External browser renderer"
+    },
+    "networkLocation": {
+      "client_default": "Device default network",
+      "server_default": "External browser default network",
+      "proxy": "Configured proxy network"
+    },
+    "executionChoiceHint": "Execution location is chosen for new pages. Selecting another profile opens a tab and preserves the current page and form.",
+    "proxyChoiceHint": "Proxy addresses are relative to the Chromium host. A local renderer can use an existing SSH SOCKS5 proxy. Proxy failures do not fall back to the default network.",
+    "profileNewTabHint": "Open this address in a new tab using another profile; keep the current page",
+    "locationPending": "Waiting to verify rendering and network location"
   }
 }

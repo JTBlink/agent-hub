@@ -289,7 +289,9 @@ export function usePreviewWorkspace() {
       if (
         tab.title === title &&
         tab.address === frame.info.url &&
-        tab.revision === frame.info.revision
+        tab.revision === frame.info.revision &&
+        tab.execution?.render === frame.info.execution?.render &&
+        tab.execution?.network === frame.info.execution?.network
       )
         return previous;
       const history = frame.info.history;
@@ -313,6 +315,7 @@ export function usePreviewWorkspace() {
         title,
         address: frame.info.url,
         revision: frame.info.revision,
+        execution: frame.info.execution,
       });
     });
     if (frame.events.length)

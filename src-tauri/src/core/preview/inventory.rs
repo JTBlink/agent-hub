@@ -145,7 +145,12 @@ impl Browsers {
             let cdp = runtimes
                 .get(&profile)
                 .and_then(|runtime| runtime.try_lock().ok())
-                .and_then(|mut runtime| runtime.attach_page(&target).ok());
+                .and_then(|mut runtime| {
+                    runtime
+                        .attach_page(&target)
+                        .ok()
+                        .map(|cdp| (cdp, runtime.execution))
+                });
             let mut state = self
                 .state
                 .lock()
@@ -154,7 +159,7 @@ impl Browsers {
             if state.closing {
                 continue;
             }
-            if let Some(cdp) = cdp {
+            if let Some((cdp, execution)) = cdp {
                 if state
                     .pages
                     .values()
@@ -165,6 +170,7 @@ impl Browsers {
                 let id = uuid::Uuid::new_v4().to_string();
                 let info = &found[&(profile.clone(), target.clone())];
                 let metadata = Arc::new(Mutex::new(BrowserPageInfo {
+                    execution,
                     status: PageStatus::Connected,
                     id: id.clone(),
                     profile: profile.clone(),

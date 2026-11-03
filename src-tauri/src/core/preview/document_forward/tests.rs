@@ -317,3 +317,29 @@ fn slow_forward_startup_releases_runtime_lock_and_cancels_on_shutdown() {
     drop(runtime);
     host.clear();
 }
+
+#[test]
+fn reissues_authorized_document_addresses_for_the_registered_client_server() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("index.html");
+    std::fs::write(&path, "<p>test</p>").unwrap();
+    let browsers = Browsers::new(root.path().join("browser"));
+    browsers
+        .register_document_origin("http://127.0.0.1:1234")
+        .unwrap();
+    let doc = browsers.documents.open(&path).unwrap();
+    let address = format!(
+        "http://{}.agent-hub.localhost:4321/index.html?mode=read#target",
+        doc.id
+    );
+    let resolved = browsers.resolve_document_url("default", &address).unwrap();
+    assert_eq!(
+        resolved,
+        format!(
+            "http://{}.agent-hub.localhost:1234/index.html?mode=read#target",
+            doc.id
+        )
+    );
+    browsers.documents.close(&doc.id);
+    assert!(browsers.resolve_document_url("default", &address).is_err());
+}

@@ -143,9 +143,33 @@ export function BrowserSettings({
             />
           </label>
           <label>
+            {t("preview.renderChoice")}
+            <ThemedSelect
+              value={profile.endpoint ? "server" : "client"}
+              onChange={(event) =>
+                setProfile({
+                  ...profile,
+                  endpoint:
+                    event.target.value === "server"
+                      ? profile.endpoint || "http://127.0.0.1:9222"
+                      : "",
+                })
+              }
+            >
+              <option value="client">
+                {t("preview.renderLocation.client")}
+              </option>
+              <option value="server">
+                {t("preview.renderLocation.server")}
+              </option>
+            </ThemedSelect>
+          </label>
+          <p>{t("preview.executionChoiceHint")}</p>
+          <label>
             {t("preview.runtimePath")}
             <input
               placeholder={model.info?.executable ?? t("preview.autoDetect")}
+              disabled={!!profile.endpoint}
               value={profile.executable ?? ""}
               onChange={(event) =>
                 setProfile({ ...profile, executable: event.target.value })
@@ -199,6 +223,33 @@ export function BrowserSettings({
               </small>
             </label>
           )}
+          <label>
+            {t("preview.networkChoice")}
+            <ThemedSelect
+              value={profile.proxy ? "proxy" : "host"}
+              onChange={(event) =>
+                setProfile({
+                  ...profile,
+                  proxy:
+                    event.target.value === "proxy"
+                      ? profile.proxy || "socks5://127.0.0.1:1080"
+                      : "",
+                })
+              }
+            >
+              <option value="host">
+                {t(
+                  profile.endpoint
+                    ? "preview.networkLocation.server_default"
+                    : "preview.networkLocation.client_default",
+                )}
+              </option>
+              <option value="proxy">
+                {t("preview.networkLocation.proxy")}
+              </option>
+            </ThemedSelect>
+          </label>
+          <p>{t("preview.proxyChoiceHint")}</p>
           <label>
             {t("preview.proxy")}
             <input

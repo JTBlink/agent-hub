@@ -98,6 +98,7 @@ pub enum PageStatus {
 }
 #[derive(Clone, Serialize)]
 pub struct BrowserPageInfo {
+    pub execution: super::execution::Execution,
     pub status: PageStatus,
     pub id: String,
     pub profile: String,
@@ -465,7 +466,12 @@ impl Browsers {
             }
             return Err(error);
         }
+        let execution = runtime
+            .lock()
+            .map_err(|_| AppError::internal("Browser runtime unavailable"))?
+            .execution;
         let metadata = Arc::new(Mutex::new(BrowserPageInfo {
+            execution,
             status: PageStatus::Connected,
             id: id.clone(),
             profile: profile.into(),

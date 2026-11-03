@@ -1,3 +1,4 @@
+import { ExecutionLocation } from "./components/ExecutionLocation";
 import { usePageFind } from "./shared/usePageFind";
 import { useBrowserInventory } from "./web/useBrowserInventory";
 import { DownloadsPanel } from "./components/DownloadsPanel";
@@ -28,12 +29,11 @@ import { previewApi } from "./api";
 import { BrowserSurface } from "./web/BrowserSurface";
 import { MarkdownPreview } from "./markdown/MarkdownPreview";
 import { CodeEditor } from "../../components/file-reader/CodeEditor";
-import { ThemedSelect } from "../../components/ThemedSelect";
+import { ProfileSelector } from "./components/ProfileSelector";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
 import { BrowserTools } from "./components/BrowserTools";
 import { AgentDelivery } from "./components/AgentDelivery";
-import { updatePreview } from "./shared/session";
 import "./preview.css";
 
 export function PreviewWorkspace({ shown }: { shown: boolean }) {
@@ -200,51 +200,11 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
             onChange={(event) => setAddress(event.target.value)}
           />
         </form>
-        <ThemedSelect
-          aria-label={t("preview.profiles")}
-          value={active?.profile ?? "default"}
-          disabled={!active}
-          onChange={async (event) => {
-            const profile = event.target.value;
-            if (active) {
-              if (model.pageId) {
-                try {
-                  await previewApi.close(model.pageId);
-                } catch (error) {
-                  model.report(error);
-                  return;
-                }
-              }
-              model.setSession((previous) =>
-                updatePreview(previous, active.id, {
-                  profile,
-                  revision: crypto.randomUUID(),
-                }),
-              );
-              model.setPageIds((previous) => {
-                const next = { ...previous };
-                delete next[active.id];
-                return next;
-              });
-            }
-          }}
-        >
-          {(
-            model.info?.profiles ?? [
-              { id: "default", name: t("preview.defaultProfile") },
-            ]
-          ).map((profile) => (
-            <option
-              key={profile.id}
-              value={profile.id}
-              disabled={profile.deleting}
-            >
-              {profile.id === "guest" && profile.name === "Guest"
-                ? t("preview.guestProfile")
-                : profile.name}
-            </option>
-          ))}
-        </ThemedSelect>
+        <ProfileSelector
+          active={active}
+          profiles={model.info?.profiles}
+          onOpen={model.openWeb}
+        />
         <button
           aria-label={t("preview.openExternal")}
           title={t("preview.openExternal")}
@@ -257,6 +217,12 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
           <ExternalLink size={16} />
         </button>
       </div>
+      {active && (
+        <ExecutionLocation
+          execution={active.execution}
+          markdown={active.kind === "markdown"}
+        />
+      )}
       <PreviewToolbar
         model={model}
         findOpen={findOpen}

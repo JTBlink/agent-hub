@@ -171,6 +171,7 @@ impl Browsers {
         address: &str,
         start: impl FnOnce(&str, u16, &AtomicBool) -> Result<Forward, AppError>,
     ) -> Result<String, AppError> {
+        super::browser::validate_url(address)?;
         let port = self.document_port.load(Ordering::Acquire);
         if port == 0 {
             return Ok(address.into());
@@ -191,11 +192,18 @@ impl Browsers {
         {
             return Ok(address.into());
         }
+        let id = id.to_owned();
         let decoded = urlencoding::decode(url.path().trim_start_matches('/'))
-            .map_err(|error| AppError::invalid_input(error.to_string()))?;
-        self.documents.resource(id, &decoded)?;
+            .map_err(|error| AppError::invalid_input(error.to_string()))?
+            .into_owned();
+        self.documents.resource(&id, &decoded)?;
+        // Capability identity is the grant, not a previous renderer's forwarding port.
+        // Always target the registered owned server when a tab changes execution profile.
+        url.set_port(Some(port))
+            .map_err(|_| AppError::invalid_input("Invalid document port"))?;
+        let canonical = url.to_string();
         let Some(runtime) = self.runtime_handles()?.get(profile).cloned() else {
-            return Ok(address.into());
+            return Ok(canonical);
         };
         let gate = runtime
             .lock()
@@ -210,12 +218,10 @@ impl Browsers {
                 .lock()
                 .map_err(|_| AppError::internal("Browser runtime unavailable"))?;
             if current.context.is_none() || current.ssh_target.is_none() {
-                return Ok(address.into());
+                return Ok(canonical);
             }
             if let Some(forward) = &mut current.document_forward {
-                if forward.local_port != port
-                    || !matches!(url.port(),Some(value) if value==port || value==forward.remote_port)
-                {
+                if forward.local_port != port {
                     return Err(AppError::invalid_input(
                         "Document address is not served by this preview",
                     ));
@@ -228,11 +234,6 @@ impl Browsers {
                 url.set_port(Some(forward.remote_port))
                     .map_err(|_| AppError::invalid_input("Invalid document port"))?;
                 return Ok(url.into());
-            }
-            if url.port() != Some(port) {
-                return Err(AppError::invalid_input(
-                    "Document address is not served by this preview",
-                ));
             }
             current
                 .ssh_target
@@ -265,7 +266,7 @@ impl Browsers {
         };
         // No state or Runtime lock is held across authentication and forwarding setup.
         let forward = start(&target, port, &cancel)?;
-        self.documents.resource(id, &decoded)?;
+        self.documents.resource(&id, &decoded)?;
         let remote = forward.remote_port;
         {
             let mut current = runtime

@@ -28,3 +28,13 @@ it("never restores built-in or custom temporary profile tabs", () => {
     "Persistent",
   ]);
 });
+it("restores metadata without claiming that a previous execution location is still verified", () => {
+  const state = openPreview(createSession(), {
+    kind: "web",
+    address: "https://example.invalid",
+    title: "Page",
+  });
+  state.tabs[0].execution = { render: "server", network: "proxy" };
+  savePreviewSession(state);
+  expect(loadPreviewSession().tabs[0].execution).toBeUndefined();
+});

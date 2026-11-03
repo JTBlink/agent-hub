@@ -143,3 +143,28 @@ it("saves the remote download base only for a remote profile", async () => {
     }),
   );
 });
+it("keeps execution choices in the draft until saving and persists the selected renderer and proxy", async () => {
+  await click([...container.querySelectorAll(".preview-profile-row")][2]);
+  const choose = async (label: string, option: string) => {
+    const group = [...container.querySelectorAll("label")].find((node) =>
+      node.textContent?.includes(label),
+    )!;
+    await click(group.querySelector('[role="combobox"]')!);
+    await click(
+      [...document.querySelectorAll('[role="option"]')].find(
+        (node) => node.textContent === option,
+      )!,
+    );
+  };
+  await choose("preview.renderChoice", "preview.renderLocation.server");
+  await choose("preview.networkChoice", "preview.networkLocation.proxy");
+  expect(previewApi.profile).not.toHaveBeenCalled();
+  await click(button("common.save"));
+  expect(previewApi.profile).toHaveBeenCalledWith(
+    expect.objectContaining({
+      id: "custom",
+      endpoint: "http://127.0.0.1:9222",
+      proxy: "socks5://127.0.0.1:1080",
+    }),
+  );
+});

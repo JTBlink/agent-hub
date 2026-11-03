@@ -35,6 +35,12 @@ impl Browsers {
             if !info.is_object() {
                 return Err(AppError::network("Page metadata unavailable"));
             }
+            info["execution"] = json!(
+                page.metadata
+                    .lock()
+                    .map_err(|_| AppError::internal("Browser metadata unavailable"))?
+                    .execution
+            );
             info["url"] = json!(url);
             info["revision"] = json!(revision);
             info["title"] = json!(info["title"]
@@ -115,7 +121,7 @@ fn dialog_frame(page: &mut Page, since: Option<u64>) -> Result<Frame, AppError> 
     if metadata.status == PageStatus::Gone {
         return Err(AppError::not_found("PREVIEW_PAGE_GONE"));
     }
-    let info = json!({"url":metadata.url,"title":metadata.title,"revision":metadata.revision,"ready":"interactive","width":page.width,"height":page.height,"dialog":page.cdp.dialog,"chooser":page.cdp.chooser});
+    let info = json!({"execution":metadata.execution,"url":metadata.url,"title":metadata.title,"revision":metadata.revision,"ready":"interactive","width":page.width,"height":page.height,"dialog":page.cdp.dialog,"chooser":page.cdp.chooser});
     let version = page.cdp.frame_version;
     let image = if since == Some(version) {
         String::new()

@@ -1,6 +1,9 @@
 import { BrowserSurface } from "../../src/features/preview/web/BrowserSurface";
 import { DownloadsPanel } from "../../src/features/preview/components/DownloadsPanel";
-import type { PreviewDownload } from "../../src/features/preview/api";
+import type {
+  PreviewDownload,
+  BrowserPageInfo,
+} from "../../src/features/preview/api";
 // Production components with synthetic IPC. Native browser behavior is tested in Rust.
 import { useState } from "react";
 import { CookieImportPanel } from "../../src/features/preview/components/CookieImportPanel";
@@ -11,7 +14,7 @@ import { applyTextSize } from "../../src/lib/textScale";
 import "../../src/index.css";
 const parameters = new URLSearchParams(location.search);
 // Background browser acceptance tabs model the active production surface for polling.
-if (parameters.get("view") === "recovery")
+if (["recovery", "execution"].includes(parameters.get("view") ?? ""))
   Object.defineProperty(document, "hidden", {
     configurable: true,
     get: () => false,
@@ -23,6 +26,15 @@ document.documentElement.classList.toggle(
 const content =
   "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\nThis continuation belongs to the same paragraph.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
 let linkDestination = "system";
+const executionPages = new Map<string, BrowserPageInfo>();
+let executionCreated = 0;
+let executionClosed = 0;
+const executionSnapshot = () => {
+  document.documentElement.dataset.executionPages = JSON.stringify([
+    ...executionPages.values(),
+  ]);
+  document.documentElement.dataset.executionClosed = String(executionClosed);
+};
 let disconnected = true;
 let fetchAttempts = 0;
 let remoteDownload: PreviewDownload = {
@@ -84,6 +96,84 @@ mockIPC((command, args) => {
     const request = args?.request;
     if (!request || typeof request !== "object" || !("kind" in request))
       return null;
+    if (parameters.get("view") === "execution") {
+      if (request.kind === "info")
+        return {
+          executable: null,
+          profiles: [
+            { id: "default", name: "Device" },
+            {
+              id: "remote",
+              name: "External",
+              endpoint: "http://127.0.0.1:9222",
+            },
+            { id: "proxy", name: "Proxy", proxy: "socks5://127.0.0.1:1080" },
+          ],
+        };
+      if (
+        request.kind === "create" &&
+        "profile" in request &&
+        typeof request.profile === "string" &&
+        "url" in request &&
+        typeof request.url === "string"
+      ) {
+        const id = `execution-${++executionCreated}`;
+        executionPages.set(id, {
+          id,
+          status: "connected",
+          profile: request.profile,
+          url: request.url,
+          title: `Page ${request.profile}`,
+          revision: id,
+          execution: {
+            render: request.profile === "remote" ? "server" : "client",
+            network:
+              request.profile === "remote"
+                ? "server_default"
+                : request.profile === "proxy"
+                  ? "proxy"
+                  : "client_default",
+          },
+        });
+        executionSnapshot();
+        return id;
+      }
+      if (
+        request.kind === "close" &&
+        "id" in request &&
+        typeof request.id === "string"
+      ) {
+        executionPages.delete(request.id);
+        executionClosed += 1;
+        executionSnapshot();
+        return null;
+      }
+      if (request.kind === "list") return [...executionPages.values()];
+      if (
+        request.kind === "frame" &&
+        "id" in request &&
+        typeof request.id === "string"
+      ) {
+        const page = executionPages.get(request.id);
+        if (!page) throw Error("Page unavailable");
+        return {
+          version: 1,
+          image:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a5sAAAAASUVORK5CYII=",
+          events: [],
+          info: {
+            ...page,
+            ready: "complete",
+            width: 800,
+            height: 600,
+            scrollX: 0,
+            scrollY: 0,
+            dpr: 1,
+          },
+        };
+      }
+      if (request.kind === "action") return null;
+    }
     if (request.kind === "frame" && parameters.get("view") === "recovery") {
       if (disconnected) throw new Error("Disconnected");
       return {

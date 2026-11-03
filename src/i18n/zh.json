@@ -2859,6 +2859,21 @@
       "authentication": "SSH 认证失败，请检查密钥、SSH agent 与目录权限。",
       "timeout": "传输超时，可重试。",
       "failed": "SFTP 传输失败，请检查 SSH 配置和连接后重试。"
-    }
+    },
+    "renderChoice": "页面渲染位置",
+    "networkChoice": "页面网络路径",
+    "renderLocation": {
+      "client": "本机渲染",
+      "server": "外部内核渲染"
+    },
+    "networkLocation": {
+      "client_default": "本机默认网络",
+      "server_default": "外部内核默认网络",
+      "proxy": "指定代理网络"
+    },
+    "executionChoiceHint": "位置由新建页面使用的配置决定。选择其他配置会新建标签，当前页面和表单保留。",
+    "proxyChoiceHint": "代理地址相对于运行 Chromium 的主机。本机渲染可连接已建立的 SSH SOCKS5 代理；代理不可用时页面报错，不退回默认网络。",
+    "profileNewTabHint": "选择其他配置，在新标签打开当前地址；保留原页面",
+    "locationPending": "等待核验网络与渲染位置"
   }
 }
