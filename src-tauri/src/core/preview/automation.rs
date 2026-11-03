@@ -32,6 +32,9 @@ enum Request {
     Reconnect { id: String },
     Reopen { id: String },
     Frame { id: String },
+    Downloads,
+    CancelDownload { profile: String, id: String },
+    ForgetDownload { profile: String, id: String },
 }
 pub struct Automation {
     stop: Arc<AtomicBool>,
@@ -183,6 +186,15 @@ fn serve(mut stream: TcpStream, token: &str, browsers: &Browsers) -> std::io::Re
     }
     let request = serde_json::from_slice::<Request>(&bytes[header_end..header_end + length]);
     let result = match request {
+        Ok(Request::Downloads) => browsers
+            .downloads()
+            .and_then(|value| serde_json::to_value(value).map_err(AppError::io)),
+        Ok(Request::CancelDownload { profile, id }) => {
+            browsers.cancel_download(&profile, &id).map(|_| Value::Null)
+        }
+        Ok(Request::ForgetDownload { profile, id }) => {
+            browsers.forget_download(&profile, &id).map(|_| Value::Null)
+        }
         Ok(Request::List) => browsers
             .list()
             .and_then(|value| serde_json::to_value(value).map_err(AppError::io)),

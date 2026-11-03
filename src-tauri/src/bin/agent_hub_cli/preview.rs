@@ -13,6 +13,20 @@ pub struct PreviewArgs {
 pub enum PreviewCommand {
     /// 列出网页标签及连接状态。
     List,
+    /// 列出本机和远端会话的下载记录。
+    Downloads,
+    /// 取消指定配置中的活动下载。
+    CancelDownload {
+        id: String,
+        #[arg(long, default_value = "default")]
+        profile: String,
+    },
+    /// 移除已结束下载的记录，保留文件。
+    ForgetDownload {
+        id: String,
+        #[arg(long, default_value = "default")]
+        profile: String,
+    },
     /// 打开与桌面界面共用的网页。
     Open {
         url: String,
@@ -71,6 +85,13 @@ fn action(id: &str, value: Value) -> Result<Value> {
 }
 pub fn run(args: &PreviewArgs, json_output: bool) -> Result<()> {
     let value = match &args.command {
+        PreviewCommand::Downloads => request(json!({"kind":"downloads"}))?,
+        PreviewCommand::CancelDownload { id, profile } => {
+            request(json!({"kind":"cancel_download","profile":profile,"id":id}))?
+        }
+        PreviewCommand::ForgetDownload { id, profile } => {
+            request(json!({"kind":"forget_download","profile":profile,"id":id}))?
+        }
         PreviewCommand::List => request(json!({"kind":"list"}))?,
         PreviewCommand::Open { url, profile } => {
             request(json!({"kind":"open","url":url,"profile":profile}))?

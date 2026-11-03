@@ -80,6 +80,16 @@ export function DownloadsPanel({
               · {bytes(item.received)}
               {item.total > 0 ? ` / ${bytes(item.total)}` : ""}
             </p>
+            <p>
+              {t(
+                item.remote
+                  ? "preview.remoteDownloadLocation"
+                  : "preview.localDownloadLocation",
+              )}
+            </p>
+            {item.remote && item.state === "completed" && !item.local && (
+              <p>{t("preview.remoteDownloadPendingTransfer")}</p>
+            )}
             {item.state === "inProgress" && item.verified === false && (
               <p role="status">{t("preview.downloadUnverified")}</p>
             )}

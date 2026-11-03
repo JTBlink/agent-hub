@@ -28,3 +28,11 @@ node tests/browser/preview-document-links.mjs
 ```
 
 该脚本使用生产预览工作区检查授权资源目的地、临时反转、查询参数、跨 Markdown 文件锚点实际滚动与三种布局；IPC 返回合成资源地址，不操作日常外部浏览器。真实文件资源服务另由 Rust 的 `browser_follows_granted_file_links_with_encoded_paths_and_url_suffixes` 测试在独立 Chromium 资料目录验证。
+
+远端下载管理的界面验收复用同一前置环境：
+
+```sh
+node tests/browser/preview-remote-downloads.mjs
+```
+
+脚本检查远端文件位置、没有本机文件时不提供打开／定位操作、远端目录表单提交，以及三语和三种布局。独立 Vite 端口可通过 `PREVIEW_TEST_ORIGIN=http://127.0.0.1:4185` 指定。该界面使用合成 IPC，不代替真实远端上下文、浏览器下载与取消验收。

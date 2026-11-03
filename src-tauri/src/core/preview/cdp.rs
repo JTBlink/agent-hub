@@ -63,12 +63,30 @@ impl Cdp {
         Ok(())
     }
     pub fn call(&mut self, method: &str, params: Value) -> Result<Value, AppError> {
+        self.send_call(method, params, None)
+    }
+    pub(super) fn call_in_session(
+        &mut self,
+        session: &str,
+        method: &str,
+        params: Value,
+    ) -> Result<Value, AppError> {
+        self.send_call(method, params, Some(session))
+    }
+    fn send_call(
+        &mut self,
+        method: &str,
+        params: Value,
+        session: Option<&str>,
+    ) -> Result<Value, AppError> {
         self.sequence += 1;
         let id = self.sequence;
+        let mut command = json!({ "id": id, "method": method, "params": params });
+        if let Some(session) = session {
+            command["sessionId"] = json!(session);
+        }
         self.socket
-            .send(Message::Text(
-                json!({ "id": id, "method": method, "params": params }).to_string(),
-            ))
+            .send(Message::Text(command.to_string()))
             .map_err(AppError::network)?;
         let started = Instant::now();
         while started.elapsed() < Duration::from_secs(15) {
@@ -83,7 +101,7 @@ impl Cdp {
                                     .unwrap_or("Browser command failed"),
                             ));
                         }
-                        if method == "Page.getFrameTree" {
+                        if method == "Page.getFrameTree" && session.is_none() {
                             self.main_frame = reply["result"]["frameTree"]["frame"]["id"]
                                 .as_str()
                                 .map(str::to_owned);

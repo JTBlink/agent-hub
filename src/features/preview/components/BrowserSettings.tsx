@@ -47,6 +47,9 @@ export function BrowserSettings({
         executable: profile.executable || null,
         endpoint: profile.endpoint || null,
         proxy: profile.proxy || null,
+        remote_download_directory: profile.endpoint
+          ? profile.remote_download_directory || null
+          : null,
       });
       model.setInfo(await previewApi.info());
       model.setNotice(t("preview.saved"));
@@ -157,6 +160,24 @@ export function BrowserSettings({
             />
           </label>
           <p>{t("preview.remoteHint")}</p>
+          {profile.endpoint && (
+            <label>
+              {t("preview.remoteDownloadDirectory")}
+              <input
+                value={profile.remote_download_directory ?? ""}
+                placeholder="/srv/downloads"
+                onChange={(event) =>
+                  setProfile({
+                    ...profile,
+                    remote_download_directory: event.target.value,
+                  })
+                }
+              />
+              <small className="text-xs leading-5 text-muted">
+                {t("preview.remoteDownloadDirectoryHint")}
+              </small>
+            </label>
+          )}
           <label>
             {t("preview.proxy")}
             <input

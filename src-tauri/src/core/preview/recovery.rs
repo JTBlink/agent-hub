@@ -52,6 +52,10 @@ impl Browsers {
             if let Some(directory) = &runtime.download_dir {
                 control.call("Browser.setDownloadBehavior", json!({"behavior":"allowAndName","downloadPath":directory,"eventsEnabled":true}))?;
             }
+            if let Some(params) = runtime.remote_download_behavior() {
+                control.call("Browser.setDownloadBehavior", params)?;
+            }
+            runtime.download_epoch = runtime.download_epoch.wrapping_add(1);
             // Swap only after target ownership and page attachment have both succeeded.
             runtime.cdp = control;
             transport

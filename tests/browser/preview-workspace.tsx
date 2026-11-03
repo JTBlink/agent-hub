@@ -114,10 +114,26 @@ mockIPC((command, args) => {
           url: "http://127.0.0.1:4176/linked-fixture/next.md?mode=read#target",
         },
       };
+    if (request.kind === "save_profile") {
+      document.documentElement.dataset.savedRemoteProfile = JSON.stringify(
+        "profile" in request ? request.profile : null,
+      );
+      return null;
+    }
     if (request.kind === "info")
       return {
         executable: null,
-        profiles: [{ id: "default", name: "Default" }],
+        profiles:
+          parameters.get("view") === "remote-settings"
+            ? [
+                {
+                  id: "remote",
+                  name: "Remote",
+                  endpoint: "http://127.0.0.1:9222",
+                  remote_download_directory: "/srv/downloads",
+                },
+              ]
+            : [{ id: "default", name: "Default" }],
       };
     if (request.kind === "cookie_prepare")
       return {
@@ -137,7 +153,23 @@ mockIPC((command, args) => {
       };
     if (request.kind === "cookie_apply") return { imported: 1, removed: 0 };
     if (request.kind === "downloads")
-      return parameters.get("view") === "downloads" ? downloads : [];
+      return parameters.get("view") === "remote-downloads"
+        ? [
+            {
+              id: "remote-artifact",
+              profile: "remote",
+              name: "server-artifact.bin",
+              state: "completed",
+              received: 1024,
+              total: 1024,
+              remote: true,
+              local: false,
+              verified: true,
+            },
+          ]
+        : parameters.get("view") === "downloads"
+          ? downloads
+          : [];
     if (
       request.kind === "forget_download" &&
       "id" in request &&
@@ -191,7 +223,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           onError={() => {}}
         />
       </section>
-    ) : parameters.get("view") === "downloads" ? (
+    ) : ["downloads", "remote-downloads"].includes(
+        parameters.get("view") ?? "",
+      ) ? (
       <section className="preview-workspace">
         <DownloadsPanel model={{ report: () => {}, setPanelOpen: () => {} }} />
       </section>

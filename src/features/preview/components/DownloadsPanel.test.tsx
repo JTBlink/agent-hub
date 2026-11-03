@@ -92,3 +92,49 @@ it("shows unverified progress and removes only a completed record after native s
     vi.clearAllMocks();
   }
 });
+
+it("labels completed remote artifacts without offering local file actions", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(previewApi.downloads).mockResolvedValue([
+    {
+      id: "remote-artifact",
+      profile: "remote",
+      name: "server.bin",
+      state: "completed",
+      received: 20,
+      total: 20,
+      local: false,
+      remote: true,
+      verified: true,
+    },
+  ]);
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        <DownloadsPanel model={{ report: vi.fn(), setPanelOpen: vi.fn() }} />,
+      ),
+    );
+    expect(container.textContent).toContain("preview.remoteDownloadLocation");
+    expect(container.textContent).toContain(
+      "preview.remoteDownloadPendingTransfer",
+    );
+    expect(
+      [...container.querySelectorAll("button")].some(
+        (button) => button.textContent === "common.open",
+      ),
+    ).toBe(false);
+    expect(
+      [...container.querySelectorAll("button")].some(
+        (button) => button.textContent === "preview.revealDownload",
+      ),
+    ).toBe(false);
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  }
+});

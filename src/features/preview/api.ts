@@ -6,6 +6,7 @@ export interface BrowserProfile {
   executable?: string | null;
   endpoint?: string | null;
   proxy?: string | null;
+  remote_download_directory?: string | null;
   ephemeral?: boolean;
   deleting?: boolean;
 }
@@ -221,6 +222,7 @@ export interface PreviewDownload {
   received: number;
   total: number;
   local: boolean;
+  remote?: boolean;
 }
 
 export interface CookieImportSummary {

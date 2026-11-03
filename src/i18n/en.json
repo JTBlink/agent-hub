@@ -2836,6 +2836,12 @@
     "moduleBrowser": "Preview module",
     "linkDestinationHint": "Applies to terminal, Markdown and help web links. Shift + Ctrl/⌘ + click temporarily reverses the destination. Terminal links require Ctrl/⌘ + click.",
     "openLinkFailed": "Could not open the link.",
-    "fileLinkDestinationHint": "Authorized file links in preview documents use the same setting. System browsers may show Markdown source; choose the preview module for a reading view."
+    "fileLinkDestinationHint": "Authorized file links in preview documents use the same setting. System browsers may show Markdown source; choose the preview module for a reading view.",
+    "remoteDownloadDirectory": "Remote download base directory",
+    "remoteDownloadDirectoryHint": "Use an absolute directory writable by the remote browser. Downloads use a separate subdirectory. Remote download management stays disabled until configured.",
+    "remoteDownloadLocation": "Stored on the network host",
+    "localDownloadLocation": "Stored on this computer",
+    "remoteDownloadPendingTransfer": "The remote download is complete. The file has not been transferred to this computer.",
+    "downloadSourceUnverified": "Some download sources could not be verified. Events are retained for retry and are not reported as local or completed."
   }
 }

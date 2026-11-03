@@ -145,7 +145,7 @@ impl Browsers {
             let cdp = runtimes
                 .get(&profile)
                 .and_then(|runtime| runtime.try_lock().ok())
-                .and_then(|runtime| runtime.attach_page(&target).ok());
+                .and_then(|mut runtime| runtime.attach_page(&target).ok());
             let mut state = self
                 .state
                 .lock()

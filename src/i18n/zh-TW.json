@@ -2793,6 +2793,12 @@
     "moduleBrowser": "預覽模組",
     "linkDestinationHint": "適用於終端、Markdown 和說明中的網頁連結。Shift + Ctrl/⌘ + 點擊暫時切換開啟位置；終端連結需 Ctrl/⌘ + 點擊。",
     "openLinkFailed": "無法開啟連結。",
-    "fileLinkDestinationHint": "預覽文件中的檔案連結也使用此設定，並保留目錄授權檢查。系統瀏覽器可能將 Markdown 顯示為原始碼；需要閱讀檢視時選擇預覽模組。"
+    "fileLinkDestinationHint": "預覽文件中的檔案連結也使用此設定，並保留目錄授權檢查。系統瀏覽器可能將 Markdown 顯示為原始碼；需要閱讀檢視時選擇預覽模組。",
+    "remoteDownloadDirectory": "遠端下載根目錄",
+    "remoteDownloadDirectoryHint": "填寫遠端瀏覽器可寫入的絕對目錄；使用隔離子目錄儲存下載。未設定時不啟用遠端下載管理。",
+    "remoteDownloadLocation": "儲存在網路主機",
+    "localDownloadLocation": "儲存在本機",
+    "remoteDownloadPendingTransfer": "遠端下載已完成，檔案尚未傳輸到本機。",
+    "downloadSourceUnverified": "部分下載事件的來源暫時無法核驗，已保留待重試；不會將其誤認為本機工作階段或已完成。"
   }
 }

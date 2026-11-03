@@ -21,6 +21,8 @@ pub struct BrowserProfile {
     #[serde(default)]
     pub proxy: Option<String>,
     #[serde(default)]
+    pub remote_download_directory: Option<String>,
+    #[serde(default)]
     pub ephemeral: bool,
     #[serde(default)]
     pub deleting: bool,
@@ -43,6 +45,7 @@ impl Default for BrowserProfile {
             executable: None,
             endpoint: None,
             proxy: None,
+            remote_download_directory: None,
             ephemeral: false,
             deleting: false,
         }
@@ -59,6 +62,10 @@ impl Drop for OwnedChild {
     }
 }
 pub struct Runtime {
+    pub(super) instance_id: String,
+    pub(super) download_epoch: u64,
+    pub(super) download_frames: std::collections::VecDeque<String>,
+    pub(super) remote_download_dir: Option<String>,
     child: Option<Arc<Mutex<OwnedChild>>>,
     pub cdp: Cdp,
     pub endpoint: String,
@@ -187,7 +194,17 @@ impl Runtime {
                 return Err(error);
             }
         };
+        let instance_id = uuid::Uuid::new_v4().to_string();
+        let remote_download_dir = profile
+            .remote_download_directory
+            .as_ref()
+            .map(|base| super::remote_downloads::managed_directory(base, &instance_id))
+            .transpose()?;
         let mut runtime = Self {
+            instance_id,
+            download_epoch: 0,
+            download_frames: std::collections::VecDeque::new(),
+            remote_download_dir,
             child,
             cdp,
             endpoint,
@@ -211,7 +228,14 @@ impl Runtime {
                 "Target.createBrowserContext",
                 json!({ "disposeOnDetach": false }),
             )?;
-            runtime.context = context["browserContextId"].as_str().map(str::to_owned);
+            runtime.context = Some(
+                context["browserContextId"]
+                    .as_str()
+                    .filter(|id| !id.is_empty())
+                    .ok_or_else(|| AppError::network("Browser did not create an isolated context"))?
+                    .to_owned(),
+            );
+            runtime.configure_remote_downloads()?;
         } else {
             let directory = root.join("downloads").join(&profile.id);
             fs::create_dir_all(&directory)?;
@@ -256,9 +280,10 @@ impl Runtime {
                         })?
                         .into(),
                 );
+                self.download_frames.clear();
             }
         }
-        Ok(())
+        self.configure_remote_downloads()
     }
     pub fn create_page(
         &mut self,
@@ -278,7 +303,7 @@ impl Runtime {
         let cdp = self.attach_page(&id)?;
         Ok((id, cdp))
     }
-    pub fn attach_page(&self, id: &str) -> Result<Cdp, AppError> {
+    pub fn attach_page(&mut self, id: &str) -> Result<Cdp, AppError> {
         let target = json_endpoint(&self.endpoint, "/json/list")?
             .as_array()
             .and_then(|targets| targets.iter().find(|target| target["id"] == id))
@@ -300,6 +325,10 @@ impl Runtime {
             json!({ "maxTotalBufferSize": 1048576, "maxResourceBufferSize": 65536 }),
         )?;
         cdp.call("Page.startScreencast", json!({"format":"jpeg","quality":85,"maxWidth":3840,"maxHeight":2160,"everyNthFrame":1}))?;
+        if self.context.is_some() && self.remote_download_dir.is_some() {
+            let tree = cdp.call("Page.getFrameTree", json!({}))?;
+            self.remember_download_frames(&tree["frameTree"]);
+        }
         Ok(cdp)
     }
 }
@@ -384,6 +413,14 @@ pub fn validate_profile(profile: &BrowserProfile) -> Result<(), AppError> {
     }
     if let Some(endpoint) = &profile.endpoint {
         validate_endpoint(endpoint)?;
+    }
+    if let Some(directory) = &profile.remote_download_directory {
+        if profile.endpoint.is_none() {
+            return Err(AppError::invalid_input(
+                "Remote download directories require a remote endpoint",
+            ));
+        }
+        super::remote_downloads::managed_directory(directory, "validation")?;
     }
     Ok(())
 }

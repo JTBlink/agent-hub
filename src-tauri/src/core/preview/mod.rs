@@ -14,6 +14,7 @@ pub mod packets;
 mod page_actions;
 mod profiles;
 mod recovery;
+mod remote_downloads;
 pub mod runtime;
 pub mod uploads;
 use super::error::AppError;

@@ -102,6 +102,7 @@ fn reopens_live_exited_and_disposed_pages_without_replaying_forms_or_losing_logi
                 local: true,
                 verified: false,
                 path: None,
+                ..Download::default()
             };
             browsers
                 .state

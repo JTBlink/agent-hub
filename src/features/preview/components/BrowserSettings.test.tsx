@@ -114,3 +114,32 @@ it("keeps failed cleanup visible and permits retrying the same profile deletion"
     vi.mocked(previewApi.deleteProfile).mock.calls.map((call) => call[0]),
   ).toEqual(["custom", "custom"]);
 });
+
+it("saves the remote download base only for a remote profile", async () => {
+  const remote = {
+    id: "remote",
+    name: "Remote",
+    endpoint: "http://127.0.0.1:9222",
+    remote_download_directory: "/srv/downloads",
+  };
+  await act(async () =>
+    root.render(
+      <BrowserSettings
+        model={{ ...model, info: { ...info, profiles: [remote] } }}
+      />,
+    ),
+  );
+  await click(container.querySelector(".preview-profile-row")!);
+  expect(
+    [...container.querySelectorAll("input")].some(
+      (input) => input.value === "/srv/downloads",
+    ),
+  ).toBe(true);
+  await click(button("common.save"));
+  expect(previewApi.profile).toHaveBeenCalledWith(
+    expect.objectContaining({
+      id: "remote",
+      remote_download_directory: "/srv/downloads",
+    }),
+  );
+});

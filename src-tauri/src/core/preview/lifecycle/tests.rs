@@ -172,6 +172,7 @@ fn background_reaping_clears_guest_data_keeps_recoverable_tabs_and_preserves_per
                     local: true,
                     verified: true,
                     path: None,
+                    ..Download::default()
                 },
             );
         }

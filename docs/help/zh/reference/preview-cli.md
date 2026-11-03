@@ -76,6 +76,9 @@ agent-hub-cli preview close '<page-id>'
 | `preview scroll <page-id> [--x <number>] [--y <number>]` | 按 CSS 像素滚动；默认向下 600                         |
 | `preview screenshot <page-id> <output> [--full]`         | 保存视口或完整页面 PNG                                |
 | `preview close <page-id>`                                | 关闭指定页面                                          |
+| `preview downloads`                                      | 列出本机与已启用远端会话的下载状态                    |
+| `preview cancel-download <download-id> --profile <id>`   | 取消指定配置及隔离会话中的活动下载                    |
+| `preview forget-download <download-id> --profile <id>`   | 移除已结束记录，保留宿主上的文件                      |
 
 内置访客配置可直接用于临时浏览：
 
@@ -111,3 +114,15 @@ agent-hub-cli --json preview evaluate '<page-id>' '({ width: innerWidth, height:
 - 远程宿主无法访问：保留不可验证状态，不能把断连当作远端页面或进程已经退出。
 
 CLI 不启动任务计划，不从历史恢复输入，也不自动重放失败操作。
+
+## 下载状态
+
+先在界面配置远端调试端点和远端浏览器可写的绝对下载根目录。每个浏览运行实例使用独立子目录，重新连接沿用原目录，只管理 AgentHub 自有浏览上下文，不修改浏览器默认上下文的下载设置。未配置目录的远端会话不启用下载管理。
+
+```sh
+agent-hub-cli --json preview downloads
+agent-hub-cli preview cancel-download '<download-id>' --profile '<profile-id>'
+agent-hub-cli preview forget-download '<download-id>' --profile '<profile-id>'
+```
+
+`remote: true` 表示下载来自远端网络宿主，`local: false` 表示尚未拥有可打开的本机文件。`completed` 只表示浏览器报告下载完成，不代表已取回本机。`verified: false` 表示当前状态无法核验；保留已知进度，不推断完成。取消操作绑定原浏览上下文及运行时，不能用于其他或已替换的会话。移除记录不删除本机或远端文件。远端文件取回通道仍在实现，不能用记录列表代替传输结果。

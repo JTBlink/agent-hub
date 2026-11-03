@@ -13,6 +13,7 @@ fn concurrent_poll_reads_committed_downloads_without_draining_events() {
         local: true,
         verified: true,
         path: None,
+        ..Download::default()
     };
     browsers
         .state
@@ -42,6 +43,7 @@ fn forgetting_records_keeps_files_and_refuses_unverified_active_downloads() {
         local: true,
         verified: false,
         path: Some(path.clone()),
+        ..Download::default()
     };
     browsers
         .state
@@ -79,6 +81,7 @@ fn keeps_progress_but_marks_it_unverified_when_the_control_connection_fails() {
         local: true,
         verified: true,
         path: None,
+        ..Download::default()
     };
     browsers
         .state
@@ -97,4 +100,25 @@ fn keeps_progress_but_marks_it_unverified_when_the_control_connection_fails() {
     assert_eq!(downloads[0].received, 10.);
     assert!(browsers.forget_download("default", "item").is_err());
     browsers.clear();
+}
+
+#[test]
+fn unknown_progress_does_not_invent_a_terminal_state_or_reset_known_byte_counts() {
+    let mut item = Download {
+        state: "inProgress".into(),
+        received: 10.,
+        total: 20.,
+        verified: true,
+        ..Download::default()
+    };
+    item.observe_progress(&serde_json::json!({"state":"unrecognized","receivedBytes":100}));
+    assert_eq!(item.state, "inProgress");
+    assert_eq!(item.received, 10.);
+    assert!(!item.verified);
+    item.observe_progress(
+        &serde_json::json!({"state":"completed","receivedBytes":-1,"totalBytes":20}),
+    );
+    assert_eq!(item.state, "completed");
+    assert_eq!(item.received, 10.);
+    assert!(item.verified);
 }
