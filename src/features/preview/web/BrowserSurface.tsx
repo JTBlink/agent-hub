@@ -10,7 +10,6 @@ import {
   type BrowserFrame,
   type PickedElement,
 } from "../api";
-import { getErrorMessage } from "../../../lib/error";
 
 interface Props {
   tabId: string;
@@ -84,7 +83,7 @@ export function BrowserSurface(props: Props) {
         pickEpoch.current += 1;
         motion.current?.clear();
         setHover(null);
-        const message = getErrorMessage(error, t("common.error"));
+        const message = previewError(error, t);
         const rejected =
           typeof error === "object" &&
           error !== null &&
@@ -164,7 +163,7 @@ export function BrowserSurface(props: Props) {
         ready(value);
       })
       .catch((error: unknown) => {
-        if (!disposed) setError(getErrorMessage(error, t("common.error")));
+        if (!disposed) setError(previewError(error, t));
       });
     return () => {
       disposed = true;
@@ -202,7 +201,7 @@ export function BrowserSurface(props: Props) {
           }
         }
       } catch (error: unknown) {
-        if (!disposed) setError(getErrorMessage(error, t("common.error")));
+        if (!disposed) setError(previewError(error, t));
       } finally {
         inFlight = false;
         if (!disposed)
@@ -244,9 +243,7 @@ export function BrowserSurface(props: Props) {
     const timer = window.setTimeout(() => {
       previewApi
         .action(id, { kind: "resize", width, height, mobile })
-        .catch((error: unknown) =>
-          report(getErrorMessage(error, t("common.error"))),
-        );
+        .catch((error: unknown) => report(previewError(error, t)));
     }, 180);
     return () => clearTimeout(timer);
   }, [id, width, height, mobile, props.active, t]);
@@ -341,7 +338,7 @@ export function BrowserSurface(props: Props) {
             })
             .catch((error: unknown) => {
               setHover(null);
-              props.onError(getErrorMessage(error, t("common.error")));
+              props.onError(previewError(error, t));
             });
         } else {
           const epoch = pickEpoch.current;
@@ -356,9 +353,7 @@ export function BrowserSurface(props: Props) {
               if (epoch === pickEpoch.current)
                 props.onCapture({ ...currentHover, screenshot: value.data });
             })
-            .catch((error: unknown) =>
-              props.onError(getErrorMessage(error, t("common.error"))),
-            );
+            .catch((error: unknown) => props.onError(previewError(error, t)));
         }
       }}
     >
@@ -445,7 +440,7 @@ export function BrowserSurface(props: Props) {
                     props.onCapture(value);
                 })
                 .catch((error: unknown) =>
-                  props.onError(getErrorMessage(error, t("common.error"))),
+                  props.onError(previewError(error, t)),
                 );
             } else
               send({
@@ -529,7 +524,7 @@ export function BrowserSurface(props: Props) {
                       send({ kind: "text", text });
                   })
                   .catch((error: unknown) =>
-                    props.onError(getErrorMessage(error, t("common.error"))),
+                    props.onError(previewError(error, t)),
                   );
                 return;
               }
@@ -542,7 +537,7 @@ export function BrowserSurface(props: Props) {
                   })
                   .then(writeText)
                   .catch((error: unknown) =>
-                    props.onError(getErrorMessage(error, t("common.error"))),
+                    props.onError(previewError(error, t)),
                   );
                 return;
               }

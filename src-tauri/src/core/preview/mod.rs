@@ -6,6 +6,7 @@ mod cdp;
 pub mod cookies;
 pub mod documents;
 pub mod downloads;
+pub mod export;
 mod frames;
 mod inventory;
 pub mod packets;

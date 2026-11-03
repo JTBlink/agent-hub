@@ -202,8 +202,12 @@ export const previewApi = {
   saveDocument: (id: string, content: string, revision: string) =>
     request<PreviewDocument>({ kind: "save_document", id, content, revision }),
   closeDocument: (id: string) => request<void>({ kind: "close_document", id }),
-  export: (name: string, content: string, binary = false) =>
-    invoke<boolean>("preview_export", { name, content, binary }),
+  export: (
+    name: string,
+    content: string,
+    binary = false,
+    expected?: { id: string; revision: string },
+  ) => invoke<boolean>("preview_export", { name, content, binary, expected }),
 };
 
 export interface PreviewDownload {

@@ -529,12 +529,8 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
         <AgentDelivery
           text={model.delivery.text}
           images={model.delivery.images}
-          isCurrent={() =>
-            model.sessionRef.current.tabs.some(
-              (tab) =>
-                tab.id === model.delivery?.tabId &&
-                tab.revision === model.delivery?.revision,
-            )
+          verifyCurrent={() =>
+            model.verifyContext(model.delivery!.tabId, model.delivery!.revision)
           }
           stale={
             !model.session.tabs.some(

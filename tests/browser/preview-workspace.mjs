@@ -76,6 +76,20 @@ try {
     assert.ok(copied.includes("DOM path:"), copied);
     assert.ok(copied.includes("CSS:"), copied);
     assert.ok(copied.includes("Accessibility:"), copied);
+    await run(
+      `d.querySelector('aside.preview-inspector footer > .app-button-primary').click()`,
+    );
+    await until(`${documentRef}?.querySelector('dialog[open] textarea')`);
+    const delivery = await evaluate(
+      `${documentRef}.querySelector('dialog textarea').value`,
+    );
+    assert.ok(delivery.includes("Source: guide.md:5-6"), delivery);
+    await run(
+      `delete d.documentElement.dataset.copiedContext; d.querySelector('dialog footer .app-button-primary').click()`,
+    );
+    await until(
+      `!${documentRef}.querySelector('dialog[open]') && ${documentRef}.documentElement.dataset.copiedContext?.includes('Source: guide.md:5-6')`,
+    );
     await run(`d.querySelector('.preview-source-link').click()`);
     await until(`${documentRef}?.querySelector('.cm-editor')`);
     await run(`d.querySelector('.preview-source-toggle').click()`);

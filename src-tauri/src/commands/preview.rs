@@ -240,7 +240,13 @@ pub async fn preview_pick_document(
     tauri::async_runtime::spawn_blocking(move || preview.open_document(&path).map(Some)).await?
 }
 #[tauri::command]
-pub async fn preview_export(name: String, content: String, binary: bool) -> Result<bool, AppError> {
+pub async fn preview_export(
+    preview: State<'_, Arc<Preview>>,
+    name: String,
+    content: String,
+    binary: bool,
+    expected: Option<preview::export::ExpectedPage>,
+) -> Result<bool, AppError> {
     if content.len() > 24 * 1024 * 1024 || name.len() > 200 || name.contains(['/', '\\']) {
         return Err(AppError::invalid_input(
             "Export exceeds the supported limit",
@@ -254,6 +260,7 @@ pub async fn preview_export(name: String, content: String, binary: bool) -> Resu
         return Ok(false);
     };
     let path = file.path().to_path_buf();
+    let preview = preview.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         use base64::Engine;
         let bytes = if binary {
@@ -263,7 +270,7 @@ pub async fn preview_export(name: String, content: String, binary: bool) -> Resu
         } else {
             content.into_bytes()
         };
-        std::fs::write(path, bytes)?;
+        preview::export::write(&preview.browsers, &path, &bytes, expected.as_ref())?;
         Ok(true)
     })
     .await?

@@ -15,7 +15,7 @@ impl Browsers {
             .map_err(|_| AppError::internal("Browser page unavailable"))?;
         match action {
             Action::VerifyRevision {expected_revision} => {
-                if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("Page changed; select the element again")); }
+                if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED")); }
                 Ok(Value::Null)
             }
             Action::HandleDialog {accept,prompt} => {
@@ -104,7 +104,7 @@ impl Browsers {
             },
             Action::Screenshot { full, clip, expected_revision } => {
                 let (revision,_)=page.identity()?;
-                if expected_revision.as_ref().is_some_and(|expected|expected!=&revision){return Err(AppError::cancelled("Page changed; select the element again"));}
+                if expected_revision.as_ref().is_some_and(|expected|expected!=&revision){return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED"));}
                 let mut params = json!({ "format":"png", "captureBeyondViewport": full });
                 if full {
                     let layout = page.cdp.call("Page.getLayoutMetrics", json!({}))?;

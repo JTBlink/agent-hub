@@ -1,3 +1,5 @@
+import { verifyPreviewContext } from "./shared/verifyContext";
+import { annotationActions } from "./shared/annotationActions";
 import { openWebLink } from "../../lib/openWebLink";
 import { previewError } from "./shared/previewError";
 import { copyScreenshot } from "./shared/copyScreenshot";
@@ -29,7 +31,6 @@ import {
   attachScreenshot,
   annotationsForPage,
   closePreview,
-  formatAnnotations,
   navigatePreview,
   openPreview,
   restorePreview,
@@ -41,7 +42,6 @@ import {
   savePreviewSession,
 } from "./shared/sessionStorage";
 import { getErrorMessage } from "../../lib/error";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 export type PreviewPanel =
   "annotations" | "settings" | "history" | "tools" | "downloads";
@@ -446,6 +446,7 @@ export function usePreviewWorkspace() {
       )
         throw new Error(t("preview.pageChanged"));
       if (copy) {
+        await verifyContext(active.id, active.revision);
         await copyScreenshot(data);
         setNotice(t("preview.copied"));
       } else if (note)
@@ -455,6 +456,9 @@ export function usePreviewWorkspace() {
           full ? "page-full.png" : "page-viewport.png",
           data,
           true,
+          active.kind === "markdown"
+            ? undefined
+            : { id: pageId ?? "", revision: active.revision },
         );
     } catch (error) {
       report(error);
@@ -462,31 +466,23 @@ export function usePreviewWorkspace() {
       setBusy(false);
     }
   };
-  const copyNotes = async (noteId?: string) => {
-    if (!active) return;
-    try {
-      await writeText(
-        formatAnnotations(
-          active,
-          noteId ? notes.filter((note) => note.id === noteId) : notes,
-        ),
-      );
-      setNotice(t("preview.copied"));
-    } catch (error) {
-      report(error);
-    }
-  };
-  const exportNotes = async () => {
-    if (active)
-      try {
-        await previewApi.export(
-          "page-feedback.md",
-          formatAnnotations(active, notes),
-        );
-      } catch (error) {
-        report(error);
-      }
-  };
+  const verifyContext = (tabId: string, revision: string) =>
+    verifyPreviewContext(
+      { id: tabId, revision },
+      () => ({
+        tab: sessionRef.current.tabs.find((tab) => tab.id === tabId),
+        pageId: pageIdsRef.current[tabId],
+      }),
+      t("preview.pageChanged"),
+    );
+  const { copyNotes, exportNotes } = annotationActions({
+    tab: active,
+    pageId,
+    notes,
+    verify: verifyContext,
+    onCopied: () => setNotice(t("preview.copied")),
+    onError: report,
+  });
   const restore = (id?: string) => {
     setSession((previous) => restorePreview(previous, id));
     resetView();
@@ -591,6 +587,7 @@ export function usePreviewWorkspace() {
     screenshot,
     copyNotes,
     exportNotes,
+    verifyContext,
     restore,
   };
 }

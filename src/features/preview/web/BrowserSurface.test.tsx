@@ -68,6 +68,7 @@ it.each([true, false])(
       revision,
     };
     vi.mocked(previewApi.action).mockResolvedValue(picked);
+    const onError = vi.fn();
     const container = document.createElement("div");
     document.body.append(container);
     const root = createRoot(container);
@@ -85,7 +86,7 @@ it.each([true, false])(
             onReady={vi.fn()}
             onFrame={vi.fn()}
             onCapture={vi.fn()}
-            onError={vi.fn()}
+            onError={onError}
           />,
         ),
       );
@@ -119,9 +120,10 @@ it.each([true, false])(
         });
       } else {
         vi.mocked(previewApi.action).mockRejectedValueOnce(
-          new Error("Page changed"),
+          new Error("PREVIEW_CONTEXT_CHANGED"),
         );
         await copy();
+        expect(onError).toHaveBeenLastCalledWith("preview.pageChanged");
       }
       expect(container.querySelector(".preview-element-outline")).toBeNull();
       await copy();

@@ -1,3 +1,4 @@
+import { previewError } from "../shared/previewError";
 import { previewApi } from "../api";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,19 +16,21 @@ export function AgentDelivery({
   text,
   images,
   stale,
-  isCurrent,
+  verifyCurrent,
   onClose,
   onSent,
 }: {
   text: string;
   images: string[];
   stale: boolean;
-  isCurrent: () => boolean;
+  verifyCurrent: () => Promise<void>;
   onClose: () => void;
   onSent: (copied: boolean) => void;
 }) {
   const { t } = useTranslation();
   const dialog = useRef<HTMLDialogElement>(null);
+  const sending = useRef(false);
+  const mounted = useRef(true);
   const [draft, setDraft] = useState(text);
   const [targets, setTargets] = useState<
     { id: string; label: string; target: HerdrTarget }[]
@@ -36,9 +39,13 @@ export function AgentDelivery({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
+    mounted.current = true;
     const element = dialog.current;
     element?.showModal();
-    return () => element?.close();
+    return () => {
+      mounted.current = false;
+      element?.close();
+    };
   }, []);
   useEffect(() => {
     let disposed = false;
@@ -70,25 +77,34 @@ export function AgentDelivery({
     };
   }, [t]);
   const send = async () => {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setError("");
     try {
+      const verify = async () => {
+        if (!mounted.current) throw new Error(t("preview.pageChanged"));
+        await verifyCurrent();
+        if (!mounted.current) throw new Error(t("preview.pageChanged"));
+      };
+      await verify();
       const packet =
         images.length || draft.length > 48000
           ? await previewApi.prepareDelivery(draft, images)
           : null;
-      if (!isCurrent()) throw new Error(t("preview.pageChanged"));
+      if (packet) await verify();
       if (selected === "copy") await writeText(packet?.context ?? draft);
       else {
         const entry = targets.find((item) => item.id === selected);
         if (!entry) throw new Error(t("preview.targetUnavailable"));
         await runHerdrAction(entry.target, "prompt", packet?.prompt ?? draft);
       }
-      onSent(selected === "copy");
+      if (mounted.current) onSent(selected === "copy");
     } catch (error) {
-      setError(getErrorMessage(error, t("common.error")));
+      if (mounted.current) setError(previewError(error, t));
     } finally {
-      setBusy(false);
+      sending.current = false;
+      if (mounted.current) setBusy(false);
     }
   };
   return (
@@ -114,6 +130,7 @@ export function AgentDelivery({
       <label>
         {t("preview.target")}
         <ThemedSelect
+          disabled={busy}
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
         >
@@ -128,6 +145,7 @@ export function AgentDelivery({
       <label>
         {t("preview.context")}
         <textarea
+          disabled={busy}
           rows={14}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

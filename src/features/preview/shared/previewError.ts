@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../../../lib/error";
 const messages: Record<string, string> = {
+  PREVIEW_CONTEXT_CHANGED: "preview.pageChanged",
   PREVIEW_REOPEN_BUSY: "preview.reopenBusy",
   PREVIEW_REOPEN_UNCERTAIN: "preview.reopenUncertain",
   PREVIEW_PAGE_GONE: "preview.pageGone",
