@@ -2622,6 +2622,17 @@
     "replacing": "正在取代…"
   },
   "preview": {
+    "profileBusy": "瀏覽器設定被舊實例佔用",
+    "forceClosing": "正在關閉舊實例…",
+    "forceCloseHint": "將強制關閉佔用此設定的預覽瀏覽器，未儲存的網頁內容可能遺失。登入資料會保留。",
+    "profileInUse": "瀏覽器設定正被另一個或殘留的預覽程序佔用。請退出舊 AgentHub 實例後重試，或新增訪客網頁。登入資料未被刪除。",
+    "kernelInfo": "核心資訊",
+    "kernelEngine": "引擎",
+    "kernelVersion": "版本",
+    "kernelUnknown": "暫時無法取得",
+    "kernelPending": "頁面連線後可查看版本與 UA",
+    "systemKernel": "系統核心",
+    "chromiumKernel": "Chromium",
     "reopen": "放棄原表單並重新開啟",
     "reopenHint": "重新開啟會放棄原頁面表單，只載入最後核驗的網址。本機持久登入依瀏覽器恢復；訪客或遺失的遠端工作階段可能需要重新登入。",
     "reopenBusy": "這個登入設定正在建立或恢復頁面，請稍後重試。",

@@ -4,6 +4,14 @@ use super::{
 };
 use serde_json::json;
 impl Browsers {
+    pub fn kernel(&self, id: &str) -> Result<serde_json::Value, AppError> {
+        let page = self.page(id)?;
+        let mut page = page
+            .lock()
+            .map_err(|_| AppError::internal("Browser page unavailable"))?;
+        page.cdp.call("Browser.getVersion", json!({}))
+    }
+
     pub fn frame(&self, id: &str) -> Result<Frame, AppError> {
         self.frame_since(id, None)
     }

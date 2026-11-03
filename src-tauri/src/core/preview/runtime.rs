@@ -164,16 +164,17 @@ impl Runtime {
             let child = spawn(&mut command, temporary)?;
             let started = Instant::now();
             let port = loop {
-                if child
+                if let Some(status) = child
                     .lock()
                     .map_err(|_| AppError::internal("Browser process unavailable"))?
                     .process
                     .try_wait()?
-                    .is_some()
                 {
-                    return Err(AppError::network(
-                        "Browser exited during startup; check the executable and profile",
-                    ));
+                    return Err(AppError::network(if status.code() == Some(21) {
+                        "PREVIEW_PROFILE_IN_USE: Browser profile is already in use. Close the previous AgentHub instance and retry, or use a guest tab. Saved login data has not been removed."
+                    } else {
+                        "Browser exited during startup; check the executable and profile"
+                    }));
                 }
                 if let Ok(text) = fs::read_to_string(&port_file) {
                     if let Some(port) = text
@@ -515,3 +516,6 @@ fn create_context(cdp: &mut Cdp, proxy: Option<&str>) -> Result<Value, AppError>
     }
     cdp.call("Target.createBrowserContext", params)
 }
+
+#[cfg(test)]
+mod tests;

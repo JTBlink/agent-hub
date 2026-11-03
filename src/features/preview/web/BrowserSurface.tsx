@@ -1,3 +1,5 @@
+import { ChromiumError } from "./chromium/ChromiumError";
+import { getErrorMessage } from "../../../lib/error";
 import { previewError } from "../shared/previewError";
 import { latestDispatcher } from "../shared/latestDispatcher";
 import { PagePrompts } from "./PagePrompts";
@@ -30,6 +32,7 @@ export function BrowserSurface(props: Props) {
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [hover, setHover] = useState<PickedElement | null>(null);
   const [error, setError] = useState("");
+  const [profileInUse, setProfileInUse] = useState(false);
   const [recovering, setRecovering] = useState<"reconnect" | "reopen" | null>(
     null,
   );
@@ -149,6 +152,7 @@ export function BrowserSurface(props: Props) {
   }, []);
   useEffect(() => {
     if (!props.active || id) return;
+    setProfileInUse(false);
     let disposed = false;
     previewApi
       .create(props.profile, props.address, props.tabId)
@@ -163,7 +167,12 @@ export function BrowserSurface(props: Props) {
         ready(value);
       })
       .catch((error: unknown) => {
-        if (!disposed) setError(previewError(error, t));
+        if (!disposed) {
+          setError(previewError(error, t));
+          setProfileInUse(
+            getErrorMessage(error, "").includes("PREVIEW_PROFILE_IN_USE"),
+          );
+        }
       });
     return () => {
       disposed = true;
@@ -361,50 +370,18 @@ export function BrowserSurface(props: Props) {
         <PagePrompts id={id} info={frame.info} onError={props.onError} />
       )}
       {error && (
-        <div role="alert" className="preview-browser-error">
-          {id && <p>{t("preview.connectionUnverified")}</p>}
-          <p>
-            {error.includes("PREVIEW_BROWSER_NOT_FOUND")
-              ? t("preview.missingBrowser")
-              : error}
-          </p>
-          {id && <p>{t("preview.reconnectHint")}</p>}
-          <button
-            className="app-button-ghost"
-            disabled={recovering !== null}
-            onClick={() => {
-              if (id) void recover("reconnect");
-              else {
-                setError("");
-                setRetry((value) => value + 1);
-              }
-            }}
-          >
-            {t(
-              recovering === "reconnect"
-                ? "preview.reconnecting"
-                : id
-                  ? "preview.reconnect"
-                  : "common.retry",
-            )}
-          </button>
-          {id && (
-            <>
-              <p>{t("preview.reopenHint")}</p>
-              <button
-                className="app-button-ghost"
-                disabled={recovering !== null}
-                onClick={() => void recover("reopen")}
-              >
-                {t(
-                  recovering === "reopen"
-                    ? "preview.reopening"
-                    : "preview.reopen",
-                )}
-              </button>
-            </>
-          )}
-        </div>
+        <ChromiumError
+          error={error}
+          id={id}
+          profile={props.profile}
+          profileInUse={profileInUse}
+          recovering={recovering}
+          onRetry={() => {
+            setError("");
+            setRetry((value) => value + 1);
+          }}
+          onRecover={(mode) => void recover(mode)}
+        />
       )}
       {!frame && !error && (
         <p role="status" className="text-xs text-muted">

@@ -1,3 +1,4 @@
+import { KernelInfo } from "./components/KernelInfo";
 import { ExecutionLocation } from "./components/ExecutionLocation";
 import { usePageFind } from "./shared/usePageFind";
 import { useBrowserInventory } from "./web/useBrowserInventory";
@@ -223,6 +224,9 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
           setFindOpen={setFindOpen}
           showPanel={showPanel}
         >
+          {active && active.kind !== "markdown" && (
+            <KernelInfo backend="chromium" pageId={model.pageId} />
+          )}
           {active && (
             <ExecutionLocation
               execution={active.execution}

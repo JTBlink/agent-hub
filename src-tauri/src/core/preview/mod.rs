@@ -16,6 +16,7 @@ mod inventory;
 mod lifecycle;
 pub mod packets;
 mod page_actions;
+mod profile_processes;
 mod profiles;
 mod recovery;
 mod remote_downloads;

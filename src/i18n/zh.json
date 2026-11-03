@@ -2662,6 +2662,17 @@
     "replacing": "正在替换…"
   },
   "preview": {
+    "profileBusy": "浏览器配置被旧实例占用",
+    "forceClosing": "正在关闭旧实例…",
+    "forceCloseHint": "将强制关闭占用此配置的预览浏览器，未保存的网页内容可能丢失。登录数据会保留。",
+    "profileInUse": "浏览器配置正被另一个或残留的预览进程占用。请退出旧 AgentHub 实例后重试，或新建访客网页。登录数据未被删除。",
+    "kernelInfo": "内核信息",
+    "kernelEngine": "引擎",
+    "kernelVersion": "版本",
+    "kernelUnknown": "暂不可用",
+    "kernelPending": "页面连接后可查看版本和 UA",
+    "systemKernel": "系统内核",
+    "chromiumKernel": "Chromium",
     "reopen": "放弃原表单并重新打开",
     "reopenHint": "重新打开会放弃原页面表单，只加载最后核验的地址。本机持久登录按浏览器恢复；访客或丢失的远端会话可能需要重新登录。",
     "reopenBusy": "这个登录配置正在创建或恢复页面，请稍后重试。",

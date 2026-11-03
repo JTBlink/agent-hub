@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../../../lib/error";
 const messages: Record<string, string> = {
+  PREVIEW_PROFILE_IN_USE: "preview.profileInUse",
   PREVIEW_DOWNLOAD_UNVERIFIED: "preview.downloadSourceUnverified",
   PREVIEW_CONTEXT_CHANGED: "preview.pageChanged",
   PREVIEW_REOPEN_BUSY: "preview.reopenBusy",

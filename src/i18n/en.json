@@ -2665,6 +2665,17 @@
     "replacing": "Replacing…"
   },
   "preview": {
+    "profileBusy": "Browser profile is in use by an old instance",
+    "forceClosing": "Closing old instance…",
+    "forceCloseHint": "Force closes the preview browser using this profile. Unsaved page content may be lost. Saved login data is kept.",
+    "profileInUse": "This browser profile is in use by another or leftover preview process. Quit the previous AgentHub instance and retry, or open a guest tab. Saved login data has not been removed.",
+    "kernelInfo": "Engine information",
+    "kernelEngine": "Engine",
+    "kernelVersion": "Version",
+    "kernelUnknown": "Unavailable",
+    "kernelPending": "Connect the page to inspect its version and UA",
+    "systemKernel": "System engine",
+    "chromiumKernel": "Chromium",
     "reopen": "Discard the old form and reopen",
     "reopenHint": "Reopen discards the old form and loads the last verified address. The browser restores persistent local login data; guest or lost remote sessions may require signing in again.",
     "reopenBusy": "This profile is creating or restoring a page. Try again shortly.",

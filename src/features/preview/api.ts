@@ -109,6 +109,12 @@ export type BrowserAction =
 const request = <T>(value: object) =>
   invoke<T>("preview_request", { request: value });
 export const previewApi = {
+  killProfileProcess: (profile: string) =>
+    request<void>({ kind: "kill_profile_process", profile }),
+  kernel: (id: string) =>
+    request<{ product?: string; userAgent?: string; protocolVersion?: string }>(
+      { kind: "kernel", id },
+    ),
   list: () => request<BrowserPageInfo[]>({ kind: "list" }),
   captureRendered: (
     html: string,

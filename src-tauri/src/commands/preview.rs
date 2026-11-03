@@ -59,6 +59,12 @@ pub enum PreviewRequest {
         images: Vec<String>,
     },
     Info,
+    KillProfileProcess {
+        profile: String,
+    },
+    Kernel {
+        id: String,
+    },
     List,
     Create {
         profile: String,
@@ -196,6 +202,11 @@ pub async fn preview_request(
             PreviewRequest::PrepareDelivery { text, images } => {
                 serde_json::to_value(preview.packets.prepare(&text, &images)?)
             }
+            PreviewRequest::KillProfileProcess { profile } => {
+                preview.browsers.kill_profile_process(&profile)?;
+                return Ok(Value::Null);
+            }
+            PreviewRequest::Kernel { id } => return preview.browsers.kernel(&id),
             PreviewRequest::Info => {
                 preview.start_automation()?;
                 serde_json::to_value(preview.browsers.info()?)
