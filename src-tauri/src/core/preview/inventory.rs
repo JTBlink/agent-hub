@@ -283,26 +283,28 @@ impl Browsers {
             })
             .cloned()
             .collect();
-        for (id, old) in observed {
-            if current.contains(&old.profile)
-                && state.pages.get(id).is_some_and(|page| {
-                    Arc::ptr_eq(&page.page, &old.page) && page.target == old.target
-                })
-            {
-                state.lost_pages.insert(id.clone());
-                if let Ok(mut metadata) = old.metadata.lock() {
-                    metadata.status = PageStatus::Gone;
-                }
-            }
-        }
-        for key in downloads {
-            if let Some(item) = state.downloads.get_mut(key) {
-                if current.contains(&item.profile) && item.state == "inProgress" {
-                    item.state = "interrupted".into();
-                    item.verified = false;
-                }
-            }
-        }
+        let lost = observed
+            .iter()
+            .filter(|(id, old)| {
+                current.contains(&old.profile)
+                    && state.pages.get(*id).is_some_and(|page| {
+                        Arc::ptr_eq(&page.page, &old.page) && page.target == old.target
+                    })
+            })
+            .map(|(id, _)| id.clone())
+            .collect::<Vec<_>>();
+        state.mark_pages_lost(lost);
+        let interrupted = downloads
+            .iter()
+            .filter(|key| {
+                state
+                    .downloads
+                    .get(*key)
+                    .is_some_and(|item| current.contains(&item.profile))
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        state.interrupt_downloads(interrupted);
         Ok(())
     }
 }

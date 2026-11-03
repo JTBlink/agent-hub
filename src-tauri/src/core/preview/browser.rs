@@ -247,6 +247,7 @@ impl Browsers {
             if closed {
                 break;
             }
+            manager.reap_exited();
             let _ = manager.downloads();
             manager.retire_idle();
             drop(manager);

@@ -9,6 +9,7 @@ pub mod downloads;
 pub mod export;
 mod frames;
 mod inventory;
+mod lifecycle;
 pub mod packets;
 mod page_actions;
 mod profiles;

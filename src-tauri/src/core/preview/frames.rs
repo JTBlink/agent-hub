@@ -78,6 +78,9 @@ impl Browsers {
             info["dialog"] = json!(page.cdp.dialog);
             let events = page.cdp.events.drain(..).collect();
             if let Ok(mut metadata) = page.metadata.lock() {
+                if metadata.status == PageStatus::Gone {
+                    return Err(AppError::not_found("PREVIEW_PAGE_GONE"));
+                }
                 metadata.url = info["url"].as_str().unwrap_or("about:blank").into();
                 metadata.title = info["title"].as_str().unwrap_or("").into();
                 metadata.revision = revision;
@@ -109,6 +112,9 @@ fn dialog_frame(page: &mut Page, since: Option<u64>) -> Result<Frame, AppError> 
         .lock()
         .map_err(|_| AppError::internal("Browser metadata unavailable"))?
         .clone();
+    if metadata.status == PageStatus::Gone {
+        return Err(AppError::not_found("PREVIEW_PAGE_GONE"));
+    }
     let info = json!({"url":metadata.url,"title":metadata.title,"revision":metadata.revision,"ready":"interactive","width":page.width,"height":page.height,"dialog":page.cdp.dialog,"chooser":page.cdp.chooser});
     let version = page.cdp.frame_version;
     let image = if since == Some(version) {

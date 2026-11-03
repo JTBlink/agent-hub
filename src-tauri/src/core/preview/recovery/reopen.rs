@@ -111,29 +111,23 @@ impl Browsers {
             return Err(AppError::cancelled("PREVIEW_REOPEN_BUSY"));
         }
         let all = !matches!(loss, Loss::Page);
-        let lost: Vec<_> = state
+        let lost = state
             .pages
             .iter()
             .filter(|(_, page)| {
                 page.profile == handle.profile && (all || Arc::ptr_eq(&page.page, &handle.page))
             })
-            .map(|(id, page)| (id.clone(), page.metadata.clone()))
-            .collect();
-        for (id, metadata) in lost {
-            state.lost_pages.insert(id);
-            if let Ok(mut metadata) = metadata.lock() {
-                metadata.status = PageStatus::Gone;
-            }
-        }
+            .map(|(id, _)| id.clone())
+            .collect::<Vec<_>>();
+        state.mark_pages_lost(lost);
         if all {
-            for download in state
+            let keys = state
                 .downloads
-                .values_mut()
-                .filter(|item| item.profile == handle.profile && item.state == "inProgress")
-            {
-                download.state = "interrupted".into();
-                download.verified = false;
-            }
+                .iter()
+                .filter(|(_, item)| item.profile == handle.profile)
+                .map(|(key, _)| key.clone())
+                .collect::<Vec<_>>();
+            state.interrupt_downloads(keys);
         }
         let retired = if matches!(loss, Loss::Process) {
             (
