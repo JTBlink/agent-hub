@@ -127,6 +127,15 @@ pub fn clone_repo(store: &SkillStore, url: &str, strict: bool) -> Result<()> {
     })
 }
 
+/// Complete an interrupted publication before configuration access. Caller holds RepoLock.
+pub(crate) fn recover_for_user_config() -> Result<()> {
+    if journal_path().try_exists()? {
+        let store = SkillStore::new(&central_repo::db_path())?;
+        finish_unlocked(&store)?;
+    }
+    Ok(())
+}
+
 pub(crate) fn recover_on_startup(store: &SkillStore) {
     if journal_path().exists() {
         if let Err(error) = git_backup::with_repo_lock("backup recovery", || finish_unlocked(store))

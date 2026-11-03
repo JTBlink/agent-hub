@@ -12,6 +12,7 @@ fn default_argument_help(id: &str) -> &'static str {
         "name" => "名称。",
         "project_path" => "项目内的相对技能目录。",
         "query" => "搜索关键词。",
+        "revision" => "最近一次读取返回的修订，用于防止覆盖外部修改。",
         "tags" => "标签，可重复指定。",
         "deployed_to" => "按部署到的 Agent 筛选。",
         "untagged" => "仅显示没有标签的技能。",

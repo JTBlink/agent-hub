@@ -2,6 +2,8 @@
 mod automation;
 #[path = "agent-hub-cli/help.rs"]
 mod help;
+#[path = "agent-hub-cli/hosts.rs"]
+mod hosts_cli;
 #[path = "agent_hub_cli/preview.rs"]
 mod preview_cli;
 #[path = "agent-hub-cli/project.rs"]
@@ -27,7 +29,7 @@ use serde::Serialize;
 #[derive(Parser, Debug)]
 #[command(
     name = "agent-hub-cli",
-    about = "管理 AgentHub 技能、技能组、Agent 和 Git 备份",
+    about = "管理 AgentHub 技能、技能组、Agent、Hosts 和 Git 备份",
     version,
     disable_help_subcommand = true,
     subcommand_help_heading = "命令",
@@ -48,6 +50,9 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 管理完整 Hosts 方案，显式读取或写入系统 Hosts。
+    #[command(alias = "host")]
+    Hosts(hosts_cli::HostsArgs),
     /// 浏览、检查和自动操作应用中的独立网页。
     Preview(preview_cli::PreviewArgs),
     /// 汇总、创建、编辑和手动运行自动化任务。
@@ -903,9 +908,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         return automation::run(args, cli.json);
     }
 
+    if let Commands::Hosts(args) = &cli.command {
+        return hosts_cli::run(args, cli.skills_root.is_some(), cli.json);
+    }
+
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
+        Commands::Hosts(_) => unreachable!("handled before opening the store"),
         Commands::Preview(args) => preview_cli::run(&args, cli.json),
         Commands::Repo(args) => run_repo(args, &store, cli.json),
         Commands::Project(args) => project::run(&args, Some(&store), cli.json),

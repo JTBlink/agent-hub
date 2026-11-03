@@ -326,6 +326,8 @@ fn preserves_external_configuration_edits_when_remote_publication_conflicts() {
     )
     .unwrap();
     fs::write(&profile.path, "# external\n").unwrap();
+    assert!(super::super::hosts::profiles::list().is_err());
+    assert!(journal_path().exists());
     assert!(finish_unlocked(&e.store).is_err());
     assert_eq!(fs::read_to_string(&profile.path).unwrap(), "# external\n");
     fs::write(&profile.path, "# original\n").unwrap();
@@ -415,4 +417,25 @@ fn restores_both_legacy_hosts_layouts_and_migrates_them_to_flat_files() {
             .join("hosts/profiles")
             .exists());
     }
+}
+
+#[test]
+fn hosts_reads_finish_pending_configuration_recovery_without_restarting() {
+    let e = env();
+    let profile = super::super::hosts::profiles::create("Original", "# original\n").unwrap();
+    initialize(&e.store).unwrap();
+    prepare_unlocked(&e.store).unwrap();
+    fs::write(
+        repo_dir().join(format!("user-config/hosts/{}.hosts", profile.id)),
+        "# incoming\n",
+    )
+    .unwrap();
+    assert!(journal_path().exists());
+    let restored = super::super::hosts::profiles::list().unwrap();
+    assert_eq!(restored[0].content, "# incoming\n");
+    assert!(!journal_path().exists());
+    assert_eq!(
+        super::super::hosts::profiles::list().unwrap()[0].id,
+        profile.id
+    );
 }

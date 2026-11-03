@@ -32,4 +32,4 @@
 
 系统实际内容首次读取后进入用户配置库的设备快照；系统保存或方案应用前保留原文，写入后更新当前快照。设备键保存在本机，配置库中的快照不包含系统绝对路径；跨设备恢复不会写系统文件，之后读取仍以本机实际内容为准。所有快照沿用统一 GitHub 自动备份与版本历史，不提供第二套备份界面。
 
-执行规格与交付证据见 [GitHub Issue #271](https://github.com/JTBlink/agent-hub/issues/271)；应用入口与平铺存储调整见 [GitHub Issue #272](https://github.com/JTBlink/agent-hub/issues/272)。相关入口：[总体规划](agent-hub.md)。
+执行规格与交付证据见 [GitHub Issue #271](https://github.com/JTBlink/agent-hub/issues/271)；应用入口与平铺存储调整见 [GitHub Issue #272](https://github.com/JTBlink/agent-hub/issues/272)。CLI 与恢复联动见 [GitHub Issue #273](https://github.com/JTBlink/agent-hub/issues/273)。相关入口：[总体规划](agent-hub.md)。

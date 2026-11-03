@@ -101,9 +101,7 @@ fn read_files(metadata_path: &Path, content_path: &Path, id: &str) -> Result<Hos
 /// List portable profiles without requesting system-file privileges.
 pub fn list() -> Result<Vec<HostsProfile>, String> {
     let _lock = RepoLock::acquire_foreground("read Hosts profiles").map_err(|e| e.to_string())?;
-    storage::recover()?;
-    files::recover()?;
-    migration::run()?;
+    recover_pending()?;
     user_config::checked(&library())?;
     list_at(&library())
 }
@@ -213,9 +211,7 @@ fn write(
 
 pub fn create(title: &str, content: &str) -> Result<HostsProfile, String> {
     let _lock = RepoLock::acquire_foreground("create Hosts profile").map_err(|e| e.to_string())?;
-    storage::recover()?;
-    files::recover()?;
-    migration::run()?;
+    recover_pending()?;
     user_config::checked(&library())?;
     if list_at(&library())?.len() >= 1000 {
         return Err("HOSTS_PROFILE_LIMIT".into());
@@ -229,9 +225,7 @@ pub fn update(
     expected: &str,
 ) -> Result<HostsProfile, String> {
     let _lock = RepoLock::acquire_foreground("save Hosts profile").map_err(|e| e.to_string())?;
-    storage::recover()?;
-    files::recover()?;
-    migration::run()?;
+    recover_pending()?;
     user_config::checked(&library())?;
     let before = read_at(&library(), id)?;
     if before.revision != expected {
@@ -241,9 +235,7 @@ pub fn update(
 }
 pub fn delete(id: &str, expected: &str) -> Result<(), String> {
     let _lock = RepoLock::acquire_foreground("delete Hosts profile").map_err(|e| e.to_string())?;
-    storage::recover()?;
-    files::recover()?;
-    migration::run()?;
+    recover_pending()?;
     user_config::checked(&library())?;
     let before = read_at(&library(), id)?;
     if before.revision != expected {
@@ -259,9 +251,7 @@ pub fn apply(
     expected_system: &str,
 ) -> Result<HostsSaved, String> {
     let _lock = RepoLock::acquire_foreground("apply Hosts profile").map_err(|e| e.to_string())?;
-    storage::recover()?;
-    files::recover()?;
-    migration::run()?;
+    recover_pending()?;
     user_config::checked(&library())?;
     let profile = read_at(&library(), id)?;
     if profile.revision != expected_profile {
@@ -272,6 +262,7 @@ pub fn apply(
 
 /// Complete interrupted profile writes before backup projection. Caller holds RepoLock.
 pub(crate) fn recover_pending() -> Result<(), String> {
+    crate::core::backup_workspace::recover_for_user_config().map_err(|e| format!("{e:#}"))?;
     storage::recover()?;
     files::recover()?;
     migration::run()

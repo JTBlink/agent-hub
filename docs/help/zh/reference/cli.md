@@ -18,7 +18,29 @@ agent-hub-cli --help
 agent-hub-cli project --help
 agent-hub-cli skill-groups --help
 agent-hub-cli automations --help
+agent-hub-cli hosts --help
 ```
+
+## Hosts 方案
+
+`hosts`（兼容 `host`）与设置页共用方案、文件目录、提权和统一备份。创建、更新、复制、重命名与删除方案不会写系统 Hosts；只有 `apply` 或 `system write` 会写系统。
+
+```bash
+agent-hub-cli --json hosts list
+agent-hub-cli --json hosts create --name Development --file ./development.hosts
+agent-hub-cli --json hosts show Development
+agent-hub-cli --json hosts update '<profile-id>' --revision '<profile-revision>' --file ./development.hosts
+agent-hub-cli --json hosts rename '<profile-id>' --name Testing --revision '<profile-revision>'
+agent-hub-cli --json hosts copy '<profile-id>' --name Copy
+agent-hub-cli --json hosts delete '<profile-id>' --revision '<profile-revision>'
+agent-hub-cli --json hosts system read
+agent-hub-cli --json hosts apply '<profile-id>' --revision '<profile-revision>' --system-revision '<system-revision>'
+agent-hub-cli --json hosts system write --revision '<system-revision>' --file ./system.hosts
+```
+
+修订号取自最近一次 `show` 或 `system read` 返回的 `revision`。过期修订会被拒绝，需重新读取并保留自己的草稿；名称重复时使用唯一 ID。`--file -` 从标准输入读取 UTF-8 正文，文件与输入均限制为 1 MiB。
+
+`--skills-root` 可用于隔离方案管理，但不能与系统写入或应用同时使用。正常使用沿用当前配置库目录；写入系统时按需请求管理员授权，保留原文备份并验证结果。遇到中断的统一备份时先尝试恢复，冲突时保留现有内容和恢复记录。
 
 ## 项目管理
 
