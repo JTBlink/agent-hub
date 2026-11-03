@@ -139,6 +139,29 @@ async function render(route = "/my-skills") {
   );
 }
 
+it("clears the search and restores focus so the next query can be typed immediately", async () => {
+  await render();
+  const input = container.querySelector<HTMLInputElement>(
+    'input[type="search"]',
+  )!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(input, "no-matching-skill");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(container.textContent).toContain("没有符合当前搜索或筛选条件");
+  const clear = container.querySelector<HTMLButtonElement>(
+    '[aria-label="清空搜索"]',
+  )!;
+  clear.focus();
+  await act(async () => clear.click());
+  expect(input.value).toBe("");
+  expect(document.activeElement).toBe(input);
+  expect(container.textContent).not.toContain("没有符合当前搜索或筛选条件");
+});
+
 function row(label: string) {
   return container.querySelector(`[role="group"][aria-label="${label}"]`)!;
 }

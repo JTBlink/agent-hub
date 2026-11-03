@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import {
   LayoutGrid,
   List,
@@ -39,6 +39,7 @@ export function SkillLibraryToolbar({
   children,
 }: ToolbarProps) {
   const { t } = useTranslation();
+  const searchRef = useRef<HTMLInputElement>(null);
   return (
     <div className="min-w-0 space-y-3">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-3">
@@ -48,6 +49,7 @@ export function SkillLibraryToolbar({
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
           />
           <input
+            ref={searchRef}
             type="search"
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
@@ -62,7 +64,10 @@ export function SkillLibraryToolbar({
             <button
               type="button"
               aria-label={t("mySkills.clearSearch")}
-              onClick={() => onSearchChange("")}
+              onClick={() => {
+                onSearchChange("");
+                searchRef.current?.focus();
+              }}
               className={cn(
                 "absolute right-1 top-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-hover hover:text-primary",
                 focusClass,
