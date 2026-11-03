@@ -60,13 +60,6 @@ export function GitSourceControlToolbar({
     { key: "commit", icon: "check", disabled: !canCommit },
     { key: "history", icon: "history", onClick: onHistory, pressed: history },
     {
-      key: "refresh",
-      icon: "refresh",
-      onClick: onRefresh,
-      disabled,
-      spin: loading,
-    },
-    {
       key: "layout",
       icon: tree ? "list-tree" : "list-flat",
       onClick: onTree,
@@ -78,6 +71,13 @@ export function GitSourceControlToolbar({
       onClick: onGraph,
       pressed: graph,
       disabled,
+    },
+    {
+      key: "refresh",
+      icon: "refresh",
+      onClick: onRefresh,
+      disabled,
+      spin: loading,
     },
   ];
   return (

@@ -810,7 +810,7 @@ it("opens Git Graph from source control and returns to the selected diff on clos
       toolbarButtons
         .slice(-2)
         .map((button) => button.getAttribute("aria-label")),
-    ).toEqual(["git.graph.open", "git.actions.more"]);
+    ).toEqual(["git.actions.refresh", "git.actions.more"]);
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>('[aria-label="git.graph.open"]')!

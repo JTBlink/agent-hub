@@ -565,11 +565,14 @@ it("shows the cached subscription period next to Codex and warns without claimin
   await render();
   await click("Agent 用量");
   const section = document.querySelector('section[aria-label="Codex"]')!;
-  expect(section.textContent).toContain("本期有效至");
-  expect(section.textContent).toContain("本期有效期临近");
-  expect(section.textContent).toContain("登录时记录，续费后可能滞后");
-  expect(section.textContent).toContain("订阅核验：");
+  expect(section.textContent).toContain("有效至");
+  expect(section.textContent).toContain("即将到期");
+  expect(section.textContent).not.toContain("登录时记录");
+  expect(section.textContent).not.toContain("订阅核验");
+  const hint = section.querySelector<HTMLElement>("span[title]")?.title;
+  expect(hint).toContain("登录时记录，续费后可能滞后");
+  expect(hint).toContain("订阅核验：");
   expect(
     document.querySelector('section[aria-label="Claude"]')?.textContent,
-  ).not.toContain("本期有效至");
+  ).not.toContain("有效至");
 });

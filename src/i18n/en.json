@@ -146,11 +146,11 @@
   },
   "agentUsage": {
     "subscription": {
-      "validUntil": "Current period ends {{time}}",
+      "validUntil": "Valid until {{time}}",
       "cached": "Recorded at sign-in; renewals may not appear yet.",
       "checkedAt": "Subscription checked: {{time}}",
-      "ending": "Current period ends soon",
-      "past": "Recorded period ended; check renewal"
+      "ending": "Ending soon",
+      "past": "Check renewal"
     },
     "resetCredits": {
       "loading": "Loading reset credits…",

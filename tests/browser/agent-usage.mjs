@@ -72,13 +72,14 @@ try {
       );
     assert.ok(!metrics.text.includes("agentUsage."), metrics.text);
     assert.ok(
-      metrics.text.includes(
-        language === "en" ? "Current period ends" : "本期有效至",
-      ),
+      metrics.text.includes(language === "en" ? "Valid until" : "有效至"),
       metrics.text,
     );
+    const hint = await evaluate(
+      `${doc}.querySelector('section[aria-label="Codex"] span[title]')?.title`,
+    );
     assert.ok(
-      metrics.text.includes(
+      hint.includes(
         language === "en"
           ? "Recorded at sign-in"
           : language === "zh-TW"

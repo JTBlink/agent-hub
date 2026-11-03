@@ -146,11 +146,11 @@
   },
   "agentUsage": {
     "subscription": {
-      "validUntil": "本期有效至 {{time}}",
+      "validUntil": "有效至 {{time}}",
       "cached": "登入時記錄，續費後可能延遲更新。",
       "checkedAt": "訂閱核驗：{{time}}",
-      "ending": "本期有效期將至",
-      "past": "本期日期已過，請確認續費"
+      "ending": "即將到期",
+      "past": "請確認續費"
     },
     "resetCredits": {
       "loading": "正在查詢重置額度…",
