@@ -26,7 +26,8 @@ it("tracks settings installation changes and shares Claude installation with Tea
           tools={[
             { key: "claude_code", installed: claudeInstalled },
             { key: "codex", installed: codexInstalled },
-            { key: "opencode", installed: false },
+            { key: "opencode", installed: codexInstalled },
+            { key: "hermes", installed: codexInstalled },
             { key: "cursor", installed: true },
           ]}
           onNew={onNew}
@@ -44,6 +45,11 @@ it("tracks settings installation changes and shares Claude installation with Tea
       "Claude Code",
       "Claude Agent Teams",
     ]);
+    for (const image of document.querySelectorAll<HTMLImageElement>(
+      '[role="menuitem"] img',
+    )) {
+      expect(image.src).toMatch(/^data:image\//);
+    }
     const teams = [
       ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
     ].find((item) => item.textContent === "Claude Agent Teams")!;
@@ -51,7 +57,18 @@ it("tracks settings installation changes and shares Claude installation with Tea
     expect(onNew).toHaveBeenCalledWith("claude_teams");
     await render(false, true);
     await act(async () => host.querySelector("button")!.click());
-    expect(labels()).toEqual(["terminal.new", "Codex"]);
+    expect(labels()).toEqual([
+      "terminal.new",
+      "Codex",
+      "OpenCode",
+      "Hermes Agent",
+    ]);
+    expect(document.querySelectorAll('[role="menuitem"] img')).toHaveLength(3);
+    for (const image of document.querySelectorAll<HTMLImageElement>(
+      '[role="menuitem"] img',
+    )) {
+      expect(image.src).toMatch(/^data:image\//);
+    }
   } finally {
     await act(async () => root.unmount());
     host.remove();

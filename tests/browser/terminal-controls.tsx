@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { TerminalNewMenu } from "../../src/components/terminal/TerminalNewMenu";
 import { TerminalTabs } from "../../src/components/terminal/TerminalTabs";
 import { TerminalPanelTools } from "../../src/components/terminal/TerminalPanelTools";
 import { createTerminalTab } from "../../src/lib/terminalLayout";
@@ -55,6 +56,16 @@ export function Fixture() {
           updateVersion="1.2.3"
           onHerdr={() => setLaunches((value) => value + 1)}
           onSplit={() => {}}
+        />
+      </div>
+      <div data-new-terminal-fixture>
+        <TerminalNewMenu
+          disabled={false}
+          tools={["codex", "claude_code", "opencode", "hermes"].map((key) => ({
+            key,
+            installed: true,
+          }))}
+          onNew={() => {}}
         />
       </div>
       {graphOpen && (

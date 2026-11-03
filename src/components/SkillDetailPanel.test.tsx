@@ -178,7 +178,7 @@ it("keeps one interactive agent row below the title and forwards group toggles",
   expect(button?.getAttribute("aria-label")).toBe("Claude Code · 点击卸载");
   const close = document.querySelector(".lucide-x")?.closest("button");
   expect(close?.parentElement?.parentElement?.querySelector("img")).toBeNull();
-  expect(document.querySelectorAll('img[src*="claude"]')).toHaveLength(1);
+  expect(button?.querySelectorAll("img")).toHaveLength(1);
   await act(async () => button?.click());
   expect(onToggleTool).toHaveBeenCalledWith("claude_code", false);
   await render(skill, { ...props, togglingTool: "claude_code" });

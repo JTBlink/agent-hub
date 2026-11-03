@@ -1,3 +1,10 @@
+// Bundle local icons with the module so desktop routes and deployments do not
+// depend on a separate origin-root /agent-icons request.
+const BUNDLED_AGENT_ICONS = import.meta.glob<string>(
+  "../../public/agent-icons/*.{svg,png}",
+  { eager: true, query: "?url&inline", import: "default" },
+);
+
 const AGENT_ICON_FILES: Record<string, string> = {
   adal: "adal.png",
   amp: "amp.svg",
@@ -62,7 +69,9 @@ const DARK_INVERT_ICON_KEYS = new Set<string>(["codex", "roo_code"]);
 
 export function getAgentIconSrc(agentKey: string): string | null {
   const file = AGENT_ICON_FILES[agentKey];
-  return file ? `/agent-icons/${file}` : null;
+  return file
+    ? (BUNDLED_AGENT_ICONS[`../../public/agent-icons/${file}`] ?? null)
+    : null;
 }
 
 export function agentIconNeedsDarkInvert(agentKey: string): boolean {
