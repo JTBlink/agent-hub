@@ -1117,6 +1117,7 @@ pub fn run() {
             commands::preview::preview_pick_document,
             commands::preview::preview_export,
             commands::preview::preview_upload,
+            commands::preview_cookies::preview_cookie_file,
             commands::preview::preview_download_file,
             commands::preview::preview_open_project,
             commands::automation::get_automation_overview,

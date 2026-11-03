@@ -1,4 +1,6 @@
 // Production components with synthetic IPC. Native browser behavior is tested in Rust.
+import { useState } from "react";
+import { CookieImportPanel } from "../../src/features/preview/components/CookieImportPanel";
 import ReactDOM from "react-dom/client";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { PreviewWorkspace } from "../../src/features/preview/PreviewWorkspace";
@@ -22,19 +24,38 @@ mockIPC((command, args) => {
       url: "http://127.0.0.1:4176/fixture/guide.md",
     };
   if (command === "preview_request") {
-    const request = args?.request as { kind: string; content?: string };
+    const request = args?.request;
+    if (!request || typeof request !== "object" || !("kind" in request))
+      return null;
     if (request.kind === "info")
       return {
         executable: null,
         profiles: [{ id: "default", name: "Default" }],
       };
+    if (request.kind === "cookie_prepare")
+      return {
+        id: "fixture-import",
+        target: {
+          id: "fixture-page",
+          profile: "default",
+          profile_name: "Default",
+          revision: "fixture-revision",
+          title: "Cookie scope",
+          url: "https://example.invalid",
+        },
+        domains: { "one.example.invalid": 1, "two.example.invalid": 1 },
+        total: 2,
+        importable: 2,
+        skipped: { invalid: 0, expired: 0, partitioned: 0, bound: 0 },
+      };
+    if (request.kind === "cookie_apply") return { imported: 1, removed: 0 };
     if (request.kind === "list" || request.kind === "downloads") return [];
     if (request.kind === "save_document")
       return {
         id: "fixture",
         kind: "markdown",
         title: "guide.md",
-        content: request.content,
+        content: "content" in request ? request.content : "",
         revision: "new",
       };
   }
@@ -51,6 +72,33 @@ const { i18nReady } = await import("../../src/i18n");
 await i18nReady;
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <div style={{ height: "calc(100vh / var(--app-scale, 1))", display: "flex" }}>
-    <PreviewWorkspace shown />
+    {parameters.get("view") === "cookies" ? (
+      <CookieFixture />
+    ) : (
+      <PreviewWorkspace shown />
+    )}
   </div>,
 );
+
+export function CookieFixture() {
+  const [notice, setNotice] = useState("");
+  return (
+    <section className="preview-workspace">
+      <aside
+        className="preview-inspector"
+        style={{ width: "100%", height: "100%" }}
+      >
+        <div className="preview-inspector-scroll">
+          <CookieImportPanel
+            pageId="fixture-page"
+            address="https://example.invalid"
+            revision="fixture-revision"
+            onError={() => setNotice("Import error")}
+            onImported={() => setNotice("Imported")}
+          />
+          <p role="status">{notice}</p>
+        </div>
+      </aside>
+    </section>
+  );
+}

@@ -6,6 +6,9 @@ use serde_json::{json, Value};
 
 impl Browsers {
     pub fn action(&self, id: &str, action: Action) -> Result<Value, AppError> {
+        if let Action::ImportCookies { cookies } = &action {
+            return self.import_cookie_values(id, cookies.clone());
+        }
         let page = self.page(id)?;
         let mut page = page
             .lock()
@@ -113,10 +116,7 @@ impl Browsers {
                 page.cdp.evaluate(&format!("(()=>{{const text={encoded};const found=window.find(text,false,{backwards},true);const count=text?document.body.innerText.toLowerCase().split(text.toLowerCase()).length-1:0;return {{found,count}};}})()"))
             }
             Action::Cookies => page.cdp.call("Network.getAllCookies", json!({})),
-            Action::ImportCookies { cookies } => {
-                if !cookies.is_array() || cookies.as_array().is_some_and(|items| items.len() > 2000) || cookies.to_string().len() > 2 * 1024 * 1024 { return Err(AppError::invalid_input("Invalid cookie import")); }
-                page.cdp.call("Network.setCookies", json!({"cookies": cookies}))
-            }
+            Action::ImportCookies { .. } => Err(AppError::internal("Cookie import was not dispatched")),
             Action::Storage => page.cdp.evaluate("({local:Object.fromEntries(Object.entries(localStorage)),session:Object.fromEntries(Object.entries(sessionStorage))})"),
         }
     }

@@ -190,16 +190,8 @@ impl Runtime {
         let address = version["webSocketDebuggerUrl"]
             .as_str()
             .ok_or_else(|| AppError::network("Browser does not expose CDP"))?;
-        let parsed = reqwest::Url::parse(address).map_err(AppError::network)?;
-        let endpoint_url = reqwest::Url::parse(&endpoint).map_err(AppError::network)?;
-        let mut control = parsed;
-        control
-            .set_host(endpoint_url.host_str())
-            .map_err(AppError::network)?;
-        control
-            .set_port(endpoint_url.port())
-            .map_err(|_| AppError::invalid_input("Invalid control port"))?;
-        let mut cdp = match Cdp::connect(control.as_str()) {
+        let control = control_address(&endpoint, address)?;
+        let mut cdp = match Cdp::connect(&control) {
             Ok(value) => value,
             Err(error) => {
                 if let Some(child) = child {
@@ -268,13 +260,8 @@ impl Runtime {
         let address = target["webSocketDebuggerUrl"]
             .as_str()
             .ok_or_else(|| AppError::network("Browser page is unavailable"))?;
-        let mut url = reqwest::Url::parse(address).map_err(AppError::network)?;
-        let endpoint = reqwest::Url::parse(&self.endpoint).map_err(AppError::network)?;
-        url.set_host(endpoint.host_str())
-            .map_err(AppError::network)?;
-        url.set_port(endpoint.port())
-            .map_err(|_| AppError::invalid_input("Invalid control port"))?;
-        let mut cdp = Cdp::connect(url.as_str())?;
+        let address = control_address(&self.endpoint, address)?;
+        let mut cdp = Cdp::connect(&address)?;
         cdp.call("Page.enable", json!({}))?;
         cdp.call("Runtime.enable", json!({}))?;
         cdp.call(
@@ -302,7 +289,8 @@ impl Drop for Runtime {
     }
 }
 pub fn json_endpoint(endpoint: &str, path: &str) -> Result<Value, AppError> {
-    reqwest::blocking::Client::builder()
+    use std::io::Read;
+    let response = reqwest::blocking::Client::builder()
         .no_proxy()
         .timeout(Duration::from_secs(5))
         .build()
@@ -311,9 +299,13 @@ pub fn json_endpoint(endpoint: &str, path: &str) -> Result<Value, AppError> {
         .send()
         .map_err(AppError::network)?
         .error_for_status()
-        .map_err(AppError::network)?
-        .json()
-        .map_err(AppError::network)
+        .map_err(AppError::network)?;
+    let mut bytes = Vec::new();
+    response.take(2 * 1024 * 1024 + 1).read_to_end(&mut bytes)?;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err(AppError::network("Browser metadata exceeds limit"));
+    }
+    serde_json::from_slice(&bytes).map_err(AppError::network)
 }
 pub fn validate_endpoint(endpoint: &str) -> Result<String, AppError> {
     let url = reqwest::Url::parse(endpoint)
@@ -401,4 +393,19 @@ pub fn discover() -> Option<PathBuf> {
             })
             .collect();
     candidates.into_iter().find(|path| path.is_file())
+}
+
+pub(super) fn control_address(endpoint: &str, advertised: &str) -> Result<String, AppError> {
+    let endpoint = reqwest::Url::parse(&validate_endpoint(endpoint)?).map_err(AppError::network)?;
+    let mut address = reqwest::Url::parse(advertised).map_err(AppError::network)?;
+    if address.scheme() != "ws" || !address.username().is_empty() || address.password().is_some() {
+        return Err(AppError::invalid_input("Invalid browser WebSocket address"));
+    }
+    address
+        .set_host(endpoint.host_str())
+        .map_err(AppError::network)?;
+    address
+        .set_port(endpoint.port())
+        .map_err(|_| AppError::invalid_input("Invalid browser control port"))?;
+    Ok(address.into())
 }

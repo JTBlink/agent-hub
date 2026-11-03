@@ -85,6 +85,13 @@ try {
       `${documentRef}.querySelector('.preview-find span').textContent`,
     );
     assert.ok(second.startsWith("2"), second);
+    assert.equal(
+      await evaluate(
+        `!!document.querySelector('vite-error-overlay')||!!${documentRef}.querySelector('vite-error-overlay')`,
+      ),
+      false,
+      "Vite error overlay must not cover the accepted UI",
+    );
     const dimensions = await evaluate(
       `(()=>{const d=${documentRef},r=d.querySelector('.preview-workspace').getBoundingClientRect();return {width:d.defaultView.innerWidth,right:r.right,scroll:d.documentElement.scrollWidth}})()`,
     );
@@ -99,9 +106,49 @@ try {
     await request(
       `/screenshot?target=${targetId}&file=/tmp/agenthub-preview-${width}-${theme}.png`,
     );
+    await evaluate(
+      `(()=>{const frame=document.querySelector('#preview');frame.src=${JSON.stringify(`./preview-workspace.html?view=cookies&theme=${theme}&language=${language}&text-size=${size}`)};return true})()`,
+    );
+    await until(`${documentRef}?.querySelector('.preview-inspector textarea')`);
+    await run(
+      `const input=d.querySelector('textarea');Object.getOwnPropertyDescriptor(d.defaultView.HTMLTextAreaElement.prototype,'value').set.call(input,'[]');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
+    );
+    await run(`d.querySelector('.preview-inspector section > button').click()`);
+    await until(`${documentRef}?.querySelector('.preview-import-confirm')`);
+    const scopes = await evaluate(
+      `[...${documentRef}.querySelectorAll('[role="switch"]')].map(element=>element.getAttribute('aria-label'))`,
+    );
+    assert.deepEqual(scopes, ["one.example.invalid", "two.example.invalid"]);
+    const controlsReachable = await evaluate(
+      `(()=>{const d=${documentRef},pane=d.querySelector('.preview-inspector-scroll'),controls=[...d.querySelectorAll('.preview-import-confirm [role="switch"],.preview-import-confirm>button')];return controls.every(element=>{element.scrollIntoView({block:'center'});const r=element.getBoundingClientRect(),p=pane.getBoundingClientRect();return r.top>=p.top-1&&r.bottom<=p.bottom+1&&r.width>0})})()`,
+    );
+    assert.equal(
+      controlsReachable,
+      true,
+      "Every scope and import action must be reachable by scrolling",
+    );
+    await run(
+      `d.querySelector('[role="switch"][aria-label="two.example.invalid"]').scrollIntoView({block:'center'})`,
+    );
+
+    const overflow = await evaluate(
+      `(()=>{const d=${documentRef};return d.documentElement.scrollWidth>d.defaultView.innerWidth+1})()`,
+    );
+    assert.equal(overflow, false);
+    assert.equal(
+      await evaluate(
+        `!!document.querySelector('vite-error-overlay')||!!${documentRef}.querySelector('vite-error-overlay')`,
+      ),
+      false,
+      "Vite error overlay must not cover cookie import UI",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await request(
+      `/screenshot?target=${targetId}&file=/tmp/agenthub-cookie-import-${width}-${theme}.png`,
+    );
   }
   console.log(
-    "Preview acceptance passed: Markdown outline, source capture/navigation, themes, enlarged text, 1440/960/480 layouts (synthetic IPC).",
+    "Preview acceptance passed: Markdown outline, source capture/navigation, cookie scope preview, themes, enlarged text, 1440/960/480 layouts (synthetic IPC).",
   );
 } finally {
   await request(`/close?target=${targetId}`);

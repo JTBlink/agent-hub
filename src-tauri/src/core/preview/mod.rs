@@ -3,6 +3,7 @@ pub mod automation;
 pub mod browser;
 mod capture;
 mod cdp;
+pub mod cookies;
 pub mod documents;
 pub mod downloads;
 mod frames;
@@ -34,6 +35,7 @@ pub struct Preview {
     automation: Mutex<Option<automation::Automation>>,
     pub documents: Arc<documents::Documents>,
     pub packets: packets::Packets,
+    pub cookie_imports: Arc<cookies::Imports>,
     assets: Mutex<Option<assets::Assets>>,
     closed: AtomicBool,
 }
@@ -48,6 +50,7 @@ impl Default for Preview {
             packets: packets::Packets::new(
                 super::central_repo::home_base_dir().join("preview/deliveries"),
             ),
+            cookie_imports: cookies::Imports::shared(),
             assets: Mutex::new(None),
             closed: AtomicBool::new(false),
         }
@@ -191,6 +194,7 @@ impl Preview {
         }
         self.browsers.clear();
         self.packets.clear();
+        self.cookie_imports.clear();
         if let Ok(mut assets) = self.assets.lock() {
             assets.take();
         }

@@ -10,6 +10,7 @@ fn rendered_document_capture_preserves_the_requested_region() {
         documents: Arc::new(documents::Documents::default()),
         packets: packets::Packets::new(root.path().join("deliveries")),
         assets: Mutex::new(None),
+        cookie_imports: cookies::Imports::shared(),
         closed: AtomicBool::new(false),
     };
     let html="<!doctype html><style>html,body{margin:0}div{height:400px;background:red}div+div{background:blue}</style><div></div><div></div>";

@@ -11,6 +11,24 @@ use tauri::State;
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PreviewRequest {
+    CookiePrepare {
+        id: String,
+        revision: String,
+        text: String,
+    },
+    CookieBrowser {
+        id: String,
+        revision: String,
+        endpoint: String,
+    },
+    CookieApply {
+        import_id: String,
+        domains: Vec<String>,
+        replace: bool,
+    },
+    CookieCancel {
+        import_id: String,
+    },
     CaptureRendered {
         html: String,
         width: u32,
@@ -77,6 +95,46 @@ pub async fn preview_request(
     let preview = preview.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let value = match request {
+            PreviewRequest::CookiePrepare { id, revision, text } => {
+                if text.len() > preview::cookies::policy::MAX_BYTES {
+                    return Err(AppError::invalid_input("Cookie text exceeds 2 MiB"));
+                }
+                let value = serde_json::from_str(&text)
+                    .map_err(|_| AppError::invalid_input("Invalid cookie JSON"))?;
+                serde_json::to_value(preview.cookie_imports.prepare(
+                    &preview.browsers,
+                    &id,
+                    &revision,
+                    value,
+                )?)
+            }
+            PreviewRequest::CookieBrowser {
+                id,
+                revision,
+                endpoint,
+            } => {
+                let value = preview::cookies::sources::browser(&endpoint)?;
+                serde_json::to_value(preview.cookie_imports.prepare(
+                    &preview.browsers,
+                    &id,
+                    &revision,
+                    value,
+                )?)
+            }
+            PreviewRequest::CookieApply {
+                import_id,
+                domains,
+                replace,
+            } => serde_json::to_value(preview.cookie_imports.apply(
+                &preview.browsers,
+                &import_id,
+                domains,
+                replace,
+            )?),
+            PreviewRequest::CookieCancel { import_id } => {
+                preview.cookie_imports.cancel(&import_id);
+                return Ok(Value::Null);
+            }
             PreviewRequest::CaptureRendered {
                 html,
                 width,

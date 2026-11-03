@@ -31,7 +31,11 @@ impl Page {
             .to_owned();
         Ok((
             revision,
-            frame["url"].as_str().unwrap_or("about:blank").into(),
+            format!(
+                "{}{}",
+                frame["url"].as_str().unwrap_or("about:blank"),
+                frame["urlFragment"].as_str().unwrap_or("")
+            ),
         ))
     }
 }
@@ -45,6 +49,7 @@ pub(super) struct PageHandle {
 }
 #[derive(Default)]
 pub(super) struct State {
+    pub cookie_gates: HashMap<String, Arc<Mutex<()>>>,
     pub downloads: HashMap<String, super::downloads::Download>,
     pub closing: bool,
     pub runtimes: HashMap<String, Arc<Mutex<Runtime>>>,

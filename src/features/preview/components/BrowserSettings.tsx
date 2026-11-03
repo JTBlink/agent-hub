@@ -1,3 +1,4 @@
+import { CookieImportPanel } from "./CookieImportPanel";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { ToggleSwitch } from "../../../components/ToggleSwitch";
 import { resetDeletedProfile } from "../shared/session";
@@ -37,13 +38,6 @@ export function BrowserSettings({
   const [profile, setProfile] = useState<BrowserProfile>(emptyProfile);
   const [deleting, setDeleting] = useState<BrowserProfile | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cookieText, setCookieText] = useState("");
-  const [cookiePreview, setCookiePreview] = useState<{
-    cookies: unknown[];
-    domains: string[];
-    pageId?: string;
-    revision?: string;
-  } | null>(null);
   const save = async () => {
     setBusy(true);
     try {
@@ -60,37 +54,6 @@ export function BrowserSettings({
       model.report(error);
     } finally {
       setBusy(false);
-    }
-  };
-  const inspectCookies = () => {
-    try {
-      const parsed: unknown = JSON.parse(cookieText);
-      if (!Array.isArray(parsed) || parsed.length > 2000)
-        throw new Error(t("preview.invalidCookies"));
-      const domains = Array.from(
-        new Set(
-          parsed.map((item: unknown) => {
-            if (
-              !item ||
-              typeof item !== "object" ||
-              !("name" in item) ||
-              !("value" in item) ||
-              !("domain" in item) ||
-              typeof item.domain !== "string"
-            )
-              throw new Error(t("preview.invalidCookies"));
-            return item.domain;
-          }),
-        ),
-      );
-      setCookiePreview({
-        cookies: parsed,
-        domains,
-        pageId: model.pageId,
-        revision: model.active?.revision,
-      });
-    } catch (error) {
-      model.report(error);
     }
   };
   return (
@@ -150,7 +113,7 @@ export function BrowserSettings({
           </button>
         ))}
         <fieldset disabled={busy || profile.deleting}>
-          <label className="flex items-center justify-between gap-2">
+          <label className="preview-toggle-row">
             <span>{t("preview.temporaryProfile")}</span>
             <ToggleSwitch
               checked={!!profile.ephemeral}
@@ -227,63 +190,17 @@ export function BrowserSettings({
           )}
         <p>{t("preview.profileCloseHint")}</p>
         <hr />
-        <h3>{t("preview.cookies")}</h3>
-        <p>{t("preview.cookieHint")}</p>
-        <textarea
-          rows={4}
-          aria-label={t("preview.cookies")}
-          value={cookieText}
-          onChange={(event) => {
-            setCookieText(event.target.value);
-            setCookiePreview(null);
-          }}
-          maxLength={2 * 1024 * 1024}
+        <CookieImportPanel
+          pageId={model.pageId}
+          address={model.active?.address ?? ""}
+          revision={model.active?.revision}
+          onError={model.report}
+          onImported={(count, profile) =>
+            model.setNotice(
+              t("preview.cookieImportedCount", { count, profile }),
+            )
+          }
         />
-        <button
-          className="app-button-ghost"
-          disabled={!model.pageId || !cookieText.trim()}
-          onClick={inspectCookies}
-        >
-          {t("preview.inspectImport")}
-        </button>
-        {cookiePreview && (
-          <div className="preview-import-confirm">
-            <p>{t("preview.importDomains")}</p>
-            <pre>{cookiePreview.domains.join("\n")}</pre>
-            <button
-              className="app-button-primary"
-              disabled={
-                busy ||
-                cookiePreview.pageId !== model.pageId ||
-                cookiePreview.revision !== model.active?.revision
-              }
-              onClick={async () => {
-                if (
-                  !model.pageId ||
-                  cookiePreview.pageId !== model.pageId ||
-                  cookiePreview.revision !== model.active?.revision
-                )
-                  return;
-                setBusy(true);
-                try {
-                  await previewApi.action(model.pageId, {
-                    kind: "import_cookies",
-                    cookies: cookiePreview.cookies,
-                  });
-                  setCookiePreview(null);
-                  setCookieText("");
-                  model.setNotice(t("preview.imported"));
-                } catch (error) {
-                  model.report(error);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {t("preview.importCookies")}
-            </button>
-          </div>
-        )}
         <hr />
         <h3>{t("preview.viewport")}</h3>
         <ThemedSelect

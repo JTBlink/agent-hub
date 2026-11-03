@@ -120,6 +120,39 @@ export const previewApi = {
       context_path: string;
       attachments: string[];
     }>({ kind: "prepare_delivery", text, images }),
+  prepareCookies: (id: string, revision: string, text: string) =>
+    request<CookieImportSummary>({
+      kind: "cookie_prepare",
+      id,
+      revision,
+      text,
+    }),
+  browserCookies: (id: string, revision: string, endpoint: string) =>
+    request<CookieImportSummary>({
+      kind: "cookie_browser",
+      id,
+      revision,
+      endpoint,
+    }),
+  cookieFile: (
+    id: string,
+    revision: string,
+    format: "json" | "netscape" | "firefox",
+  ) =>
+    invoke<CookieImportSummary | null>("preview_cookie_file", {
+      id,
+      revision,
+      format,
+    }),
+  applyCookies: (import_id: string, domains: string[], replace: boolean) =>
+    request<{ imported: number; removed: number }>({
+      kind: "cookie_apply",
+      import_id,
+      domains,
+      replace,
+    }),
+  cancelCookieImport: (import_id: string) =>
+    request<void>({ kind: "cookie_cancel", import_id }),
   info: () => request<BrowserInfo>({ kind: "info" }),
   create: (profile: string, url: string, owner?: string) =>
     request<string>({ kind: "create", profile, url, owner }),
@@ -171,4 +204,25 @@ export interface PreviewDownload {
   received: number;
   total: number;
   local: boolean;
+}
+
+export interface CookieImportSummary {
+  id: string;
+  target: {
+    id: string;
+    profile: string;
+    profile_name: string;
+    revision: string;
+    title: string;
+    url: string;
+  };
+  domains: Record<string, number>;
+  total: number;
+  importable: number;
+  skipped: {
+    invalid: number;
+    expired: number;
+    partitioned: number;
+    bound: number;
+  };
 }
