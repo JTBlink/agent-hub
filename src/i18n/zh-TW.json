@@ -88,6 +88,9 @@
     "completed": "檔案操作已完成"
   },
   "herdr": {
+    "projectActions": "專案操作",
+    "copyName": "複製名稱",
+    "copied": "已複製",
     "workspaceUnavailable": "暫時無法開啟此工作空間，請檢查本機目錄後重試。",
     "sessionUnavailable": "暫時無法讀取 Herdr 工作階段，請重新整理再試。",
     "worktreeActions": "工作樹操作",

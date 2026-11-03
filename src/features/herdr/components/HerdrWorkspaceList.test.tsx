@@ -1,5 +1,9 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  writeText: vi.fn().mockResolvedValue(undefined),
+}));
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { HerdrWorkspaceList } from "./HerdrWorkspaceList";
@@ -49,6 +53,7 @@ it("keeps unmatched worktrees visible and groups linked checkouts by repository 
 it("opens child workspaces and collapses and expands their group", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
+  document.body.append(host);
   const root = createRoot(host);
   const onOpen = vi.fn();
   try {
@@ -62,11 +67,18 @@ it("opens child workspaces and collapses and expands their group", async () => {
         />,
       ),
     );
-    await act(async () =>
-      host
-        .querySelector<HTMLButtonElement>('[data-herdr-workspace="child"]')!
-        .click(),
+    const child = host.querySelector<HTMLButtonElement>(
+      '[data-herdr-workspace="child"]',
+    )!;
+    expect(child.querySelector("[data-herdr-directory]")?.textContent).toBe(
+      "feature",
     );
+    expect(child.querySelector("[data-herdr-branch]")?.textContent).toBe(
+      "feature",
+    );
+    expect(child.getAttribute("aria-label")).toBe("feature feature");
+    expect(child.title).toBe("/projects/feature\nfeature");
+    await act(async () => child.click());
     expect(onOpen).toHaveBeenCalledWith("child");
     const main = host.querySelector<HTMLButtonElement>(
       '[data-herdr-workspace="main"]',
@@ -81,6 +93,11 @@ it("opens child workspaces and collapses and expands their group", async () => {
     ];
     expect(rootItems.map((item) => item.textContent)).toEqual([
       "herdr.openProject",
+      "fileTree.reveal",
+      "common.copyPath",
+      "fileTree.copyRelativePath",
+      "herdr.copyName",
+      "git.copyBranchName",
     ]);
     await act(async () => rootItems[0].click());
     expect(onOpen).toHaveBeenLastCalledWith("main");
@@ -96,6 +113,46 @@ it("opens child workspaces and collapses and expands their group", async () => {
     expect(host.querySelector('[data-herdr-workspace="child"]')).toBeTruthy();
   } finally {
     await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("does not reopen an already selected workspace", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const onOpen = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <HerdrWorkspaceList
+          spaces={spaces}
+          agents={[]}
+          selected="main"
+          disabled={false}
+          onOpen={onOpen}
+        />,
+      ),
+    );
+
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[data-herdr-workspace="main"]')!
+        .click(),
+    );
+    expect(onOpen).not.toHaveBeenCalled();
+
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[data-herdr-workspace="child"]')!
+        .click(),
+    );
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith("child");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });
@@ -137,6 +194,7 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
     },
   ]);
   const host = document.createElement("div");
+  document.body.append(host);
   const root = createRoot(host);
   const onOpenWorktree = vi.fn();
   const onOpen = vi.fn();
@@ -167,6 +225,35 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
         .querySelector('[data-herdr-workspace="worktree:/projects/missing"]')
         ?.hasAttribute("disabled"),
     ).toBe(true);
+    const missing = host.querySelector<HTMLElement>(
+      '[data-herdr-workspace="worktree:/projects/missing"]',
+    )!.parentElement!;
+    expect(missing.tabIndex).toBe(0);
+    await act(async () => {
+      missing.focus();
+      missing.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ContextMenu", bubbles: true }),
+      );
+    });
+    const unavailableItems = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ];
+    expect(
+      unavailableItems.find((item) => item.textContent === "herdr.openWorktree")
+        ?.disabled,
+    ).toBe(true);
+    expect(
+      unavailableItems.find((item) => item.textContent === "common.copyPath")
+        ?.disabled,
+    ).toBe(false);
+    await act(async () =>
+      document
+        .querySelector('[role="menu"]')!
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        ),
+    );
+    expect(document.activeElement).toBe(missing);
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>(
@@ -231,9 +318,14 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
       ];
       expect(items.map((item) => item.textContent)).toEqual([
         "herdr.openWorktree",
+        "fileTree.reveal",
+        "common.copyPath",
+        "fileTree.copyRelativePath",
+        "herdr.copyName",
+        "git.copyBranchName",
         "herdr.deleteWorktree",
       ]);
-      if (id === "child") expect(items[1].disabled).toBe(true);
+      if (id === "child") expect(items.at(-1)?.disabled).toBe(true);
       await act(async () => items[0].click());
       expect(document.querySelector('[role="menu"]')).toBeNull();
     }
@@ -258,12 +350,70 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
     ];
     expect(rootItems.map((item) => item.textContent)).toEqual([
       "herdr.openProject",
+      "fileTree.reveal",
+      "common.copyPath",
+      "fileTree.copyRelativePath",
+      "herdr.copyName",
+      "git.copyBranchName",
     ]);
     await act(async () => rootItems[0].click());
     expect(onOpen).toHaveBeenLastCalledWith("main");
   } finally {
     await act(async () => root.unmount());
+    host.remove();
     load.mockRestore();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("copies project-relative checkout paths without changing the selected workspace", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(writeText).mockClear();
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const onOpen = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <HerdrWorkspaceList
+          spaces={spaces}
+          agents={[]}
+          selected="main"
+          disabled={false}
+          onOpen={onOpen}
+        />,
+      ),
+    );
+    for (const [id, expected] of [
+      ["main", "."],
+      ["child", "../feature"],
+    ]) {
+      const row = host.querySelector<HTMLButtonElement>(
+        `[data-herdr-workspace="${id}"]`,
+      )!;
+      await act(async () =>
+        row.dispatchEvent(
+          new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+        ),
+      );
+      const copy = [
+        ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+      ].find((item) => item.textContent === "fileTree.copyRelativePath")!;
+      expect(copy.disabled).toBe(false);
+      await act(async () => copy.click());
+      expect(writeText).toHaveBeenLastCalledWith(expected);
+      expect(document.querySelector('[role="menu"]')).toBeNull();
+    }
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(
+      host
+        .querySelector('[data-herdr-workspace="main"]')
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });

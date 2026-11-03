@@ -23,6 +23,7 @@ import { HerdrWorkspaceRow } from "./HerdrWorkspaceRow";
 
 import type { Project } from "../../../lib/tauri";
 import { useProjectWorktrees } from "../../../hooks/useProjectWorktrees";
+import { relativeDirectoryPath } from "../../../lib/directoryPath";
 import { worktreeDirectoryName } from "../../../lib/worktreeApi";
 import { groupHerdrWorkspaces } from "../lib/herdrWorkspaces";
 
@@ -224,6 +225,7 @@ function HerdrWorkspaceGroup({
       openWorktree(checkout);
     else onOpen(checkout.workspace_id);
   };
+  const projectRoot = project?.path ?? space.directory;
   const row = (space: HerdrWorkspace, connector?: "branch" | "last") => {
     const tree = worktrees.find((tree) => tree.path === space.directory);
     const canDelete =
@@ -231,7 +233,11 @@ function HerdrWorkspaceGroup({
     return (
       <HerdrWorktreeMenu
         target={connector ? "worktree" : "project"}
-        disabled={disabled || tree?.available === false}
+        disabled={disabled}
+        unavailable={tree?.available === false}
+        workspace={space}
+        projectId={project?.id}
+        relativePath={relativeDirectoryPath(projectRoot, space.directory)}
         onOpen={() => openWorktree(space)}
         deletion={
           canDelete

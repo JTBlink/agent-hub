@@ -88,6 +88,9 @@
     "completed": "File operation completed"
   },
   "herdr": {
+    "projectActions": "Project actions",
+    "copyName": "Copy name",
+    "copied": "Copied",
     "workspaceUnavailable": "This workspace could not be opened. Check its local directory and try again.",
     "sessionUnavailable": "Herdr session is temporarily unavailable. Refresh to try again.",
     "worktreeActions": "Worktree actions",

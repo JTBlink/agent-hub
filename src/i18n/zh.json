@@ -88,6 +88,9 @@
     "completed": "文件操作已完成"
   },
   "herdr": {
+    "projectActions": "项目操作",
+    "copyName": "复制名称",
+    "copied": "已复制",
     "workspaceUnavailable": "暂时无法打开该工作空间，请检查本地目录后重试。",
     "sessionUnavailable": "暂时无法读取 Herdr 会话，请刷新重试。",
     "worktreeActions": "工作树操作",
