@@ -7,7 +7,7 @@ interface Node {
   value?: string;
   children?: Node[];
   depth?: number;
-  position?: { start: { line: number } };
+  position?: { start: { line: number }; end?: { line: number } };
   properties?: Record<string, unknown>;
 }
 const text = (node: Node): string =>
@@ -40,6 +40,7 @@ export function sourcePositions() {
       ) {
         node.properties ??= {};
         node.properties["data-source-line"] = node.position?.start.line;
+        node.properties["data-source-end-line"] = node.position?.end?.line;
         if (/^h[1-6]$/.test(node.tagName))
           node.properties.id = slugger.slug(text(node));
       }

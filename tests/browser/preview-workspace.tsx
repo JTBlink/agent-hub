@@ -12,8 +12,12 @@ document.documentElement.classList.toggle(
   parameters.get("theme") !== "light",
 );
 const content =
-  "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
+  "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\nThis continuation belongs to the same paragraph.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
 mockIPC((command, args) => {
+  if (command === "plugin:clipboard-manager|write_text") {
+    document.documentElement.dataset.copiedContext = String(args?.text ?? "");
+    return null;
+  }
   if (command === "preview_pick_document")
     return {
       id: "fixture",

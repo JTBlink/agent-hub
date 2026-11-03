@@ -1,5 +1,6 @@
 import {
   MousePointer2,
+  Copy,
   Camera,
   Download,
   Code2,
@@ -39,7 +40,9 @@ export function PreviewToolbar({
         </button>
         <button
           disabled={
-            (!model.pageId && model.active?.kind !== "markdown") || model.busy
+            (!model.pageId && model.active?.kind !== "markdown") ||
+            model.busy ||
+            model.source
           }
           onClick={() => void model.screenshot()}
         >
@@ -48,7 +51,9 @@ export function PreviewToolbar({
         </button>
         <button
           disabled={
-            (!model.pageId && model.active?.kind !== "markdown") || model.busy
+            (!model.pageId && model.active?.kind !== "markdown") ||
+            model.busy ||
+            model.source
           }
           title={t("preview.fullScreenshot")}
           onClick={() => void model.screenshot(true)}
@@ -57,8 +62,33 @@ export function PreviewToolbar({
           {t("preview.fullPage")}
         </button>
         <button
+          disabled={
+            (!model.pageId && active?.kind !== "markdown") ||
+            model.busy ||
+            model.source
+          }
+          title={t("preview.copyScreenshot")}
+          aria-label={t("preview.copyScreenshot")}
+          onClick={() => void model.screenshot(false, undefined, true)}
+        >
+          <Copy size={14} />
+        </button>
+        <button
+          disabled={
+            (!model.pageId && active?.kind !== "markdown") ||
+            model.busy ||
+            model.source
+          }
+          title={t("preview.copyFullScreenshot")}
+          aria-label={t("preview.copyFullScreenshot")}
+          onClick={() => void model.screenshot(true, undefined, true)}
+        >
+          <Copy size={14} />
+          {t("preview.fullPage")}
+        </button>
+        <button
           disabled={!model.document}
-          className={model.source ? "active" : ""}
+          className={`preview-source-toggle ${model.source ? "active" : ""}`}
           onClick={() => {
             model.setSource(!model.source);
             model.setPicking(false);

@@ -130,11 +130,64 @@ export function MarkdownPreview({
           const box = block.getBoundingClientRect(),
             container = root.getBoundingClientRect();
           const scale = container.width / root.offsetWidth || 1;
+          const domPath: string[] = [];
+          for (
+            let node: HTMLElement | null = block;
+            node && node !== root && domPath.length < 32;
+            node = node.parentElement
+          ) {
+            const index = node.parentElement
+              ? Array.from(node.parentElement.children).indexOf(node) + 1
+              : 1;
+            domPath.unshift(
+              `${node.tagName.toLowerCase()}:nth-child(${index})`,
+            );
+          }
           onCapture({
             selector: block.tagName.toLowerCase(),
             text: block.innerText.slice(0, 2000),
             html: block.outerHTML.slice(0, 4096),
+            styles: Object.fromEntries(
+              [
+                "color",
+                "background-color",
+                "font-family",
+                "font-size",
+                "font-weight",
+                "line-height",
+                "padding",
+                "margin",
+                "display",
+                "gap",
+                "border-radius",
+              ].map((key) => [
+                key,
+                getComputedStyle(block).getPropertyValue(key).slice(0, 500),
+              ]),
+            ),
+            accessibility: {
+              role:
+                block.getAttribute("role") ??
+                (/^H[1-6]$/.test(block.tagName)
+                  ? "heading"
+                  : block.tagName === "P"
+                    ? "paragraph"
+                    : null),
+              label: block.getAttribute("aria-label"),
+            },
             sourceLine: Number(block.dataset.sourceLine),
+            sourceEndLine:
+              Number(block.dataset.sourceEndLine) ||
+              Number(block.dataset.sourceLine),
+            domPath,
+            viewport: {
+              width: root.clientWidth,
+              height: root.parentElement?.clientHeight ?? root.clientHeight,
+              dpr: window.devicePixelRatio || 1,
+              scrollX: root.parentElement?.scrollLeft ?? 0,
+              scrollY: root.parentElement?.scrollTop ?? 0,
+              scale,
+            },
             bounds: {
               x: (box.left - container.left) / scale,
               y: (box.top - container.top) / scale,

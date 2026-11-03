@@ -63,11 +63,20 @@ try {
       `${documentRef}.querySelector('.preview-source-link').textContent`,
     );
     assert.ok(sourceLine.includes(":5"), sourceLine);
+    await run(`d.querySelector('.preview-note-actions button').click()`);
+    await until(
+      `${documentRef}.documentElement.dataset.copiedContext?.includes('Viewport:')`,
+    );
+    const copied = await evaluate(
+      `${documentRef}.documentElement.dataset.copiedContext`,
+    );
+    assert.ok(copied.includes("Source: guide.md:5-6"), copied);
+    assert.ok(copied.includes("DOM path:"), copied);
+    assert.ok(copied.includes("CSS:"), copied);
+    assert.ok(copied.includes("Accessibility:"), copied);
     await run(`d.querySelector('.preview-source-link').click()`);
     await until(`${documentRef}?.querySelector('.cm-editor')`);
-    await run(
-      `d.querySelectorAll('.preview-toolbar>div:first-child>button')[3].click()`,
-    );
+    await run(`d.querySelector('.preview-source-toggle').click()`);
     await until(`${documentRef}?.querySelector('.preview-markdown')`);
     await run(
       `d.querySelector('.preview-toolbar .lucide-search').closest('button').click()`,
@@ -109,7 +118,9 @@ try {
     await evaluate(
       `(()=>{const frame=document.querySelector('#preview');frame.src=${JSON.stringify(`./preview-workspace.html?view=cookies&theme=${theme}&language=${language}&text-size=${size}`)};return true})()`,
     );
-    await until(`${documentRef}?.querySelector('.preview-inspector textarea')`);
+    await until(
+      `${documentRef}?.location.search.includes('view=cookies') && ${documentRef}?.querySelector('.preview-inspector textarea')`,
+    );
     await run(
       `const input=d.querySelector('textarea');Object.getOwnPropertyDescriptor(d.defaultView.HTMLTextAreaElement.prototype,'value').set.call(input,'[]');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
     );

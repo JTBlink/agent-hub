@@ -1,3 +1,4 @@
+import type { CaptureViewport } from "./captureContext";
 export type PreviewKind = "web" | "html" | "markdown";
 export interface PreviewTab {
   id: string;
@@ -22,6 +23,9 @@ export interface Annotation {
   html?: string;
   styles?: Record<string, string>;
   sourceLine?: number;
+  sourceEndLine?: number;
+  domPath?: string[];
+  viewport?: CaptureViewport;
   screenshot?: string;
   bounds?: { x: number; y: number; width: number; height: number };
 }
@@ -175,7 +179,7 @@ export function formatAnnotations(
     `Revision: ${tab.revision}`,
     ...notes.map(
       (note, index) =>
-        `## ${index + 1}. ${note.selector}\n${note.sourceLine ? `Source: ${tab.title}:${note.sourceLine}\n` : ""}\n${note.text}\n\n${note.note}\n\n${note.html ? `DOM:\n\`\`\`html\n${note.html}\n\`\`\`` : ""}\n${note.accessibility ? `Accessibility: ${JSON.stringify(note.accessibility)}\n` : ""}${note.styles ? `CSS:\n\`\`\`json\n${JSON.stringify(note.styles, null, 2)}\n\`\`\`` : ""}`,
+        `## ${index + 1}. ${note.selector}\n${note.sourceLine ? `Source: ${tab.title}:${note.sourceLine}${note.sourceEndLine ? `-${note.sourceEndLine}` : ""}\n` : ""}\n${note.domPath?.length ? `DOM path: ${note.domPath.join(" > ")}\n` : ""}${note.viewport ? `Viewport: ${JSON.stringify(note.viewport)}\n` : ""}${note.bounds ? `Bounds: ${JSON.stringify(note.bounds)}\n` : ""}${note.text}\n\n${note.note}\n\n${note.html ? `DOM:\n\`\`\`html\n${note.html}\n\`\`\`` : ""}\n${note.accessibility ? `Accessibility: ${JSON.stringify(note.accessibility)}\n` : ""}${note.styles ? `CSS:\n\`\`\`json\n${JSON.stringify(note.styles, null, 2)}\n\`\`\`` : ""}`,
     ),
   ].join("\n\n");
 }

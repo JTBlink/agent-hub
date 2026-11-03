@@ -2611,6 +2611,12 @@
     "replacing": "Replacing…"
   },
   "preview": {
+    "copyFullScreenshot": "Copy full-page screenshot",
+    "clipboardLimit": "The screenshot is too large to copy. Save a smaller capture.",
+    "clipboardInvalid": "The screenshot is not a valid PNG image. Capture it again.",
+    "clipboardDimensions": "The screenshot dimensions exceed the clipboard limit. Select a smaller area.",
+    "copyScreenshot": "Copy screenshot",
+    "copyNote": "Copy this annotation",
     "title": "Preview & browse",
     "tabs": "Preview tabs",
     "browserSurface": "Browser page",

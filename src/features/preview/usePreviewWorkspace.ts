@@ -1,3 +1,5 @@
+import { previewError } from "./shared/previewError";
+import { copyScreenshot } from "./shared/copyScreenshot";
 import { consumePreviewRequests } from "./shared/openRequests";
 import { resolveAddress, type SearchEngine } from "./shared/address";
 import { getSettings, setSettings } from "../../lib/tauri";
@@ -117,20 +119,7 @@ export function usePreviewWorkspace() {
   const dirty = !!document && draft !== undefined && draft !== document.content;
   const notes = active ? annotationsForPage(session, active.id) : [];
   const pageId = active ? pageIds[active.id] : undefined;
-  const report = (error: unknown) =>
-    setError(
-      getErrorMessage(error, t("common.error")).includes("PREVIEW_TAB_LIMIT")
-        ? t("preview.tabLimit")
-        : getErrorMessage(error, t("common.error")).includes(
-              "PREVIEW_ANNOTATION_LIMIT",
-            )
-          ? t("preview.annotationLimit")
-          : getErrorMessage(error, t("common.error")).includes(
-                "PREVIEW_CAPTURE_LIMIT",
-              )
-            ? t("preview.captureLimit")
-            : getErrorMessage(error, t("common.error")),
-    );
+  const report = (error: unknown) => setError(previewError(error, t));
   useEffect(() => {
     let disposed = false;
     previewApi
@@ -361,6 +350,8 @@ export function usePreviewWorkspace() {
       id,
       {
         selector: value.selector,
+        domPath: value.domPath,
+        viewport: value.viewport,
         text: value.text,
         html: value.html,
         styles: value.styles,
@@ -437,7 +428,7 @@ export function usePreviewWorkspace() {
       );
     }
   };
-  const screenshot = async (full = false, noteId?: string) => {
+  const screenshot = async (full = false, noteId?: string, copy = false) => {
     if (!active) return;
     setBusy(true);
     try {
@@ -450,7 +441,10 @@ export function usePreviewWorkspace() {
           ?.revision !== active.revision
       )
         throw new Error(t("preview.pageChanged"));
-      if (note)
+      if (copy) {
+        await copyScreenshot(data);
+        setNotice(t("preview.copied"));
+      } else if (note)
         setSession((previous) => attachScreenshot(previous, note.id, data));
       else
         await previewApi.export(
@@ -464,10 +458,15 @@ export function usePreviewWorkspace() {
       setBusy(false);
     }
   };
-  const copyNotes = async () => {
+  const copyNotes = async (noteId?: string) => {
     if (!active) return;
     try {
-      await writeText(formatAnnotations(active, notes));
+      await writeText(
+        formatAnnotations(
+          active,
+          noteId ? notes.filter((note) => note.id === noteId) : notes,
+        ),
+      );
       setNotice(t("preview.copied"));
     } catch (error) {
       report(error);

@@ -9,6 +9,7 @@ import {
   closePreview,
   restorePreview,
   resetDeletedProfile,
+  formatAnnotations,
 } from "./session";
 
 describe("independent preview sessions", () => {
@@ -79,4 +80,39 @@ it("resets removed profile references and discards their obsolete feedback", () 
   state = resetDeletedProfile(state, "custom");
   expect(state.closed[0].profile).toBe("default");
   expect(state.annotations).toEqual([]);
+});
+
+it("includes source range and measured element context in copied feedback", () => {
+  const state = openPreview(createSession(), {
+    kind: "markdown",
+    address: "workspace:///guide.md",
+    title: "guide.md",
+  });
+  const text = formatAnnotations(state.tabs[0], [
+    {
+      id: "note",
+      tabId: state.activeId!,
+      revision: state.tabs[0].revision,
+      selector: "p",
+      text: "Paragraph",
+      note: "Change this",
+      sourceLine: 5,
+      sourceEndLine: 7,
+      domPath: ["article", "p:nth-child(2)"],
+      viewport: {
+        width: 800,
+        height: 600,
+        dpr: 2,
+        scrollX: 0,
+        scrollY: 120,
+        scale: 1,
+      },
+      bounds: { x: 0, y: 100, width: 700, height: 80 },
+    },
+  ]);
+  expect(text).toContain("Source: guide.md:5-7");
+  expect(text).toContain("DOM path: article > p:nth-child(2)");
+  expect(text).toContain('"dpr":2');
+  expect(text).toContain('"scrollY":120');
+  expect(text).toContain('"height":80');
 });

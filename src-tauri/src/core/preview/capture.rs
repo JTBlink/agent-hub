@@ -7,6 +7,12 @@ use std::collections::BTreeMap;
 #[serde(rename_all = "camelCase")]
 struct Capture {
     selector: String,
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    dom_path: Vec<String>,
+    #[serde(default)]
+    viewport: Option<Viewport>,
     text: String,
     html: String,
     styles: BTreeMap<String, String>,
@@ -16,6 +22,20 @@ struct Capture {
     role: Option<String>,
     #[serde(default)]
     label: Option<String>,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Viewport {
+    width: f64,
+    height: f64,
+    dpr: f64,
+    scroll_x: f64,
+    scroll_y: f64,
+    #[serde(default = "unit_scale")]
+    scale: f64,
+}
+fn unit_scale() -> f64 {
+    1.
 }
 #[derive(Deserialize, Serialize)]
 struct Bounds {
@@ -42,6 +62,34 @@ pub fn normalize(value: Value, revision: String, url: String) -> Result<Value, A
             ));
         }
     }
+    if let Some(viewport) = &capture.viewport {
+        if ![
+            viewport.width,
+            viewport.height,
+            viewport.dpr,
+            viewport.scroll_x,
+            viewport.scroll_y,
+            viewport.scale,
+        ]
+        .into_iter()
+        .all(|value| value.is_finite())
+            || viewport.width <= 0.
+            || viewport.height <= 0.
+            || !(0.1..=16.).contains(&viewport.dpr)
+            || !(0.1..=16.).contains(&viewport.scale)
+        {
+            return Err(AppError::invalid_input(
+                "Page returned invalid viewport data",
+            ));
+        }
+    }
+    capture.title = capture.title.chars().take(500).collect();
+    capture.dom_path = capture
+        .dom_path
+        .into_iter()
+        .take(32)
+        .map(|item| item.chars().take(200).collect())
+        .collect();
     capture.selector = capture.selector.chars().take(2000).collect();
     capture.text = capture.text.chars().take(2000).collect();
     capture.html = capture.html.chars().take(4096).collect();
@@ -74,5 +122,21 @@ mod tests {
             "about:blank".into()
         )
         .is_err());
+    }
+    #[test]
+    fn preserves_bounded_context_and_rejects_invalid_viewport() {
+        let mut value = serde_json::json!({"selector":"p","title":"Page","domPath":vec!["x".repeat(300);40],"text":"Text","html":"<p>Text</p>","styles":{},"bounds":{"x":0,"y":0,"width":100,"height":20},"documentBounds":{"x":0,"y":120,"width":100,"height":20},"viewport":{"width":800,"height":600,"dpr":2,"scrollX":0,"scrollY":120,"scale":1}});
+        let result = normalize(
+            value.clone(),
+            "rev".into(),
+            "https://example.invalid".into(),
+        )
+        .unwrap();
+        assert_eq!(result["title"], "Page");
+        assert_eq!(result["viewport"]["scrollY"], 120.);
+        assert_eq!(result["domPath"].as_array().unwrap().len(), 32);
+        assert_eq!(result["domPath"][0].as_str().unwrap().len(), 200);
+        value["viewport"]["dpr"] = serde_json::json!(-1);
+        assert!(normalize(value, "rev".into(), "https://example.invalid".into()).is_err());
     }
 }

@@ -155,6 +155,12 @@ fn navigates_types_resizes_and_captures_a_real_browser_page() {
         .action(&id, Action::Pick { x: 20., y: 30. })
         .unwrap();
     assert!(!picked["selector"].as_str().unwrap().is_empty());
+    assert_eq!(picked["title"], "Preview contract");
+    assert!(picked["domPath"]
+        .as_array()
+        .is_some_and(|path| !path.is_empty()));
+    assert!(picked["viewport"]["dpr"].as_f64().unwrap() > 0.);
+    assert_eq!(picked["viewport"]["scrollY"], 0.);
     browsers.close(&id).unwrap();
     assert!(browsers.frame(&id).is_err());
     let id = pages.iter().find(|page| page.id != id).unwrap().id.clone();

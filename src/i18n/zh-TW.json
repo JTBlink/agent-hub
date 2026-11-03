@@ -2568,6 +2568,12 @@
     "replacing": "正在取代…"
   },
   "preview": {
+    "copyFullScreenshot": "複製整頁截圖",
+    "clipboardLimit": "截圖過大，無法複製。請儲存或擷取較小區域。",
+    "clipboardInvalid": "截圖不是有效的 PNG 圖片，請重新擷取。",
+    "clipboardDimensions": "截圖尺寸超出剪貼簿上限，請選擇較小區域。",
+    "copyScreenshot": "複製截圖",
+    "copyNote": "複製這條批註",
     "title": "预览与浏览",
     "tabs": "预览标签",
     "browserSurface": "网页浏览区",

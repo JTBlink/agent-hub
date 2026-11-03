@@ -85,6 +85,19 @@ export function AnnotationPanel({ model }: { model: PreviewModel }) {
               }
             />
             <div className="preview-note-actions">
+              <button onClick={() => void model.copyNotes(note.id)}>
+                <Copy size={13} />
+                {t("preview.copyNote")}
+              </button>
+              {note.bounds && (
+                <button
+                  disabled={model.busy}
+                  onClick={() => void model.screenshot(false, note.id, true)}
+                >
+                  <Copy size={13} />
+                  {t("preview.copyScreenshot")}
+                </button>
+              )}
               {note.bounds && (
                 <button
                   disabled={model.busy}

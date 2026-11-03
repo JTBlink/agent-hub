@@ -1,3 +1,4 @@
+import type { CaptureViewport } from "./shared/captureContext";
 import { invoke } from "@tauri-apps/api/core";
 export interface BrowserProfile {
   id: string;
@@ -52,6 +53,9 @@ export interface BrowserFrame {
   events: { method: string; params: Record<string, unknown> }[];
 }
 export interface PickedElement {
+  title?: string;
+  domPath?: string[];
+  viewport?: CaptureViewport;
   role?: string | null;
   label?: string | null;
   screenshot?: string;
