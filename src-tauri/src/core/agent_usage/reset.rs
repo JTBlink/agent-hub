@@ -54,7 +54,7 @@ async fn exchange(
     credit_id: Option<&str>,
 ) -> Result<ResetResult, UsageStatus> {
     let mut reader = BufReader::new(output.take(codex::MAX_RPC_BYTES));
-    codex::initialize_account(&mut writer, &mut reader).await?;
+    let account = codex::initialize_account(&mut writer, &mut reader).await?;
     let mut params = json!({"idempotencyKey":key});
     if let Some(id) = credit_id {
         params["creditId"] = json!(id);
@@ -75,7 +75,9 @@ async fn exchange(
             json!({"jsonrpc":"2.0","id":4,"method":"account/rateLimits/read"}),
         )
         .await?;
-        codex::parse(&codex::response(&mut reader, 4).await?)
+        let mut snapshot = codex::parse(&codex::response(&mut reader, 4).await?)?;
+        snapshot.subscription = super::subscription::read(&account).await;
+        Ok(snapshot)
     }
     .await;
     let (snapshot, refresh_error) = match snapshot {

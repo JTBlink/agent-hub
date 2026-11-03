@@ -179,19 +179,21 @@ async fn exchange(
     output: impl AsyncRead + Unpin,
 ) -> Result<ProviderUsage, UsageStatus> {
     let mut reader = BufReader::new(output.take(MAX_RPC_BYTES));
-    initialize_account(&mut writer, &mut reader).await?;
+    let account = initialize_account(&mut writer, &mut reader).await?;
     send(
         &mut writer,
         json!({"jsonrpc":"2.0","id":3,"method":"account/rateLimits/read"}),
     )
     .await?;
-    parse(&response(&mut reader, 3).await?)
+    let mut snapshot = parse(&response(&mut reader, 3).await?)?;
+    snapshot.subscription = super::subscription::read(&account).await;
+    Ok(snapshot)
 }
 
 pub(super) async fn initialize_account(
     writer: &mut (impl AsyncWrite + Unpin),
     reader: &mut (impl tokio::io::AsyncBufRead + Unpin),
-) -> Result<(), UsageStatus> {
+) -> Result<Value, UsageStatus> {
     send(writer, json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"agent_hub_usage","version":env!("CARGO_PKG_VERSION")}}})).await?;
     response(reader, 1).await?;
     send(writer, json!({"jsonrpc":"2.0","method":"initialized"})).await?;
@@ -214,7 +216,7 @@ pub(super) async fn initialize_account(
     if identity["type"] != "chatgpt" {
         return Err(UsageStatus::Unsupported);
     }
-    Ok(())
+    Ok(identity.clone())
 }
 
 pub(super) fn parse(data: &Value) -> Result<ProviderUsage, UsageStatus> {

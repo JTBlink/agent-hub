@@ -145,6 +145,13 @@
     "unavailable": "系統負載暫不可用"
   },
   "agentUsage": {
+    "subscription": {
+      "validUntil": "本期有效至 {{time}}",
+      "cached": "登入時記錄，續費後可能延遲更新。",
+      "checkedAt": "訂閱核驗：{{time}}",
+      "ending": "本期有效期將至",
+      "past": "本期日期已過，請確認續費"
+    },
     "resetCredits": {
       "loading": "正在查詢重置額度…",
       "unavailable": "服務暫未提供重置額度資訊，可重新整理再試。",

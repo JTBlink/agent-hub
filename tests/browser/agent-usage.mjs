@@ -71,6 +71,23 @@ try {
         `/screenshot?target=${targetId}&file=/tmp/agent-hub-usage-preview.png`,
       );
     assert.ok(!metrics.text.includes("agentUsage."), metrics.text);
+    assert.ok(
+      metrics.text.includes(
+        language === "en" ? "Current period ends" : "本期有效至",
+      ),
+      metrics.text,
+    );
+    assert.ok(
+      metrics.text.includes(
+        language === "en"
+          ? "Recorded at sign-in"
+          : language === "zh-TW"
+            ? "登入時記錄"
+            : "登录时记录",
+      ),
+      metrics.text,
+    );
+
     const resets = await evaluate(
       `(()=>{const d=${doc},p=d.querySelector('[role="dialog"]'),rows=[...p.querySelectorAll('li')];return {first:p.querySelector('section')?.getAttribute('aria-label'),rows:rows.length,urgent:rows.filter(n=>n.classList.contains('text-danger')).length,colors:rows.map(n=>d.defaultView.getComputedStyle(n).color),reminder:!!d.querySelector('footer .text-danger[title]')}})()`,
     );

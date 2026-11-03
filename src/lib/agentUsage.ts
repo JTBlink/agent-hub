@@ -34,6 +34,10 @@ export interface ProviderUsage {
   status: UsageStatus;
   windows: UsageWindow[];
   reset_credits?: ResetCredits | null;
+  subscription?: {
+    active_until: number;
+    last_checked_at: number | null;
+  } | null;
   updated_at: number;
   retry_after_seconds: number | null;
 }
@@ -78,6 +82,34 @@ export function highestUsage(
 
 export function quotaTime(timestamp: number, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp * 1000));
+}
+
+/** Cached sign-in period; a past date does not prove that renewal failed. */
+export function subscriptionState(
+  snapshot: ProviderUsage | undefined,
+  now = Date.now(),
+): "current" | "ending" | "past" | null {
+  if (
+    snapshot?.provider !== "codex" ||
+    !["ready", "no_data"].includes(snapshot.status)
+  )
+    return null;
+  const until = snapshot.subscription?.active_until;
+  if (!until || !Number.isFinite(until) || until <= 0 || until > 253402300799)
+    return null;
+  const remaining = until * 1000 - now;
+  if (remaining <= 0) return "past";
+  return remaining <= 7 * 86400 * 1000 ? "ending" : "current";
+}
+
+export function subscriptionTime(timestamp: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",

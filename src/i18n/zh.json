@@ -145,6 +145,13 @@
     "unavailable": "系统负载暂不可用"
   },
   "agentUsage": {
+    "subscription": {
+      "validUntil": "本期有效至 {{time}}",
+      "cached": "登录时记录，续费后可能滞后。",
+      "checkedAt": "订阅核验：{{time}}",
+      "ending": "本期有效期临近",
+      "past": "本期日期已过，请核实续费"
+    },
     "resetCredits": {
       "loading": "正在查询重置额度…",
       "unavailable": "服务暂未提供重置额度信息，可刷新重试。",

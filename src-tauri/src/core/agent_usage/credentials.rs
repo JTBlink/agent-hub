@@ -38,7 +38,7 @@ fn token_from_json(bytes: &[u8]) -> Result<Option<String>, UsageStatus> {
     }
 }
 
-async fn read_json_file(path: &Path) -> Result<Option<Vec<u8>>, UsageStatus> {
+pub(super) async fn read_json_file(path: &Path) -> Result<Option<Vec<u8>>, UsageStatus> {
     let metadata = match tokio::fs::metadata(path).await {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),

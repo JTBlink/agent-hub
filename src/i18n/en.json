@@ -145,6 +145,13 @@
     "unavailable": "System load unavailable"
   },
   "agentUsage": {
+    "subscription": {
+      "validUntil": "Current period ends {{time}}",
+      "cached": "Recorded at sign-in; renewals may not appear yet.",
+      "checkedAt": "Subscription checked: {{time}}",
+      "ending": "Current period ends soon",
+      "past": "Recorded period ended; check renewal"
+    },
     "resetCredits": {
       "loading": "Loading reset credits…",
       "unavailable": "The service has not provided reset credit information. Refresh to try again.",

@@ -4,6 +4,7 @@ mod claude;
 mod codex;
 mod credentials;
 mod reset;
+mod subscription;
 pub use reset::{ResetOutcome, ResetResult};
 
 use serde::Serialize;
@@ -62,11 +63,18 @@ pub struct ResetCredits {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct SubscriptionPeriod {
+    pub active_until: i64,
+    pub last_checked_at: Option<i64>,
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub struct ProviderUsage {
     pub provider: UsageProvider,
     pub status: UsageStatus,
     pub windows: Vec<UsageWindow>,
     pub reset_credits: Option<ResetCredits>,
+    pub subscription: Option<SubscriptionPeriod>,
     pub updated_at: i64,
     pub retry_after_seconds: Option<u64>,
 }
@@ -78,6 +86,7 @@ impl ProviderUsage {
             status,
             windows: Vec::new(),
             reset_credits: None,
+            subscription: None,
             updated_at: chrono::Utc::now().timestamp(),
             retry_after_seconds: None,
         }

@@ -84,3 +84,47 @@ it("warns only for live reset credits within the inclusive 72-hour boundary", as
     false,
   );
 });
+
+it("distinguishes seven-day subscription reminders from an ended cached period", async () => {
+  const { subscriptionState } = await import("./agentUsage");
+  const now = 1800000000;
+  const snapshot: ProviderUsage = {
+    provider: "codex",
+    status: "ready",
+    windows: [],
+    updated_at: now,
+    retry_after_seconds: null,
+    subscription: { active_until: now + 7 * 86400, last_checked_at: null },
+  };
+  expect(subscriptionState(snapshot, now * 1000)).toBe("ending");
+  expect(
+    subscriptionState(
+      {
+        ...snapshot,
+        subscription: {
+          active_until: now + 7 * 86400 + 1,
+          last_checked_at: null,
+        },
+      },
+      now * 1000,
+    ),
+  ).toBe("current");
+  expect(
+    subscriptionState(
+      {
+        ...snapshot,
+        subscription: { active_until: now, last_checked_at: null },
+      },
+      now * 1000,
+    ),
+  ).toBe("past");
+  expect(
+    subscriptionState({ ...snapshot, subscription: null }, now * 1000),
+  ).toBeNull();
+  expect(
+    subscriptionState({ ...snapshot, status: "signed_out" }, now * 1000),
+  ).toBeNull();
+  expect(
+    subscriptionState({ ...snapshot, provider: "claude" }, now * 1000),
+  ).toBeNull();
+});

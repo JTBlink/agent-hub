@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { RefreshCw, X } from "lucide-react";
 import { AgentIcon } from "../AgentIcon";
 import { ResetCreditsSection } from "./ResetCreditsSection";
+import { SubscriptionPeriod } from "./SubscriptionPeriod";
 import {
   currentUsageWindows,
   isUsageWarning,
@@ -82,12 +83,13 @@ export function AgentUsagePanel({
               : snapshot?.status;
           return (
             <section key={provider} aria-label={usageProviderName(provider)}>
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <div className="mb-2 flex items-start gap-2 text-sm font-medium">
                 <AgentIcon
                   agentKey={usageAgentKey(provider)}
                   className="h-4 w-4 border-0 bg-transparent"
                 />
                 {usageProviderName(provider)}
+                <SubscriptionPeriod snapshot={snapshot} now={now} />
               </div>
               {windows.length ? (
                 <div className="space-y-2">

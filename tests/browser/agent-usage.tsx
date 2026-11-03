@@ -51,6 +51,10 @@ Object.assign(window, {
         {
           provider: "codex",
           status: "ready",
+          subscription: {
+            active_until: now + 5 * 86400,
+            last_checked_at: now - 86400,
+          },
           reset_credits: {
             available_count: 2,
             credits: [

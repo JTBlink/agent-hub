@@ -552,3 +552,24 @@ it("keeps confirmation open on uncertain failure and reuses its key without dupl
     document.querySelector('section[aria-label="使用限额重置"]'),
   ).not.toBeNull();
 });
+
+it("shows the cached subscription period next to Codex and warns without claiming membership expired", async () => {
+  const snapshots = fixture();
+  const codex = snapshots[1];
+  const now = Math.floor(Date.now() / 1000);
+  codex.subscription = {
+    active_until: now + 7 * 86400,
+    last_checked_at: now - 86400,
+  };
+  vi.mocked(getAgentUsage).mockResolvedValue(snapshots);
+  await render();
+  await click("Agent 用量");
+  const section = document.querySelector('section[aria-label="Codex"]')!;
+  expect(section.textContent).toContain("本期有效至");
+  expect(section.textContent).toContain("本期有效期临近");
+  expect(section.textContent).toContain("登录时记录，续费后可能滞后");
+  expect(section.textContent).toContain("订阅核验：");
+  expect(
+    document.querySelector('section[aria-label="Claude"]')?.textContent,
+  ).not.toContain("本期有效至");
+});
