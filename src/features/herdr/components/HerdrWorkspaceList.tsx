@@ -1,5 +1,21 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState, type ComponentProps, type ReactNode } from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { HerdrPane, HerdrWorkspace } from "../lib/herdrControlApi";
 import { HerdrWorktreeMenu } from "./HerdrWorktreeMenu";
@@ -20,6 +36,9 @@ export function HerdrWorkspaceList({
   session = "default",
   onWorktreeDeleted,
   onOpenWorktree,
+  order,
+  onReorder,
+  reorderDisabled = false,
 }: {
   spaces: HerdrWorkspace[];
   agents: HerdrPane[];
@@ -34,23 +53,113 @@ export function HerdrWorkspaceList({
     path: string,
     parentWorkspaceId: string,
   ) => void;
+  order?: string[];
+  onReorder?: (activeId: string, overId: string) => void;
+  reorderDisabled?: boolean;
 }) {
   const { roots, children } = groupHerdrWorkspaces(spaces);
-  return roots.map((space) => (
-    <HerdrWorkspaceGroup
-      key={space.workspace_id}
-      space={space}
-      session={session}
-      onWorktreeDeleted={onWorktreeDeleted}
-      linked={children.get(space.workspace_id) ?? []}
-      agents={agents}
-      selected={selected}
-      disabled={disabled}
-      onOpen={onOpen}
-      project={projects.find((project) => project.path === space.directory)}
-      onOpenWorktree={onOpenWorktree}
-    />
-  ));
+  const orderedRoots = order
+    ? [
+        ...order.flatMap((id) =>
+          roots.filter((space) => space.workspace_id === id),
+        ),
+        ...roots.filter((space) => !order.includes(space.workspace_id)),
+      ]
+    : roots;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (over && active.id !== over.id)
+      onReorder?.(String(active.id), String(over.id));
+  };
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={orderedRoots.map((space) => space.workspace_id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {orderedRoots.map((space) => (
+          <SortableHerdrWorkspaceGroup
+            key={space.workspace_id}
+            space={space}
+            session={session}
+            onWorktreeDeleted={onWorktreeDeleted}
+            linked={children.get(space.workspace_id) ?? []}
+            agents={agents}
+            selected={selected}
+            disabled={disabled}
+            onOpen={onOpen}
+            project={projects.find(
+              (project) => project.path === space.directory,
+            )}
+            onOpenWorktree={onOpenWorktree}
+            sortable={!!onReorder && orderedRoots.length > 1}
+            reorderDisabled={disabled || reorderDisabled}
+          />
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SortableHerdrWorkspaceGroup({
+  sortable,
+  reorderDisabled,
+  ...props
+}: ComponentProps<typeof HerdrWorkspaceGroup> & {
+  sortable: boolean;
+  reorderDisabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: props.space.workspace_id,
+    disabled: !sortable || reorderDisabled,
+  });
+  const dragHandle: ReactNode = sortable ? (
+    <button
+      type="button"
+      ref={setActivatorNodeRef}
+      {...attributes}
+      {...listeners}
+      data-herdr-workspace-drag={props.space.workspace_id}
+      aria-disabled={reorderDisabled || undefined}
+      className="app-button-ghost flex h-5 w-4 shrink-0 cursor-grab items-center justify-center rounded text-muted transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+      title={t("herdr.dragWorkspace", { name: props.space.label })}
+      aria-label={t("herdr.dragWorkspace", { name: props.space.label })}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <GripVertical size={12} />
+    </button>
+  ) : null;
+  return (
+    <div
+      ref={setNodeRef}
+      data-herdr-workspace-group={props.space.workspace_id}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : undefined,
+      }}
+    >
+      <HerdrWorkspaceGroup {...props} dragHandle={dragHandle} />
+    </div>
+  );
 }
 
 function HerdrWorkspaceGroup({
@@ -64,6 +173,7 @@ function HerdrWorkspaceGroup({
   onOpen,
   project,
   onOpenWorktree,
+  dragHandle,
 }: {
   space: HerdrWorkspace;
   session: string;
@@ -79,6 +189,7 @@ function HerdrWorkspaceGroup({
     path: string,
     parentWorkspaceId: string,
   ) => void;
+  dragHandle?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
@@ -159,7 +270,14 @@ function HerdrWorkspaceGroup({
   return (
     <div key={space.workspace_id}>
       <div className="relative">
-        <div className={linked.length ? "pr-6" : undefined}>{row(space)}</div>
+        <div className="flex min-w-0 items-start">
+          {dragHandle}
+          <div
+            className={linked.length ? "min-w-0 flex-1 pr-6" : "min-w-0 flex-1"}
+          >
+            {row(space)}
+          </div>
+        </div>
         {linked.length > 0 && (
           <button
             className="app-button-ghost absolute right-1 top-1.5 rounded p-1 focus-visible:ring-2 focus-visible:ring-accent"

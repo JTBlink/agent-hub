@@ -17,10 +17,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useApp } from "../../../context/AppContext";
 import { useActiveWorkspace } from "../../../hooks/useActiveWorkspace";
 import { useHerdrProjectWorkspace } from "../hooks/useHerdrProjectWorkspace";
 import { useHerdrSnapshot } from "../hooks/useHerdrSnapshot";
+import { useHerdrWorkspaceOrder } from "../hooks/useHerdrWorkspaceOrder";
+import { orderHerdrWorkspaces } from "../lib/herdrWorkspaces";
 import { useProjectWorktrees } from "../../../hooks/useProjectWorktrees";
 import { WorkspaceUnavailable } from "../../../components/worktree/WorkspaceUnavailable";
 import * as api from "../api";
@@ -64,6 +67,14 @@ export function SidebarHerdr({ active }: { active: boolean }) {
         )));
   const source = useHerdrSnapshot(active);
   const { session, snapshot } = source;
+  const workspaceOrder = useHerdrWorkspaceOrder(
+    session,
+    snapshot?.workspaces ?? [],
+  );
+  const orderedWorkspaces = orderHerdrWorkspaces(
+    snapshot?.workspaces ?? [],
+    workspaceOrder.order,
+  );
   const [workspaceFilter, setWorkspaceFilter] = useState({
     session: "",
     id: "",
@@ -128,10 +139,9 @@ export function SidebarHerdr({ active }: { active: boolean }) {
     snapshot?.workspaces.some((w) => w.workspace_id === workspaceFilter.id)
       ? workspaceFilter.id
       : "";
-  const spaces =
-    snapshot?.workspaces.filter(
-      (w) => !filterId || w.workspace_id === filterId,
-    ) ?? [];
+  const spaces = orderedWorkspaces.filter(
+    (w) => !filterId || w.workspace_id === filterId,
+  );
   const agents =
     snapshot?.agents.filter(
       (a) =>
@@ -356,7 +366,7 @@ export function SidebarHerdr({ active }: { active: boolean }) {
               aria-label={t("herdr.filterWorkspace")}
             >
               <option value="">{t("herdr.allWorkspaces")}</option>
-              {snapshot.workspaces.map((w) => (
+              {orderedWorkspaces.map((w) => (
                 <option key={w.workspace_id} value={w.workspace_id}>
                   {w.label}
                   {w.branch ? ` · ${w.branch}` : ""}
@@ -447,6 +457,17 @@ export function SidebarHerdr({ active }: { active: boolean }) {
                   agents={snapshot.agents}
                   selected={current?.target.workspace_id}
                   disabled={busy}
+                  order={workspaceOrder.order}
+                  reorderDisabled={
+                    !workspaceOrder.ready || workspaceOrder.saving
+                  }
+                  onReorder={(activeId, overId) => {
+                    void workspaceOrder
+                      .move(activeId, overId)
+                      .catch(() =>
+                        toast.error(t("herdr.workspaceOrderSaveFailed")),
+                      );
+                  }}
                   onOpen={(id) =>
                     void open(id, lastPanes.current.get(`${session}:${id}`))
                   }

@@ -108,6 +108,8 @@
     "filterWorkspace": "篩選工作空間",
     "allWorkspaces": "全部工作空間",
     "worktrees": "{{name}} 的工作樹",
+    "dragWorkspace": "拖曳「{{name}}」調整工作空間順序",
+    "workspaceOrderSaveFailed": "工作空間順序儲存失敗，已還原原順序，請重試。",
     "deleteSession": "刪除工作階段",
     "keepDefault": "保留預設工作階段，無法刪除",
     "deleteSessionHelp": "刪除工作階段「{{name}}」？這會關閉其中所有終端、Agent 和執行中的程序，並移除儲存的工作階段配置。專案檔案不會被刪除。",

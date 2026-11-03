@@ -1,4 +1,9 @@
 export function navigateHerdrList(e: React.KeyboardEvent<HTMLDivElement>) {
+  if (
+    e.target instanceof Element &&
+    e.target.closest("[data-herdr-workspace-drag]")
+  )
+    return;
   if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return;
   const nodes = [
     ...e.currentTarget.querySelectorAll<HTMLButtonElement>(

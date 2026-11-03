@@ -108,6 +108,8 @@
     "filterWorkspace": "Filter workspaces",
     "allWorkspaces": "All workspaces",
     "worktrees": "Worktrees of {{name}}",
+    "dragWorkspace": "Drag {{name}} to reorder workspaces",
+    "workspaceOrderSaveFailed": "Could not save the workspace order. The previous order was restored. Try again.",
     "deleteSession": "Delete session",
     "keepDefault": "The default session cannot be deleted",
     "deleteSessionHelp": "Delete session “{{name}}”? This closes all its terminals, agents and running processes, and removes its saved layout. Project files will be kept.",
