@@ -282,6 +282,40 @@ it("waits for bundled fonts before starting the PTY and redraws without restarti
   expect(api.closeTerminal).not.toHaveBeenCalled();
 });
 
+it("starts with fallback fonts without reporting a terminal failure when a font resource fails", async () => {
+  const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.mocked(document.fonts.load).mockRejectedValue(
+    new Error("A network error occurred."),
+  );
+  const onReady = vi.fn();
+  try {
+    await act(async () =>
+      root.render(<TerminalPane projectId="demo" active onReady={onReady} />),
+    );
+    expect(api.createTerminal).toHaveBeenCalledOnce();
+    expect(onReady).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "pty-1" }),
+    );
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(warning).toHaveBeenCalled();
+  } finally {
+    warning.mockRestore();
+  }
+});
+
+it("still reports PTY creation failures after fonts finish loading", async () => {
+  vi.mocked(api.createTerminal).mockRejectedValueOnce(
+    new Error("PTY unavailable"),
+  );
+  await act(async () => {
+    root.render(<TerminalPane projectId="demo" active onReady={() => {}} />);
+    finishFonts();
+  });
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    "PTY unavailable",
+  );
+});
+
 it("restores visible panes independently of focus without clearing a shared atlas or restarting the PTY", async () => {
   const render = async (visible: boolean) => {
     await act(async () =>

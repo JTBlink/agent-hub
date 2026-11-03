@@ -207,7 +207,14 @@ export function TerminalPane({
       return keyboard.handle(event);
     });
     void loadTerminalFonts()
-      .catch(fail)
+      .catch((reason) => {
+        // CSS provides fallback fonts; this does not indicate a PTY failure.
+        if (!disposed)
+          console.warn(
+            "Terminal font preload failed; using fallback fonts",
+            reason,
+          );
+      })
       .then(() => {
         if (disposed) return;
         fontsReady = true;
