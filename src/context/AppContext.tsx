@@ -93,7 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
-  const autoCheckInFlightRef = useRef(false);
+  const startupSkillCheckStartedRef = useRef(false);
   const appUpdateCheckedRef = useRef(false);
   const lastUpdateNotificationRef = useRef<string | null>(null);
   const lastActiveSkillGroupIdRef = useRef<string | null>(null);
@@ -416,11 +416,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const hasGitSkills = managedSkills.some(
       (s) => s.source_type === "git" || s.source_type === "skillssh",
     );
-    if (!hasGitSkills || autoCheckInFlightRef.current) return;
+    if (!hasGitSkills || startupSkillCheckStartedRef.current) return;
 
     // Delay to avoid slowing down initial render
     const timer = setTimeout(() => {
-      autoCheckInFlightRef.current = true;
+      // App-data refreshes also toggle loading. Only start this round once;
+      // subsequent checks belong to the backend scheduler or manual actions.
+      startupSkillCheckStartedRef.current = true;
       (async () => {
         try {
           await api.checkAllSkillUpdates(false);
@@ -445,16 +447,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   i18n.t("mySkills.autoUpdated", { count: result.refreshed }),
                 );
               }
-              // Held back rather than applied: updating would have removed
-              // files the new version does not have, and nobody was here to ask.
-              if (result.held_back.length > 0) {
-                toast.warning(
-                  i18n.t("mySkills.batchHeldBack", {
-                    count: result.held_back.length,
-                    names: result.held_back.slice(0, 3).join("、"),
-                  }),
-                );
-              }
+              // Automatic skips remain visible as available updates below.
+              // Reserve removal warnings for an explicit user update action.
               if (result.failed.length > 0) {
                 console.warn("Auto-update failures:", result.failed);
                 toast.error(
@@ -475,8 +469,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Startup round is non-blocking and does not toast on failure, but
           // log so a broken check/update is still diagnosable.
           console.error("Startup skill update round failed:", err);
-        } finally {
-          autoCheckInFlightRef.current = false;
         }
       })();
     }, 3000);

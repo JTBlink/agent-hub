@@ -2,7 +2,20 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import * as api from "../lib/tauri";
+import { toast } from "sonner";
+import { createManagedSkill } from "../../tests/fixtures/managedSkill";
 import { AppProvider, useApp } from "./AppContext";
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+    warning: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    dismiss: vi.fn(),
+  },
+}));
 
 vi.mock("@tauri-apps/api/event", () => ({ listen: async () => () => {} }));
 vi.mock("@tauri-apps/api/core", () => ({
@@ -36,6 +49,7 @@ function LibraryScope() {
         Group
       </button>
       <button onClick={() => void app.refreshSkillGroups()}>Refresh</button>
+      <button onClick={() => void app.refreshAppData()}>Refresh app</button>
     </>
   );
 }
@@ -54,6 +68,9 @@ afterEach(async () => {
   container.remove();
   localStorage.clear();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+  vi.clearAllMocks();
 });
 async function render() {
   await act(async () =>
@@ -93,4 +110,46 @@ it("leaves the ungrouped view when the full library is selected", async () => {
   expect(container.querySelector("output")!.textContent).toBe("ungrouped");
   await click("Library");
   expect(container.querySelector("output")!.textContent).toBe("library");
+});
+
+it("runs startup updates once across app refreshes and silently holds back removals", async () => {
+  vi.useFakeTimers();
+  const skill = createManagedSkill({ update_status: "update_available" });
+  vi.spyOn(api, "getManagedSkills").mockResolvedValue([skill]);
+  vi.spyOn(api, "getSettings").mockResolvedValue("on");
+  vi.spyOn(api, "checkAppUpdate").mockResolvedValue({
+    has_update: false,
+    current_version: "1.0.0",
+    latest_version: "1.0.0",
+    release_url: "https://example.invalid/releases",
+  });
+  const check = vi
+    .spyOn(api, "checkAllSkillUpdates")
+    .mockResolvedValue(undefined);
+  const update = vi.spyOn(api, "batchUpdateSkills").mockResolvedValue({
+    refreshed: 0,
+    unchanged: 0,
+    held_back: [skill.name],
+    failed: [],
+  });
+  await render();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3000);
+  });
+  expect(update).toHaveBeenCalledOnce();
+  expect(toast.warning).not.toHaveBeenCalled();
+  expect(toast.info).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.objectContaining({
+      id: "skill-update-available",
+      action: expect.objectContaining({ onClick: expect.any(Function) }),
+    }),
+  );
+  await click("Refresh app");
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(6000);
+  });
+  expect(check).toHaveBeenCalledOnce();
+  expect(update).toHaveBeenCalledOnce();
+  expect(toast.info).toHaveBeenCalledOnce();
 });
