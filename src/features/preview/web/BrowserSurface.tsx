@@ -49,7 +49,8 @@ export function BrowserSurface(props: Props) {
   const pickEpoch = useRef(0);
   useEffect(() => {
     pickEpoch.current += 1;
-  }, [props.active, props.picking, id]);
+    motion.current?.clear();
+  }, [props.active, props.picking, props.address, frame?.info.revision, id]);
   const refresh = useRef<(() => void) | null>(null);
   const fastUntil = useRef(0);
   const report = useEffectEvent((message: string) => props.onError(message));
@@ -222,6 +223,10 @@ export function BrowserSurface(props: Props) {
     if (props.active && props.picking)
       container.current?.focus({ preventScroll: true });
   }, [props.active, props.picking]);
+  const currentHover =
+    hover?.revision === frame?.info.revision && hover?.url === frame?.info.url
+      ? hover
+      : null;
   const imageWidth = frame?.info.width ?? width,
     imageHeight = frame?.info.height ?? height;
   const scale = Math.min(size.width / imageWidth, size.height / imageHeight);
@@ -257,7 +262,7 @@ export function BrowserSurface(props: Props) {
         if (
           !props.picking ||
           !props.active ||
-          !hover ||
+          !currentHover ||
           !id ||
           event.ctrlKey ||
           event.metaKey ||
@@ -268,23 +273,33 @@ export function BrowserSurface(props: Props) {
         if (key !== "c" && key !== "s") return;
         event.preventDefault();
         event.stopPropagation();
-        if (key === "c")
-          void writeText(JSON.stringify(hover, null, 2)).catch(
-            (error: unknown) =>
-              props.onError(getErrorMessage(error, t("common.error"))),
-          );
-        else {
+        if (key === "c") {
+          const epoch = pickEpoch.current;
+          void previewApi
+            .action(id, {
+              kind: "verify_revision",
+              expected_revision: currentHover.revision,
+            })
+            .then(() => {
+              if (epoch === pickEpoch.current)
+                return writeText(JSON.stringify(currentHover, null, 2));
+            })
+            .catch((error: unknown) => {
+              setHover(null);
+              props.onError(getErrorMessage(error, t("common.error")));
+            });
+        } else {
           const epoch = pickEpoch.current;
           void previewApi
             .action<{ data: string }>(id, {
               kind: "screenshot",
               full: false,
-              clip: hover.documentBounds,
-              expected_revision: hover.revision,
+              clip: currentHover.documentBounds,
+              expected_revision: currentHover.revision,
             })
             .then((value) => {
               if (epoch === pickEpoch.current)
-                props.onCapture({ ...hover, screenshot: value.data });
+                props.onCapture({ ...currentHover, screenshot: value.data });
             })
             .catch((error: unknown) =>
               props.onError(getErrorMessage(error, t("common.error"))),
@@ -386,19 +401,20 @@ export function BrowserSurface(props: Props) {
             alt={frame.info.title || t("preview.browserSurface")}
             draggable={false}
           />
-          {props.picking && hover && (
+          {props.picking && currentHover && (
             <div
               className="preview-element-outline"
               style={{
-                left: (hover.bounds.x / imageWidth) * 100 + "%",
-                top: (hover.bounds.y / imageHeight) * 100 + "%",
-                width: (hover.bounds.width / imageWidth) * 100 + "%",
-                height: (hover.bounds.height / imageHeight) * 100 + "%",
+                left: (currentHover.bounds.x / imageWidth) * 100 + "%",
+                top: (currentHover.bounds.y / imageHeight) * 100 + "%",
+                width: (currentHover.bounds.width / imageWidth) * 100 + "%",
+                height: (currentHover.bounds.height / imageHeight) * 100 + "%",
               }}
             >
               <span>
-                {hover.selector} · {Math.round(hover.bounds.width)} ×{" "}
-                {Math.round(hover.bounds.height)}
+                {currentHover.selector} ·{" "}
+                {Math.round(currentHover.bounds.width)} ×{" "}
+                {Math.round(currentHover.bounds.height)}
               </span>
             </div>
           )}

@@ -14,6 +14,10 @@ impl Browsers {
             .lock()
             .map_err(|_| AppError::internal("Browser page unavailable"))?;
         match action {
+            Action::VerifyRevision {expected_revision} => {
+                if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("Page changed; select the element again")); }
+                Ok(Value::Null)
+            }
             Action::HandleDialog {accept,prompt} => {
                 let result = page.cdp.call("Page.handleJavaScriptDialog",json!({"accept":accept,"promptText":prompt.unwrap_or_default()}))?;
                 page.cdp.dialog = None;
@@ -25,16 +29,19 @@ impl Browsers {
             }
 
             Action::ClickRef {reference} => {
+                page.validate_reference(&reference)?;
                 let encoded=serde_json::to_string(&reference).map_err(|error|AppError::invalid_input(error.to_string()))?;
-                let position=page.cdp.evaluate(&format!("(()=>{{const [token,index]={encoded}.split(':');const node=window.__agentHubSnapshots?.get(token)?.[Number(index)];if(!node?.isConnected)throw Error('Snapshot expired');node.scrollIntoView({{block:'center',inline:'center'}});const box=node.getBoundingClientRect();const scale=visualViewport?.scale||1;return {{x:(box.x+box.width/2-(visualViewport?.offsetLeft||0))*scale,y:(box.y+box.height/2-(visualViewport?.offsetTop||0))*scale}}}})()"))?;
+                let position=page.cdp.evaluate(&format!("(()=>{{const [token,index]={encoded}.split(':');const snapshot=window.__agentHubSnapshots?.get(token);if(snapshot?.url!==location.href)throw Error('Snapshot expired');const node=snapshot?.nodes[Number(index)];if(!node?.isConnected)throw Error('Snapshot expired');node.scrollIntoView({{block:'center',inline:'center'}});const box=node.getBoundingClientRect();const scale=visualViewport?.scale||1;return {{x:(box.x+box.width/2-(visualViewport?.offsetLeft||0))*scale,y:(box.y+box.height/2-(visualViewport?.offsetTop||0))*scale}}}})()"))?;
+                page.validate_reference(&reference)?;
                 for event in ["mousePressed","mouseReleased"] { page.cdp.call("Input.dispatchMouseEvent",json!({"type":event,"x":position["x"],"y":position["y"],"button":"left","clickCount":1}))?; }
                 Ok(Value::Null)
             }
             Action::FillRef {reference,value} => {
+                page.validate_reference(&reference)?;
                 if value.len()>64*1024{return Err(AppError::invalid_input("Input exceeds limit"));}
                 let reference=serde_json::to_string(&reference).map_err(|error|AppError::invalid_input(error.to_string()))?;
                 let value=serde_json::to_string(&value).map_err(|error|AppError::invalid_input(error.to_string()))?;
-                page.cdp.evaluate(&format!("(()=>{{const [token,index]={reference}.split(':');const node=window.__agentHubSnapshots?.get(token)?.[Number(index)];if(!node?.isConnected||node.disabled||node.readOnly)throw Error('Input unavailable');node.focus();const setter=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(node),'value')?.set;if(setter)setter.call(node,{value});else if(node.isContentEditable)node.textContent={value};else throw Error('Element is not editable');node.dispatchEvent(new Event('input',{{bubbles:true}}));node.dispatchEvent(new Event('change',{{bubbles:true}}));return true}})()"))
+                page.cdp.evaluate(&format!("(()=>{{const [token,index]={reference}.split(':');const snapshot=window.__agentHubSnapshots?.get(token);if(snapshot?.url!==location.href)throw Error('Snapshot expired');const node=snapshot?.nodes[Number(index)];if(!node?.isConnected||node.disabled||node.readOnly)throw Error('Input unavailable');node.focus();const setter=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(node),'value')?.set;if(setter)setter.call(node,{value});else if(node.isContentEditable)node.textContent={value};else throw Error('Element is not editable');node.dispatchEvent(new Event('input',{{bubbles:true}}));node.dispatchEvent(new Event('change',{{bubbles:true}}));return true}})()"))
             }
 
             Action::Navigate { url } => { validate_url(&url)?; page.cdp.call("Page.navigate", json!({ "url": url })) }
@@ -88,8 +95,11 @@ impl Browsers {
             }
             Action::Snapshot => {
                 let (revision,url)=page.identity()?;
-                let mut value = page.cdp.evaluate(&include_str!("scripts/snapshot.js").replace("__SNAPSHOT_ID__",&uuid::Uuid::new_v4().simple().to_string()))?;
+                let token = uuid::Uuid::new_v4().simple().to_string();
+                let mut value = page.cdp.evaluate(&include_str!("scripts/snapshot.js").replace("__SNAPSHOT_ID__",&token))?;
                 if !value.is_object() || page.identity()?.0 != revision {return Err(AppError::cancelled("Page changed during snapshot"));}
+                if page.snapshots.len() >= 8 { page.snapshots.pop_front(); }
+                page.snapshots.push_back((token, revision.clone()));
                 value["revision"]=json!(revision);value["url"]=json!(url);Ok(value)
             },
             Action::Screenshot { full, clip, expected_revision } => {
@@ -119,5 +129,25 @@ impl Browsers {
             Action::ImportCookies { .. } => Err(AppError::internal("Cookie import was not dispatched")),
             Action::Storage => page.cdp.evaluate("({local:Object.fromEntries(Object.entries(localStorage)),session:Object.fromEntries(Object.entries(sessionStorage))})"),
         }
+    }
+}
+
+impl super::browser::Page {
+    fn validate_reference(&mut self, reference: &str) -> Result<(), AppError> {
+        let (token, index) = reference
+            .split_once(':')
+            .ok_or_else(|| AppError::invalid_input("Invalid snapshot reference"))?;
+        if reference.len() > 100 || index.parse::<usize>().map_or(true, |index| index >= 500) {
+            return Err(AppError::invalid_input("Invalid snapshot reference"));
+        }
+        let revision = self.identity()?.0;
+        if !self
+            .snapshots
+            .iter()
+            .any(|(stored, value)| stored == token && value == &revision)
+        {
+            return Err(AppError::cancelled("Snapshot expired; take a new snapshot"));
+        }
+        Ok(())
     }
 }

@@ -12,6 +12,8 @@ use tungstenite::{stream::MaybeTlsStream, Message, WebSocket};
 pub struct Cdp {
     socket: WebSocket<MaybeTlsStream<TcpStream>>,
     sequence: u64,
+    main_frame: Option<String>,
+    pub navigation_version: u64,
     pub frame: Option<String>,
     pub frame_version: u64,
     pub expected_size: Option<(u32, u32)>,
@@ -38,6 +40,8 @@ impl Cdp {
         Ok(Self {
             socket,
             sequence: 0,
+            main_frame: None,
+            navigation_version: 0,
             frame: None,
             frame_version: 0,
             expected_size: None,
@@ -78,6 +82,11 @@ impl Cdp {
                                     .as_str()
                                     .unwrap_or("Browser command failed"),
                             ));
+                        }
+                        if method == "Page.getFrameTree" {
+                            self.main_frame = reply["result"]["frameTree"]["frame"]["id"]
+                                .as_str()
+                                .map(str::to_owned);
                         }
                         return Ok(reply["result"].clone());
                     }
@@ -124,7 +133,17 @@ impl Cdp {
                         Some("Page.frameNavigated")
                             if reply["params"]["frame"].get("parentId").is_none() =>
                         {
+                            self.main_frame =
+                                reply["params"]["frame"]["id"].as_str().map(str::to_owned);
+                            self.navigation_version = self.navigation_version.wrapping_add(1);
                             self.chooser = None
+                        }
+                        Some("Page.navigatedWithinDocument")
+                            if reply["params"]["frameId"].as_str()
+                                == self.main_frame.as_deref() =>
+                        {
+                            self.navigation_version = self.navigation_version.wrapping_add(1);
+                            self.chooser = None;
                         }
                         _ => {}
                     }

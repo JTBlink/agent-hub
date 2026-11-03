@@ -6,8 +6,9 @@ use super::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     path::PathBuf,
     process::Command,
     sync::{Arc, Mutex},
@@ -15,6 +16,7 @@ use std::{
 };
 
 pub struct Page {
+    pub(super) snapshots: VecDeque<(String, String)>,
     pub cdp: Cdp,
     pub width: u32,
     pub height: u32,
@@ -29,14 +31,19 @@ impl Page {
             .filter(|value| !value.is_empty())
             .ok_or_else(|| AppError::network("Browser document is not ready"))?
             .to_owned();
-        Ok((
+        let url = format!(
+            "{}{}",
+            frame["url"].as_str().unwrap_or("about:blank"),
+            frame["urlFragment"].as_str().unwrap_or("")
+        );
+        let revision = format!(
+            "{}:{}:{:x}",
             revision,
-            format!(
-                "{}{}",
-                frame["url"].as_str().unwrap_or("about:blank"),
-                frame["urlFragment"].as_str().unwrap_or("")
-            ),
-        ))
+            self.cdp.navigation_version,
+            Sha256::digest(url.as_bytes())
+        );
+        self.snapshots.retain(|(_, value)| value == &revision);
+        Ok((revision, url))
     }
 }
 #[derive(Clone)]
@@ -117,6 +124,9 @@ impl Drop for Reservation<'_> {
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Action {
+    VerifyRevision {
+        expected_revision: String,
+    },
     HandleDialog {
         accept: bool,
         prompt: Option<String>,
@@ -372,6 +382,7 @@ impl Browsers {
             owner,
         }));
         let page = Arc::new(Mutex::new(Page {
+            snapshots: VecDeque::new(),
             cdp,
             width: 1200,
             height: 800,
@@ -534,6 +545,7 @@ impl Browsers {
                     owner: None,
                 }));
                 let page = Arc::new(Mutex::new(Page {
+                    snapshots: VecDeque::new(),
                     cdp,
                     width: 1200,
                     height: 800,

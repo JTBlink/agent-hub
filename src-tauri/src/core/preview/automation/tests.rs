@@ -92,6 +92,125 @@ fn shared_agent_transport_navigates_fills_and_captures_the_same_page() {
         .decode(image["data"].as_str().unwrap())
         .unwrap();
     assert!(image::load_from_memory_with_format(&bytes, image::ImageFormat::Png).is_ok());
+    let mut snapshots = Vec::new();
+    for _ in 0..9 {
+        snapshots.push(
+            call(
+                &endpoint,
+                json!({"kind":"action","id":id,"action":{"kind":"snapshot"}}),
+            )
+            .unwrap(),
+        );
+    }
+    for (index, item) in snapshots.iter().enumerate() {
+        let reference = item["elements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["tag"] == "input")
+            .unwrap()["ref"]
+            .clone();
+        let result = call(
+            &endpoint,
+            json!({"kind":"action","id":id,"action":{"kind":"fill_ref","reference":reference,"value":"CLI text"}}),
+        );
+        assert_eq!(
+            result.is_ok(),
+            index > 0,
+            "only oldest of nine snapshots expires"
+        );
+    }
+    let elements = snapshots.last().unwrap()["elements"].as_array().unwrap();
+    let input = &elements.iter().find(|item| item["tag"] == "input").unwrap()["ref"];
+    let button = &elements
+        .iter()
+        .find(|item| item["tag"] == "button")
+        .unwrap()["ref"];
+    // Same-document routes keep the DOM nodes alive but invalidate their meaning.
+    let old_revision = snapshot["revision"].as_str().unwrap();
+    browsers
+        .action(
+            id.as_str().unwrap(),
+            Action::Evaluate {
+                expression: "history.pushState({},'',location.pathname+'#route');true".into(),
+            },
+        )
+        .unwrap();
+    let routed = call(
+        &endpoint,
+        json!({"kind":"action","id":id,"action":{"kind":"snapshot"}}),
+    )
+    .unwrap();
+    assert_ne!(routed["revision"], old_revision);
+    assert!(browsers
+        .action(
+            id.as_str().unwrap(),
+            Action::VerifyRevision {
+                expected_revision: old_revision.into()
+            }
+        )
+        .is_err());
+    assert!(call(&endpoint,json!({"kind":"action","id":id,"action":{"kind":"fill_ref","reference":input,"value":"stale"}})).is_err());
+    assert!(call(
+        &endpoint,
+        json!({"kind":"action","id":id,"action":{"kind":"click_ref","reference":button}})
+    )
+    .is_err());
+    assert!(browsers
+        .action(
+            id.as_str().unwrap(),
+            Action::Screenshot {
+                full: false,
+                clip: None,
+                expected_revision: Some(old_revision.into())
+            }
+        )
+        .is_err());
+    let current = routed["elements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["tag"] == "input")
+        .unwrap()["ref"]
+        .clone();
+    call(&endpoint,json!({"kind":"action","id":id,"action":{"kind":"fill_ref","reference":current,"value":"new route"}})).unwrap();
+    // Returning to the same URL must not revive an earlier snapshot.
+    browsers
+        .action(
+            id.as_str().unwrap(),
+            Action::Evaluate {
+                expression: "history.replaceState({},'',location.pathname);true".into(),
+            },
+        )
+        .unwrap();
+    assert!(call(&endpoint,json!({"kind":"action","id":id,"action":{"kind":"fill_ref","reference":input,"value":"revived"}})).is_err());
+    assert_eq!(
+        browsers
+            .action(
+                id.as_str().unwrap(),
+                Action::Evaluate {
+                    expression: "document.querySelector('input').value".into()
+                }
+            )
+            .unwrap(),
+        "new route"
+    );
+    let before_roundtrip = call(
+        &endpoint,
+        json!({"kind":"action","id":id,"action":{"kind":"snapshot"}}),
+    )
+    .unwrap();
+    let reference = before_roundtrip["elements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["tag"] == "input")
+        .unwrap()["ref"]
+        .clone();
+    browsers.action(id.as_str().unwrap(), Action::Evaluate {
+        expression: "history.pushState({},'',location.pathname+'#brief');history.replaceState({},'',location.pathname);true".into()
+    }).unwrap();
+    assert!(call(&endpoint,json!({"kind":"action","id":id,"action":{"kind":"fill_ref","reference":reference,"value":"roundtrip"}})).is_err());
     call(&endpoint, json!({"kind":"close","id":id})).unwrap();
     assert!(call(&endpoint, json!({"kind":"list"}))
         .unwrap()

@@ -65,6 +65,7 @@ export interface PickedElement {
   url: string;
 }
 export type BrowserAction =
+  | { kind: "verify_revision"; expected_revision: string }
   | { kind: "handle_dialog"; accept: boolean; prompt?: string }
   | { kind: "cancel_upload"; token: string }
   | { kind: "navigate"; url: string }
