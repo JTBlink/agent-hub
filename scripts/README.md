@@ -2,6 +2,10 @@
 
 发布流水线和开发辅助脚本，均为 ES module（`.mjs`）。每个脚本既可通过 `package.json` 的 `npm run` 调用，也可直接 `node scripts/<name>.mjs` 单独执行。
 
+## 需求原型预览
+
+根目录 `./prototype.sh` 启动并打开[原型目录](../prototypes/README.md)。`--list` 列出全部入口，`./prototype.sh preview --layout B` 直达指定原型；共用 `prototypes/catalog.json`，无需另起独立工程。
+
 ## 脚本说明
 
 ### 版本管理

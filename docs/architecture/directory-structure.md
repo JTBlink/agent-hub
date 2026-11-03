@@ -6,6 +6,8 @@
 
 ```text
 agent-hub/
+├── prototypes/                     # 需求原型、统一目录索引与历史设计参考
+├── prototype.sh                    # 一键启动原型目录或指定原型
 ├── src/                            # React/TypeScript 前端
 │   ├── views/                      # 页面视图
 │   │   ├── Dashboard.tsx           #   仪表盘主页

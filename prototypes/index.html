@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>需求原型目录 · AgentHub</title>
+    <link rel="stylesheet" href="./catalog.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="brand">AgentHub</p>
+          <h1>需求原型目录</h1>
+        </div>
+        <button id="theme" type="button" aria-pressed="false">
+          切换深色主题
+        </button>
+      </header>
+      <p class="intro">
+        查看交互方案与历史设计参考。原型使用演示数据，正式功能和验收状态以对应需求为准。
+      </p>
+      <label class="search"
+        >查找原型<input
+          id="search"
+          type="search"
+          placeholder="名称、用途或状态"
+      /></label>
+      <p id="count" role="status"></p>
+      <div id="entries"></div>
+      <p id="empty" hidden>没有匹配的原型，试试其他关键词。</p>
+      <footer>
+        <code>./prototype.sh --list</code> 查看命令行目录；<code
+          >./prototype.sh preview</code
+        >
+        直达指定原型。<br />新增原型请登记
+        <code>prototypes/catalog.json</code>，入口、状态和源码位置统一维护。
+      </footer>
+    </main>
+    <script type="module" src="./catalog.mjs"></script>
+  </body>
+</html>

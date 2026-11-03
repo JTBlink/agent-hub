@@ -2,19 +2,19 @@
 
 本原型回答：网页、HTML 与 Markdown 作为独立预览模块，如何复用公共能力，并完成从浏览、检查到交给 Agent 的交互？
 
-完整对齐范围与架构边界见 [规划](../../../../docs/plans/agent-hub.md#独立预览与浏览模块)。此目录是可丢弃的交互原型，不是浏览器内核或生产模块。
+完整对齐范围与架构边界见 [规划](../../docs/plans/agent-hub.md#独立预览与浏览模块)。此目录是可丢弃的交互原型，不是浏览器内核或生产模块。
 
 ## 运行
 
 ```sh
-./prototype.sh
+./prototype.sh preview
 ```
 
-脚本自动打开 <http://127.0.0.1:4176/tests/browser/preview-module-prototype.html?variant=A>，已有当前项目目录的原型服务时复用；端口被其他服务或其他工作树占用时提示换端口，不终止已有进程。新服务在当前终端运行，按 Ctrl+C 停止。
+脚本自动打开 <http://127.0.0.1:4176/prototypes/preview/?variant=A>，已有当前项目目录的原型服务时复用；端口被其他服务或其他工作树占用时提示换端口，不终止已有进程。新服务在当前终端运行，按 Ctrl+C 停止。
 
 ```sh
-./prototype.sh --layout B               # 直接查看阅读布局
-./prototype.sh --port 4180 --no-open   # 自选端口，不打开浏览器
+./prototype.sh preview --layout B               # 直接查看阅读布局
+./prototype.sh preview --port 4180 --no-open   # 自选端口，不打开浏览器
 ```
 
 底层命令 `npm run prototype:preview` 仍可直接使用。正式应用的预览模块随应用启动，不需要单独运行本脚本。

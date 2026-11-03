@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import { createHash } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { helpContentPlugin } from "./scripts/docs/vite-plugin.mjs";
 
@@ -14,6 +14,23 @@ export default defineConfig({
         const checkout = createHash("sha256")
           .update(realpathSync(server.config.root))
           .digest("hex");
+        const catalog: { path?: string; aliases?: string[] }[] = JSON.parse(
+          readFileSync(
+            new URL("./prototypes/catalog.json", import.meta.url),
+            "utf8",
+          ),
+        );
+        server.middlewares.use((request, response, next) => {
+          const url = new URL(request.url ?? "/", "http://localhost");
+          const entry = catalog.find((item) =>
+            item.aliases?.includes(url.pathname),
+          );
+          if (entry?.path) {
+            response
+              .writeHead(302, { Location: entry.path + url.search })
+              .end();
+          } else next();
+        });
         server.middlewares.use("/__prototype_identity", (request, response) => {
           if (request.method !== "GET") {
             response.writeHead(405).end();

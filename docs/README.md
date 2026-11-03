@@ -2,6 +2,7 @@
 
 当前文档描述单主应用架构；旧配置中心和独立 Skills 子窗口的说明已删除。旧方案已直接删除，ADR 只保留当前适用内容。
 
+- [需求原型目录](../prototypes/README.md)（`./prototype.sh` 一键查看索引）
 - [后续规划与设计](plans/agent-hub.md)（统一规划入口）
 - [产品概述](product/overview.md)
 - [编译、打包与安装](build-and-install.md)（命令、产物位置、安装与缓存清理）

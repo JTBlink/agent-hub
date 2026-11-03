@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import postcss from "postcss";
+import tailwindcss from "tailwindcss";
 import http from "node:http";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -11,7 +13,15 @@ const launch = (port) =>
   new Promise((resolve, reject) => {
     const child = spawn(
       "bash",
-      ["./prototype.sh", "--port", String(port), "--layout", "B", "--no-open"],
+      [
+        "./prototype.sh",
+        "preview",
+        "--port",
+        String(port),
+        "--layout",
+        "B",
+        "--no-open",
+      ],
       { cwd: root, timeout: 8000 },
     );
     let output = "";
@@ -33,11 +43,7 @@ it("reuses only the current checkout and preserves services from other worktrees
     const own = await launch(port);
     assert.equal(own.code, 0, own.output);
     assert.ok(own.output.includes("复用已有原型服务"));
-    assert.ok(
-      own.output.includes(
-        `:${port}/tests/browser/preview-module-prototype.html?variant=B`,
-      ),
-    );
+    assert.ok(own.output.includes(`:${port}/prototypes/preview/?variant=B`));
     checkout = "different-worktree";
     const other = await launch(port);
     assert.equal(other.code, 1, other.output);
@@ -47,4 +53,26 @@ it("reuses only the current checkout and preserves services from other worktrees
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+it("compiles the catalog stylesheet with the shared theme", async () => {
+  const brand = readFileSync(
+    new URL("../src/styles/brand.css", import.meta.url),
+    "utf8",
+  );
+  const catalog = readFileSync(
+    new URL("../prototypes/catalog.css", import.meta.url),
+    "utf8",
+  );
+  const result = await postcss([
+    tailwindcss({
+      content: [
+        { raw: '<html class="dark"><body></body></html>', extension: "html" },
+      ],
+      darkMode: "class",
+    }),
+  ]).process(brand + "\n" + catalog, { from: undefined });
+  assert.ok(result.css.includes("--color-bg:"));
+  assert.ok(result.css.includes(".dark"));
+  assert.ok(!result.css.includes("@tailwind base"));
 });

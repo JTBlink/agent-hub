@@ -4,16 +4,21 @@ set -euo pipefail
 
 project_dir="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 preview_port=4176
-preview_layout=A
+preview_layout=""
+prototype_id=index
+list_only=false
 open_browser=true
 
 usage() {
   cat <<'HELP'
-用法：./prototype.sh [--port 端口] [--layout A|B|C] [--no-open]
+用法：./prototype.sh [原型名称] [--port 端口] [--layout A|B|C] [--no-open]
+      ./prototype.sh --list
 
-启动预览与浏览交互原型；已有相同原型服务时复用。
+默认打开需求原型目录；如 ./prototype.sh preview 可直达预览与浏览。
+已有当前工作树的原型服务时复用。
+  --list       列出原型名称、用途和状态
   --port       本地端口，默认 4176
-  --layout     A 浏览与检查 / B 文档阅读 / C Agent 协作，默认 A
+  --layout     A 浏览与检查 / B 文档阅读 / C Agent 协作，仅 preview，默认 A
   --no-open    只显示地址，不自动打开浏览器
   -h, --help   显示帮助
 
@@ -31,9 +36,13 @@ while (($#)); do
       if [[ "$1" == --port ]]; then preview_port="$2"; else preview_layout="$2"; fi
       shift 2
       ;;
+    --list) list_only=true; shift ;;
     --no-open) open_browser=false; shift ;;
     -h|--help) usage; exit 0 ;;
-    *) printf '未知参数：%s\n' "$1" >&2; usage >&2; exit 1 ;;
+    --*) printf '未知参数：%s\n' "$1" >&2; usage >&2; exit 1 ;;
+    *)
+      if [[ "$prototype_id" != index ]]; then printf '只能指定一个原型。\n' >&2; exit 1; fi
+      prototype_id="$1"; shift ;;
   esac
 done
 
@@ -42,10 +51,11 @@ if [[ ! "$preview_port" =~ ^[0-9]{1,5}$ ]] || ((10#$preview_port < 1 || 10#$prev
   exit 1
 fi
 preview_port=$((10#$preview_port))
-case "$preview_layout" in A|B|C) ;; *) printf '布局必须为 A、B 或 C\n' >&2; exit 1 ;; esac
+case "$preview_layout" in ""|A|B|C) ;; *) printf '布局必须为 A、B 或 C\n' >&2; exit 1 ;; esac
 command -v node >/dev/null 2>&1 || { printf '需要 Node.js，请先安装项目要求的版本。\n' >&2; exit 1; }
 
-preview_path="/tests/browser/preview-module-prototype.html?variant=$preview_layout"
+if "$list_only"; then exec node "$project_dir/scripts/prototype-catalog.mjs" --list; fi
+preview_path="$(node "$project_dir/scripts/prototype-catalog.mjs" "$prototype_id" "$preview_layout")"
 preview_url="http://127.0.0.1:$preview_port$preview_path"
 probe_result=0
 node --input-type=module - "$preview_port" "$project_dir" <<'JS' || probe_result=$?

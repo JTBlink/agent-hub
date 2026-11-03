@@ -1,0 +1,51 @@
+[
+  {
+    "id": "preview",
+    "title": "预览与浏览",
+    "description": "网页、HTML、Markdown 独立模块；检查、批注和 Agent 交互。",
+    "status": "设计中",
+    "path": "/prototypes/preview/",
+    "source": "prototypes/preview/",
+    "layouts": ["A", "B", "C"],
+    "aliases": ["/tests/browser/preview-module-prototype.html"]
+  },
+  {
+    "id": "tasks-terminal",
+    "title": "任务与终端",
+    "description": "代码平台任务、项目终端、分屏与 Herdr 运行状态。",
+    "status": "参考原型",
+    "path": "/prototypes/tasks-terminal/",
+    "source": "prototypes/tasks-terminal/",
+    "aliases": [
+      "/docs/prototypes/tasks-terminal.html",
+      "/docs/prototypes/tasks-herdr.html"
+    ]
+  },
+  {
+    "id": "herdr-sidebar",
+    "title": "Herdr 侧栏",
+    "description": "工作空间、工作树、Agent 会话与侧栏导航方案。",
+    "status": "参考原型",
+    "path": "/prototypes/herdr-sidebar/",
+    "source": "prototypes/herdr-sidebar/",
+    "aliases": ["/docs/prototypes/herdr-sidebar.html"]
+  },
+  {
+    "id": "install",
+    "title": "安装流程",
+    "description": "桌面应用安装与首次使用流程的界面参考。",
+    "status": "参考原型",
+    "path": "/prototypes/install/",
+    "source": "prototypes/install/",
+    "aliases": ["/docs/prototypes/install.html"]
+  },
+  {
+    "id": "hosts",
+    "title": "Hosts 方案",
+    "description": "A 方案列表与编辑器、B/C 比较方案；正式功能已有独立实现。",
+    "status": "分支存档",
+    "branch": "prototype/hosts-config",
+    "commit": "0ef0a4f",
+    "source": "src/components/settings/prototype/"
+  }
+]

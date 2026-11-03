@@ -1,5 +1,5 @@
 import { htmlExampleDocument } from "./PrototypeExamples";
-import { ThemedSelect } from "../../../components/ThemedSelect";
+import { ThemedSelect } from "../../src/components/ThemedSelect";
 import { useEffect, useRef } from "react";
 import {
   X,
