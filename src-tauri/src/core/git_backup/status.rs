@@ -307,7 +307,7 @@ fn count_changed_skills(changes: &[GitBackupChange]) -> u32 {
             std::iter::once(change.path.as_str()).chain(change.previous_path.as_deref())
         })
         .filter_map(|path| {
-            if path.starts_with("automations/") {
+            if path.starts_with("automations/") || path.starts_with("user-config/") {
                 return None;
             }
             let path = path.strip_prefix("skills/").unwrap_or(path);

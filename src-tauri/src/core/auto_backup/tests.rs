@@ -140,8 +140,20 @@ fn round_commits_and_pushes_without_snapshot_tag() {
     std::fs::create_dir_all(env.skills_dir.join("skill-a")).unwrap();
     std::fs::write(env.skills_dir.join("skill-a/SKILL.md"), "content").unwrap();
 
+    let profile =
+        crate::core::hosts::profiles::create("Automatic backup", "127.0.0.1 localhost\n").unwrap();
     let outcome = run_round_blocking(&env.store);
     assert_eq!(outcome, Outcome::BackedUp);
+    assert_eq!(
+        git_out(
+            &env.remote,
+            &[
+                "show",
+                &format!("main:user-config/hosts/profiles/{}/hosts", profile.id)
+            ]
+        ),
+        "127.0.0.1 localhost"
+    );
 
     // The change reached the remote…
     let remote_head = git_out(&env.remote, &["rev-parse", "main"]);

@@ -3,8 +3,10 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{io::Write, net::IpAddr, path::PathBuf, sync::Mutex};
 
+mod archive;
 mod elevation;
 pub mod permissions;
+pub mod profiles;
 #[cfg(test)]
 mod tests;
 
@@ -16,6 +18,7 @@ pub struct HostsSnapshot {
     pub path: String,
     pub content: String,
     pub revision: String,
+    pub backup_warning: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -55,12 +58,24 @@ fn read_path(path: &std::path::Path) -> Result<HostsSnapshot, String> {
         path: path.to_string_lossy().into_owned(),
         content,
         revision,
+        backup_warning: None,
     })
 }
 
 /// Read the operating system's hosts file without requesting administrator access.
 pub fn read() -> Result<HostsSnapshot, String> {
     read_path(&system_path())
+}
+
+/// Capture actual local content in the existing portable configuration backup.
+pub fn read_for_editor() -> Result<HostsSnapshot, String> {
+    let lock = crate::core::repo_lock::RepoLock::acquire_foreground("capture system Hosts");
+    let mut snapshot = read()?;
+    snapshot.backup_warning = lock
+        .map_err(|e| e.to_string())
+        .and_then(|_lock| archive::capture(&snapshot, false))
+        .err();
+    Ok(snapshot)
 }
 
 fn validate(content: &str) -> Result<(), String> {
@@ -113,10 +128,24 @@ fn encode(content: &str, original: &str) -> String {
 
 /// Check for concurrent edits, back up the original, then save through a scoped helper.
 pub fn save(content: &str, expected_revision: &str) -> Result<HostsSaved, String> {
+    let _lock = crate::core::repo_lock::RepoLock::acquire_foreground("save system Hosts")
+        .map_err(|e| e.to_string())?;
+    save_unlocked(content, expected_revision)
+}
+
+pub(super) fn save_unlocked(content: &str, expected_revision: &str) -> Result<HostsSaved, String> {
     let _guard = SAVE_LOCK
         .lock()
         .map_err(|_| "Hosts save lock unavailable")?;
-    save_path(&system_path(), content, expected_revision)
+    let before = read()?;
+    if before.revision != expected_revision {
+        return Err("HOSTS_CONFLICT".into());
+    }
+    validate(content)?;
+    archive::capture(&before, true)?;
+    let mut result = save_path(&system_path(), content, expected_revision)?;
+    result.snapshot.backup_warning = archive::capture(&result.snapshot, false).err();
+    Ok(result)
 }
 
 fn save_path(path: &std::path::Path, content: &str, expected: &str) -> Result<HostsSaved, String> {

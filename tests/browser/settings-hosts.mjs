@@ -10,9 +10,11 @@ async function request(path, body) {
   assert.ok(response.ok, JSON.stringify(result));
   return result;
 }
+const baseUrl =
+  process.env.AGENT_HUB_BROWSER_BASE_URL ?? "http://127.0.0.1:1420";
 const { targetId } = await request(
   "/new",
-  "http://127.0.0.1:1420/tests/browser/settings-hosts.html",
+  `${baseUrl}/tests/browser/settings-hosts.html`,
 );
 async function evaluate(code) {
   const result = await request(
@@ -66,8 +68,12 @@ try {
       }
     }
   }
+  await evaluate(
+    `new Promise(resolve => { const frame=document.querySelector('iframe');frame.style.width='960px';frame.onload=()=>resolve(true);frame.src='/tests/browser/settings-hosts.html?language=zh'; })`,
+  );
+  await until(`!!document.querySelector('textarea:not(:disabled)')`);
   await inside(
-    `document.querySelector('#settings-panel-hosts aside button').click();true`,
+    `document.querySelector('#settings-panel-hosts details').open=true;Array.from(document.querySelectorAll('#settings-panel-hosts button')).find(b=>b.textContent==='打开系统权限设置').click();true`,
   );
   await until(
     `document.documentElement.dataset.permissionSettingsOpened === 'true'`,
@@ -90,7 +96,9 @@ try {
   await inside(
     `const editor=document.querySelector('textarea');Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set.call(editor,${JSON.stringify("127.0.0.2 demo.test\n")});editor.dispatchEvent(new window.Event('input',{bubbles:true}));true`,
   );
-  await until(`!document.querySelector('button.app-button-primary').disabled`);
+  await until(
+    `!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='保存').disabled`,
+  );
   await inside(`document.querySelector('#settings-tab-network').click();true`);
   await inside(`document.querySelector('#settings-tab-hosts').click();true`);
   assert.equal(
@@ -98,13 +106,49 @@ try {
     "127.0.0.2 demo.test\n",
   );
   await inside(
-    `document.querySelector('button.app-button-primary').click();true`,
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='保存').click();true`,
   );
   await until(`!!document.querySelector('[role=status]')`);
   assert.ok(
     (
       await inside(`document.querySelector('[role=status]').textContent`)
-    ).includes("/etc/hosts.agent-hub-example.bak"),
+    ).includes("Hosts 已保存"),
+  );
+  await inside(`document.querySelector('[aria-pressed="false"]').click();true`);
+  await until(
+    `document.querySelector('textarea').value==='127.0.0.2 app.test\\n'`,
+  );
+  await inside(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='应用到系统').click();true`,
+  );
+  await until(
+    `!!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='已应用' && b.disabled)`,
+  );
+  await inside(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='用 VS Code 打开').click();true`,
+  );
+  await until(`!!document.documentElement.dataset.vscodeOpened`);
+  assert.ok(
+    (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
+      "/profiles/development/hosts",
+    ),
+  );
+  await inside(
+    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='新建方案').click();true`,
+  );
+  await until(`!!document.querySelector('[role=alertdialog] input')`);
+  const modalFits = await inside(
+    `(() => {const r=document.querySelector('[role=alertdialog]').getBoundingClientRect();return r.top>=0 && r.bottom<=window.innerHeight;})()`,
+  );
+  assert.ok(modalFits);
+  await inside(
+    `const input=document.querySelector('[role=alertdialog] input');Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(input,'Browser profile');input.dispatchEvent(new window.Event('input',{bubbles:true}));true`,
+  );
+  await inside(
+    `Array.from(document.querySelectorAll('[role=alertdialog] button')).find(b=>b.textContent==='保存').click();true`,
+  );
+  await until(
+    `!document.querySelector('[role=alertdialog]') && document.querySelector('textarea').value.includes('app.test')`,
   );
   await inside(
     `document.querySelector('#settings-tab-hosts').focus();document.activeElement.dispatchEvent(new window.KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));true`,
@@ -114,7 +158,7 @@ try {
     "settings-tab-network",
   );
   console.log(
-    "PASS: 24 theme/scale/width/locale layouts, draft retention, save, backup, settings shortcut, sidebar sizing and vertical keyboard navigation",
+    "PASS: 24 theme/scale/width/locale layouts, draft retention, save, profile create/apply, VS Code, settings shortcut, sidebar sizing and vertical keyboard navigation",
   );
 } finally {
   await request(`/close?target=${targetId}`);

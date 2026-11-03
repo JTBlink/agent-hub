@@ -3,6 +3,7 @@
 mod files;
 #[cfg(test)]
 mod tests;
+mod user_config;
 use super::{central_repo, git_backup, skill_store::SkillStore, sync_metadata};
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -14,7 +15,7 @@ use std::{
 
 const LAYOUT: &str = ".agent-hub/backup-layout.json";
 const LEGACY_README: &str = "# Skills\n\nInstall all or selected skills with:\n\n```sh\nnpx skills@latest add <repository-url>\nnpx skills@latest add <repository-url> --skill <skill-name>\n```\n\nSkills are in `skills/`, each with its original `SKILL.md` and supporting files.\n`.agent-hub/` contains portable AgentHub sync metadata.\nPrivate repositories require Git access on the installing machine.\n";
-const README: &str = "# AgentHub backup\n\n- `skills/`: installable Skills with `SKILL.md` and supporting files.\n- `automations/`: installable task directories with `task.json`, scripts and prompts.\n- `.agent-hub/`: portable sync metadata.\n\nInstall Skills with `npx skills@latest add <repository-url>`. Preview automation packages through AgentHub Discover → Automations → Git install. Restored tasks require local configuration and installation before use.\n\nCredentials, installation receipts, private environments and run history stay on the original device. Private repositories require Git access on the installing machine.\n";
+const README: &str = "# AgentHub backup\n\n- `skills/`: installable Skills with `SKILL.md` and supporting files.\n- `automations/`: installable task directories with `task.json`, scripts and prompts.\n- `user-config/`: portable user configuration, including complete Hosts profiles.\n- `.agent-hub/`: portable sync metadata.\n\nInstall Skills with `npx skills@latest add <repository-url>`. Preview automation packages through AgentHub Discover → Automations → Git install. Restored tasks require local configuration and installation before use.\n\nCredentials, installation receipts, private environments and run history stay on the original device. Private repositories require Git access on the installing machine.\n";
 
 fn write_readme(root: &Path) -> Result<()> {
     let path = root.join("README.md");
@@ -39,6 +40,8 @@ fn journal_path() -> PathBuf {
 struct Journal {
     live_root: PathBuf,
     before: BTreeMap<String, String>,
+    #[serde(default)]
+    user_config_before: Option<BTreeMap<String, String>>,
     recovery: PathBuf,
 }
 
@@ -141,6 +144,9 @@ pub(crate) fn clone_unlocked(root: &Path, url: &str) -> Result<()> {
     git_backup::clone_into_unlocked(&checkout, url)?;
     normalize_layout(&checkout)?;
     carry_local_only(&root.join("skills"), &checkout.join("skills"))?;
+    super::user_config::validate_tree(&root.join("user-config"))?;
+    super::user_config::validate_tree(&checkout.join("user-config"))?;
+    carry_local_only(&root.join("user-config"), &checkout.join("user-config"))?;
     // Restore does not discard tags/IDs of Skills present only on this device.
     let remote_meta = read_metadata(&checkout.join(".agent-hub/skills"))?;
     for (path, meta) in read_metadata(&root.join(".agent-hub/skills"))? {
@@ -249,7 +255,7 @@ pub(crate) fn normalize_layout(root: &Path) -> Result<()> {
         fs::create_dir(&content)?;
         let names: Vec<_> = files::names(root)?
             .into_iter()
-            .filter(|name| name != "automations")
+            .filter(|name| name != "automations" && name != "user-config")
             .filter(|name| files::content_name(name))
             .collect();
         for name in &names {
@@ -307,6 +313,7 @@ pub(crate) fn prepare_unlocked(store: &SkillStore) -> Result<()> {
     if journal_path().exists() {
         finish_unlocked(store)?;
     }
+    super::hosts::profiles::recover_pending().map_err(anyhow::Error::msg)?;
     ensure_repo()?;
     let root = repo_dir();
     if root.join(".git").exists() {
@@ -335,9 +342,11 @@ pub(crate) fn prepare_unlocked(store: &SkillStore) -> Result<()> {
     }
     project_metadata(&live.join(".agent-hub"), &root.join(".agent-hub"), true)?;
     fs::write(root.join(LAYOUT), b"{\"version\":1}\n")?;
+    let user_config_before = Some(user_config::export(&root)?);
     let journal = Journal {
         live_root: live,
         before,
+        user_config_before,
         recovery: central_repo::base_dir()
             .join("recovery")
             .join(format!("backup-{}", uuid::Uuid::new_v4())),
@@ -432,7 +441,8 @@ pub(crate) fn finish_unlocked(store: &SkillStore) -> Result<()> {
                     || files::fingerprint(&stage.path().join(".agent-hub").join(name))?
                         != files::fingerprint(&journal.live_root.join(".agent-hub").join(name))?)
             })?;
-    if changed.is_empty() && !metadata_changed {
+    let config_changed = user_config::stage(&journal, &root, stage.path())?;
+    if changed.is_empty() && !metadata_changed && !config_changed {
         fs::remove_file(journal_path())?;
         return Ok(());
     }
@@ -492,6 +502,9 @@ pub(crate) fn finish_unlocked(store: &SkillStore) -> Result<()> {
         &journal.live_root.join(".agent-hub"),
     )
     .map_err(anyhow::Error::msg)?;
+    if config_changed {
+        user_config::publish(&journal, stage.path())?;
+    }
     fs::remove_file(journal_path())?;
     Ok(())
 }

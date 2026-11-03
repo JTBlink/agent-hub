@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { SettingsTabs } from "../../src/components/settings/SettingsTabs";
 import { HostsSettings } from "../../src/components/settings/HostsSettings";
+import type { HostsProfile } from "../../src/lib/hostsApi";
 import { applyTextSize } from "../../src/lib/textScale";
 import "../../src/index.css";
 
@@ -17,9 +18,76 @@ applyTextSize(params.get("text-size") ?? "default");
 let content =
   "# Local development\n127.0.0.1 localhost demo.test\n::1 localhost\n";
 let revision = "first";
+let profiles: HostsProfile[] = [
+  {
+    id: "development",
+    name: "Development",
+    content: "127.0.0.2 app.test\n",
+    revision: "profile-first",
+    path: "/workspace/user-config/hosts/profiles/development/hosts",
+  },
+];
+const saveSystem = (next: string) => {
+  content = next;
+  revision += "-saved";
+  return {
+    snapshot: { path: "/etc/hosts", content, revision },
+    backup_path: null,
+  };
+};
+
 Object.assign(window, {
   __TAURI_INTERNALS__: {
     invoke: async (command: string, args: Record<string, string>) => {
+      if (command === "list_hosts_profiles") return profiles;
+      if (command === "create_hosts_profile") {
+        const id = crypto.randomUUID();
+        const profile = {
+          id,
+          name: args.name,
+          content: args.content,
+          revision: id,
+          path: `/workspace/user-config/hosts/profiles/${id}/hosts`,
+        };
+        profiles = [...profiles, profile];
+        return profile;
+      }
+      if (
+        command === "update_hosts_profile" ||
+        command === "delete_hosts_profile" ||
+        command === "apply_hosts_profile"
+      ) {
+        const profile = profiles.find((p) => p.id === args.id);
+        if (
+          !profile ||
+          profile.revision !==
+            (command === "apply_hosts_profile"
+              ? args.profileRevision
+              : args.revision)
+        )
+          throw { kind: "io", message: "HOSTS_PROFILE_CONFLICT" };
+        if (command === "delete_hosts_profile") {
+          profiles = profiles.filter((p) => p.id !== profile.id);
+          return;
+        }
+        if (command === "apply_hosts_profile") {
+          if (args.systemRevision !== revision)
+            throw { kind: "io", message: "HOSTS_CONFLICT" };
+          return saveSystem(profile.content);
+        }
+        const next = {
+          ...profile,
+          name: args.name,
+          content: args.content,
+          revision: profile.revision + "-saved",
+        };
+        profiles = profiles.map((p) => (p.id === next.id ? next : p));
+        return next;
+      }
+      if (command === "plugin:opener|open_url") {
+        document.documentElement.dataset.vscodeOpened = args.url;
+        return;
+      }
       if (command === "read_system_hosts")
         return { path: "/etc/hosts", content, revision };
       if (command === "save_system_hosts") {
@@ -57,9 +125,12 @@ export function Fixture() {
         setResourcePanelVisible: () => {},
       }}
     >
-      <div className="flex h-[calc(100vh/var(--app-scale,1))] min-w-0 bg-background">
+      <div
+        style={{ height: "calc(100vh / var(--app-scale, 1))" }}
+        className="flex min-w-0 bg-background"
+      >
         <div ref={setSidebarContainer} className="flex min-h-0 shrink-0" />
-        <main className="workbench-editor-panel flex min-w-0 flex-1 flex-col p-3">
+        <main className="workbench-editor-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3">
           <h1 className="app-page-title mb-3">{i18n.t("settings.title")}</h1>
           <SettingsTabs agentCount={3}>
             {{

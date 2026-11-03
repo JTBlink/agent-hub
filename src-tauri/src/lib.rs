@@ -1207,6 +1207,11 @@ pub fn run() {
             commands::hosts::open_hosts_permission_settings,
             commands::hosts::read_system_hosts,
             commands::hosts::save_system_hosts,
+            commands::hosts::list_hosts_profiles,
+            commands::hosts::create_hosts_profile,
+            commands::hosts::update_hosts_profile,
+            commands::hosts::delete_hosts_profile,
+            commands::hosts::apply_hosts_profile,
             // Settings
             commands::settings::get_settings,
             commands::settings::set_settings,

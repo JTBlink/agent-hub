@@ -286,3 +286,97 @@ fn restore_rejects_remote_symlinks_without_changing_live_skill() {
         .unwrap()
         .contains("base"));
 }
+
+#[test]
+fn backs_up_and_restores_user_configuration_without_applying_system_hosts() {
+    let e = env();
+    let profile =
+        super::super::hosts::profiles::create("Development", "127.0.0.1 localhost\n").unwrap();
+    initialize(&e.store).unwrap();
+    let root = repo_dir();
+    assert_eq!(
+        fs::read_to_string(root.join(format!("user-config/hosts/profiles/{}/hosts", profile.id)))
+            .unwrap(),
+        "127.0.0.1 localhost\n"
+    );
+    let tag = commit(&e.store, "before profile change").unwrap();
+    super::super::hosts::profiles::update(
+        &profile.id,
+        "Changed",
+        "::1 localhost\n",
+        &profile.revision,
+    )
+    .unwrap();
+    commit(&e.store, "after profile change").unwrap();
+    restore(&e.store, &tag).unwrap();
+    let restored = super::super::hosts::profiles::list().unwrap();
+    assert_eq!(restored[0].name, "Development");
+    assert_eq!(restored[0].content, "127.0.0.1 localhost\n");
+    assert!(!e.tmp.path().join("hosts").exists());
+}
+
+#[test]
+fn preserves_external_configuration_edits_when_remote_publication_conflicts() {
+    let e = env();
+    let profile = super::super::hosts::profiles::create("Original", "# original\n").unwrap();
+    initialize(&e.store).unwrap();
+    prepare_unlocked(&e.store).unwrap();
+    fs::write(
+        repo_dir().join(format!("user-config/hosts/profiles/{}/hosts", profile.id)),
+        "# incoming\n",
+    )
+    .unwrap();
+    fs::write(&profile.path, "# external\n").unwrap();
+    assert!(finish_unlocked(&e.store).is_err());
+    assert_eq!(fs::read_to_string(&profile.path).unwrap(), "# external\n");
+    fs::write(&profile.path, "# original\n").unwrap();
+    finish_unlocked(&e.store).unwrap();
+    assert_eq!(fs::read_to_string(&profile.path).unwrap(), "# incoming\n");
+}
+
+#[cfg(unix)]
+#[test]
+fn rejects_linked_configuration_before_publishing_any_restore() {
+    let e = env();
+    let profile = super::super::hosts::profiles::create("Original", "# original\n").unwrap();
+    initialize(&e.store).unwrap();
+    prepare_unlocked(&e.store).unwrap();
+    let remote = repo_dir().join(format!("user-config/hosts/profiles/{}/hosts", profile.id));
+    fs::remove_file(&remote).unwrap();
+    let outside = e.tmp.path().join("private");
+    fs::write(&outside, "# outside\n").unwrap();
+    std::os::unix::fs::symlink(&outside, remote).unwrap();
+    assert!(finish_unlocked(&e.store).is_err());
+    assert_eq!(fs::read_to_string(&profile.path).unwrap(), "# original\n");
+    assert_eq!(fs::read_to_string(outside).unwrap(), "# outside\n");
+}
+
+#[test]
+fn configuration_writers_wait_for_interrupted_restore_recovery() {
+    let e = env();
+    let profile = super::super::hosts::profiles::create("Original", "# original\n").unwrap();
+    initialize(&e.store).unwrap();
+    prepare_unlocked(&e.store).unwrap();
+    fs::write(
+        repo_dir().join(format!("user-config/hosts/profiles/{}/hosts", profile.id)),
+        "# incoming\n",
+    )
+    .unwrap();
+    let journal: Journal = serde_json::from_slice(&fs::read(journal_path()).unwrap()).unwrap();
+    fs::create_dir_all(&journal.recovery).unwrap();
+    fs::rename(
+        super::super::user_config::root(),
+        journal.recovery.join("user-config"),
+    )
+    .unwrap();
+    assert_eq!(
+        super::super::user_config::ensure_root().unwrap_err(),
+        "USER_CONFIG_RECOVERY_PENDING"
+    );
+    assert!(!super::super::user_config::root().exists());
+    finish_unlocked(&e.store).unwrap();
+    assert_eq!(
+        super::super::hosts::profiles::list().unwrap()[0].content,
+        "# incoming\n"
+    );
+}

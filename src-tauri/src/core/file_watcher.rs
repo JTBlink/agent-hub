@@ -308,6 +308,8 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
         let mut pending_emit = false;
         let automation_root = super::automation::watch_dir();
         let mut automation_watched = false;
+        let config_root = super::user_config::root();
+        let mut config_watched = false;
 
         let emit_now = |last_emit: &mut Instant| {
             if let Err(err) = app.emit(APP_FS_CHANGED_EVENT, ()) {
@@ -328,6 +330,22 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
                 }) {
                     Ok(()) => automation_watched = true,
                     Err(error) => log::debug!("Cannot watch automation definitions: {error}"),
+                }
+            }
+            if !config_watched || last_sync.elapsed() >= WATCH_RESCAN_INTERVAL {
+                if config_watched {
+                    let _ = watcher.unwatch(&config_root);
+                }
+                match super::user_config::checked(&config_root).and_then(|()| {
+                    watcher
+                        .watch(&config_root, RecursiveMode::Recursive)
+                        .map_err(|e| e.to_string())
+                }) {
+                    Ok(()) => config_watched = true,
+                    Err(error) => {
+                        config_watched = false;
+                        log::debug!("Cannot watch user configuration: {error}");
+                    }
                 }
             }
             if last_sync.elapsed() >= WATCH_RESCAN_INTERVAL {
@@ -360,7 +378,12 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
                     if automation_event && super::automation::has_pending_backup() {
                         super::auto_backup::notify_central_change();
                     }
-                    if touches_central_repo(&event) {
+                    if touches_central_repo(&event)
+                        || event
+                            .paths
+                            .iter()
+                            .any(|path| path.starts_with(&config_root))
+                    {
                         super::auto_backup::notify_central_change();
                     }
                     match decide_emit(

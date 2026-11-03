@@ -12,10 +12,12 @@ export async function openPreviewInVscode(
   await openUrl(vscodeDirectoryUrl(localPath));
 }
 
-/** Open an absolute directory in VS Code. Callers handle launch failures. */
-export async function openDirectoryInVscode(path: string): Promise<void> {
+/** Open an absolute local file or directory in VS Code. Callers handle launch failures. */
+export async function openPathInVscode(path: string): Promise<void> {
   await openUrl(vscodeDirectoryUrl(path));
 }
+
+export const openDirectoryInVscode = openPathInVscode;
 
 /** Open a file relative to its saved local directory, expanding a home prefix. */
 export async function openFileInVscode(

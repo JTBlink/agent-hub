@@ -33,6 +33,7 @@ agent-hub/
 │   │       └── terminal/           #     Herdr 客户端挂接、快捷入口与终端操作栏
 │   ├── components/                 # 共享 UI 组件
 │   │   ├── Layout.tsx              #   主布局框架
+│   │   ├── settings/               #   设置组合、Hosts 方案列表、编辑状态与权限说明
 │   │   ├── usage/                  #   Agent 订阅用量摘要与详情
 │   │   ├── Sidebar.tsx             #   侧边栏导航
 │   │   ├── CommandPalette.tsx      #   命令面板
@@ -191,6 +192,8 @@ agent-hub/
 │   │       ├── github_api.rs       #     GitHub API 客户端
 │   │       ├── credential_cache.rs #     进程内钥匙串读取缓存与并发合并
 │   │       ├── library_layout.rs   #     默认库层级升级、冲突保护与中断恢复
+│   │       ├── hosts/              #     系统 Hosts 校验与提权、完整方案及中断写入恢复
+│   │       ├── user_config.rs      #     独立用户配置目录、路径保护及统一容量约束
 │   │       ├── central_repo.rs     #     库路径与应用状态目录
 │   │       ├── central_repo_migration.rs # 应用数据目录迁移
 │   │       ├── central_repo_tests.rs #   库路径与迁移回归

@@ -75,3 +75,5 @@ pub mod project_worktrees;
 pub mod worktree_search;
 
 pub mod preview;
+
+pub mod user_config;
