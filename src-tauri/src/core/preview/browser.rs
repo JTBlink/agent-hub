@@ -82,6 +82,7 @@ pub(super) struct State {
 }
 pub struct Browsers {
     pub root: PathBuf,
+    pub documents: Arc<super::documents::Documents>,
     pub(super) state: Mutex<State>,
     pub(super) downloads_gate: Mutex<()>,
 }
@@ -233,6 +234,7 @@ impl Browsers {
     pub fn new(root: PathBuf) -> Self {
         Self {
             root,
+            documents: Arc::new(super::documents::Documents::default()),
             state: Mutex::new(State::default()),
             downloads_gate: Mutex::new(()),
         }
@@ -360,7 +362,10 @@ impl Browsers {
                     Ok(child)
                 });
             let runtime = match created {
-                Ok(runtime) => Arc::new(Mutex::new(runtime)),
+                Ok(mut runtime) => {
+                    runtime.documents = Some(self.documents.clone());
+                    Arc::new(Mutex::new(runtime))
+                }
                 Err(error) => {
                     let child = self
                         .state

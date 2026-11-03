@@ -114,16 +114,14 @@ fn serve(mut stream: TcpStream, documents: &Documents) -> std::io::Result<()> {
         };
         parts
     };
-    let Ok(relative) = urlencoding::decode(raw_relative) else {
-        return respond(&mut stream, 400, "text/plain", b"Invalid path", false);
-    };
-    let Ok(path) = documents.resource(id, &relative) else {
-        return respond(&mut stream, 404, "text/plain", b"Not found", false);
-    };
-    let Ok(content) = std::fs::read(&path) else {
-        return respond(&mut stream, 404, "text/plain", b"Not found", false);
-    };
-    respond(&mut stream, 200, mime(&path), &content, method == "HEAD")
+    let response = super::resource_bridge::load(documents, id, raw_relative, method);
+    respond(
+        &mut stream,
+        response.code,
+        response.mime,
+        &response.content,
+        method == "HEAD",
+    )
 }
 pub(super) fn mime(path: &std::path::Path) -> &'static str {
     let extension = path

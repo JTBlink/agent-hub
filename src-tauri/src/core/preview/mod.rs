@@ -18,6 +18,7 @@ mod recovery;
 mod remote_downloads;
 #[cfg(test)]
 mod remote_proxy_tests;
+mod resource_bridge;
 pub mod runtime;
 pub mod uploads;
 use super::error::AppError;
@@ -49,12 +50,12 @@ pub struct Preview {
 }
 impl Default for Preview {
     fn default() -> Self {
+        let browsers =
+            browser::Browsers::shared(super::central_repo::home_base_dir().join("preview"));
         Self {
-            browsers: browser::Browsers::shared(
-                super::central_repo::home_base_dir().join("preview"),
-            ),
+            documents: browsers.documents.clone(),
+            browsers,
             automation: Mutex::new(None),
-            documents: Arc::new(documents::Documents::default()),
             packets: packets::Packets::new(
                 super::central_repo::home_base_dir().join("preview/deliveries"),
             ),

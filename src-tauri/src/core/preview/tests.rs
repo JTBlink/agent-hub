@@ -4,10 +4,11 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 #[ignore = "requires installed Chromium; verifies document viewport clipping and full capture"]
 fn rendered_document_capture_preserves_the_requested_region() {
     let root = tempfile::tempdir().unwrap();
+    let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
-        browsers: Arc::new(browser::Browsers::new(root.path().join("browser"))),
+        documents: browsers.documents.clone(),
+        browsers,
         automation: Mutex::new(None),
-        documents: Arc::new(documents::Documents::default()),
         packets: packets::Packets::new(root.path().join("deliveries")),
         assets: Mutex::new(None),
         cookie_imports: cookies::Imports::shared(),
@@ -46,10 +47,11 @@ fn file_links_reuse_the_source_grant_and_preserve_query_and_fragment_for_both_de
     std::fs::write(&path, "# Guide").unwrap();
     std::fs::write(root.path().join("next.md"), "# Target").unwrap();
     std::fs::write(root.path().join("page.html"), "<title>Page</title>").unwrap();
+    let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
-        browsers: Arc::new(browser::Browsers::new(root.path().join("browser"))),
+        documents: browsers.documents.clone(),
+        browsers,
         automation: Mutex::new(None),
-        documents: Arc::new(documents::Documents::default()),
         packets: packets::Packets::new(root.path().join("deliveries")),
         assets: Mutex::new(None),
         cookie_imports: cookies::Imports::shared(),
@@ -95,10 +97,11 @@ fn browser_follows_granted_file_links_with_encoded_paths_and_url_suffixes() {
     std::fs::write(folder.join("guide.md"), "# Guide").unwrap();
     std::fs::write(folder.join("page #.html"), "<!doctype html><link rel='stylesheet' href='/style.css'><title>Linked page</title><p id='target'>Target</p>").unwrap();
     std::fs::write(root.path().join("style.css"), "p{color:rgb(1,2,3)}").unwrap();
+    let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
-        browsers: Arc::new(browser::Browsers::new(root.path().join("browser"))),
+        documents: browsers.documents.clone(),
+        browsers,
         automation: Mutex::new(None),
-        documents: Arc::new(documents::Documents::default()),
         packets: packets::Packets::new(root.path().join("deliveries")),
         assets: Mutex::new(None),
         cookie_imports: cookies::Imports::shared(),

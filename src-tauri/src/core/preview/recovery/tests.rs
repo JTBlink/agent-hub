@@ -3,7 +3,6 @@ use crate::core::preview::{
     assets::Assets,
     automation::{self, Automation, ControlEndpoint},
     browser::Action,
-    documents::Documents,
     runtime::BrowserProfile,
 };
 use std::time::{Duration, Instant};
@@ -14,7 +13,8 @@ fn reconnects_local_and_paired_pages_without_reloading_or_replaying_input() {
         let root = tempfile::tempdir().unwrap();
         let path = root.path().join("index.html");
         std::fs::write(&path,"<!doctype html><title>Recovery</title><input id='field'><button onclick='window.clicks=(window.clicks||0)+1'>Submit</button>").unwrap();
-        let docs = Arc::new(Documents::default());
+        let browsers = Arc::new(Browsers::new(root.path().join("client")));
+        let docs = browsers.documents.clone();
         let doc = docs.open(&path).unwrap();
         let assets = Assets::start(docs).unwrap();
         let url = assets.browser_document_url(&doc.id, &doc.title);
@@ -24,7 +24,6 @@ fn reconnects_local_and_paired_pages_without_reloading_or_replaying_input() {
         } else {
             None
         };
-        let browsers = Arc::new(Browsers::new(root.path().join("client")));
         let profile = if remote {
             let endpoint = host.runtime_handles().unwrap()["default"]
                 .lock()

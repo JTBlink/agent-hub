@@ -70,6 +70,7 @@ pub struct Runtime {
     pub(super) download_frames: std::collections::VecDeque<String>,
     pub(super) remote_download_dir: Option<String>,
     context_proxy: Option<String>,
+    pub(super) documents: Option<Arc<super::documents::Documents>>,
     child: Option<Arc<Mutex<OwnedChild>>>,
     pub cdp: Cdp,
     pub endpoint: String,
@@ -210,6 +211,7 @@ impl Runtime {
             download_frames: std::collections::VecDeque::new(),
             remote_download_dir,
             context_proxy: profile.proxy.clone(),
+            documents: None,
             child,
             cdp,
             endpoint,
@@ -313,6 +315,9 @@ impl Runtime {
             .ok_or_else(|| AppError::network("Browser page is unavailable"))?;
         let address = control_address(&self.endpoint, address)?;
         let mut cdp = Cdp::connect(&address)?;
+        if let Some(documents) = self.documents.as_ref().filter(|_| self.context.is_some()) {
+            cdp.enable_resources(&address, documents.clone())?;
+        }
         cdp.call("Page.enable", json!({}))?;
         cdp.call("Runtime.enable", json!({}))?;
         cdp.call(

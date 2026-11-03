@@ -1,4 +1,5 @@
 //! Bounded CDP requests on an application-owned browser transport.
+mod resource_worker;
 use super::super::error::AppError;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::{json, Value};
@@ -10,6 +11,7 @@ use std::{
 use tungstenite::{stream::MaybeTlsStream, Message, WebSocket};
 
 pub struct Cdp {
+    resources: Option<resource_worker::ResourceWorker>,
     socket: WebSocket<MaybeTlsStream<TcpStream>>,
     sequence: u64,
     main_frame: Option<String>,
@@ -39,6 +41,7 @@ impl Cdp {
         }
         Ok(Self {
             socket,
+            resources: None,
             sequence: 0,
             main_frame: None,
             navigation_version: 0,
@@ -49,6 +52,14 @@ impl Cdp {
             chooser: None,
             dialog: None,
         })
+    }
+    pub(super) fn enable_resources(
+        &mut self,
+        address: &str,
+        documents: std::sync::Arc<super::documents::Documents>,
+    ) -> Result<(), AppError> {
+        self.resources = Some(resource_worker::ResourceWorker::start(address, documents)?);
+        Ok(())
     }
     #[cfg(test)]
     pub fn close(&mut self) {
@@ -79,6 +90,15 @@ impl Cdp {
         params: Value,
         session: Option<&str>,
     ) -> Result<Value, AppError> {
+        if self
+            .resources
+            .as_ref()
+            .is_some_and(|worker| !worker.healthy())
+        {
+            return Err(AppError::network(
+                "Document resource connection lost; reconnect the page",
+            ));
+        }
         self.sequence += 1;
         let id = self.sequence;
         let mut command = json!({ "id": id, "method": method, "params": params });
@@ -174,9 +194,25 @@ impl Cdp {
                     }
                     if reply.get("method").is_some() {
                         if self.events.len() >= 200 {
+                            if reply["method"] == "Fetch.requestPaused"
+                                || self
+                                    .events
+                                    .iter()
+                                    .any(|event| event["method"] == "Fetch.requestPaused")
+                            {
+                                return Err(AppError::network("Too many paused resource requests during startup; reconnect the page"));
+                            }
                             self.events.pop_front();
                         }
-                        let event = if reply.to_string().len() > 16384 {
+                        let event = if reply["method"] == "Fetch.requestPaused" {
+                            // Startup can receive a paused request before the enable reply.
+                            // Retain its identity even when postData/headers exceed the event cap.
+                            json!({"method":"Fetch.requestPaused","params":{
+                                "requestId":reply["params"]["requestId"],
+                                "request":{"url":reply["params"]["request"]["url"].as_str().filter(|url|url.len()<=8192).unwrap_or(""),
+                                "method":reply["params"]["request"]["method"]}
+                            }})
+                        } else if reply.to_string().len() > 16384 {
                             json!({"method": reply["method"], "params":{"truncated":true}})
                         } else {
                             reply
