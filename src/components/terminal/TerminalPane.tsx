@@ -1,3 +1,4 @@
+import { bindTerminalWebLinks } from "./terminalWebLinks";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -95,6 +96,9 @@ export function TerminalPane({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
+    const unbindWebLinks = bindTerminalWebLinks(terminal, () =>
+      toast.error(translate.current("preview.openLinkFailed")),
+    );
     const keyboard = bindTerminalTextInput(node, terminal);
     emulator.current = terminal;
     let disposed = false;
@@ -299,6 +303,7 @@ export function TerminalPane({
       inputQueue.dispose();
       showNow.current = () => {};
       renderer.dispose();
+      unbindWebLinks();
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };

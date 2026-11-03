@@ -2782,6 +2782,11 @@
     "cookieMergeHint": "Write selected cookies, updating matching name, domain and path coordinates.",
     "cookieReplaceHint": "Remove cookies for selected exact domains before writing. Replacement is refused if partitioned state cannot be preserved.",
     "cookieImportedCount": "Imported {{count}} cookies into “{{profile}}”",
-    "cookieNeedsPage": "Select a loaded web tab to import login cookies."
+    "cookieNeedsPage": "Select a loaded web tab to import login cookies.",
+    "linkDestination": "Open content links in",
+    "systemBrowser": "System browser",
+    "moduleBrowser": "Preview module",
+    "linkDestinationHint": "Applies to terminal, Markdown and help web links. Shift + Ctrl/⌘ + click temporarily reverses the destination. Terminal links require Ctrl/⌘ + click.",
+    "openLinkFailed": "Could not open the link."
   }
 }

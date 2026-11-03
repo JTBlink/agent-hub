@@ -1,4 +1,4 @@
-function (x, y) {
+function pickElement(x, y) {
   const viewportScale = window.visualViewport?.scale || 1;
   const offsetX = window.visualViewport?.offsetLeft || 0, offsetY = window.visualViewport?.offsetTop || 0;
   const el = document.elementFromPoint(x / viewportScale + offsetX, y / viewportScale + offsetY);

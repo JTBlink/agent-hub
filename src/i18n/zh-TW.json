@@ -2739,6 +2739,11 @@
     "cookieMergeHint": "只寫入選擇的 Cookie；相同名稱、網域與路徑的值將更新。",
     "cookieReplaceHint": "先移除所選精確網域的現有 Cookie，再寫入本次內容；存在無法保留的分區狀態時會拒絕替換。",
     "cookieImportedCount": "已向「{{profile}}」匯入 {{count}} 條 Cookie",
-    "cookieNeedsPage": "請先選擇已載入的網頁分頁，再匯入登入資料。"
+    "cookieNeedsPage": "請先選擇已載入的網頁分頁，再匯入登入資料。",
+    "linkDestination": "內容連結開啟位置",
+    "systemBrowser": "系統瀏覽器",
+    "moduleBrowser": "預覽模組",
+    "linkDestinationHint": "適用於終端、Markdown 和說明中的網頁連結。Shift + Ctrl/⌘ + 點擊暫時切換開啟位置；終端連結需 Ctrl/⌘ + 點擊。",
+    "openLinkFailed": "無法開啟連結。"
   }
 }

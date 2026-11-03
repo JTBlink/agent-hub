@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openWebLink, invertLinkDestination } from "../../lib/openWebLink";
 import { toast } from "sonner";
 import type { Components } from "react-markdown";
 import type { HelpArticle } from "../../lib/help/types";
@@ -38,7 +38,9 @@ export function HelpMarkdown({ article }: { article: HelpArticle }) {
             href={link.url}
             onClick={(event) => {
               event.preventDefault();
-              openUrl(link.url).catch(() => toast.error(t("help.openFailed")));
+              openWebLink(link.url, {
+                invert: invertLinkDestination(event),
+              }).catch(() => toast.error(t("help.openFailed")));
             }}
           >
             {children}

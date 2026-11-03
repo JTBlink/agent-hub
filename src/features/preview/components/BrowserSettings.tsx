@@ -1,3 +1,4 @@
+import { LinkRoutingSettings } from "./LinkRoutingSettings";
 import { CookieImportPanel } from "./CookieImportPanel";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { ToggleSwitch } from "../../../components/ToggleSwitch";
@@ -68,6 +69,7 @@ export function BrowserSettings({
         </button>
       </header>
       <div className="preview-inspector-scroll">
+        <LinkRoutingSettings onError={model.report} />
         <h3>{t("preview.searchEngine")}</h3>
         <ThemedSelect
           value={model.searchEngine}

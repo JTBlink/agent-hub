@@ -1,3 +1,4 @@
+import { invertLinkDestination } from "../../../lib/openWebLink";
 import { memo, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownContent } from "../../../components/MarkdownContent";
@@ -13,7 +14,7 @@ const MarkdownBody = memo(function MarkdownBody({
 }: {
   draft: string;
   base?: string;
-  onLink: (href: string) => void;
+  onLink: (href: string, invert: boolean) => void;
 }) {
   const components = useMemo(
     () => ({
@@ -39,7 +40,7 @@ const MarkdownBody = memo(function MarkdownBody({
               } catch {
                 /* A malformed fragment is not a navigation instruction. */
               }
-            } else if (href) onLink(href);
+            } else if (href) onLink(href, invertLinkDestination(event));
           }}
         >
           {children}
@@ -83,7 +84,7 @@ export function MarkdownPreview({
   onCapture: (
     value: Omit<Annotation, "id" | "tabId" | "revision" | "note">,
   ) => void;
-  onLink: (address: string) => void;
+  onLink: (address: string, invert: boolean) => void;
 }) {
   const { t } = useTranslation();
   const highlighted = useRef<HTMLElement | null>(null);

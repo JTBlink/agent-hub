@@ -1,3 +1,10 @@
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import {
+  isWebLink,
+  openWebLink,
+  invertLinkDestination,
+} from "../lib/openWebLink";
 import ReactMarkdown, { type Components } from "react-markdown";
 import type { ReactNode } from "react";
 import type { PluggableList } from "unified";
@@ -20,6 +27,7 @@ export function MarkdownContent({
   children,
   rehypePlugins,
 }: MarkdownContentProps) {
+  const { t } = useTranslation();
   return (
     <article
       className={cn(
@@ -79,6 +87,14 @@ export function MarkdownContent({
                 target="_blank"
                 rel="noreferrer"
                 {...props}
+                onClick={(event) => {
+                  if (safeHref && isWebLink(safeHref)) {
+                    event.preventDefault();
+                    void openWebLink(safeHref, {
+                      invert: invertLinkDestination(event),
+                    }).catch(() => toast.error(t("preview.openLinkFailed")));
+                  }
+                }}
               />
             );
           },

@@ -1,6 +1,10 @@
+import { openWebLink } from "../../lib/openWebLink";
 import { previewError } from "./shared/previewError";
 import { copyScreenshot } from "./shared/copyScreenshot";
-import { consumePreviewRequests } from "./shared/openRequests";
+import {
+  consumePreviewRequests,
+  type PreviewOpenRequest,
+} from "./shared/openRequests";
 import { resolveAddress, type SearchEngine } from "./shared/address";
 import { getSettings, setSettings } from "../../lib/tauri";
 import { capturePreview } from "./shared/screenshot";
@@ -487,9 +491,10 @@ export function usePreviewWorkspace() {
     setSession((previous) => restorePreview(previous, id));
     resetView();
   };
-  const receiveDocument = useEffectEvent((value: PreviewDocument) => {
+  const receiveDocument = useEffectEvent((value: PreviewOpenRequest) => {
     try {
-      acceptDocument(value);
+      if (value.kind === "web") openWeb(value.address, value.profile);
+      else acceptDocument(value.document);
     } catch (error) {
       report(error);
     }
@@ -498,9 +503,16 @@ export function usePreviewWorkspace() {
     () => consumePreviewRequests((value) => receiveDocument(value)),
     [],
   );
-  const openDocumentLink = async (href: string) => {
+  const openDocumentLink = async (href: string, invert = false) => {
     if (/^https?:\/\//i.test(href) || href.startsWith("//")) {
-      openWeb(new URL(href, document?.url).href);
+      try {
+        await openWebLink(new URL(href, document?.url).href, {
+          invert,
+          profile: active?.profile,
+        });
+      } catch (error) {
+        report(error);
+      }
       return;
     }
     if (!document) return;

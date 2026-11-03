@@ -375,7 +375,9 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
                     sourceLine={model.sourceLine}
                     picking={model.picking && active?.id === tab.id}
                     onCapture={(value) => model.capture(tab.id, value)}
-                    onLink={(href) => void model.openDocumentLink(href)}
+                    onLink={(href, invert) =>
+                      void model.openDocumentLink(href, invert)
+                    }
                   />
                 ) : (
                   <>

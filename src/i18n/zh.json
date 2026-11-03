@@ -2779,6 +2779,11 @@
     "cookieMergeHint": "只写入选择的 Cookie；相同名称、域名和路径的值将更新。",
     "cookieReplaceHint": "先移除所选精确域名的现有 Cookie，再写入本次内容；存在无法保留的分区状态时会拒绝替换。",
     "cookieImportedCount": "已向“{{profile}}”导入 {{count}} 条 Cookie",
-    "cookieNeedsPage": "请先选择已加载的网页标签，再导入登录信息。"
+    "cookieNeedsPage": "请先选择已加载的网页标签，再导入登录信息。",
+    "linkDestination": "内容链接打开位置",
+    "systemBrowser": "系统浏览器",
+    "moduleBrowser": "预览模块",
+    "linkDestinationHint": "适用于终端、Markdown 和帮助中的网页链接。Shift + Ctrl/⌘ + 点击临时切换打开位置；终端链接需 Ctrl/⌘ + 点击。",
+    "openLinkFailed": "无法打开链接。"
   }
 }
