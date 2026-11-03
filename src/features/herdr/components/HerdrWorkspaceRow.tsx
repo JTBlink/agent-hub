@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import type { HerdrPane, HerdrWorkspace } from "../lib/herdrControlApi";
+import { worktreeDirectoryName } from "../../../lib/worktreeApi";
 import { cn } from "../../../utils";
 import { HerdrStatus } from "./HerdrStatus";
 
-/** Compact checkout identity; hover reveals its branch and full path. */
 export function HerdrWorkspaceRow({
   workspace,
   agents,
@@ -22,6 +22,10 @@ export function HerdrWorkspaceRow({
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
+  const directoryName = workspace.directory
+    ? worktreeDirectoryName(workspace.directory)
+    : workspace.label;
+  const branchLabel = workspace.branch ?? "—";
   const state = ["blocked", "working", "done", "idle"].find((value) =>
     agents.some((agent) => agent.agent_status === value),
   );
@@ -30,6 +34,7 @@ export function HerdrWorkspaceRow({
       data-herdr-item
       data-herdr-workspace={workspace.workspace_id}
       disabled={disabled || unavailable}
+      aria-label={`${directoryName} ${branchLabel}`}
       aria-pressed={selected}
       title={[
         workspace.directory ?? t("herdr.directoryUnknown"),
@@ -61,6 +66,7 @@ export function HerdrWorkspaceRow({
       )}
       <span className="min-w-0 flex-1">
         <span
+          data-herdr-directory
           className={cn(
             "block truncate leading-5",
             selected
@@ -68,20 +74,14 @@ export function HerdrWorkspaceRow({
               : "font-medium text-secondary",
           )}
         >
-          {workspace.label}
+          {directoryName}
         </span>
-        {!connector && (
-          <span
-            className={cn(
-              "block truncate leading-4",
-              selected ? "text-accent-light" : "text-muted",
-            )}
-          >
-            {workspace.branch ??
-              workspace.directory ??
-              t("herdr.directoryUnknown")}
-          </span>
-        )}
+        <span
+          data-herdr-branch
+          className="block truncate font-normal leading-4 text-muted"
+        >
+          {branchLabel}
+        </span>
       </span>
     </button>
   );
