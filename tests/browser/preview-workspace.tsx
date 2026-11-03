@@ -83,7 +83,8 @@ mockIPC((command, args) => {
         },
       };
     }
-    if (request.kind === "reconnect") {
+    if (request.kind === "reconnect" || request.kind === "reopen") {
+      document.documentElement.dataset.recoveryAction = request.kind;
       disconnected = false;
       return null;
     }

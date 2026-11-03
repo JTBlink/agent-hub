@@ -1,4 +1,5 @@
 //! Explicit transport recovery for an existing logical page; never replay navigation or input.
+mod reopen;
 use super::{super::error::AppError, browser::Browsers, runtime};
 use serde_json::json;
 use std::sync::Arc;
@@ -19,6 +20,9 @@ impl Browsers {
                 .get(id)
                 .cloned()
                 .ok_or_else(|| AppError::not_found("PREVIEW_PAGE_GONE"))?;
+            if state.reopening_profiles.contains_key(&handle.profile) {
+                return Err(AppError::cancelled("PREVIEW_REOPEN_BUSY"));
+            }
             let runtime = state
                 .runtimes
                 .get(&handle.profile)

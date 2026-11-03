@@ -55,6 +55,7 @@ impl Browsers {
             .lock()
             .map_err(|_| AppError::internal("Browser state unavailable"))?;
         if state.closing
+            || state.reopening_profiles.contains_key(&profile.id)
             || state.runtimes.contains_key(&profile.id)
             || state.pending.values().any(|id| id == &profile.id)
         {
@@ -126,7 +127,9 @@ impl Browsers {
             .lock()
             .map_err(|_| AppError::internal("Browser state unavailable"))?;
         if state.closing
+            || state.reopening_profiles.contains_key(id)
             || state.runtimes.contains_key(id)
+            || state.pages.values().any(|page| page.profile == id)
             || state.pending.values().any(|profile| profile == id)
         {
             return Err(AppError::invalid_input(

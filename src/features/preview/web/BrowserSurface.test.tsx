@@ -11,6 +11,7 @@ vi.mock("../api", () => ({
   previewApi: {
     frame: vi.fn(),
     reconnect: vi.fn(),
+    reopen: vi.fn(),
     action: vi.fn(),
     close: vi.fn().mockResolvedValue(undefined),
   },
@@ -132,131 +133,139 @@ it.each([true, false])(
   },
 );
 
-it.each(["frame", "action"])(
-  "reconnects the same page and discards queued text after %s failure",
-  async (failure) => {
-    vi.useFakeTimers();
-    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        observe() {}
-        disconnect() {}
-      },
+it.each([
+  ["frame", "reconnect"],
+  ["action", "reconnect"],
+  ["frame", "reopen"],
+])("discards queued text after %s failure during %s", async (failure, mode) => {
+  vi.useFakeTimers();
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  let failed = false,
+    revision = "before";
+  const frame: BrowserFrame = {
+    version: 1,
+    image: "image",
+    events: [],
+    info: {
+      url: "https://example.invalid/",
+      title: "Page",
+      revision,
+      ready: "complete",
+      width: 1200,
+      height: 800,
+      scrollX: 0,
+      scrollY: 0,
+      dpr: 1,
+    },
+  };
+  vi.mocked(previewApi.frame).mockImplementation(async () => {
+    if (failed) throw new Error("Disconnected");
+    return { ...frame, info: { ...frame.info, revision } };
+  });
+  let finishInput!: () => void;
+  let rejectInput!: (error: Error) => void;
+  let finishPaste!: (text: string) => void;
+  vi.mocked(readText).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finishPaste = resolve;
+      }),
+  );
+  vi.mocked(previewApi.action).mockImplementation(async (_id, action) => {
+    if (action.kind === "text" && action.text === "a")
+      await new Promise<void>((resolve, reject) => {
+        finishInput = resolve;
+        rejectInput = reject;
+      });
+    return null;
+  });
+  vi.mocked(previewApi.reconnect).mockImplementation(async () => {
+    failed = false;
+    revision = "after";
+  });
+  vi.mocked(previewApi.reopen).mockImplementation(async () => {
+    failed = false;
+    revision = "new-document";
+  });
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        <BrowserSurface
+          tabId="tab"
+          initialId="page"
+          active
+          address={frame.info.url}
+          profile="default"
+          picking={false}
+          viewport={null}
+          onReady={vi.fn()}
+          onFrame={vi.fn()}
+          onCapture={vi.fn()}
+          onError={vi.fn()}
+        />,
+      ),
     );
-    let failed = false,
-      revision = "before";
-    const frame: BrowserFrame = {
-      version: 1,
-      image: "image",
-      events: [],
-      info: {
-        url: "https://example.invalid/",
-        title: "Page",
-        revision,
-        ready: "complete",
-        width: 1200,
-        height: 800,
-        scrollX: 0,
-        scrollY: 0,
-        dpr: 1,
-      },
-    };
-    vi.mocked(previewApi.frame).mockImplementation(async () => {
-      if (failed) throw new Error("Disconnected");
-      return { ...frame, info: { ...frame.info, revision } };
-    });
-    let finishInput!: () => void;
-    let rejectInput!: (error: Error) => void;
-    let finishPaste!: (text: string) => void;
-    vi.mocked(readText).mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          finishPaste = resolve;
+    const input = container.querySelector("textarea")!;
+    for (const text of ["a", "b"])
+      await act(async () => {
+        input.value = text;
+        input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      });
+    await act(async () => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "v",
+          ctrlKey: true,
+          bubbles: true,
         }),
-    );
-    vi.mocked(previewApi.action).mockImplementation(async (_id, action) => {
-      if (action.kind === "text" && action.text === "a")
-        await new Promise<void>((resolve, reject) => {
-          finishInput = resolve;
-          rejectInput = reject;
-        });
-      return null;
-    });
-    vi.mocked(previewApi.reconnect).mockImplementation(async () => {
-      failed = false;
-      revision = "after";
-    });
-    const container = document.createElement("div");
-    document.body.append(container);
-    const root = createRoot(container);
-    try {
-      await act(async () =>
-        root.render(
-          <BrowserSurface
-            tabId="tab"
-            initialId="page"
-            active
-            address={frame.info.url}
-            profile="default"
-            picking={false}
-            viewport={null}
-            onReady={vi.fn()}
-            onFrame={vi.fn()}
-            onCapture={vi.fn()}
-            onError={vi.fn()}
-          />,
-        ),
       );
-      const input = container.querySelector("textarea")!;
-      for (const text of ["a", "b"])
-        await act(async () => {
-          input.value = text;
-          input.dispatchEvent(new InputEvent("input", { bubbles: true }));
-        });
+    });
+    if (failure === "frame") {
+      failed = true;
       await act(async () => {
-        input.dispatchEvent(
-          new KeyboardEvent("keydown", {
-            key: "v",
-            ctrlKey: true,
-            bubbles: true,
-          }),
-        );
+        await vi.advanceTimersByTimeAsync(400);
       });
-      if (failure === "frame") {
-        failed = true;
-        await act(async () => {
-          await vi.advanceTimersByTimeAsync(400);
-        });
-      } else {
-        await act(async () => {
-          rejectInput(new Error("Disconnected"));
-        });
-      }
-      expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-        "preview.connectionUnverified",
-      );
+    } else {
       await act(async () => {
-        container
-          .querySelector<HTMLButtonElement>('[role="alert"] button')!
-          .click();
+        rejectInput(new Error("Disconnected"));
       });
-      expect(previewApi.reconnect).toHaveBeenCalledWith("page");
-      await act(async () => {
-        finishInput();
-        finishPaste("late paste");
-      });
-      expect(
-        vi
-          .mocked(previewApi.action)
-          .mock.calls.filter(([, action]) => action.kind === "text")
-          .map(([, action]) => (action.kind === "text" ? action.text : "")),
-      ).toEqual(["a"]);
-      expect(container.querySelector('[role="alert"]')).toBeNull();
-      expect(container.querySelector("img")?.getAttribute("alt")).toBe("Page");
-    } finally {
-      await act(async () => root.unmount());
-      container.remove();
     }
-  },
-);
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "preview.connectionUnverified",
+    );
+    await act(async () => {
+      const buttons = container.querySelectorAll<HTMLButtonElement>(
+        '[role="alert"] button',
+      );
+      buttons[mode === "reopen" ? 1 : 0].click();
+    });
+    expect(
+      mode === "reopen" ? previewApi.reopen : previewApi.reconnect,
+    ).toHaveBeenCalledWith("page");
+    await act(async () => {
+      finishInput();
+      finishPaste("late paste");
+    });
+    expect(
+      vi
+        .mocked(previewApi.action)
+        .mock.calls.filter(([, action]) => action.kind === "text")
+        .map(([, action]) => (action.kind === "text" ? action.text : "")),
+    ).toEqual(["a"]);
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(container.querySelector("img")?.getAttribute("alt")).toBe("Page");
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
+});

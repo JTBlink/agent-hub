@@ -2568,6 +2568,11 @@
     "replacing": "正在取代…"
   },
   "preview": {
+    "reopen": "放棄原表單並重新開啟",
+    "reopenHint": "重新開啟會放棄原頁面表單，只載入最後核驗的網址。本機持久登入依瀏覽器恢復；訪客或遺失的遠端工作階段可能需要重新登入。",
+    "reopenBusy": "這個登入設定正在建立或恢復頁面，請稍後重試。",
+    "reopenUncertain": "新頁面已建立，但後續狀態無法核驗。請先重新連線目前標籤，不要重複開啟。",
+    "reopening": "正在重新開啟…",
     "reconnect": "重新連線目前頁面",
     "reconnecting": "正在重新連線…",
     "connectionUnverified": "連線中斷，顯示的是最後畫面，目前頁面狀態無法核驗。",
@@ -2690,7 +2695,8 @@
     "downloadState": {
       "inProgress": "下載中",
       "completed": "已完成",
-      "canceled": "已取消"
+      "canceled": "已取消",
+      "interrupted": "已中斷"
     },
     "tabLimit": "最多同時開啟 12 個預覽分頁。",
     "annotationLimit": "批註已達上限，請先匯出並清理。",

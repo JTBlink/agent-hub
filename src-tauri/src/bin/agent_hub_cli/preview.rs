@@ -11,7 +11,7 @@ pub struct PreviewArgs {
 }
 #[derive(Subcommand, Debug)]
 pub enum PreviewCommand {
-    /// 列出应用中的真实网页标签。
+    /// 列出网页标签及连接状态。
     List,
     /// 打开与桌面界面共用的网页。
     Open {
@@ -25,6 +25,8 @@ pub enum PreviewCommand {
     Snapshot { id: String },
     /// 重新连接原页面通道，不导航或重放输入。
     Reconnect { id: String },
+    /// 放弃原表单并重新打开最后地址，保留逻辑页面 ID。
+    Reopen { id: String },
     /// 在指定页面导航。
     Navigate { id: String, url: String },
     /// 在页面内执行表达式（不访问应用 IPC）。
@@ -74,6 +76,7 @@ pub fn run(args: &PreviewArgs, json_output: bool) -> Result<()> {
             request(json!({"kind":"open","url":url,"profile":profile}))?
         }
         PreviewCommand::Close { id } => request(json!({"kind":"close","id":id}))?,
+        PreviewCommand::Reopen { id } => request(json!({"kind":"reopen","id":id}))?,
         PreviewCommand::Reconnect { id } => request(json!({"kind":"reconnect","id":id}))?,
         PreviewCommand::Snapshot { id } => action(id, json!({"kind":"snapshot"}))?,
         PreviewCommand::Navigate { id, url } => action(id, json!({"kind":"navigate","url":url}))?,

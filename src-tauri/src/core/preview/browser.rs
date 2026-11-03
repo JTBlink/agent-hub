@@ -33,11 +33,17 @@ impl Page {
             .filter(|value| !value.is_empty())
             .ok_or_else(|| AppError::network("Browser document is not ready"))?
             .to_owned();
-        let url = format!(
-            "{}{}",
-            frame["url"].as_str().unwrap_or("about:blank"),
-            frame["urlFragment"].as_str().unwrap_or("")
-        );
+        let url = match frame["unreachableUrl"]
+            .as_str()
+            .filter(|url| validate_url(url).is_ok())
+        {
+            Some(url) => url.to_owned(),
+            None => format!(
+                "{}{}",
+                frame["url"].as_str().unwrap_or("about:blank"),
+                frame["urlFragment"].as_str().unwrap_or("")
+            ),
+        };
         let revision = format!(
             "{}:{}:{}:{:x}",
             revision,
@@ -59,6 +65,8 @@ pub(super) struct PageHandle {
 }
 #[derive(Default)]
 pub(super) struct State {
+    pub reopening_profiles: HashMap<String, String>,
+    pub lost_pages: HashSet<String>,
     pub cookie_gates: HashMap<String, Arc<Mutex<()>>>,
     pub downloads: HashMap<String, super::downloads::Download>,
     pub closing: bool,
@@ -76,8 +84,16 @@ pub struct Browsers {
     pub(super) state: Mutex<State>,
     pub(super) downloads_gate: Mutex<()>,
 }
+#[derive(Clone, Copy, Debug, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum PageStatus {
+    Connected,
+    Unverified,
+    Gone,
+}
 #[derive(Clone, Serialize)]
 pub struct BrowserPageInfo {
+    pub status: PageStatus,
     pub id: String,
     pub profile: String,
     pub url: String,
@@ -96,6 +112,20 @@ pub struct Frame {
     pub info: Value,
     pub events: Vec<Value>,
     pub version: u64,
+}
+pub(super) struct ProfileLease<'a> {
+    pub browsers: &'a Browsers,
+    pub profile: String,
+    pub id: String,
+}
+impl Drop for ProfileLease<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut state) = self.browsers.state.lock() {
+            if state.reopening_profiles.get(&self.profile) == Some(&self.id) {
+                state.reopening_profiles.remove(&self.profile);
+            }
+        }
+    }
 }
 struct Reservation<'a> {
     manager: &'a Browsers,
@@ -231,16 +261,24 @@ impl Browsers {
         })
     }
     pub fn create(&self, profile: &str, url: &str) -> Result<String, AppError> {
-        self.create_page(profile, url, false, None)
+        self.create_page(profile, url, false, None, None)
     }
     pub(super) fn create_internal(&self, profile: &str, url: &str) -> Result<String, AppError> {
-        self.create_page(profile, url, true, None)
+        self.create_page(profile, url, true, None, None)
     }
     pub fn create_owned(&self, profile: &str, url: &str, owner: &str) -> Result<String, AppError> {
         if owner.len() > 100 {
             return Err(AppError::invalid_input("Invalid preview owner"));
         }
-        self.create_page(profile, url, false, Some(owner.into()))
+        self.create_page(profile, url, false, Some(owner.into()), None)
+    }
+    pub(super) fn create_replacement(
+        &self,
+        profile: &str,
+        url: &str,
+        original: &str,
+    ) -> Result<String, AppError> {
+        self.create_page(profile, url, true, None, Some(original))
     }
     fn create_page(
         &self,
@@ -248,6 +286,7 @@ impl Browsers {
         url: &str,
         internal: bool,
         owner: Option<String>,
+        recovery_id: Option<&str>,
     ) -> Result<String, AppError> {
         validate_url(url)?;
         if !self.profiles()?.iter().any(|item| item.id == profile) {
@@ -262,7 +301,11 @@ impl Browsers {
             if state.closing {
                 return Err(AppError::cancelled("Preview is shutting down"));
             }
-            if state.pages.len() + state.pending.len() + state.attaching.len() >= 12 {
+            if state.reopening_profiles.get(profile).map(String::as_str) != recovery_id {
+                return Err(AppError::cancelled("PREVIEW_REOPEN_BUSY"));
+            }
+            let limit = if recovery_id.is_some() { 13 } else { 12 };
+            if state.pages.len() + state.pending.len() + state.attaching.len() >= limit {
                 return Err(AppError::invalid_input("Browser page limit reached"));
             }
             state.pending.insert(id.clone(), profile.into());
@@ -347,13 +390,39 @@ impl Browsers {
             let mut runtime = runtime
                 .lock()
                 .map_err(|_| AppError::internal("Browser runtime unavailable"))?;
-            let result = runtime.create_page()?;
-            self.state
-                .lock()
-                .map_err(|_| AppError::internal("Browser state unavailable"))?
-                .pending_targets
-                .insert(id.clone(), (profile.into(), result.0.clone()));
-            result
+            let result = runtime.create_page(|target| {
+                self.state
+                    .lock()
+                    .map_err(|_| AppError::internal("Browser state unavailable"))?
+                    .pending_targets
+                    .insert(id.clone(), (profile.into(), target.into()));
+                Ok(())
+            });
+            match result {
+                Ok(result) => result,
+                Err(error) => {
+                    let target = self
+                        .state
+                        .lock()
+                        .map_err(|_| AppError::internal("Browser state unavailable"))?
+                        .pending_targets
+                        .get(&id)
+                        .map(|(_, target)| target.clone());
+                    if let Some(target) = target {
+                        let closed = runtime
+                            .cdp
+                            .call("Target.closeTarget", json!({"targetId":target}))
+                            .is_ok_and(|value| value["success"] == true);
+                        if !closed {
+                            if let Some(original) = recovery_id {
+                                self.keep_uncertain_replacement(original, profile, &target)?;
+                                return Err(AppError::network("PREVIEW_REOPEN_UNCERTAIN"));
+                            }
+                        }
+                    }
+                    return Err(error);
+                }
+            }
         };
         let setup = (|| {
             cdp.call(
@@ -369,14 +438,22 @@ impl Browsers {
             Ok(())
         })();
         if let Err(error) = setup {
-            if let Ok(mut runtime) = runtime.lock() {
-                let _ = runtime
+            let closed = runtime.lock().ok().is_some_and(|mut runtime| {
+                runtime
                     .cdp
-                    .call("Target.closeTarget", json!({"targetId":target}));
+                    .call("Target.closeTarget", json!({"targetId":target}))
+                    .is_ok_and(|value| value["success"] == true)
+            });
+            if !closed {
+                if let Some(original) = recovery_id {
+                    self.keep_uncertain_replacement(original, profile, &target)?;
+                    return Err(AppError::network("PREVIEW_REOPEN_UNCERTAIN"));
+                }
             }
             return Err(error);
         }
         let metadata = Arc::new(Mutex::new(BrowserPageInfo {
+            status: PageStatus::Connected,
             id: id.clone(),
             profile: profile.into(),
             url: url.into(),
@@ -413,6 +490,34 @@ impl Browsers {
         state.idle.remove(profile);
         Ok(id)
     }
+    fn keep_uncertain_replacement(
+        &self,
+        original: &str,
+        profile: &str,
+        target: &str,
+    ) -> Result<(), AppError> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| AppError::internal("Browser state unavailable"))?;
+        if state.closing
+            || state.reopening_profiles.get(profile).map(String::as_str) != Some(original)
+        {
+            return Err(AppError::cancelled("PREVIEW_PAGE_GONE"));
+        }
+        let page = state
+            .pages
+            .get_mut(original)
+            .filter(|page| page.profile == profile)
+            .ok_or_else(|| AppError::not_found("PREVIEW_PAGE_GONE"))?;
+        page.target = target.into();
+        page.metadata
+            .lock()
+            .map_err(|_| AppError::internal("Browser metadata unavailable"))?
+            .status = PageStatus::Unverified;
+        state.lost_pages.remove(original);
+        Ok(())
+    }
     pub fn page(&self, id: &str) -> Result<Arc<Mutex<Page>>, AppError> {
         self.state
             .lock()
@@ -423,6 +528,45 @@ impl Browsers {
             .ok_or_else(|| AppError::not_found("Browser page closed"))
     }
     pub fn close(&self, id: &str) -> Result<(), AppError> {
+        let _lease = {
+            let mut state = self
+                .state
+                .lock()
+                .map_err(|_| AppError::internal("Browser state unavailable"))?;
+            if let Some(page) = state.pages.get(id) {
+                if state.reopening_profiles.contains_key(&page.profile) && !page.internal {
+                    return Err(AppError::cancelled("PREVIEW_REOPEN_BUSY"));
+                }
+            }
+            if state.lost_pages.remove(id) {
+                if let Some(page) = state.pages.remove(id) {
+                    if !state
+                        .pages
+                        .values()
+                        .any(|item| item.profile == page.profile)
+                    {
+                        state.idle.insert(page.profile, Instant::now());
+                    }
+                }
+                return Ok(());
+            }
+            if let Some(page) = state.pages.get(id).cloned() {
+                if page.internal && state.reopening_profiles.contains_key(&page.profile) {
+                    None
+                } else {
+                    state
+                        .reopening_profiles
+                        .insert(page.profile.clone(), id.into());
+                    Some(ProfileLease {
+                        browsers: self,
+                        profile: page.profile,
+                        id: id.into(),
+                    })
+                }
+            } else {
+                return Ok(());
+            }
+        };
         let (page, runtime) = {
             let state = self
                 .state
@@ -448,6 +592,13 @@ impl Browsers {
             .state
             .lock()
             .map_err(|_| AppError::internal("Browser state unavailable"))?;
+        if state
+            .pages
+            .get(id)
+            .is_some_and(|current| !Arc::ptr_eq(&current.page, &page.page))
+        {
+            return Err(AppError::cancelled("PREVIEW_REOPEN_BUSY"));
+        }
         state.pages.remove(id);
         if !state
             .pages
@@ -457,149 +608,6 @@ impl Browsers {
             state.idle.insert(page.profile.clone(), Instant::now());
         }
         Ok(())
-    }
-    pub fn list(&self) -> Result<Vec<BrowserPageInfo>, AppError> {
-        let runtimes = self.runtime_handles()?;
-        let mut verified = HashSet::new();
-        let mut found = HashMap::new();
-        for (profile, runtime) in &runtimes {
-            let Ok(mut runtime) = runtime.try_lock() else {
-                continue;
-            };
-            let Ok(result) = runtime.cdp.call("Target.getTargets", json!({})) else {
-                continue;
-            };
-            verified.insert(profile.clone());
-            if let Some(targets) = result["targetInfos"].as_array() {
-                for target in targets {
-                    if target["type"] != "page"
-                        || runtime.context.as_ref().is_some_and(|context| {
-                            target["browserContextId"].as_str() != Some(context.as_str())
-                        })
-                    {
-                        continue;
-                    }
-                    if let Some(id) = target["targetId"].as_str() {
-                        found.insert((profile.clone(), id.to_owned()), target.clone());
-                    }
-                }
-            }
-        }
-        let to_attach = {
-            let mut state = self
-                .state
-                .lock()
-                .map_err(|_| AppError::internal("Browser state unavailable"))?;
-            state.pages.retain(|_, page| {
-                !verified.contains(&page.profile)
-                    || found.contains_key(&(page.profile.clone(), page.target.clone()))
-            });
-            let mut pending = Vec::new();
-            for key in found.keys() {
-                if state
-                    .pages
-                    .values()
-                    .any(|page| (&page.profile, &page.target) == (&key.0, &key.1))
-                    || state.attaching.contains(key)
-                    || state.pending_targets.values().any(|target| target == key)
-                {
-                    continue;
-                }
-                if state.pages.len() + state.pending.len() + state.attaching.len() >= 12 {
-                    continue;
-                }
-                state.attaching.insert(key.clone());
-                pending.push(key.clone());
-            }
-            pending
-        };
-        for (profile, target) in to_attach {
-            let cdp = runtimes
-                .get(&profile)
-                .and_then(|runtime| runtime.try_lock().ok())
-                .and_then(|runtime| runtime.attach_page(&target).ok());
-            let mut state = self
-                .state
-                .lock()
-                .map_err(|_| AppError::internal("Browser state unavailable"))?;
-            state.attaching.remove(&(profile.clone(), target.clone()));
-            if state.closing {
-                continue;
-            }
-            if let Some(cdp) = cdp {
-                if state
-                    .pages
-                    .values()
-                    .any(|page| page.profile == profile && page.target == target)
-                {
-                    continue;
-                }
-                let id = uuid::Uuid::new_v4().to_string();
-                let info = &found[&(profile.clone(), target.clone())];
-                let metadata = Arc::new(Mutex::new(BrowserPageInfo {
-                    id: id.clone(),
-                    profile: profile.clone(),
-                    url: info["url"].as_str().unwrap_or("about:blank").into(),
-                    title: info["title"]
-                        .as_str()
-                        .unwrap_or("")
-                        .chars()
-                        .take(500)
-                        .collect(),
-                    revision: String::new(),
-                    owner: None,
-                }));
-                let page = Arc::new(Mutex::new(Page {
-                    connection_generation: 0,
-                    snapshots: VecDeque::new(),
-                    cdp,
-                    width: 1200,
-                    height: 800,
-                    mobile: false,
-                    metadata: metadata.clone(),
-                }));
-                state.pages.insert(
-                    id,
-                    PageHandle {
-                        profile: profile.clone(),
-                        target,
-                        internal: false,
-                        page,
-                        metadata,
-                    },
-                );
-                state.idle.remove(&profile);
-            }
-        }
-        let handles = self
-            .state
-            .lock()
-            .map_err(|_| AppError::internal("Browser state unavailable"))?
-            .pages
-            .values()
-            .cloned()
-            .collect::<Vec<_>>();
-        let mut pages = Vec::new();
-        for handle in handles {
-            if handle.internal {
-                continue;
-            }
-            let mut metadata = handle
-                .metadata
-                .lock()
-                .map_err(|_| AppError::internal("Browser metadata unavailable"))?;
-            if let Some(target) = found.get(&(handle.profile, handle.target)) {
-                metadata.url = target["url"].as_str().unwrap_or(&metadata.url).to_owned();
-                metadata.title = target["title"]
-                    .as_str()
-                    .unwrap_or(&metadata.title)
-                    .chars()
-                    .take(500)
-                    .collect();
-            }
-            pages.push(metadata.clone());
-        }
-        Ok(pages)
     }
     pub(super) fn runtime_handles(&self) -> Result<HashMap<String, Arc<Mutex<Runtime>>>, AppError> {
         Ok(self

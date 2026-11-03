@@ -181,7 +181,10 @@ impl Browsers {
             .downloads
             .get(&key)
             .ok_or_else(|| AppError::not_found("Download unavailable"))?;
-        if !matches!(item.state.as_str(), "completed" | "canceled") {
+        if !matches!(
+            item.state.as_str(),
+            "completed" | "canceled" | "interrupted"
+        ) {
             return Err(AppError::invalid_input(
                 "Cancel the download before removing its record",
             ));

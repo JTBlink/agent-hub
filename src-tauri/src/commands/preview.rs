@@ -69,6 +69,9 @@ pub enum PreviewRequest {
     Close {
         id: String,
     },
+    Reopen {
+        id: String,
+    },
     Reconnect {
         id: String,
     },
@@ -159,6 +162,10 @@ pub async fn preview_request(
             }
             PreviewRequest::CancelDownload { profile, id } => {
                 preview.browsers.cancel_download(&profile, &id)?;
+                return Ok(Value::Null);
+            }
+            PreviewRequest::Reopen { id } => {
+                preview.browsers.reopen(&id)?;
                 return Ok(Value::Null);
             }
             PreviewRequest::Reconnect { id } => {

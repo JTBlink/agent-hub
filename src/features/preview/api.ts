@@ -23,6 +23,7 @@ export interface PreviewDocument {
   url?: string;
 }
 export interface BrowserPageInfo {
+  status?: "connected" | "unverified" | "gone";
   owner?: string | null;
   id: string;
   profile: string;
@@ -165,6 +166,7 @@ export const previewApi = {
     request<BrowserFrame>({ kind: "frame", id, since }),
   action: <T = unknown>(id: string, action: BrowserAction) =>
     request<T>({ kind: "action", id, action }),
+  reopen: (id: string) => request<void>({ kind: "reopen", id }),
   reconnect: (id: string) => request<void>({ kind: "reconnect", id }),
   close: (id: string) => request<void>({ kind: "close", id }),
   deleteProfile: (id: string) => request<void>({ kind: "delete_profile", id }),

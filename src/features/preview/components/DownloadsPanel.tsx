@@ -120,7 +120,7 @@ export function DownloadsPanel({
                 </button>
               </div>
             ) : null}
-            {["completed", "canceled"].includes(item.state) && (
+            {["completed", "canceled", "interrupted"].includes(item.state) && (
               <button
                 disabled={busy !== null}
                 title={t("preview.removeDownloadHint")}

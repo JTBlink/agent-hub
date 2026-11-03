@@ -7,6 +7,7 @@ pub mod cookies;
 pub mod documents;
 pub mod downloads;
 mod frames;
+mod inventory;
 pub mod packets;
 mod page_actions;
 mod profiles;

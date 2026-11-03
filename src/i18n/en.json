@@ -2611,6 +2611,11 @@
     "replacing": "Replacing…"
   },
   "preview": {
+    "reopen": "Discard the old form and reopen",
+    "reopenHint": "Reopen discards the old form and loads the last verified address. The browser restores persistent local login data; guest or lost remote sessions may require signing in again.",
+    "reopenBusy": "This profile is creating or restoring a page. Try again shortly.",
+    "reopenUncertain": "A replacement page was created, but its final state cannot be verified. Reconnect this tab before opening another replacement.",
+    "reopening": "Reopening…",
     "reconnect": "Reconnect this page",
     "reconnecting": "Reconnecting…",
     "connectionUnverified": "Connection lost. The last frame is shown; the current page state cannot be verified.",
@@ -2733,7 +2738,8 @@
     "downloadState": {
       "inProgress": "Downloading",
       "completed": "Completed",
-      "canceled": "Canceled"
+      "canceled": "Canceled",
+      "interrupted": "Interrupted"
     },
     "tabLimit": "You can open up to 12 preview tabs.",
     "annotationLimit": "Annotation limit reached. Export and clear some notes first.",

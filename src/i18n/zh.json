@@ -2608,6 +2608,11 @@
     "replacing": "正在替换…"
   },
   "preview": {
+    "reopen": "放弃原表单并重新打开",
+    "reopenHint": "重新打开会放弃原页面表单，只加载最后核验的地址。本机持久登录按浏览器恢复；访客或丢失的远端会话可能需要重新登录。",
+    "reopenBusy": "这个登录配置正在创建或恢复页面，请稍后重试。",
+    "reopenUncertain": "新页面已创建，但后续状态无法核验。请先重新连接当前标签，不要重复打开。",
+    "reopening": "正在重新打开…",
     "reconnect": "重新连接当前页面",
     "reconnecting": "正在重新连接…",
     "connectionUnverified": "连接中断，显示的是最后画面，当前页面状态无法核验。",
@@ -2730,7 +2735,8 @@
     "downloadState": {
       "inProgress": "下载中",
       "completed": "已完成",
-      "canceled": "已取消"
+      "canceled": "已取消",
+      "interrupted": "已中断"
     },
     "tabLimit": "最多同时打开 12 个预览标签。",
     "annotationLimit": "批注已达上限，请先导出并清理。",

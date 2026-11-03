@@ -190,33 +190,41 @@ try {
     await request(
       `/screenshot?target=${targetId}&file=/tmp/agenthub-downloads-${width}-${theme}.png`,
     );
-    await evaluate(
-      `(()=>{document.querySelector('#preview').src=${JSON.stringify(`./preview-workspace.html?view=recovery&theme=${theme}&language=${language}&text-size=${size}`)};return true})()`,
-    );
-    await until(
-      `${documentRef}?.location.search.includes('view=recovery') && ${documentRef}.querySelector('.preview-browser-error button')`,
-    );
-    const readable = await evaluate(
-      `(()=>{const d=${documentRef},pane=d.querySelector('.preview-browser-error');return [...pane.querySelectorAll('p')].every(p=>p.getBoundingClientRect().width>=pane.clientWidth-50)})()`,
-    );
-    assert.equal(
-      readable,
-      true,
-      "Recovery text must use the available line width",
-    );
-    await request(
-      `/screenshot?target=${targetId}&file=/tmp/agenthub-recovery-${width}-${theme}.png`,
-    );
-    await run(`d.querySelector('.preview-browser-error button').click()`);
-    await until(
-      `${documentRef}.querySelector('.preview-browser-image img') && !${documentRef}.querySelector('.preview-browser-error')`,
-    );
-    assert.equal(
+    for (const mode of ["reconnect", "reopen"]) {
       await evaluate(
-        `${documentRef}.documentElement.scrollWidth>${documentRef}.defaultView.innerWidth+1`,
-      ),
-      false,
-    );
+        `(()=>{document.querySelector('#preview').src=${JSON.stringify(`./preview-workspace.html?view=recovery&action=${mode}&theme=${theme}&language=${language}&text-size=${size}`)};return true})()`,
+      );
+      await until(
+        `${documentRef}?.location.search.includes('view=recovery') && ${documentRef}.querySelector('.preview-browser-error button')`,
+      );
+      const readable = await evaluate(
+        `(()=>{const d=${documentRef},pane=d.querySelector('.preview-browser-error');return [...pane.querySelectorAll('p')].every(p=>p.getBoundingClientRect().width>=pane.clientWidth-50)})()`,
+      );
+      assert.equal(
+        readable,
+        true,
+        "Recovery text must use the available line width",
+      );
+      await request(
+        `/screenshot?target=${targetId}&file=/tmp/agenthub-${mode}-${width}-${theme}.png`,
+      );
+      await run(
+        `const button=d.querySelectorAll('.preview-browser-error button')[${mode === "reopen" ? 1 : 0}];button.scrollIntoView({block:'center'});button.click()`,
+      );
+      await until(
+        `${documentRef}.querySelector('.preview-browser-image img') && !${documentRef}.querySelector('.preview-browser-error')`,
+      );
+      assert.equal(
+        await evaluate(
+          `${documentRef}.documentElement.scrollWidth>${documentRef}.defaultView.innerWidth+1`,
+        ),
+        false,
+      );
+      assert.equal(
+        await evaluate(`${documentRef}.documentElement.dataset.recoveryAction`),
+        mode,
+      );
+    }
   }
   console.log(
     "Preview acceptance passed: Markdown outline, source capture/navigation, cookie scope preview, themes, enlarged text, 1440/960/480 layouts (synthetic IPC).",

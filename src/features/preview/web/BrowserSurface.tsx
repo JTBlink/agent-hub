@@ -31,7 +31,9 @@ export function BrowserSurface(props: Props) {
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [hover, setHover] = useState<PickedElement | null>(null);
   const [error, setError] = useState("");
-  const [recovering, setRecovering] = useState(false);
+  const [recovering, setRecovering] = useState<"reconnect" | "reopen" | null>(
+    null,
+  );
   const [retry, setRetry] = useState(0);
   const [size, setSize] = useState({ width: 1200, height: 800 });
   const container = useRef<HTMLDivElement>(null);
@@ -284,15 +286,17 @@ export function BrowserSurface(props: Props) {
       ),
     };
   };
-  const reconnect = async () => {
+  const recover = async (mode: "reconnect" | "reopen") => {
     if (!id || recovering) return;
     const page = id;
     pickEpoch.current += 1;
     motion.current?.clear();
     setHover(null);
-    setRecovering(true);
+    setRecovering(mode);
     try {
-      await previewApi.reconnect(page);
+      await (mode === "reopen"
+        ? previewApi.reopen(page)
+        : previewApi.reconnect(page));
       if (ownedId.current !== page) return;
       setFrame(null);
       setError("");
@@ -300,7 +304,7 @@ export function BrowserSurface(props: Props) {
     } catch (error: unknown) {
       if (ownedId.current === page) setError(previewError(error, t));
     } finally {
-      if (ownedId.current === page) setRecovering(false);
+      if (ownedId.current === page) setRecovering(null);
     }
   };
   return (
@@ -372,9 +376,9 @@ export function BrowserSurface(props: Props) {
           {id && <p>{t("preview.reconnectHint")}</p>}
           <button
             className="app-button-ghost"
-            disabled={recovering}
+            disabled={recovering !== null}
             onClick={() => {
-              if (id) void reconnect();
+              if (id) void recover("reconnect");
               else {
                 setError("");
                 setRetry((value) => value + 1);
@@ -382,13 +386,29 @@ export function BrowserSurface(props: Props) {
             }}
           >
             {t(
-              recovering
+              recovering === "reconnect"
                 ? "preview.reconnecting"
                 : id
                   ? "preview.reconnect"
                   : "common.retry",
             )}
           </button>
+          {id && (
+            <>
+              <p>{t("preview.reopenHint")}</p>
+              <button
+                className="app-button-ghost"
+                disabled={recovering !== null}
+                onClick={() => void recover("reopen")}
+              >
+                {t(
+                  recovering === "reopen"
+                    ? "preview.reopening"
+                    : "preview.reopen",
+                )}
+              </button>
+            </>
+          )}
         </div>
       )}
       {!frame && !error && (

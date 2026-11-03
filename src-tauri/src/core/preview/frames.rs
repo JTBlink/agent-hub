@@ -1,6 +1,6 @@
 use super::{
     super::error::AppError,
-    browser::{Browsers, Frame, Page},
+    browser::{Browsers, Frame, Page, PageStatus},
 };
 use serde_json::json;
 impl Browsers {
@@ -81,6 +81,7 @@ impl Browsers {
                 metadata.url = info["url"].as_str().unwrap_or("about:blank").into();
                 metadata.title = info["title"].as_str().unwrap_or("").into();
                 metadata.revision = revision;
+                metadata.status = PageStatus::Connected;
             }
             Ok(Frame {
                 version,
@@ -89,6 +90,13 @@ impl Browsers {
                 events,
             })
         })();
+        if result.is_err() {
+            if let Ok(mut metadata) = page.metadata.lock() {
+                if metadata.status != PageStatus::Gone {
+                    metadata.status = PageStatus::Unverified;
+                }
+            }
+        }
         if result.is_err() && page.cdp.dialog.is_some() {
             return dialog_frame(&mut page, since);
         }

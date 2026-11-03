@@ -223,7 +223,48 @@ impl Runtime {
         }
         Ok(runtime)
     }
-    pub fn create_page(&mut self) -> Result<(String, Cdp), AppError> {
+    pub(super) fn owned_process_exited(&self) -> Result<bool, AppError> {
+        match &self.child {
+            Some(child) => Ok(child
+                .lock()
+                .map_err(|_| AppError::internal("Browser process unavailable"))?
+                .process
+                .try_wait()?
+                .is_some()),
+            None => Ok(false),
+        }
+    }
+    fn ensure_context(&mut self) -> Result<(), AppError> {
+        if let Some(context) = &self.context {
+            let contexts = self.cdp.call("Target.getBrowserContexts", json!({}))?;
+            let contexts = contexts["browserContextIds"]
+                .as_array()
+                .ok_or_else(|| AppError::network("Browser contexts unavailable"))?;
+            if !contexts
+                .iter()
+                .any(|value| value.as_str() == Some(context.as_str()))
+            {
+                let created = self.cdp.call(
+                    "Target.createBrowserContext",
+                    json!({"disposeOnDetach":false}),
+                )?;
+                self.context = Some(
+                    created["browserContextId"]
+                        .as_str()
+                        .ok_or_else(|| {
+                            AppError::network("Browser did not create an isolated context")
+                        })?
+                        .into(),
+                );
+            }
+        }
+        Ok(())
+    }
+    pub fn create_page(
+        &mut self,
+        on_created: impl FnOnce(&str) -> Result<(), AppError>,
+    ) -> Result<(String, Cdp), AppError> {
+        self.ensure_context()?;
         let mut params = json!({ "url": "about:blank" });
         if let Some(context) = &self.context {
             params["browserContextId"] = json!(context);
@@ -233,6 +274,7 @@ impl Runtime {
             .as_str()
             .ok_or_else(|| AppError::network("Browser did not create a page"))?
             .to_owned();
+        on_created(&id)?;
         let cdp = self.attach_page(&id)?;
         Ok((id, cdp))
     }
