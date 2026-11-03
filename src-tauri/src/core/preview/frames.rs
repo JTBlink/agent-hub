@@ -3,6 +3,7 @@ use super::{
     browser::{Browsers, Frame, Page, PageStatus},
 };
 use serde_json::json;
+use std::time::{Duration, Instant};
 impl Browsers {
     pub fn kernel(&self, id: &str) -> Result<serde_json::Value, AppError> {
         let page = self.page(id)?;
@@ -11,16 +12,53 @@ impl Browsers {
             .map_err(|_| AppError::internal("Browser page unavailable"))?;
         page.cdp.call("Browser.getVersion", json!({}))
     }
-
     pub fn frame(&self, id: &str) -> Result<Frame, AppError> {
         self.frame_since(id, None)
     }
     pub fn frame_since(&self, id: &str, since: Option<u64>) -> Result<Frame, AppError> {
+        self.frame_with_cache(id, since, false)
+    }
+    pub fn quick_frame(&self, id: &str, since: Option<u64>) -> Result<Frame, AppError> {
+        self.frame_with_cache(id, since, true)
+    }
+    fn frame_with_cache(
+        &self,
+        id: &str,
+        since: Option<u64>,
+        quick: bool,
+    ) -> Result<Frame, AppError> {
         let page = self.page(id)?;
         let mut page = page
             .lock()
             .map_err(|_| AppError::internal("Browser page unavailable"))?;
         let result = (|| {
+            page.cdp.sync_frame()?;
+            if quick && page.cdp.dialog.is_none() {
+                if let Some((at, info)) = &page.frame_info {
+                    if at.elapsed() < Duration::from_millis(500) {
+                        let metadata = page
+                            .metadata
+                            .lock()
+                            .map_err(|_| AppError::internal("Browser metadata unavailable"))?;
+                        if metadata.status == PageStatus::Gone {
+                            return Err(AppError::not_found("PREVIEW_PAGE_GONE"));
+                        }
+                        let info = info.clone();
+                        drop(metadata);
+                        let version = page.cdp.frame_version;
+                        return Ok(Frame {
+                            version,
+                            image: if since == Some(version) {
+                                String::new()
+                            } else {
+                                page.cdp.frame.clone().unwrap_or_default()
+                            },
+                            info,
+                            events: page.cdp.events.drain(..).collect(),
+                        });
+                    }
+                }
+            }
             let identity = if page.cdp.dialog.is_some() {
                 None
             } else {
@@ -100,6 +138,7 @@ impl Browsers {
                 metadata.revision = revision;
                 metadata.status = PageStatus::Connected;
             }
+            page.frame_info = Some((Instant::now(), info.clone()));
             Ok(Frame {
                 version,
                 image,
@@ -143,3 +182,6 @@ fn dialog_frame(page: &mut Page, since: Option<u64>) -> Result<Frame, AppError> 
         events: page.cdp.events.drain(..).collect(),
     })
 }
+
+#[cfg(test)]
+mod tests;

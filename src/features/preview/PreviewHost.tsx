@@ -7,7 +7,13 @@ const Workspace = lazy(() =>
   })),
 );
 /** Keep owned preview sessions alive when another workbench module is selected. */
-export function PreviewHost({ active }: { active: boolean }) {
+export function PreviewHost({
+  active,
+  deliveryAdapter,
+}: {
+  active: boolean;
+  deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
+}) {
   const [opened, setOpened] = useState(active);
   const navigate = useNavigate();
   useEffect(() => {
@@ -25,7 +31,7 @@ export function PreviewHost({ active }: { active: boolean }) {
       <Suspense
         fallback={<div role="status" className="flex-1 bg-background" />}
       >
-        <Workspace shown={active} />
+        <Workspace shown={active} deliveryAdapter={deliveryAdapter} />
       </Suspense>
     </div>
   );

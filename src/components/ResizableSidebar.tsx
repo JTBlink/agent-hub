@@ -7,6 +7,7 @@ const WIDTH_CHANGE_EVENT = "agent-hub:sidebar-width-change";
 
 interface Props {
   storageKey: string;
+  side?: "left" | "right";
   label: string;
   defaultWidth?: number;
   minWidth?: number;
@@ -23,6 +24,7 @@ interface Props {
 /** Shared horizontal sidebar sizing in logical pixels, including app zoom. */
 export function ResizableSidebar({
   storageKey,
+  side = "left",
   label,
   defaultWidth = 280,
   minWidth = 180,
@@ -145,7 +147,8 @@ export function ResizableSidebar({
         tabIndex={hidden ? -1 : 0}
         title={t("sidebar.resizeHint")}
         className={cn(
-          "sidebar-resize-handle absolute inset-y-0 -right-1 z-40 w-2 cursor-col-resize touch-none outline-none before:absolute before:inset-y-0 before:left-[3px] before:w-0.5 hover:before:bg-accent focus-visible:before:bg-accent",
+          "sidebar-resize-handle absolute inset-y-0 z-40 w-2 cursor-col-resize touch-none outline-none before:absolute before:inset-y-0 before:left-[3px] before:w-0.5 hover:before:bg-accent focus-visible:before:bg-accent",
+          side === "right" ? "-left-1" : "-right-1",
           dragging && "before:bg-accent",
         )}
         onPointerDown={(event) => {
@@ -163,7 +166,8 @@ export function ResizableSidebar({
           if (drag.current && event.pointerId === drag.current.pointerId)
             update(
               drag.current.width +
-                (event.clientX - drag.current.x) / getAppScale(),
+                ((event.clientX - drag.current.x) / getAppScale()) *
+                  (side === "right" ? -1 : 1),
             );
         }}
         onPointerUp={(event) => {
@@ -177,9 +181,10 @@ export function ResizableSidebar({
         onKeyDown={(event) => {
           const next =
             event.key === "ArrowLeft"
-              ? width - (event.shiftKey ? 40 : 10)
+              ? width + (event.shiftKey ? 40 : 10) * (side === "right" ? 1 : -1)
               : event.key === "ArrowRight"
-                ? width + (event.shiftKey ? 40 : 10)
+                ? width +
+                  (event.shiftKey ? 40 : 10) * (side === "right" ? -1 : 1)
                 : event.key === "Home"
                   ? lower
                   : event.key === "End"

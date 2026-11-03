@@ -75,6 +75,8 @@ pub enum PreviewRequest {
         id: String,
         #[serde(default)]
         since: Option<u64>,
+        #[serde(default)]
+        quick: bool,
     },
     Action {
         id: String,
@@ -198,18 +200,18 @@ pub async fn preview_request(
                 preview.browsers.reconnect(&id)?;
                 return Ok(Value::Null);
             }
+            PreviewRequest::Kernel { id } => return preview.browsers.kernel(&id),
             PreviewRequest::List => serde_json::to_value(preview.browsers.list()?),
             PreviewRequest::PrepareDelivery { text, images } => {
                 serde_json::to_value(preview.packets.prepare(&text, &images)?)
             }
-            PreviewRequest::KillProfileProcess { profile } => {
-                preview.browsers.kill_profile_process(&profile)?;
-                return Ok(Value::Null);
-            }
-            PreviewRequest::Kernel { id } => return preview.browsers.kernel(&id),
             PreviewRequest::Info => {
                 preview.start_automation()?;
                 serde_json::to_value(preview.browsers.info()?)
+            }
+            PreviewRequest::KillProfileProcess { profile } => {
+                preview.browsers.kill_profile_process(&profile)?;
+                return Ok(Value::Null);
             }
             PreviewRequest::Create {
                 profile,
@@ -219,9 +221,11 @@ pub async fn preview_request(
                 Some(owner) => preview.browsers.create_owned(&profile, &url, &owner)?,
                 None => preview.browsers.create(&profile, &url)?,
             }),
-            PreviewRequest::Frame { id, since } => {
-                serde_json::to_value(preview.browsers.frame_since(&id, since)?)
-            }
+            PreviewRequest::Frame { id, since, quick } => serde_json::to_value(if quick {
+                preview.browsers.quick_frame(&id, since)?
+            } else {
+                preview.browsers.frame_since(&id, since)?
+            }),
             PreviewRequest::Action { id, action } => return preview.browsers.action(&id, action),
             PreviewRequest::Close { id } => {
                 preview.browsers.close(&id)?;

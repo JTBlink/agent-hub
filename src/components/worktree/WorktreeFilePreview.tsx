@@ -1,3 +1,4 @@
+import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 import { useWorktreeBrowserPreview } from "../../hooks/useWorktreeBrowserPreview";
 import { useState } from "react";
 import { getErrorMessage } from "../../lib/error";
@@ -22,6 +23,7 @@ export function WorktreeFilePreview({
   toolbarContainer?: HTMLElement | null;
 }) {
   const { t } = useTranslation();
+  const previews = useWorktreePreviews();
   const [previewError, setPreviewError] = useState("");
   const browserPreview = useWorktreeBrowserPreview(
     projectId,
@@ -78,15 +80,16 @@ export function WorktreeFilePreview({
           toolbarContainer={toolbarContainer}
           showOpenInVscode={false}
           defaultSource
+          onPreview={previews ? () => void openPreview() : undefined}
           maxLength={1024 * 1024}
           actions={
             <div className="flex items-center gap-1 text-xs">
-              {canPreviewDocument(path) && (
+              {canPreviewDocument(path) && !/\.(md|markdown)$/i.test(path) && (
                 <button
                   type="button"
                   className="app-button-ghost p-1"
-                  title={t("preview.openInModule")}
-                  aria-label={t("preview.openInModule")}
+                  title={t("fileReader.preview")}
+                  aria-label={t("fileReader.preview")}
                   disabled={
                     browserPreview.opening ||
                     document.dirty ||

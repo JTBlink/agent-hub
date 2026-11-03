@@ -52,7 +52,6 @@ export function usePreviewModel() {
   const [remoteHost, setRemoteHost] = useState("dev.example.invalid");
   const [renderOn, setRenderOn] = useState("本机渲染");
   const [linkRouting, setLinkRouting] = useState("模块内打开");
-  const [agent, setAgent] = useState("Codex");
   const [prompt, setPrompt] = useState("");
   const [agentLog, setAgentLog] = useState<string[]>([]);
   const [automation, setAutomation] = useState("");
@@ -428,8 +427,6 @@ export function usePreviewModel() {
     setRenderOn,
     linkRouting,
     setLinkRouting,
-    agent,
-    setAgent,
     prompt,
     setPrompt,
     agentLog,

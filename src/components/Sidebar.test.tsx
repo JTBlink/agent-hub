@@ -147,6 +147,7 @@ function TestSidebar({ withSettings = false }: { withSettings?: boolean }) {
             backup: "Backup",
             network: "Network",
             hosts: "Hosts",
+            permissions: "permissions",
             about: "About",
           }}
         </SettingsTabs>

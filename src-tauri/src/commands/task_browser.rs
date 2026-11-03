@@ -7,7 +7,7 @@ use crate::core::{
     },
 };
 use std::sync::Arc;
-use tauri::{State, WebviewWindow};
+use tauri::{State, Webview};
 
 #[tauri::command]
 pub async fn task_bindings(
@@ -58,7 +58,7 @@ pub async fn task_project_remotes(
     })
     .await?
 }
-fn request_key(window: &WebviewWindow, id: &str) -> Result<String, TaskFailure> {
+fn request_key(window: &Webview, id: &str) -> Result<String, TaskFailure> {
     uuid::Uuid::parse_str(id)
         .map_err(|_| TaskFailure::new("invalid_input", "Invalid query identity"))?;
     Ok(format!("tasks:{}:{id}", window.label()))
@@ -72,7 +72,7 @@ fn client(store: &SkillStore, id: &str) -> Result<(Binding, TaskClient<SystemCli
 }
 #[tauri::command]
 pub async fn task_list(
-    window: WebviewWindow,
+    window: Webview,
     store: State<'_, Arc<SkillStore>>,
     registry: State<'_, Arc<InstallCancelRegistry>>,
     binding_id: String,
@@ -103,7 +103,7 @@ pub struct DetailQuery {
 }
 #[tauri::command]
 pub async fn task_detail(
-    window: WebviewWindow,
+    window: Webview,
     store: State<'_, Arc<SkillStore>>,
     registry: State<'_, Arc<InstallCancelRegistry>>,
     query: DetailQuery,
@@ -129,7 +129,7 @@ pub async fn task_detail(
 }
 #[tauri::command]
 pub fn task_cancel(
-    window: WebviewWindow,
+    window: Webview,
     registry: State<'_, Arc<InstallCancelRegistry>>,
     request_id: String,
 ) -> Result<(), TaskFailure> {
@@ -172,7 +172,7 @@ pub async fn task_add_comment(
 
 #[tauri::command]
 pub async fn task_prepare_herdr_workspace(
-    window: WebviewWindow,
+    window: Webview,
     store: State<'_, Arc<SkillStore>>,
     tools: State<'_, Arc<crate::core::herdr::tools::HerdrTools>>,
     project_id: String,

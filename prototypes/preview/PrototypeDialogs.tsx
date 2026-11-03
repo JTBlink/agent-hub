@@ -1,5 +1,5 @@
 import { htmlExampleDocument } from "./PrototypeExamples";
-import { ThemedSelect } from "../../src/components/ThemedSelect";
+import { PrototypeDelivery } from "./PrototypeDelivery";
 import { useEffect, useRef } from "react";
 import {
   X,
@@ -7,7 +7,6 @@ import {
   FileText,
   FileCode2,
   Camera,
-  Send,
   Download,
   FolderOpen,
   Link2,
@@ -24,19 +23,12 @@ export function PrototypeDialogs({ model }: { model: PreviewModel }) {
     customHtml,
     modal,
     setModal,
-    agent,
-    setAgent,
-    prompt,
-    setPrompt,
-    setAgentLog,
-    association,
     content,
     fileInput,
     active,
     current,
     pageCaptures,
     notify,
-    switchVariant,
     addTab,
     copy,
     grab,
@@ -170,58 +162,7 @@ export function PrototypeDialogs({ model }: { model: PreviewModel }) {
                 </div>
               </div>
             )}
-            {modal === "send" && (
-              <div className="pv-modal-body">
-                <p className="pv-subtle">
-                  {pageCaptures.length} 条批注 · {active?.title} · {association}
-                </p>
-                <label className="pv-field">
-                  目标 Agent
-                  <ThemedSelect
-                    aria-label="目标 Agent"
-                    value={agent}
-                    onChange={(event) => setAgent(event.target.value)}
-                  >
-                    <option>Codex</option>
-                    <option>Claude</option>
-                    <option>当前终端</option>
-                    <option>仅复制</option>
-                  </ThemedSelect>
-                </label>
-                <label className="pv-field">
-                  将要交付的上下文
-                  <textarea
-                    rows={10}
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                  />
-                </label>
-                <p className="pv-note">
-                  原型只投递到右侧沙盒，不会向真实 Agent 发送。
-                </p>
-                <button
-                  className="pv-primary"
-                  disabled={!prompt.trim()}
-                  onClick={() => {
-                    if (agent === "仅复制") {
-                      void copy(prompt);
-                    } else {
-                      setAgentLog((previous) => [
-                        ...previous,
-                        `→ ${agent}\n${prompt}`,
-                        "演示交付完成，等待真实宿主接入。",
-                      ]);
-                      switchVariant("C");
-                      notify("已交付到演示区");
-                    }
-                    setModal(null);
-                  }}
-                >
-                  <Send size={14} />
-                  {agent === "仅复制" ? "复制上下文" : "交付到演示区"}
-                </button>
-              </div>
-            )}
+            {modal === "send" && <PrototypeDelivery model={model} />}
             {modal === "share" && (
               <div className="pv-modal-body">
                 <p>将页面或带批注的反馈带出工作区。</p>

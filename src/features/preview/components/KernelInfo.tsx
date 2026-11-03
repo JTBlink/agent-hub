@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { previewApi } from "../api";
+import { NativeUserAgent } from "../web/native/NativeUserAgent";
 import { nativeApi } from "../web/native/api";
 import { getErrorMessage } from "../../../lib/error";
 interface Info {
@@ -19,6 +20,7 @@ export function KernelInfo({
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [refresh, setRefresh] = useState(0);
   const key = `${backend}:${pageId ?? ""}`;
   const [result, setResult] = useState<{
     key: string;
@@ -51,7 +53,7 @@ export function KernelInfo({
     return () => {
       disposed = true;
     };
-  }, [backend, pageId, key, open, t]);
+  }, [backend, pageId, key, open, refresh, t]);
   const current = result?.key === key ? result : undefined;
   return (
     <details
@@ -71,7 +73,14 @@ export function KernelInfo({
             )}
           </strong>
           <p>{t("preview.kernelInfo")}</p>
-
+          {backend === "native" && pageId && current?.info && (
+            <NativeUserAgent
+              key={key}
+              id={pageId}
+              current={current.info.userAgent}
+              onApplied={() => setRefresh((value) => value + 1)}
+            />
+          )}
           {current?.error ? (
             <p role="alert">{current.error}</p>
           ) : current?.info ? (

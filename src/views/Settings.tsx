@@ -1,4 +1,5 @@
 import { useLocation } from "react-router-dom";
+import { PermissionSettings } from "../components/settings/PermissionSettings";
 import { HostsSettings } from "../components/settings/HostsSettings";
 import { Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +38,7 @@ export function Settings() {
           backup: <BackupSettings />,
           network: <NetworkSettings />,
           hosts: <HostsSettings active={hash === "#hosts"} />,
+          permissions: <PermissionSettings active={hash === "#permissions"} />,
           about: (
             <>
               <AboutSettings diagnostics={diagnostics} />

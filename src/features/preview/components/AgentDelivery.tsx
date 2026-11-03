@@ -4,25 +4,28 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { ThemedSelect } from "../../../components/ThemedSelect";
-import {
-  getHerdrInventory,
-  getHerdrSnapshot,
-  herdrTarget,
-  runHerdrAction,
-  type HerdrTarget,
-} from "../../herdr/lib/herdrControlApi";
-import { getErrorMessage } from "../../../lib/error";
+import type {
+  AgentDeliveryAdapter,
+  AgentDeliveryDestination,
+} from "../../../lib/agentDelivery";
+import type { Annotation, PreviewTab } from "../shared/session";
 export function AgentDelivery({
+  adapter,
   text,
   images,
   stale,
+  page,
+  annotations = [],
   verifyCurrent,
   onClose,
   onSent,
 }: {
+  adapter?: AgentDeliveryAdapter;
   text: string;
   images: string[];
   stale: boolean;
+  page?: Pick<PreviewTab, "title" | "address" | "revision">;
+  annotations?: Annotation[];
   verifyCurrent: () => Promise<void>;
   onClose: () => void;
   onSent: (copied: boolean) => void;
@@ -32,10 +35,8 @@ export function AgentDelivery({
   const sending = useRef(false);
   const mounted = useRef(true);
   const [draft, setDraft] = useState(text);
-  const [targets, setTargets] = useState<
-    { id: string; label: string; target: HerdrTarget }[]
-  >([]);
-  const [selected, setSelected] = useState("copy");
+  const [target, setTarget] = useState<AgentDeliveryDestination | null>(null);
+  const [selected, setSelected] = useState(adapter?.id ?? "copy");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -47,35 +48,6 @@ export function AgentDelivery({
       element?.close();
     };
   }, []);
-  useEffect(() => {
-    let disposed = false;
-    void (async () => {
-      try {
-        const inventory = await getHerdrInventory();
-        if (!inventory.installed) return;
-        const all = [];
-        for (const session of inventory.sessions
-          .filter((item) => item.running)
-          .slice(0, 10)) {
-          const snapshot = await getHerdrSnapshot(session.name);
-          for (const pane of snapshot.agents) {
-            if (!pane.agent) continue;
-            all.push({
-              id: `${session.name}:${pane.pane_id}`,
-              label: `${pane.name || pane.agent} / ${snapshot.workspaces.find((item) => item.workspace_id === pane.workspace_id)?.label ?? session.name}`,
-              target: herdrTarget(session.name, pane),
-            });
-          }
-        }
-        if (!disposed) setTargets(all);
-      } catch (error) {
-        if (!disposed) setError(getErrorMessage(error, t("common.error")));
-      }
-    })();
-    return () => {
-      disposed = true;
-    };
-  }, [t]);
   const send = async () => {
     if (sending.current) return;
     sending.current = true;
@@ -89,15 +61,14 @@ export function AgentDelivery({
       };
       await verify();
       const packet =
-        images.length || draft.length > 48000
+        images.length || new TextEncoder().encode(draft).length > 32 * 1024
           ? await previewApi.prepareDelivery(draft, images)
           : null;
       if (packet) await verify();
       if (selected === "copy") await writeText(packet?.context ?? draft);
       else {
-        const entry = targets.find((item) => item.id === selected);
-        if (!entry) throw new Error(t("preview.targetUnavailable"));
-        await runHerdrAction(entry.target, "prompt", packet?.prompt ?? draft);
+        if (!target) throw new Error(t("preview.targetUnavailable"));
+        await target.send(packet?.prompt ?? draft);
       }
       if (mounted.current) onSent(selected === "copy");
     } catch (error) {
@@ -132,16 +103,47 @@ export function AgentDelivery({
         <ThemedSelect
           disabled={busy}
           value={selected}
-          onChange={(event) => setSelected(event.target.value)}
+          onChange={(event) => {
+            setSelected(event.target.value);
+            setTarget(null);
+          }}
         >
           <option value="copy">{t("preview.copyOnly")}</option>
-          {targets.map((target) => (
-            <option key={target.id} value={target.id}>
-              {target.label}
-            </option>
-          ))}
+          {adapter && <option value={adapter.id}>{adapter.label}</option>}
         </ThemedSelect>
       </label>
+      {selected !== "copy" && adapter && (
+        <adapter.TargetPicker disabled={busy} onChange={setTarget} />
+      )}
+      {page && (
+        <section className="text-xs break-all">
+          <strong>{page.title}</strong>
+          <p>{page.address}</p>
+          <p>Revision: {page.revision}</p>
+          <p>{t("preview.noteCount", { count: annotations.length })}</p>
+          {annotations.map((note) => (
+            <article key={note.id}>
+              <strong>{note.selector}</strong>
+              <p>{note.note || note.text}</p>
+              <p>
+                {note.screenshot
+                  ? t("preview.elementScreenshot")
+                  : t("preview.noScreenshot")}
+                {note.screenshot &&
+                  note.bounds &&
+                  ` · x=${note.bounds.x}, y=${note.bounds.y}, ${note.bounds.width} × ${note.bounds.height}`}
+              </p>
+              {note.screenshot && (
+                <img
+                  className="max-h-32 max-w-full object-contain"
+                  src={`data:image/png;base64,${note.screenshot}`}
+                  alt={t("preview.elementScreenshot")}
+                />
+              )}
+            </article>
+          ))}
+        </section>
+      )}
       <label>
         {t("preview.context")}
         <textarea
@@ -163,6 +165,9 @@ export function AgentDelivery({
       {error && (
         <p role="alert" className="text-xs text-danger">
           {error}
+          {selected !== "copy" && (
+            <span className="block">{t("preview.deliveryFailed")}</span>
+          )}
         </p>
       )}
       <footer>
@@ -171,7 +176,9 @@ export function AgentDelivery({
         </button>
         <button
           className="app-button-primary"
-          disabled={busy || !draft.trim() || stale}
+          disabled={
+            busy || !draft.trim() || stale || (selected !== "copy" && !target)
+          }
           onClick={() => void send()}
         >
           {busy

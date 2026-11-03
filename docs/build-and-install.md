@@ -63,8 +63,10 @@ Unix 开发环境只更新 CLI 时可执行：
 npm run cli:build                       # debug 编译并更新本机 CLI
 npm run cli:build -- --release          # release 编译并更新本机 CLI
 npm run cli -- --help                   # 先编译、更新，再执行 CLI
-./agent-hub.sh dev                      # 更新配套 CLI 后启动 Tauri + React
+./agent-hub.sh dev                      # 停止旧开发实例，更新 CLI 后启动 Tauri + React
 ```
+
+Unix 下 `./agent-hub.sh dev` 与 `npm run app:dev` 会先核实当前仓库的旧开发进程及工作目录，发送终止信号并等待退出，3 秒后仍未退出则强制结束；停止失败不启动新实例。其他仓库与正式安装版不参与清理。前端端口被其他服务占用时正常报错，不按端口强杀进程。
 
 `npm run app:dev`、`npm run tauri -- dev` 与上述 `dev` 使用同一入口。这里指 dev 启动阶段的配套 CLI 构建；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
 

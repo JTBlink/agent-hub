@@ -4,7 +4,7 @@ use super::{
     cdp::Cdp,
     runtime::{self, BrowserProfile, OwnedChild, Runtime},
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
@@ -16,6 +16,7 @@ use std::{
 };
 
 pub struct Page {
+    pub(super) frame_info: Option<(Instant, Value)>,
     pub(super) connection_generation: u64,
     pub(super) navigation_intent: u64,
     pub(super) snapshots: VecDeque<(String, String)>,
@@ -160,80 +161,7 @@ impl Drop for Reservation<'_> {
         }
     }
 }
-#[derive(Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum Action {
-    VerifyRevision {
-        expected_revision: String,
-    },
-    HandleDialog {
-        accept: bool,
-        prompt: Option<String>,
-    },
-    CancelUpload {
-        token: String,
-    },
-    ClickRef {
-        reference: String,
-    },
-    FillRef {
-        reference: String,
-        value: String,
-    },
-    Navigate {
-        url: String,
-    },
-    Reload {
-        hard: bool,
-    },
-    Stop,
-    Back,
-    Forward,
-    Resize {
-        width: u32,
-        height: u32,
-        mobile: bool,
-    },
-    Mouse {
-        x: f64,
-        y: f64,
-        event: String,
-        button: Option<String>,
-        delta_x: Option<f64>,
-        delta_y: Option<f64>,
-    },
-    Text {
-        text: String,
-    },
-    Key {
-        key: String,
-        code: String,
-        modifiers: u32,
-    },
-    Evaluate {
-        expression: String,
-    },
-    Pick {
-        x: f64,
-        y: f64,
-    },
-    Snapshot,
-    Screenshot {
-        full: bool,
-        clip: Option<Value>,
-        #[serde(default)]
-        expected_revision: Option<String>,
-    },
-    Find {
-        text: String,
-        backwards: bool,
-    },
-    Cookies,
-    ImportCookies {
-        cookies: Value,
-    },
-    Storage,
-}
+pub use super::actions::Action;
 impl Browsers {
     pub fn new(root: PathBuf) -> Self {
         Self {
@@ -481,6 +409,7 @@ impl Browsers {
             owner,
         }));
         let page = Arc::new(Mutex::new(Page {
+            frame_info: None,
             connection_generation: 0,
             navigation_intent: 0,
             snapshots: VecDeque::new(),
@@ -720,19 +649,7 @@ impl Browsers {
         }
     }
 }
-pub fn validate_url(value: &str) -> Result<(), AppError> {
-    let url =
-        reqwest::Url::parse(value).map_err(|error| AppError::invalid_input(error.to_string()))?;
-    if value.len() > 8192
-        || !matches!(url.scheme(), "http" | "https" | "about")
-        || (url.scheme() == "about" && value != "about:blank")
-    {
-        return Err(AppError::invalid_input(
-            "Only HTTP, HTTPS and about:blank addresses are supported",
-        ));
-    }
-    Ok(())
-}
+pub use super::navigation::validate_url;
 #[cfg(test)]
 #[path = "browser/tests.rs"]
 mod tests;

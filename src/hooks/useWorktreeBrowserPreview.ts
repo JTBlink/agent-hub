@@ -1,3 +1,4 @@
+import { useWorktreePreviews } from "./worktreePreviewsContext";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { hasPendingWorktreeDocument } from "./useWorktreeDocument";
@@ -10,6 +11,7 @@ export function useWorktreeBrowserPreview(
   path: string,
 ) {
   const { t } = useTranslation();
+  const previews = useWorktreePreviews();
   const pending = useRef(false);
   const [opening, setOpening] = useState(false);
   const open = async () => {
@@ -20,7 +22,8 @@ export function useWorktreeBrowserPreview(
     pending.current = true;
     setOpening(true);
     try {
-      await openProjectPreview(projectId, worktreePath, path);
+      if (previews) await previews.open(projectId, worktreePath, path);
+      else await openProjectPreview(projectId, worktreePath, path);
     } finally {
       pending.current = false;
       setOpening(false);

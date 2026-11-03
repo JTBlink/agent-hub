@@ -1,3 +1,4 @@
+import { useBrowserBackends } from "./web/useBrowserBackends";
 import { verifyPreviewContext } from "./shared/verifyContext";
 import { annotationActions } from "./shared/annotationActions";
 import { followDocumentLink } from "./shared/documentLinks";
@@ -36,6 +37,7 @@ import {
   restorePreview,
   updatePreview,
   type Annotation,
+  type PreviewTab,
 } from "./shared/session";
 import {
   loadPreviewSession,
@@ -89,6 +91,7 @@ export function usePreviewWorkspace() {
     pageIdsRef.current = next;
     setPageIdsState(next);
   };
+  const backends = useBrowserBackends();
   const [info, setInfo] = useState<BrowserInfo | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,6 +112,8 @@ export function usePreviewWorkspace() {
   };
   const [delivery, setDelivery] = useState<{
     text: string;
+    page: PreviewTab;
+    annotations: Annotation[];
     images: string[];
     tabId: string;
     revision: string;
@@ -123,6 +128,9 @@ export function usePreviewWorkspace() {
   const dirty = !!document && draft !== undefined && draft !== document.content;
   const notes = active ? annotationsForPage(session, active.id) : [];
   const pageId = active ? pageIds[active.id] : undefined;
+  const native =
+    !!active &&
+    (active.profile === "native" || !!backends.nativeTabs[active.id]);
   const report = (error: unknown) => setError(previewError(error, t));
   useEffect(() => {
     let disposed = false;
@@ -257,9 +265,10 @@ export function usePreviewWorkspace() {
   const action = async <T = unknown>(
     value: BrowserAction,
   ): Promise<T | undefined> => {
-    if (!pageId) return;
     setError("");
     try {
+      if (native && active && (await backends.action(active.id, value))) return;
+      if (!pageId) return;
       return await previewApi.action<T>(pageId, value);
     } catch (error) {
       report(error);
@@ -530,6 +539,9 @@ export function usePreviewWorkspace() {
     pageIds,
     pageIdsRef,
     setPageIds,
+    native,
+    setNativeTabs: backends.setNativeTabs,
+    registerNative: backends.registerNative,
     info,
     setInfo,
     error,

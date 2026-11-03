@@ -126,6 +126,7 @@ async function render() {
                     backup: "Backup",
                     network: "Network",
                     hosts: "Hosts",
+                    permissions: "permissions",
                     about: "About",
                   }}
                 </SettingsTabs>

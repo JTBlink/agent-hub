@@ -337,7 +337,7 @@ impl Runtime {
             "Network.enable",
             json!({ "maxTotalBufferSize": 1048576, "maxResourceBufferSize": 65536 }),
         )?;
-        cdp.call("Page.startScreencast", json!({"format":"jpeg","quality":85,"maxWidth":3840,"maxHeight":2160,"everyNthFrame":1}))?;
+        cdp.enable_frames(&address)?;
         if self.context.is_some() && self.remote_download_dir.is_some() {
             let tree = cdp.call("Page.getFrameTree", json!({}))?;
             self.remember_download_frames(&tree["frameTree"]);

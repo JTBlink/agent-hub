@@ -63,6 +63,10 @@ impl Imports {
         value: Value,
     ) -> Result<Summary, AppError> {
         let target = target(browsers, id, revision)?;
+        self.prepare_target(target, value)
+    }
+    /// Stage renderer-independent cookie scopes without exposing their values.
+    pub fn prepare_target(&self, target: Target, value: Value) -> Result<Summary, AppError> {
         let normalized = policy::normalize(value)?;
         let mut domains = BTreeMap::new();
         for cookie in &normalized.cookies {
@@ -113,6 +117,11 @@ impl Imports {
         domains: Vec<String>,
         replace: bool,
     ) -> Result<ImportResult, AppError> {
+        let (target, cookies) = self.take(id, domains)?;
+        browsers.apply_cookies(&target, cookies, replace)
+    }
+    /// Consume one bounded, expiring preview for a renderer-specific mutation adapter.
+    pub fn take(&self, id: &str, domains: Vec<String>) -> Result<(Target, Vec<Cookie>), AppError> {
         let batch = self
             .batches
             .lock()
@@ -141,7 +150,7 @@ impl Imports {
             .into_iter()
             .filter(|cookie| domains.contains(&cookie.domain))
             .collect::<Vec<_>>();
-        browsers.apply_cookies(&batch.target, cookies, replace)
+        Ok((batch.target, cookies))
     }
 }
 pub(super) fn target(browsers: &Browsers, id: &str, revision: &str) -> Result<Target, AppError> {

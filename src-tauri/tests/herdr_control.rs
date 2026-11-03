@@ -11,6 +11,7 @@ if [ "$1" = session ]; then cat "$0.sessions"
 elif [ "$3 $4" = 'api snapshot' ]; then cat "$0.snapshot"
 elif [ "$3 $4" = 'pane process-info' ] && [ -f "$0.process" ]; then cat "$0.process"
 elif [ "$3 $4" = 'pane process-info' ]; then printf '%s\n' '{"result":{"process_info":{"shell_pid":1,"foreground_process_group_id":2,"foreground_processes":[{"name":"codex"}]}}}'
+elif [ "$3 $4" = 'agent prompt' ] && { [ "$#" != 6 ] || [ "${6#-}" != "$6" ]; }; then echo 'unknown option' >&2; exit 2
 else printf '%s\n' '{"result":{"type":"ok"}}'; fi
 "#).unwrap();
     fs::set_permissions(&cli, fs::Permissions::from_mode(0o755)).unwrap();
@@ -329,6 +330,9 @@ fn prompts_require_ready_foreground_and_unchanged_agent_identity() {
     control
         .action(&target, Action::Prompt, Some("Review this change"))
         .unwrap();
+    control
+        .action(&target, Action::Prompt, Some("--wait"))
+        .unwrap();
     pane["agent_session"] = json!({"id":"replacement"});
     fixture["result"]["snapshot"]["agents"] = json!([pane]);
     fs::write(&file, fixture.to_string()).unwrap();
@@ -341,8 +345,10 @@ fn prompts_require_ready_foreground_and_unchanged_agent_identity() {
             .lines()
             .filter(|s| s.contains(" agent prompt "))
             .count(),
-        1
+        2
     );
+    assert!(calls.contains("agent prompt w1:p1 Review this change"));
+    assert!(calls.contains("agent prompt w1:p1 \n--wait"));
     assert!(!calls.contains("Never send twice"));
     assert!(!calls.contains("agent send-keys"));
 }

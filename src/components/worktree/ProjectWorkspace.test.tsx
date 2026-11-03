@@ -15,6 +15,8 @@ import { SidebarProjectFiles } from "./SidebarProjectFiles";
 import { WorkspaceFilesProvider } from "./WorkspaceFilesContext";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { ProjectSkills } from "../../views/ProjectSkills";
+import { previewApi } from "../../features/preview/api";
+import { PREVIEW_OPEN_EVENT } from "../../features/preview/shared/openRequests";
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { GitFileEditor } from "../git/GitFileEditor";
 import {
@@ -72,6 +74,15 @@ const mocks = vi.hoisted(() => ({
   open: vi.fn().mockResolvedValue(undefined),
   remove: vi.fn().mockResolvedValue(undefined),
   refresh: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../features/preview/api", () => ({
+  previewApi: {
+    openProject: vi.fn(),
+    closeDocument: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+vi.mock("../../features/preview/web/BrowserSurface", () => ({
+  BrowserSurface: () => <div>Browser preview</div>,
 }));
 vi.mock("../../hooks/useOpenProject", () => ({
   useOpenProject: () => ({ openProject: mocks.open, isOpening: false }),
@@ -161,8 +172,21 @@ vi.mock("../terminal/TerminalWorkspace", () => ({
   },
 }));
 vi.mock("../file-reader/FileContent", () => ({
-  FileContent: ({ file }: { file: { path: string; content: string } }) => (
-    <output aria-label={file.path}>{file.content}</output>
+  FileContent: ({
+    file,
+    onPreview,
+  }: {
+    file: { path: string; content: string };
+    onPreview?: () => void;
+  }) => (
+    <>
+      <output aria-label={file.path}>{file.content}</output>
+      {onPreview && (
+        <button data-preview onClick={onPreview}>
+          Preview
+        </button>
+      )}
+    </>
   ),
 }));
 vi.mock("../../views/ProjectDetail", () => ({
@@ -588,4 +612,54 @@ it("removes an invalid project only after confirmation and returns to the welcom
   expect(mocks.remove).toHaveBeenCalledExactlyOnceWith(project.id);
   expect(mocks.refresh).toHaveBeenCalledOnce();
   expect(host.querySelector("[data-route]")?.textContent).toBe("/");
+});
+
+it("adds a preview after the source tab without navigation, reuses it, and closes its document", async () => {
+  mocks.files.mockResolvedValue([
+    { name: "README.md", path: "README.md", is_dir: false, is_symlink: false },
+  ]);
+  mocks.read.mockResolvedValue("# Preview example");
+  vi.mocked(previewApi.openProject).mockResolvedValue({
+    id: "workspace-preview",
+    kind: "markdown",
+    title: "README.md",
+    content: "# Preview example",
+    revision: "saved",
+  });
+  const navigatePreview = vi.fn();
+  window.addEventListener(PREVIEW_OPEN_EVENT, navigatePreview);
+  try {
+    await render();
+    await act(async () => window.dispatchEvent(new Event("focus")));
+    await click('aside button[title="README.md"]');
+    const route = host.querySelector("[data-route]")?.textContent;
+    await click("[data-preview]");
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
+    const tabs = [...host.querySelectorAll('[role="tab"]')];
+    const source = tabs.findIndex((tab) => tab.textContent === "README.md");
+    expect(tabs[source + 1].textContent).toBe("README.md · fileReader.preview");
+    expect(tabs[source + 1].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[source].getAttribute("aria-selected")).toBe("false");
+    expect(host.querySelector("article h1")?.textContent).toBe(
+      "Preview example",
+    );
+    expect(host.querySelector("[data-route]")?.textContent).toBe(route);
+    expect(navigatePreview).not.toHaveBeenCalled();
+    await act(async () => (tabs[source] as HTMLElement).click());
+    await click("[data-preview]");
+    expect(previewApi.openProject).toHaveBeenCalledTimes(1);
+    expect(
+      host.querySelectorAll('[role="tab"][title="README.md"]'),
+    ).toHaveLength(2);
+    await click('[aria-label="preview.closeTab"]');
+    expect(previewApi.closeDocument).toHaveBeenCalledWith("workspace-preview");
+    expect(
+      host.querySelectorAll('[role="tab"][title="README.md"]'),
+    ).toHaveLength(1);
+    expect(host.querySelector('output[aria-label="README.md"]')).not.toBeNull();
+  } finally {
+    window.removeEventListener(PREVIEW_OPEN_EVENT, navigatePreview);
+  }
 });

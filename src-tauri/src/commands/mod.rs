@@ -11,6 +11,7 @@ pub mod file_preview;
 pub mod git_backup;
 pub mod git_repositories;
 pub mod hosts;
+pub mod ipc;
 pub mod project_library;
 pub mod project_skill_diff;
 pub mod project_skill_update;
@@ -38,3 +39,6 @@ pub mod project_worktrees;
 
 pub mod preview;
 pub mod preview_cookies;
+pub mod preview_native;
+
+pub mod system_permissions;

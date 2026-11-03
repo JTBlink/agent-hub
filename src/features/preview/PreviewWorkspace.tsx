@@ -1,3 +1,6 @@
+import { TabCloseButton } from "../../components/TabCloseButton";
+import { ResizableSidebar } from "../../components/ResizableSidebar";
+import { CardActionMenu } from "../../components/CardActionMenu";
 import { KernelInfo } from "./components/KernelInfo";
 import { ExecutionLocation } from "./components/ExecutionLocation";
 import { usePageFind } from "./shared/usePageFind";
@@ -14,7 +17,7 @@ import {
   Plus,
   X,
   Globe,
-  UserRound,
+  VenetianMask,
   FileText,
   FileCode2,
   MousePointer2,
@@ -38,7 +41,13 @@ import { BrowserTools } from "./components/BrowserTools";
 import { AgentDelivery } from "./components/AgentDelivery";
 import "./preview.css";
 
-export function PreviewWorkspace({ shown }: { shown: boolean }) {
+export function PreviewWorkspace({
+  shown,
+  deliveryAdapter,
+}: {
+  shown: boolean;
+  deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
+}) {
   const { t } = useTranslation();
   const model = usePreviewWorkspace();
   useBrowserInventory(shown, model);
@@ -99,7 +108,7 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
         if (key === "s") void model.save();
         if (key === "r") {
           if (model.document) void model.reloadDocument();
-          if (model.pageId)
+          if (model.pageId || model.native)
             void model.action({ kind: "reload", hard: event.shiftKey });
         }
       }}
@@ -130,40 +139,51 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
                   <span>●</span>
                 )}
             </button>
-            <button
+            <TabCloseButton
+              className="preview-tab-close"
               aria-label={t("preview.closeTab", { title: tab.title })}
               onClick={() => void model.close(tab.id)}
-            >
-              <X size={12} />
-            </button>
+            />
           </div>
         ))}
-        <button
-          title={t("preview.newTab")}
-          aria-label={t("preview.newTab")}
-          onClick={() => model.openWeb()}
-        >
-          <Plus size={16} />
-        </button>
-        <button
-          title={t("preview.newGuestTab")}
-          aria-label={t("preview.newGuestTab")}
-          onClick={() => model.openWeb("about:blank", "guest")}
-        >
-          <UserRound size={16} />
-        </button>
+        <CardActionMenu
+          className="preview-new-tab"
+          label={t("preview.newTab")}
+          align="start"
+          triggerIcon={<Plus size={16} />}
+          actions={[
+            {
+              key: "web",
+              label: t("preview.newTab"),
+              icon: <Globe size={14} />,
+              onSelect: () => model.openWeb(),
+            },
+            {
+              key: "native",
+              label: t("preview.nativeBackend"),
+              icon: <Globe size={14} />,
+              onSelect: () => model.openWeb("about:blank", "native"),
+            },
+            {
+              key: "guest",
+              label: t("preview.newGuestTab"),
+              icon: <VenetianMask size={14} />,
+              onSelect: () => model.openWeb("about:blank", "guest"),
+            },
+          ]}
+        />
       </div>
       <div className="preview-addressbar">
         <button
           title={t("preview.back")}
-          disabled={!model.pageId}
+          disabled={!model.pageId && !model.native}
           onClick={() => void model.action({ kind: "back" })}
         >
           <ArrowLeft size={16} />
         </button>
         <button
           title={t("preview.forward")}
-          disabled={!model.pageId}
+          disabled={!model.pageId && !model.native}
           onClick={() => void model.action({ kind: "forward" })}
         >
           <ArrowRight size={16} />
@@ -173,7 +193,7 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
           disabled={!active || model.busy}
           onClick={() => {
             if (model.document) void model.reloadDocument();
-            if (model.pageId)
+            if (model.pageId || model.native)
               void model.action({ kind: "reload", hard: false });
           }}
         >
@@ -213,6 +233,7 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
         <button
           aria-label={t("preview.developerTools")}
           title={t("preview.developerTools")}
+          disabled={model.native}
           className={model.panelOpen && model.panel === "tools" ? "active" : ""}
           onClick={() => showPanel("tools")}
         >
@@ -225,10 +246,14 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
           showPanel={showPanel}
         >
           {active && active.kind !== "markdown" && (
-            <KernelInfo backend="chromium" pageId={model.pageId} />
+            <KernelInfo
+              backend={model.native ? "native" : "chromium"}
+              pageId={model.pageId}
+            />
           )}
           {active && (
             <ExecutionLocation
+              native={model.native}
               execution={active.execution}
               markdown={active.kind === "markdown"}
             />
@@ -361,11 +386,44 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
                     >
                       <BrowserSurface
                         key={`${tab.id}:${tab.profile}`}
+                        onBackend={(backend) =>
+                          model.setNativeTabs((previous) =>
+                            previous[tab.id] === (backend === "native")
+                              ? previous
+                              : { ...previous, [tab.id]: backend === "native" },
+                          )
+                        }
+                        onNativeNavigation={(handler) =>
+                          model.registerNative(tab.id, handler)
+                        }
+                        onNativeLocation={(url) =>
+                          model.setSession((previous) => {
+                            const current = previous.tabs.find(
+                              (item) => item.id === tab.id,
+                            );
+                            if (!current || current.address === url)
+                              return previous;
+                            return {
+                              ...previous,
+                              tabs: previous.tabs.map((item) =>
+                                item.id === tab.id
+                                  ? {
+                                      ...item,
+                                      address: url,
+                                      title: url,
+                                      revision: crypto.randomUUID(),
+                                    }
+                                  : item,
+                              ),
+                            };
+                          })
+                        }
                         tabId={tab.id}
                         initialId={model.pageIds[tab.id]}
                         active={shown && active?.id === tab.id && !model.source}
                         address={tab.address}
                         profile={tab.profile}
+                        onPickingChange={model.setPicking}
                         picking={model.picking}
                         viewport={model.viewports[tab.id] ?? null}
                         onReady={(id) =>
@@ -395,56 +453,69 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
             );
           })}
         </div>
-        {model.panelOpen &&
-          (model.panel === "annotations" ? (
-            <AnnotationPanel model={model} />
-          ) : model.panel === "settings" ? (
-            <BrowserSettings model={model} />
-          ) : model.panel === "downloads" ? (
-            <DownloadsPanel model={model} />
-          ) : model.panel === "tools" ? (
-            <BrowserTools
-              key={`${active?.id}:${active?.revision}`}
-              model={model}
-            />
-          ) : (
-            <aside className="preview-inspector">
-              <header>
-                <h2>{t("preview.history")}</h2>
-                <button
-                  aria-label={t("common.close")}
-                  onClick={() => model.setPanelOpen(false)}
-                >
-                  ×
-                </button>
-              </header>
-              <div className="preview-inspector-scroll">
-                <h3>{t("preview.currentTab")}</h3>
-                {active?.history.map((url, index) => (
+        {model.panelOpen && (
+          <ResizableSidebar
+            storageKey="agent-hub.preview.inspector-width"
+            label={t("preview.annotations")}
+            side="right"
+            defaultWidth={300}
+            minWidth={240}
+            maxWidth={700}
+            reserveWidth={200}
+            constrainToParent
+            className="preview-inspector-size"
+          >
+            {model.panel === "annotations" ? (
+              <AnnotationPanel model={model} />
+            ) : model.panel === "settings" ? (
+              <BrowserSettings model={model} />
+            ) : model.panel === "downloads" ? (
+              <DownloadsPanel model={model} />
+            ) : model.panel === "tools" ? (
+              <BrowserTools
+                key={`${active?.id}:${active?.revision}`}
+                model={model}
+              />
+            ) : (
+              <aside className="preview-inspector">
+                <header>
+                  <h2>{t("preview.history")}</h2>
                   <button
-                    className="preview-history-item"
-                    key={`${url}-${index}`}
-                    onClick={() => void model.navigate(url)}
+                    aria-label={t("common.close")}
+                    onClick={() => model.setPanelOpen(false)}
                   >
-                    {url}
+                    ×
                   </button>
-                ))}
-                <h3>{t("preview.recentlyClosed")}</h3>
-                {model.session.closed
-                  .slice()
-                  .reverse()
-                  .map((tab) => (
+                </header>
+                <div className="preview-inspector-scroll">
+                  <h3>{t("preview.currentTab")}</h3>
+                  {active?.history.map((url, index) => (
                     <button
                       className="preview-history-item"
-                      key={tab.id}
-                      onClick={() => model.restore(tab.id)}
+                      key={`${url}-${index}`}
+                      onClick={() => void model.navigate(url)}
                     >
-                      {tab.title}
+                      {url}
                     </button>
                   ))}
-              </div>
-            </aside>
-          ))}
+                  <h3>{t("preview.recentlyClosed")}</h3>
+                  {model.session.closed
+                    .slice()
+                    .reverse()
+                    .map((tab) => (
+                      <button
+                        className="preview-history-item"
+                        key={tab.id}
+                        onClick={() => model.restore(tab.id)}
+                      >
+                        {tab.title}
+                      </button>
+                    ))}
+                </div>
+              </aside>
+            )}
+          </ResizableSidebar>
+        )}
       </div>
       <footer className="preview-status">
         <span>
@@ -501,6 +572,9 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
       )}
       {model.delivery !== null && (
         <AgentDelivery
+          adapter={deliveryAdapter}
+          page={model.delivery.page}
+          annotations={model.delivery.annotations}
           text={model.delivery.text}
           images={model.delivery.images}
           verifyCurrent={() =>

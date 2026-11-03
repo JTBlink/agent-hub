@@ -7,7 +7,7 @@ use crate::core::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::{ipc::Channel, State, WebviewWindow};
+use tauri::{ipc::Channel, State, Webview};
 
 fn controller(tools: &HerdrTools) -> Result<HerdrControl, AppError> {
     tools
@@ -24,7 +24,7 @@ pub struct Inventory {
     sessions: Vec<SessionInfo>,
 }
 #[tauri::command]
-pub async fn herdr_sidebar_keys(window: WebviewWindow) -> Result<String, AppError> {
+pub async fn herdr_sidebar_keys(window: Webview) -> Result<String, AppError> {
     crate::commands::terminal::owner(&window)?;
     tauri::async_runtime::spawn_blocking(|| {
         crate::core::herdr::control::sidebar_keys().map_err(AppError::io)
@@ -33,7 +33,7 @@ pub async fn herdr_sidebar_keys(window: WebviewWindow) -> Result<String, AppErro
 }
 #[tauri::command]
 pub async fn herdr_inventory(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
 ) -> Result<Inventory, AppError> {
     crate::commands::terminal::owner(&window)?;
@@ -56,7 +56,7 @@ pub async fn herdr_inventory(
 }
 #[tauri::command]
 pub async fn herdr_prepare_session(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
 ) -> Result<String, AppError> {
     crate::commands::terminal::owner(&window)?;
@@ -68,7 +68,7 @@ pub async fn herdr_prepare_session(
 }
 #[tauri::command]
 pub async fn herdr_restart_session(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     session: String,
 ) -> Result<(), AppError> {
@@ -83,7 +83,7 @@ pub async fn herdr_restart_session(
 }
 #[tauri::command]
 pub async fn herdr_delete_session(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     session: String,
 ) -> Result<(), AppError> {
@@ -98,7 +98,7 @@ pub async fn herdr_delete_session(
 }
 #[tauri::command]
 pub async fn herdr_snapshot(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     session: String,
 ) -> Result<Snapshot, AppError> {
@@ -111,7 +111,7 @@ pub async fn herdr_snapshot(
 }
 #[tauri::command]
 pub async fn herdr_open(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     store: State<'_, Arc<SkillStore>>,
     session: String,
@@ -130,7 +130,7 @@ pub async fn herdr_open(
 }
 #[tauri::command]
 pub async fn herdr_ensure(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     store: State<'_, Arc<SkillStore>>,
     session: String,
@@ -162,7 +162,7 @@ pub async fn herdr_ensure(
 }
 #[tauri::command]
 pub async fn herdr_action(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     target: Target,
     action: Action,
@@ -179,7 +179,7 @@ pub async fn herdr_action(
 }
 #[tauri::command]
 pub async fn herdr_start_agent(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     target: Target,
     input: NewAgent,
@@ -195,7 +195,7 @@ pub async fn herdr_start_agent(
 }
 #[tauri::command]
 pub async fn herdr_terminal_create(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     store: State<'_, Arc<SkillStore>>,
     manager: State<'_, Arc<TerminalManager>>,
@@ -255,7 +255,7 @@ pub struct DeleteWorktreeInput {
 
 #[tauri::command]
 pub async fn herdr_delete_worktree(
-    window: WebviewWindow,
+    window: Webview,
     tools: State<'_, Arc<HerdrTools>>,
     store: State<'_, Arc<SkillStore>>,
     input: DeleteWorktreeInput,
@@ -284,7 +284,7 @@ pub async fn herdr_delete_worktree(
 
 #[tauri::command]
 pub async fn terminal_launch_herdr(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     tools: State<'_, Arc<crate::core::herdr::tools::HerdrTools>>,
     id: String,

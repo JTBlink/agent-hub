@@ -79,7 +79,9 @@ export function PreviewToolbar({
           >
             <div>
               <button
-                disabled={!active || model.source}
+                disabled={
+                  !active || model.source || (model.native && !model.pageId)
+                }
                 className={model.picking ? "active" : ""}
                 onClick={() => model.setPicking(!model.picking)}
               >

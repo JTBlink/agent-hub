@@ -32,12 +32,11 @@ fn settings_command() -> Result<Command, String> {
 
 /// Both URLs are documented by Apple's EndpointSecurity ESClient.h.
 #[cfg(target_os = "macos")]
-pub(super) fn macos_settings_url(major: u32) -> &'static str {
-    if major >= 13 {
-        "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_AllFiles"
-    } else {
-        "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
-    }
+pub(super) fn macos_settings_url(major: u32) -> String {
+    crate::core::system_permissions::macos_settings_url(
+        crate::core::system_permissions::Permission::FullDisk,
+        major,
+    )
 }
 
 #[cfg(windows)]

@@ -1413,7 +1413,8 @@
       "backup": "Sync & backup",
       "network": "Network",
       "hosts": "Hosts",
-      "about": "About & diagnostics"
+      "about": "About & diagnostics",
+      "permissions": "Permission guide"
     },
     "skillStorage": "Skill directory",
     "backupStorage": "Local sync data",
@@ -1649,7 +1650,37 @@
     "backupDirectoryHint": "This directory stores Git sync data and version history. The cloud repository URL is shown in the connection details below.",
     "gitErrorSshAuth": "SSH authentication failed. Check your SSH key, ssh-agent, and the key’s repository access.",
     "gitErrorCredentialRead": "Git credentials could not be read or saved. Check the application data directory permissions and reconnect your account.",
-    "gitErrorCredentialMissing": "Git could not obtain login credentials. Reconnect GitHub for GitHub backups, or configure credentials for the remote host."
+    "gitErrorCredentialMissing": "Git could not obtain login credentials. Reconnect GitHub for GitHub backups, or configure credentials for the remote host.",
+    "permissions": {
+      "title": "Permission guide",
+      "refresh": "Check again",
+      "open": "Open system settings",
+      "intro": "Enable permissions for the features you use. This page only checks queryable authorization and opens settings; permission changes remain under your control.",
+      "step1": "Review the feature described for each permission and enable it as needed.",
+      "step2": "Choose the actual AgentHub app or external tool in system settings. Development builds and installed apps may need separate authorization.",
+      "step3": "Return here to check again. Save your work before restarting if the system requires it.",
+      "otherPlatform": "Manage permissions through your system security settings or the prompts shown by each feature. macOS-specific settings shortcuts are unavailable here.",
+      "granted": "Granted",
+      "notGranted": "Not granted · enable if needed",
+      "checkInSettings": "Check in system settings",
+      "files_folders": {
+        "title": "Files and folders",
+        "description": "Project, skill and backup directories may require per-folder permission. Prefer granting the required directory through a file picker. This page does not probe protected directories."
+      },
+      "full_disk": {
+        "title": "Full Disk Access · as needed",
+        "description": "Consider this only when a required protected resource reports permission denied. Web browsing does not require it. It does not replace administrator approval for modifying system Hosts."
+      },
+      "accessibility": {
+        "title": "Accessibility · optional external automation",
+        "description": "Tools that control other applications may need this permission; authorize the tool that performs the action. Current preview input, element selection and Herdr delivery do not require it."
+      },
+      "screen_capture": {
+        "title": "Screen recording · optional external automation",
+        "description": "Tools capturing other applications or the desktop may need this permission; authorize the tool taking the capture. Chromium page screenshots do not record the desktop."
+      },
+      "previewNote": "A busy browser profile, missing browser engine or stopped development server is a runtime issue. System permissions do not resolve these conditions."
+    }
   },
   "closeAction": {
     "enableTrayHint": "Running in the background will enable the tray icon so you can reopen the window.",
@@ -2665,17 +2696,6 @@
     "replacing": "Replacing…"
   },
   "preview": {
-    "profileBusy": "Browser profile is in use by an old instance",
-    "forceClosing": "Closing old instance…",
-    "forceCloseHint": "Force closes the preview browser using this profile. Unsaved page content may be lost. Saved login data is kept.",
-    "profileInUse": "This browser profile is in use by another or leftover preview process. Quit the previous AgentHub instance and retry, or open a guest tab. Saved login data has not been removed.",
-    "kernelInfo": "Engine information",
-    "kernelEngine": "Engine",
-    "kernelVersion": "Version",
-    "kernelUnknown": "Unavailable",
-    "kernelPending": "Connect the page to inspect its version and UA",
-    "systemKernel": "System engine",
-    "chromiumKernel": "Chromium",
     "reopen": "Discard the old form and reopen",
     "reopenHint": "Reopen discards the old form and loads the last verified address. The browser restores persistent local login data; guest or lost remote sessions may require signing in again.",
     "reopenBusy": "This profile is creating or restoring a page. Try again shortly.",
@@ -2788,7 +2808,7 @@
     "bottomDock": "Bottom annotations",
     "exportDocument": "Export document",
     "copyAddress": "Copy address",
-    "delivered": "Delivery completed",
+    "delivered": "Sent to Agent. Refresh the preview after the changes are complete to check the result.",
     "chooseFiles": "Choose files",
     "deliveryImages": "Include {{count}} screenshots with the context.",
     "dialogResponse": "Response",
@@ -2890,6 +2910,41 @@
     "executionChoiceHint": "Execution location is chosen for new pages. Selecting another profile opens a tab and preserves the current page and form.",
     "proxyChoiceHint": "Proxy addresses are relative to the Chromium host. A local renderer can use an existing SSH SOCKS5 proxy. Proxy failures do not fall back to the default network.",
     "profileNewTabHint": "Open this address in a new tab using another profile; keep the current page",
-    "locationPending": "Waiting to verify rendering and network location"
+    "locationPending": "Waiting to verify rendering and network location",
+    "herdrSession": "Herdr session",
+    "chooseSession": "Choose a running session",
+    "herdrWorkspace": "Workspace",
+    "chooseWorkspace": "Choose a workspace",
+    "herdrAgent": "Agent",
+    "chooseAgent": "Choose an Agent",
+    "sessionStopped": "Stopped",
+    "deliveryTo": "Send to",
+    "herdrMissing": "Herdr is not installed. Install it from the terminal first.",
+    "herdrStopped": "No running Herdr sessions. Start a session from the terminal, then refresh.",
+    "noWorkspaces": "This session has no workspaces.",
+    "noAgents": "No Agents in this workspace. Start an Agent, then refresh.",
+    "refreshTargets": "Refresh targets and choose again",
+    "noScreenshot": "No screenshot attached",
+    "deliveryFailed": "Delivery was not confirmed. Your draft is retained. Check the target terminal before retrying to avoid duplicate delivery. Refresh and choose again if the target is unavailable.",
+    "profileBusy": "Browser profile is in use by an old instance",
+    "forceClosing": "Closing old instance…",
+    "forceCloseHint": "Force closes the preview browser using this profile. Unsaved page content may be lost. Saved login data is kept.",
+    "profileInUse": "This browser profile is in use by another or leftover preview process. Quit the previous AgentHub instance and retry, or open a guest tab. Saved login data has not been removed.",
+    "nativeBackend": "System WebView",
+    "nativeCapabilities": "The system WebView renders directly and supports selection, annotations, screenshots and Agent delivery. Login settings can import cookies and optionally apply the source UA.",
+    "systemKernel": "System engine",
+    "chromiumKernel": "Chromium",
+    "kernelInfo": "Engine information",
+    "kernelEngine": "Engine",
+    "kernelVersion": "Version",
+    "kernelUnknown": "Unavailable",
+    "kernelPending": "Connect the page to inspect its version and UA",
+    "nativeBasicCapabilities": "This platform currently supports native browsing, navigation, input and scrolling. Extended inspection and screenshot adapters are unavailable.",
+    "nativePersistent": "Login data is saved in an independent native browsing profile.",
+    "nativeTemporary": "This system uses temporary browsing data.",
+    "nativeUA": "Native page User-Agent",
+    "nativeUAHint": "Applies to this page and new native pages. Reload for the site to read it again; the actual engine remains the one reported here.",
+    "nativeUAReset": "Restore system UA",
+    "syncSourceUA": "Also apply the source browser UA"
   }
 }

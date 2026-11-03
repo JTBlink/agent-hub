@@ -83,6 +83,7 @@ impl Browsers {
         // CLI recovery must also invalidate an existing GUI frame cursor.
         transport.frame_version = page.cdp.frame_version.saturating_add(1);
         transport.frame = None;
+        page.frame_info = None;
         page.cdp = transport;
         page.connection_generation = page.connection_generation.wrapping_add(1);
         page.snapshots.clear();

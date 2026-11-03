@@ -13,6 +13,7 @@ const tabs = [
   "backup",
   "network",
   "hosts",
+  "permissions",
   "about",
 ] as const;
 type SettingsTab = (typeof tabs)[number];

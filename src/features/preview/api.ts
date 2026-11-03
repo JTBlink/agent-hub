@@ -1,3 +1,5 @@
+import { nativeApi } from "./web/native/api";
+import { isNativePage } from "./web/native/identity";
 import type { CaptureViewport } from "./shared/captureContext";
 import { invoke } from "@tauri-apps/api/core";
 export interface BrowserProfile {
@@ -109,12 +111,6 @@ export type BrowserAction =
 const request = <T>(value: object) =>
   invoke<T>("preview_request", { request: value });
 export const previewApi = {
-  killProfileProcess: (profile: string) =>
-    request<void>({ kind: "kill_profile_process", profile }),
-  kernel: (id: string) =>
-    request<{ product?: string; userAgent?: string; protocolVersion?: string }>(
-      { kind: "kernel", id },
-    ),
   list: () => request<BrowserPageInfo[]>({ kind: "list" }),
   captureRendered: (
     html: string,
@@ -141,49 +137,79 @@ export const previewApi = {
       attachments: string[];
     }>({ kind: "prepare_delivery", text, images }),
   prepareCookies: (id: string, revision: string, text: string) =>
-    request<CookieImportSummary>({
-      kind: "cookie_prepare",
-      id,
-      revision,
-      text,
-    }),
+    isNativePage(id)
+      ? nativeApi
+          .cookiePrepare(id, revision, { kind: "text", text })
+          .then(requireSummary)
+      : request<CookieImportSummary>({
+          kind: "cookie_prepare",
+          id,
+          revision,
+          text,
+        }),
   browserCookies: (id: string, revision: string, endpoint: string) =>
-    request<CookieImportSummary>({
-      kind: "cookie_browser",
-      id,
-      revision,
-      endpoint,
-    }),
+    isNativePage(id)
+      ? nativeApi
+          .cookiePrepare(id, revision, { kind: "browser", endpoint })
+          .then(requireSummary)
+      : request<CookieImportSummary>({
+          kind: "cookie_browser",
+          id,
+          revision,
+          endpoint,
+        }),
   cookieFile: (
     id: string,
     revision: string,
     format: "json" | "netscape" | "firefox",
   ) =>
-    invoke<CookieImportSummary | null>("preview_cookie_file", {
-      id,
-      revision,
-      format,
-    }),
-  applyCookies: (import_id: string, domains: string[], replace: boolean) =>
-    request<{ imported: number; removed: number }>({
-      kind: "cookie_apply",
-      import_id,
-      domains,
-      replace,
-    }),
+    isNativePage(id)
+      ? nativeApi.cookiePrepare(id, revision, { kind: "file", format })
+      : invoke<CookieImportSummary | null>("preview_cookie_file", {
+          id,
+          revision,
+          format,
+        }),
+  applyCookies: (
+    import_id: string,
+    domains: string[],
+    replace: boolean,
+    syncUA = false,
+  ) =>
+    import_id.startsWith("native-import:")
+      ? nativeApi.cookieApply(import_id, domains, replace, syncUA)
+      : request<{ imported: number; removed: number }>({
+          kind: "cookie_apply",
+          import_id,
+          domains,
+          replace,
+        }),
   cancelCookieImport: (import_id: string) =>
-    request<void>({ kind: "cookie_cancel", import_id }),
+    import_id.startsWith("native-import:")
+      ? nativeApi.cookieCancel(import_id)
+      : request<void>({ kind: "cookie_cancel", import_id }),
   info: () => request<BrowserInfo>({ kind: "info" }),
+  kernel: (id: string) =>
+    request<{ product?: string; userAgent?: string; protocolVersion?: string }>(
+      { kind: "kernel", id },
+    ),
   create: (profile: string, url: string, owner?: string) =>
     request<string>({ kind: "create", profile, url, owner }),
   frame: (id: string, since?: number) =>
-    request<BrowserFrame>({ kind: "frame", id, since }),
+    request<BrowserFrame>({ kind: "frame", id, since, quick: true }),
   action: <T = unknown>(id: string, action: BrowserAction) =>
-    request<T>({ kind: "action", id, action }),
+    isNativePage(id)
+      ? nativeApi.execute<T>(id, action)
+      : request<T>({ kind: "action", id, action }),
   reopen: (id: string) => request<void>({ kind: "reopen", id }),
   reconnect: (id: string) => request<void>({ kind: "reconnect", id }),
-  close: (id: string) => request<void>({ kind: "close", id }),
+  close: (id: string) =>
+    isNativePage(id)
+      ? nativeApi.action(id, "close")
+      : request<void>({ kind: "close", id }),
   deleteProfile: (id: string) => request<void>({ kind: "delete_profile", id }),
+  killProfileProcess: (profile: string) =>
+    request<void>({ kind: "kill_profile_process", profile }),
   profile: (profile: BrowserProfile) =>
     request<void>({ kind: "save_profile", profile }),
   upload: (id: string, revision: string, token: string, multiple: boolean) =>
@@ -227,7 +253,13 @@ export const previewApi = {
     content: string,
     binary = false,
     expected?: { id: string; revision: string },
-  ) => invoke<boolean>("preview_export", { name, content, binary, expected }),
+  ) =>
+    invoke<boolean>(
+      expected && isNativePage(expected.id)
+        ? "preview_native_export"
+        : "preview_export",
+      { name, content, binary, expected },
+    ),
 };
 
 export interface PreviewDownload {
@@ -247,7 +279,15 @@ export interface PreviewDownload {
   remote?: boolean;
 }
 
+function requireSummary(
+  value: CookieImportSummary | null,
+): CookieImportSummary {
+  if (!value) throw Error("Cookie preview unavailable");
+  return value;
+}
 export interface CookieImportSummary {
+  source_user_agent?: string;
+  replace_supported?: boolean;
   id: string;
   target: {
     id: string;

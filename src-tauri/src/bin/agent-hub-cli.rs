@@ -4,7 +4,7 @@ mod automation;
 mod help;
 #[path = "agent-hub-cli/hosts.rs"]
 mod hosts_cli;
-#[path = "agent_hub_cli/preview.rs"]
+#[path = "agent-hub-cli/preview.rs"]
 mod preview_cli;
 #[path = "agent-hub-cli/project.rs"]
 mod project;

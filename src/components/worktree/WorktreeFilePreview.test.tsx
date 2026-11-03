@@ -204,7 +204,7 @@ it("opens Markdown directly in the editable source view", async () => {
   vi.unstubAllGlobals();
 });
 
-it("moves file controls into the shared toolbar and offers preview only for Markdown", async () => {
+it("moves file controls into the shared toolbar and offers previews for supported documents", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   installCodeEditorGeometry();
   vi.mocked(readWorktreeFile).mockResolvedValue("# Toolbar example");
@@ -269,6 +269,10 @@ it("moves file controls into the shared toolbar and offers preview only for Mark
   );
   expect(save.disabled).toBe(true);
   await act(async () => render("example.ts"));
+  expect(
+    toolbar.querySelector('[aria-label="fileReader.preview"]'),
+  ).not.toBeNull();
+  await act(async () => render("unknown.exe"));
   expect(toolbar.querySelector('[aria-label="fileReader.preview"]')).toBeNull();
   expect(
     toolbar.querySelector('[aria-label="fileReader.wrap"]'),

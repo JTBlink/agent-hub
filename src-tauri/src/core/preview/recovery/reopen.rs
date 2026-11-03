@@ -155,6 +155,7 @@ impl Browsers {
         let mut page = page
             .lock()
             .map_err(|_| AppError::internal("Browser replacement unavailable"))?;
+        page.frame_info = None;
         page.cdp.expected_size = Some((old.width, old.height));
         page.width = old.width;
         page.height = old.height;

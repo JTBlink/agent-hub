@@ -1,4 +1,5 @@
 //! Bounded CDP requests on an application-owned browser transport.
+mod frame_worker;
 mod resource_worker;
 use super::super::error::AppError;
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -12,6 +13,8 @@ use tungstenite::{stream::MaybeTlsStream, Message, WebSocket};
 
 pub struct Cdp {
     resources: Option<resource_worker::ResourceWorker>,
+    frames: Option<frame_worker::FrameWorker>,
+    source_version: u64,
     socket: WebSocket<MaybeTlsStream<TcpStream>>,
     sequence: u64,
     main_frame: Option<String>,
@@ -42,6 +45,8 @@ impl Cdp {
         Ok(Self {
             socket,
             resources: None,
+            frames: None,
+            source_version: 0,
             sequence: 0,
             main_frame: None,
             navigation_version: 0,
@@ -53,6 +58,24 @@ impl Cdp {
             dialog: None,
         })
     }
+    pub(super) fn enable_frames(&mut self, address: &str) -> Result<(), AppError> {
+        self.frames = Some(frame_worker::FrameWorker::start(address)?);
+        Ok(())
+    }
+    pub(super) fn sync_frame(&mut self) -> Result<(), AppError> {
+        if let Some(worker) = &self.frames {
+            if let Some(frame) = worker.latest()? {
+                if frame.version != self.source_version
+                    && self.expected_size.map_or(true, |size| size == frame.size)
+                {
+                    self.source_version = frame.version;
+                    self.frame = Some(frame.image.to_string());
+                    self.frame_version = self.frame_version.wrapping_add(1);
+                }
+            }
+        }
+        Ok(())
+    }
     pub(super) fn enable_resources(
         &mut self,
         address: &str,
@@ -60,6 +83,10 @@ impl Cdp {
     ) -> Result<(), AppError> {
         self.resources = Some(resource_worker::ResourceWorker::start(address, documents)?);
         Ok(())
+    }
+    #[cfg(test)]
+    pub(super) fn request_count(&self) -> u64 {
+        self.sequence
     }
     #[cfg(test)]
     pub fn close(&mut self) {

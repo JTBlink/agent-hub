@@ -23,6 +23,7 @@ export function CookieImportPanel({
   const [endpoint, setEndpoint] = useState("http://127.0.0.1:9222");
   const [preview, setPreview] = useState<CookieImportSummary | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [syncUA, setSyncUA] = useState(false);
   const [replace, setReplace] = useState(false);
   const [busy, setBusy] = useState(false);
   const generation = useRef(0);
@@ -62,6 +63,8 @@ export function CookieImportPanel({
         return;
       }
       setPreview(result);
+      setSyncUA(false);
+      if (result.replace_supported === false) setReplace(false);
       setSelected(Object.keys(result.domains));
     } catch (error) {
       if (epoch === generation.current) onError(error);
@@ -78,11 +81,9 @@ export function CookieImportPanel({
     if (!preview || stale || busy) return;
     setBusy(true);
     try {
-      const result = await previewApi.applyCookies(
-        preview.id,
-        selected,
-        replace,
-      );
+      const result = preview.source_user_agent
+        ? await previewApi.applyCookies(preview.id, selected, replace, syncUA)
+        : await previewApi.applyCookies(preview.id, selected, replace);
       onImported(result.imported, preview.target.profile_name);
       setText("");
       setPreview(null);
@@ -224,13 +225,29 @@ export function CookieImportPanel({
             onChange={(event) => setReplace(event.target.value === "replace")}
           >
             <option value="merge">{t("preview.cookieMerge")}</option>
-            <option value="replace">{t("preview.cookieReplace")}</option>
+            <option
+              value="replace"
+              disabled={preview.replace_supported === false}
+            >
+              {t("preview.cookieReplace")}
+            </option>
           </ThemedSelect>
           <p>
             {t(
               replace ? "preview.cookieReplaceHint" : "preview.cookieMergeHint",
             )}
           </p>
+          {preview.source_user_agent && (
+            <label>
+              <ToggleSwitch
+                checked={syncUA}
+                onChange={() => setSyncUA((value) => !value)}
+                disabled={busy}
+              />
+              <span>{t("preview.syncSourceUA")}</span>
+              <code className="break-all">{preview.source_user_agent}</code>
+            </label>
+          )}
           {stale && <p role="status">{t("preview.pageChanged")}</p>}
           <button
             className="app-button-primary"

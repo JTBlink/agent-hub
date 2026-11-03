@@ -13,7 +13,7 @@ export function usage() {
   return `用法: node scripts/app/build.mjs <命令> [选项]
 
 命令:
-  dev       自动更新配套 CLI 后启动 Tauri + React 开发模式
+  dev       停止旧开发实例，自动更新配套 CLI 后启动 Tauri + React
   build     编译当前平台安装包
   clean     清理 Tauri/Cargo 构建缓存
   prune     清理历史构建与安装包，保留最新产物和共享依赖（支持 --dry-run）
@@ -173,6 +173,14 @@ export function runCommand(
 ) {
   switch (command) {
     case "dev":
+      if (!isWindows && !args.includes("--help") && !args.includes("-h")) {
+        const status = run(
+          process.execPath,
+          ["scripts/app/stop-dev.mjs"],
+          runner,
+        );
+        if (status !== 0) return status;
+      }
       return runNpm(["run", "tauri", "--", "dev", ...args], runner);
     case "build":
       return runNpm(["run", "tauri", "--", "build", ...args], runner);

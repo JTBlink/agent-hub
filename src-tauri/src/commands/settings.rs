@@ -664,7 +664,7 @@ pub async fn update_install_blocker() -> Result<Option<String>, AppError> {
 #[tauri::command]
 pub async fn hide_to_tray(
     app: tauri::AppHandle,
-    window: tauri::WebviewWindow,
+    window: tauri::Window,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let show_tray_icon = {

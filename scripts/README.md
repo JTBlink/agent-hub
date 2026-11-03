@@ -4,7 +4,7 @@
 
 | 模块                     | 职责                                     | 主要入口                                                                                                                   |
 | ------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [app/](app/)             | 桌面与 CLI 构建、开发运行、构建缓存清理  | `build.mjs`、`primary-app.mjs`、`run-rust-cli.mjs`、`build-cache.mjs`                                                      |
+| [app/](app/)             | 桌面与 CLI 构建、开发运行、构建缓存清理  | `build.mjs`、`stop-dev.mjs`、`primary-app.mjs`、`run-rust-cli.mjs`、`build-cache.mjs`                                      |
 | [release/](release/)     | 版本同步、发布候选、安装包汇总与校验     | `check-version.mjs`、`set-version.mjs`、`check-release-candidate.mjs`、`assemble-release.mjs`、`verify-release-bundle.mjs` |
 | [website/](website/)     | 主页构建、Pages 发布源检查、合成数据截图 | `build-homepage.mjs`、`check-pages-config.mjs`、`capture-product-screenshots.mjs`                                          |
 | [docs/](docs/)           | 离线帮助与文档站内容、链接、开发服务插件 | `build-help.mjs`、`vite-plugin.mjs`                                                                                        |

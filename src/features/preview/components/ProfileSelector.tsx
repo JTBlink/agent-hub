@@ -24,6 +24,7 @@ export function ProfileSelector({
           onOpen(active.address, event.target.value);
       }}
     >
+      <option value="native">{t("preview.nativeBackend")}</option>
       {(profiles ?? [{ id: "default", name: t("preview.defaultProfile") }]).map(
         (profile) => (
           <option

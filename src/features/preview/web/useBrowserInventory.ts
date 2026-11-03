@@ -1,3 +1,4 @@
+import { isNativePage } from "./native/identity";
 import { useEffect, useEffectEvent } from "react";
 import { previewApi, type BrowserPageInfo } from "../api";
 import type { PreviewModel } from "../usePreviewWorkspace";
@@ -18,7 +19,13 @@ export function useBrowserInventory(active: boolean, model: PreviewModel) {
         model.setPageIds(mapping);
     },
   );
-  const snapshot = useEffectEvent(() => ({ ...model.pageIdsRef.current }));
+  const snapshot = useEffectEvent(() =>
+    Object.fromEntries(
+      Object.entries(model.pageIdsRef.current).filter(
+        ([, id]) => !isNativePage(id),
+      ),
+    ),
+  );
   useEffect(() => {
     if (!active) return;
     let disposed = false;

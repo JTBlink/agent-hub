@@ -32,6 +32,7 @@ const documentRef = "document.querySelector('#preview').contentDocument";
 const run = (code) =>
   evaluate(`(()=>{const d=${documentRef};${code};return true})()`);
 try {
+  await until("document.querySelector('#preview')");
   for (const [width, theme, language, size] of [
     [1440, "dark", "zh", "default"],
     [960, "light", "en", "xlarge"],
@@ -43,6 +44,19 @@ try {
     );
     await until(
       `${documentRef}?.location.search === ${JSON.stringify(`?theme=${theme}&language=${language}&text-size=${size}`)} && ${documentRef}?.querySelector('.preview-welcome') && ${documentRef}?.querySelector('.preview-welcome button:last-child')`,
+    );
+    assert.ok(
+      await evaluate(
+        `${documentRef}.querySelector('.preview-new-tab svg').getBoundingClientRect().width >= 14`,
+      ),
+      "New-tab icon must remain visible",
+    );
+    await run(`d.querySelector('.preview-new-tab button').click()`);
+    await until(
+      `${documentRef}?.querySelectorAll('[role="menuitem"]').length===3`,
+    );
+    await run(
+      `d.querySelector('[role="menuitem"]').dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`,
     );
     await run(`d.querySelector('.preview-welcome button:last-child').click()`);
     await until(
@@ -102,7 +116,7 @@ try {
     );
     assert.ok(delivery.includes("Source: guide.md:5-6"), delivery);
     await run(
-      `delete d.documentElement.dataset.copiedContext; d.querySelector('dialog footer .app-button-primary').click()`,
+      `const select=d.querySelector('dialog select');select.value='copy';select.dispatchEvent(new d.defaultView.Event('change',{bubbles:true}));delete d.documentElement.dataset.copiedContext; d.querySelector('dialog footer .app-button-primary').click()`,
     );
     await until(
       `!${documentRef}.querySelector('dialog[open]') && ${documentRef}.documentElement.dataset.copiedContext?.includes('Source: guide.md:5-6')`,

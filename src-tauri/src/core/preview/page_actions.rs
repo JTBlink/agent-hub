@@ -51,6 +51,9 @@ impl Browsers {
                 "Navigation was superseded; inspect the current page",
             ));
         }
+        if intent.is_some() {
+            page.frame_info = None;
+        }
         match action {
             Action::VerifyRevision {expected_revision} => {
                 if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED")); }
@@ -96,6 +99,7 @@ impl Browsers {
             }
             Action::Resize { width, height, mobile } => {
                 if !(240..=3840).contains(&width) || !(200..=2160).contains(&height) { return Err(AppError::invalid_input("Viewport dimensions are outside the supported range")); }
+                page.frame_info = None;
                 page.cdp.expected_size = Some((width,height));
                 page.cdp.call("Emulation.setDeviceMetricsOverride", json!({"width":width,"height":height,"deviceScaleFactor":1,"mobile":mobile}))?;
                 page.width = width; page.height = height;page.mobile=mobile;page.cdp.frame=None;

@@ -1,7 +1,8 @@
+pub mod actions;
 mod assets;
 pub mod automation;
 pub mod browser;
-mod capture;
+pub(crate) mod capture;
 mod cdp;
 pub mod cookies;
 mod document_forward;
@@ -14,6 +15,7 @@ mod file_types;
 mod frames;
 mod inventory;
 mod lifecycle;
+pub mod navigation;
 pub mod packets;
 mod page_actions;
 mod profile_processes;

@@ -25,6 +25,7 @@ export function FileContent({
   maxLength,
   actions,
   toolbarContainer,
+  onPreview,
   defaultSource = false,
   showOpenInVscode = true,
 }: {
@@ -34,6 +35,8 @@ export function FileContent({
   /** Render controls in a host toolbar and omit the breadcrumb row. */
   toolbarContainer?: HTMLElement | null;
   defaultSource?: boolean;
+  /** Open a workspace preview tab while retaining this source editor. */
+  onPreview?: () => void;
   /** Project workspaces expose the external editor at the project level. */
   showOpenInVscode?: boolean;
 } & Pick<
@@ -116,7 +119,9 @@ export function FileContent({
             aria-label={t(value ? "fileReader.preview" : "fileReader.source")}
             title={t(value ? "fileReader.preview" : "fileReader.source")}
             aria-pressed={preview === value}
-            onClick={() => setPreview(value)}
+            onClick={() =>
+              value && onPreview ? onPreview() : setPreview(value)
+            }
             className={cn(
               "app-button-ghost px-2 py-1 text-xs",
               preview === value && "bg-surface-active text-accent-light",

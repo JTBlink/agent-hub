@@ -185,6 +185,7 @@ impl Browsers {
                     owner: None,
                 }));
                 let page = Arc::new(Mutex::new(Page {
+                    frame_info: None,
                     connection_generation: 0,
                     navigation_intent: 0,
                     snapshots: VecDeque::new(),

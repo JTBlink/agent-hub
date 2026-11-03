@@ -1,3 +1,4 @@
+import { herdrDeliveryAdapter } from "../features/herdr/deliveryAdapter";
 import { PreviewHost } from "../features/preview/PreviewHost";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -178,7 +179,12 @@ export function Layout() {
                     />
                   ) : null}
                   {started && pathname !== "/git" && <Outlet />}
-                  {started && <PreviewHost active={pathname === "/preview"} />}
+                  {started && (
+                    <PreviewHost
+                      active={pathname === "/preview"}
+                      deliveryAdapter={herdrDeliveryAdapter}
+                    />
+                  )}
                 </div>
               </div>
             </div>

@@ -23,7 +23,10 @@ describe("build command orchestrator", () => {
     expect(runCommand("dev", ["--no-watch"], { runner })).toBe(0);
     expect(runCommand("build", ["--bundles", "nsis,msi"], { runner })).toBe(0);
 
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(process.platform === "win32" ? 2 : 3);
+    if (process.platform !== "win32") {
+      expect(calls.shift().args).toEqual(["scripts/app/stop-dev.mjs"]);
+    }
     expect(calls[0].args.join(" ")).toContain("run tauri -- dev --no-watch");
     expect(calls[1].args.join(" ")).toContain(
       "run tauri -- build --bundles nsis,msi",
@@ -102,4 +105,22 @@ describe("build command orchestrator", () => {
     expect(main(["unknown"], { runner: fakeRunner() })).toBe(1);
     expect(usage()).toContain("build     编译当前平台安装包");
   });
+});
+
+it.skipIf(process.platform === "win32")(
+  "does not launch dev when the old instance cannot stop",
+  () => {
+    const calls = [];
+    expect(runCommand("dev", [], { runner: fakeRunner(17, calls) })).toBe(17);
+    expect(calls).toHaveLength(1);
+  },
+);
+
+it("does not stop an instance for dev help", () => {
+  const calls = [];
+  expect(runCommand("dev", ["--help"], { runner: fakeRunner(0, calls) })).toBe(
+    0,
+  );
+  expect(calls).toHaveLength(1);
+  expect(calls[0].args.join(" ")).toContain("run tauri -- dev --help");
 });

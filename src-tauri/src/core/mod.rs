@@ -77,3 +77,5 @@ pub mod worktree_search;
 pub mod preview;
 
 pub mod user_config;
+
+pub mod system_permissions;

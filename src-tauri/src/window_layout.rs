@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use tauri::{LogicalSize, Manager, PhysicalPosition, WebviewWindow};
+use tauri::{LogicalSize, Manager, PhysicalPosition, Window};
 
 use crate::core::skill_store::SkillStore;
 
@@ -30,7 +30,7 @@ fn fit_size(requested: WindowSize, minimum: WindowSize, available: WindowSize) -
     }
 }
 
-pub fn restore(window: &WebviewWindow, store: &SkillStore) {
+pub fn restore(window: &Window, store: &SkillStore) {
     let Some(config) = window
         .app_handle()
         .config()
@@ -87,7 +87,7 @@ pub fn restore(window: &WebviewWindow, store: &SkillStore) {
     }
 }
 
-pub fn save(window: &WebviewWindow) {
+pub fn save(window: &Window) {
     // A temporary minimized/full-screen/maximized frame must not replace the
     // user's normal editing size.
     if window.is_minimized().unwrap_or(false)

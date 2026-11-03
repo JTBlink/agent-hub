@@ -6,9 +6,9 @@ use crate::core::{
     terminal::{self, TerminalEvent, TerminalManager, TerminalSession, TerminalSize, TerminalSpec},
 };
 use std::sync::Arc;
-use tauri::{ipc::Channel, Manager, State, WebviewWindow};
+use tauri::{ipc::Channel, Manager, State, Webview};
 
-pub(crate) fn owner(window: &WebviewWindow) -> Result<String, AppError> {
+pub(crate) fn owner<R: tauri::Runtime>(window: &Webview<R>) -> Result<String, AppError> {
     if window.label() != "main" {
         return Err(AppError::invalid_input(
             "Terminal access requires the main window",
@@ -18,7 +18,7 @@ pub(crate) fn owner(window: &WebviewWindow) -> Result<String, AppError> {
 }
 #[tauri::command]
 pub async fn terminal_create(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     project_id: String,
     worktree_path: Option<String>,
@@ -82,7 +82,7 @@ pub async fn terminal_create(
 }
 #[tauri::command]
 pub async fn terminal_write(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     id: String,
     data: String,
@@ -99,7 +99,7 @@ pub async fn terminal_write(
 }
 #[tauri::command]
 pub async fn terminal_resize(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     id: String,
     size: TerminalSize,
@@ -113,7 +113,7 @@ pub async fn terminal_resize(
 }
 #[tauri::command]
 pub fn terminal_ack(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     id: String,
     seq: u64,
@@ -124,7 +124,7 @@ pub fn terminal_ack(
 }
 #[tauri::command]
 pub async fn terminal_close(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     id: String,
 ) -> Result<(), AppError> {
@@ -134,8 +134,8 @@ pub async fn terminal_close(
         .await?
 }
 #[tauri::command]
-pub fn terminal_list(
-    window: WebviewWindow,
+pub fn terminal_list<R: tauri::Runtime>(
+    window: Webview<R>,
     manager: State<'_, Arc<TerminalManager>>,
 ) -> Result<Vec<TerminalSession>, AppError> {
     manager.list(&owner(&window)?).map_err(AppError::io)
@@ -143,7 +143,7 @@ pub fn terminal_list(
 
 #[tauri::command]
 pub fn terminal_launch_state(
-    window: WebviewWindow,
+    window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     id: String,
 ) -> Result<terminal::LaunchState, AppError> {
@@ -153,7 +153,7 @@ pub fn terminal_launch_state(
 }
 #[tauri::command]
 pub async fn terminal_project_directory(
-    window: WebviewWindow,
+    window: Webview,
     store: State<'_, Arc<SkillStore>>,
     project_id: String,
     worktree_path: Option<String>,

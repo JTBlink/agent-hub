@@ -151,10 +151,21 @@ fn firefox(path: &Path) -> Result<Value, AppError> {
     Ok(json!(cookies))
 }
 pub fn browser(endpoint: &str) -> Result<Value, AppError> {
+    Ok(browser_session(endpoint)?.0)
+}
+/// The browser supplies its own UA; callers choose whether to apply it.
+pub fn browser_session(endpoint: &str) -> Result<(Value, Option<String>), AppError> {
     let mut cdp = runtime::connect_control(endpoint)?;
     cdp.set_timeout(std::time::Duration::from_secs(12))?;
     let value = cdp.call("Storage.getCookies", json!({}))?;
-    Ok(value["cookies"].clone())
+    let version = cdp.call("Browser.getVersion", json!({}))?;
+    Ok((
+        value["cookies"].clone(),
+        version["userAgent"]
+            .as_str()
+            .filter(|value| value.len() <= 2048 && !value.chars().any(char::is_control))
+            .map(str::to_owned),
+    ))
 }
 
 fn copy_database_file(source: &Path, target: &Path) -> Result<(), AppError> {

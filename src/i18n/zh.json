@@ -1411,7 +1411,8 @@
       "backup": "同步与备份",
       "network": "网络",
       "hosts": "Hosts",
-      "about": "关于与诊断"
+      "about": "关于与诊断",
+      "permissions": "权限引导"
     },
     "skillStorage": "技能目录",
     "backupStorage": "本地同步数据",
@@ -1647,7 +1648,37 @@
     "backupDirectoryHint": "此目录用于保存 Git 同步数据和版本历史；云端仓库地址见下方连接信息。",
     "gitErrorSshAuth": "SSH 认证失败：请检查 SSH 密钥、ssh-agent 及该密钥对仓库的访问权限。",
     "gitErrorCredentialRead": "无法读取或保存 Git 凭证。请检查应用数据目录权限并重新连接账号。",
-    "gitErrorCredentialMissing": "Git 未能取得登录凭证。GitHub 备份请点击“重新连接 GitHub”；其他远端请配置相应凭证。"
+    "gitErrorCredentialMissing": "Git 未能取得登录凭证。GitHub 备份请点击“重新连接 GitHub”；其他远端请配置相应凭证。",
+    "permissions": {
+      "title": "权限引导",
+      "refresh": "重新检测",
+      "open": "打开系统设置",
+      "intro": "按实际使用的功能开启权限。此页只检测可查询的授权状态并打开对应设置，由你在系统设置中确认，不会自动修改权限。",
+      "step1": "先查看各项权限对应的功能，按需开启。",
+      "step2": "在系统设置中选择实际运行的 AgentHub 或外部工具；开发构建与安装版可能需要分别授权。",
+      "step3": "返回此页重新检测；系统提示需要重启时，先保存工作再重新启动。",
+      "otherPlatform": "此系统的权限需通过系统安全设置或功能触发的授权提示管理；当前不提供 macOS 专用设置入口。",
+      "granted": "已授权",
+      "notGranted": "未授权 · 按功能决定是否开启",
+      "checkInSettings": "需在系统设置确认",
+      "files_folders": {
+        "title": "文件与文件夹",
+        "description": "访问项目、技能或备份目录时，系统可能按目录请求授权。优先通过文件选择器授权需要的目录；此页不会扫描受保护目录来探测权限。"
+      },
+      "full_disk": {
+        "title": "完全磁盘访问 · 按需",
+        "description": "仅在需要访问受保护资料且明确遇到权限拒绝时考虑开启。普通网页浏览不需要此权限；它也不能代替修改系统 Hosts 时的管理员授权。"
+      },
+      "accessibility": {
+        "title": "辅助功能 · 外部自动化可选",
+        "description": "需要控制其他应用的自动化工具可能需要此权限，请给实际执行操作的工具授权。AgentHub 当前的网页输入、元素选取与 Herdr 投递不依赖此权限。"
+      },
+      "screen_capture": {
+        "title": "屏幕录制 · 外部自动化可选",
+        "description": "抓取其他应用或桌面的工具可能需要此权限，请给实际抓屏工具授权。预览页面的 Chromium 截图不需要录制整个屏幕。"
+      },
+      "previewNote": "浏览器配置被占用、内核未安装和开发服务停止属于运行问题，开启系统权限不能修复这些情况。"
+    }
   },
   "closeAction": {
     "enableTrayHint": "选择后台运行会启用托盘图标，方便重新打开窗口。",
@@ -2662,17 +2693,6 @@
     "replacing": "正在替换…"
   },
   "preview": {
-    "profileBusy": "浏览器配置被旧实例占用",
-    "forceClosing": "正在关闭旧实例…",
-    "forceCloseHint": "将强制关闭占用此配置的预览浏览器，未保存的网页内容可能丢失。登录数据会保留。",
-    "profileInUse": "浏览器配置正被另一个或残留的预览进程占用。请退出旧 AgentHub 实例后重试，或新建访客网页。登录数据未被删除。",
-    "kernelInfo": "内核信息",
-    "kernelEngine": "引擎",
-    "kernelVersion": "版本",
-    "kernelUnknown": "暂不可用",
-    "kernelPending": "页面连接后可查看版本和 UA",
-    "systemKernel": "系统内核",
-    "chromiumKernel": "Chromium",
     "reopen": "放弃原表单并重新打开",
     "reopenHint": "重新打开会放弃原页面表单，只加载最后核验的地址。本机持久登录按浏览器恢复；访客或丢失的远端会话可能需要重新登录。",
     "reopenBusy": "这个登录配置正在创建或恢复页面，请稍后重试。",
@@ -2785,7 +2805,7 @@
     "bottomDock": "底部批注区",
     "exportDocument": "导出文档",
     "copyAddress": "复制地址",
-    "delivered": "交付已完成",
+    "delivered": "已发送给 Agent；待修改完成后刷新预览检查结果。",
     "chooseFiles": "选择文件",
     "deliveryImages": "随上下文交付 {{count}} 张截图。",
     "dialogResponse": "响应内容",
@@ -2887,6 +2907,41 @@
     "executionChoiceHint": "位置由新建页面使用的配置决定。选择其他配置会新建标签，当前页面和表单保留。",
     "proxyChoiceHint": "代理地址相对于运行 Chromium 的主机。本机渲染可连接已建立的 SSH SOCKS5 代理；代理不可用时页面报错，不退回默认网络。",
     "profileNewTabHint": "选择其他配置，在新标签打开当前地址；保留原页面",
-    "locationPending": "等待核验网络与渲染位置"
+    "locationPending": "等待核验网络与渲染位置",
+    "herdrSession": "Herdr 会话",
+    "chooseSession": "选择运行中的会话",
+    "herdrWorkspace": "工作空间",
+    "chooseWorkspace": "选择工作空间",
+    "herdrAgent": "具体 Agent",
+    "chooseAgent": "选择 Agent",
+    "sessionStopped": "未运行",
+    "deliveryTo": "发送至",
+    "herdrMissing": "尚未安装 Herdr，请先在终端安装。",
+    "herdrStopped": "没有运行中的 Herdr 会话，请先在终端启动会话后刷新。",
+    "noWorkspaces": "此会话没有工作空间。",
+    "noAgents": "此工作空间没有 Agent，请先启动 Agent 后刷新。",
+    "refreshTargets": "刷新目标并重新选择",
+    "noScreenshot": "未附截图",
+    "deliveryFailed": "未确认交付。草稿已保留；请先查看目标终端，确认未收到后再重试。目标失效时刷新并重新选择。",
+    "profileBusy": "浏览器配置被旧实例占用",
+    "forceClosing": "正在关闭旧实例…",
+    "forceCloseHint": "将强制关闭占用此配置的预览浏览器，未保存的网页内容可能丢失。登录数据会保留。",
+    "profileInUse": "浏览器配置正被另一个或残留的预览进程占用。请退出旧 AgentHub 实例后重试，或新建访客网页。登录数据未被删除。",
+    "nativeBackend": "系统原生浏览",
+    "nativeCapabilities": "系统 WebView 直接渲染，支持元素选取、批注、截图及 Agent 交付；登录设置支持导入 Cookie，可选同步来源 UA。",
+    "systemKernel": "系统内核",
+    "chromiumKernel": "Chromium",
+    "kernelInfo": "内核信息",
+    "kernelEngine": "引擎",
+    "kernelVersion": "版本",
+    "kernelUnknown": "暂不可用",
+    "kernelPending": "页面连接后可查看版本和 UA",
+    "nativeBasicCapabilities": "此平台当前支持系统 WebView 浏览、导航、输入和滚动；扩展检查与截图适配尚未可用。",
+    "nativePersistent": "登录资料保存在独立的原生浏览配置中。",
+    "nativeTemporary": "当前系统使用临时浏览资料。",
+    "nativeUA": "原生页面 User-Agent",
+    "nativeUAHint": "应用到当前页面及后续新建的原生页面。刷新后由网站重新读取；实际引擎仍以这里的内核信息为准。",
+    "nativeUAReset": "恢复系统默认 UA",
+    "syncSourceUA": "同时应用来源浏览器 UA"
   }
 }

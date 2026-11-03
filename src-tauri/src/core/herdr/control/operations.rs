@@ -136,9 +136,16 @@ impl HerdrControl {
                     .filter(|t| !t.trim().is_empty() && t.len() <= 32 * 1024)
                     .context("Enter a task of up to 32 KiB")?;
                 self.foreground(target, pane)?;
+                // Herdr takes the prompt as one positional argument, without a `--`
+                // separator. A leading newline keeps dash-prefixed feedback positional.
+                let positional = if text.starts_with('-') {
+                    format!("\n{text}")
+                } else {
+                    text.to_owned()
+                };
                 self.call(
                     Some(&target.session),
-                    &["agent", "prompt", &target.pane_id, "--", text],
+                    &["agent", "prompt", &target.pane_id, &positional],
                     10,
                 )?;
             }

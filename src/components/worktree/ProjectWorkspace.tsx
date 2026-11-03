@@ -1,4 +1,10 @@
+import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
+import { TabCloseButton } from "../TabCloseButton";
+import { useTranslation } from "react-i18next";
+import { Eye } from "lucide-react";
 import {
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -30,6 +36,12 @@ import {
 
 import type { TerminalStartupState } from "../terminal/useTerminalLayout";
 
+const WorktreeDocumentPreview = lazy(() =>
+  import("./WorktreeDocumentPreview").then((module) => ({
+    default: module.WorktreeDocumentPreview,
+  })),
+);
+
 /** Remains mounted with Layout so switching worktrees/pages preserves PTYs. */
 export function ProjectWorkspace({
   page,
@@ -39,6 +51,8 @@ export function ProjectWorkspace({
   onStartupStateChange?: (state: TerminalStartupState) => void;
 }) {
   const { openProject, isOpening } = useOpenProject();
+  const { t } = useTranslation();
+  const previews = useWorktreePreviews();
   const removal = useRecentProject();
   const sidebarVisibility = useContext(SidebarVisibilityContext);
   const [gitTabsContainer, setGitTabsContainer] =
@@ -95,11 +109,17 @@ export function ProjectWorkspace({
     [onStartupStateChange, unavailable],
   );
   const scope = JSON.stringify([project?.id, path]);
+  const previewTabs = previews?.tabs.filter((tab) => tab.scope === scope) ?? [];
+  const previewShown = previewTabs.some(
+    (tab) => tab.document.id === previews?.selected,
+  );
+
   const [skillsSelection, setSkillsSelection] = useState<string | null>(null);
   const skillsKey = JSON.stringify([scope, location.key]);
-  const skillsShown = skillsSelection === skillsKey;
+  const skillsShown = skillsSelection === skillsKey && !previewShown;
   const pageShown =
     !skillsShown &&
+    !previewShown &&
     gitPage &&
     gitEditorVisible &&
     pageSelection === location.key;
@@ -109,10 +129,20 @@ export function ProjectWorkspace({
       setCheckout({ projectId: routeProjectId, worktreePath: path });
   }, [routeProjectId, path, setCheckout]);
   const file = files[scope];
+  const selectWorkspacePreview = previews?.select;
+  useEffect(() => {
+    selectWorkspacePreview?.(null);
+  }, [file, selectWorkspacePreview]);
+  const selectPreview = (id: string) => {
+    setSkillsSelection(null);
+    setPageSelection("");
+    previews?.select(id);
+  };
   const visible = gitPage || !!route || location.pathname === "/terminal";
   const selectTerminal = () => {
     setSkillsSelection(null);
     setPageSelection("");
+    previews?.select(null);
     if (file?.shown)
       setFiles((previous) => ({
         ...previous,
@@ -162,7 +192,12 @@ export function ProjectWorkspace({
             projects={projects}
             tools={tools}
             onProjectSkills={
-              route ? () => setSkillsSelection(skillsKey) : undefined
+              route
+                ? () => {
+                    previews?.select(null);
+                    setSkillsSelection(skillsKey);
+                  }
+                : undefined
             }
             projectsReady={
               !projectsLoading &&
@@ -173,7 +208,10 @@ export function ProjectWorkspace({
             shown={
               !unavailable &&
               (!!herdrNavigation(location.state) ||
-                (!skillsShown && !pageShown && (!file?.shown || !route)))
+                (!skillsShown &&
+                  !pageShown &&
+                  !previewShown &&
+                  (!file?.shown || !route)))
             }
             onSelectTerminal={selectTerminal}
             extraTabs={
@@ -183,7 +221,7 @@ export function ProjectWorkspace({
                   <div
                     className={cn(
                       "flex h-full min-w-0 items-center border-b-2",
-                      file.shown && !pageShown && !skillsShown
+                      file.shown && !pageShown && !skillsShown && !previewShown
                         ? "border-accent text-primary"
                         : "border-transparent text-muted",
                     )}
@@ -192,10 +230,16 @@ export function ProjectWorkspace({
                       type="button"
                       title={file.path}
                       role="tab"
-                      aria-selected={file.shown && !pageShown && !skillsShown}
+                      aria-selected={
+                        file.shown &&
+                        !pageShown &&
+                        !skillsShown &&
+                        !previewShown
+                      }
                       onClick={() => {
                         setSkillsSelection(null);
                         setPageSelection("");
+                        previews?.select(null);
                         setFiles((previous) => ({
                           ...previous,
                           [scope]: { ...file, shown: true },
@@ -223,6 +267,44 @@ export function ProjectWorkspace({
                     />
                   </div>
                 )}
+                {previewTabs.map((tab) => (
+                  <div
+                    key={tab.document.id}
+                    className={cn(
+                      "flex h-full shrink-0 items-center border-b-2",
+                      previewShown &&
+                        previews?.selected === tab.document.id &&
+                        !pageShown &&
+                        !skillsShown
+                        ? "border-accent text-primary"
+                        : "border-transparent text-muted",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={
+                        previews?.selected === tab.document.id &&
+                        !pageShown &&
+                        !skillsShown
+                      }
+                      onClick={() => selectPreview(tab.document.id)}
+                      title={tab.path}
+                      className="flex h-full max-w-64 items-center gap-1.5 px-3 text-xs focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                    >
+                      <Eye size={13} className="shrink-0" />
+                      <span className="truncate">
+                        {tab.document.title} · {t("fileReader.preview")}
+                      </span>
+                    </button>
+                    <TabCloseButton
+                      aria-label={t("preview.closeTab", {
+                        title: tab.document.title,
+                      })}
+                      onClick={() => previews?.close(tab.document.id)}
+                    />
+                  </div>
+                ))}
               </>
             }
             toolbar={
@@ -233,7 +315,11 @@ export function ProjectWorkspace({
               ) : undefined
             }
             toolbarEnd={
-              file?.shown && route && !pageShown && !skillsShown ? (
+              file?.shown &&
+              route &&
+              !pageShown &&
+              !skillsShown &&
+              !previewShown ? (
                 <div
                   ref={setFileToolbar}
                   className="flex shrink-0 items-center"
@@ -272,6 +358,7 @@ export function ProjectWorkspace({
                             active: pageShown,
                             onTerminal: selectTerminal,
                             onSelect: () => {
+                              previews?.select(null);
                               setSkillsSelection(null);
                               setPageSelection(location.key);
                             },
@@ -283,11 +370,26 @@ export function ProjectWorkspace({
                     </SidebarVisibilityContext.Provider>
                   </div>
                 )}
+                <Suspense fallback={<div role="status" />}>
+                  {previewTabs.map((tab) => (
+                    <WorktreeDocumentPreview
+                      key={tab.document.id}
+                      document={tab.document}
+                      active={
+                        previewShown &&
+                        previews?.selected === tab.document.id &&
+                        !skillsShown &&
+                        !pageShown
+                      }
+                    />
+                  ))}
+                </Suspense>
                 {skillsShown && project && (
                   <ProjectSkillsPanel projectId={project.id} />
                 )}
                 {!skillsShown &&
                   !pageShown &&
+                  !previewShown &&
                   route &&
                   project &&
                   path &&

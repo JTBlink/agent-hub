@@ -77,7 +77,7 @@ fn restore_main_window(app: &tauri::AppHandle) {
             }
         }
 
-        if let Some(w) = app_for_main.get_webview_window("main") {
+        if let Some(w) = app_for_main.get_window("main") {
             if let Err(err) = w.show() {
                 log::error!("Failed to show main window: {err}");
             }
@@ -837,7 +837,7 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
     if let Some(terminals) = app.try_state::<Arc<core::terminal::TerminalManager>>() {
         terminals.close_all();
     }
-    if let Some(w) = app.get_webview_window("main") {
+    if let Some(w) = app.get_window("main") {
         window_layout::save(&w);
         if let Err(err) = w.destroy() {
             log::error!("Failed to destroy main window while quitting: {err}");
@@ -878,6 +878,7 @@ pub fn run() {
         .manage(Arc::new(core::herdr::tools::HerdrTools::default()))
         .manage(Arc::new(core::file_preview::FilePreviews::default()))
         .manage(Arc::new(core::preview::Preview::default()))
+        .manage(commands::preview_native::NativeViews::default())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             restore_main_window(app);
         }))
@@ -1049,7 +1050,7 @@ pub fn run() {
             // Intercept window close — let frontend decide (close vs hide to tray)
             // When QUITTING is set, allow the close to proceed so the process fully exits.
             let step = Instant::now();
-            let win = app.get_webview_window("main").unwrap();
+            let win = app.get_window("main").unwrap();
             window_layout::restore(&win, &store_for_setup);
             let win_for_event = win.clone();
             win.on_window_event(move |event| {
@@ -1074,8 +1075,10 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
+        .invoke_handler(commands::ipc::main_only(tauri::generate_handler![
             commands::agent_usage::get_agent_usage,
+            commands::system_permissions::get_system_permissions,
+            commands::system_permissions::open_system_permission_settings,
             commands::agent_usage::consume_codex_reset_credit,
             commands::system_load::get_system_load,
             commands::herdr::tools::herdr_detect,
@@ -1114,6 +1117,18 @@ pub fn run() {
             commands::terminal::terminal_close,
             commands::file_preview::prepare_file_preview,
             commands::preview::preview_request,
+            commands::preview_native::preview_native_open,
+            commands::preview_native::preview_native_info,
+            commands::preview_native::cookies::preview_native_cookie_prepare,
+            commands::preview_native::cookies::preview_native_cookie_apply,
+            commands::preview_native::cookies::preview_native_cookie_cancel,
+            commands::preview_native::cookies::preview_native_user_agent,
+            commands::preview_native::export::preview_native_export,
+            commands::preview_native::control::preview_native_frame,
+            commands::preview_native::control::preview_native_execute,
+            commands::preview_native::control::preview_native_pick_mode,
+            commands::preview_native::preview_native_update,
+            commands::preview_native::preview_native_action,
             commands::preview::preview_pick_document,
             commands::preview::preview_export,
             commands::preview::preview_upload,
@@ -1328,7 +1343,7 @@ pub fn run() {
             commands::projects::touch_project_visited,
             commands::skill_groups::get_skill_group_skill_order,
             commands::skill_groups::reorder_skill_group_skills,
-        ])
+        ]))
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -19,7 +19,7 @@ serde_json = "1.0"
 toml = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.10.0", features = ["tray-icon", "devtools", "image-png"] }
+tauri = { version = "2.10.0", features = ["tray-icon", "devtools", "image-png", "unstable"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
@@ -68,6 +68,8 @@ junction = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
+block2 = "0.6"
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "WKWebView", "WKSnapshotConfiguration", "WKWebViewConfiguration", "WKWebsiteDataStore", "WKHTTPCookieStore", "block2", "objc2-app-kit", "objc2-core-foundation"] }
 objc2-app-kit = { version = "0.3", features = ["NSOpenPanel", "NSSavePanel", "NSPanel", "NSWindow", "NSResponder"] }
 objc2-foundation = { version = "0.3", features = ["NSURL"] }
 
@@ -81,3 +83,6 @@ sha2 = { version = "0.10", features = ["asm"] }
 # Optimizing this dependency preserves application debug symbols and behavior.
 [profile.dev.package.sha2]
 opt-level = 3
+
+[dev-dependencies]
+tauri = { version = "2.10.0", features = ["test"] }

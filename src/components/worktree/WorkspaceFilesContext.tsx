@@ -1,3 +1,4 @@
+import { WorktreePreviewsProvider } from "../../hooks/useWorktreePreviews";
 import { useState, type ReactNode } from "react";
 import type { Project } from "../../lib/tauri";
 import { projectCheckoutRoute } from "../../lib/worktreeApi";
@@ -42,7 +43,7 @@ export function WorkspaceFilesProvider({
     <WorkspaceFilesContext.Provider
       value={{ files, setFiles, checkout, setCheckout }}
     >
-      {children}
+      <WorktreePreviewsProvider>{children}</WorktreePreviewsProvider>
     </WorkspaceFilesContext.Provider>
   );
 }

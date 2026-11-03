@@ -128,3 +128,31 @@ it("keeps mounted panels at the same user width when switching their content", a
   expect(separators[0].getAttribute("aria-valuenow")).toBe("350");
   expect(localStorage.getItem("shared-width")).toBe("350");
 });
+
+it("resizes a right sidebar from its left edge and resets its saved width", async () => {
+  await act(async () =>
+    root.render(
+      <ResizableSidebar
+        side="right"
+        storageKey="preview-width"
+        label="Annotations"
+        defaultWidth={300}
+      >
+        <p>Feedback</p>
+      </ResizableSidebar>,
+    ),
+  );
+  await pointer("pointerdown", 700);
+  await pointer("pointermove", 620);
+  await pointer("pointerup", 620);
+  expect(handle().getAttribute("aria-valuenow")).toBe("380");
+  expect(localStorage.getItem("preview-width")).toBe("380");
+  await key("ArrowLeft");
+  expect(handle().getAttribute("aria-valuenow")).toBe("390");
+  await key("ArrowRight");
+  expect(handle().getAttribute("aria-valuenow")).toBe("380");
+  await act(async () =>
+    handle().dispatchEvent(new MouseEvent("dblclick", { bubbles: true })),
+  );
+  expect(handle().getAttribute("aria-valuenow")).toBe("300");
+});

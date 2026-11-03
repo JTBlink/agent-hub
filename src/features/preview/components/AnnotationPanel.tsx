@@ -23,7 +23,9 @@ export function AnnotationPanel({ model }: { model: PreviewModel }) {
             <p>{t("preview.annotationHint")}</p>
             <button
               className="app-button-primary"
-              disabled={!model.active || model.source}
+              disabled={
+                !model.active || model.source || (model.native && !model.pageId)
+              }
               onClick={() => model.setPicking(true)}
             >
               {t("preview.pick")}
@@ -142,6 +144,8 @@ export function AnnotationPanel({ model }: { model: PreviewModel }) {
           onClick={() => {
             if (model.active)
               model.setDelivery({
+                page: model.active,
+                annotations: model.notes,
                 text: formatAnnotations(model.active, model.notes),
                 images: model.notes.flatMap((note) =>
                   note.screenshot ? [note.screenshot] : [],

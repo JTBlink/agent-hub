@@ -89,6 +89,13 @@
 .preview-tabs > div > button:last-child {
   margin: 5px;
 }
+.preview-tabs .preview-tab-close {
+  padding: 0;
+  color: var(--color-text-secondary);
+}
+.preview-tabs .preview-tab-close:hover {
+  color: var(--color-text-primary);
+}
 .preview-addressbar {
   display: flex;
   align-items: center;
@@ -275,6 +282,22 @@
 }
 .preview-browser-error > button {
   flex-shrink: 0;
+}
+.preview-browser-error.preview-profile-conflict {
+  flex-direction: row;
+  align-items: center;
+  color: var(--color-text-secondary);
+}
+.preview-profile-conflict > p {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview-profile-conflict > button {
+  white-space: nowrap;
 }
 .preview-browser-image.picking {
   cursor: crosshair;
@@ -843,21 +866,63 @@
   line-height: 1.5;
 }
 
-.preview-browser-error.preview-profile-conflict {
-  flex-direction: row;
-  align-items: center;
-  color: var(--color-text-secondary);
+.preview-tabs > .preview-new-tab {
+  min-width: 0;
+  flex-shrink: 0;
+  border: 0;
+  color: inherit;
 }
-.preview-profile-conflict > p {
+
+.preview-inspector-size > .preview-inspector {
+  width: 100%;
+  flex: 1;
+}
+.preview-workspace.dock-bottom .preview-inspector-size {
+  width: 100% !important;
+}
+.preview-workspace.dock-bottom
+  .preview-inspector-size
+  > .sidebar-resize-handle {
+  display: none;
+}
+@media (max-width: 700px) {
+  .preview-inspector-size {
+    width: 100% !important;
+    max-height: 260px;
+  }
+  .preview-inspector-size > .sidebar-resize-handle {
+    display: none;
+  }
+}
+.preview-tabs > .preview-new-tab {
+  width: 36px;
+  align-items: center;
+}
+.preview-tabs > .preview-new-tab > button:first-child {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0 4px;
+  flex: none;
+  justify-content: center;
+}
+.preview-native-surface {
+  display: flex;
   flex: 1;
   min-width: 0;
-  width: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-height: 0;
+  flex-direction: column;
+  padding: 8px 12px;
 }
-.preview-profile-conflict > button {
-  white-space: nowrap;
+.preview-native-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preview-native-viewport {
+  flex: 1;
+  min-height: 200px;
 }
 
 .preview-kernel {
@@ -890,4 +955,6 @@
   overflow-wrap: anywhere;
 }
 
-.preview-tools-menu .preview-kernel summary span { color: var(--color-text-primary); }
+.preview-tools-menu .preview-kernel summary span {
+  color: var(--color-text-primary);
+}
