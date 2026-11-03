@@ -28,6 +28,8 @@ function ThemedToaster() {
     <Toaster
       theme={resolvedTheme}
       position="bottom-right"
+      offset={{ bottom: "calc(var(--app-statusbar-height) + 12px)" }}
+      mobileOffset={{ bottom: "calc(var(--app-statusbar-height) + 12px)" }}
       closeButton
       toastOptions={{
         style: {
