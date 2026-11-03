@@ -2744,6 +2744,7 @@
     "systemBrowser": "系統瀏覽器",
     "moduleBrowser": "預覽模組",
     "linkDestinationHint": "適用於終端、Markdown 和說明中的網頁連結。Shift + Ctrl/⌘ + 點擊暫時切換開啟位置；終端連結需 Ctrl/⌘ + 點擊。",
-    "openLinkFailed": "無法開啟連結。"
+    "openLinkFailed": "無法開啟連結。",
+    "fileLinkDestinationHint": "預覽文件中的檔案連結也使用此設定，並保留目錄授權檢查。系統瀏覽器可能將 Markdown 顯示為原始碼；需要閱讀檢視時選擇預覽模組。"
   }
 }

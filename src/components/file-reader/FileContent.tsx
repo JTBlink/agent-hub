@@ -1,3 +1,4 @@
+import { MarkdownLink } from "../MarkdownLink";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -209,8 +210,10 @@ export function FileContent({
             content={file.content}
             components={{
               img: ({ alt }) => <span className="text-muted">{alt}</span>,
-              a: ({ children }) => (
-                <span className="text-accent-light underline">{children}</span>
+              a: ({ href, children }) => (
+                <MarkdownLink href={href} webOnly>
+                  {children}
+                </MarkdownLink>
               ),
             }}
           />

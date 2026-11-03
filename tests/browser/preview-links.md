@@ -20,3 +20,11 @@ node tests/browser/preview-links.mjs
 ```
 
 前置检查成功后复用现有 Proxy；不要另起或重启共享服务。脚本成功输出 `PASS`，三语菜单截图保存在 `/tmp/preview-links-{zh,en,zh-TW}.png`。IPC 层队列的检查不等同于原生浏览器启动或第三方网站登录验收；网页原生行为由 Rust 预览集成测试验证。
+
+同一前置环境可运行文档链接验收：
+
+```sh
+node tests/browser/preview-document-links.mjs
+```
+
+该脚本使用生产预览工作区检查授权资源目的地、临时反转、查询参数、跨 Markdown 文件锚点实际滚动与三种布局；IPC 返回合成资源地址，不操作日常外部浏览器。真实文件资源服务另由 Rust 的 `browser_follows_granted_file_links_with_encoded_paths_and_url_suffixes` 测试在独立 Chromium 资料目录验证。

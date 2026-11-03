@@ -2784,6 +2784,7 @@
     "systemBrowser": "系统浏览器",
     "moduleBrowser": "预览模块",
     "linkDestinationHint": "适用于终端、Markdown 和帮助中的网页链接。Shift + Ctrl/⌘ + 点击临时切换打开位置；终端链接需 Ctrl/⌘ + 点击。",
-    "openLinkFailed": "无法打开链接。"
+    "openLinkFailed": "无法打开链接。",
+    "fileLinkDestinationHint": "预览文档中的文件链接也使用此设置，并保留目录授权校验。系统浏览器可能将 Markdown 显示为源文；需要阅读视图时选择预览模块。"
   }
 }

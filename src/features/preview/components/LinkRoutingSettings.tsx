@@ -62,6 +62,9 @@ export function LinkRoutingSettings({
       <p className="my-2 text-xs leading-6 text-muted">
         {t("preview.linkDestinationHint")}
       </p>
+      <p className="my-2 text-xs leading-6 text-muted">
+        {t("preview.fileLinkDestinationHint")}
+      </p>
     </section>
   );
 }

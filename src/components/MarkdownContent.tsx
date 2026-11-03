@@ -1,10 +1,4 @@
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-import {
-  isWebLink,
-  openWebLink,
-  invertLinkDestination,
-} from "../lib/openWebLink";
+import { MarkdownLink } from "./MarkdownLink";
 import ReactMarkdown, { type Components } from "react-markdown";
 import type { ReactNode } from "react";
 import type { PluggableList } from "unified";
@@ -27,7 +21,6 @@ export function MarkdownContent({
   children,
   rehypePlugins,
 }: MarkdownContentProps) {
-  const { t } = useTranslation();
   return (
     <article
       className={cn(
@@ -73,31 +66,11 @@ export function MarkdownContent({
               {...props}
             />
           ),
-          a: ({ className, href, ...props }) => {
-            const dangerous = /^(javascript|vbscript|data):/i;
-            const safeHref =
-              href && !dangerous.test(href.trim()) ? href : undefined;
-            return (
-              <a
-                className={cn(
-                  "text-accent-light underline decoration-accent-border underline-offset-4",
-                  className,
-                )}
-                href={safeHref}
-                target="_blank"
-                rel="noreferrer"
-                {...props}
-                onClick={(event) => {
-                  if (safeHref && isWebLink(safeHref)) {
-                    event.preventDefault();
-                    void openWebLink(safeHref, {
-                      invert: invertLinkDestination(event),
-                    }).catch(() => toast.error(t("preview.openLinkFailed")));
-                  }
-                }}
-              />
-            );
-          },
+          a: ({ className, href, title, children }) => (
+            <MarkdownLink className={className} href={href} title={title}>
+              {children}
+            </MarkdownLink>
+          ),
           ul: ({ className, ...props }) => (
             <ul
               className={cn(

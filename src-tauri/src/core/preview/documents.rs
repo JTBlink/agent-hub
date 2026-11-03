@@ -16,6 +16,10 @@ pub struct Document {
     pub content: String,
     pub revision: String,
 }
+pub struct DocumentLink {
+    pub relative: String,
+    pub suffix: String,
+}
 #[derive(Clone)]
 struct Grant {
     root: PathBuf,
@@ -24,6 +28,13 @@ struct Grant {
 #[derive(Default)]
 pub struct Documents {
     grants: Mutex<HashMap<String, Grant>>,
+}
+pub(super) fn resource_path(relative: &str) -> String {
+    relative
+        .split('/')
+        .map(|part| urlencoding::encode(part).into_owned())
+        .collect::<Vec<_>>()
+        .join("/")
 }
 fn revision(text: &str) -> String {
     hex::encode(Sha256::digest(text.as_bytes()))
@@ -91,9 +102,17 @@ impl Documents {
         self.open_at(&grant.root, &relative)
     }
     pub fn link_relative(&self, id: &str, href: &str) -> Result<String, AppError> {
+        Ok(self.resolve_link(id, href)?.relative)
+    }
+    pub fn resolve_link(&self, id: &str, href: &str) -> Result<DocumentLink, AppError> {
+        if href.len() > 8192 {
+            return Err(AppError::invalid_input(
+                "Document link exceeds the supported limit",
+            ));
+        }
         let grant = self.grant(id)?;
         let mut base = reqwest::Url::parse("http://resources.invalid/").map_err(AppError::io)?;
-        base.set_path(&format!("/{}", grant.relative));
+        base.set_path(&format!("/{}", resource_path(&grant.relative)));
         let target = base
             .join(href)
             .map_err(|error| AppError::invalid_input(error.to_string()))?;
@@ -103,7 +122,21 @@ impl Documents {
         let relative =
             urlencoding::decode(target.path().trim_start_matches('/')).map_err(AppError::io)?;
         let _ = self.resource(id, &relative)?;
-        Ok(relative.into_owned())
+        let suffix = format!(
+            "{}{}",
+            target
+                .query()
+                .map(|query| format!("?{query}"))
+                .unwrap_or_default(),
+            target
+                .fragment()
+                .map(|fragment| format!("#{fragment}"))
+                .unwrap_or_default()
+        );
+        Ok(DocumentLink {
+            relative: relative.into_owned(),
+            suffix,
+        })
     }
     pub(super) fn authorize_rendered(&self, path: &Path) -> Result<String, AppError> {
         let root = path

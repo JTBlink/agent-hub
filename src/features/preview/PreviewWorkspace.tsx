@@ -369,6 +369,7 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
                 {tab.kind === "markdown" && doc ? (
                   <MarkdownPreview
                     document={doc}
+                    active={active?.id === tab.id}
                     draft={model.drafts[tab.id] ?? doc.content}
                     onChange={model.busy ? undefined : model.changeDraft}
                     source={model.source && active?.id === tab.id}

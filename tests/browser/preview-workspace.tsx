@@ -22,6 +22,7 @@ document.documentElement.classList.toggle(
 );
 const content =
   "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\nThis continuation belongs to the same paragraph.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
+let linkDestination = "system";
 let disconnected = true;
 let downloads: PreviewDownload[] = [
   {
@@ -50,12 +51,20 @@ mockIPC((command, args) => {
     document.documentElement.dataset.copiedContext = String(args?.text ?? "");
     return null;
   }
+  if (command === "plugin:opener|open_url") {
+    document.documentElement.dataset.openedResource = String(args?.url ?? "");
+    return null;
+  }
+  if (command === "set_settings" && args?.key === "preview_link_destination") {
+    linkDestination = String(args?.value);
+    return null;
+  }
   if (command === "preview_pick_document")
     return {
       id: "fixture",
       kind: "markdown",
       title: "guide.md",
-      content,
+      content: content + "\n[Linked guide](next.md?mode=read#target)\n",
       revision: "saved",
       url: "http://127.0.0.1:4176/fixture/guide.md",
     };
@@ -88,6 +97,23 @@ mockIPC((command, args) => {
       disconnected = false;
       return null;
     }
+    if (request.kind === "resource_link")
+      return "http://fixture.agent-hub.localhost:4176/next.md?mode=read#target";
+    if (request.kind === "open_link")
+      return {
+        kind: "document",
+        document: {
+          id: "linked-fixture",
+          kind: "markdown",
+          title: "next.md",
+          revision: "saved",
+          content:
+            "# Linked guide\n\n" +
+            "A long paragraph before the anchor.\n\n".repeat(80) +
+            "## Target\n\nAnchor destination.",
+          url: "http://127.0.0.1:4176/linked-fixture/next.md?mode=read#target",
+        },
+      };
     if (request.kind === "info")
       return {
         executable: null,
@@ -135,7 +161,9 @@ mockIPC((command, args) => {
   if (command === "get_settings")
     return args?.key === "language"
       ? (parameters.get("language") ?? "zh")
-      : null;
+      : args?.key === "preview_link_destination"
+        ? linkDestination
+        : null;
   if (command === "herdr_inventory") return { installed: false, sessions: [] };
   return null;
 });

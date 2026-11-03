@@ -85,6 +85,10 @@ pub enum PreviewRequest {
         id: String,
         href: String,
     },
+    ResourceLink {
+        id: String,
+        href: String,
+    },
     ReadDocument {
         id: String,
     },
@@ -206,6 +210,9 @@ pub async fn preview_request(
             }
             PreviewRequest::OpenLink { id, href } => {
                 serde_json::to_value(preview.open_link(&id, &href)?)
+            }
+            PreviewRequest::ResourceLink { id, href } => {
+                serde_json::to_value(preview.resource_link(&id, &href)?)
             }
             PreviewRequest::ReadDocument { id } => {
                 serde_json::to_value(preview.documents.read(&id)?)

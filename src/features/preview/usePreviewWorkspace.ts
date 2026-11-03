@@ -1,6 +1,6 @@
 import { verifyPreviewContext } from "./shared/verifyContext";
 import { annotationActions } from "./shared/annotationActions";
-import { openWebLink } from "../../lib/openWebLink";
+import { followDocumentLink } from "./shared/documentLinks";
 import { previewError } from "./shared/previewError";
 import { copyScreenshot } from "./shared/copyScreenshot";
 import {
@@ -173,7 +173,7 @@ export function usePreviewWorkspace() {
       report(error);
     }
   };
-  const acceptDocument = (opened: PreviewDocument) => {
+  const acceptDocument = (opened: PreviewDocument, profile?: string) => {
     const id = `doc:${opened.id}`;
     if (
       sessionRef.current.tabs.length >= 12 &&
@@ -193,6 +193,7 @@ export function usePreviewWorkspace() {
         openPreview(previous, {
           id,
           kind: opened.kind,
+          profile,
           address: opened.url ?? "",
           title: opened.title,
         }),
@@ -500,30 +501,16 @@ export function usePreviewWorkspace() {
     [],
   );
   const openDocumentLink = async (href: string, invert = false) => {
-    if (/^https?:\/\//i.test(href) || href.startsWith("//")) {
-      try {
-        await openWebLink(new URL(href, document?.url).href, {
-          invert,
-          profile: active?.profile,
-        });
-      } catch (error) {
-        report(error);
-      }
-      return;
-    }
     if (!document) return;
     try {
-      const linked = await previewApi.openLink(document.id, href);
-      if (linked.kind === "document") {
-        acceptDocument({
-          ...linked.document,
-          fragment: href.includes("#")
-            ? decodeURIComponent(href.split("#").slice(1).join("#"))
-            : undefined,
-        });
-      } else {
-        openWeb(linked.url);
-      }
+      await followDocumentLink({
+        document,
+        href,
+        invert,
+        profile: active?.profile,
+        acceptDocument,
+        openPage: openWeb,
+      });
     } catch (error) {
       report(error);
     }

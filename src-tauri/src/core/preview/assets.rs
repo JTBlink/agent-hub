@@ -54,20 +54,12 @@ impl Assets {
         })
     }
     pub fn document_url(&self, id: &str, relative: &str) -> String {
-        let path = relative
-            .split('/')
-            .map(|part| urlencoding::encode(part).into_owned())
-            .collect::<Vec<_>>()
-            .join("/");
+        let path = super::documents::resource_path(relative);
         format!("{}/{}/{}", self.origin, id, path)
     }
     pub fn browser_document_url(&self, id: &str, relative: &str) -> String {
         let port = self.origin.rsplit(':').next().unwrap_or_default();
-        let path = relative
-            .split('/')
-            .map(|part| urlencoding::encode(part).into_owned())
-            .collect::<Vec<_>>()
-            .join("/");
+        let path = super::documents::resource_path(relative);
         format!("http://{id}.agent-hub.localhost:{port}/{path}")
     }
 }

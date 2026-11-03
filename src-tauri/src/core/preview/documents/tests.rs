@@ -42,3 +42,34 @@ fn rejects_visible_symlinks_to_hidden_resources() {
     let opened = documents.open(&root.path().join("index.html")).unwrap();
     assert!(documents.resource(&opened.id, "visible.txt").is_err());
 }
+
+#[test]
+fn resolves_encoded_file_names_query_and_fragments_without_escaping_the_grant() {
+    let root = tempfile::tempdir().unwrap();
+    let nested = root.path().join("literal%20folder");
+    std::fs::create_dir(&nested).unwrap();
+    std::fs::write(nested.join("guide.md"), "# Guide").unwrap();
+    std::fs::write(nested.join("next #.md"), "# Next").unwrap();
+    let documents = Documents::default();
+    let opened = documents
+        .open_at(root.path(), "literal%20folder/guide.md")
+        .unwrap();
+    let link = documents
+        .resolve_link(&opened.id, "next%20%23.md?mode=read#next%20heading")
+        .unwrap();
+    assert_eq!(link.relative, "literal%20folder/next #.md");
+    assert_eq!(link.suffix, "?mode=read#next%20heading");
+    for href in [
+        "file:///private.txt",
+        "javascript:alert(1)",
+        "https://example.invalid/a",
+        "//example.invalid/a",
+        ".env",
+        "%2e%2e%2fsecret.md",
+    ] {
+        assert!(
+            documents.resolve_link(&opened.id, href).is_err(),
+            "accepted {href}"
+        );
+    }
+}

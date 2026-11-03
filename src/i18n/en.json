@@ -2787,6 +2787,7 @@
     "systemBrowser": "System browser",
     "moduleBrowser": "Preview module",
     "linkDestinationHint": "Applies to terminal, Markdown and help web links. Shift + Ctrl/⌘ + click temporarily reverses the destination. Terminal links require Ctrl/⌘ + click.",
-    "openLinkFailed": "Could not open the link."
+    "openLinkFailed": "Could not open the link.",
+    "fileLinkDestinationHint": "Authorized file links in preview documents use the same setting. System browsers may show Markdown source; choose the preview module for a reading view."
   }
 }

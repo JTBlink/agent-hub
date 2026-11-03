@@ -1,5 +1,5 @@
 import { invertLinkDestination } from "../../../lib/openWebLink";
-import { memo, useMemo, useRef } from "react";
+import { memo, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownContent } from "../../../components/MarkdownContent";
 import { CodeEditor } from "../../../components/file-reader/CodeEditor";
@@ -67,6 +67,7 @@ const MarkdownBody = memo(function MarkdownBody({
 });
 export function MarkdownPreview({
   document,
+  active = true,
   draft,
   onChange,
   source,
@@ -76,6 +77,7 @@ export function MarkdownPreview({
   onLink,
 }: {
   document: PreviewDocument;
+  active?: boolean;
   draft: string;
   onChange?: (text: string) => void;
   source: boolean;
@@ -88,6 +90,20 @@ export function MarkdownPreview({
 }) {
   const { t } = useTranslation();
   const highlighted = useRef<HTMLElement | null>(null);
+  const body = useRef<HTMLDivElement>(null);
+  const visitedFragment = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (!active || source || !document.fragment || !body.current) return;
+    const key = `${document.id}:${document.fragment}`;
+    if (visitedFragment.current === key) return;
+    const target = body.current.querySelector(
+      `#${CSS.escape(document.fragment)}`,
+    );
+    if (target) {
+      target.scrollIntoView({ block: "start" });
+      visitedFragment.current = key;
+    }
+  }, [active, source, document.id, document.fragment]);
   const headings = useMemo(() => outline(draft), [draft]);
   if (source)
     return (
@@ -104,6 +120,7 @@ export function MarkdownPreview({
   return (
     <div className={`preview-markdown-layout ${picking ? "picking" : ""}`}>
       <div
+        ref={body}
         className="preview-markdown"
         onMouseMove={(event) => {
           if (!picking) return;

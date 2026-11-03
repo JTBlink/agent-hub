@@ -27,12 +27,14 @@ export async function openWebLink(
   options: { invert?: boolean; profile?: string } = {},
 ) {
   if (!isWebLink(address)) throw new Error("Unsupported web link");
-  const preferred = linkDestination(await getSettings(LINK_DESTINATION_KEY));
-  const destination = options.invert
-    ? preferred === "system"
-      ? "preview"
-      : "system"
-    : preferred;
+  const destination = await preferredLinkDestination(options.invert);
   if (destination === "preview") queuePreviewWeb(address, options.profile);
   else await openUrl(address);
+}
+
+export async function preferredLinkDestination(
+  invert = false,
+): Promise<LinkDestination> {
+  const preferred = linkDestination(await getSettings(LINK_DESTINATION_KEY));
+  return invert ? (preferred === "system" ? "preview" : "system") : preferred;
 }

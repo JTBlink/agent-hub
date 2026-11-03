@@ -84,7 +84,8 @@ impl Preview {
         self.publish_document(self.documents.open_at(root, relative)?)
     }
     pub fn open_link(&self, id: &str, href: &str) -> Result<LinkedResource, AppError> {
-        let relative = self.documents.link_relative(id, href)?;
+        let link = self.documents.resolve_link(id, href)?;
+        let relative = &link.relative;
         if matches!(
             std::path::Path::new(&relative)
                 .extension()
@@ -94,9 +95,20 @@ impl Preview {
             Some("md" | "markdown" | "html" | "htm")
         ) {
             return Ok(LinkedResource::Document {
-                document: self.publish_document(self.documents.open_link(id, href)?)?,
+                document: {
+                    let mut document =
+                        self.publish_document(self.documents.open_link(id, href)?)?;
+                    document.url.push_str(&link.suffix);
+                    document
+                },
             });
         }
+        Ok(LinkedResource::Page {
+            url: self.resource_link(id, href)?,
+        })
+    }
+    pub fn resource_link(&self, id: &str, href: &str) -> Result<String, AppError> {
+        let link = self.documents.resolve_link(id, href)?;
         let assets = self
             .assets
             .lock()
@@ -104,8 +116,8 @@ impl Preview {
         let url = assets
             .as_ref()
             .ok_or_else(|| AppError::not_found("Document resources unavailable"))?
-            .browser_document_url(id, &relative);
-        Ok(LinkedResource::Page { url })
+            .browser_document_url(id, &link.relative);
+        Ok(format!("{url}{}", link.suffix))
     }
     fn publish_document(&self, document: documents::Document) -> Result<OpenedDocument, AppError> {
         let mut assets = self
