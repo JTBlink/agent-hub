@@ -314,6 +314,8 @@ it("attributes identical contents only to the backend ID and switches only after
   );
   expect(activeProfileNames()).toEqual([second.name]);
   expect(button("已应用").disabled).toBe(true);
+  expect(button("已应用").querySelectorAll("svg")).toHaveLength(1);
+  expect(button("已应用").querySelectorAll("svg path")).toHaveLength(1);
 
   vi.mocked(api.readSystemHosts).mockResolvedValue(applied);
   await act(async () => window.dispatchEvent(new Event("focus")));

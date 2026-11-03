@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Check,
-  CheckCheck,
   Copy,
   Code2,
   Monitor,
@@ -298,7 +297,7 @@ export function HostsSettings({ active }: { active: boolean }) {
                 disabled={state.busy || state.dirty || applied || !state.system}
                 onClick={() => void state.apply(state.profile!)}
               >
-                <CheckCheck className="h-3.5 w-3.5" />
+                <Check className="h-3.5 w-3.5" />
                 {t(applied ? "hosts.alreadyApplied" : "hosts.apply")}
               </button>
             )}
