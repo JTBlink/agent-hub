@@ -1,0 +1,356 @@
+//! Chromium discovery and owned background runtime lifecycle.
+use super::{super::error::AppError, cdp::Cdp};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct BrowserProfile {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub executable: Option<String>,
+    #[serde(default)]
+    pub endpoint: Option<String>,
+    #[serde(default)]
+    pub proxy: Option<String>,
+}
+impl Default for BrowserProfile {
+    fn default() -> Self {
+        Self {
+            id: "default".into(),
+            name: "Default".into(),
+            executable: None,
+            endpoint: None,
+            proxy: None,
+        }
+    }
+}
+pub(super) struct OwnedChild(pub(super) Child);
+impl Drop for OwnedChild {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+pub struct Runtime {
+    child: Option<Arc<Mutex<OwnedChild>>>,
+    pub cdp: Cdp,
+    pub endpoint: String,
+    pub context: Option<String>,
+    pub download_dir: Option<PathBuf>,
+}
+impl Runtime {
+    pub(super) fn start(
+        root: &Path,
+        profile: &BrowserProfile,
+        spawn: impl FnOnce(&mut Command) -> Result<Arc<Mutex<OwnedChild>>, AppError>,
+    ) -> Result<Self, AppError> {
+        validate_profile(profile)?;
+        let (child, endpoint) = if let Some(endpoint) = &profile.endpoint {
+            (None, validate_endpoint(endpoint)?)
+        } else {
+            let executable = match &profile.executable {
+                Some(path) if !path.trim().is_empty() => {
+                    let path = PathBuf::from(path);
+                    if !path.is_file() {
+                        return Err(AppError::not_found(
+                            "Configured browser executable is unavailable",
+                        ));
+                    }
+                    path
+                }
+                _ => discover().ok_or_else(|| AppError::not_found("PREVIEW_BROWSER_NOT_FOUND"))?,
+            };
+            let directory = root.join("profiles").join(&profile.id);
+            fs::create_dir_all(&directory)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
+            }
+            let port_file = directory.join("DevToolsActivePort");
+            if port_file.exists() {
+                fs::remove_file(&port_file)?;
+            }
+            let mut command = Command::new(executable);
+            command
+                .args([
+                    "--headless=new",
+                    "--remote-debugging-address=127.0.0.1",
+                    "--remote-debugging-port=0",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-background-networking",
+                ])
+                .arg(format!("--user-data-dir={}", directory.display()))
+                .arg("about:blank")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            if let Some(proxy) = &profile.proxy {
+                command.arg(format!("--proxy-server={proxy}"));
+                command.arg("--proxy-bypass-list=<-loopback>;*.agent-hub.localhost");
+                command.arg("--dns-prefetch-disable");
+            }
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                command.creation_flags(0x08000000);
+            }
+            #[cfg(test)]
+            command.args(["--use-mock-keychain", "--password-store=basic"]);
+            let child = spawn(&mut command)?;
+            let started = Instant::now();
+            let port = loop {
+                if child
+                    .lock()
+                    .map_err(|_| AppError::internal("Browser process unavailable"))?
+                    .0
+                    .try_wait()?
+                    .is_some()
+                {
+                    return Err(AppError::network(
+                        "Browser exited during startup; check the executable and profile",
+                    ));
+                }
+                if let Ok(text) = fs::read_to_string(&port_file) {
+                    if let Some(port) = text
+                        .lines()
+                        .next()
+                        .and_then(|line| line.parse::<u16>().ok())
+                    {
+                        break port;
+                    }
+                }
+                if started.elapsed() > Duration::from_secs(15) {
+                    let _ = child.lock().map(|mut child| child.0.kill());
+                    let _ = child.lock().map(|mut child| child.0.wait());
+                    return Err(AppError::network("Browser startup timed out"));
+                }
+                std::thread::sleep(Duration::from_millis(50));
+            };
+            (Some(child), format!("http://127.0.0.1:{port}"))
+        };
+        let version = match json_endpoint(&endpoint, "/json/version") {
+            Ok(value) => value,
+            Err(error) => {
+                if let Some(child) = child {
+                    let _ = child.lock().map(|mut child| child.0.kill());
+                    let _ = child.lock().map(|mut child| child.0.wait());
+                }
+                return Err(error);
+            }
+        };
+        let address = version["webSocketDebuggerUrl"]
+            .as_str()
+            .ok_or_else(|| AppError::network("Browser does not expose CDP"))?;
+        let parsed = reqwest::Url::parse(address).map_err(AppError::network)?;
+        let endpoint_url = reqwest::Url::parse(&endpoint).map_err(AppError::network)?;
+        let mut control = parsed;
+        control
+            .set_host(endpoint_url.host_str())
+            .map_err(AppError::network)?;
+        control
+            .set_port(endpoint_url.port())
+            .map_err(|_| AppError::invalid_input("Invalid control port"))?;
+        let mut cdp = match Cdp::connect(control.as_str()) {
+            Ok(value) => value,
+            Err(error) => {
+                if let Some(child) = child {
+                    let _ = child.lock().map(|mut child| child.0.kill());
+                    let _ = child.lock().map(|mut child| child.0.wait());
+                }
+                return Err(error);
+            }
+        };
+        cdp.set_timeout(Duration::from_secs(2))?;
+        let mut runtime = Self {
+            child,
+            cdp,
+            endpoint,
+            context: None,
+            download_dir: None,
+        };
+        if profile.endpoint.is_none() {
+            let targets = runtime.cdp.call("Target.getTargets", json!({}))?;
+            if let Some(targets) = targets["targetInfos"].as_array() {
+                for target in targets {
+                    if target["type"] == "page" {
+                        let _ = runtime
+                            .cdp
+                            .call("Target.closeTarget", json!({"targetId":target["targetId"]}));
+                    }
+                }
+            }
+        }
+        if profile.endpoint.is_some() {
+            let context = runtime.cdp.call(
+                "Target.createBrowserContext",
+                json!({ "disposeOnDetach": false }),
+            )?;
+            runtime.context = context["browserContextId"].as_str().map(str::to_owned);
+        } else {
+            let directory = root.join("downloads").join(&profile.id);
+            fs::create_dir_all(&directory)?;
+            runtime.cdp.call(
+                "Browser.setDownloadBehavior",
+                json!({ "behavior": "allowAndName", "downloadPath": directory, "eventsEnabled": true }),
+            )?;
+            runtime.download_dir = Some(directory);
+        }
+        Ok(runtime)
+    }
+    pub fn create_page(&mut self) -> Result<(String, Cdp), AppError> {
+        let mut params = json!({ "url": "about:blank" });
+        if let Some(context) = &self.context {
+            params["browserContextId"] = json!(context);
+        }
+        let result = self.cdp.call("Target.createTarget", params)?;
+        let id = result["targetId"]
+            .as_str()
+            .ok_or_else(|| AppError::network("Browser did not create a page"))?
+            .to_owned();
+        let cdp = self.attach_page(&id)?;
+        Ok((id, cdp))
+    }
+    pub fn attach_page(&self, id: &str) -> Result<Cdp, AppError> {
+        let target = json_endpoint(&self.endpoint, "/json/list")?
+            .as_array()
+            .and_then(|targets| targets.iter().find(|target| target["id"] == id))
+            .cloned()
+            .ok_or_else(|| AppError::network("Browser page is not ready"))?;
+        let address = target["webSocketDebuggerUrl"]
+            .as_str()
+            .ok_or_else(|| AppError::network("Browser page is unavailable"))?;
+        let mut url = reqwest::Url::parse(address).map_err(AppError::network)?;
+        let endpoint = reqwest::Url::parse(&self.endpoint).map_err(AppError::network)?;
+        url.set_host(endpoint.host_str())
+            .map_err(AppError::network)?;
+        url.set_port(endpoint.port())
+            .map_err(|_| AppError::invalid_input("Invalid control port"))?;
+        let mut cdp = Cdp::connect(url.as_str())?;
+        cdp.call("Page.enable", json!({}))?;
+        cdp.call("Runtime.enable", json!({}))?;
+        cdp.call(
+            "Page.setInterceptFileChooserDialog",
+            json!({"enabled":true}),
+        )?;
+        cdp.call(
+            "Network.enable",
+            json!({ "maxTotalBufferSize": 1048576, "maxResourceBufferSize": 65536 }),
+        )?;
+        cdp.call("Page.startScreencast", json!({"format":"jpeg","quality":85,"maxWidth":3840,"maxHeight":2160,"everyNthFrame":1}))?;
+        Ok(cdp)
+    }
+}
+impl Drop for Runtime {
+    fn drop(&mut self) {
+        if self.child.is_none() {
+            if let Some(context) = &self.context {
+                let _ = self.cdp.call(
+                    "Target.disposeBrowserContext",
+                    json!({ "browserContextId": context }),
+                );
+            }
+        }
+    }
+}
+pub fn json_endpoint(endpoint: &str, path: &str) -> Result<Value, AppError> {
+    reqwest::blocking::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(AppError::network)?
+        .get(format!("{endpoint}{path}"))
+        .send()
+        .map_err(AppError::network)?
+        .error_for_status()
+        .map_err(AppError::network)?
+        .json()
+        .map_err(AppError::network)
+}
+pub fn validate_endpoint(endpoint: &str) -> Result<String, AppError> {
+    let url = reqwest::Url::parse(endpoint)
+        .map_err(|error| AppError::invalid_input(error.to_string()))?;
+    if url.scheme() != "http"
+        || !matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "::1"))
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+        || url.path() != "/"
+    {
+        return Err(AppError::invalid_input(
+            "Use a loopback HTTP browser endpoint; tunnel remote control through SSH",
+        ));
+    }
+    Ok(url.as_str().trim_end_matches('/').to_owned())
+}
+pub fn validate_profile(profile: &BrowserProfile) -> Result<(), AppError> {
+    if profile.id.is_empty()
+        || profile.id.len() > 64
+        || !profile
+            .id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        || profile.name.trim().is_empty()
+        || profile.name.len() > 100
+    {
+        return Err(AppError::invalid_input("Invalid browser profile"));
+    }
+    if let Some(proxy) = &profile.proxy {
+        let url = reqwest::Url::parse(proxy)
+            .map_err(|error| AppError::invalid_input(error.to_string()))?;
+        if !matches!(url.scheme(), "http" | "https" | "socks5")
+            || url.host_str().is_none()
+            || proxy.len() > 2048
+        {
+            return Err(AppError::invalid_input("Invalid browser proxy"));
+        }
+    }
+    if let Some(endpoint) = &profile.endpoint {
+        validate_endpoint(endpoint)?;
+    }
+    Ok(())
+}
+pub fn discover() -> Option<PathBuf> {
+    #[cfg(target_os = "macos")]
+    let candidates = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ]
+    .map(PathBuf::from)
+    .to_vec();
+    #[cfg(windows)]
+    let candidates: Vec<PathBuf> = ["PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"]
+        .iter()
+        .filter_map(std::env::var_os)
+        .flat_map(|root| {
+            [
+                PathBuf::from(&root).join("Google/Chrome/Application/chrome.exe"),
+                PathBuf::from(&root).join("Microsoft/Edge/Application/msedge.exe"),
+            ]
+        })
+        .collect();
+    #[cfg(not(any(target_os = "macos", windows)))]
+    let candidates: Vec<PathBuf> =
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+            .flat_map(|directory| {
+                [
+                    directory.join("google-chrome"),
+                    directory.join("chromium"),
+                    directory.join("chromium-browser"),
+                    directory.join("microsoft-edge"),
+                ]
+            })
+            .collect();
+    candidates.into_iter().find(|path| path.is_file())
+}

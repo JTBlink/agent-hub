@@ -2,6 +2,8 @@
 mod automation;
 #[path = "agent-hub-cli/help.rs"]
 mod help;
+#[path = "agent_hub_cli/preview.rs"]
+mod preview_cli;
 #[path = "agent-hub-cli/project.rs"]
 mod project;
 use help::localize_command;
@@ -46,6 +48,8 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 浏览、检查和自动操作应用中的独立网页。
+    Preview(preview_cli::PreviewArgs),
     /// 汇总、创建、编辑和手动运行自动化任务。
     Automations(automation::AutomationArgs),
     /// 查看或修改中央技能库路径。
@@ -854,6 +858,12 @@ fn main() {
 }
 
 fn run(cli: Cli) -> anyhow::Result<()> {
+    if let Commands::Preview(args) = &cli.command {
+        if cli.skills_root.is_some() {
+            bail!("Preview uses the running desktop app, not the skills repository");
+        }
+        return preview_cli::run(args, cli.json);
+    }
     if let Commands::Repo(RepoArgs {
         command: command @ (RepoCommand::SetPath { .. } | RepoCommand::ResetPath),
     }) = &cli.command
@@ -896,6 +906,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
+        Commands::Preview(args) => preview_cli::run(&args, cli.json),
         Commands::Repo(args) => run_repo(args, &store, cli.json),
         Commands::Project(args) => project::run(&args, Some(&store), cli.json),
         Commands::Tools(args) => run_tools(args, &store, cli.json),

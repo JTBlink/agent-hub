@@ -843,6 +843,9 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
             log::error!("Failed to destroy main window while quitting: {err}");
         }
     }
+    if let Some(preview) = app.try_state::<Arc<core::preview::Preview>>() {
+        preview.clear();
+    }
     if let Some(previews) = app.try_state::<Arc<core::file_preview::FilePreviews>>() {
         if let Err(error) = previews.clear() {
             log::warn!("Cannot clear preview copies: {error}");
@@ -874,6 +877,7 @@ pub fn run() {
         .manage(Arc::new(core::terminal::TerminalManager::default()))
         .manage(Arc::new(core::herdr::tools::HerdrTools::default()))
         .manage(Arc::new(core::file_preview::FilePreviews::default()))
+        .manage(Arc::new(core::preview::Preview::default()))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             restore_main_window(app);
         }))
@@ -888,6 +892,8 @@ pub fn run() {
             // the App between Builder::default() and invoking this callback.
             let builder_to_setup_ms = builder_start.elapsed().as_millis();
             let setup_start = Instant::now();
+            let preview = app.state::<Arc<core::preview::Preview>>().inner().clone();
+            std::thread::spawn(move || { if preview.start_automation().is_err() { log::warn!("Preview automation bridge did not start"); } });
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .targets([
@@ -1107,6 +1113,11 @@ pub fn run() {
             commands::terminal::terminal_list,
             commands::terminal::terminal_close,
             commands::file_preview::prepare_file_preview,
+            commands::preview::preview_request,
+            commands::preview::preview_pick_document,
+            commands::preview::preview_export,
+            commands::preview::preview_download_file,
+            commands::preview::preview_open_project,
             commands::automation::get_automation_overview,
             commands::automation::get_automation_output,
             commands::automation::get_automation_history,

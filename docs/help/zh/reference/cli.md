@@ -4,7 +4,7 @@ title: CLI 使用入口
 description: 查看 CLI 帮助，并与桌面端共用技能管理能力。
 since: "0.1.4"
 tags: ["CLI", "命令行", "help"]
-related: ["data-directories"]
+related: ["data-directories", "preview-cli"]
 ---
 
 # CLI 使用入口
@@ -170,3 +170,7 @@ agent-hub-cli automations logs '<task-id>'
 ```
 
 在 `disk-cleanup/cleanup-config.json` 中调整保留期、清理开关、项目目录和通知。执行命令只负责调用入口脚本。修改日程不影响手动触发入口；`pause`／`resume` 控制后续计划，`remove` 删除任务。
+
+## 预览与浏览
+
+`agent-hub-cli preview` 提供与桌面端共用的网页检查和自动操作。关键命令、运行前提与示例独立维护于[预览与浏览 CLI](preview-cli.md)。

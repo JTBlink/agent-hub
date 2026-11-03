@@ -539,3 +539,35 @@ fn skill_and_skill_group_deployment_round_trip() {
     assert_eq!(audit[0].action, "deploy");
     assert_eq!(audit[0].skill_id.as_deref(), Some("skill-demo"));
 }
+
+#[test]
+fn preview_accepts_negative_scroll_and_literal_hyphen_input() {
+    let matches = cli_command()
+        .try_get_matches_from(["agent-hub-cli", "preview", "scroll", "page", "--y", "-500"])
+        .unwrap();
+    let cli = Cli::from_arg_matches(&matches).unwrap();
+    assert!(matches!(
+        cli.command,
+        Commands::Preview(preview_cli::PreviewArgs {
+            command: preview_cli::PreviewCommand::Scroll { y: -500., .. }
+        })
+    ));
+    let matches = cli_command()
+        .try_get_matches_from([
+            "agent-hub-cli",
+            "preview",
+            "fill",
+            "page",
+            "snapshot:0",
+            "--literal",
+        ])
+        .unwrap();
+    let cli = Cli::from_arg_matches(&matches).unwrap();
+    let Commands::Preview(preview_cli::PreviewArgs {
+        command: preview_cli::PreviewCommand::Fill { value, .. },
+    }) = cli.command
+    else {
+        panic!("expected fill");
+    };
+    assert_eq!(value, "--literal");
+}
