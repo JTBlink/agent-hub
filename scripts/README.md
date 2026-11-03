@@ -1,70 +1,53 @@
-# scripts/
+# 工程脚本目录
 
-发布流水线和开发辅助脚本，均为 ES module（`.mjs`）。每个脚本既可通过 `package.json` 的 `npm run` 调用，也可直接 `node scripts/<name>.mjs` 单独执行。
+按功能模块存放实现与相邻的 `*.test.mjs`。优先使用根目录 `package.json` 提供的 npm 命令；已有命令名称与 `agent-hub.sh` / `agent-hub.bat` 保持一致。
 
-## 需求原型预览
+| 模块                     | 职责                                     | 主要入口                                                                                                                   |
+| ------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [app/](app/)             | 桌面与 CLI 构建、开发运行、构建缓存清理  | `build.mjs`、`primary-app.mjs`、`run-rust-cli.mjs`、`build-cache.mjs`                                                      |
+| [release/](release/)     | 版本同步、发布候选、安装包汇总与校验     | `check-version.mjs`、`set-version.mjs`、`check-release-candidate.mjs`、`assemble-release.mjs`、`verify-release-bundle.mjs` |
+| [website/](website/)     | 主页构建、Pages 发布源检查、合成数据截图 | `build-homepage.mjs`、`check-pages-config.mjs`、`capture-product-screenshots.mjs`                                          |
+| [docs/](docs/)           | 离线帮助与文档站内容、链接、开发服务插件 | `build-help.mjs`、`vite-plugin.mjs`                                                                                        |
+| [prototype/](prototype/) | 需求原型目录、按名称打开、服务身份校验   | `preview.sh`、`catalog.mjs`                                                                                                |
+| [github/](github/)       | GitHub Issue 标签、里程碑和发布归属同步  | `issue-metadata.mjs`                                                                                                       |
+| [checks/](checks/)       | 工作流、应用权限等跨模块契约测试         | `workflow-contract.test.mjs`、`opener-permissions.test.mjs`                                                                |
+| [fonts/](fonts/)         | 手工维护字体产物的开发辅助脚本           | 见目录说明；不加入应用运行或常规构建依赖                                                                                   |
 
-`./scripts/prototype.sh` 启动并打开[原型目录](../prototypes/README.md)。`--list` 列出全部入口，`./prototype.sh preview --layout B` 直达指定原型；共用 `prototypes/catalog.json`，无需另起独立工程。根目录 `./prototype.sh` 保留为同一实现的快捷入口。
+共享的仓库路径放在 [shared/](shared/)，命令入口从脚本位置解析项目，避免依赖调用方当前目录。产物目录参数仍按调用方指定位置解析。
 
-## 脚本说明
+## 常用命令
 
-### 版本管理
+从项目根目录运行：
 
-| 脚本                | 作用                                                                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `check-version.mjs` | 读取 `package.json`、`package-lock.json`、`Cargo.toml`、`Cargo.lock`、`tauri.conf.json` 五处版本号，验证它们完全一致；可附带 git tag 做额外校验。 |
-| `set-version.mjs`   | 接受一个 semver 版本号，一次性同步更新上述所有文件，避免手动改漏。                                                                                |
-
-```bash
-node scripts/check-version.mjs              # 仅校验
-node scripts/check-version.mjs v1.2.3      # 同时验证与 tag 是否匹配
-node scripts/set-version.mjs 1.2.3         # 同步所有文件到新版本
+```sh
+npm run app:dev                      # 桌面与前端开发
+npm run build                        # 前端类型检查与构建
+npm run cli -- --help                # CLI 帮助
+npm run version:check                # 检查统一版本
+npm run version:set -- <version>     # 设置并同步版本
+npm run homepage:build               # 构建官网
+npm run docs:dev                     # 预览文档站
+./prototype.sh                      # 打开需求原型目录
+./scripts/prototype/preview.sh --list
+./prototype.sh preview --layout B    # 直达文档阅读原型
 ```
 
-### 发布打包
+根目录 `prototype.sh` 和 `scripts/prototype.sh` 为兼容快捷入口，统一转发给 `prototype/preview.sh`。原型清单来自 `prototypes/catalog.json`，详细用法见[原型目录](../prototypes/README.md)。
 
-| 脚本                        | 作用                                                                                                                                                              |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `assemble-release.mjs`      | 收拢多平台构建产物（`.exe`、`.msi`、`.dmg`、`.AppImage`、`.deb`）、展平目录层级、生成 `SHA256SUMS`，并从 `CHANGELOG.md` 提取当前版本内容写成 `RELEASE_NOTES.md`。 |
-| `verify-release-bundle.mjs` | 对 `assemble-release` 的输出做验收：逐文件重算 SHA256 并比对、确认所有平台安装包位于根层级、检查 `CHANGELOG.md`/`PLATFORM_SUPPORT.md`/`RELEASE_NOTES.md` 齐全。   |
+## 构建与缓存
 
-```bash
-node scripts/assemble-release.mjs <output-dir> <build-ref>
-node scripts/verify-release-bundle.mjs <bundle-dir>
+完整操作见[编译、打包与安装](../docs/build-and-install.md)。`app/primary-app.mjs` 为桌面开发与打包准备 CLI sidecar；`app/run-rust-cli.mjs` 管理 CLI 构建、运行与安装；`app/build-cache.mjs` 复用项目 target 并清理历史产物。
+
+构建、安装、测试成功后的缓存清理仍由公共入口调用。失败或被信号中断时保留产物；支持 `CARGO_TARGET_DIR`。手动检查清理范围：
+
+```sh
+npm run app:prune -- --dry-run
 ```
 
-### 任务状态
+发布流程由 `release/` 与 GitHub 工作流共同维护；目录调整不会触发发布或修改版本。
 
-`issue-metadata.mjs` 同步 GitHub Issue 的分诊标签、目标里程碑和发布归属；由 `issue-metadata.yml` 调用。任务状态使用 GitHub 原生状态，不再校验仓库内任务索引。
+## 测试与新增脚本
 
-## 测试
+运行 `npm test`，或指定模块，例如 `npx vitest run scripts/app scripts/release scripts/checks`。实现和单元测试放在同一功能目录，跨模块工程契约集中到 `checks/`。
 
-关键构建、版本和发布逻辑由 `.test.mjs` 覆盖，通过 `npm test` 运行。
-
-## 主应用与 CLI
-
-完整操作说明见[编译、打包与安装](../docs/build-and-install.md)。
-
-`primary-app.mjs` 统一开发和打包流程，提前构建并放置 `agent-hub-cli` sidecar。`run-rust-cli.mjs` 提供 CLI 运行、构建和安装入口。前端、桌面与 CLI 均使用根目录工程。
-
-`./agent-hub.sh install` 默认进入 Tauri 打包流程。Unix 开发环境如需只更新 CLI，可运行 `./agent-hub.sh install --dev`：它会将 `${CARGO_HOME:-~/.cargo}/bin/agent-hub-cli` 链接到仓库的 debug 构建产物，并刷新 `~/.agent-hub/bin/agent-hub-cli` bridge，使 `agent-hub-cli` 立即使用本次构建；追加 `release` 可构建 release CLI。`AGENT_HUB_CLI_BIN_DIR` 可指定链接目录，`AGENT_HUB_BRIDGE_DIR` 可指定开发 bridge 目录。已有普通文件或指向其他位置的 Cargo 软链接不会被覆盖。
-
-### 构建缓存自动清理
-
-桌面打包（`npm run app:build` / `npm run tauri -- build`）、CLI 构建/安装/运行和 `npm run app:test`、`npm run app:lint` 成功后自动调用 `build-cache.mjs`。桌面开发会话正常退出后清理，开发服务器运行期间不清理。失败或被信号中断时保留已有产物。
-
-CLI 构建、运行与安装统一使用项目构建目录；`cli:install` 复用依赖缓存，不再使用 Cargo 临时构建目录。支持 `CARGO_TARGET_DIR`，CLI 构建和安装的 `--target-dir` 参数优先。Unix 开发安装复用同一 Node 构建入口，但保持固定使用仓库 `src-tauri/target/` 的现有链接约定。
-
-- 按架构、debug/release、编译模式和 feature 配置保留最新应用产物；共享依赖、Cargo build-script 输出和增量缓存继续复用。
-- 从当前 `libapp_lib.rlib` 的归档清单识别仍被引用的目标文件，删除历史编译遗留的 `app_lib.*.rcgu.o`；归档缺失时跳过这些文件，归档损坏时停止本次清理并提示。
-- 测试和 CLI 的同一 artifact hash 可能留下多次编译的目标文件，只保留最近一次 session。自动入口跳过本轮构建开始后更新的文件。
-- 安装包在各自目录中按名称、架构和格式分组，保留最近构建的一份，删除旧版本及其 `.sig`。当前可执行文件与无版本号的固定输出保留。
-- 支持 `CARGO_TARGET_DIR`；不遍历构建目录内的目录符号链接。清理失败只报告原因，不改变成功构建的退出状态。
-
-也可在没有其他 Cargo 编译运行时手动执行：
-
-```bash
-npm run app:prune -- --dry-run  # 预览历史产物数量
-npm run app:prune              # 保留最新构建，清理历史产物
-npm run app:clean              # 完整删除 Cargo 构建缓存，下次重新编译
-```
+新增脚本先选择已有模块，补充本索引中的职责或入口；涉及调用路径时同步 npm 命令、顶层启动器、工作流、自动化和文档。源归档清单保持其历史路径，不作运行入口维护。

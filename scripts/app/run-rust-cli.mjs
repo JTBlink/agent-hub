@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { existsSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +10,7 @@ function canRun(command, args = ["--version"]) {
   return result.status === 0;
 }
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const ROOT = repositoryRoot;
 
 function resolveCargo() {
   if (process.env.CARGO && existsSync(process.env.CARGO)) {

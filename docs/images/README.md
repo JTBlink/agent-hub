@@ -14,7 +14,7 @@
 2. 打开 `/tests/browser/product-preview.html?theme=dark&language=zh&undeployed&ungrouped`。保持技能库“全部”视图和卡片模式，不选择技能组、不展开更多筛选，保持侧栏默认技能库展开与“全部技能”选中。
 3. 打开 `/tests/browser/product-preview.html?view=dashboard&theme=dark&language=zh&undeployed&ungrouped`。保持默认项目工作空间与 3 项近期技能，不展开更多内容，保持侧栏非活动分组默认折叠。
 4. 使用 Chromium 浏览器，以 1440×900 CSS 像素、1 倍像素密度捕获页面内容。等待数据与字体加载完成，页面停在顶部，不包含浏览器工具栏，保存为对应 PNG。
-5. 检查截图没有错误、加载状态、弹窗或个人信息；执行 `npm run website:build` 和 `npx vitest run scripts/build-homepage.test.mjs`，确认输出资源与源图片一致。
+5. 检查截图没有错误、加载状态、弹窗或个人信息；执行 `npm run website:build` 和 `npx vitest run scripts/website/build-homepage.test.mjs`，确认输出资源与源图片一致。
 6. 检查 README 和官网图片替代文本、说明及尺寸；按现有 Pages 工作流部署后核对线上两张图片与源文件一致。
 
 截图页直接复用 `Layout`、`MySkills`、`Dashboard` 和应用上下文，只在 Tauri 调用边界注入示例数据。它仅用于文档截图，不包含完整的写入与文件操作能力。
@@ -34,7 +34,7 @@ README 与官网默认展示工作台，技能库可展开或切换查看。主�
 复用本机 Vite 后执行：
 
 ```bash
-node scripts/capture-product-screenshots.mjs
+node scripts/website/capture-product-screenshots.mjs
 ```
 
 脚本只允许本地预览来源，以隔离的临时 Chromium profile 捕获 1440×900、1 倍像素密度的 PNG，结束后清理 profile，不读取日常浏览器数据。可通过 `AGENT_HUB_SCREENSHOT_BROWSER` 指定浏览器执行文件，通过 `AGENT_HUB_PREVIEW_ORIGIN` 指定本地开发端口。拍摄后检查加载、错误与菜单打开状态，并检查示例内容及个人信息。

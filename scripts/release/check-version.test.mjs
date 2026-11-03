@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -104,4 +106,13 @@ describe("release version validation", () => {
       "does not match application version",
     );
   });
+});
+
+it("validates the repository version when invoked outside the checkout", () => {
+  const output = execFileSync(
+    process.execPath,
+    [fileURLToPath(new URL("./check-version.mjs", import.meta.url))],
+    { cwd: tmpdir(), encoding: "utf8" },
+  );
+  expect(output).toContain("Validated AgentHub version");
 });

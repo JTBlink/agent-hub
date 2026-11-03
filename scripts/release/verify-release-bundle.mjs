@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -189,7 +190,10 @@ const invokedPath = process.argv[1]
   : "";
 if (invokedPath === import.meta.url) {
   try {
-    const result = verifyReleaseBundle({ bundleDirectory: process.argv[2] });
+    const result = verifyReleaseBundle({
+      root: repositoryRoot,
+      bundleDirectory: process.argv[2] ? resolve(process.argv[2]) : undefined,
+    });
     console.log(
       `Verified ${result.installers} installers and ${result.verifiedFiles} checksummed files`,
     );

@@ -191,16 +191,18 @@ class CleanupChecks(unittest.TestCase):
             rules.incremental_rules(self.home)
 
     def test_project_pruning_reuses_trusted_helper_with_scoped_target(self):
-        project = self.home / "project with spaces"
-        self.old(project / "scripts/build.mjs")
-        self.old(project / "src-tauri/Cargo.toml")
-        self.settings["agent_hub_projects"] = [str(project)]
-        with patch.object(actions, "run_tool", return_value=("项目", "预览完成")) as tool:
-            status, output = self.run_main("--dry-run")
-        self.assertEqual(status, 0, output)
-        call = tool.call_args
-        self.assertEqual(call.args[1], ["node", str(project / "scripts/build.mjs"), "prune", "--dry-run"])
-        self.assertEqual(call.kwargs["env"]["CARGO_TARGET_DIR"], str(project / "src-tauri/target"))
+        for helper in ("scripts/app/build.mjs", "scripts/build.mjs"):
+            with self.subTest(helper=helper):
+                project = self.home / ("project with spaces " + helper.replace("/", "-"))
+                self.old(project / helper)
+                self.old(project / "src-tauri/Cargo.toml")
+                self.settings["agent_hub_projects"] = [str(project)]
+                with patch.object(actions, "run_tool", return_value=("项目", "预览完成")) as tool:
+                    status, output = self.run_main("--dry-run")
+                self.assertEqual(status, 0, output)
+                call = tool.call_args
+                self.assertEqual(call.args[1], ["node", str(project / helper), "prune", "--dry-run"])
+                self.assertEqual(call.kwargs["env"]["CARGO_TARGET_DIR"], str(project / "src-tauri/target"))
 
     def test_default_tool_actions_can_run_without_force_install_or_network_update(self):
         self.settings.update(uv_prune=True, brew_cleanup=True)

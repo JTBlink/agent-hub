@@ -17,7 +17,7 @@
 - preflight 固定事件的 `github.sha`；质量检查、平台矩阵和汇总检出同一 SHA。tag preflight 检查该 SHA 的成功手动候选。
 - concurrency 按事件和 SHA 隔离，`cancel-in-progress: false`；不同 SHA 可独立验证。
 - Node.js 22、`npm ci`、Rust stable；各平台 core tests 在安装包编译前执行。Runner、架构与安装格式见 [平台支持](platform-support.md)。
-- 构建统一经过 `scripts/build.mjs`：CI 用 `npm run app:build -- <Tauri 参数>`，本地用 `./agent-hub.sh build` 或 `agent-hub.bat build`，均在对应原生平台运行并准备 CLI sidecar。
+- 构建统一经过 `scripts/app/build.mjs`：CI 用 `npm run app:build -- <Tauri 参数>`，本地用 `./agent-hub.sh build` 或 `agent-hub.bat build`，均在对应原生平台运行并准备 CLI sidecar。
 - 平台 artifacts 保留 1 天。汇总执行 `release:assemble` / `release:verify`，生成扁平安装包、SHA256SUMS 和说明文件；当前不上传汇总 artifact。
 - tag 运行在全部平台成功后发布附件；已有 Release 跳过发布，不覆盖附件。手动运行只提供平台 artifacts，不读取生产签名 Secrets。
 
@@ -25,7 +25,7 @@
 
 产物为 `_site/`，公开文档位于 `/agent-hub/docs/`。普通主页或文档变更不自动部署，可从 main 手动运行 `deploy-pages.yml`。
 
-仓库 Settings → Pages → Build and deployment → Source 必须选择 **GitHub Actions**（`build_type: workflow`）。根 `index.html` 是桌面开发入口，不能从 main 根目录直接发布。`scripts/check-pages-config.mjs` 在部署前核对发布源，API 失败或 legacy 模式会阻止部署。
+仓库 Settings → Pages → Build and deployment → Source 必须选择 **GitHub Actions**（`build_type: workflow`）。根 `index.html` 是桌面开发入口，不能从 main 根目录直接发布。`scripts/website/check-pages-config.mjs` 在部署前核对发布源，API 失败或 legacy 模式会阻止部署。
 
 更新依赖锁文件后，使用 CI 对应的 npm 10 执行干净 `npm ci`。VitePress 的 DocSearch 可能需要独立的 React 18 peer 依赖，不用 `--legacy-peer-deps` 绕过一致性检查。
 

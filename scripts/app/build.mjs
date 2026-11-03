@@ -1,15 +1,16 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
-export const ROOT_DIR = resolve(fileURLToPath(new URL("..", import.meta.url)));
+export const ROOT_DIR = resolve(repositoryRoot);
 export const isWindows = process.platform === "win32";
 const npmCommand = isWindows ? process.env.ComSpec || "cmd.exe" : "npm";
 
 export function usage() {
-  return `用法: node scripts/build.mjs <命令> [选项]
+  return `用法: node scripts/app/build.mjs <命令> [选项]
 
 命令:
   dev       启动 Tauri + React 开发模式
@@ -68,18 +69,20 @@ function runRelease(args, runner) {
   const [outputDir, buildRef] = args;
   if (!outputDir || !buildRef || args.length > 2) {
     console.error("错误：release 需要指定输出目录和 git ref。");
-    console.error("用法：node scripts/build.mjs release <输出目录> <git-ref>");
+    console.error(
+      "用法：node scripts/app/build.mjs release <输出目录> <git-ref>",
+    );
     return 1;
   }
   let status = run(
     process.execPath,
-    ["scripts/assemble-release.mjs", outputDir, buildRef],
+    ["scripts/release/assemble-release.mjs", outputDir, buildRef],
     runner,
   );
   if (status !== 0) return status;
   return run(
     process.execPath,
-    ["scripts/verify-release-bundle.mjs", outputDir],
+    ["scripts/release/verify-release-bundle.mjs", outputDir],
     runner,
   );
 }

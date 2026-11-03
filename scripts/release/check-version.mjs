@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -86,7 +87,10 @@ const invokedPath = process.argv[1]
   : "";
 if (invokedPath === import.meta.url) {
   try {
-    const version = validateVersions({ tag: process.argv[2] ?? "" });
+    const version = validateVersions({
+      root: repositoryRoot,
+      tag: process.argv[2] ?? "",
+    });
     console.log(`Validated AgentHub version ${version}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

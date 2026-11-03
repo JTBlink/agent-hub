@@ -2,5 +2,5 @@
 setlocal
 cd /d "%~dp0"
 
-node "%~dp0scripts\build.mjs" %*
+node "%~dp0scripts\app\build.mjs" %*
 exit /b %errorlevel%

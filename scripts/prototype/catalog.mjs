@@ -3,7 +3,10 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 export const prototypes = JSON.parse(
-  readFileSync(new URL("../prototypes/catalog.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../../prototypes/catalog.json", import.meta.url),
+    "utf8",
+  ),
 );
 export function prototypePath(id = "index", layout = "") {
   if (id === "index") {

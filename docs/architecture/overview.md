@@ -10,7 +10,7 @@ agent-hub 使用单个 Tauri 2 桌面应用和 React 前端，业务实现来自
 
 `src-tauri/src/core/central_repo.rs` 统一解析库路径、配置和日志路径；`cli_bridge.rs` 负责将同版本 CLI 发布到固定的应用目录。应用默认根目录为 `~/.agent-hub`，不自动迁移旧数据库。
 
-开发与打包共用 `scripts/primary-app.mjs`：先构建同版本 CLI，再把它作为 sidecar 放入主应用安装包。macOS Universal 的 CLI 同样合并两种架构。
+开发与打包共用 `scripts/app/primary-app.mjs`：先构建同版本 CLI，再把它作为 sidecar 放入主应用安装包。macOS Universal 的 CLI 同样合并两种架构。
 
 继承代码中仍有超大页面和 Rust 模块，按 [ADR-0006](../adr/0006-file-size-and-reuse-conventions.md) 在后续功能修改时逐步拆分，避免本次主入口切换同时重写核心行为。
 

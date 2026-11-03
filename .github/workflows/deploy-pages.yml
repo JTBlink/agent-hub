@@ -39,7 +39,7 @@ jobs:
       - name: Verify GitHub Pages publishing source
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/check-pages-config.mjs
+        run: node scripts/website/check-pages-config.mjs
 
       - name: Validate version and shared documentation
         run: |

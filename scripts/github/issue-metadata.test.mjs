@@ -197,7 +197,10 @@ describe("Issue metadata", () => {
     );
     const installerWorkflow = parse(
       readFileSync(
-        new URL("../.github/workflows/build-installers.yml", import.meta.url),
+        new URL(
+          "../../.github/workflows/build-installers.yml",
+          import.meta.url,
+        ),
         "utf8",
       ),
     );
@@ -222,7 +225,7 @@ describe("Issue metadata", () => {
   it("limits the workflow to metadata writes and trusted default-branch code", () => {
     const workflow = parse(
       readFileSync(
-        new URL("../.github/workflows/issue-metadata.yml", import.meta.url),
+        new URL("../../.github/workflows/issue-metadata.yml", import.meta.url),
         "utf8",
       ),
     );

@@ -240,16 +240,16 @@ agent-hub/
 │   ├── plans/                      #   规划设计文档
 │   └── reference/                  #   参考资料与来源
 │
-├── scripts/                        # 构建与发布脚本（Node.js）
-│   ├── build.mjs                   #   前端构建
-│   ├── assemble-release.mjs        #   发布产物组装
-│   ├── set-version.mjs             #   版本号设置
-│   ├── check-version.mjs           #   版本号校验
-│   ├── issue-metadata.mjs          #   Issue 状态与里程碑同步
-│   ├── primary-app.mjs             #   主应用切换
-│   ├── build-homepage.mjs          #   主页构建
-│   ├── verify-release-bundle.mjs   #   发布包验证
-│   └── run-rust-cli.mjs            #   Rust CLI 运行器
+├── scripts/                        # 工程脚本，完整入口见 scripts/README.md
+│   ├── app/                        #   桌面／CLI 构建运行与缓存清理
+│   ├── release/                    #   版本、发布候选、产物组装与校验
+│   ├── website/                    #   官网、Pages 检查与合成截图
+│   ├── docs/                       #   离线帮助和文档站构建
+│   ├── prototype/                  #   需求原型启动与目录解析
+│   ├── github/                     #   Issue 元数据与里程碑
+│   ├── checks/                     #   跨模块工程契约测试
+│   ├── fonts/                      #   字体开发工具
+│   └── shared/                     #   跨模块共用仓库路径
 │
 ├── .agents/skills/                 # 项目内部规范，随 Git 共享
 │   ├── rust-dev/                   #   开发、UI、测试与提交规范

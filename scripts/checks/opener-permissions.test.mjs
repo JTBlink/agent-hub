@@ -6,8 +6,8 @@ const read = (path) =>
 
 describe("local Skills folder opening", () => {
   it("allows opening shared hidden and custom Skills paths with the default file manager", () => {
-    const capability = read("../src-tauri/capabilities/default.json");
-    const config = read("../src-tauri/tauri.conf.json");
+    const capability = read("../../src-tauri/capabilities/default.json");
+    const config = read("../../src-tauri/tauri.conf.json");
     expect(capability.windows).toEqual(["main"]);
     expect(capability.remote).toBeUndefined();
     expect(capability.permissions).toContainEqual({

@@ -40,6 +40,6 @@ jobs:
         with:
           node-version: 22
       - name: Synchronize issue state and milestones
-        run: node scripts/issue-metadata.mjs
+        run: node scripts/github/issue-metadata.mjs
         env:
           GITHUB_TOKEN: "${{ github.token }}"

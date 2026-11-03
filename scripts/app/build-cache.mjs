@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import {
   closeSync,
   existsSync,
@@ -11,7 +12,7 @@ import {
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const ROOT = repositoryRoot;
 const packagePattern = /^agent-hub-([a-f0-9]{16})$/;
 const objectPattern = /^(?:app_lib|agent_hub(?:_cli)?)(?:[.-]).*\.rcgu\.o$/;
 
@@ -262,7 +263,7 @@ if (
 ) {
   const args = process.argv.slice(2);
   if (args.some((arg) => arg !== "--dry-run")) {
-    console.error("用法：node scripts/build-cache.mjs [--dry-run]");
+    console.error("用法：node scripts/app/build-cache.mjs [--dry-run]");
     process.exitCode = 1;
   } else
     process.exitCode = cleanupBuildCache({

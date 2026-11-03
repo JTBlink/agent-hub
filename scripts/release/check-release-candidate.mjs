@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -121,7 +122,10 @@ const invokedPath = process.argv[1]
   : "";
 if (invokedPath === import.meta.url) {
   try {
-    const result = checkReleaseCandidate({ tag: process.argv[2] ?? "" });
+    const result = checkReleaseCandidate({
+      root: repositoryRoot,
+      tag: process.argv[2] ?? "",
+    });
     console.log(`Release candidate verified: ${result.sha}\n${result.url}`);
   } catch (error) {
     // Child-process messages may contain full local paths; keep API failures terse.

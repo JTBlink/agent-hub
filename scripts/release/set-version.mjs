@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -75,9 +76,9 @@ const invokedPath = process.argv[1]
 if (invokedPath === import.meta.url) {
   const version =
     process.argv[2] ??
-    readFileSync(resolve(process.cwd(), "VERSION"), "utf8").trim();
+    readFileSync(resolve(repositoryRoot, "VERSION"), "utf8").trim();
   try {
-    setVersions({ version });
+    setVersions({ root: repositoryRoot, version });
     console.log(`Updated AgentHub to version ${version}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);

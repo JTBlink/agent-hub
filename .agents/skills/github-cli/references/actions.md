@@ -33,7 +33,7 @@
 
 ## 修改后验证
 
-运行与修改相关的 `scripts/workflow-contract.test.mjs`、构建、版本、assemble 和 verify 测试，检查 YAML、`needs`、表达式、shell 与权限范围。仅文字调整可检查引用及文档一致性；实际 workflow 行为变化需要合约测试，原生安装与签名仍依赖对应平台证据。
+运行与修改相关的 `scripts/checks/workflow-contract.test.mjs`、构建、版本、assemble 和 verify 测试，检查 YAML、`needs`、表达式、shell 与权限范围。仅文字调整可检查引用及文档一致性；实际 workflow 行为变化需要合约测试，原生安装与签名仍依赖对应平台证据。
 
 ## 资源控制
 

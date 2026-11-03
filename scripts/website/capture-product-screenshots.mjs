@@ -1,11 +1,11 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 // Capture only the synthetic local product fixture in an isolated browser profile.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = repositoryRoot;
 const candidates = [
   process.env.AGENT_HUB_SCREENSHOT_BROWSER,
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",

@@ -75,7 +75,7 @@ install_cli() {
     cargo_args+=(--release)
   fi
 
-  node "${ROOT_DIR}/scripts/run-rust-cli.mjs" build "${cargo_args[@]}"
+  node "${ROOT_DIR}/scripts/app/run-rust-cli.mjs" build "${cargo_args[@]}"
   if [[ ! -x "${binary}" ]]; then
     echo "构建完成但未找到 CLI: ${binary}" >&2
     return 1
@@ -101,7 +101,7 @@ if [[ "${1:-}" == "install" ]]; then
     install_cli "${1:-debug}"
     exit $?
   fi
-  exec node "$ROOT_DIR/scripts/build.mjs" build "$@"
+  exec node "$ROOT_DIR/scripts/app/build.mjs" build "$@"
 fi
 
-exec node "$ROOT_DIR/scripts/build.mjs" "$@"
+exec node "$ROOT_DIR/scripts/app/build.mjs" "$@"

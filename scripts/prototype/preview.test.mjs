@@ -8,7 +8,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { it } from "vitest";
 
-const root = realpathSync(fileURLToPath(new URL("..", import.meta.url)));
+const root = realpathSync(fileURLToPath(new URL("../..", import.meta.url)));
 const launch = (port) =>
   new Promise((resolve, reject) => {
     const child = spawn(
@@ -57,11 +57,11 @@ it("reuses only the current checkout and preserves services from other worktrees
 
 it("compiles the catalog stylesheet with the shared theme", async () => {
   const brand = readFileSync(
-    new URL("../src/styles/brand.css", import.meta.url),
+    new URL("../../src/styles/brand.css", import.meta.url),
     "utf8",
   );
   const catalog = readFileSync(
-    new URL("../prototypes/catalog.css", import.meta.url),
+    new URL("../../prototypes/catalog.css", import.meta.url),
     "utf8",
   );
   const result = await postcss([

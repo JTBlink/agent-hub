@@ -7,11 +7,11 @@ import { it, expect } from "vitest";
 
 it("builds a self-contained website with the current version and all local assets", () => {
   const outputDirectory = mkdtempSync(join(tmpdir(), "agenthub-homepage-"));
-  const root = fileURLToPath(new URL("../", import.meta.url));
+  const root = fileURLToPath(new URL("../../", import.meta.url));
   const outputPath = join(outputDirectory, "nested", "index.html");
   try {
     execFileSync(process.execPath, [
-      join(root, "scripts/build-homepage.mjs"),
+      join(root, "scripts/website/build-homepage.mjs"),
       outputPath,
     ]);
     const html = readFileSync(outputPath, "utf8");

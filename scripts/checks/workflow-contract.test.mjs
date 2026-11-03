@@ -5,18 +5,18 @@ import { describe, expect, it } from "vitest";
 
 const readText = (url) => readFileSync(url, "utf8").replaceAll("\r\n", "\n");
 const installers = readText(
-  new URL("../.github/workflows/build-installers.yml", import.meta.url),
+  new URL("../../.github/workflows/build-installers.yml", import.meta.url),
 );
-const ci = readText(new URL("../.github/workflows/ci.yml", import.meta.url));
+const ci = readText(new URL("../../.github/workflows/ci.yml", import.meta.url));
 const pages = readText(
-  new URL("../.github/workflows/deploy-pages.yml", import.meta.url),
+  new URL("../../.github/workflows/deploy-pages.yml", import.meta.url),
 );
 const desktopIndex = readFileSync(
-  new URL("../index.html", import.meta.url),
+  new URL("../../index.html", import.meta.url),
   "utf8",
 );
 const websiteIndex = readFileSync(
-  new URL("../homepage/index.html", import.meta.url),
+  new URL("../../homepage/index.html", import.meta.url),
   "utf8",
 );
 
@@ -52,7 +52,7 @@ describe("GitHub Actions workflow contract", () => {
     expect(gate).toContain("github.event_name == 'push'");
     expect(gate).toContain("startsWith(github.ref, 'refs/tags/v')");
     expect(gate).toContain(
-      'node scripts/check-release-candidate.mjs "$GITHUB_REF_NAME"',
+      'node scripts/release/check-release-candidate.mjs "$GITHUB_REF_NAME"',
     );
     expect(gate).toContain("GH_TOKEN: ${{ github.token }}");
   });
@@ -229,7 +229,7 @@ describe("GitHub Actions workflow contract", () => {
 
   it("uses the configured macOS app bundle for installation and notarization", () => {
     const config = JSON.parse(
-      readText(new URL("../src-tauri/tauri.conf.json", import.meta.url)),
+      readText(new URL("../../src-tauri/tauri.conf.json", import.meta.url)),
     );
     const bundle = `${config.productName}.app`;
     expect(installers).toContain(`app_path="$RUNNER_TEMP/${bundle}"`);

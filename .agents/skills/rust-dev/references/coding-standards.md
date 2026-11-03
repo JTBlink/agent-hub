@@ -88,7 +88,7 @@
 | 前端函数、Hook、组件与页面测试 | 默认与被测文件同目录，使用 `<name>.test.ts` / `<name>.test.tsx`。同一模块有多份测试需要收拢时，可放模块内的 `__tests__/`，保留 `.test` 命名并确认测试运行器能够发现。                                                    |
 | Rust 模块内部测试              | 放被测模块相邻的独立测试文件，默认 `<module>/tests.rs`；按行为拆分时可用 `<module>/<behavior>_tests.rs`。实现文件仅保留 `#[cfg(test)] mod tests;` 等测试模块声明，保留平台条件与私有成员访问边界，不为测试扩大生产接口。 |
 | Rust 公共接口与 CLI 集成测试   | 放 crate 根目录的 `src-tauri/tests/<behavior>.rs`，通过公共接口或进程入口验证跨模块流程。                                                                                                                                |
-| 构建、版本与发布脚本测试       | 与被测脚本同目录，使用 `<name>.test.mjs`，例如 `scripts/build.test.mjs`；文档构建脚本测试放 `scripts/docs/`。                                                                                                            |
+| 构建、版本与发布脚本测试       | 与被测脚本同目录，使用 `<name>.test.mjs`，例如 `scripts/app/build.test.mjs`；文档构建脚本测试放 `scripts/docs/`。                                                                                                        |
 | 浏览器交互、布局与端到端验收   | 集中放 `tests/browser/`，场景入口、驱动脚本及专用 fixture 就近组织；不为同一验收另建一套根目录。                                                                                                                         |
 | 前端共享测试辅助代码           | 环境模拟、渲染与编辑器等通用辅助放 `src/test/`；仅服务单个模块的辅助留在对应测试旁。                                                                                                                                     |
 | 共享样例数据                   | 前端跨模块复用的数据工厂放 `tests/fixtures/`；Rust 集成测试专用数据放 `src-tauri/tests/fixtures/`，共享辅助模块使用 `src-tauri/tests/common/mod.rs`，避免被 Cargo 当作独立测试入口。                                     |

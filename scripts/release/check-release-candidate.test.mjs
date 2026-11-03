@@ -55,7 +55,7 @@ function fixture() {
     "src-tauri/Cargo.lock",
     "src-tauri/tauri.conf.json",
   ]) {
-    cpSync(new URL(`../${path}`, import.meta.url), join(root, path), {
+    cpSync(new URL(`../../${path}`, import.meta.url), join(root, path), {
       recursive: true,
     });
   }

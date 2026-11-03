@@ -46,12 +46,12 @@ jobs:
         id: release_metadata
         run: |
           if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == refs/tags/v* ]]; then
-            node scripts/check-version.mjs "$GITHUB_REF_NAME"
+            node scripts/release/check-version.mjs "$GITHUB_REF_NAME"
             echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
           else
             version="$(tr -d '[:space:]' < VERSION)"
             tag="v$version"
-            node scripts/check-version.mjs "$tag"
+            node scripts/release/check-version.mjs "$tag"
             echo "tag=$tag" >> "$GITHUB_OUTPUT"
           fi
 
@@ -59,7 +59,7 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/check-release-candidate.mjs "$GITHUB_REF_NAME"
+        run: node scripts/release/check-release-candidate.mjs "$GITHUB_REF_NAME"
 
       - name: Validate Apple signing and notarization configuration
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.ENABLE_APPLE_SIGNING == 'true'
@@ -398,6 +398,6 @@ jobs:
 
       - name: Synchronize published release milestone
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        run: node scripts/issue-metadata.mjs
+        run: node scripts/github/issue-metadata.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}

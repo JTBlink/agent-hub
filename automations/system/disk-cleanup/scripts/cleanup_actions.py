@@ -60,9 +60,12 @@ def optional_cleanup(args, apply_rules):
 
     def project_builds(directory):
         project = Path(directory).expanduser().absolute()
-        script = cache_target(project, "scripts") / "build.mjs"
+        scripts = cache_target(project, "scripts")
+        script = scripts / "app/build.mjs"
+        if not script.is_file():
+            script = scripts / "build.mjs"
         if not script.is_file() or not (project / "src-tauri/Cargo.toml").is_file():
-            raise ValueError("请指定可信任的 AgentHub 源码目录，其中须包含 scripts/build.mjs 和 src-tauri/Cargo.toml。")
+            raise ValueError("请指定可信任的 AgentHub 源码目录，其中须包含 scripts/app/build.mjs 和 src-tauri/Cargo.toml。")
         target = cache_target(project / "src-tauri", "target")
         command = ["node", str(script), "prune"] + (["--dry-run"] if args.dry_run else [])
         env = dict(os.environ, CARGO_TARGET_DIR=str(target))
@@ -75,7 +78,7 @@ def optional_cleanup(args, apply_rules):
 
     if args.detect_workspace_builds:
         workspace = Path.cwd()
-        if (workspace / "src-tauri/Cargo.toml").is_file() and (workspace / "scripts/build.mjs").is_file():
+        if (workspace / "src-tauri/Cargo.toml").is_file() and any((workspace / path).is_file() for path in ("scripts/app/build.mjs", "scripts/build.mjs")):
             args.agent_hub_projects = list(dict.fromkeys([*args.agent_hub_projects, str(workspace)]))
         elif (workspace / "Cargo.toml").is_file():
             args.rust_targets = list(dict.fromkeys([*args.rust_targets, str(workspace / "target")]))

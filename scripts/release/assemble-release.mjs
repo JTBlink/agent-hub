@@ -1,3 +1,4 @@
+import { repositoryRoot } from "../shared/paths.mjs";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -140,7 +141,8 @@ const invokedPath = process.argv[1]
 if (invokedPath === import.meta.url) {
   try {
     const result = await assembleRelease({
-      outputDirectory: process.argv[2],
+      root: repositoryRoot,
+      outputDirectory: process.argv[2] ? resolve(process.argv[2]) : undefined,
       buildRef: process.argv[3],
     });
     console.log(
