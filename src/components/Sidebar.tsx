@@ -15,7 +15,7 @@ import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { SidebarSkillGroups } from "./SidebarSkillGroups";
 import { SidebarProjectFiles } from "./worktree/SidebarProjectFiles";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
-import { worktreeUrl } from "../lib/worktreeApi";
+import { projectWorkspaceRoute, worktreeUrl } from "../lib/worktreeApi";
 import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { SidebarActivityBar } from "./SidebarActivityBar";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
@@ -93,7 +93,12 @@ export function Sidebar() {
     setResourcePanelVisible?.(panelVisible);
   }, [setResourcePanelVisible, panelVisible]);
   const selectPanel = (panel: SidebarPanel) => {
-    if (selectedPanel === panel && panelVisible) {
+    const switchToWorkspace =
+      (location.pathname === "/settings" && panel !== "skills") ||
+      (panel === "herdr" &&
+        location.pathname !== "/terminal" &&
+        !projectWorkspaceRoute(location.pathname, location.search));
+    if (selectedPanel === panel && panelVisible && !switchToWorkspace) {
       togglePanel();
       return;
     }
@@ -110,7 +115,17 @@ export function Sidebar() {
     if (panel === "herdr") setHerdrOpened(true);
     setPanelSelection({ routeKey: location.key, panel, manual: true });
     setPanelOpen(true);
-    if (panel === "projects" && !location.pathname.startsWith("/project/")) {
+    if (switchToWorkspace) {
+      navigate(
+        activeProject && activePath
+          ? worktreeUrl(activeProject.id, activePath)
+          : "/terminal",
+        { state: { preserveSidebar: true } },
+      );
+    } else if (
+      panel === "projects" &&
+      !location.pathname.startsWith("/project/")
+    ) {
       if (activeProject && activePath)
         navigate(worktreeUrl(activeProject.id, activePath));
     }

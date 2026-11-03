@@ -14,6 +14,7 @@ import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { createTerminalTab, writeTerminalLayout } from "../lib/terminalLayout";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
 import { Sidebar } from "./Sidebar";
+import { SettingsTabs } from "./settings/SettingsTabs";
 import { workspaceSkillsCache } from "../lib/workspaceSkillsCache";
 
 const worktreeMocks = vi.hoisted(() => ({
@@ -90,9 +91,10 @@ afterEach(async () => {
 
 function Navigation() {
   const navigate = useNavigate();
+  const location = useLocation();
   return (
     <>
-      <output>{useLocation().pathname}</output>
+      <output data-search={location.search}>{location.pathname}</output>
       <button onClick={() => navigate("/project/demo")}>Go project</button>
       <button onClick={() => navigate("/settings")}>Go settings</button>
       <button
@@ -123,7 +125,8 @@ function Navigation() {
   );
 }
 
-function TestSidebar() {
+function TestSidebar({ withSettings = false }: { withSettings?: boolean }) {
+  const { pathname } = useLocation();
   const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
   const [gitSidebarVisible, setGitSidebarVisible] = useState(true);
   return (
@@ -135,6 +138,19 @@ function TestSidebar() {
       }}
     >
       <Sidebar />
+      {withSettings && pathname === "/settings" && (
+        <SettingsTabs agentCount={0}>
+          {{
+            agents: "Agents",
+            skills: "Skills",
+            appearance: "Appearance",
+            backup: "Backup",
+            network: "Network",
+            hosts: "Hosts",
+            about: "About",
+          }}
+        </SettingsTabs>
+      )}
       <div data-resource-visible={String(resourcePanelVisible)} />
       <div
         data-git-visible={String(gitSidebarVisible && !resourcePanelVisible)}
@@ -143,12 +159,12 @@ function TestSidebar() {
   );
 }
 
-async function render(path = "/global-workspace/codex") {
+async function render(path = "/global-workspace/codex", withSettings = false) {
   await act(async () =>
     root.render(
       <MemoryRouter initialEntries={[path]}>
         <WorkspaceFilesProvider>
-          <TestSidebar />
+          <TestSidebar withSettings={withSettings} />
         </WorkspaceFilesProvider>
         <Navigation />
       </MemoryRouter>,
@@ -848,4 +864,73 @@ it("focuses the workspace search field on repeated shortcuts without opening glo
   });
   expect(document.activeElement).toBe(input);
   expect(app.openSearch).not.toHaveBeenCalled();
+});
+
+it.each(["projects", "skills", "search", "herdr"])(
+  "leaves settings and closes its navigation when selecting %s without a project",
+  async (panel) => {
+    await render("/settings#hosts", true);
+    expect(container.querySelector('[role="tablist"]')).not.toBeNull();
+    const trigger = container.querySelector<HTMLButtonElement>(
+      `[data-sidebar-panel="${panel}"]`,
+    )!;
+    await click(trigger);
+    expect(container.querySelector("output")?.textContent).toBe(
+      panel === "skills" ? "/my-skills" : "/terminal",
+    );
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(trigger.getAttribute("aria-current")).toBe("page");
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  },
+);
+
+it.each(["projects", "search", "herdr"])(
+  "returns to the remembered checkout and keeps the %s panel selected when leaving settings",
+  async (panel) => {
+    const project = makeProject();
+    Object.assign(app, { projects: [project] });
+    const tab = createTerminalTab(project.id, undefined, "/workspace/topic");
+    writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
+    await render("/settings", true);
+    const trigger = container.querySelector<HTMLButtonElement>(
+      `[data-sidebar-panel="${panel}"]`,
+    )!;
+    await click(trigger);
+    expect(container.querySelector("output")?.textContent).toBe(
+      `/project/${project.id}`,
+    );
+    expect(
+      new URLSearchParams(
+        container.querySelector("output")!.dataset.search,
+      ).get("worktree"),
+    ).toBe("/workspace/topic");
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(trigger.getAttribute("aria-current")).toBe("page");
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    await click(button("Go back"));
+    expect(container.querySelector('[role="tablist"]')).not.toBeNull();
+  },
+);
+
+it.each([
+  "/tasks",
+  "/automation",
+  "/my-skills",
+  "/git",
+  "/project/demo/skills",
+])("updates the right workspace when opening Herdr from %s", async (path) => {
+  const project = makeProject();
+  Object.assign(app, { projects: [project] });
+  await render(path);
+  const trigger = container.querySelector<HTMLButtonElement>(
+    '[data-sidebar-panel="herdr"]',
+  )!;
+  await click(trigger);
+  expect(container.querySelector("output")?.textContent).toBe(
+    `/project/${project.id}`,
+  );
+  expect(trigger.getAttribute("aria-current")).toBe("page");
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  await click(trigger);
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });
