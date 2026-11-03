@@ -6,6 +6,7 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HostsSettings } from "./HostsSettings";
 import * as api from "../../lib/hostsApi";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import zh from "../../i18n/zh.json";
 
 vi.mock("../../lib/hostsApi", () => ({
@@ -18,7 +19,7 @@ vi.mock("../../lib/hostsApi", () => ({
   deleteHostsProfile: vi.fn(),
   applyHostsProfile: vi.fn(),
 }));
-vi.mock("../../lib/openInVscode", () => ({ openPathInVscode: vi.fn() }));
+vi.mock("@tauri-apps/plugin-opener", () => ({ revealItemInDir: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async () => () => {}),
 }));
@@ -94,6 +95,20 @@ it.each(["/etc/hosts", "C:\\Windows\\System32\\drivers\\etc\\hosts"])(
       "配置文件路径",
     );
     expect(location.textContent).toBe(path);
+  },
+);
+
+it.each(["/etc/hosts", "C:\\Windows\\System32\\drivers\\etc\\hosts"])(
+  "reveals the selected Hosts file in its containing folder: %s",
+  async (path) => {
+    vi.mocked(api.readSystemHosts).mockResolvedValueOnce({ ...initial, path });
+    vi.mocked(revealItemInDir).mockResolvedValueOnce(undefined);
+    await render();
+    await act(async () => button("打开所在文件夹").click());
+    expect(revealItemInDir).toHaveBeenCalledWith(path);
+    expect(host.querySelector('[role="status"]')?.textContent).toContain(
+      "系统文件管理器",
+    );
   },
 );
 

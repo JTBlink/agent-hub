@@ -84,8 +84,10 @@ Object.assign(window, {
         profiles = profiles.map((p) => (p.id === next.id ? next : p));
         return next;
       }
-      if (command === "plugin:opener|open_url") {
-        document.documentElement.dataset.vscodeOpened = args.url;
+      if (command === "plugin:opener|reveal_item_in_dir") {
+        document.documentElement.dataset.revealedHostsPath = JSON.stringify(
+          args.paths,
+        );
         return;
       }
       if (command === "read_system_hosts")

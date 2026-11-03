@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import * as api from "../../lib/hostsApi";
-import { openPathInVscode } from "../../lib/openInVscode";
 import { describeHostsError, hostsEditorText } from "./hostsPresentation";
 
 type Source = api.HostsSnapshot | api.HostsProfile;
@@ -269,12 +269,12 @@ export function useHostsSettings(active: boolean) {
       }));
       setNotice(t("hosts.deleted"));
     });
-  const openVscode = () =>
+  const revealFile = () =>
     run(async () => {
       const source = current.current.source;
       if (!source) return;
-      await openPathInVscode(source.path);
-      if (mounted.current) setNotice(t("hosts.openedVscode"));
+      await revealItemInDir(source.path);
+      if (mounted.current) setNotice(t("hosts.openedFolder"));
     });
   const profile = isProfile(model.source) ? model.source : null;
   const latest = profile
@@ -298,7 +298,7 @@ export function useHostsSettings(active: boolean) {
     create,
     rename,
     remove,
-    openVscode,
+    revealFile,
     retry: () =>
       failedAction.current ? run(failedAction.current) : Promise.resolve(false),
   };
