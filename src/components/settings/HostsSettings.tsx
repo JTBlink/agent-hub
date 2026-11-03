@@ -15,7 +15,7 @@ import type { HostsProfile } from "../../lib/hostsApi";
 import { HostsPermissionGuide } from "./HostsPermissionGuide";
 import { HostsProfileList } from "./HostsProfileList";
 import { useHostsSettings } from "./useHostsSettings";
-import { appliedHostsProfile, hostsDisplayPath } from "./hostsPresentation";
+import { appliedHostsProfile } from "./hostsPresentation";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { actionButtonClass, fieldClass } from "./settingsStyles";
 
@@ -185,11 +185,9 @@ export function HostsSettings({ active }: { active: boolean }) {
               title={state.source?.path}
               aria-label={state.source?.path}
               tabIndex={state.source ? 0 : undefined}
-              className="min-w-0 flex-1 truncate"
+              className="min-w-0 flex-1 whitespace-normal break-all leading-relaxed"
             >
-              {state.source
-                ? hostsDisplayPath(state.source.path)
-                : t("hosts.pathUnavailable")}
+              {state.source ? state.source.path : t("hosts.pathUnavailable")}
             </code>
             <span className={`shrink-0 ${state.dirty ? "text-warning" : ""}`}>
               {t(state.dirty ? "hosts.unsaved" : "hosts.noChanges")}

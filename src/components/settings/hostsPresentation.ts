@@ -5,16 +5,6 @@ import type { HostsProfile, HostsSnapshot } from "../../lib/hostsApi";
 export const hostsEditorText = (content: string) =>
   content.replace(/\r\n/g, "\n");
 
-export function hostsDisplayPath(path: string): string {
-  const parts = path.replace(/\\/g, "/").split("/");
-  const filename = parts.at(-1) ?? "";
-  const shortName = filename.replace(
-    /^([\da-f]{8})-[\da-f-]{27}(\.hosts)$/i,
-    "$1…$2",
-  );
-  return parts.length > 3 ? `…/${parts.at(-2)}/${shortName}` : path;
-}
-
 export const appliedHostsProfile = (
   profiles: HostsProfile[],
   system: HostsSnapshot | null,

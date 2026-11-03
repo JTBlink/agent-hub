@@ -357,22 +357,16 @@ it("clears the badge after saving changes to the active profile without changing
 });
 
 it.each([
-  [
-    "/workspace/user-config/hosts/12345678-1234-4234-8234-123456789abc.hosts",
-    "…/hosts/12345678….hosts",
-  ],
-  [
-    "C:\\workspace\\user-config\\hosts\\12345678-1234-4234-8234-123456789abc.hosts",
-    "…/hosts/12345678….hosts",
-  ],
+  "/workspace/user-config/hosts/12345678-1234-4234-8234-123456789abc.hosts",
+  "C:\\workspace\\user-config\\hosts\\12345678-1234-4234-8234-123456789abc.hosts",
 ])(
-  "shortens the profile path while keeping the exact location accessible: %s",
-  async (path, display) => {
+  "shows the full profile path without shortening folders or file names: %s",
+  async (path) => {
     vi.mocked(api.listHostsProfiles).mockResolvedValue([{ ...profile, path }]);
     await render();
     await selectProfile();
     const location = host.querySelector("code[title]");
-    expect(location?.textContent).toBe(display);
+    expect(location?.textContent).toBe(path);
     expect(location?.getAttribute("title")).toBe(path);
     expect(location?.getAttribute("aria-label")).toBe(path);
   },
