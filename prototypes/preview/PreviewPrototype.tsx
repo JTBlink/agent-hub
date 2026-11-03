@@ -1,15 +1,4 @@
-import {
-  Send,
-  Check,
-  Layers,
-  Terminal,
-  Sun,
-  Moon,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { Button } from "./prototypeShared";
-import { variants } from "./previewFormat";
+import { Send, Check, Terminal } from "lucide-react";
 import { PrototypeLibrary } from "./PrototypeLibrary";
 import { PrototypeToolbar } from "./PrototypeToolbar";
 import { PrototypePage } from "./PrototypePage";
@@ -29,8 +18,7 @@ export function PreviewPrototype() {
     source,
     mobile,
     toast,
-    dark,
-    setDark,
+    libraryOpen,
     prompt,
     setPrompt,
     agentLog,
@@ -40,29 +28,17 @@ export function PreviewPrototype() {
     cookieInput,
     active,
     notify,
-    cycleVariant,
     openPanel,
     importFile,
   } = model;
   return (
     <div className={`pv-app variant-${variant}`}>
-      <header className="pv-titlebar" inert={modal !== null}>
-        <div className="pv-brand">
-          <Layers size={18} />
-          <strong>AgentHub</strong>
-          <span>/</span>
-          <span>预览与浏览</span>
-        </div>
-        <span className="pv-prototype-label">交互原型 · 外部操作为演示</span>
-        <Button
-          label={dark ? "浅色主题" : "深色主题"}
-          onClick={() => setDark(!dark)}
-        >
-          {dark ? <Sun size={16} /> : <Moon size={16} />}
-        </Button>
-      </header>
       <div className="pv-shell" inert={modal !== null}>
-        <PrototypeLibrary model={model} />
+        {libraryOpen && (
+          <div className="pv-navigation">
+            <PrototypeLibrary model={model} />
+          </div>
+        )}
         <main className="pv-main">
           <PrototypeToolbar model={model} />
           <div className="pv-workarea">
@@ -150,20 +126,6 @@ export function PreviewPrototype() {
           }}
         >
           <span>{hover.label}</span>
-        </div>
-      )}
-      {import.meta.env.DEV && (
-        <div className="pv-variant-switcher" inert={modal !== null}>
-          <button aria-label="上一个方案" onClick={() => cycleVariant(-1)}>
-            <ChevronLeft size={16} />
-          </button>
-          <span>
-            方案 {variant}
-            <strong>{variants[variant]}</strong>
-          </span>
-          <button aria-label="下一个方案" onClick={() => cycleVariant(1)}>
-            <ChevronRight size={16} />
-          </button>
         </div>
       )}
       {toast && (

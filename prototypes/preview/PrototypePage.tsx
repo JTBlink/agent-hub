@@ -12,6 +12,8 @@ import type { PreviewModel } from "./usePreviewModel";
 export function PrototypePage({ model }: { model: PreviewModel }) {
   const {
     picking,
+    hoveredElementRef,
+    pickElement,
     setHover,
     source,
     sourceLine,
@@ -32,7 +34,6 @@ export function PrototypePage({ model }: { model: PreviewModel }) {
     current,
     openPanel,
     navigate,
-    grab,
   } = model;
   return (
     <div className="pv-browser-column">
@@ -58,9 +59,11 @@ export function PrototypePage({ model }: { model: PreviewModel }) {
                 "[data-pick],h1,h2,h3,p,li,td,pre,blockquote",
               );
               if (!element) {
+                hoveredElementRef.current = null;
                 setHover(null);
                 return;
               }
+              hoveredElementRef.current = element;
               const rect = element.getBoundingClientRect();
               setHover({
                 x: rect.x,
@@ -70,8 +73,14 @@ export function PrototypePage({ model }: { model: PreviewModel }) {
                 label: `${element.tagName.toLowerCase()} · ${Math.round(rect.width)} × ${Math.round(rect.height)}`,
               });
             }}
-            onMouseLeave={() => setHover(null)}
-            onScrollCapture={() => setHover(null)}
+            onMouseLeave={() => {
+              hoveredElementRef.current = null;
+              setHover(null);
+            }}
+            onScrollCapture={() => {
+              hoveredElementRef.current = null;
+              setHover(null);
+            }}
             onClickCapture={(event) => {
               if (!picking) return;
               event.preventDefault();
@@ -81,7 +90,7 @@ export function PrototypePage({ model }: { model: PreviewModel }) {
               ).closest<HTMLElement>(
                 "[data-pick],h1,h2,h3,p,li,td,pre,blockquote",
               );
-              if (element) grab(element);
+              if (element) pickElement(element);
             }}
           >
             {source ? (

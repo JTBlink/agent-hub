@@ -13,10 +13,15 @@ export function usePreviewModel() {
   });
   const [tabs, setTabs] = useState(initialTabs);
   const [closed, setClosed] = useState<PreviewTab[]>([]);
-  const [activeId, setActiveId] = useState(1);
-  const [address, setAddress] = useState(initialTabs[0].url);
+  const [activeId, setActiveId] = useState(variant === "B" ? 2 : 3);
+  const [address, setAddress] = useState(
+    initialTabs[variant === "B" ? 1 : 2].url,
+  );
   const [panel, setPanel] = useState<Panel>("feedback");
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [pickIntent, setPickIntent] = useState<"copy" | "annotate">("annotate");
+  const hoveredElementRef = useRef<HTMLElement | null>(null);
   const [picking, setPicking] = useState(false);
   const [hover, setHover] = useState<{
     x: number;
@@ -55,7 +60,6 @@ export function usePreviewModel() {
     { id: number; name: string; state: string }[]
   >([]);
   const [reloading, setReloading] = useState(false);
-  const [menu, setMenu] = useState(false);
   const [association, setAssociation] = useState("未关联项目");
   useEffect(() => {
     const root = document.documentElement;
@@ -91,7 +95,6 @@ export function usePreviewModel() {
   const openPanel = (next: Panel) => {
     setPanel(next);
     setPanelOpen(true);
-    setMenu(false);
   };
   const updateTab = (patch: Partial<PreviewTab>) =>
     setTabs((previous) =>
@@ -162,6 +165,11 @@ export function usePreviewModel() {
       : value.includes(".") || value.includes(":")
         ? `https://${value}`
         : `https://search.example.invalid/?q=${encodeURIComponent(value)}`;
+    if (active.kind !== "web" && /^(https?:|about:)/.test(url)) {
+      addTab("web", url, "网页演示");
+      notify("已在网页标签打开地址；原型不请求外部网站");
+      return;
+    }
     updateTab({
       url,
       history: [...active.history.slice(0, active.cursor + 1), url],
@@ -235,6 +243,22 @@ export function usePreviewModel() {
         : "已选取，添加修改意见后交给 Agent",
     );
   };
+  const startPicking = (intent: "copy" | "annotate") => {
+    setPicking(!(picking && pickIntent === intent));
+    setPickIntent(intent);
+    setHover(null);
+    hoveredElementRef.current = null;
+  };
+  const copyElement = (element: HTMLElement) => {
+    const style = getComputedStyle(element);
+    void copy(
+      `${active?.title ?? ""}\n${active?.url ?? ""}\n\n${element.outerHTML}\n\nCSS:\ncolor: ${style.color};\nfont: ${style.font};\npadding: ${style.padding};`,
+    );
+  };
+  const pickElement = (element: HTMLElement) => {
+    if (pickIntent === "copy") copyElement(element);
+    else grab(element);
+  };
   const downloadText = (name: string, text: string, type = "text/markdown") => {
     const url = URL.createObjectURL(new Blob([text], { type }));
     const anchor = document.createElement("a");
@@ -284,13 +308,12 @@ export function usePreviewModel() {
       const editing =
         event.target instanceof HTMLElement &&
         !!event.target.closest(
-          "input,textarea,select,[role=combobox],[role=listbox],[role=option],[contenteditable=true]",
+          "input,textarea,select,[role=combobox],[role=listbox],[role=option],[role=menu],[role=menuitem],[contenteditable=true]",
         );
       if (event.key === "Escape") {
         setPicking(false);
         setHover(null);
         setModal(null);
-        setMenu(false);
         setFindOpen(false);
         return;
       }
@@ -313,15 +336,10 @@ export function usePreviewModel() {
         hover &&
         (event.key.toLowerCase() === "c" || event.key.toLowerCase() === "s")
       ) {
-        const element = document
-          .elementFromPoint(
-            hover.x + hover.w / 2,
-            hover.y + Math.min(hover.h / 2, 20),
-          )
-          ?.closest<HTMLElement>("[data-pick],h1,h2,h3,p,li,td,pre,blockquote");
+        const element = hoveredElementRef.current;
         if (element) {
           event.preventDefault();
-          if (event.key.toLowerCase() === "c") void copy(element.outerHTML);
+          if (event.key.toLowerCase() === "c") copyElement(element);
           else grab(element, true);
         }
       }
@@ -342,6 +360,12 @@ export function usePreviewModel() {
   };
 
   return {
+    libraryOpen,
+    setLibraryOpen,
+    pickIntent,
+    startPicking,
+    hoveredElementRef,
+    pickElement,
     variant,
     setVariant,
     tabs,
@@ -416,8 +440,6 @@ export function usePreviewModel() {
     setDownloads,
     reloading,
     setReloading,
-    menu,
-    setMenu,
     association,
     setAssociation,
     content,

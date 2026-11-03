@@ -186,6 +186,8 @@ export function HtmlExamplePage() {
 }
 
 const htmlExampleStyles = `.pv-html-example {
+  width: min(100%, 560px);
+  margin-inline: auto;
   min-height: 100%;
   display: flex;
   flex-direction: column;
