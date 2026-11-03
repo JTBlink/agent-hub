@@ -124,31 +124,20 @@ fn serve(mut stream: TcpStream, documents: &Documents) -> std::io::Result<()> {
     )
 }
 pub(super) fn mime(path: &std::path::Path) -> &'static str {
-    let extension = path
-        .extension()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_ascii_lowercase();
-    match extension.as_str() {
-        "html" | "htm" => "text/html; charset=utf-8",
-        "css" => "text/css; charset=utf-8",
-        "js" | "mjs" => "application/javascript; charset=utf-8",
-        "json" | "map" => "application/json",
-        "svg" => "image/svg+xml",
-        "png" => "image/png",
-        "pdf" => "application/pdf",
-        "csv" => "text/csv",
-        "avif" => "image/avif",
-        "zip" => "application/zip",
-        "jpg" | "jpeg" => "image/jpeg",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "ico" => "image/x-icon",
-        "woff2" => "font/woff2",
-        "woff" => "font/woff",
-        "md" | "markdown" | "txt" => "text/plain; charset=utf-8",
-        _ => "application/octet-stream",
-    }
+    super::file_types::mime(path).unwrap_or_else(|| {
+        match path
+            .extension()
+            .and_then(|value| value.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "woff2" => "font/woff2",
+            "woff" => "font/woff",
+            "zip" => "application/zip",
+            _ => "application/octet-stream",
+        }
+    })
 }
 
 fn respond(

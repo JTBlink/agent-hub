@@ -239,7 +239,7 @@ export function CardActionMenu({
     locate();
   }, [open, locate, setOpenState]);
 
-  if (actions.length === 0) return null;
+  if (actions.length === 0 && !renderContent) return null;
 
   return (
     <>

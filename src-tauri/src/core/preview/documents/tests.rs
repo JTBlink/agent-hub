@@ -73,3 +73,51 @@ fn resolves_encoded_file_names_query_and_fragments_without_escaping_the_grant() 
         );
     }
 }
+
+#[test]
+fn opens_browser_resources_without_text_conversion_and_refuses_edits() {
+    let root = tempfile::tempdir().unwrap();
+    let documents = Documents::default();
+    for extension in [
+        "png", "svg", "pdf", "txt", "json", "xml", "mp3", "mp4", "webm",
+    ] {
+        let path = root.path().join(format!("sample.{extension}"));
+        let bytes = [0xff, 0x00, 0x80, 0x42];
+        std::fs::write(&path, bytes).unwrap();
+        let doc = documents.open(&path).unwrap();
+        assert_eq!(doc.kind, "resource");
+        assert!(doc.content.is_empty());
+        let response =
+            super::super::resource_bridge::load(&documents, &doc.id, &doc.relative_path, "GET");
+        assert_eq!(response.code, 200);
+        assert_eq!(response.content, bytes);
+        assert_ne!(response.mime, "application/octet-stream");
+        assert!(documents.save(&doc.id, "overwrite", &doc.revision).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        std::fs::write(&path, [1, 2, 3]).unwrap();
+        assert_ne!(documents.read(&doc.id).unwrap().revision, doc.revision);
+        documents.close(&doc.id);
+        assert_eq!(
+            super::super::resource_bridge::load(&documents, &doc.id, &doc.relative_path, "GET")
+                .code,
+            404
+        );
+    }
+}
+
+#[test]
+fn refuses_unknown_hidden_and_oversized_browser_resources() {
+    let root = tempfile::tempdir().unwrap();
+    let documents = Documents::default();
+    for name in ["archive.zip", ".hidden.png"] {
+        let path = root.path().join(name);
+        std::fs::write(&path, "data").unwrap();
+        assert!(documents.open(&path).is_err());
+    }
+    let large = root.path().join("large.mp4");
+    std::fs::File::create(&large)
+        .unwrap()
+        .set_len(super::super::resource_bridge::LIMIT + 1)
+        .unwrap();
+    assert!(documents.open(&large).is_err());
+}

@@ -1,0 +1,168 @@
+[
+  {
+    "extensions": ["md", "markdown"],
+    "mime": "text/plain; charset=utf-8",
+    "kind": "markdown"
+  },
+  {
+    "extensions": ["html", "htm"],
+    "mime": "text/html; charset=utf-8",
+    "kind": "html"
+  },
+  {
+    "extensions": ["xhtml"],
+    "mime": "application/xhtml+xml",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["svg"],
+    "mime": "image/svg+xml",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["png", "apng"],
+    "mime": "image/png",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["jpg", "jpeg", "jpe", "jfif"],
+    "mime": "image/jpeg",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["gif"],
+    "mime": "image/gif",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["webp"],
+    "mime": "image/webp",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["avif"],
+    "mime": "image/avif",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["bmp"],
+    "mime": "image/bmp",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["ico"],
+    "mime": "image/x-icon",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["pdf"],
+    "mime": "application/pdf",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["json", "map"],
+    "mime": "application/json",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["xml", "rss", "atom"],
+    "mime": "application/xml",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["css"],
+    "mime": "text/css; charset=utf-8",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["js", "mjs", "cjs"],
+    "mime": "text/javascript; charset=utf-8",
+    "kind": "resource"
+  },
+  {
+    "extensions": [
+      "txt",
+      "text",
+      "log",
+      "csv",
+      "tsv",
+      "yaml",
+      "yml",
+      "toml",
+      "ini",
+      "cfg",
+      "conf",
+      "rs",
+      "ts",
+      "tsx",
+      "jsx",
+      "py",
+      "go",
+      "java",
+      "c",
+      "h",
+      "cpp",
+      "hpp",
+      "sh",
+      "bash",
+      "zsh",
+      "sql",
+      "vue",
+      "svelte",
+      "diff",
+      "patch"
+    ],
+    "mime": "text/plain; charset=utf-8",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["mp3"],
+    "mime": "audio/mpeg",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["wav"],
+    "mime": "audio/wav",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["ogg", "oga", "opus"],
+    "mime": "audio/ogg",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["flac"],
+    "mime": "audio/flac",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["aac"],
+    "mime": "audio/aac",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["m4a"],
+    "mime": "audio/mp4",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["mp4", "m4v"],
+    "mime": "video/mp4",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["webm"],
+    "mime": "video/webm",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["ogv"],
+    "mime": "video/ogg",
+    "kind": "resource"
+  },
+  {
+    "extensions": ["mov"],
+    "mime": "video/quicktime",
+    "kind": "resource"
+  }
+]

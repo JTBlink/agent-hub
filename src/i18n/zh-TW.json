@@ -72,6 +72,7 @@
     "recoveryPending": "統一備份正在還原設定，請稍後重新讀取；如持續出現，請重新啟動應用程式完成還原。"
   },
   "fileTree": {
+    "previewInBrowser": "瀏覽器預覽",
     "actions": "檔案操作",
     "open": "開啟檔案",
     "newFile": "新增檔案…",

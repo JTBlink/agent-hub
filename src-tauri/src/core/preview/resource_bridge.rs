@@ -3,7 +3,7 @@ use super::{assets, documents::Documents};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde_json::{json, Value};
 use std::io::Read;
-const LIMIT: u64 = 16 * 1024 * 1024;
+pub(super) const LIMIT: u64 = 16 * 1024 * 1024;
 pub(super) struct Resource {
     pub code: u16,
     pub mime: &'static str,

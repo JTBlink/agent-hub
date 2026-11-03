@@ -42,9 +42,9 @@ try {
       `(()=>{const f=document.querySelector('#preview');f.style.width='${width}px';f.src=${JSON.stringify(src)};return true})()`,
     );
     await until(
-      `${documentRef}?.location.search === ${JSON.stringify(`?theme=${theme}&language=${language}&text-size=${size}`)} && ${documentRef}?.querySelector('.preview-welcome') && ${documentRef}?.querySelector('.preview-tabs button:last-child')`,
+      `${documentRef}?.location.search === ${JSON.stringify(`?theme=${theme}&language=${language}&text-size=${size}`)} && ${documentRef}?.querySelector('.preview-welcome') && ${documentRef}?.querySelector('.preview-welcome button:last-child')`,
     );
-    await run(`d.querySelector('.preview-tabs button:last-child').click()`);
+    await run(`d.querySelector('.preview-welcome button:last-child').click()`);
     await until(
       `${documentRef}?.querySelectorAll('.preview-markdown h2').length===2`,
     );
@@ -54,6 +54,23 @@ try {
     assert.deepEqual(
       outline.map((item) => item.id),
       ["working-document", "working-document-1"],
+    );
+    await run(
+      `d.querySelector('.preview-addressbar .lucide-terminal').closest('button').click()`,
+    );
+    await until(`${documentRef}?.querySelector('.preview-tool-output')`);
+    await run(`d.querySelector('.preview-inspector header button').click()`);
+    const singleRow = await evaluate(
+      `(()=>{const bar=${documentRef}.querySelector('.preview-addressbar');const r=bar.getBoundingClientRect();return [...bar.children].every(el=>{const b=el.getBoundingClientRect();return b.top>=r.top && b.bottom<=r.bottom})})()`,
+    );
+    assert.ok(singleRow, "Navigation and tools stay in one row");
+    await run(`d.querySelector('.preview-more-trigger').click()`);
+    await until(`${documentRef}?.querySelector('.preview-toolbar button')`);
+    assert.ok(
+      await evaluate(
+        `(()=>{const rows=[...${documentRef}.querySelectorAll('.preview-toolbar button')].map(el=>el.getBoundingClientRect());return rows.every((r,i)=>i===0 || (Math.abs(r.left-rows[0].left)<1 && r.top>=rows[i-1].bottom))})()`,
+      ),
+      "More menu actions form a single column without overlap",
     );
     await run(`d.querySelector('.preview-toolbar button').click()`);
     await until(
@@ -92,8 +109,10 @@ try {
     );
     await run(`d.querySelector('.preview-source-link').click()`);
     await until(`${documentRef}?.querySelector('.cm-editor')`);
+    await run(`d.querySelector('.preview-more-trigger').click()`);
     await run(`d.querySelector('.preview-source-toggle').click()`);
     await until(`${documentRef}?.querySelector('.preview-markdown')`);
+    await run(`d.querySelector('.preview-more-trigger').click()`);
     await run(
       `d.querySelector('.preview-toolbar .lucide-search').closest('button').click()`,
     );

@@ -141,3 +141,64 @@ fn remote_html_loads_authorized_relative_resources_and_honors_revocation_after_r
     );
     host.clear();
 }
+
+#[test]
+#[ignore = "requires installed Chromium; verifies native image and text documents"]
+fn browser_renders_authorized_image_and_text_resources() {
+    use crate::core::preview::{
+        assets::Assets,
+        browser::{Action, Browsers},
+    };
+    use std::time::{Duration, Instant};
+    let root = tempfile::tempdir().unwrap();
+    image::RgbImage::new(2, 3)
+        .save(root.path().join("image.png"))
+        .unwrap();
+    std::fs::write(
+        root.path().join("data.json"),
+        "{\"message\":\"resource-preview\"}",
+    )
+    .unwrap();
+    std::fs::write(root.path().join("notes.txt"), "resource-preview").unwrap();
+    let browsers = Browsers::new(root.path().join("browser"));
+    let assets = Assets::start(browsers.documents.clone()).unwrap();
+    for (name, expression) in [
+        (
+            "image.png",
+            "document.querySelector('img')?.naturalWidth === 2",
+        ),
+        (
+            "data.json",
+            "document.body.innerText.includes('resource-preview')",
+        ),
+        (
+            "notes.txt",
+            "document.body.innerText.includes('resource-preview')",
+        ),
+    ] {
+        let doc = browsers.documents.open(&root.path().join(name)).unwrap();
+        let page = browsers
+            .create("default", &assets.browser_document_url(&doc.id, name))
+            .unwrap();
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            if browsers
+                .action(
+                    &page,
+                    Action::Evaluate {
+                        expression: expression.into(),
+                    },
+                )
+                .unwrap()
+                == true
+            {
+                break;
+            }
+            assert!(Instant::now() < deadline, "browser failed to render {name}");
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        browsers.close(&page).unwrap();
+        browsers.documents.close(&doc.id);
+    }
+    browsers.clear();
+}

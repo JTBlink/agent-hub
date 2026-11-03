@@ -4,6 +4,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
+    io::Read,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -39,20 +40,29 @@ pub(super) fn resource_path(relative: &str) -> String {
 fn revision(text: &str) -> String {
     hex::encode(Sha256::digest(text.as_bytes()))
 }
-fn kind(path: &Path) -> Result<&'static str, AppError> {
-    match path
-        .extension()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_lowercase()
-        .as_str()
-    {
-        "md" | "markdown" => Ok("markdown"),
-        "html" | "htm" => Ok("html"),
-        _ => Err(AppError::invalid_input(
-            "Select a Markdown or HTML document",
-        )),
+fn resource_revision(path: &Path) -> Result<String, AppError> {
+    let mut file = std::fs::File::open(path)?.take(super::resource_bridge::LIMIT + 1);
+    let mut hasher = Sha256::new();
+    let mut count = 0u64;
+    let mut buffer = [0u8; 8192];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        count += read as u64;
+        if count > super::resource_bridge::LIMIT {
+            return Err(AppError::invalid_input(
+                "Preview resource exceeds the 16 MiB limit",
+            ));
+        }
+        hasher.update(&buffer[..read]);
     }
+    Ok(hex::encode(hasher.finalize()))
+}
+fn kind(path: &Path) -> Result<&'static str, AppError> {
+    super::file_types::kind(path)
+        .ok_or_else(|| AppError::invalid_input("Unsupported browser preview file type"))
 }
 impl Documents {
     /// Call only after a native file selection or an authorized project request.
@@ -71,7 +81,18 @@ impl Documents {
         let root = root.canonicalize()?;
         let path = project_worktrees::file_path(&root, relative).map_err(AppError::io)?;
         let kind = kind(&path)?;
-        let content = project_worktrees::read_file(&root, relative).map_err(AppError::io)?;
+        // Resource documents are read-only handles: bytes stay in the capability bridge,
+        // never pass through the text editor or UTF-8 conversion.
+        let content = if kind == "resource" {
+            if !path.is_file() || std::fs::metadata(&path)?.len() > super::resource_bridge::LIMIT {
+                return Err(AppError::invalid_input(
+                    "Preview resource exceeds the 16 MiB limit",
+                ));
+            }
+            String::new()
+        } else {
+            project_worktrees::read_file(&root, relative).map_err(AppError::io)?
+        };
         let id = uuid::Uuid::new_v4().to_string();
         let relative = relative.replace('\\', "/");
         let document = Document {
@@ -83,7 +104,11 @@ impl Documents {
                 .into_owned(),
             relative_path: relative.clone(),
             kind: kind.into(),
-            revision: revision(&content),
+            revision: if kind == "resource" {
+                resource_revision(&path)?
+            } else {
+                revision(&content)
+            },
             content,
         };
         let mut grants = self
@@ -93,7 +118,14 @@ impl Documents {
         if grants.len() >= 100 {
             return Err(AppError::invalid_input("Close unused documents first"));
         }
-        grants.insert(id, Grant { root, relative });
+        grants.insert(id.clone(), Grant { root, relative });
+        drop(grants);
+        if kind == "resource" {
+            if let Err(error) = self.resource(&id, &document.relative_path) {
+                self.close(&id);
+                return Err(error);
+            }
+        }
         Ok(document)
     }
     pub fn open_link(&self, id: &str, href: &str) -> Result<Document, AppError> {
@@ -161,8 +193,12 @@ impl Documents {
     }
     pub fn read(&self, id: &str) -> Result<Document, AppError> {
         let grant = self.grant(id)?;
-        let content =
-            project_worktrees::read_file(&grant.root, &grant.relative).map_err(AppError::io)?;
+        let content = if kind(Path::new(&grant.relative))? == "resource" {
+            let _ = self.resource(id, &grant.relative)?;
+            String::new()
+        } else {
+            project_worktrees::read_file(&grant.root, &grant.relative).map_err(AppError::io)?
+        };
         Ok(Document {
             id: id.into(),
             title: Path::new(&grant.relative)
@@ -171,8 +207,12 @@ impl Documents {
                 .to_string_lossy()
                 .into_owned(),
             kind: kind(Path::new(&grant.relative))?.into(),
-            relative_path: grant.relative,
-            revision: revision(&content),
+            relative_path: grant.relative.clone(),
+            revision: if kind(Path::new(&grant.relative))? == "resource" {
+                resource_revision(&self.resource(id, &grant.relative)?)?
+            } else {
+                revision(&content)
+            },
             content,
         })
     }
@@ -183,6 +223,9 @@ impl Documents {
         expected_revision: &str,
     ) -> Result<Document, AppError> {
         let grant = self.grant(id)?;
+        if kind(Path::new(&grant.relative))? == "resource" {
+            return Err(AppError::invalid_input("Browser resources are read-only"));
+        }
         let current =
             project_worktrees::read_file(&grant.root, &grant.relative).map_err(AppError::io)?;
         if revision(&current) != expected_revision {
@@ -209,7 +252,7 @@ impl Documents {
                     .any(|component| component.as_os_str().to_string_lossy().starts_with('.'))
             })
             || !path.is_file()
-            || std::fs::metadata(&path)?.len() > 16 * 1024 * 1024
+            || std::fs::metadata(&path)?.len() > super::resource_bridge::LIMIT
         {
             return Err(AppError::invalid_input(
                 "Resource is outside the authorized directory or too large",

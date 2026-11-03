@@ -1,7 +1,7 @@
+import { useWorktreeBrowserPreview } from "../../hooks/useWorktreeBrowserPreview";
 import { useState } from "react";
 import { getErrorMessage } from "../../lib/error";
-import { previewApi } from "../../features/preview/api";
-import { queuePreviewDocument } from "../../features/preview/shared/openRequests";
+import { canPreviewDocument } from "../../features/preview/shared/projectPreview";
 import type { ReaderLocation } from "../file-reader/types";
 import { useTranslation } from "react-i18next";
 import { Eye, RefreshCw, Save } from "lucide-react";
@@ -23,18 +23,17 @@ export function WorktreeFilePreview({
 }) {
   const { t } = useTranslation();
   const [previewError, setPreviewError] = useState("");
-  const [openingPreview, setOpeningPreview] = useState(false);
+  const browserPreview = useWorktreeBrowserPreview(
+    projectId,
+    worktreePath,
+    path,
+  );
   const openPreview = async () => {
-    setOpeningPreview(true);
     setPreviewError("");
     try {
-      queuePreviewDocument(
-        await previewApi.openProject(projectId, worktreePath, path),
-      );
+      await browserPreview.open();
     } catch (error) {
       setPreviewError(getErrorMessage(error, t("common.error")));
-    } finally {
-      setOpeningPreview(false);
     }
   };
   const document = useWorktreeDocument(projectId, worktreePath, path);
@@ -82,14 +81,14 @@ export function WorktreeFilePreview({
           maxLength={1024 * 1024}
           actions={
             <div className="flex items-center gap-1 text-xs">
-              {/\.(md|markdown|html|htm)$/i.test(path) && (
+              {canPreviewDocument(path) && (
                 <button
                   type="button"
                   className="app-button-ghost p-1"
                   title={t("preview.openInModule")}
                   aria-label={t("preview.openInModule")}
                   disabled={
-                    openingPreview ||
+                    browserPreview.opening ||
                     document.dirty ||
                     document.saving ||
                     document.loading

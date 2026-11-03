@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ArrowRight,
   RotateCw,
+  Terminal,
   Plus,
   X,
   Globe,
@@ -150,14 +151,6 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
         >
           <UserRound size={16} />
         </button>
-        <button
-          title={t("preview.openDocument")}
-          aria-label={t("preview.openDocument")}
-          disabled={model.busy}
-          onClick={() => void model.openDocument()}
-        >
-          <FolderOpen size={16} />
-        </button>
       </div>
       <div className="preview-addressbar">
         <button
@@ -216,19 +209,28 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
         >
           <ExternalLink size={16} />
         </button>
+        <button
+          aria-label={t("preview.developerTools")}
+          title={t("preview.developerTools")}
+          className={model.panelOpen && model.panel === "tools" ? "active" : ""}
+          onClick={() => showPanel("tools")}
+        >
+          <Terminal size={16} />
+        </button>
+        <PreviewToolbar
+          model={model}
+          findOpen={findOpen}
+          setFindOpen={setFindOpen}
+          showPanel={showPanel}
+        >
+          {active && (
+            <ExecutionLocation
+              execution={active.execution}
+              markdown={active.kind === "markdown"}
+            />
+          )}
+        </PreviewToolbar>
       </div>
-      {active && (
-        <ExecutionLocation
-          execution={active.execution}
-          markdown={active.kind === "markdown"}
-        />
-      )}
-      <PreviewToolbar
-        model={model}
-        findOpen={findOpen}
-        setFindOpen={setFindOpen}
-        showPanel={showPanel}
-      />
       {findOpen && (
         <form
           className="preview-find"

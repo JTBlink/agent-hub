@@ -10,6 +10,7 @@ mod download_transfer;
 pub mod downloads;
 pub mod execution;
 pub mod export;
+mod file_types;
 mod frames;
 mod inventory;
 mod lifecycle;
@@ -154,7 +155,7 @@ impl Preview {
             .as_ref()
             .ok_or_else(|| AppError::internal("Document resource server unavailable"))?
             .document_url(&document.id, &document.relative_path);
-        let url = if document.kind == "html" {
+        let url = if document.kind != "markdown" {
             assets
                 .as_ref()
                 .ok_or_else(|| AppError::internal("Document resource server unavailable"))?

@@ -2,6 +2,9 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { previewApi } from "../../features/preview/api";
+import { queuePreviewDocument } from "../../features/preview/shared/openRequests";
+import { toast } from "sonner";
 import { WorktreeEntryMenu } from "./WorktreeEntryMenu";
 import {
   modifyWorktreeEntry,
@@ -10,6 +13,12 @@ import {
 import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
+vi.mock("../../features/preview/api", () => ({
+  previewApi: { openProject: vi.fn() },
+}));
+vi.mock("../../features/preview/shared/openRequests", () => ({
+  queuePreviewDocument: vi.fn(),
+}));
 vi.mock("../../lib/worktreeApi", () => ({
   modifyWorktreeEntry: vi.fn(),
   revealWorktreeEntry: vi.fn(),
@@ -255,4 +264,53 @@ it("renames directories and blocks unsafe link operations while allowing path co
     menuItems().find((item) => item.textContent === "fileTree.copyPath")
       ?.disabled,
   ).toBe(false);
+});
+
+it("opens supported files in browser preview and blocks unsaved changes", async () => {
+  await render("docs/index.HTML");
+  const document = {
+    id: "preview",
+    kind: "html" as const,
+    title: "index.HTML",
+    path: "/workspace/demo/docs/index.HTML",
+    content: "<h1>Demo</h1>",
+    revision: "saved",
+  };
+  vi.mocked(previewApi.openProject).mockResolvedValue(document);
+  await open();
+  await choose("fileTree.previewInBrowser");
+  expect(previewApi.openProject).toHaveBeenCalledWith(
+    "demo",
+    "/workspace/demo",
+    "docs/index.HTML",
+  );
+  expect(queuePreviewDocument).toHaveBeenCalledWith(document);
+  vi.mocked(previewApi.openProject).mockClear();
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(true);
+  await open();
+  await choose("fileTree.previewInBrowser");
+  expect(previewApi.openProject).not.toHaveBeenCalled();
+  expect(toast.error).toHaveBeenCalledWith("fileTree.saveFirst");
+});
+
+it("omits browser preview for directories and other files and disables links", async () => {
+  for (const [path, directory] of [
+    ["docs.md", true],
+    ["archive.zip", false],
+  ] as const) {
+    await render(path, directory);
+    await open();
+    expect(
+      menuItems().some(
+        (item) => item.textContent === "fileTree.previewInBrowser",
+      ),
+    ).toBe(false);
+    await choose("worktree.refreshFiles");
+  }
+  await render("link.md", false, true);
+  await open();
+  expect(
+    menuItems().find((item) => item.textContent === "fileTree.previewInBrowser")
+      ?.disabled,
+  ).toBe(true);
 });

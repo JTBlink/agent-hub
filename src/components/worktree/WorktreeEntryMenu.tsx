@@ -8,6 +8,7 @@ import {
   Trash2,
   FileCode2,
   RefreshCw,
+  Globe,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -21,6 +22,8 @@ import {
   type WorktreeFileAction,
 } from "../../lib/worktreeApi";
 import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
+import { canPreviewDocument } from "../../features/preview/shared/projectPreview";
+import { useWorktreeBrowserPreview } from "../../hooks/useWorktreeBrowserPreview";
 import { getErrorMessage } from "../../lib/error";
 
 export interface WorktreeEntryChange {
@@ -59,6 +62,11 @@ export function WorktreeEntryMenu({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
+  const browserPreview = useWorktreeBrowserPreview(
+    projectId,
+    worktreePath,
+    path,
+  );
   const folder = directory ? path : path.split("/").slice(0, -1).join("/");
   const begin = (kind: WorktreeFileAction["kind"]) => {
     setName(kind === "rename" ? (path.split("/").at(-1) ?? "") : "");
@@ -123,6 +131,17 @@ export function WorktreeEntryMenu({
             icon: <FileCode2 size={14} />,
             disabled: symlink,
             onSelect: () => onSelect(path),
+          },
+        ]
+      : []),
+    ...(!directory && canPreviewDocument(path)
+      ? [
+          {
+            key: "browser_preview",
+            label: t("fileTree.previewInBrowser"),
+            icon: <Globe size={14} />,
+            disabled: symlink,
+            onSelect: () => void report(browserPreview.open),
           },
         ]
       : []),
@@ -214,7 +233,7 @@ export function WorktreeEntryMenu({
           contextOnly
           actions={actions}
           label={t("fileTree.actions")}
-          disabled={busy}
+          disabled={busy || browserPreview.opening}
         />
       </div>
       {operation === "delete" ? (
@@ -254,7 +273,7 @@ export function WorktreeEntryMenu({
                   data-initial-focus
                   required
                   value={name}
-                  disabled={busy}
+                  disabled={busy || browserPreview.opening}
                   className="app-input w-full"
                   onFocus={(event) => event.currentTarget.select()}
                   onChange={(event) => setName(event.target.value)}
@@ -268,7 +287,7 @@ export function WorktreeEntryMenu({
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || browserPreview.opening}
                   onClick={() => setOperation(undefined)}
                   className="app-button-secondary px-3 py-1.5"
                 >

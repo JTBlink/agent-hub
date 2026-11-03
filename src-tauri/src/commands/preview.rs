@@ -251,11 +251,7 @@ pub async fn preview_request(
 pub async fn preview_pick_document(
     preview: State<'_, Arc<Preview>>,
 ) -> Result<Option<preview::OpenedDocument>, AppError> {
-    let Some(file) = rfd::AsyncFileDialog::new()
-        .add_filter("Preview documents", &["md", "markdown", "html", "htm"])
-        .pick_file()
-        .await
-    else {
+    let Some(file) = rfd::AsyncFileDialog::new().pick_file().await else {
         return Ok(None);
     };
     let path = file.path().to_path_buf();

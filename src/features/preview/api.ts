@@ -19,7 +19,7 @@ export interface PreviewDocument {
   fragment?: string;
   id: string;
   title: string;
-  kind: "markdown" | "html";
+  kind: "markdown" | "html" | "resource";
   content: string;
   revision: string;
   url?: string;

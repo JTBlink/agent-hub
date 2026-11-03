@@ -1,6 +1,6 @@
 import type { ExecutionLocation } from "../api";
 import type { CaptureViewport } from "./captureContext";
-export type PreviewKind = "web" | "html" | "markdown";
+export type PreviewKind = "web" | "html" | "markdown" | "resource";
 export interface PreviewTab {
   id: string;
   kind: PreviewKind;
