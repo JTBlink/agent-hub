@@ -18,18 +18,18 @@ npm run version:check
 
 ## 常用命令
 
-| 目的             | 命令                                           | 结果                                    |
-| ---------------- | ---------------------------------------------- | --------------------------------------- |
-| 桌面开发         | `npm run app:dev`                              | 启动 Vite 与 Tauri 开发窗口             |
-| 只构建前端       | `npm run build`                                | 类型检查后输出到 `dist/`，不生成安装包  |
-| 当前平台安装包   | `npm run app:build`                            | release 安装包及配套 CLI                |
-| macOS 调试应用   | `npm run tauri -- build --debug --bundles app` | debug `.app`                            |
-| 运行 CLI         | `npm run cli -- --help`                        | 编译并运行开发 CLI                      |
-| 编译 CLI         | `npm run cli:build`                            | debug CLI                               |
-| 编译 release CLI | `npm run cli:build -- --release`               | release CLI                             |
-| 安装 CLI         | `npm run cli:install`                          | Cargo 安装 CLI，默认放到 Cargo bin 目录 |
-| 全量应用测试     | `npm run app:test`                             | 前端测试成功后运行 Rust 测试            |
-| 静态检查         | `npm run app:lint`                             | ESLint、Rust 格式和严格 Clippy 检查     |
+| 目的             | 命令                                           | 结果                                           |
+| ---------------- | ---------------------------------------------- | ---------------------------------------------- |
+| 桌面开发         | `npm run app:dev`                              | 自动更新配套 CLI 后启动 Vite 与 Tauri 开发窗口 |
+| 只构建前端       | `npm run build`                                | 类型检查后输出到 `dist/`，不生成安装包         |
+| 当前平台安装包   | `npm run app:build`                            | release 安装包及配套 CLI                       |
+| macOS 调试应用   | `npm run tauri -- build --debug --bundles app` | debug `.app`                                   |
+| 运行 CLI         | `npm run cli -- --help`                        | 编译并运行开发 CLI                             |
+| 编译 CLI         | `npm run cli:build`                            | debug CLI                                      |
+| 编译 release CLI | `npm run cli:build -- --release`               | release CLI                                    |
+| 安装 CLI         | `npm run cli:install`                          | Cargo 安装 CLI，默认放到 Cargo bin 目录        |
+| 全量应用测试     | `npm run app:test`                             | 前端测试成功后运行 Rust 测试                   |
+| 静态检查         | `npm run app:lint`                             | ESLint、Rust 格式和严格 Clippy 检查            |
 
 Unix 也可执行 `./agent-hub.sh build`；Windows 可执行 `agent-hub.bat build`。参数继续传给 Tauri，例如 `npm run app:build -- --bundles dmg`。默认构建本机架构；显式目标通过 `--target <triple>` 指定，并需事先安装相应 Rust target 和原生工具链。
 
@@ -54,6 +54,25 @@ Unix 开发环境只更新 CLI 时可执行：
 ```
 
 这会构建 CLI，将 Cargo bin 目录中的 `agent-hub-cli` 链接到本仓库产物，并更新 `~/.agent-hub/bin/agent-hub-cli` bridge。已有普通文件或指向其他位置的链接会被拒绝覆盖。`AGENT_HUB_CLI_BIN_DIR` 和 `AGENT_HUB_BRIDGE_DIR` 可调整安装位置。此入口固定使用本仓库的 `src-tauri/target/`。
+
+## CLI 自动更新
+
+项目入口编译 CLI 成功后会自动验证并更新 `~/.agent-hub/bin/agent-hub-cli` 与版本戳；已有的本仓库开发软链接也会指向本次产物。首次创建 PATH 软链接仍使用 `install --dev`。普通文件、其他项目的软链接保持原样，不会被自动覆盖。
+
+```bash
+npm run cli:build                       # debug 编译并更新本机 CLI
+npm run cli:build -- --release          # release 编译并更新本机 CLI
+npm run cli -- --help                   # 先编译、更新，再执行 CLI
+./agent-hub.sh dev                      # 更新配套 CLI 后启动 Tauri + React
+```
+
+`npm run app:dev`、`npm run tauri -- dev` 与上述 `dev` 使用同一入口。这里指 dev 启动阶段的配套 CLI 构建；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
+
+构建失败不会发布新副本；验证／发布失败会明确返回失败，dev 不继续启动。跨架构构建不替换本机入口。相同版本号的重编译也会按内容更新，不能只用 `--version` 验收。构建与发布提示输出到 stderr，不混入 CLI JSON 结果。
+
+`AGENT_HUB_BRIDGE_DIR` 可指定发布目录；`AGENT_HUB_CLI_BIN_DIR` 或 `CARGO_HOME/bin` 决定已有开发软链接的位置。桌面启动也会校验并更新其配套副本；开发中应使用匹配的新桌面构建，避免启动旧应用后重新发布旧版 CLI。
+
+开发交付要求见[开发规范](../.agents/skills/rust-dev/references/development.md#cli-自动更新约定)。
 
 ## 自动清理与缓存复用
 

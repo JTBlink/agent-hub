@@ -50,6 +50,9 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 构建入口内部使用：验证并发布当前 CLI。
+    #[command(hide = true)]
+    PublishCliBridge,
     /// 管理完整 Hosts 方案，显式读取或写入系统 Hosts。
     #[command(alias = "host")]
     Hosts(hosts_cli::HostsArgs),
@@ -863,6 +866,11 @@ fn main() {
 }
 
 fn run(cli: Cli) -> anyhow::Result<()> {
+    if matches!(cli.command, Commands::PublishCliBridge) {
+        let path = app_lib::core::cli_bridge::publish_current(env!("CARGO_PKG_VERSION"))?;
+        print_json(&serde_json::json!({"ok":true,"path":path}), cli.json);
+        return Ok(());
+    }
     if let Commands::Preview(args) = &cli.command {
         if cli.skills_root.is_some() {
             bail!("Preview uses the running desktop app, not the skills repository");
@@ -915,6 +923,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
+        Commands::PublishCliBridge => unreachable!("handled before opening the store"),
         Commands::Hosts(_) => unreachable!("handled before opening the store"),
         Commands::Preview(args) => preview_cli::run(&args, cli.json),
         Commands::Repo(args) => run_repo(args, &store, cli.json),

@@ -82,12 +82,18 @@ describe("primary application packaging", () => {
       return { status: 0 };
     };
     expect(
-      prepareCli("universal-apple-darwin", true, runner, {
-        mkdirSync() {},
-        copyFileSync(from, to) {
-          copies.push([from, to]);
+      prepareCli(
+        "universal-apple-darwin",
+        true,
+        runner,
+        {
+          mkdirSync() {},
+          copyFileSync(from, to) {
+            copies.push([from, to]);
+          },
         },
-      }),
+        () => {},
+      ),
     ).toBe(0);
     expect(copies).toHaveLength(3);
     expect(copies[0][1]).toMatch(/agent-hub-cli-aarch64-apple-darwin$/);
@@ -116,4 +122,61 @@ describe("primary application packaging", () => {
       calls.some(([, args]) => args.some((arg) => arg.endsWith("tauri.js"))),
     ).toBe(false);
   });
+});
+
+it.each(["dev", "build"])(
+  "updates the CLI before starting Tauri %s",
+  (mode) => {
+    const events = [];
+    const runner = (command, args) => {
+      if (args.some((arg) => arg.endsWith("tauri.js"))) events.push("tauri");
+      if (command === "cargo") events.push("compile-cli");
+      return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+    };
+    const prepare = (target, release, run) =>
+      prepareCli(
+        target,
+        release,
+        run,
+        { mkdirSync() {}, copyFileSync() {} },
+        () => events.push("publish-cli"),
+      );
+    expect(main([mode], runner, prepare, () => {})).toBe(0);
+    expect(events).toEqual(["compile-cli", "publish-cli", "tauri"]);
+  },
+);
+it("does not launch dev when publishing the compiled CLI fails", () => {
+  const events = [];
+  const runner = (_command, args) => {
+    if (args.some((arg) => arg.endsWith("tauri.js"))) events.push("tauri");
+    return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+  };
+  const prepare = (target, release, run) =>
+    prepareCli(
+      target,
+      release,
+      run,
+      { mkdirSync() {}, copyFileSync() {} },
+      () => {
+        throw new Error("publish refused");
+      },
+    );
+  expect(main(["dev"], runner, prepare)).toBe(1);
+  expect(events).toEqual([]);
+});
+
+it("keeps the desktop dev sibling CLI current before publishing", () => {
+  const copies = [];
+  expect(
+    prepareCli(
+      "aarch64-apple-darwin",
+      false,
+      () => ({ status: 0 }),
+      { mkdirSync() {}, copyFileSync: (from, to) => copies.push([from, to]) },
+      () => {},
+      "aarch64-apple-darwin",
+    ),
+  ).toBe(0);
+  expect(copies[1][0]).toMatch(/aarch64-apple-darwin\/debug\/agent-hub-cli$/);
+  expect(copies[1][1]).toMatch(/target\/debug\/agent-hub-cli$/);
 });

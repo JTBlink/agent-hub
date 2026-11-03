@@ -247,7 +247,7 @@ export function pruneBuildCache({
 export function cleanupBuildCache(options) {
   try {
     const paths = pruneBuildCache(options);
-    console.log(
+    (options?.reportToStderr ? console.error : console.log)(
       `构建缓存：${options?.dryRun ? "可清理" : "已清理"} ${paths.length} 项历史产物，保留最新构建和共享依赖。`,
     );
     return 0;

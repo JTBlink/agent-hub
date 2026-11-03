@@ -11,6 +11,7 @@ describe("CLI build and install", () => {
       expect(
         main([mode], {
           cargo: "cargo",
+          publish: () => {},
           env: {},
           runner: (command, args, options) => {
             calls.push({ command, args, options });
@@ -22,7 +23,11 @@ describe("CLI build and install", () => {
       expect(calls[0].options.env.CARGO_TARGET_DIR).toBe(cargoTargetDir());
       expect(calls[0].options.cwd).toBeTruthy();
       expect(cleanups).toEqual([
-        { before: expect.any(Number), targetDir: cargoTargetDir() },
+        {
+          before: expect.any(Number),
+          targetDir: cargoTargetDir(),
+          ...(mode === "cli" ? { reportToStderr: true } : {}),
+        },
       ]);
     },
   );
@@ -33,6 +38,7 @@ describe("CLI build and install", () => {
       const cleanups = [];
       main(["install", ...args], {
         cargo: "cargo",
+        publish: () => {},
         env: { CARGO_TARGET_DIR: "other-cache" },
         runner: (_command, _args, options) => {
           expect(options.env.CARGO_TARGET_DIR).toMatch(/custom-cache$/);
@@ -47,11 +53,8 @@ describe("CLI build and install", () => {
   it("keeps application arguments separate from Cargo options", () => {
     const plan = cliBuildPlan("cli", ["--target-dir", "application-data"], {});
     expect(plan.targetDir).toBe(cargoTargetDir());
-    expect(plan.args.slice(-3)).toEqual([
-      "--",
-      "--target-dir",
-      "application-data",
-    ]);
+    expect(plan.runArgs).toEqual(["--target-dir", "application-data"]);
+    expect(plan.args).not.toContain("application-data");
   });
 
   it.each([
@@ -63,6 +66,7 @@ describe("CLI build and install", () => {
     expect(
       main(["build"], {
         cargo: "cargo",
+        publish: () => {},
         runner: () => result,
         cleanup: () => {
           cleaned = true;
@@ -81,4 +85,52 @@ describe("CLI build and install", () => {
       }),
     ).toBe(2);
   });
+});
+
+it.each(["build", "cli", "install"])(
+  "publishes after a successful %s before cleanup",
+  (mode) => {
+    const events = [];
+    expect(
+      main([mode], {
+        cargo: "cargo",
+        env: {},
+        runner: (command) => {
+          events.push(command === "cargo" ? "compile" : "execute-cli");
+          return { status: 0 };
+        },
+        publish: ({ profile }) => events.push(`publish-${profile}`),
+        cleanup: () => events.push("cleanup"),
+      }),
+    ).toBe(0);
+    expect(events).toEqual([
+      "compile",
+      `publish-${mode === "install" ? "release" : "debug"}`,
+      ...(mode === "cli" ? ["execute-cli"] : []),
+      "cleanup",
+    ]);
+  },
+);
+it("does not publish a failed build or hide failed publication", () => {
+  const events = [];
+  expect(
+    main(["build"], {
+      cargo: "cargo",
+      runner: () => ({ status: 17 }),
+      publish: () => events.push("publish"),
+      cleanup: () => events.push("cleanup"),
+    }),
+  ).toBe(17);
+  expect(events).toEqual([]);
+  expect(
+    main(["build"], {
+      cargo: "cargo",
+      runner: () => ({ status: 0 }),
+      publish: () => {
+        throw new Error("bridge is locked");
+      },
+      cleanup: () => events.push("cleanup"),
+    }),
+  ).toBe(1);
+  expect(events).toEqual([]);
 });

@@ -3,7 +3,7 @@ name: rust-dev
 description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、性能、复用设计、测试、兼容性和提交要求。
 license: MIT
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # 项目开发规范
@@ -39,6 +39,7 @@ Skill 版本以 frontmatter 的 `metadata.version` 为准，独立于应用 `VER
 1. 确认需求、验收条件和影响边界。先找现有组件、纯函数、bindings、适配器和安全校验，再设计变更。
 2. 按职责实现最小完整改动。按[复用设计与性能规则](references/coding-standards.md#复用设计)检查现有实现、数据来源、执行成本和资源生命周期；变更跨端契约时检查注册、DTO、bindings 和调用方。
 3. 用可观察行为验证验收条件。缺陷修复增加回归测试；UI 检查主题、缩放、键盘与异步反馈；仅文档改动检查结构、链接与规则一致性。
-4. 回写对应 GitHub Issue 的结果和里程碑；按实际影响决定是否记录 `CHANGELOG.md`。汇报修改结果、执行过的验证以及尚未完成的验收。创建 skill 或完成实现本身不授权提交、部署或发布。
+4. 涉及 CLI 或共享 Rust core 的变更，按[开发指南：CLI 自动更新约定](references/development.md#cli-自动更新约定)通过项目编译入口更新本机 CLI；涉及桌面行为时启动新构建并验证运行实例，不能用编译成功代替生效验收。
+5. 回写对应 GitHub Issue 的结果和里程碑；按实际影响决定是否记录 `CHANGELOG.md`。汇报修改结果、执行过的验证以及尚未完成的验收。创建 skill 或完成实现本身不授权提交、部署或发布。
 
 审查时分别判断 **Standards**（规范、性能、复用设计、安全、兼容性）和 **Spec**（需求与验收行为）。按[审查证据要求](references/coding-standards.md#审查与交付证据)指出具体文件、影响和修复建议，不用“已遵循规范”代替证据。

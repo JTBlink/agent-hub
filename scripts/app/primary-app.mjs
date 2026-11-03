@@ -2,6 +2,7 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { publishBuiltCli } from "./cli-publish.mjs";
 import { ROOT_DIR, run, runNpm } from "./build.mjs";
 import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
@@ -23,6 +24,8 @@ export function prepareCli(
   release,
   runner = spawnSync,
   filesystem = { copyFileSync, mkdirSync },
+  publish = publishBuiltCli,
+  host,
 ) {
   const targetDir = cargoTargetDir();
   const output = resolve(ROOT_DIR, "src-tauri/binaries");
@@ -77,6 +80,21 @@ export function prepareCli(
     filesystem.mkdirSync(universalDir, { recursive: true });
     filesystem.copyFileSync(fatBinary, resolve(universalDir, "agent-hub-cli"));
   }
+  if (host && target === host) {
+    // Tauri dev's desktop binary lives in the native profile directory. Keep
+    // its sibling CLI current so startup cannot republish an older artifact.
+    filesystem.mkdirSync(resolve(targetDir, profile), { recursive: true });
+    filesystem.copyFileSync(
+      resolve(targetDir, target, profile, `agent-hub-cli${suffix}`),
+      resolve(targetDir, profile, `agent-hub-cli${suffix}`),
+    );
+  }
+  try {
+    publish({ targetDir, target, profile, runner });
+  } catch (error) {
+    console.error(error.message);
+    return 1;
+  }
   return 0;
 }
 
@@ -107,6 +125,9 @@ export function main(
       requestedTarget(args, process.env.CARGO_BUILD_TARGET || host),
       command === "build" && !args.includes("--debug"),
       runner,
+      undefined,
+      undefined,
+      host,
     );
     if (status !== 0) return status;
     args = [...args, "--config", "src-tauri/tauri.cli.conf.json"];

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { builtCliPath, publishBuiltCli } from "./cli-publish.mjs";
 import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 
 function canRun(command, args = ["--version"]) {
@@ -63,7 +64,7 @@ export function cliBuildPlan(mode, extraArgs, env = process.env) {
   ];
   const args =
     mode === "cli"
-      ? ["run", "--quiet", ...baseArgs, "--", ...extraArgs]
+      ? ["build", "--quiet", ...baseArgs]
       : mode === "build"
         ? ["build", ...baseArgs, ...extraArgs]
         : [
@@ -76,7 +77,7 @@ export function cliBuildPlan(mode, extraArgs, env = process.env) {
             "--force",
             ...extraArgs,
           ];
-  return { args, targetDir };
+  return { args, targetDir, ...(mode === "cli" ? { runArgs: extraArgs } : {}) };
 }
 
 export function main(
@@ -85,6 +86,7 @@ export function main(
     runner = spawnSync,
     cleanup = cleanupBuildCache,
     cargo,
+    publish = publishBuiltCli,
     env = process.env,
   } = {},
 ) {
@@ -113,7 +115,54 @@ export function main(
     return 1;
   }
   const status = result.status ?? 1;
-  if (status === 0) cleanup({ before, targetDir: plan.targetDir });
+  if (status === 0) {
+    const option = (name) => {
+      const index = extraArgs.indexOf(name);
+      return (
+        extraArgs
+          .find((arg) => arg.startsWith(`${name}=`))
+          ?.slice(name.length + 1) ??
+        (index >= 0 ? extraArgs[index + 1] : undefined)
+      );
+    };
+    const requestedProfile =
+      mode === "cli"
+        ? "debug"
+        : (option("--profile") ??
+          (extraArgs.includes("--release") ||
+          (mode === "install" && !extraArgs.includes("--debug"))
+            ? "release"
+            : "debug"));
+    const artifact = {
+      targetDir: plan.targetDir,
+      target:
+        (mode === "cli" ? undefined : option("--target")) ??
+        env.CARGO_BUILD_TARGET,
+      profile: requestedProfile === "dev" ? "debug" : requestedProfile,
+    };
+    try {
+      publish({ ...artifact, runner, env });
+    } catch (error) {
+      console.error(error.message);
+      return 1;
+    }
+    if (mode === "cli") {
+      const execution = runner(builtCliPath(artifact), plan.runArgs, {
+        cwd: ROOT,
+        stdio: "inherit",
+        env,
+      });
+      if (execution.error || execution.status !== 0) {
+        if (execution.error) console.error(execution.error.message);
+        return execution.status ?? 1;
+      }
+    }
+    cleanup({
+      before,
+      targetDir: plan.targetDir,
+      ...(mode === "cli" ? { reportToStderr: true } : {}),
+    });
+  }
   return status;
 }
 

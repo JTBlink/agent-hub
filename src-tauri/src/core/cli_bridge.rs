@@ -45,8 +45,11 @@ const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
 /// Where the bridge lives. Deliberately the home directory rather than
 /// `central_repo::base_dir()`: the library can be relocated to anywhere the
 /// user likes, and the skill has to be able to name this path without asking.
+/// Development build hooks may explicitly override it with AGENT_HUB_BRIDGE_DIR.
 pub fn bridge_dir() -> PathBuf {
-    central_repo::home_base_dir().join("bin")
+    std::env::var_os("AGENT_HUB_BRIDGE_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| central_repo::home_base_dir().join("bin"))
 }
 
 /// Whether `name` is one of the files the bridge keeps in [`bridge_dir`].
@@ -175,7 +178,7 @@ fn verify(path: &Path, expected_version: &str) -> Result<()> {
 /// logged, and the caller carries on. The app must start whether or not an
 /// agent can drive it.
 pub fn ensure_bridge(app_version: &str) {
-    match ensure_bridge_inner(app_version) {
+    match publish_current(app_version) {
         Ok(path) => log::info!("cli bridge: ready at {}", path.display()),
         Err(e) => {
             // A missing sidecar or failed content check must not leave a
@@ -188,7 +191,8 @@ pub fn ensure_bridge(app_version: &str) {
     }
 }
 
-fn ensure_bridge_inner(app_version: &str) -> Result<PathBuf> {
+/// Publish the CLI next to this executable, including development build artifacts.
+pub fn publish_current(app_version: &str) -> Result<PathBuf> {
     let source = bundled_cli()?;
     ensure_bridge_from(&source, app_version)
 }
