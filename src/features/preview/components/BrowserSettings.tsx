@@ -1,17 +1,41 @@
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { ToggleSwitch } from "../../../components/ToggleSwitch";
+import { resetDeletedProfile } from "../shared/session";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { previewApi, type BrowserProfile } from "../api";
 import type { PreviewModel } from "../usePreviewWorkspace";
 import { ThemedSelect } from "../../../components/ThemedSelect";
-export function BrowserSettings({ model }: { model: PreviewModel }) {
+const emptyProfile = (): BrowserProfile => ({
+  id: crypto.randomUUID(),
+  name: "",
+  executable: "",
+  endpoint: "",
+  proxy: "",
+  ephemeral: false,
+});
+export function BrowserSettings({
+  model,
+}: {
+  model: Pick<
+    PreviewModel,
+    | "active"
+    | "info"
+    | "pageId"
+    | "report"
+    | "searchEngine"
+    | "setInfo"
+    | "setNotice"
+    | "setPanelOpen"
+    | "setSearchEngine"
+    | "setSession"
+    | "setViewport"
+    | "viewport"
+  >;
+}) {
   const { t } = useTranslation();
-  const [profile, setProfile] = useState<BrowserProfile>({
-    id: crypto.randomUUID(),
-    name: "",
-    executable: "",
-    endpoint: "",
-    proxy: "",
-  });
+  const [profile, setProfile] = useState<BrowserProfile>(emptyProfile);
+  const [deleting, setDeleting] = useState<BrowserProfile | null>(null);
   const [busy, setBusy] = useState(false);
   const [cookieText, setCookieText] = useState("");
   const [cookiePreview, setCookiePreview] = useState<{
@@ -31,13 +55,7 @@ export function BrowserSettings({ model }: { model: PreviewModel }) {
       });
       model.setInfo(await previewApi.info());
       model.setNotice(t("preview.saved"));
-      setProfile({
-        id: crypto.randomUUID(),
-        name: "",
-        executable: "",
-        endpoint: "",
-        proxy: "",
-      });
+      setProfile(emptyProfile());
     } catch (error) {
       model.report(error);
     } finally {
@@ -105,6 +123,9 @@ export function BrowserSettings({ model }: { model: PreviewModel }) {
           <option value="duckduckgo">DuckDuckGo</option>
         </ThemedSelect>
         <h3>{t("preview.profiles")}</h3>
+        <button disabled={busy} onClick={() => setProfile(emptyProfile())}>
+          {t("preview.newProfile")}
+        </button>
         <p>{t("preview.profileHint")}</p>
         {model.info?.profiles.map((item) => (
           <button
@@ -112,7 +133,13 @@ export function BrowserSettings({ model }: { model: PreviewModel }) {
             key={item.id}
             onClick={() => setProfile(item)}
           >
-            <strong>{item.name}</strong>
+            <strong>
+              {item.id === "guest" && item.name === "Guest"
+                ? t("preview.guestProfile")
+                : item.name}
+              {item.deleting ? ` · ${t("preview.profileDeletionPending")}` : ""}
+              {item.ephemeral ? ` · ${t("preview.temporaryProfile")}` : ""}
+            </strong>
             <small>
               {item.endpoint
                 ? t("preview.remoteStream")
@@ -122,53 +149,82 @@ export function BrowserSettings({ model }: { model: PreviewModel }) {
             </small>
           </button>
         ))}
-        <label>
-          {t("preview.profileName")}
-          <input
-            value={profile.name}
-            onChange={(event) =>
-              setProfile({ ...profile, name: event.target.value })
-            }
-          />
-        </label>
-        <label>
-          {t("preview.runtimePath")}
-          <input
-            placeholder={model.info?.executable ?? t("preview.autoDetect")}
-            value={profile.executable ?? ""}
-            onChange={(event) =>
-              setProfile({ ...profile, executable: event.target.value })
-            }
-          />
-        </label>
-        <label>
-          {t("preview.remoteEndpoint")}
-          <input
-            placeholder="http://127.0.0.1:9222"
-            value={profile.endpoint ?? ""}
-            onChange={(event) =>
-              setProfile({ ...profile, endpoint: event.target.value })
-            }
-          />
-        </label>
-        <p>{t("preview.remoteHint")}</p>
-        <label>
-          {t("preview.proxy")}
-          <input
-            placeholder="socks5://127.0.0.1:1080"
-            value={profile.proxy ?? ""}
-            onChange={(event) =>
-              setProfile({ ...profile, proxy: event.target.value })
-            }
-          />
-        </label>
-        <button
-          className="app-button-primary"
-          disabled={busy || !profile.name.trim()}
-          onClick={() => void save()}
-        >
-          {t("common.save")}
-        </button>
+        <fieldset disabled={busy || profile.deleting}>
+          <label className="flex items-center justify-between gap-2">
+            <span>{t("preview.temporaryProfile")}</span>
+            <ToggleSwitch
+              checked={!!profile.ephemeral}
+              disabled={busy || profile.id === "guest"}
+              title={t("preview.temporaryProfile")}
+              onChange={() =>
+                setProfile({ ...profile, ephemeral: !profile.ephemeral })
+              }
+            />
+          </label>
+          <p>{t("preview.guestHint")}</p>
+          <label>
+            {t("preview.profileName")}
+            <input
+              value={profile.name}
+              onChange={(event) =>
+                setProfile({ ...profile, name: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            {t("preview.runtimePath")}
+            <input
+              placeholder={model.info?.executable ?? t("preview.autoDetect")}
+              value={profile.executable ?? ""}
+              onChange={(event) =>
+                setProfile({ ...profile, executable: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            {t("preview.remoteEndpoint")}
+            <input
+              placeholder="http://127.0.0.1:9222"
+              value={profile.endpoint ?? ""}
+              onChange={(event) =>
+                setProfile({ ...profile, endpoint: event.target.value })
+              }
+            />
+          </label>
+          <p>{t("preview.remoteHint")}</p>
+          <label>
+            {t("preview.proxy")}
+            <input
+              placeholder="socks5://127.0.0.1:1080"
+              value={profile.proxy ?? ""}
+              onChange={(event) =>
+                setProfile({ ...profile, proxy: event.target.value })
+              }
+            />
+          </label>
+          <button
+            className="app-button-primary"
+            disabled={busy || !profile.name.trim()}
+            onClick={() => void save()}
+          >
+            {t("common.save")}
+          </button>
+        </fieldset>
+        {profile.id !== "default" &&
+          profile.id !== "guest" &&
+          model.info?.profiles.some((item) => item.id === profile.id) && (
+            <button
+              className="text-danger"
+              disabled={busy}
+              onClick={() => setDeleting(profile)}
+            >
+              {t(
+                profile.deleting
+                  ? "preview.retryProfileDeletion"
+                  : "preview.deleteProfile",
+              )}
+            </button>
+          )}
         <p>{t("preview.profileCloseHint")}</p>
         <hr />
         <h3>{t("preview.cookies")}</h3>
@@ -285,6 +341,38 @@ export function BrowserSettings({ model }: { model: PreviewModel }) {
           </label>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleting !== null}
+        title={t("preview.deleteProfile")}
+        message={t("preview.deleteProfileMessage", { name: deleting?.name })}
+        onClose={() => setDeleting(null)}
+        onConfirm={async () => {
+          if (!deleting) return false;
+          try {
+            await previewApi.deleteProfile(deleting.id);
+            model.setInfo(await previewApi.info());
+            model.setSession((previous) =>
+              resetDeletedProfile(previous, deleting.id),
+            );
+            setProfile(emptyProfile());
+            setDeleting(null);
+            model.setNotice(t("preview.profileDeleted"));
+          } catch (error) {
+            model.report(error);
+            try {
+              const info = await previewApi.info();
+              model.setInfo(info);
+              setProfile(
+                info.profiles.find((profile) => profile.id === deleting.id) ??
+                  emptyProfile(),
+              );
+            } catch {
+              /* Preserve the selected configuration when status cannot be verified. */
+            }
+            return false;
+          }
+        }}
+      />
     </aside>
   );
 }

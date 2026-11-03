@@ -11,6 +11,7 @@ import {
   Plus,
   X,
   Globe,
+  UserRound,
   FileText,
   FileCode2,
   MousePointer2,
@@ -143,6 +144,13 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
           <Plus size={16} />
         </button>
         <button
+          title={t("preview.newGuestTab")}
+          aria-label={t("preview.newGuestTab")}
+          onClick={() => model.openWeb("about:blank", "guest")}
+        >
+          <UserRound size={16} />
+        </button>
+        <button
           title={t("preview.openDocument")}
           aria-label={t("preview.openDocument")}
           disabled={model.busy}
@@ -226,8 +234,14 @@ export function PreviewWorkspace({ shown }: { shown: boolean }) {
               { id: "default", name: t("preview.defaultProfile") },
             ]
           ).map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.name}
+            <option
+              key={profile.id}
+              value={profile.id}
+              disabled={profile.deleting}
+            >
+              {profile.id === "guest" && profile.name === "Guest"
+                ? t("preview.guestProfile")
+                : profile.name}
             </option>
           ))}
         </ThemedSelect>

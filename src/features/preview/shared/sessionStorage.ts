@@ -1,4 +1,5 @@
 import { createSession, openPreview, type PreviewSession } from "./session";
+import type { BrowserProfile } from "../api";
 const KEY = "agent-hub.preview.tabs.v1";
 function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -11,7 +12,8 @@ export function loadPreviewSession(): PreviewSession {
       if (
         !record(item) ||
         typeof item.address !== "string" ||
-        typeof item.title !== "string"
+        typeof item.title !== "string" ||
+        item.profile === "guest"
       )
         return state;
       const url = new URL(item.address);
@@ -31,13 +33,23 @@ export function loadPreviewSession(): PreviewSession {
     return createSession();
   }
 }
-export function savePreviewSession(state: PreviewSession) {
+export function savePreviewSession(
+  state: PreviewSession,
+  profiles: BrowserProfile[] = [],
+) {
   try {
     localStorage.setItem(
       KEY,
       JSON.stringify(
         state.tabs
-          .filter((tab) => tab.kind === "web")
+          .filter(
+            (tab) =>
+              tab.kind === "web" &&
+              tab.profile !== "guest" &&
+              !profiles.some(
+                (profile) => profile.id === tab.profile && profile.ephemeral,
+              ),
+          )
           .map(({ address, title, profile }) => ({ address, title, profile })),
       ),
     );

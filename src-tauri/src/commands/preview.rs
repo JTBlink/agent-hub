@@ -47,6 +47,9 @@ pub enum PreviewRequest {
     Close {
         id: String,
     },
+    DeleteProfile {
+        id: String,
+    },
     SaveProfile {
         profile: BrowserProfile,
     },
@@ -111,6 +114,10 @@ pub async fn preview_request(
             PreviewRequest::Action { id, action } => return preview.browsers.action(&id, action),
             PreviewRequest::Close { id } => {
                 preview.browsers.close(&id)?;
+                return Ok(Value::Null);
+            }
+            PreviewRequest::DeleteProfile { id } => {
+                preview.browsers.delete_profile(&id)?;
                 return Ok(Value::Null);
             }
             PreviewRequest::SaveProfile { profile } => {

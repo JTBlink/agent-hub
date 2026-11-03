@@ -2717,6 +2717,16 @@
     "tabLimit": "You can open up to 12 preview tabs.",
     "annotationLimit": "Annotation limit reached. Export and clear some notes first.",
     "openInModule": "Open in Preview & Browser",
-    "matchPosition": "{{current}} of {{count}} matches"
+    "matchPosition": "{{current}} of {{count}} matches",
+    "guestProfile": "Guest",
+    "temporaryProfile": "Temporary profile",
+    "newGuestTab": "New guest tab",
+    "newProfile": "New profile",
+    "guestHint": "Temporary profiles use isolated data directories. Login data is removed when the browser session retires; temporary tabs are not restored.",
+    "deleteProfile": "Delete profile",
+    "deleteProfileMessage": "Delete settings, cookies, cache and site storage for “{{name}}”. Downloaded files are managed separately in Downloads.",
+    "profileDeleted": "Profile deleted",
+    "profileDeletionPending": "Deletion pending",
+    "retryProfileDeletion": "Retry profile deletion"
   }
 }

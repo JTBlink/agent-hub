@@ -75,6 +75,14 @@ agent-hub-cli preview close '<page-id>'
 | `preview screenshot <page-id> <output> [--full]`         | 保存视口或完整页面 PNG                                |
 | `preview close <page-id>`                                | 关闭指定页面                                          |
 
+内置访客配置可直接用于临时浏览：
+
+```bash
+agent-hub-cli --json preview open 'https://example.invalid' --profile guest
+```
+
+访客与自定义临时配置使用独立临时资料目录，浏览进程回收后清理登录数据，不恢复临时标签。多个同配置页面在本次浏览会话中共享存储。
+
 配置标识可从已有页面的 `profile` 字段取得。CLI 不创建或修改登录配置；同一配置的页面共用站点存储，不同配置相互隔离。
 
 ## 辅助检查

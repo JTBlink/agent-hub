@@ -2714,6 +2714,16 @@
     "tabLimit": "最多同时打开 12 个预览标签。",
     "annotationLimit": "批注已达上限，请先导出并清理。",
     "openInModule": "在预览与浏览中打开",
-    "matchPosition": "{{current}} / {{count}} 个匹配"
+    "matchPosition": "{{current}} / {{count}} 个匹配",
+    "guestProfile": "访客",
+    "temporaryProfile": "临时登录配置",
+    "newGuestTab": "新建访客网页",
+    "newProfile": "新建登录配置",
+    "guestHint": "临时配置使用独立资料目录；浏览会话回收后清理登录数据，不恢复临时标签。",
+    "deleteProfile": "删除登录配置",
+    "deleteProfileMessage": "删除“{{name}}”的配置、Cookie、缓存和站点存储。下载文件由下载列表管理。",
+    "profileDeleted": "登录配置已删除",
+    "profileDeletionPending": "等待删除",
+    "retryProfileDeletion": "重试删除配置"
   }
 }

@@ -5,6 +5,8 @@ export interface BrowserProfile {
   executable?: string | null;
   endpoint?: string | null;
   proxy?: string | null;
+  ephemeral?: boolean;
+  deleting?: boolean;
 }
 export interface BrowserInfo {
   executable: string | null;
@@ -126,6 +128,7 @@ export const previewApi = {
   action: <T = unknown>(id: string, action: BrowserAction) =>
     request<T>({ kind: "action", id, action }),
   close: (id: string) => request<void>({ kind: "close", id }),
+  deleteProfile: (id: string) => request<void>({ kind: "delete_profile", id }),
   profile: (profile: BrowserProfile) =>
     request<void>({ kind: "save_profile", profile }),
   upload: (id: string, revision: string, token: string, multiple: boolean) =>

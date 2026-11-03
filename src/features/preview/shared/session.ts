@@ -205,3 +205,24 @@ export function attachScreenshot(
     ),
   };
 }
+
+export function resetDeletedProfile(
+  state: PreviewSession,
+  id: string,
+): PreviewSession {
+  const affected = new Set(
+    [...state.tabs, ...state.closed]
+      .filter((tab) => tab.profile === id)
+      .map((tab) => tab.id),
+  );
+  const reset = (tab: PreviewTab) =>
+    affected.has(tab.id)
+      ? { ...tab, profile: "default", revision: crypto.randomUUID() }
+      : tab;
+  return {
+    ...state,
+    tabs: state.tabs.map(reset),
+    closed: state.closed.map(reset),
+    annotations: state.annotations.filter((note) => !affected.has(note.tabId)),
+  };
+}

@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     path::PathBuf,
     process::Command,
     sync::{Arc, Mutex},
@@ -213,46 +212,6 @@ impl Browsers {
             profiles: self.profiles()?,
         })
     }
-    pub fn profiles(&self) -> Result<Vec<BrowserProfile>, AppError> {
-        let path = self.root.join("profiles.json");
-        if !path.exists() {
-            return Ok(vec![BrowserProfile::default()]);
-        }
-        let bytes = fs::read(path)?;
-        if bytes.len() > 128 * 1024 {
-            return Err(AppError::invalid_input(
-                "Profile configuration exceeds limit",
-            ));
-        }
-        serde_json::from_slice(&bytes).map_err(AppError::io)
-    }
-    pub fn save_profile(&self, profile: BrowserProfile) -> Result<(), AppError> {
-        runtime::validate_profile(&profile)?;
-        let state = self
-            .state
-            .lock()
-            .map_err(|_| AppError::internal("Browser state unavailable"))?;
-        if state.runtimes.contains_key(&profile.id)
-            || state.pending.values().any(|id| id == &profile.id)
-        {
-            return Err(AppError::invalid_input(
-                "Close the profile's pages and wait for downloads before changing its settings",
-            ));
-        }
-        let mut profiles = self.profiles()?;
-        profiles.retain(|existing| existing.id != profile.id);
-        if profiles.len() >= 20 {
-            return Err(AppError::invalid_input("Profile limit reached"));
-        }
-        profiles.push(profile);
-        fs::create_dir_all(&self.root)?;
-        let mut file = tempfile::NamedTempFile::new_in(&self.root)?;
-        use std::io::Write;
-        file.write_all(&serde_json::to_vec_pretty(&profiles).map_err(AppError::io)?)?;
-        file.persist(self.root.join("profiles.json"))
-            .map_err(|error| AppError::io(error.error))?;
-        Ok(())
-    }
     pub fn create(&self, profile: &str, url: &str) -> Result<String, AppError> {
         self.create_page(profile, url, false, None)
     }
@@ -321,20 +280,22 @@ impl Browsers {
                 .into_iter()
                 .find(|item| item.id == profile)
                 .ok_or_else(|| AppError::not_found("Profile unavailable"))?;
-            let created = Runtime::start(&self.root, &settings, |command: &mut Command| {
-                let mut state = self
-                    .state
-                    .lock()
-                    .map_err(|_| AppError::internal("Browser state unavailable"))?;
-                if state.closing {
-                    return Err(AppError::cancelled("Preview is shutting down"));
-                }
-                let child = Arc::new(Mutex::new(OwnedChild(
-                    command.spawn().map_err(AppError::io)?,
-                )));
-                state.processes.insert(profile.into(), child.clone());
-                Ok(child)
-            });
+            let created =
+                Runtime::start(&self.root, &settings, |command: &mut Command, temporary| {
+                    let mut state = self
+                        .state
+                        .lock()
+                        .map_err(|_| AppError::internal("Browser state unavailable"))?;
+                    if state.closing {
+                        return Err(AppError::cancelled("Preview is shutting down"));
+                    }
+                    let child = Arc::new(Mutex::new(OwnedChild {
+                        process: command.spawn().map_err(AppError::io)?,
+                        _temporary_profile: temporary,
+                    }));
+                    state.processes.insert(profile.into(), child.clone());
+                    Ok(child)
+                });
             let runtime = match created {
                 Ok(runtime) => Arc::new(Mutex::new(runtime)),
                 Err(error) => {
@@ -345,8 +306,8 @@ impl Browsers {
                         .and_then(|mut state| state.processes.remove(profile));
                     if let Some(child) = child {
                         if let Ok(mut child) = child.lock() {
-                            let _ = child.0.kill();
-                            let _ = child.0.wait();
+                            let _ = child.process.kill();
+                            let _ = child.process.wait();
                         }
                     }
                     return Err(error);
@@ -660,8 +621,8 @@ impl Browsers {
         for (runtime, process) in retired {
             if let Some(process) = process {
                 if let Ok(mut process) = process.lock() {
-                    let _ = process.0.kill();
-                    let _ = process.0.wait();
+                    let _ = process.process.kill();
+                    let _ = process.process.wait();
                 }
             }
             drop(runtime);
@@ -681,8 +642,8 @@ impl Browsers {
         };
         for child in detached.1.values() {
             if let Ok(mut child) = child.lock() {
-                let _ = child.0.kill();
-                let _ = child.0.wait();
+                let _ = child.process.kill();
+                let _ = child.process.wait();
             }
         }
         drop(detached);

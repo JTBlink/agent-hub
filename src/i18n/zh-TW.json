@@ -2674,6 +2674,16 @@
     "tabLimit": "最多同時開啟 12 個預覽分頁。",
     "annotationLimit": "批註已達上限，請先匯出並清理。",
     "openInModule": "在預覽與瀏覽中開啟",
-    "matchPosition": "{{current}} / {{count}} 個符合項目"
+    "matchPosition": "{{current}} / {{count}} 個符合項目",
+    "guestProfile": "訪客",
+    "temporaryProfile": "臨時登入設定",
+    "newGuestTab": "新增訪客網頁",
+    "newProfile": "新增登入設定",
+    "guestHint": "臨時設定使用獨立資料目錄；瀏覽工作階段回收後清理登入資料，不還原臨時分頁。",
+    "deleteProfile": "刪除登入設定",
+    "deleteProfileMessage": "刪除「{{name}}」的設定、Cookie、快取與網站儲存空間。下載檔案由下載清單管理。",
+    "profileDeleted": "登入設定已刪除",
+    "profileDeletionPending": "等待刪除",
+    "retryProfileDeletion": "重試刪除設定"
   }
 }

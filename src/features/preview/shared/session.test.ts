@@ -8,6 +8,7 @@ import {
   annotationsForPage,
   closePreview,
   restorePreview,
+  resetDeletedProfile,
 } from "./session";
 
 describe("independent preview sessions", () => {
@@ -56,4 +57,26 @@ it("rejects attaching a late screenshot after navigation", () => {
   expect(() => attachScreenshot(state, "note", "late")).toThrow(
     "PREVIEW_STALE_CAPTURE",
   );
+});
+
+it("resets removed profile references and discards their obsolete feedback", () => {
+  let state = openPreview(createSession(), {
+    id: "tab",
+    kind: "web",
+    address: "about:blank",
+    title: "Tab",
+    profile: "custom",
+  });
+  state = addAnnotation(state, {
+    id: "note",
+    tabId: "tab",
+    revision: state.tabs[0].revision,
+    selector: "p",
+    text: "Text",
+    note: "",
+  });
+  state = closePreview(state, "tab");
+  state = resetDeletedProfile(state, "custom");
+  expect(state.closed[0].profile).toBe("default");
+  expect(state.annotations).toEqual([]);
 });

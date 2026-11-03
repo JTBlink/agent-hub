@@ -20,6 +20,20 @@ pub struct BrowserProfile {
     pub endpoint: Option<String>,
     #[serde(default)]
     pub proxy: Option<String>,
+    #[serde(default)]
+    pub ephemeral: bool,
+    #[serde(default)]
+    pub deleting: bool,
+}
+impl BrowserProfile {
+    pub fn guest() -> Self {
+        Self {
+            id: "guest".into(),
+            name: "Guest".into(),
+            ephemeral: true,
+            ..Self::default()
+        }
+    }
 }
 impl Default for BrowserProfile {
     fn default() -> Self {
@@ -29,14 +43,19 @@ impl Default for BrowserProfile {
             executable: None,
             endpoint: None,
             proxy: None,
+            ephemeral: false,
+            deleting: false,
         }
     }
 }
-pub(super) struct OwnedChild(pub(super) Child);
+pub(super) struct OwnedChild {
+    pub process: Child,
+    pub _temporary_profile: Option<tempfile::TempDir>,
+}
 impl Drop for OwnedChild {
     fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
+        let _ = self.process.kill();
+        let _ = self.process.wait();
     }
 }
 pub struct Runtime {
@@ -50,9 +69,17 @@ impl Runtime {
     pub(super) fn start(
         root: &Path,
         profile: &BrowserProfile,
-        spawn: impl FnOnce(&mut Command) -> Result<Arc<Mutex<OwnedChild>>, AppError>,
+        spawn: impl FnOnce(
+            &mut Command,
+            Option<tempfile::TempDir>,
+        ) -> Result<Arc<Mutex<OwnedChild>>, AppError>,
     ) -> Result<Self, AppError> {
         validate_profile(profile)?;
+        if profile.deleting {
+            return Err(AppError::invalid_input(
+                "Profile deletion is pending; retry it in browser settings",
+            ));
+        }
         let (child, endpoint) = if let Some(endpoint) = &profile.endpoint {
             (None, validate_endpoint(endpoint)?)
         } else {
@@ -68,7 +95,19 @@ impl Runtime {
                 }
                 _ => discover().ok_or_else(|| AppError::not_found("PREVIEW_BROWSER_NOT_FOUND"))?,
             };
-            let directory = root.join("profiles").join(&profile.id);
+            let temporary = if profile.ephemeral {
+                Some(
+                    tempfile::Builder::new()
+                        .prefix("agent-hub-guest-")
+                        .tempdir()?,
+                )
+            } else {
+                None
+            };
+            let directory = temporary
+                .as_ref()
+                .map(|directory| directory.path().to_path_buf())
+                .unwrap_or_else(|| root.join("profiles").join(&profile.id));
             fs::create_dir_all(&directory)?;
             #[cfg(unix)]
             {
@@ -106,13 +145,13 @@ impl Runtime {
             }
             #[cfg(test)]
             command.args(["--use-mock-keychain", "--password-store=basic"]);
-            let child = spawn(&mut command)?;
+            let child = spawn(&mut command, temporary)?;
             let started = Instant::now();
             let port = loop {
                 if child
                     .lock()
                     .map_err(|_| AppError::internal("Browser process unavailable"))?
-                    .0
+                    .process
                     .try_wait()?
                     .is_some()
                 {
@@ -130,8 +169,8 @@ impl Runtime {
                     }
                 }
                 if started.elapsed() > Duration::from_secs(15) {
-                    let _ = child.lock().map(|mut child| child.0.kill());
-                    let _ = child.lock().map(|mut child| child.0.wait());
+                    let _ = child.lock().map(|mut child| child.process.kill());
+                    let _ = child.lock().map(|mut child| child.process.wait());
                     return Err(AppError::network("Browser startup timed out"));
                 }
                 std::thread::sleep(Duration::from_millis(50));
@@ -142,8 +181,8 @@ impl Runtime {
             Ok(value) => value,
             Err(error) => {
                 if let Some(child) = child {
-                    let _ = child.lock().map(|mut child| child.0.kill());
-                    let _ = child.lock().map(|mut child| child.0.wait());
+                    let _ = child.lock().map(|mut child| child.process.kill());
+                    let _ = child.lock().map(|mut child| child.process.wait());
                 }
                 return Err(error);
             }
@@ -164,8 +203,8 @@ impl Runtime {
             Ok(value) => value,
             Err(error) => {
                 if let Some(child) = child {
-                    let _ = child.lock().map(|mut child| child.0.kill());
-                    let _ = child.lock().map(|mut child| child.0.wait());
+                    let _ = child.lock().map(|mut child| child.process.kill());
+                    let _ = child.lock().map(|mut child| child.process.wait());
                 }
                 return Err(error);
             }
@@ -300,8 +339,15 @@ pub fn validate_profile(profile: &BrowserProfile) -> Result<(), AppError> {
             .id
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        || ["default", "guest"]
+            .iter()
+            .any(|reserved| profile.id.eq_ignore_ascii_case(reserved) && profile.id != *reserved)
         || profile.name.trim().is_empty()
         || profile.name.len() > 100
+        || profile
+            .executable
+            .as_ref()
+            .is_some_and(|path| path.len() > 8192)
     {
         return Err(AppError::invalid_input("Invalid browser profile"));
     }
@@ -311,6 +357,8 @@ pub fn validate_profile(profile: &BrowserProfile) -> Result<(), AppError> {
         if !matches!(url.scheme(), "http" | "https" | "socks5")
             || url.host_str().is_none()
             || proxy.len() > 2048
+            || !url.username().is_empty()
+            || url.password().is_some()
         {
             return Err(AppError::invalid_input("Invalid browser proxy"));
         }

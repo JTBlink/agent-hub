@@ -145,7 +145,7 @@ export function usePreviewWorkspace() {
       disposed = true;
     };
   }, [t]);
-  useEffect(() => savePreviewSession(session), [session]);
+  useEffect(() => savePreviewSession(session, info?.profiles), [session, info]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 4000);
@@ -161,7 +161,7 @@ export function usePreviewWorkspace() {
     setSession((previous) => ({ ...previous, activeId: id }));
     resetView();
   };
-  const openWeb = (address = "about:blank") => {
+  const openWeb = (address = "about:blank", profile?: string) => {
     try {
       setSession((previous) =>
         openPreview(previous, {
@@ -169,8 +169,10 @@ export function usePreviewWorkspace() {
           address,
           title: address,
           profile:
+            profile ??
             previous.tabs.find((tab) => tab.id === previous.activeId)
-              ?.profile ?? "default",
+              ?.profile ??
+            "default",
         }),
       );
       resetView();
