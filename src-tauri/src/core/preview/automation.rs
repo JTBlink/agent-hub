@@ -29,6 +29,7 @@ enum Request {
     Open { url: String, profile: String },
     Action { id: String, action: Action },
     Close { id: String },
+    Reconnect { id: String },
     Frame { id: String },
 }
 pub struct Automation {
@@ -186,6 +187,7 @@ fn serve(mut stream: TcpStream, token: &str, browsers: &Browsers) -> std::io::Re
             .and_then(|value| serde_json::to_value(value).map_err(AppError::io)),
         Ok(Request::Open { url, profile }) => browsers.create(&profile, &url).map(Value::String),
         Ok(Request::Action { id, action }) => browsers.action(&id, action),
+        Ok(Request::Reconnect { id }) => browsers.reconnect(&id).map(|_| Value::Null),
         Ok(Request::Close { id }) => browsers.close(&id).map(|_| Value::Null),
         Ok(Request::Frame { id }) => browsers
             .frame(&id)

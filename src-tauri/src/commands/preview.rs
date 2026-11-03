@@ -69,6 +69,9 @@ pub enum PreviewRequest {
     Close {
         id: String,
     },
+    Reconnect {
+        id: String,
+    },
     DeleteProfile {
         id: String,
     },
@@ -156,6 +159,10 @@ pub async fn preview_request(
             }
             PreviewRequest::CancelDownload { profile, id } => {
                 preview.browsers.cancel_download(&profile, &id)?;
+                return Ok(Value::Null);
+            }
+            PreviewRequest::Reconnect { id } => {
+                preview.browsers.reconnect(&id)?;
                 return Ok(Value::Null);
             }
             PreviewRequest::List => serde_json::to_value(preview.browsers.list()?),

@@ -60,7 +60,7 @@ impl Browsers {
                 if !(240..=3840).contains(&width) || !(200..=2160).contains(&height) { return Err(AppError::invalid_input("Viewport dimensions are outside the supported range")); }
                 page.cdp.expected_size = Some((width,height));
                 page.cdp.call("Emulation.setDeviceMetricsOverride", json!({"width":width,"height":height,"deviceScaleFactor":1,"mobile":mobile}))?;
-                page.width = width; page.height = height;page.cdp.frame=None;
+                page.width = width; page.height = height;page.mobile=mobile;page.cdp.frame=None;
                 Ok(Value::Null)
             }
             Action::Mouse { x, y, event, button, delta_x, delta_y } => {

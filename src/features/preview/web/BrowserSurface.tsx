@@ -1,3 +1,4 @@
+import { previewError } from "../shared/previewError";
 import { latestDispatcher } from "../shared/latestDispatcher";
 import { PagePrompts } from "./PagePrompts";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
@@ -30,6 +31,7 @@ export function BrowserSurface(props: Props) {
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [hover, setHover] = useState<PickedElement | null>(null);
   const [error, setError] = useState("");
+  const [recovering, setRecovering] = useState(false);
   const [retry, setRetry] = useState(0);
   const [size, setSize] = useState({ width: 1200, height: 800 });
   const container = useRef<HTMLDivElement>(null);
@@ -50,25 +52,45 @@ export function BrowserSurface(props: Props) {
   useEffect(() => {
     pickEpoch.current += 1;
     motion.current?.clear();
-  }, [props.active, props.picking, props.address, frame?.info.revision, id]);
+  }, [
+    props.active,
+    props.picking,
+    props.address,
+    frame?.info.revision,
+    id,
+    error,
+    recovering,
+  ]);
   const refresh = useRef<(() => void) | null>(null);
   const fastUntil = useRef(0);
   const report = useEffectEvent((message: string) => props.onError(message));
   const ready = useEffectEvent((value: string) => props.onReady(value));
   const publish = useEffectEvent((value: BrowserFrame) => props.onFrame(value));
   const send = (action: BrowserAction) => {
-    if (!id) return;
+    if (!id || error || recovering) return;
     const page = id;
+    const epoch = pickEpoch.current;
     queue.current = queue.current
       .then(async () => {
-        if (ownedId.current !== page) return;
+        if (ownedId.current !== page || epoch !== pickEpoch.current) return;
         await previewApi.action(page, action);
         fastUntil.current = Date.now() + 1000;
         refresh.current?.();
       })
-      .catch((error: unknown) =>
-        props.onError(getErrorMessage(error, t("common.error"))),
-      );
+      .catch((error: unknown) => {
+        if (epoch !== pickEpoch.current) return;
+        pickEpoch.current += 1;
+        motion.current?.clear();
+        setHover(null);
+        const message = getErrorMessage(error, t("common.error"));
+        const rejected =
+          typeof error === "object" &&
+          error !== null &&
+          "kind" in error &&
+          ["invalid_input", "cancelled"].includes(String(error.kind));
+        if (!rejected) setError(message);
+        props.onError(message);
+      });
     return queue.current;
   };
   const deliverMotion = useEffectEvent(
@@ -79,7 +101,14 @@ export function BrowserSurface(props: Props) {
       picking: boolean;
       epoch: number;
     }) => {
-      if (!props.active || value.epoch !== pickEpoch.current || !id) return;
+      if (
+        !props.active ||
+        error ||
+        recovering ||
+        value.epoch !== pickEpoch.current ||
+        !id
+      )
+        return;
       if (value.picking) {
         try {
           const picked = await previewApi.action<PickedElement>(id, {
@@ -148,7 +177,7 @@ export function BrowserSurface(props: Props) {
     [],
   );
   useEffect(() => {
-    if (!props.active || !id) return;
+    if (!props.active || !id || recovering) return;
     let disposed = false;
     let timer: number | undefined;
     let since: number | undefined;
@@ -191,7 +220,7 @@ export function BrowserSurface(props: Props) {
       disposed = true;
       clearTimeout(timer);
     };
-  }, [props.active, id, retry, t]);
+  }, [props.active, id, retry, recovering, t]);
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -224,7 +253,10 @@ export function BrowserSurface(props: Props) {
       container.current?.focus({ preventScroll: true });
   }, [props.active, props.picking]);
   const currentHover =
-    hover?.revision === frame?.info.revision && hover?.url === frame?.info.url
+    !error &&
+    !recovering &&
+    hover?.revision === frame?.info.revision &&
+    hover?.url === frame?.info.url
       ? hover
       : null;
   const imageWidth = frame?.info.width ?? width,
@@ -251,6 +283,25 @@ export function BrowserSurface(props: Props) {
         ),
       ),
     };
+  };
+  const reconnect = async () => {
+    if (!id || recovering) return;
+    const page = id;
+    pickEpoch.current += 1;
+    motion.current?.clear();
+    setHover(null);
+    setRecovering(true);
+    try {
+      await previewApi.reconnect(page);
+      if (ownedId.current !== page) return;
+      setFrame(null);
+      setError("");
+      setRetry((value) => value + 1);
+    } catch (error: unknown) {
+      if (ownedId.current === page) setError(previewError(error, t));
+    } finally {
+      if (ownedId.current === page) setRecovering(false);
+    }
   };
   return (
     <div
@@ -307,24 +358,36 @@ export function BrowserSurface(props: Props) {
         }
       }}
     >
-      {id && frame && (
+      {id && frame && !error && !recovering && (
         <PagePrompts id={id} info={frame.info} onError={props.onError} />
       )}
       {error && (
         <div role="alert" className="preview-browser-error">
+          {id && <p>{t("preview.connectionUnverified")}</p>}
           <p>
             {error.includes("PREVIEW_BROWSER_NOT_FOUND")
               ? t("preview.missingBrowser")
               : error}
           </p>
+          {id && <p>{t("preview.reconnectHint")}</p>}
           <button
             className="app-button-ghost"
+            disabled={recovering}
             onClick={() => {
-              setError("");
-              setRetry((value) => value + 1);
+              if (id) void reconnect();
+              else {
+                setError("");
+                setRetry((value) => value + 1);
+              }
             }}
           >
-            {t("common.retry")}
+            {t(
+              recovering
+                ? "preview.reconnecting"
+                : id
+                  ? "preview.reconnect"
+                  : "common.retry",
+            )}
           </button>
         </div>
       )}
@@ -338,6 +401,7 @@ export function BrowserSurface(props: Props) {
           className={`preview-browser-image ${props.picking ? "picking" : ""}`}
           style={{ width: imageWidth * scale, height: imageHeight * scale }}
           onPointerDown={(event) => {
+            if (error || recovering) return;
             event.preventDefault();
             keyboard.current?.focus({ preventScroll: true });
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -350,6 +414,7 @@ export function BrowserSurface(props: Props) {
               });
           }}
           onPointerUp={(event) => {
+            if (error || recovering) return;
             const point = coordinates(event);
             if (props.picking && id) {
               const epoch = pickEpoch.current;
@@ -371,6 +436,7 @@ export function BrowserSurface(props: Props) {
               });
           }}
           onPointerMove={(event) => {
+            if (error || recovering) return;
             motion.current?.submit({
               ...coordinates(event),
               button:
@@ -385,6 +451,7 @@ export function BrowserSurface(props: Props) {
           }}
           onContextMenu={(event) => event.preventDefault()}
           onWheel={(event) => {
+            if (error || recovering) return;
             event.stopPropagation();
             send({
               kind: "mouse",
@@ -427,13 +494,19 @@ export function BrowserSurface(props: Props) {
             spellCheck={false}
             onKeyDown={(event) => {
               event.stopPropagation();
+              if (error || recovering) {
+                event.preventDefault();
+                return;
+              }
               if (event.nativeEvent.isComposing) return;
               const modifier = event.ctrlKey || event.metaKey;
               if (modifier && event.key.toLowerCase() === "v") {
                 event.preventDefault();
+                const epoch = pickEpoch.current;
                 void readText()
                   .then((text) => {
-                    if (text) send({ kind: "text", text });
+                    if (text && epoch === pickEpoch.current)
+                      send({ kind: "text", text });
                   })
                   .catch((error: unknown) =>
                     props.onError(getErrorMessage(error, t("common.error"))),

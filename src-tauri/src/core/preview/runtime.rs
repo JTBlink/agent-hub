@@ -177,8 +177,8 @@ impl Runtime {
             };
             (Some(child), format!("http://127.0.0.1:{port}"))
         };
-        let version = match json_endpoint(&endpoint, "/json/version") {
-            Ok(value) => value,
+        let cdp = match connect_control(&endpoint) {
+            Ok(cdp) => cdp,
             Err(error) => {
                 if let Some(child) = child {
                     let _ = child.lock().map(|mut child| child.process.kill());
@@ -187,21 +187,6 @@ impl Runtime {
                 return Err(error);
             }
         };
-        let address = version["webSocketDebuggerUrl"]
-            .as_str()
-            .ok_or_else(|| AppError::network("Browser does not expose CDP"))?;
-        let control = control_address(&endpoint, address)?;
-        let mut cdp = match Cdp::connect(&control) {
-            Ok(value) => value,
-            Err(error) => {
-                if let Some(child) = child {
-                    let _ = child.lock().map(|mut child| child.process.kill());
-                    let _ = child.lock().map(|mut child| child.process.wait());
-                }
-                return Err(error);
-            }
-        };
-        cdp.set_timeout(Duration::from_secs(2))?;
         let mut runtime = Self {
             child,
             cdp,
@@ -408,4 +393,15 @@ pub(super) fn control_address(endpoint: &str, advertised: &str) -> Result<String
         .set_port(endpoint.port())
         .map_err(|_| AppError::invalid_input("Invalid browser control port"))?;
     Ok(address.into())
+}
+
+/// Connect through the validated endpoint, including SSH-forwarded authorities.
+pub(super) fn connect_control(endpoint: &str) -> Result<Cdp, AppError> {
+    let version = json_endpoint(&validate_endpoint(endpoint)?, "/json/version")?;
+    let advertised = version["webSocketDebuggerUrl"]
+        .as_str()
+        .ok_or_else(|| AppError::network("Browser does not expose CDP"))?;
+    let mut cdp = Cdp::connect(&control_address(endpoint, advertised)?)?;
+    cdp.set_timeout(Duration::from_secs(2))?;
+    Ok(cdp)
 }

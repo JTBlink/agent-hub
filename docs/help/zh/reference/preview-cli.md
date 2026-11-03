@@ -68,6 +68,7 @@ agent-hub-cli preview close '<page-id>'
 | `preview list`                                           | 列出网页 ID、标题、地址和登录配置标识                 |
 | `preview open <url> [--profile <id>]`                    | 在指定配置中打开 HTTP／HTTPS 网页，默认使用 `default` |
 | `preview navigate <page-id> <url>`                       | 在已有页面导航                                        |
+| `preview reconnect <page-id>`                            | 恢复现有页面的控制和画面连接，不重放操作              |
 | `preview snapshot <page-id>`                             | 返回页面文本、文档标识和可操作元素引用                |
 | `preview click <page-id> <ref>`                          | 点击当前文档中的快照元素                              |
 | `preview fill <page-id> <ref> <value>`                   | 填写输入框、选择框或可编辑元素                        |
@@ -102,6 +103,7 @@ agent-hub-cli --json preview evaluate '<page-id>' '({ width: innerWidth, height:
 
 - 未连接应用：先确认 AgentHub 正在运行，再用 `preview list` 验证连接。
 - 浏览器不可用：在界面检查运行时路径和配置，不切换到日常浏览器的用户资料目录。
+- 控制连接中断：恢复回环端点或 SSH 转发后运行 `agent-hub-cli preview reconnect <page-id>`。此命令连接原页面，不导航、不重放输入；重新抓取 snapshot 后继续操作。原页面或浏览进程已退出时会报错，需要显式重新打开页面。
 - 引用过期：重新 `snapshot`，从新快照中选择元素。导航、刷新、SPA 路由或片段变更后旧引用失效；返回原地址也需要新快照。每页最多保留最近八批引用。
 - 请求超时或连接断开：操作结果可能不明；先查看 `list`、界面或新快照，再决定下一步，不自动重发点击、填写或导航。
 - 远程宿主无法访问：保留不可验证状态，不能把断连当作远端页面或进程已经退出。

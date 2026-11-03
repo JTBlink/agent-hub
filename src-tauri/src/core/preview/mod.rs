@@ -10,6 +10,7 @@ mod frames;
 pub mod packets;
 mod page_actions;
 mod profiles;
+mod recovery;
 pub mod runtime;
 pub mod uploads;
 use super::error::AppError;

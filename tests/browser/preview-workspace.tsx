@@ -1,3 +1,4 @@
+import { BrowserSurface } from "../../src/features/preview/web/BrowserSurface";
 import { DownloadsPanel } from "../../src/features/preview/components/DownloadsPanel";
 import type { PreviewDownload } from "../../src/features/preview/api";
 // Production components with synthetic IPC. Native browser behavior is tested in Rust.
@@ -9,12 +10,19 @@ import { PreviewWorkspace } from "../../src/features/preview/PreviewWorkspace";
 import { applyTextSize } from "../../src/lib/textScale";
 import "../../src/index.css";
 const parameters = new URLSearchParams(location.search);
+// Background browser acceptance tabs model the active production surface for polling.
+if (parameters.get("view") === "recovery")
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => false,
+  });
 document.documentElement.classList.toggle(
   "dark",
   parameters.get("theme") !== "light",
 );
 const content =
   "# Preview workspace\n\n## Working document\n\nSelect this paragraph to keep its source location.\nThis continuation belongs to the same paragraph.\n\n```md\n## Code is not an outline heading\n```\n\n## Working document\n\n| Feature | State |\n| --- | --- |\n| Markdown | Ready |\n";
+let disconnected = true;
 let downloads: PreviewDownload[] = [
   {
     id: "completed",
@@ -55,6 +63,30 @@ mockIPC((command, args) => {
     const request = args?.request;
     if (!request || typeof request !== "object" || !("kind" in request))
       return null;
+    if (request.kind === "frame" && parameters.get("view") === "recovery") {
+      if (disconnected) throw new Error("Disconnected");
+      return {
+        version: 2,
+        image:
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a5sAAAAASUVORK5CYII=",
+        events: [],
+        info: {
+          url: "https://example.invalid",
+          title: "Recovery fixture",
+          revision: "connected",
+          ready: "complete",
+          width: 800,
+          height: 600,
+          scrollX: 0,
+          scrollY: 0,
+          dpr: 1,
+        },
+      };
+    }
+    if (request.kind === "reconnect") {
+      disconnected = false;
+      return null;
+    }
     if (request.kind === "info")
       return {
         executable: null,
@@ -114,6 +146,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <div style={{ height: "calc(100vh / var(--app-scale, 1))", display: "flex" }}>
     {parameters.get("view") === "cookies" ? (
       <CookieFixture />
+    ) : parameters.get("view") === "recovery" ? (
+      <section className="preview-workspace">
+        <BrowserSurface
+          tabId="recovery"
+          initialId="fixture-page"
+          active
+          address="https://example.invalid"
+          profile="default"
+          picking={false}
+          viewport={null}
+          onReady={() => {}}
+          onFrame={() => {}}
+          onCapture={() => {}}
+          onError={() => {}}
+        />
+      </section>
     ) : parameters.get("view") === "downloads" ? (
       <section className="preview-workspace">
         <DownloadsPanel model={{ report: () => {}, setPanelOpen: () => {} }} />

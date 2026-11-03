@@ -1,8 +1,5 @@
 use super::policy::{MAX_BYTES, MAX_COOKIES};
-use crate::core::{
-    error::AppError,
-    preview::{cdp::Cdp, runtime},
-};
+use crate::core::{error::AppError, preview::runtime};
 use serde_json::{json, Value};
 use std::{io::Read, path::Path};
 pub fn file(path: &Path, format: &str) -> Result<Value, AppError> {
@@ -154,13 +151,8 @@ fn firefox(path: &Path) -> Result<Value, AppError> {
     Ok(json!(cookies))
 }
 pub fn browser(endpoint: &str) -> Result<Value, AppError> {
-    let endpoint = runtime::validate_endpoint(endpoint)?;
-    let version = runtime::json_endpoint(&endpoint, "/json/version")?;
-    let advertised = version["webSocketDebuggerUrl"]
-        .as_str()
-        .ok_or_else(|| AppError::invalid_input("Browser does not expose CDP"))?;
-    let address = runtime::control_address(&endpoint, advertised)?;
-    let mut cdp = Cdp::connect(&address)?;
+    let mut cdp = runtime::connect_control(endpoint)?;
+    cdp.set_timeout(std::time::Duration::from_secs(12))?;
     let value = cdp.call("Storage.getCookies", json!({}))?;
     Ok(value["cookies"].clone())
 }

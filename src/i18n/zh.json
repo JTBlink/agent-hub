@@ -2608,6 +2608,11 @@
     "replacing": "正在替换…"
   },
   "preview": {
+    "reconnect": "重新连接当前页面",
+    "reconnecting": "正在重新连接…",
+    "connectionUnverified": "连接中断，显示的是最后画面，当前页面状态无法核验。",
+    "reconnectHint": "重新连接保留现有页面，不重新导航，也不重放输入或提交操作。",
+    "pageGone": "原页面或浏览会话已不存在，请重新打开页面。",
     "removeDownload": "移除记录",
     "removeDownloadHint": "仅移除下载记录，保留已下载文件",
     "downloadUnverified": "连接中断，当前下载状态无法核验。请恢复连接后再确认进度。",

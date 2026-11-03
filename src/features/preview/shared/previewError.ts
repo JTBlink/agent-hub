@@ -1,5 +1,6 @@
 import { getErrorMessage } from "../../../lib/error";
 const messages: Record<string, string> = {
+  PREVIEW_PAGE_GONE: "preview.pageGone",
   PREVIEW_TAB_LIMIT: "preview.tabLimit",
   PREVIEW_ANNOTATION_LIMIT: "preview.annotationLimit",
   PREVIEW_CAPTURE_LIMIT: "preview.captureLimit",

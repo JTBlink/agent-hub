@@ -165,6 +165,7 @@ export const previewApi = {
     request<BrowserFrame>({ kind: "frame", id, since }),
   action: <T = unknown>(id: string, action: BrowserAction) =>
     request<T>({ kind: "action", id, action }),
+  reconnect: (id: string) => request<void>({ kind: "reconnect", id }),
   close: (id: string) => request<void>({ kind: "close", id }),
   deleteProfile: (id: string) => request<void>({ kind: "delete_profile", id }),
   profile: (profile: BrowserProfile) =>

@@ -2611,6 +2611,11 @@
     "replacing": "Replacing…"
   },
   "preview": {
+    "reconnect": "Reconnect this page",
+    "reconnecting": "Reconnecting…",
+    "connectionUnverified": "Connection lost. The last frame is shown; the current page state cannot be verified.",
+    "reconnectHint": "Reconnect keeps the existing page without navigating or replaying input or submissions.",
+    "pageGone": "The original page or browser session no longer exists. Open the page again.",
     "removeDownload": "Remove record",
     "removeDownloadHint": "Remove the record and keep the downloaded file",
     "downloadUnverified": "Connection lost. Download progress cannot be verified until the connection is restored.",

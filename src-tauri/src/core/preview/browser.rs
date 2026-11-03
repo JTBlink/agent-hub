@@ -16,10 +16,12 @@ use std::{
 };
 
 pub struct Page {
+    pub(super) connection_generation: u64,
     pub(super) snapshots: VecDeque<(String, String)>,
     pub cdp: Cdp,
     pub width: u32,
     pub height: u32,
+    pub(super) mobile: bool,
     pub(super) metadata: Arc<Mutex<BrowserPageInfo>>,
 }
 impl Page {
@@ -37,8 +39,9 @@ impl Page {
             frame["urlFragment"].as_str().unwrap_or("")
         );
         let revision = format!(
-            "{}:{}:{:x}",
+            "{}:{}:{}:{:x}",
             revision,
+            self.connection_generation,
             self.cdp.navigation_version,
             Sha256::digest(url.as_bytes())
         );
@@ -382,10 +385,12 @@ impl Browsers {
             owner,
         }));
         let page = Arc::new(Mutex::new(Page {
+            connection_generation: 0,
             snapshots: VecDeque::new(),
             cdp,
             width: 1200,
             height: 800,
+            mobile: false,
             metadata: metadata.clone(),
         }));
         let mut state = self
@@ -545,10 +550,12 @@ impl Browsers {
                     owner: None,
                 }));
                 let page = Arc::new(Mutex::new(Page {
+                    connection_generation: 0,
                     snapshots: VecDeque::new(),
                     cdp,
                     width: 1200,
                     height: 800,
+                    mobile: false,
                     metadata: metadata.clone(),
                 }));
                 state.pages.insert(

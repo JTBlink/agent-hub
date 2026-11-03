@@ -2568,6 +2568,11 @@
     "replacing": "正在取代…"
   },
   "preview": {
+    "reconnect": "重新連線目前頁面",
+    "reconnecting": "正在重新連線…",
+    "connectionUnverified": "連線中斷，顯示的是最後畫面，目前頁面狀態無法核驗。",
+    "reconnectHint": "重新連線會保留現有頁面，不重新導覽，也不重放輸入或提交操作。",
+    "pageGone": "原頁面或瀏覽工作階段已不存在，請重新開啟頁面。",
     "removeDownload": "移除紀錄",
     "removeDownloadHint": "只移除下載紀錄，保留已下載檔案",
     "downloadUnverified": "連線中斷，目前下載狀態無法核驗。請恢復連線後再確認進度。",
