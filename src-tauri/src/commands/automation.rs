@@ -35,19 +35,6 @@ pub async fn export_automation_package(id: String, path: String) -> Result<(), A
 }
 
 #[tauri::command]
-pub async fn set_automation_installation(id: String, installed: bool) -> Result<(), AppError> {
-    tauri::async_runtime::spawn_blocking(move || {
-        if installed {
-            automation::package::install(&id)
-        } else {
-            automation::package::uninstall(&id)
-        }
-        .map_err(AppError::invalid_input)
-    })
-    .await?
-}
-
-#[tauri::command]
 pub async fn migrate_automation_package(id: String) -> Result<String, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
         automation::package::migrate(&id).map_err(AppError::invalid_input)
@@ -79,17 +66,8 @@ pub async fn save_automation(
     id: Option<String>,
     revision: Option<u64>,
     draft: AutomationDraft,
-    install: Option<bool>,
 ) -> Result<String, AppError> {
     tauri::async_runtime::spawn_blocking(move || {
-        if install == Some(false) {
-            if id.is_some() {
-                return Err(AppError::invalid_input(
-                    "Use uninstall to change an existing installation",
-                ));
-            }
-            return automation::package::create_uninstalled(draft).map_err(AppError::invalid_input);
-        }
         automation::save(id.as_deref(), revision, draft).map_err(AppError::invalid_input)
     })
     .await?

@@ -31,10 +31,25 @@ impl Registration for Native {
     ) -> Result<(), String> {
         let mut configured = record.clone();
         configured.draft.enabled = enabled;
-        native::apply(state, &configured)
+        #[cfg(not(test))]
+        {
+            native::apply(state, &configured)
+        }
+        #[cfg(test)]
+        {
+            native::refresh_runner(state, &configured)
+        }
     }
     fn remove(&mut self, state: &Path, record: &ManagedAutomation) -> Result<(), String> {
-        native::remove(state, record)
+        #[cfg(not(test))]
+        {
+            native::remove(state, record)
+        }
+        #[cfg(test)]
+        {
+            let _ = (state, record);
+            Ok(())
+        }
     }
 }
 
@@ -64,7 +79,7 @@ impl Registration for Hermes {
                 .ok_or("Missing task package")?
                 .join(".local/hermes-create-pending");
             if marker.exists() {
-                return Err("Previous Hermes creation has an unknown result; inspect Hermes and uninstall this package before retrying".into());
+                return Err("Previous Hermes creation has an unknown result; inspect Hermes and delete this task before retrying".into());
             }
             store::write(&marker, b"creation requested")?;
             let (identifier, location) = hermes_manage::create_at(&root, &configured, &extra)?;
@@ -76,7 +91,7 @@ impl Registration for Hermes {
                 job.identifier.as_deref() == Some(record.identifier.as_str())
                     && job.status == "running"
             }) {
-                return Err("Wait for the current Hermes run before changing installation".into());
+                return Err("Wait for the current Hermes run before changing this task".into());
             }
             let registered = super::super::hermes::at(&root)?
                 .into_iter()

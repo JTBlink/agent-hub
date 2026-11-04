@@ -55,7 +55,7 @@ export function AutomationPackageCard({
             { name: task.title },
           )}
           title={t(
-            installed ? "discovery.reinstall" : "automation.installPackage",
+            installed ? "discovery.reinstall" : "automation.addPackage",
           )}
           className="shrink-0 rounded-[5px] border border-accent-border bg-accent-dark p-1 text-white hover:bg-accent focus-visible:ring-2 focus-visible:ring-accent"
         >
@@ -78,7 +78,7 @@ export function AutomationPackageCard({
             {t(
               updateAvailable
                 ? "automation.updateAvailable"
-                : "automation.installStates.installed",
+                : "automation.added",
             )}
           </span>
         )}

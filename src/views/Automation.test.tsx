@@ -33,7 +33,6 @@ vi.mock("../lib/tauri", () => ({
   previewAutomationPackage: vi.fn(),
   importAutomationPackage: vi.fn(),
   exportAutomationPackage: vi.fn(),
-  setAutomationInstallation: vi.fn(),
   migrateAutomationPackage: vi.fn(),
 }));
 const i18n = createInstance();
@@ -145,7 +144,6 @@ beforeEach(() => {
   vi.mocked(api.importAutomationPackage)
     .mockReset()
     .mockResolvedValue("imported-task");
-  vi.mocked(api.setAutomationInstallation).mockReset().mockResolvedValue();
   vi.mocked(api.exportAutomationPackage).mockReset().mockResolvedValue();
   vi.mocked(api.migrateAutomationPackage).mockReset();
   vi.mocked(api.getAutomationTemplates)
@@ -1194,7 +1192,7 @@ async function openBackupRestore() {
 it("routes a blank new task to recommended discovery without creating anything", async () => {
   await render();
   await click("新建自动化");
-  await click("从发现安装");
+  await click("从发现添加");
   expect(container.querySelector("[data-current-location]")?.textContent).toBe(
     "/discover?type=automations&automationSource=recommended",
   );
@@ -1207,7 +1205,7 @@ it("retains a draft when cancelling navigation to discovery and leaves only afte
   await render();
   await click("新建自动化");
   await input("名称", "Unsaved task");
-  await click("从发现安装");
+  await click("从发现添加");
   expect(
     container.querySelector('[role="alertdialog"]')?.textContent,
   ).toContain("尚未保存");
@@ -1220,12 +1218,12 @@ it("retains a draft when cancelling navigation to discovery and leaves only afte
   expect(
     container.querySelector<HTMLInputElement>('[aria-label="名称"]')?.value,
   ).toBe("Unsaved task");
-  await click("从发现安装");
+  await click("从发现添加");
   const confirm = [
     ...container.querySelectorAll<HTMLButtonElement>(
       '[role="alertdialog"] button',
     ),
-  ].find((node) => node.textContent === "从发现安装")!;
+  ].find((node) => node.textContent === "从发现添加")!;
   await act(async () => confirm.click());
   expect(
     container.querySelector("[data-current-location]")?.textContent,
@@ -1233,7 +1231,7 @@ it("retains a draft when cancelling navigation to discovery and leaves only afte
   expect(api.saveAutomation).not.toHaveBeenCalled();
 });
 
-it("restored templates create uninstalled copies and preserve existing task IDs", async () => {
+it("restored templates create paused copies and preserve existing task IDs", async () => {
   vi.mocked(api.getAutomationBackups).mockResolvedValue([
     {
       schema_version: 1,
@@ -1257,7 +1255,7 @@ it("restored templates create uninstalled copies and preserve existing task IDs"
   expect(container.querySelector('[aria-label="清理磁盘缓存"]')).toBeNull();
   expect(api.saveAutomation).not.toHaveBeenCalled();
   await ariaClick("备份检查");
-  expect(container.textContent).toContain("保存为未安装任务");
+  expect(container.textContent).toContain("暂停");
   await act(async () =>
     container
       .querySelector("form")!
@@ -1267,7 +1265,6 @@ it("restored templates create uninstalled copies and preserve existing task IDs"
     null,
     null,
     expect.objectContaining({ enabled: false }),
-    false,
   );
   expect(api.runAutomation).not.toHaveBeenCalled();
 });
@@ -1588,7 +1585,6 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
       ],
       schedule: { kind: "manual" },
     }),
-    false,
   );
   expect(api.runAutomation).not.toHaveBeenCalled();
 });
@@ -1934,7 +1930,7 @@ it("allows an editable external LaunchAgent to save in place and delete without 
   expect(api.removeAutomation).toHaveBeenCalledWith(external.id, false);
 });
 
-it("imports the exact previewed task as a dormant instance without installing or running it", async () => {
+it("imports the exact previewed task paused without running it", async () => {
   const preview: api.AutomationPackage = {
     schema_version: 1,
     shell: "sh",
@@ -1968,7 +1964,6 @@ it("imports the exact previewed task as a dormant instance without installing or
   expect(confirm().disabled).toBe(false);
   await act(async () => confirm().click());
   expect(api.importAutomationPackage).toHaveBeenCalledWith(preview, null);
-  expect(api.setAutomationInstallation).not.toHaveBeenCalled();
   expect(api.runAutomation).not.toHaveBeenCalled();
   expect(api.saveAutomation).not.toHaveBeenCalled();
 });
@@ -1992,24 +1987,22 @@ it("keeps a failed package preview open and prevents importing unreadable conten
   expect(confirm.disabled).toBe(true);
 });
 
-it("provides install and uninstall independently of scheduled enablement and manual runs", async () => {
+it("runs a paused package and resumes its schedule without an installation step", async () => {
   const task: api.AutomationTask = {
-    ...native,
+    ...hermes,
     id: "package-task",
     name: "独立任务",
     origin: "agent_hub",
     source: "launchd",
-    installation: "uninstalled",
+    is_package: true,
     status: "paused",
     can_edit: true,
-    can_run: false,
+    can_run: true,
     definition: {
-      name: "独立任务",
+      ...hermes.definition!,
       provider: "system",
-      content: "sh './scripts/run.sh'",
-      workdir: null,
-      schedule: { kind: "manual" },
       enabled: false,
+      schedule: { kind: "hourly", minute: 15 },
     },
   };
   vi.mocked(api.getAutomationOverview).mockResolvedValue({
@@ -2018,21 +2011,16 @@ it("provides install and uninstall independently of scheduled enablement and man
     hermes_installed: false,
   });
   await render("/automation?task=package-task");
-  expect(button("安装任务").disabled).toBe(false);
-  vi.mocked(api.getAutomationOverview).mockResolvedValue({
-    tasks: [{ ...task, installation: "installed", can_run: true }],
-    issues: [],
-    hermes_installed: false,
-  });
-  await click("安装任务");
-  expect(api.setAutomationInstallation).toHaveBeenLastCalledWith(task.id, true);
-  await click("卸载任务");
-  expect(api.setAutomationInstallation).toHaveBeenLastCalledWith(
+  expect(container.textContent).not.toContain("安装任务");
+  expect(container.textContent).not.toContain("卸载任务");
+  await click("立即运行");
+  expect(api.runAutomation).toHaveBeenCalledWith(task.id);
+  await ariaClick("恢复计划");
+  expect(api.saveAutomation).toHaveBeenCalledWith(
     task.id,
-    false,
+    task.revision,
+    expect.objectContaining({ enabled: true }),
   );
-  expect(api.runAutomation).not.toHaveBeenCalled();
-  expect(api.saveAutomation).not.toHaveBeenCalled();
 });
 
 it("manages a system LaunchDaemon in place with administrator context and retains failed confirmations", async () => {
@@ -2114,7 +2102,7 @@ it("shows the refreshed next calendar run after enabling and clears it after pau
     source: "launchd",
     name: "MR processing",
     status: "paused",
-    installation: "installed",
+    is_package: true,
     can_edit: true,
     can_run: true,
     revision: 3,

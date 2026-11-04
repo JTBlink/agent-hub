@@ -77,3 +77,12 @@ fn allows_explicit_all_and_external_task_origins() {
         }
     ));
 }
+
+#[test]
+fn exposes_import_without_a_separate_installation_lifecycle() {
+    assert!(Cli::try_parse_from(["cli", "import", "--path", "task.json"]).is_ok());
+    assert!(Cli::try_parse_from(["cli", "import", "--path", "task.json", "--preview"]).is_ok());
+    assert!(Cli::try_parse_from(["cli", "import", "--path", "task.json", "--install"]).is_err());
+    assert!(Cli::try_parse_from(["cli", "install", "task-id"]).is_err());
+    assert!(Cli::try_parse_from(["cli", "uninstall", "task-id"]).is_err());
+}

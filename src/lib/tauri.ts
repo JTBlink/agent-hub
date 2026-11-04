@@ -75,7 +75,7 @@ export interface AutomationTask {
   requires_admin?: boolean;
   definition: AutomationDraft | null;
   revision: number | null;
-  installation?: string | null;
+  is_package?: boolean;
   is_builtin: boolean;
   schedule: string;
   project: string | null;
@@ -149,8 +149,7 @@ export const saveAutomation = (
   id: string | null,
   revision: number | null,
   draft: AutomationDraft,
-  install = true,
-) => invoke<string>("save_automation", { id, revision, draft, install });
+) => invoke<string>("save_automation", { id, revision, draft });
 export const runAutomation = (id: string) =>
   invoke<void>("run_automation", { id });
 export const removeAutomation = (id: string, deleteLocalData = false) =>
@@ -197,8 +196,6 @@ export const importAutomationPackage = (
   });
 export const exportAutomationPackage = (id: string, path: string) =>
   invoke<void>("export_automation_package", { id, path });
-export const setAutomationInstallation = (id: string, installed: boolean) =>
-  invoke<void>("set_automation_installation", { id, installed });
 export const migrateAutomationPackage = (id: string) =>
   invoke<string>("migrate_automation_package", { id });
 

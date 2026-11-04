@@ -71,7 +71,8 @@ fn task() -> AutomationTask {
         "example.plist".into(),
     );
     task.status = "active".into();
-    task.installation = Some("installed".into());
+    task.is_package = true;
+    task.can_run = true;
     task.definition = Some(AutomationDraft {
         name: task.name.clone(),
         provider: super::super::Provider::System,
@@ -86,7 +87,7 @@ fn task() -> AutomationTask {
     task
 }
 #[test]
-fn enabling_and_rescheduling_update_the_prediction_while_pause_and_uninstall_clear_it() {
+fn enabling_and_rescheduling_update_the_prediction_while_pause_and_unavailable_runtime_clear_it() {
     let mut report = AutomationOverview {
         tasks: vec![task()],
         ..Default::default()
@@ -108,10 +109,10 @@ fn enabling_and_rescheduling_update_the_prediction_while_pause_and_uninstall_cle
         report.tasks[0].next_run.as_deref(),
         Some("2026-10-31T12:45:00+08:00")
     );
-    report.tasks[0].installation = Some("uninstalled".into());
+    report.tasks[0].can_run = false;
     fill(&mut report, &now);
     assert!(report.tasks[0].next_run.is_none());
-    report.tasks[0].installation = Some("installed".into());
+    report.tasks[0].can_run = true;
     report.tasks[0].status = "paused".into();
     fill(&mut report, &now);
     assert!(report.tasks[0].next_run.is_none());

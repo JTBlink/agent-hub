@@ -6,7 +6,7 @@ fn legacy(state: &Path) -> ManagedAutomation {
         "package_options":{"version":"1.2.3","dependencies":[],"hermes":null}
     }))
     .unwrap();
-    let id = super::super::lifecycle::create(state, draft, vec![], false).unwrap();
+    let id = super::super::creation::stage(state, draft, vec![]).unwrap();
     let record = find(state, &id).unwrap();
     fs::rename(directory(&record).unwrap(), root(state).join("MR 处理")).unwrap();
     find(state, &id).unwrap()
@@ -48,7 +48,7 @@ fn migrates_chinese_directory_without_changing_identity_schedule_content_or_hist
         fs::read(target.join(".local/runs/saved.log")).unwrap(),
         b"retained output"
     );
-    assert_eq!(receipt(&next).unwrap().state, "uninstalled");
+    assert_eq!(receipt(&next).unwrap().state, "pending");
     assert!(receipt(&next).unwrap().pending_backup);
     assert!(!journal_path(state, &old.id).exists());
     migrate(state, &old.id).unwrap();
@@ -60,10 +60,10 @@ fn refuses_installed_running_and_unowned_environments_without_moving_data() {
     let old = legacy(temp.path());
     let path = directory(&old).unwrap();
     let mut installed = receipt(&old).unwrap();
-    installed.state = "installed".into();
+    installed.state = "ready".into();
     write_receipt(&old, &installed).unwrap();
     assert!(migrate(temp.path(), &old.id).is_err());
-    installed.state = "uninstalled".into();
+    installed.state = "removed".into();
     write_receipt(&old, &installed).unwrap();
     for name in ["run.claim", "ready", "env"] {
         fs::create_dir(path.join(".local").join(name)).unwrap();
@@ -80,7 +80,7 @@ fn another_tasks_project_binding_blocks_migration_and_occupied_names_are_preserv
     let mut shared = old.draft.clone();
     shared.script_dir = None;
     shared.workdir = Some(path.to_string_lossy().into_owned());
-    let other = super::super::lifecycle::create(temp.path(), shared, vec![], false).unwrap();
+    let other = super::super::creation::stage(temp.path(), shared, vec![]).unwrap();
     assert!(migrate(temp.path(), &old.id).is_err());
     let other = find(temp.path(), &other).unwrap();
     let occupied = directory(&other).unwrap();

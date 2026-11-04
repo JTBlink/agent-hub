@@ -5,11 +5,10 @@ use super::*;
 pub fn migrate(id: &str) -> Result<String, String> {
     let state = store::root();
     let _lock = lock(&state, id)?;
-    migrate_using(
-        &state,
-        id,
-        &mut *super::registration::adapter(Provider::System),
-    )
+    let provider = find(&state, id)
+        .map(|record| record.draft.provider)
+        .unwrap_or(Provider::System);
+    migrate_using(&state, id, &mut *super::registration::adapter(provider))
 }
 
 pub(super) fn migrate_using(
@@ -18,7 +17,24 @@ pub(super) fn migrate_using(
     scheduler: &mut dyn super::registration::Registration,
 ) -> Result<String, String> {
     let Some(old) = store::legacy_task(state, id)? else {
-        return super::relocation::migrate(state, id);
+        let record = find(state, id)?;
+        let path = checked(state, &record)?;
+        if path.file_name().is_some_and(|name| name.is_ascii()) {
+            return Ok(id.into());
+        }
+        // Detach references before moving, then rebuild them at the resulting path.
+        super::lifecycle::cleanup_using(state, &record, scheduler)?;
+        let result = super::relocation::migrate(state, id);
+        let mut current = find(state, id)?;
+        current.draft.enabled = record.draft.enabled;
+        let manifest: Manifest =
+            super::storage::json(&checked(state, &current)?.join("task.json"))?;
+        super::storage::materialize(&current, manifest.dependencies, manifest.hermes)?;
+        let mut local = receipt(&current)?;
+        local.state = "pending".into();
+        write_receipt(&current, &local)?;
+        super::lifecycle::prepare_using(state, &current, scheduler)?;
+        return result;
     };
     managed::verify(state, &old)?;
     if old.draft.provider != Provider::System {
@@ -34,7 +50,7 @@ pub(super) fn migrate_using(
         draft.files = native::bundle_files::read(&old)?;
         draft.script_dir = None;
         draft.enabled = false;
-        super::lifecycle::create_identity(state, draft, Vec::new(), None, false, Some(id))?;
+        super::creation::stage_identity(state, draft, Vec::new(), None, Some(id))?;
         find(state, id)?
     };
     let path = checked(state, &next)?;
@@ -60,12 +76,12 @@ pub(super) fn migrate_using(
         let mut receipt = receipt(&configured)?;
         receipt.revision = configured.revision;
         receipt.fingerprint = super::storage::fingerprint(&configured.draft)?;
-        receipt.state = "uninstalled".into();
+        receipt.state = "pending".into();
         receipt.archived = false;
         write_receipt(&configured, &receipt)?;
         let mut paused = configured.clone();
         paused.draft.enabled = false;
-        super::lifecycle::install_using(state, &paused, scheduler)?;
+        super::lifecycle::prepare_using(state, &paused, scheduler)?;
         store::retire_legacy(state, id)?;
         scheduler.apply(state, &mut configured, old.draft.enabled)?;
         Ok::<_, String>(())
@@ -76,7 +92,7 @@ pub(super) fn migrate_using(
             .apply(state, &mut old.clone(), old.draft.enabled)
             .and_then(|()| store::restore_legacy(state, &old));
         let mut receipt = receipt(&next)?;
-        receipt.state = "install_failed".into();
+        receipt.state = "prepare_failed".into();
         receipt.error = Some(format!(
             "Migration failed: {error}; restoration: {rollback:?}"
         ));

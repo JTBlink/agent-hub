@@ -1,10 +1,7 @@
 import { useEffect } from "react";
 import type { AutomationTask } from "../lib/tauri";
 
-type ScheduledTask = Pick<
-  AutomationTask,
-  "next_run" | "status" | "definition" | "installation"
->;
+type ScheduledTask = Pick<AutomationTask, "next_run" | "status" | "definition">;
 
 /** Revalidate at the next scheduled boundary, rather than polling every task. */
 export function useAutomationNextRunRefresh(
@@ -16,8 +13,7 @@ export function useAutomationNextRunRefresh(
       .filter(
         (task) =>
           task.status !== "paused" &&
-          task.definition?.schedule.kind !== "manual" &&
-          (!task.installation || task.installation === "installed"),
+          task.definition?.schedule.kind !== "manual",
       )
       .map((task) => (task.next_run ? Date.parse(task.next_run) : NaN))
       .filter(Number.isFinite);

@@ -13,7 +13,6 @@ import {
   importAutomationPackage,
   getAutomationOverview,
   saveAutomation,
-  setAutomationInstallation,
   type AutomationTask,
 } from "../../lib/tauri";
 import { getErrorMessage } from "../../lib/error";
@@ -29,9 +28,7 @@ function canReplace(task: AutomationTask, provider: string) {
     task.can_edit &&
     task.revision !== null &&
     task.definition?.provider === provider &&
-    task.status !== "running" &&
-    (!task.installation ||
-      ["installed", "uninstalled"].includes(task.installation))
+    task.status !== "running"
   );
 }
 
@@ -97,7 +94,6 @@ export function AutomationInstaller({
     setError(null);
     try {
       let id = instanceId;
-      // Creation and installation are separate: retry the existing instance after partial failure.
       if (!id) {
         const intent = {
           ...draft,
@@ -145,12 +141,9 @@ export function AutomationInstaller({
                 { ...task.package, draft: intent },
                 workdir,
               )
-            : await saveAutomation(null, null, { ...intent, workdir }, false);
+            : await saveAutomation(null, null, { ...intent, workdir });
         if (alive.current) setInstanceId(id);
       }
-      // Legacy managed tasks are registered by save; packages have a separate lifecycle.
-      if (!replacement || replacement.installation)
-        await setAutomationInstallation(id, true);
       if (alive.current) {
         setStep(2);
         onInstalled(id);
@@ -192,7 +185,7 @@ export function AutomationInstaller({
               id={titleId}
               className="text-lg font-semibold outline-none"
             >
-              {t("automation.installPackage")}
+              {t("automation.addPackage")}
             </h2>
             <p className="mt-1 break-words text-xs text-muted">
               {task.title} · {task.source}

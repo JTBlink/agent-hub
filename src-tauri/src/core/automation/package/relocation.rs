@@ -1,5 +1,4 @@
-//! Explicit directory normalization. Uninstall first so no scheduler or venv
-//! continues to reference a moved package; identity and history remain intact.
+//! Directory normalization runs between scheduler cleanup and runtime preparation.
 use super::*;
 use std::fs;
 
@@ -30,16 +29,15 @@ fn verify_identity(path: &Path, id: &str) -> Result<(), String> {
 
 fn verify_idle(path: &Path) -> Result<(), String> {
     let receipt: Receipt = super::storage::json(&path.join(".local/receipt.json"))?;
-    if receipt.state != "uninstalled" || receipt.removal_pending || receipt.archived {
-        return Err("Uninstall this task before migrating its directory; content and history will be retained".into());
+    if !["pending", "removed"].contains(&receipt.state.as_str())
+        || receipt.removal_pending
+        || receipt.archived
+    {
+        return Err("Task runtime must be detached before directory migration".into());
     }
     for name in ["run.claim", "ready", "env"] {
         match path.join(".local").join(name).symlink_metadata() {
-            Ok(_) => {
-                return Err(
-                    "Task runtime remains; finish uninstallation before directory migration".into(),
-                )
-            }
+            Ok(_) => return Err("Task runtime remains; retry directory migration".into()),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
             Err(error) => return Err(error.to_string()),
         }
@@ -51,7 +49,7 @@ fn restore(state: &Path, journal: &Journal) -> Result<(), String> {
     let root = root(state);
     super::storage::regular_directory(&root)?;
     if !valid_id(&journal.id)
-        || journal.receipt.state != "uninstalled"
+        || !["pending", "removed"].contains(&journal.receipt.state.as_str())
         || journal.from == journal.to
         || [&journal.from, &journal.to]
             .iter()

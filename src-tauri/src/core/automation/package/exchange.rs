@@ -206,7 +206,7 @@ pub(crate) fn read_backup_directory(
     })
 }
 
-/// Import allocates a new identity and remains uninstalled until install is requested.
+/// Import creates a paused task and prepares its runtime without executing its body.
 pub fn import_package(source: &Path, workdir: Option<String>) -> Result<String, String> {
     import_definition(preview_package(source)?, workdir)
 }
@@ -225,7 +225,7 @@ pub fn import_definition(
         dependencies: package.dependencies,
         hermes: package.hermes,
     });
-    super::lifecycle::create(&store::root(), package.draft, Vec::new(), false)
+    super::creation::create(&store::root(), package.draft, Vec::new())
 }
 
 /// A single JSON file contains portable intent and declared text files only.
@@ -324,6 +324,6 @@ pub(in crate::core::automation) fn normalize(draft: &mut AutomationDraft) {
     }
     if !draft.files.iter().any(|f| f.path == "README.md") {
         draft.files.push(super::super::AutomationScriptFile { path: "README.md".into(),
-            content: "# Automation task\n\nInstall and uninstall through AgentHub. Local state and logs are in `.local/`.\n".into() });
+            content: "# Automation task\n\nManage the schedule through AgentHub. Local state and logs are in `.local/`.\n".into() });
     }
 }

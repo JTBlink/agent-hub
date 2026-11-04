@@ -1,7 +1,7 @@
 //! Revision-checked updates retain a durable previous package for recovery.
 use super::super::Provider;
 use super::creation::create;
-use super::lifecycle::{block, install_at, notify};
+use super::lifecycle::{block, notify, prepare_at};
 use super::*;
 use std::fs;
 
@@ -12,10 +12,12 @@ pub(in crate::core::automation) fn save(
 ) -> Result<String, String> {
     let state = store::root();
     let Some(id) = id else {
-        return create(&state, draft, Vec::new(), true);
+        return create(&state, draft, Vec::new());
     };
     let _lock = lock(&state, id)?;
-    let old = find(&state, id)?;
+    let observed = find(&state, id)?;
+    let recovered = super::lifecycle::recover_update(&state, &observed)?;
+    let old = recovered.unwrap_or(observed);
     let path = checked(&state, &old)?;
     if Some(old.revision) != revision {
         return Err("Task changed; refresh before saving".into());
@@ -40,11 +42,8 @@ pub(in crate::core::automation) fn save(
         return Err("Task package directories cannot be moved while editing".into());
     }
     let mut receipt = receipt(&old)?;
-    if receipt.removal_pending {
+    if receipt.removal_pending || ["removing", "remove_failed"].contains(&receipt.state.as_str()) {
         return Err("Task deletion is pending; retry deletion".into());
-    }
-    if !["installed", "uninstalled"].contains(&receipt.state.as_str()) {
-        return Err("Finish or retry installation/uninstallation before editing".into());
     }
     let mut next = old.clone();
     next.draft = draft;
@@ -70,10 +69,8 @@ pub(in crate::core::automation) fn save(
         .revision
         .checked_add(1)
         .ok_or("Automation revision exhausted")?;
-    let installed = receipt.state == "installed";
-    if installed {
-        block(&path, &old)?;
-    }
+    let registered = receipt.state == "ready";
+    block(&path, &old)?;
     let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
     json_write(
         &path.join(".local/operation.json"),
@@ -86,7 +83,7 @@ pub(in crate::core::automation) fn save(
     receipt.state = "updating".into();
     write_receipt(&old, &receipt)?;
     let result = (|| {
-        if installed {
+        if registered {
             if old.draft.provider == Provider::System {
                 detach(&old)?;
             } else {
@@ -110,11 +107,9 @@ pub(in crate::core::automation) fn save(
         receipt.revision = next.revision;
         receipt.fingerprint = super::storage::fingerprint(&next.draft)?;
         receipt.pending_backup = true;
-        receipt.state = "uninstalled".into();
+        receipt.state = "pending".into();
         write_receipt(&next, &receipt)?;
-        if installed {
-            install_at(&state, &next)?;
-        }
+        prepare_at(&state, &next)?;
         Ok::<_, String>(())
     })();
     if let Err(error) = result {
@@ -122,10 +117,10 @@ pub(in crate::core::automation) fn save(
             super::storage::materialize(&old, manifest.dependencies, manifest.hermes)?;
             receipt.revision = old.revision;
             receipt.fingerprint = super::storage::fingerprint(&old.draft)?;
-            receipt.state = "uninstalled".into();
+            receipt.state = "pending".into();
             write_receipt(&old, &receipt)?;
-            if installed {
-                install_at(&state, &old)?;
+            if registered {
+                prepare_at(&state, &old)?;
             }
             Ok::<_, String>(())
         })();

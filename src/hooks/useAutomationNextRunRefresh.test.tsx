@@ -19,7 +19,6 @@ const task = (next_run: string) => ({
   next_run,
   status: "active" as const,
   definition: null,
-  installation: "installed",
 });
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -68,11 +67,10 @@ it("keeps a failed or stale snapshot on a bounded retry rather than spinning", a
   await act(async () => vi.advanceTimersByTimeAsync(60_000));
   expect(refresh).toHaveBeenCalledTimes(2);
 });
-it("cancels the timer on pause and ignores absent or uninstalled predictions", async () => {
+it("cancels the timer on pause and ignores absent predictions", async () => {
   await render([task("2026-10-31T12:30:00+08:00")]);
   await render([
     { ...task("2026-10-31T12:30:00+08:00"), status: "paused" },
-    { ...task("2026-10-31T12:30:00+08:00"), installation: "uninstalled" },
     task("unknown"),
   ]);
   await act(async () => vi.advanceTimersByTimeAsync(120_000));

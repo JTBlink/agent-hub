@@ -73,7 +73,6 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::automation::preview_git_automation_packages,
         commands::automation::import_automation_package,
         commands::automation::export_automation_package,
-        commands::automation::set_automation_installation,
         commands::automation::migrate_automation_package,
         commands::automation::run_automation,
         commands::automation::remove_automation,

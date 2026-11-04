@@ -69,6 +69,10 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
         return Err("Unsupported task package or nonportable manifest".into());
     }
     let mut draft = manifest.draft;
+    // A formerly uninstalled task must stay paused until explicitly resumed.
+    if receipt.state == "legacy_uninstalled" {
+        draft.enabled = false;
+    }
     for relative in manifest.files {
         super::exchange::validate_path(&relative)?;
         let file =

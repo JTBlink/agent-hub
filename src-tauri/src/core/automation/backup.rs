@@ -210,7 +210,7 @@ fn write_changed(path: &Path, bytes: &[u8]) -> Result<bool, String> {
     Ok(true)
 }
 
-/// Explicit restore creates an uninstalled copy. This never overwrites a local task.
+/// Explicit restore creates a paused, usable copy. This never overwrites a local task.
 pub fn restore(id: &str, apply: bool) -> Result<AutomationBackup, String> {
     let mut record = list()?
         .into_iter()
@@ -227,7 +227,7 @@ pub fn restore(id: &str, apply: bool) -> Result<AutomationBackup, String> {
             );
         }
         record.draft.script_dir = None;
-        record.id = super::package::create_uninstalled(record.draft.clone())?;
+        record.id = super::save(None, None, record.draft.clone())?;
     }
     Ok(record)
 }

@@ -51,10 +51,7 @@ pub(super) fn fill<Tz: TimeZone>(report: &mut AutomationOverview, now: &DateTime
         };
         if !draft.enabled
             || matches!(draft.schedule, Schedule::Manual)
-            || task
-                .installation
-                .as_deref()
-                .is_some_and(|state| state != "installed")
+            || (task.is_package && !task.can_run)
             || !matches!(task.status.as_str(), "active" | "running" | "error")
         {
             task.next_run = None;

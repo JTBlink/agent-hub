@@ -25,7 +25,6 @@ import {
   saveAutomation,
   runAutomation,
   removeAutomation,
-  setAutomationInstallation,
   exportAutomationPackage,
   migrateAutomationPackage,
   type AutomationTask,
@@ -216,7 +215,7 @@ export function Automation() {
     const task = typeof editor === "object" ? editor : null;
     const id =
       editor === "restore"
-        ? await saveAutomation(null, null, draft, false)
+        ? await saveAutomation(null, null, { ...draft, enabled: false })
         : await saveAutomation(task?.id ?? null, task?.revision ?? null, draft);
     setEditor(null);
     setActionError(null);
@@ -292,9 +291,6 @@ export function Automation() {
       onRemove={() => {
         setActionError(null);
         setRemoving(task);
-      }}
-      onInstall={(installed) => {
-        void perform(task, () => setAutomationInstallation(task.id, installed));
       }}
       onExport={() => {
         void perform(task, async () => {
@@ -437,11 +433,7 @@ export function Automation() {
                     <AutomationTaskIcon task={task} className="h-7 w-7" />
                     <span className="min-w-0">
                       <span className="block truncate">{task.name}</span>
-                      {task.installation && (
-                        <span className="block text-xs font-normal text-muted">
-                          {t(`automation.installStates.${task.installation}`)}
-                        </span>
-                      )}
+
                       {task.origin !== "external" && (
                         <AutomationOriginBadge origin={task.origin} />
                       )}

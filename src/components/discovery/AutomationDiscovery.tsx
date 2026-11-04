@@ -333,8 +333,7 @@ export function AutomationDiscovery({
                   (existing.name.trim() === task.draft.name.trim() ||
                     existing.id ===
                       installedIds[`${task.source}:${task.title}`]) &&
-                  (existing.installation === "installed" ||
-                    (!existing.installation && existing.can_run)),
+                  existing.can_edit,
               ) ?? [];
             return (
               <AutomationPackageCard

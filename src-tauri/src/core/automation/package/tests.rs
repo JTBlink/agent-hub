@@ -18,8 +18,8 @@ fn draft() -> AutomationDraft {
 #[test]
 fn same_name_tasks_have_independent_packages_and_corruption_is_isolated() {
     let temp = tempfile::tempdir().unwrap();
-    let first = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
-    let second = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let first = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
+    let second = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let one = find(temp.path(), &first).unwrap();
     let two = find(temp.path(), &second).unwrap();
     assert_ne!(one.draft.script_dir, two.draft.script_dir);
@@ -38,7 +38,7 @@ fn same_name_tasks_have_independent_packages_and_corruption_is_isolated() {
 #[test]
 fn missing_or_damaged_legacy_index_does_not_hide_new_packages() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     fs_write(&temp.path().join("tasks.json"), "corrupted");
     let registry = store::read_registry(temp.path()).unwrap();
     assert_eq!(registry.tasks[0].id, id);
@@ -55,7 +55,7 @@ fn import_preview_reads_only_declared_portable_files_and_never_runs_commands() {
     let temp = tempfile::tempdir().unwrap();
     let mut task = draft();
     task.content = "exit 79".into();
-    let id = lifecycle::create(temp.path(), task, Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), task, Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     fs_write(&path.join(".local/secret"), "private-value");
@@ -82,7 +82,7 @@ fn import_preview_reads_only_declared_portable_files_and_never_runs_commands() {
 #[test]
 fn script_edits_invalidate_revision_and_backup_uses_the_actual_body() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let original = find(temp.path(), &id).unwrap();
     let path = directory(&original).unwrap();
     let entry = super::super::native::shell_entry::entry(&original.draft).unwrap();
@@ -116,9 +116,9 @@ fn lifecycle_locks_block_the_same_task_without_blocking_other_tasks() {
 
 #[cfg(unix)]
 #[test]
-fn package_runner_checks_installation_before_entering_the_body_and_releases_its_claim() {
+fn package_runner_checks_readiness_before_entering_the_body_and_releases_its_claim() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     let runtime = path.join(".local");
@@ -146,7 +146,7 @@ fn package_runner_checks_installation_before_entering_the_body_and_releases_its_
 #[test]
 fn linked_files_cannot_escape_the_package_during_import_or_read() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     let outside = temp.path().join("outside.md");
@@ -192,9 +192,9 @@ impl super::registration::Registration for Scheduler {
 }
 
 #[test]
-fn interrupted_updates_restore_the_previous_body_before_reinstalling() {
+fn interrupted_updates_restore_the_previous_body_before_preparing_runtime() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     let mut local = receipt(&record).unwrap();
@@ -214,9 +214,9 @@ fn interrupted_updates_restore_the_previous_body_before_reinstalling() {
     let observed = find(temp.path(), &id).unwrap();
     assert_eq!(observed.draft, record.draft);
     let mut scheduler = Scheduler::default();
-    lifecycle::install_using(temp.path(), &observed, &mut scheduler).unwrap();
+    lifecycle::prepare_using(temp.path(), &observed, &mut scheduler).unwrap();
     assert_eq!(find(temp.path(), &id).unwrap().draft, record.draft);
-    assert_eq!(receipt(&record).unwrap().state, "installed");
+    assert_eq!(receipt(&record).unwrap().state, "ready");
     assert!(!path.join(".local/operation.json").exists());
 }
 
@@ -300,7 +300,7 @@ fn migration_failure_restores_legacy_metadata_and_can_resume_without_another_pac
 }
 
 #[test]
-fn exported_and_backed_up_requirements_survive_import_without_local_bindings_or_installation() {
+fn exported_and_backed_up_requirements_survive_import_without_local_bindings_or_execution() {
     use crate::core::central_repo;
     let _guard = central_repo::test_base_dir_lock();
     let temp = tempfile::tempdir().unwrap();
@@ -313,10 +313,8 @@ fn exported_and_backed_up_requirements_survive_import_without_local_bindings_or_
     }
     let _reset = Reset;
     let state = store::root();
-    let requirements = vec![Dependency::Python {
-        packages: vec!["demo-package==1.0".into()],
-    }];
-    let id = lifecycle::create(&state, draft(), requirements.clone(), false).unwrap();
+    let requirements = vec![Dependency::Command { name: "git".into() }];
+    let id = creation::stage(&state, draft(), requirements.clone()).unwrap();
     let record = find(&state, &id).unwrap();
     fs_write(
         &directory(&record).unwrap().join(".local/private.md"),
@@ -334,7 +332,7 @@ fn exported_and_backed_up_requirements_survive_import_without_local_bindings_or_
     let imported_id = import_package(&output, None).unwrap();
     assert_ne!(imported_id, id);
     let imported = find(&state, &imported_id).unwrap();
-    assert_eq!(receipt(&imported).unwrap().state, "uninstalled");
+    assert_eq!(receipt(&imported).unwrap().state, "ready");
     assert_eq!(
         imported
             .draft
@@ -360,52 +358,52 @@ fn exported_and_backed_up_requirements_survive_import_without_local_bindings_or_
 }
 
 #[test]
-fn failed_installation_stays_visible_and_retry_finishes_without_running_the_body() {
+fn failed_preparation_stays_visible_and_retry_finishes_without_running_the_body() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let mut scheduler = Scheduler {
         fail_registration: true,
         ..Default::default()
     };
-    assert!(lifecycle::install_using(temp.path(), &record, &mut scheduler).is_err());
-    assert_eq!(receipt(&record).unwrap().state, "install_failed");
+    assert!(lifecycle::prepare_using(temp.path(), &record, &mut scheduler).is_err());
+    assert_eq!(receipt(&record).unwrap().state, "prepare_failed");
     assert_eq!(scheduler.calls, ["register:false", "remove"]);
     assert!(!directory(&record).unwrap().join(".local/ready").exists());
     scheduler.fail_registration = false;
-    lifecycle::install_using(temp.path(), &record, &mut scheduler).unwrap();
-    assert_eq!(receipt(&record).unwrap().state, "installed");
+    lifecycle::prepare_using(temp.path(), &record, &mut scheduler).unwrap();
+    assert_eq!(receipt(&record).unwrap().state, "ready");
     assert!(directory(&record).unwrap().join(".local/ready").exists());
     let calls = scheduler.calls.len();
-    lifecycle::install_using(temp.path(), &record, &mut scheduler).unwrap();
+    lifecycle::prepare_using(temp.path(), &record, &mut scheduler).unwrap();
     assert_eq!(scheduler.calls.len(), calls);
     assert!(!directory(&record).unwrap().join(".local/started").exists());
 }
 
 #[test]
-fn uninstall_retries_preserve_scripts_and_external_projects_and_release_only_owned_dependencies() {
+fn cleanup_retries_preserve_scripts_and_external_projects_and_release_only_owned_dependencies() {
     let temp = tempfile::tempdir().unwrap();
     let project = temp.path().join("project");
     std::fs::create_dir(&project).unwrap();
     fs_write(&project.join("keep"), "keep");
     let mut task = draft();
     task.workdir = Some(project.to_string_lossy().into_owned());
-    let id = lifecycle::create(temp.path(), task, Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), task, Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     let mut scheduler = Scheduler::default();
-    lifecycle::install_using(temp.path(), &record, &mut scheduler).unwrap();
+    lifecycle::prepare_using(temp.path(), &record, &mut scheduler).unwrap();
     std::fs::create_dir(path.join(".local/env")).unwrap();
     json_write(&path.join(".local/env-owner.json"), &id).unwrap();
     fs_write(&path.join(".local/env/installed.txt"), "private");
     scheduler.fail_removal = true;
-    assert!(lifecycle::uninstall_using(temp.path(), &record, &mut scheduler).is_err());
-    assert_eq!(receipt(&record).unwrap().state, "uninstall_failed");
+    assert!(lifecycle::cleanup_using(temp.path(), &record, &mut scheduler).is_err());
+    assert_eq!(receipt(&record).unwrap().state, "remove_failed");
     assert!(path.join(".local/env/installed.txt").is_file());
     assert!(!path.join(".local/ready").exists());
     scheduler.fail_removal = false;
-    lifecycle::uninstall_using(temp.path(), &record, &mut scheduler).unwrap();
-    assert_eq!(receipt(&record).unwrap().state, "uninstalled");
+    lifecycle::cleanup_using(temp.path(), &record, &mut scheduler).unwrap();
+    assert_eq!(receipt(&record).unwrap().state, "removed");
     assert!(!path.join(".local/env").exists());
     assert!(path.join("README.md").is_file());
     assert_eq!(
@@ -413,27 +411,27 @@ fn uninstall_retries_preserve_scripts_and_external_projects_and_release_only_own
         "keep"
     );
     let calls = scheduler.calls.len();
-    lifecycle::uninstall_using(temp.path(), &record, &mut scheduler).unwrap();
+    lifecycle::cleanup_using(temp.path(), &record, &mut scheduler).unwrap();
     assert_eq!(scheduler.calls.len(), calls);
 }
 
 #[test]
-fn active_claim_prevents_uninstall_and_keeps_the_installed_task_usable() {
+fn active_claim_prevents_cleanup_and_keeps_the_task_usable() {
     let temp = tempfile::tempdir().unwrap();
-    let id = lifecycle::create(temp.path(), draft(), Vec::new(), false).unwrap();
+    let id = creation::stage(temp.path(), draft(), Vec::new()).unwrap();
     let record = find(temp.path(), &id).unwrap();
     let mut scheduler = Scheduler::default();
-    lifecycle::install_using(temp.path(), &record, &mut scheduler).unwrap();
+    lifecycle::prepare_using(temp.path(), &record, &mut scheduler).unwrap();
     let path = directory(&record).unwrap();
     std::fs::create_dir(path.join(".local/run.claim")).unwrap();
-    assert!(lifecycle::uninstall_using(temp.path(), &record, &mut scheduler).is_err());
+    assert!(lifecycle::cleanup_using(temp.path(), &record, &mut scheduler).is_err());
     assert!(path.join(".local/ready").exists());
-    assert_eq!(receipt(&record).unwrap().state, "installed");
+    assert_eq!(receipt(&record).unwrap().state, "ready");
     assert!(!scheduler.calls.iter().any(|call| call == "remove"));
 }
 
 #[test]
-fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled_copies() {
+fn packages_upload_as_discoverable_directories_and_restore_paused_usable_copies() {
     use crate::core::{auto_backup, backup_workspace, central_repo, skill_store::SkillStore};
     let _guard = central_repo::test_base_dir_lock();
     let temp = tempfile::tempdir().unwrap();
@@ -463,11 +461,11 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
     });
     definition.enabled = true;
     definition.workdir = Some(temp.path().to_string_lossy().into_owned());
-    let id = lifecycle::create(&state, definition, Vec::new(), false).unwrap();
+    let id = creation::stage(&state, definition, Vec::new()).unwrap();
     let original = find(&state, &id).unwrap();
     let local = directory(&original).unwrap();
     let mut scheduler = Scheduler::default();
-    lifecycle::install_using(&state, &original, &mut scheduler).unwrap();
+    lifecycle::prepare_using(&state, &original, &mut scheduler).unwrap();
     fs_write(&local.join(".local/private.env"), "private-credentials");
     fs_write(&local.join(".local/output.log"), "private-execution-output");
     assert_eq!(
@@ -516,7 +514,7 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
     let restored = super::super::backup::restore(&id, true).unwrap();
     assert_ne!(restored.id, id);
     let copy = find(&state, &restored.id).unwrap();
-    assert_eq!(receipt(&copy).unwrap().state, "uninstalled");
+    assert_eq!(receipt(&copy).unwrap().state, "ready");
     assert_eq!(
         copy.draft
             .package_options
@@ -527,10 +525,7 @@ fn installed_packages_upload_as_discoverable_directories_and_restore_uninstalled
         Some("1.2.3")
     );
     assert!(!copy.draft.enabled && copy.draft.workdir.is_none());
-    assert_eq!(
-        receipt(&find(&state, &id).unwrap()).unwrap().state,
-        "installed"
-    );
+    assert_eq!(receipt(&find(&state, &id).unwrap()).unwrap().state, "ready");
 }
 
 #[test]
@@ -612,7 +607,7 @@ fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_
     assert_ne!(id, restored_id);
     let restored = find(&state, &restored_id).unwrap();
     assert_eq!(restored.revision, 1);
-    assert_eq!(receipt(&restored).unwrap().state, "uninstalled");
+    assert_eq!(receipt(&restored).unwrap().state, "ready");
     assert_eq!(
         restored
             .draft
@@ -635,5 +630,122 @@ fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_
             legacy.validate().is_err(),
             "accepted invalid version {invalid}"
         );
+    }
+}
+
+#[test]
+fn saving_a_legacy_uninstalled_task_prepares_it_paused_without_running_the_body() {
+    use crate::core::central_repo;
+    let _guard = central_repo::test_base_dir_lock();
+    let temp = tempfile::tempdir().unwrap();
+    central_repo::set_test_base_dir_override(Some(temp.path().join("app")));
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            central_repo::set_test_base_dir_override(None);
+        }
+    }
+    let _reset = Reset;
+    let state = store::root();
+    let mut definition = draft();
+    definition.enabled = true;
+    definition.schedule = Schedule::Hourly { minute: 15 };
+    let id = creation::stage(&state, definition, vec![]).unwrap();
+    let original = find(&state, &id).unwrap();
+    let path = directory(&original).unwrap();
+    let mut legacy = serde_json::to_value(receipt(&original).unwrap()).unwrap();
+    legacy["state"] = serde_json::json!("uninstalled");
+    json_write(&path.join(".local/receipt.json"), &legacy).unwrap();
+    let paused = find(&state, &id).unwrap();
+    assert!(!paused.draft.enabled);
+    assert!(!path.join(".local/ready").exists());
+    update::save(Some(&id), Some(paused.revision), paused.draft).unwrap();
+    let saved = find(&state, &id).unwrap();
+    assert!(!saved.draft.enabled);
+    assert_eq!(receipt(&saved).unwrap().state, "ready");
+    assert!(path.join(".local/ready").is_file());
+    assert!(!path.join(".local/started").exists());
+    let mut enabled = saved.draft.clone();
+    enabled.enabled = true;
+    update::save(Some(&id), Some(saved.revision), enabled).unwrap();
+    assert!(find(&state, &id).unwrap().draft.enabled);
+    assert_eq!(receipt(&find(&state, &id).unwrap()).unwrap().state, "ready");
+}
+
+#[test]
+fn saving_corrected_dependencies_recovers_a_failed_task_without_an_install_action() {
+    use crate::core::central_repo;
+    let _guard = central_repo::test_base_dir_lock();
+    let temp = tempfile::tempdir().unwrap();
+    central_repo::set_test_base_dir_override(Some(temp.path().join("app")));
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            central_repo::set_test_base_dir_override(None);
+        }
+    }
+    let _reset = Reset;
+    let state = store::root();
+    let mut definition = draft();
+    definition.package_options = Some(PackageOptions {
+        version: None,
+        dependencies: vec![Dependency::Command {
+            name: "agent-hub-missing-test-tool".into(),
+        }],
+        hermes: None,
+    });
+    assert!(update::save(None, None, definition).is_err());
+    let failed = discover(&state).0.remove(0);
+    assert_eq!(receipt(&failed).unwrap().state, "prepare_failed");
+    let mut corrected = failed.draft.clone();
+    corrected
+        .package_options
+        .as_mut()
+        .unwrap()
+        .dependencies
+        .clear();
+    update::save(Some(&failed.id), Some(failed.revision), corrected).unwrap();
+    let saved = find(&state, &failed.id).unwrap();
+    assert_eq!(receipt(&saved).unwrap().state, "ready");
+    assert!(!directory(&saved).unwrap().join(".local/started").exists());
+}
+
+#[test]
+fn directory_migration_automatically_rebuilds_runtime_and_preserves_enablement() {
+    for (enabled, legacy_uninstalled) in [(false, false), (true, false), (true, true)] {
+        let temp = tempfile::tempdir().unwrap();
+        let mut definition = draft();
+        definition.enabled = enabled;
+        definition.schedule = Schedule::Hourly { minute: 30 };
+        let id = creation::stage(temp.path(), definition, vec![]).unwrap();
+        let original = find(temp.path(), &id).unwrap();
+        let mut scheduler = Scheduler::default();
+        lifecycle::prepare_using(temp.path(), &original, &mut scheduler).unwrap();
+        if legacy_uninstalled {
+            let mut legacy = serde_json::to_value(receipt(&original).unwrap()).unwrap();
+            legacy["state"] = serde_json::json!("uninstalled");
+            json_write(
+                &directory(&original).unwrap().join(".local/receipt.json"),
+                &legacy,
+            )
+            .unwrap();
+            std::fs::remove_file(directory(&original).unwrap().join(".local/ready")).unwrap();
+        }
+        std::fs::rename(
+            directory(&original).unwrap(),
+            root(temp.path()).join("旧任务"),
+        )
+        .unwrap();
+        migration::migrate_using(temp.path(), &id, &mut scheduler).unwrap();
+        let migrated = find(temp.path(), &id).unwrap();
+        assert_eq!(migrated.draft.enabled, enabled && !legacy_uninstalled);
+        assert_eq!(migrated.draft.schedule, original.draft.schedule);
+        assert_eq!(receipt(&migrated).unwrap().state, "ready");
+        assert!(directory(&migrated).unwrap().join(".local/ready").is_file());
+        assert!(directory(&migrated)
+            .unwrap()
+            .file_name()
+            .unwrap()
+            .is_ascii());
     }
 }

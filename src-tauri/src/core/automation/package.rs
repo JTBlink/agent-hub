@@ -1,4 +1,4 @@
-//! Independent task packages. Portable intent and local installation evidence
+//! Independent task packages. Portable intent and local runtime evidence
 //! live in separate files; a damaged package cannot hide another package.
 pub mod catalog;
 mod creation;
@@ -20,8 +20,7 @@ pub use exchange::{
     export_package, import_definition, import_package, preview_package, AutomationPackage,
 };
 pub(crate) use exchange::{read_backup_directory, write_backup_directory};
-pub(super) use lifecycle::remove;
-pub use lifecycle::{install, uninstall};
+pub(super) use lifecycle::{prepare_at, remove};
 pub use migration::migrate;
 pub(super) use storage::fingerprint as storage_fingerprint;
 pub(super) use storage::{discover, read, write_receipt};
@@ -99,6 +98,7 @@ pub(super) struct Receipt {
     pub source: String,
     pub identifier: String,
     pub location: String,
+    #[serde(deserialize_with = "read_runtime_state")]
     pub state: String,
     pub error: Option<String>,
     pub fingerprint: String,
@@ -202,7 +202,7 @@ pub(super) fn state(record: &ManagedAutomation) -> Option<String> {
     Some(
         receipt(record)
             .map(|r| r.state)
-            .unwrap_or_else(|_| "install_failed".into()),
+            .unwrap_or_else(|_| "prepare_failed".into()),
     )
 }
 
@@ -213,6 +213,18 @@ pub(super) fn is_package_draft(draft: &AutomationDraft) -> bool {
         .is_some_and(|path| Path::new(path).join("task.json").is_file())
 }
 
-pub fn create_uninstalled(draft: AutomationDraft) -> Result<String, String> {
-    lifecycle::create(&store::root(), draft, Vec::new(), false)
+// Read receipts from the former installation lifecycle without rewriting data on list.
+fn read_runtime_state<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<String, D::Error> {
+    let state = String::deserialize(deserializer)?;
+    Ok(match state.as_str() {
+        "installed" => "ready".into(),
+        "uninstalled" => "legacy_uninstalled".into(),
+        "installing" => "preparing".into(),
+        "install_failed" => "prepare_failed".into(),
+        "uninstalling" => "removing".into(),
+        "uninstall_failed" => "remove_failed".into(),
+        _ => state,
+    })
 }

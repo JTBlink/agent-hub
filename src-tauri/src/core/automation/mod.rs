@@ -72,7 +72,7 @@ pub struct AutomationTask {
     pub requires_admin: bool,
     pub definition: Option<AutomationDraft>,
     pub revision: Option<u64>,
-    pub installation: Option<String>,
+    pub is_package: bool,
     /// Known operating-system maintenance jobs; retained so the UI can reveal them.
     pub is_builtin: bool,
     pub schedule: String,
@@ -101,7 +101,7 @@ impl AutomationTask {
             requires_admin: false,
             definition: None,
             revision: None,
-            installation: None,
+            is_package: false,
             is_builtin: false,
             location,
             schedule: String::new(),

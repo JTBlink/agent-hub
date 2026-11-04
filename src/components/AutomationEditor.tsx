@@ -280,7 +280,7 @@ export function AutomationEditor({
                   <AutomationWorkdirField
                     kind="scriptDir"
                     value={scriptDir}
-                    readOnly={externalNative || !task || !!task.installation}
+                    readOnly={externalNative || !task || !!task.is_package}
                     helpText={
                       externalNative
                         ? t("automation.externalScriptDirHelp")
@@ -329,7 +329,7 @@ export function AutomationEditor({
             ) : (
               t(
                 restoreBackup
-                  ? "automation.uninstalledSaveHint"
+                  ? "automation.pausedSaveHint"
                   : schedule.kind === "manual"
                     ? "automation.manualSaveHint"
                     : !draft.enabled

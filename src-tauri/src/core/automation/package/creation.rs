@@ -1,40 +1,46 @@
 //! Prepare a complete independent package before registering any schedule.
 use super::super::{managed, Provider};
-use super::lifecycle::{install_at, notify};
+use super::lifecycle::{notify, prepare_at};
 use super::*;
 use std::fs;
 
+/// Create a usable task; setup is part of saving, never a separate user action.
 pub(super) fn create(
     state: &Path,
     draft: AutomationDraft,
     dependencies: Vec<Dependency>,
-    install_now: bool,
 ) -> Result<String, String> {
-    create_with_hermes(state, draft, dependencies, None, install_now)
+    let id = stage(state, draft, dependencies)?;
+    let _lock = lock(state, &id)?;
+    let record = find(state, &id)?;
+    prepare_at(state, &record).map_err(|e| {
+        format!(
+            "Task {id} was saved; runtime preparation failed. Edit or run this task to retry: {e}"
+        )
+    })?;
+    Ok(id)
 }
 
-pub(super) fn create_with_hermes(
+/// Stage files before touching a scheduler (also used by migration rollback).
+pub(super) fn stage(
     state: &Path,
     draft: AutomationDraft,
     dependencies: Vec<Dependency>,
-    hermes: Option<HermesScripts>,
-    install_now: bool,
 ) -> Result<String, String> {
-    create_identity(state, draft, dependencies, hermes, install_now, None)
+    stage_identity(state, draft, dependencies, None, None)
 }
 
-pub(super) fn create_identity(
+pub(super) fn stage_identity(
     state: &Path,
     mut draft: AutomationDraft,
     mut dependencies: Vec<Dependency>,
     hermes: Option<HermesScripts>,
-    install_now: bool,
     identity: Option<&str>,
 ) -> Result<String, String> {
     let mut version = None;
     let hermes = if let Some(options) = draft.package_options.take() {
         if !dependencies.is_empty() || hermes.is_some() {
-            return Err("Task installation requirements were declared twice".into());
+            return Err("Task runtime requirements were declared twice".into());
         }
         version = options.version;
         dependencies = options.dependencies;
@@ -134,7 +140,7 @@ pub(super) fn create_identity(
             source: record.source.clone(),
             identifier: record.identifier.clone(),
             location: record.location.clone(),
-            state: "uninstalled".into(),
+            state: "pending".into(),
             error: None,
             fingerprint: super::storage::fingerprint(&record.draft)?,
             pending_backup: true,
@@ -143,10 +149,6 @@ pub(super) fn create_identity(
         },
     )?;
     super::storage::materialize(&record, dependencies, hermes)?;
-    if install_now {
-        install_at(state, &record)
-            .map_err(|e| format!("Task {id} was saved; installation failed: {e}"))?;
-    }
     notify();
     Ok(id)
 }

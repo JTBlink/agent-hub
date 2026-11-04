@@ -24,7 +24,7 @@ enum Origin {
 
 #[derive(Subcommand, Debug)]
 enum AutomationCommand {
-    /// 导入独立任务包或目录；默认未安装，--install 注册为暂停任务。
+    /// 导入独立任务包或目录，准备运行环境并默认暂停。
     Import {
         #[arg(long)]
         path: PathBuf,
@@ -32,8 +32,6 @@ enum AutomationCommand {
         workdir: Option<String>,
         #[arg(long)]
         preview: bool,
-        #[arg(long, conflicts_with = "preview")]
-        install: bool,
     },
     /// 导出可移植 JSON 包，不包含项目路径、凭据或运行历史。
     Export {
@@ -41,11 +39,7 @@ enum AutomationCommand {
         #[arg(long)]
         file: PathBuf,
     },
-    /// 自动检查依赖并安装已导入／已卸载任务的调度。
-    Install { id: String },
-    /// 撤销调度并卸载私有环境，保留任务内容和运行记录。
-    Uninstall { id: String },
-    /// 迁移旧系统任务或规范已卸载包的中文目录；保留任务 ID、日程和原脚本。
+    /// 迁移旧任务或规范任务目录；保留任务 ID、日程和原脚本。
     Migrate { id: String },
     /// 默认列出 AgentHub 创建的任务；使用 --origin all 查看所有来源。
     List {
@@ -78,20 +72,20 @@ enum AutomationCommand {
             conflicts_with = "template"
         )]
         file: Option<PathBuf>,
-        /// 安装内置模板为独立本地任务；原模板保持只读，可通过 templates 查看。
+        /// 从内置模板创建独立本地任务；原模板保持只读，可通过 templates 查看。
         #[arg(long, required_unless_present = "file", conflicts_with = "file")]
         template: Option<String>,
         #[arg(long, default_value = "zh")]
         locale: String,
     },
-    /// 只读查看市场内置模板；通过 create --template 安装为本地任务。
+    /// 只读查看市场内置模板；通过 create --template 创建本地任务。
     Templates {
         #[arg(long, default_value = "zh")]
         locale: String,
     },
     /// 查看 Git 备份中的任务定义；不触发调度。
     Backups,
-    /// 预览备份；--apply 显式创建未安装的副本，不覆盖本机任务。
+    /// 预览备份；--apply 显式创建默认暂停的副本，不覆盖本机任务。
     Restore {
         id: String,
         #[arg(long)]
@@ -152,7 +146,6 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
             path,
             workdir,
             preview,
-            install,
         } => {
             if *preview {
                 println!(
@@ -164,31 +157,16 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
             } else {
                 let id = automation::package::import_package(path, workdir.clone())
                     .map_err(anyhow::Error::msg)?;
-                if *install {
-                    automation::package::install(&id).map_err(anyhow::Error::msg)?;
-                }
-                result(
-                    json,
-                    &id,
-                    if *install { "installed" } else { "uninstalled" },
-                );
+                result(json, &id, "saved");
             }
         }
         AutomationCommand::Export { id, file } => {
             automation::package::export_package(id, file).map_err(anyhow::Error::msg)?;
             result(json, id, "exported");
         }
-        AutomationCommand::Install { id } => {
-            automation::package::install(id).map_err(anyhow::Error::msg)?;
-            result(json, id, "installed");
-        }
-        AutomationCommand::Uninstall { id } => {
-            automation::package::uninstall(id).map_err(anyhow::Error::msg)?;
-            result(json, id, "uninstalled");
-        }
         AutomationCommand::Migrate { id } => {
             let new_id = automation::package::migrate(id).map_err(anyhow::Error::msg)?;
-            result(json, &new_id, "uninstalled");
+            result(json, &new_id, "saved");
         }
         AutomationCommand::List {
             source,

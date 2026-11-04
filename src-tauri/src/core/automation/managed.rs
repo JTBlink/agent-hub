@@ -76,11 +76,11 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
                 && task.identifier.as_deref() == Some(&record.identifier)
                 && task.location == record.location
         });
-        let installation = super::package::state(&record);
+        let runtime_state = super::package::state(&record);
         if record.draft.provider == Provider::Hermes
             && index.is_none()
             && !removal_pending
-            && installation.is_none()
+            && runtime_state.is_none()
         {
             // A task removed in Hermes is not resurrected from cached metadata.
             continue;
@@ -98,8 +98,8 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
         task.can_edit = true;
         task.can_run = true;
         task.revision = Some(record.revision);
-        task.installation = installation.clone();
-        if installation.is_some() {
+        task.is_package = runtime_state.is_some();
+        if runtime_state.is_some() {
             task.definition = Some(record.draft.clone());
             task.name = record.draft.name.clone();
             task.project = record.draft.workdir.clone();
@@ -142,10 +142,11 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             task.definition = Some(record.draft.clone());
             task.revision = Some(record.revision);
         }
-        if let Some(installation) = installation {
-            if installation != "installed" {
-                task.can_run = false;
-                task.status = if installation == "uninstalled" {
+        if let Some(runtime) = runtime_state {
+            if runtime != "ready" {
+                // Older uninstalled tasks stay paused and prepare on their next run/save.
+                task.can_run = matches!(runtime.as_str(), "removed" | "legacy_uninstalled");
+                task.status = if matches!(runtime.as_str(), "removed" | "legacy_uninstalled") {
                     "paused"
                 } else {
                     "error"
@@ -374,11 +375,8 @@ pub fn run(id: &str) -> Result<(), String> {
     } else {
         None
     };
-    if package
-        .as_ref()
-        .is_some_and(|r| super::package::state(r).as_deref() != Some("installed"))
-    {
-        return Err("Install the task successfully before running it".into());
+    if let Some(record) = package.as_ref() {
+        super::package::prepare_at(&root, record)?;
     }
     let _lock = store::Lock::acquire(&root)?;
     if store::read_registry(&root)?.removal_pending.contains(id) {

@@ -1,6 +1,5 @@
 //! Per-task lifecycle. State is durable before every external side effect.
 use super::super::Provider;
-pub(super) use super::creation::{create, create_identity};
 use super::*;
 use std::fs;
 
@@ -9,22 +8,18 @@ pub(super) fn notify() {
     crate::core::auto_backup::notify_central_change();
 }
 
-pub fn install(id: &str) -> Result<(), String> {
-    let state = store::root();
-    let _lock = lock(&state, id)?;
-    let record = find(&state, id)?;
-    install_at(&state, &record)
-}
-
-pub(super) fn install_at(state: &Path, original: &ManagedAutomation) -> Result<(), String> {
-    install_using(
+pub(in crate::core::automation) fn prepare_at(
+    state: &Path,
+    original: &ManagedAutomation,
+) -> Result<(), String> {
+    prepare_using(
         state,
         original,
         &mut *super::registration::adapter(original.draft.provider),
     )
 }
 
-pub(super) fn install_using(
+pub(super) fn prepare_using(
     state: &Path,
     original: &ManagedAutomation,
     scheduler: &mut dyn super::registration::Registration,
@@ -39,14 +34,14 @@ pub(super) fn install_using(
     if receipt.removal_pending {
         return Err("Task deletion is pending; retry deletion".into());
     }
-    if receipt.state == "installed" && path.join(".local/ready").is_file() {
+    if receipt.state == "ready" && path.join(".local/ready").is_file() {
         return Ok(());
     }
-    if ["uninstalling", "uninstall_failed"].contains(&receipt.state.as_str()) {
-        return Err("Complete uninstallation before reinstalling".into());
+    if ["removing", "remove_failed"].contains(&receipt.state.as_str()) {
+        return Err("Task cleanup is pending; retry deletion".into());
     }
     block(&path, &record)?;
-    receipt.state = "installing".into();
+    receipt.state = "preparing".into();
     receipt.error = None;
     write_receipt(&record, &receipt)?;
     let result = (|| {
@@ -62,7 +57,7 @@ pub(super) fn install_using(
         if marker.exists() && !record.identifier.is_empty() {
             fs::remove_file(marker).map_err(|e| e.to_string())?;
         }
-        receipt.state = "installed".into();
+        receipt.state = "ready".into();
         receipt.error = None;
         write_receipt(&record, &receipt)?;
         store::write(&path.join(".local/ready"), b"1")?;
@@ -85,7 +80,7 @@ pub(super) fn install_using(
         if rollback.is_ok() && record.draft.provider == Provider::Hermes && !preserved {
             receipt.identifier.clear();
         }
-        receipt.state = "install_failed".into();
+        receipt.state = "prepare_failed".into();
         receipt.error = Some(format!("{error}; scheduler cleanup: {rollback:?}"));
         write_receipt(&record, &receipt)?;
         return Err(receipt.error.unwrap_or(error));
@@ -111,30 +106,23 @@ pub(super) fn block(path: &Path, record: &ManagedAutomation) -> Result<(), Strin
         Err(e) => return Err(e.to_string()),
     }
     if path.join(".local/run.claim").exists() || running {
-        if receipt(record)?.state == "installed" {
+        if receipt(record)?.state == "ready" {
             store::write(&ready, b"1")?;
         }
-        return Err("Wait for the current task run to finish before changing installation".into());
+        return Err("Wait for the current task run to finish before changing this task".into());
     }
     Ok(())
 }
 
-pub fn uninstall(id: &str) -> Result<(), String> {
-    let state = store::root();
-    let _lock = lock(&state, id)?;
-    let record = find(&state, id)?;
-    uninstall_at(&state, &record)
-}
-
-fn uninstall_at(state: &Path, record: &ManagedAutomation) -> Result<(), String> {
-    uninstall_using(
+pub(super) fn cleanup_at(state: &Path, record: &ManagedAutomation) -> Result<(), String> {
+    cleanup_using(
         state,
         record,
         &mut *super::registration::adapter(record.draft.provider),
     )
 }
 
-pub(super) fn uninstall_using(
+pub(super) fn cleanup_using(
     state: &Path,
     record: &ManagedAutomation,
     scheduler: &mut dyn super::registration::Registration,
@@ -143,11 +131,11 @@ pub(super) fn uninstall_using(
     let record = recovered.as_ref().unwrap_or(record);
     let path = checked(state, record)?;
     let mut receipt = receipt(record)?;
-    if receipt.state == "uninstalled" {
+    if receipt.state == "removed" {
         return Ok(());
     }
     block(&path, record)?;
-    receipt.state = "uninstalling".into();
+    receipt.state = "removing".into();
     receipt.error = None;
     write_receipt(record, &receipt)?;
     let result = (|| {
@@ -179,9 +167,9 @@ pub(super) fn uninstall_using(
         Ok::<_, String>(())
     })();
     receipt.state = if result.is_ok() {
-        "uninstalled"
+        "removed"
     } else {
-        "uninstall_failed"
+        "remove_failed"
     }
     .into();
     receipt.error = result.as_ref().err().cloned();
@@ -189,7 +177,7 @@ pub(super) fn uninstall_using(
     result
 }
 
-fn recover_update(
+pub(super) fn recover_update(
     state: &Path,
     record: &ManagedAutomation,
 ) -> Result<Option<ManagedAutomation>, String> {
@@ -209,9 +197,8 @@ fn recover_update(
         snapshot.manifest.hermes,
     )?;
     let mut restored = snapshot.receipt;
-    restored.state = "install_failed".into();
-    restored.error =
-        Some("Interrupted update was restored; retry installation or uninstall the task".into());
+    restored.state = "prepare_failed".into();
+    restored.error = Some("Interrupted update was restored; edit or run the task to retry".into());
     write_receipt(&snapshot.record, &restored)?;
     fs::remove_file(path.join(".local/operation.json")).map_err(|e| e.to_string())?;
     Ok(Some(snapshot.record))
@@ -222,7 +209,7 @@ pub(in crate::core::automation) fn remove(id: &str, delete_data: bool) -> Result
     let _lock = lock(&state, id)?;
     let record = find(&state, id)?;
     let path = checked(&state, &record)?;
-    uninstall_at(&state, &record)?;
+    cleanup_at(&state, &record)?;
     if !delete_data {
         let journal = state
             .join("deletions")
@@ -279,7 +266,7 @@ pub(in crate::core::automation) fn remove(id: &str, delete_data: bool) -> Result
     write_receipt(&record, &receipt)?;
     checked(&state, &record)?;
     fs::remove_dir_all(&path)
-        .map_err(|e| format!("Task uninstalled; retry deleting local data: {e}"))?;
+        .map_err(|e| format!("Task schedule removed; retry deleting local data: {e}"))?;
     notify();
     Ok(())
 }

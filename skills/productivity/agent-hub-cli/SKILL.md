@@ -121,9 +121,9 @@ scheduler files or Hermes jobs.json as a fallback.
 
 Marketplace tasks are read-only: view them with `templates` or an import preview,
 and install an independent local instance with `create --template <template-id>`
-or `import --install`. Never edit, delete, pause, or run the marketplace source.
+or `import --path <package>`. Never edit, delete, pause, or run the marketplace source.
 Editing scripts, changing schedules, pausing/resuming, running, and removing
-operate on the local instance ID returned by installation or `list`. Local
+operate on the local instance ID returned by creation or `list`. Local
 changes and deletion do not update or delete the marketplace original.
 
 `list` defaults to tasks created by AgentHub, matching the desktop view. Use
@@ -146,7 +146,7 @@ occupied names receive numeric suffixes. Renaming preserves the allocated path.
 The project `workdir` is a separate local binding, defaulting to execution in the
 package. Existing custom and UUID directories remain supported as legacy tasks.
 New packages are discovered independently of the legacy `tasks.json`. Task
-content and install requirements join Git backup; local registrations, bindings,
+content and runtime requirements join Git backup; local registrations, bindings,
 environments and logs stay local.
 
 To configure a starter before registration, export its `draft` from `templates`
@@ -165,20 +165,21 @@ update. Private state and runs live in `.local/`; Python dependencies have
 private environments. Legacy task layouts remain supported until explicit
 `migrate`.
 
-Use `uninstall` to revoke scheduling and task-owned dependencies while keeping
-content and history. `remove` cancels management and preserves files by default;
-`--delete-local-data` also removes an owned package after reference checks.
-Project, external and shared resources remain protected. Failed operations keep
-retry state. Import and backup restore create uninstalled copies and never run
-the task or overwrite another instance.
+Creation, import and explicit restore prepare task dependencies and scheduling
+in the same operation. Use `pause` / `resume` to control the schedule; there are
+no separate `install` / `uninstall` commands. `remove` revokes scheduling and
+owned runtime resources, preserving files by default; `--delete-local-data` also
+removes an owned package after reference checks. Projects, external tools and
+shared resources remain protected. Import and restore create paused tasks and
+never execute the body or overwrite another instance. Old uninstalled tasks
+remain paused and prepare automatically when saved or run.
 
 ```bash
 "$SM" --json automations backups
 "$SM" --json automations restore '<backup-id>'
 ```
 
-`restore` previews a dormant copy. `--apply` creates a local uninstalled
-package; installation is a separate explicit step. Git sync itself must not activate tasks or overwrite
+`restore` previews a paused copy. `--apply` creates a local paused task and prepares its runtime. Git sync itself must not activate tasks or overwrite
 an existing local schedule. GUI users can inspect the same definitions via
 New automation → Use template → Git backups.
 
@@ -564,7 +565,7 @@ retain customized configuration, then edit with the current revision.
 
 ### Independent automation packages
 
-New automations own a task package with `task.json`, `scripts/`, root prompt/config/README and private `.local/` state. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new, uninstalled instance. `import --install` installs it paused. `install`, `uninstall`, `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Uninstall preserves task content and projects; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
+New automations own a task package with `task.json`, `scripts/`, root prompt/config/README and private `.local/` state. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new paused instance and prepares its runtime. `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Use pause/resume to control scheduling; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
 
 ## Desktop preview browser
 
