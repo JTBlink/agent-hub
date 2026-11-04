@@ -13,6 +13,7 @@ pub struct Document {
     pub id: String,
     pub title: String,
     pub relative_path: String,
+    pub path: PathBuf,
     pub kind: String,
     pub content: String,
     pub revision: String,
@@ -102,6 +103,7 @@ impl Documents {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .into_owned(),
+            path: path.canonicalize()?,
             relative_path: relative.clone(),
             kind: kind.into(),
             revision: if kind == "resource" {
@@ -207,6 +209,9 @@ impl Documents {
                 .to_string_lossy()
                 .into_owned(),
             kind: kind(Path::new(&grant.relative))?.into(),
+            path: project_worktrees::file_path(&grant.root, &grant.relative)
+                .map_err(AppError::io)?
+                .canonicalize()?,
             relative_path: grant.relative.clone(),
             revision: if kind(Path::new(&grant.relative))? == "resource" {
                 resource_revision(&self.resource(id, &grant.relative)?)?

@@ -35,6 +35,7 @@ pub enum Action {
     Reload {
         hard: bool,
     },
+    Devtools,
     Stop,
     Back,
     Forward,

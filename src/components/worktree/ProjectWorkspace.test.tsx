@@ -675,6 +675,8 @@ it("adds a preview after the source tab without navigation, reuses it, and close
       "preview.downloads",
       "preview.history",
       "preview.developerTools",
+      "preview.openExternal",
+      "settings.about",
       "preview.settings",
       "preview.annotations",
     ]) {

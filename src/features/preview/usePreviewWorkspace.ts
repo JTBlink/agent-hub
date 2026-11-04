@@ -41,8 +41,7 @@ import {
 } from "./shared/sessionStorage";
 import { getErrorMessage } from "../../lib/error";
 
-export type PreviewPanel =
-  "annotations" | "settings" | "history" | "tools" | "downloads";
+export type PreviewPanel = "annotations" | "settings" | "history" | "downloads";
 export function usePreviewWorkspace({
   initialDocument,
   isolated = false,
@@ -103,9 +102,6 @@ export function usePreviewWorkspace({
     tabId: string;
     revision: string;
   } | null>(null);
-  const [events, setEvents] = useState<
-    Record<string, { method: string; params: Record<string, unknown> }[]>
-  >({});
   const [notice, setNotice] = useState("");
   const active = session.tabs.find((tab) => tab.id === session.activeId);
   const document = active ? documents[active.id] : undefined;
@@ -246,7 +242,6 @@ export function usePreviewWorkspace({
       );
     setDocuments(retain);
     setDrafts(retain);
-    setEvents(retain);
     setViewports(retain);
     resetView();
   };
@@ -261,6 +256,18 @@ export function usePreviewWorkspace({
     } catch (error) {
       report(error);
       return;
+    }
+  };
+  const openDevtools = async () => {
+    if (!pageId) return;
+    const url = await action<string | null>({ kind: "devtools" });
+    if (url) {
+      try {
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
+        await openUrl(url);
+      } catch (error) {
+        report(error);
+      }
     }
   };
   const navigate = async (value: string) => {
@@ -315,11 +322,6 @@ export function usePreviewWorkspace({
         execution: frame.info.execution,
       });
     });
-    if (frame.events.length)
-      setEvents((previous) => ({
-        ...previous,
-        [id]: [...(previous[id] ?? []), ...frame.events].slice(-150),
-      }));
   };
   const capture = (
     tabId: string,
@@ -552,7 +554,6 @@ export function usePreviewWorkspace({
     setViewport,
     delivery,
     setDelivery,
-    events,
     notice,
     setNotice,
     active,
@@ -569,6 +570,7 @@ export function usePreviewWorkspace({
     close,
     action,
     navigate,
+    openDevtools,
     onFrame,
     capture,
     captureWeb,

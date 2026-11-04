@@ -69,11 +69,6 @@ try {
       outline.map((item) => item.id),
       ["working-document", "working-document-1"],
     );
-    await run(
-      `d.querySelector('.preview-addressbar .lucide-terminal').closest('button').click()`,
-    );
-    await until(`${documentRef}?.querySelector('.preview-tool-output')`);
-    await run(`d.querySelector('.preview-inspector header button').click()`);
     const singleRow = await evaluate(
       `(()=>{const bar=${documentRef}.querySelector('.preview-addressbar');const r=bar.getBoundingClientRect();return [...bar.children].every(el=>{const b=el.getBoundingClientRect();return b.top>=r.top && b.bottom<=r.bottom})})()`,
     );

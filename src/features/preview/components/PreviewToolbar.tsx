@@ -1,3 +1,4 @@
+import { openPreviewAddress } from "../shared/documentLinks";
 import {
   MousePointer2,
   Copy,
@@ -9,9 +10,11 @@ import {
   StopCircle,
   Clock,
   Terminal,
+  ExternalLink,
   Settings2,
   PanelRight,
   MoreVertical,
+  Info,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCallback, type ReactNode } from "react";
@@ -22,9 +25,11 @@ export function PreviewToolbar({
   findOpen,
   setFindOpen,
   showPanel,
+  onAbout,
   children,
 }: {
   children?: ReactNode;
+  onAbout: () => void;
   model: PreviewModel;
   findOpen: boolean;
   setFindOpen: (open: boolean) => void;
@@ -198,9 +203,20 @@ export function PreviewToolbar({
                 {t("preview.history")}
               </button>
               <button
+                disabled={!active || !/^https?:/.test(active.address)}
+                onClick={() => {
+                  if (active)
+                    void openPreviewAddress(active.address).catch(model.report);
+                }}
+              >
+                <ExternalLink size={14} />
+                {t("preview.openExternal")}
+              </button>
+              <button
                 aria-label={t("preview.developerTools")}
                 title={t("preview.developerTools")}
-                onClick={() => showPanel("tools")}
+                disabled={!model.pageId}
+                onClick={() => void model.openDevtools()}
               >
                 <Terminal size={14} />
                 {t("preview.developerTools")}
@@ -224,6 +240,10 @@ export function PreviewToolbar({
               >
                 <PanelRight size={14} />
                 {t("preview.annotations")}
+              </button>
+              <button onClick={onAbout}>
+                <Info size={14} />
+                {t("settings.about")}
               </button>
             </div>
           </div>

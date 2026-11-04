@@ -88,6 +88,7 @@ mockIPC((command, args) => {
       id: "fixture",
       kind: "markdown",
       title: "guide.md",
+      path: "/workspace/site/guide.md",
       content: content + "\n[Linked guide](next.md?mode=read#target)\n",
       revision: "saved",
       url: "http://127.0.0.1:4176/fixture/guide.md",
@@ -96,6 +97,26 @@ mockIPC((command, args) => {
     const request = args?.request;
     if (!request || typeof request !== "object" || !("kind" in request))
       return null;
+    if (request.kind === "kernel")
+      return {
+        product: "Chrome/156.0.0.0",
+        userAgent:
+          "Mozilla/5.0 (Synthetic preview) AppleWebKit/537.36 Chrome/156.0.0.0 Safari/537.36",
+        protocolVersion: "1.3",
+      };
+    if (
+      request.kind === "action" &&
+      "action" in request &&
+      request.action &&
+      typeof request.action === "object" &&
+      "kind" in request.action &&
+      request.action.kind === "devtools"
+    ) {
+      document.documentElement.dataset.devtoolsTarget = String(
+        "id" in request ? request.id : "",
+      );
+      return null;
+    }
     if (parameters.get("view") === "execution") {
       if (request.kind === "info")
         return {

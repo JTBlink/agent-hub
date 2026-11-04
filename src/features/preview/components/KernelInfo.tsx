@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useState, useRef, useId, useEffectEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { previewApi } from "../api";
 import { NativeUserAgent } from "../web/native/NativeUserAgent";
@@ -14,12 +15,32 @@ interface Info {
 export function KernelInfo({
   backend,
   pageId,
+  open,
+  onClose,
+  returnFocus,
 }: {
+  open: boolean;
+  onClose: () => void;
+  returnFocus?: () => void;
   backend: "native" | "chromium";
   pageId?: string;
 }) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const restoreFocus = useEffectEvent(() => returnFocus?.());
+  useEffect(() => {
+    const node = dialog.current;
+    if (!open || !node) return;
+    const previous = document.activeElement;
+    node.showModal();
+    return () => {
+      node.close();
+      if (previous instanceof HTMLElement && previous.isConnected)
+        previous.focus();
+      else restoreFocus();
+    };
+  }, [open]);
   const [refresh, setRefresh] = useState(0);
   const key = `${backend}:${pageId ?? ""}`;
   const [result, setResult] = useState<{
@@ -55,60 +76,76 @@ export function KernelInfo({
     };
   }, [backend, pageId, key, open, refresh, t]);
   const current = result?.key === key ? result : undefined;
-  return (
-    <details
-      className="preview-kernel"
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+  if (!open) return null;
+  return createPortal(
+    <dialog
+      ref={dialog}
+      className="preview-kernel-dialog"
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <summary>
-        <span>{t("settings.about")}</span>
-      </summary>
-      {open && (
-        <div className="preview-kernel-details">
-          <strong>
-            {t(
-              backend === "native"
-                ? "preview.systemKernel"
-                : "preview.chromiumKernel",
+      <header>
+        <h2 id={titleId}>{t("settings.about")}</h2>
+        <button
+          autoFocus
+          type="button"
+          aria-label={t("common.close")}
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </header>
+      <div className="preview-kernel-details">
+        <strong>
+          {t(
+            backend === "native"
+              ? "preview.systemKernel"
+              : "preview.chromiumKernel",
+          )}
+        </strong>
+        <p>{t("preview.kernelInfo")}</p>
+        {backend === "native" && pageId && current?.info && (
+          <NativeUserAgent
+            key={key}
+            id={pageId}
+            current={current.info.userAgent}
+            onApplied={() => setRefresh((value) => value + 1)}
+          />
+        )}
+        {current?.error ? (
+          <p role="alert">{current.error}</p>
+        ) : current?.info ? (
+          <dl>
+            <dt>{t("preview.kernelEngine")}</dt>
+            <dd>{current.info.engine}</dd>
+            <dt>{t("preview.kernelVersion")}</dt>
+            <dd>{current.info.version || t("preview.kernelUnknown")}</dd>
+            <dt>User-Agent</dt>
+            <dd>{current.info.userAgent || t("preview.kernelUnknown")}</dd>
+            {current.info.protocol && (
+              <>
+                <dt>CDP</dt>
+                <dd>{current.info.protocol}</dd>
+              </>
             )}
-          </strong>
-          <p>{t("preview.kernelInfo")}</p>
-          {backend === "native" && pageId && current?.info && (
-            <NativeUserAgent
-              key={key}
-              id={pageId}
-              current={current.info.userAgent}
-              onApplied={() => setRefresh((value) => value + 1)}
-            />
-          )}
-          {current?.error ? (
-            <p role="alert">{current.error}</p>
-          ) : current?.info ? (
-            <dl>
-              <dt>{t("preview.kernelEngine")}</dt>
-              <dd>{current.info.engine}</dd>
-              <dt>{t("preview.kernelVersion")}</dt>
-              <dd>{current.info.version || t("preview.kernelUnknown")}</dd>
-              <dt>User-Agent</dt>
-              <dd>{current.info.userAgent || t("preview.kernelUnknown")}</dd>
-              {current.info.protocol && (
-                <>
-                  <dt>CDP</dt>
-                  <dd>{current.info.protocol}</dd>
-                </>
-              )}
-            </dl>
-          ) : (
-            <p role="status">
-              {t(
-                backend === "chromium" && !pageId
-                  ? "preview.kernelPending"
-                  : "common.loading",
-              )}
-            </p>
-          )}
-        </div>
-      )}
-    </details>
+          </dl>
+        ) : (
+          <p role="status">
+            {t(
+              backend === "chromium" && !pageId
+                ? "preview.kernelPending"
+                : "common.loading",
+            )}
+          </p>
+        )}
+      </div>
+    </dialog>,
+    document.body,
   );
 }

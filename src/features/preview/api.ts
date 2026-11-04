@@ -18,6 +18,7 @@ export interface BrowserInfo {
   profiles: BrowserProfile[];
 }
 export interface PreviewDocument {
+  path?: string;
   fragment?: string;
   id: string;
   title: string;
@@ -88,7 +89,16 @@ export type BrowserAction =
   | { kind: "cancel_upload"; token: string }
   | { kind: "navigate"; url: string }
   | { kind: "reload"; hard: boolean }
-  | { kind: "stop" | "back" | "forward" | "snapshot" | "cookies" | "storage" }
+  | {
+      kind:
+        | "stop"
+        | "back"
+        | "forward"
+        | "snapshot"
+        | "cookies"
+        | "storage"
+        | "devtools";
+    }
   | { kind: "resize"; width: number; height: number; mobile: boolean }
   | {
       kind: "mouse";

@@ -6,6 +6,9 @@ use serde_json::{json, Value};
 
 impl Browsers {
     pub fn action(&self, id: &str, action: Action) -> Result<Value, AppError> {
+        if matches!(&action, Action::Devtools) {
+            return self.devtools_url(id).map(Value::String);
+        }
         if let Action::ImportCookies { cookies } = &action {
             return self.import_cookie_values(id, cookies.clone());
         }
@@ -55,6 +58,7 @@ impl Browsers {
             page.frame_info = None;
         }
         match action {
+            Action::Devtools => unreachable!("handled before page locking"),
             Action::SetTheme { dark, .. } => page.cdp.call("Emulation.setEmulatedMedia", json!({ "features": [{ "name": "prefers-color-scheme", "value": if dark { "dark" } else { "light" } }] })),
             Action::VerifyRevision {expected_revision} => {
                 if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED")); }

@@ -5,8 +5,9 @@ import { ExecutionLocation } from "./components/ExecutionLocation";
 import { usePageFind } from "./shared/usePageFind";
 import { useBrowserInventory } from "./web/useBrowserInventory";
 import { DownloadsPanel } from "./components/DownloadsPanel";
+import { PreviewAddress } from "./components/PreviewAddress";
 import { PreviewToolbar } from "./components/PreviewToolbar";
-import { useImperativeHandle, useState, type Ref } from "react";
+import { useImperativeHandle, useState, useRef, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -20,11 +21,9 @@ import {
   Search,
   Download,
   Send,
-  ExternalLink,
   FolderOpen,
   Copy,
 } from "lucide-react";
-import { openPreviewAddress } from "./shared/documentLinks";
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
 import { previewApi, type PreviewDocument } from "./api";
 import { BrowserSurface } from "./web/BrowserSurface";
@@ -33,7 +32,6 @@ import { CodeEditor } from "../../components/file-reader/CodeEditor";
 import { ProfileSelector } from "./components/ProfileSelector";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
-import { BrowserTools } from "./components/BrowserTools";
 import { AgentDelivery } from "./components/AgentDelivery";
 import "./preview.css";
 
@@ -56,16 +54,23 @@ export function PreviewWorkspace({
   onClose?: () => void;
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
 }) {
+  const workspace = useRef<HTMLElement>(null);
   const { t } = useTranslation();
   const model = usePreviewWorkspace({ initialDocument, isolated: embedded });
   useImperativeHandle(ref, () => ({ requestClose: model.requestClose }));
   useBrowserInventory(shown, model);
   const [address, setAddress] = useState("");
+  const [showSourcePath, setShowSourcePath] = useState(true);
   const [previousAddress, setPreviousAddress] = useState<string | undefined>();
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const { find, setFind, findResult, findPage } = usePageFind(model);
   const [bottomDock, setBottomDock] = useState(false);
   const active = model.active;
+  const sourcePath = model.document?.path;
+  const sourceAddress = showSourcePath ? sourcePath : undefined;
+  const showingSource = Boolean(sourceAddress);
+  const visibleAddress = sourceAddress ?? address;
   if (previousAddress !== active?.address) {
     setPreviousAddress(active?.address);
     setAddress(active?.address ?? "");
@@ -76,11 +81,18 @@ export function PreviewWorkspace({
   };
   return (
     <section
+      ref={workspace}
       className={`preview-workspace ${bottomDock ? "dock-bottom" : ""}`}
       hidden={!shown}
       aria-label={t("preview.title")}
       onKeyDownCapture={(event) => {
         if (!shown) return;
+        if (event.key === "F12") {
+          event.preventDefault();
+          event.stopPropagation();
+          void model.openDevtools();
+          return;
+        }
         if (event.key === "F6") {
           event.preventDefault();
           event.currentTarget
@@ -157,43 +169,24 @@ export function PreviewWorkspace({
         >
           <RotateCw size={16} />
         </button>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void model.navigate(address);
-          }}
-        >
-          <Globe size={14} />
-          <input
-            data-preview-address
-            aria-label={t("preview.address")}
-            value={address}
-            placeholder={t("preview.addressPlaceholder")}
-            onChange={(event) => setAddress(event.target.value)}
-          />
-        </form>
+        <PreviewAddress
+          value={visibleAddress}
+          sourcePath={sourcePath}
+          showingSource={showingSource}
+          onToggle={() => setShowSourcePath((previous) => !previous)}
+          onChange={setAddress}
+          onNavigate={() => void model.navigate(address)}
+        />
         <ProfileSelector
           active={active}
           profiles={model.info?.profiles}
           onOpen={model.openWeb}
         />
         <button
-          aria-label={t("preview.openExternal")}
-          title={t("preview.openExternal")}
-          disabled={!active || !/^https?:/.test(active.address)}
-          onClick={() => {
-            if (active)
-              void openPreviewAddress(active.address).catch(model.report);
-          }}
-        >
-          <ExternalLink size={16} />
-        </button>
-        <button
           aria-label={t("preview.developerTools")}
           title={t("preview.developerTools")}
-          disabled={model.native && !model.pageId}
-          className={model.panelOpen && model.panel === "tools" ? "active" : ""}
-          onClick={() => showPanel("tools")}
+          disabled={!model.pageId}
+          onClick={() => void model.openDevtools()}
         >
           <Terminal size={16} />
         </button>
@@ -202,13 +195,8 @@ export function PreviewWorkspace({
           findOpen={findOpen}
           setFindOpen={setFindOpen}
           showPanel={showPanel}
+          onAbout={() => setAboutOpen(true)}
         >
-          {active && active.kind !== "markdown" && (
-            <KernelInfo
-              backend={model.native ? "native" : "chromium"}
-              pageId={model.pageId}
-            />
-          )}
           {active && (
             <ExecutionLocation
               native={model.native}
@@ -218,6 +206,17 @@ export function PreviewWorkspace({
           )}
         </PreviewToolbar>
       </div>
+      <KernelInfo
+        open={aboutOpen}
+        returnFocus={() =>
+          workspace.current
+            ?.querySelector<HTMLButtonElement>(".preview-more-trigger")
+            ?.focus()
+        }
+        onClose={() => setAboutOpen(false)}
+        backend={model.native ? "native" : "chromium"}
+        pageId={model.pageId}
+      />
       {findOpen && (
         <form
           className="preview-find"
@@ -431,11 +430,6 @@ export function PreviewWorkspace({
               <BrowserSettings model={model} />
             ) : model.panel === "downloads" ? (
               <DownloadsPanel model={model} />
-            ) : model.panel === "tools" ? (
-              <BrowserTools
-                key={`${active?.id}:${active?.revision}`}
-                model={model}
-              />
             ) : (
               <aside className="preview-inspector">
                 <header>
@@ -507,7 +501,7 @@ export function PreviewWorkspace({
           onClick={() => {
             if (active)
               void import("@tauri-apps/plugin-clipboard-manager")
-                .then((api) => api.writeText(active.address))
+                .then((api) => api.writeText(sourceAddress ?? active.address))
                 .then(() => model.setNotice(t("preview.copied")))
                 .catch(model.report);
           }}

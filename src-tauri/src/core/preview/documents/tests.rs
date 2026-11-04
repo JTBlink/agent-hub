@@ -121,3 +121,33 @@ fn refuses_unknown_hidden_and_oversized_browser_resources() {
         .unwrap();
     assert!(documents.open(&large).is_err());
 }
+
+#[test]
+fn returns_full_source_paths_for_open_read_save_and_linked_documents() {
+    let root = tempfile::tempdir().unwrap();
+    let nested = root.path().join("site");
+    std::fs::create_dir(&nested).unwrap();
+    let path = nested.join("index.html");
+    let next = nested.join("next page.html");
+    std::fs::write(&path, "page").unwrap();
+    std::fs::write(&next, "next").unwrap();
+    let documents = Documents::default();
+    let opened = documents.open_at(root.path(), "site/index.html").unwrap();
+    let expected = path.canonicalize().unwrap();
+    assert_eq!(opened.path, expected);
+    assert_eq!(documents.read(&opened.id).unwrap().path, expected);
+    assert_eq!(
+        documents
+            .save(&opened.id, "edited", &opened.revision)
+            .unwrap()
+            .path,
+        expected
+    );
+    assert_eq!(
+        documents
+            .open_link(&opened.id, "next%20page.html")
+            .unwrap()
+            .path,
+        next.canonicalize().unwrap()
+    );
+}
