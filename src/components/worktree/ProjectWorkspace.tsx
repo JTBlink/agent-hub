@@ -315,11 +315,10 @@ export function ProjectWorkspace({
               ) : undefined
             }
             toolbarEnd={
-              file?.shown &&
+              (file?.shown || previewShown) &&
               route &&
               !pageShown &&
-              !skillsShown &&
-              !previewShown ? (
+              !skillsShown ? (
                 <div
                   ref={setFileToolbar}
                   className="flex shrink-0 items-center"
@@ -375,6 +374,16 @@ export function ProjectWorkspace({
                     <WorktreeDocumentPreview
                       key={tab.document.id}
                       document={tab.document}
+                      toolbarContainer={fileToolbar}
+                      onSource={() => {
+                        setSkillsSelection(null);
+                        setPageSelection("");
+                        previews?.select(null);
+                        setFiles((previous) => ({
+                          ...previous,
+                          [tab.scope]: { path: tab.path, shown: true },
+                        }));
+                      }}
                       active={
                         visible &&
                         !unavailable &&

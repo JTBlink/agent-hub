@@ -11,9 +11,13 @@ import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 export function WorktreeDocumentPreview({
   document,
   active,
+  onSource,
+  toolbarContainer,
 }: {
   document: PreviewDocument;
   active: boolean;
+  onSource: () => void;
+  toolbarContainer?: HTMLElement | null;
 }) {
   const workspace = useRef<PreviewWorkspaceHandle>(null);
   const previews = useWorktreePreviews();
@@ -34,6 +38,8 @@ export function WorktreeDocumentPreview({
       shown={active}
       deliveryAdapter={herdrDeliveryAdapter}
       onClose={() => previews?.close(document.id)}
+      onSource={onSource}
+      sourceToolbarContainer={active ? toolbarContainer : null}
     />
   );
 }

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { PreviewTabs, PreviewNewTab } from "./components/PreviewTabs";
 import { ResizableSidebar } from "../../components/ResizableSidebar";
 import { KernelInfo } from "./components/KernelInfo";
@@ -23,6 +24,8 @@ import {
   Send,
   FolderOpen,
   Copy,
+  FileCode2,
+  Eye,
 } from "lucide-react";
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
 import { previewApi, type PreviewDocument } from "./api";
@@ -46,12 +49,18 @@ export function PreviewWorkspace({
   embedded = false,
   ref,
   onClose,
+  onSource,
+  sourceToolbarContainer,
 }: {
   shown: boolean;
   initialDocument?: PreviewDocument;
   embedded?: boolean;
   ref?: Ref<PreviewWorkspaceHandle>;
   onClose?: () => void;
+  /** Return a project preview to its matching workspace file editor. */
+  onSource?: () => void;
+  /** Mount the source action in the workspace tab toolbar when embedded. */
+  sourceToolbarContainer?: HTMLElement | null;
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
 }) {
   const workspace = useRef<HTMLElement>(null);
@@ -79,6 +88,35 @@ export function PreviewWorkspace({
     model.setPanel(panel);
     model.setPanelOpen(true);
   };
+  const sourceAction =
+    model.document && model.document.kind !== "resource" ? (
+      <button
+        className={
+          sourceToolbarContainer !== undefined
+            ? "app-button-ghost h-7 w-7 shrink-0 p-0"
+            : undefined
+        }
+        aria-label={t(
+          model.source ? "fileReader.preview" : "fileReader.source",
+        )}
+        title={t(model.source ? "fileReader.preview" : "fileReader.source")}
+        onClick={() => {
+          if (
+            !model.source &&
+            onSource &&
+            model.document?.id === initialDocument?.id
+          ) {
+            onSource();
+            return;
+          }
+          model.setSource(!model.source);
+          model.setPicking(false);
+          model.setSourceLine(undefined);
+        }}
+      >
+        {model.source ? <Eye size={16} /> : <FileCode2 size={16} />}
+      </button>
+    ) : null;
   return (
     <section
       ref={workspace}
@@ -182,6 +220,10 @@ export function PreviewWorkspace({
           profiles={model.info?.profiles}
           onOpen={model.openWeb}
         />
+        {sourceToolbarContainer === undefined
+          ? sourceAction
+          : sourceToolbarContainer &&
+            createPortal(sourceAction, sourceToolbarContainer)}
         <button
           aria-label={t("preview.developerTools")}
           title={t("preview.developerTools")}

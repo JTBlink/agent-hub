@@ -112,19 +112,21 @@ export function FileContent({
         </button>
       )}
       {markdown &&
-        [false, true].map((value) => (
+        (onPreview ? [true] : [false, true]).map((value) => (
           <button
             key={String(value)}
             type="button"
             aria-label={t(value ? "fileReader.preview" : "fileReader.source")}
             title={t(value ? "fileReader.preview" : "fileReader.source")}
-            aria-pressed={preview === value}
+            aria-pressed={onPreview ? undefined : preview === value}
             onClick={() =>
               value && onPreview ? onPreview() : setPreview(value)
             }
             className={cn(
               "app-button-ghost px-2 py-1 text-xs",
-              preview === value && "bg-surface-active text-accent-light",
+              !onPreview &&
+                preview === value &&
+                "bg-surface-active text-accent-light",
             )}
           >
             {toolbarContainer !== undefined ? (

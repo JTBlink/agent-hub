@@ -624,6 +624,7 @@ it("removes an invalid project only after confirmation and returns to the welcom
 it("adds a preview after the source tab without navigation, reuses it, and closes its document", async () => {
   mocks.files.mockResolvedValue([
     { name: "README.md", path: "README.md", is_dir: false, is_symlink: false },
+    { name: "other.md", path: "other.md", is_dir: false, is_symlink: false },
   ]);
   mocks.read.mockResolvedValue("# Preview example");
   vi.mocked(previewApi.openProject).mockResolvedValue({
@@ -654,6 +655,28 @@ it("adds a preview after the source tab without navigation, reuses it, and close
     );
     expect(host.querySelector("[data-route]")?.textContent).toBe(route);
     expect(navigatePreview).not.toHaveBeenCalled();
+    expect(
+      host.querySelector(
+        '.preview-addressbar button[aria-label="fileReader.source"]',
+      ),
+    ).toBeNull();
+    await click(
+      '[data-terminal-toolbar] button[aria-label="fileReader.source"]',
+    );
+    expect(host.querySelector('output[aria-label="README.md"]')).not.toBeNull();
+    await click('aside button[title="other.md"]');
+    await act(async () => {
+      [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+        .find((tab) => tab.textContent === "README.md · fileReader.preview")!
+        .click();
+    });
+    await click(
+      '[data-terminal-toolbar] button[aria-label="fileReader.source"]',
+    );
+    expect(host.querySelector('output[aria-label="README.md"]')).not.toBeNull();
+    expect(host.querySelector('output[aria-label="other.md"]')).toBeNull();
+    await click("[data-preview]");
+    expect(previewApi.openProject).toHaveBeenCalledTimes(1);
     const menuAction = async (label: string) => {
       await click(".preview-more-trigger");
       const button = [
@@ -725,6 +748,14 @@ it("adds a preview after the source tab without navigation, reuses it, and close
       )?.disabled,
     ).toBe(false);
     installCodeEditorGeometry();
+    await menuAction("preview.source");
+    expect(codeEditor(host).state.sliceDoc()).toBe("# Preview example");
+    await click(
+      '[data-terminal-toolbar] button[aria-label="fileReader.preview"]',
+    );
+    expect(host.querySelector("article h1")?.textContent).toBe(
+      "Preview example",
+    );
     await menuAction("preview.source");
     await act(async () =>
       codeEditor(host).dispatch({

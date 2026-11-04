@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
 import zh from "../../i18n/zh.json";
 import { FileReader, type ReaderFile } from ".";
+import { FileContent } from "./FileContent";
 import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
 
 const i18n = createInstance();
@@ -33,6 +34,22 @@ beforeEach(() => {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
+});
+it("offers preview as an action when the host opens a separate preview tab", async () => {
+  const preview = vi.fn();
+  await act(async () =>
+    root.render(
+      <FileContent file={files[0]} defaultSource onPreview={preview} />,
+    ),
+  );
+  expect(container.querySelector('button[aria-label="源码"]')).toBeNull();
+  const button = container.querySelector<HTMLButtonElement>(
+    'button[aria-label="预览"]',
+  )!;
+  expect(button.hasAttribute("aria-pressed")).toBe(false);
+  await act(async () => button.click());
+  expect(preview).toHaveBeenCalledOnce();
+  expect(codeEditor(container).state.sliceDoc()).toBe(files[0].content);
 });
 afterEach(async () => {
   await act(async () => root.unmount());
