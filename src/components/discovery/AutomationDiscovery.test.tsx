@@ -609,7 +609,7 @@ it("shows an available task version and confirms the installed version before re
   await submit();
   await submit();
   expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
-    "当前 1.0.0 → 安装 2.0.0",
+    "当前 1.0.0 → 使用 2.0.0",
   );
   await click("确认覆盖");
   expect(api.saveAutomation).toHaveBeenCalledWith(

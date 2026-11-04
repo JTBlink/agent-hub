@@ -138,11 +138,11 @@ Herdr 模板使用共用的 `herdr-agent.py`，系统调度发起后先核实目
 
 提示词不使用 CLI 的 5 秒活动门槛作为任务终态：只提交一次，然后在执行进程内观察状态和完成序号，直到有活动后的就绪状态或明确的新完成序号。`unknown` 保持进行中，旧版 `agent_prompt_stalled` 也只继续观察，不重发；整个等待期间原生包装器保持运行，已有开始／结束标记驱动界面状态更新。最多等待 30 分钟，超时保留会话。
 
-内置每小时维护（:15，只读）、PR / MR 代码审查（:30，只读）和 Issue 自动处理（:45）模板；Issue 模板仅授权明确候选的分支实现、验证及草稿交付，不自动合并或发布。每小时日程以固定本地分钟执行：launchd 使用仅含 Minute 的日历，systemd 使用每小时 OnCalendar，Windows 使用下一次目标分钟开始的一小时重复触发。
+内置每小时维护（:15，只读）、PR / MR 代码审查（:30，评论反馈与自动请求更改）和 Issue 自动处理（:45）模板；Issue 模板仅授权明确候选的分支实现、验证及草稿交付，不自动合并或发布。每小时日程以固定本地分钟执行：launchd 使用仅含 Minute 的日历，systemd 使用每小时 OnCalendar，Windows 使用下一次目标分钟开始的一小时重复触发。
 
 PR / MR 代码审查由 `scripts/review.py` 先执行无模型检查：按分支跟踪或显式选择的 remote 确定仓库，GitHub 使用 `gh`，GitLab 使用 `glab`；自建主机按该主机的 CLI 登录状态识别，也支持在 `config/review-config.json` 指定平台和 CLI launcher argv。不猜测多 remote，不绑定组织平台。查询错误报告失败；没有非草稿开放请求或 head/base 未变且已有完整本地报告时，不启动 Herdr Agent。默认每轮最多检查 3 页、审核一个请求。
 
-检测与运行脚本随任务包分发，无需读取会话历史或访问开发仓库；系统计划直接运行本机完整任务包。有候选时由 Agent 直接调用已安装的 `code-review` Skill，固定 head/base，分别报告 Standards 与 Spec；不修改代码、发表评论、批准或合并。运行上下文通过共享 Herdr launcher 的可选 `prompt_context` 追加，不改写用户的 `prompts/prompt.md`。只有本轮结构化报告完整且结束时远端身份与提交仍匹配，才在 `.local/state/reviews/` 按请求保存最近结果；`review-pending.json` 保留未完成轮次的准确对象与报告路径，恢复先收回原轮次，不另发同一请求。缺少报告不会将 Agent 就绪当作审查成功。任务包 2.0.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](../../automations/engineering/agent-mr-processing/TASK.md)。
+检测与运行脚本随任务包分发，无需读取会话历史或访问开发仓库；系统计划直接运行本机完整任务包。有候选时由 Agent 直接调用已安装的 `code-review` Skill，固定 head/base，分别报告 Standards 与 Spec；将双轴结果发布到该请求的评论，有明确必须修复的问题时自动请求更改；不修改代码、批准或合并。发布前核对提交并按本轮标记去重，打回能力受限时评论说明阻碍。运行上下文通过共享 Herdr launcher 的可选 `prompt_context` 追加，不改写用户的 `prompts/prompt.md`。只有本轮结构化报告包含已确认的评论发布凭据且结束时远端身份与提交仍匹配，才在 `.local/state/reviews/` 按请求保存最近结果；`review-pending.json` 保留未完成轮次的准确对象与报告路径，恢复先收回原轮次，不另发同一请求。缺少报告不会将 Agent 就绪当作审查成功。任务包 2.1.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](../../automations/engineering/agent-mr-processing/TASK.md)。
 
 ## 统一创建入口
 

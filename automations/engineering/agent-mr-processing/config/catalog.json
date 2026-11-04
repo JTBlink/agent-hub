@@ -7,9 +7,9 @@
   },
   "aliases": ["MR 处理", "MR 處理", "MR / PR processing"],
   "description": {
-    "zh": "自动识别 GitHub/GitLab，仅在有待审新版本时启动 Agent，分别审查代码规范和需求符合度。",
-    "zh-TW": "自動識別 GitHub/GitLab，僅在有待審新版本時啟動 Agent，分別審查程式碼規範與需求符合度。",
-    "en": "Detect GitHub/GitLab and start an agent only for a new review version, checking coding standards and specification separately."
+    "zh": "自动识别 GitHub/GitLab，仅在有待审新版本时启动 Agent，分别审查代码规范和需求符合度，评论反馈并自动请求更改。",
+    "zh-TW": "自動識別 GitHub/GitLab，僅在有待審新版本時啟動 Agent，分別審查程式碼規範與需求符合度，留言回饋並自動請求變更。",
+    "en": "Detect GitHub/GitLab and start an agent only for a new review version, checking coding standards and specification separately, posting results and requesting changes when needed."
   },
   "entrypoint": "scripts/review.py",
   "default_enabled": true

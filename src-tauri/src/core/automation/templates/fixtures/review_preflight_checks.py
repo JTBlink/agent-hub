@@ -97,7 +97,8 @@ class ReviewPreflightChecks(unittest.TestCase):
         if not self.report_missing:
             report = contract['report_shape']
             report['summary'] = 'Synthetic review with separate findings'
-            report['standards']['findings'] = [{'file': 'src/example.rs:10', 'impact': 'Synthetic finding'}]
+            report['standards']['findings'] = [{'file': 'src/example.rs:10', 'impact': 'Synthetic finding', 'blocking': False}]
+            report['publication'] = {'status': 'published', 'url': 'https://' + report['host'] + ('/example/project/pull/' if self.provider == 'github' else '/example/team/project/-/merge_requests/') + str(report['number']) + '#review-1', 'decision': 'comment'}
             if self.report_override:
                 report.update(self.report_override)
             Path(contract['result_file']).write_text(json.dumps(report))
@@ -129,6 +130,16 @@ class ReviewPreflightChecks(unittest.TestCase):
         self.assertEqual(len(self.starts), 3)
         self.assertEqual(len(list((self.state / 'reviews').glob('*.json'))), 1)
         self.assertTrue(all(call[0] != 'glab' for call in self.calls))
+
+    def test_old_local_only_receipt_is_reviewed_again(self):
+        self.assertEqual(self.execute(), 0)
+        receipt = next((self.state / 'reviews').glob('*.json'))
+        report = json.loads(receipt.read_text())
+        report.pop('publication')
+        receipt.write_text(json.dumps(report))
+        self.assertEqual(self.execute(), 0)
+        self.assertEqual(len(self.starts), 2)
+        self.assertEqual(json.loads(receipt.read_text())['publication']['status'], 'published')
 
     def test_gitlab_nested_project_and_target_branch_are_encoded(self):
         self.provider = 'gitlab'
@@ -203,6 +214,47 @@ class ReviewPreflightChecks(unittest.TestCase):
         self.assertEqual(self.execute(), 0)
         report = json.loads(next((self.state / 'reviews').glob('*.json')).read_text())
         self.assertEqual(report['spec']['status'], 'unavailable')
+
+    def test_unpublished_or_wrong_request_comment_is_not_cached(self):
+        for publication in ({'status': 'pending'},
+                            {'status': 'published', 'url': 'https://github.com/other/project/pull/1#r',
+                             'decision': 'comment'}):
+            with self.subTest(publication=publication):
+                self.report_override = {'publication': publication}
+                for result in self.state.glob('review-result-*.json'):
+                    report = json.loads(result.read_text())
+                    report['publication'] = publication
+                    result.write_text(json.dumps(report))
+                with self.assertRaises(RuntimeError):
+                    self.execute()
+                self.assertFalse((self.state / 'reviews').exists())
+
+    def test_blocking_findings_require_request_changes_or_reported_limitation(self):
+        self.report_override = {
+            'standards': {'status': 'complete', 'findings': [
+                {'file': 'src/example.rs:10', 'impact': 'Broken behavior', 'blocking': True}]},
+            'publication': {'status': 'published', 'decision': 'comment',
+                            'url': 'https://github.com/example/project/pull/1#review-1'}}
+        with self.assertRaises(RuntimeError):
+            self.execute()
+        self.report_override['publication']['reason'] = 'Self-review cannot request changes'
+        # Complete the retained round, without starting a second agent.
+        result = next(self.state.glob('review-result-*.json'))
+        report = json.loads(result.read_text())
+        report['publication'] = self.report_override['publication']
+        result.write_text(json.dumps(report))
+        self.assertEqual(self.execute(), 0)
+        self.assertEqual(len(self.starts), 1)
+
+    def test_request_changes_is_recorded_for_blocking_findings(self):
+        self.report_override = {
+            'spec': {'status': 'complete', 'findings': [
+                {'file': 'src/example.rs:10', 'impact': 'Missing requirement', 'blocking': True}]},
+            'publication': {'status': 'published', 'decision': 'request_changes',
+                            'url': 'https://github.com/example/project/pull/1#review-1'}}
+        self.assertEqual(self.execute(), 0)
+        report = json.loads(next((self.state / 'reviews').glob('*.json')).read_text())
+        self.assertEqual(report['publication']['decision'], 'request_changes')
 
     def test_closed_request_before_launch_does_not_start_agent(self):
         self.detail_changes = [{**self.request(), 'state': 'closed'}]
