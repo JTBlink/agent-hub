@@ -19,12 +19,14 @@ import { useNavigate } from "react-router-dom";
 
 export function AutomationEditor({
   task,
+  initialDraft,
   restoreBackup = false,
   hermesInstalled,
   onClose,
   onSave,
 }: {
   task?: AutomationTask;
+  initialDraft?: AutomationDraft;
   restoreBackup?: boolean;
   hermesInstalled: boolean;
   onClose: () => void;
@@ -33,17 +35,18 @@ export function AutomationEditor({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<AutomationDraft>(
-    task?.definition ?? {
-      package_options: { version: "1.0.0", dependencies: [], hermes: null },
-      name: "",
-      provider: "system",
-      content: "",
-      workdir: null,
-      schedule: { kind: "daily", hour: 9, minute: 0, weekdays: true },
-      enabled: !restoreBackup,
-    },
+    initialDraft ??
+      task?.definition ?? {
+        package_options: { version: "1.0.0", dependencies: [], hermes: null },
+        name: "",
+        provider: "system",
+        content: "",
+        workdir: null,
+        schedule: { kind: "daily", hour: 9, minute: 0, weekdays: true },
+        enabled: !restoreBackup,
+      },
   );
-  const initialDraft = useRef(draft);
+  const originalDraft = useRef(draft);
   const [leavingForDiscovery, setLeavingForDiscovery] = useState(false);
   const leaving = useRef(false);
   leaving.current = leavingForDiscovery;
@@ -117,7 +120,7 @@ export function AutomationEditor({
   };
   const discover = () => {
     if (
-      JSON.stringify(draft) !== JSON.stringify(initialDraft.current) ||
+      JSON.stringify(draft) !== JSON.stringify(originalDraft.current) ||
       inactivePrompt
     )
       setLeavingForDiscovery(true);
@@ -179,9 +182,11 @@ export function AutomationEditor({
             {t(
               task
                 ? "automation.edit"
-                : restoreBackup
-                  ? "automation.restoreBackup"
-                  : "automation.create",
+                : initialDraft
+                  ? "automation.copy"
+                  : restoreBackup
+                    ? "automation.restoreBackup"
+                    : "automation.create",
             )}
           </h2>
           <div className="flex items-center gap-3">
@@ -221,6 +226,11 @@ export function AutomationEditor({
         ) : (
           <div className="grid min-h-0 overflow-y-auto md:grid-cols-[minmax(0,1fr)_320px]">
             <div className="flex min-w-0 flex-col gap-5 p-6 md:p-8">
+              {initialDraft && (
+                <p className="text-sm leading-6 text-muted">
+                  {t("automation.copyHelp")}
+                </p>
+              )}
               <label className="space-y-2">
                 <span className="sr-only">{t("automation.columns.name")}</span>
                 <input

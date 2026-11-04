@@ -4,13 +4,14 @@
 
 在自动化页选择“导入任务”，可以打开导出的 JSON、任务目录或其中的 `config/task.json`（兼容旧版根目录 `task.json`）。确认预览内容并选择本机项目后，直接创建默认暂停的新任务，并自动完成依赖检查和调度注册；随后可以恢复计划或手动运行。导入不会执行正文。
 
-详情支持编辑、暂停／恢复、立即运行、导出与删除。删除会撤销调度并清理任务拥有的运行环境，可以选择同时清理本地任务文件和记录。项目目录和其他任务引用的资源会被保留。旧任务可通过“迁移为独立任务包”显式迁移，ID 和原日程保留，原脚本不会被搬走。
+列表和详情支持复制完整任务；副本打开编辑器，可修改名称、脚本、提示词、配置和日程。保存后分配独立身份与目录，默认暂停，不复制执行记录、业务状态或运行环境；保留外部项目绑定。详情还支持编辑、暂停／恢复、立即运行、导出与删除。删除会撤销调度并清理任务拥有的运行环境，可以选择同时清理本地任务文件和记录。项目目录和其他任务引用的资源会被保留。旧任务可通过“迁移为独立任务包”显式迁移，ID 和原日程保留，原脚本不会被搬走。
 
 CLI 使用相同流程：
 
 ```bash
 agent-hub-cli automations import --path ./automation.json --preview
 agent-hub-cli automations import --path ./automation.json --workdir ~/projects/demo
+agent-hub-cli automations copy <task-id> --name "Review copy"
 agent-hub-cli automations resume <task-id>
 agent-hub-cli automations export <task-id> --file ./exported-task.json
 agent-hub-cli automations remove <task-id> --delete-local-data

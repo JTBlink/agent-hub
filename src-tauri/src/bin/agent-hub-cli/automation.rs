@@ -24,6 +24,16 @@ enum Origin {
 
 #[derive(Subcommand, Debug)]
 enum AutomationCommand {
+    /// 复制完整任务为独立且默认暂停的副本，可继续编辑全部内容。
+    Copy {
+        id: String,
+        /// 副本名称；省略时在原名称后添加 (copy)。
+        #[arg(long)]
+        name: Option<String>,
+        /// 核对原任务修订，防止复制陈旧版本。
+        #[arg(long)]
+        revision: Option<u64>,
+    },
     /// 导入独立任务包或目录，准备运行环境并默认暂停。
     Import {
         #[arg(long)]
@@ -142,6 +152,14 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
         automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
     }
     match &args.command {
+        AutomationCommand::Copy { id, name, revision } => {
+            let mut draft = automation::copy_draft(id, *revision).map_err(anyhow::Error::msg)?;
+            draft.name = name
+                .clone()
+                .unwrap_or_else(|| format!("{} (copy)", draft.name));
+            let id = automation::save(None, None, draft).map_err(anyhow::Error::msg)?;
+            result(json, &id, "saved");
+        }
         AutomationCommand::Import {
             path,
             workdir,

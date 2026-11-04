@@ -1,6 +1,8 @@
 //! Explicit opt-in smoke test: registers only a unique, manual-only user job.
 //! Never edits an existing job or invokes any user command.
 use serde_json::{json, Value};
+#[path = "automation_management/copy.rs"]
+mod copy;
 use std::{
     path::Path,
     process::{Command, Output},

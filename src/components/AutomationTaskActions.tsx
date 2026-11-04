@@ -6,6 +6,7 @@ import {
   Loader2,
   Download,
   FolderInput,
+  Copy,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationTask } from "../lib/tauri";
@@ -16,6 +17,7 @@ export function AutomationTaskActions({
   pending,
   onRun,
   onEdit,
+  onCopy,
   onToggle,
   onRemove,
   compact = false,
@@ -28,6 +30,7 @@ export function AutomationTaskActions({
   compact?: boolean;
   onRun: () => void;
   onEdit: () => void;
+  onCopy?: () => void;
   onToggle: () => void;
   onRemove: () => void;
   onExport?: () => void;
@@ -40,6 +43,27 @@ export function AutomationTaskActions({
     ["paused", "completed", "error"].includes(task.status);
   return (
     <div className="flex max-w-full shrink-0 flex-wrap items-center gap-1.5">
+      {task.origin === "agent_hub" &&
+        task.can_edit &&
+        task.definition &&
+        !task.is_builtin &&
+        onCopy && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCopy}
+            aria-label={t("automation.copyTask", { name: task.name })}
+            title={t("automation.copy")}
+            className={
+              compact
+                ? "app-button-ghost rounded-md p-1.5 hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
+                : "app-button-secondary"
+            }
+          >
+            <Copy aria-hidden="true" className="h-3.5 w-3.5" />
+            {!compact && t("automation.copy")}
+          </button>
+        )}
       {!compact && task.is_package && onExport && (
         <button
           type="button"

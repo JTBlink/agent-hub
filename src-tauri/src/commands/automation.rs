@@ -62,6 +62,17 @@ pub async fn get_automation_overview(
 }
 
 #[tauri::command]
+pub async fn get_automation_copy_draft(
+    id: String,
+    revision: Option<u64>,
+) -> Result<AutomationDraft, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        automation::copy_draft(&id, revision).map_err(AppError::invalid_input)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn save_automation(
     id: Option<String>,
     revision: Option<u64>,

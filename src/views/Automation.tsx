@@ -23,6 +23,7 @@ import {
   getProjects,
   type Project,
   saveAutomation,
+  getAutomationCopyDraft,
   runAutomation,
   removeAutomation,
   exportAutomationPackage,
@@ -86,6 +87,7 @@ export function Automation() {
     AutomationTask | "create" | "restore" | null
   >(null);
   const [removing, setRemoving] = useState<AutomationTask | null>(null);
+  const [copyDraft, setCopyDraft] = useState<AutomationDraft | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -218,6 +220,7 @@ export function Automation() {
         ? await saveAutomation(null, null, { ...draft, enabled: false })
         : await saveAutomation(task?.id ?? null, task?.revision ?? null, draft);
     setEditor(null);
+    setCopyDraft(null);
     setActionError(null);
     setNotice(t("automation.saved"));
     refresh();
@@ -252,13 +255,23 @@ export function Automation() {
           }}
         />
       )}
-      {editor && (
+      {(editor || copyDraft) && (
         <AutomationEditor
-          key={typeof editor === "string" ? editor : editor.id}
-          task={typeof editor === "string" ? undefined : editor}
+          key={
+            copyDraft
+              ? "copy"
+              : typeof editor === "string"
+                ? editor
+                : editor?.id
+          }
+          task={typeof editor === "object" && editor ? editor : undefined}
+          initialDraft={copyDraft ?? undefined}
           restoreBackup={editor === "restore"}
           hermesInstalled={data?.hermes_installed ?? false}
-          onClose={() => setEditor(null)}
+          onClose={() => {
+            setEditor(null);
+            setCopyDraft(null);
+          }}
           onSave={save}
         />
       )}
@@ -287,6 +300,15 @@ export function Automation() {
       pending={busyId === task.id}
       onRun={() => run(task)}
       onEdit={() => setEditor(task)}
+      onCopy={() => {
+        void perform(task, async () => {
+          const draft = await getAutomationCopyDraft(task.id, task.revision);
+          setCopyDraft({
+            ...draft,
+            name: t("automation.copyName", { name: draft.name }),
+          });
+        });
+      }}
       onToggle={() => toggle(task)}
       onRemove={() => {
         setActionError(null);

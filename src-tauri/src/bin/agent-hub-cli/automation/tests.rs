@@ -17,6 +17,16 @@ fn parses_management_and_origin_filters_without_opening_a_database() {
     ])
     .is_ok());
     assert!(Cli::try_parse_from(["cli", "create", "--file", "task.json"]).is_ok());
+    assert!(Cli::try_parse_from([
+        "cli",
+        "copy",
+        "exact-id",
+        "--name",
+        "Review copy",
+        "--revision",
+        "2"
+    ])
+    .is_ok());
     assert!(Cli::try_parse_from(["cli", "run", "exact-id"]).is_ok());
     assert!(Cli::try_parse_from(["cli", "remove", "exact-id", "--delete-local-data"]).is_ok());
     assert!(Cli::try_parse_from(["cli", "create", "--template", "workspace-check"]).is_ok());

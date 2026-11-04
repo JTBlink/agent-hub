@@ -2,9 +2,11 @@
 #[cfg(any(target_os = "macos", test))]
 mod app_icons;
 pub mod backup;
+mod copy;
 #[cfg(any(unix, test))]
 mod cron;
 mod definition;
+pub use copy::copy_draft;
 mod events;
 mod hermes;
 mod history;

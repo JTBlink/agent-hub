@@ -1,6 +1,8 @@
 //! Independent task packages. Portable intent and local runtime evidence
 //! live in separate files; a damaged package cannot hide another package.
 pub mod catalog;
+#[cfg(test)]
+mod copy_tests;
 mod creation;
 mod dependencies;
 mod exchange;

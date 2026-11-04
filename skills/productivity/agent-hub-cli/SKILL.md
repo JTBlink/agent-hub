@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.12.2"
+  version: "1.13.0"
 description: Manage the user's shared agent-skill library, local automation tasks, and desktop preview browser via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -115,6 +115,7 @@ scheduler files or Hermes jobs.json as a fallback.
 "$SM" --json automations templates
 "$SM" --json automations list
 "$SM" --json automations show '<task-id>'
+"$SM" --json automations copy '<task-id>' --name 'Review copy'
 "$SM" --json automations run '<task-id>'
 "$SM" --json automations logs '<task-id>'
 ```
@@ -155,6 +156,14 @@ use `create --file task.json`. For an existing task, read `show`, edit its
 `definition` as `task.json`, and pass the returned `revision` to `edit`. Never
 pass the entire `show` response as a draft. `pause`, `resume`, and `remove` use
 the same exact task ID; use `runs` and `logs --run` to inspect an execution.
+
+`copy <id> --name <name>` creates an independent paused task containing all
+declared scripts, prompts, configuration, schedule and runtime requirements.
+Use `show` and `edit --file ... --revision ...` to modify any part of the copy.
+The original task is untouched; runtime environments, history and business state
+are not copied. External project bindings are retained; bindings into the source
+package use the new package by default. The GUI Copy action opens the full editor
+before creating the independent task.
 
 New system tasks execute `sh './scripts/run.sh'` (`& './scripts/run.ps1'` on
 Windows). Templates use `TASK.md` as their instruction entrypoint, `config/task.json`

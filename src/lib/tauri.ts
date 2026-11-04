@@ -145,6 +145,8 @@ export const getAutomationTemplates = (locale: string) =>
   invoke<AutomationCatalog>("get_automation_templates", { locale });
 export const getAutomationBackups = () =>
   invoke<AutomationBackup[]>("get_automation_backups");
+export const getAutomationCopyDraft = (id: string, revision: number | null) =>
+  invoke<AutomationDraft>("get_automation_copy_draft", { id, revision });
 export const saveAutomation = (
   id: string | null,
   revision: number | null,

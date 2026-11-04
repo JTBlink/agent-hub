@@ -23,6 +23,7 @@ vi.mock("../lib/tauri", () => ({
   getToolStatus: vi.fn(),
   getAutomationOverview: vi.fn(),
   saveAutomation: vi.fn(),
+  getAutomationCopyDraft: vi.fn(),
   runAutomation: vi.fn(),
   removeAutomation: vi.fn(),
   getAutomationTemplates: vi.fn(),
@@ -138,6 +139,7 @@ beforeEach(() => {
       hermes_installed: true,
     });
   vi.mocked(api.saveAutomation).mockReset().mockResolvedValue("created-id");
+  vi.mocked(api.getAutomationCopyDraft).mockReset();
   vi.mocked(api.runAutomation).mockReset().mockResolvedValue();
   vi.mocked(api.removeAutomation).mockReset().mockResolvedValue();
   vi.mocked(api.previewAutomationPackage).mockReset();
@@ -2200,4 +2202,125 @@ it("shows the refreshed next calendar run after enabling and clears it after pau
   expect(nextMetric()).toBe(new Date(next).toLocaleString("zh"));
   await ariaClick("暂停计划");
   expect(nextMetric()).toBe("已停用");
+});
+
+it("copies a complete task from the list and edits prompts, scripts, settings and schedule independently", async () => {
+  const definition: api.AutomationDraft = {
+    name: "Request review",
+    provider: "system",
+    package_options: {
+      version: "2.0.0",
+      dependencies: [{ kind: "command", name: "git" }],
+      hermes: null,
+    },
+    content: "sh './scripts/run.sh'",
+    workdir: "/workspace/demo",
+    script_dir: "/tasks/request-review",
+    schedule: { kind: "hourly", minute: 20 },
+    enabled: true,
+    files: [
+      { path: "prompts/prompt.md", content: "Review requests" },
+      { path: "scripts/run.sh", content: "echo original" },
+      { path: "config/settings.json", content: '{"limit":3}' },
+    ],
+  };
+  const task: api.AutomationTask = {
+    ...hermes,
+    id: "agent_hub:review",
+    name: definition.name,
+    source: "launchd",
+    origin: "agent_hub" as const,
+    is_package: true,
+    revision: 7,
+    definition,
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [task],
+    issues: [],
+    hermes_installed: true,
+  });
+  vi.mocked(api.getAutomationCopyDraft).mockResolvedValue({
+    ...definition,
+    script_dir: null,
+    enabled: false,
+  });
+  await render();
+  await ariaClick("复制任务 Request review");
+  expect(api.getAutomationCopyDraft).toHaveBeenCalledWith(task.id, 7);
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("名称");
+  await input("名称", "Review copy");
+  await input("提示词", "Review only the selected repository");
+  await select("日程", "manual");
+  await click("打开文件夹");
+  for (const [path, content] of [
+    ["scripts/run.sh", "echo copied"],
+    ["config/settings.json", '{"limit":5}'],
+  ]) {
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          `dialog button[aria-label="${path}"]`,
+        )!
+        .click(),
+    );
+    const editor = codeEditor(document);
+    await act(async () =>
+      editor.dispatch({
+        changes: { from: 0, to: editor.state.doc.length, insert: content },
+      }),
+    );
+  }
+  await act(async () =>
+    document
+      .querySelector("dialog")!
+      .dispatchEvent(new Event("cancel", { cancelable: true })),
+  );
+  vi.mocked(api.saveAutomation).mockRejectedValueOnce(
+    new Error("scheduler unavailable"),
+  );
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "scheduler unavailable",
+  );
+  expect(
+    container.querySelector<HTMLInputElement>('[aria-label="名称"]')?.value,
+  ).toBe("Review copy");
+  await click("创建");
+  expect(api.saveAutomation).toHaveBeenLastCalledWith(null, null, {
+    ...definition,
+    name: "Review copy",
+    script_dir: null,
+    enabled: false,
+    schedule: { kind: "manual" },
+    files: [
+      {
+        path: "prompts/prompt.md",
+        content: "Review only the selected repository",
+      },
+      { path: "scripts/run.sh", content: "echo copied" },
+      { path: "config/settings.json", content: '{"limit":5}' },
+    ],
+  });
+  expect(definition.files?.[1].content).toBe("echo original");
+  expect(api.runAutomation).not.toHaveBeenCalled();
+});
+
+it("cancels a copy from task details without creating or editing the original", async () => {
+  const task = { ...hermes, origin: "agent_hub" as const };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [task],
+    issues: [],
+    hermes_installed: true,
+  });
+  vi.mocked(api.getAutomationCopyDraft).mockResolvedValue(task.definition!);
+  await render("/automation?task=" + encodeURIComponent(task.id));
+  await click("复制任务");
+  await click("取消");
+  expect(container.querySelector("form")).toBeNull();
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(api.runAutomation).not.toHaveBeenCalled();
 });
