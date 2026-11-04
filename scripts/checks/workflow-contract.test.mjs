@@ -350,6 +350,15 @@ describe("native preview cloud validation", () => {
       "--locked --test native_preview_runtime -- --ignored",
     );
     expect(source).toContain("xvfb-run --auto-servernum");
+    const nativeChecks = job.steps.filter((step) =>
+      step.name.startsWith("Verify actual"),
+    );
+    expect(nativeChecks).toHaveLength(2);
+    for (const step of nativeChecks) {
+      expect(step.if).toContain("!cancelled()");
+      expect(step.if).toContain("steps.adapters.outcome == 'success'");
+      expect(step["continue-on-error"]).toBeUndefined();
+    }
     expect(source).not.toMatch(
       /contents: write|secrets\.|upload-artifact|release create/,
     );

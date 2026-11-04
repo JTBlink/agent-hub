@@ -54,14 +54,15 @@ jobs:
       - name: Check Rust formatting
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
       - name: Lint Rust adapters
+        id: adapters
         run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
       - name: Run Rust regression tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - name: Verify actual native WebView
-        if: runner.os != 'Linux'
+        if: ${{ !cancelled() && steps.adapters.outcome == 'success' && runner.os != 'Linux' }}
         run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test native_preview_runtime -- --ignored
       - name: Verify actual WebKitGTK
-        if: runner.os == 'Linux'
+        if: ${{ !cancelled() && steps.adapters.outcome == 'success' && runner.os == 'Linux' }}
         env:
           WEBKIT_DISABLE_COMPOSITING_MODE: "1"
           GDK_BACKEND: x11

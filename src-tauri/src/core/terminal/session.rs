@@ -7,10 +7,11 @@ use std::{
     io::{Read, Write},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, SyncSender},
+        mpsc::{self, SyncSender, TrySendError},
         Arc, Condvar, Mutex,
     },
     thread,
+    time::Duration,
 };
 
 const OUTPUT_CHUNK: usize = 16 * 1024;
@@ -76,6 +77,7 @@ impl Session {
         thread::spawn(move || {
             let mut writer = writer;
             while let Ok(bytes) = receiver.recv() {
+                input_session.wake.notify_all();
                 if input_session.is_closed() {
                     break;
                 }
@@ -242,7 +244,28 @@ impl Session {
             .as_ref()
             .context("Terminal input is closed")?
             .clone();
-        sender.send(bytes).context("Terminal input is closed")
+        // A blocked OS writer can retain the receiver after PTY shutdown on Linux.
+        // Wait on our close notification rather than an uncancellable channel send.
+        let mut pending = bytes;
+        loop {
+            if self.exited.load(Ordering::Acquire) || self.is_closed() {
+                bail!("Terminal input is closed");
+            }
+            match sender.try_send(pending) {
+                Ok(()) => return Ok(()),
+                Err(TrySendError::Disconnected(_)) => bail!("Terminal input is closed"),
+                Err(TrySendError::Full(bytes)) => pending = bytes,
+            }
+            let flow = self.flow.lock().unwrap_or_else(|e| e.into_inner());
+            if flow.closed || self.exited.load(Ordering::Acquire) {
+                bail!("Terminal input is closed");
+            }
+            drop(
+                self.wake
+                    .wait_timeout(flow, Duration::from_millis(10))
+                    .unwrap_or_else(|e| e.into_inner()),
+            );
+        }
     }
     pub fn launch_state(&self) -> super::LaunchState {
         self.shell

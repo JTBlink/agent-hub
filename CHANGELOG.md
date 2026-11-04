@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 修复 Linux 终端输入拥塞时关闭后发送者仍等待的问题，保留有界队列的背压并响应关闭通知。
+
 - 原生预览新增 Windows WebView2 / Linux WebKitGTK 查询、截图、UA 与主题适配，增加 GitHub 三平台真实 WebView 验证工作流；Cookie 导入仍仅支持 macOS。
 
 - 分离共享桌面 Builder、初始化、IPC 注册、托盘与生命周期，以及前端应用外壳和页面路由；宿主可追加编译时插件和页面。Rust `run` 入口改为接收宿主生成的 Tauri Context，现有应用仍使用一套源码与构建流程。
