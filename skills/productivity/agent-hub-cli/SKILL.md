@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.12.1"
+  version: "1.12.2"
 description: Manage the user's shared agent-skill library, local automation tasks, and desktop preview browser via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -118,6 +118,13 @@ scheduler files or Hermes jobs.json as a fallback.
 "$SM" --json automations run '<task-id>'
 "$SM" --json automations logs '<task-id>'
 ```
+
+Marketplace tasks are read-only: view them with `templates` or an import preview,
+and install an independent local instance with `create --template <template-id>`
+or `import --install`. Never edit, delete, pause, or run the marketplace source.
+Editing scripts, changing schedules, pausing/resuming, running, and removing
+operate on the local instance ID returned by installation or `list`. Local
+changes and deletion do not update or delete the marketplace original.
 
 `list` defaults to tasks created by AgentHub, matching the desktop view. Use
 `list --origin all` only when the user asks for tasks from other sources, or

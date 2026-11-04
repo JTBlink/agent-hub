@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 明确自动化 CLI 的市场与本地任务边界：市场任务仅查看和安装，编辑、运行及删除等操作只针对本地任务实例。
+
 - CLI `automations list` 默认只返回 AgentHub 创建的任务，与桌面页一致；仍可通过 `--origin all` 或 `--origin external` 显式查询其他来源。
 
 - macOS 系统 Hosts 首次写入授权安装专用辅助入口，后续写入免密；保留修订检查、备份与失败恢复，并提供 `agent-hub-cli hosts revoke-authorization` 撤销当前用户授权。

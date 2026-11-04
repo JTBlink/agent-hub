@@ -60,7 +60,7 @@ enum AutomationCommand {
         #[arg(long)]
         query: Option<String>,
     },
-    /// 查看完整定义、创建者、日程和执行状态。
+    /// 查看本地任务实例的完整定义、创建者、日程和执行状态。
     Show { id: String },
     /// 查看本机保存的执行记录；不触发任务或 Git 备份。
     Runs { id: String },
@@ -78,13 +78,13 @@ enum AutomationCommand {
             conflicts_with = "template"
         )]
         file: Option<PathBuf>,
-        /// 使用内置模板 ID；创建前可通过 templates 预览。
+        /// 安装内置模板为独立本地任务；原模板保持只读，可通过 templates 查看。
         #[arg(long, required_unless_present = "file", conflicts_with = "file")]
         template: Option<String>,
         #[arg(long, default_value = "zh")]
         locale: String,
     },
-    /// 查看本机可用的内置模板，供 GUI 和 Agent 快速创建。
+    /// 只读查看市场内置模板；通过 create --template 安装为本地任务。
     Templates {
         #[arg(long, default_value = "zh")]
         locale: String,
@@ -97,7 +97,7 @@ enum AutomationCommand {
         #[arg(long)]
         apply: bool,
     },
-    /// 更新任务；支持当前用户的常见 launchd 定时任务和 Hermes 任务。
+    /// 编辑本地任务实例的定义、脚本和日程；不能修改市场模板。
     Edit {
         id: String,
         #[arg(long)]
@@ -112,7 +112,7 @@ enum AutomationCommand {
     Pause { id: String },
     /// 恢复计划运行。
     Resume { id: String },
-    /// 删除受支持的任务和创建记录。
+    /// 删除本地任务及其调度、创建记录；不删除市场模板。
     Remove {
         id: String,
         /// 同时清理 AgentHub 自动工作目录和本地记录，保留自定义及共享目录。

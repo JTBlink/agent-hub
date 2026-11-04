@@ -94,6 +94,22 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
     assert!(draft.files[0].content.contains("parse_options"));
     assert_eq!(std::fs::read_dir(temporary.path()).unwrap().count(), 0);
 }
+#[test]
+fn marketplace_templates_cannot_be_edited_or_removed_as_local_tasks() {
+    let temporary = tempfile::tempdir().unwrap();
+    let catalog = success(cli(temporary.path(), &["templates"]));
+    let missing = temporary.path().join("not-a-local-definition.json");
+    let edit = cli(
+        temporary.path(),
+        &["edit", "disk-cleanup", "--file", missing.to_str().unwrap()],
+    );
+    assert!(!edit.status.success());
+    assert!(String::from_utf8_lossy(&edit.stderr).contains("Task not found"));
+    let remove = cli(temporary.path(), &["remove", "disk-cleanup"]);
+    assert!(!remove.status.success());
+    assert_eq!(catalog, success(cli(temporary.path(), &["templates"])));
+}
+
 struct Cleanup<'a> {
     root: &'a Path,
     id: String,
