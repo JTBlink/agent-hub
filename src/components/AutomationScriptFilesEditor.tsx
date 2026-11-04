@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationScriptFile } from "../lib/tauri";
 import { FileReaderDialog } from "./file-reader";
@@ -34,11 +34,12 @@ export function AutomationScriptFilesEditor({
         onClick={() => setOpen(true)}
         className="app-button-secondary shrink-0"
       >
-        <BookOpen aria-hidden="true" className="h-4 w-4" />
-        {t("fileReader.open")}
+        <FolderOpen aria-hidden="true" className="h-4 w-4" />
+        {t("automation.openScriptFolder")}
       </button>
       {open && (
         <FileReaderDialog
+          initialMaximized
           title={t("automation.scriptFiles", { count: files.length })}
           description={t("automation.scriptFilesSaveHint")}
           files={files}

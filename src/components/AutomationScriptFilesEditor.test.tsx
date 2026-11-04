@@ -66,19 +66,22 @@ async function click(path: string) {
   expect(button).not.toBeNull();
   await act(async () => button!.click());
 }
-async function openReader() {
+async function openFolder() {
   const button = [...container.querySelectorAll("button")].find((node) =>
-    node.textContent?.includes("打开文件阅读器"),
+    node.textContent?.includes("打开文件夹"),
   )!;
   button.focus();
   await act(async () => button.click());
   return button;
 }
-it("opens a separate reader and keeps edits across file switches and reopening", async () => {
+it("opens the task folder in the shared editor and keeps edits across file switches and reopening", async () => {
   await act(async () => root.render(<Editor />));
   expect(container.querySelector("textarea")).toBeNull();
-  const trigger = await openReader();
+  const trigger = await openFolder();
   expect(document.querySelector("dialog[open]")).not.toBeNull();
+  expect(
+    document.querySelector('dialog button[aria-label="还原阅读窗口"]'),
+  ).not.toBeNull();
   await click("maintenance/agent.py");
   const editor = codeEditor(document);
   expect(editor.state.sliceDoc()).toBe("print('check')");
@@ -98,7 +101,7 @@ it("opens a separate reader and keeps edits across file switches and reopening",
   await click("关闭");
   expect(document.querySelector("dialog")).toBeNull();
   expect(document.activeElement).toBe(trigger);
-  await openReader();
+  await openFolder();
   expect(codeEditor(document).state.sliceDoc()).toBe("print('updated')");
 });
 it("allows reading and selecting text while busy and handles removed files", async () => {
@@ -111,7 +114,7 @@ it("allows reading and selecting text while busy and handles removed files", asy
       />,
     ),
   );
-  await openReader();
+  await openFolder();
   await click("run.sh");
   const editor = codeEditor(document);
   expect(editor.state.readOnly).toBe(true);

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { AutomationTask } from "../lib/tauri";
 import { automationTime, automationSchedule } from "../lib/automation";
 import { AutomationTaskIcon } from "./AutomationTaskIcon";
+import { AutomationTaskSource } from "./AutomationTaskSource";
 import { AutomationStatusBadge } from "./AutomationStatusBadge";
 import { AutomationOriginBadge } from "./AutomationOriginBadge";
 import { CopyPathButton } from "./CopyPathButton";
@@ -173,6 +174,7 @@ export function AutomationTaskDetail({
               >
                 {task?.name || t("automation.details")}
               </h1>
+              {task && <AutomationTaskSource key={task.id} task={task} />}
               {task && <AutomationOriginBadge origin={task.origin} />}
               {task && (
                 <AutomationStatusBadge
