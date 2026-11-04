@@ -295,22 +295,33 @@ fn backs_up_and_restores_user_configuration_without_applying_system_hosts() {
     initialize(&e.store).unwrap();
     let root = repo_dir();
     assert_eq!(
-        fs::read_to_string(root.join(format!("user-config/hosts/{}.hosts", profile.id))).unwrap(),
-        profile.content
+        fs::read_to_string(root.join(format!("user-config/hosts/{}.hosts", profile.id)))
+            .unwrap()
+            .replace("\r\n", "\n"),
+        "127.0.0.1 localhost\n"
     );
     let tag = commit(&e.store, "before profile change").unwrap();
+    // Git may apply the user's configured line endings while initializing the backup.
+    let current = super::super::hosts::profiles::list()
+        .unwrap()
+        .into_iter()
+        .find(|item| item.id == profile.id)
+        .unwrap();
     super::super::hosts::profiles::update(
         &profile.id,
         "Changed",
         "::1 localhost\n",
-        &profile.revision,
+        &current.revision,
     )
     .unwrap();
     commit(&e.store, "after profile change").unwrap();
     restore(&e.store, &tag).unwrap();
     let restored = super::super::hosts::profiles::list().unwrap();
     assert_eq!(restored[0].name, "Development");
-    assert_eq!(restored[0].content, profile.content);
+    assert_eq!(
+        restored[0].content.replace("\r\n", "\n"),
+        "127.0.0.1 localhost\n"
+    );
     assert!(!e.tmp.path().join("hosts").exists());
 }
 

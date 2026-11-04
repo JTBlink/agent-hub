@@ -122,7 +122,7 @@ pub fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<String> {
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let (parent, tree) = trees(&repo, sha)?;
     let mut options = git2::DiffOptions::new();
-    options.context_lines(u32::MAX);
+    options.context_lines(super::DIFF_CONTEXT_LINES);
     let mut diff = repo.diff_tree_to_tree(parent.as_ref(), Some(&tree), Some(&mut options))?;
     diff.find_similar(None)?;
     super::render_diff_for_path(&diff, Some(path))

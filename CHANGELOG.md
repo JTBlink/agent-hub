@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 修复 Windows Hosts helper 的 PowerShell 模块依赖及 Git 补丁上下文的整数上限，保留完整上下文与并发修改校验。
+
 - 项目 Skills 事务锁在操作结束时显式解锁，避免继承或复制的文件句柄导致后续操作偶发提示忙碌。
 
 - 修复 Windows 文件重命名覆盖目标、Hosts 保存时临时文件句柄占用及 Git worktree 的系统路径兼容问题；跨平台回归尊重平台换行设置。

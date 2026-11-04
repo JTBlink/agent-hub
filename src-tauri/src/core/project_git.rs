@@ -148,7 +148,7 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
     let mut options = git2::DiffOptions::new();
     options
-        .context_lines(u32::MAX)
+        .context_lines(DIFF_CONTEXT_LINES)
         .pathspec(path)
         .disable_pathspec_match(true)
         .include_untracked(true)
@@ -162,6 +162,9 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
     };
     render_diff(&diff)
 }
+
+// libgit2's xdiff consumes C long, which is only 32 bits on Windows.
+const DIFF_CONTEXT_LINES: u32 = i32::MAX as u32;
 
 fn render_diff(diff: &git2::Diff<'_>) -> Result<String> {
     render_diff_for_path(diff, None)

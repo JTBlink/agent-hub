@@ -100,6 +100,12 @@ pub(super) fn script(
 ) -> String {
     format!(
         r#"$ErrorActionPreference = 'Stop'
+function Get-ContentHash([string]$path) {{
+  $stream = [IO.File]::OpenRead($path)
+  $sha = [Security.Cryptography.SHA256]::Create()
+  try {{ return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }}
+  finally {{ $sha.Dispose(); $stream.Dispose() }}
+}}
 try {{
   $target = {target}
   $backup = {backup}
@@ -108,11 +114,11 @@ try {{
   $sha = [Security.Cryptography.SHA256]::Create()
   try {{ $hash = [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '').ToLowerInvariant() }} finally {{ $sha.Dispose() }}
   if ($hash -ne '{updated}') {{ throw 'HOSTS_PAYLOAD_CHANGED' }}
-  if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne '{expected}') {{ throw 'HOSTS_CONFLICT' }}
+  if ((Get-ContentHash $target) -ne '{expected}') {{ throw 'HOSTS_CONFLICT' }}
   [IO.File]::Copy($target, $backup, $false)
   try {{
     [IO.File]::WriteAllBytes($target, $bytes)
-    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -ne '{updated}') {{ throw 'HOSTS_VERIFY_FAILED' }}
+    if ((Get-ContentHash $target) -ne '{updated}') {{ throw 'HOSTS_VERIFY_FAILED' }}
   }} catch {{
     try {{ [IO.File]::WriteAllBytes($target, [IO.File]::ReadAllBytes($backup)) }} catch {{ throw 'HOSTS_RESTORE_FAILED' }}
     throw 'HOSTS_WRITE_FAILED'
@@ -128,7 +134,7 @@ try {{
 
 #[cfg(windows)]
 fn run(script: &str, elevated: bool) -> Result<(), String> {
-    use crate::core::cli_process::command_with_timeout;
+    use crate::core::cli_process::capture_prepared;
     use base64::{engine::general_purpose::STANDARD, Engine};
     let encode = |value: &str| {
         STANDARD.encode(
@@ -149,16 +155,14 @@ fn run(script: &str, elevated: bool) -> Result<(), String> {
     } else {
         script.into()
     };
-    command_with_timeout(
-        &powershell.to_string_lossy(),
-        &[
-            "-NoProfile",
-            "-NonInteractive",
-            "-EncodedCommand",
-            &encode(&launcher),
-        ],
-        &[],
-        300,
-    )
-    .map(|_| ())
+    let mut command = std::process::Command::new(&powershell);
+    command.args([
+        "-NoProfile",
+        "-NonInteractive",
+        "-EncodedCommand",
+        &encode(&launcher),
+    ]);
+    // PowerShell 7's inherited module path is incompatible with Windows PowerShell 5.
+    command.env_remove("PSModulePath");
+    capture_prepared(command, &powershell.to_string_lossy(), 300, None).map(|_| ())
 }
