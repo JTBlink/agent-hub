@@ -47,11 +47,11 @@ enum AutomationCommand {
     Uninstall { id: String },
     /// 迁移旧系统任务或规范已卸载包的中文目录；保留任务 ID、日程和原脚本。
     Migrate { id: String },
-    /// 汇总本机任务；默认隐藏操作系统内置任务。
+    /// 默认列出 AgentHub 创建的任务；使用 --origin all 查看所有来源。
     List {
         #[arg(long, value_enum, default_value = "all")]
         source: Source,
-        #[arg(long, value_enum, default_value = "all")]
+        #[arg(long, value_enum, default_value = "agent-hub")]
         origin: Origin,
         /// 包含操作系统内置任务。
         #[arg(long)]

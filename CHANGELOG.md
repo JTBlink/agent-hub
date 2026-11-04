@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- CLI `automations list` 默认只返回 AgentHub 创建的任务，与桌面页一致；仍可通过 `--origin all` 或 `--origin external` 显式查询其他来源。
+
 - macOS 系统 Hosts 首次写入授权安装专用辅助入口，后续写入免密；保留修订检查、备份与失败恢复，并提供 `agent-hub-cli hosts revoke-authorization` 撤销当前用户授权。
 
 - 原生网页元素选取仅接受当前已启用会话的结果，取消或切到后台后忽略延迟捕获，防止旧结果触发复制。

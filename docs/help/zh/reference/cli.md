@@ -52,12 +52,13 @@ CLI 使用相同的数据与路径规则，显式目录参数会影响目标。�
 
 ## 自动化任务
 
-列表默认隐藏系统内置任务。使用返回的完整 `id` 操作任务，名称相同也不会混淆不同作用域的任务。
+列表默认只返回 AgentHub 创建的任务，与桌面页保持一致。使用 `--origin all` 查看所有来源，或 `--origin external` 查看外部任务；系统内置任务还需加 `--show-system`。使用返回的完整 `id` 操作任务，名称相同也不会混淆不同作用域的任务。
 
 ```bash
 agent-hub-cli --json automations list
 agent-hub-cli automations list --origin agent-hub --source system
-agent-hub-cli automations list --show-system
+agent-hub-cli automations list --origin all
+agent-hub-cli automations list --origin all --show-system
 agent-hub-cli --json automations show '<task-id>'
 agent-hub-cli --json automations runs '<task-id>'
 agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'

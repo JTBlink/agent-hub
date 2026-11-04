@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.12.0"
+  version: "1.12.1"
 description: Manage the user's shared agent-skill library, local automation tasks, and desktop preview browser via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -113,11 +113,16 @@ scheduler files or Hermes jobs.json as a fallback.
 
 ```bash
 "$SM" --json automations templates
-"$SM" --json automations list --origin agent-hub
+"$SM" --json automations list
 "$SM" --json automations show '<task-id>'
 "$SM" --json automations run '<task-id>'
 "$SM" --json automations logs '<task-id>'
 ```
+
+`list` defaults to tasks created by AgentHub, matching the desktop view. Use
+`list --origin all` only when the user asks for tasks from other sources, or
+`--origin external` for external tasks. Add `--show-system` to an explicit
+`--origin all` query when operating-system built-in tasks are also requested.
 
 Resolve the exact ID from `list`, then inspect the command/prompt and working
 directory with `show` before running the user-selected task. Use `can_run` and

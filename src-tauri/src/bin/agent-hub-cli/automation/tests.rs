@@ -42,3 +42,38 @@ fn parses_management_and_origin_filters_without_opening_a_database() {
     ])
     .is_ok());
 }
+
+#[test]
+fn lists_only_agent_hub_tasks_by_default() {
+    let cli = Cli::try_parse_from(["cli", "list"]).unwrap();
+    assert!(matches!(
+        cli.args.command,
+        super::AutomationCommand::List {
+            origin: super::Origin::AgentHub,
+            source: super::Source::All,
+            show_system: false,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn allows_explicit_all_and_external_task_origins() {
+    let cli = Cli::try_parse_from(["cli", "list", "--origin", "all", "--show-system"]).unwrap();
+    assert!(matches!(
+        cli.args.command,
+        super::AutomationCommand::List {
+            origin: super::Origin::All,
+            show_system: true,
+            ..
+        }
+    ));
+    let cli = Cli::try_parse_from(["cli", "list", "--origin", "external"]).unwrap();
+    assert!(matches!(
+        cli.args.command,
+        super::AutomationCommand::List {
+            origin: super::Origin::External,
+            ..
+        }
+    ));
+}
