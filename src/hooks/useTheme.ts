@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import * as api from "../lib/tauri";
 
 export type Theme = "light" | "dark" | "system";
@@ -12,8 +12,9 @@ function getSystemTheme(): ResolvedTheme {
     : "light";
 }
 
-function applyThemeClass(resolved: ResolvedTheme) {
+function applyThemeClass(resolved: ResolvedTheme, mode: Theme) {
   const root = document.documentElement;
+  root.dataset.themeMode = mode;
   if (resolved === "dark") {
     root.classList.add("dark");
   } else {
@@ -29,22 +30,25 @@ export function useTheme() {
     return "dark";
   });
 
-  const resolvedTheme: ResolvedTheme =
-    theme === "system" ? getSystemTheme() : theme;
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (theme !== "system") return () => {};
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    [theme],
+  );
+  const systemTheme = useSyncExternalStore<ResolvedTheme>(
+    subscribe,
+    () => (theme === "system" ? getSystemTheme() : "light"),
+    () => "light",
+  );
+  const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
 
-  // Apply class on mount and theme change
   useEffect(() => {
-    applyThemeClass(resolvedTheme);
-  }, [resolvedTheme]);
-
-  // Listen for system preference changes when in "system" mode
-  useEffect(() => {
-    if (theme !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => applyThemeClass(getSystemTheme());
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+    applyThemeClass(resolvedTheme, theme);
+  }, [resolvedTheme, theme]);
 
   // Load from Tauri settings on mount
   useEffect(() => {

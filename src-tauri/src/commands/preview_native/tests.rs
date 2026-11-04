@@ -31,3 +31,14 @@ fn filters_malformed_page_events_before_the_inspector_receives_them() {
     assert_eq!(events.len(), 1);
     assert_eq!(events[0]["method"], "Runtime.consoleAPICalled");
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn restores_theme_after_batch_close_before_runtime_removes_views() {
+    let views = NativeViews::default();
+    let live = || ["first", "second"].map(String::from);
+    assert!(!views.last_view_closing("first", live()));
+    assert!(views.last_view_closing("second", live()));
+    assert!(views.last_view_closing("next", ["next".into()]));
+    assert_eq!(views.closing.lock().unwrap().len(), 1);
+}

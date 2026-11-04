@@ -180,7 +180,15 @@ fn synchronizes_page_theme_without_replacing_website_styles() {
     let id = browsers.create("guest", "about:blank").unwrap();
     browsers.action(&id, Action::Evaluate { expression: "document.body.innerHTML='<style>body{background:rgb(255,255,255)}@media(prefers-color-scheme:dark){body{background:rgb(30,30,46)}}</style><p>Theme content</p>';true".into() }).unwrap();
     for dark in [true, false, true] {
-        browsers.action(&id, Action::SetTheme { dark }).unwrap();
+        browsers
+            .action(
+                &id,
+                Action::SetTheme {
+                    dark,
+                    system: false,
+                },
+            )
+            .unwrap();
         let page = browsers.action(&id, Action::Evaluate { expression: "({dark:matchMedia('(prefers-color-scheme: dark)').matches,background:getComputedStyle(document.body).backgroundColor,text:document.querySelector('p').textContent})".into() }).unwrap();
         assert_eq!(page["dark"], dark);
         assert_eq!(

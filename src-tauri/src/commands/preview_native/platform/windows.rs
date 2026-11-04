@@ -162,7 +162,7 @@ pub async fn user_agent(view: &tauri::Webview, value: Option<String>) -> Result<
     .map_err(AppError::io)?;
     super::receive(receiver).await
 }
-pub async fn theme(view: &tauri::Webview, dark: bool) -> Result<(), AppError> {
+pub async fn theme(view: &tauri::Webview, dark: bool, _system: bool) -> Result<(), AppError> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     view.with_webview(move |platform| {
         let result = (|| unsafe {

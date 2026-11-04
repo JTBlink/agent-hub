@@ -107,8 +107,8 @@ pub async fn preview_native_execute(
     let view = target(&webview, &id)?;
     let _job = webview.state::<NativeViews>().lock(&id).await?;
     match action {
-        Action::SetTheme { dark } => {
-            platform::theme(&view, dark).await?;
+        Action::SetTheme { dark, system } => {
+            platform::theme(&view, dark, system).await?;
             Ok(Value::Null)
         }
         Action::VerifyRevision { expected_revision } => {

@@ -67,14 +67,27 @@ pub async fn user_agent(view: &tauri::Webview, value: Option<String>) -> Result<
     .map_err(AppError::io)?;
     super::receive(receiver).await
 }
-pub async fn theme(view: &tauri::Webview, dark: bool) -> Result<(), AppError> {
+fn apply_theme(dark: bool, system: bool) -> Result<(), AppError> {
     use gtk::prelude::GtkSettingsExt;
+    let settings =
+        gtk::Settings::default().ok_or_else(|| AppError::network("GTK settings unavailable"))?;
+    if system {
+        settings.reset_property("gtk-application-prefer-dark-theme");
+    } else {
+        settings.set_gtk_application_prefer_dark_theme(dark);
+    }
+    Ok(())
+}
+pub fn restore_theme(view: &tauri::Webview) -> Result<(), AppError> {
+    view.with_webview(|_| {
+        let _ = apply_theme(false, true);
+    })
+    .map_err(AppError::io)
+}
+pub async fn theme(view: &tauri::Webview, dark: bool, system: bool) -> Result<(), AppError> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     view.with_webview(move |_| {
-        let result = gtk::Settings::default()
-            .ok_or_else(|| AppError::network("GTK settings unavailable"))
-            .map(|settings| settings.set_gtk_application_prefer_dark_theme(dark));
-        let _ = sender.send(result);
+        let _ = sender.send(apply_theme(dark, system));
     })
     .map_err(AppError::io)?;
     super::receive(receiver).await

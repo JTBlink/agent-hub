@@ -134,7 +134,7 @@ pub async fn user_agent(view: &tauri::Webview, value: Option<String>) -> Result<
 }
 
 /// Apply appearance to the owned child view so WebKit updates prefers-color-scheme.
-pub async fn theme(view: &tauri::Webview, dark: bool) -> Result<(), AppError> {
+pub async fn theme(view: &tauri::Webview, dark: bool, _system: bool) -> Result<(), AppError> {
     use objc2_app_kit::{
         NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
     };

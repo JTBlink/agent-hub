@@ -55,7 +55,7 @@ impl Browsers {
             page.frame_info = None;
         }
         match action {
-            Action::SetTheme { dark } => page.cdp.call("Emulation.setEmulatedMedia", json!({ "features": [{ "name": "prefers-color-scheme", "value": if dark { "dark" } else { "light" } }] })),
+            Action::SetTheme { dark, .. } => page.cdp.call("Emulation.setEmulatedMedia", json!({ "features": [{ "name": "prefers-color-scheme", "value": if dark { "dark" } else { "light" } }] })),
             Action::VerifyRevision {expected_revision} => {
                 if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED")); }
                 Ok(Value::Null)

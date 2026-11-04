@@ -17,6 +17,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   document.documentElement.classList.remove("dark");
   document.documentElement.removeAttribute("style");
+  delete document.documentElement.dataset.themeMode;
 });
 
 it("sends the same theme operation to Chromium and native pages and applies background only to blank documents", async () => {
@@ -100,4 +101,27 @@ it("uses app colors on the blank page and preserves authored webpage colors", ()
   website.window.eval(blankPageThemeScript({ dark: true, background: "red" }));
   expect(website.window.document.body.style.backgroundColor).toBe("");
   website.window.close();
+});
+
+it("sends system mode when the selected mode changes without changing its resolved color", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  document.documentElement.classList.add("dark");
+  document.documentElement.dataset.themeMode = "dark";
+  function Host() {
+    const theme = useBrowserTheme("https://example.invalid/", vi.fn());
+    return <button onClick={() => theme.ready("page")}>Ready</button>;
+  }
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  await act(async () => root.render(<Host />));
+  await act(async () => host.querySelector("button")!.click());
+  await act(async () => {
+    document.documentElement.dataset.themeMode = "system";
+  });
+  expect(previewApi.action).toHaveBeenLastCalledWith("page", {
+    kind: "set_theme",
+    dark: true,
+    system: true,
+  });
+  await act(async () => root.unmount());
 });

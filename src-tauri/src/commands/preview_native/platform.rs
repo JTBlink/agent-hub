@@ -47,3 +47,6 @@ pub use windows::{evaluate, query, snapshot, theme, user_agent};
 mod linux;
 #[cfg(target_os = "linux")]
 pub use linux::{evaluate, query, snapshot, theme, user_agent};
+
+#[cfg(target_os = "linux")]
+pub use linux::restore_theme as linux_restore_theme;

@@ -6,6 +6,8 @@ use serde_json::Value;
 pub enum Action {
     SetTheme {
         dark: bool,
+        #[serde(default)]
+        system: bool,
     },
     VerifyRevision {
         expected_revision: String,
@@ -81,3 +83,7 @@ pub enum Action {
     },
     Storage,
 }
+
+#[cfg(test)]
+#[path = "actions_tests.rs"]
+mod tests;

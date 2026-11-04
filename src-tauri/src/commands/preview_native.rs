@@ -23,6 +23,8 @@ pub struct NativeViews {
     imports: Arc<crate::core::preview::cookies::Imports>,
     import_uas: Mutex<HashMap<String, (std::time::Instant, Option<String>)>>,
     cookie_gate: tokio::sync::Mutex<()>,
+    #[cfg(target_os = "linux")]
+    closing: Mutex<std::collections::HashSet<String>>,
 }
 impl Default for NativeViews {
     fn default() -> Self {
@@ -32,10 +34,25 @@ impl Default for NativeViews {
             imports: crate::core::preview::cookies::Imports::shared(),
             import_uas: Mutex::default(),
             cookie_gate: tokio::sync::Mutex::new(()),
+            #[cfg(target_os = "linux")]
+            closing: Mutex::default(),
         }
     }
 }
 impl NativeViews {
+    #[cfg(target_os = "linux")]
+    fn last_view_closing(&self, id: &str, live: impl IntoIterator<Item = String>) -> bool {
+        let live: std::collections::HashSet<_> = live.into_iter().collect();
+        let mut closing = self
+            .closing
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        // Runtime removal is asynchronous; simultaneous close requests must count
+        // already-closing views without retaining stale identities indefinitely.
+        closing.retain(|view| live.contains(view));
+        closing.insert(id.into());
+        live.iter().all(|view| closing.contains(view))
+    }
     async fn lock(&self, id: &str) -> Result<tokio::sync::OwnedMutexGuard<()>, AppError> {
         let gate = self
             .gates
@@ -252,6 +269,18 @@ pub fn preview_native_action(
         "back" => view.eval("history.back()").map_err(AppError::io),
         "forward" => view.eval("history.forward()").map_err(AppError::io),
         "close" => {
+            #[cfg(target_os = "linux")]
+            if webview.state::<NativeViews>().last_view_closing(
+                &id,
+                webview
+                    .window()
+                    .webviews()
+                    .iter()
+                    .filter(|view| view.label().starts_with("preview-native-"))
+                    .map(|view| view.label().to_owned()),
+            ) {
+                let _ = platform::linux_restore_theme(&view);
+            }
             webview.state::<NativeViews>().downloads.close_view(&id);
             if let Ok(mut gates) = webview.state::<NativeViews>().gates.lock() {
                 gates.remove(&id);

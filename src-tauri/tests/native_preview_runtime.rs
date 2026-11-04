@@ -125,7 +125,7 @@ mod runtime {
         download_url: String,
     ) -> Result<(), String> {
         for _ in 0..100 {
-            if evaluate(&main,&id,"Boolean(document.querySelector('#name')&&document.querySelector('iframe')?.contentDocument?.querySelector('button'))").await.unwrap_or(Value::Bool(false))==true{break;}
+            if evaluate(&main,&id,"Boolean(document.readyState==='complete'&&document.querySelector('#name')&&document.querySelector('iframe')?.contentDocument?.readyState==='complete'&&document.querySelector('iframe')?.contentDocument?.querySelector('button'))").await.unwrap_or(Value::Bool(false))==true{break;}
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
         ensure(
@@ -236,8 +236,24 @@ mod runtime {
                 "HttpOnly cookie missing",
             )?;
         }
+        let system_dark = evaluate(
+            &main,
+            &id,
+            "matchMedia('(prefers-color-scheme: dark)').matches",
+        )
+        .await?
+        .as_bool()
+        .ok_or("Missing system theme")?;
         for dark in [true, false] {
-            action(&main, &id, Action::SetTheme { dark }).await?;
+            action(
+                &main,
+                &id,
+                Action::SetTheme {
+                    dark,
+                    system: false,
+                },
+            )
+            .await?;
             wait_for(
                 &main,
                 &id,
@@ -246,6 +262,22 @@ mod runtime {
             )
             .await?;
         }
+        action(
+            &main,
+            &id,
+            Action::SetTheme {
+                dark: system_dark,
+                system: true,
+            },
+        )
+        .await?;
+        wait_for(
+            &main,
+            &id,
+            &format!("matchMedia('(prefers-color-scheme: dark)').matches==={system_dark}"),
+            "System theme was not restored",
+        )
+        .await?;
         let current = action(&main, &id, Action::Snapshot).await?;
         let shadow = reference(&current, "Shadow action")?;
         let picked = action(&main, &id, Action::InspectRef { reference: shadow }).await?;
@@ -257,7 +289,7 @@ mod runtime {
         evaluate(&main,&id,&format!("document.querySelector('#shadow').shadowRoot.querySelector('button').dispatchEvent(new MouseEvent('click',{{bubbles:true,composed:true,clientX:{x},clientY:{y},view:window}}));true")).await?;
         let capture = control::preview_native_frame(main.clone(), id.clone())
             .await
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| format!("shadow capture: {error}"))?;
         ensure(
             capture["picked"]["label"] == "Shadow action",
             "Native picker did not reach the shadow element",
@@ -293,7 +325,7 @@ mod runtime {
         evaluate(&main,&id,"const d=document.querySelector('iframe').contentDocument,b=d.querySelector('button'),r=b.getBoundingClientRect();b.dispatchEvent(new d.defaultView.MouseEvent('click',{bubbles:true,cancelable:true,clientX:r.x+5,clientY:r.y+5,view:d.defaultView}));true").await?;
         let frame_pick = control::preview_native_frame(main.clone(), id.clone())
             .await
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| format!("iframe capture: {error}"))?;
         ensure(
             frame_pick["picked"]["label"] == "Frame action",
             "Native iframe pointer selection failed",
@@ -340,12 +372,64 @@ mod runtime {
                 serde_json::to_string(&history).unwrap_or_default()
             ),
         )?;
+        #[cfg(target_os = "linux")]
+        {
+            action(
+                &main,
+                &id,
+                Action::SetTheme {
+                    dark: !system_dark,
+                    system: false,
+                },
+            )
+            .await?;
+            wait_for(
+                &main,
+                &id,
+                &format!(
+                    "matchMedia('(prefers-color-scheme: dark)').matches==={}",
+                    !system_dark
+                ),
+                "Explicit GTK theme did not apply",
+            )
+            .await?;
+        }
+        preview_native::preview_native_action(main.clone(), id, "close".into())
+            .map_err(|error| error.to_string())?;
+        #[cfg(target_os = "linux")]
+        {
+            let window = main.window();
+            let next_id = tauri::async_runtime::spawn_blocking(move || {
+                let next_id = format!("preview-native-{}", uuid::Uuid::new_v4());
+                window
+                    .add_child(
+                        WebviewBuilder::new(
+                            &next_id,
+                            tauri::WebviewUrl::External("about:blank".parse().unwrap()),
+                        )
+                        .incognito(true),
+                        tauri::LogicalPosition::new(10., 10.),
+                        tauri::LogicalSize::new(100., 100.),
+                    )
+                    .map_err(|error| error.to_string())?;
+                Ok::<_, String>(next_id)
+            })
+            .await
+            .map_err(|error| error.to_string())??;
+            wait_for(
+                &main,
+                &next_id,
+                &format!("matchMedia('(prefers-color-scheme: dark)').matches==={system_dark}"),
+                "Closing the last GTK view retained the forced theme",
+            )
+            .await?;
+            preview_native::preview_native_action(main, next_id, "close".into())
+                .map_err(|error| error.to_string())?;
+        }
         println!(
             "{}",
             json!({"native_preview":"passed","platform":std::env::consts::OS,"http_only_cookies":cfg!(target_os="macos"),"checks":["semantic snapshot","shadow DOM","same-origin iframe","inspect","click","fill","readonly","stale references","storage","theme","selection","real screenshot","console events","keyboard copy","screenshot fallback","viewport size","native download","iframe selection","strict CSP","script errors"]})
         );
-        preview_native::preview_native_action(main, id, "close".into())
-            .map_err(|error| error.to_string())?;
         Ok(())
     }
     // Native layout and media preferences cross renderer processes asynchronously.
@@ -382,7 +466,7 @@ mod runtime {
         evaluate(main, id, &format!("(()=>{{{script}}})()")).await?;
         control::preview_native_frame(main.clone(), id.into())
             .await
-            .map_err(|error| error.to_string())
+            .map_err(|error| format!("selection {operation}: {error}"))
     }
     pub fn run() {
         let site = Site::start();

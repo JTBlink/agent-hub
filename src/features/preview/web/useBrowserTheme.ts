@@ -5,6 +5,7 @@ import { getErrorMessage } from "../../../lib/error";
 export interface BrowserTheme {
   background: string;
   dark: boolean;
+  system?: boolean;
 }
 
 export function readBrowserTheme(): BrowserTheme {
@@ -12,6 +13,7 @@ export function readBrowserTheme(): BrowserTheme {
   return {
     background: getComputedStyle(root).getPropertyValue("--color-bg").trim(),
     dark: root.classList.contains("dark"),
+    ...(root.dataset.themeMode === "system" ? { system: true } : {}),
   };
 }
 
@@ -26,7 +28,11 @@ export async function applyBrowserTheme(
   theme: BrowserTheme,
   blank: boolean,
 ) {
-  await previewApi.action(id, { kind: "set_theme", dark: theme.dark });
+  await previewApi.action(id, {
+    kind: "set_theme",
+    dark: theme.dark,
+    ...(theme.system ? { system: true } : {}),
+  });
   if (blank && theme.background)
     await previewApi.action(id, {
       kind: "evaluate",
@@ -65,7 +71,7 @@ export function useBrowserTheme(
     const observer = new MutationObserver(apply);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "style"],
+      attributeFilter: ["class", "style", "data-theme-mode"],
     });
     return () => {
       disposed = true;
