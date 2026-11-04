@@ -1,14 +1,10 @@
-import { useId, useState } from "react";
-import {
-  ChevronRight,
-  FileCode2,
-  Folder,
-  Minus,
-  Plus,
-  Undo2,
-} from "lucide-react";
+import { useId, useState, type ReactNode } from "react";
+import { ChevronRight, Minus, Plus, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitFile } from "../../lib/gitApi";
+import { FileTypeIcon } from "../FileTypeIcon";
+import { GitStatusIndicator } from "./GitStatusIndicator";
+import { gitFileDecoration } from "../../lib/worktreeDecorations";
 import { cn } from "../../utils";
 
 export interface GitSelection {
@@ -47,16 +43,10 @@ function changeTree(files: GitFile[]): ChangeNode[] {
   sort(roots);
   return roots;
 }
-const markers: Record<string, string> = {
-  added: "A",
-  modified: "M",
-  deleted: "D",
-  renamed: "R",
-  conflict: "!",
-};
 
 type ChangeProps = {
   tree?: boolean;
+  renderFile?: (file: GitFile, children: ReactNode) => ReactNode;
   staged: boolean;
   selection?: GitSelection;
   busy: boolean;
@@ -127,6 +117,18 @@ function ChangeActions({
   );
 }
 
+function ChangeFileRow({
+  file,
+  renderFile,
+  children,
+}: {
+  file: GitFile;
+  renderFile?: ChangeProps["renderFile"];
+  children: ReactNode;
+}) {
+  return renderFile ? renderFile(file, children) : children;
+}
+
 function ChangeTree({
   nodes,
   depth = 0,
@@ -138,63 +140,60 @@ function ChangeTree({
       {nodes.map((node) => (
         <li key={node.path}>
           {node.file ? (
-            <div
-              className={cn(
-                "group flex min-w-0 items-center",
-                props.selection?.path === node.path &&
-                  props.selection.staged === props.staged
-                  ? "bg-surface-active"
-                  : "hover:bg-surface-hover",
-              )}
-            >
-              <button
-                type="button"
-                title={
-                  node.file.old_path
-                    ? `${node.file.old_path} → ${node.path}`
-                    : node.path
-                }
-                aria-label={`${props.fileLabel ?? t(props.staged ? "git.staged" : "git.unstaged")}: ${node.path}`}
-                aria-current={
-                  props.selection?.path === node.path &&
-                  props.selection.staged === props.staged
-                    ? "true"
-                    : undefined
-                }
+            <ChangeFileRow file={node.file} renderFile={props.renderFile}>
+              <div
                 className={cn(
-                  "flex h-6 min-w-0 flex-1 items-center gap-1.5 pr-1 text-left text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
-                  node.file.conflicted || node.file.status === "deleted"
-                    ? "text-danger"
-                    : node.file.status === "added"
-                      ? "text-[var(--color-brand-teal)]"
-                      : "text-[var(--terminal-yellow)]",
+                  "group flex min-w-0 items-center",
+                  props.selection?.path === node.path &&
+                    props.selection.staged === props.staged
+                    ? "bg-surface-active"
+                    : "hover:bg-surface-hover",
                 )}
-                style={{ paddingLeft: 14 + depth * 12 }}
-                onClick={() =>
-                  props.onSelect({ path: node.path, staged: props.staged })
-                }
               >
-                <FileCode2 size={14} className="shrink-0 text-muted" />
-                <span className="min-w-0 flex-1 truncate">{node.name}</span>
-                {node.file.additions != null && node.file.deletions != null && (
-                  <span className="shrink-0 font-mono tabular-nums">
-                    <span className="text-[var(--color-brand-teal)]">
-                      +{node.file.additions}
-                    </span>
-                    {" / "}
-                    <span className="text-danger">−{node.file.deletions}</span>
-                  </span>
-                )}
-                <span
-                  title={t(`git.states.${node.file.status}`)}
-                  aria-label={t(`git.states.${node.file.status}`)}
-                  className="w-4 shrink-0 text-center font-mono"
+                <button
+                  type="button"
+                  title={
+                    node.file.old_path
+                      ? `${node.file.old_path} → ${node.path}`
+                      : node.path
+                  }
+                  aria-label={`${props.fileLabel ?? t(props.staged ? "git.staged" : "git.unstaged")}: ${node.path}`}
+                  aria-current={
+                    props.selection?.path === node.path &&
+                    props.selection.staged === props.staged
+                      ? "true"
+                      : undefined
+                  }
+                  className={cn(
+                    "flex h-6 min-w-0 flex-1 items-center gap-1.5 pr-1 text-left text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+                    "text-secondary",
+                  )}
+                  style={{ paddingLeft: 14 + depth * 12 }}
+                  onClick={() =>
+                    props.onSelect({ path: node.path, staged: props.staged })
+                  }
                 >
-                  {markers[node.file.status] ?? "M"}
-                </span>
-              </button>
-              <ChangeActions {...props} paths={[node.path]} />
-            </div>
+                  <FileTypeIcon path={node.path} />
+                  <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                  {node.file.additions != null &&
+                    node.file.deletions != null && (
+                      <span className="shrink-0 font-mono tabular-nums">
+                        <span className="text-[var(--color-brand-teal)]">
+                          +{node.file.additions}
+                        </span>
+                        {" / "}
+                        <span className="text-danger">
+                          −{node.file.deletions}
+                        </span>
+                      </span>
+                    )}
+                  <GitStatusIndicator
+                    decoration={gitFileDecoration(node.file)}
+                  />
+                </button>
+                <ChangeActions {...props} paths={[node.path]} />
+              </div>
+            </ChangeFileRow>
           ) : (
             <details
               open
@@ -206,7 +205,7 @@ function ChangeTree({
                 className="group flex h-6 cursor-pointer list-none items-center gap-1.5 pr-2 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden"
               >
                 <ChevronRight size={12} className="shrink-0" />
-                <Folder size={14} className="shrink-0 text-muted" />
+                <FileTypeIcon path={node.path} directory />
                 <span className="min-w-0 flex-1 truncate">{node.name}</span>
                 <ChangeActions
                   {...props}

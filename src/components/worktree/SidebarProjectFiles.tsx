@@ -1,3 +1,4 @@
+import { WorktreeCheckoutSwitcher } from "./WorktreeCheckoutSwitcher";
 import { useLocation } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
@@ -27,18 +28,22 @@ export function SidebarProjectFiles({
   if (!route || !project) return null;
   if (error || (worktrees.length > 0 && !worktree?.available))
     return (
-      <WorkspaceUnavailable
-        compact
-        path={requested ?? project.path}
-        loading={loading}
-        missing={!error}
-        onRetry={() => void refresh()}
-      />
+      <div className="min-h-0">
+        <WorktreeCheckoutSwitcher />
+        <WorkspaceUnavailable
+          compact
+          path={requested ?? project.path}
+          loading={loading}
+          missing={!error}
+          onRetry={() => void refresh()}
+        />
+      </div>
     );
   if (!worktree?.available) return null;
   const scope = JSON.stringify([project.id, worktree.path]);
   return (
     <WorktreeExplorer
+      checkoutSwitcher={<WorktreeCheckoutSwitcher />}
       key={scope}
       projectId={project.id}
       worktreePath={worktree.path}

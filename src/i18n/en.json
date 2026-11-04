@@ -2349,7 +2349,7 @@
     "checkingIdentity": "Checking identity",
     "limited": "Platform search results are capped or incomplete. Narrow your filters.",
     "notConnected": "No task repositories could be detected. Add a local project or select a remote in Repository connections. This does not indicate that the CLI is signed out.",
-    "empty": "No tasks in this scope",
+    "empty": "The list is empty",
     "task": "Task",
     "assignee": "Assignee",
     "updated": "Updated",
@@ -2506,6 +2506,9 @@
     "unsaved": "Unsaved"
   },
   "git": {
+    "viewDiff": "View Diff",
+    "viewRevision": "View File at this Revision",
+    "compareWorking": "View Diff with Working File",
     "copyBranchName": "Copy branch name",
     "viewDetails": "View details",
     "copyCommitSummary": "Copy commit message",
@@ -2655,7 +2658,10 @@
     "localRefs": "Local refs",
     "collapseUnchanged": "Collapse unchanged regions",
     "changeOverview": "Diff scroll overview",
-    "overviewHint": "Click or drag to navigate; arrows scroll, Page Up/Down page, Home/End go to the edges"
+    "overviewHint": "Click or drag to navigate; arrows scroll, Page Up/Down page, Home/End go to the edges",
+    "directoryChanges": "{{count}} changed files: {{details}}",
+    "stateCount": "{{state}}: {{count}}",
+    "stateSeparator": ", "
   },
   "workspaceSearch": {
     "title": "Search",

@@ -2346,7 +2346,7 @@
     "checkingIdentity": "读取身份中",
     "limited": "平台搜索结果达到上限或不完整，请缩小筛选范围。",
     "notConnected": "未找到可自动识别的任务仓库。请添加本地项目，或在“仓库连接”中选择远端；此状态不表示 CLI 未登录。",
-    "empty": "当前范围没有任务",
+    "empty": "列表为空",
     "task": "任务",
     "assignee": "负责人",
     "updated": "更新时间",
@@ -2503,6 +2503,9 @@
     "unsaved": "未保存"
   },
   "git": {
+    "viewDiff": "查看差异",
+    "viewRevision": "查看此版本的文件",
+    "compareWorking": "与工作区文件比较差异",
     "copyBranchName": "复制分支名",
     "viewDetails": "查看详情",
     "copyCommitSummary": "复制提交说明",
@@ -2652,7 +2655,10 @@
     "localRefs": "本地引用",
     "collapseUnchanged": "折叠未更改区域",
     "changeOverview": "差异滚动概览",
-    "overviewHint": "点击或拖动定位；方向键滚动，Page Up／Down 翻页，Home／End 到首尾"
+    "overviewHint": "点击或拖动定位；方向键滚动，Page Up／Down 翻页，Home／End 到首尾",
+    "directoryChanges": "{{count}} 个文件有变更：{{details}}",
+    "stateCount": "{{state}} {{count}}",
+    "stateSeparator": "，"
   },
   "workspaceSearch": {
     "title": "搜索",

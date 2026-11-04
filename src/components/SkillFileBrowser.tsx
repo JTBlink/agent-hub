@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, FileCode, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { FileTypeIcon } from "./FileTypeIcon";
 import { cn } from "../utils";
 import {
   getSkillFiles,
@@ -25,10 +26,6 @@ function formatSize(bytes: number): string {
 
 function isMarkdown(path: string): boolean {
   return /\.md$/i.test(path);
-}
-
-function fileIcon(path: string) {
-  return isMarkdown(path) ? FileText : FileCode;
 }
 
 function makeInitialContent(
@@ -129,7 +126,6 @@ export function SkillFileBrowser({
                   </span>
                 )}
                 {group.files.map((entry) => {
-                  const Icon = fileIcon(entry.relative_path);
                   const name =
                     entry.relative_path.split("/").pop() ?? entry.relative_path;
                   return (
@@ -141,11 +137,19 @@ export function SkillFileBrowser({
                       className={cn(
                         "inline-flex items-center gap-1 rounded px-2 py-1 font-mono text-code transition-colors",
                         selectedFile === entry.relative_path
-                          ? "bg-accent text-white"
+                          ? "bg-accent text-[var(--color-on-accent)]"
                           : "bg-surface-hover text-secondary hover:text-primary",
                       )}
                     >
-                      <Icon className="h-3 w-3 shrink-0" />
+                      <FileTypeIcon
+                        path={entry.relative_path}
+                        size={12}
+                        className={
+                          selectedFile === entry.relative_path
+                            ? "text-current"
+                            : undefined
+                        }
+                      />
                       {name}
                     </button>
                   );

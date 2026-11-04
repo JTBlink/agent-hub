@@ -38,7 +38,7 @@ export function GitEditorTab({
         aria-selected={active}
         title={title}
         onClick={() => shared?.onSelect()}
-        className="flex h-full max-w-64 items-center gap-1.5 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        className="flex h-full max-w-[min(32rem,calc(100vw/var(--app-scale)-3rem))] items-center gap-1.5 px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       >
         {icon}
         <span className="truncate">{label}</span>

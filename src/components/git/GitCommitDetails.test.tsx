@@ -12,6 +12,9 @@ const translate = (key: string) => key;
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: translate, i18n: { language: "en" } }),
 }));
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  writeText: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../lib/gitApi", () => ({ getProjectGitCommit: vi.fn() }));
 const data: Details = {
   sha: "a".repeat(40),
@@ -161,6 +164,77 @@ it("opens graph metadata immediately and shows identities, full message, file co
     expect(onParent).toHaveBeenCalledWith(data.parents[0]);
   } finally {
     await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it("replaces the native file menu and dispatches revision, working comparison and open actions", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitCommit).mockResolvedValue(data);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const onSelect = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <GitCommitDetails
+          target={{ projectId: "demo", worktreePath: "/workspace/demo" }}
+          sha={data.sha}
+          onSelect={onSelect}
+        />,
+      ),
+    );
+    const file = host.querySelector<HTMLButtonElement>(
+      '[aria-label="git.commitFile: src/parser.rs"]',
+    )!;
+    for (const [label, view] of [
+      ["git.viewRevision", "revision"],
+      ["git.compareWorking", "working"],
+      ["fileTree.open", "file"],
+    ]) {
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+      });
+      await act(async () => {
+        file.dispatchEvent(event);
+      });
+      expect(event.defaultPrevented).toBe(true);
+      const menu = document.querySelector('[role="menu"]')!;
+      expect(menu.textContent).toContain("fileTree.copyPath");
+      expect(menu.textContent).toContain("fileTree.copyRelativePath");
+      const action = [
+        ...menu.querySelectorAll<HTMLButtonElement>("button"),
+      ].find((button) => button.textContent === label)!;
+      await act(async () => action.click());
+      expect(onSelect).toHaveBeenLastCalledWith({
+        sha: data.sha,
+        path: "src/parser.rs",
+        view,
+      });
+    }
+    await act(async () => {
+      file.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "F10",
+          shiftKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
+    await act(async () => {
+      document.activeElement!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement).toBe(file);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });

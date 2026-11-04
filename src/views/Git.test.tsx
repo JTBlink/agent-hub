@@ -636,6 +636,7 @@ it("opens committed file diffs separately from working changes", async () => {
       "<workspace>/demo",
       sha,
       "src/demo.ts",
+      undefined,
     );
     expect(host.textContent).toContain("historical content");
     expect(host.textContent).toContain("git.parentVersion");
@@ -830,6 +831,7 @@ it("opens Git Graph from source control and returns to the selected diff on clos
     expect(graphTab).toBeTruthy();
     expect(tablist.querySelector('[role="tab"]')).toBe(terminalTab);
     expect(content.querySelector('[role="tablist"]')).toBeNull();
+    selectEditor.mockClear();
     await act(async () => graphTab.click());
     expect(selectEditor).toHaveBeenCalledOnce();
     expect(getProjectGitGraph).toHaveBeenLastCalledWith(
@@ -1098,6 +1100,114 @@ it("uses a Git-specific empty state when no projects are available", async () =>
   } finally {
     await act(async () => root.unmount());
     emptyState.noProjects = false;
+    vi.unstubAllGlobals();
+  }
+});
+
+it("opens historical files in separate tabs and preserves the selected Graph commit", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  installCodeEditorGeometry();
+  const sha = "c".repeat(40);
+  vi.mocked(getProjectGitStatus).mockResolvedValue({
+    branch: "main",
+    head: sha,
+    upstream: null,
+    ahead: 0,
+    behind: 0,
+    state: "Clean",
+    truncated: false,
+    files: [],
+    commits: [],
+  });
+  vi.mocked(getProjectGitGraph).mockResolvedValue({
+    commits: [
+      {
+        sha,
+        summary: "Keep Graph selection",
+        author: "Example",
+        time: 1000,
+        parents: [],
+        refs: [],
+      },
+    ],
+    has_more: false,
+  });
+  vi.mocked(getProjectGitCommit).mockResolvedValue({
+    sha,
+    message: "Example",
+    author: "Example",
+    committer: "Example",
+    author_email: "user@example.invalid",
+    committer_email: "user@example.invalid",
+    time: 1000,
+    parents: [],
+    additions: 1,
+    deletions: 0,
+    truncated: false,
+    files: [
+      { path: "src/one.ts", old_path: null, status: "modified" },
+      { path: "src/two.ts", old_path: null, status: "modified" },
+    ],
+  });
+  vi.mocked(getProjectGitCommitDiff).mockResolvedValue(
+    "@@ -1 +1 @@\n-old\n+new\n",
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const tab = (name: string) =>
+    [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+      (button) => button.textContent === name,
+    )!;
+  try {
+    await act(async () => root.render(<TestGit />));
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="git.graph.open"]')!
+        .click(),
+    );
+    const commit = host.querySelector<HTMLButtonElement>(
+      '[data-commit-index="0"]',
+    )!;
+    await act(async () => commit.click());
+    const graph = host.querySelector('[aria-label="git.graph.title"]')!;
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="git.commitFile: src/one.ts"]',
+        )!
+        .click(),
+    );
+    const first = tab("one.ts (cccccccc^ ↔ cccccccc)");
+    expect(first.getAttribute("aria-selected")).toBe("true");
+    expect(tab("git.graph.title").getAttribute("aria-selected")).toBe("false");
+    expect(host.querySelector('[aria-label="git.graph.title"]')).toBe(graph);
+    await act(async () => tab("git.graph.title").click());
+    expect(commit.getAttribute("aria-pressed")).toBe("true");
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="git.commitFile: src/two.ts"]',
+        )!
+        .click(),
+    );
+    expect(tab("two.ts (cccccccc^ ↔ cccccccc)")).toBeTruthy();
+    expect(tab("one.ts (cccccccc^ ↔ cccccccc)")).toBe(first);
+    await act(async () => first.click());
+    expect(first.getAttribute("aria-selected")).toBe("true");
+    await act(async () =>
+      first
+        .parentElement!.querySelector<HTMLButtonElement>(
+          '[aria-label="common.close"]',
+        )!
+        .click(),
+    );
+    expect(tab("one.ts (cccccccc^ ↔ cccccccc)")).toBeUndefined();
+    expect(tab("git.graph.title").getAttribute("aria-selected")).toBe("true");
+    expect(tab("two.ts (cccccccc^ ↔ cccccccc)")).toBeTruthy();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     vi.unstubAllGlobals();
   }
 });

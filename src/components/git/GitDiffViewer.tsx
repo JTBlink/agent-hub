@@ -22,12 +22,14 @@ export function GitDiffViewer({
   patch,
   staged,
   historical = false,
+  compareWorking = false,
   path = "changes.diff",
   onOpenFile,
 }: {
   patch: string;
   staged: boolean;
   historical?: boolean;
+  compareWorking?: boolean;
   path?: string;
   onOpenFile?: () => void;
 }) {
@@ -111,18 +113,22 @@ export function GitDiffViewer({
     setPosition({ patch, index });
   };
   const leftLabel = t(
-    historical
-      ? "git.parentVersion"
-      : staged
-        ? "git.headVersion"
-        : "git.indexVersion",
+    compareWorking
+      ? "git.commitVersion"
+      : historical
+        ? "git.parentVersion"
+        : staged
+          ? "git.headVersion"
+          : "git.indexVersion",
   );
   const rightLabel = t(
-    historical
-      ? "git.commitVersion"
-      : staged
-        ? "git.indexVersion"
-        : "git.workingVersion",
+    compareWorking
+      ? "git.workingVersion"
+      : historical
+        ? "git.commitVersion"
+        : staged
+          ? "git.indexVersion"
+          : "git.workingVersion",
   );
   const renderOverview = () => (
     <ScrollOverview

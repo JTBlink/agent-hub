@@ -129,12 +129,14 @@ export const getProjectGitCommitDiff = (
   worktreePath: string | undefined,
   sha: string,
   path: string,
+  view?: "revision" | "working",
 ) =>
   invoke<string>("get_project_git_commit_diff", {
     projectId,
     worktreePath,
     sha,
     path,
+    ...(view ? { view } : {}),
   });
 
 export type GitReferenceKind = "branches" | "remotes" | "stashes" | "tags";

@@ -11,7 +11,7 @@ import { CardActionMenu } from "../CardActionMenu";
 import { WorktreeBranchSwitcher } from "./WorktreeBranchSwitcher";
 import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 
-/** The title bar selects a worktree; the footer changes its branch in place. */
+/** The title bar selects a project; the explorer selects its checkout; the footer changes its branch in place. */
 export function ProjectSwitcher({
   onRemove,
 }: {

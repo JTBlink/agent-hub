@@ -201,3 +201,25 @@ fn initial_and_paged_history_share_topological_order_with_skewed_merge_dates() {
     );
     assert_eq!(page.commits.last().unwrap().sha, root.id().to_string());
 }
+
+#[test]
+fn commit_file_views_read_history_and_compare_current_worktree() {
+    let dir = tempfile::tempdir().unwrap();
+    let repo = git2::Repository::init(dir.path()).unwrap();
+    std::fs::write(dir.path().join("demo.txt"), "original\n").unwrap();
+    let sha = save(&repo, "initial");
+    std::fs::write(dir.path().join("demo.txt"), "working\n").unwrap();
+    assert_eq!(
+        commit_file_view(dir.path(), &sha, "demo.txt", Some("revision")).unwrap(),
+        "original\n"
+    );
+    let diff = commit_file_view(dir.path(), &sha, "demo.txt", Some("working")).unwrap();
+    assert!(diff.contains("-original"));
+    assert!(diff.contains("+working"));
+    assert!(commit_file_view(dir.path(), &sha, "../outside", Some("revision")).is_err());
+    assert!(commit_file_view(dir.path(), &sha, "demo.txt", Some("unknown")).is_err());
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("demo.txt")).unwrap(),
+        "working\n"
+    );
+}

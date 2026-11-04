@@ -1,4 +1,5 @@
-import { ChevronRight, FileCode2, Folder } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { FileTypeIcon } from "../FileTypeIcon";
 import { cn } from "../../utils";
 import type { ReaderFile } from "./types";
 
@@ -62,7 +63,7 @@ function FileList({
                   : "text-secondary hover:bg-surface-hover",
               )}
             >
-              <FileCode2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              <FileTypeIcon path={node.path} />
               <span className="truncate">{node.name}</span>
             </button>
           ) : (
@@ -72,10 +73,7 @@ function FileList({
             >
               <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded px-2 py-1 text-xs text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent [&::-webkit-details-marker]:hidden">
                 <ChevronRight aria-hidden="true" className="h-3 w-3 shrink-0" />
-                <Folder
-                  aria-hidden="true"
-                  className="h-3.5 w-3.5 shrink-0 text-muted"
-                />
+                <FileTypeIcon path={node.path} directory />
                 <span title={node.path} className="truncate">
                   {node.name}
                 </span>

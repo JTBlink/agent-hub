@@ -1,3 +1,4 @@
+import { FileTypeIcon } from "../FileTypeIcon";
 import { MarkdownLink } from "../MarkdownLink";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -179,11 +180,7 @@ export function FileContent({
                   />
                 )}
                 {index === parts.length - 1 && (
-                  <FileCode2
-                    aria-hidden="true"
-                    size={13}
-                    className="mr-1.5 shrink-0"
-                  />
+                  <FileTypeIcon path={file.path} size={13} className="mr-1.5" />
                 )}
                 <span
                   className={cn(

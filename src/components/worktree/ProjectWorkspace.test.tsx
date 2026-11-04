@@ -352,12 +352,11 @@ it("collapses folders, refreshes the tree and retains file selection for each ch
   await click('aside button[aria-label="worktree.refreshFiles"]');
   expect(mocks.files.mock.calls.length).toBeGreaterThan(before);
   expect(host.querySelector("[data-terminal]")).toBe(terminal);
-  const rootButton = host.querySelector<HTMLButtonElement>(
-    "aside button[aria-expanded]",
-  )!;
-  await act(async () => rootButton.click());
-  expect(rootButton.getAttribute("aria-expanded")).toBe("false");
-  expect(host.querySelector("aside [hidden]")).not.toBeNull();
+  expect(
+    host.querySelector(
+      'aside [role="combobox"][aria-label="worktree.selectWorktree"]',
+    ),
+  ).not.toBeNull();
 });
 
 it("omits duplicate branch context and refresh from the terminal/file toolbar", async () => {
@@ -430,7 +429,7 @@ it("omits the fixed source control tab and preserves terminal, file, and change 
   ).toBe(false);
   const changeTab = () =>
     host.querySelector<HTMLButtonElement>(
-      '[role="tab"][title="src/changed.ts"]',
+      '[role="tab"][title^="src/changed.ts"]',
     )!;
   expect(changeTab().closest('[role="tablist"]')).toBe(
     fileTab().closest('[role="tablist"]'),

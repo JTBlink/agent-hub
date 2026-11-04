@@ -165,12 +165,17 @@ export function ThemedSelect({
         positionFor(trigger.current, options.length, fitContent, list.current),
       );
     reposition();
-    document.addEventListener("mousedown", dismiss);
+    // Other menu triggers may stop bubbling to keep the title bar from dragging.
+    document.addEventListener("pointerdown", dismiss, true);
+    document.addEventListener("mousedown", dismiss, true);
+    document.addEventListener("click", dismiss, true);
     window.addEventListener("blur", blur);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
     return () => {
-      document.removeEventListener("mousedown", dismiss);
+      document.removeEventListener("pointerdown", dismiss, true);
+      document.removeEventListener("mousedown", dismiss, true);
+      document.removeEventListener("click", dismiss, true);
       window.removeEventListener("blur", blur);
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);

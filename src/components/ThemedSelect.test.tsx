@@ -155,3 +155,36 @@ it("recalculates menu height when asynchronous options arrive while open", async
   );
   expect(menu.textContent).toContain("Second");
 });
+
+it("closes when another menu stops propagation, including keyboard activation", async () => {
+  const changed = vi.fn();
+  const openOther = vi.fn();
+  await act(async () =>
+    root.render(
+      <>
+        <Picker changed={changed} />
+        <div
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button onClick={openOther}>Other menu</button>
+        </div>
+      </>,
+    ),
+  );
+  const trigger =
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  const other = container.querySelector<HTMLButtonElement>(
+    "div > button:not([role])",
+  )!;
+  await act(async () => trigger.click());
+  await act(async () =>
+    other.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })),
+  );
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  await act(async () => trigger.click());
+  await act(async () => other.click());
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(openOther).toHaveBeenCalledOnce();
+  expect(changed).not.toHaveBeenCalled();
+});

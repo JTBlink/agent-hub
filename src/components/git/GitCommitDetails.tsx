@@ -1,3 +1,4 @@
+import { GitCommitFileMenu } from "./GitCommitFileMenu";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ export interface CommitTarget {
 export interface CommitFileSelection {
   sha: string;
   path: string;
+  view?: "revision" | "working" | "file";
 }
 
 export function GitCommitDetails({
@@ -92,6 +94,17 @@ export function GitCommitDetails({
             unstaged: false,
             conflicted: false,
           }))}
+          renderFile={(file, children) => (
+            <GitCommitFileMenu
+              target={target}
+              sha={sha}
+              path={file.path}
+              deleted={file.status === "deleted"}
+              onSelect={onSelect}
+            >
+              {children}
+            </GitCommitFileMenu>
+          )}
           staged={false}
           busy={false}
           batchLimited={false}

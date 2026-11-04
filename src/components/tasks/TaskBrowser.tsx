@@ -9,6 +9,7 @@ import {
   Suspense,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { Inbox } from "lucide-react";
 import * as api from "../../lib/tauri";
 import type { Project, RepositoryTask, TaskFilters } from "../../lib/tauri";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -312,7 +313,15 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                 sources.some(
                   (source) => source.error,
                 ) ? null : selectedBindings.length ? (
-                t("tasks.empty")
+                <div className="flex flex-col items-center gap-3">
+                  <Inbox
+                    size={32}
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                    className="text-muted opacity-60"
+                  />
+                  <p>{t("tasks.empty")}</p>
+                </div>
               ) : (
                 <div className="mx-auto max-w-md space-y-3">
                   <p>{t("tasks.notConnected")}</p>

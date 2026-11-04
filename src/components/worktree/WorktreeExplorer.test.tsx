@@ -66,7 +66,7 @@ it("shows collapsed folder changes, opens files and clears decorations without c
     );
   await act(async () => render(files));
   expect(
-    host.querySelector('[aria-label="git.changedFiles: 1"]'),
+    host.querySelector('[aria-label="git.directoryChanges: 1"]'),
   ).not.toBeNull();
   expect(host.querySelector('[title="src/new.ts"]')).toBeNull();
   await act(async () =>
@@ -81,7 +81,9 @@ it("shows collapsed folder changes, opens files and clears decorations without c
   expect(select).toHaveBeenCalledWith("src/new.ts");
   await act(async () => render([]));
   expect(host.querySelector('[aria-label="git.states.untracked"]')).toBeNull();
-  expect(host.querySelector('[aria-label="git.changedFiles: 1"]')).toBeNull();
+  expect(
+    host.querySelector('[aria-label="git.directoryChanges: 1"]'),
+  ).toBeNull();
   expect(host.querySelector('[title="src/new.ts"]')).not.toBeNull();
 });
 

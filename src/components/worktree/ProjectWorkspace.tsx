@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FileCode2 } from "lucide-react";
+import { FileTypeIcon } from "../FileTypeIcon";
 import { WorktreeFileCloseButton } from "./WorktreeFileCloseButton";
 import { useOpenProject } from "../../hooks/useOpenProject";
 import { useApp } from "../../context/AppContext";
@@ -247,7 +247,7 @@ export function ProjectWorkspace({
                       }}
                       className="flex h-full min-w-0 items-center gap-1.5 px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                     >
-                      <FileCode2 size={13} className="shrink-0" />
+                      <FileTypeIcon path={file.path} size={13} />
                       <span className="truncate">
                         {file.path.split("/").at(-1)}
                       </span>

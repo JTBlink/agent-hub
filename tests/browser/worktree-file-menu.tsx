@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "sonner";
@@ -9,11 +10,32 @@ import type {
 import "../../src/i18n";
 import "../../src/index.css";
 
+// Local visual checks: ?theme=dark&scale=1.25&width=360 (synthetic data only).
+const preview = new URLSearchParams(window.location.search);
+document.documentElement.classList.toggle(
+  "dark",
+  preview.get("theme") === "dark",
+);
+const previewScale = preview.get("scale") === "1.25" ? "1.25" : "1";
+document.documentElement.style.setProperty("--app-scale", previewScale);
+document.documentElement.style.zoom = previewScale;
+
+const settingsName = preview.has("long")
+  ? "workspace-configuration-with-a-long-name.json"
+  : "settings.json";
+
 // Synthetic file operations only; this fixture never touches the local filesystem.
 const entries: WorktreeFileEntry[] = [
   { name: "src", path: "src", is_dir: true, is_symlink: false },
   { name: "notes.md", path: "src/notes.md", is_dir: false, is_symlink: false },
   { name: "README.md", path: "README.md", is_dir: false, is_symlink: false },
+  {
+    name: settingsName,
+    path: settingsName,
+    is_dir: false,
+    is_symlink: false,
+  },
+  { name: "review.py", path: "review.py", is_dir: false, is_symlink: false },
 ];
 Object.assign(window, {
   __TAURI_INTERNALS__: {
@@ -63,11 +85,51 @@ Object.assign(window, {
 export function Fixture() {
   const [selected, setSelected] = useState<string>();
   return (
-    <main className="flex h-screen bg-background text-primary">
+    <main
+      className="flex h-screen max-w-full bg-background text-primary"
+      style={{ width: preview.get("width") === "360" ? 360 : undefined }}
+    >
       <div className="w-60 overflow-auto border-r border-border">
         <WorktreeExplorer
           projectId="demo"
           worktreePath="/workspace/demo"
+          gitFiles={[
+            {
+              path: "README.md",
+              status: "modified",
+              staged: false,
+              unstaged: true,
+              conflicted: false,
+            },
+            {
+              path: settingsName,
+              status: "added",
+              staged: false,
+              unstaged: true,
+              conflicted: false,
+            },
+            {
+              path: "review.py",
+              status: "added",
+              staged: true,
+              unstaged: false,
+              conflicted: false,
+            },
+            {
+              path: "src/notes.md",
+              status: "modified",
+              staged: false,
+              unstaged: true,
+              conflicted: true,
+            },
+            {
+              path: "src/removed.txt",
+              status: "deleted",
+              staged: false,
+              unstaged: true,
+              conflicted: false,
+            },
+          ]}
           selected={selected}
           onSelect={setSelected}
           onEntryChange={(change) => {
@@ -92,4 +154,8 @@ export function Fixture() {
     </main>
   );
 }
-createRoot(document.getElementById("root")!).render(<Fixture />);
+createRoot(document.getElementById("root")!).render(
+  <MemoryRouter>
+    <Fixture />
+  </MemoryRouter>,
+);

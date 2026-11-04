@@ -128,6 +128,40 @@ pub fn commit_diff(root: &Path, sha: &str, path: &str) -> Result<String> {
     super::render_diff_for_path(&diff, Some(path))
 }
 
+/// Read an immutable file or compare its committed tree with the current checkout.
+pub fn commit_file_view(root: &Path, sha: &str, path: &str, view: Option<&str>) -> Result<String> {
+    if view.is_none() {
+        return commit_diff(root, sha, path);
+    }
+    super::validate_file_path(path)?;
+    let repo =
+        git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
+    let tree = repo.find_commit(oid(sha)?)?.tree()?;
+    match view {
+        Some("revision") => {
+            let entry = tree.get_path(Path::new(path))?;
+            let blob = repo.find_blob(entry.id())?;
+            if blob.size() > 2 * 1024 * 1024 {
+                bail!("File exceeds the preview limit");
+            }
+            if blob.is_binary() {
+                bail!("Binary files cannot be previewed as text");
+            }
+            Ok(std::str::from_utf8(blob.content())?.to_owned())
+        }
+        Some("working") => {
+            let mut options = git2::DiffOptions::new();
+            options
+                .context_lines(super::DIFF_CONTEXT_LINES)
+                .include_untracked(true)
+                .show_untracked_content(true);
+            let diff = repo.diff_tree_to_workdir_with_index(Some(&tree), Some(&mut options))?;
+            super::render_diff_for_path(&diff, Some(path))
+        }
+        _ => bail!("Unsupported commit file view"),
+    }
+}
+
 #[derive(Serialize)]
 pub struct GitHistoryPage {
     pub commits: Vec<super::GitCommit>,

@@ -743,6 +743,47 @@ it("uses the top menu for project switching and keeps the branch controls", asyn
   expect(container.querySelector('[aria-label="刷新工作树"]')).not.toBeNull();
 });
 
+it("switches worktrees from the file tree header within the current project", async () => {
+  const project = { ...makeProject(), id: "explorer-checkouts", name: "Demo" };
+  const main = {
+    path: project.path,
+    branch: "main",
+    head: "abcdef",
+    is_main: true,
+    locked: false,
+    available: true,
+  };
+  worktreeMocks.list.mockResolvedValueOnce([
+    main,
+    { ...main, path: `${project.path}-topic`, branch: "topic", is_main: false },
+  ]);
+  Object.assign(app, {
+    projects: [project, { ...project, id: "another-project", name: "Other" }],
+  });
+  await render(`/project/${project.id}`);
+  const selector = container.querySelector<HTMLButtonElement>(
+    '[aria-label="文件目录"] [role="combobox"][aria-label="切换工作树"]',
+  )!;
+  expect(selector).not.toBeNull();
+  await click(selector);
+  const options = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ];
+  expect(options).toHaveLength(3);
+  expect(options.some((option) => option.textContent?.includes("Other"))).toBe(
+    false,
+  );
+  await click(options[1]);
+  expect(container.querySelector("output")?.textContent).toBe(
+    `/project/${project.id}`,
+  );
+  expect(
+    new URLSearchParams(
+      container.querySelector("output")!.getAttribute("data-search")!,
+    ).get("worktree"),
+  ).toBe(`${project.path}-topic`);
+});
+
 it("toggles the Git sidebar without navigating away from its editor", async () => {
   await render("/git");
   const trigger = container.querySelector<HTMLAnchorElement>('a[href="/git"]')!;

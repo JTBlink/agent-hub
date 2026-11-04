@@ -37,3 +37,20 @@ it("aggregates nested changes before directories are loaded, with conflict prior
   expect(entries.has("doc")).toBe(false);
   expect(worktreeDecorations([]).size).toBe(0);
 });
+
+it("counts one path once across staging areas and preserves each folder's status breakdown", () => {
+  const entries = worktreeDecorations([
+    file("tasks/task.json", "added", true),
+    file("tasks/task.json", "modified"),
+    file("tasks/old.md", "deleted"),
+    file("tasks/new.md", "added"),
+  ]);
+  expect(entries.get("tasks")).toMatchObject({
+    count: 3,
+    counts: { modified: 1, deleted: 1, untracked: 1 },
+  });
+  expect(entries.get("tasks/task.json")).toMatchObject({
+    marker: "M",
+    count: 1,
+  });
+});

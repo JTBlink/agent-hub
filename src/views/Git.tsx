@@ -13,7 +13,6 @@ import {
   discardProjectGitChanges,
   setProjectGitStaged,
   getProjectGitDiff,
-  getProjectGitCommitDiff,
   getProjectGitStatus,
   type GitStatus,
   runProjectGitAction,
@@ -23,7 +22,8 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { getErrorMessage } from "../lib/error";
 import { groupGitChanges } from "../lib/gitChanges";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
-import { GitGraph } from "../components/git/GitGraph";
+import { GitEditorWorkspace } from "../components/git/GitEditorWorkspace";
+import { useGitEditors } from "../hooks/useGitEditors";
 import { GitHistory } from "../components/git/GitHistory";
 import { GitCommitForm } from "../components/git/GitCommitForm";
 import { GitStatusBar } from "../components/git/GitStatusBar";
@@ -46,8 +46,6 @@ export function Git() {
   }>();
   const [revision, setRevision] = useState(0);
   const [selection, setSelection] = useState<GitSelection>();
-  const [commitSha, setCommitSha] = useState<string>();
-  const [graphOpen, setGraphOpen] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [actionType, setActionType] = useState<
     "stage" | "commit" | "sync" | GitRepositoryAction
@@ -59,14 +57,13 @@ export function Git() {
   const [actionError, setActionError] = useState<string>();
   const [fileView, setFileView] = useState(false);
   const scope = JSON.stringify([activeId, root]);
+  const editors = useGitEditors(scope);
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {
     setPreviousScope(scope);
-    setGraphOpen(false);
     setSelection(undefined);
-    setCommitSha(undefined);
     setFileView(false);
     setActionError(undefined);
     setDiscardTarget(undefined);
@@ -83,12 +80,17 @@ export function Git() {
     statusResult?.key === statusKey ? statusResult.error : undefined;
   const loading = !!activeId && statusResult?.key !== statusKey;
   const editorVisible =
-    !activeId || graphOpen || !!selection || !!error || !!actionError;
+    !activeId ||
+    editors.graph ||
+    editors.files.length > 0 ||
+    !!selection ||
+    !!error ||
+    !!actionError;
   useEffect(() => {
     setGitEditorVisible?.(editorVisible);
     return () => setGitEditorVisible?.(false);
   }, [editorVisible, setGitEditorVisible]);
-  const diffKey = JSON.stringify([scope, selection, commitSha, revision]);
+  const diffKey = JSON.stringify([scope, selection, revision]);
   const [diffResult, setDiffResult] = useState<{
     key: string;
     content?: string;
@@ -133,9 +135,12 @@ export function Git() {
   useEffect(() => {
     if (!activeId || !selection || fileView) return;
     let cancelled = false;
-    const request = commitSha
-      ? getProjectGitCommitDiff(activeId, root, commitSha, selection.path)
-      : getProjectGitDiff(activeId, root, selection.path, selection.staged);
+    const request = getProjectGitDiff(
+      activeId,
+      root,
+      selection.path,
+      selection.staged,
+    );
     void request.then(
       (content) => {
         if (!cancelled) setDiffResult({ key: diffKey, content });
@@ -151,7 +156,7 @@ export function Git() {
     return () => {
       cancelled = true;
     };
-  }, [activeId, root, selection, commitSha, fileView, diffKey, t]);
+  }, [activeId, root, selection, fileView, diffKey, t]);
   const files = status?.files ?? [];
   const { stagedFiles, unstagedFiles } = groupGitChanges(files);
   const branch = status?.branch ?? status?.head?.slice(0, 8) ?? t("git.unborn");
@@ -201,7 +206,6 @@ export function Git() {
     if (
       status &&
       selection &&
-      !commitSha &&
       !status.files.some(
         (file) =>
           file.path === selection.path &&
@@ -211,16 +215,15 @@ export function Git() {
       setSelection(undefined);
       setFileView(false);
     }
-  }, [status, selection, commitSha]);
+  }, [status, selection]);
   const changeProps = {
     tree,
-    selection: commitSha ? undefined : selection,
+    selection,
     busy: busy || loading,
     batchLimited: !!status?.truncated,
     onSelect: (next: GitSelection) => {
-      setGraphOpen(false);
+      editors.select("working");
       setSelection(next);
-      setCommitSha(undefined);
       setFileView(false);
     },
     onDiscard: (paths: string[]) => {
@@ -294,8 +297,8 @@ export function Git() {
                     loading={loading || busy}
                     tree={tree}
                     history={historyExpanded}
-                    graph={graphOpen}
-                    onGraph={() => setGraphOpen(true)}
+                    graph={editors.active === "graph"}
+                    onGraph={editors.openGraph}
                     onRemote={(action) => {
                       if (activeId)
                         void runAction(
@@ -412,17 +415,10 @@ export function Git() {
                   ? { projectId: activeId, worktreePath: root }
                   : undefined
               }
-              selected={
-                commitSha && selection
-                  ? { sha: commitSha, path: selection.path }
-                  : undefined
-              }
-              onSelect={({ sha, path }) => {
-                setGraphOpen(false);
-                setCommitSha(sha);
-                setSelection({ path, staged: false });
-                setFileView(false);
-              }}
+              selected={editors.files.find(
+                (file) => editors.fileId(file) === editors.active,
+              )}
+              onSelect={editors.openFile}
             />
           }
         />
@@ -502,52 +498,43 @@ export function Git() {
               {!sidebarVisibility?.sidebarContainer && sidebar}
 
               <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                {graphOpen ? (
-                  <GitGraph
-                    key={scope}
-                    target={{ projectId: activeId, worktreePath: root }}
-                    revision={revision}
-                    changedFiles={files.length}
-                    busy={busy || loading}
-                    fetching={actionType === "fetch"}
-                    onFetch={() => {
-                      void runAction(
-                        () => runProjectGitAction(activeId, root, "fetch"),
-                        "fetch",
-                      );
-                    }}
-                    onRefresh={refresh}
-                    onClose={() => setGraphOpen(false)}
-                    onSelect={({ sha, path }) => {
-                      setGraphOpen(false);
-                      setCommitSha(sha);
-                      setSelection({ path, staged: false });
-                      setFileView(false);
-                    }}
-                  />
-                ) : selection ? (
-                  <GitFileEditor
-                    activeId={activeId}
-                    root={root}
-                    selection={selection}
-                    commitSha={commitSha}
-                    fileView={fileView}
-                    diff={diff}
-                    diffError={diffError}
-                    files={files}
-                    onFileViewChange={setFileView}
-                    onClose={() => {
-                      changesRef.current
-                        ?.querySelector<HTMLButtonElement>(
-                          'button[aria-current="true"]',
-                        )
-                        ?.focus();
-                      setSelection(undefined);
-                      setCommitSha(undefined);
-                      setFileView(false);
-                    }}
-                  />
-                ) : null}
+                <GitEditorWorkspace
+                  target={{ projectId: activeId, worktreePath: root }}
+                  editors={editors}
+                  revision={revision}
+                  files={files}
+                  busy={busy || loading}
+                  fetching={actionType === "fetch"}
+                  onFetch={() => {
+                    void runAction(
+                      () => runProjectGitAction(activeId, root, "fetch"),
+                      "fetch",
+                    );
+                  }}
+                  onRefresh={refresh}
+                >
+                  {selection ? (
+                    <GitFileEditor
+                      activeId={activeId}
+                      root={root}
+                      selection={selection}
+                      fileView={fileView}
+                      diff={diff}
+                      diffError={diffError}
+                      files={files}
+                      onFileViewChange={setFileView}
+                      onClose={() => {
+                        changesRef.current
+                          ?.querySelector<HTMLButtonElement>(
+                            'button[aria-current="true"]',
+                          )
+                          ?.focus();
+                        setSelection(undefined);
+                        setFileView(false);
+                      }}
+                    />
+                  ) : null}
+                </GitEditorWorkspace>
               </section>
             </div>
             {!sidebarVisibility?.statusContainer && statusBar}

@@ -2306,7 +2306,7 @@
     "checkingIdentity": "讀取身分中",
     "limited": "平台搜尋結果達到上限或不完整，請縮小篩選範圍。",
     "notConnected": "未找到可自動識別的任務儲存庫。請新增本機專案，或在「儲存庫連線」中選擇遠端；此狀態不表示 CLI 未登入。",
-    "empty": "目前範圍沒有任務",
+    "empty": "清單為空",
     "task": "任務",
     "assignee": "負責人",
     "updated": "更新時間",
@@ -2463,6 +2463,9 @@
     "unsaved": "未儲存"
   },
   "git": {
+    "viewDiff": "檢視差異",
+    "viewRevision": "檢視此版本的檔案",
+    "compareWorking": "與工作區檔案比較差異",
     "copyBranchName": "複製分支名稱",
     "viewDetails": "檢視詳情",
     "copyCommitSummary": "複製提交說明",
@@ -2612,7 +2615,10 @@
     "localRefs": "本機參照",
     "collapseUnchanged": "摺疊未變更區域",
     "changeOverview": "差異捲動概覽",
-    "overviewHint": "點選或拖曳定位；方向鍵捲動，Page Up／Down 翻頁，Home／End 到首尾"
+    "overviewHint": "點選或拖曳定位；方向鍵捲動，Page Up／Down 翻頁，Home／End 到首尾",
+    "directoryChanges": "{{count}} 個檔案有變更：{{details}}",
+    "stateCount": "{{state}} {{count}}",
+    "stateSeparator": "，"
   },
   "workspaceSearch": {
     "title": "搜尋",

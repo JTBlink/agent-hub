@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
 import { makeProject } from "../../tests/fixtures/workspace";
 import { refreshProjectWorktrees } from "../hooks/useProjectWorktrees";
+import { WorktreeCheckoutSwitcher } from "./worktree/WorktreeCheckoutSwitcher";
 import { WindowTitleBar } from "./WindowTitleBar";
 import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CommandPalette } from "./CommandPalette";
@@ -124,6 +125,9 @@ function Shell() {
   return (
     <>
       <WindowTitleBar onOpenCommands={() => setOpen(true)} />
+      <aside>
+        <WorktreeCheckoutSwitcher />
+      </aside>
       <CommandPalette open={open} onOpenChange={setOpen} />
       <output>{useLocation().pathname}</output>
     </>
@@ -223,33 +227,32 @@ it("drags from the title bar background while its controls remain clickable", as
   expect(container.querySelector("output")?.textContent).toBe("/help");
 });
 
-it("only lists worktrees of the current project in the title bar", async () => {
-  await render("/project/demo");
+it("lists projects in the title bar and switches from a child checkout to another project", async () => {
+  await render("/project/demo?worktree=%3Cworkspace%3E%2Fdemo-topic");
   const selector = container.querySelector<HTMLButtonElement>(
-    'header [role="combobox"][aria-label="切换工作树"]',
+    'header [role="combobox"][aria-label="切换项目"]',
   )!;
-  await act(async () =>
-    selector.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })),
-  );
-  expect(drag).not.toHaveBeenCalled();
+  expect(selector.textContent).toContain("Demo workspace");
   await act(async () => selector.click());
   const options = [
     ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
   ];
   expect(options.map((item) => item.textContent)).toEqual([
-    "demo · 主工作树",
-    "demo-topic",
-    "创建工作树…",
+    "Demo workspace",
+    "Other workspace",
   ]);
   await act(async () => options[1].click());
-  expect(selector.textContent).toContain("demo-topic");
-  expect(container.querySelector("output")?.textContent).toBe("/project/demo");
+  expect(selector.textContent).toContain("Other workspace");
+  expect(container.querySelector("output")?.textContent).toBe("/project/other");
+  expect(
+    container.querySelector<HTMLSelectElement>("aside select")!.value,
+  ).toBe(JSON.stringify(["other", "~/projects/other"]));
 });
 
-it("places the VS Code icon beside the worktree selector and opens the route worktree", async () => {
+it("places the VS Code icon beside the project selector and opens the route worktree", async () => {
   await render("/project/demo?worktree=%2Fworkspace%2Ftopic");
   const selector = container.querySelector(
-    'header [role="combobox"][aria-label="切换工作树"]',
+    'header [role="combobox"][aria-label="切换项目"]',
   )!;
   const button = container.querySelector<HTMLButtonElement>(
     'header button[aria-label="在 VS Code 中打开"]',
@@ -273,6 +276,9 @@ it("separates project, directory and branch selection and preserves the checkout
     return (
       <>
         <WindowTitleBar onOpenCommands={() => {}} />
+        <aside>
+          <WorktreeCheckoutSwitcher />
+        </aside>
         <ProjectSwitcher onRemove={remove} />
         <output>
           {location.pathname}
@@ -305,12 +311,12 @@ it("separates project, directory and branch selection and preserves the checkout
   expect(container.querySelectorAll("header [role=combobox]")).toHaveLength(1);
   expect(
     container.querySelector("header [role=combobox]")?.textContent,
-  ).toContain("demo-topic");
+  ).toContain("Demo workspace");
   expect(
     [...container.querySelectorAll("header option")].some((option) =>
       option.textContent?.includes("Other workspace"),
     ),
-  ).toBe(false);
+  ).toBe(true);
   expect(checkout().options[0].text).toContain("主工作树");
   expect(
     container.querySelector('button[aria-label="移除项目 Demo workspace"]'),
@@ -422,6 +428,9 @@ it("preserves an unavailable worktree instead of silently selecting the main dir
       >
         <WorkspaceFilesProvider>
           <WindowTitleBar onOpenCommands={() => {}} />
+          <aside>
+            <WorktreeCheckoutSwitcher />
+          </aside>
           <ProjectSwitcher onRemove={() => {}} />
         </WorkspaceFilesProvider>
       </MemoryRouter>,
@@ -443,11 +452,11 @@ it("preserves an unavailable worktree instead of silently selecting the main dir
   ).toBe(false);
 });
 
-it("creates a worktree from the title menu, retains failed inputs and switches only after success", async () => {
+it("creates a worktree from the explorer menu, retains failed inputs and switches only after success", async () => {
   await refreshProjectWorktrees("demo");
   await render("/project/demo");
   const trigger = container.querySelector<HTMLButtonElement>(
-    'header [role="combobox"]',
+    'aside [role="combobox"]',
   )!;
   await act(async () => trigger.click());
   const create = [
@@ -516,7 +525,7 @@ it("cancels worktree creation without changing the current checkout", async () =
   await refreshProjectWorktrees("demo");
   await render("/project/demo");
   const trigger = container.querySelector<HTMLButtonElement>(
-    'header [role="combobox"]',
+    'aside [role="combobox"]',
   )!;
   await act(async () => trigger.click());
   const create = [
