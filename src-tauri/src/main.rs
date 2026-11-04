@@ -1,6 +1,9 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(all(target_os = "macos", debug_assertions))]
+mod dev_bundle;
+
 fn main() {
     if std::env::args().nth(1).as_deref() == Some("--smoke") {
         if let Err(error) = app_lib::run_package_smoke() {
@@ -10,5 +13,8 @@ fn main() {
         println!("agent-hub package smoke passed");
         return;
     }
-    app_lib::run(tauri::generate_context!());
+    let context = tauri::generate_context!();
+    #[cfg(all(target_os = "macos", debug_assertions))]
+    dev_bundle::relaunch(context.config()).expect("failed to prepare macOS development app");
+    app_lib::run(context);
 }
