@@ -103,7 +103,8 @@ agent-hub/
 │   │   └── en.json                 #   英文
 │   ├── fonts/                      # 字体声明、共享排版变量、终端字体参数与预加载
 │   ├── styles/brand.css            # 明暗主题与色调变量
-│   ├── App.tsx                     # 应用根组件
+│   ├── app/                        # 公共路由定义与宿主页组合入口
+│   ├── App.tsx                     # 共享 Provider、路由与应用外壳
 │   ├── main.tsx                    # 前端入口
 │   ├── utils.ts                    # 通用工具函数
 │   └── index.css                   # 全局样式
@@ -111,7 +112,8 @@ agent-hub/
 ├── src-tauri/                      # Rust 桌面端（Tauri 2）
 │   ├── src/
 │   │   ├── main.rs                 #   应用入口（保持精简）
-│   │   ├── lib.rs                  #   库入口与 Tauri 插件注册
+│   │   ├── lib.rs                  #   共享 Builder 与显式 Context 启动入口
+│   │   ├── desktop/                #   启动、IPC 注册、生命周期和托盘，见 app-composition.md
 │   │   ├── smoke.rs                #   冒烟测试
 │   │   ├── bin/
 │   │   │   └── agent-hub-cli.rs    #   CLI 工具入口

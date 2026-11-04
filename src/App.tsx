@@ -1,26 +1,11 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider, useThemeContext } from "./context/ThemeContext";
 import { CloseActionGuard } from "./components/CloseActionGuard";
 import { FirstRunRestoreDialog } from "./components/FirstRunRestoreDialog";
-import { Layout } from "./components/Layout";
-import { Dashboard } from "./views/Dashboard";
-import { MySkills } from "./views/MySkills";
-import { WorkspaceView } from "./views/WorkspaceView";
-import {
-  CODING_WORKSPACE_CONFIG,
-  LOBSTER_WORKSPACE_CONFIG,
-} from "./views/workspaceConfigs";
-import { Discover } from "./views/Discover";
-import { Settings } from "./views/Settings";
-import { ProjectSkills } from "./views/ProjectSkills";
-import { Backup } from "./views/Backup";
-import BackupDiff from "./views/BackupDiff";
-import { Help } from "./views/Help";
-import { Tasks } from "./views/Tasks";
-import { Git } from "./views/Git";
-import { Automation } from "./views/Automation";
+import type { RouteObject } from "react-router-dom";
+import { AppRoutes } from "./app/AppRoutes";
 
 function ThemedToaster() {
   const { resolvedTheme } = useThemeContext();
@@ -42,47 +27,17 @@ function ThemedToaster() {
   );
 }
 
-function App() {
+export interface AppProps {
+  /** Additional pages rendered inside the shared layout and providers. */
+  extensionRoutes?: readonly RouteObject[];
+}
+
+function App({ extensionRoutes = [] }: AppProps) {
   return (
     <ThemeProvider>
       <AppProvider>
         <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/my-skills" element={<MySkills />} />
-              <Route
-                path="/global-workspace"
-                element={<WorkspaceView config={CODING_WORKSPACE_CONFIG} />}
-              />
-              <Route
-                path="/global-workspace/:agentKey"
-                element={<WorkspaceView config={CODING_WORKSPACE_CONFIG} />}
-              />
-              <Route
-                path="/lobster-workspace"
-                element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
-              />
-              <Route
-                path="/lobster-workspace/:agentKey"
-                element={<WorkspaceView config={LOBSTER_WORKSPACE_CONFIG} />}
-              />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/install" element={<Discover />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/git" element={<Git />} />
-              <Route path="/terminal" element={null} />
-              <Route path="/preview" element={null} />
-              <Route path="/automation" element={<Automation />} />
-              <Route path="/backup" element={<Backup />} />
-              <Route path="/backup/diff" element={<BackupDiff />} />
-              <Route path="/project/:id" element={null} />
-              <Route path="/project/:id/skills" element={<ProjectSkills />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/help" element={<Help />} />
-              <Route path="/help/:articleId" element={<Help />} />
-            </Route>
-          </Routes>
+          <AppRoutes extensionRoutes={extensionRoutes} />
           <CloseActionGuard />
           <FirstRunRestoreDialog />
         </BrowserRouter>

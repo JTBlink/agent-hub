@@ -10,5 +10,5 @@ fn main() {
         println!("agent-hub package smoke passed");
         return;
     }
-    app_lib::run();
+    app_lib::run(tauri::generate_context!());
 }
