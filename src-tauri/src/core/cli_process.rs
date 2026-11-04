@@ -60,15 +60,26 @@ pub(crate) fn capture(
 
 /// Run a command whose caller owns environment isolation, using the same bounded capture.
 pub(crate) fn capture_prepared(
-    mut command: Command,
+    command: Command,
     program: &str,
     timeout_seconds: u64,
     cancel: Option<&std::sync::atomic::AtomicBool>,
 ) -> Result<(String, String), String> {
+    capture_prepared_with_input(command, program, timeout_seconds, cancel, None)
+}
+
+/// Provide a file-backed request to a bounded child without pipe deadlocks.
+pub(crate) fn capture_prepared_with_input(
+    mut command: Command,
+    program: &str,
+    timeout_seconds: u64,
+    cancel: Option<&std::sync::atomic::AtomicBool>,
+    input: Option<std::fs::File>,
+) -> Result<(String, String), String> {
     let mut stdout = tempfile::tempfile().map_err(|e| e.to_string())?;
     let mut stderr = tempfile::tempfile().map_err(|e| e.to_string())?;
     command
-        .stdin(Stdio::null())
+        .stdin(input.map(Stdio::from).unwrap_or_else(Stdio::null))
         .stdout(stdout.try_clone().map_err(|e| e.to_string())?)
         .stderr(stderr.try_clone().map_err(|e| e.to_string())?);
     #[cfg(windows)]

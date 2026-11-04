@@ -13,6 +13,10 @@ pub(super) fn write(
         Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => true,
         Err(e) => return Err(e.to_string()),
     };
+    #[cfg(target_os = "macos")]
+    if elevated {
+        return super::macos_helper::write(target, source, expected, updated, backup);
+    }
     let script = script(target, source, expected, updated, backup);
     run(&script, elevated)
 }
@@ -69,15 +73,7 @@ fn run(script: &str, elevated: bool) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        let shell = format!("/bin/sh -c {}", quote(Path::new(script)));
-        let apple = format!(
-            "do shell script \"{}\" with administrator privileges",
-            shell
-                .replace('\\', "\\\\")
-                .replace('"', "\\\"")
-                .replace('\n', "\\n")
-        );
-        command_with_timeout("/usr/bin/osascript", &["-e", &apple], &[], 300).map(|_| ())
+        crate::core::system_authorization::authorize(script)
     }
     #[cfg(not(target_os = "macos"))]
     {

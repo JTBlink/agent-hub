@@ -6,7 +6,7 @@
     "permissions": {
       "title": "Write permission",
       "open": "Open system permission settings",
-      "intro": "Open your system’s permission settings to review file access. Return here and retry saving after making changes. Saving may still require administrator authentication.",
+      "intro": "On macOS, the first system Hosts write requires administrator approval to install a dedicated helper; later writes require no password. This permission covers Hosts only and does not give terminals or Agents administrator access. Run agent-hub-cli hosts revoke-authorization to revoke it. Other systems may require authentication for each write. Open system permission settings if file access is denied.",
       "retry": "Authorize and save again",
       "unavailable": "This desktop has no supported permission settings shortcut. Check your administrator account and authentication service in system settings, then retry.",
       "openFailed": "Unable to open system permission settings. Open system settings manually and retry. Details: {{message}}"

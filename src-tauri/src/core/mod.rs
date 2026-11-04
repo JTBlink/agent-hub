@@ -52,6 +52,7 @@ pub mod skill_versions;
 pub mod skillssh_api;
 pub mod sync_engine;
 pub mod sync_metadata;
+pub(crate) mod system_authorization;
 pub mod system_load;
 pub mod timing;
 pub mod tool_adapters;

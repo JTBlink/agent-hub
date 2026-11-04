@@ -67,6 +67,9 @@ enum HostsCommand {
         #[arg(long)]
         system_revision: String,
     },
+    /// 撤销当前用户的 macOS Hosts 持久免密授权；下次写入重新授权。
+    #[cfg(target_os = "macos")]
+    RevokeAuthorization,
     /// 读取或显式写入本机系统 Hosts。
     System {
         #[command(subcommand)]
@@ -140,8 +143,20 @@ pub(super) fn run(args: &HostsArgs, isolated: bool, json: bool) -> anyhow::Resul
         )
         .into());
     }
+    #[cfg(target_os = "macos")]
+    if isolated && matches!(args.command, HostsCommand::RevokeAuthorization) {
+        return Err(AppError::invalid_input(
+            "Hosts authorization cannot be combined with --skills-root",
+        )
+        .into());
+    }
     use HostsCommand::*;
     match &args.command {
+        #[cfg(target_os = "macos")]
+        RevokeAuthorization => {
+            hosts::macos_helper::revoke().map_err(AppError::io)?;
+            super::print_json(&serde_json::json!({"ok": true, "revoked": true}), json);
+        }
         List => super::print_json(&profiles::list().map_err(AppError::io)?, json),
         Show { reference } => super::print_json(&resolve(reference)?, json),
         Create { name, input } => super::print_json(

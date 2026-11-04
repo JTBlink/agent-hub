@@ -5,6 +5,8 @@ use std::{io::Write, net::IpAddr, path::PathBuf, sync::Mutex};
 
 mod archive;
 mod elevation;
+#[cfg(target_os = "macos")]
+pub mod macos_helper;
 pub mod permissions;
 pub mod profiles;
 #[cfg(test)]
