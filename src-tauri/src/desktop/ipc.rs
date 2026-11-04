@@ -45,6 +45,8 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::terminal::terminal_close,
         commands::file_preview::prepare_file_preview,
         commands::preview::preview_request,
+        commands::preview::preview_development_plan,
+        commands::preview::preview_development_wait,
         commands::preview_native::preview_native_open,
         commands::preview_native::preview_native_info,
         commands::preview_native::cookies::preview_native_cookie_prepare,

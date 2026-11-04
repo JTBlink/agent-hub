@@ -180,3 +180,9 @@ NativeSurface 按实际视口坐标更新子视图，切换标签、隐藏页面
 网页主题由 `useBrowserTheme` 统一读取应用主题并发送 `set_theme` 动作：Chromium 使用原生媒体偏好模拟，macOS 系统 WebView 使用视图 appearance，Windows 使用 WebView2 profile 色彩偏好，Linux 使用 GTK 应用主题偏好；新页面、导航和应用主题切换均重新同步。默认空白页额外使用应用背景色，仅处理未编写内容的 `about:blank`；普通页面的配色仍由站点响应 `prefers-color-scheme`，不注入覆盖站点样式的通用 CSS。
 
 原生云端验证使用固定提交、标准三平台 runner 和独立临时网页／下载目录，不发布安装包、不读取签名密钥。普通 Rust 测试只编译原生验收入口，必须显式传入 `--ignored` 才会执行真实 WebView 流程。
+
+## 前端项目开发预览
+
+工作树内的 HTML 右键预览先检查最近的 `package.json`。目前自动启动支持 `scripts.dev` 直接以 `vite` 开头的项目；其他 HTML 沿用静态文档预览。按进程工作目录、监听端口和 Vite 客户端响应识别已运行的开发服务，不按固定端口猜测项目。
+
+没有运行服务时，按项目锁文件选择 npm、pnpm、Yarn 或 Bun，在新的内部终端标签执行 `dev`，显式绑定回环地址和独立端口。预览最多等待 30 秒，就绪后在当前工作区打开 HTTP 页面；启动失败保留终端输出。相同项目的并发启动请求合并。服务归属该终端标签，关闭标签、切换工作树或退出应用会释放自有 PTY；复用的外部服务不受影响。布局不保存启动意图，重启不自动重跑。Unix 上已运行服务的端口识别使用 `lsof`，Windows 使用 `netstat`。

@@ -5,6 +5,7 @@ pub mod browser;
 pub(crate) mod capture;
 mod cdp;
 pub mod cookies;
+pub mod development;
 mod document_forward;
 pub mod documents;
 mod download_transfer;

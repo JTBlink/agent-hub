@@ -1,3 +1,4 @@
+import type { DevelopmentLaunch } from "./developmentPreview";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { createHerdrTerminal } from "../features/herdr/terminal/api";
 import type { HerdrAgent } from "../features/herdr/lib/herdrAgents";
@@ -27,6 +28,8 @@ export async function createTerminal(
   worktreePath?: string,
   agent?: HerdrAgent,
   herdrTarget?: HerdrTarget,
+  scriptPath?: string,
+  development?: DevelopmentLaunch,
 ) {
   // A tab can be closed and replaced before its PTY close IPC has completed.
   await Promise.all(closingTerminals);
@@ -45,7 +48,13 @@ export async function createTerminal(
     worktreePath,
     size,
     events,
-    ...(agent ? { agent } : {}),
+    ...(agent
+      ? { launch: { kind: "agent", agent } }
+      : scriptPath
+        ? { launch: { kind: "script", path: scriptPath } }
+        : development
+          ? { launch: { kind: "development", launch: development } }
+          : {}),
   });
 }
 export const writeTerminal = (id: string, data: string) =>

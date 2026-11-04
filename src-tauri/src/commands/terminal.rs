@@ -16,13 +16,27 @@ pub(crate) fn owner<R: tauri::Runtime>(window: &Webview<R>) -> Result<String, Ap
     }
     Ok(window.label().into())
 }
+#[derive(serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TerminalLaunch {
+    Agent {
+        agent: HerdrAgent,
+    },
+    Script {
+        path: String,
+    },
+    Development {
+        launch: crate::core::preview::development::DevelopmentLaunch,
+    },
+}
+
 #[tauri::command]
 pub async fn terminal_create(
     window: Webview,
     manager: State<'_, Arc<TerminalManager>>,
     project_id: String,
     worktree_path: Option<String>,
-    agent: Option<HerdrAgent>,
+    launch: Option<TerminalLaunch>,
     size: TerminalSize,
     events: Channel<TerminalEvent>,
 ) -> Result<TerminalSession, AppError> {
@@ -38,23 +52,35 @@ pub async fn terminal_create(
                 &owner,
                 || {
                     size.validate()?;
-                    let cwd = crate::core::project_worktrees::directory(
+                    let mut cwd = crate::core::project_worktrees::directory(
                         &store,
                         &project_id,
                         worktree_path.as_deref(),
                     )?;
-                    let (command, integration) = if let Some(agent) = agent {
-                        let installed = tools.install(store.proxy_url().as_deref())?;
-                        let prepared = herdr_agents::prepare(
-                            std::path::Path::new(&installed.path),
-                            &cwd,
-                            agent,
-                        )?;
-                        startup = Some(prepared.startup);
-                        (prepared.attachment.command(), None)
-                    } else {
-                        let (command, integration) = terminal::prepare_shell(None, None)?;
-                        (command, Some(integration))
+                    let (command, integration) = match launch {
+                        Some(TerminalLaunch::Development { launch }) => {
+                            let (directory, command) =
+                                crate::core::preview::development::command(&cwd, &launch)?;
+                            cwd = directory;
+                            (command, None)
+                        }
+                        Some(TerminalLaunch::Script { path }) => {
+                            (terminal::prepare_script(&cwd, &path)?, None)
+                        }
+                        Some(TerminalLaunch::Agent { agent }) => {
+                            let installed = tools.install(store.proxy_url().as_deref())?;
+                            let prepared = herdr_agents::prepare(
+                                std::path::Path::new(&installed.path),
+                                &cwd,
+                                agent,
+                            )?;
+                            startup = Some(prepared.startup);
+                            (prepared.attachment.command(), None)
+                        }
+                        None => {
+                            let (command, integration) = terminal::prepare_shell(None, None)?;
+                            (command, Some(integration))
+                        }
                     };
                     Ok(TerminalSpec {
                         project_id,

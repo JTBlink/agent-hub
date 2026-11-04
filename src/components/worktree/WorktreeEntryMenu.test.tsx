@@ -5,6 +5,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { previewApi } from "../../features/preview/api";
 import { queuePreviewDocument } from "../../features/preview/shared/openRequests";
 import { toast } from "sonner";
+import {
+  developmentPlan,
+  startDevelopment,
+} from "../../lib/developmentPreview";
 import { WorktreeEntryMenu } from "./WorktreeEntryMenu";
 import {
   modifyWorktreeEntry,
@@ -13,13 +17,18 @@ import {
 import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
+vi.mock("../../lib/developmentPreview", () => ({
+  developmentPlan: vi.fn(async () => null),
+  startDevelopment: vi.fn(),
+}));
 vi.mock("../../features/preview/api", () => ({
   previewApi: { openProject: vi.fn() },
 }));
 vi.mock("../../features/preview/shared/openRequests", () => ({
   queuePreviewDocument: vi.fn(),
 }));
-vi.mock("../../lib/worktreeApi", () => ({
+vi.mock("../../lib/worktreeApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/worktreeApi")>()),
   modifyWorktreeEntry: vi.fn(),
   revealWorktreeEntry: vi.fn(),
 }));
@@ -28,6 +37,8 @@ vi.mock("../../hooks/useWorktreeDocument", () => ({
 }));
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({ writeText: vi.fn() }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+const navigate = vi.fn();
+vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));
 const t = (key: string) => key;
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
 let host: HTMLDivElement;
@@ -313,4 +324,91 @@ it("omits browser preview for directories and other files and disables links", a
     menuItems().find((item) => item.textContent === "fileTree.previewInBrowser")
       ?.disabled,
   ).toBe(true);
+});
+
+it("runs saved scripts in a new internal terminal and blocks unsaved scripts", async () => {
+  await render("scripts/run.SH");
+  await open();
+  await choose("fileTree.runInTerminal");
+  expect(navigate).toHaveBeenCalledWith(expect.any(String), {
+    state: {
+      terminalScript: {
+        projectId: "demo",
+        worktreePath: "/workspace/demo",
+        scriptPath: "scripts/run.SH",
+      },
+    },
+  });
+  navigate.mockClear();
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(true);
+  await open();
+  await choose("fileTree.runInTerminal");
+  expect(navigate).not.toHaveBeenCalled();
+  expect(toast.error).toHaveBeenCalledWith("fileTree.saveFirst");
+});
+
+it("offers script execution only for files and disables symbolic links", async () => {
+  for (const [path, directory] of [
+    ["folder.sh", true],
+    ["notes.md", false],
+  ] as const) {
+    await render(path, directory);
+    await open();
+    expect(
+      menuItems().some((item) => item.textContent === "fileTree.runInTerminal"),
+    ).toBe(false);
+    await choose("worktree.refreshFiles");
+  }
+  await render("link.bat", false, true);
+  await open();
+  expect(
+    menuItems().find((item) => item.textContent === "fileTree.runInTerminal")
+      ?.disabled,
+  ).toBe(true);
+});
+
+it.each([true, false])(
+  "previews Vite HTML through its development server (running=%s)",
+  async (running) => {
+    await render("index.html");
+    const plan = {
+      directory: "/workspace/demo",
+      url: "http://127.0.0.1:5173/index.html",
+      running,
+      launch: { relative_path: "index.html", port: 5173 },
+    };
+    vi.mocked(developmentPlan).mockResolvedValue(plan);
+    vi.mocked(startDevelopment).mockResolvedValue("http://127.0.0.1:5173");
+    vi.mocked(previewApi.openProject).mockResolvedValue({
+      id: "html",
+      title: "index.html",
+      kind: "html",
+      content: "<div></div>",
+      revision: "saved",
+      url: "http://static.invalid/index.html",
+    });
+    await open();
+    await choose("fileTree.previewInBrowser");
+    expect(startDevelopment).toHaveBeenCalledTimes(running ? 0 : 1);
+    expect(queuePreviewDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://127.0.0.1:5173/index.html" }),
+    );
+  },
+);
+
+it("reports development startup errors without opening a blank static preview", async () => {
+  await render("index.html");
+  vi.mocked(developmentPlan).mockResolvedValue({
+    directory: "/workspace/demo",
+    url: "http://127.0.0.1:5173/index.html",
+    running: false,
+    launch: { relative_path: "index.html", port: 5173 },
+  });
+  vi.mocked(startDevelopment).mockRejectedValue(
+    new Error("Development server failed"),
+  );
+  await open();
+  await choose("fileTree.previewInBrowser");
+  expect(previewApi.openProject).not.toHaveBeenCalled();
+  expect(toast.error).toHaveBeenCalledWith("Development server failed");
 });

@@ -1,3 +1,4 @@
+import type { DevelopmentTerminal } from "../../lib/developmentPreview";
 import { bindTerminalWebLinks } from "./terminalWebLinks";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
@@ -39,6 +40,8 @@ interface Props {
   projectId: string;
   worktreePath?: string;
   agent?: HerdrAgent;
+  scriptPath?: string;
+  development?: DevelopmentTerminal;
   herdrTarget?: HerdrTarget;
   active: boolean;
   visible?: boolean;
@@ -50,6 +53,8 @@ export function TerminalPane({
   projectId,
   worktreePath,
   agent,
+  scriptPath,
+  development,
   herdrTarget,
   active,
   visible = true,
@@ -66,6 +71,7 @@ export function TerminalPane({
   const visibleRef = useRef(visible);
   const showNow = useRef<() => void>(() => {});
   const translate = useRef(t);
+  const generation = useRef(0);
   const attachment = useRef(herdrTarget);
   const attachmentKey = herdrTarget
     ? `${herdrTarget.session}:${herdrTarget.workspace_id}`
@@ -87,6 +93,8 @@ export function TerminalPane({
 
   useEffect(() => {
     if (!element.current) return;
+    const lifecycle = generation;
+    const currentGeneration = ++lifecycle.current;
     const node = element.current;
     const terminal = new Terminal({
       ...terminalAppearance(getComputedStyle(document.documentElement)),
@@ -137,6 +145,8 @@ export function TerminalPane({
     let frame = 0;
     let revision = 0;
     const fail = (reason: unknown) => {
+      if (disposed) return;
+      development?.failed(reason);
       if (!disposed)
         setError(getErrorMessage(reason, translate.current("terminal.error")));
     };
@@ -248,12 +258,18 @@ export function TerminalPane({
                     void api.ackTerminal(sessionId, event.seq).catch(fail);
                   else pendingAck = event.seq;
                 });
-              } else if (event.kind === "exit") setExitCode(event.code);
-              else setError(event.message);
+              } else if (event.kind === "exit") {
+                setExitCode(event.code);
+                development?.failed(
+                  new Error(translate.current("fileTree.developmentExited")),
+                );
+              } else fail(new Error(event.message));
             },
             worktreePath,
             agent,
             attachmentKey ? attachment.current : undefined,
+            scriptPath,
+            development?.launch,
           )
           .then((session) => {
             if (disposed) {
@@ -261,6 +277,7 @@ export function TerminalPane({
               return;
             }
             sessionId = session.id;
+            development?.started();
             setStarted(true);
             inputQueue.connect((data) => api.writeTerminal(session.id, data));
             callback.current({
@@ -293,6 +310,12 @@ export function TerminalPane({
       .catch(fail);
     return () => {
       disposed = true;
+      queueMicrotask(() => {
+        if (lifecycle.current === currentGeneration)
+          development?.failed(
+            new Error(translate.current("fileTree.developmentExited")),
+          );
+      });
       emulator.current = null;
       copyNow.current = () => {};
       unbindSelectionCopy();
@@ -311,7 +334,7 @@ export function TerminalPane({
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };
-  }, [projectId, worktreePath, agent, attachmentKey]);
+  }, [projectId, worktreePath, agent, attachmentKey, scriptPath, development]);
   useEffect(() => {
     showNow.current();
   }, [visible]);

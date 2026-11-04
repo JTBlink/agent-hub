@@ -1,5 +1,7 @@
 //! Interactive PTY resources shared by desktop adapters and core callers.
 mod process;
+mod script;
+pub use script::prepare_script;
 mod session;
 mod shell;
 use anyhow::{bail, Result};

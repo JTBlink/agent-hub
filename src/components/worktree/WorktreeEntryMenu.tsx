@@ -9,7 +9,11 @@ import {
   FileCode2,
   RefreshCw,
   Globe,
+  Terminal,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { worktreeUrl } from "../../lib/worktreeApi";
+import { isRunnableScript } from "../../lib/worktreeScripts";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
@@ -56,6 +60,7 @@ export function WorktreeEntryMenu({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const target = useRef<HTMLDivElement>(null);
   const [operation, setOperation] = useState<WorktreeFileAction["kind"]>();
   const [name, setName] = useState("");
@@ -142,6 +147,30 @@ export function WorktreeEntryMenu({
             icon: <Globe size={14} />,
             disabled: symlink,
             onSelect: () => void report(browserPreview.open),
+          },
+        ]
+      : []),
+    ...(!directory && isRunnableScript(path)
+      ? [
+          {
+            key: "run_script",
+            label: t("fileTree.runInTerminal"),
+            icon: <Terminal size={14} />,
+            disabled: symlink,
+            onSelect: () =>
+              void report(async () => {
+                if (hasPendingWorktreeDocument(projectId, worktreePath, path))
+                  throw new Error(t("fileTree.saveFirst"));
+                navigate(worktreeUrl(projectId, worktreePath), {
+                  state: {
+                    terminalScript: {
+                      projectId,
+                      worktreePath,
+                      scriptPath: path,
+                    },
+                  },
+                });
+              }),
           },
         ]
       : []),

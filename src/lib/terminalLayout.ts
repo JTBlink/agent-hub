@@ -1,3 +1,4 @@
+import type { DevelopmentTerminal } from "./developmentPreview";
 import type { TerminalTaskContext } from "./taskContext";
 import type { HerdrAgent } from "../features/herdr/lib/herdrAgents";
 import {
@@ -23,6 +24,8 @@ export interface TerminalTab {
   context?: TerminalTaskContext;
   // Launch intent belongs only to this run, and is omitted from saved layouts.
   agent?: HerdrAgent;
+  scriptPath?: string;
+  development?: DevelopmentTerminal;
   herdrTarget?: HerdrTarget;
 }
 

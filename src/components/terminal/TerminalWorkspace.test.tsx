@@ -855,7 +855,7 @@ it.each([
       expect(creations()[1][1]).toMatchObject({
         projectId: project.id,
         worktreePath: topic,
-        agent,
+        launch: { kind: "agent", agent },
       });
       expect(
         host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
@@ -872,3 +872,145 @@ it.each([
     }
   },
 );
+
+it("starts a script once in a new pane and never persists its execution intent", async () => {
+  const { useNavigate } = await import("react-router-dom");
+  const project = makeProject();
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "terminal_list"
+      ? []
+      : command === "terminal_create"
+        ? {
+            id: crypto.randomUUID(),
+            cwd: project.path,
+            project_id: project.id,
+            exited: false,
+          }
+        : undefined,
+  );
+  function Run() {
+    const navigate = useNavigate();
+    return (
+      <button
+        id="run-script"
+        onClick={() =>
+          navigate(
+            `/project/${project.id}?${new URLSearchParams({ worktree: project.path })}`,
+            {
+              state: {
+                terminalScript: {
+                  projectId: project.id,
+                  worktreePath: project.path,
+                  scriptPath: "scripts/run.sh",
+                },
+              },
+            },
+          )
+        }
+      >
+        Run script
+      </button>
+    );
+  }
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter
+          initialEntries={[
+            `/project/${project.id}?${new URLSearchParams({ worktree: project.path })}`,
+          ]}
+        >
+          <Run />
+          <TerminalWorkspace projects={[project]} />
+        </MemoryRouter>,
+      ),
+    );
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("#run-script")!.click(),
+    );
+    const launched = vi
+      .mocked(invoke)
+      .mock.calls.filter(
+        ([command, args]) =>
+          command === "terminal_create" && args && "launch" in args,
+      );
+    expect(launched).toHaveLength(1);
+    expect(launched[0][1]).toMatchObject({
+      projectId: project.id,
+      worktreePath: project.path,
+      launch: { kind: "script", path: "scripts/run.sh" },
+    });
+    expect(localStorage.getItem("agent-hub:terminal-layout")).not.toContain(
+      "scriptPath",
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+it("starts a development service in an owned terminal and waits for readiness", async () => {
+  const { startDevelopment } = await import("../../lib/developmentPreview");
+  const project = makeProject();
+  vi.mocked(invoke).mockImplementation(async (command) =>
+    command === "terminal_list"
+      ? []
+      : command === "terminal_create"
+        ? {
+            id: crypto.randomUUID(),
+            cwd: project.path,
+            project_id: project.id,
+            exited: false,
+          }
+        : undefined,
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <StrictMode>
+          <MemoryRouter
+            initialEntries={[
+              `/project/${project.id}?${new URLSearchParams({ worktree: project.path })}`,
+            ]}
+          >
+            <TerminalWorkspace projects={[project]} />
+          </MemoryRouter>
+        </StrictMode>,
+      ),
+    );
+    let opening!: Promise<string>;
+    await act(async () => {
+      opening = startDevelopment(project.id, project.path, {
+        directory: project.path,
+        url: "http://127.0.0.1:54321/index.html",
+        running: false,
+        launch: { relative_path: "index.html", port: 54321 },
+      });
+    });
+    await expect(opening).resolves.toBe("http://127.0.0.1:54321");
+    expect(invoke).toHaveBeenCalledWith(
+      "terminal_create",
+      expect.objectContaining({
+        launch: {
+          kind: "development",
+          launch: { relative_path: "index.html", port: 54321 },
+        },
+      }),
+    );
+    expect(invoke).toHaveBeenCalledWith("preview_development_wait", {
+      port: 54321,
+    });
+    expect(localStorage.getItem("agent-hub:terminal-layout")).not.toContain(
+      '"development":',
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

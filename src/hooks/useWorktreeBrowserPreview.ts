@@ -1,3 +1,4 @@
+import { developmentPlan, startDevelopment } from "../lib/developmentPreview";
 import { useWorktreePreviews } from "./worktreePreviewsContext";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,8 +23,16 @@ export function useWorktreeBrowserPreview(
     pending.current = true;
     setOpening(true);
     try {
-      if (previews) await previews.open(projectId, worktreePath, path);
-      else await openProjectPreview(projectId, worktreePath, path);
+      const plan = /\.html?$/i.test(path)
+        ? await developmentPlan(projectId, worktreePath, path)
+        : null;
+      if (plan && !plan.running) {
+        const origin = await startDevelopment(projectId, worktreePath, plan);
+        plan.url = new URL(new URL(plan.url).pathname, origin).href;
+      }
+      if (previews)
+        await previews.open(projectId, worktreePath, path, plan?.url);
+      else await openProjectPreview(projectId, worktreePath, path, plan?.url);
     } finally {
       pending.current = false;
       setOpening(false);

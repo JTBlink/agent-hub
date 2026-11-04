@@ -416,3 +416,28 @@ pub async fn preview_upload(
     .await??;
     Ok(true)
 }
+
+#[tauri::command]
+pub async fn preview_development_plan(
+    store: State<'_, Arc<crate::core::skill_store::SkillStore>>,
+    project_id: String,
+    worktree_path: String,
+    relative_path: String,
+) -> Result<Option<preview::development::DevelopmentPlan>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root =
+            crate::core::project_worktrees::directory(&store, &project_id, Some(&worktree_path))
+                .map_err(AppError::io)?;
+        preview::development::plan(&root, &relative_path).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
+pub async fn preview_development_wait(port: u16) -> Result<(), AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        preview::development::wait(port).map_err(AppError::io)
+    })
+    .await?
+}

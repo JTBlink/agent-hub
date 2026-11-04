@@ -58,6 +58,7 @@ it("saves only terminal layout and restores split direction, focus and scoped se
   tab.activePane = "second-pane";
   tab.direction = "vertical";
   tab.agent = "codex";
+  tab.scriptPath = "scripts/run.sh";
   const activeIds = {
     [terminalScopeKey(tab.projectId, tab.worktreePath)]: tab.id,
   };
@@ -72,6 +73,8 @@ it("saves only terminal layout and restores split direction, focus and scoped se
   const layout = { ...tab };
   delete layout.context;
   delete layout.agent;
+  delete layout.scriptPath;
+  expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("run.sh");
   expect(readTerminalLayout()).toEqual({
     tabs: [layout],
     activeIds,

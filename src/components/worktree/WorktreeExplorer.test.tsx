@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { WorktreeExplorer } from "./WorktreeExplorer";
@@ -53,13 +54,15 @@ it("shows collapsed folder changes, opens files and clears decorations without c
   ];
   const render = (gitFiles: GitFile[]) =>
     root.render(
-      <WorktreeExplorer
-        projectId="demo"
-        worktreePath="<workspace>/demo"
-        selected="src/new.ts"
-        onSelect={select}
-        gitFiles={gitFiles}
-      />,
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath="<workspace>/demo"
+          selected="src/new.ts"
+          onSelect={select}
+          gitFiles={gitFiles}
+        />
+      </MemoryRouter>,
     );
   await act(async () => render(files));
   expect(
@@ -88,11 +91,13 @@ it("requests Git status refresh alongside the file listing", async () => {
   try {
     await act(async () =>
       root.render(
-        <WorktreeExplorer
-          projectId="demo"
-          worktreePath="<workspace>/demo"
-          onSelect={vi.fn()}
-        />,
+        <MemoryRouter>
+          <WorktreeExplorer
+            projectId="demo"
+            worktreePath="<workspace>/demo"
+            onSelect={vi.fn()}
+          />
+        </MemoryRouter>,
       ),
     );
     await act(async () =>

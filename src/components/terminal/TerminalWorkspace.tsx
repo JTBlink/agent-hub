@@ -41,6 +41,10 @@ import type { HerdrAgent } from "../../features/herdr/lib/herdrAgents";
 import { herdrNavigation } from "../../features/herdr/lib/herdrControlApi";
 import { useTerminalTaskRequest } from "./useTerminalTaskRequest";
 import { useHerdrAttachment } from "../../features/herdr/terminal/useHerdrAttachment";
+import {
+  useTerminalRunRequests,
+  terminalScriptRequest,
+} from "./useTerminalRunRequests";
 import { LocalTerminalTools } from "./TerminalActionBar";
 import { HerdrTerminalTools } from "../../features/herdr/terminal/HerdrTerminalTools";
 
@@ -113,6 +117,7 @@ export function TerminalWorkspace({
     path: scopedPath,
     initialize:
       visible &&
+      !terminalScriptRequest(location.state) &&
       !terminalTaskRequest(location.state) &&
       !herdrNavigation(location.state),
   });
@@ -161,6 +166,17 @@ export function TerminalWorkspace({
     onError: setBridgeError,
     setProjectId,
     setContextVisible,
+  });
+
+  useTerminalRunRequests({
+    ready,
+    projectId: scopedProject,
+    path: scopedPath,
+    tabs: tabsRef,
+    setTabs,
+    setActiveId,
+    onSelectTerminal,
+    onError: setBridgeError,
   });
 
   const recent = projects.reduce<Project | undefined>(
@@ -488,6 +504,12 @@ export function TerminalWorkspace({
                 )}
                 <TerminalPane
                   {...herdrSessions.paneProps(tab, pane)}
+                  scriptPath={
+                    pane === tab.panes[0] ? tab.scriptPath : undefined
+                  }
+                  development={
+                    pane === tab.panes[0] ? tab.development : undefined
+                  }
                   visible={visible && displayedId === tab.id}
                   active={
                     visible && displayedId === tab.id && tab.activePane === pane

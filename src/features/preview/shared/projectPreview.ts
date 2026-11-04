@@ -20,8 +20,8 @@ export async function openProjectPreview(
   projectId: string,
   worktreePath: string,
   path: string,
+  url?: string,
 ): Promise<void> {
-  queuePreviewDocument(
-    await previewApi.openProject(projectId, worktreePath, path),
-  );
+  const document = await previewApi.openProject(projectId, worktreePath, path);
+  queuePreviewDocument(url ? { ...document, url } : document);
 }
