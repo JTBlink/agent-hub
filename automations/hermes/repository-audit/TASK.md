@@ -1,5 +1,3 @@
 # Weekday repository audit
 
-Ask Hermes to inspect repository health and suggest follow-up work.
-
-Install through AgentHub Discover or import this task directory. Configure the project before enabling its schedule.
+Run the prompt in `prompts/prompt.md` through the independent Herdr runtime. Configure the project and session before enabling the schedule. Agent command defaults come from global settings; explicit task arguments override them.

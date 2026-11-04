@@ -88,13 +88,12 @@ pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
         )?;
         (root, path, "hermes")
     } else {
-        let root = store::root();
         if let Some(dir) = native_directory(&task)? {
             let path = dir.join("output.log");
             checked(&dir, &path)?;
-            (root, Some(path), "system")
+            (dir, Some(path), "system")
         } else {
-            (root, None, "unsupported")
+            (store::root(), None, "unsupported")
         }
     };
     let path = match path {

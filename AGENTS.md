@@ -74,6 +74,10 @@
 
 每次提交前都必须检查本次变更是否影响用户可见行为、发布流程或兼容性；如有影响，及时在根目录 `CHANGELOG.md` 的 `Unreleased` 或对应版本章节中补充记录。
 
+## 定时任务记录规范
+
+开发、修改或审查任意定时任务时，必须遵循[定时任务本地记录规范](docs/architecture/automation-records.md)：按任务包归集 `.local/runs/` 执行记录，业务信息保存在 `.local/state/task-state.json` 的命名扩展中，复用通用存储与回调约定。执行记录及业务状态仅保存在本机，不进入定义、导出、备份或同步；累计次数和人工接管状态不得随重跑清零。旧任务沿显式迁移流程兼容，不复制第二份权威记录。
+
 ## Agent skills
 
 ### Project development
@@ -91,3 +95,7 @@ Uses the default five canonical triage labels. See `docs/agents/triage-labels.md
 ### Domain docs
 
 Single-context layout; read `CONTEXT.md`, `GLOSSARY.md` (if present), and relevant ADRs before working. See `docs/agents/domain.md`.
+
+## 自动化与 Agent 启动
+
+自动化任务的 Agent 能力可选；普通任务直接执行命令。需要 Agent 时，复用独立通用启动模块，优先 Herdr，未安装时自动降级原生终端；已发起或结果不明时不切换后端重跑。终端、任务面板与定时任务共享模块边界，规范见 [Agent 启动架构](docs/architecture/agent-launch.md)和[自动化编写规范](docs/product/automation-authoring.md)。

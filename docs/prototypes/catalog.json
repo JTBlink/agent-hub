@@ -59,11 +59,10 @@
   {
     "id": "agent-settings",
     "title": "全局智能体设置",
-    "description": "各 Agent 的默认命令、权限、参数与环境；使用智能体默认模型。",
+    "description": "支持搜索和筛选多个 Agent，每行直接编辑启动指令，常用参数按钮自动组合命令。",
     "status": "设计中",
     "path": "/docs/prototypes/agent-settings/",
     "source": "docs/prototypes/agent-settings/",
-    "layouts": ["A", "B", "C"],
     "aliases": ["/tests/browser/settings-agents-prototype.html"]
   }
 ]

@@ -2,6 +2,8 @@
 
 桌面页面与 `agent-hub-cli automations` 共用 `core::automation`。原生系统任务与 Hermes 各自调度，应用不增加依赖桌面窗口存活的轮询调度器。
 
+全部任务的记录布局、扩展字段、回调、次数与备份边界遵循[定时任务本地记录规范](automation-records.md)。
+
 ## 独立任务包
 
 按 [ADR-0016](../adr/0016-independent-automation-packages.md)，新建、模板和导入统一使用独立包；下文旧 `tasks.json`、自定义脚本目录和旧 runner 的处理作为兼容路径，不用于存放新包的唯一内容。
@@ -21,7 +23,7 @@
     ├── receipt.json         # 运行准备阶段、调度身份、错误和备份状态
     ├── operation.json       # 更新过程中存在的恢复 journal
     ├── env/                 # 按依赖版本组合分配的私有环境
-    ├── state/
+    ├── state/task-state.json # 按用途命名的本地 extensions，不备份
     └── runs/<run-id>/
 ```
 
@@ -140,9 +142,7 @@ Herdr 模板使用共用的 `herdr-agent.py`，系统调度发起后先核实目
 
 内置每小时维护（:15，只读）、PR / MR 代码审查（:30，评论反馈与自动请求更改）和 Issue 自动处理（:45）模板；Issue 模板仅授权明确候选的分支实现、验证及草稿交付，不自动合并或发布。每小时日程以固定本地分钟执行：launchd 使用仅含 Minute 的日历，systemd 使用每小时 OnCalendar，Windows 使用下一次目标分钟开始的一小时重复触发。
 
-PR / MR 代码审查由 `scripts/review.py` 先执行无模型检查：按分支跟踪或显式选择的 remote 确定仓库，GitHub 使用 `gh`，GitLab 使用 `glab`；自建主机按该主机的 CLI 登录状态识别，也支持在 `config/review-config.json` 指定平台和 CLI launcher argv。不猜测多 remote，不绑定组织平台。查询错误报告失败；没有非草稿开放请求或 head/base 未变且已有完整本地报告时，不启动 Herdr Agent。默认每轮最多检查 3 页、审核一个请求。
-
-检测与运行脚本随任务包分发，无需读取会话历史或访问开发仓库；系统计划直接运行本机完整任务包。有候选时由 Agent 直接调用已安装的 `code-review` Skill，固定 head/base，分别报告 Standards 与 Spec；将双轴结果发布到该请求的评论，有明确必须修复的问题时自动请求更改；不修改代码、批准或合并。发布前核对提交并按本轮标记去重，打回能力受限时评论说明阻碍。运行上下文通过共享 Herdr launcher 的可选 `prompt_context` 追加，不改写用户的 `prompts/prompt.md`。只有本轮结构化报告包含已确认的评论发布凭据且结束时远端身份与提交仍匹配，才在 `.local/state/reviews/` 按请求保存最近结果；`review-pending.json` 保留未完成轮次的准确对象与报告路径，恢复先收回原轮次，不另发同一请求。缺少报告不会将 Agent 就绪当作审查成功。任务包 2.1.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](../../automations/engineering/agent-mr-processing/TASK.md)。
+PR / MR 任务由脚本通过项目配置的平台 CLI 按创建时间选择最早的开放、非草稿待处理请求，每轮一个，将编号、标题、URL、源提交与目标分支快照交给 Herdr Agent。Agent 调用 `code-review` 审查，自动修复并提交到对应源分支，评论结论与结果，不批准或合并。实际修复前后通过本地回调保存 `extensions.mr_repair`，每个请求累计最多 3 次；失败后打回并交给人工，后续运行不再自动处理。记录与执行日志一样只留本机，不生成本地审查报告；Herdr 运行状态继续防止未结束任务重复投递。任务包 2.5.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](../../automations/engineering/agent-mr-processing/TASK.md)。
 
 ## 统一创建入口
 
@@ -169,3 +169,5 @@ macOS 额外提供“定时重置网络”：每天 07:00，默认暂停；脚�
 Windows、systemd 和 Hermes 返回的下一次时间优先使用调度器原值。launchd 不提供下一次触发时间，因此已启用且运行环境与注册有效的每小时、每日和工作日日历任务，在每次查询时按本机时区计算严格晚于当前时刻的下一次日程。停用、环境未就绪、手动任务和注册未知的任务不生成未来时间；没有可靠计时锚点的 `StartInterval` 不猜测相位。
 
 自动化页在最近的下一次日程到点后重新查询，以滚动到下一轮，启停和保存日程仍沿用原操作完成后的刷新。读取失败按一分钟间隔重试；页面隐藏时交由已有的焦点/可见性刷新处理，卸载页面清理计时器。
+
+Agent 可选；需要 Agent 时统一经独立 Herdr 模块发起。通用场景边界见[Agent 启动架构](agent-launch.md)；新任务遵循[自动化编写规范](../product/automation-authoring.md)。

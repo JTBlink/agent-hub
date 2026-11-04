@@ -1,3 +1,4 @@
+import { useDefaultAgentKey } from "../../../hooks/useDefaultAgentKey";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -28,7 +29,13 @@ export function HerdrAgentDialog({
   const { t } = useTranslation();
   const { tools } = useApp();
   const options = automationAgentOptions(tools);
-  const [kind, setKind] = useState(options[0]?.kind ?? "");
+  const defaultAgent = useDefaultAgentKey();
+  const [selectedKind, setKind] = useState("");
+  const kind =
+    selectedKind ||
+    options.find((option) => option.key === defaultAgent)?.kind ||
+    options[0]?.kind ||
+    "";
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
   const [direction, setDirection] = useState<"right" | "down">("right");

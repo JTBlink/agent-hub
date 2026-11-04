@@ -5,6 +5,9 @@ use crate::commands;
 pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     commands::ipc::main_only(tauri::generate_handler![
         commands::agent_usage::get_agent_usage,
+        commands::agent_launch::agent_launch_settings,
+        commands::agent_launch::task_native_agent_launch,
+        commands::agent_launch::save_agent_launch_settings,
         commands::system_permissions::get_system_permissions,
         commands::system_permissions::open_system_permission_settings,
         commands::agent_usage::consume_codex_reset_credit,

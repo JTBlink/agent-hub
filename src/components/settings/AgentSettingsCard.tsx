@@ -1,3 +1,5 @@
+import { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
+import { AgentLaunchEditor } from "./AgentLaunchEditor";
 import { Check, FolderOpen, Pencil, RotateCcw, Trash2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AgentIcon } from "../../components/AgentIcon";
@@ -11,8 +13,10 @@ export function AgentSettingsCard({
   agent,
   dragHandle,
   controller,
+  launch,
 }: {
   agent: api.ToolInfo;
+  launch?: ReturnType<typeof useAgentLaunchSettings>;
   dragHandle?: React.ReactNode;
   controller: ReturnType<typeof useAgentSettings>;
 }) {
@@ -123,150 +127,163 @@ export function AgentSettingsCard({
         />
       </div>
 
-      <div className="space-y-1">
-        {/* Global skills path */}
-        {editingPathKey === agent.key ? (
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              aria-label={t("settings.skillsPath")}
-              value={editingPathValue}
-              onChange={(e) => setEditingPathValue(e.target.value)}
-              className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-xs font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSavePath();
-                if (e.key === "Escape") setEditingPathKey(null);
-              }}
-            />
-            <button
-              onClick={() => handleBrowsePath(setEditingPathValue)}
-              className="shrink-0 p-1 text-muted hover:text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              title={t("settings.selectFolder")}
-            >
-              <FolderOpen className="h-3 w-3" />
-            </button>
-            <button
-              aria-label={t("common.save")}
-              onClick={handleSavePath}
-              className="shrink-0 p-1 text-emerald-500 hover:text-emerald-400 outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Check className="h-3 w-3" />
-            </button>
-            <button
-              aria-label={t("common.cancel")}
-              onClick={() => setEditingPathKey(null)}
-              className="shrink-0 p-1 text-muted hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <p
-              className="min-w-0 flex-1 truncate text-xs font-mono leading-tight text-muted"
-              title={agent.skills_dir}
-            >
-              {compactHomePath(agent.skills_dir)}
-            </p>
-            <button
-              type="button"
-              onClick={() => startEditPath(agent.key, agent.skills_dir)}
-              className="shrink-0 p-0.5 text-muted hover:text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-              title={t("settings.editPath")}
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            {agent.has_path_override && !agent.is_custom && (
+      {launch && <AgentLaunchEditor agentKey={agent.key} controller={launch} />}
+      <details
+        className="mt-2"
+        open={
+          editingPathKey === agent.key ||
+          editingProjectPathKey === agent.key ||
+          undefined
+        }
+      >
+        <summary className="cursor-pointer text-xs text-muted">
+          {t("agentLaunch.details")}
+        </summary>
+        <div className="mt-2 space-y-1">
+          {/* Global skills path */}
+          {editingPathKey === agent.key ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                aria-label={t("settings.skillsPath")}
+                value={editingPathValue}
+                onChange={(e) => setEditingPathValue(e.target.value)}
+                className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-xs font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSavePath();
+                  if (e.key === "Escape") setEditingPathKey(null);
+                }}
+              />
+              <button
+                onClick={() => handleBrowsePath(setEditingPathValue)}
+                className="shrink-0 p-1 text-muted hover:text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title={t("settings.selectFolder")}
+              >
+                <FolderOpen className="h-3 w-3" />
+              </button>
+              <button
+                aria-label={t("common.save")}
+                onClick={handleSavePath}
+                className="shrink-0 p-1 text-emerald-500 hover:text-emerald-400 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Check className="h-3 w-3" />
+              </button>
+              <button
+                aria-label={t("common.cancel")}
+                onClick={() => setEditingPathKey(null)}
+                className="shrink-0 p-1 text-muted hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <p
+                className="min-w-0 flex-1 truncate text-xs font-mono leading-tight text-muted"
+                title={agent.skills_dir}
+              >
+                {compactHomePath(agent.skills_dir)}
+              </p>
               <button
                 type="button"
-                onClick={() => handleResetPath(agent.key)}
-                className="shrink-0 p-0.5 text-muted hover:text-amber-500 outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                title={t("settings.resetPath")}
+                onClick={() => startEditPath(agent.key, agent.skills_dir)}
+                className="shrink-0 p-0.5 text-muted hover:text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                title={t("settings.editPath")}
               >
-                <RotateCcw className="h-3 w-3" />
+                <Pencil className="h-3 w-3" />
               </button>
-            )}
-          </div>
-        )}
+              {agent.has_path_override && !agent.is_custom && (
+                <button
+                  type="button"
+                  onClick={() => handleResetPath(agent.key)}
+                  className="shrink-0 p-0.5 text-muted hover:text-amber-500 outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                  title={t("settings.resetPath")}
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* Project-relative skills path — always rendered so every card is the
+          {/* Project-relative skills path — always rendered so every card is the
             same height, installed or not. */}
-        {editingProjectPathKey === agent.key ? (
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              aria-label={t("settings.projectSkillsPath")}
-              value={editingProjectPathValue}
-              onChange={(e) => setEditingProjectPathValue(e.target.value)}
-              placeholder={t("settings.projectSkillsPathPlaceholder")}
-              className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-xs font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSaveProjectPath();
-                if (e.key === "Escape") setEditingProjectPathKey(null);
-              }}
-            />
-            <button
-              aria-label={t("common.save")}
-              onClick={handleSaveProjectPath}
-              className="shrink-0 p-1 text-emerald-500 hover:text-emerald-400 outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <Check className="h-3 w-3" />
-            </button>
-            <button
-              aria-label={t("common.cancel")}
-              onClick={() => setEditingProjectPathKey(null)}
-              className="shrink-0 p-1 text-muted hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <p
-              className="min-w-0 flex-1 truncate text-xs font-mono leading-tight text-muted"
-              title={
-                agent.project_relative_skills_dir ??
-                t("settings.projectSkillsPathDesc")
-              }
-            >
-              {agent.project_relative_skills_dir
-                ? !agent.is_custom && !agent.has_project_path_override
-                  ? t("settings.projectSkillsPathDefault", {
-                      path: agent.project_relative_skills_dir,
-                    })
-                  : t("settings.projectSkillsPathValue", {
-                      path: agent.project_relative_skills_dir,
-                    })
-                : t("settings.projectSkillsPathEmpty")}
-            </p>
-            <button
-              type="button"
-              onClick={() =>
-                startEditProjectPath(
-                  agent.key,
-                  agent.project_relative_skills_dir,
-                )
-              }
-              className="shrink-0 p-0.5 text-muted hover:text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-              title={t("settings.editPath")}
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            {!agent.is_custom && agent.has_project_path_override && (
+          {editingProjectPathKey === agent.key ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                aria-label={t("settings.projectSkillsPath")}
+                value={editingProjectPathValue}
+                onChange={(e) => setEditingProjectPathValue(e.target.value)}
+                placeholder={t("settings.projectSkillsPathPlaceholder")}
+                className="h-7 min-w-0 flex-1 rounded border border-border-subtle bg-background px-1.5 text-xs font-mono text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent focus:border-accent"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveProjectPath();
+                  if (e.key === "Escape") setEditingProjectPathKey(null);
+                }}
+              />
+              <button
+                aria-label={t("common.save")}
+                onClick={handleSaveProjectPath}
+                className="shrink-0 p-1 text-emerald-500 hover:text-emerald-400 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <Check className="h-3 w-3" />
+              </button>
+              <button
+                aria-label={t("common.cancel")}
+                onClick={() => setEditingProjectPathKey(null)}
+                className="shrink-0 p-1 text-muted hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <p
+                className="min-w-0 flex-1 truncate text-xs font-mono leading-tight text-muted"
+                title={
+                  agent.project_relative_skills_dir ??
+                  t("settings.projectSkillsPathDesc")
+                }
+              >
+                {agent.project_relative_skills_dir
+                  ? !agent.is_custom && !agent.has_project_path_override
+                    ? t("settings.projectSkillsPathDefault", {
+                        path: agent.project_relative_skills_dir,
+                      })
+                    : t("settings.projectSkillsPathValue", {
+                        path: agent.project_relative_skills_dir,
+                      })
+                  : t("settings.projectSkillsPathEmpty")}
+              </p>
               <button
                 type="button"
-                onClick={() => handleResetProjectPath(agent.key)}
-                className="shrink-0 p-0.5 text-muted hover:text-amber-500 outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
-                title={t("settings.resetPath")}
+                onClick={() =>
+                  startEditProjectPath(
+                    agent.key,
+                    agent.project_relative_skills_dir,
+                  )
+                }
+                className="shrink-0 p-0.5 text-muted hover:text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                title={t("settings.editPath")}
               >
-                <RotateCcw className="h-3 w-3" />
+                <Pencil className="h-3 w-3" />
               </button>
-            )}
-          </div>
-        )}
-      </div>
+              {!agent.is_custom && agent.has_project_path_override && (
+                <button
+                  type="button"
+                  onClick={() => handleResetProjectPath(agent.key)}
+                  className="shrink-0 p-0.5 text-muted hover:text-amber-500 outline-none focus-visible:ring-2 focus-visible:ring-accent opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                  title={t("settings.resetPath")}
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </details>
     </fieldset>
   );
 }

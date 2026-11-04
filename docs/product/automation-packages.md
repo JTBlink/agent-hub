@@ -86,3 +86,7 @@ agent-hub-cli automations migrate <task-id>
 说明采用与 Skill 相近的分层结构：先读 TASK.md 了解用途和流程，运行脚本无需把实现载入 Agent 上下文；只在需要时读取 references/ 的细节。TASK.md 不重复维护日程、依赖或版本，实际配置以 config/task.json 为准。
 
 旧版根目录清单和 README.md、herdr.json 继续可用；仅查看或更新旧任务不会自动搬迁清单。新旧 task.json 同时存在时报告冲突，不静默任选一份。JSON 单文件导入导出格式保持兼容，文件清单始终相对包根目录。
+
+## 执行记录与处理状态
+
+所有任务按[定时任务本地记录规范](../architecture/automation-records.md)保存本机数据：执行记录位于任务包 `.local/runs/<运行ID>/`，业务处理记录位于 `.local/state/task-state.json` 的 `extensions` 中。MR、Issue、巡检等用途使用独立扩展；重跑不清零累计次数。运行记录与业务扩展均不参与任务导出、备份或跨设备同步，任务定义和声明脚本继续备份。

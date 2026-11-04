@@ -44,6 +44,7 @@ function SortableAgentCard({
     <button
       type="button"
       ref={setActivatorNodeRef}
+      {...attributes}
       {...listeners}
       onClick={(e) => e.stopPropagation()}
       className="mt-0.5 flex shrink-0 cursor-grab items-center justify-center rounded text-faint outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors hover:text-muted active:cursor-grabbing"
@@ -55,7 +56,7 @@ function SortableAgentCard({
   );
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="h-full">
+    <div ref={setNodeRef} style={style} className="h-full">
       {children(handle)}
     </div>
   );
@@ -63,6 +64,7 @@ function SortableAgentCard({
 
 interface AgentGroupDndProps {
   items: api.ToolInfo[];
+  layout?: "grid" | "columns";
   sensors: ReturnType<typeof useSensors>;
   dragLabel: string;
   onDragEnd: (event: DragEndEvent, groupKeys: string[]) => void;
@@ -74,6 +76,7 @@ interface AgentGroupDndProps {
 
 export function AgentGroupDnd({
   items,
+  layout = "grid",
   sensors,
   dragLabel,
   onDragEnd,
@@ -87,7 +90,13 @@ export function AgentGroupDnd({
       onDragEnd={(e) => onDragEnd(e, groupKeys)}
     >
       <SortableContext items={groupKeys} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-1.5">
+        <div
+          className={
+            layout === "columns"
+              ? "grid grid-cols-1 gap-2 xl:grid-cols-2"
+              : "grid grid-cols-[repeat(auto-fill,minmax(min(100%,18rem),1fr))] gap-1.5"
+          }
+        >
           {items.map((agent) => (
             <SortableAgentCard
               key={agent.key}

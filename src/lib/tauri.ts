@@ -1473,3 +1473,11 @@ export * from "./taskBrowserApi";
 export * from "../features/herdr/lib/herdrControlApi";
 export * from "../features/herdr/lib/herdrToolsApi";
 export { launchTerminalHerdr } from "../features/herdr/terminal/api";
+
+// Independent portable Agent launch preferences.
+export const getAgentLaunchSettings = () =>
+  invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>("agent_launch_settings");
+export const saveAgentLaunchSettings = (
+  document: import("./agentLaunchConfig").AgentLaunchDocument,
+  revision: string,
+) => invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>("save_agent_launch_settings", { document, revision });

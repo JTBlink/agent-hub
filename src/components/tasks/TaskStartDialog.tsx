@@ -1,3 +1,4 @@
+import { useDefaultAgentKey } from "../../hooks/useDefaultAgentKey";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -80,13 +81,16 @@ export function TaskStartDialog({
     ReturnType<typeof getHerdrInventory>
   > | null>(null);
   const options = automationAgentOptions(tools);
+  const defaultAgent = useDefaultAgentKey();
   const kind =
     selectedKind ||
+    options.find((option) => option.key === defaultAgent)?.kind ||
     options.find((option) => option.kind === "codex")?.kind ||
     options[0]?.kind ||
     "";
   const kindAvailable = options.some((option) => option.kind === kind);
   const sessionAvailable =
+    inventory?.installed === false ||
     !session ||
     !!inventory?.sessions.some((item) => item.name === session && item.running);
   const selectedSkills = preferences.skills.map(
@@ -161,6 +165,11 @@ export function TaskStartDialog({
     onClose();
   };
   const openResult = (value: TaskLaunchResult) => {
+    if (!value.attachment) {
+      if (!value.warning) toast.success(t("agentLaunch.nativeSubmitted"));
+      close();
+      return;
+    }
     navigate(worktreeUrl(value.attachment.project_id, value.attachment.path), {
       state: {
         preserveSidebar: true,
@@ -506,6 +515,11 @@ export function TaskStartDialog({
           </p>
         )}
         {inventory?.installed === false && (
+          <p className="text-xs text-secondary">
+            {t("agentLaunch.nativeFallback")}
+          </p>
+        )}
+        {inventory?.installed === false && (
           <button
             type="button"
             className="app-button-secondary text-xs"
@@ -558,7 +572,7 @@ export function TaskStartDialog({
                   !actionAllowed ||
                   trees.loading ||
                   !detail ||
-                  !inventory?.installed ||
+                  !inventory ||
                   !kindAvailable ||
                   !sessionAvailable ||
                   missingSkills ||
@@ -573,7 +587,11 @@ export function TaskStartDialog({
             {busy || loading
               ? t("common.loading")
               : result
-                ? t("tasks.launch.openWorkspace")
+                ? t(
+                    result.native
+                      ? "common.close"
+                      : "tasks.launch.openWorkspace",
+                  )
                 : t("tasks.launch.confirm")}
           </button>
         </div>

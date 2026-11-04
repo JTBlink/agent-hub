@@ -2912,5 +2912,49 @@
     "nativeUAHint": "套用至目前頁面與之後新建的原生頁面。重新整理後由網站重新讀取；實際引擎仍以此處的核心資訊為準。",
     "nativeUAReset": "恢復系統預設 UA",
     "syncSourceUA": "同時套用來源瀏覽器 UA"
+  },
+  "agentLaunch": {
+    "instruction": "啟動指令",
+    "description": "編輯完整命令與參數，使用 Agent 預設模型。儲存後用於後續啟動；執行中的工作階段保持原樣。桌面工具使用宿主開啟指令，Herdr 僅支援相容的 CLI。路徑包含空格時請加引號。",
+    "reset": "還原預設指令",
+    "default": "✓ 預設",
+    "setDefault": "設為預設",
+    "details": "詳細設定",
+    "reload": "重新讀取（保留草稿）",
+    "syncCommit": "更新 Agent 啟動指令",
+    "shortcuts": {
+      "fullAccess": "完整存取",
+      "search": "網路搜尋",
+      "scrollback": "保留捲動",
+      "continue": "繼續工作階段",
+      "verbose": "詳細日誌",
+      "logs": "顯示日誌",
+      "tui": "終端介面"
+    },
+    "backup": {
+      "syncing": "正在同步到 Git…",
+      "conflict": "Git 存在衝突，請在備份頁處理",
+      "failed": "同步或狀態讀取失敗，本機設定保留",
+      "local": "已儲存至本機；設定 Git 備份後可同步",
+      "pending": "已儲存至本機，Git 有待同步變更",
+      "synced": "Git 備份已同步",
+      "settings": "備份設定",
+      "details": "檢視備份",
+      "sync": "立即同步"
+    },
+    "nativeSubmitted": "已提交至原生終端，請在終端檢視任務結果。",
+    "nativeFallback": "Herdr 未安裝，將自動使用原生終端執行。",
+    "search": "搜尋智慧體或啟動指令",
+    "noMatches": "沒有符合的智慧體",
+    "overwrite": "覆寫目前值",
+    "changed": "指令已被其他視窗或還原操作修改。目前儲存值：",
+    "filter": "篩選智慧體",
+    "filters": {
+      "installed": "已安裝",
+      "enabled": "已啟用",
+      "all": "全部"
+    },
+    "addCustom": "新增自訂",
+    "more": "更多"
   }
 }

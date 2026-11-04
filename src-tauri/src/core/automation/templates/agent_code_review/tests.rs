@@ -8,6 +8,8 @@ fn template_bundles_editable_prompt_and_executes_without_model_requests() {
             "agent-maintenance",
             "agent-mr-processing",
             "agent-issue-processing",
+            "daily-summary",
+            "repository-audit",
         ] {
             let template = super::super::builtin::all_templates("zh", false, shell)
                 .into_iter()

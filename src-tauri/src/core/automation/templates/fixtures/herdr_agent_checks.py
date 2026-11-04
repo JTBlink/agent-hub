@@ -32,6 +32,7 @@ class HerdrChecks(unittest.TestCase):
     def setUp(self):
         STATE.unlink(missing_ok=True)
         self.calls = []
+        self.config_calls = []
         self.output = io.StringIO()
 
     def tearDown(self):
@@ -43,17 +44,36 @@ class HerdrChecks(unittest.TestCase):
                 output='Synthetic Herdr result', read_failure=None, config=None,
                 missing_agent=False, pane_exists=False, lookup_failure=None,
                 replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None,
-                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None):
+                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None, shell_initializing=0, launch=None, launch_failure=False, herdr_missing=False, terminal_phase="running"):
         if config is not None:
             CONFIG.write_text(json.dumps(config), encoding='utf-8')
         previous_name = json.loads(STATE.read_text()).get('agent_name', OLD_NAME) if STATE.exists() else OLD_NAME
         lookups = 0
+        start_attempts = 0
         observed = iter(progress or ['working', status])
 
         def error(args, code):
             return subprocess.CompletedProcess(args, 1, '', json.dumps({'error': {'code': code, 'message': code}}))
         def run(args, **options):
-            nonlocal lookups
+            nonlocal lookups, start_attempts
+            if args[0] == 'agent-hub-cli':
+                self.config_calls.append((args, options))
+                if args[1:5] == ['--json', 'agents', 'launch', 'environment']:
+                    return subprocess.CompletedProcess(args, 0, json.dumps({'herdr_path': None if herdr_missing else 'herdr'}), '')
+                if args[1:5] == ['--json', 'agents', 'launch', 'terminal']:
+                    receipt = {'id': 'native-launch', 'backend': 'terminal', 'phase': 'submitted', 'exit_code': None}
+                    Path(args[args.index('--receipt-file') + 1]).write_text(json.dumps(receipt), encoding='utf-8')
+                    return subprocess.CompletedProcess(args, 0, json.dumps(receipt), '')
+                if args[1:5] == ['--json', 'agents', 'launch', 'terminal-status']:
+                    return subprocess.CompletedProcess(args, 0, json.dumps({'id': 'native-launch', 'backend': 'terminal', 'phase': terminal_phase, 'exit_code': 0 if terminal_phase == 'exited' else None}), '')
+                assert args[1:5] == ['--json', 'agents', 'launch', 'resolve'], args
+                if launch_failure:
+                    return subprocess.CompletedProcess(args, 1, '', '{"error":{"message":"launch settings invalid"}}')
+                return subprocess.CompletedProcess(args, 0, json.dumps(launch or {
+                    'kind': 'codex' if args[5] == 'default' else args[5],
+                    'program': 'codex' if args[5] == 'default' else args[5],
+                    'arguments': ['--dangerously-bypass-approvals-and-sandbox', '-c', 'check_for_update_on_startup=false'] if args[5] in ('codex', 'default') else [],
+                }), '')
             self.calls.append((args, options))
             assert args[0] == 'herdr', args
             command = args[1:]
@@ -67,6 +87,9 @@ class HerdrChecks(unittest.TestCase):
                 elif command[:2] == ['tab', 'create']:
                     payload = {'result': {'root_pane': {'pane_id': 'w-test:p-test', 'workspace_id': 'w-test', 'tab_id': 'w-test:t-task'}}}
                 elif command[:2] == ['agent', 'start']:
+                    start_attempts += 1
+                    if start_attempts <= shell_initializing:
+                        return error(args, 'agent_pane_busy')
                     if start_failure:
                         return error(args, start_failure)
                     payload = {'result': {'agent': {'agent_status': 'idle', 'completion_seq': 1}}}
@@ -104,7 +127,7 @@ class HerdrChecks(unittest.TestCase):
                 else:
                     raise AssertionError(command)
             return subprocess.CompletedProcess(args, 0, json.dumps(payload), '')
-        with patch('shutil.which', return_value=None if missing else 'herdr'):
+        with patch('pathlib.Path.home', return_value=PROJECT / 'isolated-home'), patch('shutil.which', side_effect=lambda name: None if missing or (herdr_missing and name == 'herdr') else name):
             with patch('subprocess.run', side_effect=run):
                 with patch('pathlib.Path.cwd', return_value=PROJECT):
                     with self.assertRaises(SystemExit) as result, redirect_stdout(self.output), patch('time.sleep'):
@@ -210,6 +233,12 @@ class HerdrChecks(unittest.TestCase):
         self.assertIsInstance(self.execute(missing_agent=True, pane_exists=True), str)
         self.assertFalse(any('create' in args or 'start' in args or 'close' in args for args, _ in self.calls))
 
+    def test_new_pane_shell_initialization_retries_start_without_duplicate_prompts(self):
+        self.assertEqual(self.execute(shell_initializing=1, pane_exists=True), 0)
+        self.assertEqual(sum('start' in args for args, _ in self.calls), 2)
+        self.assertEqual(sum('prompt' in args for args, _ in self.calls), 1)
+        self.assertEqual(sum('create' in args for args, _ in self.calls), 1)
+
     def test_startup_exit_resumes_in_the_existing_shell_without_new_layout(self):
         self.assertIsInstance(self.execute(start_failure='agent_not_ready'), str)
         state = json.loads(STATE.read_text())
@@ -312,6 +341,37 @@ class HerdrChecks(unittest.TestCase):
             '-c', 'name="value with spaces"', '--literal', '$(touch NEVER)',
         ])
         self.assertTrue(all(not options.get('shell') for _, options in self.calls))
+
+    def test_missing_herdr_submits_native_terminal_once_and_tracks_its_receipt(self):
+        self.assertEqual(self.execute(herdr_missing=True), 0)
+        self.assertEqual(json.loads(STATE.read_text())['backend'], 'terminal')
+        self.assertEqual(len([args for args, _ in self.config_calls if 'terminal' in args]), 1)
+        self.assertFalse(self.calls)
+        self.config_calls = []
+        self.assertEqual(self.execute(herdr_missing=True), 0)
+        self.assertFalse(any('terminal' in args for args, _ in self.config_calls))
+        self.assertEqual(self.execute(herdr_missing=True, terminal_phase='exited'), 0)
+        self.assertEqual(json.loads(STATE.read_text())['phase'], 'completed')
+
+    def test_missing_herdr_does_not_restart_an_uncertain_herdr_task(self):
+        self.save_previous('attention')
+        self.assertIsInstance(self.execute(herdr_missing=True), str)
+        self.assertFalse(any('terminal' in args for args, _ in self.config_calls))
+
+    def test_inherits_global_arguments_and_preserves_explicit_empty_override(self):
+        launch = {'kind': 'codex', 'program': 'codex', 'arguments': ['--search']}
+        self.assertEqual(self.execute(config={'agent': 'codex'}, launch=launch), 0)
+        start = next(args for args, _ in self.calls if 'start' in args)
+        self.assertIn('--search', start)
+        self.calls = []
+        STATE.unlink(missing_ok=True)
+        self.assertEqual(self.execute(config={'agent': 'codex', 'arguments': []}, launch=launch), 0)
+        start = next(args for args, _ in self.calls if 'start' in args)
+        self.assertNotIn('--search', start)
+
+    def test_invalid_global_settings_never_create_or_start_a_pane(self):
+        self.assertIsInstance(self.execute(launch_failure=True), str)
+        self.assertFalse(any('create' in args or 'start' in args for args, _ in self.calls))
 
     def test_invalid_extra_arguments_never_create_a_session(self):
         for value in ['-m "unterminated', ['--model'], 'nul\0value']:

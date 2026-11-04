@@ -149,3 +149,22 @@ fn a_failed_republish_leaves_the_previous_bridge_unusable() {
 
     central_repo::set_test_home_dir_override(None);
 }
+
+#[cfg(unix)]
+#[test]
+fn native_launch_rejects_a_remaining_binary_after_its_stamp_was_invalidated() {
+    let _lock = central_repo::test_base_dir_lock();
+    let tmp = tempdir().unwrap();
+    central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+    let outcome = std::panic::catch_unwind(|| {
+        std::fs::create_dir_all(bridge_dir()).unwrap();
+        fake_cli(&bridge_dir(), env!("CARGO_PKG_VERSION"));
+        assert!(validated_path().is_err());
+        std::fs::write(stamp_path(), env!("CARGO_PKG_VERSION")).unwrap();
+        assert_eq!(validated_path().unwrap(), bridge_path());
+        std::fs::write(stamp_path(), "").unwrap();
+        assert!(validated_path().is_err());
+    });
+    central_repo::set_test_home_dir_override(None);
+    outcome.unwrap();
+}

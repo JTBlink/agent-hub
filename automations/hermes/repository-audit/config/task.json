@@ -1,11 +1,11 @@
 {
-  "version": "2.0.0",
+  "version": "2.1.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
     "name": "Weekday repository audit",
-    "provider": "hermes",
-    "content": "Inspect this repository: dependencies, failing tests, lint/type errors and risky open changes. Summarize evidence and recommend next actions. Report findings without changing files.",
+    "provider": "system",
+    "content": "sh './scripts/run.sh'",
     "workdir": null,
     "schedule": {
       "kind": "daily",
@@ -15,6 +15,22 @@
     },
     "enabled": false
   },
-  "files": ["TASK.md"],
-  "dependencies": []
+  "files": [
+    "scripts/agent.py",
+    "scripts/herdr_agent.py",
+    "scripts/run.sh",
+    "config/herdr.json",
+    "prompts/prompt.md",
+    "TASK.md"
+  ],
+  "dependencies": [
+    {
+      "kind": "python",
+      "packages": []
+    },
+    {
+      "kind": "command",
+      "name": "hermes"
+    }
+  ]
 }

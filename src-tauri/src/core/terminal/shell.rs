@@ -96,38 +96,11 @@ impl ShellState {
         {
             bail!("Invalid launch argument");
         }
-        match integration.kind.as_str() {
-            "cmd" => {
-                if path.contains(['%', '!', '"']) {
-                    bail!("Use a Shell supporting this executable path");
-                }
-                if arguments
-                    .iter()
-                    .any(|argument| argument.contains(['%', '!', '"']))
-                {
-                    bail!("Use a Shell supporting these launch arguments");
-                }
-                let arguments = arguments
-                    .iter()
-                    .map(|argument| format!("\"{argument}\""))
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                Ok(format!("\"{path}\" {arguments}\r"))
-            }
-            _ => {
-                let command = std::iter::once(path)
-                    .chain(arguments.iter().map(String::as_str))
-                    .map(quote)
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                Ok(format!("{command}\r"))
-            }
-        }
+        let command = super::launch_command::render(&integration.kind, path, arguments)?;
+        Ok(format!("{command}\r"))
     }
 }
-fn quote(text: &str) -> String {
-    format!("'{}'", text.replace('\'', "'\\''"))
-}
+use super::launch_command::quote_posix as quote;
 fn source(path: &Path) -> String {
     format!(
         "if [ -r {0} ]; then . {0}; fi\n",

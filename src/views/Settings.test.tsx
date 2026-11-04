@@ -10,6 +10,20 @@ import en from "../i18n/en.json";
 import { Settings } from "./Settings";
 
 const api = vi.hoisted(() => ({
+  getAgentLaunchSettings: vi.fn(async () => ({
+    document: { schema_version: 1, default_agent: "codex", instructions: {} },
+    revision: "initial",
+    defaults: { codex: "codex" },
+  })),
+  gitBackupStatus: vi.fn(async () => ({
+    is_repo: false,
+    remote_url: null,
+    changes: [],
+    ahead: 0,
+    behind: 0,
+    has_changes: false,
+    upstream_health: "no_remote",
+  })),
   getSettings: vi.fn(),
   setSettings: vi.fn(),
   getCentralRepoPath: vi.fn(),

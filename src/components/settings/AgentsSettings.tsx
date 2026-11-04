@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -10,11 +11,17 @@ import { useAgentSettings } from "../../hooks/useAgentSettings";
 import * as api from "../../lib/tauri";
 import { AddCustomAgentForm } from "./AddCustomAgentForm";
 import { AgentGroupDnd } from "./AgentGroupDnd";
+import { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
+import { AgentLaunchBackup } from "./AgentLaunchBackup";
+import { CardActionMenu } from "../CardActionMenu";
 import { AgentSettingsCard } from "./AgentSettingsCard";
 
 export function AgentsSettings() {
   const { t } = useTranslation();
   const controller = useAgentSettings();
+  const launch = useAgentLaunchSettings();
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"installed" | "enabled" | "all">("all");
   const {
     tools,
     refreshing,
@@ -32,6 +39,22 @@ export function AgentsSettings() {
     dragSensors,
     handleAgentDragEnd,
   } = controller;
+  const matching = (agents: api.ToolInfo[]) =>
+    agents.filter((agent) => {
+      const instruction =
+        launch.snapshot?.document.instructions[agent.key] ??
+        launch.snapshot?.defaults[agent.key] ??
+        "";
+      if (filter === "installed" && !agent.installed) return false;
+      if (filter === "enabled" && (!agent.installed || !agent.enabled))
+        return false;
+      return `${agent.key} ${agent.display_name} ${instruction}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase());
+    });
+  const visibleDetected = matching(detectedTools);
+  const visibleUndetected = matching(undetectedTools);
+  const visibleCustom = matching(customTools);
   const renderAgentCard = (
     agent: api.ToolInfo,
     dragHandle?: React.ReactNode,
@@ -40,6 +63,7 @@ export function AgentsSettings() {
       agent={agent}
       dragHandle={dragHandle}
       controller={controller}
+      launch={launch}
     />
   );
   return (
@@ -48,73 +72,113 @@ export function AgentsSettings() {
       tabIndex={-1}
       className="scroll-mt-4 outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="app-section-title">
-            {t("settings.supportedAgents")} ({installedTools.length}/
-            {tools.length})
-          </h2>
+      <h2 className="sr-only">{t("settings.supportedAgents")}</h2>
+      <AgentLaunchBackup
+        revision={launch.snapshot?.revision}
+        onSynced={launch.reload}
+      />
+      <div className="mb-3 flex min-w-0 items-center gap-3">
+        <div
+          className="flex shrink-0 items-center gap-1"
+          role="group"
+          aria-label={t("agentLaunch.filter")}
+        >
+          {(["installed", "enabled", "all"] as const).map((value) => (
+            <button
+              type="button"
+              key={value}
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${filter === value ? "bg-surface-active text-primary" : "text-muted hover:bg-surface-hover hover:text-secondary"}`}
+            >
+              {t(`agentLaunch.filters.${value}`)}{" "}
+              <span className="ml-1 text-xs tabular-nums">
+                {value === "installed"
+                  ? installedTools.length
+                  : value === "enabled"
+                    ? enabledTools.length
+                    : tools.length}
+              </span>
+            </button>
+          ))}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          aria-label={t("agentLaunch.search")}
+          placeholder={t("agentLaunch.search")}
+          title={t("agentLaunch.description")}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          className="app-input ml-auto min-w-0 max-w-sm flex-1"
+        />
+        <button
+          type="button"
+          onClick={() => setShowAddCustom(true)}
+          title={`${t("settings.customAgents")}: ${customTools.length}`}
+          className="flex shrink-0 items-center gap-1 text-sm font-medium text-accent outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t("agentLaunch.addCustom")}
+        </button>
+        <CardActionMenu
+          label={t("agentLaunch.more")}
+          triggerIcon={
+            <span className="whitespace-nowrap text-sm">
+              {refreshing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                t("agentLaunch.more")
+              )}
+            </span>
+          }
+          triggerClassName="!h-8 !w-auto px-2"
+          actions={[
+            {
+              key: "enable",
+              label: t("settings.enableAll"),
+              disabled: controller.togglingTools.size > 0,
+              onSelect: () => void handleToggleAllTools(true),
+            },
+            {
+              key: "disable",
+              label: t("settings.disableAll"),
+              disabled: controller.togglingTools.size > 0,
+              onSelect: () => void handleToggleAllTools(false),
+            },
+            {
+              key: "refresh",
+              label: t("settings.refresh"),
+              icon: <RefreshCw className="h-3.5 w-3.5" />,
+              disabled: refreshing,
+              onSelect: () => void handleRefresh(),
+            },
+          ]}
+        />
+      </div>
+      {launch.error && (
+        <div role="alert" className="mb-3 text-sm text-danger">
+          {launch.error}{" "}
           <button
-            onClick={() => setShowAddCustom(true)}
-            className="flex items-center gap-1 text-sm text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            type="button"
+            className="text-accent"
+            onClick={() => void launch.reload()}
           >
-            <Plus className="w-3.5 h-3.5" />
-            {t("settings.addCustomAgent")}
-          </button>
-          <button
-            onClick={() => handleToggleAllTools(true)}
-            className="text-sm text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {t("settings.enableAll")}
-          </button>
-          <button
-            onClick={() => handleToggleAllTools(false)}
-            className="text-sm text-muted hover:text-secondary transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {t("settings.disableAll")}
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-light transition-colors font-medium outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            {refreshing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
-            )}
-            {t("settings.refresh")}
+            {t("agentLaunch.reload")}
           </button>
         </div>
-      </div>
-
-      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-muted">
-        <span>
-          {t("settings.detectedAgents")}{" "}
-          <span className="font-medium text-secondary">
-            {installedTools.length}
-          </span>
-        </span>
-        <span>
-          {t("settings.enabledAgents")}{" "}
-          <span className="font-medium text-secondary">
-            {enabledTools.length}
-          </span>
-        </span>
-        <span>
-          {t("settings.customAgents")}{" "}
-          <span className="font-medium text-secondary">
-            {customTools.length}
-          </span>
-        </span>
-      </div>
-
+      )}
       {showAddCustom && <AddCustomAgentForm controller={controller} />}
 
+      {visibleDetected.length +
+        visibleUndetected.length +
+        visibleCustom.length ===
+        0 && (
+        <p role="status" className="text-sm text-muted">
+          {t("agentLaunch.noMatches")}
+        </p>
+      )}
       <div className="space-y-4">
-        {detectedTools.length > 0 && (
+        {visibleDetected.length > 0 && (
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-sm font-medium text-secondary">
@@ -125,7 +189,8 @@ export function AgentsSettings() {
               </span>
             </div>
             <AgentGroupDnd
-              items={detectedTools}
+              layout="columns"
+              items={visibleDetected}
               sensors={dragSensors}
               dragLabel={t("settings.dragToReorder")}
               onDragEnd={handleAgentDragEnd}
@@ -134,7 +199,7 @@ export function AgentsSettings() {
           </div>
         )}
 
-        {undetectedTools.length > 0 && (
+        {visibleUndetected.length > 0 && (
           <div>
             <button
               type="button"
@@ -150,9 +215,10 @@ export function AgentsSettings() {
                 count: undetectedTools.length,
               })}
             </button>
-            {showMoreAgents && (
+            {(showMoreAgents || query.trim()) && (
               <AgentGroupDnd
-                items={undetectedTools}
+                layout="columns"
+                items={visibleUndetected}
                 sensors={dragSensors}
                 dragLabel={t("settings.dragToReorder")}
                 onDragEnd={handleAgentDragEnd}
@@ -162,7 +228,7 @@ export function AgentsSettings() {
           </div>
         )}
 
-        {customTools.length > 0 && (
+        {visibleCustom.length > 0 && (
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-sm font-medium text-secondary">
@@ -171,7 +237,8 @@ export function AgentsSettings() {
               <span className="text-xs text-muted">{customTools.length}</span>
             </div>
             <AgentGroupDnd
-              items={customTools}
+              layout="columns"
+              items={visibleCustom}
               sensors={dragSensors}
               dragLabel={t("settings.dragToReorder")}
               onDragEnd={handleAgentDragEnd}

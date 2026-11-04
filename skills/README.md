@@ -24,7 +24,7 @@ claude plugin install agent-hub-skills
 
 ### [Engineering](engineering/)
 
-开发工作流类 Skill。_即将推出。_
+开发工作流类 Skill，包括 [code-review](engineering/code-review/SKILL.md) 双轴审查与反馈。
 
 ### [In Progress](in-progress/)
 

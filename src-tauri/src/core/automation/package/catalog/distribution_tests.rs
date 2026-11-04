@@ -18,13 +18,19 @@ fn repository_automations_are_real_independent_installable_packages() {
         assert!(!entry.package.draft.enabled);
         assert!(entry.package.draft.workdir.is_none());
         assert!(entry.package.draft.script_dir.is_none());
-        if entry.path.starts_with("engineering/") {
+        if entry
+            .package
+            .draft
+            .files
+            .iter()
+            .any(|f| f.path == "config/herdr.json")
+        {
             let agent = entry
                 .package
                 .draft
                 .files
                 .iter()
-                .find(|f| f.path.ends_with("agent.py") || f.path.ends_with("agent-code-review.py"))
+                .find(|f| f.path == "scripts/herdr_agent.py")
                 .unwrap();
             assert_eq!(
                 agent.content, shared,

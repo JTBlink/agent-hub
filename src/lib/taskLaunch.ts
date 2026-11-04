@@ -16,7 +16,13 @@ export interface TaskLaunchInput {
   prompt: string;
 }
 export interface TaskLaunchResult {
-  attachment: HerdrOpenedWorkspace;
+  attachment: HerdrOpenedWorkspace | null;
+  native?: {
+    id: string;
+    backend: string;
+    phase: string;
+    exit_code: number | null;
+  };
   warning: string | null;
 }
 
@@ -24,6 +30,21 @@ export interface TaskLaunchResult {
 export async function launchTaskAgent(
   input: TaskLaunchInput,
 ): Promise<TaskLaunchResult> {
+  const native = await invoke<{
+    receipt: NonNullable<TaskLaunchResult["native"]>;
+    warning: string | null;
+  } | null>("task_native_agent_launch", {
+    projectId: input.projectId,
+    path: input.path,
+    kind: input.kind,
+    prompt: input.prompt,
+  });
+  if (native)
+    return {
+      attachment: null,
+      native: native.receipt,
+      warning: native.warning,
+    };
   const workspace = input.session
     ? await ensureHerdrWorkspace(input.session, input.projectId, input.path)
     : await invoke<HerdrOpenedWorkspace>("task_prepare_herdr_workspace", {

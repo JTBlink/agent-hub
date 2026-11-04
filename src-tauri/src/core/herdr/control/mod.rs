@@ -37,7 +37,7 @@ impl HerdrControl {
             .map(|v| v.0)
             .map_err(anyhow::Error::msg)
     }
-    fn call(&self, session: Option<&str>, args: &[&str], timeout: u64) -> Result<Value> {
+    pub(crate) fn call(&self, session: Option<&str>, args: &[&str], timeout: u64) -> Result<Value> {
         let data: Value = serde_json::from_str(&self.text(session, args, timeout)?)
             .context("Invalid Herdr response; check client/server compatibility")?;
         if data.get("error").is_some() {

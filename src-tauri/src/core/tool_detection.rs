@@ -33,6 +33,9 @@ fn commands(key: &str) -> &[&str] {
         "github_copilot" => &["copilot"],
         "cursor" => &["cursor", "cursor-agent"],
         "qwen_code" => &["qwen"],
+        "antigravity" => &["agy", "antigravity"],
+        "kiro" => &["kiro-cli"],
+        "qoder" => &["qoder", "qodercli"],
         "kilo_code" => &["kilo"],
         "mistral_vibe" => &["vibe"],
         "continue" => &["cn"],
@@ -254,3 +257,37 @@ pub(super) fn is_installed(key: &str) -> bool {
 
 #[cfg(test)]
 mod tests;
+
+/// Resolve user-configured launch programs, including absolute paths and local wrappers.
+/// Uses the same bounded command roots as installation detection; never searches directories.
+pub(crate) fn resolve_program(program: &str, cwd: &Path) -> Option<PathBuf> {
+    let path = Path::new(program);
+    if path.is_absolute() {
+        return executable(path).then(|| path.into());
+    }
+    if program.contains(['/', '\\']) {
+        let path = cwd.join(path);
+        return executable(&path).then_some(path);
+    }
+    if program.is_empty()
+        || program == "."
+        || program == ".."
+        || program.contains(['\0', '\r', '\n'])
+    {
+        return None;
+    }
+    InstallationProbe::system().bins.iter().find_map(|root| {
+        let direct = root.join(program);
+        if executable(&direct) {
+            return Some(direct);
+        }
+        #[cfg(windows)]
+        for extension in ["exe", "cmd", "bat", "com"] {
+            let candidate = root.join(format!("{program}.{extension}"));
+            if executable(&candidate) {
+                return Some(candidate);
+            }
+        }
+        None
+    })
+}

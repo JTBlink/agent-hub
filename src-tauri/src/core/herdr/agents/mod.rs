@@ -1,4 +1,5 @@
 //! Interactive Agent startup belongs to Herdr, independent of the terminal UI.
+mod configured;
 use super::session::{Client, INHERITED_CONTEXT, SESSION};
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
@@ -15,25 +16,12 @@ pub enum HerdrAgent {
 }
 
 impl HerdrAgent {
-    fn kind(self) -> &'static str {
+    pub fn kind(self) -> &'static str {
         match self {
             Self::Codex => "codex",
             Self::Claude | Self::ClaudeTeams => "claude",
             Self::Opencode => "opencode",
             Self::Hermes => "hermes",
-        }
-    }
-
-    fn arguments(self) -> &'static [&'static str] {
-        match self {
-            Self::Codex => &[
-                "--dangerously-bypass-approvals-and-sandbox",
-                "-c",
-                "check_for_update_on_startup=false",
-            ],
-            Self::Claude | Self::ClaudeTeams => &["--dangerously-skip-permissions"],
-            Self::Opencode => &["--auto"],
-            Self::Hermes => &["--yolo"],
         }
     }
 }
@@ -54,6 +42,7 @@ pub struct AgentStartup {
     executable: PathBuf,
     cwd: PathBuf,
     agent: HerdrAgent,
+    launch: crate::core::agent_launch_config::Launch,
     pane: String,
     name: String,
 }
@@ -74,7 +63,8 @@ impl AgentAttachment {
 /// Start an interactive YOLO Agent in an explicitly selected, validated directory.
 /// Callers retain ownership of project validation and the attachment's PTY.
 pub fn prepare(executable: &Path, cwd: &Path, agent: HerdrAgent) -> Result<PreparedAgent> {
-    if crate::core::tool_detection::find_command(agent.kind()).is_none() {
+    let launch = crate::core::agent_launch_config::resolve(agent.kind())?;
+    if crate::core::tool_detection::resolve_program(&launch.program, cwd).is_none() {
         bail!(
             "{} is not installed; install its CLI and retry",
             agent.kind()
@@ -84,6 +74,7 @@ pub fn prepare(executable: &Path, cwd: &Path, agent: HerdrAgent) -> Result<Prepa
 }
 
 fn prepare_available(executable: &Path, cwd: &Path, agent: HerdrAgent) -> Result<PreparedAgent> {
+    let launch = crate::core::agent_launch_config::resolve(agent.kind())?;
     let client = Client { executable, cwd };
     client.ensure_server()?;
     let mut workspace = vec!["workspace", "create", "--cwd"];
@@ -114,6 +105,7 @@ fn prepare_available(executable: &Path, cwd: &Path, agent: HerdrAgent) -> Result
             executable: executable.into(),
             cwd: cwd.into(),
             agent,
+            launch,
             pane: pane.into(),
             name,
         },
@@ -128,18 +120,10 @@ impl AgentStartup {
             executable: &self.executable,
             cwd: &self.cwd,
         };
-        let mut start = vec![
-            "agent",
-            "start",
-            &self.name,
-            "--kind",
-            self.agent.kind(),
-            "--pane",
-            &self.pane,
-            "--",
-        ];
-        start.extend(self.agent.arguments().iter().copied());
-        if client.call(&start, 40).is_err()
+        if configured::start(&self.launch, &self.name, &self.pane, |args, timeout| {
+            client.call(args, timeout)
+        })
+        .is_err()
             && client.call(&["agent", "get", &self.name], 5).is_err()
         {
             // Never repeat a start whose outcome is uncertain. The terminal
@@ -155,3 +139,17 @@ impl AgentStartup {
 
 #[cfg(test)]
 mod tests;
+
+/// Start one configured Agent in an explicit session/pane. No prompt is submitted here.
+pub fn start_configured(
+    executable: &Path,
+    session: &str,
+    launch: &crate::core::agent_launch_config::Launch,
+    name: &str,
+    pane: &str,
+) -> Result<serde_json::Value> {
+    let control = super::control::HerdrControl::new(executable.into());
+    configured::start(launch, name, pane, |args, timeout| {
+        control.call(Some(session), args, timeout)
+    })
+}

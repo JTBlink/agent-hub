@@ -2955,5 +2955,49 @@
     "nativeUAHint": "Applies to this page and new native pages. Reload for the site to read it again; the actual engine remains the one reported here.",
     "nativeUAReset": "Restore system UA",
     "syncSourceUA": "Also apply the source browser UA"
+  },
+  "agentLaunch": {
+    "instruction": "Launch instruction",
+    "description": "Edit the full command and arguments. Agents use their default model. Saved changes apply to future launches. Desktop tools use their host command; Herdr supports compatible CLIs only. Quote paths containing spaces.",
+    "reset": "Reset instruction",
+    "default": "✓ Default",
+    "setDefault": "Set default",
+    "details": "Detailed settings",
+    "reload": "Reload (keep drafts)",
+    "syncCommit": "Update Agent launch instructions",
+    "shortcuts": {
+      "fullAccess": "Full access",
+      "search": "Web search",
+      "scrollback": "Keep scrollback",
+      "continue": "Continue",
+      "verbose": "Verbose",
+      "logs": "Show logs",
+      "tui": "Terminal UI"
+    },
+    "backup": {
+      "syncing": "Syncing to Git…",
+      "conflict": "Resolve Git conflicts on the backup page",
+      "failed": "Sync or status failed; local preferences retained",
+      "local": "Saved locally; configure Git backup to sync",
+      "pending": "Saved locally; Git changes pending",
+      "synced": "Git backup synced",
+      "settings": "Backup settings",
+      "details": "View backup",
+      "sync": "Sync now"
+    },
+    "nativeSubmitted": "Submitted to the native terminal. Inspect task results there.",
+    "nativeFallback": "Herdr is not installed. The native terminal will be used.",
+    "search": "Search Agents or launch instructions",
+    "noMatches": "No matching Agents",
+    "overwrite": "Replace current value",
+    "changed": "Another window or restore changed this instruction. Current saved value:",
+    "filter": "Filter Agents",
+    "filters": {
+      "installed": "Installed",
+      "enabled": "Enabled",
+      "all": "All"
+    },
+    "addCustom": "Add custom",
+    "more": "More"
   }
 }

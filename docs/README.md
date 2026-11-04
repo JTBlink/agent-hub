@@ -21,3 +21,5 @@
 - [导入来源与许可](reference/skills-manager/README.md)
 
 版本变更见根目录 [CHANGELOG](../CHANGELOG.md)，领域术语见 [CONTEXT](../CONTEXT.md)。
+
+- [定时任务本地记录规范](architecture/automation-records.md)：全部任务的执行记录、业务扩展、结果回调及不备份边界。

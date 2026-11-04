@@ -1,3 +1,5 @@
+pub mod agent_launch_config;
+pub mod agent_launcher;
 pub mod agent_usage;
 pub mod app_state;
 pub mod app_updates;

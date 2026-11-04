@@ -14,6 +14,7 @@ pub(super) fn export(repository: &Path) -> Result<Fingerprints> {
     let source = user_config::root();
     user_config::checked(&source).map_err(anyhow::Error::msg)?;
     let before = snapshot(&source)?;
+    crate::core::agent_launch_config::validate_at(&source)?;
     let target = repository.join("user-config");
     if before != snapshot(&target)? {
         let stage = tempfile::tempdir_in(repository)?;
@@ -42,6 +43,7 @@ pub(super) fn stage(journal: &Journal, repository: &Path, stage: &Path) -> Resul
         return Ok(false);
     }
     let desired = snapshot(&source)?;
+    crate::core::agent_launch_config::validate_at(&source)?;
     let hosts = source.join("hosts");
     crate::core::hosts::profiles::list_at(&hosts).map_err(anyhow::Error::msg)?;
     crate::core::hosts::profiles::list_at(&hosts.join("profiles")).map_err(anyhow::Error::msg)?;

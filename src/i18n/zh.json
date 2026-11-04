@@ -2952,5 +2952,49 @@
     "nativeUAHint": "应用到当前页面及后续新建的原生页面。刷新后由网站重新读取；实际引擎仍以这里的内核信息为准。",
     "nativeUAReset": "恢复系统默认 UA",
     "syncSourceUA": "同时应用来源浏览器 UA"
+  },
+  "agentLaunch": {
+    "instruction": "启动指令",
+    "description": "编辑完整命令与参数，使用 Agent 默认模型。保存后用于后续启动；运行中的会话保持原样。桌面工具使用宿主打开指令，Herdr 仅支持兼容的 CLI。路径包含空格时请加引号。",
+    "reset": "恢复默认指令",
+    "default": "✓ 默认",
+    "setDefault": "设为默认",
+    "details": "详细设置",
+    "reload": "重新读取（保留草稿）",
+    "syncCommit": "更新 Agent 启动指令",
+    "shortcuts": {
+      "fullAccess": "完全访问",
+      "search": "联网搜索",
+      "scrollback": "保留滚动",
+      "continue": "继续会话",
+      "verbose": "详细日志",
+      "logs": "显示日志",
+      "tui": "终端界面"
+    },
+    "backup": {
+      "syncing": "正在同步到 Git…",
+      "conflict": "Git 存在冲突，请在备份页处理",
+      "failed": "同步或状态读取失败，本地设置保留",
+      "local": "已保存到本机；配置 Git 备份后可同步",
+      "pending": "已保存到本机，Git 有待同步变更",
+      "synced": "Git 备份已同步",
+      "settings": "备份设置",
+      "details": "查看备份",
+      "sync": "立即同步"
+    },
+    "nativeSubmitted": "已提交到原生终端，请在终端查看任务结果。",
+    "nativeFallback": "Herdr 未安装，将自动使用原生终端执行。",
+    "search": "搜索智能体或启动指令",
+    "noMatches": "没有匹配的智能体",
+    "overwrite": "覆盖当前值",
+    "changed": "指令已被其他窗口或恢复操作修改。当前保存值：",
+    "filter": "筛选智能体",
+    "filters": {
+      "installed": "已安装",
+      "enabled": "已启用",
+      "all": "全部"
+    },
+    "addCustom": "添加自定义",
+    "more": "更多"
   }
 }

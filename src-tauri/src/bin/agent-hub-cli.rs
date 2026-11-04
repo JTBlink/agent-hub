@@ -4,6 +4,8 @@ mod automation;
 mod help;
 #[path = "agent-hub-cli/hosts.rs"]
 mod hosts_cli;
+#[path = "agent-hub-cli/launch.rs"]
+mod launch_cli;
 #[path = "agent-hub-cli/preview.rs"]
 mod preview_cli;
 #[path = "agent-hub-cli/project.rs"]
@@ -108,6 +110,8 @@ struct ToolsArgs {
 
 #[derive(Subcommand, Debug)]
 enum ToolsCommand {
+    /// 读取、保存或解析全局 Agent 启动指令。
+    Launch(launch_cli::LaunchArgs),
     /// 列出已知 Agent 及其安装状态。
     List,
     /// 启用一个或多个 Agent。
@@ -967,6 +971,7 @@ fn repo_status(store: &SkillStore) -> RepoStatus {
 
 fn run_tools(args: ToolsArgs, store: &SkillStore, json: bool) -> anyhow::Result<()> {
     match args.command {
+        ToolsCommand::Launch(args) => launch_cli::run(args, json)?,
         ToolsCommand::List => print_json(&tool_service::list_tool_info(store), json),
         ToolsCommand::Enable { agents } => {
             print_json(&run_set_agents_enabled(store, &agents, true)?, json)

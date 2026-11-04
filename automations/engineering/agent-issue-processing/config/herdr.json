@@ -1,6 +1,5 @@
 {
   "session": "default",
-  "agent": "codex",
-  "arguments": ["--dangerously-bypass-approvals-and-sandbox"],
+  "agent": "default",
   "title": "Issue 处理"
 }

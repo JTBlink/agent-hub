@@ -14,12 +14,13 @@ const root = realpathSync(fileURLToPath(new URL("../..", import.meta.url)));
 it("serves migrated prototype entries through legacy URLs instead of the application shell", async () => {
   const server = await createServer({
     root,
-    server: { port: 0, open: false, preTransformRequests: false },
+    server: { middlewareMode: true, hmr: false, preTransformRequests: false },
     optimizeDeps: { noDiscovery: true, include: [] },
   });
+  const listener = http.createServer(server.middlewares);
   try {
-    await server.listen();
-    const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
+    await new Promise((resolve) => listener.listen(0, "127.0.0.1", resolve));
+    const origin = `http://127.0.0.1:${listener.address().port}`;
     const catalog = JSON.parse(
       readFileSync(
         new URL("../../docs/prototypes/catalog.json", import.meta.url),
@@ -55,6 +56,9 @@ it("serves migrated prototype entries through legacy URLs instead of the applica
       }
     }
   } finally {
+    await new Promise((resolve, reject) =>
+      listener.close((error) => (error ? reject(error) : resolve())),
+    );
     await server.close();
   }
 }, 15000);

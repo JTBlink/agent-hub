@@ -59,13 +59,37 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
         )
     };
     let mut draft = AutomationDraft {
-    package_options: None,
-        name: String::new(), provider: Provider::System, content,
-        workdir: None, script_dir: None, schedule: Schedule::Daily { hour: 9, minute: 0, weekdays: true }, enabled: true,
+        package_options: None,
+        name: String::new(),
+        provider: Provider::System,
+        content,
+        workdir: None,
+        script_dir: None,
+        schedule: Schedule::Daily {
+            hour: 9,
+            minute: 0,
+            weekdays: true,
+        },
+        enabled: true,
         files: vec![
-            AutomationScriptFile { path: "scripts/agent.py".into(), content: include_str!("../../../../../automations/_shared/herdr-agent.py").into() },
-            AutomationScriptFile { path: "prompts/prompt.md".into(), content: String::new() },
-            AutomationScriptFile { path: "config/herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[\"--dangerously-bypass-approvals-and-sandbox\"],\"title\":\"AgentHub task\"}\n".into() },
+            AutomationScriptFile {
+                path: "scripts/agent.py".into(),
+                content: include_str!("../../../../../automations/_shared/agent-entry.py").into(),
+            },
+            AutomationScriptFile {
+                path: "scripts/herdr_agent.py".into(),
+                content: include_str!("../../../../../automations/_shared/herdr-agent.py").into(),
+            },
+            AutomationScriptFile {
+                path: "prompts/prompt.md".into(),
+                content: String::new(),
+            },
+            AutomationScriptFile {
+                path: "config/herdr.json".into(),
+                content:
+                    "{\"session\":\"default\",\"agent\":\"default\",\"title\":\"AgentHub task\"}\n"
+                        .into(),
+            },
         ],
     };
     super::super::native::shell_entry::wrap(&mut draft, shell);
@@ -111,6 +135,7 @@ pub(super) const DISK_CLEANUP_FILES: &[(&str, &str)] = &[
 
 const BUNDLES: &[Bundle] = &[
 (include_str!("../../../../../automations/engineering/agent-code-review/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-code-review/config/task.json"), &[
+("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent-code-review.py", include_str!("../../../../../automations/engineering/agent-code-review/scripts/agent-code-review.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-code-review/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-code-review/config/herdr.json")),
@@ -118,6 +143,7 @@ const BUNDLES: &[Bundle] = &[
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-code-review/scripts/run.sh"))
 ]),
 (include_str!("../../../../../automations/engineering/agent-issue-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-issue-processing/config/task.json"), &[
+("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/agent.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-issue-processing/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-issue-processing/config/herdr.json")),
@@ -125,6 +151,7 @@ const BUNDLES: &[Bundle] = &[
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/run.sh"))
 ]),
 (include_str!("../../../../../automations/engineering/agent-maintenance/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-maintenance/config/task.json"), &[
+("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/agent.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-maintenance/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-maintenance/config/herdr.json")),
@@ -132,9 +159,14 @@ const BUNDLES: &[Bundle] = &[
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/run.sh"))
 ]),
 (include_str!("../../../../../automations/engineering/agent-mr-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-mr-processing/config/task.json"), &[
+("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/agent.py")),
 ("scripts/review.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review.py")),
 ("scripts/review_host.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review_host.py")),
+("scripts/repair_state.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/repair_state.py")),
+("scripts/review_labels.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review_labels.py")),
+("references/review-labels.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/review-labels.md")),
+("scripts/task_state.py", include_str!("../../../../../automations/_shared/task-state.py")),
 ("config/review-config.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/review-config.json")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-mr-processing/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/herdr.json")),
@@ -144,6 +176,11 @@ const BUNDLES: &[Bundle] = &[
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/run.sh"))
 ]),
 (include_str!("../../../../../automations/hermes/daily-summary/config/catalog.json"), include_str!("../../../../../automations/hermes/daily-summary/config/task.json"), &[
+("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
+("scripts/agent.py", include_str!("../../../../../automations/hermes/daily-summary/scripts/agent.py")),
+("scripts/run.sh", include_str!("../../../../../automations/hermes/daily-summary/scripts/run.sh")),
+("config/herdr.json", include_str!("../../../../../automations/hermes/daily-summary/config/herdr.json")),
+("prompts/prompt.md", include_str!("../../../../../automations/hermes/daily-summary/prompts/prompt.md")),
 ("TASK.md", include_str!("../../../../../automations/hermes/daily-summary/TASK.md"))
 ]),
 (include_str!("../../../../../automations/system/disk-cleanup/config/catalog.json"), include_str!("../../../../../automations/system/disk-cleanup/config/task.json"), &[
@@ -170,6 +207,11 @@ const BUNDLES: &[Bundle] = &[
 ("scripts/run.sh", include_str!("../../../../../automations/system/network-reset/scripts/run.sh"))
 ]),
 (include_str!("../../../../../automations/hermes/repository-audit/config/catalog.json"), include_str!("../../../../../automations/hermes/repository-audit/config/task.json"), &[
+("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
+("scripts/agent.py", include_str!("../../../../../automations/hermes/repository-audit/scripts/agent.py")),
+("scripts/run.sh", include_str!("../../../../../automations/hermes/repository-audit/scripts/run.sh")),
+("config/herdr.json", include_str!("../../../../../automations/hermes/repository-audit/config/herdr.json")),
+("prompts/prompt.md", include_str!("../../../../../automations/hermes/repository-audit/prompts/prompt.md")),
 ("TASK.md", include_str!("../../../../../automations/hermes/repository-audit/TASK.md"))
 ]),
 (include_str!("../../../../../automations/system/workspace-check/config/catalog.json"), include_str!("../../../../../automations/system/workspace-check/config/task.json"), &[
@@ -249,7 +291,7 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
                     path
                 )
             };
-            let files = package
+            let mut files: Vec<AutomationScriptFile> = package
                 .files
                 .into_iter()
                 .filter(|name| package.draft.provider != Provider::System || name != "scripts/run.sh")
@@ -265,6 +307,13 @@ pub(super) fn all_templates(locale: &str, hermes: bool, shell: &str) -> Vec<Auto
                     }
                 })
                 .collect();
+            if package.draft.provider == Provider::System {
+                if let Some(prompt) = &manifest.prompt {
+                    if let Some(file) = files.iter_mut().find(|f| f.path == "prompts/prompt.md") {
+                        file.content = prompt.get(locale);
+                    }
+                }
+            }
             let command = if package.draft.provider == Provider::Hermes {
                 manifest
                     .prompt

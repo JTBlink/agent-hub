@@ -1,6 +1,6 @@
 use crate::core::{
     error::AppError,
-    herdr::agents::{self as herdr_agents, HerdrAgent},
+    herdr::agents::HerdrAgent,
     herdr::tools::HerdrTools,
     skill_store::SkillStore,
     terminal::{self, TerminalEvent, TerminalManager, TerminalSession, TerminalSize, TerminalSpec},
@@ -68,14 +68,15 @@ pub async fn terminal_create(
                             (terminal::prepare_script(&cwd, &path)?, None)
                         }
                         Some(TerminalLaunch::Agent { agent }) => {
-                            let installed = tools.install(store.proxy_url().as_deref())?;
-                            let prepared = herdr_agents::prepare(
-                                std::path::Path::new(&installed.path),
-                                &cwd,
-                                agent,
-                            )?;
-                            startup = Some(prepared.startup);
-                            (prepared.attachment.command(), None)
+                            match crate::core::agent_launcher::prepare(&tools, &cwd, agent)? {
+                                crate::core::agent_launcher::Prepared::Herdr(prepared) => {
+                                    startup = Some(prepared.startup);
+                                    (prepared.attachment.command(), None)
+                                }
+                                crate::core::agent_launcher::Prepared::Terminal(command) => {
+                                    (command, None)
+                                }
+                            }
                         }
                         None => {
                             let (command, integration) = terminal::prepare_shell(None, None)?;

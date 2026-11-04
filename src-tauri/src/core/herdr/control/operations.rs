@@ -253,9 +253,7 @@ impl HerdrControl {
         {
             bail!("Invalid Agent kind")
         }
-        if crate::core::tool_detection::find_command(&input.kind).is_none() {
-            bail!("Selected Agent CLI is not installed")
-        }
+        let launch = crate::core::agent_launch_config::resolve(&input.kind)?;
         if input.prompt.len() > 32 * 1024 {
             bail!("Initial task exceeds 32 KiB")
         }
@@ -277,18 +275,12 @@ impl HerdrControl {
             .action_locked(target, split, None)?
             .target
             .context("New Shell pane is unavailable")?;
-        if let Err(error) = self.call(
-            Some(&target.session),
-            &[
-                "agent",
-                "start",
-                &input.name,
-                "--kind",
-                &input.kind,
-                "--pane",
-                &pane.pane_id,
-            ],
-            40,
+        if let Err(error) = super::super::agents::start_configured(
+            &self.executable,
+            &target.session,
+            &launch,
+            &input.name,
+            &pane.pane_id,
         ) {
             return Ok(StartedAgent { target: pane, warning: Some(format!("{error}; the created pane was preserved. Inspect its terminal before starting or sending again")) });
         }

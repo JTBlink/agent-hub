@@ -61,6 +61,17 @@ pub fn bridge_path() -> PathBuf {
     bridge_dir().join(BRIDGE_BIN_NAME)
 }
 
+/// Refuse a copy invalidated by an interrupted publication, even if the binary remains.
+pub(crate) fn validated_path() -> Result<PathBuf> {
+    let path = bridge_path();
+    if read_stamp().as_deref() != Some(env!("CARGO_PKG_VERSION"))
+        || !super::tool_detection::executable(&path)
+    {
+        bail!("AgentHub CLI bridge is unavailable or unverified; update the application before launching a terminal");
+    }
+    Ok(path)
+}
+
 fn stamp_path() -> PathBuf {
     bridge_dir().join(".version")
 }

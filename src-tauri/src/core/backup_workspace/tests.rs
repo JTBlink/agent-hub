@@ -450,3 +450,39 @@ fn hosts_reads_finish_pending_configuration_recovery_without_restarting() {
         profile.id
     );
 }
+
+#[test]
+fn restores_agent_instructions_through_git_without_changing_local_tool_settings() {
+    use crate::core::agent_launch_config as launch;
+    let e = env();
+    e.store
+        .set_setting("disabled_tools", "[\"codex\"]")
+        .unwrap();
+    let initial = launch::load().unwrap();
+    let mut document = initial.document;
+    document.default_agent = "hermes".into();
+    document.instructions.insert(
+        "codex".into(),
+        "codex --search --config 'note=hello world'".into(),
+    );
+    let saved = launch::save(document, &initial.revision).unwrap();
+    initialize(&e.store).unwrap();
+    let tag = commit(&e.store, "configured Agent").unwrap();
+    assert!(repo_dir().join("user-config/agent-launch.json").is_file());
+    let mut changed = saved.document;
+    changed
+        .instructions
+        .insert("codex".into(), "codex --no-alt-screen".into());
+    launch::save(changed, &saved.revision).unwrap();
+    commit(&e.store, "changed Agent").unwrap();
+    restore(&e.store, &tag).unwrap();
+    assert_eq!(
+        launch::resolve("codex").unwrap().arguments,
+        ["--search", "--config", "note=hello world"]
+    );
+    assert_eq!(launch::load().unwrap().document.default_agent, "hermes");
+    assert_eq!(
+        e.store.get_setting("disabled_tools").unwrap().as_deref(),
+        Some("[\"codex\"]")
+    );
+}
