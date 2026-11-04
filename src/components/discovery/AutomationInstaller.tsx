@@ -404,6 +404,7 @@ export function AutomationInstaller({
             if (file) await openPreviewInVscode(file.path, file.content);
           }}
           initialPath={
+            draft.files?.find((file) => file.path === "TASK.md")?.path ??
             draft.files?.find((file) => file.path === "README.md")?.path ??
             draft.files?.find((file) => file.path === "prompt.md")?.path
           }

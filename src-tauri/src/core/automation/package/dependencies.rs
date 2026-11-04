@@ -60,7 +60,7 @@ pub(super) fn prepare(path: &Path, dependencies: &[Dependency]) -> Result<(), St
             Dependency::Python { packages } => {
                 let python = super::super::native::python_runtime()?;
                 let env = path.join(".local/env");
-                let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+                let manifest: Manifest = super::layout::read_manifest(path)?;
                 let owner = path.join(".local/env-owner.json");
                 if owner.exists() {
                     let id: String = super::storage::json(&owner)?;
@@ -142,7 +142,7 @@ pub(super) fn cleanup(path: &Path) -> Result<(), String> {
     if local.join("env").exists() {
         let id: String = super::storage::json(&owner)
             .map_err(|_| "Python environment has no ownership receipt; files were preserved")?;
-        let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+        let manifest: Manifest = super::layout::read_manifest(path)?;
         if id != manifest.instance_id {
             return Err("Python environment ownership changed; files were preserved".into());
         }

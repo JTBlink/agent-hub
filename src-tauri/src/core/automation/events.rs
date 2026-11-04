@@ -23,6 +23,14 @@ fn paths(root: &Path) -> HashSet<PathBuf> {
             if is_path_safe(root, &dir) || super::package::checked(root, &record).is_ok() {
                 paths.insert(dir);
                 if let Some(workdir) = record.draft.scripts_dir() {
+                    let manifest = super::package::manifest_path(Path::new(workdir));
+                    if manifest.is_file() {
+                        if let Some(parent) = manifest.parent() {
+                            if is_path_safe(Path::new(workdir), parent) && !parent.is_symlink() {
+                                paths.insert(parent.to_path_buf());
+                            }
+                        }
+                    }
                     for file in &record.draft.files {
                         if let Some(parent) = Path::new(&workdir).join(&file.path).parent() {
                             if is_path_safe(Path::new(&workdir), parent) && !parent.is_symlink() {

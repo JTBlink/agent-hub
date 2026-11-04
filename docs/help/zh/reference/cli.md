@@ -99,7 +99,7 @@ agent-hub-cli automations remove '<task-id>' --delete-local-data
 
 `workdir` 是执行目录，对应桌面的“项目工作区”；选择项目后任务自动切到项目目录，留空则在脚本目录执行。脚本不会复制进项目，切换项目不改变 `script_dir`。旧定义没有 `script_dir` 时保留原目录保存脚本，编辑保存后分开管理。
 
-系统任务执行独立任务包内的 Shell 入口，定时和手动运行共用同一份脚本。项目根目录 `automations/` 保存可直接添加的任务包，`task.json` 声明实际脚本、提示词、配置、日程与依赖；可从发现页或 CLI 直接创建本地任务。GUI、CLI 和外部编辑器的脚本修改随任务定义进入云端备份，云端同样使用 `automations/<英文目录名>/`。本机项目绑定、运行环境回执、私有环境和执行记录不上传，恢复时可重新配置项目，程序自动准备运行环境，默认暂停。
+系统任务执行独立任务包内的 Shell 入口，定时和手动运行共用同一份脚本。项目根目录 `automations/` 保存可直接添加的任务包，`TASK.md` 为说明入口，`config/task.json` 声明实际脚本、提示词、配置、日程与依赖；可从发现页或 CLI 直接创建本地任务。GUI、CLI 和外部编辑器的脚本修改随任务定义进入云端备份，云端同样使用 `automations/<英文目录名>/`。本机项目绑定、运行环境回执、私有环境和执行记录不上传，恢复时可重新配置项目，程序自动准备运行环境，默认暂停。
 
 `provider` 为 `system` 时，内容是 macOS/Linux 的 `/bin/sh` 命令或 Windows PowerShell 命令。任务写入当前用户的系统原生调度器，关闭 AgentHub 后仍可按计划执行；需要用户保持登录，Linux 可另行配置用户服务 linger。支持每天、工作日、固定分钟间隔（`{"kind":"interval","minutes":60}`）和仅手动触发（`{"kind":"manual"}`）。保存不会额外触发一次运行，手动运行不修改日程配置。
 
@@ -111,7 +111,7 @@ AgentHub 创建的系统任务与支持的第三方 launchd 定时任务可编�
 
 ## Agent 与自动备份
 
-Agent 可读取 `automations templates` 获取项目巡检、MR 处理、Issue 处理和清理磁盘缓存四个核心模板，用 `create --template <模板 ID>` 快速创建。智能体和普通命令也可直接自定义；旧模板 ID 保留显式 CLI 兼容。`--json automations list` 返回精确任务 ID，随后使用 `run <ID>` 手动触发，`show <ID>` 查看实际运行时间与结果；“requested” 仅表示请求成功。不要根据旧的 `last_result` 宣称本次运行完成，也不要因查询暂未更新就重复触发。
+Agent 可读取 `automations templates` 获取项目巡检、PR / MR 代码审查、Issue 处理和清理磁盘缓存四个核心模板，用 `create --template <模板 ID>` 快速创建。智能体和普通命令也可直接自定义；旧模板 ID 保留显式 CLI 兼容。`--json automations list` 返回精确任务 ID，随后使用 `run <ID>` 手动触发，`show <ID>` 查看实际运行时间与结果；“requested” 仅表示请求成功。不要根据旧的 `last_result` 宣称本次运行完成，也不要因查询暂未更新就重复触发。
 
 创建、编辑、启停与删除会将任务定义变更加入持久待备份队列。应用运行、已有 Git 远端且自动备份开启时，沿用现有防抖、提交与推送流程；CLI 的修改也能被应用检测。直接编辑工作目录脚本时，应用通过文件事件同步脚本内容并增加任务版本，沿用相同的备份流程；CLI 查询或修改任务时也会同步已定制内容。应用关闭时的修改在下次启动或手动 Git 备份时处理。备份保存脚本内容与任务定义，不同步日志、执行记录和其他工作目录文件。读取失败或内容无效会报告错误，避免把旧内容当作本次脚本备份。立即运行及日志更新不会产生任务配置备份。
 
@@ -127,14 +127,14 @@ agent-hub-cli --json automations restore '<backup-id>' --apply
 
 「清理磁盘缓存」模板 `disk-cleanup` 默认每天 03:00 执行。模板文件夹内包含 CLI 入口、配置、按职责拆分的 Python 模块和使用说明，全部随软件与 CLI 预装，创建时一起复制并纳入任务定义及 Git 自动备份。直接修改配置文件也会触发同步。
 
-| 文件                                     | 用途                               |
-| ---------------------------------------- | ---------------------------------- |
-| `disk-cleanup.py`                        | 入口和清理流程                     |
-| `cleanup-config.json`                    | 保留天数、开关、项目目录与通知配置 |
-| `cleanup_files.py`、`cleanup_rules.py`   | 文件安全校验与明确的缓存目录规则   |
-| `cleanup_actions.py`                     | 原生工具、历史构建、旧更新缓存     |
-| `cleanup_config.py`、`cleanup_report.py` | 配置／CLI 校验、中文总结与桌面通知 |
-| `README.md`                              | 可随任务一起阅读的完整说明         |
+| 文件                                                     | 用途                               |
+| -------------------------------------------------------- | ---------------------------------- |
+| `scripts/disk-cleanup.py`                                | 入口和清理流程                     |
+| `config/cleanup-config.json`                             | 保留天数、开关、项目目录与通知配置 |
+| `scripts/cleanup_files.py`、`scripts/cleanup_rules.py`   | 文件安全校验与明确的缓存目录规则   |
+| `scripts/cleanup_actions.py`                             | 原生工具、历史构建、旧更新缓存     |
+| `scripts/cleanup_config.py`、`scripts/cleanup_report.py` | 配置／CLI 校验、中文总结与桌面通知 |
+| `TASK.md`                                                | 可随任务一起阅读的完整说明         |
 
 默认清理工作目录过期 `tmp`（7 天）／`logs`（30 天），以及超过 7 天未使用的 Homebrew、pip、npm、npm-hermes 和 Electron 构建下载缓存。保留 `_npx` 工具安装文件，Agent 日志按修改时间、缓存按最近修改／访问时间判断。普通缓存保留目录、链接／junction、硬链接、锁文件；单项权限不足记为警告并继续，真实清理错误返回非零退出码。
 
@@ -155,16 +155,16 @@ Agent 默认规则覆盖 Codex 的 `cache`／`tmp`／`shell_snapshots`／`log`�
 
 ```bash
 # 先预览，不删除文件、不发通知；uv 没有无副作用预览，因此跳过
-python3 ./disk-cleanup/disk-cleanup.py --dry-run
+python3 ./disk-cleanup/scripts/disk-cleanup.py --dry-run
 # 执行配置中的自动清理，完成后请求桌面通知
-python3 ./disk-cleanup/disk-cleanup.py --notify
+python3 ./disk-cleanup/scripts/disk-cleanup.py --notify
 # 指定配置路径，或本次关闭通知
-python3 ./disk-cleanup/disk-cleanup.py --config ./disk-cleanup/cleanup-config.json --skip-notify
+python3 ./disk-cleanup/scripts/disk-cleanup.py --config ./disk-cleanup/config/cleanup-config.json --skip-notify
 # 仅工作目录；不会运行用户缓存、构建及工具清理，默认不通知
-python3 ./disk-cleanup/disk-cleanup.py --workspace-only
+python3 ./disk-cleanup/scripts/disk-cleanup.py --workspace-only
 # 调整 Agent／下载缓存保留期，或跳过特定规则
-python3 ./disk-cleanup/disk-cleanup.py --agent-cache-days 14 --download-cache-days 14 --skip-agent-cache
-python3 ./disk-cleanup/disk-cleanup.py --skip-browser-cache --skip-uv-prune --skip-brew-cleanup --skip-updater-cache
+python3 ./disk-cleanup/scripts/disk-cleanup.py --agent-cache-days 14 --download-cache-days 14 --skip-agent-cache
+python3 ./disk-cleanup/scripts/disk-cleanup.py --skip-browser-cache --skip-uv-prune --skip-brew-cleanup --skip-updater-cache
 ```
 
 CLI 参数覆盖本次配置，`--rust-target` 和 `--agent-hub-project` 可重复追加项目；`--no-tools` 跳过构建、uv、Homebrew 和旧更新包清理。无效配置在清理开始前拒绝。配置中的 `notify` 控制默认桌面通知，CLI 可用 `--notify`／`--skip-notify` 覆盖；通知不可用或被系统拒绝时只报告提示，不改变清理退出码。macOS 使用系统 osascript，Linux 使用 notify-send，Windows 使用 PowerShell Toast（失败时回退到系统托盘通知），需对应桌面会话和通知权限。

@@ -66,7 +66,7 @@ pub fn preview_git(
 fn scan(root: &Path, revision: String) -> Result<GitAutomationCatalog, String> {
     super::storage::regular_directory(root)?;
     // A selected task wins; otherwise prefer the conventional automation-only subtree.
-    let scan_root = if !root.join("task.json").exists() && root.join("automations").is_dir() {
+    let scan_root = if !super::manifest_path(root).exists() && root.join("automations").is_dir() {
         root.join("automations")
     } else {
         root.to_path_buf()
@@ -100,7 +100,7 @@ fn scan(root: &Path, revision: String) -> Result<GitAutomationCatalog, String> {
         if result.packages.len() + result.issues.len() >= 100 {
             return Err("Too many tasks; select an automation subdirectory".into());
         }
-        let directory = entry.path().parent().ok_or("Missing task directory")?;
+        let directory = super::manifest_directory(entry.path())?;
         let path = directory
             .strip_prefix(root)
             .map_err(|e| e.to_string())?

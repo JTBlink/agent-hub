@@ -171,11 +171,14 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
-def main():
+def main(prompt_context=""):
     binary = shutil.which("herdr")
     if not binary:
         raise HerdrError("未找到 Herdr CLI，请安装 Herdr 并启动本地服务。")
-    config = json.loads(read_bundle(TASK / "herdr.json"))
+    config_path = TASK / "config/herdr.json"
+    if not config_path.exists():
+        config_path = TASK / "herdr.json"
+    config = json.loads(read_bundle(config_path))
     session = config.get("session", "default")
     kind = config.get("agent", "codex")
     if not isinstance(session, str) or not session or session.startswith("-"):
@@ -195,9 +198,14 @@ def main():
     # Unattended tasks must not stop at the CLI's interactive updater and exit.
     if kind == "codex":
         extra = ["-c", "check_for_update_on_startup=false", *extra]
-    prompt = read_bundle(TASK / "prompt.md").strip()
+    prompt_path = TASK / "prompts/prompt.md"
+    if not prompt_path.exists():
+        prompt_path = TASK / "prompt.md"
+    prompt = read_bundle(prompt_path).strip()
     if not prompt:
         raise HerdrError("提示词为空，请填写任务提示词。")
+    if prompt_context:
+        prompt += "\n\n" + prompt_context
     cwd = Path.cwd().resolve()
     # Refuse the default task storage directory: it is not a chosen project.
     if cwd == HERE or cwd == HERE.parent:

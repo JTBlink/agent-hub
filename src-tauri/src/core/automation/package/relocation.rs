@@ -20,7 +20,7 @@ fn journal_path(state: &Path, id: &str) -> PathBuf {
 fn verify_identity(path: &Path, id: &str) -> Result<(), String> {
     super::storage::regular_directory(path)?;
     super::storage::regular_directory(&path.join(".local"))?;
-    let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+    let manifest: Manifest = super::layout::read_manifest(path)?;
     if manifest.instance_id != id {
         return Err("Directory migration identity changed; files were preserved".into());
     }

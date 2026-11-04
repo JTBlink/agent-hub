@@ -1,10 +1,11 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import manifest from "../../../docs/examples/automation-task/task.json?raw";
+import manifest from "../../../docs/examples/automation-task/config/task.json?raw";
+import instructions from "../../../docs/examples/automation-task/TASK.md?raw";
 import script from "../../../docs/examples/automation-task/scripts/run.sh?raw";
 
 const structure =
-  "automations/\n└── example-task/\n    ├── task.json\n    └── scripts/\n        └── run.sh";
+  "automations/\n└── example-task/\n    ├── TASK.md\n    ├── config/\n    │   └── task.json\n    └── scripts/\n        └── run.sh";
 
 /** Keep the visible example identical to the package validated by the core. */
 export function AutomationGitFormatHelp() {
@@ -43,10 +44,19 @@ export function AutomationGitFormatHelp() {
         </summary>
         <div className="mt-3 space-y-3">
           <p className="text-muted">{t("discovery.gitFormatExampleHelp")}</p>
+          <div className="rounded-md bg-bg-secondary p-3">
+            <p className="font-mono text-secondary">TASK.md</p>
+            <pre className="mt-1 overflow-x-auto text-secondary">
+              <code>{instructions}</code>
+            </pre>
+          </div>
           <div className="grid min-w-0 gap-3 lg:grid-cols-2">
             <div className="min-w-0">
-              <p className="font-mono text-secondary">task.json</p>
-              <pre className="mt-1 overflow-x-auto rounded-md bg-bg-secondary p-3 text-secondary">
+              <p className="font-mono text-secondary">config/task.json</p>
+              <pre
+                aria-label="config/task.json"
+                className="mt-1 overflow-x-auto rounded-md bg-bg-secondary p-3 text-secondary"
+              >
                 <code>{manifest}</code>
               </pre>
             </div>

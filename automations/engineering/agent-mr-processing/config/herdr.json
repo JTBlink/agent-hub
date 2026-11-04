@@ -2,5 +2,5 @@
   "session": "default",
   "agent": "codex",
   "arguments": ["--dangerously-bypass-approvals-and-sandbox"],
-  "title": "MR 处理"
+  "title": "PR / MR 代码审查"
 }

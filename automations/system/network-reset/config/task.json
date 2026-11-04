@@ -1,21 +1,27 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
-    "name": "Git workspace status",
+    "name": "Reset network on schedule",
     "provider": "system",
     "content": "sh './scripts/run.sh'",
     "workdir": null,
     "schedule": {
       "kind": "daily",
-      "hour": 17,
+      "hour": 7,
       "minute": 0,
-      "weekdays": true
+      "weekdays": false
     },
     "enabled": false
   },
-  "files": ["scripts/git-status.py", "scripts/run.sh", "README.md"],
+  "files": [
+    "scripts/network-reset.py",
+    "scripts/setup.sh",
+    "scripts/reset.sh",
+    "TASK.md",
+    "scripts/run.sh"
+  ],
   "dependencies": [
     {
       "kind": "python",

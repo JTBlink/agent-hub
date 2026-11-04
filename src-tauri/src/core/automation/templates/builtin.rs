@@ -19,6 +19,8 @@ impl Text {
 struct Manifest {
     id: String,
     title: Text,
+    #[serde(default)]
+    aliases: Vec<String>,
     description: Text,
     entrypoint: Option<String>,
     prompt: Option<Text>,
@@ -62,8 +64,8 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
         workdir: None, script_dir: None, schedule: Schedule::Daily { hour: 9, minute: 0, weekdays: true }, enabled: true,
         files: vec![
             AutomationScriptFile { path: "scripts/agent.py".into(), content: include_str!("../../../../../automations/_shared/herdr-agent.py").into() },
-            AutomationScriptFile { path: "prompt.md".into(), content: String::new() },
-            AutomationScriptFile { path: "herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[\"--dangerously-bypass-approvals-and-sandbox\"],\"title\":\"AgentHub task\"}\n".into() },
+            AutomationScriptFile { path: "prompts/prompt.md".into(), content: String::new() },
+            AutomationScriptFile { path: "config/herdr.json".into(), content: "{\"session\":\"default\",\"agent\":\"codex\",\"arguments\":[\"--dangerously-bypass-approvals-and-sandbox\"],\"title\":\"AgentHub task\"}\n".into() },
         ],
     };
     super::super::native::shell_entry::wrap(&mut draft, shell);
@@ -98,77 +100,82 @@ pub(super) const DISK_CLEANUP_FILES: &[(&str, &str)] = &[
         include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_report.py"),
     ),
     (
-        "scripts/cleanup-config.json",
-        include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup-config.json"),
+        "config/cleanup-config.json",
+        include_str!("../../../../../automations/system/disk-cleanup/config/cleanup-config.json"),
     ),
     (
-        "README.md",
-        include_str!("../../../../../automations/system/disk-cleanup/README.md"),
+        "TASK.md",
+        include_str!("../../../../../automations/system/disk-cleanup/TASK.md"),
     ),
 ];
 
 const BUNDLES: &[Bundle] = &[
-(include_str!("../../../../../automations/engineering/agent-code-review/catalog.json"), include_str!("../../../../../automations/engineering/agent-code-review/task.json"), &[
+(include_str!("../../../../../automations/engineering/agent-code-review/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-code-review/config/task.json"), &[
 ("scripts/agent-code-review.py", include_str!("../../../../../automations/engineering/agent-code-review/scripts/agent-code-review.py")),
-("prompt.md", include_str!("../../../../../automations/engineering/agent-code-review/prompt.md")),
-("herdr.json", include_str!("../../../../../automations/engineering/agent-code-review/herdr.json")),
-("README.md", include_str!("../../../../../automations/engineering/agent-code-review/README.md")),
+("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-code-review/prompts/prompt.md")),
+("config/herdr.json", include_str!("../../../../../automations/engineering/agent-code-review/config/herdr.json")),
+("TASK.md", include_str!("../../../../../automations/engineering/agent-code-review/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-code-review/scripts/run.sh"))
 ]),
-(include_str!("../../../../../automations/engineering/agent-issue-processing/catalog.json"), include_str!("../../../../../automations/engineering/agent-issue-processing/task.json"), &[
+(include_str!("../../../../../automations/engineering/agent-issue-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-issue-processing/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/agent.py")),
-("prompt.md", include_str!("../../../../../automations/engineering/agent-issue-processing/prompt.md")),
-("herdr.json", include_str!("../../../../../automations/engineering/agent-issue-processing/herdr.json")),
-("README.md", include_str!("../../../../../automations/engineering/agent-issue-processing/README.md")),
+("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-issue-processing/prompts/prompt.md")),
+("config/herdr.json", include_str!("../../../../../automations/engineering/agent-issue-processing/config/herdr.json")),
+("TASK.md", include_str!("../../../../../automations/engineering/agent-issue-processing/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/run.sh"))
 ]),
-(include_str!("../../../../../automations/engineering/agent-maintenance/catalog.json"), include_str!("../../../../../automations/engineering/agent-maintenance/task.json"), &[
+(include_str!("../../../../../automations/engineering/agent-maintenance/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-maintenance/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/agent.py")),
-("prompt.md", include_str!("../../../../../automations/engineering/agent-maintenance/prompt.md")),
-("herdr.json", include_str!("../../../../../automations/engineering/agent-maintenance/herdr.json")),
-("README.md", include_str!("../../../../../automations/engineering/agent-maintenance/README.md")),
+("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-maintenance/prompts/prompt.md")),
+("config/herdr.json", include_str!("../../../../../automations/engineering/agent-maintenance/config/herdr.json")),
+("TASK.md", include_str!("../../../../../automations/engineering/agent-maintenance/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/run.sh"))
 ]),
-(include_str!("../../../../../automations/engineering/agent-mr-processing/catalog.json"), include_str!("../../../../../automations/engineering/agent-mr-processing/task.json"), &[
+(include_str!("../../../../../automations/engineering/agent-mr-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-mr-processing/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/agent.py")),
-("prompt.md", include_str!("../../../../../automations/engineering/agent-mr-processing/prompt.md")),
-("herdr.json", include_str!("../../../../../automations/engineering/agent-mr-processing/herdr.json")),
-("README.md", include_str!("../../../../../automations/engineering/agent-mr-processing/README.md")),
+("scripts/review.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review.py")),
+("scripts/review_host.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review_host.py")),
+("config/review-config.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/review-config.json")),
+("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-mr-processing/prompts/prompt.md")),
+("config/herdr.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/herdr.json")),
+("TASK.md", include_str!("../../../../../automations/engineering/agent-mr-processing/TASK.md")),
+("references/platforms.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/platforms.md")),
+("references/runtime.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/runtime.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/run.sh"))
 ]),
-(include_str!("../../../../../automations/hermes/daily-summary/catalog.json"), include_str!("../../../../../automations/hermes/daily-summary/task.json"), &[
-("README.md", include_str!("../../../../../automations/hermes/daily-summary/README.md"))
+(include_str!("../../../../../automations/hermes/daily-summary/config/catalog.json"), include_str!("../../../../../automations/hermes/daily-summary/config/task.json"), &[
+("TASK.md", include_str!("../../../../../automations/hermes/daily-summary/TASK.md"))
 ]),
-(include_str!("../../../../../automations/system/disk-cleanup/catalog.json"), include_str!("../../../../../automations/system/disk-cleanup/task.json"), &[
+(include_str!("../../../../../automations/system/disk-cleanup/config/catalog.json"), include_str!("../../../../../automations/system/disk-cleanup/config/task.json"), &[
 ("scripts/disk-cleanup.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/disk-cleanup.py")),
 ("scripts/cleanup_config.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_config.py")),
 ("scripts/cleanup_files.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_files.py")),
 ("scripts/cleanup_rules.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_rules.py")),
 ("scripts/cleanup_actions.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_actions.py")),
 ("scripts/cleanup_report.py", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup_report.py")),
-("scripts/cleanup-config.json", include_str!("../../../../../automations/system/disk-cleanup/scripts/cleanup-config.json")),
-("README.md", include_str!("../../../../../automations/system/disk-cleanup/README.md")),
+("config/cleanup-config.json", include_str!("../../../../../automations/system/disk-cleanup/config/cleanup-config.json")),
+("TASK.md", include_str!("../../../../../automations/system/disk-cleanup/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/system/disk-cleanup/scripts/run.sh"))
 ]),
-(include_str!("../../../../../automations/system/git-status/catalog.json"), include_str!("../../../../../automations/system/git-status/task.json"), &[
+(include_str!("../../../../../automations/system/git-status/config/catalog.json"), include_str!("../../../../../automations/system/git-status/config/task.json"), &[
 ("scripts/git-status.py", include_str!("../../../../../automations/system/git-status/scripts/git-status.py")),
 ("scripts/run.sh", include_str!("../../../../../automations/system/git-status/scripts/run.sh")),
-("README.md", include_str!("../../../../../automations/system/git-status/README.md"))
+("TASK.md", include_str!("../../../../../automations/system/git-status/TASK.md"))
 ]),
-(include_str!("../../../../../automations/system/network-reset/catalog.json"), include_str!("../../../../../automations/system/network-reset/task.json"), &[
+(include_str!("../../../../../automations/system/network-reset/config/catalog.json"), include_str!("../../../../../automations/system/network-reset/config/task.json"), &[
 ("scripts/network-reset.py", include_str!("../../../../../automations/system/network-reset/scripts/network-reset.py")),
 ("scripts/setup.sh", include_str!("../../../../../automations/system/network-reset/scripts/setup.sh")),
 ("scripts/reset.sh", include_str!("../../../../../automations/system/network-reset/scripts/reset.sh")),
-("README.md", include_str!("../../../../../automations/system/network-reset/README.md")),
+("TASK.md", include_str!("../../../../../automations/system/network-reset/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/system/network-reset/scripts/run.sh"))
 ]),
-(include_str!("../../../../../automations/hermes/repository-audit/catalog.json"), include_str!("../../../../../automations/hermes/repository-audit/task.json"), &[
-("README.md", include_str!("../../../../../automations/hermes/repository-audit/README.md"))
+(include_str!("../../../../../automations/hermes/repository-audit/config/catalog.json"), include_str!("../../../../../automations/hermes/repository-audit/config/task.json"), &[
+("TASK.md", include_str!("../../../../../automations/hermes/repository-audit/TASK.md"))
 ]),
-(include_str!("../../../../../automations/system/workspace-check/catalog.json"), include_str!("../../../../../automations/system/workspace-check/task.json"), &[
+(include_str!("../../../../../automations/system/workspace-check/config/catalog.json"), include_str!("../../../../../automations/system/workspace-check/config/task.json"), &[
 ("scripts/workspace-check.py", include_str!("../../../../../automations/system/workspace-check/scripts/workspace-check.py")),
 ("scripts/run.sh", include_str!("../../../../../automations/system/workspace-check/scripts/run.sh")),
-("README.md", include_str!("../../../../../automations/system/workspace-check/README.md"))
+("TASK.md", include_str!("../../../../../automations/system/workspace-check/TASK.md"))
 ])
 ];
 
@@ -176,14 +183,16 @@ const BUNDLES: &[Bundle] = &[
 pub(in crate::core::automation) fn directory_slug(name: &str) -> Option<String> {
     BUNDLES.iter().find_map(|(catalog, _, _)| {
         let catalog: Manifest = serde_json::from_str(catalog).ok()?;
-        [
+        let matches = [
             catalog.id.as_str(),
             &catalog.title.en,
             &catalog.title.zh,
             &catalog.title.tw,
         ]
-        .contains(&name.trim())
-        .then_some(catalog.id)
+        .into_iter()
+        .chain(catalog.aliases.iter().map(String::as_str))
+        .any(|candidate| candidate == name.trim());
+        matches.then_some(catalog.id)
     })
 }
 

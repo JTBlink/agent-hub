@@ -57,7 +57,7 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
         }
         return Ok(snapshot.record);
     }
-    let manifest: Manifest = json(&path.join("task.json"))?;
+    let manifest = super::layout::read_manifest(path)?;
     if manifest.schema_version != 1
         || !valid_id(&manifest.instance_id)
         || !["sh", "powershell"].contains(&manifest.shell.as_str())
@@ -149,7 +149,7 @@ pub(in crate::core::automation) fn discover(state: &Path) -> (Vec<ManagedAutomat
             let path = entry.path();
             // Only direct, nonlinked folders containing a manifest are packages.
             if !entry.file_type().map_err(|e| e.to_string())?.is_dir()
-                || !path.join("task.json").exists()
+                || !manifest_path(&path).exists()
             {
                 return Ok(None);
             }
@@ -212,8 +212,8 @@ pub(super) fn materialize(
     draft.package_options = None;
     draft.script_dir = None;
     draft.workdir = None;
-    json_write(
-        &path.join("task.json"),
+    super::layout::write_manifest(
+        &path,
         &Manifest {
             version: record
                 .draft

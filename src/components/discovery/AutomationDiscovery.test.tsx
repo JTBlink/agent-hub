@@ -130,92 +130,99 @@ async function submit() {
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
   );
 }
-it("opens a separate full-screen read-only preview and returns to configuration", async () => {
-  const files = [
-    { path: "scripts/run.sh", content: "echo package-preview" },
-    {
-      path: "README.md",
-      content: "# Package overview\nRead before installing.",
-    },
-    { path: "scripts/lib/check.py", content: "print('ready')" },
-  ];
-  vi.mocked(api.getAutomationTemplates).mockResolvedValue({
-    shell: "sh",
-    templates: [
+it.each(["README.md", "TASK.md"])(
+  "opens a read-only preview at %s and returns to configuration",
+  async (instructionFile) => {
+    const files = [
+      { path: "scripts/run.sh", content: "echo package-preview" },
       {
-        id: "example",
-        title: "Example task",
-        description: "Example description",
-        draft: { ...draft, files },
+        path: instructionFile,
+        content: "# Package overview\nRead before installing.",
       },
-    ],
-  });
-  await render("recommended");
-  await click("添加 Example task");
-  const installer = document.querySelector("dialog")!;
-  expect(installer.querySelector("h1")).toBeNull();
-  const previewButton = [...installer.querySelectorAll("button")].find(
-    (button) => button.textContent === "打开预览",
-  )!;
-  previewButton.focus();
-  await click("打开预览");
-  const dialog = document.querySelector<HTMLDialogElement>(
-    "dialog[data-file-reader]",
-  )!;
-  expect(dialog.open).toBe(true);
-  expect(dialog.contains(document.activeElement)).toBe(true);
-  expect(dialog.querySelector('[aria-label="还原阅读窗口"]')).toBeTruthy();
-  expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
-  expect(
-    dialog
-      .querySelector('button[aria-label="README.md"]')
-      ?.getAttribute("aria-current"),
-  ).toBe("page");
-  expect(
-    [...dialog.querySelectorAll("aside summary")].map(
-      (node) => node.textContent,
-    ),
-  ).toEqual(["scripts", "lib"]);
-  await click("scripts/lib/check.py");
-  const source = codeEditor(dialog);
-  expect(source.state.sliceDoc()).toBe("print('ready')");
-  expect(source.state.readOnly).toBe(true);
-  expect(
-    dialog.querySelector<HTMLButtonElement>('[aria-label="在 VS Code 中打开"]')!
-      .disabled,
-  ).toBe(false);
-  await click("在 VS Code 中打开");
-  expect(openPreviewInVscode).toHaveBeenLastCalledWith(
-    "scripts/lib/check.py",
-    "print('ready')",
-  );
-  expect(dialog.textContent).toContain("VS Code 中的修改不会写回任务");
-  await click("README.md");
-  await click("源码");
-  expect(codeEditor(dialog).state.sliceDoc()).toContain("# Package overview");
-  await click("预览");
-  expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
-  expect(api.saveAutomation).not.toHaveBeenCalled();
-  expect(api.importAutomationPackage).not.toHaveBeenCalled();
-  expect(dialog.querySelector('[name="task-name"]')).toBeNull();
-  await act(async () => {
-    dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
-  });
-  expect(document.querySelector("dialog[data-file-reader]")).toBeNull();
-  expect(installer.open).toBe(true);
-  expect(document.activeElement).toBe(previewButton);
-  await click("打开预览");
-  const reopened = document.querySelector("dialog[data-file-reader]")!;
-  await act(async () => {
-    reopened.querySelector<HTMLButtonElement>('[aria-label="关闭"]')!.click();
-  });
-  expect(document.querySelector("dialog[data-file-reader]")).toBeNull();
-  expect(document.activeElement).toBe(previewButton);
-  await submit();
-  expect(
-    installer.querySelector<HTMLInputElement>('[name="task-name"]')?.value,
-  ).toBe("Example task");
-});
+      { path: "scripts/lib/check.py", content: "print('ready')" },
+    ];
+    if (instructionFile === "TASK.md") {
+      files.push({ path: "README.md", content: "# Legacy overview" });
+    }
+    vi.mocked(api.getAutomationTemplates).mockResolvedValue({
+      shell: "sh",
+      templates: [
+        {
+          id: "example",
+          title: "Example task",
+          description: "Example description",
+          draft: { ...draft, files },
+        },
+      ],
+    });
+    await render("recommended");
+    await click("添加 Example task");
+    const installer = document.querySelector("dialog")!;
+    expect(installer.querySelector("h1")).toBeNull();
+    const previewButton = [...installer.querySelectorAll("button")].find(
+      (button) => button.textContent === "打开预览",
+    )!;
+    previewButton.focus();
+    await click("打开预览");
+    const dialog = document.querySelector<HTMLDialogElement>(
+      "dialog[data-file-reader]",
+    )!;
+    expect(dialog.open).toBe(true);
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(dialog.querySelector('[aria-label="还原阅读窗口"]')).toBeTruthy();
+    expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
+    expect(
+      dialog
+        .querySelector(`button[aria-label="${instructionFile}"]`)
+        ?.getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      [...dialog.querySelectorAll("aside summary")].map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(["scripts", "lib"]);
+    await click("scripts/lib/check.py");
+    const source = codeEditor(dialog);
+    expect(source.state.sliceDoc()).toBe("print('ready')");
+    expect(source.state.readOnly).toBe(true);
+    expect(
+      dialog.querySelector<HTMLButtonElement>(
+        '[aria-label="在 VS Code 中打开"]',
+      )!.disabled,
+    ).toBe(false);
+    await click("在 VS Code 中打开");
+    expect(openPreviewInVscode).toHaveBeenLastCalledWith(
+      "scripts/lib/check.py",
+      "print('ready')",
+    );
+    expect(dialog.textContent).toContain("VS Code 中的修改不会写回任务");
+    await click(instructionFile);
+    await click("源码");
+    expect(codeEditor(dialog).state.sliceDoc()).toContain("# Package overview");
+    await click("预览");
+    expect(dialog.querySelector("h1")?.textContent).toBe("Package overview");
+    expect(api.saveAutomation).not.toHaveBeenCalled();
+    expect(api.importAutomationPackage).not.toHaveBeenCalled();
+    expect(dialog.querySelector('[name="task-name"]')).toBeNull();
+    await act(async () => {
+      dialog.dispatchEvent(new Event("cancel", { cancelable: true }));
+    });
+    expect(document.querySelector("dialog[data-file-reader]")).toBeNull();
+    expect(installer.open).toBe(true);
+    expect(document.activeElement).toBe(previewButton);
+    await click("打开预览");
+    const reopened = document.querySelector("dialog[data-file-reader]")!;
+    await act(async () => {
+      reopened.querySelector<HTMLButtonElement>('[aria-label="关闭"]')!.click();
+    });
+    expect(document.querySelector("dialog[data-file-reader]")).toBeNull();
+    expect(document.activeElement).toBe(previewButton);
+    await submit();
+    expect(
+      installer.querySelector<HTMLInputElement>('[name="task-name"]')?.value,
+    ).toBe("Example task");
+  },
+);
 
 it("previews before creating and installs a configured recommendation paused", async () => {
   await render("recommended");
@@ -293,7 +300,7 @@ it("shows the pinned Git revision, keeps partial errors, and installs its snapsh
 
 it("explains Git recognition and reveals the same manifest used by the documented example", async () => {
   await render("git");
-  expect(host.textContent).toContain("每个任务目录必须有 task.json");
+  expect(host.textContent).toContain("TASK.md 说明用途和流程");
   expect(host.textContent).toContain("只扫描 automations/");
   expect(
     host.querySelector('pre[aria-label="推荐的任务仓库目录结构"]')?.textContent,
@@ -302,9 +309,12 @@ it("explains Git recognition and reveals the same manifest used by the documente
   expect(details.open).toBe(false);
   await act(async () => details.querySelector("summary")!.click());
   expect(details.open).toBe(true);
-  const manifest = JSON.parse(details.querySelector("code")!.textContent!);
+  const manifest = JSON.parse(
+    details.querySelector('pre[aria-label="config/task.json"] code')!
+      .textContent!,
+  );
   expect(manifest.schema_version).toBe(1);
-  expect(manifest.files).toEqual(["scripts/run.sh"]);
+  expect(manifest.files).toEqual(["TASK.md", "scripts/run.sh"]);
   expect(details.textContent).toContain("Example task completed");
   expect(host.textContent).toContain("目前仅支持 GitHub 的 tree 链接");
   expect(api.previewGitAutomationPackages).not.toHaveBeenCalled();

@@ -5,6 +5,7 @@ mod creation;
 mod dependencies;
 mod exchange;
 mod hermes_bridge;
+mod layout;
 mod lifecycle;
 mod migration;
 mod privileged;
@@ -20,6 +21,7 @@ pub use exchange::{
     export_package, import_definition, import_package, preview_package, AutomationPackage,
 };
 pub(crate) use exchange::{read_backup_directory, write_backup_directory};
+pub(crate) use layout::{manifest_directory, manifest_path};
 pub(super) use lifecycle::{prepare_at, remove};
 pub use migration::migrate;
 pub(super) use storage::fingerprint as storage_fingerprint;
@@ -140,7 +142,7 @@ pub(super) fn root(state: &Path) -> PathBuf {
 
 pub(super) fn directory(record: &ManagedAutomation) -> Option<PathBuf> {
     let path = PathBuf::from(record.draft.script_dir.as_ref()?);
-    let identity = storage::json::<Manifest>(&path.join("task.json"))
+    let identity = layout::read_manifest(&path)
         .map(|m| m.instance_id)
         .or_else(|_| {
             storage::json::<UpdateSnapshot>(&path.join(".local/operation.json"))
@@ -210,7 +212,7 @@ pub(super) fn is_package_draft(draft: &AutomationDraft) -> bool {
     draft
         .script_dir
         .as_ref()
-        .is_some_and(|path| Path::new(path).join("task.json").is_file())
+        .is_some_and(|path| manifest_path(Path::new(path)).is_file())
 }
 
 // Read receipts from the former installation lifecycle without rewriting data on list.

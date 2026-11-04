@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -15,9 +15,9 @@
   },
   "files": [
     "scripts/agent.py",
-    "prompt.md",
-    "herdr.json",
-    "README.md",
+    "prompts/prompt.md",
+    "config/herdr.json",
+    "TASK.md",
     "scripts/run.sh"
   ],
   "dependencies": [

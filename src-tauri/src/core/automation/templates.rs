@@ -63,4 +63,6 @@ fn catalog(locale: &str, hermes: bool, shell: &str) -> AutomationCatalog {
 }
 
 #[cfg(test)]
+mod review_preflight_tests;
+#[cfg(test)]
 mod tests;

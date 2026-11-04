@@ -44,7 +44,7 @@ def load_config(path):
 
 def parse_options(default_config):
     parser = argparse.ArgumentParser(description="自动清理过期缓存和历史构建，保留对话、凭据、运行时和被引用的依赖，输出中文总结及桌面通知。")
-    parser.add_argument("--config", type=Path, default=default_config, help="配置文件路径，默认使用入口脚本旁的 cleanup-config.json")
+    parser.add_argument("--config", type=Path, default=default_config, help="配置文件路径，默认使用任务 config/cleanup-config.json，兼容旧入口旁的配置")
     parser.add_argument("--dry-run", action="store_true", help="只预览，不删除文件，不发通知；无预览能力的工具不执行")
     parser.add_argument("--workspace-only", action="store_true", help="仅清理工作目录 tmp/logs，默认不发通知")
     parser.add_argument("--no-tools", action="store_true", help="跳过构建、uv、Homebrew 和更新缓存清理")

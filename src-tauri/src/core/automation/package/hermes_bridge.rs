@@ -13,7 +13,7 @@ fn home(record: &ManagedAutomation) -> Result<PathBuf, String> {
 
 pub(super) fn prepare(state: &Path, record: &ManagedAutomation) -> Result<Vec<String>, String> {
     let package = checked(state, record)?;
-    let manifest: Manifest = super::storage::json(&package.join("task.json"))?;
+    let manifest: Manifest = super::layout::read_manifest(&package)?;
     let Some(options) = manifest.hermes else {
         return Ok(Vec::new());
     };

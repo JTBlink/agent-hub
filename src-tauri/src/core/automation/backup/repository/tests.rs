@@ -131,7 +131,7 @@ fn publishes_plain_task_names_and_keeps_identity_inside_the_manifest() {
         assert_eq!(fs::read_dir(repo.join("automations")).unwrap().count(), 2);
         for (record, slug) in [(&one, "network-reset"), (&two, "agent-mr-processing")] {
             let directory = repo.join("automations").join(slug);
-            assert!(directory.join("task.json").is_file());
+            assert!(directory.join("config/task.json").is_file());
             assert_eq!(
                 package::read_backup_directory(&directory).unwrap().id,
                 record.id
@@ -203,7 +203,9 @@ fn avoids_case_unicode_and_reserved_device_name_collisions() {
         .map(|entry| name_key(entry.unwrap().file_name().to_str().unwrap()))
         .collect();
     assert_eq!(names.len(), records.len());
-    assert!(repo.join("automations/task-con.txt/task.json").is_file());
+    assert!(repo
+        .join("automations/task-con.txt/config/task.json")
+        .is_file());
     let target = temp.path().join("restored");
     import(&repo, &target).unwrap();
     assert_eq!(read(&target).unwrap().len(), records.len());
@@ -233,7 +235,7 @@ fn reads_uuid_suffixed_directories_and_rewrites_them_on_the_next_export() {
     );
     export(&restored, &repo).unwrap();
     assert!(!old.exists());
-    assert!(plain.join("task.json").is_file());
+    assert!(plain.join("config/task.json").is_file());
     assert_eq!(package::read_backup_directory(&plain).unwrap().id, task.id);
 }
 

@@ -27,8 +27,7 @@ pub(super) fn migrate_using(
         let result = super::relocation::migrate(state, id);
         let mut current = find(state, id)?;
         current.draft.enabled = record.draft.enabled;
-        let manifest: Manifest =
-            super::storage::json(&checked(state, &current)?.join("task.json"))?;
+        let manifest = super::layout::read_manifest(&checked(state, &current)?)?;
         super::storage::materialize(&current, manifest.dependencies, manifest.hermes)?;
         let mut local = receipt(&current)?;
         local.state = "pending".into();
@@ -65,7 +64,7 @@ pub(super) fn migrate_using(
     }
     let result = (|| {
         scheduler.apply(state, &mut old.clone(), false)?;
-        let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+        let manifest: Manifest = super::layout::read_manifest(&path)?;
         let mut configured = next.clone();
         configured.draft.enabled = old.draft.enabled;
         configured.revision = old

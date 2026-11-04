@@ -16,7 +16,7 @@
 python3 ./scripts/disk-cleanup.py --dry-run
 python3 ./scripts/disk-cleanup.py
 python3 ./scripts/disk-cleanup.py --skip-notify
-python3 ./scripts/disk-cleanup.py --config ./scripts/cleanup-config.json --notify
+python3 ./scripts/disk-cleanup.py --config ./config/cleanup-config.json --notify
 ```
 
 默认 7 天保留下载缓存、Agent 缓存／日志、浏览器缓存和 Rust 增量缓存。工作目录日志保留 30 天。浏览器仍运行或检测到 cargo／rustc 时跳过对应规则。默认运行 `uv cache prune --offline`（没有无副作用预览，预览时跳过）和关闭自动更新的 `brew cleanup`；不强制删除正在使用的依赖。工具缺失、通知失败不导致整个任务失败，真实清理错误返回非零退出码。

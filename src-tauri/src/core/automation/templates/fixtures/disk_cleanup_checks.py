@@ -21,7 +21,10 @@ import cleanup_files as files
 import cleanup_rules as rules
 import cleanup_actions as actions
 import cleanup_report as report
-bundle_config = config.load_config(Path(sys.argv[1]).with_name("cleanup-config.json"))
+config_path = Path(sys.argv[1]).resolve().parent.parent / "config/cleanup-config.json"
+if not config_path.exists():
+    config_path = Path(sys.argv[1]).with_name("cleanup-config.json")
+bundle_config = config.load_config(config_path)
 
 
 class CleanupChecks(unittest.TestCase):

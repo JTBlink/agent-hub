@@ -17,7 +17,10 @@ def main():
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
-    options = parse_options(Path(__file__).with_name("cleanup-config.json"))
+    config = Path(__file__).resolve().parent.parent / "config/cleanup-config.json"
+    if not config.exists():
+        config = Path(__file__).with_name("cleanup-config.json")
+    options = parse_options(config)
     if options.dry_run:
         print("预览模式：不会删除任何文件，也不会发送桌面通知。")
     start = time.monotonic()

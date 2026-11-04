@@ -71,7 +71,7 @@ pub(in crate::core::automation) fn save(
         .ok_or("Automation revision exhausted")?;
     let registered = receipt.state == "ready";
     block(&path, &old)?;
-    let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+    let manifest: Manifest = super::layout::read_manifest(&path)?;
     json_write(
         &path.join(".local/operation.json"),
         &UpdateSnapshot {

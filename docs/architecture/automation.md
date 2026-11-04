@@ -8,11 +8,14 @@
 
 ```text
 ~/.agent-hub/automations/<allocated-task-name>/
-├── task.json
-├── scripts/                 # 包括 run.sh 或 run.ps1
-├── prompt.md                # Agent 任务
-├── herdr.json               # Herdr 任务
-├── README.md
+├── TASK.md                  # 任务说明入口
+├── config/
+│   ├── task.json            # 清单、日程、依赖与文件列表
+│   └── herdr.json           # Herdr 任务；其他 JSON 配置同放此处
+├── scripts/                 # 独立可执行入口
+├── references/              # 按需资料，无需时不创建
+├── prompts/
+│   └── prompt.md            # Agent 任务目标
 └── .local/
     ├── binding.json         # 本机项目绑定
     ├── receipt.json         # 运行准备阶段、调度身份、错误和备份状态
@@ -21,6 +24,8 @@
     ├── state/
     └── runs/<run-id>/
 ```
+
+布局由 [ADR-0017](../adr/0017-automation-task-layout.md) 细化：新包与新备份使用 `config/task.json`，旧根目录清单保持原位置读写，冲突双清单拒绝读取；文件列表始终相对任务根目录，`config/task.json` 和 `config/catalog.json` 不得声明为正文文件。
 
 显式 `AGENT_HUB_AUTOMATION_HOME` 下的包位于该根的 `workspaces/`。`package/storage` 逐包读取，正文不在清单中重复保存；`AutomationDraft.files` 和 `package_options` 是 GUI、CLI 和备份的即时快照。内容及绑定变化使 `revision` 失效。旧全局文件损坏时仍展示可读包，并报告兼容记录错误，不覆盖损坏文件。
 
@@ -119,11 +124,11 @@ Git 内容恢复只更新同步定义，不变更运行中的本机任务。GUI 
 
 ## Herdr Agent 模板与提示词编辑
 
-包含 `prompt.md` 的 Agent 任务直接在主编辑区编辑提示词；该正文仍作为声明文件保存、同步与备份，界面不另外维护一份提示词状态。Shell 命令默认一行，现有多行命令保留；Agent 的启动命令和脚本收进高级执行设置。`herdr.json` 保存智能体、明确的 Herdr 会话及原生参数，右侧提供智能体与项目工作区入口。
+包含 `prompts/prompt.md` 的 Agent 任务直接在主编辑区编辑提示词；该正文仍作为声明文件保存、同步与备份，界面不另外维护一份提示词状态。Shell 命令默认一行，现有多行命令保留；Agent 的启动命令和脚本收进高级执行设置。`config/herdr.json` 保存智能体、明确的 Herdr 会话及原生参数，右侧提供智能体与项目工作区入口。
 
 Herdr 模板使用共用的 `herdr-agent.py`，系统调度发起后先核实目标会话已运行，再以所选项目目录创建工作区或任务标签页，使用返回的面板 ID 启动 Agent 并投递提示词，所有创建均不抢占焦点。不使用 UI 当前焦点隐式定位，不自动启动或重启 Herdr 服务，不自动回答审批。命令参数以 argv 传递。声明 JSON／Markdown 文件读取时去除 AgentHub 所有权头。
 
-智能体选择、执行说明、额外参数与 Herdr 会话放在同一组，高级区域提供额外的智能体参数输入，原文保存在 `herdr.json` 的 `extra_arguments`，与默认 `arguments` 分开管理；启动时按命令行引号解析并追加到默认参数之后，不经 Shell 执行。切换 Agent 清空原 Agent 的额外参数，Codex 默认使用 `--dangerously-bypass-approvals-and-sandbox` 以无人值守执行。已有任务保存的自定义参数保持原样。`agent get` 等状态命令按 JSON 解析，`agent read` 的终端输出按纯文本接收；等待确认时只读取可见区域，不滚动应用历史。
+智能体选择、执行说明、额外参数与 Herdr 会话放在同一组，高级区域提供额外的智能体参数输入，原文保存在 `config/herdr.json` 的 `extra_arguments`，与默认 `arguments` 分开管理；启动时按命令行引号解析并追加到默认参数之后，不经 Shell 执行。切换 Agent 清空原 Agent 的额外参数，Codex 默认使用 `--dangerously-bypass-approvals-and-sandbox` 以无人值守执行。已有任务保存的自定义参数保持原样。`agent get` 等状态命令按 JSON 解析，`agent read` 的终端输出按纯文本接收；等待确认时只读取可见区域，不滚动应用历史。
 
 本地 `.herdr-run.json` 在布局创建及提示词投递之前记录状态。上次仍在工作时直接跳过当前触发，返回成功并记录跳过原因，不排队、不新建布局、不读取历史或重复投递，保留本地状态；即使上次记录已完成，也重新核对 Agent 的当前状态。等待确认、状态不明或投递结果不确定时不重复投递；用户在 Herdr 确认后可处理该本地状态。它不属于声明文件，不进入任务定义备份。运行记录保存面板标识和可读取的终端输出；Herdr 就绪不等同于任务验证成功。
 
@@ -133,7 +138,11 @@ Herdr 模板使用共用的 `herdr-agent.py`，系统调度发起后先核实目
 
 提示词不使用 CLI 的 5 秒活动门槛作为任务终态：只提交一次，然后在执行进程内观察状态和完成序号，直到有活动后的就绪状态或明确的新完成序号。`unknown` 保持进行中，旧版 `agent_prompt_stalled` 也只继续观察，不重发；整个等待期间原生包装器保持运行，已有开始／结束标记驱动界面状态更新。最多等待 30 分钟，超时保留会话。
 
-内置每小时维护（:15，只读）、MR 定时处理（:30）和 Issue 自动处理（:45）模板；后两者的提示词仅授权明确候选的分支实现、验证及草稿交付，不自动合并或发布。每小时日程以固定本地分钟执行：launchd 使用仅含 Minute 的日历，systemd 使用每小时 OnCalendar，Windows 使用下一次目标分钟开始的一小时重复触发。
+内置每小时维护（:15，只读）、PR / MR 代码审查（:30，只读）和 Issue 自动处理（:45）模板；Issue 模板仅授权明确候选的分支实现、验证及草稿交付，不自动合并或发布。每小时日程以固定本地分钟执行：launchd 使用仅含 Minute 的日历，systemd 使用每小时 OnCalendar，Windows 使用下一次目标分钟开始的一小时重复触发。
+
+PR / MR 代码审查由 `scripts/review.py` 先执行无模型检查：按分支跟踪或显式选择的 remote 确定仓库，GitHub 使用 `gh`，GitLab 使用 `glab`；自建主机按该主机的 CLI 登录状态识别，也支持在 `config/review-config.json` 指定平台和 CLI launcher argv。不猜测多 remote，不绑定组织平台。查询错误报告失败；没有非草稿开放请求或 head/base 未变且已有完整本地报告时，不启动 Herdr Agent。默认每轮最多检查 3 页、审核一个请求。
+
+检测与运行脚本随任务包分发，无需读取会话历史或访问开发仓库；系统计划直接运行本机完整任务包。有候选时由 Agent 直接调用已安装的 `code-review` Skill，固定 head/base，分别报告 Standards 与 Spec；不修改代码、发表评论、批准或合并。运行上下文通过共享 Herdr launcher 的可选 `prompt_context` 追加，不改写用户的 `prompts/prompt.md`。只有本轮结构化报告完整且结束时远端身份与提交仍匹配，才在 `.local/state/reviews/` 按请求保存最近结果；`review-pending.json` 保留未完成轮次的准确对象与报告路径，恢复先收回原轮次，不另发同一请求。缺少报告不会将 Agent 就绪当作审查成功。任务包 2.0.0 保留 `agent-mr-processing` 标识及旧名称映射，不自动覆盖已安装定义或启用任务。执行与配置见[任务说明](../../automations/engineering/agent-mr-processing/TASK.md)。
 
 ## 统一创建入口
 
@@ -143,7 +152,7 @@ Herdr 模板使用共用的 `herdr-agent.py`，系统调度发起后先核实目
 
 ## 内置模板范围
 
-默认目录保留四个核心场景：项目巡检、MR 处理、Issue 处理和清理磁盘缓存。巡检合并近期变更、失败验证与卡住工作等只读检查，不再为目录检查、Git 状态、仓库审计、代码巡检和每日摘要各列一张卡片。三个 Agent 模板的提示词控制在 160 个字符内，具体流程由目标项目规范与已安装技能提供。Shell 命令和通用 Agent 任务可直接新建，不增加空白示例模板。
+默认目录保留四个核心场景：项目巡检、PR / MR 代码审查、Issue 处理和清理磁盘缓存。巡检合并近期变更、失败验证与卡住工作等只读检查，不再为目录检查、Git 状态、仓库审计、代码巡检和每日摘要各列一张卡片。三个 Agent 模板的提示词控制在 160 个字符内，具体流程由目标项目规范与已安装技能提供。Shell 命令和通用 Agent 任务可直接新建，不增加空白示例模板。
 
 已创建任务及备份仍携带完整定义，不受目录精简影响；CLI 显式使用旧模板 ID 时通过兼容查找创建。“使用模板”直接展示内置模板，不提供来源切换；“从备份恢复”独立展示已保存的自动化配置，选择后填入编辑器，保存时创建默认暂停的副本，不覆盖本机已有任务。
 

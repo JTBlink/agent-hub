@@ -1,5 +1,6 @@
 """Exercise only sandboxed scripts and mocked subprocesses. Never touches networking."""
 from pathlib import Path
+import json
 import os
 import runpy
 import subprocess
@@ -11,6 +12,16 @@ bundle = root / "scripts"
 for name in ["setup.sh", "reset.sh"]:
     subprocess.run(["/bin/bash", "-n", str(bundle / name)], check=True)
 module = runpy.run_path(str(bundle / "network-reset.py"))
+# Both package layouts must keep the task-specific privileged runner identity.
+identity = "agent_hub:00000000-0000-4000-8000-000000000001"
+for relative in ["config/task.json", "task.json"]:
+    manifest = root / relative
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text(json.dumps({"instance_id": identity}))
+    with patch.dict(os.environ, {"AGENT_HUB_TASK_DIR": str(root)}):
+        packaged = runpy.run_path(str(bundle / "network-reset.py"))
+    assert packaged["RUNNER"].parent.name == identity.removeprefix("agent_hub:")
+    manifest.unlink()
 with patch.object(sys, "argv", ["network-reset.py", "--dry-run"]), patch("subprocess.run") as command:
     module["main"]()
     command.assert_not_called()

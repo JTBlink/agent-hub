@@ -15,7 +15,11 @@ fn draft() -> AutomationDraft {
 #[test]
 fn localized_task_names_use_portable_english_directory_slugs() {
     for (name, expected) in [
+        ("PR / MR 代码审查", "agent-mr-processing"),
+        ("PR / MR 程式碼審查", "agent-mr-processing"),
+        ("PR / MR code review", "agent-mr-processing"),
         ("MR 处理", "agent-mr-processing"),
+        ("MR 處理", "agent-mr-processing"),
         ("MR / PR processing", "agent-mr-processing"),
         ("项目巡检", "agent-maintenance"),
         ("定时重置网络", "network-reset"),

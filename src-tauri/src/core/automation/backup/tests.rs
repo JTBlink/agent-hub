@@ -78,7 +78,7 @@ fn automatic_git_backup_pushes_task_changes_and_restores_only_dormant_definition
         .peel_to_tree()
         .unwrap();
     let directory = "automations/audit";
-    let path = format!("{directory}/task.json");
+    let path = format!("{directory}/config/task.json");
     assert!(tree.get_path(Path::new(&path)).is_ok());
     assert!(tree.get_path(Path::new("output.log")).is_err());
     assert!(tree.get_path(Path::new("tasks.json")).is_err());

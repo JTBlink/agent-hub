@@ -68,7 +68,7 @@ fn refuses_installed_running_and_unowned_environments_without_moving_data() {
     for name in ["run.claim", "ready", "env"] {
         fs::create_dir(path.join(".local").join(name)).unwrap();
         assert!(migrate(temp.path(), &old.id).is_err());
-        assert!(path.join("task.json").is_file());
+        assert!(manifest_path(&path).is_file());
         fs::remove_dir(path.join(".local").join(name)).unwrap();
     }
 }
@@ -93,7 +93,7 @@ fn another_tasks_project_binding_blocks_migration_and_occupied_names_are_preserv
             .unwrap(),
         "agent-mr-processing-2"
     );
-    assert!(occupied.join("task.json").is_file());
+    assert!(manifest_path(&occupied).is_file());
 }
 #[test]
 fn recovers_an_interrupted_move_before_retrying_and_rejects_foreign_journals() {
@@ -118,5 +118,5 @@ fn recovers_an_interrupted_move_before_retrying_and_rejects_foreign_journals() {
     foreign.to = temp.path().join("outside");
     json_write(&journal_path(temp.path(), &old.id), &foreign).unwrap();
     assert!(migrate(temp.path(), &old.id).is_err());
-    assert!(directory(&next).unwrap().join("task.json").is_file());
+    assert!(manifest_path(&directory(&next).unwrap()).is_file());
 }

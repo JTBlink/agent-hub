@@ -7,15 +7,20 @@ import type {
 } from "./tauri";
 
 export function automationPromptFile(draft: AutomationDraft) {
-  return draft.files?.find(
-    (file) => file.path === "prompt.md" || file.path.endsWith("/prompt.md"),
+  return (
+    draft.files?.find((file) => file.path === "prompts/prompt.md") ??
+    draft.files?.find(
+      (file) => file.path === "prompt.md" || file.path.endsWith("/prompt.md"),
+    )
   );
 }
 
 export function automationHerdrConfig(draft: AutomationDraft) {
-  const file = draft.files?.find(
-    (file) => file.path === "herdr.json" || file.path.endsWith("/herdr.json"),
-  );
+  const file =
+    draft.files?.find((file) => file.path === "config/herdr.json") ??
+    draft.files?.find(
+      (file) => file.path === "herdr.json" || file.path.endsWith("/herdr.json"),
+    );
   if (!file) return null;
   try {
     const value: unknown = JSON.parse(file.content);

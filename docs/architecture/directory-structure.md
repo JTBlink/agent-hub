@@ -257,7 +257,7 @@ agent-hub/
 │   ├── rust-dev/                   #   开发、UI、测试与提交规范
 │   └── github/             #   版本发布、Actions 与产物验收
 │
-├── automations/                    # 可独立安装的真实任务包：task.json、scripts/、提示词和配置
+├── automations/                    # 可独立安装的真实任务包：TASK.md、config/、scripts/ 与按需 references/
 ├── skills/                         # 内置 Skill
 │   └── agent-hub-cli/SKILL.md      #   技能管理 Skill
 │

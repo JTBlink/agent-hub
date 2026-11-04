@@ -18,9 +18,16 @@ pub struct AutomationPackage {
 
 pub(super) fn validate_path(path: &str) -> Result<(), String> {
     crate::core::path_guard::ensure_safe_skill_relative_path(path).map_err(|e| e.to_string())?;
-    if !path.starts_with("scripts/") && !["README.md", "prompt.md", "herdr.json"].contains(&path) {
+    if ["config/task.json", "config/catalog.json"].contains(&path) {
+        return Err("Task manifests and catalog metadata cannot be declared body files".into());
+    }
+    if !["scripts/", "config/", "prompts/", "references/"]
+        .iter()
+        .any(|prefix| path.starts_with(prefix))
+        && !["TASK.md", "README.md", "prompt.md", "herdr.json"].contains(&path)
+    {
         return Err(
-            "Task files must be under scripts/ or be README.md, prompt.md or herdr.json".into(),
+            "Task files must be under scripts/, config/, prompts/ or references/, or be TASK.md or a supported legacy root file".into(),
         );
     }
     if path.split('/').any(|part| part.starts_with('.')) {
@@ -77,7 +84,14 @@ impl AutomationPackage {
 
 /// Preview only reads declared files; no extraction, setup hook or registration.
 pub fn preview_package(source: &Path) -> Result<AutomationPackage, String> {
-    read_package(source, true)
+    let source = if source.is_absolute() {
+        source.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|e| e.to_string())?
+            .join(source)
+    };
+    read_package(&source, true)
 }
 
 fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, String> {
@@ -89,14 +103,15 @@ fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, 
         let directory = if source.is_dir() {
             source
         } else {
-            source.parent().ok_or("Missing task package directory")?
+            manifest_directory(source)?
         };
         super::storage::regular_directory(directory)?;
-        let manifest: Manifest = super::storage::json(&if source.is_dir() {
-            source.join("task.json")
-        } else {
-            source.to_path_buf()
-        })?;
+        let manifest: Manifest =
+            if source.is_dir() || source.file_name().is_some_and(|name| name == "task.json") {
+                super::layout::read_manifest(directory)?
+            } else {
+                super::storage::json(source)?
+            };
         let mut draft = manifest.draft;
         for relative in manifest.files {
             validate_path(&relative)?;
@@ -182,13 +197,13 @@ pub(crate) fn write_backup_directory(
         store::write(&path, file.content.as_bytes())?;
         manifest.files.push(file.path);
     }
-    json_write(&target.join("task.json"), &manifest)
+    super::layout::write_manifest(target, &manifest)
 }
 
 pub(crate) fn read_backup_directory(
     source: &Path,
 ) -> Result<super::super::backup::AutomationBackup, String> {
-    let manifest: Manifest = super::storage::json(&source.join("task.json"))?;
+    let manifest = super::layout::read_manifest(source)?;
     if !valid_id(&manifest.instance_id) {
         return Err("Invalid automation backup identity".into());
     }
@@ -234,7 +249,7 @@ pub fn export_package(id: &str, target: &Path) -> Result<(), String> {
     let _lock = lock(&state, id)?;
     let record = find(&state, id)?;
     let path = checked(&state, &record)?;
-    let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+    let manifest = super::layout::read_manifest(&path)?;
     let mut draft = record.draft;
     draft.script_dir = None;
     draft.workdir = None;
@@ -274,10 +289,13 @@ pub(in crate::core::automation) fn normalize(draft: &mut AutomationDraft) {
     let mut replacements = Vec::new();
     for file in &draft.files {
         let name = file.path.rsplit('/').next().unwrap_or(&file.path);
-        let new = if ["README.md", "prompt.md", "herdr.json"].contains(&name) {
-            name.to_string()
-        } else if file.path.starts_with("scripts/") {
+        let new = if ["scripts/", "config/", "prompts/", "references/"]
+            .iter()
+            .any(|prefix| file.path.starts_with(prefix))
+        {
             file.path.clone()
+        } else if ["TASK.md", "README.md", "prompt.md", "herdr.json"].contains(&name) {
+            name.to_string()
         } else {
             format!("scripts/{name}")
         };
@@ -322,8 +340,12 @@ pub(in crate::core::automation) fn normalize(draft: &mut AutomationDraft) {
             });
         }
     }
-    if !draft.files.iter().any(|f| f.path == "README.md") {
-        draft.files.push(super::super::AutomationScriptFile { path: "README.md".into(),
-            content: "# Automation task\n\nManage the schedule through AgentHub. Local state and logs are in `.local/`.\n".into() });
+    if !draft
+        .files
+        .iter()
+        .any(|f| ["TASK.md", "README.md"].contains(&f.path.as_str()))
+    {
+        draft.files.push(super::super::AutomationScriptFile { path: "TASK.md".into(),
+            content: "# Automation task\n\nRun the declared entrypoint in the selected project. Configuration is in `config/`, executable helpers in `scripts/`, and optional details in `references/`. Manage the schedule through AgentHub. Local state and logs are in `.local/`.\n".into() });
     }
 }

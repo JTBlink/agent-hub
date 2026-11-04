@@ -1,9 +1,9 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
-    "name": "MR / PR processing",
+    "name": "PR / MR code review",
     "provider": "system",
     "content": "sh './scripts/run.sh'",
     "workdir": null,
@@ -15,10 +15,15 @@
   },
   "files": [
     "scripts/agent.py",
-    "prompt.md",
-    "herdr.json",
-    "README.md",
-    "scripts/run.sh"
+    "scripts/review.py",
+    "scripts/review_host.py",
+    "config/review-config.json",
+    "prompts/prompt.md",
+    "config/herdr.json",
+    "TASK.md",
+    "scripts/run.sh",
+    "references/platforms.md",
+    "references/runtime.md"
   ],
   "dependencies": [
     {
@@ -28,6 +33,10 @@
     {
       "kind": "command",
       "name": "herdr"
+    },
+    {
+      "kind": "command",
+      "name": "git"
     }
   ]
 }

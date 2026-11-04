@@ -10,7 +10,10 @@ ROOT = Path("/Library/PrivilegedHelperTools/agent-hub-network-reset")
 RUNNER = ROOT / "run"  # Legacy tasks retain their administrator-installed entry.
 TASK = Path(os.environ.get("AGENT_HUB_TASK_DIR", str(Path(__file__).resolve().parent.parent)))
 try:
-    identity = json.loads((TASK / "task.json").read_text())["instance_id"]
+    manifest = TASK / "config/task.json"
+    if not manifest.exists():
+        manifest = TASK / "task.json"
+    identity = json.loads(manifest.read_text())["instance_id"]
     if re.fullmatch(r"agent_hub:[0-9a-fA-F-]{36}", identity):
         RUNNER = ROOT / identity.removeprefix("agent_hub:") / "run"
 except (OSError, ValueError, KeyError, TypeError):

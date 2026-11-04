@@ -11,6 +11,7 @@
 
 - [ADR-0015：使用 GitHub Issues 与 Milestones 管理任务](0015-github-issues-tracker.md)
 - [ADR-0016：独立自动化任务包与安装生命周期](0016-independent-automation-packages.md)
+- [ADR-0017：任务说明入口与配置目录](0017-automation-task-layout.md)
 - [ADR-0018：自动化任务直接创建与启停](0018-automation-direct-lifecycle.md)
 
 后续规划统一放在 [docs/plans/agent-hub.md](../plans/agent-hub.md)，确认的重要决策再形成 ADR。

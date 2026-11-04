@@ -90,7 +90,7 @@ fn cli_exposes_a_single_disk_cleanup_draft_for_scheduling_without_registering_a_
     assert!(draft
         .files
         .iter()
-        .any(|file| file.path == "scripts/cleanup-config.json"));
+        .any(|file| file.path == "config/cleanup-config.json"));
     assert!(draft.files[0].content.contains("parse_options"));
     assert_eq!(std::fs::read_dir(temporary.path()).unwrap().count(), 0);
 }
@@ -133,7 +133,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     draft["workdir"] = json!(workspace);
     // Keep the opt-in native smoke task confined to its workspace, with no notification.
     for file in draft["files"].as_array_mut().unwrap() {
-        if file["path"] == "scripts/cleanup-config.json" {
+        if file["path"] == "config/cleanup-config.json" {
             let mut config: Value =
                 serde_json::from_str(file["content"].as_str().unwrap()).unwrap();
             for key in [
@@ -169,7 +169,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     };
     let task = success(cli(&root, &["show", &cleanup.id]));
     let package = std::path::PathBuf::from(task["definition"]["script_dir"].as_str().unwrap());
-    let file = package.join("scripts/cleanup-config.json");
+    let file = package.join("config/cleanup-config.json");
     let content = std::fs::read_to_string(&file).unwrap();
     let mut config: Value = serde_json::from_str(&content).unwrap();
     config["workspace_tmp_days"] = json!(14);
@@ -204,7 +204,7 @@ fn runs_customized_bundled_python_files_and_queues_their_contents_for_backup() {
     let files = task["definition"]["files"].as_array().unwrap();
     assert!(files
         .iter()
-        .any(|file| file["path"] == "scripts/cleanup-config.json"
+        .any(|file| file["path"] == "config/cleanup-config.json"
             && file["content"]
                 .as_str()
                 .unwrap()

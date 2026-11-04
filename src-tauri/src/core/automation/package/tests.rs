@@ -25,10 +25,10 @@ fn same_name_tasks_have_independent_packages_and_corruption_is_isolated() {
     assert_ne!(one.draft.script_dir, two.draft.script_dir);
     let path = directory(&one).unwrap();
     assert!(path.join("scripts/run.sh").exists() || path.join("scripts/run.ps1").exists());
-    assert!(path.join("README.md").is_file());
+    assert!(path.join("TASK.md").is_file());
     assert!(path.join(".local/receipt.json").is_file());
     assert!(!temp.path().join("tasks.json").exists());
-    fs_write(&path.join("task.json"), "broken");
+    fs_write(&manifest_path(&path), "broken");
     let registry = store::read_registry(temp.path()).unwrap();
     assert_eq!(registry.tasks.len(), 1);
     assert_eq!(registry.tasks[0].id, second);
@@ -151,8 +151,8 @@ fn linked_files_cannot_escape_the_package_during_import_or_read() {
     let path = directory(&record).unwrap();
     let outside = temp.path().join("outside.md");
     fs_write(&outside, "private outside content");
-    std::fs::remove_file(path.join("README.md")).unwrap();
-    std::os::unix::fs::symlink(&outside, path.join("README.md")).unwrap();
+    std::fs::remove_file(path.join("TASK.md")).unwrap();
+    std::os::unix::fs::symlink(&outside, path.join("TASK.md")).unwrap();
     assert!(read(&path).is_err());
     assert!(preview_package(&path).is_err());
     assert_eq!(
@@ -198,7 +198,7 @@ fn interrupted_updates_restore_the_previous_body_before_preparing_runtime() {
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     let mut local = receipt(&record).unwrap();
-    let manifest: Manifest = storage::json(&path.join("task.json")).unwrap();
+    let manifest: Manifest = storage::json(&manifest_path(&path)).unwrap();
     json_write(
         &path.join(".local/operation.json"),
         &UpdateSnapshot {
@@ -210,7 +210,7 @@ fn interrupted_updates_restore_the_previous_body_before_preparing_runtime() {
     .unwrap();
     local.state = "updating".into();
     write_receipt(&record, &local).unwrap();
-    fs_write(&path.join("task.json"), "interrupted write");
+    fs_write(&manifest_path(&path), "interrupted write");
     let observed = find(temp.path(), &id).unwrap();
     assert_eq!(observed.draft, record.draft);
     let mut scheduler = Scheduler::default();
@@ -405,7 +405,7 @@ fn cleanup_retries_preserve_scripts_and_external_projects_and_release_only_owned
     lifecycle::cleanup_using(temp.path(), &record, &mut scheduler).unwrap();
     assert_eq!(receipt(&record).unwrap().state, "removed");
     assert!(!path.join(".local/env").exists());
-    assert!(path.join("README.md").is_file());
+    assert!(path.join("TASK.md").is_file());
     assert_eq!(
         std::fs::read_to_string(project.join("keep")).unwrap(),
         "keep"
@@ -480,7 +480,7 @@ fn packages_upload_as_discoverable_directories_and_restore_paused_usable_copies(
         .unwrap();
     let relative = "automations/audit";
     assert!(tree
-        .get_path(Path::new(&format!("{relative}/task.json")))
+        .get_path(Path::new(&format!("{relative}/config/task.json")))
         .is_ok());
     assert!(tree
         .get_path(Path::new(&format!("{relative}/.local")))

@@ -45,7 +45,7 @@ pub(super) fn load(root: &Path) -> Result<Vec<ManagedAutomation>, String> {
 }
 
 pub(super) fn read_registry(root: &Path) -> Result<Registry, String> {
-    if root.join("task.json").is_file() {
+    if super::package::manifest_path(root).is_file() {
         return Ok(Registry {
             version: 1,
             tasks: vec![super::package::read(root)?],

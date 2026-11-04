@@ -95,9 +95,8 @@ pub(crate) fn import(repository: &Path, metadata: &Path) -> Result<bool, String>
             if !entry.file_type().is_file() || entry.file_name() != "task.json" {
                 continue;
             }
-            let record = package::read_backup_directory(
-                entry.path().parent().ok_or("Missing task directory")?,
-            )?;
+            let record =
+                package::read_backup_directory(package::manifest_directory(entry.path())?)?;
             if !ids.insert(record.id.clone()) {
                 return Err("Duplicate automation backup identity".into());
             }

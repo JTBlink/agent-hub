@@ -1,35 +1,25 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
-    "name": "Agent code review (Herdr)",
+    "name": "Git workspace status",
     "provider": "system",
     "content": "sh './scripts/run.sh'",
     "workdir": null,
     "schedule": {
       "kind": "daily",
-      "hour": 9,
+      "hour": 17,
       "minute": 0,
       "weekdays": true
     },
     "enabled": false
   },
-  "files": [
-    "scripts/agent-code-review.py",
-    "prompt.md",
-    "herdr.json",
-    "README.md",
-    "scripts/run.sh"
-  ],
+  "files": ["scripts/git-status.py", "scripts/run.sh", "TASK.md"],
   "dependencies": [
     {
       "kind": "python",
       "packages": []
-    },
-    {
-      "kind": "command",
-      "name": "herdr"
     }
   ]
 }

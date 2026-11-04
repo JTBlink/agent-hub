@@ -15,11 +15,15 @@ HERE = SCRIPT.parent
 PROJECT = HERE.parent / 'selected-project'
 PROJECT.mkdir(exist_ok=True)
 TASK = HERE.parent if HERE.name == 'scripts' else HERE
-PROMPT = TASK / 'prompt.md'
+PROMPT = TASK / 'prompts/prompt.md'
+if not PROMPT.exists():
+    PROMPT = TASK / 'prompt.md'
 ORIGINAL = PROMPT.read_text(encoding='utf-8')
 STATE = TASK / '.local/state/.herdr-run.json' if HERE.name == 'scripts' else HERE / '.herdr-run.json'
 STATE.parent.mkdir(parents=True, exist_ok=True)
-CONFIG = TASK / 'herdr.json'
+CONFIG = TASK / 'config/herdr.json'
+if not CONFIG.exists():
+    CONFIG = TASK / 'herdr.json'
 ORIGINAL_CONFIG = CONFIG.read_text(encoding='utf-8')
 OLD_NAME = 'ah-' + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + '-previous'
 
@@ -39,7 +43,7 @@ class HerdrChecks(unittest.TestCase):
                 output='Synthetic Herdr result', read_failure=None, config=None,
                 missing_agent=False, pane_exists=False, lookup_failure=None,
                 replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None,
-                shell_busy=False, pane_cwd=None, start_failure=None):
+                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None):
         if config is not None:
             CONFIG.write_text(json.dumps(config), encoding='utf-8')
         previous_name = json.loads(STATE.read_text()).get('agent_name', OLD_NAME) if STATE.exists() else OLD_NAME
@@ -104,7 +108,11 @@ class HerdrChecks(unittest.TestCase):
             with patch('subprocess.run', side_effect=run):
                 with patch('pathlib.Path.cwd', return_value=PROJECT):
                     with self.assertRaises(SystemExit) as result, redirect_stdout(self.output), patch('time.sleep'):
-                        runpy.run_path(str(SCRIPT), run_name='__main__')
+                        if prompt_context is None:
+                            runpy.run_path(str(SCRIPT), run_name='__main__')
+                        else:
+                            launcher = runpy.run_path(str(SCRIPT))
+                            raise SystemExit(launcher['main'](prompt_context=prompt_context))
         return result.exception.code
 
     def test_launches_in_explicit_project_without_focus_and_passes_prompt_as_data(self):
@@ -125,6 +133,15 @@ class HerdrChecks(unittest.TestCase):
         self.assertFalse(self.calls)
         self.assertIsInstance(self.execute(running=False), str)
         self.assertFalse(any('create' in args for args, _ in self.calls))
+
+    def test_preflight_context_is_submitted_without_rewriting_saved_prompt(self):
+        prompt = 'Saved review prompt'
+        PROMPT.write_text(prompt, encoding='utf-8')
+        context = 'Selected review: immutable head/base and report path'
+        self.assertEqual(self.execute(prompt_context=context), 0)
+        submitted = next(args for args, _ in self.calls if 'prompt' in args)
+        self.assertEqual(submitted[submitted.index('prompt') + 2], prompt + '\n\n' + context)
+        self.assertEqual(PROMPT.read_text(encoding='utf-8'), prompt)
 
     def test_working_or_blocked_prior_agent_is_not_prompted_again(self):
         for status in ['working', 'blocked', 'unknown']:

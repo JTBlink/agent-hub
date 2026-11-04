@@ -45,7 +45,7 @@ pub(super) fn prepare_using(
     receipt.error = None;
     write_receipt(&record, &receipt)?;
     let result = (|| {
-        let manifest: Manifest = super::storage::json(&path.join("task.json"))?;
+        let manifest: Manifest = super::layout::read_manifest(&path)?;
         super::dependencies::prepare(&path, &manifest.dependencies)?;
         super::privileged::prepare(&record)?;
         scheduler.apply(state, &mut record, false)?;

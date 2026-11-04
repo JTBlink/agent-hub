@@ -157,8 +157,9 @@ pass the entire `show` response as a draft. `pause`, `resume`, and `remove` use
 the same exact task ID; use `runs` and `logs --run` to inspect an execution.
 
 New system tasks execute `sh './scripts/run.sh'` (`& './scripts/run.ps1'` on
-Windows). Templates place executable files under `scripts/` and prompt/config/
-README at the root. The embedded source catalog and shared Python code are
+Windows). Templates use `TASK.md` as their instruction entrypoint, `config/task.json`
+for the manifest, `config/` for JSON settings, `scripts/` for executable files,
+and optional `references/` for details. `prompts/prompt.md` is the fixed Agent prompt entrypoint. The embedded source catalog and shared Python code are
 rendered into each independent package. Edit its declared files or use the
 editor; file changes produce an opaque revision, so always re-read before an
 update. Private state and runs live in `.local/`; Python dependencies have
@@ -565,7 +566,7 @@ retain customized configuration, then edit with the current revision.
 
 ### Independent automation packages
 
-New automations own a task package with `task.json`, `scripts/`, root prompt/config/README and private `.local/` state. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new paused instance and prepares its runtime. `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Use pause/resume to control scheduling; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
+New automations own a task package with root `TASK.md`, prompts in `prompts/prompt.md`, JSON in `config/` (including `task.json` and optional `herdr.json`), executable helpers in `scripts/`, optional `references/`, and private `.local/` state. Legacy root manifests and settings remain supported without implicit migration; never provide both manifest paths. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new paused instance and prepares its runtime. `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Use pause/resume to control scheduling; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
 
 ## Desktop preview browser
 

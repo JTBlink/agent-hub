@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "2.0.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -22,8 +22,8 @@
     "scripts/cleanup_rules.py",
     "scripts/cleanup_actions.py",
     "scripts/cleanup_report.py",
-    "scripts/cleanup-config.json",
-    "README.md",
+    "config/cleanup-config.json",
+    "TASK.md",
     "scripts/run.sh"
   ],
   "dependencies": [
