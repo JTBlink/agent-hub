@@ -26,6 +26,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
@@ -124,41 +125,51 @@ it("closes a view whose asynchronous creation finishes after its tab was removed
   expect(nativeApi.update).not.toHaveBeenCalled();
 });
 
-it.each(["capture", "copy"] as const)(
-  "delivers native %s data and preserves element information when screenshots fail",
-  async (operation) => {
+function selectionFrame() {
+  const picked: PickedElement = {
+    selector: "button",
+    text: "Save",
+    html: "<button>Save</button>",
+    styles: {},
+    bounds: { x: 10, y: 20, width: 100, height: 20 },
+    documentBounds: { x: 10, y: 20, width: 100, height: 20 },
+    revision: "rev",
+    url: "https://example.invalid",
+  };
+  const frame: BrowserFrame = {
+    version: 0,
+    image: "",
+    events: [],
+    info: {
+      url: picked.url,
+      title: "Fixture",
+      revision: "rev",
+      ready: "complete",
+      width: 800,
+      height: 600,
+      scrollX: 0,
+      scrollY: 0,
+      dpr: 1,
+    },
+  };
+
+  return { picked, frame };
+}
+it.each([
+  ["capture", true],
+  ["copy", true],
+  ["capture", false],
+  ["copy", false],
+] as const)(
+  "accepts native %s only with selection enabled=%s and preserves screenshot fallback",
+  async (operation, enabled) => {
     const { host, root } = setup();
     Object.defineProperty(document, "hidden", {
       configurable: true,
       value: false,
     });
     vi.mocked(nativeApi.open).mockResolvedValue("native-id");
-    const picked: PickedElement = {
-      selector: "button",
-      text: "Save",
-      html: "<button>Save</button>",
-      styles: {},
-      bounds: { x: 10, y: 20, width: 100, height: 20 },
-      documentBounds: { x: 10, y: 20, width: 100, height: 20 },
-      revision: "rev",
-      url: "https://example.invalid",
-    };
-    const frame: BrowserFrame = {
-      version: 0,
-      image: "",
-      events: [],
-      info: {
-        url: picked.url,
-        title: "Fixture",
-        revision: "rev",
-        ready: "complete",
-        width: 800,
-        height: 600,
-        scrollX: 0,
-        scrollY: 0,
-        dpr: 1,
-      },
-    };
+    const { picked, frame } = selectionFrame();
     vi.mocked(nativeApi.frame).mockResolvedValue({
       frame,
       picked,
@@ -173,7 +184,7 @@ it.each(["capture", "copy"] as const)(
       root.render(
         <NativeSurface
           active={active}
-          picking
+          picking={enabled}
           address={picked.url}
           onCapture={onCapture}
           onError={onError}
@@ -183,8 +194,12 @@ it.each(["capture", "copy"] as const)(
       );
     await act(async () => render(true));
     expect(onFrame).toHaveBeenCalledWith(frame);
-    expect(onPickingChange).toHaveBeenCalledWith(false);
-    if (operation === "capture") {
+    if (!enabled) {
+      expect(onPickingChange).not.toHaveBeenCalled();
+      expect(onCapture).not.toHaveBeenCalled();
+      expect(writeText).not.toHaveBeenCalled();
+    } else if (operation === "capture") {
+      expect(onPickingChange).toHaveBeenCalledWith(false);
       expect(onCapture).toHaveBeenCalledWith(picked);
       expect(onError).toHaveBeenCalledWith(
         "preview.elementScreenshotUnavailable",
@@ -248,3 +263,51 @@ it("opens new-window links only for the owning visible native tab", async () => 
   expect(onNewTab).toHaveBeenCalledTimes(1);
   await act(async () => root.unmount());
 });
+
+it.each(["cancelled", "background"] as const)(
+  "ignores copy results from a %s selection session",
+  async (reason) => {
+    vi.useFakeTimers();
+    const { root } = setup();
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: false,
+    });
+    vi.mocked(nativeApi.open).mockResolvedValue("native-id");
+    const { frame, picked } = selectionFrame();
+    vi.mocked(nativeApi.frame).mockResolvedValue({ frame });
+    const onCapture = vi.fn();
+    const render = (active: boolean, picking: boolean) =>
+      root.render(
+        <NativeSurface
+          active={active}
+          picking={picking}
+          address={picked.url}
+          onCapture={onCapture}
+          onFrame={vi.fn()}
+          onError={vi.fn()}
+        />,
+      );
+    try {
+      await act(async () => render(true, true));
+      let finish!: (value: Awaited<ReturnType<typeof nativeApi.frame>>) => void;
+      vi.mocked(nativeApi.frame).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      await act(async () =>
+        render(reason !== "background", reason !== "cancelled"),
+      );
+      await act(async () => finish({ frame, picked, operation: "copy" }));
+      expect(writeText).not.toHaveBeenCalled();
+      expect(onCapture).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  },
+);

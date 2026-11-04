@@ -23,6 +23,7 @@ pub struct NativeViews {
     imports: Arc<crate::core::preview::cookies::Imports>,
     import_uas: Mutex<HashMap<String, (std::time::Instant, Option<String>)>>,
     cookie_gate: tokio::sync::Mutex<()>,
+    picking: Mutex<Option<String>>,
     #[cfg(target_os = "linux")]
     closing: Mutex<std::collections::HashSet<String>>,
 }
@@ -34,12 +35,31 @@ impl Default for NativeViews {
             imports: crate::core::preview::cookies::Imports::shared(),
             import_uas: Mutex::default(),
             cookie_gate: tokio::sync::Mutex::new(()),
+            picking: Mutex::default(),
             #[cfg(target_os = "linux")]
             closing: Mutex::default(),
         }
     }
 }
 impl NativeViews {
+    fn is_picking(&self, id: &str) -> bool {
+        self.picking
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .as_deref()
+            == Some(id)
+    }
+    fn set_picking(&self, id: &str, enabled: bool) {
+        let mut picking = self
+            .picking
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if enabled {
+            *picking = Some(id.into());
+        } else if picking.as_deref() == Some(id) {
+            *picking = None;
+        }
+    }
     #[cfg(target_os = "linux")]
     fn last_view_closing(&self, id: &str, live: impl IntoIterator<Item = String>) -> bool {
         let live: std::collections::HashSet<_> = live.into_iter().collect();
@@ -269,6 +289,7 @@ pub fn preview_native_action(
         "back" => view.eval("history.back()").map_err(AppError::io),
         "forward" => view.eval("history.forward()").map_err(AppError::io),
         "close" => {
+            webview.state::<NativeViews>().set_picking(&id, false);
             #[cfg(target_os = "linux")]
             if webview.state::<NativeViews>().last_view_closing(
                 &id,

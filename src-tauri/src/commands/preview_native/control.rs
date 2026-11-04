@@ -42,12 +42,16 @@ pub(super) async fn verify(view: &tauri::Webview, revision: &str) -> Result<Valu
 pub async fn preview_native_frame(webview: tauri::Webview, id: String) -> Result<Value, AppError> {
     let view = target(&webview, &id)?;
     let _job = webview.state::<NativeViews>().lock(&id).await?;
-    let state = platform::query(&view, &format!("(()=>{{const state=window.__agentHubNativePreview;const picked=state?.captured;const cancelled=state?.cancelled;const events=state?.events?.splice(0,150)||[];if(state){{state.cancelled=false;state.eventBytes=0}}return {{info:{METADATA},picked,cancelled,events}}}})()")).await?;
+    let picking = webview.state::<NativeViews>().is_picking(&id);
+    let state = platform::query(&view, &format!("(()=>{{const state=window.__agentHubNativePreview;const picked={picking}?state?.captured:null;const cancelled={picking}&&state?.cancelled;const events=state?.events?.splice(0,150)||[];if(state){{state.cancelled=false;state.eventBytes=0}}return {{info:{METADATA},picked,cancelled,events}}}})()")).await?;
     let info = &state["info"];
     let mut picked = Value::Null;
     let mut screenshot_unavailable = false;
     let mut operation = "capture";
-    if let Some(captured) = state.get("picked").filter(|value| value.is_object()) {
+    if let Some(captured) = state
+        .get("picked")
+        .filter(|value| picking && value.is_object())
+    {
         let revision = captured["revision"]
             .as_str()
             .ok_or_else(|| AppError::invalid_input("Invalid native selection"))?;
@@ -78,8 +82,12 @@ pub async fn preview_native_frame(webview: tauri::Webview, id: String) -> Result
         let id = serde_json::to_string(&captured["id"]).map_err(AppError::io)?;
         platform::query(&view,&format!("(()=>{{const state=window.__agentHubNativePreview;if(state?.captured?.id==={id})state.captured=null;return true}})()")).await?;
     }
+    let cancelled = picking && state["cancelled"] == true;
+    if picked.is_object() || cancelled {
+        webview.state::<NativeViews>().set_picking(&id, false);
+    }
     Ok(
-        json!({"frame":{"version":0,"image":"","info":info,"events":inspection_events(&state["events"])},"picked":picked,"operation":operation,"screenshotUnavailable":screenshot_unavailable,"cancelled":state["cancelled"]}),
+        json!({"frame":{"version":0,"image":"","info":info,"events":inspection_events(&state["events"])},"picked":picked,"operation":operation,"screenshotUnavailable":screenshot_unavailable,"cancelled":cancelled}),
     )
 }
 
@@ -90,12 +98,18 @@ pub async fn preview_native_pick_mode(
     enabled: bool,
 ) -> Result<(), AppError> {
     let view = target(&webview, &id)?;
+    if !enabled {
+        webview.state::<NativeViews>().set_picking(&id, false);
+    }
     let _job = webview.state::<NativeViews>().lock(&id).await?;
     platform::query(
         &view,
         &format!("(()=>{{window.__agentHubNativePreview?.enable({enabled});return true}})()"),
     )
     .await?;
+    if enabled {
+        webview.state::<NativeViews>().set_picking(&id, true);
+    }
     Ok(())
 }
 #[tauri::command]

@@ -284,6 +284,7 @@
     state.picking = enabled;
     state.cancelled = false;
     if (enabled) {
+      state.captured = null;
       attach(document);
       scan();
     } else hide();

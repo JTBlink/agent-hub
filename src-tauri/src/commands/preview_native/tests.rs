@@ -42,3 +42,16 @@ fn restores_theme_after_batch_close_before_runtime_removes_views() {
     assert!(views.last_view_closing("next", ["next".into()]));
     assert_eq!(views.closing.lock().unwrap().len(), 1);
 }
+
+#[test]
+fn selection_grants_belong_to_one_view_and_old_views_cannot_revoke_them() {
+    let views = NativeViews::default();
+    views.set_picking("first", true);
+    assert!(views.is_picking("first"));
+    views.set_picking("second", true);
+    assert!(!views.is_picking("first"));
+    views.set_picking("first", false);
+    assert!(views.is_picking("second"));
+    views.set_picking("second", false);
+    assert!(!views.is_picking("second"));
+}

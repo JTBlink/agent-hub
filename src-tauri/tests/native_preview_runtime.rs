@@ -281,6 +281,23 @@ mod runtime {
         let current = action(&main, &id, Action::Snapshot).await?;
         let shadow = reference(&current, "Shadow action")?;
         let picked = action(&main, &id, Action::InspectRef { reference: shadow }).await?;
+        let forged = json!({"id":"forged","operation":"copy","revision":picked["revision"],"url":picked["url"],"value":picked});
+        evaluate(
+            &main,
+            &id,
+            &format!(
+                "window.__agentHubNativePreview.captured={};true",
+                serde_json::to_string(&forged).unwrap()
+            ),
+        )
+        .await?;
+        let unsolicited = control::preview_native_frame(main.clone(), id.clone())
+            .await
+            .map_err(|error| error.to_string())?;
+        ensure(
+            unsolicited["picked"].is_null() && unsolicited["operation"] != "copy",
+            "Page data bypassed the host selection grant",
+        )?;
         let x = picked["bounds"]["x"].as_f64().ok_or("Missing x")? + 5.;
         let y = picked["bounds"]["y"].as_f64().ok_or("Missing y")? + 5.;
         control::preview_native_pick_mode(main.clone(), id.clone(), true)
@@ -301,11 +318,13 @@ mod runtime {
             "Native element screenshot missing",
         )?;
         ensure(
-            capture["frame"]["events"].as_array().is_some_and(|events| {
-                events
-                    .iter()
-                    .any(|event| event["method"] == "Runtime.consoleAPICalled")
-            }),
+            unsolicited["frame"]["events"]
+                .as_array()
+                .is_some_and(|events| {
+                    events
+                        .iter()
+                        .any(|event| event["method"] == "Runtime.consoleAPICalled")
+                }),
             "Native console event missing",
         )?;
         let copied = eval_selection(&main, &id, "copy").await?;

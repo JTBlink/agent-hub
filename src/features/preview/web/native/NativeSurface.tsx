@@ -38,6 +38,8 @@ export function NativeSurface(props: Props) {
   const [inspection, setInspection] = useState(false);
   const [persistent, setPersistent] = useState(false);
   const [ready, setReady] = useState(false);
+  const selection = useRef<symbol | null>(null);
+  const [selectionReady, setSelectionReady] = useState<symbol | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const active = useRef(props.active);
@@ -69,11 +71,20 @@ export function NativeSurface(props: Props) {
   );
   const notifyReady = useEffectEvent((id: string) => props.onReady?.(id));
   const publish = useEffectEvent(
-    (result: Awaited<ReturnType<typeof nativeApi.frame>>) => {
+    (
+      result: Awaited<ReturnType<typeof nativeApi.frame>>,
+      session: symbol | null,
+    ) => {
       props.onFrame?.(result.frame);
       setError("");
       setLoading(result.frame.info.ready === "loading");
-      if (result.picked) {
+      const authorized =
+        session &&
+        selection.current === session &&
+        props.picking &&
+        props.active;
+      if (result.picked && authorized) {
+        selection.current = null;
         props.onPickingChange?.(false);
         if (result.operation === "copy")
           void writeText(JSON.stringify(result.picked, null, 2)).catch(report);
@@ -84,7 +95,10 @@ export function NativeSurface(props: Props) {
           props.onError(message);
         }
       }
-      if (result.cancelled) props.onPickingChange?.(false);
+      if (result.cancelled && authorized) {
+        selection.current = null;
+        props.onPickingChange?.(false);
+      }
     },
   );
   const notifyNewTab = useEffectEvent((url: string) => props.onNewTab?.(url));
@@ -239,8 +253,9 @@ export function NativeSurface(props: Props) {
     const poll = async () => {
       try {
         if (id.current && !document.hidden) {
+          const session = selection.current;
           const result = await nativeApi.frame(id.current);
-          if (!disposed) publish(result);
+          if (!disposed) publish(result, session);
         }
       } catch (error) {
         if (!disposed) report(error);
@@ -253,12 +268,29 @@ export function NativeSurface(props: Props) {
       disposed = true;
       clearTimeout(timer);
     };
-  }, [polling]);
+  }, [polling, selectionReady]);
   useEffect(() => {
-    if (ready && inspection && id.current)
-      void nativeApi
-        .picking(id.current, props.active && (props.picking ?? false))
-        .catch(report);
+    selection.current = null;
+    setSelectionReady(null);
+    if (!ready || !inspection || !id.current) return;
+    let disposed = false;
+    const session =
+      props.active && props.picking ? Symbol("native-selection") : null;
+    void nativeApi
+      .picking(id.current, !!session)
+      .then(() => {
+        if (!disposed) {
+          selection.current = session;
+          setSelectionReady(session);
+        }
+      })
+      .catch((error) => {
+        if (!disposed) report(error);
+      });
+    return () => {
+      disposed = true;
+      selection.current = null;
+    };
   }, [ready, inspection, props.picking, props.active]);
   return (
     <div className="preview-native-surface">
