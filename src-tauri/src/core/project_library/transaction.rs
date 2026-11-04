@@ -16,7 +16,7 @@ use super::{
 };
 
 pub struct ProjectLock {
-    _file: fs::File,
+    file: fs::File,
     pub journal: PathBuf,
 }
 
@@ -34,7 +34,7 @@ impl ProjectLock {
         file.try_lock_exclusive()
             .context("Project Skills are busy; retry after the current operation")?;
         Ok(Self {
-            _file: file,
+            file,
             journal: directory.join(format!("{key}.json")),
         })
     }
@@ -310,3 +310,14 @@ pub(super) fn copy_project_content(source: &Path, destination: &Path) -> Result<
     }
     Ok(())
 }
+
+impl Drop for ProjectLock {
+    fn drop(&mut self) {
+        // Closing one descriptor does not release flock while an inherited or
+        // duplicated descriptor survives. The guard owns the lock lifetime.
+        let _ = FileExt::unlock(&self.file);
+    }
+}
+
+#[cfg(test)]
+mod tests;
