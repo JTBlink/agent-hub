@@ -1,3 +1,4 @@
+import { previewMarkdownElement } from "./previewElements";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PreviewModel } from "../usePreviewWorkspace";
@@ -45,9 +46,7 @@ export function usePageFind(model: PreviewModel) {
           : -1,
       };
     } else {
-      const root = document.querySelector<HTMLElement>(
-        ".preview-tab-content:not([hidden]) .preview-markdown",
-      );
+      const root = previewMarkdownElement(id);
       if (!root) return;
       match = findInDocument(root, current.query, current.index, backwards);
     }

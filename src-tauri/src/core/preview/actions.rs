@@ -4,6 +4,9 @@ use serde_json::Value;
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Action {
+    SetTheme {
+        dark: bool,
+    },
     VerifyRevision {
         expected_revision: String,
     },
@@ -13,6 +16,9 @@ pub enum Action {
     },
     CancelUpload {
         token: String,
+    },
+    InspectRef {
+        reference: String,
     },
     ClickRef {
         reference: String,

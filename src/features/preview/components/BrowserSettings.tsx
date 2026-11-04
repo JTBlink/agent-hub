@@ -33,7 +33,7 @@ export function BrowserSettings({
     | "setSession"
     | "setViewport"
     | "viewport"
-  >;
+  > & { native?: boolean };
 }) {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<BrowserProfile>(emptyProfile);
@@ -298,6 +298,7 @@ export function BrowserSettings({
         />
         <hr />
         <h3>{t("preview.viewport")}</h3>
+        {model.native && <p>{t("preview.nativeViewportHint")}</p>}
         <ThemedSelect
           value={model.viewport ? String(model.viewport.width) : "auto"}
           onChange={(event) => {

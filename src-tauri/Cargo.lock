@@ -51,6 +51,7 @@ dependencies = [
  "anyhow",
  "base64 0.22.1",
  "block2",
+ "cairo-rs",
  "caseless",
  "chrono",
  "clap",
@@ -58,8 +59,10 @@ dependencies = [
  "fs2",
  "gethostname",
  "git2",
+ "gtk",
  "hex",
  "image",
+ "javascriptcore-rs",
  "junction",
  "keyring",
  "libc",
@@ -100,6 +103,9 @@ dependencies = [
  "urlencoding",
  "uuid",
  "walkdir",
+ "webkit2gtk",
+ "webview2-com",
+ "windows 0.61.3",
  "zip 2.4.2",
 ]
 

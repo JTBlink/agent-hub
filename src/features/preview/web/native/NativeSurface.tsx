@@ -1,3 +1,5 @@
+import { nativeViewportBounds } from "./viewport";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   useEffect,
   useEffectEvent,
@@ -17,10 +19,13 @@ interface Props {
   address: string;
   picking?: boolean;
   onReady?: (id: string) => void;
+  onThemeReady?: (id: string) => void;
   onFrame?: (frame: BrowserFrame) => void;
   onCapture?: (capture: PickedElement) => void;
   onPickingChange?: (picking: boolean) => void;
   onNavigation?: (handler: BrowserNavigation | null) => void;
+  viewport?: { width: number; height: number; mobile: boolean } | null;
+  onNewTab?: (url: string) => void;
   onLocation?: (url: string) => void;
   onError: (message: string) => void;
 }
@@ -36,6 +41,12 @@ export function NativeSurface(props: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const active = useRef(props.active);
+  const viewport = useRef(props.viewport);
+  const refreshLayout = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    viewport.current = props.viewport;
+    refreshLayout.current?.();
+  }, [props.viewport]);
   useEffect(() => {
     active.current = props.active;
   }, [props.active]);
@@ -53,16 +64,30 @@ export function NativeSurface(props: Props) {
     setError(message);
     props.onError(message);
   });
+  const notifyThemeReady = useEffectEvent((id: string) =>
+    props.onThemeReady?.(id),
+  );
   const notifyReady = useEffectEvent((id: string) => props.onReady?.(id));
   const publish = useEffectEvent(
     (result: Awaited<ReturnType<typeof nativeApi.frame>>) => {
       props.onFrame?.(result.frame);
       setError("");
       setLoading(result.frame.info.ready === "loading");
-      if (result.picked) props.onCapture?.(result.picked);
+      if (result.picked) {
+        props.onPickingChange?.(false);
+        if (result.operation === "copy")
+          void writeText(JSON.stringify(result.picked, null, 2)).catch(report);
+        else props.onCapture?.(result.picked);
+        if (result.screenshotUnavailable) {
+          const message = t("preview.elementScreenshotUnavailable");
+          setError(message);
+          props.onError(message);
+        }
+      }
       if (result.cancelled) props.onPickingChange?.(false);
     },
   );
+  const notifyNewTab = useEffectEvent((url: string) => props.onNewTab?.(url));
   const notifyLocation = useEffectEvent((url: string) =>
     props.onLocation?.(url),
   );
@@ -74,6 +99,7 @@ export function NativeSurface(props: Props) {
     let observer: ResizeObserver | undefined;
     let mutation: MutationObserver | undefined;
     let unlisten: (() => void) | undefined;
+    let unlistenNewTab: (() => void) | undefined;
     let previous = "";
     const early = new Map<
       string,
@@ -94,15 +120,11 @@ export function NativeSurface(props: Props) {
       setLoading(payload.loading);
       notifyLocation(payload.url);
     };
-    const bounds = () => {
-      const rect = surface.current!.getBoundingClientRect();
-      return {
-        x: Math.max(0, rect.x),
-        y: Math.max(0, rect.y),
-        width: Math.max(1, rect.width),
-        height: Math.max(1, rect.height),
-      };
-    };
+    const bounds = () =>
+      nativeViewportBounds(
+        surface.current!.getBoundingClientRect(),
+        viewport.current,
+      );
     const sync = () => {
       if (!id.current || !surface.current || disposed) return;
       const visible =
@@ -111,12 +133,13 @@ export function NativeSurface(props: Props) {
         !document.querySelector(
           'dialog[open], [role="dialog"], [aria-modal="true"], [role="menu"], [role="listbox"]',
         );
-      const rect = bounds();
+      const rect = visible ? bounds() : undefined;
       const next = JSON.stringify({ visible, rect });
       if (next === previous) return;
       previous = next;
       void nativeApi.update(id.current, visible, rect).catch(report);
     };
+    refreshLayout.current = sync;
     void (async () => {
       try {
         unlisten = await listen<{ id: string; url: string; loading: boolean }>(
@@ -129,16 +152,31 @@ export function NativeSurface(props: Props) {
           unlisten();
           return;
         }
-        const opened = await nativeApi.open(location.current, bounds());
+        unlistenNewTab = await listen<{ id: string; url: string }>(
+          "preview-native-new-tab",
+          ({ payload }) => {
+            if (!disposed && active.current && payload.id === id.current)
+              notifyNewTab(payload.url);
+          },
+        );
+        if (disposed) {
+          unlistenNewTab();
+          return;
+        }
+        const opened = await nativeApi.open(
+          location.current,
+          visible() ? bounds() : { x: 0, y: 0, width: 1, height: 1 },
+        );
         if (disposed) {
           await nativeApi.action(opened, "close");
           return;
         }
         id.current = opened;
-        const info = await nativeApi.info();
+        const info = await nativeApi.info(opened);
         if (disposed) return;
         setInspection(info.inspection ?? true);
         setPersistent(info.persistent ?? false);
+        notifyThemeReady(opened);
         if (info.inspection ?? true) notifyReady(opened);
         setReady(true);
         if (early.has(opened)) consume(early.get(opened)!);
@@ -164,10 +202,12 @@ export function NativeSurface(props: Props) {
     })();
     return () => {
       disposed = true;
+      refreshLayout.current = null;
       notifyNavigation(null);
       observer?.disconnect();
       mutation?.disconnect();
       unlisten?.();
+      unlistenNewTab?.();
       window.removeEventListener("resize", sync);
       window.removeEventListener("scroll", sync, true);
       document.removeEventListener("visibilitychange", sync);
@@ -175,7 +215,7 @@ export function NativeSurface(props: Props) {
       id.current = null;
       if (opened) void nativeApi.action(opened, "close").catch(() => {});
     };
-  }, []);
+  }, [visible]);
   useEffect(() => {
     if (id.current) void nativeApi.update(id.current, visible()).catch(report);
   }, [props.active, visible]);
@@ -187,7 +227,11 @@ export function NativeSurface(props: Props) {
         .catch(report);
     }
   }, [props.address, props.active, ready, visible]);
-  const polling = ready && inspection && props.active && !!props.onFrame;
+  const polling =
+    ready &&
+    inspection &&
+    props.active &&
+    !!(props.onFrame || props.onCapture || props.picking);
   useEffect(() => {
     if (!polling) return;
     let disposed = false;
@@ -212,8 +256,10 @@ export function NativeSurface(props: Props) {
   }, [polling]);
   useEffect(() => {
     if (ready && inspection && id.current)
-      void nativeApi.picking(id.current, props.picking ?? false).catch(report);
-  }, [ready, inspection, props.picking]);
+      void nativeApi
+        .picking(id.current, props.active && (props.picking ?? false))
+        .catch(report);
+  }, [ready, inspection, props.picking, props.active]);
   return (
     <div className="preview-native-surface">
       <div className="preview-native-toolbar">

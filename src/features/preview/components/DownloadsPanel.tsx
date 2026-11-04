@@ -142,9 +142,13 @@ export function DownloadsPanel({
               {item.state === "inProgress" && item.verified === false && (
                 <p role="status">{t("preview.downloadUnverified")}</p>
               )}
+              {item.state === "inProgress" &&
+                item.cancel_supported === false && (
+                  <p>{t("preview.nativeDownloadProgress")}</p>
+                )}
               {item.state === "inProgress" ? (
                 <button
-                  disabled={busy !== null}
+                  disabled={busy !== null || item.cancel_supported === false}
                   onClick={() =>
                     void run(item, () =>
                       previewApi.cancelDownload(item.profile, item.id),

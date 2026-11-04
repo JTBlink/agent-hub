@@ -6,7 +6,7 @@ use crate::core::{
 use serde::Deserialize;
 use serde_json::Value;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{Manager, State};
 
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -119,10 +119,15 @@ pub enum PreviewRequest {
 }
 #[tauri::command]
 pub async fn preview_request(
+    app: tauri::AppHandle,
     preview: State<'_, Arc<Preview>>,
     request: PreviewRequest,
 ) -> Result<Value, AppError> {
     let preview = preview.inner().clone();
+    let native_downloads = app
+        .state::<super::preview_native::NativeViews>()
+        .downloads
+        .clone();
     tauri::async_runtime::spawn_blocking(move || {
         let value = match request {
             PreviewRequest::CookiePrepare { id, revision, text } => {
@@ -183,12 +188,31 @@ pub async fn preview_request(
                 preview.browsers.cancel_transfer(&profile, &id)?;
                 return Ok(Value::Null);
             }
-            PreviewRequest::Downloads => serde_json::to_value(preview.browsers.downloads()?),
+            PreviewRequest::Downloads => {
+                let mut items = preview
+                    .browsers
+                    .downloads()?
+                    .into_iter()
+                    .map(serde_json::to_value)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(AppError::io)?;
+                items.extend(native_downloads.snapshot()?);
+                Ok(Value::Array(items))
+            }
             PreviewRequest::ForgetDownload { profile, id } => {
-                preview.browsers.forget_download(&profile, &id)?;
+                if profile == "native" {
+                    native_downloads.forget(&id)?;
+                } else {
+                    preview.browsers.forget_download(&profile, &id)?;
+                }
                 return Ok(Value::Null);
             }
             PreviewRequest::CancelDownload { profile, id } => {
+                if profile == "native" {
+                    return Err(AppError::invalid_input(
+                        "The system WebView does not provide download cancellation",
+                    ));
+                }
                 preview.browsers.cancel_download(&profile, &id)?;
                 return Ok(Value::Null);
             }
@@ -320,7 +344,13 @@ pub async fn preview_download_file(
 ) -> Result<(), AppError> {
     let preview = preview.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let path = preview.browsers.download_path(&profile, &id)?;
+        let path = if profile == "native" {
+            app.state::<super::preview_native::NativeViews>()
+                .downloads
+                .path(&id)?
+        } else {
+            preview.browsers.download_path(&profile, &id)?
+        };
         if reveal {
             tauri_plugin_opener::reveal_item_in_dir(path).map_err(AppError::io)
         } else {

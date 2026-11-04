@@ -371,11 +371,14 @@ export function ProjectWorkspace({
                   </div>
                 )}
                 <Suspense fallback={<div role="status" />}>
-                  {previewTabs.map((tab) => (
+                  {previews?.tabs.map((tab) => (
                     <WorktreeDocumentPreview
                       key={tab.document.id}
                       document={tab.document}
                       active={
+                        visible &&
+                        !unavailable &&
+                        tab.scope === scope &&
                         previewShown &&
                         previews?.selected === tab.document.id &&
                         !skillsShown &&

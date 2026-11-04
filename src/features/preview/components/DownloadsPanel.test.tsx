@@ -215,3 +215,37 @@ it("retrieves remote files, cancels transfer, retries failures and exposes only 
     vi.unstubAllGlobals();
   }
 });
+it("shows native engine limits and does not offer an unsupported cancellation action", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(previewApi.downloads).mockResolvedValue([
+    {
+      id: "native-file",
+      profile: "native",
+      name: "native-file.bin",
+      state: "inProgress",
+      received: 0,
+      total: 0,
+      local: false,
+      verified: true,
+      cancel_supported: false,
+    },
+  ]);
+  const container = document.createElement("div"),
+    root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        <DownloadsPanel model={{ report: vi.fn(), setPanelOpen: vi.fn() }} />,
+      ),
+    );
+    expect(container.textContent).toContain("preview.nativeDownloadProgress");
+    expect(
+      [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "common.cancel",
+      )?.disabled,
+    ).toBe(true);
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});

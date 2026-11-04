@@ -6,6 +6,7 @@ import type {
 } from "../../api";
 import { invoke } from "@tauri-apps/api/core";
 export interface NativeBounds {
+  zoom?: number;
   x: number;
   y: number;
   width: number;
@@ -18,6 +19,8 @@ export const nativeApi = {
     invoke<{
       frame: BrowserFrame;
       picked?: PickedElement;
+      operation?: "capture" | "copy";
+      screenshotUnavailable?: boolean;
       cancelled?: boolean;
     }>("preview_native_frame", { id }),
   picking: (id: string, enabled: boolean) =>

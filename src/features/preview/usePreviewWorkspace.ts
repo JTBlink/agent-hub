@@ -1,23 +1,19 @@
+import { usePreviewOpenRequests } from "./shared/usePreviewOpenRequests";
+import { useIsolatedPreviewDocuments } from "./shared/useIsolatedPreviewDocuments";
+import {
+  documentSession,
+  type PreviewWorkspaceOptions,
+} from "./shared/workspaceOptions";
+import { usePreviewSearchEngine } from "./shared/usePreviewSearchEngine";
 import { useBrowserBackends } from "./web/useBrowserBackends";
 import { verifyPreviewContext } from "./shared/verifyContext";
 import { annotationActions } from "./shared/annotationActions";
 import { followDocumentLink } from "./shared/documentLinks";
 import { previewError } from "./shared/previewError";
 import { copyScreenshot } from "./shared/copyScreenshot";
-import {
-  consumePreviewRequests,
-  type PreviewOpenRequest,
-} from "./shared/openRequests";
-import { resolveAddress, type SearchEngine } from "./shared/address";
-import { getSettings, setSettings } from "../../lib/tauri";
+import { resolveAddress } from "./shared/address";
 import { capturePreview } from "./shared/screenshot";
-import {
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-  type SetStateAction,
-} from "react";
+import { useEffect, useRef, useState, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import {
   previewApi,
@@ -47,9 +43,14 @@ import { getErrorMessage } from "../../lib/error";
 
 export type PreviewPanel =
   "annotations" | "settings" | "history" | "tools" | "downloads";
-export function usePreviewWorkspace() {
+export function usePreviewWorkspace({
+  initialDocument,
+  isolated = false,
+}: PreviewWorkspaceOptions = {}) {
   const { t } = useTranslation();
-  const [session, setSessionState] = useState(loadPreviewSession);
+  const [session, setSessionState] = useState(() =>
+    initialDocument ? documentSession(initialDocument) : loadPreviewSession(),
+  );
   const sessionRef = useRef(session);
   const setSession = (update: SetStateAction<typeof session>) => {
     const next =
@@ -57,32 +58,16 @@ export function usePreviewWorkspace() {
     sessionRef.current = next;
     setSessionState(next);
   };
-  const [searchEngine, setSearchEngineState] = useState<SearchEngine>("bing");
-  const setSearchEngine = (value: SearchEngine) => {
-    setSearchEngineState(value);
-    void setSettings("preview_search_engine", value).catch((error: unknown) =>
-      setError(getErrorMessage(error, t("common.error"))),
-    );
-  };
-  useEffect(() => {
-    let disposed = false;
-    void getSettings("preview_search_engine")
-      .then((value) => {
-        if (
-          !disposed &&
-          (value === "bing" || value === "google" || value === "duckduckgo")
-        )
-          setSearchEngineState(value);
-      })
-      .catch(() => {});
-    return () => {
-      disposed = true;
-    };
-  }, []);
   const [documents, setDocuments] = useState<Record<string, PreviewDocument>>(
-    {},
+    () =>
+      initialDocument ? { [`doc:${initialDocument.id}`]: initialDocument } : {},
   );
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>(() =>
+    initialDocument
+      ? { [`doc:${initialDocument.id}`]: initialDocument.content }
+      : {},
+  );
+  useIsolatedPreviewDocuments(isolated, initialDocument?.id, documents);
   const [pageIds, setPageIdsState] = useState<Record<string, string>>({});
   const pageIdsRef = useRef<Record<string, string>>({});
   const setPageIds = (update: SetStateAction<Record<string, string>>) => {
@@ -132,6 +117,7 @@ export function usePreviewWorkspace() {
     !!active &&
     (active.profile === "native" || !!backends.nativeTabs[active.id]);
   const report = (error: unknown) => setError(previewError(error, t));
+  const { searchEngine, setSearchEngine } = usePreviewSearchEngine(report);
   useEffect(() => {
     let disposed = false;
     previewApi
@@ -146,7 +132,9 @@ export function usePreviewWorkspace() {
       disposed = true;
     };
   }, [t]);
-  useEffect(() => savePreviewSession(session, info?.profiles), [session, info]);
+  useEffect(() => {
+    if (!isolated) savePreviewSession(session, info?.profiles);
+  }, [session, info, isolated]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 4000);
@@ -250,7 +238,7 @@ export function usePreviewWorkspace() {
       ),
     );
     for (const [tab, document] of Object.entries(documents))
-      if (!retained.has(tab))
+      if (!retained.has(tab) && document.id !== initialDocument?.id)
         void previewApi.closeDocument(document.id).catch(report);
     const retain = <T>(values: Record<string, T>) =>
       Object.fromEntries(
@@ -406,6 +394,7 @@ export function usePreviewWorkspace() {
       );
       if (pageId)
         await previewApi.action(pageId, { kind: "reload", hard: true });
+      if (isolated) window.dispatchEvent(new Event("worktree-file-saved"));
       setNotice(t("preview.saved"));
     } catch (error) {
       report(error);
@@ -500,18 +489,7 @@ export function usePreviewWorkspace() {
     setSession((previous) => restorePreview(previous, id));
     resetView();
   };
-  const receiveDocument = useEffectEvent((value: PreviewOpenRequest) => {
-    try {
-      if (value.kind === "web") openWeb(value.address, value.profile);
-      else acceptDocument(value.document);
-    } catch (error) {
-      report(error);
-    }
-  });
-  useEffect(
-    () => consumePreviewRequests((value) => receiveDocument(value)),
-    [],
-  );
+  usePreviewOpenRequests(isolated, { openWeb, acceptDocument, report });
   const openDocumentLink = async (href: string, invert = false) => {
     if (!document) return;
     try {
@@ -527,7 +505,19 @@ export function usePreviewWorkspace() {
       report(error);
     }
   };
+  const requestClose = () => {
+    const dirtyTab = Object.keys(documents).find(
+      (id) => drafts[id] !== documents[id].content,
+    );
+    if (busy || dirtyTab) {
+      if (dirtyTab && dirtyTab !== active?.id) select(dirtyTab);
+      setNotice(t(busy ? "common.loading" : "preview.saveBeforeClose"));
+      return false;
+    }
+    return true;
+  };
   return {
+    requestClose,
     session,
     sessionRef,
     searchEngine,

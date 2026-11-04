@@ -55,6 +55,7 @@ impl Browsers {
             page.frame_info = None;
         }
         match action {
+            Action::SetTheme { dark } => page.cdp.call("Emulation.setEmulatedMedia", json!({ "features": [{ "name": "prefers-color-scheme", "value": if dark { "dark" } else { "light" } }] })),
             Action::VerifyRevision {expected_revision} => {
                 if page.identity()?.0 != expected_revision { return Err(AppError::cancelled("PREVIEW_CONTEXT_CHANGED")); }
                 Ok(Value::Null)
@@ -69,6 +70,13 @@ impl Browsers {
                 Ok(Value::Null)
             }
 
+            Action::InspectRef {reference} => {
+                page.validate_reference(&reference)?;
+                let (revision,url)=page.identity()?;
+                let value=page.cdp.evaluate(&super::scripts::reference(&reference,super::scripts::ReferenceAction::Inspect)?)?;
+                page.validate_reference(&reference)?;
+                super::capture::normalize(value,revision,url)
+            }
             Action::ClickRef {reference} => {
                 page.validate_reference(&reference)?;
                 let encoded=serde_json::to_string(&reference).map_err(|error|AppError::invalid_input(error.to_string()))?;
@@ -130,7 +138,7 @@ impl Browsers {
             Action::Pick { x, y } => {
                 if !x.is_finite() || !y.is_finite() { return Err(AppError::invalid_input("Invalid pick position")); }
                 let (revision,url)=page.identity()?;
-                let value=page.cdp.evaluate(&format!("({})({}, {})", include_str!("scripts/pick.js"), x, y))?;
+                let value=page.cdp.evaluate(&format!("({})({}, {})", super::scripts::picker(), x, y))?;
                 if !value.is_object(){return Ok(Value::Null);}
                 if page.identity()?.0 != revision { return Err(AppError::cancelled("Page changed during selection")); }
                 super::capture::normalize(value,revision,url)
@@ -138,7 +146,7 @@ impl Browsers {
             Action::Snapshot => {
                 let (revision,url)=page.identity()?;
                 let token = uuid::Uuid::new_v4().simple().to_string();
-                let mut value = page.cdp.evaluate(&include_str!("scripts/snapshot.js").replace("__SNAPSHOT_ID__",&token))?;
+                let mut value = page.cdp.evaluate(&super::scripts::snapshot(&token))?;
                 if !value.is_object() || page.identity()?.0 != revision {return Err(AppError::cancelled("Page changed during snapshot"));}
                 if page.snapshots.len() >= 8 { page.snapshots.pop_front(); }
                 page.snapshots.push_back((token, revision.clone()));
@@ -163,13 +171,10 @@ impl Browsers {
                 if page.identity()?.0 != revision { return Err(AppError::cancelled("Page changed during capture")); }
                 if result["data"].as_str().is_some_and(|data| data.len() <= 24 * 1024 * 1024) { Ok(result) } else { Err(AppError::invalid_input("Screenshot is unavailable or exceeds limit")) }
             }
-            Action::Find { text, backwards } => {
-                let encoded = serde_json::to_string(&text).map_err(|error| AppError::invalid_input(error.to_string()))?;
-                page.cdp.evaluate(&format!("(()=>{{const text={encoded};const found=window.find(text,false,{backwards},true);const count=text?document.body.innerText.toLowerCase().split(text.toLowerCase()).length-1:0;return {{found,count}};}})()"))
-            }
+            Action::Find { text, backwards } => page.cdp.evaluate(&super::scripts::find(&text, backwards)?),
             Action::Cookies => page.cdp.call("Network.getAllCookies", json!({})),
             Action::ImportCookies { .. } => Err(AppError::internal("Cookie import was not dispatched")),
-            Action::Storage => page.cdp.evaluate("({local:Object.fromEntries(Object.entries(localStorage)),session:Object.fromEntries(Object.entries(sessionStorage))})"),
+            Action::Storage => page.cdp.evaluate(super::scripts::STORAGE),
         }
     }
 }

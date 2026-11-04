@@ -80,8 +80,11 @@ export interface PickedElement {
   url: string;
 }
 export type BrowserAction =
+  | { kind: "inspect_ref" | "click_ref"; reference: string }
+  | { kind: "fill_ref"; reference: string; value: string }
   | { kind: "verify_revision"; expected_revision: string }
   | { kind: "handle_dialog"; accept: boolean; prompt?: string }
+  | { kind: "set_theme"; dark: boolean }
   | { kind: "cancel_upload"; token: string }
   | { kind: "navigate"; url: string }
   | { kind: "reload"; hard: boolean }
@@ -263,6 +266,7 @@ export const previewApi = {
 };
 
 export interface PreviewDownload {
+  cancel_supported?: boolean;
   transfer?: {
     state: "running" | "canceling" | "completed" | "failed" | "canceled";
     received: number;

@@ -15,6 +15,7 @@ mod file_types;
 mod frames;
 mod inventory;
 mod lifecycle;
+pub mod native_downloads;
 pub mod navigation;
 pub mod packets;
 mod page_actions;
@@ -27,6 +28,7 @@ mod remote_proxy_tests;
 mod remote_ssh;
 mod resource_bridge;
 pub mod runtime;
+pub(crate) mod scripts;
 #[cfg(all(test, unix))]
 mod ssh_fixture;
 pub mod uploads;

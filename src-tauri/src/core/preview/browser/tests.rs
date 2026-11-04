@@ -171,3 +171,27 @@ fn navigates_types_resizes_and_captures_a_real_browser_page() {
     assert!(browsers.state.lock().unwrap().pages.contains_key(&id));
     browsers.clear();
 }
+
+#[test]
+#[ignore = "requires an installed Chromium runtime; verifies native media emulation"]
+fn synchronizes_page_theme_without_replacing_website_styles() {
+    let directory = tempfile::tempdir().unwrap();
+    let browsers = Browsers::new(directory.path().join("runtime"));
+    let id = browsers.create("guest", "about:blank").unwrap();
+    browsers.action(&id, Action::Evaluate { expression: "document.body.innerHTML='<style>body{background:rgb(255,255,255)}@media(prefers-color-scheme:dark){body{background:rgb(30,30,46)}}</style><p>Theme content</p>';true".into() }).unwrap();
+    for dark in [true, false, true] {
+        browsers.action(&id, Action::SetTheme { dark }).unwrap();
+        let page = browsers.action(&id, Action::Evaluate { expression: "({dark:matchMedia('(prefers-color-scheme: dark)').matches,background:getComputedStyle(document.body).backgroundColor,text:document.querySelector('p').textContent})".into() }).unwrap();
+        assert_eq!(page["dark"], dark);
+        assert_eq!(
+            page["background"],
+            if dark {
+                "rgb(30, 30, 46)"
+            } else {
+                "rgb(255, 255, 255)"
+            }
+        );
+        assert_eq!(page["text"], "Theme content");
+    }
+    browsers.close(&id).unwrap();
+}

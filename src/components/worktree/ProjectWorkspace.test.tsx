@@ -16,6 +16,7 @@ import { WorkspaceFilesProvider } from "./WorkspaceFilesContext";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { ProjectSkills } from "../../views/ProjectSkills";
 import { previewApi } from "../../features/preview/api";
+import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
 import { PREVIEW_OPEN_EVENT } from "../../features/preview/shared/openRequests";
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { GitFileEditor } from "../git/GitFileEditor";
@@ -78,6 +79,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../features/preview/api", () => ({
   previewApi: {
     openProject: vi.fn(),
+    info: vi.fn().mockResolvedValue({ profiles: [] }),
+    list: vi.fn().mockResolvedValue([]),
+    captureRendered: vi.fn().mockResolvedValue("png-data"),
+    export: vi.fn().mockResolvedValue(undefined),
+    readDocument: vi.fn(),
+    saveDocument: vi.fn(),
     closeDocument: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -647,6 +654,105 @@ it("adds a preview after the source tab without navigation, reuses it, and close
     );
     expect(host.querySelector("[data-route]")?.textContent).toBe(route);
     expect(navigatePreview).not.toHaveBeenCalled();
+    const menuAction = async (label: string) => {
+      await click(".preview-more-trigger");
+      const button = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          ".preview-toolbar button",
+        ),
+      ].find((button) => button.textContent === label)!;
+      expect(button).toBeDefined();
+      await act(async () => button.click());
+    };
+    await click(".preview-more-trigger");
+    for (const label of [
+      "preview.pick",
+      "preview.screenshot",
+      "preview.fullScreenshot",
+      "preview.copyScreenshot",
+      "preview.source",
+      "preview.find",
+      "preview.downloads",
+      "preview.history",
+      "preview.developerTools",
+      "preview.settings",
+      "preview.annotations",
+    ]) {
+      expect(
+        [...document.querySelectorAll(".preview-toolbar button")].some(
+          (button) => button.textContent === label,
+        ),
+      ).toBe(true);
+    }
+    await act(async () =>
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          ".preview-toolbar button",
+        ),
+      ]
+        .find((button) => button.textContent === "preview.screenshot")!
+        .click(),
+    );
+    expect(previewApi.captureRendered).toHaveBeenCalledWith(
+      expect.stringContaining("Preview example"),
+      expect.any(Number),
+      expect.any(Number),
+      "default",
+      false,
+      expect.any(Object),
+    );
+    expect(previewApi.export).toHaveBeenCalledWith(
+      "page-viewport.png",
+      "png-data",
+      true,
+      undefined,
+    );
+    await menuAction("preview.pick");
+    const heading = host.querySelector<HTMLElement>(".preview-markdown h1")!;
+    Object.defineProperty(heading, "innerText", {
+      value: heading.textContent,
+      configurable: true,
+    });
+    await act(async () => heading.click());
+    expect(host.querySelector(".preview-note")?.textContent).toContain(
+      "Preview example",
+    );
+    expect(
+      [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+        (button) => button.textContent === "preview.sendAgent",
+      )?.disabled,
+    ).toBe(false);
+    installCodeEditorGeometry();
+    await menuAction("preview.source");
+    await act(async () =>
+      codeEditor(host).dispatch({
+        changes: {
+          from: 0,
+          to: codeEditor(host).state.doc.length,
+          insert: "# Edited preview",
+        },
+      }),
+    );
+    await click('[aria-label="preview.closeTab"]');
+    expect(previewApi.closeDocument).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("preview.saveBeforeClose");
+    // Switching away preserves the editable preview and its annotations.
+    await act(async () => (tabs[source] as HTMLElement).click());
+    await act(async () => (tabs[source + 1] as HTMLElement).click());
+    expect(codeEditor(host).state.sliceDoc()).toBe("# Edited preview");
+    vi.mocked(previewApi.saveDocument).mockResolvedValue({
+      id: "workspace-preview",
+      kind: "markdown",
+      title: "README.md",
+      content: "# Edited preview",
+      revision: "saved-again",
+    });
+    await menuAction("common.save");
+    expect(previewApi.saveDocument).toHaveBeenCalledWith(
+      "workspace-preview",
+      "# Edited preview",
+      "saved",
+    );
     await act(async () => (tabs[source] as HTMLElement).click());
     await click("[data-preview]");
     expect(previewApi.openProject).toHaveBeenCalledTimes(1);

@@ -6,29 +6,10 @@ mod macos;
 #[cfg(target_os = "macos")]
 mod macos_cookies;
 #[cfg(target_os = "macos")]
-pub use macos::{query, snapshot, user_agent};
+pub use macos::{evaluate, query, snapshot, theme, user_agent};
 #[cfg(target_os = "macos")]
 pub use macos_cookies::{cookies, mutate_cookie};
-#[cfg(not(target_os = "macos"))]
-pub async fn query(_: &tauri::Webview, _: &str) -> Result<Value, AppError> {
-    Err(AppError::invalid_input(
-        "Native page inspection is unavailable on this platform",
-    ))
-}
-#[cfg(not(target_os = "macos"))]
-pub async fn snapshot(_: &tauri::Webview) -> Result<Vec<u8>, AppError> {
-    Err(AppError::invalid_input(
-        "Native capture is unavailable on this platform",
-    ))
-}
-#[cfg(not(target_os = "macos"))]
-pub async fn user_agent(_: &tauri::Webview, _: Option<String>) -> Result<(), AppError> {
-    Err(AppError::invalid_input(
-        "Native UA configuration is unavailable on this platform",
-    ))
-}
 /// A bounded reply; closing a view or losing its renderer cannot leave IPC waiting forever.
-#[cfg(target_os = "macos")]
 async fn receive<T>(
     receiver: tokio::sync::oneshot::Receiver<Result<T, AppError>>,
 ) -> Result<T, AppError> {
@@ -56,3 +37,13 @@ pub async fn mutate_cookie(
         "Native cookie import is unavailable on this platform",
     ))
 }
+
+mod script;
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+pub use windows::{evaluate, query, snapshot, theme, user_agent};
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::{evaluate, query, snapshot, theme, user_agent};

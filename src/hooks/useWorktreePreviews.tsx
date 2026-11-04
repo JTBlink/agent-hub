@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { previewApi } from "../features/preview/api";
 import {
   WorktreePreviewsContext,
@@ -13,6 +19,13 @@ export function WorktreePreviewsProvider({
   const [tabs, setTabs] = useState<WorktreePreview[]>([]);
   const owned = useRef(tabs);
   const [selected, select] = useState<string | null>(null);
+  const guards = useRef(new Map<string, () => boolean>());
+  const registerClose = useCallback((id: string, guard: () => boolean) => {
+    guards.current.set(id, guard);
+    return () => {
+      if (guards.current.get(id) === guard) guards.current.delete(id);
+    };
+  }, []);
   const pending = useRef(new Map<string, Promise<void>>());
   const mounted = useRef(true);
   useEffect(() => {
@@ -61,6 +74,11 @@ export function WorktreePreviewsProvider({
     }
   };
   const close = (id: string) => {
+    if (guards.current.get(id)?.() === false) {
+      select(id);
+      return;
+    }
+    guards.current.delete(id);
     owned.current = owned.current.filter((tab) => tab.document.id !== id);
     setTabs(owned.current);
     select((current) => (current === id ? null : current));
@@ -68,7 +86,7 @@ export function WorktreePreviewsProvider({
   };
   return (
     <WorktreePreviewsContext.Provider
-      value={{ tabs, selected, select, open, close }}
+      value={{ tabs, selected, select, open, close, registerClose }}
     >
       {children}
     </WorktreePreviewsContext.Provider>

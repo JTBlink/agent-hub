@@ -1,0 +1,68 @@
+name: Native Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-preview-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native:
+    name: Native preview (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Check out fixed revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libayatana-appindicator3-dev librsvg2-dev libwebkit2gtk-4.1-dev xvfb
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          save-if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Validate frontend
+        run: |
+          npm run version:check
+          npm run lint
+          npm test
+          npm run build
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+      - name: Lint Rust adapters
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+      - name: Run Rust regression tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - name: Verify actual native WebView
+        if: runner.os != 'Linux'
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test native_preview_runtime -- --ignored
+      - name: Verify actual WebKitGTK
+        if: runner.os == 'Linux'
+        env:
+          WEBKIT_DISABLE_COMPOSITING_MODE: "1"
+          GDK_BACKEND: x11
+        run: xvfb-run --auto-servernum cargo test --manifest-path src-tauri/Cargo.toml --locked --test native_preview_runtime -- --ignored

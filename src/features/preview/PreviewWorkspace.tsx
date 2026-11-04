@@ -1,13 +1,12 @@
-import { TabCloseButton } from "../../components/TabCloseButton";
+import { PreviewTabs, PreviewNewTab } from "./components/PreviewTabs";
 import { ResizableSidebar } from "../../components/ResizableSidebar";
-import { CardActionMenu } from "../../components/CardActionMenu";
 import { KernelInfo } from "./components/KernelInfo";
 import { ExecutionLocation } from "./components/ExecutionLocation";
 import { usePageFind } from "./shared/usePageFind";
 import { useBrowserInventory } from "./web/useBrowserInventory";
 import { DownloadsPanel } from "./components/DownloadsPanel";
 import { PreviewToolbar } from "./components/PreviewToolbar";
-import { useState } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -17,9 +16,6 @@ import {
   Plus,
   X,
   Globe,
-  VenetianMask,
-  FileText,
-  FileCode2,
   MousePointer2,
   Search,
   Download,
@@ -30,7 +26,7 @@ import {
 } from "lucide-react";
 import { openPreviewAddress } from "./shared/documentLinks";
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
-import { previewApi } from "./api";
+import { previewApi, type PreviewDocument } from "./api";
 import { BrowserSurface } from "./web/BrowserSurface";
 import { MarkdownPreview } from "./markdown/MarkdownPreview";
 import { CodeEditor } from "../../components/file-reader/CodeEditor";
@@ -41,15 +37,28 @@ import { BrowserTools } from "./components/BrowserTools";
 import { AgentDelivery } from "./components/AgentDelivery";
 import "./preview.css";
 
+export interface PreviewWorkspaceHandle {
+  requestClose: () => boolean;
+}
+
 export function PreviewWorkspace({
   shown,
   deliveryAdapter,
+  initialDocument,
+  embedded = false,
+  ref,
+  onClose,
 }: {
   shown: boolean;
+  initialDocument?: PreviewDocument;
+  embedded?: boolean;
+  ref?: Ref<PreviewWorkspaceHandle>;
+  onClose?: () => void;
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
 }) {
   const { t } = useTranslation();
-  const model = usePreviewWorkspace();
+  const model = usePreviewWorkspace({ initialDocument, isolated: embedded });
+  useImperativeHandle(ref, () => ({ requestClose: model.requestClose }));
   useBrowserInventory(shown, model);
   const [address, setAddress] = useState("");
   const [previousAddress, setPreviousAddress] = useState<string | undefined>();
@@ -74,7 +83,7 @@ export function PreviewWorkspace({
         if (!shown) return;
         if (event.key === "F6") {
           event.preventDefault();
-          document
+          event.currentTarget
             .querySelector<HTMLInputElement>("[data-preview-address]")
             ?.focus();
           return;
@@ -93,7 +102,7 @@ export function PreviewWorkspace({
         event.preventDefault();
         event.stopPropagation();
         if (key === "l") {
-          const input = document.querySelector<HTMLInputElement>(
+          const input = event.currentTarget.querySelector<HTMLInputElement>(
             "[data-preview-address]",
           );
           input?.focus();
@@ -104,7 +113,10 @@ export function PreviewWorkspace({
           if (event.shiftKey) model.restore();
           else model.openWeb();
         }
-        if (key === "w" && active) void model.close(active.id);
+        if (key === "w" && active) {
+          if (embedded && model.session.tabs.length === 1 && onClose) onClose();
+          else void model.close(active.id);
+        }
         if (key === "s") void model.save();
         if (key === "r") {
           if (model.document) void model.reloadDocument();
@@ -113,67 +125,13 @@ export function PreviewWorkspace({
         }
       }}
     >
-      <div
-        className="preview-tabs"
-        role="tablist"
-        aria-label={t("preview.tabs")}
-      >
-        {model.session.tabs.map((tab) => (
-          <div key={tab.id} className={tab.id === active?.id ? "active" : ""}>
-            <button
-              role="tab"
-              aria-selected={tab.id === active?.id}
-              onClick={() => model.select(tab.id)}
-              title={tab.title}
-            >
-              {tab.kind === "markdown" ? (
-                <FileText size={14} />
-              ) : tab.kind === "html" ? (
-                <FileCode2 size={14} />
-              ) : (
-                <Globe size={14} />
-              )}
-              <span>{tab.title}</span>
-              {model.documents[tab.id] &&
-                model.drafts[tab.id] !== model.documents[tab.id].content && (
-                  <span>●</span>
-                )}
-            </button>
-            <TabCloseButton
-              className="preview-tab-close"
-              aria-label={t("preview.closeTab", { title: tab.title })}
-              onClick={() => void model.close(tab.id)}
-            />
-          </div>
-        ))}
-        <CardActionMenu
-          className="preview-new-tab"
-          label={t("preview.newTab")}
-          align="start"
-          triggerIcon={<Plus size={16} />}
-          actions={[
-            {
-              key: "web",
-              label: t("preview.newTab"),
-              icon: <Globe size={14} />,
-              onSelect: () => model.openWeb(),
-            },
-            {
-              key: "native",
-              label: t("preview.nativeBackend"),
-              icon: <Globe size={14} />,
-              onSelect: () => model.openWeb("about:blank", "native"),
-            },
-            {
-              key: "guest",
-              label: t("preview.newGuestTab"),
-              icon: <VenetianMask size={14} />,
-              onSelect: () => model.openWeb("about:blank", "guest"),
-            },
-          ]}
-        />
-      </div>
+      {(!embedded || model.session.tabs.length > 1) && (
+        <PreviewTabs model={model} />
+      )}
       <div className="preview-addressbar">
+        {embedded && model.session.tabs.length <= 1 && (
+          <PreviewNewTab model={model} />
+        )}
         <button
           title={t("preview.back")}
           disabled={!model.pageId && !model.native}
@@ -233,7 +191,7 @@ export function PreviewWorkspace({
         <button
           aria-label={t("preview.developerTools")}
           title={t("preview.developerTools")}
-          disabled={model.native}
+          disabled={model.native && !model.pageId}
           className={model.panelOpen && model.panel === "tools" ? "active" : ""}
           onClick={() => showPanel("tools")}
         >
@@ -362,12 +320,13 @@ export function PreviewWorkspace({
               <div
                 key={tab.id}
                 className="preview-tab-content"
+                data-preview-tab-id={tab.id}
                 hidden={active?.id !== tab.id}
               >
                 {tab.kind === "markdown" && doc ? (
                   <MarkdownPreview
                     document={doc}
-                    active={active?.id === tab.id}
+                    active={shown && active?.id === tab.id}
                     draft={model.drafts[tab.id] ?? doc.content}
                     onChange={model.busy ? undefined : model.changeDraft}
                     source={model.source && active?.id === tab.id}
@@ -422,6 +381,7 @@ export function PreviewWorkspace({
                         initialId={model.pageIds[tab.id]}
                         active={shown && active?.id === tab.id && !model.source}
                         address={tab.address}
+                        onNewTab={(url) => model.openWeb(url, "native")}
                         profile={tab.profile}
                         onPickingChange={model.setPicking}
                         picking={model.picking}

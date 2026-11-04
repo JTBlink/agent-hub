@@ -18,5 +18,6 @@ export interface BrowserSurfaceProps {
   onBackend?: (backend: "chromium" | "native") => void;
   onNativeNavigation?: (handler: BrowserNavigation | null) => void;
   onPickingChange?: (picking: boolean) => void;
+  onNewTab?: (url: string) => void;
   onNativeLocation?: (url: string) => void;
 }

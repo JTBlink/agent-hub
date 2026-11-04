@@ -1,3 +1,4 @@
+import { previewMarkdownElement } from "./previewElements";
 import { previewApi } from "../api";
 import { captureDocument } from "../markdown/captureDocument";
 import type { Annotation, PreviewTab } from "./session";
@@ -14,9 +15,7 @@ export async function capturePreview({
   full: boolean;
 }) {
   if (tab.kind === "markdown") {
-    const element = document.querySelector<HTMLElement>(
-      ".preview-tab-content:not([hidden]) .preview-markdown",
-    );
+    const element = previewMarkdownElement(tab.id);
     if (!element) throw Error("Document capture unavailable");
     return captureDocument(element, tab.profile, full, note?.bounds);
   }

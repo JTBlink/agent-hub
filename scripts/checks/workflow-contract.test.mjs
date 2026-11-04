@@ -328,3 +328,30 @@ describe("GitHub Actions workflow contract", () => {
     expect(installers).toContain("contents: write");
   });
 });
+
+describe("native preview cloud validation", () => {
+  it("tests actual views on three standard runners at the fixed revision without publishing", () => {
+    const source = readText(
+      new URL("../../.github/workflows/native-preview.yml", import.meta.url),
+    );
+    const workflow = parse(source);
+    expect(Object.keys(workflow.on)).toEqual(["workflow_dispatch"]);
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    const job = workflow.jobs.native;
+    expect(job.strategy.matrix.os).toEqual([
+      "macos-latest",
+      "windows-latest",
+      "ubuntu-24.04",
+    ]);
+    expect(job.strategy["fail-fast"]).toBe(false);
+    expect(job.steps[0].with.ref).toBe("${{ github.sha }}");
+    expect(source).toContain("--locked --all-targets -- -D warnings");
+    expect(source).toContain(
+      "--locked --test native_preview_runtime -- --ignored",
+    );
+    expect(source).toContain("xvfb-run --auto-servernum");
+    expect(source).not.toMatch(
+      /contents: write|secrets\.|upload-artifact|release create/,
+    );
+  });
+});

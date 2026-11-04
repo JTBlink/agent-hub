@@ -2,6 +2,7 @@
 mod capture;
 pub mod control;
 pub mod cookies;
+pub mod downloads;
 pub mod export;
 mod platform;
 mod profile;
@@ -17,6 +18,7 @@ use std::{
 };
 use tauri::{Emitter, Manager};
 pub struct NativeViews {
+    pub downloads: downloads::Downloads,
     gates: Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>,
     imports: Arc<crate::core::preview::cookies::Imports>,
     import_uas: Mutex<HashMap<String, (std::time::Instant, Option<String>)>>,
@@ -25,6 +27,7 @@ pub struct NativeViews {
 impl Default for NativeViews {
     fn default() -> Self {
         Self {
+            downloads: downloads::Downloads::default(),
             gates: Mutex::default(),
             imports: crate::core::preview::cookies::Imports::shared(),
             import_uas: Mutex::default(),
@@ -51,6 +54,7 @@ pub struct NativeBounds {
     y: f64,
     width: f64,
     height: f64,
+    zoom: Option<f64>,
 }
 impl NativeBounds {
     fn validate(&self) -> Result<(), AppError> {
@@ -63,6 +67,9 @@ impl NativeBounds {
             || self.height < 1.0
             || self.x + self.width > 20000.0
             || self.y + self.height > 20000.0
+            || self
+                .zoom
+                .is_some_and(|zoom| !zoom.is_finite() || !(0.01..=5.0).contains(&zoom))
         {
             return Err(AppError::invalid_input("Invalid native browser bounds"));
         }
@@ -114,13 +121,17 @@ pub async fn preview_native_info(
     } else {
         "WebKitGTK"
     };
-    let ua = if let Some(id) = id.filter(|_| cfg!(target_os = "macos")) {
-        control::metadata(&target(&webview, &id)?).await?["userAgent"].clone()
+    let ua = if let Some(id) = id {
+        let view = target(&webview, &id)?;
+        control::metadata(&view)
+            .await
+            .map(|metadata| metadata["userAgent"].clone())
+            .unwrap_or(serde_json::Value::Null)
     } else {
         serde_json::Value::Null
     };
     Ok(
-        serde_json::json!({"engine":engine,"version":tauri::webview_version().ok(),"userAgent":ua,"inspection":cfg!(target_os="macos"),"persistent":profile::persistent()}),
+        serde_json::json!({"engine":engine,"version":tauri::webview_version().ok(),"userAgent":ua,"inspection":ua.is_string(),"cookies":cfg!(target_os="macos"),"persistent":profile::persistent()}),
     )
 }
 #[tauri::command]
@@ -145,15 +156,34 @@ pub async fn preview_native_open(
     tauri::async_runtime::spawn_blocking(move || {
         let id = format!("preview-native-{}", uuid::Uuid::new_v4());
         let event_id = id.clone();
+        let popup_id = id.clone();
+        let popup_app = window.app_handle().clone();
         let builder = tauri::webview::WebviewBuilder::new(&id, tauri::WebviewUrl::External(url))
             .incognito(true)
-            .initialization_script(include_str!("preview_native/bridge.js").replace(
-                "__PICK_FUNCTION__",
-                include_str!("../core/preview/scripts/pick.js"),
-            ))
+            .initialization_script(
+                include_str!("preview_native/bridge.js")
+                    .replace(
+                        "__PICK_FUNCTION__",
+                        &crate::core::preview::scripts::picker(),
+                    )
+                    .replace(
+                        "__ELEMENT_CONTEXT__",
+                        include_str!("../core/preview/scripts/elements.js"),
+                    ),
+            )
             .focused(false)
             .on_navigation(|url| native_url(url.as_str()).is_ok())
-            .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+            .on_download(downloads::handle)
+            .on_new_window(move |url, _| {
+                if native_url(url.as_str()).is_ok() && url.scheme() != "about" {
+                    let _ = popup_app.emit_to(
+                        "main",
+                        "preview-native-new-tab",
+                        serde_json::json!({"id":popup_id,"url":url.as_str()}),
+                    );
+                }
+                tauri::webview::NewWindowResponse::Deny
+            })
             .on_page_load(move |view, payload| {
                 let _ = view.app_handle().emit_to(
                     "main",
@@ -166,13 +196,17 @@ pub async fn preview_native_open(
                 );
             });
         let builder = profile::configure(builder)?;
-        window
+        let view = window
             .add_child(
                 builder,
                 tauri::LogicalPosition::new(bounds.x, bounds.y),
                 tauri::LogicalSize::new(bounds.width, bounds.height),
             )
             .map_err(AppError::io)?;
+        if let Err(error) = view.set_zoom(bounds.zoom.unwrap_or(1.0)) {
+            let _ = view.close();
+            return Err(AppError::io(error));
+        }
         Ok(id)
     })
     .await
@@ -192,6 +226,8 @@ pub fn preview_native_update(
         view.set_position(tauri::LogicalPosition::new(bounds.x, bounds.y))
             .map_err(AppError::io)?;
         view.set_size(tauri::LogicalSize::new(bounds.width, bounds.height))
+            .map_err(AppError::io)?;
+        view.set_zoom(bounds.zoom.unwrap_or(1.0))
             .map_err(AppError::io)?;
     }
     if let Some(url) = url {
@@ -216,6 +252,7 @@ pub fn preview_native_action(
         "back" => view.eval("history.back()").map_err(AppError::io),
         "forward" => view.eval("history.forward()").map_err(AppError::io),
         "close" => {
+            webview.state::<NativeViews>().downloads.close_view(&id);
             if let Ok(mut gates) = webview.state::<NativeViews>().gates.lock() {
                 gates.remove(&id);
             }

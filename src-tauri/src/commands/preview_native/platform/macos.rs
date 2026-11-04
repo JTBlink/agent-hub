@@ -8,19 +8,39 @@ use objc2_web_kit::{WKSnapshotConfiguration, WKWebView};
 use std::sync::Mutex;
 
 pub async fn query(view: &tauri::Webview, expression: &str) -> Result<Value, AppError> {
-    if expression.len() > 256 * 1024 {
-        return Err(AppError::invalid_input("Native expression exceeds limit"));
-    }
-    let script = format!("(()=>{{try{{return {{ok:true,value:({expression})}}}}catch(error){{return {{ok:false,error:String(error)}}}}}})()");
+    execute(view, script::query(expression)?, true).await
+}
+
+/// Execute user expressions or statements through WebKit itself, without CSP-sensitive eval.
+pub async fn evaluate(view: &tauri::Webview, expression: &str) -> Result<Value, AppError> {
+    execute(view, expression.into(), false).await
+}
+
+async fn execute(view: &tauri::Webview, script: String, wrapped: bool) -> Result<Value, AppError> {
+    script::validate(&script)?;
     let (sender, receiver) = tokio::sync::oneshot::channel();
     view.with_webview(move |platform| {
         let sender = Mutex::new(Some(sender));
         let callback = block2::RcBlock::new(move |value: *mut AnyObject, error: *mut NSError| {
             let result = (|| {
-                if !error.is_null() || value.is_null() {
+                if !error.is_null() {
+                    // WebKit's exception message is page data, shown only to this inspector caller.
+                    let error = unsafe { &*error };
+                    let details = error.userInfo();
+                    let message = details
+                        .objectForKey(&NSString::from_str("WKJavaScriptExceptionMessage"))
+                        .and_then(|value| {
+                            value
+                                .downcast_ref::<NSString>()
+                                .map(|value| value.to_string())
+                        })
+                        .unwrap_or_else(|| error.localizedDescription().to_string());
                     return Err(AppError::network(
-                        "Native script failed or its result cannot be serialized",
+                        message.chars().take(2000).collect::<String>(),
                     ));
+                }
+                if value.is_null() {
+                    return Ok(Value::Null);
                 }
                 // WebKit's callback owns these objects for this invocation; no pointer escapes it.
                 let data = unsafe {
@@ -34,13 +54,7 @@ pub async fn query(view: &tauri::Webview, expression: &str) -> Result<Value, App
                 if bytes.len() > 2 * 1024 * 1024 {
                     return Err(AppError::invalid_input("Native page result exceeds limit"));
                 }
-                let mut result: Value = serde_json::from_slice(&bytes).map_err(AppError::io)?;
-                if result["ok"] != true {
-                    return Err(AppError::network(
-                        result["error"].as_str().unwrap_or("Native script failed"),
-                    ));
-                }
-                Ok(result["value"].take())
+                script::decode(std::str::from_utf8(&bytes).map_err(AppError::io)?, wrapped)
             })();
             if let Ok(mut sender) = sender.lock() {
                 if let Some(sender) = sender.take() {
@@ -114,6 +128,34 @@ pub async fn user_agent(view: &tauri::Webview, value: Option<String>) -> Result<
             wk.setCustomUserAgent(value.as_deref());
         }
         let _ = sender.send(Ok(()));
+    })
+    .map_err(AppError::io)?;
+    super::receive(receiver).await
+}
+
+/// Apply appearance to the owned child view so WebKit updates prefers-color-scheme.
+pub async fn theme(view: &tauri::Webview, dark: bool) -> Result<(), AppError> {
+    use objc2_app_kit::{
+        NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
+    };
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    view.with_webview(move |platform| {
+        let result = (|| {
+            // This closure runs on the main thread; the appearance never leaves it.
+            let name = unsafe {
+                if dark {
+                    NSAppearanceNameDarkAqua
+                } else {
+                    NSAppearanceNameAqua
+                }
+            };
+            let appearance = NSAppearance::appearanceNamed(name)
+                .ok_or_else(|| AppError::internal("Native appearance unavailable"))?;
+            let wk: &WKWebView = unsafe { &*platform.inner().cast() };
+            wk.setAppearance(Some(&appearance));
+            Ok(())
+        })();
+        let _ = sender.send(result);
     })
     .map_err(AppError::io)?;
     super::receive(receiver).await
