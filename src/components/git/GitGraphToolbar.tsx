@@ -47,7 +47,7 @@ export function GitGraphToolbar({
   const settingsId = useId();
   const iconButton = "app-button-ghost h-7 w-7 shrink-0 p-0";
   return (
-    <div className="shrink-0 border-b border-border-subtle text-xs">
+    <div className="shrink-0 border-b border-border-subtle text-sm">
       <div className="flex flex-wrap items-center gap-2 px-3 py-2">
         {branchControl}
         <label className="flex items-center gap-1.5">

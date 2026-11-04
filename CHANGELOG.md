@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Git Graph 提交列表、分支标签与筛选工具栏改用 13px 正文字号，保留紧凑行高并跟随应用文字缩放，提升阅读清晰度。
+
 - 明确自动化 CLI 的市场与本地任务边界：市场任务仅查看和安装，编辑、运行及删除等操作只针对本地任务实例。
 
 - CLI `automations list` 默认只返回 AgentHub 创建的任务，与桌面页一致；仍可通过 `--origin all` 或 `--origin external` 显式查询其他来源。

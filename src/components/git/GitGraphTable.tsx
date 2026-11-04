@@ -95,7 +95,7 @@ export function GitGraphTable({
       <table
         ref={table}
         aria-rowcount={entries.length + 1 + (showWorking ? 1 : 0)}
-        className="git-graph-table w-full border-collapse text-xs"
+        className="git-graph-table w-full border-collapse whitespace-nowrap text-sm"
         style={{ minWidth: 680 + width }}
       >
         <colgroup>

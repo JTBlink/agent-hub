@@ -33,6 +33,17 @@ try {
       );
       assert.equal(
         await evaluate(`(() => {
+          const labels = [...document.querySelectorAll('[data-commit-index], [data-graph-ref]')];
+          return labels.every(label => parseFloat(getComputedStyle(label).fontSize) === 13) &&
+            labels.every(label => label.getBoundingClientRect().height <= 30 * ${scale}) &&
+            [...document.querySelectorAll('[data-commit-index]')].every(button =>
+              Math.abs(button.closest('tr').getBoundingClientRect().height - 30 * ${scale}) < 1);
+        })()`),
+        true,
+        `${theme} ${scale}: readable commit/ref text fits the fixed graph rows`,
+      );
+      assert.equal(
+        await evaluate(`(() => {
       const rows = [...document.querySelectorAll('[data-commit-index]')].map(button => button.closest('tr'));
       const x = rows.map(row => Number(row.querySelector('circle').getAttribute('cx')));
       return x[0] > x[2] && x[1] > x[0] &&
