@@ -163,8 +163,10 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<String> {
     render_diff(&diff)
 }
 
-// libgit2's xdiff consumes C long, which is only 32 bits on Windows.
-const DIFF_CONTEXT_LINES: u32 = i32::MAX as u32;
+const MAX_DIFF_BYTES: usize = 1024 * 1024;
+// xdiff doubles this C long. The rendering budget already bounds valid output
+// below this many lines; keep the intermediate arithmetic safe on Windows.
+const DIFF_CONTEXT_LINES: u32 = MAX_DIFF_BYTES as u32;
 
 fn render_diff(diff: &git2::Diff<'_>) -> Result<String> {
     render_diff_for_path(diff, None)
@@ -181,7 +183,7 @@ fn render_diff_for_path(diff: &git2::Diff<'_>, path: Option<&str>) -> Result<Str
                 return true;
             }
         }
-        if bytes.len() + line.content().len() > 1024 * 1024 {
+        if bytes.len() + line.content().len() > MAX_DIFF_BYTES {
             oversized = true;
             return false;
         }

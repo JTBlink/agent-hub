@@ -10,15 +10,27 @@ fn previews_include_context_far_from_changes() {
     let original = (0..30).map(|i| format!("line {i}\n")).collect::<String>();
     std::fs::write(dir.path().join("demo.txt"), &original).unwrap();
     save(&repo, "initial");
-    let changed = original.replace("line 15\n", "updated\n");
+    let changed = original
+        .replace("line 15\n", "updated\n")
+        .replace("line 20\n", "updated second\n");
     std::fs::write(dir.path().join("demo.txt"), changed).unwrap();
     let patch = super::super::diff(dir.path(), "demo.txt", false).unwrap();
     assert!(patch.contains(" line 0\n"));
     assert!(patch.contains(" line 29\n"));
+    assert!(patch.contains("+updated second\n"));
+    assert_eq!(
+        patch.lines().filter(|line| line.starts_with("@@")).count(),
+        1
+    );
     let commit = save(&repo, "change");
     let patch = commit_diff(dir.path(), &commit, "demo.txt").unwrap();
     assert!(patch.contains(" line 0\n"));
     assert!(patch.contains(" line 29\n"));
+    assert!(patch.contains("+updated second\n"));
+    assert_eq!(
+        patch.lines().filter(|line| line.starts_with("@@")).count(),
+        1
+    );
 }
 
 fn save(repo: &git2::Repository, message: &str) -> String {
