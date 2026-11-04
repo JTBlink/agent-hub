@@ -27,6 +27,12 @@
 
 具体的 SOLID 落地、模块边界、状态迁移、错误处理与验证要求见[开发规范](.agents/skills/rust-dev/references/coding-standards.md)。
 
+## 需求原型
+
+原型属于需求资料，所有需求、UI 和交互原型统一放在 `docs/prototypes/<名称>/`。原型组件、样式、演示数据、页面入口及其专用检查文件集中在对应目录，不放在仓库根目录 `prototypes/`、正式源码 `src/` 或浏览器验收目录 `tests/browser/`。
+
+原型可复用正式组件与主题，正式代码不得反向依赖原型。通用启动工具留在 `scripts/prototype/`；新增或迁移原型时同步更新 `docs/prototypes/catalog.json`、启动入口、文档链接和资源引用。真实功能的浏览器验收驱动及 fixture 仍按测试规范放在 `tests/browser/`。
+
 ## 构建、测试与开发命令
 
 - `npm run tauri dev`：启动桌面应用开发环境。

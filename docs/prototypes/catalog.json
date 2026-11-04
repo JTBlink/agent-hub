@@ -1,0 +1,69 @@
+[
+  {
+    "id": "preview",
+    "title": "预览与浏览",
+    "description": "网页、HTML、Markdown 独立模块；检查、批注和 Agent 交互。",
+    "status": "设计中",
+    "path": "/docs/prototypes/preview/",
+    "source": "docs/prototypes/preview/",
+    "layouts": ["A", "B", "C"],
+    "aliases": [
+      "/prototypes/preview/",
+      "/tests/browser/preview-module-prototype.html"
+    ]
+  },
+  {
+    "id": "tasks-terminal",
+    "title": "任务与终端",
+    "description": "代码平台任务、项目终端、分屏与 Herdr 运行状态。",
+    "status": "参考原型",
+    "path": "/docs/prototypes/tasks-terminal/",
+    "source": "docs/prototypes/tasks-terminal/",
+    "aliases": [
+      "/prototypes/tasks-terminal/",
+      "/docs/prototypes/tasks-terminal.html",
+      "/docs/prototypes/tasks-herdr.html"
+    ]
+  },
+  {
+    "id": "herdr-sidebar",
+    "title": "Herdr 侧栏",
+    "description": "工作空间、工作树、Agent 会话与侧栏导航方案。",
+    "status": "参考原型",
+    "path": "/docs/prototypes/herdr-sidebar/",
+    "source": "docs/prototypes/herdr-sidebar/",
+    "aliases": [
+      "/prototypes/herdr-sidebar/",
+      "/docs/prototypes/herdr-sidebar.html"
+    ]
+  },
+  {
+    "id": "install",
+    "title": "安装流程",
+    "description": "桌面应用安装与首次使用流程的界面参考。",
+    "status": "参考原型",
+    "path": "/docs/prototypes/install/",
+    "source": "docs/prototypes/install/",
+    "aliases": ["/prototypes/install/", "/docs/prototypes/install.html"]
+  },
+  {
+    "id": "hosts",
+    "title": "Hosts 方案",
+    "description": "A 方案列表与编辑器、B/C 比较方案；正式功能已有独立实现。",
+    "status": "参考原型",
+    "source": "docs/prototypes/hosts/",
+    "path": "/docs/prototypes/hosts/",
+    "layouts": ["A", "B", "C"],
+    "aliases": ["/tests/browser/settings-hosts-prototype.html"]
+  },
+  {
+    "id": "agent-settings",
+    "title": "全局智能体设置",
+    "description": "各 Agent 的默认命令、权限、参数与环境；使用智能体默认模型。",
+    "status": "设计中",
+    "path": "/docs/prototypes/agent-settings/",
+    "source": "docs/prototypes/agent-settings/",
+    "layouts": ["A", "B", "C"],
+    "aliases": ["/tests/browser/settings-agents-prototype.html"]
+  }
+]

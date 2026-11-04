@@ -26,7 +26,7 @@
 
 ## 原型与正式实现
 
-已选定 A「方案列表＋编辑器」。三套比较原型已从原始提交 `0ef0a4f` 归档到主线，源码位于 `src/components/settings/prototype/`。运行 `npm run prototype:hosts` 可回看，地址的 `variant=A`、`variant=B`、`variant=C` 参数可直接定位布局；正式功能不保留原型切换栏。B／C 仅作为设计来源。原型仅使用内存中的合成数据，不读写系统 Hosts、不启动外部编辑器、不连接备份仓库。
+已选定 A「方案列表＋编辑器」。三套比较原型已从原始提交 `0ef0a4f` 归档到主线，源码位于 `docs/prototypes/hosts/`。运行 `npm run prototype:hosts` 可回看，地址的 `variant=A`、`variant=B`、`variant=C` 参数可直接定位布局；正式功能不保留原型切换栏。B／C 仅作为设计来源。原型仅使用内存中的合成数据，不读写系统 Hosts、不启动外部编辑器、不连接备份仓库。
 
 正式页面复用设置导航、主题、确认弹窗与权限说明，位于 `src/components/settings/HostsSettings.tsx`；`tests/browser/settings-hosts.html` 使用实际组件与合成 IPC 数据，可用于无系统写入的浏览器验收。
 

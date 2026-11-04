@@ -89,7 +89,7 @@ Herdr 快捷按钮是工具启动器，不代表 AgentHub 自己创建了新的�
 
 ## 可点击原型
 
-文件：[任务与终端原型](../../prototypes/tasks-terminal/index.html)。单个 HTML，可直接用浏览器打开。数据保存在页面内存中，刷新重置；所有命令、安装、更新和 TUI 画面都是模拟，不访问本机账号、真实终端或平台数据。
+文件：[任务与终端原型](../prototypes/tasks-terminal/index.html)。单个 HTML，可直接用浏览器打开。数据保存在页面内存中，刷新重置；所有命令、安装、更新和 TUI 画面都是模拟，不访问本机账号、真实终端或平台数据。
 
 从项目根目录运行：
 
@@ -97,7 +97,7 @@ Herdr 快捷按钮是工具启动器，不代表 AgentHub 自己创建了新的�
 ./prototype.sh tasks-terminal
 ```
 
-打开 `http://127.0.0.1:4176/prototypes/tasks-terminal/`；`?view=terminal` 直达终端，`?provider=gitlab` 选择 GitLab。顶部“交互原型 · 演示状态”仅用于切换已安装、未安装、有更新等模拟条件，不属于产品功能。
+打开 `http://127.0.0.1:4176/docs/prototypes/tasks-terminal/`；`?view=terminal` 直达终端，`?provider=gitlab` 选择 GitLab。顶部“交互原型 · 演示状态”仅用于切换已安装、未安装、有更新等模拟条件，不属于产品功能。
 
 演示路径：
 

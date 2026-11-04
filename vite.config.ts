@@ -16,12 +16,22 @@ export default defineConfig({
           .digest("hex");
         const catalog: { path?: string; aliases?: string[] }[] = JSON.parse(
           readFileSync(
-            new URL("./prototypes/catalog.json", import.meta.url),
+            new URL("./docs/prototypes/catalog.json", import.meta.url),
             "utf8",
           ),
         );
         server.middlewares.use((request, response, next) => {
           const url = new URL(request.url ?? "/", "http://localhost");
+          if (
+            ["/prototypes", "/prototypes/", "/prototypes/index.html"].includes(
+              url.pathname,
+            )
+          ) {
+            response
+              .writeHead(302, { Location: "/docs/prototypes/" + url.search })
+              .end();
+            return;
+          }
           const entry = catalog.find((item) =>
             item.aliases?.includes(url.pathname),
           );

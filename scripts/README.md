@@ -32,7 +32,7 @@ npm run docs:dev                     # 预览文档站
 ./prototype.sh preview --layout B    # 直达文档阅读原型
 ```
 
-根目录 `prototype.sh` 和 `scripts/prototype.sh` 为兼容快捷入口，统一转发给 `prototype/preview.sh`。原型清单来自 `prototypes/catalog.json`，详细用法见[原型目录](../prototypes/README.md)。
+根目录 `prototype.sh` 和 `scripts/prototype.sh` 为兼容快捷入口，统一转发给 `prototype/preview.sh`。原型清单来自 `docs/prototypes/catalog.json`，详细用法见[原型目录](../docs/prototypes/README.md)。
 
 ## 构建与缓存
 

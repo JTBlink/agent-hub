@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ThemedSelect } from "../../src/components/ThemedSelect";
+import { ThemedSelect } from "../../../src/components/ThemedSelect";
 import type { PreviewModel } from "./usePreviewModel";
 
 const sessions = [

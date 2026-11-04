@@ -2,7 +2,7 @@ import { X, Globe, FileText } from "lucide-react";
 import { Button } from "./prototypeShared";
 
 import { PrototypeMarkdown } from "./PrototypeMarkdown";
-import { CodeEditor } from "../../src/components/file-reader/CodeEditor";
+import { CodeEditor } from "../../../src/components/file-reader/CodeEditor";
 import {
   DemoPage,
   HtmlExamplePage,

@@ -170,7 +170,7 @@ AgentHub 基于 Skills Manager 二次开发，使用 Tauri 2、React、TypeScrip
 
 应用更新入口指向本项目发布页。GitHub 备份支持令牌或普通 Git；设备码登录需构建时设置项目自己的 `VITE_AGENTHUB_GITHUB_OAUTH_CLIENT_ID`。
 
-[需求原型目录](prototypes/README.md)（`./prototype.sh`） · [文档索引](docs/README.md) · [后续规划](docs/plans/agent-hub.md) · [架构说明](docs/architecture/overview.md)
+[需求原型目录](docs/prototypes/README.md)（`./prototype.sh`） · [文档索引](docs/README.md) · [后续规划](docs/plans/agent-hub.md) · [架构说明](docs/architecture/overview.md)
 
 本项目使用 [MIT 许可证](LICENSE)。导入代码的[来源说明与原许可证](docs/reference/skills-manager/README.md)保留，此前架构可通过 Git 历史查阅。
 

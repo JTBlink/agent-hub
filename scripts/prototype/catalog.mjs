@@ -4,17 +4,15 @@ import { resolve } from "node:path";
 
 export const prototypes = JSON.parse(
   readFileSync(
-    new URL("../../prototypes/catalog.json", import.meta.url),
+    new URL("../../docs/prototypes/catalog.json", import.meta.url),
     "utf8",
   ),
 );
 export function prototypePath(id = "index", layout = "") {
   if (id === "index") {
     if (layout)
-      throw new Error(
-        "布局选项用于 preview：./prototype.sh preview --layout B",
-      );
-    return "/prototypes/";
+      throw new Error("先指定原型名称，例如 ./prototype.sh preview --layout B");
+    return "/docs/prototypes/";
   }
   const entry = prototypes.find((item) => item.id === id);
   if (!entry)

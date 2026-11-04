@@ -448,7 +448,7 @@ repository/
 
 ### 原型与当前验证
 
-可丢弃原型位于 `prototypes/preview/`，入口 `prototypes/preview/index.html`，运行 `./prototype.sh preview`。方案 A 为浏览＋右侧检查栏，B 为阅读＋底部批注区，C 为浏览＋Agent 协作。推荐 A 为默认布局，B／C 为可切换工作模式。
+可丢弃原型位于 `docs/prototypes/preview/`，入口 `docs/prototypes/preview/index.html`，运行 `./prototype.sh preview`。方案 A 为浏览＋右侧检查栏，B 为阅读＋底部批注区，C 为浏览＋Agent 协作。推荐 A 为默认布局，B／C 为可切换工作模式。
 
 本轮原型已实际复用 Markdown 渲染和源码编辑器，完成内存会话／历史、DOM／CSS 抓取、批注隔离与编辑、上下文草稿交付到演示区、文件导入和本地导出。浏览器检查覆盖网页选取、Markdown 段落选取与源码编辑、HTML 移动宽度、查找、主题、三种布局及 520／960／1440 宽度无页面横向溢出。
 

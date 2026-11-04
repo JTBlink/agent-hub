@@ -11,7 +11,7 @@ import {
   Moon,
   Terminal,
 } from "lucide-react";
-import { CardActionMenu } from "../../src/components/CardActionMenu";
+import { CardActionMenu } from "../../../src/components/CardActionMenu";
 import { Button, KindIcon } from "./prototypeShared";
 import { PrototypeBrowserActions } from "./PrototypeBrowserActions";
 import { variants } from "./previewFormat";

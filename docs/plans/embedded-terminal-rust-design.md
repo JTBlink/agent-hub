@@ -2,7 +2,7 @@
 
 状态：选型已确认；实现与原生验证状态以对应开发 Issue 为准。更新时间：2026-10-31。
 
-配套：[任务与终端 PRD](github-gitlab-tasks-terminal-prd.md)、[终端原型](../../prototypes/tasks-terminal/index.html?view=terminal)。
+配套：[任务与终端 PRD](github-gitlab-tasks-terminal-prd.md)、[终端原型](../prototypes/tasks-terminal/index.html?view=terminal)。
 
 对应开发规格：[GitHub Issue #230](https://github.com/JTBlink/agent-hub/issues/230)；实现状态与后续子任务以 Issue 为准。
 

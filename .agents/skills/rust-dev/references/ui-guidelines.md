@@ -2,6 +2,10 @@
 
 全部主题色值统一在 `src/styles/brand.css` 配置；`tailwind.config.js` 只负责语义类和兼容色名到主题变量的映射，不保存配色色值。下述交互清单用于新增或修改界面的验收，不要求顺带重写所有历史组件。
 
+## 原型位置
+
+原型属于需求资料，统一遵循根目录 AGENTS.md 的“需求原型”规则，存放在 `docs/prototypes/<名称>/`；原型代码不混入 `src/` 或 `tests/browser/`。
+
 ## 品牌、主题与样式
 
 - 保留原 Logo 与 `src-tauri/icons/app-icon.svg` 图标母版。平台图标变更查 [图标规范](icon-assets.md)。

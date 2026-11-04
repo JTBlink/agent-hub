@@ -1,4 +1,4 @@
-import { MarkdownContent } from "../../src/components/MarkdownContent";
+import { MarkdownContent } from "../../../src/components/MarkdownContent";
 
 /** Keep source positions from the shared Markdown parser for block annotations. */
 export function PrototypeMarkdown({ content }: { content: string }) {

@@ -8,7 +8,7 @@ import {
   Download,
   FolderOpen,
 } from "lucide-react";
-import { CardActionMenu } from "../../src/components/CardActionMenu";
+import { CardActionMenu } from "../../../src/components/CardActionMenu";
 import { Button } from "./prototypeShared";
 import type { PreviewModel } from "./usePreviewModel";
 

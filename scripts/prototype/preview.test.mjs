@@ -7,8 +7,58 @@ import http from "node:http";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { it } from "vitest";
+import { createServer } from "vite";
 
 const root = realpathSync(fileURLToPath(new URL("../..", import.meta.url)));
+
+it("serves migrated prototype entries through legacy URLs instead of the application shell", async () => {
+  const server = await createServer({
+    root,
+    server: { port: 0, open: false, preTransformRequests: false },
+    optimizeDeps: { noDiscovery: true, include: [] },
+  });
+  try {
+    await server.listen();
+    const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
+    const catalog = JSON.parse(
+      readFileSync(
+        new URL("../../docs/prototypes/catalog.json", import.meta.url),
+        "utf8",
+      ),
+    );
+    const entries = [
+      {
+        path: "/docs/prototypes/",
+        aliases: ["/prototypes", "/prototypes/", "/prototypes/index.html"],
+      },
+      ...catalog,
+    ];
+    for (const entry of entries) {
+      for (const alias of entry.aliases ?? []) {
+        const query = "?variant=B&theme=light";
+        const response = await fetch(origin + alias + query, {
+          redirect: "manual",
+        });
+        assert.equal(response.status, 302, alias);
+        assert.equal(
+          response.headers.get("location"),
+          entry.path + query,
+          alias,
+        );
+        const page = await fetch(
+          new URL(response.headers.get("location"), origin),
+        );
+        assert.equal(page.status, 200, entry.path);
+        const html = await page.text();
+        assert.ok(!html.includes('src="/src/main.tsx"'), alias);
+        assert.match(html, /<script[^>]+type="module"/, alias);
+      }
+    }
+  } finally {
+    await server.close();
+  }
+}, 15000);
+
 const launch = (port) =>
   new Promise((resolve, reject) => {
     const child = spawn(
@@ -43,7 +93,9 @@ it("reuses only the current checkout and preserves services from other worktrees
     const own = await launch(port);
     assert.equal(own.code, 0, own.output);
     assert.ok(own.output.includes("复用已有原型服务"));
-    assert.ok(own.output.includes(`:${port}/prototypes/preview/?variant=B`));
+    assert.ok(
+      own.output.includes(`:${port}/docs/prototypes/preview/?variant=B`),
+    );
     checkout = "different-worktree";
     const other = await launch(port);
     assert.equal(other.code, 1, other.output);
@@ -61,7 +113,7 @@ it("compiles the catalog stylesheet with the shared theme", async () => {
     "utf8",
   );
   const catalog = readFileSync(
-    new URL("../../prototypes/catalog.css", import.meta.url),
+    new URL("../../docs/prototypes/catalog.css", import.meta.url),
     "utf8",
   );
   const result = await postcss([

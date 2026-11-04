@@ -2,11 +2,11 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
-import { SidebarVisibilityContext } from "../../src/hooks/sidebarVisibility";
-import { SettingsTabs } from "../../src/components/settings/SettingsTabs";
-import { HostsPrototype } from "../../src/components/settings/prototype/HostsPrototype";
-import { applyTextSize } from "../../src/lib/textScale";
-import "../../src/index.css";
+import { SidebarVisibilityContext } from "../../../src/hooks/sidebarVisibility";
+import { SettingsTabs } from "../../../src/components/settings/SettingsTabs";
+import { HostsPrototype } from "./HostsPrototype";
+import { applyTextSize } from "../../../src/lib/textScale";
+import "../../../src/index.css";
 const params = new URLSearchParams(location.search);
 document.documentElement.classList.toggle(
   "dark",
@@ -14,7 +14,7 @@ document.documentElement.classList.toggle(
 );
 applyTextSize(params.get("text-size") ?? "default");
 Object.assign(window, { __TAURI_INTERNALS__: { invoke: async () => null } });
-const { default: i18n, i18nReady } = await import("../../src/i18n");
+const { default: i18n, i18nReady } = await import("../../../src/i18n");
 await i18nReady;
 await i18n.changeLanguage("zh");
 export function PrototypeHost() {

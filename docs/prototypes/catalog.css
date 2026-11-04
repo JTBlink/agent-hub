@@ -1,4 +1,4 @@
-@import "../src/styles/brand.css";
+@import "../../src/styles/brand.css";
 @tailwind base;
 * {
   box-sizing: border-box;

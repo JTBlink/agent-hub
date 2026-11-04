@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Throwaway UI prototype: workspace and Agent quick switching in the AgentHub terminal shell.
-     Open this file directly, or visit /prototypes/herdr-sidebar/?variant=A on the existing Vite server.
+     Open this file directly, or visit /docs/prototypes/herdr-sidebar/?variant=A on the existing Vite server.
      All operations use synthetic in-memory state. No application data, CLI, PTY or account access. -->
 <html lang="zh-CN">
   <head>
@@ -2856,7 +2856,7 @@
         const loading = state.scenario === "loading";
         const keys = (...values) =>
           `<span class="welcome-keys" aria-hidden="true">${values.map((value) => `<kbd>${value}</kbd>`).join("")}</span>`;
-        return `<main class="editor welcome" aria-label="启动页"><div class="welcome-content"><img class="welcome-logo" src="../../public/icons/app-icon.svg" alt="" /><h1>AgentHub</h1><p class="welcome-description" role="status" aria-live="polite">${loading ? "加载中…" : "添加项目或创建工作空间，开始工作。"}</p>${loading ? "" : `<div class="welcome-actions"><button class="secondary" data-action="add-project">${icon("folder")}添加项目</button><button class="primary" data-action="new-workspace">${icon("git")}创建工作空间</button></div><div class="welcome-shortcuts" aria-label="常用快捷键"><button data-action="new-workspace" aria-keyshortcuts="Meta+N">创建工作空间${keys("⌘", "N")}</button><button data-action="previous-workspace" disabled aria-keyshortcuts="Meta+Shift+ArrowUp">上一个工作空间${keys("⌘", "⇧", "↑")}</button><button data-action="next-workspace" disabled aria-keyshortcuts="Meta+Shift+ArrowDown">下一个工作空间${keys("⌘", "⇧", "↓")}</button></div>`}</div><button class="welcome-help" data-action="requirements">${icon("help")} 查看使用说明</button></main>`;
+        return `<main class="editor welcome" aria-label="启动页"><div class="welcome-content"><img class="welcome-logo" src="../../../public/icons/app-icon.svg" alt="" /><h1>AgentHub</h1><p class="welcome-description" role="status" aria-live="polite">${loading ? "加载中…" : "添加项目或创建工作空间，开始工作。"}</p>${loading ? "" : `<div class="welcome-actions"><button class="secondary" data-action="add-project">${icon("folder")}添加项目</button><button class="primary" data-action="new-workspace">${icon("git")}创建工作空间</button></div><div class="welcome-shortcuts" aria-label="常用快捷键"><button data-action="new-workspace" aria-keyshortcuts="Meta+N">创建工作空间${keys("⌘", "N")}</button><button data-action="previous-workspace" disabled aria-keyshortcuts="Meta+Shift+ArrowUp">上一个工作空间${keys("⌘", "⇧", "↑")}</button><button data-action="next-workspace" disabled aria-keyshortcuts="Meta+Shift+ArrowDown">下一个工作空间${keys("⌘", "⇧", "↓")}</button></div>`}</div><button class="welcome-help" data-action="requirements">${icon("help")} 查看使用说明</button></main>`;
       }
       function navigateWorkspace(direction) {
         const spaces = currentSpaces();

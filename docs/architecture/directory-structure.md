@@ -6,7 +6,6 @@
 
 ```text
 agent-hub/
-├── prototypes/                     # 需求原型、统一目录索引与历史设计参考
 ├── prototype.sh                    # 一键启动原型目录或指定原型
 ├── src/                            # React/TypeScript 前端
 │   ├── views/                      # 页面视图
@@ -240,6 +239,7 @@ agent-hub/
 │   ├── architecture/               #   架构文档
 │   ├── adr/                        #   架构决策记录
 │   ├── plans/                      #   规划设计文档
+│   ├── prototypes/                 #   全部需求原型、目录索引与设计参考
 │   └── reference/                  #   参考资料与来源
 │
 ├── scripts/                        # 工程脚本，完整入口见 scripts/README.md
