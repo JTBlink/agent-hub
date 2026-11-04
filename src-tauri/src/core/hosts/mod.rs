@@ -202,9 +202,11 @@ fn save_path(path: &std::path::Path, content: &str, expected: &str) -> Result<Ho
         .write_all(content.as_bytes())
         .map_err(|e| e.to_string())?;
     payload.flush().map_err(|e| e.to_string())?;
+    // Release the open handle before PowerShell reads the private payload on Windows.
+    let payload = payload.into_temp_path();
     elevation::write(
         &target,
-        payload.path(),
+        &payload,
         expected,
         &revision(content.as_bytes()),
         &backup,

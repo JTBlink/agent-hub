@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 修复 Windows 文件重命名覆盖目标、Hosts 保存时临时文件句柄占用及 Git worktree 的系统路径兼容问题；跨平台回归尊重平台换行设置。
+
 - 修复 Linux 终端输入拥塞时关闭后发送者仍等待的问题，保留有界队列的背压并响应关闭通知。
 
 - 原生预览新增 Windows WebView2 / Linux WebKitGTK 查询、截图、UA 与主题适配，增加 GitHub 三平台真实 WebView 验证工作流；Cookie 导入仍仅支持 macOS。

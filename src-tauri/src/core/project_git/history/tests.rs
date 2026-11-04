@@ -3,6 +3,10 @@ use super::*;
 fn previews_include_context_far_from_changes() {
     let dir = tempfile::tempdir().unwrap();
     let repo = git2::Repository::init(dir.path()).unwrap();
+    repo.config()
+        .unwrap()
+        .set_bool("core.autocrlf", false)
+        .unwrap();
     let original = (0..30).map(|i| format!("line {i}\n")).collect::<String>();
     std::fs::write(dir.path().join("demo.txt"), &original).unwrap();
     save(&repo, "initial");

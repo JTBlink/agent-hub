@@ -65,8 +65,9 @@ tungstenite = { version = "0.24", default-features = false, features = ["handsha
 
 [target.'cfg(windows)'.dependencies]
 junction = "2"
+dunce = "1"
 webview2-com = "0.38"
-windows = { version = "0.61", features = ["Win32_System_Com_StructuredStorage"] }
+windows = { version = "0.61", features = ["Win32_System_Com_StructuredStorage", "Win32_Storage_FileSystem"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = { version = "2.0", features = ["v2_40"] }

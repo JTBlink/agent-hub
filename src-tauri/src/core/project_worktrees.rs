@@ -202,7 +202,13 @@ pub fn create(
     if target.symlink_metadata().is_ok() {
         bail!("Destination already exists; choose a new directory");
     }
-    let target_str = target.to_str().context("Destination must be valid UTF-8")?;
+    #[cfg(windows)]
+    let git_target = dunce::simplified(&target);
+    #[cfg(not(windows))]
+    let git_target = target.as_path();
+    let target_str = git_target
+        .to_str()
+        .context("Destination must be valid UTF-8")?;
     super::project_git::run_git(
         &source,
         &["worktree", "add", "-b", branch, "--", target_str, &head],

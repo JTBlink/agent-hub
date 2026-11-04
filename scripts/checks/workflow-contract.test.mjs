@@ -344,6 +344,13 @@ describe("native preview cloud validation", () => {
       "ubuntu-24.04",
     ]);
     expect(job.strategy["fail-fast"]).toBe(false);
+    const rustCache = job.steps.find(
+      (step) => step.uses === "Swatinem/rust-cache@v2",
+    );
+    expect(rustCache.with["cache-on-failure"]).toBe(true);
+    expect(rustCache.with["save-if"]).toContain(
+      "github.event.repository.default_branch",
+    );
     expect(job.steps[0].with.ref).toBe("${{ github.sha }}");
     expect(source).toContain("--locked --all-targets -- -D warnings");
     expect(source).toContain(

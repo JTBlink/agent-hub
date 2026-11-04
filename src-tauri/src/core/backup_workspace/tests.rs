@@ -296,7 +296,7 @@ fn backs_up_and_restores_user_configuration_without_applying_system_hosts() {
     let root = repo_dir();
     assert_eq!(
         fs::read_to_string(root.join(format!("user-config/hosts/{}.hosts", profile.id))).unwrap(),
-        "127.0.0.1 localhost\n"
+        profile.content
     );
     let tag = commit(&e.store, "before profile change").unwrap();
     super::super::hosts::profiles::update(
@@ -310,7 +310,7 @@ fn backs_up_and_restores_user_configuration_without_applying_system_hosts() {
     restore(&e.store, &tag).unwrap();
     let restored = super::super::hosts::profiles::list().unwrap();
     assert_eq!(restored[0].name, "Development");
-    assert_eq!(restored[0].content, "127.0.0.1 localhost\n");
+    assert_eq!(restored[0].content, profile.content);
     assert!(!e.tmp.path().join("hosts").exists());
 }
 

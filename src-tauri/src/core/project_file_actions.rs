@@ -162,10 +162,14 @@ fn rename_without_replace(source: &Path, target: &Path) -> Result<()> {
         }
         Ok(())
     }
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    #[cfg(windows)]
     {
-        // Windows rename fails if the destination already exists.
-        fs::rename(source, target)?;
+        use std::os::windows::ffi::OsStrExt;
+        use windows::{core::PCWSTR, Win32::Storage::FileSystem::MoveFileW};
+        let source: Vec<_> = source.as_os_str().encode_wide().chain(Some(0)).collect();
+        let target: Vec<_> = target.as_os_str().encode_wide().chain(Some(0)).collect();
+        // MoveFileW refuses an existing destination atomically, including races.
+        unsafe { MoveFileW(PCWSTR(source.as_ptr()), PCWSTR(target.as_ptr()))? };
         Ok(())
     }
 }
