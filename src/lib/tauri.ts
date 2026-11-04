@@ -1476,8 +1476,14 @@ export { launchTerminalHerdr } from "../features/herdr/terminal/api";
 
 // Independent portable Agent launch preferences.
 export const getAgentLaunchSettings = () =>
-  invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>("agent_launch_settings");
+  invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>(
+    "agent_launch_settings",
+  );
 export const saveAgentLaunchSettings = (
   document: import("./agentLaunchConfig").AgentLaunchDocument,
   revision: string,
-) => invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>("save_agent_launch_settings", { document, revision });
+) =>
+  invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>(
+    "save_agent_launch_settings",
+    { document, revision },
+  );
