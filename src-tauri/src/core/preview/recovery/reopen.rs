@@ -156,14 +156,15 @@ impl Browsers {
             .lock()
             .map_err(|_| AppError::internal("Browser replacement unavailable"))?;
         page.frame_info = None;
-        page.cdp.expected_size = Some((old.width, old.height));
+        page.cdp
+            .configure_frames(old.width, old.height, old.mobile, old.device_scale_factor)?;
         page.width = old.width;
         page.height = old.height;
         page.mobile = old.mobile;
+        page.device_scale_factor = old.device_scale_factor;
         page.connection_generation = old.connection_generation.wrapping_add(1);
         page.cdp.frame_version = old.cdp.frame_version.saturating_add(1);
         page.cdp.frame = None;
-        page.cdp.call("Emulation.setDeviceMetricsOverride",json!({"width":old.width,"height":old.height,"deviceScaleFactor":1,"mobile":old.mobile}))?;
         drop(page);
         drop(old);
         self.adopt_replacement(id, replacement, original, PageStatus::Connected)

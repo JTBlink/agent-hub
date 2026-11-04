@@ -47,6 +47,9 @@ impl Browsers {
                         drop(metadata);
                         let version = page.cdp.frame_version;
                         return Ok(Frame {
+                            image_mime: super::rendering::image_mime(
+                                page.cdp.frame.as_deref().unwrap_or_default(),
+                            ),
                             version,
                             image: if since == Some(version) {
                                 String::new()
@@ -107,11 +110,11 @@ impl Browsers {
                 let clip = json!({"x":0,"y":0,"width":page.width,"height":page.height,"scale":1});
                 let result = page.cdp.call(
                     "Page.captureScreenshot",
-                    json!({"format":"jpeg","quality":85,"captureBeyondViewport":false,"clip":clip}),
+                    json!({"format":"png","captureBeyondViewport":false,"clip":clip}),
                 )?;
                 let image = result["data"]
                     .as_str()
-                    .filter(|data| data.len() <= 8 * 1024 * 1024)
+                    .filter(|data| data.len() <= super::rendering::MAX_FRAME_BYTES)
                     .ok_or_else(|| AppError::network("Browser frame unavailable"))?
                     .to_owned();
                 page.cdp.frame = Some(image);
@@ -140,6 +143,9 @@ impl Browsers {
             }
             page.frame_info = Some((Instant::now(), info.clone()));
             Ok(Frame {
+                image_mime: super::rendering::image_mime(
+                    page.cdp.frame.as_deref().unwrap_or_default(),
+                ),
                 version,
                 image,
                 info,
@@ -176,6 +182,7 @@ fn dialog_frame(page: &mut Page, since: Option<u64>) -> Result<Frame, AppError> 
         page.cdp.frame.clone().unwrap_or_default()
     };
     Ok(Frame {
+        image_mime: super::rendering::image_mime(page.cdp.frame.as_deref().unwrap_or_default()),
         version,
         image,
         info,

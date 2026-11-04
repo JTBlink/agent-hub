@@ -78,13 +78,18 @@ impl Browsers {
                 return Err(AppError::cancelled("PREVIEW_PAGE_GONE"));
             }
         }
-        transport.expected_size = Some((page.width, page.height));
-        transport.call("Emulation.setDeviceMetricsOverride", json!({"width":page.width,"height":page.height,"deviceScaleFactor":1,"mobile":page.mobile}))?;
         // CLI recovery must also invalidate an existing GUI frame cursor.
         transport.frame_version = page.cdp.frame_version.saturating_add(1);
         transport.frame = None;
         page.frame_info = None;
         page.cdp = transport;
+        let (width, height, mobile, density) = (
+            page.width,
+            page.height,
+            page.mobile,
+            page.device_scale_factor,
+        );
+        page.cdp.configure_frames(width, height, mobile, density)?;
         page.connection_generation = page.connection_generation.wrapping_add(1);
         page.snapshots.clear();
         Ok(())

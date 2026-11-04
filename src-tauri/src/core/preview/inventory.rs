@@ -192,6 +192,7 @@ impl Browsers {
                     cdp,
                     width: 1200,
                     height: 800,
+                    device_scale_factor: 1.,
                     mobile: false,
                     metadata: metadata.clone(),
                 }));

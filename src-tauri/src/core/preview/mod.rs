@@ -28,6 +28,7 @@ mod remote_downloads;
 #[cfg(test)]
 mod remote_proxy_tests;
 mod remote_ssh;
+mod rendering;
 mod resource_bridge;
 pub mod runtime;
 pub(crate) mod scripts;
@@ -214,6 +215,7 @@ impl Preview {
                 self.browsers.action(
                     &id,
                     browser::Action::Resize {
+                        device_scale_factor: None,
                         width,
                         height,
                         mobile: false,

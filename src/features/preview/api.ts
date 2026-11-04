@@ -42,6 +42,7 @@ export interface BrowserPageInfo {
   revision: string;
 }
 export interface BrowserFrame {
+  image_mime?: "image/jpeg" | "image/png";
   version: number;
   image: string;
   info: {
@@ -99,7 +100,13 @@ export type BrowserAction =
         | "storage"
         | "devtools";
     }
-  | { kind: "resize"; width: number; height: number; mobile: boolean }
+  | {
+      kind: "resize";
+      width: number;
+      height: number;
+      mobile: boolean;
+      device_scale_factor?: number;
+    }
   | {
       kind: "mouse";
       x: number;

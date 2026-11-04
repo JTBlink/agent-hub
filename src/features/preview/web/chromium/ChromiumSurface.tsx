@@ -1,3 +1,4 @@
+import { getAppScale } from "../../../../lib/textScale";
 import { ChromiumError } from "./ChromiumError";
 import { getErrorMessage } from "../../../../lib/error";
 import type { BrowserSurfaceProps } from "../types";
@@ -25,7 +26,11 @@ export function ChromiumSurface(props: BrowserSurfaceProps) {
     null,
   );
   const [retry, setRetry] = useState(0);
-  const [size, setSize] = useState({ width: 1200, height: 800 });
+  const [size, setSize] = useState({
+    width: 1200,
+    height: 800,
+    density: Math.min(2, Math.max(1, window.devicePixelRatio * getAppScale())),
+  });
   const container = useRef<HTMLDivElement>(null);
   const keyboard = useRef<HTMLTextAreaElement>(null);
   const ownedId = useRef<string | null>(props.initialId ?? null);
@@ -201,7 +206,11 @@ export function ChromiumSurface(props: BrowserSurfaceProps) {
           if (!disposed) {
             setFrame((previous) => {
               if (!next.image && previous)
-                return { ...next, image: previous.image };
+                return {
+                  ...next,
+                  image: previous.image,
+                  image_mime: previous.image_mime,
+                };
               return next;
             });
             setError("");
@@ -233,14 +242,22 @@ export function ChromiumSurface(props: BrowserSurfaceProps) {
   useEffect(() => {
     const element = container.current;
     if (!element) return;
-    const observer = new ResizeObserver(() =>
+    const measure = () =>
       setSize({
         width: Math.max(240, element.clientWidth - 24),
         height: Math.max(200, element.clientHeight - 24),
-      }),
-    );
+        density: Math.min(
+          2,
+          Math.max(1, window.devicePixelRatio * getAppScale()),
+        ),
+      });
+    const observer = new ResizeObserver(measure);
     observer.observe(element);
-    return () => observer.disconnect();
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, []);
   const width = props.viewport?.width ?? Math.min(3840, Math.round(size.width));
   const height =
@@ -250,11 +267,17 @@ export function ChromiumSurface(props: BrowserSurfaceProps) {
     if (!props.active || !id) return;
     const timer = window.setTimeout(() => {
       previewApi
-        .action(id, { kind: "resize", width, height, mobile })
+        .action(id, {
+          kind: "resize",
+          width,
+          height,
+          mobile,
+          device_scale_factor: size.density,
+        })
         .catch((error: unknown) => report(previewError(error, t)));
     }, 180);
     return () => clearTimeout(timer);
-  }, [id, width, height, mobile, props.active, t]);
+  }, [id, width, height, mobile, size.density, props.active, t]);
   useEffect(() => {
     if (props.active && props.picking)
       container.current?.focus({ preventScroll: true });
@@ -455,7 +478,7 @@ export function ChromiumSurface(props: BrowserSurfaceProps) {
           }}
         >
           <img
-            src={`data:image/jpeg;base64,${frame.image}`}
+            src={`data:${frame.image_mime ?? "image/jpeg"};base64,${frame.image}`}
             alt={frame.info.title || t("preview.browserSurface")}
             draggable={false}
           />

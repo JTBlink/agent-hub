@@ -80,6 +80,7 @@ fn navigates_types_resizes_and_captures_a_real_browser_page() {
         .action(
             &id,
             Action::Resize {
+                device_scale_factor: None,
                 width: 390,
                 height: 844,
                 mobile: false,
@@ -145,12 +146,7 @@ fn navigates_types_resizes_and_captures_a_real_browser_page() {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(frame.image)
         .unwrap();
-    assert_eq!(
-        image::load_from_memory_with_format(&bytes, image::ImageFormat::Jpeg)
-            .unwrap()
-            .width(),
-        390
-    );
+    assert_eq!(image::load_from_memory(&bytes).unwrap().width(), 390);
     let picked = browsers
         .action(&id, Action::Pick { x: 20., y: 30. })
         .unwrap();

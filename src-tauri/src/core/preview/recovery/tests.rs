@@ -69,6 +69,7 @@ fn reconnects_local_and_paired_pages_without_reloading_or_replaying_input() {
             .action(
                 &id,
                 Action::Resize {
+                    device_scale_factor: Some(2.),
                     width: 700,
                     height: 600,
                     mobile: false,
@@ -96,11 +97,12 @@ fn reconnects_local_and_paired_pages_without_reloading_or_replaying_input() {
         assert!(browsers.frame(&id).is_err());
         assert!(browsers.list().unwrap().iter().any(|page| page.id == id));
         automation::call(&control, json!({"kind":"reconnect","id":id})).unwrap();
-        let value = browsers.action(&id,Action::Evaluate{expression:"({value:document.querySelector('input').value,clicks:window.clicks,origin:performance.timeOrigin,width:innerWidth,height:innerHeight})".into()}).unwrap();
+        let value = browsers.action(&id,Action::Evaluate{expression:"({value:document.querySelector('input').value,clicks:window.clicks,origin:performance.timeOrigin,width:innerWidth,height:innerHeight,dpr:devicePixelRatio})".into()}).unwrap();
         assert_eq!(value["value"], "unsent draft");
         assert_eq!(value["clicks"], 1);
         assert_eq!(value["origin"], origin);
         assert_eq!(value["width"], 700);
+        assert_eq!(value["dpr"], 2);
         assert_eq!(value["height"], 600);
         let frame = browsers
             .frame_since(&id, Some(previous_frame.version))

@@ -23,6 +23,7 @@ pub struct Page {
     pub cdp: Cdp,
     pub width: u32,
     pub height: u32,
+    pub(super) device_scale_factor: f64,
     pub(super) mobile: bool,
     pub(super) metadata: Arc<Mutex<BrowserPageInfo>>,
 }
@@ -116,6 +117,7 @@ pub struct BrowserInfo {
 #[derive(Serialize)]
 pub struct Frame {
     pub image: String,
+    pub image_mime: &'static str,
     pub info: Value,
     pub events: Vec<Value>,
     pub version: u64,
@@ -416,6 +418,7 @@ impl Browsers {
             cdp,
             width: 1200,
             height: 800,
+            device_scale_factor: 1.,
             mobile: false,
             metadata: metadata.clone(),
         }));

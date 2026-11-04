@@ -109,12 +109,13 @@ impl Browsers {
                     Some(entry) => page.cdp.call("Page.navigateToHistoryEntry", json!({ "entryId": entry })), None => Ok(Value::Null)
                 }
             }
-            Action::Resize { width, height, mobile } => {
+            Action::Resize { width, height, mobile, device_scale_factor } => {
                 if !(240..=3840).contains(&width) || !(200..=2160).contains(&height) { return Err(AppError::invalid_input("Viewport dimensions are outside the supported range")); }
+                let density = device_scale_factor.unwrap_or(1.);
+                if !density.is_finite() || !(1. ..=2.).contains(&density) { return Err(AppError::invalid_input("Device scale factor must be between 1 and 2")); }
                 page.frame_info = None;
-                page.cdp.expected_size = Some((width,height));
-                page.cdp.call("Emulation.setDeviceMetricsOverride", json!({"width":width,"height":height,"deviceScaleFactor":1,"mobile":mobile}))?;
-                page.width = width; page.height = height;page.mobile=mobile;page.cdp.frame=None;
+                page.cdp.configure_frames(width, height, mobile, density)?;
+                page.width = width; page.height = height;page.mobile=mobile;page.device_scale_factor=density;page.cdp.frame=None;
                 Ok(Value::Null)
             }
             Action::Mouse { x, y, event, button, delta_x, delta_y } => {

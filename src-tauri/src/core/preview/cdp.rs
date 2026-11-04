@@ -22,6 +22,7 @@ pub struct Cdp {
     pub frame: Option<String>,
     pub frame_version: u64,
     pub expected_size: Option<(u32, u32)>,
+    pub expected_css_size: Option<(u32, u32)>,
     pub events: VecDeque<Value>,
     pub chooser: Option<Value>,
     pub dialog: Option<Value>,
@@ -53,6 +54,7 @@ impl Cdp {
             frame: None,
             frame_version: 0,
             expected_size: None,
+            expected_css_size: None,
             events: VecDeque::new(),
             chooser: None,
             dialog: None,
@@ -62,11 +64,39 @@ impl Cdp {
         self.frames = Some(frame_worker::FrameWorker::start(address)?);
         Ok(())
     }
+    pub(super) fn configure_frames(
+        &mut self,
+        width: u32,
+        height: u32,
+        mobile: bool,
+        density: f64,
+    ) -> Result<(), AppError> {
+        let metrics = super::rendering::metrics(width, height, mobile, density);
+        if self.frames.is_some() {
+            // Only the frame connection owns emulation. Disposing another session must not reset it.
+            self.call("Emulation.clearDeviceMetricsOverride", json!({}))?;
+            if let Some(worker) = &self.frames {
+                worker.set_metrics(metrics)?;
+            }
+        } else {
+            self.call("Emulation.setDeviceMetricsOverride", metrics)?;
+        }
+        self.expected_size = Some(super::rendering::pixel_size(width, height, density));
+        self.expected_css_size = Some((width, height));
+        Ok(())
+    }
+    fn accepts_frame(&self, size: (u32, u32), image: &str) -> bool {
+        self.expected_size.map_or(true, |expected| {
+            expected == size
+                || (super::rendering::image_mime(image) == "image/jpeg"
+                    && self.expected_css_size == Some(size))
+        })
+    }
     pub(super) fn sync_frame(&mut self) -> Result<(), AppError> {
         if let Some(worker) = &self.frames {
             if let Some(frame) = worker.latest()? {
                 if frame.version != self.source_version
-                    && self.expected_size.map_or(true, |size| size == frame.size)
+                    && self.accepts_frame(frame.size, &frame.image)
                 {
                     self.source_version = frame.version;
                     self.frame = Some(frame.image.to_string());
@@ -158,21 +188,16 @@ impl Cdp {
                     if reply["method"] == "Page.screencastFrame" {
                         if let Some(data) = reply["params"]["data"]
                             .as_str()
-                            .filter(|data| data.len() <= 8 * 1024 * 1024)
+                            .filter(|data| data.len() <= super::rendering::MAX_FRAME_BYTES)
                         {
-                            let metadata = &reply["params"]["metadata"];
-                            if self.expected_size.map_or(true, |(width, height)| {
-                                metadata["deviceWidth"].as_f64() == Some(f64::from(width))
-                                    && metadata["deviceHeight"].as_f64() == Some(f64::from(height))
-                                    && STANDARD.decode(data).ok().and_then(|bytes| {
-                                        image::ImageReader::with_format(
-                                            std::io::Cursor::new(bytes),
-                                            image::ImageFormat::Jpeg,
-                                        )
-                                        .into_dimensions()
-                                        .ok()
-                                    }) == Some((width, height))
-                            }) {
+                            let size = STANDARD.decode(data).ok().and_then(|bytes| {
+                                image::ImageReader::new(std::io::Cursor::new(bytes))
+                                    .with_guessed_format()
+                                    .ok()?
+                                    .into_dimensions()
+                                    .ok()
+                            });
+                            if size.is_some_and(|size| self.accepts_frame(size, data)) {
                                 self.frame = Some(data.to_owned());
                                 self.frame_version += 1;
                             }

@@ -271,3 +271,95 @@ it.each([
     container.remove();
   }
 });
+
+it("requests Retina resolution while preserving logical viewport dimensions", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const density = Object.getOwnPropertyDescriptor(window, "devicePixelRatio");
+  Object.defineProperty(window, "devicePixelRatio", {
+    configurable: true,
+    value: 2,
+  });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.mocked(previewApi.action).mockResolvedValue(undefined);
+  const frame: BrowserFrame = {
+    version: 1,
+    image: "png-data",
+    image_mime: "image/png",
+    events: [],
+    info: {
+      url: "about:blank",
+      title: "Example",
+      revision: "retina",
+      ready: "complete",
+      width: 800,
+      height: 600,
+      dpr: 2,
+      scrollX: 0,
+      scrollY: 0,
+    },
+  };
+  vi.mocked(previewApi.frame).mockResolvedValue(frame);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <BrowserSurface
+          tabId="retina"
+          initialId="retina-page"
+          active
+          address="about:blank"
+          profile="default"
+          picking={false}
+          viewport={{ width: 800, height: 600, mobile: false }}
+          onReady={vi.fn()}
+          onFrame={vi.fn()}
+          onCapture={vi.fn()}
+          onError={vi.fn()}
+        />,
+      ),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(200));
+    expect(previewApi.action).toHaveBeenCalledWith("retina-page", {
+      kind: "resize",
+      width: 800,
+      height: 600,
+      mobile: false,
+      device_scale_factor: 2,
+    });
+    expect(host.querySelector("img")?.getAttribute("src")).toBe(
+      "data:image/png;base64,png-data",
+    );
+    vi.mocked(previewApi.frame).mockResolvedValue({
+      ...frame,
+      version: 2,
+      image: "jpeg-data",
+      image_mime: "image/jpeg",
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(200));
+    expect(host.querySelector("img")?.getAttribute("src")).toBe(
+      "data:image/jpeg;base64,jpeg-data",
+    );
+    vi.mocked(previewApi.frame).mockResolvedValue({
+      ...frame,
+      version: 2,
+      image: "",
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(200));
+    expect(host.querySelector("img")?.getAttribute("src")).toBe(
+      "data:image/jpeg;base64,jpeg-data",
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    if (density) Object.defineProperty(window, "devicePixelRatio", density);
+  }
+});

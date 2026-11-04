@@ -40,6 +40,8 @@ pub enum Action {
     Back,
     Forward,
     Resize {
+        #[serde(default)]
+        device_scale_factor: Option<f64>,
         width: u32,
         height: u32,
         mobile: bool,

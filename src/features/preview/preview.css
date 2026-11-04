@@ -230,7 +230,7 @@
   background: var(--color-surface);
   overflow: hidden;
   box-shadow: var(--shadow-switch-knob);
-  border: 1px solid var(--color-border-subtle);
+  outline: 1px solid var(--color-border-subtle);
   touch-action: none;
 }
 .preview-browser-image > img {

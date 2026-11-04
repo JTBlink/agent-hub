@@ -3,7 +3,6 @@ use crate::core::preview::{
     assets::Assets,
     automation::{self, Automation, ControlEndpoint},
     browser::Action,
-    documents::Documents,
     downloads::Download,
     runtime::BrowserProfile,
 };
@@ -23,7 +22,8 @@ fn reopens_live_exited_and_disposed_pages_without_replaying_forms_or_losing_logi
         let root = tempfile::tempdir().unwrap();
         let path = root.path().join("index.html");
         std::fs::write(&path,"<!doctype html><meta name='viewport' content='width=device-width,initial-scale=1'><title>Reopen</title><input><button onclick='window.clicks=(window.clicks||0)+1'>Submit</button>").unwrap();
-        let docs = Arc::new(Documents::default());
+        let browsers = Arc::new(Browsers::new(root.path().join("client")));
+        let docs = browsers.documents.clone();
         let doc = docs.open(&path).unwrap();
         let assets = Assets::start(docs).unwrap();
         let url = assets.browser_document_url(&doc.id, &doc.title);
@@ -33,7 +33,6 @@ fn reopens_live_exited_and_disposed_pages_without_replaying_forms_or_losing_logi
         } else {
             None
         };
-        let browsers = Arc::new(Browsers::new(root.path().join("client")));
         let profile = if mode == "paired" {
             let endpoint = host.runtime_handles().unwrap()["default"]
                 .lock()
@@ -66,6 +65,7 @@ fn reopens_live_exited_and_disposed_pages_without_replaying_forms_or_losing_logi
             .action(
                 &id,
                 Action::Resize {
+                    device_scale_factor: Some(2.),
                     width: 700,
                     height: 600,
                     mobile: false,
@@ -123,11 +123,12 @@ fn reopens_live_exited_and_disposed_pages_without_replaying_forms_or_losing_logi
         .unwrap();
         automation::call(&endpoint, json!({"kind":"reopen","id":id})).unwrap();
         wait_ready(&browsers, &id);
-        let value=browsers.action(&id,Action::Evaluate{expression:"({form:document.querySelector('input').value,clicks:window.clicks||0,origin:performance.timeOrigin,storage:localStorage.getItem('persist'),cookie:document.cookie,width:innerWidth,height:innerHeight})".into()}).unwrap();
+        let value=browsers.action(&id,Action::Evaluate{expression:"({form:document.querySelector('input').value,clicks:window.clicks||0,origin:performance.timeOrigin,storage:localStorage.getItem('persist'),cookie:document.cookie,width:innerWidth,height:innerHeight,dpr:devicePixelRatio})".into()}).unwrap();
         assert_eq!(value["form"], "");
         assert_eq!(value["clicks"], 0);
         assert_ne!(value["origin"], origin);
         assert_eq!(value["width"], 700);
+        assert_eq!(value["dpr"], 2);
         assert_eq!(value["height"], 600);
         if matches!(mode, "live" | "persistent") {
             assert_eq!(value["storage"], "profile-data");
