@@ -68,7 +68,7 @@ pub async fn user_agent(view: &tauri::Webview, value: Option<String>) -> Result<
     super::receive(receiver).await
 }
 pub async fn theme(view: &tauri::Webview, dark: bool) -> Result<(), AppError> {
-    use gtk::prelude::SettingsExt;
+    use gtk::prelude::GtkSettingsExt;
     let (sender, receiver) = tokio::sync::oneshot::channel();
     view.with_webview(move |_| {
         let result = gtk::Settings::default()

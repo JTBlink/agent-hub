@@ -43,15 +43,14 @@ impl Imports {
     pub fn shared() -> Arc<Self> {
         let imports = Arc::new(Self::default());
         let weak = Arc::downgrade(&imports);
-        std::thread::spawn(move || loop {
-            let Some(imports) = weak.upgrade() else {
-                break;
-            };
-            if let Ok(mut batches) = imports.batches.lock() {
-                batches.retain(|_, batch| batch.created.elapsed() < Duration::from_secs(300));
+        std::thread::spawn(move || {
+            while let Some(imports) = weak.upgrade() {
+                if let Ok(mut batches) = imports.batches.lock() {
+                    batches.retain(|_, batch| batch.created.elapsed() < Duration::from_secs(300));
+                }
+                drop(imports);
+                std::thread::sleep(Duration::from_secs(1));
             }
-            drop(imports);
-            std::thread::sleep(Duration::from_secs(1));
         });
         imports
     }

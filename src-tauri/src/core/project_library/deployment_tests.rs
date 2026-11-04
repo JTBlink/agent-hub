@@ -2,11 +2,13 @@ use super::{
     tests::{fixture, TestProject},
     *,
 };
+#[cfg(unix)]
 use crate::core::{
     deployment_preferences::{Preference, Scope, SETTING},
     skill_store::SkillStore,
-    tool_adapters,
 };
+
+use crate::core::tool_adapters;
 
 #[test]
 fn absent_recorded_agent_is_unassigned_and_repair_does_not_readd_it() {

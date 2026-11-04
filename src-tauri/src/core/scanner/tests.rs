@@ -1,4 +1,5 @@
 use super::*;
+#[cfg(unix)]
 use crate::core::central_repo;
 use std::fs;
 use tempfile::tempdir;

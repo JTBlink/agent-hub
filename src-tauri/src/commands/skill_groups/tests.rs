@@ -1,5 +1,6 @@
 mod membership_tests;
 use super::*;
+#[cfg(unix)]
 use crate::core::scenario_service::{
     collect_scenario_sync_targets, sync_desired_targets, unsync_obsolete_scenario_targets,
 };

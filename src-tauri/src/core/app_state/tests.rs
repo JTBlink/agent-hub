@@ -1,5 +1,7 @@
 use super::*;
-use crate::core::skill_store::{ProjectRecord, SkillRecord, SkillTargetRecord};
+use crate::core::skill_store::SkillRecord;
+#[cfg(unix)]
+use crate::core::skill_store::{ProjectRecord, SkillTargetRecord};
 
 fn skill_at(id: &str, central_path: &Path) -> SkillRecord {
     SkillRecord {

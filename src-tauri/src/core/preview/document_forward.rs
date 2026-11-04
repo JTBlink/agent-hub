@@ -1,6 +1,8 @@
 //! Reverse only the explicitly registered document server through an authenticated SSH master.
 use super::browser::Browsers;
-use crate::core::{cli_process, error::AppError};
+#[cfg(unix)]
+use crate::core::cli_process;
+use crate::core::error::AppError;
 use std::{
     path::Path,
     process::Child,
