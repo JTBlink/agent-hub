@@ -59,12 +59,20 @@ fn import_preview_reads_only_declared_portable_files_and_never_runs_commands() {
     let record = find(temp.path(), &id).unwrap();
     let path = directory(&record).unwrap();
     fs_write(&path.join(".local/secret"), "private-value");
+    std::fs::create_dir_all(path.join(".local/state")).unwrap();
+    fs_write(
+        &path.join(".local/state/task-state.json"),
+        r#"{"schema_version":1,"extensions":{"mr_repair":{"private_evidence":"local-only-repair"}}}"#,
+    );
     let preview = preview_package(&path).unwrap();
     assert!(!preview.draft.enabled);
     assert!(preview.draft.workdir.is_none() && preview.draft.script_dir.is_none());
     assert!(!serde_json::to_string(&preview)
         .unwrap()
         .contains("private-value"));
+    assert!(!serde_json::to_string(&preview)
+        .unwrap()
+        .contains("local-only-repair"));
     assert!(path.join(".local/runs").read_dir().is_err());
     let mut malicious = preview.clone();
     malicious.draft.files.push(AutomationScriptFile {

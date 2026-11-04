@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.6.0",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -16,23 +16,24 @@
   "files": [
     "scripts/agent.py",
     "scripts/review.py",
-    "scripts/review_host.py",
-    "config/review-config.json",
     "prompts/prompt.md",
     "config/herdr.json",
     "TASK.md",
     "scripts/run.sh",
     "references/platforms.md",
-    "references/runtime.md"
+    "references/runtime.md",
+    "scripts/review_host.py",
+    "config/review-config.json",
+    "scripts/repair_state.py",
+    "scripts/task_state.py",
+    "scripts/herdr_agent.py",
+    "scripts/review_labels.py",
+    "references/review-labels.md"
   ],
   "dependencies": [
     {
       "kind": "python",
       "packages": []
-    },
-    {
-      "kind": "command",
-      "name": "herdr"
     },
     {
       "kind": "command",

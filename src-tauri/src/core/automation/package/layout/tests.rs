@@ -84,6 +84,8 @@ fn conflicting_manifests_and_declared_metadata_are_rejected() {
         "config/task.json",
         "config/catalog.json",
         ".local/private.json",
+        ".local/state/task-state.json",
+        ".local/runs/example/output.log",
     ] {
         assert!(super::super::exchange::validate_path(reserved).is_err());
     }

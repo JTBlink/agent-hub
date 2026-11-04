@@ -1,7 +1,10 @@
 {
   "provider": "auto",
   "remote": null,
-  "github_cli": ["gh"],
-  "gitlab_cli": ["glab"],
-  "max_pages": 3
+  "github_cli": [
+    "gh"
+  ],
+  "gitlab_cli": null,
+  "max_pages": 3,
+  "project_preflight": []
 }
