@@ -10,4 +10,14 @@ fn main() {
         ),
     )
     .expect("failed to run tauri-build");
+
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
+        // Tauri embeds its resource only in binaries. Real WebView integration tests
+        // also import Common Controls v6 APIs and must use the same manifest.
+        let resource =
+            std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap()).join("resource.rc");
+        embed_resource::compile_for_tests(resource, embed_resource::NONE)
+            .manifest_required()
+            .expect("failed to embed Windows resources in integration tests");
+    }
 }

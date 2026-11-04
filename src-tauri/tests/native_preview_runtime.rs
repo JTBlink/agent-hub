@@ -238,16 +238,13 @@ mod runtime {
         }
         for dark in [true, false] {
             action(&main, &id, Action::SetTheme { dark }).await?;
-            ensure(
-                evaluate(
-                    &main,
-                    &id,
-                    "matchMedia('(prefers-color-scheme: dark)').matches",
-                )
-                .await?
-                    == dark,
+            wait_for(
+                &main,
+                &id,
+                &format!("matchMedia('(prefers-color-scheme: dark)').matches==={dark}"),
                 "Native theme mismatch",
-            )?;
+            )
+            .await?;
         }
         let current = action(&main, &id, Action::Snapshot).await?;
         let shadow = reference(&current, "Shadow action")?;
@@ -306,13 +303,13 @@ mod runtime {
                 .map_err(|error| error.to_string())?;
         preview_native::preview_native_update(main.clone(), id.clone(), true, Some(bounds), None)
             .map_err(|error| error.to_string())?;
-        ensure(
-            evaluate(&main, &id, "innerWidth")
-                .await?
-                .as_f64()
-                .is_some_and(|width| (width - 980.).abs() < 3.),
+        wait_for(
+            &main,
+            &id,
+            "Math.abs(innerWidth-980)<3",
             "Native viewport size did not match its CSS viewport",
-        )?;
+        )
+        .await?;
         let _ = evaluate(
             &main,
             &id,
@@ -350,6 +347,24 @@ mod runtime {
         preview_native::preview_native_action(main, id, "close".into())
             .map_err(|error| error.to_string())?;
         Ok(())
+    }
+    // Native layout and media preferences cross renderer processes asynchronously.
+    async fn wait_for(
+        main: &tauri::Webview,
+        id: &str,
+        expression: &str,
+        message: &str,
+    ) -> Result<(), String> {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+        loop {
+            if evaluate(main, id, expression).await? == true {
+                return Ok(());
+            }
+            if std::time::Instant::now() >= deadline {
+                return Err(message.into());
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
     }
     async fn eval_selection(
         main: &tauri::Webview,

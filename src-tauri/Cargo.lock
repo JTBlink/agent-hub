@@ -57,6 +57,7 @@ dependencies = [
  "clap",
  "dirs 5.0.1",
  "dunce",
+ "embed-resource",
  "fs2",
  "gethostname",
  "git2",
