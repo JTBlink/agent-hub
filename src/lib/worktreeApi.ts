@@ -1,5 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export const pasteWorktreeFiles = (
+  projectId: string,
+  worktreePath: string,
+  relativePath: string,
+) =>
+  invoke<string[]>("paste_worktree_files", {
+    projectId,
+    worktreePath,
+    relativePath,
+  });
+
 export type WorktreeFileAction =
   | { kind: "new_file" | "new_directory" | "rename"; name: string }
   | { kind: "delete" };

@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import {
   Copy,
+  ClipboardPaste,
   FilePlus2,
   FolderPlus,
   FolderOpen,
@@ -22,6 +23,7 @@ import { ConfirmDialog } from "../ConfirmDialog";
 import { GitBrowserDialog } from "../GitBrowserDialog";
 import {
   modifyWorktreeEntry,
+  pasteWorktreeFiles,
   revealWorktreeEntry,
   type WorktreeFileAction,
 } from "../../lib/worktreeApi";
@@ -73,6 +75,23 @@ export function WorktreeEntryMenu({
     path,
   );
   const folder = directory ? path : path.split("/").slice(0, -1).join("/");
+  const paste = async () => {
+    if (pending.current || symlink || operation) return;
+    pending.current = true;
+    setBusy(true);
+    try {
+      await pasteWorktreeFiles(projectId, worktreePath, folder);
+      onCreated?.();
+      toast.success(t("fileTree.completed"));
+    } catch (cause) {
+      toast.error(getErrorMessage(cause, t("common.error")));
+    } finally {
+      // Refresh even after a partial publish or a collision with an external writer.
+      onRefresh();
+      pending.current = false;
+      setBusy(false);
+    }
+  };
   const begin = (kind: WorktreeFileAction["kind"]) => {
     setName(kind === "rename" ? (path.split("/").at(-1) ?? "") : "");
     setError("");
@@ -128,6 +147,13 @@ export function WorktreeEntryMenu({
     }
   };
   const actions: CardAction[] = [
+    {
+      key: "paste",
+      label: t("fileTree.paste"),
+      icon: <ClipboardPaste size={14} />,
+      disabled: symlink,
+      onSelect: () => void paste(),
+    },
     ...(!directory
       ? [
           {
@@ -255,7 +281,34 @@ export function WorktreeEntryMenu({
   );
   return (
     <>
-      <div ref={target}>
+      <div
+        ref={target}
+        className={
+          directory ? "[&:focus-within>button]:bg-surface-active" : undefined
+        }
+        onMouseDown={(event) => {
+          if (event.target instanceof Element) {
+            const button = event.target.closest("button");
+            if (button && event.currentTarget.contains(button)) button.focus();
+          }
+        }}
+        onKeyDown={(event) => {
+          if (
+            (event.metaKey || event.ctrlKey) &&
+            !event.altKey &&
+            !event.shiftKey &&
+            event.key.toLowerCase() === "v" &&
+            !(
+              event.target instanceof HTMLElement &&
+              event.target.closest("input, textarea, [contenteditable=true]")
+            )
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+            void paste();
+          }
+        }}
+      >
         {children}
         <CardActionMenu
           contextTarget={target}

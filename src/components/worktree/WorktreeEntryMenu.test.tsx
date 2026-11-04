@@ -11,6 +11,7 @@ import {
 } from "../../lib/developmentPreview";
 import { WorktreeEntryMenu } from "./WorktreeEntryMenu";
 import {
+  pasteWorktreeFiles,
   modifyWorktreeEntry,
   revealWorktreeEntry,
 } from "../../lib/worktreeApi";
@@ -29,6 +30,7 @@ vi.mock("../../features/preview/shared/openRequests", () => ({
 }));
 vi.mock("../../lib/worktreeApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/worktreeApi")>()),
+  pasteWorktreeFiles: vi.fn(),
   modifyWorktreeEntry: vi.fn(),
   revealWorktreeEntry: vi.fn(),
 }));
@@ -133,6 +135,7 @@ it("opens a root menu by keyboard and restores focus after escape", async () => 
   await render("", true);
   await open(true);
   expect(menuItems().map((item) => item.textContent)).toEqual([
+    "fileTree.paste",
     "fileTree.newFile",
     "fileTree.newDirectory",
     "fileTree.reveal",
@@ -174,6 +177,53 @@ it("copies absolute and relative paths, reveals the exact target and opens files
   await open();
   await choose("fileTree.open");
   expect(select).toHaveBeenCalledWith("src/notes.md");
+});
+
+it("pastes into the chosen folder from its context menu", async () => {
+  await render("dist", true);
+  vi.mocked(pasteWorktreeFiles).mockResolvedValue(["dist/example.txt"]);
+  await open();
+  await choose("fileTree.paste");
+  expect(pasteWorktreeFiles).toHaveBeenCalledWith(
+    "demo",
+    "/workspace/demo",
+    "dist",
+  );
+  expect(refresh).toHaveBeenCalledOnce();
+});
+
+it.each([{ metaKey: true }, { ctrlKey: true }])(
+  "pastes into a focused file's parent with a keyboard shortcut (%s)",
+  async (modifier) => {
+    await render("docs/notes.md");
+    await act(async () => {
+      host.querySelector("#entry")!.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          ...modifier,
+          key: "v",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(pasteWorktreeFiles).toHaveBeenCalledWith(
+      "demo",
+      "/workspace/demo",
+      "docs",
+    );
+    expect(refresh).toHaveBeenCalledOnce();
+  },
+);
+
+it("reports paste errors and refreshes after a partial failure", async () => {
+  await render("", true);
+  vi.mocked(pasteWorktreeFiles).mockRejectedValue(
+    new Error("Name already exists"),
+  );
+  await open();
+  await choose("fileTree.paste");
+  expect(toast.error).toHaveBeenCalledWith("Name already exists");
+  expect(refresh).toHaveBeenCalledOnce();
 });
 
 it("creates a sibling file, prevents duplicate requests and preserves input on failure", async () => {

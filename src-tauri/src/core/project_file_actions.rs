@@ -1,4 +1,5 @@
 //! File tree operations within an already authorized checkout.
+pub mod paste;
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::{

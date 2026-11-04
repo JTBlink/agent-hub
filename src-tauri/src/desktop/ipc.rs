@@ -214,6 +214,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::project_worktrees::read_worktree_file,
         commands::project_worktrees::write_worktree_file,
         commands::project_worktrees::modify_worktree_entry,
+        commands::project_worktrees::paste_worktree_files,
         commands::project_worktrees::reveal_worktree_entry,
         commands::project_worktrees::search_worktree,
         commands::project_worktrees::replace_worktree_matches,

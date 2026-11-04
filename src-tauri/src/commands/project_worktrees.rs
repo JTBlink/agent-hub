@@ -7,6 +7,35 @@ use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
+pub async fn paste_worktree_files(
+    app: tauri::AppHandle,
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: String,
+    relative_path: String,
+) -> Result<Vec<String>, AppError> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    app.run_on_main_thread(move || {
+        crate::core::project_file_actions::paste::request_files(move |result| {
+            let _ = sender.send(result);
+        });
+    })?;
+    let sources = tokio::time::timeout(std::time::Duration::from_secs(10), receiver)
+        .await
+        .map_err(AppError::io)?
+        .map_err(AppError::io)?
+        .map_err(AppError::io)?;
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, Some(&worktree_path))
+            .map_err(AppError::io)?;
+        crate::core::project_file_actions::paste::copy_into(&root, &relative_path, &sources)
+            .map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn modify_worktree_entry(
     store: State<'_, Arc<SkillStore>>,
     project_id: String,

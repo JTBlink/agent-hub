@@ -72,6 +72,7 @@
     "recoveryPending": "Configuration backup recovery is pending. Reload shortly, or restart the app to complete recovery."
   },
   "fileTree": {
+    "paste": "Paste",
     "previewInBrowser": "Preview in browser",
     "actions": "File actions",
     "open": "Open file",

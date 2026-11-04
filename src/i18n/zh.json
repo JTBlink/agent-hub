@@ -72,6 +72,7 @@
     "recoveryPending": "统一备份正在恢复配置，请稍后重新读取；如持续出现，请重启应用完成恢复。"
   },
   "fileTree": {
+    "paste": "粘贴",
     "previewInBrowser": "浏览器预览",
     "actions": "文件操作",
     "open": "打开文件",
