@@ -33,6 +33,12 @@ it("opens another profile in a new tab without modifying the existing page and d
         <ProfileSelector active={active} profiles={profiles} onOpen={open} />,
       ),
     );
+    const trigger =
+      container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+    expect(trigger.textContent).toBe("");
+    expect(trigger.title).toContain("Default");
+    expect(trigger.title).toContain("preview.profiles");
+    expect(trigger.querySelector("svg")).not.toBeNull();
     await act(async () =>
       container.querySelector<HTMLButtonElement>('[role="combobox"]')!.click(),
     );

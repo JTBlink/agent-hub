@@ -1,3 +1,4 @@
+import "@vscode/codicons/dist/codicon.css";
 import { openPreviewAddress } from "../shared/documentLinks";
 import {
   MousePointer2,
@@ -9,7 +10,6 @@ import {
   Search,
   StopCircle,
   Clock,
-  Terminal,
   ExternalLink,
   Settings2,
   PanelRight,
@@ -218,7 +218,11 @@ export function PreviewToolbar({
                 disabled={!model.pageId}
                 onClick={() => void model.openDevtools()}
               >
-                <Terminal size={14} />
+                <span
+                  className="codicon codicon-developer-tools"
+                  style={{ fontSize: 14 }}
+                  aria-hidden="true"
+                />
                 {t("preview.developerTools")}
               </button>
               <button
@@ -232,10 +236,16 @@ export function PreviewToolbar({
               <button
                 aria-label={t("preview.annotations")}
                 title={t("preview.annotations")}
-                className={model.panelOpen ? "active" : ""}
+                className={
+                  model.panelOpen && model.panel === "annotations"
+                    ? "active"
+                    : ""
+                }
                 onClick={() => {
                   model.setPanel("annotations");
-                  model.setPanelOpen(!model.panelOpen);
+                  model.setPanelOpen(
+                    !model.panelOpen || model.panel !== "annotations",
+                  );
                 }}
               >
                 <PanelRight size={14} />

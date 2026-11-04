@@ -7,6 +7,8 @@ import { usePageFind } from "./shared/usePageFind";
 import { useBrowserInventory } from "./web/useBrowserInventory";
 import { DownloadsPanel } from "./components/DownloadsPanel";
 import { PreviewAddress } from "./components/PreviewAddress";
+import { PreviewInspectActions } from "./components/PreviewInspectActions";
+import { DevtoolsDock } from "./components/DevtoolsDock";
 import { PreviewToolbar } from "./components/PreviewToolbar";
 import { useImperativeHandle, useState, useRef, type Ref } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,7 +16,6 @@ import {
   ArrowLeft,
   ArrowRight,
   RotateCw,
-  Terminal,
   Plus,
   X,
   Globe,
@@ -224,14 +225,7 @@ export function PreviewWorkspace({
           ? sourceAction
           : sourceToolbarContainer &&
             createPortal(sourceAction, sourceToolbarContainer)}
-        <button
-          aria-label={t("preview.developerTools")}
-          title={t("preview.developerTools")}
-          disabled={!model.pageId}
-          onClick={() => void model.openDevtools()}
-        >
-          <Terminal size={16} />
-        </button>
+        <PreviewInspectActions model={model} />
         <PreviewToolbar
           model={model}
           findOpen={findOpen}
@@ -450,6 +444,17 @@ export function PreviewWorkspace({
                     )}
                   </>
                 )}
+                {model.devtoolsPageId &&
+                  model.devtoolsPageId === model.pageIds[tab.id] && (
+                    <DevtoolsDock
+                      key={model.devtoolsPageId}
+                      pageId={model.devtoolsPageId}
+                      tab={tab}
+                      active={shown && active?.id === tab.id}
+                      onClose={model.closeDevtools}
+                      onError={model.report}
+                    />
+                  )}
               </div>
             );
           })}

@@ -83,7 +83,8 @@ export function usePreviewWorkspace({
   const [source, setSource] = useState(false);
   const [sourceLine, setSourceLine] = useState<number | undefined>();
   const [panel, setPanel] = useState<PreviewPanel>("annotations");
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [devtoolsPageId, setDevtoolsPageId] = useState<string | null>(null);
   const [viewports, setViewports] = useState<
     Record<string, { width: number; height: number; mobile: boolean } | null>
   >({});
@@ -137,6 +138,7 @@ export function usePreviewWorkspace({
     return () => clearTimeout(timer);
   }, [notice]);
   const resetView = () => {
+    setDevtoolsPageId(null);
     setSource(false);
     setSourceLine(undefined);
     setPicking(false);
@@ -260,15 +262,11 @@ export function usePreviewWorkspace({
   };
   const openDevtools = async () => {
     if (!pageId) return;
-    const url = await action<string | null>({ kind: "devtools" });
-    if (url) {
-      try {
-        const { openUrl } = await import("@tauri-apps/plugin-opener");
-        await openUrl(url);
-      } catch (error) {
-        report(error);
-      }
+    if (native) {
+      await action({ kind: "devtools" });
+      return;
     }
+    setDevtoolsPageId((previous) => (previous === pageId ? null : pageId));
   };
   const navigate = async (value: string) => {
     if (!value.trim()) return;
@@ -571,6 +569,8 @@ export function usePreviewWorkspace({
     action,
     navigate,
     openDevtools,
+    devtoolsPageId,
+    closeDevtools: () => setDevtoolsPageId(null),
     onFrame,
     capture,
     captureWeb,
