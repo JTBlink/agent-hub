@@ -39,7 +39,8 @@
     "docs:build": "npm run docs:generate && vitepress build docs-site",
     "docs:dev": "npm run docs:generate && vitepress dev docs-site --host 127.0.0.1 --port 4174",
     "website:build": "npm run homepage:build -- _site/index.html && npm run docs:build",
-    "prototype:preview": "vite --host 127.0.0.1 --port 4176 --strictPort"
+    "prototype:preview": "vite --host 127.0.0.1 --port 4176 --strictPort",
+    "prototype:hosts": "vite --host 127.0.0.1 --port 4177 --strictPort --open /tests/browser/settings-hosts-prototype.html"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
