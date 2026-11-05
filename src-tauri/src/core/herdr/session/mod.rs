@@ -8,6 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 pub(crate) const SESSION: &str = "default";
+pub(crate) static WORKSPACE_ROUTING: Mutex<()> = Mutex::new(());
 static SERVER_START: Mutex<()> = Mutex::new(());
 pub(crate) use crate::core::agent_runtime::INHERITED_CONTEXT;
 
@@ -91,6 +92,7 @@ pub(crate) fn spawn_server(mut server: Command) -> Result<()> {
 
 /// Select the current project's workspace before attaching an interactive client.
 pub(crate) fn prepare_workspace(executable: &Path, cwd: &Path) -> Result<Vec<String>> {
+    let _routing = WORKSPACE_ROUTING.lock().unwrap_or_else(|e| e.into_inner());
     let cwd = cwd
         .canonicalize()
         .context("Project directory is unavailable")?;

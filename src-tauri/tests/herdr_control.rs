@@ -624,3 +624,65 @@ fn worktree_deletion_protects_local_files_and_identity_then_closes_and_removes_c
         .unwrap()
         .contains("--session default workspace close w1"));
 }
+
+#[test]
+fn project_shortcut_reuses_and_attaches_to_a_matching_pane_in_a_mixed_workspace() {
+    let root = tempfile::tempdir().unwrap();
+    let checkout = root.path().join("checkout");
+    let unrelated = root.path().join("other");
+    fs::create_dir(&checkout).unwrap();
+    fs::create_dir(&unrelated).unwrap();
+    let cli = fake_cli(root.path(), &checkout);
+    let snapshot_file = root.path().join("herdr.snapshot");
+    let mut data: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&snapshot_file).unwrap()).unwrap();
+    data["result"]["snapshot"]["workspaces"][0]["active_tab_id"] = json!("w1:t2");
+    data["result"]["snapshot"]["panes"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+            "workspace_id":"w1", "tab_id":"w1:t2", "pane_id":"w1:p2",
+            "terminal_id":"terminal-2", "cwd":unrelated, "focused":true
+        }));
+    fs::write(&snapshot_file, data.to_string()).unwrap();
+    let control = HerdrControl::new(cli);
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let project = control
+        .open(&store, "default", "w1", Some("w1:p1"))
+        .unwrap();
+    for _ in 0..2 {
+        let opened = control
+            .ensure(
+                &store,
+                "default",
+                &project.project_id,
+                Some(checkout.to_str().unwrap()),
+            )
+            .unwrap();
+        assert_eq!(opened.target.workspace_id, "w1");
+        assert_eq!(opened.target.pane_id, "w1:p1");
+        assert_eq!(
+            opened.path,
+            checkout.canonicalize().unwrap().to_string_lossy()
+        );
+        control
+            .attachment(&store, &opened.project_id, &opened.path, &opened.target)
+            .unwrap();
+        assert!(control
+            .attachment(
+                &store,
+                &opened.project_id,
+                &opened.path,
+                &app_lib::core::herdr::control::Target {
+                    pane_id: "w1:p2".into(),
+                    terminal_id: "terminal-2".into(),
+                    revision: 0,
+                    ..opened.target.clone()
+                }
+            )
+            .is_err());
+    }
+    let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
+    assert!(!calls.contains("workspace create"));
+    assert!(calls.contains("tab focus w1:t1"));
+}

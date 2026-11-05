@@ -212,7 +212,6 @@ impl HerdrControl {
             .iter()
             .find(|w| w.workspace_id == workspace_id)
             .context("Herdr workspace no longer exists; refresh the sidebar")?;
-        let directory = directory_for(workspace, &snapshot.panes)?;
         let pane = snapshot
             .panes
             .iter()
@@ -232,6 +231,7 @@ impl HerdrControl {
                 }
             })
             .context("Herdr pane no longer exists; refresh the sidebar")?;
+        let directory = directory_for_pane(workspace, &snapshot.panes, pane)?;
         let project_id = bindings::resolve_project(store, &directory)?;
         self.focus(session, &snapshot, pane)?;
         Ok(OpenedWorkspace {
@@ -261,6 +261,9 @@ impl HerdrControl {
         project_id: &str,
         path: Option<&str>,
     ) -> Result<OpenedWorkspace> {
+        let _routing = super::session::WORKSPACE_ROUTING
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
         let directory = crate::core::project_worktrees::directory(store, project_id, path)?;
         let snapshot = self.snapshot(session)?;
@@ -270,6 +273,26 @@ impl HerdrControl {
                 .is_some_and(|p| Path::new(p) == directory)
         }) {
             return self.open_locked(store, session, &w.workspace_id, None);
+        }
+        // Missing workspace metadata does not mean the checkout is absent:
+        // another tab in this workspace may use a different directory.
+        for workspace in &snapshot.workspaces {
+            if workspace.worktree.is_some() {
+                continue;
+            }
+            if let Some(pane) = snapshot.panes.iter().find(|pane| {
+                pane.workspace_id == workspace.workspace_id
+                    && pane.cwd.as_deref().is_some_and(|path| {
+                        checked_directory(path).is_ok_and(|path| path == directory)
+                    })
+            }) {
+                return self.open_locked(
+                    store,
+                    session,
+                    &workspace.workspace_id,
+                    Some(&pane.pane_id),
+                );
+            }
         }
         let label = directory
             .file_name()
@@ -311,9 +334,6 @@ impl HerdrControl {
             .iter()
             .find(|w| w.workspace_id == target.workspace_id)
             .context("Workspace was closed")?;
-        if directory_for(workspace, &snapshot.panes)? != directory {
-            bail!("Herdr target no longer belongs to the selected checkout")
-        }
         // The client attaches to a workspace, whereas saved pane/terminal IDs
         // can expire when a pane is closed. Re-resolve only for attachment;
         // explicit actions must continue to use verify's exact identity fence.
@@ -331,6 +351,9 @@ impl HerdrControl {
                     .max_by_key(|p| p.focused)
             })
             .context("Herdr workspace has no available pane; refresh the sidebar")?;
+        if directory_for_pane(workspace, &snapshot.panes, pane)? != directory {
+            bail!("Herdr target no longer belongs to the selected checkout")
+        }
         self.focus(&target.session, &snapshot, pane)?;
         let mut command = portable_pty::CommandBuilder::new(&self.executable);
         command.args(["session", "attach", &target.session]);
@@ -366,6 +389,17 @@ fn directory_for(workspace: &Workspace, panes: &[Pane]) -> Result<PathBuf> {
         bail!("Herdr workspace has no unambiguous directory; open a dedicated workspace for this checkout")
     }
     Ok(directories.remove(0))
+}
+// Worktree metadata remains authoritative. Otherwise the selected live pane
+// identifies the checkout even when other tabs use unrelated directories.
+fn directory_for_pane(workspace: &Workspace, panes: &[Pane], pane: &Pane) -> Result<PathBuf> {
+    if workspace.worktree.is_some() {
+        return directory_for(workspace, panes);
+    }
+    pane.cwd
+        .as_deref()
+        .context("Pane directory is unavailable")
+        .and_then(checked_directory)
 }
 fn checked_directory(path: &str) -> Result<PathBuf> {
     let path = Path::new(path);
