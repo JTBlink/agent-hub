@@ -28,8 +28,13 @@ export interface TerminalTab {
   agent?: HerdrAgent;
   scriptPath?: string;
   development?: DevelopmentTerminal;
+  /** Runtime-only log visibility; hiding a service never closes its PTY. */
+  developmentVisible?: boolean;
   herdrTarget?: HerdrTarget;
 }
+
+export const isTerminalTabVisible = (tab: TerminalTab) =>
+  !tab.development || !!tab.developmentVisible;
 
 export interface TerminalLayout {
   tabs: TerminalTab[];
@@ -172,12 +177,20 @@ export function readTerminalLayout(): TerminalLayout {
 
 export function writeTerminalLayout(layout: TerminalLayout) {
   try {
+    const tabs = layout.tabs.filter((tab) => !tab.development);
+    const ids = new Set(tabs.map((tab) => tab.id));
     localStorage.setItem(
       TERMINAL_LAYOUT_KEY,
       JSON.stringify({
         version: 1,
         ...layout,
-        tabs: layout.tabs.map(
+        activeIds: Object.fromEntries(
+          Object.entries(layout.activeIds).filter(([, id]) => ids.has(id)),
+        ),
+        lastActiveId: ids.has(layout.lastActiveId)
+          ? layout.lastActiveId
+          : (tabs.at(-1)?.id ?? ""),
+        tabs: tabs.map(
           ({
             id,
             projectId,

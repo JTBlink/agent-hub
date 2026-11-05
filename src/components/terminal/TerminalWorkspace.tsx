@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { terminalTaskRequest } from "../../lib/taskContext";
 import { getErrorMessage } from "../../lib/error";
 import type { Project, ToolInfo } from "../../lib/tauri";
-import { ThemedSelect } from "../ThemedSelect";
+import { TerminalProjectSelect } from "./TerminalProjectSelect";
 import { TerminalPane, type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
 import { herdrEnabled, useHerdrShortcut } from "@app/herdr";
@@ -52,6 +52,7 @@ import {
 } from "./useTerminalRunRequests";
 import { LocalTerminalTools } from "./TerminalActionBar";
 import { HerdrTerminalTools } from "@app/herdr";
+import { useDevelopmentTabs } from "./useDevelopmentTabs";
 
 interface Props {
   projects: Project[];
@@ -215,8 +216,8 @@ export function TerminalWorkspace({
       replace: true,
     });
   }, [visible, ready, legacy, tabs.length, location.state, projects, navigate]);
-  const active =
-    scopedTabs.find((tab) => tab.id === activeId) ?? scopedTabs.at(-1);
+  const { visibleTabs, active, hideService, revealService } =
+    useDevelopmentTabs(scopedTabs, activeId, setTabs, setActiveId);
   const displayedId = active?.id ?? "";
   const bounds = new Map(tabs.map((tab) => [tab.id, terminalPaneBounds(tab)]));
   const count = tabs.reduce((sum, tab) => sum + tab.panes.length, 0);
@@ -259,7 +260,13 @@ export function TerminalWorkspace({
     setActiveId(tab.id);
   };
   const split = (direction: Tab["direction"]) => {
-    if (!ready || !active || active.agent || count >= TERMINAL_PANE_LIMIT)
+    if (
+      !ready ||
+      !active ||
+      active.agent ||
+      active.development ||
+      count >= TERMINAL_PANE_LIMIT
+    )
       return;
     const pane = crypto.randomUUID();
     setZoomedPane("");
@@ -287,6 +294,8 @@ export function TerminalWorkspace({
     }
   };
   const selectSession = (tab: Tab) => {
+    onSelectTerminal?.();
+    revealService(tab);
     rememberActive(tab.id);
     setActiveIds((previous) => ({
       ...previous,
@@ -327,11 +336,11 @@ export function TerminalWorkspace({
         <div className="flex h-9 shrink-0 flex-nowrap items-center overflow-x-auto gap-1 border-b border-border bg-bg-secondary px-2">
           <TerminalTabs
             onRename={renameTab}
-            tabs={scopedTabs}
+            tabs={visibleTabs}
             projects={projects}
             activeId={shown ? displayedId : ""}
             scoped={!!workspace}
-            onClose={close}
+            onClose={(tab) => (tab.development ? hideService(tab) : close(tab))}
             onSelect={(tab) => {
               onSelectTerminal?.();
               setActiveId(tab.id);
@@ -352,50 +361,26 @@ export function TerminalWorkspace({
             )}
           </TerminalTabs>
           {!workspace && (
-            <ThemedSelect
-              aria-label={t("terminal.chooseProject")}
-              value={selected}
-              title={projects.find((project) => project.id === selected)?.name}
-              onChange={(event) => {
-                const project = projects.find(
-                  (item) => item.id === event.target.value,
-                );
-                if (project) navigate(worktreeUrl(project.id, project.path));
-              }}
-              className="h-7 max-w-40 gap-2 rounded-md border-transparent bg-transparent px-2 py-0 text-xs"
-            >
-              {!projects.length && (
-                <option value="">{t("terminal.chooseProject")}</option>
-              )}
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </ThemedSelect>
+            <TerminalProjectSelect projects={projects} selected={selected} />
           )}
           <div className="flex shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap">
-            {shown && (
-              <>
-                <TerminalSessions
-                  tabs={tabs}
-                  projects={projects}
-                  activeId={displayedId}
-                  onSelect={selectSession}
-                  onClose={close}
-                />
-                {active?.context && (
-                  <button
-                    type="button"
-                    className={toolbarAction}
-                    aria-label={t("tasks.context")}
-                    title={active.context.title}
-                    onClick={() => setContextVisible((value) => !value)}
-                  >
-                    <FileText size={15} />
-                  </button>
-                )}
-              </>
+            <TerminalSessions
+              tabs={tabs}
+              projects={projects}
+              activeId={shown ? displayedId : ""}
+              onSelect={selectSession}
+              onClose={close}
+            />
+            {shown && active?.context && (
+              <button
+                type="button"
+                className={toolbarAction}
+                aria-label={t("tasks.context")}
+                title={active.context.title}
+                onClick={() => setContextVisible((value) => !value)}
+              >
+                <FileText size={15} />
+              </button>
             )}
             {toolbarEnd}
             <TerminalPanelTools
@@ -415,6 +400,7 @@ export function TerminalWorkspace({
                 ready &&
                 !!active &&
                 !active.agent &&
+                !active.development &&
                 count < TERMINAL_PANE_LIMIT
               }
               onHerdr={() => void herdrSessions.openDefault(herdr.launch)}
@@ -439,7 +425,7 @@ export function TerminalWorkspace({
             </button>
           </div>
         )}
-        {!scopedTabs.length && (
+        {!visibleTabs.length && (
           <div className="flex flex-1 items-center justify-center text-sm text-muted">
             {t(
               !ready
@@ -556,7 +542,11 @@ export function TerminalWorkspace({
             current={() => activeTarget.current}
             onNew={() => add()}
             onSplit={split}
-            onClose={() => close(active, active.activePane)}
+            onClose={() =>
+              active.development
+                ? hideService(active)
+                : close(active, active.activePane)
+            }
             onSidebar={herdr.toggleSidebar}
             onError={setBridgeError}
             zoomed={zoomedPane === active.activePane}
@@ -565,7 +555,11 @@ export function TerminalWorkspace({
                 value === active.activePane ? "" : active.activePane,
               )
             }
-            canSplit={!active.agent && count < TERMINAL_PANE_LIMIT}
+            canSplit={
+              !active.agent &&
+              !active.development &&
+              count < TERMINAL_PANE_LIMIT
+            }
             canAdd={count < TERMINAL_PANE_LIMIT}
             canZoom={active.panes.length > 1}
           />

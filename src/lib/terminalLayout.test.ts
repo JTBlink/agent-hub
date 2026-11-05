@@ -148,3 +148,28 @@ it("restores a native Herdr attachment locator without retaining Agent identity"
   });
   expect(localStorage.getItem(TERMINAL_LAYOUT_KEY)).not.toContain("private");
 });
+
+it.each([false, true])(
+  "does not restore a development service as a shell when logs are visible: %s",
+  (developmentVisible) => {
+    const shell = createTerminalTab("demo", undefined, "/projects/demo");
+    const service = {
+      ...createTerminalTab("demo", undefined, "/projects/demo"),
+      developmentVisible,
+      development: {
+        launch: { relative_path: "index.html", port: 54321 },
+        started: () => {},
+        failed: () => {},
+      },
+    };
+    writeTerminalLayout({
+      tabs: [shell, service],
+      activeIds: { [terminalScopeKey("demo", "/projects/demo")]: service.id },
+      lastActiveId: service.id,
+    });
+    const restored = readTerminalLayout();
+    expect(restored.tabs).toEqual([shell]);
+    expect(restored.activeIds).toEqual({});
+    expect(restored.lastActiveId).toBe(shell.id);
+  },
+);

@@ -6,16 +6,18 @@ import {
 } from "react";
 import {
   listenDevelopment,
+  listenDevelopmentLogHide,
   waitDevelopment,
 } from "../../lib/developmentPreview";
 import {
   createTerminalTab,
   TERMINAL_PANE_LIMIT,
+  terminalScopeKey,
   type TerminalTab,
 } from "../../lib/terminalLayout";
 import { useTranslation } from "react-i18next";
 
-/** A preview starts an ordinary owned PTY; closing its tab stops the service. */
+/** Services keep an owned PTY in the background; logs are shown only on demand or failure. */
 export function useDevelopmentTerminal({
   ready,
   projectId,
@@ -34,6 +36,20 @@ export function useDevelopmentTerminal({
   onSelectTerminal?: () => void;
 }) {
   const { t } = useTranslation();
+  useEffect(
+    () =>
+      listenDevelopmentLogHide((scope, port) => {
+        if (scope !== terminalScopeKey(projectId, path)) return;
+        setTabs((previous) =>
+          previous.map((tab) =>
+            tab.development?.launch.port === port && tab.developmentVisible
+              ? { ...tab, developmentVisible: false }
+              : tab,
+          ),
+        );
+      }),
+    [projectId, path, setTabs],
+  );
   useEffect(
     () =>
       listenDevelopment((request) => {
@@ -57,6 +73,17 @@ export function useDevelopmentTerminal({
         const failed = (reason: unknown) => {
           if (!settled) {
             settled = true;
+            if (tabs.current.some((item) => item.id === tab.id)) {
+              setTabs((previous) =>
+                previous.map((item) =>
+                  item.id === tab.id
+                    ? { ...item, developmentVisible: true }
+                    : item,
+                ),
+              );
+              setActiveId(tab.id);
+              onSelectTerminal?.();
+            }
             request.reject(reason);
           }
         };
@@ -72,11 +99,9 @@ export function useDevelopmentTerminal({
           },
           failed,
         };
-        onSelectTerminal?.();
         // Reserve synchronously so simultaneous previews respect the shared pane limit.
         tabs.current = [...tabs.current, tab];
         setTabs((previous) => [...previous, tab]);
-        setActiveId(tab.id);
       }),
     [ready, projectId, path, tabs, setTabs, setActiveId, onSelectTerminal, t],
   );

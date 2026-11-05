@@ -167,6 +167,11 @@ export function TerminalSessions({
                     <span className="min-w-0 flex-1">
                       <span className="block whitespace-normal [overflow-wrap:anywhere]">
                         {name}
+                        {tab.development && !tab.developmentVisible && (
+                          <span className="ml-2 text-muted">
+                            {t("fileTree.developmentBackground")}
+                          </span>
+                        )}
                       </span>
                       <span className="mt-0.5 block whitespace-normal text-muted [overflow-wrap:anywhere]">
                         {path}
@@ -179,7 +184,12 @@ export function TerminalSessions({
                   <button
                     type="button"
                     className="app-button-ghost h-6 w-6 shrink-0 p-0"
-                    aria-label={t("terminal.closeSession", { name, path })}
+                    aria-label={t(
+                      tab.development
+                        ? "fileTree.stopDevelopment"
+                        : "terminal.closeSession",
+                      { name, path },
+                    )}
                     onClick={() => {
                       onClose(tab);
                       trigger.current?.focus();

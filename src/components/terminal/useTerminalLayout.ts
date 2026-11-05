@@ -16,6 +16,7 @@ import {
   createTerminalTab,
   terminalScopeKey,
   TERMINAL_PANE_LIMIT,
+  isTerminalTabVisible,
   type TerminalLayout,
   type TerminalTab,
 } from "../../lib/terminalLayout";
@@ -70,6 +71,7 @@ export function useTerminalLayout(
         (tab) => tab.projectId === projectId && tab.worktreePath === path,
       )
     : tabs;
+  const visibleTabs = scopedTabs.filter(isTerminalTabVisible);
   if (
     ready &&
     !scopeChanged &&
@@ -77,12 +79,12 @@ export function useTerminalLayout(
     projectId &&
     path &&
     !initializedScopes.includes(scopeKey) &&
-    (scopedTabs.length > 0 ||
+    (visibleTabs.length > 0 ||
       tabs.reduce((sum, tab) => sum + tab.panes.length, 0) <
         TERMINAL_PANE_LIMIT)
   ) {
     setInitializedScopes([...initializedScopes, scopeKey]);
-    if (!scopedTabs.length) {
+    if (!visibleTabs.length) {
       const tab = createTerminalTab(projectId, undefined, path);
       setTabs([...tabs, tab]);
       setActiveIds({ ...activeIds, [scopeKey]: tab.id });

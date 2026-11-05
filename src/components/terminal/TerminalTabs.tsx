@@ -58,8 +58,16 @@ export function TerminalTabs({
               onRename={onRename ? (name) => onRename(tab, name) : undefined}
             />
             <TabCloseButton
-              aria-label={t("terminal.closeTab", { number: index + 1 })}
-              title={t("terminal.closeTab", { number: index + 1 })}
+              aria-label={
+                tab.development
+                  ? t("fileTree.hideDevelopmentTerminal")
+                  : t("terminal.closeTab", { number: index + 1 })
+              }
+              title={
+                tab.development
+                  ? t("fileTree.hideDevelopmentTerminal")
+                  : t("terminal.closeTab", { number: index + 1 })
+              }
               onClick={() => onClose(tab)}
             />
           </div>

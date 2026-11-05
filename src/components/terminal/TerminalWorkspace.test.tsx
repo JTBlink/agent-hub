@@ -952,8 +952,9 @@ it("starts a script once in a new pane and never persists its execution intent",
   }
 });
 
-it("starts a development service in an owned terminal and waits for readiness", async () => {
-  const { startDevelopment } = await import("../../lib/developmentPreview");
+it("runs development services in the background and hides logs without restarting or stopping the PTY", async () => {
+  const { startDevelopment, hideDevelopmentLogs } =
+    await import("../../lib/developmentPreview");
   const project = makeProject();
   vi.mocked(invoke).mockImplementation(async (command) =>
     command === "terminal_list"
@@ -994,6 +995,84 @@ it("starts a development service in an owned terminal and waits for readiness", 
       });
     });
     await expect(opening).resolves.toBe("http://127.0.0.1:54321");
+    const nativeCount = (command: string) =>
+      vi.mocked(invoke).mock.calls.filter(([value]) => value === command)
+        .length;
+    const initialCreates = nativeCount("terminal_create");
+    const initialCloses = nativeCount("terminal_close");
+    const panels = [...host.querySelectorAll('[role="tabpanel"]')];
+    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(1);
+    expect(
+      host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+    ).not.toContain("fileTree.developmentTerminal");
+    expect(
+      JSON.parse(localStorage.getItem("agent-hub:terminal-layout")!).tabs,
+    ).toHaveLength(1);
+    const showLogs = async () => {
+      await act(async () =>
+        host
+          .querySelector<HTMLButtonElement>(
+            '[aria-label="terminal.allSessions"]',
+          )!
+          .click(),
+      );
+      const entry = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[aria-label="terminal.goToSession"]',
+        ),
+      ].find((button) =>
+        button.textContent?.includes("fileTree.developmentTerminal"),
+      )!;
+      expect(entry.textContent).toContain("fileTree.developmentBackground");
+      await act(async () => entry.click());
+      expect(
+        host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+      ).toBe("fileTree.developmentTerminal");
+    };
+    await showLogs();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="fileTree.hideDevelopmentTerminal"]',
+        )!
+        .click(),
+    );
+    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(1);
+    await showLogs();
+    await act(async () =>
+      hideDevelopmentLogs(
+        JSON.stringify([project.id, "/other/checkout"]),
+        "http://127.0.0.1:54321/other.html",
+      ),
+    );
+    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(2);
+    await act(async () =>
+      hideDevelopmentLogs(
+        JSON.stringify([project.id, project.path]),
+        "http://127.0.0.1:54321/index.html",
+      ),
+    );
+    expect(host.querySelectorAll('[role="tab"]')).toHaveLength(1);
+    expect([...host.querySelectorAll('[role="tabpanel"]')]).toEqual(panels);
+    expect(nativeCount("terminal_create")).toBe(initialCreates);
+    expect(nativeCount("terminal_close")).toBe(initialCloses);
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="terminal.allSessions"]',
+        )!
+        .click(),
+    );
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-label="fileTree.stopDevelopment"]',
+        )!
+        .click(),
+    );
+    expect(nativeCount("terminal_close")).toBe(initialCloses + 1);
+    expect(host.querySelectorAll('[role="tabpanel"]')).toHaveLength(1);
+
     expect(invoke).toHaveBeenCalledWith(
       "terminal_create",
       expect.objectContaining({
@@ -1009,6 +1088,67 @@ it("starts a development service in an owned terminal and waits for readiness", 
     expect(localStorage.getItem("agent-hub:terminal-layout")).not.toContain(
       '"development":',
     );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+it("reveals the development logs when readiness fails without starting another service", async () => {
+  const { startDevelopment } = await import("../../lib/developmentPreview");
+  const project = makeProject();
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "terminal_list") return [];
+    if (command === "terminal_create")
+      return {
+        id: crypto.randomUUID(),
+        cwd: project.path,
+        project_id: project.id,
+        exited: false,
+      };
+    if (command === "preview_development_wait")
+      throw new Error("Development port did not open");
+    return undefined;
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter
+          initialEntries={[
+            `/project/${project.id}?${new URLSearchParams({ worktree: project.path })}`,
+          ]}
+        >
+          <TerminalWorkspace projects={[project]} />
+        </MemoryRouter>,
+      ),
+    );
+    let result!: Promise<unknown>;
+    await act(async () => {
+      result = startDevelopment(project.id, project.path, {
+        directory: project.path,
+        url: "http://127.0.0.1:54322/index.html",
+        running: false,
+        launch: { relative_path: "index.html", port: 54322 },
+      }).catch((error: unknown) => error);
+    });
+    expect(await result).toEqual(Error("Development port did not open"));
+    expect(
+      host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,
+    ).toBe("fileTree.developmentTerminal");
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.filter(
+          ([command, args]) =>
+            command === "terminal_create" &&
+            typeof args === "object" &&
+            args !== null &&
+            "launch" in args,
+        ),
+    ).toHaveLength(1);
   } finally {
     await act(async () => root.unmount());
     host.remove();

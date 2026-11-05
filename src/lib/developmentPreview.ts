@@ -65,3 +65,24 @@ export interface DevelopmentTerminal {
   started: () => void;
   failed: (reason: unknown) => void;
 }
+
+const hideListeners = new Set<(scope: string, port: number) => void>();
+/** Closing a preview only hides its owned service logs; it does not stop the PTY. */
+export function hideDevelopmentLogs(scope: string, url: string) {
+  let port: number;
+  try {
+    port = Number(new URL(url).port);
+  } catch {
+    return;
+  }
+  if (!port) return;
+  for (const listener of hideListeners) listener(scope, port);
+}
+export function listenDevelopmentLogHide(
+  listener: (scope: string, port: number) => void,
+) {
+  hideListeners.add(listener);
+  return () => {
+    hideListeners.delete(listener);
+  };
+}

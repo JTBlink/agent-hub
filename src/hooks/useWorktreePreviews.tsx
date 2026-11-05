@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { previewApi } from "../features/preview/api";
+import { hideDevelopmentLogs } from "../lib/developmentPreview";
 import {
   WorktreePreviewsContext,
   type WorktreePreview,
@@ -85,6 +86,9 @@ export function WorktreePreviewsProvider({
       return;
     }
     guards.current.delete(id);
+    const closing = owned.current.find((tab) => tab.document.id === id);
+    if (closing?.sourceUrl)
+      hideDevelopmentLogs(closing.scope, closing.sourceUrl);
     owned.current = owned.current.filter((tab) => tab.document.id !== id);
     setTabs(owned.current);
     select((current) => (current === id ? null : current));
