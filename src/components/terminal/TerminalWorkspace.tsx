@@ -1,3 +1,8 @@
+import {
+  splitTerminalPane,
+  removeTerminalPane,
+  terminalPaneBounds,
+} from "../../lib/terminalPaneLayout";
 import { createPortal } from "react-dom";
 import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 import {
@@ -213,6 +218,7 @@ export function TerminalWorkspace({
   const active =
     scopedTabs.find((tab) => tab.id === activeId) ?? scopedTabs.at(-1);
   const displayedId = active?.id ?? "";
+  const bounds = new Map(tabs.map((tab) => [tab.id, terminalPaneBounds(tab)]));
   const count = tabs.reduce((sum, tab) => sum + tab.panes.length, 0);
   useLayoutEffect(() => {
     activeTarget.current =
@@ -253,20 +259,13 @@ export function TerminalWorkspace({
     setActiveId(tab.id);
   };
   const split = (direction: Tab["direction"]) => {
-    if (
-      !ready ||
-      !active ||
-      active.agent ||
-      active.panes.length >= 2 ||
-      count >= TERMINAL_PANE_LIMIT
-    )
+    if (!ready || !active || active.agent || count >= TERMINAL_PANE_LIMIT)
       return;
     const pane = crypto.randomUUID();
+    setZoomedPane("");
     setTabs((previous) =>
       previous.map((tab) =>
-        tab.id === displayedId
-          ? { ...tab, panes: [...tab.panes, pane], activePane: pane, direction }
-          : tab,
+        tab.id === displayedId ? splitTerminalPane(tab, pane, direction) : tab,
       ),
     );
   };
@@ -275,9 +274,7 @@ export function TerminalWorkspace({
     if (remaining.length) {
       setTabs((previous) =>
         previous.map((item) =>
-          item.id === tab.id
-            ? { ...item, panes: remaining, activePane: remaining[0] }
-            : item,
+          item.id === tab.id ? removeTerminalPane(item, pane!) : item,
         ),
       );
     } else {
@@ -418,7 +415,6 @@ export function TerminalWorkspace({
                 ready &&
                 !!active &&
                 !active.agent &&
-                active.panes.length < 2 &&
                 count < TERMINAL_PANE_LIMIT
               }
               onHerdr={() => void herdrSessions.openDefault(herdr.launch)}
@@ -467,15 +463,20 @@ export function TerminalWorkspace({
               tab.id === displayedId && scopedTabs.includes(tab)
                 ? "flex"
                 : "hidden",
-              "min-h-0 flex-1",
-              tab.direction === "vertical" && "flex-col",
+              "relative min-h-0 flex-1",
             )}
           >
             {tab.panes.map((pane) => (
               <div
                 key={pane}
+                data-terminal-pane={pane}
+                style={
+                  zoomedPane === pane
+                    ? { left: "0%", top: "0%", width: "100%", height: "100%" }
+                    : bounds.get(tab.id)?.[pane]
+                }
                 className={cn(
-                  "relative flex min-h-0 min-w-0 flex-1 overflow-hidden border",
+                  "absolute flex min-h-0 min-w-0 overflow-hidden border",
                   zoomedPane &&
                     tab.panes.includes(zoomedPane) &&
                     pane !== zoomedPane &&
@@ -550,7 +551,7 @@ export function TerminalWorkspace({
             }
           />
         )}
-        {shown && active && !activeHerdrTarget && (
+        {herdrEnabled && shown && active && !activeHerdrTarget && (
           <LocalTerminalTools
             current={() => activeTarget.current}
             onNew={() => add()}
@@ -564,16 +565,12 @@ export function TerminalWorkspace({
                 value === active.activePane ? "" : active.activePane,
               )
             }
-            canSplit={
-              !active.agent &&
-              active.panes.length < 2 &&
-              count < TERMINAL_PANE_LIMIT
-            }
+            canSplit={!active.agent && count < TERMINAL_PANE_LIMIT}
             canAdd={count < TERMINAL_PANE_LIMIT}
             canZoom={active.panes.length > 1}
           />
         )}
-        {shown && activeHerdrTarget && (
+        {herdrEnabled && shown && activeHerdrTarget && (
           <HerdrTerminalTools
             target={activeHerdrTarget}
             current={() => activeTarget.current}

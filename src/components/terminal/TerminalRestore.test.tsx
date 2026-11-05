@@ -17,6 +17,14 @@ import type { Project } from "../../lib/tauri";
 import { worktreeUrl } from "../../lib/worktreeApi";
 import { TerminalWorkspace } from "./TerminalWorkspace";
 
+const productBuild = vi.hoisted(() => ({ herdr: true }));
+vi.mock("@app/herdr", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@app/herdr")>()),
+  get herdrEnabled() {
+    return productBuild.herdr;
+  },
+}));
+
 const i18n = createInstance();
 await i18n.init({
   lng: "zh",
@@ -56,6 +64,7 @@ const creations = () =>
         name === "terminal_create" || name === "herdr_terminal_create",
     );
 beforeEach(() => {
+  productBuild.herdr = true;
   localStorage.clear();
   vi.clearAllMocks();
   serial = 0;
@@ -116,7 +125,11 @@ async function render(
           ))}
           <Link to={worktreeUrl(project.id, topic)}>Open topic</Link>
           <Link to="/settings">Settings</Link>
-          <TerminalWorkspace projects={projects} projectsReady={ready} />
+          <TerminalWorkspace
+            projects={projects}
+            projectsReady={ready}
+            onProjectSkills={() => {}}
+          />
         </MemoryRouter>
       </StrictMode>,
     ),
@@ -487,4 +500,94 @@ it("restores only the selected checkout from an older layout containing multiple
     ),
   ).toBe(true);
   expect(readTerminalLayout().tabs).toEqual([main]);
+});
+
+it("allows another top-menu split with two panes and hides the Herdr footer in a personal build", async () => {
+  productBuild.herdr = false;
+  savedTabs();
+  await render(worktreeUrl(project.id, project.path));
+  expect(host.querySelectorAll("textarea")).toHaveLength(2);
+  await click(i18n.t("common.more"));
+  const split = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((item) => item.textContent === i18n.t("terminal.splitHorizontal"))!;
+  expect(split.disabled).toBe(false);
+  await act(async () => split.click());
+  expect(host.querySelectorAll("textarea")).toHaveLength(3);
+  expect(readTerminalLayout().tabs[0].panes).toHaveLength(3);
+  for (let index = 3; index < 8; index++) {
+    await click(i18n.t("common.more"));
+    const action = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ].find((item) => item.textContent === i18n.t("terminal.splitHorizontal"))!;
+    await act(async () => action.click());
+  }
+  expect(readTerminalLayout().tabs[0].panes).toHaveLength(8);
+  await click(i18n.t("common.more"));
+  expect(
+    [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
+      (item) => item.textContent === i18n.t("terminal.splitHorizontal"),
+    )!.disabled,
+  ).toBe(true);
+  expect(
+    host.querySelector(`nav[aria-label="${i18n.t("herdr.terminalTools")}"]`),
+  ).toBeNull();
+});
+
+it("splits the focused pane without rearranging or restarting its neighbors and restores the nested layout", async () => {
+  await render(worktreeUrl(project.id, project.path));
+  const first = host.querySelector("textarea")!;
+  const chooseSplit = async (key: string) => {
+    await click(i18n.t("common.more"));
+    const action = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ].find((item) => item.textContent === i18n.t(key))!;
+    await act(async () => action.click());
+  };
+  await chooseSplit("terminal.splitHorizontal");
+  const neighbor = host.querySelectorAll("textarea")[1];
+  await act(async () => first.focus());
+  await chooseSplit("terminal.splitVertical");
+  expect(creations()).toHaveLength(3);
+  expect(host.querySelectorAll("textarea")[0]).toBe(first);
+  expect([...host.querySelectorAll("textarea")]).toContain(neighbor);
+  const tab = readTerminalLayout().tabs[0];
+  const [a, b, c] = tab.panes;
+  expect(tab.layout).toEqual({
+    direction: "horizontal",
+    children: [
+      { direction: "vertical", children: [{ pane: a }, { pane: b }] },
+      { pane: c },
+    ],
+  });
+  const neighborPane = neighbor.closest<HTMLElement>("[data-terminal-pane]")!;
+  expect(neighborPane.style.left).toBe("50%");
+  expect(neighborPane.style.height).toBe("100%");
+  await click(i18n.t("herdr.zoomPane"));
+  const selectedPane = host.querySelector<HTMLElement>(
+    `[data-terminal-pane="${tab.activePane}"]`,
+  )!;
+  expect(selectedPane.style.width).toBe("100%");
+  expect(selectedPane.style.height).toBe("100%");
+  await click(i18n.t("herdr.restorePane"));
+  expect(selectedPane.style.width).toBe("50%");
+  expect(selectedPane.style.height).toBe("50%");
+  await act(async () =>
+    neighborPane.querySelector<HTMLButtonElement>("button")!.click(),
+  );
+  expect(readTerminalLayout().tabs[0].layout).toEqual({
+    direction: "vertical",
+    children: [{ pane: a }, { pane: b }],
+  });
+  await act(async () => root.unmount());
+  root = createRoot(host);
+  vi.mocked(invoke).mockClear();
+  await render(worktreeUrl(project.id, project.path));
+  expect(creations()).toHaveLength(2);
+  for (const pane of host.querySelectorAll<HTMLElement>(
+    "[data-terminal-pane]",
+  )) {
+    expect(pane.style.width).toBe("100%");
+    expect(pane.style.height).toBe("50%");
+  }
 });

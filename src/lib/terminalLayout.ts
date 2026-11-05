@@ -1,3 +1,4 @@
+import { readPaneLayout, type TerminalPaneLayout } from "./terminalPaneLayout";
 import { parseHerdrNavigation as herdrNavigation } from "../integrations/herdr/contracts";
 import type { DevelopmentTerminal } from "./developmentPreview";
 import type { TerminalTaskContext } from "./taskContext";
@@ -16,6 +17,7 @@ export interface TerminalTab {
   projectId: string;
   worktreePath?: string;
   panes: string[];
+  layout?: TerminalPaneLayout;
   activePane: string;
   direction: "horizontal" | "vertical";
   title?: string;
@@ -94,7 +96,7 @@ export function readTerminalLayout(): TerminalLayout {
             pane !== tab.id,
         )
         .filter((pane, index, all) => all.indexOf(pane) === index)
-        .slice(0, Math.min(2, TERMINAL_PANE_LIMIT - count));
+        .slice(0, TERMINAL_PANE_LIMIT - count);
       if (!panes.length) continue;
       ids.add(tab.id);
       panes.forEach((pane) => ids.add(pane));
@@ -126,6 +128,9 @@ export function readTerminalLayout(): TerminalLayout {
             ? tab.activePane
             : panes[0],
         direction: tab.direction,
+        ...(readPaneLayout(tab.layout, panes)
+          ? { layout: readPaneLayout(tab.layout, panes) }
+          : {}),
         ...(typeof tab.title === "string" && tab.title.trim()
           ? { title: tab.title.trim() }
           : {}),
@@ -180,6 +185,7 @@ export function writeTerminalLayout(layout: TerminalLayout) {
             panes,
             activePane,
             direction,
+            layout,
             herdrTarget,
             title,
             paneAttachments,
@@ -190,6 +196,7 @@ export function writeTerminalLayout(layout: TerminalLayout) {
             panes,
             activePane,
             direction,
+            ...(layout ? { layout: readPaneLayout(layout, panes) } : {}),
             ...(title?.trim() ? { title: title.trim() } : {}),
             ...(paneAttachments
               ? {
