@@ -1,4 +1,5 @@
-import { MessageSquareText, SquareCode } from "lucide-react";
+import { MessageSquareText } from "lucide-react";
+import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import type { PreviewModel } from "../usePreviewWorkspace";
 
@@ -14,7 +15,7 @@ export function PreviewInspectActions({ model }: { model: PreviewModel }) {
         disabled={!model.pageId}
         onClick={() => void model.openDevtools()}
       >
-        <SquareCode size={16} aria-hidden="true" />
+        <span className="codicon codicon-tools" aria-hidden="true" />
       </button>
       <button
         aria-label={t("preview.annotations")}

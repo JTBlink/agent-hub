@@ -1,4 +1,5 @@
-import { SquareCode, MessageSquareText, FileCode2 } from "lucide-react";
+import { MessageSquareText, FileCode2 } from "lucide-react";
+import "@vscode/codicons/dist/codicon.css";
 import { CardActionMenu } from "../../../src/components/CardActionMenu";
 import { Button } from "./prototypeShared";
 import type { PreviewModel } from "./usePreviewModel";
@@ -35,7 +36,7 @@ export function PrototypeBrowserActions({ model }: { model: PreviewModel }) {
         active={devtools}
         onClick={() => setDevtools(!devtools)}
       >
-        <SquareCode size={16} />
+        <span className="codicon codicon-tools" aria-hidden="true" />
       </Button>
       <Button
         label="检查与批注"
