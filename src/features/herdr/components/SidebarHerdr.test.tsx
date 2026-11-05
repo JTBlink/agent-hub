@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import type { Project } from "../../../lib/tauri";
+import { getSettings, setSettings } from "../../../lib/tauri";
 import * as api from "../api";
 import { SidebarHerdr } from "./SidebarHerdr";
 
@@ -18,6 +19,11 @@ const app = vi.hoisted(() => {
   };
 });
 vi.mock("../../../context/AppContext", () => ({ useApp: () => app }));
+vi.mock("../../../lib/tauri", async (original) => ({
+  ...(await original<typeof import("../../../lib/tauri")>()),
+  getSettings: vi.fn(),
+  setSettings: vi.fn(),
+}));
 vi.mock("../../../hooks/useActiveWorkspace", () => ({
   useActiveWorkspace: () => ({
     project: app.projects[0],
@@ -53,7 +59,10 @@ vi.mock("../api", async (original) => ({
   deleteHerdrSession: vi.fn(),
 }));
 beforeEach(() => {
+  vi.clearAllMocks();
   app.missing = false;
+  vi.mocked(getSettings).mockResolvedValue(null);
+  vi.mocked(setSettings).mockResolvedValue(undefined);
   vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
   vi.mocked(api.getHerdrInventory).mockResolvedValue({
     installed: true,
@@ -71,6 +80,157 @@ function Location() {
   const l = useLocation();
   return <output>{l.pathname + l.search}</output>;
 }
+
+it("only observes Herdr when mounting, refreshing and following project changes", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  vi.clearAllMocks();
+  const { makeProject } = await import("../../../../tests/fixtures/workspace");
+  app.projects.push({ ...makeProject(), path: "/projects/demo" });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const render = () =>
+    root.render(
+      <MemoryRouter>
+        <SidebarHerdr active />
+      </MemoryRouter>,
+    );
+  try {
+    await act(async () => render());
+    expect(api.prepareHerdrSession).not.toHaveBeenCalled();
+    expect(api.ensureHerdrWorkspace).not.toHaveBeenCalled();
+    app.projects[0] = {
+      ...app.projects[0],
+      id: "other",
+      path: "/projects/other",
+    };
+    await act(async () => render());
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="common.refresh"]')!
+        .click(),
+    );
+    expect(api.getHerdrSnapshot).toHaveBeenCalled();
+    expect(api.prepareHerdrSession).not.toHaveBeenCalled();
+    expect(api.ensureHerdrWorkspace).not.toHaveBeenCalled();
+    expect(api.openHerdrWorkspace).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+    app.projects.length = 0;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("opens full-sidebar settings, saves opt-in, coalesces project changes and stops following when disabled", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  vi.useFakeTimers();
+  const { makeProject } = await import("../../../../tests/fixtures/workspace");
+  app.projects.push({ ...makeProject(), path: "/projects/demo" });
+  const stored = new Map<string, string>();
+  vi.mocked(getSettings).mockImplementation(
+    async (key) => stored.get(key) ?? null,
+  );
+  vi.mocked(setSettings).mockImplementation(async (key, value) => {
+    stored.set(key, value);
+  });
+  vi.mocked(api.ensureHerdrWorkspace).mockImplementation(
+    async (session, projectId, path) => ({
+      project_id: projectId,
+      path: path!,
+      target: {
+        session,
+        workspace_id: "w1",
+        pane_id: "w1:p1",
+        terminal_id: "native",
+        revision: 1,
+        agent_session: null,
+      },
+    }),
+  );
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const render = () =>
+    root.render(
+      <MemoryRouter>
+        <SidebarHerdr active />
+      </MemoryRouter>,
+    );
+  const click = (selector: string) =>
+    act(async () => host.querySelector<HTMLButtonElement>(selector)!.click());
+  const openSettings = async () => {
+    await click('[aria-label="herdr.moreActions"]');
+    await act(async () =>
+      [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+        .find((button) => button.textContent === "herdr.settings")!
+        .click(),
+    );
+  };
+  try {
+    await act(async () => render());
+    await openSettings();
+    expect(host.querySelector("section[aria-labelledby]")).toBeTruthy();
+    expect(
+      host.querySelector<HTMLDivElement>('[aria-label="Herdr"]')?.hidden,
+    ).toBe(true);
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(
+      host.querySelector('[role="switch"]')?.getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      "common.back",
+    );
+    await click('[role="switch"]');
+    expect(stored.get("herdr_follow_project")).toBe("true");
+    // A rapid intermediate checkout must never steal focus.
+    app.projects[0] = { ...app.projects[0], path: "/projects/intermediate" };
+    await act(async () => render());
+    app.projects[0] = { ...app.projects[0], path: "/projects/feature" };
+    await act(async () => render());
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    expect(api.ensureHerdrWorkspace).toHaveBeenCalledExactlyOnceWith(
+      "default",
+      "demo",
+      "/projects/feature",
+    );
+    await click('[aria-label="common.back"]');
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      "herdr.moreActions",
+    );
+    await click('[aria-label="common.refresh"]');
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    expect(api.ensureHerdrWorkspace).toHaveBeenCalledOnce();
+    await openSettings();
+    vi.mocked(setSettings).mockRejectedValueOnce(new Error("failed"));
+    await click('[role="switch"]');
+    expect(
+      host.querySelector('[role="switch"]')?.getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(host.querySelector('[role="alert"]')).toBeTruthy();
+    await click('[role="switch"]');
+    expect(stored.get("herdr_follow_project")).toBe("false");
+    app.projects[0] = { ...app.projects[0], path: "/projects/next" };
+    await act(async () => render());
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    expect(api.ensureHerdrWorkspace).toHaveBeenCalledOnce();
+    // A new sidebar reads the persisted preference, rather than enabling itself.
+    await act(async () => root.render(null));
+    await act(async () => render());
+    await openSettings();
+    expect(
+      host.querySelector('[role="switch"]')?.getAttribute("aria-checked"),
+    ).toBe("false");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    app.projects.length = 0;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});
 
 it("opens the checkout returned by Herdr and navigates with an explicit attachment", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);

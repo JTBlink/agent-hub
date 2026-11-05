@@ -93,6 +93,10 @@
     "completed": "File operation completed"
   },
   "herdr": {
+    "settings": "Herdr settings",
+    "followProject": "Follow project changes",
+    "followProjectHelp": "Off by default. When enabled, switching projects or worktrees also switches Herdr workspaces while the Herdr sidebar is open. When off, Herdr switches only on a manual click.",
+    "settingsFailed": "Could not load or save settings. Reopen the sidebar or try saving again.",
     "projectActions": "Project actions",
     "copyName": "Copy name",
     "copied": "Copied",

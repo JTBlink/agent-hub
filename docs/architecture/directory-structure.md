@@ -37,6 +37,7 @@ agent-hub/
 │   │   ├── settings/               #   设置组合、Hosts 方案列表、编辑状态与权限说明
 │   │   ├── usage/                  #   Agent 订阅用量摘要与详情
 │   │   ├── Sidebar.tsx             #   侧边栏导航
+│   │   ├── SidebarSettingsPage.tsx #   共享满侧栏设置页、返回焦点与独立滚动
 │   │   ├── CommandPalette.tsx      #   命令面板
 │   │   ├── DetailSheet.tsx         #   详情抽屉
 │   │   ├── ConfirmDialog.tsx       #   确认弹窗

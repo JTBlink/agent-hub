@@ -3,7 +3,7 @@ name: rust-dev
 description: 项目内部开发规范。在本仓库进行 Rust、Tauri、React 功能开发、缺陷修复、UI 调整或代码审查时使用，落实 SOLID、性能、复用设计、测试、兼容性和提交要求。
 license: MIT
 metadata:
-  version: "1.4.1"
+  version: "1.5.0"
 ---
 
 # 项目开发规范

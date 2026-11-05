@@ -8,6 +8,7 @@ import "../../src/index.css";
 const params = new URLSearchParams(location.search);
 const storage = new Map<string, string>();
 const workspaceOrderStorageKey = "preview:herdr-workspace-order";
+const followProjectStorageKey = "preview:herdr-follow-project";
 Object.defineProperty(window, "localStorage", {
   configurable: true,
   value: {
@@ -124,7 +125,21 @@ Object.assign(window, {
             ? (params.get("text-size") ?? "default")
             : args.key === "herdr_workspace_order"
               ? sessionStorage.getItem(workspaceOrderStorageKey)
-              : null;
+              : args.key === "herdr_follow_project"
+                ? sessionStorage.getItem(followProjectStorageKey)
+                : null;
+      if (
+        command === "set_settings" &&
+        args.key === "herdr_follow_project" &&
+        typeof args.value === "string"
+      ) {
+        sessionStorage.setItem(followProjectStorageKey, args.value);
+        return null;
+      }
+      if (command === "herdr_prepare_session") {
+        menuCalls.push({ command, args });
+        return "default";
+      }
       if (
         command === "set_settings" &&
         args.key === "herdr_workspace_order" &&
@@ -207,7 +222,7 @@ createRoot(document.getElementById("root")!).render(
     <MemoryRouter>
       <div className="fixed inset-0 flex min-h-0 bg-background text-primary">
         <aside className="w-72 shrink-0 border-r border-border">
-          <SidebarHerdr active onHide={() => {}} />
+          <SidebarHerdr active />
         </aside>
         <main className="flex min-w-0 flex-1">
           <TerminalWorkspace projects={[project]} />

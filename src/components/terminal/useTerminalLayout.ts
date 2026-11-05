@@ -116,7 +116,15 @@ export function useTerminalLayout(
             if (!project) return null;
             try {
               await api.resolveTerminalProject(tab.projectId, tab.worktreePath);
-              return { ...tab, worktreePath: tab.worktreePath ?? project.path };
+              // Reconnecting a saved Herdr client focuses its shared workspace.
+              // Startup restores shells; attaching requires a fresh user action.
+              const restored = {
+                ...tab,
+                worktreePath: tab.worktreePath ?? project.path,
+              };
+              delete restored.herdrTarget;
+              delete restored.paneAttachments;
+              return restored;
             } catch {
               return null;
             }

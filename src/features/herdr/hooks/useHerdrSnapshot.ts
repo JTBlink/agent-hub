@@ -17,8 +17,6 @@ export function useHerdrSnapshot(active: boolean) {
   const running = inventory?.sessions.some(
     (s) => s.name === session && s.running,
   );
-  const [managedSession, setManagedSession] = useState("");
-  const prepared = useRef(false);
   const [data, setData] = useState<{
     session: string;
     value: api.HerdrSnapshot;
@@ -38,17 +36,8 @@ export function useHerdrSnapshot(active: boolean) {
     let cancelled = false;
     void api
       .getHerdrInventory()
-      .then(async (value) => {
+      .then((value) => {
         if (cancelled) return;
-        if (value.installed && !prepared.current) {
-          await api.prepareHerdrSession();
-          if (cancelled) return;
-          prepared.current = true;
-          setManagedSession(DEFAULT_HERDR_SESSION);
-          const inventory = await api.getHerdrInventory();
-          if (!cancelled) setInventory(inventory);
-          return;
-        }
         setInventory(value);
       })
       .catch((error) => {
@@ -59,7 +48,7 @@ export function useHerdrSnapshot(active: boolean) {
     };
   }, [active, revision, fallback]);
   useEffect(() => {
-    if (!active || !managedSession || !running) return;
+    if (!active || !running) return;
     const token = ++generation.current;
     let stopped = false,
       pending = false;
@@ -104,10 +93,9 @@ export function useHerdrSnapshot(active: boolean) {
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("focus", wake);
     };
-  }, [active, session, managedSession, running, revision, fallback]);
+  }, [active, session, running, revision, fallback]);
   return {
     inventory,
-    managedSession,
     session,
     setSession,
     snapshot: running && data?.session === session ? data.value : null,

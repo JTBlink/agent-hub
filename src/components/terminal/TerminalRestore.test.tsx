@@ -148,6 +148,48 @@ function savedTabs() {
   return [main, other];
 }
 
+it("restores saved Herdr panes as shells without automatically attaching or changing focus", async () => {
+  const tab = createTerminalTab(project.id, undefined, project.path);
+  const target = {
+    session: "default",
+    workspace_id: "w1",
+    pane_id: "w1:p1",
+    terminal_id: "native",
+    revision: 1,
+    agent_session: null,
+  };
+  tab.herdrTarget = target;
+  tab.panes.push("attached-pane");
+  tab.paneAttachments = {
+    "attached-pane": { project_id: project.id, path: project.path, target },
+  };
+  writeTerminalLayout({ tabs: [tab], activeIds: {}, lastActiveId: tab.id });
+  await render();
+  expect(creations()).toHaveLength(2);
+  expect(creations().map(([command]) => command)).toEqual([
+    "terminal_create",
+    "terminal_create",
+  ]);
+  expect(
+    vi
+      .mocked(invoke)
+      .mock.calls.some(([command]) =>
+        [
+          "herdr_terminal_create",
+          "herdr_prepare_session",
+          "herdr_ensure",
+          "herdr_open",
+          "terminal_launch_herdr",
+        ].includes(command),
+      ),
+  ).toBe(false);
+  await click("Open topic");
+  await click(`Open ${project.id}`);
+  expect(creations().every(([command]) => command === "terminal_create")).toBe(
+    true,
+  );
+});
+
 it("restores only the selected checkout and closes every old pane when switching worktrees", async () => {
   const [main, other] = savedTabs();
   await render(worktreeUrl(project.id, project.path));
@@ -366,9 +408,7 @@ it("opens a fresh Herdr client when returning through the sidebar with a refresh
     ),
   );
   expect(creations()).toHaveLength(1);
-  expect(creations()[0][1]).toMatchObject({
-    request: { target: { ...target, revision: 0 } },
-  });
+  expect(creations()[0][0]).toBe("terminal_create");
   const input = host.querySelector("textarea");
   for (let i = 0; i < 3; i++) {
     await click("Other workspace");

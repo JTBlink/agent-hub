@@ -1,5 +1,6 @@
-// Run against Vite :1420 and the shared web-access proxy :3456. Synthetic IPC only.
+// Run against Vite (AGENT_HUB_PREVIEW_URL, default :1420) and proxy :3456. Synthetic IPC only.
 import assert from "node:assert/strict";
+const previewUrl = process.env.AGENT_HUB_PREVIEW_URL ?? "http://127.0.0.1:1420";
 async function request(path, body) {
   return (
     await fetch(`http://localhost:3456${path}`, {
@@ -10,7 +11,7 @@ async function request(path, body) {
 }
 const { targetId } = await request(
   "/new",
-  "http://127.0.0.1:1420/tests/browser/herdr-sidebar-host.html",
+  `${previewUrl}/tests/browser/herdr-sidebar-host.html`,
 );
 async function evaluate(code) {
   const r = await request(
@@ -39,6 +40,60 @@ try {
     const src = `/tests/browser/herdr-sidebar.html?theme=${theme}&language=${language}&text-size=${size}`;
     await until(
       `(()=>{const f=document.querySelector('#preview');if(!f)return false;f.style.width='${width}px';if(f.getAttribute('src')!==${JSON.stringify(src)}){f.src=${JSON.stringify(src)};return false}return f.contentDocument?.querySelectorAll('[data-herdr-workspace]').length===14})()`,
+    );
+    assert.equal(
+      await evaluate(`${d}.defaultView.previewOpenCalls.length`),
+      0,
+      "Mounting must not switch Herdr focus",
+    );
+    assert.equal(
+      await evaluate(
+        `${d}.defaultView.previewMenuCalls.some(c=>c.command==='herdr_prepare_session')`,
+      ),
+      false,
+      "Mounting must not prepare Herdr",
+    );
+    const settingsLabel =
+      language === "en"
+        ? "Herdr settings"
+        : language === "zh"
+          ? "Herdr 设置"
+          : "Herdr 設定";
+    await click(
+      `d.querySelector('aside button[aria-label="${language === "en" ? "More Herdr actions" : language === "zh" ? "Herdr 更多操作" : "Herdr 更多操作"}"]').click()`,
+    );
+    await until(`!!${d}.querySelector('[role="menu"]')`);
+    await click(
+      `[...d.querySelectorAll('[role="menuitem"]')].find(b=>b.textContent===${JSON.stringify(settingsLabel)}).click()`,
+    );
+    await until(`!!${d}.querySelector('aside [role="switch"]')`);
+    const settings = await evaluate(
+      `(()=>{const d=${d},page=d.querySelector('aside section[aria-labelledby]'),r=page.getBoundingClientRect(),a=d.querySelector('aside').getBoundingClientRect(),toggle=page.querySelector('[role="switch"]');return {fullWidth:Math.abs(r.width-a.width)<=2,fullHeight:Math.abs(r.height-a.height)<=2,checked:toggle.getAttribute('aria-checked'),focused:page.contains(d.activeElement),overflow:d.documentElement.scrollWidth>d.defaultView.innerWidth}})()`,
+    );
+    assert.deepEqual(settings, {
+      fullWidth: true,
+      fullHeight: true,
+      checked: "false",
+      focused: true,
+      overflow: false,
+    });
+    if (width === 1440)
+      await request(
+        `/screenshot?target=${targetId}&file=/tmp/agenthub-herdr-settings.png`,
+      );
+    await click(`d.querySelector('aside [role="switch"]').click()`);
+    await until(
+      `${d}.defaultView.sessionStorage.getItem('preview:herdr-follow-project')==='true'`,
+    );
+    await click(`d.querySelector('aside [role="switch"]').click()`);
+    await until(
+      `${d}.defaultView.sessionStorage.getItem('preview:herdr-follow-project')==='false'`,
+    );
+    await click(
+      `d.querySelector('aside section[aria-labelledby] header button').click()`,
+    );
+    console.log(
+      `PASS ${width}px ${theme} ${language} ${size}: full-sidebar settings, default off, saved toggle and back navigation`,
     );
     const branchRow = await evaluate(
       `(()=>{const d=${d},row=d.querySelector('[data-herdr-workspace="w2"]'),directory=row.querySelector('[data-herdr-directory]'),branch=row.querySelector('[data-herdr-branch]'),connector=row.querySelector('[data-herdr-connector]'),rowRect=row.getBoundingClientRect(),directoryRect=directory.getBoundingClientRect(),branchRect=branch.getBoundingClientRect(),connectorRect=connector.getBoundingClientRect(),vertical=connector.firstElementChild.getBoundingClientRect(),horizontal=connector.lastElementChild.getBoundingClientRect();return {directory:directory.textContent,branch:branch.textContent,title:row.title,label:row.getAttribute('aria-label'),stacked:branchRect.top>=directoryRect.bottom-1,withinRow:directoryRect.right<=rowRect.right&&branchRect.right<=rowRect.right,connectorFillsRow:Math.abs(connectorRect.top-rowRect.top)<=1&&Math.abs(connectorRect.bottom-rowRect.bottom)<=1,connectorJoined:Math.abs(vertical.bottom-horizontal.top)<=1&&Math.abs(vertical.left-horizontal.left)<=1}})()`,
@@ -125,9 +180,9 @@ try {
     const openCalls = `${d}.defaultView.previewOpenCalls`;
     const beforeRepeat = await evaluate(`${openCalls}.length`);
     await click(`d.querySelector('[data-herdr-workspace="w1"]').click()`);
-    assert.equal(await evaluate(`${openCalls}.length`), beforeRepeat);
-    await click(`d.querySelector('[data-herdr-workspace="w2"]').click()`);
     await until(`${openCalls}.length===${beforeRepeat + 1}`);
+    await click(`d.querySelector('[data-herdr-workspace="w2"]').click()`);
+    await until(`${openCalls}.length===${beforeRepeat + 2}`);
     await until(
       `!!${d}.querySelector('nav button[aria-label="${language === "en" ? "Copy output" : language === "zh" ? "复制输出" : "複製輸出"}"]')`,
     );

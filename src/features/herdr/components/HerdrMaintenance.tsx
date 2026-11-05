@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Download, Info, RotateCw } from "lucide-react";
+import { Download, Info, RotateCw, Settings } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import { getErrorMessage } from "../../../lib/error";
@@ -14,10 +14,12 @@ export function HerdrMaintenance({
   session,
   disabled,
   onRefresh,
+  onSettings,
 }: {
   session: string;
   disabled: boolean;
   onRefresh: () => void;
+  onSettings?: () => void;
 }) {
   const { t } = useTranslation();
   const [target, setTarget] = useState<string | null>(null);
@@ -42,6 +44,16 @@ export function HerdrMaintenance({
     }
   };
   const actions: CardAction[] = [
+    ...(onSettings
+      ? [
+          {
+            key: "settings",
+            label: t("herdr.settings"),
+            icon: <Settings size={13} />,
+            onSelect: onSettings,
+          },
+        ]
+      : []),
     {
       key: "update",
       label: t(
