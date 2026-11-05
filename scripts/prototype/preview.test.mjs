@@ -67,15 +67,7 @@ const launch = (port) =>
   new Promise((resolve, reject) => {
     const child = spawn(
       "bash",
-      [
-        "./prototype.sh",
-        "preview",
-        "--port",
-        String(port),
-        "--layout",
-        "B",
-        "--no-open",
-      ],
+      ["./prototype.sh", "preview", "--port", String(port), "--no-open"],
       { cwd: root, timeout: 8000 },
     );
     let output = "";
@@ -97,9 +89,7 @@ it("reuses only the current checkout and preserves services from other worktrees
     const own = await launch(port);
     assert.equal(own.code, 0, own.output);
     assert.ok(own.output.includes("复用已有原型服务"));
-    assert.ok(
-      own.output.includes(`:${port}/docs/prototypes/preview/?variant=B`),
-    );
+    assert.ok(own.output.includes(`:${port}/docs/prototypes/preview/`));
     checkout = "different-worktree";
     const other = await launch(port);
     assert.equal(other.code, 1, other.output);

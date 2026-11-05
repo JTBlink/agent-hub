@@ -1,77 +1,84 @@
 [
   {
+    "id": "ai-native",
+    "title": "AI Native",
+    "description": "需求与开发、缺陷、Issue、MR、发布检查等场景的 Skill / 脚本流程编排独立原型。",
+    "status": "仅原型",
+    "path": "/docs/prototypes/ai-native/",
+    "source": "docs/prototypes/ai-native/",
+    "previewQuery": {
+      "view": "sidebar"
+    },
+    "implementation": "当前只有独立 HTML 原型。实验开关、agent-hub://flags 协议和流程执行器尚未接入正式应用；页面中的开启与推进均为演示。"
+  },
+  {
     "id": "preview",
     "title": "预览与浏览",
-    "description": "网页、HTML、Markdown 独立模块；检查、批注和 Agent 交互。",
-    "status": "设计中",
+    "description": "单一实现方案：右侧检查与批注、完整发送内容预览，按文件路径创建或复用 Agent Tab。",
+    "status": "已有实现",
     "path": "/docs/prototypes/preview/",
     "source": "docs/prototypes/preview/",
-    "layouts": ["A", "B", "C"],
     "aliases": [
       "/prototypes/preview/",
       "/tests/browser/preview-module-prototype.html"
-    ]
+    ],
+    "implementation": "已提供独立浏览工作区与项目内预览标签，支持源码编辑、元素检查、批注、截图和 Agent 交付。Chromium 与系统 WebView 分别适配，能力及平台支持存在差异。"
   },
   {
     "id": "tasks-terminal",
     "title": "任务与终端",
     "description": "代码平台任务、项目终端、分屏与 Herdr 运行状态。",
-    "status": "参考原型",
+    "status": "已有实现",
     "path": "/docs/prototypes/tasks-terminal/",
     "source": "docs/prototypes/tasks-terminal/",
     "aliases": [
       "/prototypes/tasks-terminal/",
       "/docs/prototypes/tasks-terminal.html",
       "/docs/prototypes/tasks-herdr.html"
-    ]
+    ],
+    "implementation": "任务面板从本地项目 remote 识别 GitHub / GitLab 议题和 PR / MR，确认启动时可选择工作树、Agent 与 Skill。终端按项目和工作树管理标签与分屏，项目内共享 8 个窗格；切换工作区回收应用自有终端，Herdr 后台会话保留。"
   },
   {
     "id": "herdr-sidebar",
     "title": "Herdr 侧栏",
     "description": "工作空间、工作树、Agent 会话与侧栏导航方案。",
-    "status": "参考原型",
+    "status": "已有实现",
     "path": "/docs/prototypes/herdr-sidebar/",
     "source": "docs/prototypes/herdr-sidebar/",
     "aliases": [
       "/prototypes/herdr-sidebar/",
       "/docs/prototypes/herdr-sidebar.html"
-    ]
+    ],
+    "implementation": "正式侧栏默认进入原生 default 会话，按项目和工作树创建或复用工作空间，展示真实 Agent 状态，提供手动启动、发送任务、查看输出与中断。跟随项目切换需显式开启，自动巡检由自动化任务承载。"
   },
   {
     "id": "install",
-    "title": "安装流程",
-    "description": "桌面应用安装与首次使用流程的界面参考。",
-    "status": "参考原型",
+    "title": "发现与安装",
+    "description": "Skills 与自动化任务的发现入口、本地 / Git 导入和任务安装向导。",
+    "status": "已有实现",
     "path": "/docs/prototypes/install/",
     "source": "docs/prototypes/install/",
-    "aliases": ["/prototypes/install/", "/docs/prototypes/install.html"]
+    "aliases": ["/prototypes/install/", "/docs/prototypes/install.html"],
+    "implementation": "正式发现页已分为 Skills 和自动化任务，分别选择来源；任务支持推荐模板、本地目录 / JSON 和 Git 仓库导入，配置项目与日程后创建，默认暂停。"
   },
   {
     "id": "hosts",
     "title": "Hosts 方案",
-    "description": "A 方案列表与编辑器、B/C 比较方案；正式功能已有独立实现。",
-    "status": "参考原型",
+    "description": "单一实现方案：Hosts 列表与编辑器、系统内容及显式应用。",
+    "status": "已有实现",
     "source": "docs/prototypes/hosts/",
     "path": "/docs/prototypes/hosts/",
-    "layouts": ["A", "B", "C"],
-    "aliases": ["/tests/browser/settings-hosts-prototype.html"]
+    "aliases": ["/tests/browser/settings-hosts-prototype.html"],
+    "implementation": "设置页已采用方案列表与编辑器，支持系统 Hosts 编辑、方案新建 / 复制 / 重命名 / 删除、保存和显式应用。保存不修改系统，应用时校验修订并按需授权；方案接入统一 Git 备份，CLI 共用实现。"
   },
   {
     "id": "agent-settings",
     "title": "全局智能体设置",
     "description": "支持搜索和筛选多个 Agent，每行直接编辑启动指令，常用参数按钮自动组合命令。",
-    "status": "设计中",
+    "status": "已有实现",
     "path": "/docs/prototypes/agent-settings/",
     "source": "docs/prototypes/agent-settings/",
-    "aliases": ["/tests/browser/settings-agents-prototype.html"]
-  },
-  {
-    "id": "ai-native",
-    "title": "AI Native",
-    "description": "默认关闭的实验性功能；需求与开发、Issue、MR 等场景的 Skill / 脚本编排独立原型。",
-    "status": "设计中",
-    "path": "/docs/prototypes/ai-native/",
-    "source": "docs/prototypes/ai-native/",
-    "layouts": ["A", "B", "C"]
+    "aliases": ["/tests/browser/settings-agents-prototype.html"],
+    "implementation": "设置页已支持按安装 / 启用状态筛选、搜索名称与指令、自定义 Agent、拖动排序、编辑启动指令、切换常用参数及设置默认 Agent；可恢复默认指令，并沿用统一 Git 备份与同步。"
   }
 ]

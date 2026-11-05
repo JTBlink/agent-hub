@@ -22,7 +22,7 @@ const node = (tag, text, className) => {
 function render() {
   const query = search.value.trim().toLocaleLowerCase();
   const visible = entries.filter((entry) =>
-    `${entry.title} ${entry.id} ${entry.description} ${entry.status}`
+    `${entry.title} ${entry.id} ${entry.description} ${entry.status} ${entry.implementation ?? ""}`
       .toLocaleLowerCase()
       .includes(query),
   );
@@ -42,16 +42,32 @@ function render() {
     location.title = source;
     heading.append(location);
     content.append(heading, node("p", entry.description));
+    if (entry.implementation) {
+      const implementation = node("p");
+      implementation.append(
+        node("strong", "当前实现："),
+        document.createTextNode(entry.implementation),
+      );
+      content.append(implementation);
+    }
     const actions = node("div", "", "actions");
     if (entry.path) {
       const link = node("a", "打开原型", "open");
-      link.href = entry.path;
+      const query = new URLSearchParams(entry.previewQuery);
+      link.href = entry.path + (query.size ? `?${query}` : "");
       link.setAttribute("aria-label", `打开${entry.title}原型`);
       actions.append(link);
       for (const layout of entry.layouts ?? []) {
         const variant = node("a", `方案 ${layout}`);
-        variant.href = `${entry.path}?variant=${layout}`;
+        const variantQuery = new URLSearchParams(query);
+        variantQuery.set("variant", layout);
+        variant.href = `${entry.path}?${variantQuery}`;
         actions.append(variant);
+      }
+      if (entry.previewQuery) {
+        const settings = node("a", "开关页面");
+        settings.href = entry.path;
+        actions.append(settings);
       }
     } else actions.append(node("span", "保留在历史分支", "archived-note"));
     row.append(content, actions);

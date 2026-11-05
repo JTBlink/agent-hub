@@ -18,14 +18,14 @@
         </button>
       </header>
       <p class="intro">
-        查看交互方案与历史设计参考。原型使用演示数据，正式功能和验收状态以对应需求为准。
+        每项需求只保留一个方案，新需求排在最上面；下方对照当前代码列出实现范围。已有实现表示正式应用已接入相关功能，不代表原型中的全部交互或各平台均已验收。原型使用演示数据。
       </p>
       <div class="catalog-tools">
         <label class="search"
           >查找原型<input
             id="search"
             type="search"
-            placeholder="名称、用途或状态"
+            placeholder="名称、用途、实现能力或状态"
         /></label>
         <p id="count" role="status"></p>
       </div>
@@ -39,8 +39,8 @@
               >./prototype.sh preview</code
             >
             直达指定原型。<br />新增原型请登记
-            <code>docs/prototypes/catalog.json</code
-            >，入口、状态和源码位置统一维护。
+            <code>docs/prototypes/catalog.json</code>
+            的列表顶部，入口、实现状态、当前实现说明、源码位置和展示顺序统一维护。功能变化时同步核对实现说明。
           </p>
         </details>
       </footer>
