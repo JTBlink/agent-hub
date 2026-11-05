@@ -48,4 +48,4 @@ SQLite 保存技能、项目、技能组和设置等状态。桌面 commands 和
 
 - **预览与浏览**：独立于项目的 `/preview` 宿主管理网页、HTML、Markdown 标签与批注；桌面端和关键 CLI 共用隔离 Chromium 浏览器。本地文档使用显式授权、原子保存和修订冲突检查；批注、截图与 Agent 交付绑定当前文档修订。重启只恢复网页元数据，不重放输入。模块边界、实际行为与剩余范围见[预览架构](docs/architecture/preview.md)。
 
-- **AI Native（独立需求原型）**：面向需求与开发、缺陷、Issue、MR、发布检查、L3 建设与自定义场景的 Skill/脚本流程编排。默认由 ask-matt 编排，人确认需求、测试 Case 与最终验收，AI 在授权范围内连续推进中间阶段。设计中通过 `agent-hub://flags` 手动开启，默认关闭并隐藏侧栏；当前只有独立 HTML 原型，没有正式内部协议、实验开关或执行器。详细边界见[应用组装](docs/architecture/app-composition.md#实验性功能与-ai-native-原型边界)及[统一规划](docs/plans/agent-hub.md#ai-native-场景流程编排)。
+- **AI Native（独立需求原型）**：面向需求与开发、缺陷、Issue、MR、发布检查、L3 建设与自定义场景的 Skill/脚本流程编排。默认由 ask-matt 编排，人与 AI 多轮沟通并迭代一个 HTML 需求原型，预览确认后推进开发，最后验收结果；需求、Case 与计划由命令行 Agent 整理生成后自动推进，Case 不单独人工确认。任务优先使用 Herdr，未安装时降级至内嵌终端，不打开系统终端。设计中通过 `agent-hub://flags` 手动开启，默认关闭并隐藏侧栏；当前只有独立 HTML 原型，没有正式内部协议、实验开关或执行器。详细边界见[应用组装](docs/architecture/app-composition.md#实验性功能与-ai-native-原型边界)及[统一规划](docs/plans/agent-hub.md#ai-native-场景流程编排)。

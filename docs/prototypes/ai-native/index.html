@@ -169,6 +169,42 @@
         flex-direction: column;
         gap: 14px;
       }
+      .agent-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        color: var(--sub);
+      }
+      .agent-menu {
+        position: fixed;
+        z-index: 100;
+        padding: 5px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 8px 24px #0003;
+      }
+      .agent-menu[hidden] {
+        display: none;
+      }
+      .agent-menu button {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        border: 0;
+        text-align: left;
+      }
+      .agent-menu button[aria-selected="true"] {
+        color: var(--accent);
+        background: var(--tint);
+      }
+      .agent-menu button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+        background: var(--hover);
+      }
       .tag {
         display: inline-flex;
         gap: 5px;
@@ -1074,6 +1110,326 @@
           font-size: 11px;
         }
       }
+
+      /* Guided task flow: one primary action, task-scoped state, progressive disclosure. */
+      .guided-page {
+        max-width: 920px;
+        padding-top: 22px;
+      }
+      .guide-top {
+        margin-bottom: 28px;
+      }
+      .guide-track {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 38px;
+      }
+      .guide-track button {
+        flex: 1;
+        justify-content: flex-start;
+        gap: 8px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        padding: 8px 2px;
+        font-size: 12px;
+        white-space: normal;
+      }
+      .guide-track button span {
+        display: grid;
+        place-items: center;
+        flex: 0 0 25px;
+        height: 25px;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        font-size: 11px;
+      }
+      .guide-track .current {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .guide-track .current span {
+        color: var(--on);
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .guide-track .complete span {
+        color: var(--green);
+      }
+      .guide-heading {
+        margin-bottom: 28px;
+      }
+      .guide-heading h1 {
+        font-size: 27px;
+        line-height: 1.4;
+        text-wrap: balance;
+      }
+      .guide-heading p {
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .guide-form label {
+        font-size: 13px;
+        margin-top: 26px;
+      }
+      .scene-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .scene-options button {
+        font-size: 12px;
+        padding: 9px 12px;
+      }
+      .goal-input {
+        min-height: 145px;
+        margin-top: 7px;
+        font-size: 14px;
+        line-height: 1.8;
+        padding: 16px;
+      }
+      .guide-details {
+        font-size: 12px;
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+        margin-top: 22px;
+        color: var(--sub);
+      }
+      .guide-details summary {
+        cursor: pointer;
+        width: fit-content;
+        color: var(--muted);
+      }
+      .guide-details summary:hover {
+        color: var(--accent);
+      }
+      .guide-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-top: 1px solid var(--line);
+        padding-top: 22px;
+        margin-top: 28px;
+      }
+      .guide-actions button {
+        min-height: 40px;
+        padding: 9px 17px;
+      }
+      .guide-goal-summary {
+        border-left: 2px solid var(--accent);
+        padding: 4px 0 4px 15px;
+        margin-bottom: 22px;
+      }
+      .guide-goal-summary p {
+        font-size: 13px;
+        margin-top: 5px;
+      }
+      .guide-case-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .guide-case {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        padding: 16px 18px;
+        border-radius: 8px;
+      }
+      .guide-case h3 {
+        font-size: 13px;
+      }
+      .guide-case p {
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      .guide-case details {
+        font-size: 11px;
+        margin-top: 9px;
+        color: var(--muted);
+      }
+      .guide-case summary {
+        cursor: pointer;
+        width: fit-content;
+      }
+      .guide-disclaimer {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 24px;
+      }
+      .task-list {
+        padding: 0 8px;
+      }
+      .task-item {
+        width: 100%;
+        display: flex;
+        align-items: flex-start;
+        flex-direction: column;
+        border-color: transparent;
+        background: transparent;
+        text-align: left;
+        padding: 12px 10px;
+        gap: 7px;
+        white-space: normal;
+        margin-bottom: 5px;
+      }
+      .task-item.active {
+        background: var(--tint);
+        border-color: var(--line);
+      }
+      .task-title {
+        font-size: 12px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .task-meta {
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .guide-run-state {
+        padding: 30px 22px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+      }
+      .guide-state-symbol {
+        font-size: 36px;
+        display: block;
+        margin-bottom: 12px;
+      }
+      .guide-run-state h2 {
+        font-size: 18px;
+      }
+      .guide-run-state p {
+        font-size: 12px;
+        margin: 13px auto 0;
+        max-width: 55ch;
+      }
+      .guide-run-state progress {
+        display: block;
+        width: 75%;
+        max-width: 380px;
+        height: 5px;
+        margin: 25px auto 0;
+        accent-color: var(--accent);
+      }
+      .guide-result {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        gap: 18px;
+      }
+      .guide-result:last-child {
+        border: 0;
+      }
+      .guide-result h3 {
+        font-size: 13px;
+      }
+      .guide-result p {
+        font-size: 12px;
+        margin-top: 5px;
+      }
+      .guided-page .primary {
+        white-space: normal;
+      }
+      .guided-page h1:focus {
+        outline: none;
+      }
+      .guided-page .goal-input:focus-visible {
+        outline: 2px solid var(--accent);
+      }
+      @media (max-width: 760px) {
+        .guide-track {
+          gap: 4px;
+          margin-bottom: 25px;
+        }
+        .guide-track button {
+          flex-direction: column;
+          align-items: flex-start;
+          font-size: 11px;
+        }
+        .guide-heading h1 {
+          font-size: 23px;
+        }
+        .guide-actions {
+          flex-wrap: wrap;
+          gap: 14px;
+        }
+        .guide-actions .primary {
+          margin-left: auto;
+        }
+        .scene-options button {
+          padding: 7px 9px;
+        }
+        .guided-page {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+      }
+      .prototype-options {
+        display: block;
+        left: auto;
+        right: 18px;
+        transform: none;
+        max-width: calc(100vw - 36px);
+      }
+      .prototype-options summary {
+        font-size: 11px;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 5px 10px;
+      }
+      .prototype-options-body {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 7px;
+      }
+      .discussion-thread {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .discussion-message {
+        padding: 12px 15px;
+        border-radius: 8px;
+        max-width: 95%;
+        border: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .discussion-message.user {
+        align-self: flex-end;
+        background: var(--tint);
+      }
+      .discussion-message p {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin-top: 5px;
+        font-size: 13px;
+      }
+      .requirement-summary {
+        padding: 17px;
+        border-left: 2px solid var(--accent);
+        background: var(--surface);
+        border-radius: 5px;
+      }
+      .requirement-summary p {
+        margin: 9px 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 13px;
+      }
+      .requirement-summary small {
+        display: block;
+        margin-top: 6px;
+      }
     </style>
   </head>
   <body>
@@ -1094,16 +1450,15 @@
       ><span>不连接项目或远端服务</span
       ><span class="right" id="state-summary">AI Native 已关闭</span>
     </div>
-    <div class="switcher" aria-label="原型控制">
-      <button class="ghost" onclick="cycle(-1)" aria-label="上一布局">←</button
-      ><span id="variant-label">A · 流程编排</span
-      ><button class="ghost" onclick="cycle(1)" aria-label="下一布局">→</button
-      ><span class="sep"></span
-      ><button class="ghost" onclick="theme()" id="theme-btn">浅色</button
-      ><button class="ghost optional" onclick="toggleScale()">字号</button
-      ><button class="ghost" onclick="openDesign()">设计说明</button
-      ><button class="ghost optional" onclick="resetDemo()">重置</button>
-    </div>
+    <details class="switcher prototype-options" aria-label="原型控制">
+      <summary>原型选项</summary>
+      <div class="prototype-options-body">
+        <button class="ghost" onclick="theme()" id="theme-btn">浅色</button>
+        <button class="ghost" onclick="toggleScale()">字号</button>
+        <button class="ghost" onclick="openDesign()">设计说明</button>
+        <button class="ghost" onclick="resetDemo()">重置</button>
+      </div>
+    </details>
     <dialog id="modal">
       <div class="modal-head">
         <h2 id="modal-title"></h2>
@@ -1398,6 +1753,18 @@
           ],
         },
       ];
+      for (const scenario of scenarios) {
+        for (const step of scenario.steps) {
+          if (step.id === "requirements" || step.id === "cases") {
+            step.when = "on_success";
+            step.name =
+              step.id === "requirements"
+                ? "生成需求与验收标准"
+                : "生成测试 Case 并留档";
+            step.target = "ask-matt";
+          }
+        }
+      }
       const clone = (v) => JSON.parse(JSON.stringify(v));
       const casesDefault = [
         {
@@ -1437,15 +1804,13 @@
           checked: false,
         },
       ];
-      let enabled = false,
-        page = "flags",
+      // Catalog preview simulates an enabled module; the bare file preserves default-off behavior.
+      const sidebarPreview =
+        new URLSearchParams(location.search).get("view") === "sidebar";
+      let enabled = sidebarPreview,
+        page = sidebarPreview ? "ai" : "flags",
         scene = "feature",
         tab = "flow",
-        variant = ["A", "B", "C"].includes(
-          new URLSearchParams(location.search).get("variant"),
-        )
-          ? new URLSearchParams(location.search).get("variant")
-          : "A",
         selected = "plan",
         workflow = {},
         caseData = {},
@@ -1488,11 +1853,10 @@
         toastTimer = setTimeout(() => ($("announcement").innerHTML = ""), 3500);
       }
       function render() {
+        saveActiveTask();
         renderRail();
         renderSidebar();
         renderMain();
-        $("variant-label").textContent =
-          `${variant} · ${{ A: "流程编排", B: "执行工作台", C: "验收优先" }[variant]}`;
         $("state-summary").textContent =
           `AI Native ${enabled ? "已开启 · " + current().name : "已关闭"}${run ? " · " + run.label : ""}`;
         $("address").innerHTML =
@@ -1515,14 +1879,687 @@
             .join("") +
           `<button class="bottom ${page === "flags" ? "on" : ""}" title="实验性功能" aria-label="实验性功能" onclick="navigate('flags')">${svg("settings")}</button>`;
       }
+      // Guided task state is isolated per requirement. Background demo ticks target task IDs.
+      let guideStage = 0,
+        expertMode = false,
+        activeTaskId = "task-1",
+        taskCounter = 1;
+      const taskList = [
+        {
+          id: "task-1",
+          title: "新需求",
+          scene: "feature",
+          workflow: {},
+          caseData: {},
+          run: null,
+          stage: 0,
+        },
+      ];
+      const taskTimers = new Map();
+      const stageNames = ["沟通需求", "AI 自动推进", "验收结果"];
+      function saveActiveTask() {
+        const task = taskList.find((t) => t.id === activeTaskId);
+        if (task)
+          Object.assign(task, {
+            scene,
+            workflow,
+            caseData,
+            run,
+            stage: guideStage,
+          });
+      }
+      function taskState(task) {
+        if (task.run?.state === "accepted") return ["已完成", "green"];
+        if (task.run?.state === "running") return ["AI 推进中", "blue"];
+        if (task.run?.state === "blocked" || task.run?.state === "checkpoint")
+          return ["需处理", "yellow"];
+        if (task.run?.state === "ready") return ["待验收", "purple"];
+        return [
+          Object.values(task.workflow).some((w) => w.discussion?.length)
+            ? "需求沟通中"
+            : "待描述目标",
+          "muted",
+        ];
+      }
+      function activateTask(id) {
+        saveActiveTask();
+        const task = taskList.find((t) => t.id === id);
+        if (!task) return;
+        activeTaskId = id;
+        scene = task.scene;
+        workflow = task.workflow;
+        caseData = task.caseData;
+        run = task.run;
+        guideStage = task.stage;
+        expertMode = false;
+        render();
+      }
+      function newTask() {
+        saveActiveTask();
+        const task = {
+          id: "task-" + ++taskCounter,
+          title: "新需求 " + taskCounter,
+          scene: "feature",
+          workflow: {},
+          caseData: {},
+          run: null,
+          stage: 0,
+        };
+        taskList.unshift(task);
+        activateTask(task.id);
+        $("task-goal")?.focus();
+      }
+      function taskSidebar() {
+        const running = taskList.filter(
+          (t) => t.run?.state === "running",
+        ).length;
+        return `<div class="side-title row between"><strong>AI Native</strong><span class="tag">演示</span></div><div class="workspace"><strong style="font-size:12px">demo-workspace</strong><div class="path">~/projects/demo</div></div><div style="padding:16px 12px 4px"><button class="primary" style="width:100%" onclick="newTask()">＋ 新建需求</button></div><div style="padding:8px 12px 0"><button class="ghost small" style="width:100%" onclick="openRequirementIndex()">项目需求目录</button></div><div class="side-label row between"><span>任务列表 · 新需求在上</span><span>${running ? running + " 条并行推进" : taskList.length + " 条需求"}</span></div><div class="task-list">${taskList
+          .map((task) => {
+            const [label, color] = taskState(task);
+            return `<button class="task-item ${task.id === activeTaskId ? "active" : ""}" aria-current="${task.id === activeTaskId ? "page" : "false"}" data-task="${task.id}" onclick="activateTask('${task.id}')"><span class="task-title">${esc(task.title)}</span><span class="task-meta ${color}"><i class="dot"></i>${label}</span></button>`;
+          })
+          .join(
+            "",
+          )}</div><div class="side-bottom"><p style="font-size:12px">你确认目标与结果，<br>AI 推进中间步骤。</p><button class="ghost small" style="margin-top:12px;padding-left:0" onclick="navigate('flags')">实验性功能设置</button></div>`;
+      }
+      function guideGoal() {
+        const defaults = {
+          feature: "支持项目间切换工作空间，并保留各项目的任务上下文。",
+          bugfix: "修复工作空间切换失败的问题，补充异常恢复的回归验证。",
+          issue: "处理 Issue #42，完成需求、实现和验证结果回写。",
+          mr: "检查 MR #12 的评审与 CI，修复问题并重新验证。",
+          release: "检查当前版本的构建、制品与发布条件。",
+          l3: "评估当前项目的 L3 差距，按批次建设并补齐验收证据。",
+          custom: "描述你希望 AI 完成的任务。",
+        };
+        return current().requirement ?? defaults[scene];
+      }
+      function guidedView() {
+        const task = taskList.find((t) => t.id === activeTaskId);
+        const headings = [
+          "先和 AI 把需求聊清楚",
+          run?.state === "running"
+            ? "AI 正在完成任务"
+            : run?.state === "blocked" || run?.state === "checkpoint"
+              ? "任务需要处理"
+              : "任务已准备好验收",
+          "看看结果是否达到目标",
+        ];
+        const hints = [
+          "可以多轮补充和调整，最终交付一个 HTML 原型，预览确认后再开始执行。",
+          "你可以离开这里，继续发起其他需求。",
+          "只看交付结果，过程与证据按需展开。",
+        ];
+        return `<div class="page guided-page"><div class="guide-top row between"><span class="muted">AI Native / ${esc(task.title)}</span><button class="ghost small" onclick="toggleExpert()">高级编排</button></div><nav class="guide-track" aria-label="任务步骤">${stageNames.map((name, i) => `<button ${i > guideStage ? "disabled" : ""} class="${i === guideStage ? "current" : i < guideStage ? "complete" : ""}" ${i === guideStage ? 'aria-current="step"' : ""} onclick="guideGo(${i})"><span>${i < guideStage ? "✓" : i + 1}</span>${name}</button>`).join("")}</nav><div class="guide-heading"><h1 id="guide-heading" tabindex="-1">${headings[guideStage]}</h1><p>${hints[guideStage]}</p></div>${guideStage === 0 ? guideRequestView() : guideStage === 1 ? guideRunningView() : guideAcceptView()}<p class="guide-disclaimer">交互演示 · 不启动真实 Agent 或终端</p></div>`;
+      }
+      function guideRequestView() {
+        const discussion = current().discussion ?? [];
+        const conversation = discussion
+          .map(
+            (m) =>
+              `<div class="discussion-message ${m.role}"><span class="muted">${m.role === "user" ? "你" : "AI · 演示"}</span><p>${esc(m.text)}</p></div>`,
+          )
+          .join("");
+        const summary = discussion.length
+          ? `<section class="requirement-summary"><h3>当前需求摘要</h3><p>${esc(current().requirement)}</p><small>范围限制：${esc(current().constraints || "未额外指定，遵循项目既有规范")}</small><small>AI 在执行前生成测试 Case 和计划，不逐项请求确认。</small></section>`
+          : "";
+        return `<section class="guide-form"><div class="discussion-thread" aria-label="需求对话">${conversation}</div>${summary}${requirementPrototypeCard()}<label style="margin-top:18px" for="task-goal">${discussion.length ? "继续补充，或回答 AI 的问题" : "先说说你想做什么"}</label><textarea id="task-goal" class="goal-input" oninput="guideUpdateGoal(this.value)" aria-describedby="goal-error" placeholder="可以继续追问、补充约束或调整需求">${esc(discussion.length ? (current().chatDraft ?? "") : guideGoal())}</textarea><p id="goal-error" class="error" role="alert"></p><div class="row between" style="margin-top:12px">${agentPicker()}</div><details class="guide-details"><summary>补充信息与启动选项（可选）</summary><label>启动方式</label><div class="segmented"><button class="${current().launchMode !== "embedded" ? "selected" : ""}" onclick="setLaunchMode('auto')">自动（Herdr 优先）</button><button class="${current().launchMode === "embedded" ? "selected" : ""}" onclick="setLaunchMode('embedded')">内嵌终端</button></div><label>模拟安装状态（仅原型）</label><div class="segmented"><button onclick="current().demoHerdrInstalled=true;saveActiveTask();render()">Herdr 已安装</button><button onclick="current().demoHerdrInstalled=false;saveActiveTask();render()">Herdr 未安装</button></div><label>场景模板</label><div class="scene-options">${scenarios.map((v) => `<button class="${scene === v.id ? "selected" : ""}" onclick="guideChooseScene('${v.id}')">${v.name}</button>`).join("")}</div><label for="task-object">关联 Issue / MR</label><input id="task-object" value="${esc(current().issue ?? "")}" oninput="current().issue=this.value;saveActiveTask()" placeholder="链接或编号（可选）"><label for="task-constraints">范围限制</label><textarea id="task-constraints" oninput="current().constraints=this.value;saveActiveTask()">${esc(current().constraints ?? "")}</textarea></details><div class="guide-actions">${discussion.length ? '<button onclick="guideSubmit()">发送补充</button><button class="primary" onclick="generateRequirementPrototype()">生成 / 更新 HTML 原型</button>' : '<span class="muted">先沟通需求，不会直接开始开发。</span><button class="primary" onclick="guideSubmit()">发送给 AI</button>'}</div></section>`;
+      }
+      const taskAgents = [
+        ["default", "项目默认 Agent"],
+        ["codex", "Codex"],
+        ["claude", "Claude Code"],
+        ["opencode", "OpenCode"],
+        ["hermes", "Hermes"],
+      ];
+      function agentLabel(w = current()) {
+        return (
+          taskAgents.find(([id]) => id === w.agent)?.[1] ?? taskAgents[0][1]
+        );
+      }
+      function agentPicker() {
+        return `<button id="task-agent" class="agent-trigger" role="combobox" aria-label="任务 Agent" aria-haspopup="listbox" aria-controls="task-agent-menu" aria-expanded="false" onclick="toggleAgentMenu()" onkeydown="agentMenuKey(event)">${esc(agentLabel())}<span aria-hidden="true">⌄</span></button><div id="task-agent-menu" class="agent-menu" role="listbox" aria-label="选择任务 Agent" hidden onkeydown="agentMenuKey(event)">${taskAgents.map(([id, label]) => `<button type="button" role="option" tabindex="-1" aria-selected="${(current().agent ?? "default") === id}" data-agent="${id}" onclick="chooseTaskAgent('${id}')">${label}<span aria-hidden="true">${(current().agent ?? "default") === id ? "✓" : ""}</span></button>`).join("")}</div>`;
+      }
+      function closeAgentMenu(restoreFocus = false) {
+        const menu = $("task-agent-menu"),
+          trigger = $("task-agent");
+        if (!menu || menu.hidden) return;
+        menu.hidden = true;
+        trigger?.setAttribute("aria-expanded", "false");
+        if (restoreFocus) trigger?.focus();
+      }
+      function toggleAgentMenu() {
+        const menu = $("task-agent-menu"),
+          trigger = $("task-agent");
+        if (!menu || !trigger) return;
+        if (!menu.hidden) return closeAgentMenu(true);
+        menu.hidden = false;
+        trigger.setAttribute("aria-expanded", "true");
+        const zoom =
+          Number.parseFloat(getComputedStyle(document.body).zoom) || 1;
+        const bounds = trigger.getBoundingClientRect();
+        const rect = {
+          left: bounds.left / zoom,
+          top: bounds.top / zoom,
+          bottom: bounds.bottom / zoom,
+        };
+        const width = innerWidth / zoom,
+          height = innerHeight / zoom;
+        menu.style.width = Math.min(240, width - 24) + "px";
+        menu.style.left =
+          Math.max(12, Math.min(rect.left, width - menu.offsetWidth - 12)) +
+          "px";
+        const below = height - rect.bottom - 12;
+        const above = rect.top - 12;
+        const upwards = menu.scrollHeight > below && above > below;
+        menu.style.maxHeight =
+          Math.max(40, upwards ? above - 6 : below - 6) + "px";
+        menu.style.top =
+          (upwards ? rect.top - menu.offsetHeight - 6 : rect.bottom + 6) + "px";
+        menu.querySelector('[aria-selected="true"]')?.focus();
+      }
+      function chooseTaskAgent(id) {
+        if (!taskAgents.some(([value]) => value === id)) return;
+        current().agent = id;
+        saveActiveTask();
+        render();
+        $("task-agent")?.focus();
+      }
+      function agentMenuKey(event) {
+        const menu = $("task-agent-menu");
+        if (!menu) return;
+        if (event.key === "Escape" && !menu.hidden) {
+          event.preventDefault();
+          event.stopPropagation();
+          closeAgentMenu(true);
+        } else if (event.key === "Tab") closeAgentMenu();
+        else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          if (menu.hidden) toggleAgentMenu();
+          else {
+            const options = [...menu.querySelectorAll('[role="option"]')];
+            const index = options.indexOf(document.activeElement);
+            const next =
+              event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? options.length - 1
+                  : (index +
+                      (event.key === "ArrowUp" ? -1 : 1) +
+                      options.length) %
+                    options.length;
+            options[next].focus();
+          }
+        }
+      }
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest("#task-agent, #task-agent-menu"))
+          closeAgentMenu();
+      });
+      document.addEventListener(
+        "scroll",
+        (event) => {
+          if (!event.target.closest?.("#task-agent-menu")) closeAgentMenu();
+        },
+        true,
+      );
+      window.addEventListener("resize", () => closeAgentMenu());
+      function setLaunchMode(mode) {
+        current().launchMode = mode;
+        saveActiveTask();
+        render();
+      }
+      function launchLabel(w = current()) {
+        if (w.launchMode === "embedded") return "内嵌终端";
+        return w.demoHerdrInstalled === false
+          ? "内嵌终端（Herdr 未安装）"
+          : "Herdr";
+      }
+      function taskPrompt(w = current()) {
+        return `$${w.orchestrator}\n任务 Agent：${agentLabel(w)}\n目标：${w.requirement ?? guideGoal()}\n需求沟通记录：${(w.discussion ?? []).map((m) => (m.role === "user" ? "用户：" : "AI：") + m.text).join("\n")}\n需求交付物：${w.confirmedPrototype ? w.confirmedPrototype.relativePath + " v" + w.confirmedPrototype.revision : "HTML 原型尚未确认，继续沟通与迭代，不开始正式开发"}\n已确认需求摘要：${w.confirmedSummary?.goal ?? "尚未确认，继续沟通，不开始编码"}\n在目标项目命令行中，依据已确认摘要生成需求、验收标准、测试 Case 与计划，并在编码前保存。持续完成实现、三层验证、失败修复和 Review，归集对应提交的结果与证据供最终验收。\n范围：${w.constraints || "遵循项目既有范围与授权"}\n关联：${w.issue || "由项目规范发现或登记"}\n需求固定目录：${REQUIREMENTS_DIR}/；每条需求一个稳定 HTML 文件，同时维护 index.html 与 catalog.json，新需求排在顶部，更新保持原文件名。\n遇到环境、权限或结果不明时保留现场，不重复发起。`;
+      }
+      function openTaskTerminal() {
+        showModal(
+          launchLabel() + " · Agent 任务（演示）",
+          `<div class="hint">展示将交给 ${esc(agentLabel())} 的提示词和演示输出；没有实际启动终端。</div><label>任务上下文</label><pre>${esc(taskPrompt())}</pre><label>执行记录</label><div class="terminal" style="min-height:100px">${(run?.logs ?? []).map((l) => `<div class="${l.kind ?? ""}">${esc(l.text)}</div>`).join("") || "等待发起任务。"}</div>`,
+          `<button onclick="closeModal()">返回任务</button>`,
+        );
+      }
+      function guideUpdateGoal(value) {
+        if (current().discussion?.length) {
+          current().chatDraft = value;
+          saveActiveTask();
+          return;
+        }
+        if (value !== guideGoal()) {
+          run = null;
+          current().confirmedSummary = null;
+          cases().forEach((c) => (c.checked = false));
+        }
+        current().requirement = value;
+        saveActiveTask();
+      }
+      function guideChooseScene(id) {
+        if (run?.state === "running") {
+          notify("当前任务正在推进。请新建需求。");
+          return;
+        }
+        const previous = current();
+        scene = id;
+        run = null;
+        const next = current();
+        for (const key of [
+          "requirement",
+          "discussion",
+          "chatDraft",
+          "constraints",
+          "issue",
+          "agent",
+          "launchMode",
+          "demoHerdrInstalled",
+          "requirementPrototype",
+          "prototypeHistory",
+        ])
+          if (previous[key] !== undefined) next[key] = previous[key];
+        next.confirmedSummary = null;
+        next.confirmedPrototype = null;
+        saveActiveTask();
+        render();
+      }
+      function guideSubmit() {
+        const w = current(),
+          discussion = w.discussion ?? [];
+        const text = (
+          discussion.length ? (w.chatDraft ?? "") : guideGoal()
+        ).trim();
+        if (!text) {
+          $("goal-error").textContent = discussion.length
+            ? "请填写要补充或回答的内容。"
+            : "请先描述你的目标。";
+          $("task-goal").focus();
+          return;
+        }
+        discussion.push({ role: "user", text });
+        const users = discussion.filter((m) => m.role === "user");
+        discussion.push({
+          role: "assistant",
+          text:
+            users.length === 1
+              ? "我先整理了需求摘要。你希望保留哪些现有行为？还有哪些范围或异常场景需要补充？可以继续沟通，确定后再执行。"
+              : "补充内容已加入需求摘要。还有需要调整的吗？你可以继续沟通，或确认当前需求后开始执行。",
+        });
+        w.discussion = discussion;
+        w.chatDraft = "";
+        w.confirmedSummary = null;
+        w.confirmedPrototype = null;
+        w.requirement = users
+          .map((m, i) => (i ? "补充：" : "") + m.text)
+          .join("\n");
+        taskList.find((t) => t.id === activeTaskId).title = users[0].text
+          .split(/[。\n]/)[0]
+          .slice(0, 30);
+        saveActiveTask();
+        render();
+        $("task-goal").focus();
+      }
+      const REQUIREMENTS_DIR = "docs/prototypes/requirements";
+      function requirementFile(taskId = activeTaskId) {
+        return "REQ-" + taskId.replace("task-", "").padStart(4, "0") + ".html";
+      }
+      function requirementCatalog() {
+        saveActiveTask();
+        return {
+          version: 1,
+          directory: REQUIREMENTS_DIR,
+          entries: taskList.flatMap((task) => {
+            const w = task.workflow[task.scene];
+            if (!w?.requirementPrototype) return [];
+            const p = w.requirementPrototype;
+            const [status] = taskState(task);
+            return [
+              {
+                id: p.filename.replace(".html", ""),
+                taskId: task.id,
+                title: task.title,
+                file: p.filename,
+                revision: p.revision,
+                status,
+                confirmedRevision: w.confirmedPrototype?.revision ?? null,
+                needsUpdate: p.messageCount !== (w.discussion?.length ?? 0),
+              },
+            ];
+          }),
+        };
+      }
+      function requirementIndexHtml() {
+        const entries = requirementCatalog().entries;
+        return (
+          '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>项目需求目录</title><style>body{font:14px/1.7 system-ui,sans-serif;color:#4c4f69;background:#eff1f5;margin:0}main{max-width:900px;padding:30px 20px;margin:auto}h1{font-size:25px}p,small{color:#6c6f85}article{padding:18px 0;border-top:1px solid #ccd0da}a{color:#1e66f5;font-weight:600;text-decoration:none}small{display:block}h2{font-size:16px;margin:6px 0}</style></head><body><main><h1>项目需求目录</h1><p>新需求在上，每条需求一个 HTML 文件。同一需求沿用文件名，通过修订号和项目 Git 保留历史。</p>' +
+          entries
+            .map(
+              (e) =>
+                "<article><small>" +
+                esc(e.id) +
+                " · v" +
+                e.revision +
+                " · " +
+                esc(e.status) +
+                (e.needsUpdate ? " · 待更新" : "") +
+                '</small><h2><a href="./' +
+                esc(e.file) +
+                '">' +
+                esc(e.title) +
+                "</a></h2><small>" +
+                esc(e.file) +
+                "</small></article>",
+            )
+            .join("") +
+          (entries.length ? "" : "<p>尚无已生成的需求文件。</p>") +
+          "</main></body></html>"
+        );
+      }
+      function openRequirementIndex() {
+        const catalog = requirementCatalog();
+        showModal(
+          "项目需求目录",
+          `<p class="footnote">目标项目固定目录：<code>${REQUIREMENTS_DIR}/</code><br>当前为内存演示，未向项目写入文件。新需求排在最上面。</p><div style="margin-top:16px">${catalog.entries.map((e) => `<div class="guide-result row between"><div><h3>${esc(e.id)}　${esc(e.title)}</h3><p>${esc(e.file)} · v${e.revision} · ${esc(e.status)}${e.needsUpdate ? " · 待更新" : ""}</p></div><button class="small" onclick="closeModal();activateTask('${e.taskId}')">查看需求</button></div>`).join("") || '<p class="empty-state">先生成一条 HTML 需求原型。</p>'}</div>`,
+          `<button onclick="closeModal()">关闭</button><button onclick="download('catalog.json',JSON.stringify(requirementCatalog(),null,2))">下载清单</button><button class="primary" onclick="download('index.html',requirementIndexHtml(),'text/html')">下载目录索引</button>`,
+        );
+      }
+
+      function requirementPrototypeCurrent(w = current()) {
+        return (
+          !!w.requirementPrototype &&
+          w.requirementPrototype.messageCount === (w.discussion?.length ?? 0)
+        );
+      }
+      function requirementPrototypeCard() {
+        const p = current().requirementPrototype;
+        if (!p) return "";
+        const fresh = requirementPrototypeCurrent();
+        return `<section class="requirement-summary" style="margin-top:18px"><div class="row between"><h3>需求交付：HTML 原型</h3><span class="tag ${fresh ? "blue" : "yellow"}">v${p.revision}${fresh ? "" : " · 待更新"}</span></div><p><code>${esc(p.relativePath)}</code></p><small>${fresh ? "预览并操作原型，确认后才进入正式开发。" : "沟通内容已变化，请生成新版后重新预览。"}</small>${fresh ? '<button style="margin-top:12px" onclick="previewRequirementPrototype()">预览 HTML 原型</button>' : ""}</section>`;
+      }
+      function generateRequirementPrototype() {
+        const w = current();
+        if (!w.discussion?.length) {
+          notify("先与 AI 沟通需求。");
+          return;
+        }
+        if (w.chatDraft?.trim()) {
+          $("goal-error").textContent = "请先发送补充，再生成原型。";
+          $("task-goal").focus();
+          return;
+        }
+        const revision = (w.requirementPrototype?.revision ?? 0) + 1;
+        const task = taskList.find((t) => t.id === activeTaskId);
+        const html =
+          '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'"><title>需求原型 v' +
+          revision +
+          "</title><style>*{box-sizing:border-box}body{margin:0;background:#eff1f5;color:#4c4f69;font:14px/1.6 system-ui,sans-serif}main{max-width:840px;margin:35px auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center}small{color:#6c6f85}h1{font-size:24px;margin:10px 0}h2{font-size:16px}p{white-space:pre-wrap;overflow-wrap:anywhere}section{background:white;border:1px solid #d5d9e3;border-radius:10px;padding:20px;margin-top:20px}button{font:inherit;border:1px solid #1e66f5;border-radius:6px;padding:8px 14px;background:#1e66f5;color:white;cursor:pointer;margin:8px 8px 0 0}button.secondary{background:transparent;color:#1e66f5}input{padding:10px;width:100%;border:1px solid #bfc4d2;border-radius:6px;font:inherit}output{display:block;margin-top:15px;color:#287841}:focus-visible{outline:2px solid #1e66f5;outline-offset:3px}@media(max-width:600px){main{padding:16px;margin:0}}</style></head><body><main><header><small>需求交互示例 · 非正式产品实现</small><small>v" +
+          revision +
+          "</small></header><h1>" +
+          esc(task.title) +
+          "</h1><section><h2>目标与范围</h2><p>" +
+          esc(w.requirement) +
+          "</p><small>" +
+          esc(w.constraints || "沿用项目规范与既有行为") +
+          '</small></section><section><h2>操作体验</h2><p>此独立 HTML 示例用于预览、反馈和确认流程，真实项目原型由命令行 Agent 按需求生成。</p><label for="demo-name">演示输入</label><input id="demo-name" value="项目工作空间"><button onclick="document.getElementById(\'result\').textContent=\'已完成演示操作，输入内容已保留。\'">执行演示操作</button><button class="secondary" onclick="document.getElementById(\'result\').textContent=\'异常已恢复，原输入仍保留。\'">体验异常恢复</button><output id="result" role="status">等待操作</output></section></main></body></html>';
+        const artifact = {
+          revision,
+          filename: requirementFile(task.id),
+          relativePath: REQUIREMENTS_DIR + "/" + requirementFile(task.id),
+          html,
+          messageCount: w.discussion.length,
+          viewedRevision: null,
+        };
+        w.requirementPrototype = artifact;
+        w.prototypeHistory ??= [];
+        w.prototypeHistory.push(artifact);
+        w.confirmedSummary = null;
+        w.confirmedPrototype = null;
+        saveActiveTask();
+        render();
+        previewRequirementPrototype();
+      }
+      function previewRequirementPrototype() {
+        const w = current(),
+          p = w.requirementPrototype;
+        if (!requirementPrototypeCurrent()) {
+          notify("需求已变化，请先生成当前版本的 HTML 原型。");
+          return;
+        }
+        p.viewedRevision = p.revision;
+        saveActiveTask();
+        showModal(
+          "需求 HTML 原型 · v" + p.revision,
+          `<p class="footnote">独立 HTML 演示，先操作再确认；可关闭后继续沟通修改。</p><iframe id="requirement-frame" title="需求 HTML 原型预览" sandbox="allow-scripts" style="width:100%;height:420px;border:1px solid var(--line);border-radius:8px;margin-top:12px"></iframe>`,
+          `<button onclick="closeModal();$('task-goal')?.focus()">还需修改</button><button onclick="downloadRequirementPrototype()">下载 HTML</button><button class="primary" onclick="guideConfirmRequirement()">确认此原型，开始执行</button>`,
+        );
+        $("requirement-frame").srcdoc = p.html;
+      }
+      function downloadRequirementPrototype() {
+        const p = current().requirementPrototype;
+        if (p) download(p.filename, p.html, "text/html");
+      }
+
+      function guideConfirmRequirement() {
+        const w = current();
+        if (w.chatDraft?.trim()) {
+          if ($("goal-error"))
+            $("goal-error").textContent =
+              "还有未发送的补充，请先发送后更新原型。";
+          return;
+        }
+        if (!requirementPrototypeCurrent()) {
+          notify("请生成并预览当前需求的 HTML 原型后再确认。");
+          return;
+        }
+        const p = w.requirementPrototype;
+        if (p.viewedRevision !== p.revision) {
+          previewRequirementPrototype();
+          return;
+        }
+        w.confirmedPrototype = {
+          filename: p.filename,
+          relativePath: p.relativePath,
+          revision: p.revision,
+          html: p.html,
+          messageCount: p.messageCount,
+        };
+        w.confirmedSummary = {
+          goal: w.requirement,
+          constraints: w.constraints ?? "",
+          messageCount: w.discussion.length,
+        };
+        if ($("modal").open) closeModal();
+        guideStart();
+      }
+      function generatedCases() {
+        // A deterministic fixture demonstrates CLI output. No LLM is called by this prototype.
+        return clone(casesDefault).map((c) => ({
+          ...c,
+          given: "针对目标：" + guideGoal(),
+          checked: true,
+          generatedBy: "cli-agent-demo",
+        }));
+      }
+      function guideStart() {
+        if (run?.state === "running") return;
+        if (!current().confirmedSummary || !current().confirmedPrototype) {
+          guideStage = 0;
+          render();
+          notify("请先沟通并确认 HTML 原型。");
+          return;
+        }
+        const error = validate(current());
+        if (error) {
+          notify(error);
+          return;
+        }
+        caseData[scene] = generatedCases();
+        current().generatedRequirement = {
+          goal: guideGoal(),
+          source: "cli-agent-demo",
+          beforeCoding: true,
+        };
+        const final = demoOutcome(current());
+        run = {
+          state: "running",
+          label: "AI 正在推进",
+          logs: [],
+          progress: 0,
+          total: final.logs.length,
+          final,
+        };
+        guideStage = 1;
+        saveActiveTask();
+        scheduleTask(activeTaskId);
+        render();
+      }
+      function scheduleTask(id) {
+        if (taskTimers.has(id)) clearTimeout(taskTimers.get(id));
+        taskTimers.set(
+          id,
+          setTimeout(() => advanceTask(id), 850),
+        );
+      }
+      function advanceTask(id) {
+        const task = taskList.find((t) => t.id === id);
+        if (!task || task.run?.state !== "running") {
+          taskTimers.delete(id);
+          return;
+        }
+        const state = task.run;
+        state.logs.push(state.final.logs[state.progress]);
+        state.progress++;
+        if (state.progress >= state.total) {
+          task.run = {
+            ...state.final,
+            progress: state.progress,
+            total: state.total,
+          };
+          taskTimers.delete(id);
+          if (activeTaskId === id) run = task.run;
+        } else scheduleTask(id);
+        // Do not re-render another task's form while the user is typing.
+        if (activeTaskId === id && guideStage === 1) {
+          run = task.run;
+          render();
+        } else renderSidebar();
+      }
+      function guideGo(index) {
+        if (index === 2 && (!run || !["ready", "accepted"].includes(run.state)))
+          return;
+        if (index < 1 && run?.state === "running") {
+          notify("AI 正在推进。你可以新建需求或查看其他任务。");
+          return;
+        }
+        guideStage = index;
+        expertMode = false;
+        render();
+        $("guide-heading")?.focus();
+      }
+      function guideRunningView() {
+        const busy = run?.state === "running",
+          blocked = run?.state === "blocked" || run?.state === "checkpoint";
+        if (!run)
+          return `<div class="panel empty"><p>描述目标后，由命令行 Agent 生成需求并推进。</p><button class="primary" onclick="guideGo(0)">描述目标</button></div>`;
+        const latest = run.logs.at(-1)?.text ?? "正在读取需求与项目规范…";
+        return `<div class="guide-run-state"><span class="guide-state-symbol ${busy ? "blue" : blocked ? "yellow" : "green"}">${busy ? "◌" : blocked ? "!" : "✓"}</span><h2>${busy ? "正在生成需求、开发与验证" : blocked ? "已保留现场，等待处理" : "可以验收了"}</h2><p>${esc(busy ? latest : run.label)}</p>${busy ? `<progress aria-label="演示执行进度" value="${run.progress}" max="${run.total}"></progress>` : ""}</div><details class="guide-details"><summary>查看执行过程（${run.logs.length} 条）</summary><button class="small" style="margin-top:12px" onclick="openTaskTerminal()">查看 ${esc(launchLabel())} 任务</button><div class="terminal" style="margin-top:14px;min-height:0">${run.logs.map((l) => `<div class="${l.kind ?? ""}">${esc(l.text)}</div>`).join("")}</div></details><div class="guide-actions">${busy ? '<span class="muted">无需逐步确认，AI 会连续推进。</span><button onclick="newTask()">＋ 再提一个需求</button>' : blocked ? '<button class="ghost" onclick="feedback()">补充说明</button><button class="primary" onclick="guideRetry()">恢复演示推进</button>' : '<span class="muted">结果和证据已归集。</span><button class="primary" onclick="guideGo(2)">下一步：验收结果</button>'}</div><details class="guide-details"><summary>演示异常与恢复</summary><button class="small" style="margin-top:12px" onclick="guideBlock()">模拟环境受阻</button></details>`;
+      }
+      function guideBlock() {
+        if (!run) return;
+        clearTimeout(taskTimers.get(activeTaskId));
+        taskTimers.delete(activeTaskId);
+        simulateBlocked();
+      }
+      function guideRetry() {
+        if (run?.state === "checkpoint") {
+          notify("流程配置了额外人工检查点，请进入高级编排核对。");
+          return;
+        }
+        guideStart();
+      }
+      function guideAcceptView() {
+        const ready = run && ["ready", "accepted"].includes(run.state);
+        return `<div class="guide-goal-summary"><span class="muted">你的目标</span><p>${esc(guideGoal())}</p></div><div class="panel"><div class="panel-head row between"><h2>${run?.state === "accepted" ? "已验收" : "交付结果"}</h2><span class="tag ${ready ? "green" : "yellow"}">${ready ? "演示就绪" : "需处理"}</span></div><div class="guide-result"><h3>完成了什么</h3><p>${ready ? "已按目标完成实现与受影响回归，变更说明已归集。" : "当前还有未解决的问题，尚不能验收。"}</p></div><div class="guide-result"><h3>验证结果</h3><p>AI 生成 ${cases().length} 个测试 Case；${ready ? "三层验证与构建演示通过。" : "验证尚未完成。"}</p></div><div class="guide-result"><h3>还有什么问题</h3><p>${ready ? "本次演示没有待处理问题。真实 CI、Review 与发布结果仍需执行器采集。" : esc(run?.label ?? "尚未启动任务")}</p></div></div><details class="guide-details"><summary>查看 AI 生成的需求、Case 和证据</summary><p style="margin:14px 0">需求与 Case 由命令行 Agent 在编码前生成并保存。以下为合成展示，不作为真实 L3 证据。</p>${cases()
+          .map(
+            (c) =>
+              `<div class="guide-result"><h3>${esc(c.id)} ${esc(c.name)}</h3><p>${esc(c.then)}</p><button class="ghost small" onclick="openEvidence('${c.id}')">查看证据</button></div>`,
+          )
+          .join(
+            "",
+          )}${scene === "l3" ? '<button onclick="openBaseline()">L3 基线</button>' : ""}</details><div class="guide-actions"><button class="ghost" onclick="feedback()">还需调整</button>${run?.state === "accepted" ? '<button class="primary" onclick="newTask()">开始下一个需求</button>' : `<button class="primary" ${ready ? "" : "disabled"} onclick="acceptRun()">验收通过</button>`}</div>`;
+      }
+      function toggleExpert() {
+        expertMode = !expertMode;
+        tab = "flow";
+        render();
+      }
+      function demoOutcome(w) {
+        const result = {
+          state: "ready",
+          label: "交付准备已完成，等待你验收",
+          logs: [
+            {
+              text: `已在 ${launchLabel(w)} 启动 ${agentLabel(w)}（演示）。`,
+              kind: "blue",
+            },
+            { text: "读取目标与项目规范。", kind: "blue" },
+          ],
+        };
+        let entered = false;
+        for (const s of ordered(w)) {
+          if (s.when === "human") {
+            if (!entered && ["requirements", "cases"].includes(s.id)) continue;
+            result.state = s.id === "acceptance" ? "ready" : "checkpoint";
+            result.label =
+              s.id === "acceptance"
+                ? "交付准备已完成，等待你验收"
+                : "等待人工检查点：" + s.name;
+            result.logs.push({ text: result.label, kind: "purple" });
+            break;
+          }
+          entered = true;
+          if (s.id === "develop") {
+            result.logs.push({
+              text: "目标测试出现预期失败，保存原始记录。",
+              kind: "yellow",
+            });
+            if (w.policy.maxRepairAttempts === 0) {
+              result.state = "blocked";
+              result.label = "自动修复预算为零，已保留失败现场";
+              break;
+            }
+            result.logs.push(
+              { text: "AI 根据失败完成修改并重新验证。", kind: "blue" },
+              {
+                text: "目标行为与受影响回归通过，保留失败到修复的证据。",
+                kind: "green",
+              },
+            );
+          } else
+            result.logs.push({ text: s.name + "：演示完成。", kind: "green" });
+        }
+        result.logs.push({
+          text: "以上为合成演示记录，不作为真实验收证据。",
+          kind: "muted",
+        });
+        return result;
+      }
+
       function renderSidebar() {
+        if (page === "ai" && !expertMode) {
+          $("sidebar").innerHTML = taskSidebar();
+          return;
+        }
         if (page === "flags") {
           $("sidebar").innerHTML =
             `<div class="side-title"><strong>设置</strong><small>应用配置与实验性能力</small></div><div class="side-label">高级设置</div><button class="navitem active" onclick="navigate('flags')">实验性功能 <span class="tag">1</span></button><div class="side-bottom"><span class="protocol">agent-hub://flags</span><p>通过命令面板打开。实验项开启前不显示功能入口。</p></div>`;
           return;
         }
         $("sidebar").innerHTML =
-          `<div class="side-title row between"><strong>AI Native</strong><button class="ghost small" aria-label="打开流程说明" onclick="openDesign()">···</button></div><div class="workspace"><div class="row between"><strong style="font-size:12px">demo-workspace</strong><span class="tag">演示</span></div><div class="path">~/projects/demo</div></div><div class="side-label">项目开发场景</div>${scenarios.map((s) => `<button class="navitem ${scene === s.id ? "active" : ""}" onclick="chooseScene('${s.id}')"><span style="width:17px;font-size:15px">${s.icon}</span>${s.name}${s.id === "custom" ? '<span class="tag">定制</span>' : ""}</button>`).join("")}<div class="side-label">流程资产</div><button class="navitem" onclick="openWorkflow()">{ }　流程文件</button><button class="navitem" onclick="openRuntime()">⌘　运行配置</button><div class="side-bottom"><div class="row"><i class="dot blue"></i><span style="font-size:12px">${esc(current().orchestrator)} 编排</span></div><p>Skill 与脚本按场景组合。<br>人工关注需求、Case 和最终验收。</p><button class="ghost small" style="margin-top:9px;padding-left:0" onclick="navigate('flags')">实验性功能设置</button></div>`;
+          `<div class="side-title row between"><strong>AI Native</strong><button class="ghost small" aria-label="打开流程说明" onclick="openDesign()">···</button></div><div class="workspace"><div class="row between"><strong style="font-size:12px">demo-workspace</strong><span class="tag">演示</span></div><div class="path">~/projects/demo</div></div><div class="side-label">项目开发场景</div>${scenarios.map((s) => `<button class="navitem ${scene === s.id ? "active" : ""}" onclick="chooseScene('${s.id}')"><span style="width:17px;font-size:15px">${s.icon}</span>${s.name}${s.id === "custom" ? '<span class="tag">定制</span>' : ""}</button>`).join("")}<div class="side-label">流程资产</div><button class="navitem" onclick="openWorkflow()">{ }　流程文件</button><button class="navitem" onclick="openRuntime()">⌘　运行配置</button><div class="side-bottom"><div class="row"><i class="dot blue"></i><span style="font-size:12px">${esc(current().orchestrator)} 编排</span></div><p>Skill 与脚本按场景组合。<br>人只关注目标与最终结果。</p><button class="ghost small" style="margin-top:9px;padding-left:0" onclick="navigate('flags')">实验性功能设置</button></div>`;
       }
       function navigate(next) {
         if (next === "ai" && !enabled) {
@@ -1543,10 +2580,11 @@
         );
       }
       function flagsView() {
-        return `<div class="page flags"><div class="breadcrumb">设置 <span>/</span> 实验性功能</div><div class="headline"><div><h1>实验性功能</h1><p class="protocol" style="margin-top:9px">agent-hub://flags</p></div><span class="tag">原型预览</span></div><div class="flag-banner"><strong>按需开启，先体验再启用。</strong><br>这里的功能仍在探索中。开关控制功能可见性，开启后才显示对应入口。</div><div class="panel"><div class="flag"><div class="flag-icon">AI</div><div class="grow"><div class="row"><h2>AI Native</h2><span class="tag">实验性</span></div><p>为项目开发编排 AI 工作流。人确认需求、测试 Case 和最终结果，AI 自动推进开发、验证、修复与交付准备。</p><div class="row" style="flex-wrap:wrap"><span class="tag">默认关闭</span><span class="tag">独立侧栏模块</span><span class="tag">支持 Skill 与脚本</span></div>${enabled ? '<button class="primary small feature-visible" style="margin-top:18px" onclick="navigate(\'ai\')">进入 AI Native　↗</button>' : ""}</div><div class="stack" style="align-items:center;gap:6px"><button class="toggle ${enabled ? "enabled" : ""}" role="switch" aria-checked="${enabled}" aria-label="启用 AI Native" onclick="setEnabled()"><span></span></button><small>${enabled ? "已开启" : "已关闭"}</small></div></div><div class="flag-note">${enabled ? "侧栏入口已显示。关闭后停止新任务调度，进行中的真实任务应保留现场并单独处理。" : "关闭状态下不注册侧栏入口，不启动工作流、扫描、订阅或后台任务。"}</div></div><div class="row between" style="margin-top:20px"><small>原型开关仅保存在内存，刷新后恢复默认关闭。</small><button class="ghost small" onclick="openPalette()">打开命令面板　⌘ K</button></div><div style="margin-top:45px"><h3>如何访问</h3><p style="font-size:12px;margin-top:10px;line-height:2">按 ⌘ K 打开命令面板，输入 <code>agent-hub://flags</code>。<br>内部地址先限定为应用内导航，系统级协议注册另行实现。</p></div></div>`;
+        return `<div class="page flags"><div class="breadcrumb">设置 <span>/</span> 实验性功能</div><div class="headline"><div><h1>实验性功能</h1><p class="protocol" style="margin-top:9px">agent-hub://flags</p></div><span class="tag">原型预览</span></div><div class="flag-banner"><strong>按需开启，先体验再启用。</strong><br>这里的功能仍在探索中。开关控制功能可见性，开启后才显示对应入口。</div><div class="panel"><div class="flag"><div class="flag-icon">AI</div><div class="grow"><div class="row"><h2>AI Native</h2><span class="tag">实验性</span></div><p>为项目开发编排 AI 工作流。人描述目标并验收最终结果，AI 自动推进开发、验证、修复与交付准备。</p><div class="row" style="flex-wrap:wrap"><span class="tag">默认关闭</span><span class="tag">独立侧栏模块</span><span class="tag">支持 Skill 与脚本</span></div>${enabled ? '<button class="primary small feature-visible" style="margin-top:18px" onclick="navigate(\'ai\')">进入 AI Native　↗</button>' : ""}</div><div class="stack" style="align-items:center;gap:6px"><button class="toggle ${enabled ? "enabled" : ""}" role="switch" aria-checked="${enabled}" aria-label="启用 AI Native" onclick="setEnabled()"><span></span></button><small>${enabled ? "已开启" : "已关闭"}</small></div></div><div class="flag-note">${enabled ? "侧栏入口已显示。关闭后停止新任务调度，进行中的真实任务应保留现场并单独处理。" : "关闭状态下不注册侧栏入口，不启动工作流、扫描、订阅或后台任务。"}</div></div><div class="row between" style="margin-top:20px"><small>原型开关仅保存在内存，刷新后恢复默认关闭。</small><button class="ghost small" onclick="openPalette()">打开命令面板　⌘ K</button></div><div style="margin-top:45px"><h3>如何访问</h3><p style="font-size:12px;margin-top:10px;line-height:2">按 ⌘ K 打开命令面板，输入 <code>agent-hub://flags</code>。<br>内部地址先限定为应用内导航，系统级协议注册另行实现。</p></div></div>`;
       }
       function chooseScene(id) {
         scene = id;
+        guideStage = 0;
         selected =
           current().steps.find((s) => s.when !== "human")?.id ??
           current().steps[0].id;
@@ -1556,10 +2594,13 @@
       }
       function setTab(id) {
         tab = id;
-        renderMain();
+        if (!expertMode) {
+          guideStage = { cases: 0, run: 1, accept: 2, flow: 0 }[id];
+          render();
+        } else renderMain();
       }
       function defaultTab() {
-        return { A: "flow", B: "run", C: "accept" }[variant];
+        return "flow";
       }
       function effectiveTab() {
         return tab;
@@ -1569,10 +2610,14 @@
           $("main").innerHTML = flagsView();
           return;
         }
+        if (!expertMode) {
+          $("main").innerHTML = guidedView();
+          return;
+        }
         const w = current(),
           effective = effectiveTab();
         $("main").innerHTML =
-          `<div class="page ${variant === "B" ? "compact-layout" : ""}"><div class="breadcrumb">AI Native <span>/</span> demo-workspace <span>/</span> ${esc(w.name)}</div><div class="headline"><div><div class="row"><h1>${esc(w.name)}</h1><span class="tag">可定制流程</span></div><p>${esc(w.description)}</p></div><div class="row"><button onclick="openWorkflow()">{ } 流程文件</button><button class="primary" onclick="startFlow()">${run ? "查看推进状态" : "发起任务"}　▷</button></div></div><div class="human-strip"><div><b>人定义目标</b><small>确认需求与测试 Case</small></div><div class="auto"><b class="blue">AI 自动推进</b><small>方案 · 开发 · 验证 · 失败修复 · Review · 交付准备</small></div><div><b>人验收结果</b><small>查看证据，接受或提出反馈</small></div></div><div class="tabs">${[
+          `<div class="page "><div class="breadcrumb"><button class="ghost small" onclick="toggleExpert()">← 返回任务引导</button><span>高级编排 / ${esc(w.name)}</span></div><div class="headline"><div><div class="row"><h1>${esc(w.name)}</h1><span class="tag">可定制流程</span></div><p>${esc(w.description)}</p></div><div class="row"><button onclick="openWorkflow()">{ } 流程文件</button><button class="primary" onclick="startFlow()">${run ? "查看推进状态" : "发起任务"}　▷</button></div></div><div class="human-strip"><div><b>人定义目标</b><small>描述目标，AI 生成需求与 Case</small></div><div class="auto"><b class="blue">AI 自动推进</b><small>方案 · 开发 · 验证 · 失败修复 · Review · 交付准备</small></div><div><b>人验收结果</b><small>查看证据，接受或提出反馈</small></div></div><div class="tabs">${[
             ["flow", "场景流程"],
             ["cases", "需求与测试 Case"],
             ["run", "执行记录"],
@@ -1698,14 +2743,14 @@
         renderMain();
       }
       function casesView() {
-        return `<div class="split"><section><div class="panel"><div class="panel-head row between"><h2>需求与边界</h2><span class="tag purple">人工确认</span></div><div class="panel-body"><label style="margin-top:0" for="requirement">本次任务的目标</label><textarea id="requirement" placeholder="说明期望结果、保留行为与不在本次范围的内容" oninput="saveRequirement(this.value)">${esc(current().requirement ?? "支持在多个项目间切换工作空间，保留各项目的任务上下文；异常时允许恢复，不影响其他项目的数据。")}</textarea><div class="row" style="margin-top:12px"><input aria-label="关联工作项" value="${esc(current().issue ?? "Issue #42")}" onchange="current().issue=this.value" placeholder="Issue / MR URL 或编号"><span class="tag">已绑定演示对象</span></div></div></div><div class="section-title" style="margin-top:22px"><h2>可执行测试 Case</h2><button class="small" onclick="addCase()">＋ 添加 Case</button></div><div class="panel">${cases()
+        return `<div class="split"><section><div class="panel"><div class="panel-head row between"><h2>需求与边界</h2><span class="tag blue">AI 生成</span></div><div class="panel-body"><label style="margin-top:0" for="requirement">本次任务的目标</label><textarea id="requirement" placeholder="说明期望结果、保留行为与不在本次范围的内容" oninput="saveRequirement(this.value)">${esc(current().requirement ?? "支持在多个项目间切换工作空间，保留各项目的任务上下文；异常时允许恢复，不影响其他项目的数据。")}</textarea><div class="row" style="margin-top:12px"><input aria-label="关联工作项" value="${esc(current().issue ?? "Issue #42")}" onchange="current().issue=this.value" placeholder="Issue / MR URL 或编号"><span class="tag">已绑定演示对象</span></div></div></div><div class="section-title" style="margin-top:22px"><h2>可执行测试 Case</h2><button class="small" onclick="addCase()">＋ 添加 Case</button></div><div class="panel">${cases()
           .map(
             (c, i) =>
-              `<div class="case"><input type="checkbox" aria-label="确认 ${esc(c.id)}" ${c.checked ? "checked" : ""} onchange="confirmCase(${i},this.checked)"><div><b>${esc(c.id)}　${esc(c.name)}</b><p><span class="muted">Given</span> ${esc(c.given)}<br><span class="muted">When</span> ${esc(c.when)}<br><span class="muted">Then</span> ${esc(c.then)}</p><button class="ghost small" style="padding-left:0;margin-top:5px" onclick="editCase(${i})">编辑 Case</button></div><span class="tag">${esc(c.layer)}</span></div>`,
+              `<div class="case"><input type="checkbox" aria-label="关注 ${esc(c.id)}" ${c.checked ? "checked" : ""} onchange="confirmCase(${i},this.checked)"><div><b>${esc(c.id)}　${esc(c.name)}</b><p><span class="muted">Given</span> ${esc(c.given)}<br><span class="muted">When</span> ${esc(c.when)}<br><span class="muted">Then</span> ${esc(c.then)}</p><button class="ghost small" style="padding-left:0;margin-top:5px" onclick="editCase(${i})">编辑 Case</button></div><span class="tag">${esc(c.layer)}</span></div>`,
           )
           .join(
             "",
-          )}</div></section><aside class="panel"><div class="panel-head"><h3>启动前确认</h3></div><div class="panel-body"><p style="font-size:12px">AI 会按这里的目标和 Case 推进。确认范围后，开发、验证、失败修复、评审与交付准备连续执行。</p><div class="risk"><small>测试命令必须映射目标项目实际入口；环境失败、零测试与跳过不能计为通过。</small></div><label>Case 已确认</label><strong class="blue" id="case-count">${cases().filter((c) => c.checked).length} / ${cases().length}</strong><div style="margin-top:17px"><button class="primary" onclick="previewRun()">预览自动推进</button></div><p class="footnote">此原型仅演示运行过程，不启动 AI 或脚本。</p></div></aside></div>`;
+          )}</div></section><aside class="panel"><div class="panel-head"><h3>生成与验证</h3></div><div class="panel-body"><p style="font-size:12px">AI 会按这里的目标和 Case 推进。确认范围后，开发、验证、失败修复、评审与交付准备连续执行。</p><div class="risk"><small>测试命令必须映射目标项目实际入口；环境失败、零测试与跳过不能计为通过。</small></div><label>已选关注 Case（可选）</label><strong class="blue" id="case-count">${cases().filter((c) => c.checked).length} / ${cases().length}</strong><div style="margin-top:17px"><button class="primary" onclick="previewRun()">预览自动推进</button></div><p class="footnote">此原型仅演示运行过程，不启动 AI 或脚本。</p></div></aside></div>`;
       }
       function saveRequirement(value) {
         current().requirement = value;
@@ -1714,8 +2759,9 @@
       function confirmCase(index, value) {
         cases()[index].checked = value;
         run = null;
-        $("case-count").textContent =
-          `${cases().filter((c) => c.checked).length} / ${cases().length}`;
+        if ($("case-count"))
+          $("case-count").textContent =
+            `${cases().filter((c) => c.checked).length} / ${cases().length}`;
       }
       function addCase() {
         cases().push({
@@ -1759,13 +2805,14 @@
           renderMain();
           return;
         }
-        tab = "cases";
-        renderMain();
-        notify("先确认需求与测试 Case，再预览 AI 自动推进。");
+        expertMode = false;
+        guideStage = 0;
+        render();
+        notify("描述目标后，命令行 Agent 会自动生成需求、Case 并推进。");
       }
       function runView() {
         if (!run)
-          return `<div class="split"><section><div class="section-title"><h2>AI 执行工作台</h2><span class="tag">未启动</span></div><div class="terminal"><span class="muted"># 等待需求与测试 Case 确认</span>\n\n<span class="blue">$ ${esc(current().orchestrator)}</span>\n\n读取项目规范 → 分析与计划 → 开发 → 验证\n                               ↖ 失败修复 ↙\n\nAI Review → MR / CI → 等待最终验收\n\n<span class="muted">当前没有运行任务。原型不会执行真实命令。</span></div></section><aside class="panel"><div class="panel-head"><h3>连续推进策略</h3></div><div class="panel-body">${policySummary()}<button class="primary" style="margin-top:15px" onclick="setTab('cases')">确认需求与 Case</button><button class="ghost small" style="margin-top:10px" onclick="openRuntime()">定制执行策略</button></div></aside></div>`;
+          return `<div class="split"><section><div class="section-title"><h2>AI 执行工作台</h2><span class="tag">未启动</span></div><div class="terminal"><span class="muted"># 等待目标输入</span>\n\n<span class="blue">$ ${esc(current().orchestrator)}</span>\n\n读取项目规范 → 分析与计划 → 开发 → 验证\n                               ↖ 失败修复 ↙\n\nAI Review → MR / CI → 等待最终验收\n\n<span class="muted">当前没有运行任务。原型不会执行真实命令。</span></div></section><aside class="panel"><div class="panel-head"><h3>连续推进策略</h3></div><div class="panel-body">${policySummary()}<button class="primary" style="margin-top:15px" onclick="setTab('cases')">描述目标</button><button class="ghost small" style="margin-top:10px" onclick="openRuntime()">定制执行策略</button></div></aside></div>`;
         return `<div class="split"><section><div class="section-title"><h2>${esc(run.label)}</h2><span class="tag ${run.state === "blocked" ? "yellow" : run.state === "accepted" ? "green" : "blue"}">${run.state === "blocked" ? "需要处理" : run.state === "accepted" ? "验收通过" : "演示运行"}</span></div><div class="terminal">${run.logs.map((l, i) => `<div class="runline"><time>00:${String(i * 3).padStart(2, "0")}</time><span class="${l.kind ?? ""}">${esc(l.text)}</span></div>`).join("")}</div><p class="footnote">演示任务 RUN-008 · 基线 d4e5f6a · 所有事件为合成记录，未调用 Skill 或脚本。</p></section><aside class="panel"><div class="panel-head"><h3>运行控制</h3></div><div class="panel-body">${policySummary()}<div class="stack" style="margin-top:18px"><button class="primary" onclick="setTab('accept')">查看交付与验收</button><button onclick="simulateBlocked()">演示环境阻塞</button>${run.state === "blocked" ? '<button onclick="resumeDemo()">恢复演示运行</button>' : ""}<button onclick="feedback()">追加反馈</button></div><div class="risk"><small>遇到权限不足、结果不明或修复次数用尽时暂停并保留现场；不重复发起，不削弱门禁。</small></div></div></aside></div>`;
       }
       function policySummary() {
@@ -1779,10 +2826,6 @@
           notify("请填写本次任务目标。");
           return;
         }
-        if (!cases().every((c) => c.checked)) {
-          notify("请逐项确认测试 Case，或先编辑为本次任务适用的 Case。");
-          return;
-        }
         const error = validate(current());
         if (error) {
           notify(error);
@@ -1791,75 +2834,14 @@
         const order = ordered(current());
         showModal(
           "自动推进预览",
-          `<div class="hint">以下只进行交互演示，不执行真实命令。正式执行器需绑定目标项目及其规范。</div><label>任务范围</label><p>${esc(current().requirement ?? "演示需求与开发任务")}</p><label>编排入口</label><p class="token">$${esc(current().orchestrator)}</p><label>按依赖计算的执行顺序</label><pre>${esc(order.map((s, i) => `${i + 1}. ${s.name} [${s.when === "human" ? "人工检查点" : s.type}]\n   ${s.type === "skill" ? "$" + s.target : s.target}`).join("\n"))}</pre><p class="footnote">前期节点已由需求与 Case 确认覆盖；如在中间新增人工节点，演示会在该节点暂停。没有适用 Skill、脚本入口或权限时按受阻处理。</p>`,
+          `<div class="hint">以下只进行交互演示，不执行真实命令。正式执行器需绑定目标项目及其规范。</div><label>任务范围</label><p>${esc(current().requirement ?? "演示需求与开发任务")}</p><label>编排入口</label><p class="token">$${esc(current().orchestrator)}</p><label>按依赖计算的执行顺序</label><pre>${esc(order.map((s, i) => `${i + 1}. ${s.name} [${s.when === "human" ? "人工检查点" : s.type}]\n   ${s.type === "skill" ? "$" + s.target : s.target}`).join("\n"))}</pre><p class="footnote">需求与 Case 由命令行 Agent 在编码前生成并保存；如在中间新增人工节点，演示会在该节点暂停。没有适用 Skill、脚本入口或权限时按受阻处理。</p>`,
           `<button onclick="closeModal()">返回修改</button><button class="primary" onclick="simulateRun()">开始演示推进</button>`,
         );
       }
       function simulateRun() {
         closeModal();
-        run = {
-          state: "ready",
-          label: "AI 已完成交付准备，等待验收",
-          logs: [
-            { text: "已记录需求、范围与测试 Case 确认。", kind: "purple" },
-            {
-              text: `${current().orchestrator} 读取项目规范与流程，解析依赖。`,
-              kind: "blue",
-            },
-          ],
-        };
-        const order = ordered(current());
-        let autoEntered = false;
-        for (const s of order) {
-          if (s.when === "human") {
-            if (!autoEntered && (s.id === "requirements" || s.id === "cases"))
-              continue;
-            run.logs.push({
-              text: `${s.name}：等待人工确认。`,
-              kind: "purple",
-            });
-            run.state = s.id === "acceptance" ? "ready" : "checkpoint";
-            run.label =
-              s.id === "acceptance"
-                ? "AI 已完成交付准备，等待验收"
-                : "已到达人工检查点：" + s.name;
-            break;
-          }
-          autoEntered = true;
-          if (s.id === "develop" && current().policy.maxRepairAttempts === 0) {
-            run.state = "blocked";
-            run.label = "修复预算为零，已保留演示失败现场";
-            run.logs.push({
-              text: "演示目标测试失败；自动修复预算为零，停止后续步骤。",
-              kind: "yellow",
-            });
-            break;
-          }
-          if (s.id === "develop") {
-            run.logs.push(
-              {
-                text: "Red：目标行为测试失败，已保存原始输入与失败记录。",
-                kind: "yellow",
-              },
-              {
-                text: "AI 根据具体失败实施最小修复，重新执行验证。",
-                kind: "blue",
-              },
-              {
-                text: "Green：目标行为及受影响回归通过，保留 Red → Green 因果链。",
-                kind: "green",
-              },
-            );
-          } else
-            run.logs.push({
-              text: `${s.name}：演示完成（${s.type === "skill" ? "$" + s.target : s.target}）。`,
-              kind: "green",
-            });
-        }
-        run.logs.push({
-          text: "演示事件不作为真实项目、CI、Review 或 L3 证据。",
-          kind: "yellow",
-        });
+        run = demoOutcome(current());
+        guideStage = 1;
         tab = "run";
         render();
       }
@@ -1890,7 +2872,7 @@
       }
       function acceptView() {
         if (!run)
-          return `<div class="panel"><div class="empty"><h2>交付结果将在这里归集</h2><p>AI 完成中间阶段后，统一查看 Case、变更说明、验证、Review 与 CI 证据。</p><button class="primary" onclick="setTab('cases')">先确认需求与 Case</button>${scene === "l3" ? '<button style="margin-left:9px" onclick="openBaseline()">查看 L3 验收基线</button>' : ""}</div></div>`;
+          return `<div class="panel"><div class="empty"><h2>交付结果将在这里归集</h2><p>AI 完成中间阶段后，统一查看 Case、变更说明、验证、Review 与 CI 证据。</p><button class="primary" onclick="setTab('cases')">描述目标</button>${scene === "l3" ? '<button style="margin-left:9px" onclick="openBaseline()">查看 L3 验收基线</button>' : ""}</div></div>`;
         const ready = run.state === "ready" || run.state === "accepted";
         return `<div class="section-title"><h2>交付摘要 <span class="tag">演示任务 RUN-008</span></h2><span class="tag ${ready ? "green" : "yellow"}">${ready ? "演示证据已归集" : "尚未就绪"}</span></div><div class="accept-grid"><div class="panel"><div class="panel-head row between"><h3>验收标准逐项核对</h3><span class="tag">${cases().length} 项</span></div><div class="panel-body">${cases()
           .map(
@@ -1917,6 +2899,10 @@
           )}<p class="footnote">本原型只展示合成过程；真实证据未采集，不能据此判定 L3 通过。</p>${scene === "l3" ? '<button style="margin-top:12px" onclick="openBaseline()">查看 60 项 L3 验收基线</button>' : ""}</div></div></div><div class="panel" style="margin-top:19px"><div class="panel-body row between" style="flex-wrap:wrap"><div><h3>${run.state === "accepted" ? "已接受本次演示结果" : "由你完成最终验收"}</h3><p style="font-size:12px;margin-top:4px">${run.state === "blocked" ? "环境受阻，先恢复验证。" : run.state === "checkpoint" ? "流程中有额外人工检查点，需先处理。" : "验收后按项目门禁处理合入与发布。验收结果不能替代 CI 或 Review。"}</p></div><div class="row"><button onclick="feedback()">提出反馈</button><button class="primary" ${!ready || run.state === "accepted" ? "disabled" : ""} onclick="acceptRun()">接受演示结果</button></div></div></div>`;
       }
       function acceptRun() {
+        if (!run || run.state !== "ready") {
+          notify("当前任务尚未完成必要验证，不能验收。");
+          return;
+        }
         run.state = "accepted";
         run.label = "本次演示已验收";
         run.logs.push({
@@ -1945,15 +2931,21 @@
           run.logs.push(
             { text: "用户反馈：" + value, kind: "purple" },
             {
-              text: "需求或 Case 变化，原 Green 需重新判断适用性；等待用户确认新增 Case。",
+              text: "反馈已交给命令行 Agent，需更新需求与 Case 并重新验证。",
               kind: "yellow",
             },
           );
         }
         closeModal();
         tab = "cases";
+        guideStage = 0;
+        cases().forEach((c) => (c.checked = false));
         render();
-        notify("已记录演示反馈，请更新并确认 Case 后重新预览推进。");
+        current().constraints =
+          (current().constraints ?? "") + "\n验收反馈：" + value;
+        expertMode = false;
+        guideStart();
+        notify("AI 将根据反馈更新需求、Case 并重新推进（演示）。");
       }
       function openEvidence(id) {
         showModal(
@@ -2162,18 +3154,6 @@
           navigate("flags");
         }
       }
-      function cycle(dir) {
-        const all = ["A", "B", "C"];
-        variant = all[(all.indexOf(variant) + dir + 3) % 3];
-        const u = new URL(location.href);
-        u.searchParams.set("variant", variant);
-        history.replaceState(null, "", u);
-        tab = defaultTab();
-        render();
-        notify(
-          `布局 ${variant}：${{ A: "流程编排", B: "执行工作台", C: "验收优先" }[variant]}`,
-        );
-      }
       function theme() {
         document.documentElement.classList.toggle("dark");
         $("theme-btn").textContent =
@@ -2185,6 +3165,21 @@
         notify(large ? "原型字号放大至 115%" : "已恢复默认字号");
       }
       function resetDemo() {
+        for (const timer of taskTimers.values()) clearTimeout(timer);
+        taskTimers.clear();
+        taskList.splice(0, taskList.length, {
+          id: "task-1",
+          title: "新需求",
+          scene: "feature",
+          workflow: {},
+          caseData: {},
+          run: null,
+          stage: 0,
+        });
+        activeTaskId = "task-1";
+        taskCounter = 1;
+        guideStage = 0;
+        expertMode = false;
         enabled = false;
         page = "flags";
         scene = "feature";
@@ -2198,12 +3193,12 @@
       function openDesign() {
         showModal(
           "AI Native · 设计方案",
-          `<h2>人定义边界，AI 连续推进，人验收结果。</h2><p style="margin-top:12px">AI Native 是可选的独立侧栏模块。默认关闭，从 <code>agent-hub://flags</code> 手动开启。普通用户的导航保持简洁。</p><label>常用场景</label><p>需求与开发、缺陷修复、Issue 处理、MR 处理、发布检查、L3 建设与验收、自定义场景。需求与开发共用一条贯穿流程。</p><label>流程与定制</label><p>默认 ask-matt 编排；Skill 按需加载，允许替换入口和下游节点。脚本是同等节点，采用 argv。JSON 是可导入、导出和由外部脚本生成的流程定义。稳定 ID、needs、when 定义依赖与检查点。</p><label>参考 setup-ai-native 的执行约束</label><p>验收与 Case 前置；Plan 包含验证与关键边界；项目级 Unit、Integration、核心 E2E 均需存在；保存真实失败与修复因果；CI / Review 绑定准确提交；远端门禁、发布与团队能力用事实验收。</p><label>自动推进</label><p>在已授权任务范围内连续执行，失败后自动修复复验。修复预算耗尽、权限不足或结果不明时保留现场。AI Review 与 CI 可并行；缺少关键人工 Review 或门禁时不得宣称可合入。</p><label>正式实现的模块边界</label><p>独立 FeatureModule + 可选路由；未开启时不加载业务扫描与轮询。流程定义、运行实例、节点尝试和证据分开；工作项仍是需求与状态真源。复用公共项目识别、Agent 启动、终端与平台适配器。</p><label>阶段与当前边界</label><p>本次只交付单文件原型，所有数据保存在内存。没有注册系统协议、运行脚本、调用 Agent、提交工作项或修改项目配置。脚本调度、断点恢复、节点输出与证据归档属于后续实现。</p><label>原型比较</label><p>A：流程与节点编辑优先（推荐）。B：执行记录优先。C：交付验收优先。底部按钮及左右方向键切换；输入框内不拦截方向键。</p>`,
+          `<h2>人定义边界，AI 连续推进，人验收结果。</h2><p style="margin-top:12px">AI Native 是可选的独立侧栏模块。默认关闭，从 <code>agent-hub://flags</code> 手动开启。普通用户的导航保持简洁。</p><label>常用场景</label><p>需求与开发、缺陷修复、Issue 处理、MR 处理、发布检查、L3 建设与验收、自定义场景。需求与开发共用一条贯穿流程。</p><label>流程与定制</label><p>默认 ask-matt 编排；Skill 按需加载，允许替换入口和下游节点。脚本是同等节点，采用 argv。JSON 是可导入、导出和由外部脚本生成的流程定义。稳定 ID、needs、when 定义依赖与检查点。</p><label>参考 setup-ai-native 的执行约束</label><p>验收与 Case 前置；Plan 包含验证与关键边界；项目级 Unit、Integration、核心 E2E 均需存在；保存真实失败与修复因果；CI / Review 绑定准确提交；远端门禁、发布与团队能力用事实验收。</p><label>自动推进</label><p>在已授权任务范围内连续执行，失败后自动修复复验。修复预算耗尽、权限不足或结果不明时保留现场。AI Review 与 CI 可并行；缺少关键人工 Review 或门禁时不得宣称可合入。</p><label>正式实现的模块边界</label><p>独立 FeatureModule + 可选路由；未开启时不加载业务扫描与轮询。流程定义、运行实例、节点尝试和证据分开；工作项仍是需求与状态真源。复用公共项目识别、Agent 启动、终端与平台适配器。</p><label>阶段与当前边界</label><p>本次只交付单文件原型，所有数据保存在内存。没有注册系统协议、运行脚本、调用 Agent、提交工作项或修改项目配置。脚本调度、断点恢复、节点输出与证据归档属于后续实现。</p><label>原型比较</label><p>默认三步：描述目标、AI 命令行推进、最终验收。复杂定制在高级编排中；并行需求在侧栏独立管理。只保留一套方案，不提供 A/B/C 切换。需求最终以版本化 HTML 原型交付，摘要为辅助记录。</p>`,
           `<button onclick="closeModal()">关闭</button><button onclick="download('ai-native.design.md',designMarkdown(),'text/markdown')">导出方案</button>`,
         );
       }
       function designMarkdown() {
-        return "# AI Native 设计草案\n\n状态：独立需求原型，未接入生产。\n\n入口：agent-hub://flags → 手动开启 AI Native → 侧栏。默认关闭。\n\n场景：需求与开发、缺陷修复、Issue 处理、MR 处理、发布检查、L3 建设与验收、自定义。\n\n主线：人确认需求与测试 Case → AI 自动分析、开发、验证、修复、Review 与交付准备 → 人验收。\n\n默认 ask-matt 编排；Skill 与脚本按需定制。参考 setup-ai-native 的前置验收、三层验证、失败闭环、准确版本证据与门禁约束。\n\nJSON 定义编排入口、节点、needs、when 与修复预算；可导入导出。执行器须绑定真实项目规范、能力与授权，受阻时保留现场。\n\n原型：单文件、无后端、无持久化、无真实执行。\n";
+        return "# AI Native 设计草案\n\n状态：独立需求原型，未接入生产。\n\n入口：agent-hub://flags → 手动开启 AI Native → 侧栏。默认关闭。\n\n场景：需求与开发、缺陷修复、Issue 处理、MR 处理、发布检查、L3 建设与验收、自定义。\n\n主线：人描述目标，AI 生成需求与 Case → AI 自动分析、开发、验证、修复、Review 与交付准备 → 人验收。\n\n默认 ask-matt 编排；Skill 与脚本按需定制。参考 setup-ai-native 的前置验收、三层验证、失败闭环、准确版本证据与门禁约束。\n\nJSON 定义编排入口、节点、needs、when 与修复预算；可导入导出。执行器须绑定真实项目规范、能力与授权，受阻时保留现场。\n\n原型：单文件、无后端、无持久化、无真实执行。\n";
       }
       const baseline = [
         { id: "A-01", title: "AI 参与真实需求澄清" },
@@ -2325,10 +3320,6 @@
           e.target.closest("input,textarea,[contenteditable]")
         )
           return;
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-          e.preventDefault();
-          cycle(e.key === "ArrowRight" ? 1 : -1);
-        }
       });
       $("modal").addEventListener("click", (e) => {
         if (e.target === $("modal")) {
@@ -2348,6 +3339,9 @@
       }
       tab = defaultTab();
       render();
+      window.addEventListener("beforeunload", () => {
+        for (const timer of taskTimers.values()) clearTimeout(timer);
+      });
     </script>
   </body>
 </html>
