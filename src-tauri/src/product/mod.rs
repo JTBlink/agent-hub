@@ -44,7 +44,7 @@ pub fn home_directory(home: &std::path::Path) -> std::path::PathBuf {
     if product.product_id == "standard" {
         home.join(".agent-hub")
     } else {
-        home.join(".agent-hub-products").join(product.product_id)
+        home.join(format!(".agent-hub-{}", product.product_id))
     }
 }
 

@@ -65,3 +65,5 @@ app_lib::builder()?
 构建工具集中于 `scripts/app/product/`。标准 Cargo 输出保留 `src-tauri/target/`；独立产品使用同级 `src-tauri/target-products/`，前端、sidecar 和类型检查结果按产品与配置摘要隔离在忽略目录。标准版清理不遍历个人版目录。详细命令与运行路径见[编译与安装](../build-and-install.md)。
 
 个人版具有不同的应用 identifier、开发端口、应用数据、平台任务标识和 CLI bridge。标准版继续使用原数据；产品 ID 在同一产品特性集合变化时保持稳定。共享项目文件、原生 Agent 登录及系统 Hosts 属于用户选择或系统拥有的资源，不能把版本目录隔离描述为这些资源被复制。个人版未配置专属更新通道时不查询标准版更新源。
+
+新增功能与产品配置的操作步骤见[产品配置与独立功能开发](../product-development.md)。

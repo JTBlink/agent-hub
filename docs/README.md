@@ -5,6 +5,7 @@
 - [需求原型目录](prototypes/README.md)（`./prototype.sh` 一键查看索引）
 - [后续规划与设计](plans/agent-hub.md)（统一规划入口）
 - [产品概述](product/overview.md)
+- [产品配置与独立功能开发](product-development.md)（产品选择、新功能登记、编译裁剪与核心验证）
 - [编译、打包与安装](build-and-install.md)（命令、产物位置、安装与缓存清理）
 - [帮助内容与维护指南](help/README.md)（应用离线帮助和公开文档站共用）
 - [Skill 推荐与用法指南](product/skill-recommendations.md)

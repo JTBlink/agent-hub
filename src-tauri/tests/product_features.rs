@@ -77,7 +77,7 @@ fn supported_product_identity_preserves_standard_and_isolates_personal() {
         "standard" => ("com.jtstudio.agenthub", "profile/.agent-hub"),
         "personal" => (
             "com.jtstudio.agenthub.personal",
-            "profile/.agent-hub-products/personal",
+            "profile/.agent-hub-personal",
         ),
         _ => return, // Other independently defined products have their own contracts.
     };

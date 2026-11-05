@@ -131,7 +131,7 @@ npm run cli:build -- --product personal                 # 编译个人版 CLI
 | 默认开发端口                 | 1420                                                       | 1421                                          |
 | Cargo 输出根目录             | `src-tauri/target/`                                        | `src-tauri/target-products/<产品与配置摘要>/` |
 | 前端、类型检查、sidecar 暂存 | `node_modules/.cache/agent-hub/products/<产品与配置摘要>/` | 同一父目录下的独立产品子目录                  |
-| 默认用户数据及技能内容       | `~/.agent-hub/`                                            | `~/.agent-hub-products/personal/`             |
+| 默认用户数据及技能内容       | `~/.agent-hub/`                                            | `~/.agent-hub-personal/`                      |
 | CLI bridge                   | `~/.agent-hub/bin/`                                        | 独立产品数据目录中的独立 bridge 命名空间      |
 
 运行产品的 `build-info` 命令可查看实际产品 ID、功能集合、配置摘要与基础提交。CLI bridge 同时验证版本和产品构建信息，相同版本号不代表可以互换。个人版开发 CLI 不覆盖标准版的 PATH 入口。

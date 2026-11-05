@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Personal 个人版默认数据目录缩短为 `~/.agent-hub-personal/`，备份目录随之调整；早期测试目录保留，不自动合并。
+
 - 支持通过 `--product` 编译标准版与 Personal 个人版；个人版排除 Herdr 内置集成，前端、Rust、配套 CLI、安装身份及运行目录按产品隔离，侧栏由功能模块独立声明。
 
 ### Improved
