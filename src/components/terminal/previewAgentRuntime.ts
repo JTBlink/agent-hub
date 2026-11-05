@@ -79,11 +79,12 @@ export class PreviewAgentRuntime {
   }
   private async submit(request: PreviewAgentRequest, projectId: string) {
     const { workspacePath: path, page, prompt, verify } = request;
+    const pageKey = page.path ? `file:${page.path}` : page.id;
     const scope = (tab: TerminalTab) =>
       tab.projectId === projectId && tab.worktreePath === path;
     const bound = this.options
       .tabs()
-      .find((tab) => scope(tab) && tab.previewPageId === page.id);
+      .find((tab) => scope(tab) && tab.previewPageId === pageKey);
     if (bound) {
       if (bound.previewUncertain || bound.previewPending)
         throw Error("PREVIEW_AGENT_UNCERTAIN");
@@ -97,6 +98,7 @@ export class PreviewAgentRuntime {
       .tabs()
       .filter(
         (tab) =>
+          !page.path &&
           scope(tab) &&
           !tab.previewPageId &&
           !tab.scriptPath &&
@@ -138,7 +140,7 @@ export class PreviewAgentRuntime {
       this.options.update((tabs) =>
         tabs.map((item) =>
           item.id === tab.id
-            ? { ...item, previewPageId: page.id, herdrTarget: tab.herdrTarget }
+            ? { ...item, previewPageId: pageKey, herdrTarget: tab.herdrTarget }
             : item,
         ),
       );
@@ -167,8 +169,10 @@ export class PreviewAgentRuntime {
       throw Error("PREVIEW_AGENT_LIMIT");
     const tab = {
       ...createTerminalTab(projectId, undefined, path),
-      title: page.title.slice(0, 80),
-      previewPageId: page.id,
+      title: page.path
+        ? page.path.split(/[\\/]/).at(-1)!
+        : page.title.slice(0, 80),
+      previewPageId: pageKey,
       previewPending: true,
     };
     this.options.update((tabs) => [...tabs, tab]);

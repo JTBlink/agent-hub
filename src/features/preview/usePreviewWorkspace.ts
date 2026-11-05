@@ -473,6 +473,7 @@ export function usePreviewWorkspace({
       t("preview.pageChanged"),
     );
   const { copyNotes, exportNotes } = annotationActions({
+    sourcePath: document?.path,
     instruction: instructions.instruction,
     tab: active,
     pageId,

@@ -21,15 +21,12 @@ import {
   Globe,
   MousePointer2,
   Search,
-  Download,
-  Send,
   FolderOpen,
-  Copy,
   FileCode2,
   Eye,
 } from "lucide-react";
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
-import { previewApi, type PreviewDocument } from "./api";
+import { type PreviewDocument } from "./api";
 import { ProfileSelector } from "./components/ProfileSelector";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
@@ -78,7 +75,6 @@ export function PreviewWorkspace({
   const [aboutOpen, setAboutOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const { find, setFind, findResult, findPage } = usePageFind(model);
-  const [bottomDock, setBottomDock] = useState(false);
   const active = model.active;
   const sourcePath = model.document?.path;
   const sourceAddress = showSourcePath ? sourcePath : undefined;
@@ -127,7 +123,7 @@ export function PreviewWorkspace({
   return (
     <section
       ref={workspace}
-      className={`preview-workspace ${bottomDock ? "dock-bottom" : ""}`}
+      className="preview-workspace"
       hidden={!shown}
       aria-label={t("preview.title")}
       onKeyDownCapture={(event) => {
@@ -440,54 +436,6 @@ export function PreviewWorkspace({
           </ResizableSidebar>
         )}
       </div>
-      <footer className="preview-status">
-        <span>
-          {active
-            ? `${active.kind} · ${model.viewport ? `${model.viewport.width} × ${model.viewport.height}` : t("preview.adaptive")}`
-            : t("preview.ready")}
-        </span>
-        <span>{t("preview.noteCount", { count: model.notes.length })}</span>
-        <button onClick={() => setBottomDock(!bottomDock)}>
-          {bottomDock ? t("preview.rightDock") : t("preview.bottomDock")}
-        </button>
-        {model.document && (
-          <button
-            onClick={() =>
-              void previewApi
-                .export(
-                  model.document!.title,
-                  model.draft ?? model.document!.content,
-                )
-                .catch(model.report)
-            }
-          >
-            <Download size={12} />
-            {t("preview.exportDocument")}
-          </button>
-        )}
-        <button
-          disabled={!active}
-          onClick={() => {
-            if (active)
-              void import("@tauri-apps/plugin-clipboard-manager")
-                .then((api) => api.writeText(sourceAddress ?? active.address))
-                .then(() => model.setNotice(t("preview.copied")))
-                .catch(model.report);
-          }}
-        >
-          <Copy size={12} />
-          {t("preview.copyAddress")}
-        </button>
-        <button
-          disabled={!active || !model.notes.length}
-          onClick={() => {
-            if (active) void model.copyNotes();
-          }}
-        >
-          <Send size={12} />
-          {t("preview.copyNotes")}
-        </button>
-      </footer>
       {model.notice && (
         <div role="status" className="preview-notice">
           {model.notice}

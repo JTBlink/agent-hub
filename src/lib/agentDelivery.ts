@@ -6,6 +6,8 @@ export interface AgentDeliveryPage {
   id: string;
   title: string;
   projectId?: string;
+  /** Authorized local source path, independent of the browser preview URL. */
+  path?: string;
 }
 /** The workbench composes providers; preview never imports a provider's internals. */
 export interface AgentDeliveryAdapter {

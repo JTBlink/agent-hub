@@ -1608,3 +1608,95 @@
     gap: 6px;
   }
 }
+
+/* One implementation layout: right inspector, no document-wide bottom toolbar. */
+.pv-inspector {
+  width: 580px;
+  max-width: 58vw;
+  resize: horizontal;
+  overflow: auto;
+  container-type: inline-size;
+}
+.pv-inspect-heading {
+  min-height: 40px;
+  padding: 6px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.pv-inspect-heading h2 {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.pv-inspect-tools {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+  justify-content: flex-start;
+}
+.pv-inspect-tools button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  font-size: 10px;
+}
+@container (max-width: 550px) {
+  .pv-inspect-tools span {
+    display: none;
+  }
+}
+.pv-delivery-composer {
+  margin: 10px;
+  border: 1px solid var(--pv-line);
+  border-radius: 8px;
+  background: var(--color-bg-secondary);
+  min-height: 0;
+  max-height: 60%;
+  overflow: auto;
+  flex-shrink: 0;
+}
+.pv-delivery-composer > textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+}
+.pv-delivery-preview {
+  font-size: 11px;
+  border-top: 1px solid var(--pv-line);
+}
+.pv-delivery-preview summary {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.pv-delivery-preview summary svg {
+  display: inline;
+  margin-right: 5px;
+}
+.pv-delivery-preview > div {
+  max-height: 230px;
+  overflow: auto;
+  padding: 10px;
+}
+.pv-delivery-preview pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  margin: 10px 0;
+  user-select: text;
+}
+.pv-delivery-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  gap: 8px;
+}
+.pv-delivery-actions > span {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

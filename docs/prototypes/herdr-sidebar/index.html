@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Throwaway UI prototype: workspace and Agent quick switching in the AgentHub terminal shell.
-     Open this file directly, or visit /docs/prototypes/herdr-sidebar/?variant=A on the existing Vite server.
+     Open this file directly, or visit /docs/prototypes/herdr-sidebar/ on the existing Vite server.
      All operations use synthetic in-memory state. No application data, CLI, PTY or account access. -->
 <html lang="zh-CN">
   <head>
@@ -2301,7 +2301,6 @@
               "'": "&#39;",
             })[c],
         );
-      const names = { A: "工作空间 / Agent 快速切换" };
       const statuses = {
         idle: "空闲",
         working: "工作中",
@@ -2466,9 +2465,6 @@
         return { project: root.name, directory: space.directory };
       }
       const state = {
-        variant: names[new URLSearchParams(location.search).get("variant")]
-          ? new URLSearchParams(location.search).get("variant")
-          : "A",
         theme: "dark",
         session: "default",
         panel: "herdr",
@@ -2908,16 +2904,7 @@
         document.documentElement.dataset.theme = state.theme;
         const a = selected();
         document.getElementById("app").innerHTML =
-          `<div class="app"><header class="titlebar"><div class="traffic"><i></i><i></i><i></i></div><span class="tiny muted">AgentHub</span><div class="command-search">${icon("search")}${esc(a?.workspace.name || "搜索工作空间…")}<span class="grow"></span><kbd>⌘ K</kbd></div><div class="title-actions"><span class="prototype-mark">交互原型 · 模拟数据</span><button data-action="requirements">需求说明</button><button data-action="theme">${state.theme === "dark" ? "浅色" : "深色"}</button><button data-action="scenario" aria-expanded="false">演示状态 ▾</button></div></header><div class="workbench">${renderActivity()}${renderSidebar()}${renderEditor()}</div><footer class="statusbar"><span class="row">${icon("git")}feat/sidebar</span><span class="optional">${a ? `当前工作空间 ${esc(a.workspace.name)}` : "未打开工作空间"}</span><span class="grow"></span><span>${a ? `${esc(a.name)} · ${statuses[a.status]}` : "无 Agent"}</span><span class="optional">Herdr / ${esc(state.session)}</span><span>模拟数据</span></footer></div><div class="switcher" aria-label="原型方案切换"><span class="switch-label">比较面板结构</span><button class="arrow" data-cycle="-1" aria-label="上一个方案">‹</button>${Object.entries(
-            names,
-          )
-            .map(
-              ([key, name]) =>
-                `<button data-variant="${key}" aria-pressed="${state.variant === key}" class="current">${name}</button>`,
-            )
-            .join(
-              "",
-            )}<button class="arrow" data-cycle="1" aria-label="下一个方案">›</button><span class="divider"></span><button data-action="readout" aria-pressed="${state.readout}">状态</button></div><div class="state-readout" ${state.readout ? "" : "hidden"}><div>方案：${state.variant} / ${names[state.variant]}</div><div>会话：本机 / ${esc(state.session)}</div><div>目标：${esc(a?.id ?? "无")}</div><div>Agent：${esc(a?.name ?? "无")} / ${a ? statuses[a.status] : "无"}</div><div>面板：${esc(state.panel || "已收起")}；分屏：${state.zoom ? "已放大" : state.split || "无"}</div><div>状态：${esc(state.scenario)}</div><div>项目：${esc(a ? checkoutFor(a.workspace).project : "无")}</div><div>目录：${esc(a ? checkoutFor(a.workspace).directory : "无")}</div><div>最近操作：${esc(state.lastAction)}</div></div><div class="scenario-popover" id="scenario-popover" hidden>${[
+          `<div class="app"><header class="titlebar"><div class="traffic"><i></i><i></i><i></i></div><span class="tiny muted">AgentHub</span><div class="command-search">${icon("search")}${esc(a?.workspace.name || "搜索工作空间…")}<span class="grow"></span><kbd>⌘ K</kbd></div><div class="title-actions"><span class="prototype-mark">交互原型 · 模拟数据</span><button data-action="requirements">需求说明</button><button data-action="theme">${state.theme === "dark" ? "浅色" : "深色"}</button><button data-action="scenario" aria-expanded="false">演示状态 ▾</button></div></header><div class="workbench">${renderActivity()}${renderSidebar()}${renderEditor()}</div><footer class="statusbar"><span class="row">${icon("git")}feat/sidebar</span><span class="optional">${a ? `当前工作空间 ${esc(a.workspace.name)}` : "未打开工作空间"}</span><span class="grow"></span><span>${a ? `${esc(a.name)} · ${statuses[a.status]}` : "无 Agent"}</span><span class="optional">Herdr / ${esc(state.session)}</span><span>模拟数据</span></footer></div><div class="state-readout" ${state.readout ? "" : "hidden"}><div>会话：本机 / ${esc(state.session)}</div><div>目标：${esc(a?.id ?? "无")}</div><div>Agent：${esc(a?.name ?? "无")} / ${a ? statuses[a.status] : "无"}</div><div>面板：${esc(state.panel || "已收起")}；分屏：${state.zoom ? "已放大" : state.split || "无"}</div><div>状态：${esc(state.scenario)}</div><div>项目：${esc(a ? checkoutFor(a.workspace).project : "无")}</div><div>目录：${esc(a ? checkoutFor(a.workspace).directory : "无")}</div><div>最近操作：${esc(state.lastAction)}</div></div><div class="scenario-popover" id="scenario-popover" hidden>${[
             ["loading", "加载中"],
             ["ready", "已连接"],
             ["missing", "尚未安装"],
@@ -2948,20 +2935,7 @@
         );
       }
       window.addEventListener("resize", positionReviewTools);
-      function cycle(delta) {
-        const keys = Object.keys(names),
-          i = keys.indexOf(state.variant);
-        setVariant(keys[(i + delta + keys.length) % keys.length]);
-      }
-      function setVariant(variant) {
-        state.variant = variant;
-        state.panel = "herdr";
-        state.lastAction = `切换到 ${variant} ${names[variant]}`;
-        const url = new URL(location.href);
-        url.searchParams.set("variant", variant);
-        history.replaceState(null, "", url);
-        render();
-      }
+
       function openCreate(type) {
         state.createType = type;
         document.getElementById("create-title").textContent =
@@ -3342,8 +3316,6 @@
           nav,
           agent,
           expand,
-          variant,
-          cycle: delta,
           scenario,
           session,
           space,
@@ -3415,9 +3387,7 @@
             ? state.expanded.delete(expand)
             : state.expanded.add(expand);
           render();
-        } else if (variant) setVariant(variant);
-        else if (delta) cycle(Number(delta));
-        else if (scenario) {
+        } else if (scenario) {
           state.scenario = scenario;
           state.lastAction = `演示状态 ${scenario}`;
           render();
@@ -3651,13 +3621,6 @@
           event.target.closest("input,textarea,select,[contenteditable]")
         )
           return;
-        if (
-          Object.keys(names).length > 1 &&
-          (event.key === "ArrowLeft" || event.key === "ArrowRight")
-        ) {
-          event.preventDefault();
-          cycle(event.key === "ArrowLeft" ? -1 : 1);
-        }
         if (event.key === "Escape") {
           const p = document.getElementById("scenario-popover");
           if (p) p.hidden = true;

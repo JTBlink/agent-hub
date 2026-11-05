@@ -160,3 +160,49 @@ it("keeps ignored folders and their children browsable and explains their state"
   await act(async () => file.click());
   expect(select).toHaveBeenCalledWith("cache/output.txt");
 });
+
+it("shows loading beside the expanded folder without adding a loading text row", async () => {
+  let complete!: (
+    entries: Awaited<ReturnType<typeof getWorktreeFiles>>,
+  ) => void;
+  const pending = new Promise<Awaited<ReturnType<typeof getWorktreeFiles>>>(
+    (resolve) => {
+      complete = resolve;
+    },
+  );
+  vi.mocked(getWorktreeFiles).mockImplementation(async (_id, _root, path) =>
+    path === "src"
+      ? pending
+      : [{ name: "src", path: "src", is_dir: true, is_symlink: false }],
+  );
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath="<workspace>"
+          onSelect={vi.fn()}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const folder = host.querySelector<HTMLButtonElement>('[title="src"]')!;
+  await act(async () => folder.click());
+  expect(
+    folder.querySelector('[role="status"][aria-label="common.loading"]'),
+  ).not.toBeNull();
+  expect(host.textContent).not.toContain("common.loading");
+  expect(host.querySelectorAll('[role="status"]')).toHaveLength(1);
+  await act(async () =>
+    complete([
+      {
+        name: "example.ts",
+        path: "src/example.ts",
+        is_dir: false,
+        is_symlink: false,
+      },
+    ]),
+  );
+  expect(folder.querySelector('[role="status"]')).toBeNull();
+  expect(host.querySelector('[title="src/example.ts"]')).not.toBeNull();
+});

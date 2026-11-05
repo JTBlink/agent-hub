@@ -1,4 +1,4 @@
-import { Send, Check, Terminal } from "lucide-react";
+import { Check } from "lucide-react";
 import { PrototypeLibrary } from "./PrototypeLibrary";
 import { PrototypeToolbar } from "./PrototypeToolbar";
 import { PrototypePage } from "./PrototypePage";
@@ -8,31 +8,19 @@ import { usePreviewModel } from "./usePreviewModel";
 export function PreviewPrototype() {
   const model = usePreviewModel();
   const {
-    variant,
     modal,
-    tabs,
     panelOpen,
     picking,
     hover,
-    captures,
-    source,
-    mobile,
     toast,
     libraryOpen,
-    prompt,
-    setPrompt,
-    agentLog,
-    setAgentLog,
-    association,
     fileInput,
     cookieInput,
-    active,
     notify,
-    openPanel,
     importFile,
   } = model;
   return (
-    <div className={`pv-app variant-${variant}`}>
+    <div className="pv-app">
       <div className="pv-shell" inert={modal !== null}>
         {libraryOpen && (
           <div className="pv-navigation">
@@ -48,71 +36,7 @@ export function PreviewPrototype() {
                 <PrototypeInspector model={model} />
               </aside>
             )}
-            {variant === "C" && (
-              <aside className="pv-agent">
-                <div className="pv-panel-heading">
-                  <h2>
-                    <Terminal size={16} />
-                    Agent 工作区
-                  </h2>
-                  <span className="pv-badge">沙盒演示</span>
-                </div>
-                <div className="pv-agent-log">
-                  <p className="pv-subtle">
-                    在这里预览交付结果与后续反馈。原型不会启动或向真实 Agent
-                    投递。
-                  </p>
-                  {agentLog.map((line, index) => (
-                    <pre key={index}>{line}</pre>
-                  ))}
-                  {!agentLog.length && (
-                    <div className="pv-empty">
-                      <Send size={28} />
-                      <h3>从页面到修改</h3>
-                      <p>添加批注，再点击「交给 Agent」。</p>
-                    </div>
-                  )}
-                </div>
-                <div className="pv-agent-bottom">
-                  <textarea
-                    aria-label="Agent 消息草稿"
-                    placeholder="补充说明…"
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                  />
-                  <button
-                    className="pv-primary"
-                    disabled={!prompt.trim()}
-                    onClick={() => {
-                      setAgentLog((previous) => [
-                        ...previous,
-                        `用户草稿：${prompt}`,
-                        "演示已接收；未执行真实任务。",
-                      ]);
-                      setPrompt("");
-                    }}
-                  >
-                    发送到演示区
-                  </button>
-                </div>
-              </aside>
-            )}
           </div>
-          <footer className="pv-status">
-            <span>
-              <span className="pv-status-dot" />
-              {active
-                ? `${active.kind === "markdown" ? "Markdown" : active.kind === "html" ? "HTML" : "网页"} · ${source ? "源码" : "预览"}`
-                : "就绪"}
-            </span>
-            <span>
-              {mobile ? "390 × 844" : "自适应视口"}{" "}
-              <span className="pv-status-divider">/</span> {association}
-            </span>
-            <button onClick={() => openPanel("capabilities")}>
-              原型状态：{tabs.length} 标签 · {captures.length} 批注
-            </button>
-          </footer>
         </main>
       </div>
       {hover && picking && (

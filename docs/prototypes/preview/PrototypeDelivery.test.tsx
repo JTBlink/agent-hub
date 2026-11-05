@@ -4,8 +4,7 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { usePreviewModel } from "./usePreviewModel";
 import { PrototypeDelivery } from "./PrototypeDelivery";
-
-it("requires session, workspace and Agent, retains failed feedback and delivers to the selected sandbox", async () => {
+it("previews the file packet and reuses its sandbox tab for successive sends", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const container = document.createElement("div");
   const root = createRoot(container);
@@ -17,52 +16,32 @@ it("requires session, workspace and Agent, retains failed feedback and delivers 
     });
     return <PrototypeDelivery model={current} />;
   }
-  const select = async (index: number, value: string) =>
-    act(async () => {
-      const element = container.querySelectorAll("select")[index];
-      element.value = value;
-      element.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-  const button = () =>
-    container.querySelector<HTMLButtonElement>("button.pv-primary")!;
   try {
     await act(async () => root.render(<Harness />));
+    expect(container.querySelector("select")).toBeNull();
     await act(async () => model.setPrompt("Change the selected button"));
-    expect(button().disabled).toBe(true);
-    await select(1, "default");
-    await select(2, "web");
-    await select(3, "codex-1");
-    expect(button().disabled).toBe(false);
-    expect(container.textContent).toContain(
-      "default → Web · ~/projects/web → codex-1",
-    );
+    const packet = container.querySelector("pre")!.textContent;
+    expect(packet).toContain("File: /workspace/examples/preview.html");
+    expect(packet).not.toContain("workspace://");
     await act(async () =>
-      container
-        .querySelector<HTMLInputElement>('input[type="checkbox"]')!
-        .click(),
+      container.querySelector<HTMLButtonElement>("button.pv-primary")!.click(),
     );
-    await act(async () => button().click());
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-      "批注已保留",
-    );
-    expect(model.prompt).toBe("Change the selected button");
-    expect(model.agentLog).toEqual([]);
-    await select(1, "review");
-    expect(button().disabled).toBe(true);
-    expect(container.querySelectorAll("select")[3].value).toBe("");
-    await select(2, "review-web");
-    await select(3, "codex-1");
+    await act(async () => model.setPrompt("Keep the existing spacing"));
     await act(async () =>
-      container
-        .querySelector<HTMLInputElement>('input[type="checkbox"]')!
-        .click(),
+      container.querySelector<HTMLButtonElement>("button.pv-primary")!.click(),
     );
-    await act(async () => button().click());
-    expect(model.agentLog[0]).toContain(
-      "review → Web · ~/projects/web-review → codex-1",
+    expect(Object.keys(model.agentTabs)).toEqual([
+      "/workspace/examples/preview.html",
+    ]);
+    expect(model.agentTabs["/workspace/examples/preview.html"]).toEqual([
+      packet,
+      expect.stringContaining("Keep the existing spacing"),
+    ]);
+    await act(async () => model.selectTab(model.tabs[1]));
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>("button.pv-primary")!.click(),
     );
-    expect(model.agentLog[0]).toContain("Change the selected button");
-    expect(model.variant).toBe("C");
+    expect(Object.keys(model.agentTabs)).toHaveLength(2);
   } finally {
     await act(async () => root.unmount());
     vi.unstubAllGlobals();

@@ -135,3 +135,19 @@ it("invalidates execution snapshots across close, restore and deleted-profile re
     resetDeletedProfile(state, "remote").tabs[0].execution,
   ).toBeUndefined();
 });
+it("uses the local file path instead of its preview URL in delivery context", () => {
+  const state = openPreview(createSession(), {
+    kind: "html",
+    address: "http://127.0.0.1:4000/preview",
+    title: "Preview",
+  });
+  const text = formatAnnotations(
+    state.tabs[0],
+    [],
+    "Update spacing",
+    "/workspace/site/index.html",
+  );
+  expect(text).toContain("File: /workspace/site/index.html");
+  expect(text).toContain("Update spacing");
+  expect(text).not.toContain("http://");
+});

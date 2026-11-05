@@ -45,6 +45,7 @@ const snapshot = (...targets: HerdrTarget[]): HerdrSnapshot => ({
     {
       workspace_id: "site",
       label: "Site",
+      branch: "main",
       directory: "/workspace/site",
       active_tab_id: "tab",
     },
@@ -287,4 +288,41 @@ it("blocks concurrent submissions during target preparation", async () => {
   finish();
   await pending;
   expect(startHerdrAgent).toHaveBeenCalledOnce();
+});
+it("creates a dedicated file-named tab and reuses it across preview identities", async () => {
+  tabs = [
+    {
+      ...createTerminalTab("site", undefined, "/workspace/site"),
+      herdrTarget: target("other"),
+    },
+  ];
+  const first = request("preview-one");
+  first.page = {
+    ...first.page,
+    path: "/workspace/site/design.html",
+    title: "Page title",
+  };
+  await runtime.deliver(first, "site");
+  expect(tabs).toHaveLength(2);
+  expect(tabs[1].title).toBe("design.html");
+  expect(tabs[1].previewPageId).toBe("file:/workspace/site/design.html");
+  await runtime.deliver(
+    { ...first, page: { ...first.page, id: "preview-two" } },
+    "site",
+  );
+  expect(startHerdrAgent).toHaveBeenCalledOnce();
+  expect(runHerdrAction).toHaveBeenCalledOnce();
+  vi.mocked(startHerdrAgent).mockResolvedValue({
+    target: target("two"),
+    warning: null,
+  });
+  await runtime.deliver(
+    {
+      ...first,
+      page: { ...first.page, path: "/workspace/site/other/design.html" },
+    },
+    "site",
+  );
+  expect(tabs).toHaveLength(3);
+  expect(startHerdrAgent).toHaveBeenCalledTimes(2);
 });

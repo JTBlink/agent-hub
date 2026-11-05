@@ -1,9 +1,13 @@
+import { PrototypeDelivery } from "./PrototypeDelivery";
+import { CardActionMenu } from "../../../src/components/CardActionMenu";
 import {
   X,
   MousePointer2,
   Camera,
+  Crosshair,
+  MessageSquarePlus,
+  PenTool,
   Copy,
-  Send,
   Check,
   Download,
   FolderOpen,
@@ -28,8 +32,6 @@ export function PrototypeInspector({ model }: { model: PreviewModel }) {
     setSelected,
     setSource,
     setSourceLine,
-    devtools,
-    setDevtools,
     profiles,
     setProfiles,
     profileName,
@@ -52,12 +54,10 @@ export function PrototypeInspector({ model }: { model: PreviewModel }) {
     current,
     pageCaptures,
     notify,
-    switchVariant,
     go,
     updateTab,
     restoreTab,
     copy,
-    sendPreview,
   } = model;
   const panelTitles: Record<Panel, string> = {
     feedback: "检查与批注",
@@ -70,24 +70,88 @@ export function PrototypeInspector({ model }: { model: PreviewModel }) {
   };
   return (
     <>
-      <div className="pv-panel-heading">
-        <div>
-          <span className="pv-eyebrow">当前页面</span>
-          <h2>{panelTitles[panel]}</h2>
-        </div>
+      <div className="pv-panel-heading pv-inspect-heading">
+        <h2>{panelTitles[panel]}</h2>
+        {panel === "feedback" && (
+          <div className="pv-inspect-tools">
+            <button
+              title="抓取元素"
+              aria-label="抓取元素"
+              onClick={() => model.startPicking("copy")}
+            >
+              <Crosshair size={15} />
+              <span>抓取元素</span>
+            </button>
+            <button
+              title="添加批注"
+              aria-label="添加批注"
+              onClick={() => model.startPicking("annotate")}
+            >
+              <MessageSquarePlus size={15} />
+              <span>添加批注</span>
+            </button>
+            <button
+              title="截图绘制"
+              aria-label="截图绘制"
+              onClick={() => model.setModal("screenshot")}
+            >
+              <PenTool size={15} />
+              <span>截图绘制</span>
+            </button>
+          </div>
+        )}
+        <CardActionMenu
+          label="批注与文档操作"
+          actions={[
+            {
+              key: "address",
+              label: "复制文件路径或地址",
+              icon: <Copy size={14} />,
+              onSelect: () =>
+                void copy(
+                  active?.kind === "web"
+                    ? active.url
+                    : `/workspace${new URL(active?.url ?? "workspace:///untitled").pathname}`,
+                ),
+            },
+            {
+              key: "document",
+              label: "导出文档",
+              icon: <Download size={14} />,
+              onSelect: () =>
+                model.downloadText(
+                  active?.title ?? "document.md",
+                  active?.content ?? model.md,
+                ),
+            },
+            {
+              key: "notes",
+              label: "复制批注",
+              icon: <Copy size={14} />,
+              disabled: !pageCaptures.length,
+              onSelect: () => void copy(captureText(pageCaptures)),
+            },
+            {
+              key: "export",
+              label: "导出批注",
+              icon: <Download size={14} />,
+              disabled: !pageCaptures.length,
+              onSelect: () =>
+                model.downloadText(
+                  "page-feedback.md",
+                  captureText(pageCaptures),
+                ),
+            },
+          ]}
+        />
         <Button label="关闭侧栏" onClick={() => setPanelOpen(false)}>
           <X size={16} />
         </Button>
       </div>
       {panel === "feedback" && (
         <>
-          <div className="pv-panel-tabs">
-            <button className="active" onClick={() => setSelected(null)}>
-              批注 <span>{pageCaptures.length}</span>
-            </button>
-            <button onClick={() => setDevtools(!devtools)}>页面信息</button>
-          </div>
           <div className="pv-panel-scroll">
+            <p className="pv-subtle">{pageCaptures.length} 条批注</p>
             {!pageCaptures.length && (
               <div className="pv-empty">
                 <MousePointer2 size={28} />
@@ -192,17 +256,7 @@ export function PrototypeInspector({ model }: { model: PreviewModel }) {
               </details>
             )}
           </div>
-          <div className="pv-panel-footer">
-            <div className="pv-subtle">只发送当前页面的批注</div>
-            <button
-              className="pv-primary"
-              disabled={!pageCaptures.length}
-              onClick={sendPreview}
-            >
-              <Send size={15} />
-              交给 Agent <span>{pageCaptures.length || ""}</span>
-            </button>
-          </div>
+          <PrototypeDelivery model={model} />
         </>
       )}
       {panel === "history" && (
@@ -361,7 +415,7 @@ export function PrototypeInspector({ model }: { model: PreviewModel }) {
                 `自动浏览任务草稿：${automation}`,
                 "演示计划：snapshot → 检查元素 → 点击 → 截图。尚未执行任何浏览器操作。",
               ]);
-              switchVariant("C");
+              notify("执行计划已添加至演示记录；未执行真实任务");
             }}
           >
             <Zap size={14} />

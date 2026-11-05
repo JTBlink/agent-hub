@@ -14,7 +14,6 @@ import {
 import { CardActionMenu } from "../../../src/components/CardActionMenu";
 import { Button, KindIcon } from "./prototypeShared";
 import { PrototypeBrowserActions } from "./PrototypeBrowserActions";
-import { variants } from "./previewFormat";
 import type { PreviewModel } from "./usePreviewModel";
 
 export function PrototypeToolbar({ model }: { model: PreviewModel }) {
@@ -47,9 +46,7 @@ export function PrototypeToolbar({ model }: { model: PreviewModel }) {
     navigate,
     go,
     reload,
-    switchVariant,
     openPanel,
-    variant,
   } = model;
   return (
     <>
@@ -89,15 +86,10 @@ export function PrototypeToolbar({ model }: { model: PreviewModel }) {
         </div>
         <span className="pv-prototype-label">交互原型</span>
         <CardActionMenu
-          label="预览命令与布局"
+          label="预览命令"
           triggerClassName="pv-icon"
           triggerIcon={<Terminal size={17} />}
           actions={[
-            ...(["A", "B", "C"] as const).map((key) => ({
-              key,
-              label: `${key === variant ? "✓ " : ""}方案 ${key} · ${variants[key]}`,
-              onSelect: () => switchVariant(key),
-            })),
             {
               key: "automation",
               label: "Agent 自动浏览（演示）",

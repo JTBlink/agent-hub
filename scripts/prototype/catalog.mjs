@@ -10,8 +10,7 @@ export const prototypes = JSON.parse(
 );
 export function prototypePath(id = "index", layout = "") {
   if (id === "index") {
-    if (layout)
-      throw new Error("先指定原型名称，例如 ./prototype.sh preview --layout B");
+    if (layout) throw new Error("每项原型仅保留一个方案，请移除 --layout 参数");
     return "/docs/prototypes/";
   }
   const entry = prototypes.find((item) => item.id === id);
@@ -21,9 +20,9 @@ export function prototypePath(id = "index", layout = "") {
     throw new Error(
       `${entry.title}保存在 ${entry.branch} 分支（${entry.commit}），不会自动切换当前工作区。`,
     );
-  if (layout && !entry.layouts?.includes(layout))
-    throw new Error(`${entry.title}不支持布局 ${layout}。`);
-  return entry.path + (entry.layouts ? `?variant=${layout || "A"}` : "");
+  if (layout) throw new Error("每项原型仅保留一个方案，请移除 --layout 参数。");
+  const query = new URLSearchParams(entry.previewQuery);
+  return entry.path + (query.size ? `?${query}` : "");
 }
 
 if (

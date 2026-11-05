@@ -1092,18 +1092,19 @@
 .preview-quick-actions {
   display: flex;
   flex-shrink: 0;
+  justify-content: flex-start;
   gap: 4px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 .preview-quick-actions > button {
   display: flex;
-  flex: 1;
-  flex-direction: column;
+  flex: 0 0 auto;
+  flex-direction: row;
   align-items: center;
   gap: 5px;
   min-width: 0;
-  padding: 7px 3px;
+  padding: 5px;
   border-radius: 5px;
   font-size: 10px;
   color: var(--color-text-secondary);
@@ -1234,4 +1235,76 @@
   width: min(260px, 50%);
   padding: 0;
   line-height: 1;
+}
+
+/* Keep the inspector title and inspection tools on one line at every panel width. */
+.preview-annotations {
+  container-type: inline-size;
+}
+.preview-annotations > header {
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 8px;
+}
+.preview-annotations > header h2 {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.preview-annotations > header .preview-quick-actions {
+  flex: 1 0 auto;
+  min-width: max-content;
+  padding: 0;
+  border: 0;
+  gap: 2px;
+}
+.preview-annotations > header .preview-context-header-actions {
+  gap: 2px;
+  flex-shrink: 0;
+}
+.preview-quick-actions svg {
+  flex-shrink: 0;
+}
+@container (max-width: 550px) {
+  .preview-quick-actions > button {
+    font-size: 0;
+    gap: 0;
+  }
+}
+.preview-workspace .preview-context-send {
+  width: auto;
+  gap: 5px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+.preview-delivery-preview {
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: 11px;
+}
+.preview-delivery-preview > summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  color: var(--color-text-secondary);
+}
+.preview-delivery-content {
+  max-height: 260px;
+  overflow: auto;
+  padding: 0 10px 10px;
+}
+.preview-delivery-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  user-select: text;
+}
+.preview-delivery-content p {
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+.preview-delivery-content img {
+  max-width: 100%;
+  margin-top: 8px;
 }

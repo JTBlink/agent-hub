@@ -1,4 +1,3 @@
-import "@vscode/codicons/dist/codicon.css";
 import { openPreviewAddress } from "../shared/documentLinks";
 import {
   MousePointer2,
@@ -12,7 +11,8 @@ import {
   Clock,
   ExternalLink,
   Settings2,
-  PanelRight,
+  MessageSquareText,
+  SquareCode,
   MoreVertical,
   Info,
 } from "lucide-react";
@@ -221,11 +221,7 @@ export function PreviewToolbar({
                 disabled={!model.pageId}
                 onClick={() => void model.openDevtools()}
               >
-                <span
-                  className="codicon codicon-developer-tools"
-                  style={{ fontSize: 14 }}
-                  aria-hidden="true"
-                />
+                <SquareCode size={14} aria-hidden="true" />
                 {t("preview.developerTools")}
               </button>
               <button
@@ -251,7 +247,7 @@ export function PreviewToolbar({
                   );
                 }}
               >
-                <PanelRight size={14} />
+                <MessageSquareText size={14} aria-hidden="true" />
                 {t("preview.annotations")}
               </button>
               <button onClick={onAbout}>

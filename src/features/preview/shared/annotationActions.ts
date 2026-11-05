@@ -4,6 +4,7 @@ import { formatAnnotations, type Annotation, type PreviewTab } from "./session";
 /** Both clipboard and export validate the exact context captured by the user's action. */
 export function annotationActions({
   instruction = "",
+  sourcePath,
   tab,
   pageId,
   notes,
@@ -12,6 +13,7 @@ export function annotationActions({
   onError,
 }: {
   instruction?: string;
+  sourcePath?: string;
   tab?: PreviewTab;
   pageId?: string;
   notes: Annotation[];
@@ -27,6 +29,7 @@ export function annotationActions({
           tab,
           noteId ? notes.filter((note) => note.id === noteId) : notes,
           request,
+          sourcePath,
         );
         await verify(tab.id, tab.revision);
         await writeText(text);
@@ -38,7 +41,7 @@ export function annotationActions({
     exportNotes: async (request = instruction) => {
       if (!tab) return;
       try {
-        const text = formatAnnotations(tab, notes, request);
+        const text = formatAnnotations(tab, notes, request, sourcePath);
         await verify(tab.id, tab.revision);
         await previewApi.export(
           "page-feedback.md",

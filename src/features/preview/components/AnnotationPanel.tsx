@@ -17,6 +17,7 @@ import { CardActionMenu } from "../../../components/CardActionMenu";
 import { AgentDelivery } from "./AgentDelivery";
 import { ContextAdder } from "./ContextAdder";
 import { ContextDetails } from "./ContextDetails";
+import { previewApi } from "../api";
 import { PreviewQuickActions } from "./PreviewQuickActions";
 
 export function AnnotationPanel({
@@ -51,20 +52,56 @@ export function AnnotationPanel({
   return (
     <aside className="preview-inspector preview-annotations">
       <header>
-        <h2>{t("preview.annotations")}</h2>
+        <h2 title={t("preview.annotations")}>{t("preview.annotations")}</h2>
+        <PreviewQuickActions
+          model={model}
+          disabled={disabled}
+          onDraw={onDraw}
+        />
         <div className="preview-context-header-actions">
           <CardActionMenu
             label={t("preview.contextActions")}
-            disabled={disabled || (!model.notes.length && !instruction.trim())}
+            disabled={disabled}
             actions={[
               {
+                key: "address",
+                label: t("preview.copyAddress"),
+                icon: <Copy size={14} />,
+                disabled: !model.active,
+                onSelect: () => {
+                  const address = model.document?.path ?? model.active?.address;
+                  if (address)
+                    void import("@tauri-apps/plugin-clipboard-manager")
+                      .then((api) => api.writeText(address))
+                      .then(() => model.setNotice(t("preview.copied")))
+                      .catch(model.report);
+                },
+              },
+              {
+                key: "document",
+                label: t("preview.exportDocument"),
+                icon: <Download size={14} />,
+                disabled: !model.document,
+                onSelect: () => {
+                  if (model.document)
+                    void previewApi
+                      .export(
+                        model.document.title,
+                        model.draft ?? model.document.content,
+                      )
+                      .catch(model.report);
+                },
+              },
+              {
                 key: "copy",
+                disabled: !model.notes.length && !instruction.trim(),
                 label: t("preview.copyNotes"),
                 icon: <Copy size={14} />,
                 onSelect: () => void model.copyNotes(undefined, instruction),
               },
               {
                 key: "export",
+                disabled: !model.notes.length && !instruction.trim(),
                 label: t("preview.exportNotes"),
                 icon: <Download size={14} />,
                 onSelect: () => void model.exportNotes(instruction),
@@ -79,8 +116,10 @@ export function AnnotationPanel({
           </button>
         </div>
       </header>
-      <PreviewQuickActions model={model} disabled={disabled} onDraw={onDraw} />
       <div className="preview-inspector-scroll">
+        <p className="preview-context-count">
+          {t("preview.noteCount", { count: model.notes.length })}
+        </p>
         {selected ? (
           <fieldset disabled={disabled} className="preview-context-detail">
             <ContextDetails
@@ -104,12 +143,24 @@ export function AnnotationPanel({
         workspacePath={workspacePath}
         page={
           model.active
-            ? { id: model.active.id, title: model.active.title, projectId }
+            ? {
+                id: model.active.id,
+                title:
+                  model.document?.path?.split(/[\\/]/).at(-1) ??
+                  model.active.title,
+                path: model.document?.path,
+                projectId,
+              }
             : undefined
         }
         text={
           model.active
-            ? formatAnnotations(model.active, model.notes, instruction)
+            ? formatAnnotations(
+                model.active,
+                model.notes,
+                instruction,
+                model.document?.path,
+              )
             : ""
         }
         images={model.notes.flatMap((note) =>
@@ -146,9 +197,15 @@ export function AnnotationPanel({
           aria-label={t("preview.context")}
         >
           {model.active && (
-            <span className="preview-context-page" title={model.active.address}>
+            <span
+              className="preview-context-page"
+              title={model.document?.path ?? model.active.address}
+            >
               <Globe size={13} />
-              <span>{model.active.title}</span>
+              <span>
+                {model.document?.path?.split(/[\\/]/).at(-1) ??
+                  model.active.title}
+              </span>
             </span>
           )}
           {model.notes.map((note) => {

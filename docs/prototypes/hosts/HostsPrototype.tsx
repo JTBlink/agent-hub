@@ -1,9 +1,7 @@
-// Throwaway UI: three Hosts layouts inside the existing settings shell.
+// Implementation reference: one Hosts list and editor layout.
 // Synthetic data, memory only; no system, editor, or Git mutations.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
   Check,
   CheckCheck,
   Code2,
@@ -17,26 +15,15 @@ import {
   Sun,
   Trash2,
 } from "lucide-react";
-import { HostsPrototypeVariants } from "./HostsPrototypeVariants";
+import { HostsPrototypeLayout } from "./HostsPrototypeLayout";
 import { HostsPrototypeModal as Modal } from "./HostsPrototypeModal";
-import {
-  base,
-  initial,
-  variants,
-  labels,
-  type Profile,
-  type Variant,
-} from "./hostsPrototypeData";
+import { base, initial, type Profile } from "./hostsPrototypeData";
 import "./hosts-prototype.css";
 
 export function HostsPrototype() {
-  const param = new URLSearchParams(location.search).get("variant");
-  const [variant, setVariant] = useState<Variant>(
-    variants.includes(param as Variant) ? (param as Variant) : "A",
-  );
   const [profiles, setProfiles] = useState(initial);
   const [system, setSystem] = useState(initial[0].content);
-  const [selected, setSelected] = useState(param === "B" ? "system" : "dev");
+  const [selected, setSelected] = useState("dev");
   const [draft, setDraft] = useState(initial[0].content);
   const [filter, setFilter] = useState("");
   const [notice, setNotice] = useState("准备就绪，所有操作仅影响演示数据");
@@ -57,22 +44,16 @@ export function HostsPrototype() {
   const dirty = draft !== (profile?.content ?? system);
   const active = profiles.find((p) => p.content === system);
   const visible = profiles.filter((p) => p.name.includes(filter));
-  const time = () =>
-    new Date().toLocaleTimeString("zh-CN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
   const ask = (text: string, run: () => void) => setConfirmation({ text, run });
   const choose = (id: string, openEditor = false) => {
     if (id === selected) {
-      if (openEditor && variant !== "B") setModal("editor");
+      if (openEditor) setModal("editor");
       return;
     }
     const run = () => {
       setSelected(id);
       setDraft(profiles.find((p) => p.id === id)?.content ?? system);
-      if (openEditor && variant !== "B") setModal("editor");
+      if (openEditor) setModal("editor");
     };
     if (dirty) ask("切换后会放弃尚未保存的编辑。继续切换？", run);
     else run();
@@ -126,34 +107,6 @@ export function HostsPrototype() {
     setModal(null);
     setNotice("方案已保存到用户配置库");
   };
-  const changeVariant = (v: Variant) => {
-    setVariant(v);
-    const url = new URL(location.href);
-    url.searchParams.set("variant", v);
-    history.replaceState(null, "", url);
-  };
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (
-        e.defaultPrevented ||
-        (e.target instanceof Element &&
-          e.target.closest("input,textarea,[contenteditable],dialog")) ||
-        document.querySelector("dialog[open]")
-      )
-        return;
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        e.preventDefault();
-        const step = e.key === "ArrowLeft" ? -1 : 1;
-        const next = variants[(variants.indexOf(variant) + step + 3) % 3];
-        setVariant(next);
-        const url = new URL(location.href);
-        url.searchParams.set("variant", next);
-        history.replaceState(null, "", url);
-      }
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [variant]);
   const vscode = () =>
     setNotice(
       `演示：用 VS Code 打开 ${profile ? `~/.agent-hub/user-config/hosts/profiles/${profile.id}/hosts` : "/etc/hosts"}；此处未启动外部程序`,
@@ -200,7 +153,6 @@ export function HostsPrototype() {
         <textarea
           aria-label="Hosts 内容"
           value={draft}
-          readOnly={!profile && variant !== "B"}
           spellCheck={false}
           wrap="off"
           onChange={(e) => setDraft(e.target.value)}
@@ -217,9 +169,7 @@ export function HostsPrototype() {
         <span>
           {profile
             ? "保存方案后，点击应用才会修改系统"
-            : variant === "B"
-              ? "保存到系统前沿用现有写入保护"
-              : `只读快照 · 最近读取 ${time()}`}
+            : "保存到系统前沿用现有写入保护"}
         </span>
       </div>
       <div className="hp-actions">
@@ -275,7 +225,7 @@ export function HostsPrototype() {
               <Plus size={13} />
               另存为方案
             </button>
-            {variant === "B" && (
+            {!profile && (
               <button
                 className="hp-primary"
                 disabled={!dirty}
@@ -309,7 +259,7 @@ export function HostsPrototype() {
       </div>
       <button
         onClick={() => {
-          choose("system", variant !== "A");
+          choose("system");
         }}
       >
         查看内容
@@ -317,7 +267,7 @@ export function HostsPrototype() {
     </div>
   );
   return (
-    <div className={`hosts-prototype hp-variant-${variant}`}>
+    <div className="hosts-prototype">
       <header className="hp-heading">
         <div>
           <div className="hp-eyebrow">用户配置 / 网络</div>
@@ -340,20 +290,15 @@ export function HostsPrototype() {
           </button>
         </div>
       </header>
-      <HostsPrototypeVariants
-        variant={variant}
+      <HostsPrototypeLayout
         profiles={profiles}
         visible={visible}
         selected={selected}
-        active={active}
-        system={system}
         filter={filter}
-        dirty={dirty}
         setFilter={setFilter}
         choose={choose}
         named={named}
         badge={badge}
-        apply={apply}
         editor={editor}
         systemStrip={systemStrip}
       />
@@ -377,7 +322,6 @@ export function HostsPrototype() {
         <pre>
           {JSON.stringify(
             {
-              variant,
               selected,
               active: active?.name ?? "外部修改",
               dirty,
@@ -388,29 +332,6 @@ export function HostsPrototype() {
           )}
         </pre>
       </details>
-      {import.meta.env.DEV && (
-        <nav className="hp-switcher" aria-label="原型布局切换">
-          <button
-            aria-label="上一个布局"
-            onClick={() =>
-              changeVariant(variants[(variants.indexOf(variant) + 2) % 3])
-            }
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <span>
-            原型 {variant} / {labels[variant]}
-          </span>
-          <button
-            aria-label="下一个布局"
-            onClick={() =>
-              changeVariant(variants[(variants.indexOf(variant) + 1) % 3])
-            }
-          >
-            <ArrowRight size={16} />
-          </button>
-        </nav>
-      )}
       {modal === "editor" && (
         <Modal title="Hosts 内容" close={() => setModal(null)}>
           {editor}

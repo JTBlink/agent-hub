@@ -31,6 +31,3 @@ export const initial: Profile[] = [
   },
   { id: "clean", name: "系统默认", note: "仅保留本机基础映射", content: base },
 ];
-export const variants = ["A", "B", "C"] as const;
-export const labels = { A: "列表与编辑器", B: "环境与方案", C: "配置表格" };
-export type Variant = (typeof variants)[number];

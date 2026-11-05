@@ -91,6 +91,23 @@ export function AgentDelivery({
       }}
     >
       {children}
+      <details className="preview-delivery-preview">
+        <summary>{t("preview.viewDelivery")}</summary>
+        <div className="preview-delivery-content">
+          {page?.path && <p>{page.path}</p>}
+          {adapter && page?.path && (
+            <p>{t("preview.fileAgentHint", { name: page.title })}</p>
+          )}
+          <pre>{text}</pre>
+          {images.map((data, index) => (
+            <img
+              key={index}
+              src={`data:image/png;base64,${data}`}
+              alt={t("preview.deliveryImage", { number: index + 1 })}
+            />
+          ))}
+        </div>
+      </details>
       {error && (
         <p role="alert" className="preview-context-error">
           {error}
@@ -99,8 +116,13 @@ export function AgentDelivery({
       )}
       <div className="preview-context-toolbar">
         {actions}
-        <span className="preview-context-destination" title={workspacePath}>
-          {t(adapter ? "preview.currentWorkspace" : "preview.copyNotes")}
+        <span
+          className="preview-context-destination"
+          title={page?.path ?? workspacePath}
+        >
+          {adapter && page?.path
+            ? t("preview.fileAgentTab", { name: page.title })
+            : t(adapter ? "preview.currentWorkspace" : "preview.copyNotes")}
         </span>
         <button
           type="submit"
@@ -116,6 +138,7 @@ export function AgentDelivery({
           ) : (
             <Copy size={16} />
           )}
+          {label}
         </button>
       </div>
     </form>

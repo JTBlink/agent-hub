@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronRight, CopyMinus, RefreshCw } from "lucide-react";
+import {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { ChevronRight, CopyMinus, Loader2, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   getWorktreeFiles,
@@ -42,6 +48,7 @@ export function WorktreeExplorer(props: Props) {
   const [revision, setRevision] = useState(0);
   const [collapse, setCollapse] = useState(0);
   const [open, setOpen] = useState(true);
+  const [loading, setLoading] = useState(false);
   const refresh = () => {
     setRevision((value) => value + 1);
     window.dispatchEvent(new Event("project-git-changed"));
@@ -86,6 +93,7 @@ export function WorktreeExplorer(props: Props) {
               <span className="truncate">{rootName}</span>
             </button>
           )}
+          {open && loading && <DirectoryLoading />}
           <button
             type="button"
             aria-label={t("worktree.refreshFiles")}
@@ -111,6 +119,7 @@ export function WorktreeExplorer(props: Props) {
           key={`${props.projectId}:${props.worktreePath}`}
           {...props}
           path=""
+          onLoadingChange={setLoading}
           depth={0}
           collapse={collapse}
           decorations={decorations}
@@ -123,19 +132,41 @@ export function WorktreeExplorer(props: Props) {
   );
 }
 
+function DirectoryLoading() {
+  const { t } = useTranslation();
+  return (
+    <Loader2
+      role="status"
+      aria-label={t("common.loading")}
+      size={13}
+      className="shrink-0 animate-spin text-muted"
+    />
+  );
+}
+
 function Directory({
+  onLoadingChange,
   path,
   depth,
   collapse,
   ...props
-}: TreeProps & { path: string; depth: number; collapse: number }) {
+}: TreeProps & {
+  path: string;
+  depth: number;
+  collapse: number;
+  onLoadingChange: (loading: boolean) => void;
+}) {
   const { t } = useTranslation();
   const [files, setFiles] = useState<WorktreeFileEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const describeError = useEffectEvent((cause: unknown) =>
+    getErrorMessage(cause, t("common.error")),
+  );
   useEffect(() => {
     let cancelled = false;
+    onLoadingChange(true);
     getWorktreeFiles(props.projectId, props.worktreePath, path)
       .then(
         (entries) => {
@@ -146,24 +177,29 @@ function Directory({
         },
         (cause) => {
           if (!cancelled) {
-            setError(getErrorMessage(cause, t("common.error")));
+            setError(describeError(cause));
             if (!path) window.dispatchEvent(new Event("project-git-changed"));
           }
         },
       )
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          onLoadingChange(false);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [props.projectId, props.worktreePath, path, props.revision, attempt, t]);
-  if (loading)
-    return (
-      <p role="status" className="px-2 py-1.5 text-xs text-muted">
-        {t("common.loading")}
-      </p>
-    );
+  }, [
+    props.projectId,
+    props.worktreePath,
+    path,
+    props.revision,
+    attempt,
+    onLoadingChange,
+  ]);
+  if (loading) return null;
   if (error && !path)
     return (
       <WorkspaceUnavailable
@@ -272,6 +308,7 @@ function FolderEntry({
   const { t } = useTranslation();
   const decoration = props.decorations.get(file.path);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [previousCollapse, setPreviousCollapse] = useState(collapse);
   if (previousCollapse !== collapse) {
     setPreviousCollapse(collapse);
@@ -314,11 +351,14 @@ function FolderEntry({
               symlink={file.is_symlink}
             />
           </span>
-          <span
-            className="min-w-0 flex-1 truncate"
-            title={file.is_ignored ? t("worktree.gitIgnored") : undefined}
-          >
-            {file.name}
+          <span className="flex min-w-0 flex-1 items-center gap-1">
+            <span
+              className="truncate"
+              title={file.is_ignored ? t("worktree.gitIgnored") : undefined}
+            >
+              {file.name}
+            </span>
+            {open && loading && <DirectoryLoading />}
           </span>
           {decoration && (
             <GitStatusIndicator
@@ -332,6 +372,7 @@ function FolderEntry({
         <Directory
           {...props}
           path={file.path}
+          onLoadingChange={setLoading}
           depth={depth + 1}
           collapse={collapse}
         />

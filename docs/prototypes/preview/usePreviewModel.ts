@@ -5,18 +5,13 @@ import {
   type Capture,
   type PreviewTab,
 } from "./fixtures";
-import { captureText, type Panel, type Variant } from "./previewFormat";
+import { captureText, type Panel } from "./previewFormat";
 export function usePreviewModel() {
-  const [variant, setVariant] = useState<Variant>(() => {
-    const value = new URLSearchParams(location.search).get("variant");
-    return value === "B" || value === "C" ? value : "A";
-  });
+  const [agentTabs, setAgentTabs] = useState<Record<string, string[]>>({});
   const [tabs, setTabs] = useState(initialTabs);
   const [closed, setClosed] = useState<PreviewTab[]>([]);
-  const [activeId, setActiveId] = useState(variant === "B" ? 2 : 3);
-  const [address, setAddress] = useState(
-    initialTabs[variant === "B" ? 1 : 2].url,
-  );
+  const [activeId, setActiveId] = useState(3);
+  const [address, setAddress] = useState(initialTabs[2].url);
   const [panel, setPanel] = useState<Panel>("feedback");
   const [panelOpen, setPanelOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -81,16 +76,6 @@ export function usePreviewModel() {
   );
   const current = pageCaptures.find((item) => item.id === selected);
   const notify = (message: string) => setToast(message);
-  const switchVariant = (next: Variant) => {
-    setVariant(next);
-    const url = new URL(location.href);
-    url.searchParams.set("variant", next);
-    history.replaceState(null, "", url);
-  };
-  const cycleVariant = (delta: number) => {
-    const keys: Variant[] = ["A", "B", "C"];
-    switchVariant(keys[(keys.indexOf(variant) + delta + 3) % 3]);
-  };
   const openPanel = (next: Panel) => {
     setPanel(next);
     setPanelOpen(true);
@@ -317,8 +302,6 @@ export function usePreviewModel() {
         return;
       }
       if (editing) return;
-      if (event.key === "ArrowLeft") cycleVariant(-1);
-      if (event.key === "ArrowRight") cycleVariant(1);
       if (event.ctrlKey || event.metaKey) {
         if (event.key.toLowerCase() === "f") {
           event.preventDefault();
@@ -365,8 +348,6 @@ export function usePreviewModel() {
     startPicking,
     hoveredElementRef,
     pickElement,
-    variant,
-    setVariant,
     tabs,
     setTabs,
     closed,
@@ -447,8 +428,6 @@ export function usePreviewModel() {
     current,
     pageCaptures,
     notify,
-    switchVariant,
-    cycleVariant,
     openPanel,
     updateTab,
     selectTab,
@@ -463,6 +442,8 @@ export function usePreviewModel() {
     grab,
     downloadText,
     sendPreview,
+    agentTabs,
+    setAgentTabs,
     importFile,
     changeQuery,
   };

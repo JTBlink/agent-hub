@@ -7,12 +7,6 @@ export type Panel =
   | "automation"
   | "remote"
   | "capabilities";
-export type Variant = "A" | "B" | "C";
-export const variants: Record<Variant, string> = {
-  A: "浏览与检查",
-  B: "文档与批注",
-  C: "Agent 协作",
-};
 export function captureText(items: Capture[]) {
   return items
     .map(

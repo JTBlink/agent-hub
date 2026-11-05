@@ -160,3 +160,15 @@ it("does not report success to a replacement panel after the final send complete
   await act(async () => finish());
   expect(sent).not.toHaveBeenCalled();
 });
+it("shows all delivery text and screenshots without resolving or sending a target", async () => {
+  const text =
+    "File: /workspace/site/index.html\n" + "Full context\n".repeat(300);
+  await render(undefined, ["screenshot-data"], text);
+  const details = container.querySelector("details")!;
+  expect(details.querySelector("pre")!.textContent).toBe(text);
+  expect(details.querySelector("img")!.src).toBe(
+    "data:image/png;base64,screenshot-data",
+  );
+  expect(resolveCurrent).not.toHaveBeenCalled();
+  expect(deliver).not.toHaveBeenCalled();
+});

@@ -177,14 +177,15 @@ export function formatAnnotations(
   tab: PreviewTab,
   notes: Annotation[],
   instruction = "",
+  sourcePath?: string,
 ): string {
   return [
     `# ${tab.title}`,
-    `URL: ${tab.address}`,
+    sourcePath ? `File: ${sourcePath}` : `URL: ${tab.address}`,
     `Revision: ${tab.revision}`,
     ...notes.map(
       (note, index) =>
-        `## ${index + 1}. ${note.selector}\n${note.sourceLine ? `Source: ${tab.title}:${note.sourceLine}${note.sourceEndLine ? `-${note.sourceEndLine}` : ""}\n` : ""}\n${note.domPath?.length ? `DOM path: ${note.domPath.join(" > ")}\n` : ""}${note.viewport ? `Viewport: ${JSON.stringify(note.viewport)}\n` : ""}${note.bounds ? `Bounds: ${JSON.stringify(note.bounds)}\n` : ""}${note.text}\n\n${note.note}\n\n${note.html ? `DOM:\n\`\`\`html\n${note.html}\n\`\`\`` : ""}\n${note.accessibility ? `Accessibility: ${JSON.stringify(note.accessibility)}\n` : ""}${note.styles ? `CSS:\n\`\`\`json\n${JSON.stringify(note.styles, null, 2)}\n\`\`\`` : ""}`,
+        `## ${index + 1}. ${note.selector}\n${note.sourceLine ? `Source: ${sourcePath ?? tab.title}:${note.sourceLine}${note.sourceEndLine ? `-${note.sourceEndLine}` : ""}\n` : ""}\n${note.domPath?.length ? `DOM path: ${note.domPath.join(" > ")}\n` : ""}${note.viewport ? `Viewport: ${JSON.stringify(note.viewport)}\n` : ""}${note.bounds ? `Bounds: ${JSON.stringify(note.bounds)}\n` : ""}${note.text}\n\n${note.note}\n\n${note.html ? `DOM:\n\`\`\`html\n${note.html}\n\`\`\`` : ""}\n${note.accessibility ? `Accessibility: ${JSON.stringify(note.accessibility)}\n` : ""}${note.styles ? `CSS:\n\`\`\`json\n${JSON.stringify(note.styles, null, 2)}\n\`\`\`` : ""}`,
     ),
     ...(instruction.trim()
       ? [`# Requested changes\n\n${instruction.trim()}`]

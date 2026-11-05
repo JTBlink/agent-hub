@@ -28,7 +28,7 @@ vi.mock("./api", () => ({
     action: vi
       .fn()
       .mockResolvedValue(
-        "http://127.0.0.1:4321/devtools/inspector.html?ws=fixture",
+        "http://127.0.0.1:4321/devtools/devtools_app.html?ws=fixture",
       ),
   },
 }));
@@ -95,7 +95,7 @@ it("starts with annotations hidden, toggles them from the toolbar and docks the 
       host.querySelector(
         '.preview-devtools [data-surface="devtools:doc:fixture"]',
       )?.textContent,
-    ).toContain("/devtools/inspector.html");
+    ).toContain("/devtools/devtools_app.html");
     expect(
       host.querySelector('[data-surface="doc:fixture"]')?.textContent,
     ).toContain("/example");

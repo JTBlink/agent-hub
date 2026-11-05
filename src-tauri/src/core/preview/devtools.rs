@@ -43,7 +43,9 @@ fn inspector_url(endpoint: &str, advertised: &str) -> Result<String, AppError> {
     let address = runtime::control_address(endpoint, advertised)?;
     let mut url =
         reqwest::Url::parse(&runtime::validate_endpoint(endpoint)?).map_err(AppError::network)?;
-    url.set_path("/devtools/inspector.html");
+    // The inspector entrypoint adds a second page screencast beside the tools.
+    // The host already renders the page, so use the tools-only entrypoint.
+    url.set_path("/devtools/devtools_app.html");
     url.query_pairs_mut().append_pair(
         "ws",
         address
@@ -82,6 +84,14 @@ mod tests {
             );
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
+        let has_screencast = browsers.action(&inspector, Action::Evaluate {
+            expression: "(()=>{const visit=root=>Boolean(root.querySelector('.screencast, devtools-split-view[name=\"inspector-view.screencast-split-view-state\"]'))||Array.from(root.querySelectorAll('*')).some(node=>node.shadowRoot&&visit(node.shadowRoot));return visit(document)})()".into(),
+        }).unwrap();
+        assert_eq!(
+            has_screencast,
+            serde_json::json!(false),
+            "Tools must not duplicate the preview page"
+        );
         assert!(browsers
             .action(
                 &page,
@@ -103,7 +113,7 @@ mod tests {
         )
         .unwrap();
         let url = reqwest::Url::parse(&url).unwrap();
-        assert_eq!(url.path(), "/devtools/inspector.html");
+        assert_eq!(url.path(), "/devtools/devtools_app.html");
         assert_eq!(url.port(), Some(4321));
         assert_eq!(
             url.query_pairs().find(|(key, _)| key == "ws").unwrap().1,
