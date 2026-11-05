@@ -2518,6 +2518,8 @@
   },
   "git": {
     "viewDiff": "View Diff",
+    "openChanges": "Open Changes",
+    "openHead": "Open File (HEAD)",
     "viewRevision": "View File at this Revision",
     "compareWorking": "View Diff with Working File",
     "copyBranchName": "Copy branch name",

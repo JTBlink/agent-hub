@@ -15,12 +15,14 @@ import {
   getProjectGitDiff,
   getProjectGitStatus,
   type GitStatus,
+  type GitFile,
   runProjectGitAction,
   type GitRepositoryAction,
 } from "../lib/gitApi";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { getErrorMessage } from "../lib/error";
 import { groupGitChanges } from "../lib/gitChanges";
+import { GitChangeFileMenu } from "../components/git/GitChangeFileMenu";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
 import { GitEditorWorkspace } from "../components/git/GitEditorWorkspace";
 import { useGitEditors } from "../hooks/useGitEditors";
@@ -237,6 +239,28 @@ export function Git() {
         );
     },
   };
+  const renderChangeFile =
+    (staged: boolean) => (file: GitFile, children: React.ReactNode) => (
+      <GitChangeFileMenu
+        projectId={activeId!}
+        root={root}
+        head={status?.head}
+        file={file}
+        staged={staged}
+        busy={changeProps.busy}
+        onSelect={changeProps.onSelect}
+        onOpenFile={(next) => {
+          editors.select("working");
+          setSelection(next);
+          setFileView(true);
+        }}
+        onOpenRevision={editors.openFile}
+        onStage={changeProps.onStage}
+        onDiscard={changeProps.onDiscard}
+      >
+        {children}
+      </GitChangeFileMenu>
+    );
   const statusBar = <GitStatusBar branch={branch} status={status} />;
   const sidebar = (
     <ResizableSidebar
@@ -386,12 +410,14 @@ export function Git() {
                     {...changeProps}
                     staged
                     files={stagedFiles}
+                    renderFile={renderChangeFile(true)}
                   />
                   <GitChanges
                     key={`${scope}:unstaged`}
                     {...changeProps}
                     staged={false}
                     files={unstagedFiles}
+                    renderFile={renderChangeFile(false)}
                   />
                   {status.truncated && (
                     <p className="p-3 text-xs text-muted">

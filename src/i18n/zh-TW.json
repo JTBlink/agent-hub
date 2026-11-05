@@ -2475,6 +2475,8 @@
   },
   "git": {
     "viewDiff": "檢視差異",
+    "openChanges": "開啟變更",
+    "openHead": "開啟檔案 (HEAD)",
     "viewRevision": "檢視此版本的檔案",
     "compareWorking": "與工作區檔案比較差異",
     "copyBranchName": "複製分支名稱",
