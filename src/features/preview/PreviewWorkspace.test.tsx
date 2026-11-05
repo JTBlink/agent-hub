@@ -9,6 +9,15 @@ import type { BrowserSurfaceProps } from "./web/types";
 const t = (key: string) => key;
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("./web/useBrowserInventory", () => ({ useBrowserInventory: vi.fn() }));
+vi.mock("../../components/file-reader/CodeEditor", () => ({
+  CodeEditor: ({
+    file,
+    onChange,
+  }: {
+    file: { content: string };
+    onChange?: unknown;
+  }) => <textarea readOnly={!onChange} value={file.content} />,
+}));
 vi.mock("../../lib/tauri", () => ({
   getSettings: vi.fn().mockResolvedValue(null),
   setSettings: vi.fn().mockResolvedValue(undefined),
@@ -117,6 +126,60 @@ it("starts with annotations hidden, toggles them from the toolbar and docks the 
   } finally {
     await act(async () => root.unmount());
     host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("toggles a web page between its preserved browser surface and read-only HTML", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  localStorage.setItem(
+    "agent-hub.preview.tabs.v1",
+    JSON.stringify([
+      {
+        address: "https://example.invalid/",
+        title: "Example",
+        profile: "default",
+      },
+    ]),
+  );
+  vi.mocked(previewApi.action).mockResolvedValue(
+    "<html><body>Example</body></html>",
+  );
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<PreviewWorkspace shown embedded />));
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="fileReader.source"]')!
+        .click(),
+    );
+    expect(host.querySelector("textarea")?.value).toContain(
+      "<body>Example</body>",
+    );
+    expect(host.querySelector("textarea")?.readOnly).toBe(true);
+    expect(
+      host.querySelector<HTMLDivElement>(".preview-native-page")?.hidden,
+    ).toBe(true);
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>('[aria-label="fileReader.preview"]')!
+        .click(),
+    );
+    expect(host.querySelector("textarea")).toBeNull();
+    expect(
+      host.querySelector<HTMLDivElement>(".preview-native-page")?.hidden,
+    ).toBe(false);
+  } finally {
+    await act(async () => root.unmount());
+    localStorage.clear();
     vi.unstubAllGlobals();
   }
 });

@@ -4,6 +4,7 @@ import { BrowserSurface } from "../web/BrowserSurface";
 import { MarkdownPreview } from "../markdown/MarkdownPreview";
 import { CodeEditor } from "../../../components/file-reader/CodeEditor";
 import { DevtoolsDock } from "./DevtoolsDock";
+import { WebPageSource } from "./WebPageSource";
 
 /** Keep each page mounted; visibility changes preserve browser and editor state. */
 export function PreviewPageSurface({
@@ -109,6 +110,15 @@ export function PreviewPageSurface({
               wrap
             />
           )}
+          {model.source &&
+            active?.id === tab.id &&
+            !doc &&
+            model.pageIds[tab.id] && (
+              <WebPageSource
+                key={`${model.pageIds[tab.id]}:${tab.revision}`}
+                pageId={model.pageIds[tab.id]}
+              />
+            )}
         </>
       )}
       {model.devtoolsPageId &&

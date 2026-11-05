@@ -147,7 +147,10 @@ export function PreviewToolbar({
             </div>
             <div>
               <button
-                disabled={!model.document || model.document.kind === "resource"}
+                disabled={
+                  (!model.document || model.document.kind === "resource") &&
+                  !(active?.kind === "web" && model.pageId)
+                }
                 className={`preview-source-toggle ${model.source ? "active" : ""}`}
                 onClick={() => {
                   model.setSource(!model.source);

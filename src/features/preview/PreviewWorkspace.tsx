@@ -93,8 +93,11 @@ export function PreviewWorkspace({
     model.setPanelOpen(true);
   };
   const sourceAction =
-    model.document && model.document.kind !== "resource" ? (
+    (model.document && model.document.kind !== "resource") ||
+    active?.kind === "web" ? (
       <button
+        disabled={!model.document && !model.pageId}
+        aria-pressed={model.source}
         className={
           sourceToolbarContainer !== undefined
             ? "app-button-ghost h-7 w-7 shrink-0 p-0"

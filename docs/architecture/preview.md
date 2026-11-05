@@ -4,6 +4,8 @@
 
 ## 模块与复用
 
+- 网页预览的“查看源码”复用页面求值接口读取当前 DOM（含 doctype），以只读 HTML 展示；返回预览保留原页面，重新打开源码时读取新快照，不支持将网页源码保存为本地文档。
+
 - `src/features/preview/PreviewHost.tsx` 按需加载并保留宿主；`shared/` 管理会话、地址解析、打开请求和修订隔离。
 - `web/BrowserSurface.tsx` 仅选择后端，`web/chromium/` 管理 Chromium 帧与输入，`web/native/` 管理系统 WebView 和独立 IPC；`markdown/` 复用 `MarkdownContent`、`CodeEditor`，增加目录、源码位置、资源授权和截图。
 - `components/` 组合批注、实际 Agent 目标交付、下载、登录配置和内核信息弹窗。开发人员工具按钮与 F12 打开当前页面的原生检查器；Chromium 使用同一受管回环调试端点提供的内置 DevTools 前端，在系统浏览器中连接原页面（远端端点沿用 SSH 转发地址），系统 WebView 打开自身检查器。
