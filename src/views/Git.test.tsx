@@ -94,6 +94,7 @@ vi.mock("../hooks/useProjectWorktrees", () => ({
   useProjectWorktrees: () => ({ worktrees: [] }),
 }));
 vi.mock("../lib/gitApi", () => ({
+  getProjectGitRemotes: vi.fn().mockResolvedValue([]),
   commitProjectGit: vi.fn(),
   runProjectGitAction: vi.fn(),
   getProjectGitReferences: vi.fn(),

@@ -21,6 +21,10 @@ import {
 } from "../lib/gitApi";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { getErrorMessage } from "../lib/error";
+import {
+  invalidateProjectGitStatus,
+  peekProjectGitStatus,
+} from "../lib/projectGitStatus";
 import { groupGitChanges } from "../lib/gitChanges";
 import { GitChangeFileMenu } from "../components/git/GitChangeFileMenu";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
@@ -77,7 +81,12 @@ export function Git() {
     data?: GitStatus;
     error?: string;
   }>();
-  const status = statusResult?.scope === scope ? statusResult.data : undefined;
+  const status =
+    statusResult?.scope === scope
+      ? statusResult.data
+      : activeId
+        ? peekProjectGitStatus(activeId, root)
+        : undefined;
   const error =
     statusResult?.key === statusKey ? statusResult.error : undefined;
   const loading = !!activeId && statusResult?.key !== statusKey;
@@ -104,6 +113,10 @@ export function Git() {
     () => setRevision((value) => value + 1),
     [setRevision],
   );
+  const requestRefresh = () => {
+    if (activeId) invalidateProjectGitStatus(activeId, root);
+    refresh();
+  };
   useEffect(() => {
     if (!activeId) return;
     let cancelled = false;
@@ -161,7 +174,10 @@ export function Git() {
   }, [activeId, root, selection, fileView, diffKey, t]);
   const files = status?.files ?? [];
   const { stagedFiles, unstagedFiles } = groupGitChanges(files);
-  const branch = status?.branch ?? status?.head?.slice(0, 8) ?? t("git.unborn");
+  const branch =
+    status?.branch ??
+    status?.head?.slice(0, 8) ??
+    t(status ? "git.unborn" : "common.loading");
   async function runAction(
     action: () => Promise<void>,
     type: "stage" | "commit" | "sync" | GitRepositoryAction = "stage",
@@ -185,6 +201,7 @@ export function Git() {
       refresh();
       return true;
     } catch (cause) {
+      if (activeId) invalidateProjectGitStatus(activeId, root);
       if (currentScope.current === actionScope)
         setActionError(getErrorMessage(cause, t("common.error")));
       refresh();
@@ -310,6 +327,11 @@ export function Git() {
                 }
                 toolbar={(canCommit) => (
                   <GitSourceControlToolbar
+                    target={
+                      activeId
+                        ? { projectId: activeId, worktreePath: root }
+                        : undefined
+                    }
                     disabled={!status || loading || busy}
                     canSync={
                       !!status?.upstream &&
@@ -362,7 +384,7 @@ export function Git() {
                         />
                       )
                     }
-                    onRefresh={refresh}
+                    onRefresh={requestRefresh}
                     onTree={() => setTree((value) => !value)}
                     onHistory={() => setHistoryExpanded((value) => !value)}
                     canStage={!status?.truncated && unstagedFiles.length > 0}
@@ -398,7 +420,7 @@ export function Git() {
                     : Promise.resolve(false)
                 }
               />
-              {loading && (
+              {loading && !status && (
                 <p role="status" className="px-3 pb-3 text-xs text-muted">
                   {t("common.loading")}
                 </p>
@@ -435,7 +457,7 @@ export function Git() {
               loading={loading}
               expanded={historyExpanded}
               onExpandedChange={setHistoryExpanded}
-              onRefresh={refresh}
+              onRefresh={requestRefresh}
               target={
                 activeId
                   ? { projectId: activeId, worktreePath: root }
@@ -513,7 +535,7 @@ export function Git() {
                   className="app-button-ghost ml-auto px-2"
                   onClick={() => {
                     setActionError(undefined);
-                    refresh();
+                    requestRefresh();
                   }}
                 >
                   {t("common.retry")}
@@ -537,7 +559,7 @@ export function Git() {
                       "fetch",
                     );
                   }}
-                  onRefresh={refresh}
+                  onRefresh={requestRefresh}
                 >
                   {selection ? (
                     <GitFileEditor

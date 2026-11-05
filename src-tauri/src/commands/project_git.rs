@@ -25,6 +25,21 @@ pub async fn run_project_git_action(
 }
 
 #[tauri::command]
+pub async fn get_project_git_remotes(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+) -> Result<Vec<project_git::GitRemote>, AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::remotes(&root).map_err(AppError::io)
+    })
+    .await?
+}
+
+#[tauri::command]
 pub async fn get_project_git_status(
     store: State<'_, Arc<SkillStore>>,
     project_id: String,

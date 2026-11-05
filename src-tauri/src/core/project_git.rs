@@ -4,7 +4,9 @@ mod graph;
 mod history;
 pub use graph::{graph, GitGraph};
 mod references;
+mod remotes;
 mod repository_actions;
+mod status_files;
 pub use actions::{commit, discard, set_staged};
 pub(crate) use actions::{run_git, validate_branch_name};
 use anyhow::{bail, Result};
@@ -12,6 +14,7 @@ pub use history::{
     commit_details, commit_file_view, commit_history, GitCommitDetails, GitHistoryPage,
 };
 pub use references::{references, GitReferences};
+pub use remotes::{remotes, GitRemote};
 pub use repository_actions::{repository_action, GitRepositoryAction};
 use serde::Serialize;
 use std::path::Path;
@@ -77,52 +80,7 @@ pub fn status(root: &Path) -> Result<GitStatus> {
     let divergence = oid
         .zip(upstream.as_ref().and_then(|branch| branch.get().target()))
         .and_then(|(head, remote)| repo.graph_ahead_behind(head, remote).ok());
-    let mut options = git2::StatusOptions::new();
-    options
-        .include_untracked(true)
-        .recurse_untracked_dirs(true)
-        .include_ignored(false);
-    let statuses = repo.statuses(Some(&mut options))?;
-    let files = statuses
-        .iter()
-        .take(1000)
-        .filter_map(|entry| {
-            let path = entry.path()?.to_owned();
-            let status = entry.status();
-            Some(GitFile {
-                path,
-                staged: status.intersects(
-                    git2::Status::INDEX_NEW
-                        | git2::Status::INDEX_MODIFIED
-                        | git2::Status::INDEX_DELETED
-                        | git2::Status::INDEX_RENAMED
-                        | git2::Status::INDEX_TYPECHANGE,
-                ),
-                unstaged: status.intersects(
-                    git2::Status::WT_NEW
-                        | git2::Status::WT_MODIFIED
-                        | git2::Status::WT_DELETED
-                        | git2::Status::WT_RENAMED
-                        | git2::Status::WT_TYPECHANGE,
-                ),
-                conflicted: status.is_conflicted(),
-                status: if status.is_conflicted() {
-                    "conflict"
-                } else if status.intersects(git2::Status::INDEX_DELETED | git2::Status::WT_DELETED)
-                {
-                    "deleted"
-                } else if status.intersects(git2::Status::INDEX_RENAMED | git2::Status::WT_RENAMED)
-                {
-                    "renamed"
-                } else if status.intersects(git2::Status::INDEX_NEW | git2::Status::WT_NEW) {
-                    "added"
-                } else {
-                    "modified"
-                }
-                .into(),
-            })
-        })
-        .collect();
+    let (files, truncated) = status_files::status_files(root)?;
     let mut commits = Vec::new();
     if let Some(oid) = oid {
         let walk = history_walk(&repo, oid)?;
@@ -140,7 +98,7 @@ pub fn status(root: &Path) -> Result<GitStatus> {
         state: format!("{:?}", repo.state()),
         files,
         commits,
-        truncated: statuses.len() > 1000,
+        truncated,
     })
 }
 

@@ -4,8 +4,10 @@ import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
 import { cn } from "../../utils";
+import { useGitRemoteCopyActions } from "./useGitRemoteCopyActions";
 
 export function GitSourceControlToolbar({
+  target,
   disabled,
   canSync,
   canCommit,
@@ -24,6 +26,7 @@ export function GitSourceControlToolbar({
   canStage,
   canUnstage,
 }: {
+  target?: { projectId: string; worktreePath?: string };
   disabled: boolean;
   canSync: boolean;
   canCommit: boolean;
@@ -43,6 +46,7 @@ export function GitSourceControlToolbar({
   canUnstage: boolean;
 }) {
   const { t } = useTranslation();
+  const remoteCopies = useGitRemoteCopyActions(target);
   const actions = [
     {
       key: "pull",
@@ -130,7 +134,9 @@ export function GitSourceControlToolbar({
         <CardActionMenu
           label={t("git.actions.more")}
           triggerClassName="h-6 w-6"
+          onOpenChange={remoteCopies.onOpenChange}
           actions={[
+            ...remoteCopies.actions,
             {
               key: "fetch",
               label: t("git.actions.fetch"),

@@ -1,4 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
+export interface GitRemote {
+  name: string;
+  url: string;
+}
+export const getProjectGitRemotes = (
+  projectId: string,
+  worktreePath?: string,
+) =>
+  invoke<GitRemote[]>("get_project_git_remotes", { projectId, worktreePath });
+
 export type GitRepositoryAction =
   "fetch" | "pull" | "push" | "switch_branch" | "create_branch";
 export async function runProjectGitAction(
@@ -38,8 +48,7 @@ export interface GitStatus {
   commits: { sha: string; summary: string; author: string; time: number }[];
   truncated: boolean;
 }
-export const getProjectGitStatus = (projectId: string, worktreePath?: string) =>
-  invoke<GitStatus>("get_project_git_status", { projectId, worktreePath });
+export { getProjectGitStatus } from "./projectGitStatus";
 export const getProjectGitDiff = (
   projectId: string,
   worktreePath: string | undefined,

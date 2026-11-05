@@ -21,13 +21,12 @@ pub(crate) fn validate_branch_name(branch: &str) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
+pub(super) fn git_command(root: &Path) -> Command {
     let mut command = Command::new("git");
     command
         .arg("--literal-pathspecs")
         .arg("-C")
         .arg(root)
-        .args(args)
         .env("GIT_TERMINAL_PROMPT", "0");
     // The authorized checkout, rather than a launching shell's overrides, owns the operation.
     for name in [
@@ -38,6 +37,12 @@ pub(crate) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
     ] {
         command.env_remove(name);
     }
+    command
+}
+
+pub(crate) fn run_git(root: &Path, args: &[&str]) -> Result<()> {
+    let mut command = git_command(root);
+    command.args(args);
     super::super::cli_process::capture_prepared(command, "git", 120, None)
         .map_err(anyhow::Error::msg)
         .context("Unable to complete Git operation")?;
