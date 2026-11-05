@@ -4,7 +4,10 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import { useHerdrAttachment } from "./useHerdrAttachment";
-import { type TerminalTab, createTerminalTab } from "../../../lib/terminalLayout";
+import {
+  type TerminalTab,
+  createTerminalTab,
+} from "../../../lib/terminalLayout";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

@@ -103,6 +103,7 @@
     "completed": "文件操作已完成"
   },
   "herdr": {
+    "noInstalledAgent": "请先安装可启动的 Agent，或在设置中选择其他 Agent。",
     "launchProjectAgent": "在当前项目目录复用 Herdr 工作空间和已运行的所选 Agent；没有时启动。切换 Agent 会打开新标签，旧会话继续保留。",
     "configureAgent": "编辑启动指令",
     "selectAgent": "选择 Agent",

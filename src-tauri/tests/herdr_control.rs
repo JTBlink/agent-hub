@@ -734,8 +734,14 @@ fn claude_teams_uses_the_shared_start_flow_with_environment_on_the_new_pane() {
     )
     .unwrap();
     // The fixture intentionally returns no split pane; no Agent is launched after that failure.
-    let failure = control.start_agent(&opened.target, input).err().expect("fixture has no split pane");
+    let failure = control
+        .start_agent(&opened.target, input)
+        .err()
+        .expect("fixture has no split pane");
     let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
-    assert!(calls.contains("--env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"), "{failure:#}");
+    assert!(
+        calls.contains("--env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"),
+        "{failure:#}"
+    );
     assert!(!calls.contains("agent start"));
 }

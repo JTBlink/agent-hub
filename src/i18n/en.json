@@ -103,6 +103,7 @@
     "completed": "File operation completed"
   },
   "herdr": {
+    "noInstalledAgent": "Install a supported agent or choose another agent in settings.",
     "launchProjectAgent": "Reuse the Herdr workspace and selected agent in the current project directory, starting one only when needed. Changing agents opens a new tab and preserves the previous session.",
     "configureAgent": "Edit launch command",
     "selectAgent": "Choose an agent",

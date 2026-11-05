@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { getAgentLaunchSettings } from "../../../lib/tauri";
 import {
   installedTerminalAgents,
@@ -18,6 +19,7 @@ export function useHerdrMenuLaunch(
   onSelect?: () => void,
   tools: readonly ToolInfo[] = [],
 ) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [busy, setBusy] = useState(false);
@@ -56,7 +58,7 @@ export function useHerdrMenuLaunch(
               item.toolKey === settings.document.default_agent ||
               item.id === settings.document.default_agent,
           ) ?? choices[0]);
-      if (!choice) throw new Error("PREVIEW_AGENT_NOT_INSTALLED");
+      if (!choice) throw new Error(t("herdr.noInstalledAgent"));
       const inventory = await api.getHerdrInventory();
       if (!valid()) return false;
       if (!inventory.installed) await api.installHerdr();
