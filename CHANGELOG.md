@@ -4,7 +4,7 @@
 
 ## [Unreleased]
 
-- 编译能力与产品形态统一在 `products/capabilities.json` 配置；云端同步、GitHub、GitLab 和 Herdr 可独立选择。GitHub／GitLab 实现拆为独立模块，关闭后排除专属入口、平台调用及备份后台任务，保留现有本地数据。
+- 编译能力与产品形态统一在 `products/features.json` 配置；云端同步、GitHub、GitLab 和 Herdr 可独立选择。GitHub／GitLab 实现拆为独立模块，关闭后排除专属入口、平台调用及备份后台任务，保留现有本地数据。
 
 - 终端分屏改为只拆分当前选中的窗格，支持混合左右／上下布局；关闭窗格合并所属区域，保留其他终端进程与布局，并兼容旧布局恢复。
 

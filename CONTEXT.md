@@ -2,7 +2,7 @@
 
 当前应用以 Skills Manager 的实现为基础，使用唯一的 React + Tauri 主入口；架构切换见 ADR-0008。旧配置编辑器和双窗口宿主不再属于当前实现。
 
-桌面宿主通过共享 `builder()` 或 `run(context)` 组装应用，配置与前端资源由可执行入口提供；前端应用外壳与页面路由分离，可追加宿主页。当前通过 Cargo features 和产品配置组装标准版与 Personal 个人版；默认标准版保留完整能力，个人版默认排除可选集成（Herdr、云端同步、GitHub、GitLab），能力及产品选择统一维护在 `products/capabilities.json`，构建与运行目录按产品隔离，尚未发布独立 UI 包，见[应用组装边界](docs/architecture/app-composition.md)。
+桌面宿主通过共享 `builder()` 或 `run(context)` 组装应用，配置与前端资源由可执行入口提供；前端应用外壳与页面路由分离，可追加宿主页。当前通过 Cargo features 和产品配置组装标准版与 Personal 个人版；默认标准版保留完整能力，个人版默认排除可选集成（Herdr、云端同步、GitHub、GitLab），能力及产品选择统一维护在 `products/features.json`，构建与运行目录按产品隔离，尚未发布独立 UI 包，见[应用组装边界](docs/architecture/app-composition.md)。
 
 - **Skill**：以 `SKILL.md` 为入口的能力目录，可包含脚本和资料。
 - **技能库**：由应用管理的 Skill 内容、来源和标签；默认内容存放于 `~/.agent-hub/skills`，应用数据库、配置和日志仍在 `~/.agent-hub`。技能按 Agent 原生目录规则部署；技能库不再提供整库共享链接开关。

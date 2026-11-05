@@ -1,5 +1,5 @@
 {
-  "capabilities": {
+  "features": {
     "herdr": {
       "description": "Herdr 内置集成",
       "sidebar": ["herdr"],

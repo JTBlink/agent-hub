@@ -6,13 +6,13 @@ import { repositoryRoot } from "../../shared/paths.mjs";
 import { cargoTargetDir } from "../build-cache.mjs";
 
 const ROOT = repositoryRoot;
-export const capabilityCatalog = JSON.parse(
-  readFileSync(resolve(ROOT, "products/capabilities.json"), "utf8"),
+export const featureCatalog = JSON.parse(
+  readFileSync(resolve(ROOT, "products/features.json"), "utf8"),
 );
-export function capabilityAliases(root, features) {
+export function featureAliases(root, features) {
   return Object.fromEntries(
-    Object.entries(capabilityCatalog.capabilities).flatMap(([id, capability]) =>
-      Object.entries(capability.aliases ?? {}).map(([alias, paths]) => [
+    Object.entries(featureCatalog.features).flatMap(([id, featureDefinition]) =>
+      Object.entries(featureDefinition.aliases ?? {}).map(([alias, paths]) => [
         alias,
         resolve(
           root,
@@ -86,13 +86,15 @@ export function resolveProduct(input, cargoFeatures) {
     new Set(entries).size !== entries.length
   )
     throw new Error("Unknown or duplicate sidebar module");
-  for (const [id, capability] of Object.entries(capabilityCatalog.capabilities))
+  for (const [id, featureDefinition] of Object.entries(featureCatalog.features))
     if (
-      (capability.sidebar ?? []).some((entry) => entries.includes(entry)) &&
+      (featureDefinition.sidebar ?? []).some((entry) =>
+        entries.includes(entry),
+      ) &&
       !selected.has(id)
     )
       throw new Error(
-        `${capability.description}: sidebar requires the ${id} Cargo feature`,
+        `${featureDefinition.description}: sidebar requires the ${id} Cargo feature`,
       );
   if (
     !panels.has(sidebar.defaultPanel) ||
@@ -177,9 +179,11 @@ export function loadProduct(
       ? resolve(ROOT, selection)
       : resolve(ROOT, "products", `${selection}.json`);
   const graph = cargoFeatures ?? cargoFeatureGraph();
-  for (const name of Object.keys(capabilityCatalog.capabilities))
+  for (const name of Object.keys(featureCatalog.features))
     if (!(name in graph))
-      throw new Error(`Capability is missing its Cargo feature: ${name}`);
+      throw new Error(
+        `Feature definition is missing its Cargo feature: ${name}`,
+      );
   const config = resolveProduct(
     (() => {
       const input = JSON.parse(readFileSync(configPath, "utf8"));
@@ -191,12 +195,12 @@ export function loadProduct(
         !Array.isArray(input.sidebar.bottom)
       )
         throw new Error("Invalid product sidebar");
-      const features = capabilityCatalog.products[input.id] ?? input.features;
+      const features = featureCatalog.products[input.id] ?? input.features;
       const selected = resolveFeatures(features, graph);
       const disabledEntries = new Set(
-        Object.entries(capabilityCatalog.capabilities).flatMap(
-          ([id, capability]) =>
-            selected.has(id) ? [] : (capability.sidebar ?? []),
+        Object.entries(featureCatalog.features).flatMap(
+          ([id, featureDefinition]) =>
+            selected.has(id) ? [] : (featureDefinition.sidebar ?? []),
         ),
       );
       const sidebar = {
@@ -308,10 +312,9 @@ export function prepareProduct(product) {
         : "") +
       `export const featureModules: readonly FeatureModule[] = [${product.features.includes("herdr") ? "herdrModule" : ""}];\n`,
   );
-  const platforms = Object.keys(capabilityCatalog.capabilities).filter(
+  const platforms = Object.keys(featureCatalog.features).filter(
     (name) =>
-      capabilityCatalog.capabilities[name].platform &&
-      product.features.includes(name),
+      featureCatalog.features[name].platform && product.features.includes(name),
   );
   writeGenerated(
     resolve(product.generatedDir, "platforms.ts"),
@@ -319,7 +322,7 @@ export function prepareProduct(product) {
       platforms
         .map(
           (name) =>
-            `import { ${name}Platform } from ${JSON.stringify(resolve(ROOT, capabilityCatalog.capabilities[name].platform))};\n`,
+            `import { ${name}Platform } from ${JSON.stringify(resolve(ROOT, featureCatalog.features[name].platform))};\n`,
         )
         .join("") +
       `export const taskPlatforms: readonly TaskPlatform[] = [${platforms.map((name) => name + "Platform").join(",")}];\n` +
@@ -344,7 +347,7 @@ export function prepareProduct(product) {
             "@app/herdr": [integration],
             "@app/product": [resolve(product.generatedDir, "product.ts")],
             ...Object.fromEntries(
-              Object.entries(capabilityAliases(ROOT, product.features)).map(
+              Object.entries(featureAliases(ROOT, product.features)).map(
                 ([alias, path]) => [alias, [path]],
               ),
             ),

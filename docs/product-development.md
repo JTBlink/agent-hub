@@ -2,7 +2,9 @@
 
 本文说明如何为 AgentHub 增加编译期可选功能，以及如何配置产品。构建操作和产物位置见[编译、打包与安装](build-and-install.md)，整体组装方式见[应用组装边界](architecture/app-composition.md)。
 
-编译能力与产品形态统一在 [`products/capabilities.json`](../products/capabilities.json) 管理。`capabilities` 定义能力、前端实现／缺省入口和关联侧栏；`products` 为各产品选择能力。构建入口读取同一配置，向前端、桌面端和配套 CLI 传递同一特性集合与摘要。
+编译能力与产品形态统一在 [`products/features.json`](../products/features.json) 管理。`features` 定义编译特性、前端实现／缺省入口和关联侧栏；`products` 为各产品选择能力。构建入口读取同一配置，向前端、桌面端和配套 CLI 传递同一特性集合与摘要。
+
+`features.json` 是本项目的产品组装清单，不是 Cargo 内置配置文件。实际特性及依赖以 `src-tauri/Cargo.toml` 的 `[features]` 为准，清单沿用相同的 feature ID（例如 `cloud-sync`）。Tauri 的 `capabilities` 继续专指权限声明，二者分别维护。
 
 ## 配置一个产品
 
@@ -71,7 +73,7 @@ src-tauri/src/commands/notes.rs  # 参数、权限与错误适配
 
 ## 1. 登记 Rust feature
 
-在 `src-tauri/Cargo.toml` 声明 `notes = []`，有实际依赖时在该特性中表达依赖；专属第三方库声明 `optional = true` 并通过 `dep:<依赖名>` 启用。同时在 `products/capabilities.json` 登记能力；各产品是否启用只在该文件的 `products` 中选择，不默认加入全部产品。Cargo 的 `standard` 默认集合保留直接使用 Cargo 时的兼容入口；正式产品构建始终使用显式特性集合。
+在 `src-tauri/Cargo.toml` 声明 `notes = []`，有实际依赖时在该特性中表达依赖；专属第三方库声明 `optional = true` 并通过 `dep:<依赖名>` 启用。同时在 `products/features.json` 登记能力；各产品是否启用只在该文件的 `products` 中选择，不默认加入全部产品。Cargo 的 `standard` 默认集合保留直接使用 Cargo 时的兼容入口；正式产品构建始终使用显式特性集合。
 
 在 core、commands 的模块声明处使用同一条件：
 

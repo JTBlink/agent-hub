@@ -2,8 +2,8 @@ import { relative, resolve } from "node:path";
 import {
   loadProduct,
   prepareProduct,
-  capabilityAliases,
-  capabilityCatalog,
+  featureAliases,
+  featureCatalog,
 } from "./config.mjs";
 
 /** Keep product selection out of the shared Vite/prototype configuration. */
@@ -26,7 +26,7 @@ export function productViteConfig(root) {
     resolve: {
       alias: {
         "@app/features": resolve(product.generatedDir, "features.ts"),
-        ...capabilityAliases(root, product.features),
+        ...featureAliases(root, product.features),
         "@app/platforms": resolve(product.generatedDir, "platforms.ts"),
         "@app/product":
           process.env.AGENT_HUB_PRODUCT_TS ||
@@ -80,17 +80,18 @@ export function productViteConfig(root) {
             this.error(
               "Excluded Herdr implementation entered the product bundle",
             );
-          const excluded = Object.entries(
-            capabilityCatalog.capabilities,
-          ).flatMap(([id, capability]) =>
-            product.features.includes(id) ? [] : (capability.excluded ?? []),
+          const excluded = Object.entries(featureCatalog.features).flatMap(
+            ([id, featureDefinition]) =>
+              product.features.includes(id)
+                ? []
+                : (featureDefinition.excluded ?? []),
           );
           if (
             modules.some((id) =>
               excluded.some((prefix) => id.startsWith(prefix)),
             )
           )
-            this.error("Excluded capability entered the product bundle");
+            this.error("Excluded feature entered the product bundle");
           this.emitFile({
             type: "asset",
             fileName: "product-build.json",

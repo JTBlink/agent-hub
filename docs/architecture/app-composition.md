@@ -54,7 +54,7 @@ app_lib::builder()?
 
 ## 产品编译时组装
 
-产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 默认排除可选集成。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。可选能力及产品选择统一在 `products/capabilities.json` 管理，覆盖 Herdr、云端同步、GitHub 与 GitLab；产品清单只保留身份与界面排列。
+产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 默认排除可选集成。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。可选能力及产品选择统一在 `products/features.json` 管理，覆盖 Herdr、云端同步、GitHub 与 GitLab；产品清单只保留身份与界面排列。
 
 `./agent-hub.sh build --product personal --debug --bundles app` 经共享 Node 入口解析产品，向前端、桌面和配套 CLI 传递相同配置摘要与实际特性集合。`src-tauri/src/product/` 保存编译期身份；`build-info` CLI 与 `get_build_info` IPC 只读返回该身份，前端在应用 Provider 初始化前核验，拒绝混用资源。
 

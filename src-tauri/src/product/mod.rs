@@ -1,6 +1,6 @@
 //! Read-only identity shared by the desktop host and its companion CLI.
 
-include!(concat!(env!("OUT_DIR"), "/capabilities.rs"));
+include!(concat!(env!("OUT_DIR"), "/features.rs"));
 
 #[derive(Debug, serde::Serialize)]
 pub struct BuildInfo {
@@ -11,7 +11,7 @@ pub struct BuildInfo {
     pub version: &'static str,
 }
 
-/// Describe compiled capabilities, independently of runtime environment variables.
+/// Describe compiled features, independently of runtime environment variables.
 pub fn current() -> BuildInfo {
     BuildInfo {
         product_id: env!("AGENT_HUB_PRODUCT_ID"),

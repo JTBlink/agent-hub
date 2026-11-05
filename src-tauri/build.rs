@@ -42,15 +42,14 @@ fn product_identity() {
         );
         println!("cargo:rustc-env={name}={value}");
     }
-    println!("cargo:rerun-if-changed=../products/capabilities.json");
-    let catalog: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string("../products/capabilities.json")
-            .expect("capability catalog is required"),
+    println!("cargo:rerun-if-changed=../products/features.json");
+    let feature_catalog: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string("../products/features.json").expect("feature catalog is required"),
     )
-    .expect("invalid capability catalog");
-    let mut actual: Vec<String> = catalog["capabilities"]
+    .expect("invalid feature catalog");
+    let mut actual: Vec<String> = feature_catalog["features"]
         .as_object()
-        .expect("capabilities must be an object")
+        .expect("features must be an object")
         .keys()
         .chain(std::iter::once(&"standard".to_owned()))
         .filter(|feature| {
@@ -64,12 +63,12 @@ fn product_identity() {
         .collect();
     actual.sort_unstable();
     let generated =
-        std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap()).join("capabilities.rs");
+        std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap()).join("features.rs");
     std::fs::write(
         generated,
         format!("const COMPILED_FEATURES: &[&str] = &{actual:?};"),
     )
-    .expect("write compiled capability catalog");
+    .expect("write compiled feature catalog");
     println!("cargo:rerun-if-env-changed=AGENT_HUB_PRODUCT_FEATURES");
     if let Ok(expected) = std::env::var("AGENT_HUB_PRODUCT_FEATURES") {
         let mut expected: Vec<_> = expected.split(',').filter(|v| !v.is_empty()).collect();
