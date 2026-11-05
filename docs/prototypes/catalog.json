@@ -64,5 +64,14 @@
     "path": "/docs/prototypes/agent-settings/",
     "source": "docs/prototypes/agent-settings/",
     "aliases": ["/tests/browser/settings-agents-prototype.html"]
+  },
+  {
+    "id": "ai-native",
+    "title": "AI Native",
+    "description": "默认关闭的实验性功能；需求与开发、Issue、MR 等场景的 Skill / 脚本编排独立原型。",
+    "status": "设计中",
+    "path": "/docs/prototypes/ai-native/",
+    "source": "docs/prototypes/ai-native/",
+    "layouts": ["A", "B", "C"]
   }
 ]

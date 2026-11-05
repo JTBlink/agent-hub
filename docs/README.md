@@ -10,6 +10,8 @@
 - [帮助内容与维护指南](help/README.md)（应用离线帮助和公开文档站共用）
 - [Skill 推荐与用法指南](product/skill-recommendations.md)
 - [系统架构](architecture/overview.md)
+- [应用组装边界](architecture/app-composition.md)（含 AI Native 实验性功能的原型边界）
+- [AI Native 场景流程编排](plans/agent-hub.md#ai-native-场景流程编排)（独立需求设计，尚未接入生产）
 - [目录与本地数据](architecture/directory-structure.md)
 - [项目开发 Skill](../.agents/skills/rust-dev/SKILL.md)与 [GitHub 发布 Skill](../.agents/skills/github-cli/SKILL.md)
 - [视觉规范](../.agents/skills/rust-dev/references/ui-guidelines.md)与[图标](../.agents/skills/rust-dev/references/icon-assets.md)

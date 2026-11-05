@@ -1,0 +1,2353 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI Native · 独立交互原型</title>
+    <style>
+      /* Standalone prototype; theme values follow AgentHub's Catppuccin workbench. */
+      :root {
+        color-scheme: light;
+        --bg: #eff1f5;
+        --side: #e6e9ef;
+        --surface: #fff;
+        --hover: #eceef3;
+        --active: #dce1ec;
+        --line: #d5d9e3;
+        --text: #4c4f69;
+        --sub: #5c5f77;
+        --muted: #6c6f85;
+        --accent: #1e66f5;
+        --on: #fff;
+        --tint: rgba(30, 102, 245, 0.09);
+        --green: #287841;
+        --red: #d20f39;
+        --yellow: #97680e;
+        --purple: #7940bf;
+      }
+      .dark {
+        color-scheme: dark;
+        --bg: #1e1e2e;
+        --side: #1b1b29;
+        --surface: #232332;
+        --hover: #2a2a3c;
+        --active: #35354b;
+        --line: #323245;
+        --text: #cdd6f4;
+        --sub: #bac2de;
+        --muted: #9399b2;
+        --accent: #89b4fa;
+        --on: #11111b;
+        --tint: rgba(137, 180, 250, 0.1);
+        --green: #a6e3a1;
+        --red: #f38ba8;
+        --yellow: #f9e2af;
+        --purple: #cba6f7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          13px/1.55 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          "PingFang SC",
+          sans-serif;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 7px 11px;
+        display: inline-flex;
+        gap: 7px;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+      }
+      button:hover {
+        background: var(--hover);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      button.primary {
+        background: var(--accent);
+        color: var(--on);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      button.ghost {
+        border-color: transparent;
+        background: transparent;
+      }
+      button.small {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+      .selected {
+        background: var(--tint) !important;
+        color: var(--accent) !important;
+        border-color: var(--accent) !important;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      input,
+      textarea {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text);
+        padding: 9px 10px;
+        width: 100%;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 90px;
+      }
+      label {
+        display: block;
+        margin: 15px 0 6px;
+        font-size: 12px;
+        color: var(--sub);
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-size: 26px;
+        letter-spacing: -0.6px;
+        font-weight: 650;
+      }
+      h2 {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      h3 {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      p {
+        color: var(--sub);
+      }
+      small,
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .between {
+        justify-content: space-between;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .tag {
+        display: inline-flex;
+        gap: 5px;
+        align-items: center;
+        border: 1px solid var(--line);
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .blue {
+        color: var(--accent);
+      }
+      .green {
+        color: var(--green);
+      }
+      .red {
+        color: var(--red);
+      }
+      .yellow {
+        color: var(--yellow);
+      }
+      .purple {
+        color: var(--purple);
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+      }
+      .titlebar {
+        height: 42px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+        background: var(--side);
+        gap: 20px;
+        user-select: none;
+      }
+      .lights {
+        display: flex;
+        gap: 7px;
+      }
+      .lights i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--active);
+      }
+      .titlebar > span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .address {
+        margin: auto;
+        min-width: 250px;
+        padding: 3px 15px;
+        font-size: 11px;
+        color: var(--muted);
+        background: var(--bg);
+        border-radius: 5px;
+      }
+      .shell {
+        display: flex;
+        height: calc(100vh - 66px);
+        min-height: 600px;
+      }
+      .rail {
+        width: 51px;
+        flex-shrink: 0;
+        background: var(--side);
+        border-right: 1px solid var(--line);
+        padding: 11px 5px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .rail button {
+        height: 38px;
+        width: 40px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        border-radius: 5px;
+      }
+      .rail button.on {
+        background: var(--tint);
+        color: var(--accent);
+        position: relative;
+      }
+      .rail button.on:before {
+        content: "";
+        position: absolute;
+        left: -5px;
+        width: 2px;
+        height: 24px;
+        background: var(--accent);
+      }
+      .rail svg {
+        width: 21px;
+        height: 21px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .rail .bottom {
+        margin-top: auto;
+      }
+      .sidebar {
+        width: 252px;
+        flex-shrink: 0;
+        background: var(--side);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+      }
+      .side-title {
+        padding: 19px 17px 14px;
+      }
+      .side-title strong {
+        font-size: 14px;
+      }
+      .side-title small {
+        display: block;
+        margin-top: 4px;
+      }
+      .side-label {
+        color: var(--muted);
+        font-size: 11px;
+        padding: 20px 17px 8px;
+      }
+      .navitem {
+        border: 0;
+        background: transparent;
+        text-align: left;
+        justify-content: flex-start;
+        width: calc(100% - 16px);
+        margin: 2px 8px;
+        padding: 9px 10px;
+      }
+      .navitem.active {
+        background: var(--tint);
+        color: var(--accent);
+      }
+      .navitem .tag {
+        margin-left: auto;
+      }
+      .side-bottom {
+        padding: 16px;
+        margin-top: auto;
+        border-top: 1px solid var(--line);
+      }
+      .side-bottom p {
+        font-size: 11px;
+        margin-top: 6px;
+      }
+      .workspace {
+        padding: 12px 16px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .workspace .path {
+        font-size: 11px;
+        margin-top: 3px;
+        color: var(--muted);
+      }
+      main {
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
+        position: relative;
+      }
+      .page {
+        max-width: 1280px;
+        margin: auto;
+        padding: 29px 32px 110px;
+      }
+      .breadcrumb {
+        display: flex;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 23px;
+      }
+      .headline {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 22px;
+      }
+      .headline p {
+        margin-top: 5px;
+        font-size: 12px;
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        overflow: hidden;
+      }
+      .panel-head {
+        padding: 15px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+      .panel-body {
+        padding: 18px;
+      }
+      .flags {
+        max-width: 920px;
+      }
+      .protocol {
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.1px;
+      }
+      .flag-banner {
+        padding: 17px 20px;
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--yellow);
+        border-radius: 6px;
+        margin: 25px 0;
+        color: var(--sub);
+        font-size: 12px;
+        background: var(--surface);
+      }
+      .flag {
+        padding: 25px 24px;
+        display: flex;
+        gap: 22px;
+        align-items: flex-start;
+      }
+      .flag-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 11px;
+        background: var(--tint);
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 650;
+      }
+      .flag h2 {
+        font-size: 17px;
+      }
+      .flag p {
+        font-size: 12px;
+        margin: 8px 0;
+        max-width: 540px;
+      }
+      .toggle {
+        width: 36px;
+        height: 21px;
+        padding: 2px;
+        border: 0;
+        border-radius: 20px;
+        background: var(--active);
+        justify-content: flex-start;
+        margin-top: 2px;
+      }
+      .toggle span {
+        height: 17px;
+        width: 17px;
+        border-radius: 50%;
+        background: var(--sub);
+      }
+      .toggle.enabled {
+        background: var(--accent);
+        justify-content: flex-end;
+      }
+      .toggle.enabled span {
+        background: var(--on);
+      }
+      .flag-note {
+        padding: 15px 24px;
+        border-top: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .empty {
+        padding: 65px 20px;
+        text-align: center;
+      }
+      .empty p {
+        margin: 12px 0 22px;
+      }
+      .hint {
+        padding: 10px 13px;
+        background: var(--tint);
+        border-radius: 6px;
+        color: var(--sub);
+        font-size: 12px;
+      }
+      .human-strip {
+        display: grid;
+        grid-template-columns: 1fr 1.65fr 1fr;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: 23px;
+        overflow: hidden;
+      }
+      .human-strip > div {
+        padding: 13px 16px;
+        border-right: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .human-strip > div:last-child {
+        border: 0;
+      }
+      .human-strip b {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .human-strip small {
+        font-size: 11px;
+      }
+      .human-strip .auto {
+        background: var(--tint);
+      }
+      .tabs {
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 23px;
+        margin-bottom: 23px;
+      }
+      .tabs button {
+        padding: 9px 0 11px;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .tabs button.active {
+        border-bottom: 2px solid var(--accent);
+        color: var(--text);
+      }
+      .split {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 292px;
+        gap: 18px;
+        align-items: start;
+      }
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .step {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        text-align: left;
+        justify-content: flex-start;
+        width: 100%;
+        padding: 13px 15px;
+        background: var(--surface);
+        border-radius: 7px;
+        border: 1px solid var(--line);
+        gap: 12px;
+        margin-bottom: 20px;
+        white-space: normal;
+      }
+      .step:not(:last-child):after {
+        content: "↓";
+        position: absolute;
+        left: 29px;
+        bottom: -21px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .step.active {
+        border-color: var(--accent);
+        background: var(--tint);
+      }
+      .step .step-mark {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 1px;
+      }
+      .step .step-copy {
+        flex: 1;
+        min-width: 0;
+      }
+      .step h3 {
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .step p {
+        font-size: 11px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+      .step .tag {
+        margin-top: 4px;
+      }
+      .stage-meta {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .section-title {
+        margin-bottom: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .section-title h2 {
+        font-size: 13px;
+      }
+      .inspector {
+        position: sticky;
+        top: 20px;
+      }
+      .inspector .panel-body {
+        padding: 16px;
+      }
+      .inspector h3 {
+        font-size: 13px;
+      }
+      .inspector input {
+        font-size: 12px;
+      }
+      .segmented {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .segmented button {
+        font-size: 11px;
+        padding: 5px 8px;
+      }
+      .label-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 16px;
+        margin-bottom: 6px;
+      }
+      .label-row label {
+        margin: 0;
+      }
+      .label-row small {
+        margin-left: auto;
+      }
+      .token {
+        font:
+          11px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .footnote {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 12px;
+      }
+      .case {
+        display: grid;
+        grid-template-columns: 25px minmax(0, 1fr) 75px;
+        gap: 10px;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        align-items: start;
+      }
+      .case:last-child {
+        border: 0;
+      }
+      .case input {
+        width: 15px;
+        accent-color: var(--accent);
+        margin-top: 3px;
+      }
+      .case p {
+        font-size: 12px;
+        margin-top: 5px;
+      }
+      .case b {
+        font-size: 12px;
+        font-weight: 550;
+      }
+      .case .tag {
+        justify-self: end;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .toolbar input {
+        max-width: 330px;
+      }
+      .terminal {
+        background: var(--side);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 19px;
+        min-height: 330px;
+        white-space: pre-wrap;
+        font:
+          12px/1.95 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .runline {
+        display: grid;
+        grid-template-columns: 65px 1fr;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      .runline time {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .runline span {
+        font-size: 12px;
+      }
+      .accept-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .accept-item {
+        border-bottom: 1px solid var(--line);
+        padding: 13px 0;
+      }
+      .accept-item:last-child {
+        border: 0;
+      }
+      .accept-item p {
+        font-size: 11px;
+        margin-top: 4px;
+      }
+      .statusbar {
+        height: 24px;
+        background: var(--side);
+        border-top: 1px solid var(--line);
+        padding: 0 12px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .statusbar .right {
+        margin-left: auto;
+      }
+      .switcher {
+        position: fixed;
+        bottom: 39px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px;
+        border: 1px solid var(--line);
+        background: var(--side);
+        border-radius: 9px;
+        box-shadow: 0 8px 30px #0003;
+        z-index: 20;
+      }
+      .switcher span {
+        font-size: 11px;
+        padding: 0 9px;
+      }
+      .switcher button {
+        font-size: 11px;
+        padding: 5px 8px;
+      }
+      .switcher .sep {
+        width: 1px;
+        height: 19px;
+        background: var(--line);
+        padding: 0;
+        margin: 0 4px;
+      }
+      .toast {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        padding: 12px 20px;
+        border-radius: 7px;
+        box-shadow: 0 8px 24px #0002;
+        z-index: 80;
+        max-width: 80vw;
+        font-size: 12px;
+      }
+      .matrix-row {
+        display: grid;
+        grid-template-columns: 65px 1fr 70px;
+        gap: 10px;
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .matrix-row:last-child {
+        border: 0;
+      }
+      .matrix-row span:first-child {
+        color: var(--muted);
+      }
+      .matrix-row .tag {
+        justify-self: end;
+      }
+      .subheading {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 13px;
+      }
+      .empty-state {
+        padding: 25px;
+        text-align: center;
+        color: var(--muted);
+      }
+      dialog {
+        padding: 0;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        width: min(860px, calc(100vw - 40px));
+        max-height: 85vh;
+        box-shadow: 0 25px 100px #0005;
+      }
+      dialog::backdrop {
+        background: #1116;
+        backdrop-filter: blur(4px);
+      }
+      .modal-head {
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .modal-body {
+        padding: 21px 22px;
+        overflow: auto;
+        max-height: calc(85vh - 145px);
+      }
+      .modal-foot {
+        padding: 14px 22px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: flex-end;
+        gap: 9px;
+      }
+      .modal-body pre {
+        white-space: pre-wrap;
+        background: var(--bg);
+        padding: 16px;
+        border-radius: 6px;
+        font-size: 11px;
+        line-height: 1.75;
+      }
+      .code-editor {
+        font:
+          12px/1.7 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        min-height: 330px;
+      }
+      .error {
+        font-size: 12px;
+        color: var(--red);
+        margin-top: 9px;
+      }
+      .palette {
+        width: min(700px, calc(100vw - 40px));
+        margin-top: 15vh;
+      }
+      .palette input {
+        border: 0;
+        border-radius: 0;
+        padding: 20px 24px;
+        font-size: 17px;
+        background: var(--surface);
+      }
+      .palette-result {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 24px;
+        text-align: left;
+        justify-content: flex-start;
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        background: var(--tint);
+      }
+      .palette-result b {
+        display: block;
+        font-size: 13px;
+      }
+      .palette footer {
+        padding: 11px 22px;
+        border-top: 1px solid var(--line);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .compact-layout .split {
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      }
+      .compact-layout .steps {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .compact-layout .step {
+        margin: 0;
+        min-height: 100px;
+      }
+      .compact-layout .step:after {
+        display: none;
+      }
+      .compact-layout .step-mark {
+        display: none;
+      }
+      .plan-note {
+        padding: 15px;
+        border-radius: 7px;
+        background: var(--bg);
+        font-size: 12px;
+        color: var(--sub);
+        margin-top: 14px;
+      }
+      .risk {
+        border-left: 2px solid var(--yellow);
+        padding-left: 12px;
+        margin: 12px 0;
+      }
+      .feature-visible {
+        animation: reveal 0.2s ease-out;
+      }
+      @keyframes reveal {
+        from {
+          opacity: 0;
+          transform: translateY(3px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          scroll-behavior: auto !important;
+        }
+      }
+      @media (max-width: 1100px) {
+        .sidebar {
+          width: 217px;
+        }
+        .page {
+          padding: 23px 22px 110px;
+        }
+        .split,
+        .compact-layout .split {
+          grid-template-columns: 1fr;
+        }
+        .inspector {
+          position: static;
+        }
+        .inspector .panel-body {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 15px;
+        }
+        .inspector .full {
+          grid-column: 1/-1;
+        }
+        .accept-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 720px) {
+        .sidebar {
+          width: 174px;
+        }
+        .rail {
+          width: 43px;
+          padding-left: 2px;
+          padding-right: 2px;
+        }
+        .page {
+          padding: 20px 16px 115px;
+        }
+        .headline {
+          flex-direction: column;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        .human-strip {
+          grid-template-columns: 1fr;
+        }
+        .human-strip > div {
+          border-bottom: 1px solid var(--line);
+          border-right: 0;
+          padding: 9px 12px;
+        }
+        .tabs {
+          gap: 17px;
+          overflow: auto;
+        }
+        .tabs button {
+          white-space: nowrap;
+        }
+        .address {
+          min-width: 0;
+        }
+        .titlebar > span {
+          display: none;
+        }
+        .flag {
+          padding: 18px;
+          gap: 13px;
+        }
+        .flag-icon {
+          display: none;
+        }
+        .switcher {
+          width: max-content;
+          max-width: 96vw;
+        }
+        .switcher span {
+          padding: 0 3px;
+        }
+        .switcher .optional {
+          display: none;
+        }
+        .compact-layout .steps {
+          grid-template-columns: 1fr;
+        }
+        .inspector .panel-body {
+          display: block;
+        }
+        .case {
+          grid-template-columns: 20px 1fr;
+        }
+        .case .tag {
+          grid-column: 2;
+          justify-self: start;
+        }
+        .statusbar .right {
+          display: none;
+        }
+      }
+      @media (max-width: 490px) {
+        .sidebar {
+          width: 138px;
+        }
+        .navitem {
+          font-size: 11px;
+          padding: 8px 6px;
+        }
+        .side-title,
+        .workspace,
+        .side-bottom {
+          padding: 12px;
+        }
+        .side-bottom p,
+        .navitem .tag {
+          display: none;
+        }
+        .rail {
+          width: 39px;
+        }
+        .rail button {
+          width: 34px;
+        }
+        .toolbar button {
+          font-size: 11px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="titlebar">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+      <span>AgentHub</span
+      ><button class="address" id="address" onclick="openPalette()">
+        agent-hub://flags <span style="margin-left: 30px">⌘ K</span></button
+      ><span>独立需求原型 · 演示数据</span>
+    </div>
+    <div class="shell">
+      <nav class="rail" aria-label="主导航" id="rail"></nav>
+      <aside class="sidebar" id="sidebar"></aside>
+      <main id="main"></main>
+    </div>
+    <div class="statusbar">
+      <span class="row"><i class="dot green"></i>本地交互原型</span
+      ><span>不连接项目或远端服务</span
+      ><span class="right" id="state-summary">AI Native 已关闭</span>
+    </div>
+    <div class="switcher" aria-label="原型控制">
+      <button class="ghost" onclick="cycle(-1)" aria-label="上一布局">←</button
+      ><span id="variant-label">A · 流程编排</span
+      ><button class="ghost" onclick="cycle(1)" aria-label="下一布局">→</button
+      ><span class="sep"></span
+      ><button class="ghost" onclick="theme()" id="theme-btn">浅色</button
+      ><button class="ghost optional" onclick="toggleScale()">字号</button
+      ><button class="ghost" onclick="openDesign()">设计说明</button
+      ><button class="ghost optional" onclick="resetDemo()">重置</button>
+    </div>
+    <dialog id="modal">
+      <div class="modal-head">
+        <h2 id="modal-title"></h2>
+        <button
+          class="ghost small"
+          onclick="closeModal()"
+          aria-label="关闭弹窗"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="modal-body" id="modal-content"></div>
+      <div class="modal-foot" id="modal-actions"></div>
+    </dialog>
+    <dialog class="palette" id="palette">
+      <input
+        id="palette-input"
+        aria-label="输入命令或内部地址"
+        placeholder="输入命令或内部地址"
+        autocomplete="off"
+        oninput="paletteResults()"
+        onkeydown="if (event.key === 'Enter') activatePalette();"
+      />
+      <div id="palette-results"></div>
+      <footer class="row between">
+        <span>↵ 打开　↑ ↓ 选择</span><span>Esc 关闭</span>
+      </footer>
+    </dialog>
+    <div id="announcement" role="status" aria-live="polite"></div>
+    <script>
+      // All state is memory-only. This file never invokes a Skill, process, network or project mutation.
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) =>
+        String(s ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      const icons = {
+        files: '<path d="M4 3h6l2 3h8v14H4z"/>',
+        search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/>',
+        git: '<circle cx="7" cy="5" r="2"/><circle cx="17" cy="7" r="2"/><circle cx="7" cy="19" r="2"/><path d="M7 7v10M17 9v2q0 3-10 3"/>',
+        tasks:
+          '<path d="M9 5h11M9 12h11M9 19h11M3 5l1 1 2-2M3 12l1 1 2-2M3 19l1 1 2-2"/>',
+        ai: '<path d="M12 2 3 7v10l9 5 9-5V7zM3 7l9 5 9-5M12 12v10"/><path d="m7 4 10 6"/>',
+        settings:
+          '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+        clock: '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
+      };
+      const svg = (id) =>
+        `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[id] || icons.ai}</svg>`;
+      const skill = (id, name, target, needs = [], when = "on_success") => ({
+        id,
+        name,
+        type: "skill",
+        target,
+        needs,
+        when,
+      });
+      const script = (id, name, target, needs = []) => ({
+        id,
+        name,
+        type: "script",
+        target: JSON.stringify(target),
+        needs,
+        when: "on_success",
+      });
+      const commonStart = () => [
+        skill(
+          "requirements",
+          "明确需求与验收标准",
+          "grill-with-docs",
+          [],
+          "human",
+        ),
+        skill("cases", "确认测试 Case", "ask-matt", ["requirements"], "human"),
+      ];
+      const commonEnd = (dep) => [
+        skill("review", "AI Review 与问题复验", "code-review", [dep]),
+        skill("delivery", "交付 MR 与跟踪 CI", "ask-matt", ["review"]),
+        skill("acceptance", "最终验收", "ask-matt", ["delivery"], "human"),
+      ];
+      const scenarios = [
+        {
+          id: "feature",
+          name: "需求与开发",
+          desc: "把需求变成可验收的交付，中间阶段由 AI 持续推进。",
+          icon: "◇",
+          steps: [
+            ...commonStart(),
+            skill("plan", "分析方案与开发 Plan", "ask-matt", ["cases"]),
+            skill("develop", "开发与失败修复", "tdd", ["plan"]),
+            script(
+              "verify",
+              "三层验证与构建",
+              ["npm", "run", "verify:core"],
+              ["develop"],
+            ),
+            ...commonEnd("verify"),
+          ],
+        },
+        {
+          id: "bugfix",
+          name: "缺陷修复",
+          desc: "从复现与回归 Case 开始，修复、复验和交付形成闭环。",
+          icon: "⌁",
+          steps: [
+            skill(
+              "requirements",
+              "确认问题与影响范围",
+              "ask-matt",
+              [],
+              "human",
+            ),
+            skill(
+              "cases",
+              "确认复现与回归 Case",
+              "ask-matt",
+              ["requirements"],
+              "human",
+            ),
+            skill("diagnose", "诊断真实失败", "diagnosing-bugs", ["cases"]),
+            skill("develop", "回归驱动修复", "tdd", ["diagnose"]),
+            script(
+              "verify",
+              "验证修复与受影响回归",
+              ["npm", "run", "verify:core"],
+              ["develop"],
+            ),
+            ...commonEnd("verify"),
+          ],
+        },
+        {
+          id: "issue",
+          name: "Issue 处理",
+          desc: "从工作项读取上下文，完成澄清、实现与证据回写。",
+          icon: "#",
+          steps: [
+            skill("requirements", "确认工作项与需求", "ask-matt", [], "human"),
+            skill(
+              "cases",
+              "确认可执行验收 Case",
+              "ask-matt",
+              ["requirements"],
+              "human",
+            ),
+            skill("plan", "分析依赖与拆解任务", "ask-matt", ["cases"]),
+            skill("develop", "实现工作项", "tdd", ["plan"]),
+            script(
+              "verify",
+              "运行受影响验证",
+              ["npm", "run", "verify:core"],
+              ["develop"],
+            ),
+            ...commonEnd("verify"),
+          ],
+        },
+        {
+          id: "mr",
+          name: "MR 处理",
+          desc: "围绕准确提交处理评审、CI 和修复，持续收敛到可验收版本。",
+          icon: "⑂",
+          steps: [
+            skill(
+              "requirements",
+              "确认 MR 范围与预期",
+              "ask-matt",
+              [],
+              "human",
+            ),
+            skill(
+              "cases",
+              "确认回归与验收 Case",
+              "ask-matt",
+              ["requirements"],
+              "human",
+            ),
+            skill("review", "审查当前变更", "code-review", ["cases"]),
+            skill("develop", "处理 Review 与 CI 失败", "ask-matt", ["review"]),
+            script(
+              "verify",
+              "执行回归并归集证据",
+              ["npm", "run", "verify:core"],
+              ["develop"],
+            ),
+            skill("delivery", "更新 MR 并核对门禁", "ask-matt", ["verify"]),
+            skill("acceptance", "最终验收", "ask-matt", ["delivery"], "human"),
+          ],
+        },
+        {
+          id: "release",
+          name: "发布检查",
+          desc: "核对来源提交、制品和发布条件，最终验收后进入项目发布流程。",
+          icon: "↗",
+          steps: [
+            skill(
+              "requirements",
+              "确认发布范围与目标",
+              "ask-matt",
+              [],
+              "human",
+            ),
+            skill(
+              "cases",
+              "确认发布验证 Case",
+              "ask-matt",
+              ["requirements"],
+              "human",
+            ),
+            script(
+              "build",
+              "验证构建与制品",
+              ["npm", "run", "build"],
+              ["cases"],
+            ),
+            skill("review", "核查提交、门禁与回滚", "code-review", ["build"]),
+            skill("delivery", "汇总发布就绪证据", "ask-matt", ["review"]),
+            skill(
+              "acceptance",
+              "发布前最终验收",
+              "ask-matt",
+              ["delivery"],
+              "human",
+            ),
+          ],
+        },
+        {
+          id: "l3",
+          name: "L3 建设与验收",
+          desc: "按固定基线评估、建设与补证，保留真实闭环和成员能力的验收边界。",
+          icon: "▧",
+          steps: [
+            skill(
+              "requirements",
+              "确认改造范围",
+              "setup-ai-native",
+              [],
+              "human",
+            ),
+            skill(
+              "cases",
+              "确认验收基线与 Case",
+              "setup-ai-native",
+              ["requirements"],
+              "human",
+            ),
+            skill("assess", "评估差距与规划批次", "setup-ai-native", ["cases"]),
+            skill("develop", "执行已授权改造批次", "setup-ai-native", [
+              "assess",
+            ]),
+            script(
+              "verify",
+              "自动验证与证据归集",
+              ["npm", "run", "verify:core"],
+              ["develop"],
+            ),
+            skill("review", "核对门禁与真实闭环", "setup-ai-native", [
+              "verify",
+            ]),
+            skill("delivery", "生成前后对比报告", "setup-ai-native", [
+              "review",
+            ]),
+            skill(
+              "acceptance",
+              "正式验收",
+              "setup-ai-native",
+              ["delivery"],
+              "human",
+            ),
+          ],
+        },
+        {
+          id: "custom",
+          name: "自定义场景",
+          desc: "自由组合 Skill、脚本和人工检查点，导出后可在外部调度器中使用。",
+          icon: "+",
+          steps: [
+            ...commonStart(),
+            script(
+              "custom",
+              "自定义脚本",
+              ["node", "-e", 'console.log("demo")'],
+              ["cases"],
+            ),
+            skill("acceptance", "最终验收", "ask-matt", ["custom"], "human"),
+          ],
+        },
+      ];
+      const clone = (v) => JSON.parse(JSON.stringify(v));
+      const casesDefault = [
+        {
+          id: "AC-01",
+          name: "核心路径完成预期结果",
+          given: "给定已登记项目与有效输入",
+          when: "执行本次需求的核心操作",
+          then: "用户得到需求约定的可观察结果",
+          layer: "E2E",
+          checked: false,
+        },
+        {
+          id: "AC-02",
+          name: "错误输入可恢复且不会丢失数据",
+          given: "给定无效或缺失输入",
+          when: "提交操作并修正输入",
+          then: "显示明确错误，修正后可重试，保留已有数据",
+          layer: "Integration",
+          checked: false,
+        },
+        {
+          id: "AC-03",
+          name: "权限和并发边界受保护",
+          given: "给定权限不足或外部并发修改",
+          when: "执行写入或刷新操作",
+          then: "操作明确受阻，旧结果不覆盖新状态",
+          layer: "Integration",
+          checked: false,
+        },
+        {
+          id: "AC-04",
+          name: "领域规则与边界输入正确",
+          given: "给定正常、空值与边界输入",
+          when: "执行领域逻辑",
+          then: "所有约定规则得到正确结果",
+          layer: "Unit",
+          checked: false,
+        },
+      ];
+      let enabled = false,
+        page = "flags",
+        scene = "feature",
+        tab = "flow",
+        variant = ["A", "B", "C"].includes(
+          new URLSearchParams(location.search).get("variant"),
+        )
+          ? new URLSearchParams(location.search).get("variant")
+          : "A",
+        selected = "plan",
+        workflow = {},
+        caseData = {},
+        run = null,
+        toastTimer,
+        large = false,
+        lastFocus;
+      let draftData = "";
+      function initialWorkflow(s) {
+        return {
+          version: 1,
+          id: s.id,
+          name: s.name,
+          description: s.desc,
+          orchestrator: "ask-matt",
+          policy: {
+            maxRepairAttempts: 3,
+            requireCurrentSha: true,
+            requiredVerification: ["Unit", "Integration", "Core E2E", "Build"],
+            onBlocked: "pause_and_preserve",
+            merge: "after_acceptance_and_project_gates",
+          },
+          steps: clone(s.steps),
+        };
+      }
+      function current() {
+        if (!workflow[scene])
+          workflow[scene] = initialWorkflow(
+            scenarios.find((x) => x.id === scene),
+          );
+        return workflow[scene];
+      }
+      function cases() {
+        return caseData[scene] ?? (caseData[scene] = clone(casesDefault));
+      }
+      function notify(message) {
+        clearTimeout(toastTimer);
+        $("announcement").innerHTML =
+          `<div class="toast">${esc(message)}</div>`;
+        toastTimer = setTimeout(() => ($("announcement").innerHTML = ""), 3500);
+      }
+      function render() {
+        renderRail();
+        renderSidebar();
+        renderMain();
+        $("variant-label").textContent =
+          `${variant} · ${{ A: "流程编排", B: "执行工作台", C: "验收优先" }[variant]}`;
+        $("state-summary").textContent =
+          `AI Native ${enabled ? "已开启 · " + current().name : "已关闭"}${run ? " · " + run.label : ""}`;
+        $("address").innerHTML =
+          `${page === "flags" ? "agent-hub://flags" : "AI Native / " + esc(current().name)} <span style="margin-left:25px">⌘ K</span>`;
+      }
+      function renderRail() {
+        $("rail").innerHTML =
+          [
+            ["files", "项目"],
+            ["search", "搜索"],
+            ["git", "Git"],
+            ["tasks", "任务"],
+            ["clock", "自动化"],
+            ...(enabled ? [["ai", "AI Native"]] : []),
+          ]
+            .map(
+              ([id, name]) =>
+                `<button title="${name}" aria-label="${name}" class="${id === "ai" && page === "ai" ? "on" : ""}" onclick="${id === "ai" ? "navigate('ai')" : `notify('原型仅实现 AI Native 与实验性功能页面')`}">${svg(id)}</button>`,
+            )
+            .join("") +
+          `<button class="bottom ${page === "flags" ? "on" : ""}" title="实验性功能" aria-label="实验性功能" onclick="navigate('flags')">${svg("settings")}</button>`;
+      }
+      function renderSidebar() {
+        if (page === "flags") {
+          $("sidebar").innerHTML =
+            `<div class="side-title"><strong>设置</strong><small>应用配置与实验性能力</small></div><div class="side-label">高级设置</div><button class="navitem active" onclick="navigate('flags')">实验性功能 <span class="tag">1</span></button><div class="side-bottom"><span class="protocol">agent-hub://flags</span><p>通过命令面板打开。实验项开启前不显示功能入口。</p></div>`;
+          return;
+        }
+        $("sidebar").innerHTML =
+          `<div class="side-title row between"><strong>AI Native</strong><button class="ghost small" aria-label="打开流程说明" onclick="openDesign()">···</button></div><div class="workspace"><div class="row between"><strong style="font-size:12px">demo-workspace</strong><span class="tag">演示</span></div><div class="path">~/projects/demo</div></div><div class="side-label">项目开发场景</div>${scenarios.map((s) => `<button class="navitem ${scene === s.id ? "active" : ""}" onclick="chooseScene('${s.id}')"><span style="width:17px;font-size:15px">${s.icon}</span>${s.name}${s.id === "custom" ? '<span class="tag">定制</span>' : ""}</button>`).join("")}<div class="side-label">流程资产</div><button class="navitem" onclick="openWorkflow()">{ }　流程文件</button><button class="navitem" onclick="openRuntime()">⌘　运行配置</button><div class="side-bottom"><div class="row"><i class="dot blue"></i><span style="font-size:12px">${esc(current().orchestrator)} 编排</span></div><p>Skill 与脚本按场景组合。<br>人工关注需求、Case 和最终验收。</p><button class="ghost small" style="margin-top:9px;padding-left:0" onclick="navigate('flags')">实验性功能设置</button></div>`;
+      }
+      function navigate(next) {
+        if (next === "ai" && !enabled) {
+          notify("请先在实验性功能中开启 AI Native");
+          return;
+        }
+        page = next;
+        render();
+      }
+      function setEnabled() {
+        enabled = !enabled;
+        if (!enabled) run = null;
+        render();
+        notify(
+          enabled
+            ? "AI Native 已开启，侧栏入口已显示。本原型无需重启。"
+            : "AI Native 已关闭，侧栏入口已隐藏。演示配置仍保留。",
+        );
+      }
+      function flagsView() {
+        return `<div class="page flags"><div class="breadcrumb">设置 <span>/</span> 实验性功能</div><div class="headline"><div><h1>实验性功能</h1><p class="protocol" style="margin-top:9px">agent-hub://flags</p></div><span class="tag">原型预览</span></div><div class="flag-banner"><strong>按需开启，先体验再启用。</strong><br>这里的功能仍在探索中。开关控制功能可见性，开启后才显示对应入口。</div><div class="panel"><div class="flag"><div class="flag-icon">AI</div><div class="grow"><div class="row"><h2>AI Native</h2><span class="tag">实验性</span></div><p>为项目开发编排 AI 工作流。人确认需求、测试 Case 和最终结果，AI 自动推进开发、验证、修复与交付准备。</p><div class="row" style="flex-wrap:wrap"><span class="tag">默认关闭</span><span class="tag">独立侧栏模块</span><span class="tag">支持 Skill 与脚本</span></div>${enabled ? '<button class="primary small feature-visible" style="margin-top:18px" onclick="navigate(\'ai\')">进入 AI Native　↗</button>' : ""}</div><div class="stack" style="align-items:center;gap:6px"><button class="toggle ${enabled ? "enabled" : ""}" role="switch" aria-checked="${enabled}" aria-label="启用 AI Native" onclick="setEnabled()"><span></span></button><small>${enabled ? "已开启" : "已关闭"}</small></div></div><div class="flag-note">${enabled ? "侧栏入口已显示。关闭后停止新任务调度，进行中的真实任务应保留现场并单独处理。" : "关闭状态下不注册侧栏入口，不启动工作流、扫描、订阅或后台任务。"}</div></div><div class="row between" style="margin-top:20px"><small>原型开关仅保存在内存，刷新后恢复默认关闭。</small><button class="ghost small" onclick="openPalette()">打开命令面板　⌘ K</button></div><div style="margin-top:45px"><h3>如何访问</h3><p style="font-size:12px;margin-top:10px;line-height:2">按 ⌘ K 打开命令面板，输入 <code>agent-hub://flags</code>。<br>内部地址先限定为应用内导航，系统级协议注册另行实现。</p></div></div>`;
+      }
+      function chooseScene(id) {
+        scene = id;
+        selected =
+          current().steps.find((s) => s.when !== "human")?.id ??
+          current().steps[0].id;
+        run = null;
+        tab = defaultTab();
+        render();
+      }
+      function setTab(id) {
+        tab = id;
+        renderMain();
+      }
+      function defaultTab() {
+        return { A: "flow", B: "run", C: "accept" }[variant];
+      }
+      function effectiveTab() {
+        return tab;
+      }
+      function renderMain() {
+        if (page === "flags") {
+          $("main").innerHTML = flagsView();
+          return;
+        }
+        const w = current(),
+          effective = effectiveTab();
+        $("main").innerHTML =
+          `<div class="page ${variant === "B" ? "compact-layout" : ""}"><div class="breadcrumb">AI Native <span>/</span> demo-workspace <span>/</span> ${esc(w.name)}</div><div class="headline"><div><div class="row"><h1>${esc(w.name)}</h1><span class="tag">可定制流程</span></div><p>${esc(w.description)}</p></div><div class="row"><button onclick="openWorkflow()">{ } 流程文件</button><button class="primary" onclick="startFlow()">${run ? "查看推进状态" : "发起任务"}　▷</button></div></div><div class="human-strip"><div><b>人定义目标</b><small>确认需求与测试 Case</small></div><div class="auto"><b class="blue">AI 自动推进</b><small>方案 · 开发 · 验证 · 失败修复 · Review · 交付准备</small></div><div><b>人验收结果</b><small>查看证据，接受或提出反馈</small></div></div><div class="tabs">${[
+            ["flow", "场景流程"],
+            ["cases", "需求与测试 Case"],
+            ["run", "执行记录"],
+            ["accept", "交付与验收"],
+          ]
+            .map(
+              ([id, label]) =>
+                `<button class="${effective === id ? "active" : ""}" onclick="setTab('${id}')">${label}</button>`,
+            )
+            .join(
+              "",
+            )}</div>${effective === "flow" ? flowView() : effective === "cases" ? casesView() : effective === "run" ? runView() : acceptView()}</div>`;
+      }
+      function flowView() {
+        const w = current();
+        return `<div class="split"><section><div class="section-title"><h2>流程节点 <span class="muted">${w.steps.length} 个</span></h2><div class="row"><button class="ghost small" onclick="openRuntime()">运行配置</button><button class="small" onclick="addStep()">＋ 添加节点</button></div></div><div class="hint" style="margin-bottom:18px">默认由 <b>${esc(w.orchestrator)}</b> 路由下游 Skill。流程按依赖执行，验证失败进入修复循环；人工检查点集中在前期与最终验收。</div><div class="steps">${w.steps.map((s, i) => `<button class="step ${selected === s.id ? "active" : ""}" onclick="selectStep('${s.id}')"><span class="step-mark">${s.when === "human" ? "人" : s.type === "script" ? "{ }" : String(i + 1).padStart(2, "0")}</span><div class="step-copy"><div class="row between"><h3>${esc(s.name)}</h3><span class="tag ${s.when === "human" ? "purple" : s.type === "script" ? "green" : "blue"}">${s.when === "human" ? "人工检查点" : s.type === "script" ? "脚本" : "AI 自动"}</span></div><p>${esc(s.type === "skill" ? "$" + s.target : s.target)}</p><div class="stage-meta" style="margin-top:6px"><small>${s.needs.length ? "依赖 " + esc(s.needs.join(", ")) : "流程起点"}</small>${s.id === "develop" ? '<small class="blue">失败后自动修复 ↻</small>' : ""}</div></div></button>`).join("")}</div><div class="plan-note"><b>可脚本化的流程资产</b><p style="margin-top:5px">导入 / 导出 JSON，使用稳定节点 ID 与依赖关系编排。Skill 通过可配置执行适配器调用；脚本使用 argv，运行时不拼接 Shell 字符串。</p><button class="ghost small" style="margin-top:8px;padding-left:0" onclick="openWorkflow()">编辑流程文件　↗</button></div></section>${inspectorView()}</div>`;
+      }
+      function selectStep(id) {
+        selected = id;
+        renderMain();
+      }
+      function inspectorView() {
+        const w = current(),
+          s = w.steps.find((x) => x.id === selected) ?? w.steps[0];
+        selected = s.id;
+        return `<aside class="panel inspector"><div class="panel-head row between"><h3>节点配置</h3><span class="tag token">${esc(s.id)}</span></div><div class="panel-body"><div class="full"><label for="step-name">节点名称</label><input id="step-name" value="${esc(s.name)}" onchange="updateStep('name',this.value)"></div><div class="full"><label>执行方式</label><div class="segmented">${[
+          ["skill", "Skill"],
+          ["script", "脚本"],
+        ]
+          .map(
+            ([id, label]) =>
+              `<button class="${s.type === id ? "selected" : ""}" onclick="updateStep('type','${id}')">${label}</button>`,
+          )
+          .join(
+            "",
+          )}</div></div><div class="full"><label for="step-target">${s.type === "skill" ? "Skill 标识" : "命令 argv（JSON）"}</label><textarea id="step-target" class="token" style="min-height:63px" onchange="updateStep('target',this.value)">${esc(s.target)}</textarea><p class="footnote">${s.type === "skill" ? "可以替换为项目已有 Skill；实际运行前检查可用性。" : "示例命令需要按目标项目配置；不在原型中执行。"}</p></div><div class="full"><label for="step-needs">前置节点 ID</label><input class="token" id="step-needs" value="${esc(s.needs.join(", "))}" placeholder="逗号分隔；为空表示起点" onchange="updateStep('needs',this.value)"></div><div class="full"><label>推进条件</label><div class="segmented">${[
+          ["on_success", "前置成功"],
+          ["always", "收尾执行"],
+          ["human", "人工确认"],
+        ]
+          .map(
+            ([id, label]) =>
+              `<button class="${s.when === id ? "selected" : ""}" onclick="updateStep('when','${id}')">${label}</button>`,
+          )
+          .join(
+            "",
+          )}</div><p class="footnote">人工节点用于需求、Case 和最终验收；中间节点默认自动推进。</p></div><div class="full"><label>节点操作</label><div class="row"><button class="small" onclick="moveStep(-1)">上移</button><button class="small" onclick="moveStep(1)">下移</button><button class="ghost small red" onclick="removeStep()">删除</button></div><p class="footnote">移动调整展示顺序；实际执行顺序由 needs 决定。</p></div></div></aside>`;
+      }
+      function updateStep(key, value) {
+        const s = current().steps.find((x) => x.id === selected),
+          next = clone(current());
+        const n = next.steps.find((x) => x.id === selected);
+        if (key === "needs")
+          n.needs = value
+            .split(",")
+            .map((x) => x.trim())
+            .filter(Boolean);
+        else if (key === "type") {
+          n.type = value;
+          n.target =
+            value === "skill"
+              ? "ask-matt"
+              : '["node","-e","console.log(\"demo\")"]';
+        } else n[key] = value;
+        const error = validate(next);
+        if (error) {
+          notify(error);
+          renderMain();
+          return;
+        }
+        workflow[scene] = next;
+        run = null;
+        renderMain();
+        notify(`已更新「${s.name}」的演示配置`);
+      }
+      function addStep() {
+        const w = current();
+        let n = 1;
+        while (w.steps.some((s) => s.id === "custom-" + n)) n++;
+        const before = w.steps.findIndex((s) => s.id === "acceptance"),
+          prev = w.steps[before - 1] ?? w.steps.at(-1),
+          id = "custom-" + n;
+        const node = script(
+          id,
+          "自定义脚本",
+          ["node", "-e", 'console.log("custom step")'],
+          prev ? [prev.id] : [],
+        );
+        if (before >= 0) {
+          w.steps.splice(before, 0, node);
+          w.steps.find((s) => s.id === "acceptance").needs = [id];
+        } else w.steps.push(node);
+        selected = id;
+        run = null;
+        renderMain();
+      }
+      function moveStep(delta) {
+        const steps = current().steps,
+          index = steps.findIndex((s) => s.id === selected),
+          next = index + delta;
+        if (next < 0 || next >= steps.length) return;
+        [steps[index], steps[next]] = [steps[next], steps[index]];
+        renderMain();
+      }
+      function removeStep() {
+        const w = current(),
+          s = w.steps.find((x) => x.id === selected);
+        if (w.steps.length === 1) {
+          notify("至少保留一个节点");
+          return;
+        }
+        const dependents = w.steps.filter((n) => n.needs.includes(s.id));
+        if (dependents.length) {
+          notify(
+            "请先调整依赖此节点的 needs：" +
+              dependents.map((n) => n.id).join(", "),
+          );
+          return;
+        }
+        w.steps = w.steps.filter((n) => n.id !== selected);
+        selected = w.steps[0].id;
+        run = null;
+        renderMain();
+      }
+      function casesView() {
+        return `<div class="split"><section><div class="panel"><div class="panel-head row between"><h2>需求与边界</h2><span class="tag purple">人工确认</span></div><div class="panel-body"><label style="margin-top:0" for="requirement">本次任务的目标</label><textarea id="requirement" placeholder="说明期望结果、保留行为与不在本次范围的内容" oninput="saveRequirement(this.value)">${esc(current().requirement ?? "支持在多个项目间切换工作空间，保留各项目的任务上下文；异常时允许恢复，不影响其他项目的数据。")}</textarea><div class="row" style="margin-top:12px"><input aria-label="关联工作项" value="${esc(current().issue ?? "Issue #42")}" onchange="current().issue=this.value" placeholder="Issue / MR URL 或编号"><span class="tag">已绑定演示对象</span></div></div></div><div class="section-title" style="margin-top:22px"><h2>可执行测试 Case</h2><button class="small" onclick="addCase()">＋ 添加 Case</button></div><div class="panel">${cases()
+          .map(
+            (c, i) =>
+              `<div class="case"><input type="checkbox" aria-label="确认 ${esc(c.id)}" ${c.checked ? "checked" : ""} onchange="confirmCase(${i},this.checked)"><div><b>${esc(c.id)}　${esc(c.name)}</b><p><span class="muted">Given</span> ${esc(c.given)}<br><span class="muted">When</span> ${esc(c.when)}<br><span class="muted">Then</span> ${esc(c.then)}</p><button class="ghost small" style="padding-left:0;margin-top:5px" onclick="editCase(${i})">编辑 Case</button></div><span class="tag">${esc(c.layer)}</span></div>`,
+          )
+          .join(
+            "",
+          )}</div></section><aside class="panel"><div class="panel-head"><h3>启动前确认</h3></div><div class="panel-body"><p style="font-size:12px">AI 会按这里的目标和 Case 推进。确认范围后，开发、验证、失败修复、评审与交付准备连续执行。</p><div class="risk"><small>测试命令必须映射目标项目实际入口；环境失败、零测试与跳过不能计为通过。</small></div><label>Case 已确认</label><strong class="blue" id="case-count">${cases().filter((c) => c.checked).length} / ${cases().length}</strong><div style="margin-top:17px"><button class="primary" onclick="previewRun()">预览自动推进</button></div><p class="footnote">此原型仅演示运行过程，不启动 AI 或脚本。</p></div></aside></div>`;
+      }
+      function saveRequirement(value) {
+        current().requirement = value;
+        run = null;
+      }
+      function confirmCase(index, value) {
+        cases()[index].checked = value;
+        run = null;
+        $("case-count").textContent =
+          `${cases().filter((c) => c.checked).length} / ${cases().length}`;
+      }
+      function addCase() {
+        cases().push({
+          id: "AC-" + String(cases().length + 1).padStart(2, "0"),
+          name: "补充验收 Case",
+          given: "给定前置条件",
+          when: "执行目标操作",
+          then: "得到可观察结果",
+          layer: "E2E",
+          checked: false,
+        });
+        renderMain();
+        editCase(cases().length - 1);
+      }
+      function editCase(i) {
+        const c = cases()[i];
+        showModal(
+          "编辑测试 Case",
+          `<label for="case-name">Case 名称</label><input id="case-name" value="${esc(c.name)}"><label for="case-given">Given · 前置条件</label><input id="case-given" value="${esc(c.given)}"><label for="case-when">When · 操作</label><input id="case-when" value="${esc(c.when)}"><label for="case-then">Then · 预期结果</label><textarea id="case-then">${esc(c.then)}</textarea><label for="case-layer">验证层（Unit / Integration / E2E）</label><input id="case-layer" value="${esc(c.layer)}">`,
+          `<button onclick="closeModal()">取消</button><button class="primary" onclick="saveCase(${i})">保存 Case</button>`,
+        );
+      }
+      function saveCase(i) {
+        const values = ["name", "given", "when", "then", "layer"].map((k) => [
+          $("case-" + k),
+          k,
+        ]);
+        if (values.some(([el]) => !el.value.trim())) {
+          notify("请填写完整 Case");
+          return;
+        }
+        values.forEach(([el, k]) => (cases()[i][k] = el.value.trim()));
+        cases()[i].checked = false;
+        run = null;
+        closeModal();
+        renderMain();
+      }
+      function startFlow() {
+        if (run) {
+          tab = "run";
+          renderMain();
+          return;
+        }
+        tab = "cases";
+        renderMain();
+        notify("先确认需求与测试 Case，再预览 AI 自动推进。");
+      }
+      function runView() {
+        if (!run)
+          return `<div class="split"><section><div class="section-title"><h2>AI 执行工作台</h2><span class="tag">未启动</span></div><div class="terminal"><span class="muted"># 等待需求与测试 Case 确认</span>\n\n<span class="blue">$ ${esc(current().orchestrator)}</span>\n\n读取项目规范 → 分析与计划 → 开发 → 验证\n                               ↖ 失败修复 ↙\n\nAI Review → MR / CI → 等待最终验收\n\n<span class="muted">当前没有运行任务。原型不会执行真实命令。</span></div></section><aside class="panel"><div class="panel-head"><h3>连续推进策略</h3></div><div class="panel-body">${policySummary()}<button class="primary" style="margin-top:15px" onclick="setTab('cases')">确认需求与 Case</button><button class="ghost small" style="margin-top:10px" onclick="openRuntime()">定制执行策略</button></div></aside></div>`;
+        return `<div class="split"><section><div class="section-title"><h2>${esc(run.label)}</h2><span class="tag ${run.state === "blocked" ? "yellow" : run.state === "accepted" ? "green" : "blue"}">${run.state === "blocked" ? "需要处理" : run.state === "accepted" ? "验收通过" : "演示运行"}</span></div><div class="terminal">${run.logs.map((l, i) => `<div class="runline"><time>00:${String(i * 3).padStart(2, "0")}</time><span class="${l.kind ?? ""}">${esc(l.text)}</span></div>`).join("")}</div><p class="footnote">演示任务 RUN-008 · 基线 d4e5f6a · 所有事件为合成记录，未调用 Skill 或脚本。</p></section><aside class="panel"><div class="panel-head"><h3>运行控制</h3></div><div class="panel-body">${policySummary()}<div class="stack" style="margin-top:18px"><button class="primary" onclick="setTab('accept')">查看交付与验收</button><button onclick="simulateBlocked()">演示环境阻塞</button>${run.state === "blocked" ? '<button onclick="resumeDemo()">恢复演示运行</button>' : ""}<button onclick="feedback()">追加反馈</button></div><div class="risk"><small>遇到权限不足、结果不明或修复次数用尽时暂停并保留现场；不重复发起，不削弱门禁。</small></div></div></aside></div>`;
+      }
+      function policySummary() {
+        return `<p style="font-size:12px;line-height:2.2">编排入口　<b>${esc(current().orchestrator)}</b><br>修复预算　<b>${current().policy.maxRepairAttempts} 次</b><br>验证策略　Unit / Integration / E2E / Build<br>证据版本　绑定实际源码、配置与环境<br>合入条件　验收与项目门禁同时满足</p>`;
+      }
+      function previewRun() {
+        if (
+          current().requirement !== undefined &&
+          !current().requirement.trim()
+        ) {
+          notify("请填写本次任务目标。");
+          return;
+        }
+        if (!cases().every((c) => c.checked)) {
+          notify("请逐项确认测试 Case，或先编辑为本次任务适用的 Case。");
+          return;
+        }
+        const error = validate(current());
+        if (error) {
+          notify(error);
+          return;
+        }
+        const order = ordered(current());
+        showModal(
+          "自动推进预览",
+          `<div class="hint">以下只进行交互演示，不执行真实命令。正式执行器需绑定目标项目及其规范。</div><label>任务范围</label><p>${esc(current().requirement ?? "演示需求与开发任务")}</p><label>编排入口</label><p class="token">$${esc(current().orchestrator)}</p><label>按依赖计算的执行顺序</label><pre>${esc(order.map((s, i) => `${i + 1}. ${s.name} [${s.when === "human" ? "人工检查点" : s.type}]\n   ${s.type === "skill" ? "$" + s.target : s.target}`).join("\n"))}</pre><p class="footnote">前期节点已由需求与 Case 确认覆盖；如在中间新增人工节点，演示会在该节点暂停。没有适用 Skill、脚本入口或权限时按受阻处理。</p>`,
+          `<button onclick="closeModal()">返回修改</button><button class="primary" onclick="simulateRun()">开始演示推进</button>`,
+        );
+      }
+      function simulateRun() {
+        closeModal();
+        run = {
+          state: "ready",
+          label: "AI 已完成交付准备，等待验收",
+          logs: [
+            { text: "已记录需求、范围与测试 Case 确认。", kind: "purple" },
+            {
+              text: `${current().orchestrator} 读取项目规范与流程，解析依赖。`,
+              kind: "blue",
+            },
+          ],
+        };
+        const order = ordered(current());
+        let autoEntered = false;
+        for (const s of order) {
+          if (s.when === "human") {
+            if (!autoEntered && (s.id === "requirements" || s.id === "cases"))
+              continue;
+            run.logs.push({
+              text: `${s.name}：等待人工确认。`,
+              kind: "purple",
+            });
+            run.state = s.id === "acceptance" ? "ready" : "checkpoint";
+            run.label =
+              s.id === "acceptance"
+                ? "AI 已完成交付准备，等待验收"
+                : "已到达人工检查点：" + s.name;
+            break;
+          }
+          autoEntered = true;
+          if (s.id === "develop" && current().policy.maxRepairAttempts === 0) {
+            run.state = "blocked";
+            run.label = "修复预算为零，已保留演示失败现场";
+            run.logs.push({
+              text: "演示目标测试失败；自动修复预算为零，停止后续步骤。",
+              kind: "yellow",
+            });
+            break;
+          }
+          if (s.id === "develop") {
+            run.logs.push(
+              {
+                text: "Red：目标行为测试失败，已保存原始输入与失败记录。",
+                kind: "yellow",
+              },
+              {
+                text: "AI 根据具体失败实施最小修复，重新执行验证。",
+                kind: "blue",
+              },
+              {
+                text: "Green：目标行为及受影响回归通过，保留 Red → Green 因果链。",
+                kind: "green",
+              },
+            );
+          } else
+            run.logs.push({
+              text: `${s.name}：演示完成（${s.type === "skill" ? "$" + s.target : s.target}）。`,
+              kind: "green",
+            });
+        }
+        run.logs.push({
+          text: "演示事件不作为真实项目、CI、Review 或 L3 证据。",
+          kind: "yellow",
+        });
+        tab = "run";
+        render();
+      }
+      function simulateBlocked() {
+        if (!run) return;
+        run.state = "blocked";
+        run.label = "运行受阻 · 测试环境不可用";
+        run.logs.push(
+          {
+            text: "核心 E2E 环境不可用，退出码非零；当前结果不是通过。",
+            kind: "yellow",
+          },
+          {
+            text: "已暂停后续步骤并保留工作目录、检查点与原始日志。",
+            kind: "blue",
+          },
+        );
+        render();
+      }
+      function resumeDemo() {
+        run.state = "ready";
+        run.label = "环境恢复，演示复验完成";
+        run.logs.push({
+          text: "环境恢复后重新执行对应验证，保留原失败记录。",
+          kind: "green",
+        });
+        render();
+      }
+      function acceptView() {
+        if (!run)
+          return `<div class="panel"><div class="empty"><h2>交付结果将在这里归集</h2><p>AI 完成中间阶段后，统一查看 Case、变更说明、验证、Review 与 CI 证据。</p><button class="primary" onclick="setTab('cases')">先确认需求与 Case</button>${scene === "l3" ? '<button style="margin-left:9px" onclick="openBaseline()">查看 L3 验收基线</button>' : ""}</div></div>`;
+        const ready = run.state === "ready" || run.state === "accepted";
+        return `<div class="section-title"><h2>交付摘要 <span class="tag">演示任务 RUN-008</span></h2><span class="tag ${ready ? "green" : "yellow"}">${ready ? "演示证据已归集" : "尚未就绪"}</span></div><div class="accept-grid"><div class="panel"><div class="panel-head row between"><h3>验收标准逐项核对</h3><span class="tag">${cases().length} 项</span></div><div class="panel-body">${cases()
+          .map(
+            (c) =>
+              `<div class="accept-item"><div class="row between"><b style="font-size:12px">${esc(c.id)} ${esc(c.name)}</b><span class="tag ${ready ? "green" : "yellow"}">${ready ? "演示通过" : "待复验"}</span></div><p>${esc(c.layer)} · 关联当前演示输入 · <button class="ghost small" onclick="openEvidence('${c.id}')">查看证据</button></p></div>`,
+          )
+          .join(
+            "",
+          )}</div></div><div class="panel"><div class="panel-head"><h3>验证与交付证据</h3></div><div class="panel-body">${[
+          ["三层验证与构建", "Unit / Integration / 核心 E2E / Build"],
+          [
+            "AI 与人工 Review",
+            "AI 结果绑定评审版本；关键代码人工 Review 单独核实",
+          ],
+          ["MR 与 CI 门禁", "来源 SHA 与实际被测 SHA 分开；旧绿灯不替代新版本"],
+          ["发布与反馈", "制品来源、发布后用户结果及反馈闭环另行追溯"],
+        ]
+          .map(
+            ([a, b]) =>
+              `<div class="accept-item"><b style="font-size:12px">${a}</b><p>${b}</p></div>`,
+          )
+          .join(
+            "",
+          )}<p class="footnote">本原型只展示合成过程；真实证据未采集，不能据此判定 L3 通过。</p>${scene === "l3" ? '<button style="margin-top:12px" onclick="openBaseline()">查看 60 项 L3 验收基线</button>' : ""}</div></div></div><div class="panel" style="margin-top:19px"><div class="panel-body row between" style="flex-wrap:wrap"><div><h3>${run.state === "accepted" ? "已接受本次演示结果" : "由你完成最终验收"}</h3><p style="font-size:12px;margin-top:4px">${run.state === "blocked" ? "环境受阻，先恢复验证。" : run.state === "checkpoint" ? "流程中有额外人工检查点，需先处理。" : "验收后按项目门禁处理合入与发布。验收结果不能替代 CI 或 Review。"}</p></div><div class="row"><button onclick="feedback()">提出反馈</button><button class="primary" ${!ready || run.state === "accepted" ? "disabled" : ""} onclick="acceptRun()">接受演示结果</button></div></div></div>`;
+      }
+      function acceptRun() {
+        run.state = "accepted";
+        run.label = "本次演示已验收";
+        run.logs.push({
+          text: "用户接受演示结果；未执行实际合入、发布或远端写入。",
+          kind: "purple",
+        });
+        render();
+        notify("演示验收已记录。没有执行真实合入或发布。");
+      }
+      function feedback() {
+        showModal(
+          "反馈给 AI",
+          `<p style="font-size:12px">反馈会作为本次任务的新输入；AI 沿原任务补充 Case、修改与复验，保留原有证据。</p><label for="feedback">需要调整什么</label><textarea id="feedback" placeholder="例如：补充异常恢复后的验收 Case"></textarea>`,
+          `<button onclick="closeModal()">取消</button><button class="primary" onclick="submitFeedback()">提交演示反馈</button>`,
+        );
+      }
+      function submitFeedback() {
+        const value = $("feedback").value.trim();
+        if (!value) {
+          notify("请填写反馈");
+          return;
+        }
+        if (run) {
+          run.state = "blocked";
+          run.label = "已收到反馈 · 等待补充验收 Case";
+          run.logs.push(
+            { text: "用户反馈：" + value, kind: "purple" },
+            {
+              text: "需求或 Case 变化，原 Green 需重新判断适用性；等待用户确认新增 Case。",
+              kind: "yellow",
+            },
+          );
+        }
+        closeModal();
+        tab = "cases";
+        render();
+        notify("已记录演示反馈，请更新并确认 Case 后重新预览推进。");
+      }
+      function openEvidence(id) {
+        showModal(
+          "证据详情 · " + id,
+          `<div class="hint">以下为展示字段的合成记录，不能作为真实验收依据。</div><label>任务与验收</label><p>Issue #42 / ${esc(id)} / 核心用户行为</p><label>被测输入</label><p class="token">来源 SHA: d4e5f6a<br>实际被测 SHA: d4e5f6a<br>配置摘要: demo-config-v1</p><label>执行信息</label><p>演示时间 10:32 · 隔离测试环境 · 发现 6 / 执行 6 / 跳过 0<br>退出码 0（合成） · 结果 passed（合成）</p><label>因果与适用性</label><p>原始失败 EV-001 → 修复 → Green EV-002。当前源码、配置或环境变化后需重验；历史 Red 保留。</p><label>Review 与发布</label><p>评审 SHA、问题处置、复验、制品摘要与发布后结果单独关联，不由一次测试通过推导。</p>`,
+          `<button onclick="closeModal()">关闭</button>`,
+        );
+      }
+      function validate(w) {
+        if (
+          !w ||
+          typeof w !== "object" ||
+          w.version !== 1 ||
+          typeof w.id !== "string" ||
+          typeof w.name !== "string" ||
+          typeof w.description !== "string" ||
+          !Array.isArray(w.steps) ||
+          !w.steps.length
+        )
+          return "需要 version:1、id、name、description 与非空 steps。";
+        if (typeof w.orchestrator !== "string" || !w.orchestrator.trim())
+          return "请指定编排 Skill。";
+        if (
+          !w.policy ||
+          !Number.isInteger(w.policy.maxRepairAttempts) ||
+          w.policy.maxRepairAttempts < 0 ||
+          w.policy.maxRepairAttempts > 10
+        )
+          return "修复预算须为 0–10 的整数。";
+        const ids = new Set();
+        for (const s of w.steps) {
+          if (
+            !s ||
+            typeof s.id !== "string" ||
+            !/^[a-z][a-z0-9-]*$/.test(s.id) ||
+            ids.has(s.id)
+          )
+            return "节点 ID 须为唯一的小写英文标识。";
+          ids.add(s.id);
+          if (
+            typeof s.name !== "string" ||
+            !s.name.trim() ||
+            !["skill", "script"].includes(s.type) ||
+            typeof s.target !== "string" ||
+            !s.target.trim() ||
+            !Array.isArray(s.needs) ||
+            !s.needs.every((x) => typeof x === "string") ||
+            !["on_success", "always", "human"].includes(s.when)
+          )
+            return "节点 " + s.id + " 的字段不完整。";
+          if (s.type === "script") {
+            try {
+              const args = JSON.parse(s.target);
+              if (
+                !Array.isArray(args) ||
+                !args.length ||
+                !args.every((x) => typeof x === "string") ||
+                !args[0].trim()
+              )
+                return s.id + " 的脚本必须为非空 argv 数组。";
+            } catch {
+              return s.id + " 的脚本 argv 不是有效 JSON。";
+            }
+          }
+        }
+        const pending = [...w.steps],
+          done = new Set();
+        while (pending.length) {
+          const i = pending.findIndex((s) => s.needs.every((x) => done.has(x)));
+          if (i < 0) return "needs 包含未知节点或循环依赖。";
+          done.add(pending.splice(i, 1)[0].id);
+        }
+        return null;
+      }
+      function ordered(w) {
+        const pending = [...w.steps],
+          done = [];
+        while (pending.length) {
+          const i = pending.findIndex((s) =>
+            s.needs.every((x) => done.some((n) => n.id === x)),
+          );
+          if (i < 0) break;
+          done.push(pending.splice(i, 1)[0]);
+        }
+        return done;
+      }
+      function openWorkflow() {
+        draftData = JSON.stringify(current(), null, 2);
+        showModal(
+          "流程文件 · 可脚本化定制",
+          `<div class="hint">以 JSON 描述场景、编排入口、节点依赖和执行策略。可导入现有流程，或导出交给脚本 / 调度器使用。</div><div class="row between" style="margin:16px 0 8px"><span class="tag">ai-native.workflow.v1</span><div class="row"><button class="small" onclick="$('import-file').click()">导入 JSON</button><button class="small" onclick="downloadDraft()">导出 JSON</button></div></div><input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importFile(this.files[0])"><textarea aria-label="流程 JSON" id="workflow-code" class="code-editor" spellcheck="false">${esc(draftData)}</textarea><div id="workflow-error" class="error" role="alert"></div><p class="footnote">on_success 按依赖成功推进；always 用于收尾，不绕过验收门禁；human 为人工检查点。当前演示采用串行拓扑调度，实际执行器另行接入。</p>`,
+          `<button onclick="closeModal()">取消</button><button onclick="checkDraft()">校验流程</button><button class="primary" onclick="applyDraft()">应用到原型</button>`,
+        );
+      }
+      function parseDraft() {
+        try {
+          const w = JSON.parse($("workflow-code").value);
+          const error = validate(w);
+          if (error) throw new Error(error);
+          $("workflow-error").textContent = "";
+          return w;
+        } catch (e) {
+          $("workflow-error").textContent = e.message;
+          return null;
+        }
+      }
+      function checkDraft() {
+        if (parseDraft())
+          notify(
+            "流程结构与依赖校验通过；未检查 Skill 安装、脚本可用性或权限。",
+          );
+      }
+      function applyDraft() {
+        const w = parseDraft();
+        if (!w) return;
+        workflow[scene] = w;
+        selected = w.steps[0].id;
+        run = null;
+        closeModal();
+        render();
+        notify("已应用流程文件，所有变化仅在原型内存中。");
+      }
+      function download(name, content, type = "application/json") {
+        const a = document.createElement("a"),
+          url = URL.createObjectURL(new Blob([content], { type }));
+        a.href = url;
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      function downloadDraft() {
+        const w = parseDraft();
+        if (w) {
+          download("ai-native.workflow.json", JSON.stringify(w, null, 2));
+          notify("已导出流程定义；JSON 本身不执行任何命令。");
+        }
+      }
+      async function importFile(file) {
+        if (!file) return;
+        if (file.size > 250000) {
+          notify("演示导入上限为 250 KB");
+          return;
+        }
+        try {
+          $("workflow-code").value = await file.text();
+          checkDraft();
+        } catch {
+          notify("文件读取失败，请重试。");
+        }
+      }
+      function openRuntime() {
+        showModal(
+          "运行配置",
+          `<div class="hint">前台保持通用，具体 Skill 与脚本通过项目配置绑定。</div><label for="router">默认编排 Skill</label><input id="router" value="${esc(current().orchestrator)}"><p class="footnote">默认 ask-matt；可替换为项目已有编排 Skill。只有节点需要时才加载下游能力。</p><label for="repair-budget">自动修复预算</label><input id="repair-budget" type="number" min="0" max="10" value="${current().policy.maxRepairAttempts}"><label>执行适配器</label><p style="font-size:12px">Skill → Agent 启动模块 → 已安装 Agent / Skill<br>脚本 → 项目工作目录内的 argv 进程执行</p><label>受阻处理</label><p style="font-size:12px">保留现场与恢复点，暂停依赖步骤。禁止将零测试、超时、取消或缺少证据记为通过。</p><label>授权范围</label><p style="font-size:12px">一次任务绑定项目、工作项、允许动作和停止条件。已授权范围内连续推进；合入、发布、远端权限按项目规则及既有授权处理。</p>`,
+          `<button onclick="closeModal()">取消</button><button class="primary" onclick="saveRuntime()">保存演示配置</button>`,
+        );
+      }
+      function saveRuntime() {
+        const router = $("router").value.trim(),
+          budget = Number($("repair-budget").value);
+        if (!router || !Number.isInteger(budget) || budget < 0 || budget > 10) {
+          notify("请填写编排 Skill 和 0–10 的修复预算");
+          return;
+        }
+        current().orchestrator = router;
+        current().policy.maxRepairAttempts = budget;
+        run = null;
+        closeModal();
+        render();
+      }
+      function showModal(title, body, actions) {
+        lastFocus = document.activeElement;
+        $("modal-title").textContent = title;
+        $("modal-content").innerHTML = body;
+        $("modal-actions").innerHTML = actions;
+        if (!$("modal").open) $("modal").showModal();
+      }
+      function closeModal() {
+        $("modal").close();
+        if (lastFocus?.isConnected) lastFocus.focus();
+      }
+      function openPalette() {
+        $("palette-input").value = "agent-hub://";
+        paletteResults();
+        $("palette").showModal();
+        $("palette-input").focus();
+      }
+      function paletteResults() {
+        const query = $("palette-input").value.trim().toLowerCase();
+        const matches =
+          !query ||
+          "agent-hub://flags".includes(query) ||
+          "实验性功能".includes(query);
+        $("palette-results").innerHTML = matches
+          ? '<button class="palette-result" onclick="activatePalette()"><span class="blue">⚑</span><span><b>实验性功能</b><small>agent-hub://flags</small></span><span class="tag" style="margin-left:auto">内部页面</span></button>'
+          : '<div class="empty-state">没有匹配项，换个关键词试试。</div>';
+      }
+      function activatePalette() {
+        const query = $("palette-input").value.trim().toLowerCase();
+        if (
+          !query ||
+          "agent-hub://flags".includes(query) ||
+          "实验性功能".includes(query)
+        ) {
+          $("palette").close();
+          navigate("flags");
+        }
+      }
+      function cycle(dir) {
+        const all = ["A", "B", "C"];
+        variant = all[(all.indexOf(variant) + dir + 3) % 3];
+        const u = new URL(location.href);
+        u.searchParams.set("variant", variant);
+        history.replaceState(null, "", u);
+        tab = defaultTab();
+        render();
+        notify(
+          `布局 ${variant}：${{ A: "流程编排", B: "执行工作台", C: "验收优先" }[variant]}`,
+        );
+      }
+      function theme() {
+        document.documentElement.classList.toggle("dark");
+        $("theme-btn").textContent =
+          document.documentElement.classList.contains("dark") ? "浅色" : "深色";
+      }
+      function toggleScale() {
+        large = !large;
+        document.body.style.zoom = large ? "1.15" : "1";
+        notify(large ? "原型字号放大至 115%" : "已恢复默认字号");
+      }
+      function resetDemo() {
+        enabled = false;
+        page = "flags";
+        scene = "feature";
+        tab = "flow";
+        workflow = {};
+        caseData = {};
+        run = null;
+        render();
+        notify("已恢复默认关闭状态，清空原型内存配置。");
+      }
+      function openDesign() {
+        showModal(
+          "AI Native · 设计方案",
+          `<h2>人定义边界，AI 连续推进，人验收结果。</h2><p style="margin-top:12px">AI Native 是可选的独立侧栏模块。默认关闭，从 <code>agent-hub://flags</code> 手动开启。普通用户的导航保持简洁。</p><label>常用场景</label><p>需求与开发、缺陷修复、Issue 处理、MR 处理、发布检查、L3 建设与验收、自定义场景。需求与开发共用一条贯穿流程。</p><label>流程与定制</label><p>默认 ask-matt 编排；Skill 按需加载，允许替换入口和下游节点。脚本是同等节点，采用 argv。JSON 是可导入、导出和由外部脚本生成的流程定义。稳定 ID、needs、when 定义依赖与检查点。</p><label>参考 setup-ai-native 的执行约束</label><p>验收与 Case 前置；Plan 包含验证与关键边界；项目级 Unit、Integration、核心 E2E 均需存在；保存真实失败与修复因果；CI / Review 绑定准确提交；远端门禁、发布与团队能力用事实验收。</p><label>自动推进</label><p>在已授权任务范围内连续执行，失败后自动修复复验。修复预算耗尽、权限不足或结果不明时保留现场。AI Review 与 CI 可并行；缺少关键人工 Review 或门禁时不得宣称可合入。</p><label>正式实现的模块边界</label><p>独立 FeatureModule + 可选路由；未开启时不加载业务扫描与轮询。流程定义、运行实例、节点尝试和证据分开；工作项仍是需求与状态真源。复用公共项目识别、Agent 启动、终端与平台适配器。</p><label>阶段与当前边界</label><p>本次只交付单文件原型，所有数据保存在内存。没有注册系统协议、运行脚本、调用 Agent、提交工作项或修改项目配置。脚本调度、断点恢复、节点输出与证据归档属于后续实现。</p><label>原型比较</label><p>A：流程与节点编辑优先（推荐）。B：执行记录优先。C：交付验收优先。底部按钮及左右方向键切换；输入框内不拦截方向键。</p>`,
+          `<button onclick="closeModal()">关闭</button><button onclick="download('ai-native.design.md',designMarkdown(),'text/markdown')">导出方案</button>`,
+        );
+      }
+      function designMarkdown() {
+        return "# AI Native 设计草案\n\n状态：独立需求原型，未接入生产。\n\n入口：agent-hub://flags → 手动开启 AI Native → 侧栏。默认关闭。\n\n场景：需求与开发、缺陷修复、Issue 处理、MR 处理、发布检查、L3 建设与验收、自定义。\n\n主线：人确认需求与测试 Case → AI 自动分析、开发、验证、修复、Review 与交付准备 → 人验收。\n\n默认 ask-matt 编排；Skill 与脚本按需定制。参考 setup-ai-native 的前置验收、三层验证、失败闭环、准确版本证据与门禁约束。\n\nJSON 定义编排入口、节点、needs、when 与修复预算；可导入导出。执行器须绑定真实项目规范、能力与授权，受阻时保留现场。\n\n原型：单文件、无后端、无持久化、无真实执行。\n";
+      }
+      const baseline = [
+        { id: "A-01", title: "AI 参与真实需求澄清" },
+        { id: "A-02", title: "AI 参与方案分析" },
+        { id: "A-03", title: "AI 参与开发 Plan" },
+        { id: "A-04", title: "AI 参与编码或修改" },
+        { id: "A-05", title: "AI 参与测试" },
+        { id: "A-06", title: "AI 根据测试失败继续修改" },
+        { id: "A-07", title: "AI 参与 Review" },
+        { id: "A-08", title: "AI 参与真实反馈分析或修复" },
+        { id: "B-01", title: "编码前已有明确验收标准，并有时间或版本依据" },
+        { id: "B-02", title: "验收标准可以转换为可执行验证" },
+        { id: "B-03", title: "Plan 包含测试和验证方案" },
+        { id: "B-04", title: "关键边界场景在开发前已识别" },
+        { id: "B-05", title: "验收标准与最终测试结果逐项对应" },
+        { id: "C-01", title: "Unit 测试实际可运行并判断目标行为" },
+        { id: "C-02", title: "Integration 测试实际可运行并验证真实边界" },
+        { id: "C-03", title: "核心 E2E 实际可运行并验证产品入口到用户结果" },
+        { id: "C-04", title: "测试能自动执行，不依赖人工给出通过结论" },
+        { id: "C-05", title: "测试失败返回明确日志和非成功状态" },
+        { id: "C-06", title: "开发人员本地可执行必要验证" },
+        { id: "C-07", title: "AI 能调用测试并读取结果" },
+        { id: "D-01", title: "真实任务中 AI 修改代码并主动执行测试" },
+        { id: "D-02", title: "存在真实测试失败及 AI 读取具体失败信息的记录" },
+        {
+          id: "D-03",
+          title: "AI 针对失败修改并重新测试，形成因果可追溯的闭环",
+        },
+        { id: "D-04", title: "必要本地验证通过后才提交 PR/MR" },
+        {
+          id: "E-01",
+          title:
+            "实际用于正常合入或发布的主干/发布分支按项目流程受保护，不允许开发人员常规直接 Push",
+        },
+        { id: "E-02", title: "正常代码通过 PR/MR 合入，无常规替代通道" },
+        {
+          id: "E-03",
+          title:
+            "PR/MR 创建或代码更新自动触发对应提交的 CI；PR/MR 页面能追溯各检查状态、失败日志与合入判定",
+        },
+        { id: "E-04", title: "Unit 为必需检查或等价必需流水线的一部分" },
+        { id: "E-05", title: "Integration 为必需检查或等价必需流水线的一部分" },
+        { id: "E-06", title: "核心 E2E 为必需检查或等价必需流水线的一部分" },
+        {
+          id: "E-07",
+          title:
+            "必要 Build/Compile 为必需检查或等价必需流水线的一部分，适用的静态检查同样进入必要门禁",
+        },
+        {
+          id: "E-08",
+          title: "必需检查失败时实际禁止合入，包括三层失败演练证据",
+        },
+        {
+          id: "E-09",
+          title:
+            "全部必需检查通过后才允许合入，修复更新自动重跑且旧结果不冒充新结果",
+        },
+        { id: "F-01", title: "PR/MR 自动或主动执行 AI Review" },
+        { id: "F-02", title: "AI Review 结果可追溯到对应变更及提交" },
+        { id: "F-03", title: "AI Review 发现的问题有处理及复验记录" },
+        { id: "F-04", title: "关键代码由人进行最终 Review" },
+        { id: "F-05", title: "Review 与必要 CI 验证完成后才合入" },
+        { id: "G-01", title: "合入后能自动构建" },
+        { id: "G-02", title: "形成可追溯至准确源码提交的制品" },
+        { id: "G-03", title: "有明确可执行的发布或部署流程" },
+        { id: "G-04", title: "有真实发布后验证结果" },
+        { id: "G-05", title: "CI/CD 日志可关联对应 Commit 与 PR/MR" },
+        { id: "H-01", title: "真实用户或测试反馈有记录" },
+        { id: "H-02", title: "反馈关联的修复任务及 AI 分析有记录" },
+        { id: "H-03", title: "修复有自动测试和执行结果" },
+        { id: "H-04", title: "修复经过同样的 PR/MR、Review 和 CI 门禁" },
+        { id: "H-05", title: "发布及重新验证可追溯，至少一条真实反馈完整闭环" },
+        { id: "I-01", title: "至少两名种子成员无顾问具体执行时能理解真实需求" },
+        { id: "I-02", title: "这两名成员能与 AI 澄清需求" },
+        { id: "I-03", title: "这两名成员能定义验收标准" },
+        { id: "I-04", title: "这两名成员能形成 Plan" },
+        { id: "I-05", title: "这两名成员能驱动 AI 开发" },
+        { id: "I-06", title: "这两名成员能使用自动验证" },
+        { id: "I-07", title: "这两名成员能处理测试失败" },
+        { id: "I-08", title: "这两名成员能创建 PR/MR" },
+        { id: "I-09", title: "这两名成员能处理 CI 失败" },
+        { id: "I-10", title: "这两名成员能处理 AI 与人工 Review" },
+        { id: "I-11", title: "这两名成员能完成合入" },
+        { id: "I-12", title: "这两名成员能完成发布验证" },
+      ];
+      function openBaseline() {
+        showModal(
+          "L3 验收基线",
+          `<div class="hint">l3-checklist-a-i-v1 · 60 个必要子项。本原型没有真实项目证据，所有项均为待验，切换流程方案不会放宽标准。</div><div class="toolbar" style="margin-top:14px"><input aria-label="筛选基线子项" placeholder="筛选 ID 或要求" oninput="filterBaseline(this.value)"></div><div id="baseline-rows">${baselineRows("")}</div><p class="footnote">已确认否决或必要项失败 → 不通过；无确认失败但证据不足 → 待验；全部必要项有有效证据 → 通过。能力建设完成不等同完整 L3 通过。</p>`,
+          `<button onclick="closeModal()">关闭</button>`,
+        );
+      }
+      function baselineRows(query) {
+        const items = baseline.filter((x) =>
+          (x.id + " " + x.title).toLowerCase().includes(query.toLowerCase()),
+        );
+        return items.length
+          ? items
+              .map(
+                (x) =>
+                  `<div class="matrix-row"><span>${esc(x.id)}</span><span>${esc(x.title)}</span><span class="tag">待验</span></div>`,
+              )
+              .join("")
+          : '<div class="empty-state">没有匹配子项</div>';
+      }
+      function filterBaseline(query) {
+        $("baseline-rows").innerHTML = baselineRows(query);
+      }
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          if ($("palette").open) $("palette").close();
+          else if (!$("modal").open) openPalette();
+          return;
+        }
+        if (
+          $("modal").open ||
+          $("palette").open ||
+          e.target.closest("input,textarea,[contenteditable]")
+        )
+          return;
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          e.preventDefault();
+          cycle(e.key === "ArrowRight" ? 1 : -1);
+        }
+      });
+      $("modal").addEventListener("click", (e) => {
+        if (e.target === $("modal")) {
+          const r = $("modal").getBoundingClientRect();
+          if (
+            e.clientX < r.left ||
+            e.clientX > r.right ||
+            e.clientY < r.top ||
+            e.clientY > r.bottom
+          )
+            closeModal();
+        }
+      });
+      if (new URLSearchParams(location.search).get("theme") === "light") {
+        document.documentElement.classList.remove("dark");
+        $("theme-btn").textContent = "深色";
+      }
+      tab = defaultTab();
+      render();
+    </script>
+  </body>
+</html>

@@ -17,3 +17,9 @@ agent-hub 使用单个 Tauri 2 桌面应用和 React 前端，业务实现来自
 ## 共享帮助内容
 
 帮助正文位于 `docs/help/`，导航与跨语言文章 id 经 `scripts/docs/` 校验，生成 React 使用的离线文档清单与 VitePress 网站输入。应用渲染复用 `SkillMarkdown`，链接和章节标识来自构建清单；本地搜索与网站共用中文分词规则。网站构建输出到 `_site/docs/`，与原产品首页合并部署到 Pages。生成目录不进入 Git。设计依据见 [ADR-0014](../adr/0014-shared-help-content.md)，新增文章流程见 [维护说明](../help/README.md)。
+
+## 模块组装与独立需求原型
+
+可选模块通过产品编译能力、前端贡献及共享服务边界组装，当前实现见[应用组装边界](app-composition.md)。原型统一在 `docs/prototypes/`，生产代码不反向依赖原型。
+
+AI Native 当前仅有[独立单文件原型](../prototypes/ai-native/README.md)：演示实验性开关、项目开发场景的 Skill/脚本编排、需求与 Case 前置以及最终验收。`agent-hub://flags`、运行时开关、真实工作流调度和证据存储尚未接入生产。其设计与待实现边界见[统一规划](../plans/agent-hub.md#ai-native-场景流程编排)，不改变当前单主应用、任务真源与通用 Agent 启动架构。

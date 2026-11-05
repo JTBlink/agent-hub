@@ -350,3 +350,9 @@ agent-hub/
 - 新功能实现及侧栏贡献放在 `src/features/<name>/`。公共工作台只消费贡献 interface，不接管模块业务状态。
 - 跨功能可选集成的共享契约与缺省适配放在 `src/integrations/<name>/`；公共类型不反向导入可选实现。
 - 编译身份及运行目录从 `src-tauri/src/product/` 派生；构建产物不存放到功能源码目录，也不进入 Git。
+
+## AI Native 原型位置
+
+`docs/prototypes/ai-native/index.html` 是可直接打开的独立单文件原型，`README.md` 说明体验路径和验证边界；`docs/prototypes/catalog.json` 登记启动入口。原型的实验开关、流程定义、演示运行和证据数据均在内存中，不读取真实项目或调用后台服务。
+
+当前没有 AI Native 生产模块、工作流执行 CLI 或 `agent-hub://flags` 的正式内部路由。拟议模块边界与存储约束见[统一规划](../plans/agent-hub.md#ai-native-场景流程编排)，待实现后再补实际目录树，不以原型文件代替正式模块。
