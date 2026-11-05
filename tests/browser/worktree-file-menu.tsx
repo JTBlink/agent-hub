@@ -2,6 +2,9 @@ import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Toaster } from "sonner";
+import { WorkspaceFilesProvider } from "../../src/components/worktree/WorkspaceFilesContext";
+import { useWorkspaceFiles } from "../../src/hooks/useWorkspaceFiles";
+import { WorktreeOpenEditors } from "../../src/components/worktree/WorktreeOpenEditors";
 import { WorktreeExplorer } from "../../src/components/worktree/WorktreeExplorer";
 import type {
   WorktreeFileEntry,
@@ -26,6 +29,20 @@ const settingsName = preview.has("long")
 
 // Synthetic file operations only; this fixture never touches the local filesystem.
 const entries: WorktreeFileEntry[] = [
+  {
+    name: "cache",
+    path: "cache",
+    is_dir: true,
+    is_symlink: false,
+    is_ignored: true,
+  },
+  {
+    name: "output.txt",
+    path: "cache/output.txt",
+    is_dir: false,
+    is_symlink: false,
+    is_ignored: true,
+  },
   { name: "src", path: "src", is_dir: true, is_symlink: false },
   { name: "notes.md", path: "src/notes.md", is_dir: false, is_symlink: false },
   { name: "README.md", path: "README.md", is_dir: false, is_symlink: false },
@@ -84,12 +101,14 @@ Object.assign(window, {
 });
 export function Fixture() {
   const [selected, setSelected] = useState<string>();
+  const { setFiles } = useWorkspaceFiles();
   return (
     <main
       className="flex h-screen max-w-full bg-background text-primary"
       style={{ width: preview.get("width") === "360" ? 360 : undefined }}
     >
       <div className="w-60 overflow-auto border-r border-border">
+        <WorktreeOpenEditors projectId="demo" worktreePath="/workspace/demo" />
         <WorktreeExplorer
           projectId="demo"
           worktreePath="/workspace/demo"
@@ -131,7 +150,15 @@ export function Fixture() {
             },
           ]}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={(path) => {
+            setSelected(path);
+            setFiles({
+              [JSON.stringify(["demo", "/workspace/demo"])]: {
+                path,
+                shown: true,
+              },
+            });
+          }}
           onEntryChange={(change) => {
             if (
               selected &&
@@ -156,6 +183,8 @@ export function Fixture() {
 }
 createRoot(document.getElementById("root")!).render(
   <MemoryRouter>
-    <Fixture />
+    <WorkspaceFilesProvider>
+      <Fixture />
+    </WorkspaceFilesProvider>
   </MemoryRouter>,
 );

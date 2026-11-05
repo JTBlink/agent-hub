@@ -2465,6 +2465,8 @@
     }
   },
   "worktree": {
+    "openEditors": "打开的编辑器",
+    "gitIgnored": "已被 Git 忽略",
     "missingDirectory": {
       "removeInvalidProject": "删除无效项目",
       "removeTitle": "删除无效项目",

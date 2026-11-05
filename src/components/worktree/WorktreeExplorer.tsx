@@ -58,7 +58,7 @@ export function WorktreeExplorer(props: Props) {
   return (
     <aside
       aria-label={t("fileReader.explorer")}
-      className="flex min-h-0 flex-col bg-bg-secondary"
+      className="flex min-h-0 flex-1 flex-col bg-bg-secondary"
     >
       <WorktreeEntryMenu
         {...props}
@@ -225,6 +225,9 @@ function Directory({
                   type="button"
                   disabled={file.is_symlink}
                   title={file.is_symlink ? t("worktree.symlink") : file.path}
+                  aria-description={
+                    file.is_ignored ? t("worktree.gitIgnored") : undefined
+                  }
                   aria-pressed={props.selected === file.path}
                   onClick={() => props.onSelect(file.path)}
                   style={{ paddingLeft: 28 + depth * 12 }}
@@ -233,13 +236,22 @@ function Directory({
                     props.selected === file.path
                       ? "bg-surface-active"
                       : "hover:bg-surface-hover",
-                    props.selected === file.path
-                      ? "text-primary"
-                      : "text-secondary",
+                    file.is_ignored
+                      ? "text-muted"
+                      : (decoration?.color ?? "text-primary"),
                   )}
                 >
-                  <FileTypeIcon path={file.path} symlink={file.is_symlink} />
-                  <span className="min-w-0 flex-1 truncate">{file.name}</span>
+                  <span className={file.is_ignored ? "opacity-50" : undefined}>
+                    <FileTypeIcon path={file.path} symlink={file.is_symlink} />
+                  </span>
+                  <span
+                    className="min-w-0 flex-1 truncate"
+                    title={
+                      file.is_ignored ? t("worktree.gitIgnored") : undefined
+                    }
+                  >
+                    {file.name}
+                  </span>
                   {decoration && <GitStatusIndicator decoration={decoration} />}
                 </button>
               </WorktreeEntryMenu>
@@ -257,6 +269,7 @@ function FolderEntry({
   collapse,
   ...props
 }: TreeProps & { file: WorktreeFileEntry; depth: number; collapse: number }) {
+  const { t } = useTranslation();
   const decoration = props.decorations.get(file.path);
   const [open, setOpen] = useState(false);
   const [previousCollapse, setPreviousCollapse] = useState(collapse);
@@ -277,24 +290,36 @@ function FolderEntry({
           type="button"
           aria-expanded={open}
           title={file.path}
+          aria-description={
+            file.is_ignored ? t("worktree.gitIgnored") : undefined
+          }
           onClick={() => setOpen(!open)}
           style={{ paddingLeft: 12 + depth * 12 }}
           className={cn(
             "flex h-[22px] w-full min-w-0 items-center gap-1 pr-2 text-left text-[13px] hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
-            "text-secondary",
+            file.is_ignored
+              ? "text-muted"
+              : (decoration?.color ?? "text-primary"),
           )}
         >
           <ChevronRight
             size={12}
             className={cn("shrink-0", open && "rotate-90")}
           />
-          <FileTypeIcon
-            path={file.path}
-            directory
-            open={open}
-            symlink={file.is_symlink}
-          />
-          <span className="min-w-0 flex-1 truncate">{file.name}</span>
+          <span className={file.is_ignored ? "opacity-50" : undefined}>
+            <FileTypeIcon
+              path={file.path}
+              directory
+              open={open}
+              symlink={file.is_symlink}
+            />
+          </span>
+          <span
+            className="min-w-0 flex-1 truncate"
+            title={file.is_ignored ? t("worktree.gitIgnored") : undefined}
+          >
+            {file.name}
+          </span>
           {decoration && (
             <GitStatusIndicator
               decoration={decoration}

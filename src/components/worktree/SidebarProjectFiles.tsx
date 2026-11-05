@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useProjectWorktrees } from "../../hooks/useProjectWorktrees";
 import { projectCheckoutRoute } from "../../lib/worktreeApi";
+import { WorktreeOpenEditors } from "./WorktreeOpenEditors";
 import { WorktreeExplorer } from "./WorktreeExplorer";
 import { useWorkspaceFiles } from "../../hooks/useWorkspaceFiles";
 import type { GitFile } from "../../lib/gitApi";
@@ -42,39 +43,45 @@ export function SidebarProjectFiles({
   if (!worktree?.available) return null;
   const scope = JSON.stringify([project.id, worktree.path]);
   return (
-    <WorktreeExplorer
-      checkoutSwitcher={<WorktreeCheckoutSwitcher />}
-      key={scope}
-      projectId={project.id}
-      worktreePath={worktree.path}
-      gitFiles={changes?.key === scope ? changes.files : undefined}
-      selected={files[scope]?.path}
-      onEntryChange={(change) => {
-        if (change.kind !== "rename" && change.kind !== "delete") return;
-        setFiles((previous) => {
-          const file = previous[scope];
-          if (
-            !file ||
-            (file.path !== change.path &&
-              !file.path.startsWith(`${change.path}/`))
-          )
-            return previous;
-          const next = { ...previous };
-          if (change.kind === "delete") delete next[scope];
-          else
-            next[scope] = {
-              ...file,
-              path: change.nextPath + file.path.slice(change.path.length),
-            };
-          return next;
-        });
-      }}
-      onSelect={(path) =>
-        setFiles((previous) => ({
-          ...previous,
-          [scope]: { path, shown: true },
-        }))
-      }
-    />
+    <div className="flex min-h-0 flex-col overflow-hidden">
+      <WorktreeOpenEditors
+        projectId={project.id}
+        worktreePath={worktree.path}
+      />
+      <WorktreeExplorer
+        checkoutSwitcher={<WorktreeCheckoutSwitcher />}
+        key={scope}
+        projectId={project.id}
+        worktreePath={worktree.path}
+        gitFiles={changes?.key === scope ? changes.files : undefined}
+        selected={files[scope]?.path}
+        onEntryChange={(change) => {
+          if (change.kind !== "rename" && change.kind !== "delete") return;
+          setFiles((previous) => {
+            const file = previous[scope];
+            if (
+              !file ||
+              (file.path !== change.path &&
+                !file.path.startsWith(`${change.path}/`))
+            )
+              return previous;
+            const next = { ...previous };
+            if (change.kind === "delete") delete next[scope];
+            else
+              next[scope] = {
+                ...file,
+                path: change.nextPath + file.path.slice(change.path.length),
+              };
+            return next;
+          });
+        }}
+        onSelect={(path) =>
+          setFiles((previous) => ({
+            ...previous,
+            [scope]: { path, shown: true },
+          }))
+        }
+      />
+    </div>
   );
 }

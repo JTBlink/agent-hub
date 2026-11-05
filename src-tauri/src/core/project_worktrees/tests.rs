@@ -234,3 +234,61 @@ fn refuses_links_outside_the_selected_worktree() {
     assert!(entries(root.path(), "link").is_err());
     assert!(read_file(root.path(), "link/private").is_err());
 }
+
+#[test]
+fn file_entries_mark_ignored_paths_but_preserve_tracked_and_negated_entries() {
+    let temp = tempdir().unwrap();
+    let root = temp.path();
+    let repo = git2::Repository::init(root).unwrap();
+    std::fs::create_dir(root.join("cache")).unwrap();
+    std::fs::create_dir(root.join("src")).unwrap();
+    std::fs::write(root.join("cache/output.txt"), "generated").unwrap();
+    std::fs::write(root.join("src/tracked.txt"), "tracked").unwrap();
+    std::fs::write(root.join("src/local.txt"), "local").unwrap();
+    std::fs::write(root.join("keep.txt"), "kept").unwrap();
+    let mut index = repo.index().unwrap();
+    index.add_path(Path::new("src/tracked.txt")).unwrap();
+    index.write().unwrap();
+    std::fs::write(root.join(".gitignore"), "cache/\n*.txt\n!keep.txt\n").unwrap();
+    std::fs::write(root.join(".git/info/exclude"), "private\n").unwrap();
+    std::fs::write(root.join("private"), "local").unwrap();
+    let listing = entries(root, "").unwrap();
+    let ignored = |name: &str| {
+        listing
+            .iter()
+            .find(|entry| entry.name == name)
+            .unwrap()
+            .is_ignored
+    };
+    assert!(ignored("cache"));
+    assert!(ignored("private"));
+    assert!(!ignored("src"));
+    assert!(!ignored("keep.txt"));
+    assert!(entries(root, "cache").unwrap()[0].is_ignored);
+    let nested = entries(root, "src").unwrap();
+    assert!(
+        !nested
+            .iter()
+            .find(|entry| entry.name == "tracked.txt")
+            .unwrap()
+            .is_ignored
+    );
+    assert!(
+        nested
+            .iter()
+            .find(|entry| entry.name == "local.txt")
+            .unwrap()
+            .is_ignored
+    );
+}
+
+#[test]
+fn plain_directory_entries_are_not_git_ignored() {
+    let temp = tempdir().unwrap();
+    std::fs::write(temp.path().join(".gitignore"), "output\n").unwrap();
+    std::fs::write(temp.path().join("output"), "data").unwrap();
+    assert!(entries(temp.path(), "")
+        .unwrap()
+        .iter()
+        .all(|entry| !entry.is_ignored));
+}

@@ -2468,6 +2468,8 @@
     }
   },
   "worktree": {
+    "openEditors": "Open Editors",
+    "gitIgnored": "Ignored by Git",
     "missingDirectory": {
       "removeInvalidProject": "Remove unavailable project",
       "removeTitle": "Remove unavailable project",

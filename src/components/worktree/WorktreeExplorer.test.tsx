@@ -115,3 +115,48 @@ it("requests Git status refresh alongside the file listing", async () => {
     window.removeEventListener("project-git-changed", refresh);
   }
 });
+
+it("keeps ignored folders and their children browsable and explains their state", async () => {
+  vi.mocked(getWorktreeFiles).mockImplementation(async (_id, _root, path) =>
+    path === "cache"
+      ? [
+          {
+            name: "output.txt",
+            path: "cache/output.txt",
+            is_dir: false,
+            is_symlink: false,
+            is_ignored: true,
+          },
+        ]
+      : [
+          {
+            name: "cache",
+            path: "cache",
+            is_dir: true,
+            is_symlink: false,
+            is_ignored: true,
+          },
+        ],
+  );
+  const select = vi.fn();
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath="<workspace>"
+          onSelect={select}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  const folder = host.querySelector<HTMLButtonElement>('[title="cache"]')!;
+  expect(folder.getAttribute("aria-description")).toBe("worktree.gitIgnored");
+  await act(async () => folder.click());
+  const file = host.querySelector<HTMLButtonElement>(
+    '[title="cache/output.txt"]',
+  )!;
+  expect(file.getAttribute("aria-description")).toBe("worktree.gitIgnored");
+  await act(async () => file.click());
+  expect(select).toHaveBeenCalledWith("cache/output.txt");
+});

@@ -27,6 +27,7 @@ pub struct WorktreeFileEntry {
     pub path: String,
     pub is_dir: bool,
     pub is_symlink: bool,
+    pub is_ignored: bool,
 }
 
 pub fn list(store: &SkillStore, project_id: &str) -> Result<Vec<ProjectWorktree>> {
@@ -259,8 +260,10 @@ pub fn entries(root: &Path, relative: &str) -> Result<Vec<WorktreeFileEntry>> {
             path,
             is_dir: kind.is_dir(),
             is_symlink: kind.is_symlink(),
+            is_ignored: false,
         });
     }
+    mark_ignored(root, &mut entries);
     entries.sort_by(|a, b| {
         b.is_dir
             .cmp(&a.is_dir)
@@ -268,6 +271,44 @@ pub fn entries(root: &Path, relative: &str) -> Result<Vec<WorktreeFileEntry>> {
             .then(a.name.cmp(&b.name))
     });
     Ok(entries)
+}
+
+// One repository/index snapshot per directory; never recursively scan ignored trees.
+fn mark_ignored(root: &Path, entries: &mut [WorktreeFileEntry]) {
+    let Ok(repo) = git2::Repository::discover(root) else {
+        return;
+    };
+    let Some(workdir) = repo.workdir() else {
+        return;
+    };
+    let Ok(workdir) = workdir.canonicalize() else {
+        return;
+    };
+    let Ok(root) = root.canonicalize() else {
+        return;
+    };
+    let Ok(prefix) = root.strip_prefix(&workdir) else {
+        return;
+    };
+    let Ok(index) = repo.index() else { return };
+    let tracked: std::collections::HashSet<String> = index
+        .iter()
+        .flat_map(|entry| {
+            let path = String::from_utf8_lossy(&entry.path).into_owned();
+            let mut paths = vec![path.clone()];
+            let mut parent = Path::new(&path).parent();
+            while let Some(directory) = parent {
+                paths.push(directory.to_string_lossy().replace('\\', "/"));
+                parent = directory.parent();
+            }
+            paths
+        })
+        .collect();
+    for entry in entries {
+        let path = prefix.join(&entry.path);
+        let key = path.to_string_lossy().replace('\\', "/");
+        entry.is_ignored = !tracked.contains(&key) && repo.is_path_ignored(&path).unwrap_or(false);
+    }
 }
 
 pub fn read_file(root: &Path, relative: &str) -> Result<String> {

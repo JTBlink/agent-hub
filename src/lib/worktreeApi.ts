@@ -52,6 +52,7 @@ export interface WorktreeFileEntry {
   path: string;
   is_dir: boolean;
   is_symlink: boolean;
+  is_ignored?: boolean;
 }
 export const getProjectWorktrees = (projectId: string) =>
   invoke<ProjectWorktree[]>("get_project_worktrees", { projectId });

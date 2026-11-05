@@ -2425,6 +2425,8 @@
     }
   },
   "worktree": {
+    "openEditors": "開啟的編輯器",
+    "gitIgnored": "已被 Git 忽略",
     "missingDirectory": {
       "removeInvalidProject": "刪除無效專案",
       "removeTitle": "刪除無效專案",
