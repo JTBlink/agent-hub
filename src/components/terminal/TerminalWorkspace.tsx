@@ -360,17 +360,15 @@ export function TerminalWorkspace({
             }}
           >
             {extraTabs}
-            {shown && (
-              <TerminalNewMenu
-                tools={tools}
-                disabled={
-                  !ready ||
-                  !(scopedProject || selected) ||
-                  count >= TERMINAL_PANE_LIMIT
-                }
-                onNew={add}
-              />
-            )}
+            <TerminalNewMenu
+              tools={tools}
+              disabled={
+                !ready ||
+                !(scopedProject || selected) ||
+                count >= TERMINAL_PANE_LIMIT
+              }
+              onNew={add}
+            />
           </TerminalTabs>
           {!workspace && (
             <TerminalProjectSelect projects={projects} selected={selected} />

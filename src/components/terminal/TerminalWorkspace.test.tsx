@@ -696,14 +696,19 @@ it("switches between peer file and terminal tabs without replacing running panes
     );
     expect(panels[1].hasAttribute("hidden")).toBe(false);
     await act(async () => tabButtons[2].click());
-    expect(host.querySelector('[aria-label="terminal.newMenu"]')).toBeNull();
+    expect(
+      host.querySelector<HTMLButtonElement>('[aria-label="terminal.newMenu"]')
+        ?.disabled,
+    ).toBe(false);
     expect(
       host.querySelector('[aria-label="terminal.herdrSidebar"]'),
     ).toBeNull();
-    await act(async () => tabButtons[1].click());
     await openNew(host);
     expect(host.querySelector("output")).toBeNull();
     expect(tablist.querySelectorAll('[role="tab"]')).toHaveLength(4);
+    expect(
+      tablist.querySelectorAll('[role="tab"]')[2].getAttribute("aria-selected"),
+    ).toBe("true");
     expect(
       vi
         .mocked(invoke)
