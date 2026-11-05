@@ -6,7 +6,13 @@ import { getErrorMessage } from "../lib/error";
 import { openDirectoryInVscode } from "../lib/openInVscode";
 import "@vscode/codicons/dist/codicon.css";
 
-export function OpenProjectInVscode({ path }: { path: string }) {
+export function OpenProjectInVscode({
+  path,
+  title,
+}: {
+  path: string;
+  title?: string;
+}) {
   const { t } = useTranslation();
   const [opening, setOpening] = useState(false);
   const pending = useRef(false);
@@ -28,7 +34,7 @@ export function OpenProjectInVscode({ path }: { path: string }) {
       type="button"
       disabled={!path || opening}
       aria-label={t("install.scan.openInVscode")}
-      title={t("install.scan.openInVscode")}
+      title={title ?? t("install.scan.openInVscode")}
       aria-busy={opening}
       onClick={() => void open()}
       className="app-button-ghost h-6 w-6 shrink-0 p-0 text-muted hover:text-accent-light"

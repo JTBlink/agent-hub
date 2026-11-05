@@ -16,6 +16,7 @@ const files: ReaderFile[] = [{ path: "docs/README.md", content: "# Example" }];
 
 - `files`：受控的 UTF-8 文本内容，`path` 是当前阅读器内唯一的文件标识，使用 `/` 分隔目录。
 - `initialPath`：挂载时选择的文件，默认选择首个文件。更换整个文件集合时，调用方可用 React `key` 开启新的阅读会话。
+- `directoryActions`：可选，显示在左侧目录栏顶部、弹窗标题下方的目录操作；提供时替代文件工具栏中的 VS Code 入口，切换或关闭文件不影响目录操作。自动化源码使用共享目录按钮打开任务根目录。
 - `onContentChange(path, content)`：可选；省略时只读，传入时由调用方立即更新 `files`。模块不另存一份草稿，不自行落盘或决定保存时机。
 - `maxLength`：可选，由接入方按存储限制提供。
 - `onOpenInVscode(path)`：可选异步回调，打开当前文件的本地版本；接入方解析真实路径并启动 VS Code。未提供时工具栏入口禁用，提示文件尚无本地路径。阅读器提供等待、失败与重试反馈，不自动保存草稿；切换文件后旧请求不会覆盖新文件状态。

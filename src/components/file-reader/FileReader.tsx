@@ -11,6 +11,7 @@ import type { FileReaderProps } from "./types";
 export function FileReader({
   files,
   initialPath,
+  directoryActions,
   onContentChange,
   onOpenInVscode,
   openInVscodeHint,
@@ -46,9 +47,12 @@ export function FileReader({
         aria-label={t("fileReader.explorer")}
         className="w-[32%] min-w-[110px] max-w-[280px] shrink-0 overflow-y-auto border-r border-border-subtle bg-bg-secondary p-2"
       >
-        <h3 className="px-2 py-2 text-xs font-semibold text-muted">
-          {t("fileReader.explorer")} · {files.length}
-        </h3>
+        <div className="flex min-h-9 items-center justify-between gap-2 px-2 py-1">
+          <h3 className="min-w-0 text-xs font-semibold text-muted">
+            {t("fileReader.explorer")} · {files.length}
+          </h3>
+          {directoryActions}
+        </div>
         <FileTree files={files} selected={file?.path} onSelect={select} />
       </aside>
       <section
@@ -109,6 +113,7 @@ export function FileReader({
             file={file}
             onContentChange={onContentChange}
             onOpenInVscode={onOpenInVscode}
+            showOpenInVscode={!directoryActions}
             openInVscodeHint={openInVscodeHint}
             maxLength={maxLength}
           />

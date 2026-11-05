@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FileCode2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationTask } from "../lib/tauri";
-import { openDirectoryInVscode } from "../lib/openInVscode";
+import { OpenProjectInVscode } from "./OpenProjectInVscode";
 import { FileReaderDialog } from "./file-reader";
 
 export function AutomationTaskSource({ task }: { task: AutomationTask }) {
@@ -30,8 +30,11 @@ export function AutomationTaskSource({ task }: { task: AutomationTask }) {
           initialPath={
             files.find((file) => /^(scripts\/)?run\.sh$/.test(file.path))?.path
           }
-          onOpenInVscode={
-            directory ? () => openDirectoryInVscode(directory) : undefined
+          directoryActions={
+            <OpenProjectInVscode
+              path={directory ?? ""}
+              title={t("automation.openScriptDir")}
+            />
           }
           openInVscodeHint={
             directory ? t("automation.openScriptDir") : undefined

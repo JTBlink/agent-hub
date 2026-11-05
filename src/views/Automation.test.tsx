@@ -304,6 +304,7 @@ it.each([undefined, "/workspace/task-scripts"])(
         'dialog button[aria-label="在 VS Code 中打开"]',
       )!;
       expect(button.title).toBe("在 VS Code 中打开脚本目录");
+      expect(button.closest('aside[aria-label="文件目录"]')).not.toBeNull();
       await act(async () => button.click());
       expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
         script_dir ?? "/workspace/legacy-scripts",
