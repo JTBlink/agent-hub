@@ -26,6 +26,7 @@ it("opens another profile in a new tab without modifying the existing page and d
   const profiles = [
     { id: "default", name: "Default" },
     { id: "remote", name: "Remote" },
+    { id: "guest", name: "Guest", ephemeral: true },
   ];
   try {
     await act(async () =>
@@ -35,13 +36,28 @@ it("opens another profile in a new tab without modifying the existing page and d
     );
     const trigger =
       container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
-    expect(trigger.textContent).toBe("");
-    expect(trigger.title).toContain("Default");
-    expect(trigger.title).toContain("preview.profiles");
+    expect(trigger.textContent).toBe("preview.defaultProfile");
+    expect(trigger.title).toContain("preview.chromiumModeHint");
+    expect(trigger.title).toContain("preview.browsingMode");
     expect(trigger.querySelector("svg")).not.toBeNull();
     await act(async () =>
       container.querySelector<HTMLButtonElement>('[role="combobox"]')!.click(),
     );
+    const options = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+    ];
+    expect(
+      options.find((node) => node.textContent === "preview.nativeBackend")
+        ?.title,
+    ).toBe("preview.nativeModeHint");
+    expect(
+      options.find((node) => node.textContent === "preview.defaultProfile")
+        ?.title,
+    ).toBe("preview.chromiumModeHint");
+    expect(
+      options.find((node) => node.textContent === "preview.guestProfile")
+        ?.title,
+    ).toBe("preview.guestModeHint");
     await act(async () =>
       [...document.querySelectorAll<HTMLButtonElement>('[role="option"]')]
         .find((node) => node.textContent === "Remote")!

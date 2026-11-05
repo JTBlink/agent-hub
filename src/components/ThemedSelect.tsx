@@ -20,6 +20,7 @@ interface Option {
   value: string;
   label: string;
   disabled: boolean;
+  title?: string;
 }
 function optionsFrom(children: ReactNode): Option[] {
   return Children.toArray(children).flatMap((child) => {
@@ -37,6 +38,7 @@ function optionsFrom(children: ReactNode): Option[] {
         value: String(child.props.value ?? label),
         label,
         disabled: !!child.props.disabled,
+        title: child.props.title,
       },
     ];
   });
@@ -321,7 +323,9 @@ export function ThemedSelect({
               <button
                 type="button"
                 role="option"
-                title={singleLineOptions ? option.label : undefined}
+                title={
+                  option.title ?? (singleLineOptions ? option.label : undefined)
+                }
                 aria-selected={option.value === value}
                 aria-disabled={option.disabled}
                 id={`${id}-${index}`}

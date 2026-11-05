@@ -4,6 +4,7 @@ export interface WorktreePreview {
   scope: string;
   path: string;
   document: PreviewDocument;
+  sourceUrl?: string;
 }
 export const WorktreePreviewsContext = createContext<{
   tabs: WorktreePreview[];

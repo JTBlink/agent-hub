@@ -9,6 +9,7 @@ import {
   developmentPlan,
   startDevelopment,
 } from "../../lib/developmentPreview";
+import { WorktreePreviewsProvider } from "../../hooks/useWorktreePreviews";
 import { WorktreeEntryMenu } from "./WorktreeEntryMenu";
 import {
   pasteWorktreeFiles,
@@ -23,7 +24,7 @@ vi.mock("../../lib/developmentPreview", () => ({
   startDevelopment: vi.fn(),
 }));
 vi.mock("../../features/preview/api", () => ({
-  previewApi: { openProject: vi.fn() },
+  previewApi: { openProject: vi.fn(), closeDocument: vi.fn(async () => {}) },
 }));
 vi.mock("../../features/preview/shared/openRequests", () => ({
   queuePreviewDocument: vi.fn(),
@@ -67,21 +68,29 @@ async function render(
   path = "src/notes.md",
   directory = false,
   symlink = false,
+  withPreviews = false,
 ) {
+  const entry = (
+    <WorktreeEntryMenu
+      projectId="demo"
+      worktreePath="/workspace/demo"
+      path={path}
+      directory={directory}
+      symlink={symlink}
+      onChanged={changed}
+      onRefresh={refresh}
+      onSelect={select}
+    >
+      <button id="entry">{path || "demo"}</button>
+    </WorktreeEntryMenu>
+  );
   await act(async () =>
     root.render(
-      <WorktreeEntryMenu
-        projectId="demo"
-        worktreePath="/workspace/demo"
-        path={path}
-        directory={directory}
-        symlink={symlink}
-        onChanged={changed}
-        onRefresh={refresh}
-        onSelect={select}
-      >
-        <button id="entry">{path || "demo"}</button>
-      </WorktreeEntryMenu>,
+      withPreviews ? (
+        <WorktreePreviewsProvider>{entry}</WorktreePreviewsProvider>
+      ) : (
+        entry
+      ),
     ),
   );
 }
@@ -362,8 +371,10 @@ it("omits browser preview for directories and other files and disables links", a
     await render(path, directory);
     await open();
     expect(
-      menuItems().some(
-        (item) => item.textContent === "fileTree.previewInBrowser",
+      menuItems().some((item) =>
+        ["fileTree.previewInBrowser", "fileTree.previewFileDirectly"].includes(
+          item.textContent ?? "",
+        ),
       ),
     ).toBe(false);
     await choose("worktree.refreshFiles");
@@ -373,6 +384,11 @@ it("omits browser preview for directories and other files and disables links", a
   expect(
     menuItems().find((item) => item.textContent === "fileTree.previewInBrowser")
       ?.disabled,
+  ).toBe(true);
+  expect(
+    menuItems().find(
+      (item) => item.textContent === "fileTree.previewFileDirectly",
+    )?.disabled,
   ).toBe(true);
 });
 
@@ -461,4 +477,58 @@ it("reports development startup errors without opening a blank static preview", 
   await choose("fileTree.previewInBrowser");
   expect(previewApi.openProject).not.toHaveBeenCalled();
   expect(toast.error).toHaveBeenCalledWith("Development server failed");
+});
+
+it("previews HTML directly without detecting or starting a development server", async () => {
+  await render("index.html");
+  const document = {
+    id: "static",
+    title: "index.html",
+    kind: "html" as const,
+    content: "<h1>Static</h1>",
+    revision: "saved",
+    url: "http://static.invalid/index.html",
+  };
+  vi.mocked(previewApi.openProject).mockResolvedValue(document);
+  await open(true);
+  await choose("fileTree.previewFileDirectly");
+  expect(developmentPlan).not.toHaveBeenCalled();
+  expect(startDevelopment).not.toHaveBeenCalled();
+  expect(queuePreviewDocument).toHaveBeenCalledWith(document);
+  vi.mocked(previewApi.openProject).mockClear();
+  vi.mocked(hasPendingWorktreeDocument).mockReturnValue(true);
+  await open();
+  await choose("fileTree.previewFileDirectly");
+  expect(previewApi.openProject).not.toHaveBeenCalled();
+  expect(toast.error).toHaveBeenCalledWith("fileTree.saveFirst");
+});
+
+it("keeps direct file preview separate from an existing development preview", async () => {
+  await render("index.html", false, false, true);
+  vi.mocked(developmentPlan).mockResolvedValue({
+    directory: "/workspace/demo",
+    url: "http://127.0.0.1:5173/index.html",
+    running: true,
+    launch: { relative_path: "index.html", port: 5173 },
+  });
+  vi.mocked(previewApi.openProject).mockImplementation(async () => ({
+    id: `html-${vi.mocked(previewApi.openProject).mock.calls.length}`,
+    title: "index.html",
+    kind: "html",
+    content: "<h1>Static</h1>",
+    revision: "saved",
+    url: "http://static.invalid/index.html",
+  }));
+  await open();
+  await choose("fileTree.previewInBrowser");
+  await open();
+  await choose("fileTree.previewFileDirectly");
+  expect(previewApi.openProject).toHaveBeenCalledTimes(2);
+  expect(previewApi.closeDocument).not.toHaveBeenCalled();
+  await open();
+  await choose("fileTree.previewFileDirectly");
+  await open();
+  await choose("fileTree.previewInBrowser");
+  expect(previewApi.openProject).toHaveBeenCalledTimes(2);
+  expect(startDevelopment).not.toHaveBeenCalled();
 });

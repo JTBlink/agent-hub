@@ -15,7 +15,7 @@ export function useWorktreeBrowserPreview(
   const previews = useWorktreePreviews();
   const pending = useRef(false);
   const [opening, setOpening] = useState(false);
-  const open = async () => {
+  const open = async (mode: "development" | "file" = "development") => {
     if (pending.current) return;
     if (hasPendingWorktreeDocument(projectId, worktreePath, path)) {
       throw new Error(t("fileTree.saveFirst"));
@@ -23,9 +23,10 @@ export function useWorktreeBrowserPreview(
     pending.current = true;
     setOpening(true);
     try {
-      const plan = /\.html?$/i.test(path)
-        ? await developmentPlan(projectId, worktreePath, path)
-        : null;
+      const plan =
+        mode === "development" && /\.html?$/i.test(path)
+          ? await developmentPlan(projectId, worktreePath, path)
+          : null;
       if (plan && !plan.running) {
         const origin = await startDevelopment(projectId, worktreePath, plan);
         plan.url = new URL(new URL(plan.url).pathname, origin).href;
@@ -38,5 +39,5 @@ export function useWorktreeBrowserPreview(
       setOpening(false);
     }
   };
-  return { open, opening };
+  return { open, openFile: () => open("file"), opening };
 }

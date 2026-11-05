@@ -74,6 +74,7 @@
   "fileTree": {
     "paste": "Paste",
     "previewInBrowser": "Preview in browser",
+    "previewFileDirectly": "Preview file directly",
     "actions": "File actions",
     "open": "Open file",
     "newFile": "New file…",
@@ -2946,6 +2947,10 @@
     "forceClosing": "Closing old instance…",
     "forceCloseHint": "Force closes the preview browser using this profile. Unsaved page content may be lost. Saved login data is kept.",
     "profileInUse": "This browser profile is in use by another or leftover preview process. Quit the previous AgentHub instance and retry, or open a guest tab. Saved login data has not been removed.",
+    "browsingMode": "Browsing mode",
+    "nativeModeHint": "Uses the system WebView engine with login state separate from Chromium profiles.",
+    "chromiumModeHint": "Uses Chromium and retains login state and browsing data in this profile.",
+    "guestModeHint": "Uses Chromium with an isolated temporary profile; login data is cleared when the session is released.",
     "nativeBackend": "System WebView",
     "nativeViewportHint": "The system engine scales the selected page size to fit. It does not emulate mobile touch, UA or device pixel ratio.",
     "nativeDownloadProgress": "The system engine reports download start and completion; live progress and cancellation are unavailable.",

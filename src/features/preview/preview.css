@@ -33,20 +33,13 @@
   color: var(--color-accent-light);
 }
 .preview-workspace .preview-profile-select {
-  width: 28px;
+  width: auto;
+  max-width: 160px;
   height: 28px;
-  gap: 0;
+  gap: 6px;
   border: 0;
   background: transparent;
   box-shadow: none;
-}
-.preview-profile-select > span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.preview-profile-select > svg {
-  display: none;
 }
 .preview-workspace button:focus-visible,
 .preview-workspace input:focus-visible,

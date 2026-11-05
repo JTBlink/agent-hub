@@ -74,6 +74,7 @@
   "fileTree": {
     "paste": "貼上",
     "previewInBrowser": "瀏覽器預覽",
+    "previewFileDirectly": "直接預覽檔案",
     "actions": "檔案操作",
     "open": "開啟檔案",
     "newFile": "新增檔案…",
@@ -2903,6 +2904,10 @@
     "forceClosing": "正在關閉舊實例…",
     "forceCloseHint": "將強制關閉佔用此設定的預覽瀏覽器，未儲存的網頁內容可能遺失。登入資料會保留。",
     "profileInUse": "瀏覽器設定正被另一個或殘留的預覽程序佔用。請退出舊 AgentHub 實例後重試，或新增訪客網頁。登入資料未被刪除。",
+    "browsingMode": "瀏覽方式",
+    "nativeModeHint": "使用系統 WebView 核心，與 Chromium 設定的登入狀態獨立。",
+    "chromiumModeHint": "使用 Chromium 核心，保留此設定的登入狀態和瀏覽資料。",
+    "guestModeHint": "使用 Chromium 核心和臨時隔離設定，工作階段回收後清除登入資料。",
     "nativeBackend": "系統原生瀏覽",
     "nativeViewportHint": "系統核心依選取的網頁尺寸縮放顯示，不模擬行動裝置的觸控、UA 或裝置像素比。",
     "nativeDownloadProgress": "系統核心提供下載開始及完成狀態，暫不提供即時進度與取消介面。",

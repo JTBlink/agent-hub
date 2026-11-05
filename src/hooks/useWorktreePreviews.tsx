@@ -45,13 +45,14 @@ export function WorktreePreviewsProvider({
   ) => {
     const scope = JSON.stringify([projectId, worktreePath]);
     const existing = owned.current.find(
-      (tab) => tab.scope === scope && tab.path === path,
+      (tab) =>
+        tab.scope === scope && tab.path === path && tab.sourceUrl === url,
     );
-    if (existing && (!url || existing.document.url === url)) {
+    if (existing) {
       select(existing.document.id);
       return;
     }
-    const key = JSON.stringify([scope, path]);
+    const key = JSON.stringify([scope, path, url]);
     if (pending.current.has(key)) return pending.current.get(key)!;
     const request = (async () => {
       const document = await previewApi.openProject(
@@ -65,11 +66,9 @@ export function WorktreePreviewsProvider({
       }
       if (url) document.url = url;
       owned.current = [
-        ...owned.current.filter((tab) => tab !== existing),
-        { scope, path, document },
+        ...owned.current,
+        { scope, path, document, sourceUrl: url },
       ];
-      if (existing)
-        void previewApi.closeDocument(existing.document.id).catch(() => {});
       setTabs(owned.current);
       select(document.id);
     })();
