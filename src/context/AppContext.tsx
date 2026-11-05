@@ -94,6 +94,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
   const [appUpdate, setAppUpdate] = useState<AppUpdateInfo | null>(null);
+  const startupDataStartedRef = useRef(false);
   const startupSkillCheckStartedRef = useRef(false);
   const appUpdateCheckedRef = useRef(false);
   const lastUpdateNotificationRef = useRef<string | null>(null);
@@ -163,7 +164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const refreshManagedSkills = useCallback(async () => {
+  const loadManagedSkills = useCallback(async () => {
     try {
       const skills = await api.getManagedSkills();
       setManagedSkills(skills);
@@ -173,9 +174,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error("Failed to load managed skills:", e);
       setTranslatedError("common.skills");
     }
-    // Managed skill changes affect project sync health badges
-    refreshProjects();
-  }, [setTranslatedError, refreshProjects]);
+  }, [setTranslatedError]);
+
+  const refreshManagedSkills = useCallback(async () => {
+    await loadManagedSkills();
+    // Standalone skill refreshes also update project sync health badges.
+    // Full app refreshes already load projects alongside the other resources.
+    await refreshProjects();
+  }, [loadManagedSkills, refreshProjects]);
 
   const membershipRequests = useRef(new Map<string, number>());
   const refreshSkillGroupMembership = useCallback(async (groupId: string) => {
@@ -203,11 +209,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await Promise.all([
       refreshSkillGroups(),
       refreshTools(),
-      refreshManagedSkills(),
+      loadManagedSkills(),
       refreshProjects(),
     ]);
     setLoading(false);
-  }, [refreshManagedSkills, refreshProjects, refreshSkillGroups, refreshTools]);
+  }, [loadManagedSkills, refreshProjects, refreshSkillGroups, refreshTools]);
 
   const setViewedSkillGroupId = useCallback((id: string) => {
     setViewedSkillGroupIdState(id);
@@ -270,6 +276,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [viewedSkillGroup, viewedSkillGroupId]);
 
   useEffect(() => {
+    // Strict Mode replays effects; keep the initial filesystem scan single.
+    if (startupDataStartedRef.current) return;
+    startupDataStartedRef.current = true;
     async function init() {
       // Both events log performance.now() (ms since timeOrigin) so the
       // reader can compute duration as done - start. Keeping the unit

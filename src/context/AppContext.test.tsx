@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "../lib/tauri";
@@ -50,6 +50,9 @@ function LibraryScope() {
       </button>
       <button onClick={() => void app.refreshSkillGroups()}>Refresh</button>
       <button onClick={() => void app.refreshAppData()}>Refresh app</button>
+      <button onClick={() => void app.refreshManagedSkills()}>
+        Refresh skills
+      </button>
     </>
   );
 }
@@ -110,6 +113,32 @@ it("leaves the ungrouped view when the full library is selected", async () => {
   expect(container.querySelector("output")!.textContent).toBe("ungrouped");
   await click("Library");
   expect(container.querySelector("output")!.textContent).toBe("library");
+});
+
+it("loads each resource once during strict startup and keeps later refreshes available", async () => {
+  const projects = vi.spyOn(api, "getProjects").mockResolvedValue([]);
+  const skills = vi.spyOn(api, "getManagedSkills").mockResolvedValue([]);
+  const tools = vi.spyOn(api, "getToolStatus").mockResolvedValue([]);
+  await act(async () =>
+    root.render(
+      <StrictMode>
+        <AppProvider>
+          <LibraryScope />
+        </AppProvider>
+      </StrictMode>,
+    ),
+  );
+  expect(projects).toHaveBeenCalledTimes(1);
+  expect(skills).toHaveBeenCalledTimes(1);
+  expect(tools).toHaveBeenCalledTimes(1);
+  expect(container.querySelector("output")!.textContent).toBe("demo-group");
+  await click("Refresh app");
+  expect(projects).toHaveBeenCalledTimes(2);
+  expect(skills).toHaveBeenCalledTimes(2);
+  expect(tools).toHaveBeenCalledTimes(2);
+  await click("Refresh skills");
+  expect(projects).toHaveBeenCalledTimes(3);
+  expect(skills).toHaveBeenCalledTimes(3);
 });
 
 it("runs startup updates once across app refreshes and silently holds back removals", async () => {

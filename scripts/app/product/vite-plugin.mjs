@@ -19,19 +19,31 @@ export function productViteConfig(root) {
     process.env.AGENT_HUB_PRODUCT_TS
   )
     product.generatedDir = resolve(process.env.AGENT_HUB_PRODUCT_TS, "..");
+  else if (!selected) product.generatedDir += "-development";
   product.hash = process.env.AGENT_HUB_PRODUCT_HASH || "development";
   prepareProduct(product);
   const herdr = product.features.includes("herdr");
+  const integrationAliases = featureAliases(root, product.features);
   return {
     resolve: {
       alias: {
         "@app/features": resolve(product.generatedDir, "features.ts"),
-        ...featureAliases(root, product.features),
+        ...integrationAliases,
         "@app/platforms": resolve(product.generatedDir, "platforms.ts"),
         "@app/product":
           process.env.AGENT_HUB_PRODUCT_TS ||
-          product.environment.AGENT_HUB_PRODUCT_TS,
+          resolve(product.generatedDir, "product.ts"),
       },
+    },
+    // These generated application entries live under node_modules for build isolation.
+    // Prebundling them duplicates React contexts in lazy feature chunks (e.g. Herdr).
+    optimizeDeps: {
+      exclude: [
+        "@app/features",
+        "@app/product",
+        "@app/platforms",
+        ...Object.keys(integrationAliases),
+      ],
     },
     build: { outDir: process.env.AGENT_HUB_PRODUCT_OUTPUT_DIR || "dist" },
     server: { port: Number(process.env.AGENT_HUB_DEV_PORT || product.devPort) },
