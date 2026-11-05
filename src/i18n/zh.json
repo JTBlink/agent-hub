@@ -1,4 +1,10 @@
 {
+  "desktopRuntime": {
+    "title": "请在桌面应用中打开",
+    "description": "当前打开的是 AgentHub 的桌面应用入口。浏览器预览无法读取本机技能库、项目或终端数据。",
+    "hint": "请返回 AgentHub 桌面应用继续操作。查看需求原型时，请打开对应的原型页面。",
+    "prototypes": "打开需求原型目录"
+  },
   "hosts": {
     "filePath": "配置文件路径",
     "pathUnavailable": "文件路径暂不可用，请重新读取。",

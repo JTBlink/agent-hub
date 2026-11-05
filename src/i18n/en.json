@@ -1,4 +1,10 @@
 {
+  "desktopRuntime": {
+    "title": "Open in the desktop app",
+    "description": "This is the AgentHub desktop application entry. Browser previews cannot read local skills, projects or terminal data.",
+    "hint": "Return to the AgentHub desktop app to continue. To view a prototype, open its dedicated page.",
+    "prototypes": "Open prototype catalog"
+  },
   "hosts": {
     "filePath": "Configuration file path",
     "pathUnavailable": "File path unavailable. Reload to try again.",

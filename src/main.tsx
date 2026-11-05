@@ -4,8 +4,10 @@ import i18n, { i18nReady } from "./i18n";
 import { logStartupEvent } from "./lib/tauri";
 import "./index.css";
 import App from "./App";
+import { DesktopRuntimeBoundary } from "./app/DesktopRuntimeBoundary";
 import { verifyBuildInfo } from "./app/product/buildInfo";
 
+const desktop = "__TAURI_INTERNALS__" in window;
 await i18nReady;
 try {
   await verifyBuildInfo();
@@ -17,11 +19,14 @@ try {
   }
   throw error;
 }
-logStartupEvent("i18n_ready", performance.now()).catch(() => {});
+if (desktop) logStartupEvent("i18n_ready", performance.now()).catch(() => {});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <DesktopRuntimeBoundary desktop={desktop}>
+      <App />
+    </DesktopRuntimeBoundary>
   </StrictMode>,
 );
-logStartupEvent("root_rendered", performance.now()).catch(() => {});
+if (desktop)
+  logStartupEvent("root_rendered", performance.now()).catch(() => {});

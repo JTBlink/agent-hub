@@ -1,4 +1,10 @@
 {
+  "desktopRuntime": {
+    "title": "請在桌面應用程式中開啟",
+    "description": "目前開啟的是 AgentHub 桌面應用程式入口。瀏覽器預覽無法讀取本機技能庫、專案或終端資料。",
+    "hint": "請返回 AgentHub 桌面應用程式繼續操作。查看需求原型時，請開啟對應的原型頁面。",
+    "prototypes": "開啟需求原型目錄"
+  },
   "hosts": {
     "filePath": "設定檔路徑",
     "pathUnavailable": "檔案路徑暫時無法取得，請重新讀取。",
