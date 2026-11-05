@@ -1,4 +1,5 @@
 import type { TaskFilters, TaskProvider } from "./taskBrowserApi";
+import { taskPlatforms } from "@app/platforms";
 export interface TaskViewPreferences {
   provider: "all" | TaskProvider;
   projectId: string;
@@ -25,7 +26,8 @@ export function readTaskViewPreferences(): TaskViewPreferences {
     return {
       provider:
         "provider" in value &&
-        (value.provider === "github" || value.provider === "gitlab")
+        (value.provider === "github" || value.provider === "gitlab") &&
+        taskPlatforms.some((platform) => platform.id === value.provider)
           ? value.provider
           : "all",
       projectId:

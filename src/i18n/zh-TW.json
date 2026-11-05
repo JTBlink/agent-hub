@@ -755,6 +755,7 @@
     "connection": {
       "title": "Git 儲存庫連線",
       "desc": "可使用 GitHub 登入，或填寫其他 Git 儲存庫位址。同一技能庫的多台裝置應連接同一個儲存庫。",
+      "customDesc": "填寫 Git 儲存庫位址。同一技能庫的多台裝置應連接同一個儲存庫。",
       "repository": "雲端儲存庫",
       "branch": "分支",
       "none": "未連接",

@@ -1,5 +1,7 @@
 //! Read-only identity shared by the desktop host and its companion CLI.
 
+include!(concat!(env!("OUT_DIR"), "/capabilities.rs"));
+
 #[derive(Debug, serde::Serialize)]
 pub struct BuildInfo {
     pub product_id: &'static str,
@@ -11,18 +13,11 @@ pub struct BuildInfo {
 
 /// Describe compiled capabilities, independently of runtime environment variables.
 pub fn current() -> BuildInfo {
-    let mut features = Vec::new();
-    if cfg!(feature = "herdr") {
-        features.push("herdr");
-    }
-    if cfg!(feature = "standard") {
-        features.push("standard");
-    }
     BuildInfo {
         product_id: env!("AGENT_HUB_PRODUCT_ID"),
         config_hash: env!("AGENT_HUB_PRODUCT_HASH"),
         base_commit: env!("AGENT_HUB_BASE_COMMIT"),
-        features,
+        features: COMPILED_FEATURES.to_vec(),
         version: env!("CARGO_PKG_VERSION"),
     }
 }

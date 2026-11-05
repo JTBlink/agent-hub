@@ -3,7 +3,7 @@ use super::*;
 fn invalid_executable_and_invalid_command_name_are_ignored() {
     let temp = tempfile::tempdir().unwrap();
     assert!(read_from(&temp.path().join("missing-gh")).is_none());
-    assert!(super::super::tool_detection::find_command("../gh").is_none());
+    assert!(crate::core::tool_detection::find_command("../gh").is_none());
 }
 #[cfg(unix)]
 #[test]

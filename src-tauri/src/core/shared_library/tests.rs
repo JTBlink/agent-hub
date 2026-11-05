@@ -46,7 +46,7 @@ fn conflict_keeps_old_root_and_all_existing_bytes() {
 #[test]
 fn preserves_git_history_remote_and_can_commit_after_migration() {
     let (_temp, home, legacy, shared) = fixture();
-    crate::core::git_backup::init_repo_unlocked(&legacy, "Fixture").unwrap();
+    commit_fixture(&legacy, "initial fixture");
     let repo = git2::Repository::open(&legacy).unwrap();
     repo.remote("origin", "https://example.invalid/skills.git")
         .unwrap();
@@ -60,7 +60,7 @@ fn preserves_git_history_remote_and_can_commit_after_migration() {
         Some("https://example.invalid/skills.git")
     );
     fs::write(shared.join("demo/SKILL.md"), "# Updated").unwrap();
-    crate::core::git_backup::commit_all_unlocked(&shared, "update fixture").unwrap();
+    commit_fixture(&shared, "update fixture");
     assert_ne!(repo.head().unwrap().target(), before);
     assert_eq!(
         git2::Repository::open(&legacy)
@@ -118,4 +118,30 @@ fn same_legacy_and_shared_activates_without_copying() {
     migrate(&home, &same, &same).unwrap();
     assert!(activated(&home));
     assert!(same.join("demo/SKILL.md").is_file());
+}
+
+fn commit_fixture(path: &std::path::Path, message: &str) {
+    let repository = git2::Repository::init(path).unwrap();
+    let mut index = repository.index().unwrap();
+    index
+        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
+    let tree_id = index.write_tree().unwrap();
+    let tree = repository.find_tree(tree_id).unwrap();
+    let signature = git2::Signature::now("Fixture", "user@example.invalid").unwrap();
+    let parent = repository
+        .head()
+        .ok()
+        .and_then(|head| head.peel_to_commit().ok());
+    let parents: Vec<_> = parent.iter().collect();
+    repository
+        .commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            message,
+            &tree,
+            &parents,
+        )
+        .unwrap();
 }

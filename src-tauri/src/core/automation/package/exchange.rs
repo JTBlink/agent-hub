@@ -148,6 +148,7 @@ fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, 
 
 /// Cloud repositories use the same independent directory format as discovery.
 /// Stable identity is portable; local receipts, bindings and runtime files are not.
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) fn write_backup_directory(
     backup: &super::super::backup::AutomationBackup,
     target: &Path,
@@ -200,6 +201,7 @@ pub(crate) fn write_backup_directory(
     super::layout::write_manifest(target, &manifest)
 }
 
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) fn read_backup_directory(
     source: &Path,
 ) -> Result<super::super::backup::AutomationBackup, String> {

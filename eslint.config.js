@@ -10,6 +10,7 @@ export default defineConfig([
     "dist",
     "docs/reference/**",
     "src-tauri/target/**",
+    "src-tauri/target-products/**",
     "src/generated/**",
     "docs-site/.generated/**",
     "docs-site/.vitepress/cache/**",

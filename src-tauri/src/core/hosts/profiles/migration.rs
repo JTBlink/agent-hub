@@ -1,6 +1,6 @@
 //! Migrate both historical directory layouts without changing IDs or revisions.
 use super::{files, legacy_library, library, read_at, valid_id};
-use crate::core::{auto_backup, central_repo, user_config};
+use crate::core::{central_repo, cloud_sync, user_config};
 use std::fs;
 
 pub(super) fn run() -> Result<(), String> {
@@ -53,7 +53,7 @@ pub(super) fn run() -> Result<(), String> {
                 return Err("HOSTS_PROFILE_CONFLICT".into());
             }
             fs::remove_dir_all(entry.path()).map_err(|e| e.to_string())?;
-            auto_backup::notify_central_change();
+            cloud_sync::notify_central_change();
         }
     }
     let legacy = legacy_library();

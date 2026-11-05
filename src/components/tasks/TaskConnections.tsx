@@ -5,6 +5,8 @@ import * as api from "../../lib/tauri";
 import { ThemedSelect } from "../ThemedSelect";
 import { getErrorMessage } from "../../lib/error";
 
+import { taskPlatforms } from "@app/platforms";
+
 interface Props {
   projects: Project[];
   bindings: TaskBinding[];
@@ -21,8 +23,10 @@ export function TaskConnections({
 }: Props) {
   const { t } = useTranslation();
   const [projectId, setProjectId] = useState(projects[0]?.id || "");
-  const [provider, setProvider] = useState<TaskProvider>("github");
-  const [host, setHost] = useState("github.com");
+  const [provider, setProvider] = useState<TaskProvider>(
+    taskPlatforms[0]?.id ?? "github",
+  );
+  const [host, setHost] = useState(taskPlatforms[0]?.host ?? "");
   const [repository, setRepository] = useState("");
   const [program, setProgram] = useState("");
   const [argumentsText, setArgumentsText] = useState("[]");
@@ -168,118 +172,126 @@ export function TaskConnections({
           </button>
         </div>
       ))}
-      <form
-        className="grid gap-3 sm:grid-cols-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <fieldset disabled={busy} className="contents">
-          <label className="text-xs">
-            {t("tasks.project")}
-            <ThemedSelect
-              aria-label={t("tasks.project")}
-              value={projectId}
-              onChange={(event) => setProjectId(event.target.value)}
+      {taskPlatforms.length > 0 && (
+        <form
+          className="grid gap-3 sm:grid-cols-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <fieldset disabled={busy} className="contents">
+            <label className="text-xs">
+              {t("tasks.project")}
+              <ThemedSelect
+                aria-label={t("tasks.project")}
+                value={projectId}
+                onChange={(event) => setProjectId(event.target.value)}
+              >
+                {!projects.length && (
+                  <option value="">{t("terminal.chooseProject")}</option>
+                )}
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </ThemedSelect>
+            </label>
+            <label className="text-xs">
+              {t("tasks.provider")}
+              <ThemedSelect
+                value={provider}
+                aria-label={t("tasks.provider")}
+                onChange={(event) => {
+                  const value =
+                    event.target.value === "gitlab" ? "gitlab" : "github";
+                  setProvider(value);
+                  setHost(
+                    taskPlatforms.find((platform) => platform.id === value)
+                      ?.host ?? "",
+                  );
+                }}
+              >
+                {taskPlatforms.map((platform) => (
+                  <option key={platform.id} value={platform.id}>
+                    {platform.label}
+                  </option>
+                ))}
+              </ThemedSelect>
+            </label>
+            <label className="text-xs">
+              {t("tasks.host")}
+              <input
+                ref={first}
+                className="app-input mt-1 w-full"
+                value={host}
+                required
+                onChange={(event) => setHost(event.target.value)}
+              />
+            </label>
+            <label className="text-xs">
+              {t("tasks.repository")}
+              <input
+                className="app-input mt-1 w-full"
+                value={repository}
+                placeholder="group/project"
+                required
+                onChange={(event) => setRepository(event.target.value)}
+              />
+            </label>
+            {remotes.length > 0 && (
+              <div className="flex flex-wrap gap-1 sm:col-span-2">
+                {remotes.map(({ remote, provider: remoteProvider }) => (
+                  <button
+                    key={remote}
+                    type="button"
+                    className="app-button-secondary text-xs"
+                    onClick={() => {
+                      const slash = remote.indexOf("/");
+                      const remoteHost = remote.slice(0, slash);
+                      setHost(remoteHost);
+                      if (remoteProvider) setProvider(remoteProvider);
+                      setRepository(remote.slice(slash + 1));
+                    }}
+                  >
+                    {remote}
+                  </button>
+                ))}
+              </div>
+            )}
+            <label className="text-xs">
+              {t("tasks.launcher")}
+              <input
+                className="app-input mt-1 w-full"
+                value={program}
+                placeholder={provider === "github" ? "gh" : "glab"}
+                onChange={(event) => setProgram(event.target.value)}
+              />
+            </label>
+            <label className="text-xs">
+              {t("tasks.launcherArgs")}
+              <input
+                className="app-input mt-1 w-full font-mono"
+                value={argumentsText}
+                onChange={(event) => setArgumentsText(event.target.value)}
+              />
+            </label>
+            {error && (
+              <p role="alert" className="text-xs text-danger sm:col-span-2">
+                {error}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="app-button-primary justify-self-start"
+              disabled={busy || !projectId}
             >
-              {!projects.length && (
-                <option value="">{t("terminal.chooseProject")}</option>
-              )}
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </ThemedSelect>
-          </label>
-          <label className="text-xs">
-            {t("tasks.provider")}
-            <ThemedSelect
-              value={provider}
-              aria-label={t("tasks.provider")}
-              onChange={(event) => {
-                const value =
-                  event.target.value === "gitlab" ? "gitlab" : "github";
-                setProvider(value);
-                setHost(value === "github" ? "github.com" : "gitlab.com");
-              }}
-            >
-              <option value="github">GitHub</option>
-              <option value="gitlab">GitLab</option>
-            </ThemedSelect>
-          </label>
-          <label className="text-xs">
-            {t("tasks.host")}
-            <input
-              ref={first}
-              className="app-input mt-1 w-full"
-              value={host}
-              required
-              onChange={(event) => setHost(event.target.value)}
-            />
-          </label>
-          <label className="text-xs">
-            {t("tasks.repository")}
-            <input
-              className="app-input mt-1 w-full"
-              value={repository}
-              placeholder="group/project"
-              required
-              onChange={(event) => setRepository(event.target.value)}
-            />
-          </label>
-          {remotes.length > 0 && (
-            <div className="flex flex-wrap gap-1 sm:col-span-2">
-              {remotes.map(({ remote, provider: remoteProvider }) => (
-                <button
-                  key={remote}
-                  type="button"
-                  className="app-button-secondary text-xs"
-                  onClick={() => {
-                    const slash = remote.indexOf("/");
-                    const remoteHost = remote.slice(0, slash);
-                    setHost(remoteHost);
-                    if (remoteProvider) setProvider(remoteProvider);
-                    setRepository(remote.slice(slash + 1));
-                  }}
-                >
-                  {remote}
-                </button>
-              ))}
-            </div>
-          )}
-          <label className="text-xs">
-            {t("tasks.launcher")}
-            <input
-              className="app-input mt-1 w-full"
-              value={program}
-              placeholder={provider === "github" ? "gh" : "glab"}
-              onChange={(event) => setProgram(event.target.value)}
-            />
-          </label>
-          <label className="text-xs">
-            {t("tasks.launcherArgs")}
-            <input
-              className="app-input mt-1 w-full font-mono"
-              value={argumentsText}
-              onChange={(event) => setArgumentsText(event.target.value)}
-            />
-          </label>
-          {error && (
-            <p role="alert" className="text-xs text-danger sm:col-span-2">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            className="app-button-primary justify-self-start"
-            disabled={busy || !projectId}
-          >
-            {t("common.save")}
-          </button>
-        </fieldset>
-      </form>
+              {t("common.save")}
+            </button>
+          </fieldset>
+        </form>
+      )}
     </section>
   );
 }

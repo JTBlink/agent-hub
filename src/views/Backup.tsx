@@ -1,16 +1,19 @@
+import {
+  GithubBackupConnect,
+  GithubBackupRemoteActions,
+} from "@app/github-backup";
+import { githubEnabled } from "@app/platforms";
 import { BackupScope } from "../components/BackupScope";
 import { BackupHistory } from "../components/BackupHistory";
 import { BackupPendingChanges } from "../components/BackupPendingChanges";
 import { BackupPreferences } from "../components/BackupPreferences";
 import { SkillsDirectorySetting } from "../components/SkillsDirectorySetting";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Check,
   Cloud,
-  Copy,
-  ExternalLink,
   Github,
   Loader2,
   Pencil,
@@ -22,17 +25,14 @@ import {
   XCircle,
 } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
-import { writeText as clipboardWriteText } from "@tauri-apps/plugin-clipboard-manager";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "../utils";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { GitRecoveryDialog } from "../components/GitRecoveryDialog";
 import { GitSetupDialog } from "../components/GitSetupDialog";
-import { GITHUB_OAUTH_CLIENT_ID } from "../lib/distribution";
 import { useApp } from "../context/AppContext";
-import { getErrorKind, getErrorMessage } from "../lib/error";
+import { getErrorMessage } from "../lib/error";
 import { getGitAuthErrorKind, mapGitErrorMessage } from "../lib/gitErrors";
 import * as api from "../lib/tauri";
 import {
@@ -58,9 +58,6 @@ type BackupMode =
 type LoadingAction =
   "start" | "sync" | "recovery" | "save" | "disconnect" | "github" | null;
 
-const DEFAULT_GITHUB_REPO = "agent-hub-backup";
-const GITHUB_TOKEN_URL =
-  "https://github.com/settings/tokens/new?scopes=repo&description=Skills%20Manager%20Backup";
 type RecoveryReason = GitUpstreamHealth | "conflict";
 
 export function Backup() {
@@ -88,13 +85,6 @@ export function Backup() {
   const [sizeReport, setSizeReport] = useState<GitBackupSizeReport | null>(
     null,
   );
-  const [githubToken, setGithubToken] = useState("");
-  const [githubRepoName, setGithubRepoName] = useState(DEFAULT_GITHUB_REPO);
-  const [githubError, setGithubError] = useState<string | null>(null);
-  const [patMode, setPatMode] = useState(false);
-  const [deviceInfo, setDeviceInfo] =
-    useState<api.GithubDeviceFlowStart | null>(null);
-  const deviceCancelRef = useRef(false);
   const [deviceName, setDeviceName] = useState("");
   const [deviceNameDraft, setDeviceNameDraft] = useState("");
   const [deviceNameEditing, setDeviceNameEditing] = useState(false);
@@ -108,18 +98,8 @@ export function Backup() {
   );
   // §3.1 disconnect matrix rows 2–3 + reconnect guidance after revocation.
   const [authMethod, setAuthMethod] = useState("");
-  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
-  const [deleteRemoteConfirmOpen, setDeleteRemoteConfirmOpen] = useState(false);
   const [reconnectMode, setReconnectMode] = useState(false);
   const [backupErrorRaw, setBackupErrorRaw] = useState("");
-
-  // Abandon an in-flight device-flow poll loop when leaving the page.
-  useEffect(
-    () => () => {
-      deviceCancelRef.current = true;
-    },
-    [],
-  );
 
   const mapGitError = useCallback(
     (error: unknown) => mapGitErrorMessage(error, t),
@@ -615,27 +595,6 @@ export function Backup() {
     return fromPath || conflict.skill_id.slice(0, 8);
   };
 
-  const mapGithubError = (error: unknown) => {
-    const message = getErrorMessage(error, "");
-    if (message.includes("GITHUB_TOKEN_INVALID"))
-      return t("backup.github.errorToken");
-    if (message.includes("GITHUB_SCOPE")) return t("backup.github.errorScope");
-    if (message.includes("CREDENTIAL_STORE_UNAVAILABLE"))
-      return t("backup.github.errorKeychain");
-    if (message.includes("GITHUB_DEVICE_EXPIRED"))
-      return t("backup.github.deviceExpired");
-    if (message.includes("GITHUB_DEVICE_DENIED"))
-      return t("backup.github.deviceDenied");
-    if (
-      message.includes("GITHUB_NETWORK") ||
-      getErrorKind(error) === "network"
-    ) {
-      // §3.2: when github.com is unreachable, point at the PAT fallback too.
-      return `${t("settings.gitErrorNetwork")} ${t("backup.github.deviceFallbackPat")}`;
-    }
-    return mapGitError(error);
-  };
-
   /** Shared tail of both connect paths: wire the repo locally and either
    * restore the existing backup or push the first one. */
   const finishGithubConnect = async (res: api.GithubBackupConnectResult) => {
@@ -682,73 +641,6 @@ export function Backup() {
       await refreshGitStatus();
       await handleBackupNow();
     }
-  };
-
-  const handleGithubConnect = async () => {
-    const token = githubToken.trim();
-    if (!token) return;
-    setLoading("github");
-    setGithubError(null);
-    try {
-      const res = await api.githubBackupConnect(
-        token,
-        githubRepoName.trim() || DEFAULT_GITHUB_REPO,
-      );
-      // Token is in the local credential store now; drop it from component state.
-      setGithubToken("");
-      await finishGithubConnect(res);
-    } catch (error) {
-      setGithubError(mapGithubError(error));
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const sleep = (ms: number) =>
-    new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-  const handleDeviceFlow = async () => {
-    setLoading("github");
-    setGithubError(null);
-    deviceCancelRef.current = false;
-    try {
-      const info = await api.githubDeviceFlowStart();
-      setDeviceInfo(info);
-      void openUrl(info.verification_uri);
-
-      const repoName = githubRepoName.trim() || DEFAULT_GITHUB_REPO;
-      let intervalSec = Math.max(info.interval, 5);
-      const deadline = Date.now() + info.expires_in * 1000;
-      while (!deviceCancelRef.current && Date.now() < deadline) {
-        await sleep(intervalSec * 1000);
-        if (deviceCancelRef.current) return;
-        const poll = await api.githubDeviceFlowPoll(info.device_code, repoName);
-        if (poll.status === "slow_down") {
-          intervalSec += 5;
-          continue;
-        }
-        if (poll.status === "connected" && poll.result) {
-          setDeviceInfo(null);
-          await finishGithubConnect(poll.result);
-          return;
-        }
-        // "pending" → keep polling.
-      }
-      if (!deviceCancelRef.current) {
-        setGithubError(t("backup.github.deviceExpired"));
-      }
-    } catch (error) {
-      setGithubError(mapGithubError(error));
-    } finally {
-      setDeviceInfo(null);
-      setLoading(null);
-    }
-  };
-
-  const cancelDeviceFlow = () => {
-    deviceCancelRef.current = true;
-    setDeviceInfo(null);
-    setLoading(null);
   };
 
   const handleRestoreVersion = async () => {
@@ -815,13 +707,7 @@ export function Backup() {
   };
 
   const remoteUrlValue = gitStatus?.remote_url || remoteConfig || "";
-  const isGithubRemote = remoteUrlValue.includes("github.com");
-  const githubRepoWebUrl = (() => {
-    const match = remoteUrlValue.match(
-      /github\.com[/:]([^/]+\/[^/]+?)(\.git)?$/,
-    );
-    return match ? `https://github.com/${match[1]}` : null;
-  })();
+  const isGithubRemote = githubEnabled && remoteUrlValue.includes("github.com");
   // Token revoked/expired on the GitHub side → offer an explicit reconnect
   // instead of only a failure card (backup redesign Phase 2 待办).
   const authErrorKind = getGitAuthErrorKind(backupErrorRaw);
@@ -830,42 +716,6 @@ export function Backup() {
     (authErrorKind === "https" ||
       authErrorKind === "missing" ||
       authErrorKind === "storage");
-
-  // §3.1 row 2: revoking is done on GitHub's side (a public device-flow app
-  // has no client secret, so tokens cannot be revoked via API) — open the
-  // right page and disconnect this machine.
-  const handleRevokeAuthorization = async () => {
-    setRevokeConfirmOpen(false);
-    const oauthUrl = GITHUB_OAUTH_CLIENT_ID
-      ? `https://github.com/settings/connections/applications/${GITHUB_OAUTH_CLIENT_ID}`
-      : "https://github.com/settings/applications";
-    const patUrl = "https://github.com/settings/tokens";
-    if (authMethod === "pat") {
-      openUrl(patUrl).catch(() => {});
-    } else if (authMethod === "oauth") {
-      openUrl(oauthUrl).catch(() => {});
-    } else {
-      // Connected before the method was recorded (or wired manually): the
-      // credential could be either kind — open both pages so nothing stays
-      // silently authorized.
-      openUrl(oauthUrl).catch(() => {});
-      openUrl(patUrl).catch(() => {});
-    }
-    await handleDisconnect();
-  };
-
-  // §3.1 row 3: repo deletion needs the `delete_repo` scope our tokens
-  // deliberately don't have — GitHub's own settings page (with its type-the-
-  // repo-name confirmation) is the safe double-confirm path.
-  const handleOpenDeleteRemote = async () => {
-    setDeleteRemoteConfirmOpen(false);
-    if (githubRepoWebUrl) {
-      await openUrl(`${githubRepoWebUrl}/settings#danger-zone`).catch(() => {});
-      toast.info(t("backup.disconnect.deleteRemoteOpened"), {
-        duration: 12000,
-      });
-    }
-  };
 
   const StatusIcon = statusMeta.icon;
   const canBackupNow = mode === "pending_changes" || mode === "up_to_date";
@@ -984,7 +834,7 @@ export function Backup() {
               </div>
 
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                {authErrorNeedsReconnect && (
+                {githubEnabled && authErrorNeedsReconnect && (
                   <button
                     type="button"
                     onClick={() => setReconnectMode(true)}
@@ -1137,144 +987,16 @@ export function Backup() {
             </section>
           )}
 
-          {(reconnectMode || (!gitStatus?.remote_url && !remoteConfig)) && (
-            <section className="app-panel p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Github className="h-4 w-4 text-muted" />
-                <h2 className="text-base font-semibold text-secondary">
-                  {reconnectMode
-                    ? t("backup.github.reconnectTitle")
-                    : t("backup.github.title")}
-                </h2>
-              </div>
-              <p className="mb-3 text-sm leading-5 text-muted">
-                {t("backup.github.desc")}
-              </p>
-
-              {deviceInfo ? (
-                <div className="space-y-3">
-                  <div className="flex flex-col items-center gap-2 rounded-md border border-border-subtle bg-bg-secondary px-4 py-4">
-                    <div className="font-mono text-3xl font-bold tracking-[0.25em] text-primary">
-                      {deviceInfo.user_code}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void clipboardWriteText(deviceInfo.user_code);
-                        toast.success(t("backup.github.deviceCodeCopied"));
-                      }}
-                      className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-secondary"
-                    >
-                      <Copy className="h-3 w-3" />
-                      {t("backup.github.deviceCopyCode")}
-                    </button>
-                  </div>
-                  <p className="text-sm leading-5 text-muted">
-                    {t("backup.github.deviceWaitDesc", {
-                      uri: deviceInfo.verification_uri,
-                    })}
-                  </p>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      {t("backup.github.deviceWaiting")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={cancelDeviceFlow}
-                      className="rounded-lg px-2.5 py-1 text-xs font-medium text-tertiary transition-colors hover:bg-surface-hover hover:text-secondary"
-                    >
-                      {t("common.cancel")}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDeviceFlow}
-                      disabled={!!loading}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-accent-border bg-accent-dark px-3 text-sm font-medium text-white transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {loading === "github" ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Github className="h-3.5 w-3.5" />
-                      )}
-                      {loading === "github"
-                        ? t("backup.github.connecting")
-                        : t("backup.github.deviceSignIn")}
-                    </button>
-                    <input
-                      type="text"
-                      value={githubRepoName}
-                      onChange={(event) =>
-                        setGithubRepoName(event.target.value)
-                      }
-                      disabled={loading === "github"}
-                      title={t("backup.github.repoLabel")}
-                      className="h-8 w-52 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-sm text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                    />
-                  </div>
-
-                  {patMode ? (
-                    <>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <input
-                          type="password"
-                          value={githubToken}
-                          onChange={(event) => {
-                            setGithubToken(event.target.value);
-                            setGithubError(null);
-                          }}
-                          placeholder={t("backup.github.tokenPlaceholder")}
-                          disabled={loading === "github"}
-                          className="h-8 min-w-0 flex-1 rounded-lg border border-border-subtle bg-background px-2.5 font-mono text-sm text-secondary outline-none transition-colors focus:border-border disabled:opacity-50"
-                          autoCapitalize="none"
-                          autoCorrect="off"
-                          spellCheck={false}
-                        />
-                        <button
-                          type="button"
-                          onClick={handleGithubConnect}
-                          disabled={!!loading || !githubToken.trim()}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-active disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {t("backup.github.connect")}
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => void openUrl(GITHUB_TOKEN_URL)}
-                        className="inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-secondary"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        {t("backup.github.tokenHint")}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setPatMode(true)}
-                      className="text-xs text-muted transition-colors hover:text-secondary"
-                    >
-                      {t("backup.github.patToggle")}
-                    </button>
-                  )}
-
-                  {githubError && (
-                    <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs leading-5 text-red-600 dark:text-red-300">
-                      {githubError}
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
-          )}
+          {githubEnabled &&
+            (reconnectMode || (!gitStatus?.remote_url && !remoteConfig)) && (
+              <GithubBackupConnect
+                reconnect={reconnectMode}
+                busy={!!loading}
+                onConnected={finishGithubConnect}
+                onBusyChange={(busy) => setLoading(busy ? "github" : null)}
+                mapGitError={mapGitError}
+              />
+            )}
 
           <section className="app-panel p-4">
             <div className="mb-3 flex items-center gap-2">
@@ -1284,7 +1006,11 @@ export function Backup() {
               </h2>
             </div>
             <p className="mb-3 text-sm leading-5 text-muted">
-              {t("backup.connection.desc")}
+              {t(
+                githubEnabled
+                  ? "backup.connection.desc"
+                  : "backup.connection.customDesc",
+              )}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <input
@@ -1359,45 +1085,13 @@ export function Backup() {
                 )}
                 {t("settings.gitDisconnect")}
               </button>
-              {isGithubRemote && (
-                <button
-                  type="button"
-                  onClick={() => setRevokeConfirmOpen(true)}
-                  disabled={loading === "disconnect"}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface-hover px-2.5 text-sm font-medium text-tertiary transition-colors hover:bg-surface-active disabled:opacity-50"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {t("backup.disconnect.revoke")}
-                </button>
-              )}
             </div>
-            {isGithubRemote && (
-              <p className="mt-2 text-xs leading-4 text-faint">
-                {authMethod === "pat"
-                  ? t("backup.disconnect.revokeHintPat")
-                  : authMethod === "oauth"
-                    ? t("backup.disconnect.revokeHintOauth")
-                    : t("backup.disconnect.revokeHintUnknown")}
-              </p>
-            )}
-            {githubRepoWebUrl && (
-              <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2.5">
-                <div className="text-sm font-medium text-red-700 dark:text-red-300">
-                  {t("backup.disconnect.deleteRemote")}
-                </div>
-                <p className="mt-1 text-xs leading-4 text-red-700/80 dark:text-red-300/80">
-                  {t("backup.disconnect.deleteRemoteDesc")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setDeleteRemoteConfirmOpen(true)}
-                  className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-lg border border-red-500/50 px-2.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-500/15 dark:text-red-300"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {t("backup.disconnect.deleteRemoteAction")}
-                </button>
-              </div>
-            )}
+            <GithubBackupRemoteActions
+              remoteUrl={remoteUrlValue}
+              authMethod={authMethod}
+              busy={loading === "disconnect"}
+              onDisconnect={handleDisconnect}
+            />
           </section>
 
           <section className="app-panel p-4">
@@ -1448,29 +1142,6 @@ export function Backup() {
         confirmLabel={t("settings.gitDisconnect")}
         onClose={() => setDisconnectConfirmOpen(false)}
         onConfirm={handleDisconnect}
-      />
-      <ConfirmDialog
-        open={revokeConfirmOpen}
-        title={t("backup.disconnect.revokeConfirmTitle")}
-        message={
-          authMethod === "pat"
-            ? t("backup.disconnect.revokeConfirmPat")
-            : authMethod === "oauth"
-              ? t("backup.disconnect.revokeConfirmOauth")
-              : t("backup.disconnect.revokeConfirmUnknown")
-        }
-        tone="warning"
-        confirmLabel={t("backup.disconnect.revoke")}
-        onClose={() => setRevokeConfirmOpen(false)}
-        onConfirm={handleRevokeAuthorization}
-      />
-      <ConfirmDialog
-        open={deleteRemoteConfirmOpen}
-        title={t("backup.disconnect.deleteRemoteAction")}
-        message={t("backup.disconnect.deleteRemoteConfirm")}
-        confirmLabel={t("backup.disconnect.deleteRemoteAction")}
-        onClose={() => setDeleteRemoteConfirmOpen(false)}
-        onConfirm={handleOpenDeleteRemote}
       />
       <GitSetupDialog
         open={setupOpen}

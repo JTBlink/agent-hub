@@ -1,3 +1,4 @@
+import { githubEnabled } from "@app/platforms";
 /* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
@@ -378,7 +379,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Check this application's public stable release feed without blocking startup.
   useEffect(() => {
-    if (loading || appUpdateCheckedRef.current) return;
+    if (!githubEnabled || loading || appUpdateCheckedRef.current) return;
     const timer = setTimeout(() => {
       appUpdateCheckedRef.current = true;
       refreshAppUpdate()

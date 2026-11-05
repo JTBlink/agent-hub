@@ -9,7 +9,7 @@ pub(super) fn string(value: &Value, key: &str) -> String {
 fn encode(value: &str) -> String {
     urlencoding::encode(value).into_owned()
 }
-pub(super) fn object_endpoint(binding: &Binding, kind: TaskKind, number: u64) -> String {
+pub(crate) fn object_endpoint(binding: &Binding, kind: TaskKind, number: u64) -> String {
     match binding.provider {
         Provider::Github => format!(
             "repos/{}/{}/{number}",

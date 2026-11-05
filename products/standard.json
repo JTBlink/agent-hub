@@ -1,6 +1,5 @@
 {
   "id": "standard",
-  "features": ["standard"],
   "sidebar": {
     "primary": [
       "projects",

@@ -2,11 +2,11 @@
 use super::{Provider, ReviewMetadata, TaskCheck, TaskKind, TaskMetadata};
 use serde_json::Value;
 
-pub(super) fn text(value: &Value) -> Option<String> {
+pub(crate) fn text(value: &Value) -> Option<String> {
     value.as_str().filter(|s| !s.is_empty()).map(str::to_owned)
 }
 
-pub(super) fn actor(value: &Value) -> Option<String> {
+pub(crate) fn actor(value: &Value) -> Option<String> {
     text(&value["login"]).or_else(|| text(&value["username"]))
 }
 

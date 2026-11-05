@@ -1,3 +1,4 @@
+#![cfg(all(feature = "github", feature = "gitlab"))]
 use app_lib::core::task_browser::{Binding, Provider, TaskClient, TaskFailure, TaskKind};
 use serde_json::{json, Value};
 use std::sync::atomic::AtomicBool;

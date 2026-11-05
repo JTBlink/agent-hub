@@ -29,7 +29,8 @@ export function SettingsTabs({
   const sidebarVisibility = useContext(SidebarVisibilityContext);
   const { hash } = useLocation();
   const navigate = useNavigate();
-  const active = tabs.find((tab) => hash === `#${tab}`) ?? "agents";
+  const visibleTabs = tabs.filter((tab) => children[tab] !== undefined);
+  const active = visibleTabs.find((tab) => hash === `#${tab}`) ?? "agents";
   const sidebar = (
     <ResizableSidebar
       storageKey="agent-hub:settings-sidebar-width"
@@ -49,7 +50,7 @@ export function SettingsTabs({
         aria-label={t("settings.title")}
         className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5"
       >
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab}
             type="button"
@@ -62,20 +63,20 @@ export function SettingsTabs({
               if (tab !== active) navigate({ hash: `#${tab}` });
             }}
             onKeyDown={(event) => {
-              const index = tabs.indexOf(tab);
+              const index = visibleTabs.indexOf(tab);
               const next =
                 event.key === "ArrowDown"
-                  ? (index + 1) % tabs.length
+                  ? (index + 1) % visibleTabs.length
                   : event.key === "ArrowUp"
-                    ? (index + tabs.length - 1) % tabs.length
+                    ? (index + visibleTabs.length - 1) % visibleTabs.length
                     : event.key === "Home"
                       ? 0
                       : event.key === "End"
-                        ? tabs.length - 1
+                        ? visibleTabs.length - 1
                         : null;
               if (next === null) return;
               event.preventDefault();
-              navigate({ hash: `#${tabs[next]}` });
+              navigate({ hash: `#${visibleTabs[next]}` });
               const buttons =
                 event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
                   '[role="tab"]',
@@ -110,7 +111,7 @@ export function SettingsTabs({
       {sidebarVisibility?.sidebarContainer
         ? createPortal(sidebar, sidebarVisibility.sidebarContainer)
         : sidebar}
-      {tabs.map((tab) => (
+      {visibleTabs.map((tab) => (
         <div
           key={tab}
           id={`settings-panel-${tab}`}

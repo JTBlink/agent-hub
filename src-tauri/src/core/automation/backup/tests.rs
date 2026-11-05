@@ -1,5 +1,6 @@
 use super::*;
 #[test]
+#[cfg(feature = "cloud-sync")]
 fn automatic_git_backup_pushes_task_changes_and_restores_only_dormant_definitions() {
     use crate::core::{auto_backup, backup_workspace, central_repo, skill_store::SkillStore};
     let _lock = central_repo::test_base_dir_lock();

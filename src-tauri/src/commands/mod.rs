@@ -9,8 +9,11 @@ pub mod developer_tools;
 pub mod dialog;
 pub mod discovered_skills;
 pub mod file_preview;
+#[cfg(feature = "cloud-sync")]
 pub mod git_backup;
 pub mod git_repositories;
+#[cfg(all(feature = "cloud-sync", feature = "github"))]
+pub mod github;
 pub mod hosts;
 pub mod ipc;
 pub mod project_library;

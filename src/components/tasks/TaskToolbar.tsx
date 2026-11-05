@@ -1,8 +1,6 @@
 import {
   ExternalLink,
   FolderGit2,
-  Github,
-  Gitlab,
   Layers,
   RefreshCw,
   Search,
@@ -21,6 +19,8 @@ import type { TaskViewPreferences } from "../../lib/taskViewPreferences";
 import { ThemedSelect } from "../ThemedSelect";
 import { TaskFilterGroup } from "./TaskFilterGroup";
 import { cn } from "../../utils";
+
+import { taskPlatforms } from "@app/platforms";
 
 interface Props {
   provider: TaskViewPreferences["provider"];
@@ -84,16 +84,11 @@ export function TaskToolbar({
               label: t("tasks.allProviders"),
               icon: <Layers size={16} aria-hidden="true" />,
             },
-            {
-              value: "github",
-              label: "GitHub",
-              icon: <Github size={17} aria-hidden="true" />,
-            },
-            {
-              value: "gitlab",
-              label: "GitLab",
-              icon: <Gitlab size={17} aria-hidden="true" />,
-            },
+            ...taskPlatforms.map((platform) => ({
+              value: platform.id,
+              label: platform.label,
+              icon: <platform.icon className="h-4 w-4" />,
+            })),
           ]}
         />
         <TaskFilterGroup

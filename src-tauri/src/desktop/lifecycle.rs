@@ -97,6 +97,7 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
     }
     // 退出前 auto-backup (§3.4): local commit only, fail-fast on a busy lock,
     // after the window is gone so quitting feels instant.
+    #[cfg(feature = "cloud-sync")]
     if let Some(store) = app.try_state::<Arc<core::skill_store::SkillStore>>() {
         core::auto_backup::commit_on_exit(&store);
     }

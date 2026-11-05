@@ -757,6 +757,7 @@
     "connection": {
       "title": "Git repository connection",
       "desc": "Sign in with GitHub or enter another Git repository URL. Connect devices sharing a skill library to the same repository.",
+      "customDesc": "Enter a Git repository URL. Connect devices sharing a skill library to the same repository.",
       "repository": "Cloud repository",
       "branch": "Branch",
       "none": "Not connected",

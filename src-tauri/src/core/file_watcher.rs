@@ -376,7 +376,7 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
                         path == &automation_root || path == &automation_root.join("tasks.json")
                     });
                     if automation_event && super::automation::has_pending_backup() {
-                        super::auto_backup::notify_central_change();
+                        super::cloud_sync::notify_central_change();
                     }
                     if touches_central_repo(&event)
                         || event
@@ -384,7 +384,7 @@ pub fn start_file_watcher<R: tauri::Runtime>(app: tauri::AppHandle<R>, store: Ar
                             .iter()
                             .any(|path| path.starts_with(&config_root))
                     {
-                        super::auto_backup::notify_central_change();
+                        super::cloud_sync::notify_central_change();
                     }
                     match decide_emit(
                         should_emit(&event)

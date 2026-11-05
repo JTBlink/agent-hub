@@ -1,6 +1,6 @@
 //! Complete Hosts profiles; file contents are authoritative and editor-friendly.
 use super::{read_path, revision, validate, HostsSaved};
-use crate::core::{auto_backup, repo_lock::RepoLock, user_config};
+use crate::core::{cloud_sync, repo_lock::RepoLock, user_config};
 use serde::{Deserialize, Serialize};
 use std::{fs, io::Write, path::Path};
 
@@ -205,7 +205,7 @@ fn write(
         ),
     ])?;
     files::publish(id, stage, existing.is_some())?;
-    auto_backup::notify_central_change();
+    cloud_sync::notify_central_change();
     read_at(&library(), id)
 }
 
@@ -242,7 +242,7 @@ pub fn delete(id: &str, expected: &str) -> Result<(), String> {
         return Err("HOSTS_PROFILE_CONFLICT".into());
     }
     files::delete(id)?;
-    auto_backup::notify_central_change();
+    cloud_sync::notify_central_change();
     Ok(())
 }
 pub fn apply(
@@ -262,7 +262,7 @@ pub fn apply(
 
 /// Complete interrupted profile writes before backup projection. Caller holds RepoLock.
 pub(crate) fn recover_pending() -> Result<(), String> {
-    crate::core::backup_workspace::recover_for_user_config().map_err(|e| format!("{e:#}"))?;
+    crate::core::cloud_sync::recover_for_user_config().map_err(|e| format!("{e:#}"))?;
     storage::recover()?;
     files::recover()?;
     migration::run()

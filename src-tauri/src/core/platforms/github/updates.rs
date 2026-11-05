@@ -1,18 +1,11 @@
 //! Check the application's own public stable release feed.
 
-use super::{error::AppError, skillssh_api::build_http_client};
+use crate::core::{error::AppError, skillssh_api::build_http_client};
 
 const LATEST_RELEASE_API: &str = "https://api.github.com/repos/JTBlink/agent-hub/releases/latest";
 const RELEASES_URL: &str = "https://github.com/JTBlink/agent-hub/releases";
 
-/// Existing desktop update notification contract, also used by manual checks.
-#[derive(Debug, serde::Serialize)]
-pub struct AppUpdateInfo {
-    pub has_update: bool,
-    pub current_version: String,
-    pub latest_version: String,
-    pub release_url: String,
-}
+pub use super::super::contracts::AppUpdateInfo;
 
 #[derive(serde::Deserialize)]
 struct Release {

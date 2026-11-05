@@ -198,7 +198,8 @@ agent-hub/
 │   │       │   └── templates/       #   从根目录 automations/ 编译嵌入推荐目录与跨平台入口
 │   │       ├── git_catalog.rs      #     仓库目录 DTO、本地 Git 工作区与路径校验
 │   │       ├── git_credentials.rs  #     Git 凭据管理
-│   │       ├── github_api.rs       #     GitHub API 客户端
+│   │       ├── platforms/          #     独立 GitHub／GitLab 实现、共享契约与缺省适配
+│   │       ├── cloud_sync.rs        #     本地修改对接可选备份的窄接口
 │   │       ├── credential_cache.rs #     进程内钥匙串读取缓存与并发合并
 │   │       ├── library_layout.rs   #     默认库层级升级、冲突保护与中断恢复
 │   │       ├── hosts/              #     系统 Hosts 校验与提权、完整方案及中断写入恢复

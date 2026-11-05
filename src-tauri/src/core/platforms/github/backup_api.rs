@@ -9,7 +9,7 @@
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 
-use super::skillssh_api::build_http_client;
+use crate::core::skillssh_api::build_http_client;
 
 const API_BASE: &str = "https://api.github.com";
 

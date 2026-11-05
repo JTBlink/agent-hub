@@ -162,6 +162,12 @@ fn start_sync_services(app: &tauri::App, store: &Arc<core::skill_store::SkillSto
         step.elapsed().as_millis()
     );
 
+    #[cfg(feature = "cloud-sync")]
+    start_cloud_sync(app, store);
+}
+
+#[cfg(feature = "cloud-sync")]
+fn start_cloud_sync(app: &tauri::App, store: &Arc<core::skill_store::SkillStore>) {
     // Object-merge crash recovery (merge-engine design §5): finish or
     // roll back an interrupted sync apply before any background work
     // can touch the repo. Best-effort, never blocks startup.

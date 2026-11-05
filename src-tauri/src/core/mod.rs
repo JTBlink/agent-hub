@@ -3,13 +3,20 @@ pub mod agent_launcher;
 pub mod agent_runtime;
 pub mod agent_usage;
 pub mod app_state;
+#[cfg(not(feature = "github"))]
+#[path = "platforms/disabled_updates.rs"]
 pub mod app_updates;
+#[cfg(feature = "github")]
+pub use platforms::github::updates as app_updates;
 pub mod audit_log;
+#[cfg(feature = "cloud-sync")]
 pub mod auto_backup;
 pub mod automation;
+#[cfg(feature = "cloud-sync")]
 pub mod backup_workspace;
 pub mod central_repo;
 pub mod cli_bridge;
+pub(crate) mod cloud_sync;
 pub mod content_hash;
 mod credential_cache;
 mod credential_file;
@@ -18,24 +25,31 @@ pub mod deployment_preferences;
 pub mod error;
 pub mod file_preview;
 pub mod file_watcher;
-mod gh_credentials;
+#[cfg(feature = "github")]
+pub(crate) use platforms::github::credentials as gh_credentials;
+#[cfg(feature = "cloud-sync")]
 pub mod git2_engine;
 pub(crate) mod git_auth_source;
+#[cfg(feature = "cloud-sync")]
 pub mod git_backup;
 pub mod git_catalog;
 pub mod git_credentials;
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) mod git_failure;
 pub mod git_fetcher;
 pub mod git_skill_sync;
-pub mod github_api;
+#[cfg(feature = "github")]
+pub use platforms::github::backup_api as github_api;
 pub mod hosts;
 pub mod install_cancel;
 pub mod installer;
 pub mod log_sanitize;
+#[cfg(feature = "cloud-sync")]
 pub mod merge;
 pub mod migrations;
 pub mod panic_log;
 pub mod path_guard;
+pub(crate) mod platforms;
 pub mod project_library;
 pub mod project_scanner;
 pub(crate) mod project_skill_mutation;

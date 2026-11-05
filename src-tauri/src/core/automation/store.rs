@@ -212,7 +212,7 @@ pub(super) fn save(root: &Path, tasks: Vec<ManagedAutomation>) -> Result<(), Str
     registry.backup_initialized = true;
     write_registry(root, &registry)?;
     #[cfg(not(test))]
-    super::super::auto_backup::notify_central_change();
+    super::super::cloud_sync::notify_central_change();
     Ok(())
 }
 

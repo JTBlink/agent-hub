@@ -21,10 +21,17 @@ fn preference_enabled(value: Option<&str>) -> bool {
 pub(crate) fn resolve(host: &str) -> Result<Option<RemoteCredential>> {
     select(
         host,
-        USE_GH.load(Ordering::Relaxed),
-        super::gh_credentials::load,
+        cfg!(feature = "github") && USE_GH.load(Ordering::Relaxed),
+        github_credential,
         || git_credentials::load_credential(host),
     )
+}
+
+fn github_credential() -> Option<RemoteCredential> {
+    #[cfg(feature = "github")]
+    return super::gh_credentials::load();
+    #[cfg(not(feature = "github"))]
+    None
 }
 
 fn select(

@@ -1,6 +1,5 @@
 {
   "id": "personal",
-  "features": [],
   "sidebar": {
     "primary": [
       "projects",
@@ -10,7 +9,8 @@
       "automation",
       "preview",
       "skills",
-      "discover"
+      "discover",
+      "herdr"
     ],
     "bottom": ["dashboard", "backup", "settings"],
     "defaultPanel": "skills"

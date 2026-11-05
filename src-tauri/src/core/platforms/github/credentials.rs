@@ -1,8 +1,8 @@
 //! Reuse GitHub CLI's active login without persisting a second token copy.
-use super::git_credentials::RemoteCredential;
+use crate::core::git_credentials::RemoteCredential;
 use std::{path::Path, process::Command};
 
-pub(super) fn load() -> Option<RemoteCredential> {
+pub(crate) fn load() -> Option<RemoteCredential> {
     // Unit tests never access the developer's actual CLI login. The process
     // adapter is covered separately with an isolated executable fixture.
     #[cfg(test)]
@@ -11,7 +11,7 @@ pub(super) fn load() -> Option<RemoteCredential> {
     }
     #[cfg(not(test))]
     {
-        read_from(&super::tool_detection::find_command("gh")?)
+        read_from(&crate::core::tool_detection::find_command("gh")?)
     }
 }
 

@@ -1,0 +1,52 @@
+{
+  "capabilities": {
+    "herdr": {
+      "description": "Herdr 内置集成",
+      "sidebar": ["herdr"],
+      "aliases": {
+        "@app/herdr": {
+          "enabled": "src/features/herdr/integration.ts",
+          "disabled": "src/integrations/herdr/disabled.ts"
+        }
+      },
+      "excluded": ["src/features/herdr/"]
+    },
+    "cloud-sync": {
+      "description": "Git 备份、恢复与云端同步",
+      "sidebar": ["backup"],
+      "aliases": {
+        "@app/cloud-sync": {
+          "enabled": "src/features/cloud-sync/integration.ts",
+          "disabled": "src/integrations/cloud-sync/disabled.ts"
+        }
+      },
+      "excluded": [
+        "src/features/cloud-sync/",
+        "src/views/Backup",
+        "src/components/settings/BackupSettings",
+        "src/components/FirstRunRestoreDialog"
+      ]
+    },
+    "github": {
+      "description": "GitHub 任务、登录、备份连接与应用更新",
+      "platform": "src/features/github/platform",
+      "excluded": ["src/features/github/"],
+      "aliases": {
+        "@app/github-backup": {
+          "enabled": "src/features/github/cloudIntegration.ts",
+          "disabled": "src/integrations/github-backup/disabled.ts",
+          "requires": ["cloud-sync"]
+        }
+      }
+    },
+    "gitlab": {
+      "description": "GitLab 任务与 CLI 集成",
+      "platform": "src/features/gitlab/platform",
+      "excluded": ["src/features/gitlab/"]
+    }
+  },
+  "products": {
+    "standard": ["cloud-sync", "github", "gitlab", "herdr"],
+    "personal": []
+  }
+}

@@ -6,6 +6,27 @@ import { repositoryRoot } from "../../shared/paths.mjs";
 import { cargoTargetDir } from "../build-cache.mjs";
 
 const ROOT = repositoryRoot;
+export const capabilityCatalog = JSON.parse(
+  readFileSync(resolve(ROOT, "products/capabilities.json"), "utf8"),
+);
+export function capabilityAliases(root, features) {
+  return Object.fromEntries(
+    Object.entries(capabilityCatalog.capabilities).flatMap(([id, capability]) =>
+      Object.entries(capability.aliases ?? {}).map(([alias, paths]) => [
+        alias,
+        resolve(
+          root,
+          features.includes(id) &&
+            (paths.requires ?? []).every((required) =>
+              features.includes(required),
+            )
+            ? paths.enabled
+            : paths.disabled,
+        ),
+      ]),
+    ),
+  );
+}
 const modules = new Set([
   "projects",
   "search",
@@ -22,17 +43,10 @@ const modules = new Set([
 ]);
 const panels = new Set(["projects", "search", "skills", "herdr"]);
 
-/** Resolve the same additive feature graph Cargo uses; defaults are never implicit. */
-export function resolveProduct(input, cargoFeatures) {
+function resolveFeatures(features, cargoFeatures) {
   if (
-    !input ||
-    typeof input !== "object" ||
-    !/^[a-z][a-z0-9-]*$/.test(input.id ?? "")
-  )
-    throw new Error("Invalid product ID");
-  if (
-    !Array.isArray(input.features) ||
-    !input.features.every((name) => typeof name === "string")
+    !Array.isArray(features) ||
+    !features.every((name) => typeof name === "string")
   )
     throw new Error("Invalid product features");
   const selected = new Set();
@@ -46,7 +60,19 @@ export function resolveProduct(input, cargoFeatures) {
         visit(dependency);
     }
   };
-  input.features.forEach(visit);
+  features.forEach(visit);
+  return selected;
+}
+
+/** Resolve the same additive feature graph Cargo uses; defaults are never implicit. */
+export function resolveProduct(input, cargoFeatures) {
+  if (
+    !input ||
+    typeof input !== "object" ||
+    !/^[a-z][a-z0-9-]*$/.test(input.id ?? "")
+  )
+    throw new Error("Invalid product ID");
+  const selected = resolveFeatures(input.features, cargoFeatures);
   const sidebar = input.sidebar;
   if (
     !sidebar ||
@@ -60,8 +86,14 @@ export function resolveProduct(input, cargoFeatures) {
     new Set(entries).size !== entries.length
   )
     throw new Error("Unknown or duplicate sidebar module");
-  if (entries.includes("herdr") && !selected.has("herdr"))
-    throw new Error("Herdr sidebar requires the herdr Cargo feature");
+  for (const [id, capability] of Object.entries(capabilityCatalog.capabilities))
+    if (
+      (capability.sidebar ?? []).some((entry) => entries.includes(entry)) &&
+      !selected.has(id)
+    )
+      throw new Error(
+        `${capability.description}: sidebar requires the ${id} Cargo feature`,
+      );
   if (
     !panels.has(sidebar.defaultPanel) ||
     !entries.includes(sidebar.defaultPanel)
@@ -144,9 +176,44 @@ export function loadProduct(
     selection.endsWith(".json")
       ? resolve(ROOT, selection)
       : resolve(ROOT, "products", `${selection}.json`);
+  const graph = cargoFeatures ?? cargoFeatureGraph();
+  for (const name of Object.keys(capabilityCatalog.capabilities))
+    if (!(name in graph))
+      throw new Error(`Capability is missing its Cargo feature: ${name}`);
   const config = resolveProduct(
-    JSON.parse(readFileSync(configPath, "utf8")),
-    cargoFeatures ?? cargoFeatureGraph(),
+    (() => {
+      const input = JSON.parse(readFileSync(configPath, "utf8"));
+      if (!input || typeof input !== "object")
+        throw new Error("Invalid product configuration");
+      if (
+        !input.sidebar ||
+        !Array.isArray(input.sidebar.primary) ||
+        !Array.isArray(input.sidebar.bottom)
+      )
+        throw new Error("Invalid product sidebar");
+      const features = capabilityCatalog.products[input.id] ?? input.features;
+      const selected = resolveFeatures(features, graph);
+      const disabledEntries = new Set(
+        Object.entries(capabilityCatalog.capabilities).flatMap(
+          ([id, capability]) =>
+            selected.has(id) ? [] : (capability.sidebar ?? []),
+        ),
+      );
+      const sidebar = {
+        ...input.sidebar,
+        primary: input.sidebar.primary.filter(
+          (entry) => !disabledEntries.has(entry),
+        ),
+        bottom: input.sidebar.bottom.filter(
+          (entry) => !disabledEntries.has(entry),
+        ),
+      };
+      if (disabledEntries.has(sidebar.defaultPanel))
+        sidebar.defaultPanel =
+          sidebar.primary.find((entry) => panels.has(entry)) ?? "skills";
+      return { ...input, features, sidebar };
+    })(),
+    graph,
   );
   if (
     !Number.isInteger(config.devPort) ||
@@ -241,6 +308,23 @@ export function prepareProduct(product) {
         : "") +
       `export const featureModules: readonly FeatureModule[] = [${product.features.includes("herdr") ? "herdrModule" : ""}];\n`,
   );
+  const platforms = Object.keys(capabilityCatalog.capabilities).filter(
+    (name) =>
+      capabilityCatalog.capabilities[name].platform &&
+      product.features.includes(name),
+  );
+  writeGenerated(
+    resolve(product.generatedDir, "platforms.ts"),
+    `import type { TaskPlatform } from ${JSON.stringify(resolve(ROOT, "src/integrations/platforms/types"))};\n` +
+      platforms
+        .map(
+          (name) =>
+            `import { ${name}Platform } from ${JSON.stringify(resolve(ROOT, capabilityCatalog.capabilities[name].platform))};\n`,
+        )
+        .join("") +
+      `export const taskPlatforms: readonly TaskPlatform[] = [${platforms.map((name) => name + "Platform").join(",")}];\n` +
+      `export const githubEnabled = ${platforms.includes("github")};\nexport const gitlabEnabled = ${platforms.includes("gitlab")};\n`,
+  );
   const integration = resolve(
     ROOT,
     product.features.includes("herdr")
@@ -259,6 +343,12 @@ export function prepareProduct(product) {
             "@app/features": [resolve(product.generatedDir, "features.ts")],
             "@app/herdr": [integration],
             "@app/product": [resolve(product.generatedDir, "product.ts")],
+            ...Object.fromEntries(
+              Object.entries(capabilityAliases(ROOT, product.features)).map(
+                ([alias, path]) => [alias, [path]],
+              ),
+            ),
+            "@app/platforms": [resolve(product.generatedDir, "platforms.ts")],
           },
         },
         files: [resolve(ROOT, "src/main.tsx")],

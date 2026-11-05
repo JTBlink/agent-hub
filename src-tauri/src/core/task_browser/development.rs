@@ -1,10 +1,11 @@
 //! Optional development information. Failure never discards a readable task.
-use super::{
-    metadata, Provider, TaskCheck, TaskDevelopment, TaskFailure, TaskKind, TaskLink, TaskReview,
-};
+#[cfg(any(feature = "github", feature = "gitlab"))]
+use super::{metadata, TaskLink, TaskReview};
+use super::{Provider, TaskDevelopment, TaskFailure, TaskKind};
 use serde_json::Value;
 
-fn optional(
+#[cfg(any(feature = "github", feature = "gitlab"))]
+pub(crate) fn optional(
     info: &mut TaskDevelopment,
     section: &str,
     endpoint: String,
@@ -22,7 +23,8 @@ fn optional(
     }
 }
 
-fn array(info: &mut TaskDevelopment, section: &str, value: Option<Value>) -> Vec<Value> {
+#[cfg(any(feature = "github", feature = "gitlab"))]
+pub(crate) fn array(info: &mut TaskDevelopment, section: &str, value: Option<Value>) -> Vec<Value> {
     match value {
         Some(Value::Array(items)) => {
             if items.len() >= 100 && !info.truncated.iter().any(|item| item == section) {
@@ -38,7 +40,8 @@ fn array(info: &mut TaskDevelopment, section: &str, value: Option<Value>) -> Vec
     }
 }
 
-fn link(item: &Value, kind: &str) -> Option<TaskLink> {
+#[cfg(any(feature = "github", feature = "gitlab"))]
+pub(crate) fn link(item: &Value, kind: &str) -> Option<TaskLink> {
     let url = metadata::text(&item["html_url"]).or_else(|| metadata::text(&item["web_url"]))?;
     Some(TaskLink {
         title: super::adapter::string(item, "title"),
@@ -48,7 +51,8 @@ fn link(item: &Value, kind: &str) -> Option<TaskLink> {
     })
 }
 
-fn review(item: &Value) -> TaskReview {
+#[cfg(any(feature = "github", feature = "gitlab"))]
+pub(crate) fn review(item: &Value) -> TaskReview {
     TaskReview {
         author: metadata::actor(&item["user"])
             .or_else(|| metadata::actor(&item["author"]))
@@ -69,6 +73,7 @@ fn review(item: &Value) -> TaskReview {
     }
 }
 
+#[cfg(any(feature = "github", feature = "gitlab"))]
 pub(super) fn load(
     provider: Provider,
     kind: TaskKind,
@@ -77,63 +82,22 @@ pub(super) fn load(
     mut read: impl FnMut(String) -> Result<Value, TaskFailure>,
 ) -> Result<TaskDevelopment, TaskFailure> {
     let mut info = TaskDevelopment::default();
-    if provider == Provider::Github {
-        let issues_endpoint = if kind == TaskKind::Review {
-            endpoint.replacen("/pulls/", "/issues/", 1)
-        } else {
-            endpoint.into()
-        };
-        let data = optional(
-            &mut info,
-            "related",
-            format!("{issues_endpoint}/timeline?per_page=100&page=1"),
-            &mut read,
-        )?;
-        for event in array(&mut info, "related", data) {
-            if let Some(item) = event.pointer("/source/issue") {
-                if let Some(link) = link(
-                    item,
-                    if item.get("pull_request").is_some() {
-                        "review"
-                    } else {
-                        "issue"
-                    },
-                ) {
-                    info.related.push(link);
-                }
-            }
-        }
-        if kind == TaskKind::Review {
-            github_review(&mut info, endpoint, item, &mut read)?;
-        }
-    } else {
-        let resource = if kind == TaskKind::Review {
-            "closes_issues"
-        } else {
-            "related_merge_requests"
-        };
-        let data = optional(
-            &mut info,
-            "related",
-            format!("{endpoint}/{resource}?per_page=100&page=1"),
-            &mut read,
-        )?;
-        for item in array(&mut info, "related", data) {
-            if let Some(link) = link(
-                &item,
-                if kind == TaskKind::Review {
-                    "closes"
-                } else {
-                    "review"
-                },
-            ) {
-                info.related.push(link);
-            }
-        }
-        if kind == TaskKind::Review {
-            gitlab_review(&mut info, endpoint, &mut read)?;
-        }
+    provider.require()?;
+    match provider {
+        #[cfg(feature = "github")]
+        Provider::Github => crate::core::platforms::github::tasks::development(
+            &mut info, kind, endpoint, item, &mut read,
+        )?,
+        #[cfg(feature = "gitlab")]
+        Provider::Gitlab => crate::core::platforms::gitlab::tasks::development(
+            &mut info, kind, endpoint, item, &mut read,
+        )?,
+        #[cfg(not(feature = "github"))]
+        Provider::Github => provider.require()?,
+        #[cfg(not(feature = "gitlab"))]
+        Provider::Gitlab => provider.require()?,
     }
+
     let mut urls = std::collections::HashSet::new();
     if kind == TaskKind::Review {
         changes(&mut info, provider, endpoint, &mut read)?;
@@ -142,6 +106,7 @@ pub(super) fn load(
     Ok(info)
 }
 
+#[cfg(any(feature = "github", feature = "gitlab"))]
 fn changes(
     info: &mut TaskDevelopment,
     provider: Provider,
@@ -224,102 +189,14 @@ fn changes(
     Ok(())
 }
 
-fn github_review(
-    info: &mut TaskDevelopment,
-    endpoint: &str,
-    item: &Value,
-    read: &mut impl FnMut(String) -> Result<Value, TaskFailure>,
-) -> Result<(), TaskFailure> {
-    for resource in ["reviews", "comments"] {
-        let data = optional(
-            info,
-            "reviews",
-            format!("{endpoint}/{resource}?per_page=100&page=1"),
-            read,
-        )?;
-        let reviews = array(info, "reviews", data);
-        info.reviews.extend(reviews.iter().map(review));
-    }
-    if let Some(sha) = metadata::text(&item["head"]["sha"]) {
-        let reference = urlencoding::encode(&sha);
-        let repo = endpoint
-            .rsplit_once("/pulls/")
-            .map(|value| value.0)
-            .unwrap_or_default();
-        for (resource, field) in [("check-runs", "check_runs"), ("status", "statuses")] {
-            let data = optional(
-                info,
-                "checks",
-                format!("{repo}/commits/{reference}/{resource}?per_page=100&page=1"),
-                read,
-            )?;
-            let data = data.map(|value| value[field].clone());
-            for check in array(info, "checks", data) {
-                info.checks.push(TaskCheck {
-                    name: metadata::text(&check["name"])
-                        .or_else(|| metadata::text(&check["context"]))
-                        .unwrap_or_else(|| "CI".into()),
-                    status: metadata::text(&check["conclusion"])
-                        .or_else(|| metadata::text(&check["status"]))
-                        .or_else(|| metadata::text(&check["state"]))
-                        .unwrap_or_default(),
-                    url: metadata::text(&check["html_url"])
-                        .or_else(|| metadata::text(&check["details_url"]))
-                        .or_else(|| metadata::text(&check["target_url"]))
-                        .unwrap_or_default(),
-                    sha: Some(sha.clone()),
-                });
-            }
-        }
-    }
-    Ok(())
-}
-
-fn gitlab_review(
-    info: &mut TaskDevelopment,
-    endpoint: &str,
-    read: &mut impl FnMut(String) -> Result<Value, TaskFailure>,
-) -> Result<(), TaskFailure> {
-    if let Some(value) = optional(info, "reviews", format!("{endpoint}/approvals"), read)? {
-        if value.is_object() {
-            info.approvals_required = value["approvals_required"].as_u64();
-            info.approvals_left = value["approvals_left"].as_u64();
-            if let Some(approved) = value["approved_by"].as_array() {
-                info.reviews.extend(
-                    approved
-                        .iter()
-                        .filter_map(|entry| metadata::actor(&entry["user"]))
-                        .map(|author| TaskReview {
-                            author,
-                            state: "APPROVED".into(),
-                            body: String::new(),
-                            url: String::new(),
-                            submitted_at: None,
-                            path: None,
-                            line: None,
-                            resolved: None,
-                        }),
-                );
-            }
-        } else {
-            info.warnings.push("reviews".into());
-        }
-    }
-    let data = optional(
-        info,
-        "reviews",
-        format!("{endpoint}/discussions?per_page=100&page=1"),
-        read,
-    )?;
-    for discussion in array(info, "reviews", data) {
-        if let Some(notes) = discussion["notes"].as_array() {
-            for note in notes
-                .iter()
-                .filter(|note| note.get("position").is_some_and(Value::is_object))
-            {
-                info.reviews.push(review(note));
-            }
-        }
-    }
-    Ok(())
+#[cfg(not(any(feature = "github", feature = "gitlab")))]
+pub(super) fn load(
+    provider: Provider,
+    _kind: TaskKind,
+    _endpoint: &str,
+    _item: &Value,
+    _read: impl FnMut(String) -> Result<Value, TaskFailure>,
+) -> Result<TaskDevelopment, TaskFailure> {
+    provider.require()?;
+    Ok(TaskDevelopment::default())
 }

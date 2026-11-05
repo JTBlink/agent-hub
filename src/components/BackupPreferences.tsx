@@ -1,5 +1,6 @@
+import { githubEnabled } from "@app/platforms";
 import { useTranslation } from "react-i18next";
-import { GhCredentialSetting } from "./GhCredentialSetting";
+import { GhCredentialSetting } from "@app/github-backup";
 import { ToggleSwitch } from "./ToggleSwitch";
 
 interface Props {
@@ -22,9 +23,11 @@ export function BackupPreferences({
         {t("backup.preferencesTitle")}
       </h2>
       <div className="divide-y divide-border-subtle">
-        <div className="pb-4">
-          <GhCredentialSetting disabled={disabled} />
-        </div>
+        {githubEnabled && (
+          <div className="pb-4">
+            <GhCredentialSetting disabled={disabled} />
+          </div>
+        )}
         <div className="flex items-start justify-between gap-3 pt-4">
           <div className="min-w-0">
             <h3 className="text-sm font-medium text-secondary">

@@ -439,6 +439,7 @@ fn active_claim_prevents_cleanup_and_keeps_the_task_usable() {
 }
 
 #[test]
+#[cfg(feature = "cloud-sync")]
 fn packages_upload_as_discoverable_directories_and_restore_paused_usable_copies() {
     use crate::core::{auto_backup, backup_workspace, central_repo, skill_store::SkillStore};
     let _guard = central_repo::test_base_dir_lock();

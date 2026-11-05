@@ -9,7 +9,10 @@
     "paths": {
       "@app/features": ["./src/app/features/default.ts"],
       "@app/herdr": ["./src/features/herdr/integration.ts"],
-      "@app/product": ["./src/app/product/default.ts"]
+      "@app/product": ["./src/app/product/default.ts"],
+      "@app/cloud-sync": ["./src/features/cloud-sync/integration.ts"],
+      "@app/platforms": ["./src/integrations/platforms/default.ts"],
+      "@app/github-backup": ["./src/features/github/cloudIntegration.ts"]
     },
     "skipLibCheck": true,
 

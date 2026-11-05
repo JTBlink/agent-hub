@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import * as api from "../lib/tauri";
-import { ToggleSwitch } from "./ToggleSwitch";
+import * as api from "../../lib/tauri";
+import { ToggleSwitch } from "../../components/ToggleSwitch";
 
 const SETTING = "backup_use_gh";
 

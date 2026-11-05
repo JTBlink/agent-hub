@@ -78,8 +78,7 @@ pub fn read_for_editor() -> Result<HostsSnapshot, String> {
     snapshot.backup_warning = lock
         .map_err(|e| e.to_string())
         .and_then(|_lock| {
-            crate::core::backup_workspace::recover_for_user_config()
-                .map_err(|e| format!("{e:#}"))?;
+            crate::core::cloud_sync::recover_for_user_config().map_err(|e| format!("{e:#}"))?;
             snapshot.applied_profile_id = profiles::applied_id(&snapshot)?;
             archive::capture(&snapshot, false)
         })
@@ -147,7 +146,7 @@ pub(super) fn save_unlocked(
     expected_revision: &str,
     profile_id: Option<&str>,
 ) -> Result<HostsSaved, String> {
-    crate::core::backup_workspace::recover_for_user_config().map_err(|e| format!("{e:#}"))?;
+    crate::core::cloud_sync::recover_for_user_config().map_err(|e| format!("{e:#}"))?;
     let _guard = SAVE_LOCK
         .lock()
         .map_err(|_| "Hosts save lock unavailable")?;

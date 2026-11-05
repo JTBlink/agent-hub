@@ -12,8 +12,7 @@ import {
 import { Discover } from "../views/Discover";
 import { Settings } from "../views/Settings";
 import { ProjectSkills } from "../views/ProjectSkills";
-import { Backup } from "../views/Backup";
-import BackupDiff from "../views/BackupDiff";
+import { cloudSyncRoutes } from "@app/cloud-sync";
 import { Help } from "../views/Help";
 import { Tasks } from "../views/Tasks";
 import { Git } from "../views/Git";
@@ -50,8 +49,6 @@ export function createAppRoutes(
       <Route path="/terminal" element={null} />
       <Route path="/preview" element={null} />
       <Route path="/automation" element={<Automation />} />
-      <Route path="/backup" element={<Backup />} />
-      <Route path="/backup/diff" element={<BackupDiff />} />
       <Route path="/project/:id" element={null} />
       <Route path="/project/:id/skills" element={<ProjectSkills />} />
       <Route path="/settings" element={<Settings />} />
@@ -64,6 +61,7 @@ export function createAppRoutes(
       element: <Layout />,
       children: [
         ...children,
+        ...cloudSyncRoutes,
         ...featureModules.flatMap((feature) => feature.routes ?? []),
         ...extensionRoutes,
       ],

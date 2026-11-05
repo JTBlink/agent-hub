@@ -54,7 +54,7 @@ app_lib::builder()?
 
 ## 产品编译时组装
 
-产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 排除 Herdr 内置集成。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。首期只保证 Herdr 可选，其他功能保持公共基线。
+产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 默认排除可选集成。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。可选能力及产品选择统一在 `products/capabilities.json` 管理，覆盖 Herdr、云端同步、GitHub 与 GitLab；产品清单只保留身份与界面排列。
 
 `./agent-hub.sh build --product personal --debug --bundles app` 经共享 Node 入口解析产品，向前端、桌面和配套 CLI 传递相同配置摘要与实际特性集合。`src-tauri/src/product/` 保存编译期身份；`build-info` CLI 与 `get_build_info` IPC 只读返回该身份，前端在应用 Provider 初始化前核验，拒绝混用资源。
 
@@ -67,3 +67,7 @@ app_lib::builder()?
 个人版具有不同的应用 identifier、开发端口、应用数据、平台任务标识和 CLI bridge。标准版继续使用原数据；产品 ID 在同一产品特性集合变化时保持稳定。共享项目文件、原生 Agent 登录及系统 Hosts 属于用户选择或系统拥有的资源，不能把版本目录隔离描述为这些资源被复制。个人版未配置专属更新通道时不查询标准版更新源。
 
 新增功能与产品配置的操作步骤见[产品配置与独立功能开发](../product-development.md)。
+
+GitHub 与 GitLab 的后端实现分别位于 `core/platforms/github/` 与 `core/platforms/gitlab/`，任务领域只保留共享模型、验证与有界结果解析。GitHub 的凭据、备份 HTTP 接口、更新源与引导连接归 GitHub 模块，通用 Git 备份命令不依赖它。平台类型保留用于兼容已有绑定，实际查询在平台不可用时先拒绝，不执行外部 CLI；列表不展示不可用绑定，原始数据不删除。
+
+云端同步通过 `cloud-sync` 控制命令注册、备份核心、后台启动与退出动作。共享本地修改通过窄范围的 `cloud_sync` 通知／恢复接口对接，关闭时无备份 I/O。前端静态入口通过能力清单选择实现或无副作用缺省模块；产物模块清单拒绝包含被排除的能力。构建脚本从同一能力清单生成编译能力信息，桌面与 CLI 不再手工维护另一份能力枚举。

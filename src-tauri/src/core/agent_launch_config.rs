@@ -1,5 +1,5 @@
 //! Portable Agent launch preferences, independent of UI, scheduling and Git transport.
-use super::{auto_backup, repo_lock::RepoLock, user_config};
+use super::{cloud_sync, repo_lock::RepoLock, user_config};
 use anyhow::{bail, ensure, Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -116,11 +116,12 @@ fn read(root: &Path) -> Result<(Document, String)> {
 }
 /// Validate restored configuration before the backup transaction publishes any files.
 /// Caller validates the containing tree's symlink and size boundaries first.
+#[cfg(feature = "cloud-sync")]
 pub(crate) fn validate_at(root: &Path) -> Result<()> {
     read(root).map(|_| ())
 }
 fn load_unlocked() -> Result<Snapshot> {
-    super::backup_workspace::recover_for_user_config()?;
+    super::cloud_sync::recover_for_user_config()?;
     let root = user_config::root();
     user_config::checked(&root.join(FILE)).map_err(anyhow::Error::msg)?;
     let (document, revision) = read(&root)?;
@@ -159,7 +160,7 @@ pub fn save(document: Document, expected_revision: &str) -> Result<Snapshot> {
         bail!("Agent launch settings changed while saving; draft preserved")
     }
     staged.persist(&path).map_err(|e| e.error)?;
-    auto_backup::notify_central_change();
+    cloud_sync::notify_central_change();
     load_unlocked()
 }
 pub fn resolve(agent: &str) -> Result<Launch> {

@@ -1,7 +1,7 @@
 //! System snapshots join the ordinary configuration backup, without a second history UI.
 //! Callers hold RepoLock; the device key is local and is never restored from Git.
 use super::HostsSnapshot;
-use crate::core::{auto_backup, central_repo, user_config};
+use crate::core::{central_repo, cloud_sync, user_config};
 use std::{fs, io::Write, path::Path};
 
 fn device_id() -> Result<String, String> {
@@ -32,7 +32,7 @@ fn write(path: &Path, bytes: &[u8]) -> Result<(), String> {
     file.write_all(bytes).map_err(|e| e.to_string())?;
     file.as_file().sync_all().map_err(|e| e.to_string())?;
     file.persist(path).map_err(|e| e.to_string())?;
-    auto_backup::notify_central_change();
+    cloud_sync::notify_central_change();
     Ok(())
 }
 pub(super) fn capture(snapshot: &HostsSnapshot, previous: bool) -> Result<(), String> {

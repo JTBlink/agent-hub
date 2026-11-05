@@ -22,7 +22,7 @@ afterEach(async () => {
   container.remove();
   vi.unstubAllGlobals();
 });
-function Subject() {
+function Subject({ backup = true }: { backup?: boolean }) {
   const navigate = useNavigate();
   return (
     <>
@@ -32,7 +32,7 @@ function Subject() {
           agents: <input aria-label="Agent name" defaultValue="draft" />,
           skills: <p>Skills</p>,
           appearance: <p>Appearance</p>,
-          backup: <p>Backup</p>,
+          backup: backup ? <p>Backup</p> : undefined,
           network: <input aria-label="Proxy" />,
           hosts: <p>Hosts editor</p>,
           permissions: "permissions",
@@ -147,4 +147,24 @@ it("drags the shared sidebar, keeps the selected panel and restores the saved wi
     restored.dispatchEvent(new MouseEvent("dblclick", { bubbles: true })),
   );
   expect(restored.getAttribute("aria-valuenow")).toBe(String(initial));
+});
+
+it("omits unavailable capability tabs and falls back from an old backup deep link", async () => {
+  const i18n = createInstance();
+  await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
+  await act(async () =>
+    root.render(
+      <I18nextProvider i18n={i18n}>
+        <MemoryRouter initialEntries={["/settings#backup"]}>
+          <Subject backup={false} />
+        </MemoryRouter>
+      </I18nextProvider>,
+    ),
+  );
+  expect(container.querySelector("#settings-tab-backup")).toBeNull();
+  expect(
+    container
+      .querySelector("#settings-tab-agents")
+      ?.getAttribute("aria-selected"),
+  ).toBe("true");
 });

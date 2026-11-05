@@ -1,3 +1,4 @@
+import { githubEnabled } from "@app/platforms";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   BookOpen,
@@ -46,7 +47,7 @@ export function AboutSettings({
             <p className="text-muted text-sm">{t("settings.tagline")}</p>
           </div>
         </div>
-        <AppVersionCheck />
+        {githubEnabled && <AppVersionCheck />}
       </div>
       <div className="app-panel p-4">
         <h2 className="app-section-title mb-3">
@@ -65,6 +66,7 @@ export function AboutSettings({
           </button>
           <button
             type="button"
+            hidden={!githubEnabled}
             onClick={handleReportIssue}
             disabled={reportingIssue}
             title={t("settings.reportIssueHint")}
@@ -102,6 +104,7 @@ export function AboutSettings({
           </button>
           <button
             type="button"
+            hidden={!githubEnabled}
             onClick={handleOpenGithub}
             disabled={openingGithub}
             className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}

@@ -1,4 +1,4 @@
-use super::{Binding, CliReader, Provider, TaskFailure};
+use super::{Binding, CliReader, TaskFailure};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
@@ -31,10 +31,7 @@ impl CliReader for SystemCli {
         if cancel.load(Ordering::Acquire) {
             return Err(TaskFailure::new("cancelled", "Query cancelled"));
         }
-        let default = match binding.provider {
-            Provider::Github => "gh",
-            Provider::Gitlab => "glab",
-        };
+        let default = binding.provider.cli()?;
         let configured = binding.launcher.as_ref();
         let name = configured
             .map(|launcher| launcher.program.as_str())

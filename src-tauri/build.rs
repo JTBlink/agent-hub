@@ -42,20 +42,39 @@ fn product_identity() {
         );
         println!("cargo:rustc-env={name}={value}");
     }
+    println!("cargo:rerun-if-changed=../products/capabilities.json");
+    let catalog: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string("../products/capabilities.json")
+            .expect("capability catalog is required"),
+    )
+    .expect("invalid capability catalog");
+    let mut actual: Vec<String> = catalog["capabilities"]
+        .as_object()
+        .expect("capabilities must be an object")
+        .keys()
+        .chain(std::iter::once(&"standard".to_owned()))
+        .filter(|feature| {
+            let flag = format!(
+                "CARGO_FEATURE_{}",
+                feature.replace('-', "_").to_ascii_uppercase()
+            );
+            std::env::var_os(flag).is_some()
+        })
+        .cloned()
+        .collect();
+    actual.sort_unstable();
+    let generated =
+        std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap()).join("capabilities.rs");
+    std::fs::write(
+        generated,
+        format!("const COMPILED_FEATURES: &[&str] = &{actual:?};"),
+    )
+    .expect("write compiled capability catalog");
     println!("cargo:rerun-if-env-changed=AGENT_HUB_PRODUCT_FEATURES");
     if let Ok(expected) = std::env::var("AGENT_HUB_PRODUCT_FEATURES") {
         let mut expected: Vec<_> = expected.split(',').filter(|v| !v.is_empty()).collect();
         expected.sort_unstable();
         expected.dedup();
-        let mut actual = Vec::new();
-        for (flag, feature) in [
-            ("CARGO_FEATURE_HERDR", "herdr"),
-            ("CARGO_FEATURE_STANDARD", "standard"),
-        ] {
-            if std::env::var_os(flag).is_some() {
-                actual.push(feature);
-            }
-        }
         assert_eq!(
             expected, actual,
             "Product configuration and Cargo features differ"

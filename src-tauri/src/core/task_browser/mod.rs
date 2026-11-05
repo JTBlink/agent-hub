@@ -1,12 +1,12 @@
 //! Repository work, explicitly bound to registered local projects.
-mod adapter;
+pub(crate) mod adapter;
 mod cli;
-mod development;
+pub(crate) mod development;
 mod discovery;
 mod identity;
 #[cfg(feature = "herdr")]
 mod launch;
-mod metadata;
+pub(crate) mod metadata;
 mod mutation;
 mod query;
 mod types;
@@ -25,6 +25,7 @@ pub const PAGE_SIZE: usize = 25;
 
 impl Binding {
     pub fn validate(&self) -> Result<()> {
+        self.provider.require()?;
         uuid::Uuid::parse_str(&self.id).context("Invalid repository binding identity")?;
         if self
             .host
@@ -182,7 +183,7 @@ impl<R: CliReader> TaskClient<R> {
     pub fn new(reader: R) -> Self {
         Self { reader }
     }
-    fn api(
+    pub(crate) fn api(
         &self,
         binding: &Binding,
         endpoint: String,
@@ -190,7 +191,7 @@ impl<R: CliReader> TaskClient<R> {
     ) -> std::result::Result<Value, TaskFailure> {
         self.request(binding, "GET", endpoint, &[], cancel)
     }
-    fn request(
+    pub(crate) fn request(
         &self,
         binding: &Binding,
         method: &str,
@@ -198,6 +199,7 @@ impl<R: CliReader> TaskClient<R> {
         fields: &[(&str, String)],
         cancel: &AtomicBool,
     ) -> std::result::Result<Value, TaskFailure> {
+        binding.provider.require()?;
         if cancel.load(Ordering::Acquire) {
             return Err(TaskFailure::new("cancelled", "Query cancelled"));
         }

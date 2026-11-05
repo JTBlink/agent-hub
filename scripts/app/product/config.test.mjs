@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { resolveProduct, productArguments } from "./config.mjs";
+import {
+  resolveProduct,
+  productArguments,
+  loadProduct,
+  capabilityAliases,
+  capabilityCatalog,
+} from "./config.mjs";
 
 const cargoFeatures = { default: ["standard"], standard: ["herdr"], herdr: [] };
 const base = {
@@ -51,4 +57,34 @@ describe("product build selection", () => {
     });
     expect(() => productArguments(["--product"])).toThrow(/value/);
   });
+});
+
+it("loads product capabilities from the central catalog and removes unavailable sidebar entries", () => {
+  const standard = loadProduct("standard");
+  const personal = loadProduct("personal");
+  expect(standard.features).toEqual(
+    [...capabilityCatalog.products.standard].sort(),
+  );
+  expect(personal.features).toEqual([]);
+  expect(standard.sidebar.bottom).toContain("backup");
+  expect(personal.sidebar.bottom).not.toContain("backup");
+});
+
+it("selects GitHub setup only when both GitHub and cloud sync are compiled", () => {
+  for (const features of [
+    [],
+    ["github"],
+    ["cloud-sync"],
+    ["gitlab", "cloud-sync"],
+  ]) {
+    const aliases = capabilityAliases("/workspace", features);
+    expect(aliases["@app/github-backup"]).toContain(
+      "integrations/github-backup/disabled.ts",
+    );
+  }
+  expect(
+    capabilityAliases("/workspace", ["github", "cloud-sync"])[
+      "@app/github-backup"
+    ],
+  ).toContain("features/github/cloudIntegration.ts");
 });

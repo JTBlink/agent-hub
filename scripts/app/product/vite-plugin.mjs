@@ -1,5 +1,10 @@
 import { relative, resolve } from "node:path";
-import { loadProduct, prepareProduct } from "./config.mjs";
+import {
+  loadProduct,
+  prepareProduct,
+  capabilityAliases,
+  capabilityCatalog,
+} from "./config.mjs";
 
 /** Keep product selection out of the shared Vite/prototype configuration. */
 export function productViteConfig(root) {
@@ -9,25 +14,23 @@ export function productViteConfig(root) {
       "standard",
   );
   const selected = !!process.env.AGENT_HUB_PRODUCT_HASH;
-  if (selected && process.env.AGENT_HUB_PRODUCT_HASH !== "development")
-    prepareProduct(product);
+  if (
+    process.env.AGENT_HUB_PRODUCT_HASH === "development" &&
+    process.env.AGENT_HUB_PRODUCT_TS
+  )
+    product.generatedDir = resolve(process.env.AGENT_HUB_PRODUCT_TS, "..");
+  product.hash = process.env.AGENT_HUB_PRODUCT_HASH || "development";
+  prepareProduct(product);
   const herdr = product.features.includes("herdr");
   return {
     resolve: {
       alias: {
-        "@app/features": selected
-          ? resolve(product.generatedDir, "features.ts")
-          : resolve(root, "src/app/features/default.ts"),
-        "@app/herdr": resolve(
-          root,
-          herdr
-            ? "src/features/herdr/integration.ts"
-            : "src/integrations/herdr/disabled.ts",
-        ),
-        "@app/product": selected
-          ? process.env.AGENT_HUB_PRODUCT_TS ||
-            product.environment.AGENT_HUB_PRODUCT_TS
-          : resolve(root, "src/app/product/default.ts"),
+        "@app/features": resolve(product.generatedDir, "features.ts"),
+        ...capabilityAliases(root, product.features),
+        "@app/platforms": resolve(product.generatedDir, "platforms.ts"),
+        "@app/product":
+          process.env.AGENT_HUB_PRODUCT_TS ||
+          product.environment.AGENT_HUB_PRODUCT_TS,
       },
     },
     build: { outDir: process.env.AGENT_HUB_PRODUCT_OUTPUT_DIR || "dist" },
@@ -77,6 +80,17 @@ export function productViteConfig(root) {
             this.error(
               "Excluded Herdr implementation entered the product bundle",
             );
+          const excluded = Object.entries(
+            capabilityCatalog.capabilities,
+          ).flatMap(([id, capability]) =>
+            product.features.includes(id) ? [] : (capability.excluded ?? []),
+          );
+          if (
+            modules.some((id) =>
+              excluded.some((prefix) => id.startsWith(prefix)),
+            )
+          )
+            this.error("Excluded capability entered the product bundle");
           this.emitFile({
             type: "asset",
             fileName: "product-build.json",

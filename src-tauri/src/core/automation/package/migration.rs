@@ -100,6 +100,6 @@ pub(super) fn migrate_using(
     }
     std::fs::remove_file(journal).map_err(|e| e.to_string())?;
     #[cfg(not(test))]
-    crate::core::auto_backup::notify_central_change();
+    crate::core::cloud_sync::notify_central_change();
     Ok(id.into())
 }

@@ -55,7 +55,7 @@ pub async fn set_settings(
         if key_for_store == "backup_auto_enabled" {
             // A disabled startup round may have consumed the pending flag.
             // Re-arm when the preference changes so enabling needs no file edit.
-            crate::core::auto_backup::notify_central_change();
+            crate::core::cloud_sync::notify_central_change();
         }
         if key_for_store == crate::core::git_auth_source::SETTING_USE_GH {
             crate::core::git_auth_source::set_preference(Some(&value_for_store));
@@ -78,6 +78,7 @@ pub async fn set_settings(
     Ok(())
 }
 
+#[cfg(feature = "cloud-sync")]
 #[tauri::command]
 pub fn get_backup_directory() -> String {
     crate::core::backup_workspace::repo_dir()

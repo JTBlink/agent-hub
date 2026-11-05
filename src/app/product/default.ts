@@ -1,7 +1,8 @@
+import capabilities from "../../../products/capabilities.json";
 /** Default developer entry. Product builds replace this with their generated config. */
 export const productConfig = {
   id: "standard",
-  features: ["herdr", "standard"],
+  features: capabilities.products.standard,
   hash: "development",
   baseCommit: "",
   sidebar: {

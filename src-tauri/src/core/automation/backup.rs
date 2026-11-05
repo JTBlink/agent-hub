@@ -1,14 +1,17 @@
 //! Portable definitions share the existing Git metadata namespace. Runtime
 //! registrations, wrappers, claims, logs and unrelated workspace files stay local.
 //! Customized script contents travel in the portable task definition.
+#[cfg(any(feature = "cloud-sync", test))]
+use super::workspace;
 use super::{
     definition::{valid_id, AutomationDraft},
-    store, workspace,
+    store,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::Path};
 
 const PREFIX: &str = "automation-";
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) mod repository;
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -37,6 +40,7 @@ fn filename(id: &str) -> Result<String, String> {
     ))
 }
 
+#[cfg(any(feature = "cloud-sync", test))]
 fn portable(id: &str, mut draft: AutomationDraft) -> AutomationBackup {
     if super::package::is_package_draft(&draft) {
         draft.script_dir = None;
@@ -70,6 +74,7 @@ fn portable(id: &str, mut draft: AutomationDraft) -> AutomationBackup {
     }
 }
 
+#[cfg(any(feature = "cloud-sync", test))]
 fn portable_path(path: &str) -> String {
     dirs::home_dir()
         .and_then(|home| {
@@ -84,9 +89,11 @@ fn portable_path(path: &str) -> String {
 /// RepoLock is held by backup_workspace; acquire the automation lock second.
 /// Mutations only enqueue in the registry and never take RepoLock, preventing
 /// lock inversion. Clearing pending state happens after every file is durable.
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) fn flush(metadata: &Path) -> Result<(), String> {
     flush_from(&store::root(), metadata)
 }
+#[cfg(any(feature = "cloud-sync", test))]
 fn flush_from(root: &Path, metadata: &Path) -> Result<(), String> {
     super::script_sync::sync_at(root)?;
     let snapshot = store::read_registry(root)?;
@@ -175,11 +182,13 @@ fn read(metadata: &Path) -> Result<BTreeMap<String, AutomationBackup>, String> {
 
 /// Projects only the known definition files. Importing merely stores definitions;
 /// it never registers, edits, deletes, or runs a local scheduler task.
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) fn project(source: &Path, target: &Path) -> Result<bool, String> {
     let records = read(source)?;
     project_records(&records, target)
 }
 
+#[cfg(any(feature = "cloud-sync", test))]
 fn project_records(
     records: &BTreeMap<String, AutomationBackup>,
     target: &Path,
@@ -198,10 +207,12 @@ fn project_records(
     Ok(changed)
 }
 
+#[cfg(feature = "cloud-sync")]
 pub(crate) fn differs(source: &Path, target: &Path) -> Result<bool, String> {
     Ok(read(source)? != read(target)?)
 }
 
+#[cfg(any(feature = "cloud-sync", test))]
 fn write_changed(path: &Path, bytes: &[u8]) -> Result<bool, String> {
     if std::fs::read(path).is_ok_and(|existing| existing == bytes) {
         return Ok(false);

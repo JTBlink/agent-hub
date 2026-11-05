@@ -5,7 +5,7 @@ use std::fs;
 
 pub(super) fn notify() {
     #[cfg(not(test))]
-    crate::core::auto_backup::notify_central_change();
+    crate::core::cloud_sync::notify_central_change();
 }
 
 pub(in crate::core::automation) fn prepare_at(

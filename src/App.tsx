@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider, useThemeContext } from "./context/ThemeContext";
 import { CloseActionGuard } from "./components/CloseActionGuard";
-import { FirstRunRestoreDialog } from "./components/FirstRunRestoreDialog";
+import { FirstRunRestoreDialog } from "@app/cloud-sync";
 import type { RouteObject } from "react-router-dom";
 import { AppRoutes } from "./app/AppRoutes";
 

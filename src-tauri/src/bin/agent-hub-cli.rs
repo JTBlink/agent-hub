@@ -20,10 +20,12 @@ use anyhow::{anyhow, bail, Context};
 use app_lib::commands::{
     local_cleanup, skill_groups as skill_group_cmd, skills as cmd, tools as tool_cmd,
 };
+#[cfg(feature = "cloud-sync")]
+use app_lib::core::git_backup;
 use app_lib::core::{
-    app_state, audit_log::AuditDraft, central_repo, error::AppError, git_backup, git_fetcher,
-    installer, repo_lock::RepoLock, scanner, scenario_service, skill_metadata,
-    skill_store::SkillStore, skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
+    app_state, audit_log::AuditDraft, central_repo, error::AppError, git_fetcher, installer,
+    repo_lock::RepoLock, scanner, scenario_service, skill_metadata, skill_store::SkillStore,
+    skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
 };
 use clap::{Arg, ArgAction, Args, Command, CommandFactory, FromArgMatches, Parser, Subcommand};
 use serde::Serialize;
@@ -77,6 +79,7 @@ enum Commands {
     #[command(name = "skill-groups", alias = "presets", alias = "scenarios")]
     SkillGroups(SkillGroupArgs),
     /// 管理 Git 备份、快照和恢复操作。
+    #[cfg(feature = "cloud-sync")]
     Git(GitArgs),
     /// 显示帮助，或查看指定命令的帮助。
     Help {
@@ -480,6 +483,7 @@ enum SkillGroupCommand {
     },
 }
 
+#[cfg(feature = "cloud-sync")]
 #[derive(Args, Debug)]
 #[command(subcommand_help_heading = "命令", next_help_heading = "选项")]
 struct GitArgs {
@@ -487,6 +491,7 @@ struct GitArgs {
     command: GitCommand,
 }
 
+#[cfg(feature = "cloud-sync")]
 #[derive(Subcommand, Debug)]
 enum GitCommand {
     /// 查看 Git 备份状态。
@@ -942,6 +947,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         Commands::Tools(args) => run_tools(args, &store, cli.json),
         Commands::Skills(args) => run_skills(args, &store, cli.json),
         Commands::SkillGroups(args) => run_skill_groups(args, &store, cli.json),
+        #[cfg(feature = "cloud-sync")]
         Commands::Git(args) => run_git(args, &store, cli.skills_root.is_some(), cli.json),
         Commands::Help { .. } => unreachable!("handled before opening the store"),
         Commands::Automations(_) => unreachable!("handled before opening the store"),
@@ -3334,6 +3340,7 @@ fn resolve_scenario(
 
 // ── git ───────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "cloud-sync")]
 fn run_git(
     args: GitArgs,
     store: &SkillStore,

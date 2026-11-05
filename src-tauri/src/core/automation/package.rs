@@ -22,6 +22,7 @@ pub(super) use exchange::normalize;
 pub use exchange::{
     export_package, import_definition, import_package, preview_package, AutomationPackage,
 };
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) use exchange::{read_backup_directory, write_backup_directory};
 pub(crate) use layout::{manifest_directory, manifest_path};
 pub(super) use lifecycle::{prepare_at, remove};
@@ -210,6 +211,7 @@ pub(super) fn state(record: &ManagedAutomation) -> Option<String> {
     )
 }
 
+#[cfg(any(feature = "cloud-sync", test))]
 pub(super) fn is_package_draft(draft: &AutomationDraft) -> bool {
     draft
         .script_dir

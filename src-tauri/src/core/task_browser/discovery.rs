@@ -71,6 +71,11 @@ fn status_hosts(text: &str) -> HashSet<String> {
 }
 
 fn known_hosts(program: &str, default_host: &str) -> HashSet<String> {
+    if (program == "gh" && !Provider::Github.enabled())
+        || (program == "glab" && !Provider::Gitlab.enabled())
+    {
+        return HashSet::new();
+    }
     let _probe = HOST_PROBES[usize::from(program == "glab")]
         .lock()
         .unwrap_or_else(|e| e.into_inner());
@@ -154,8 +159,16 @@ pub fn remote_candidates(store: &SkillStore, project_id: &str) -> Result<Vec<Rem
 
 fn default_hosts() -> (HashSet<String>, HashSet<String>) {
     (
-        HashSet::from(["github.com".into()]),
-        HashSet::from(["gitlab.com".into()]),
+        if Provider::Github.enabled() {
+            HashSet::from(["github.com".into()])
+        } else {
+            HashSet::new()
+        },
+        if Provider::Gitlab.enabled() {
+            HashSet::from(["gitlab.com".into()])
+        } else {
+            HashSet::new()
+        },
     )
 }
 
@@ -219,6 +232,7 @@ fn discover_matching(
     hosts: impl FnOnce() -> (HashSet<String>, HashSet<String>),
     wanted: Option<&str>,
 ) -> Result<Vec<Binding>> {
+    saved.retain(|binding| binding.provider.enabled());
     let projects = store.get_all_projects()?;
     let projects: Vec<_> = projects
         .into_iter()
@@ -261,5 +275,5 @@ fn discover_matching(
     Ok(saved)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "github", feature = "gitlab"))]
 mod tests;

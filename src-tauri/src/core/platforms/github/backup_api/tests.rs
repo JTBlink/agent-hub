@@ -2,7 +2,10 @@ use super::*;
 
 #[test]
 fn device_flow_and_frontend_settings_use_the_same_oauth_app() {
-    let frontend = include_str!("../../../../src/lib/distribution.ts");
+    let frontend = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../src/lib/distribution.ts"
+    ));
     assert!(frontend.contains(&format!(
         "export const GITHUB_OAUTH_CLIENT_ID = \"{OAUTH_CLIENT_ID}\";"
     )));

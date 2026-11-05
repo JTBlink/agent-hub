@@ -1,4 +1,4 @@
-import { useRoutes } from "react-router-dom";
+import { Navigate, useRoutes } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { createAppRoutes } from "./routeDefinitions";
 
@@ -7,5 +7,7 @@ export function AppRoutes({
 }: {
   extensionRoutes?: readonly RouteObject[];
 }) {
-  return useRoutes(createAppRoutes(extensionRoutes));
+  return (
+    useRoutes(createAppRoutes(extensionRoutes)) ?? <Navigate to="/" replace />
+  );
 }

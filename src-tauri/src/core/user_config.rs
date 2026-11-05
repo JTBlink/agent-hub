@@ -111,6 +111,7 @@ fn size(root: &Path) -> anyhow::Result<Size> {
     Ok(size)
 }
 /// Bounded traversal is used for both local export and untrusted Git restores.
+#[cfg(any(feature = "cloud-sync", test))]
 pub(crate) fn validate_tree(root: &Path) -> anyhow::Result<()> {
     if let Ok(metadata) = root.symlink_metadata() {
         anyhow::ensure!(metadata.is_dir(), "Invalid user configuration directory");

@@ -1,3 +1,4 @@
+#![cfg(all(feature = "github", feature = "gitlab"))]
 use app_lib::core::task_browser::{
     Binding, CliLauncher, Filters, Provider, TaskClient, TaskFailure,
 };

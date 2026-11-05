@@ -183,6 +183,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::settings::set_settings,
         commands::settings::get_central_repo_path,
         commands::settings::get_skills_directory,
+        #[cfg(feature = "cloud-sync")]
         commands::settings::get_backup_directory,
         commands::settings::get_central_repo_path_override,
         commands::settings::get_central_repo_pending_path,
@@ -202,30 +203,55 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::settings::restart_app,
         commands::settings::hide_to_tray,
         // Git Backup
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_fetch,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_status,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_file_diff,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_init,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_set_remote,
-        commands::git_backup::github_backup_connect,
-        commands::git_backup::github_device_flow_start,
-        commands::git_backup::github_device_flow_poll,
+        #[cfg(all(feature = "cloud-sync", feature = "github"))]
+        commands::github::github_backup_connect,
+        #[cfg(all(feature = "cloud-sync", feature = "github"))]
+        commands::github::github_device_flow_start,
+        #[cfg(all(feature = "cloud-sync", feature = "github"))]
+        commands::github::github_device_flow_poll,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_sanitize_remote_url,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_migrate_credentials,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_size_report,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_remove_remote,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_commit,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_push,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_pull,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_clone,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_reclone,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_create_snapshot,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_list_versions,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_restore_version,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::backup_device_name,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::backup_set_device_name,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_pending_conflicts,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_resolve_conflict,
+        #[cfg(feature = "cloud-sync")]
         commands::git_backup::git_backup_sync,
         // Projects
         commands::project_worktrees::get_project_worktrees,

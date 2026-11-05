@@ -755,6 +755,7 @@
     "connection": {
       "title": "Git 仓库连接",
       "desc": "可使用 GitHub 登录，或填写其他 Git 仓库地址。同一技能库的多台设备应连接同一个仓库。",
+      "customDesc": "填写 Git 仓库地址。同一技能库的多台设备应连接同一个仓库。",
       "repository": "云端仓库",
       "branch": "分支",
       "none": "未连接",
