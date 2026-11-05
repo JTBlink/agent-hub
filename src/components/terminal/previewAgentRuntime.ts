@@ -9,9 +9,10 @@ import {
   type HerdrTarget,
   type HerdrSnapshot,
 } from "@app/herdr";
-import { herdrAgents } from "../../lib/terminalAgents";
+import { installedTerminalAgents } from "../../lib/terminalAgents";
 import {
   getAgentLaunchSettings,
+  getAgentLaunchPlan,
   submitTerminalAgentPrompt,
   type ToolInfo,
 } from "../../lib/tauri";
@@ -20,6 +21,8 @@ import {
   TERMINAL_PANE_LIMIT,
   type TerminalTab,
 } from "../../lib/terminalLayout";
+import { previewAgentCommand } from "../../lib/previewAgentCommand";
+import type { AgentDeliveryPlan } from "../../lib/agentDelivery";
 import type { PreviewAgentRequest } from "../../lib/previewAgentDelivery";
 import type { PaneControl } from "./TerminalPane";
 
@@ -77,20 +80,34 @@ export class PreviewAgentRuntime {
       this.pending = false;
     }
   }
-  private async submit(request: PreviewAgentRequest, projectId: string) {
-    const { workspacePath: path, page, prompt, verify } = request;
+  private async existing(request: PreviewAgentRequest, projectId: string) {
+    const { workspacePath: path, page } = request;
     const pageKey = page.path ? `file:${page.path}` : page.id;
     const scope = (tab: TerminalTab) =>
       tab.projectId === projectId && tab.worktreePath === path;
+    if (
+      this.options
+        .tabs()
+        .some(
+          (tab) =>
+            scope(tab) &&
+            tab.previewPageId === pageKey &&
+            (tab.previewUncertain || tab.previewPending),
+        )
+    )
+      throw Error("PREVIEW_AGENT_UNCERTAIN");
     const bound = this.options
       .tabs()
-      .find((tab) => scope(tab) && tab.previewPageId === pageKey);
+      .find(
+        (tab) =>
+          scope(tab) &&
+          tab.previewPageId === pageKey &&
+          (!request.agentId || tab.agent === request.agentId),
+      );
     if (bound) {
       if (bound.previewUncertain || bound.previewPending)
         throw Error("PREVIEW_AGENT_UNCERTAIN");
-      await verify();
-      await this.send(bound, prompt, path, verify);
-      return;
+      return bound;
     }
     // Reuse a live embedded Agent only when it is unambiguously available and unbound.
     // Shells, development services and scripts are deliberately ineligible.
@@ -98,6 +115,7 @@ export class PreviewAgentRuntime {
       .tabs()
       .filter(
         (tab) =>
+          !request.agentId &&
           !page.path &&
           scope(tab) &&
           !tab.previewPageId &&
@@ -130,35 +148,93 @@ export class PreviewAgentRuntime {
           path,
           claimed,
         );
-        if (target) eligible.push({ ...candidate, herdrTarget: target });
+        if (target) {
+          const kind = snapshot.agents.find(
+            (pane) => pane.terminal_id === target.terminal_id,
+          )?.agent;
+          const agent = installedTerminalAgents(this.options.tools()).find(
+            (agent) => agent.id === kind || agent.toolKey === kind,
+          )?.id;
+          eligible.push({ ...candidate, herdrTarget: target, agent });
+        }
       } else if (this.options.controls().has(candidate.panes[0]))
         eligible.push(candidate);
     }
-    if (eligible.length === 1) {
-      const tab = eligible[0];
+    return eligible.length === 1 ? eligible[0] : undefined;
+  }
+  async preview(
+    request: PreviewAgentRequest,
+    projectId: string,
+  ): Promise<AgentDeliveryPlan> {
+    const existing = await this.existing(request, projectId);
+    const installed = installedTerminalAgents(this.options.tools());
+    const settings = await getAgentLaunchSettings();
+    const selected = request.agentId ?? existing?.agent;
+    const choice = selected
+      ? installed.find((agent) => agent.id === selected)
+      : (installed.find(
+          (agent) =>
+            agent.toolKey === settings.document.default_agent ||
+            agent.id === settings.document.default_agent,
+        ) ?? installed[0]);
+    if (!choice) throw Error("PREVIEW_AGENT_NOT_INSTALLED");
+    const launch = await getAgentLaunchPlan(
+      choice.id === "claude_teams" ? "claude" : choice.id,
+    );
+    const inventory = await getHerdrInventory();
+    const native = existing ? !existing.herdrTarget : !inventory.installed;
+    const target = existing?.herdrTarget;
+    if (target)
+      refreshed(
+        await getHerdrSnapshot(target.session),
+        target,
+        request.workspacePath,
+      );
+    return {
+      backend: native ? "native" : "herdr",
+      agent: choice.label,
+      createsWorkspace: !native && !existing,
+      command: previewAgentCommand({
+        session: target?.session ?? DEFAULT_HERDR_SESSION,
+        pane: target?.pane_id,
+        path: request.workspacePath,
+        title: request.page.path?.split(/[\\/]/).at(-1) ?? request.page.title,
+        prompt: request.prompt,
+        launch,
+        native,
+      }),
+    };
+  }
+  private async submit(request: PreviewAgentRequest, projectId: string) {
+    const { workspacePath: path, page, prompt, verify } = request;
+    const pageKey = page.path ? `file:${page.path}` : page.id;
+    const existing = await this.existing(request, projectId);
+    if (existing) {
       await verify();
       this.options.update((tabs) =>
-        tabs.map((item) =>
-          item.id === tab.id
-            ? { ...item, previewPageId: pageKey, herdrTarget: tab.herdrTarget }
-            : item,
+        tabs.map((tab) =>
+          tab.id === existing.id
+            ? {
+                ...tab,
+                previewPageId: pageKey,
+                herdrTarget: existing.herdrTarget,
+                agent: existing.agent,
+              }
+            : tab,
         ),
       );
-      await this.send(tab, prompt, path, verify);
+      await this.send(existing, prompt, path, verify);
       return;
     }
     const settings = await getAgentLaunchSettings();
-    const installed = herdrAgents.filter((agent) =>
-      this.options
-        .tools()
-        .some((tool) => tool.key === agent.toolKey && tool.installed),
-    );
-    const choice =
-      installed.find(
-        (agent) =>
-          agent.toolKey === settings.document.default_agent ||
-          agent.id === settings.document.default_agent,
-      ) ?? installed[0];
+    const installed = installedTerminalAgents(this.options.tools());
+    const choice = request.agentId
+      ? installed.find((agent) => agent.id === request.agentId)
+      : (installed.find(
+          (agent) =>
+            agent.toolKey === settings.document.default_agent ||
+            agent.id === settings.document.default_agent,
+        ) ?? installed[0]);
     if (!choice) throw Error("PREVIEW_AGENT_NOT_INSTALLED");
     const inventory = await getHerdrInventory();
     await verify();
@@ -173,6 +249,7 @@ export class PreviewAgentRuntime {
         ? page.path.split(/[\\/]/).at(-1)!
         : page.title.slice(0, 80),
       previewPageId: pageKey,
+      agent: choice.id,
       previewPending: true,
     };
     this.options.update((tabs) => [...tabs, tab]);

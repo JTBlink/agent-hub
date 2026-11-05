@@ -18,7 +18,7 @@ it("previews the file packet and reuses its sandbox tab for successive sends", a
   }
   try {
     await act(async () => root.render(<Harness />));
-    expect(container.querySelector("select")).toBeNull();
+    expect(container.querySelector('[role="combobox"]')).not.toBeNull();
     await act(async () => model.setPrompt("Change the selected button"));
     const packet = container.querySelector("pre")!.textContent;
     expect(packet).toContain("File: /workspace/examples/preview.html");

@@ -172,3 +172,91 @@ it("shows all delivery text and screenshots without resolving or sending a targe
   expect(resolveCurrent).not.toHaveBeenCalled();
   expect(deliver).not.toHaveBeenCalled();
 });
+
+it("switches Agent kinds without sending until submit and preserves the selection", async () => {
+  const selectable = {
+    ...adapter,
+    listAgents: vi.fn(async () => [
+      { id: "codex", label: "Codex", toolKey: "codex" },
+      { id: "claude", label: "Claude Code", toolKey: "claude_code" },
+    ]),
+  };
+  await act(async () =>
+    root.render(
+      <AgentDelivery
+        adapter={selectable}
+        workspacePath="/workspace/site"
+        text="feedback"
+        images={[]}
+        disabled={false}
+        verifyCurrent={async () => {}}
+        onSent={vi.fn()}
+      />,
+    ),
+  );
+  const trigger =
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  await act(async () => trigger.click());
+  await act(async () =>
+    Array.from(document.querySelectorAll<HTMLElement>('[role="option"]'))
+      .find((node) => node.textContent?.includes("Claude Code"))!
+      .click(),
+  );
+  expect(trigger.textContent).toContain("Claude Code");
+  expect(resolveCurrent).not.toHaveBeenCalled();
+  await send();
+  expect(resolveCurrent).toHaveBeenCalledWith(
+    "/workspace/site",
+    undefined,
+    "claude",
+  );
+  expect(deliver).toHaveBeenCalledOnce();
+});
+it("resolves and copies the full CLI preview with the same packaged prompt used for sending", async () => {
+  const preview = vi.fn(async () => ({
+    backend: "herdr" as const,
+    agent: "Codex",
+    createsWorkspace: false,
+    command: "herdr agent prompt pane 'packet prompt'",
+  }));
+  const images = ["image"];
+  await act(async () =>
+    root.render(
+      <AgentDelivery
+        adapter={{ ...adapter, preview }}
+        workspacePath="/workspace/site"
+        page={{ id: "page", title: "Page" }}
+        text="feedback"
+        images={images}
+        disabled={false}
+        verifyCurrent={async () => {}}
+        onSent={vi.fn()}
+      />,
+    ),
+  );
+  expect(preview).not.toHaveBeenCalled();
+  const details = container.querySelector("details")!;
+  await act(async () => {
+    details.open = true;
+    details.dispatchEvent(new Event("toggle"));
+  });
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 350)));
+  expect(preview).toHaveBeenCalledWith(
+    "/workspace/site",
+    { id: "page", title: "Page" },
+    "packet prompt",
+    undefined,
+  );
+  expect(resolveCurrent).not.toHaveBeenCalled();
+  expect(deliver).not.toHaveBeenCalled();
+  const copy = Array.from(
+    container.querySelectorAll<HTMLButtonElement>("button"),
+  ).find((button) => button.textContent === "preview.copyCommand")!;
+  await act(async () => copy.click());
+  expect(writeText).toHaveBeenCalledWith(
+    "herdr agent prompt pane 'packet prompt'",
+  );
+  await send();
+  expect(previewApi.prepareDelivery).toHaveBeenCalledOnce();
+  expect(deliver).toHaveBeenCalledWith("packet prompt", expect.any(Function));
+});

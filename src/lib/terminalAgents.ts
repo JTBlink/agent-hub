@@ -13,3 +13,11 @@ export const herdrAgents: { id: HerdrAgent; label: string; toolKey: string }[] =
 
 export const herdrAgentLabel = (agent: HerdrAgent) =>
   herdrAgents.find((item) => item.id === agent)!.label;
+
+/** Launchable Agent kinds use the same installed-tool evidence in every entrypoint. */
+export const installedTerminalAgents = (
+  tools: readonly { key: string; installed: boolean }[],
+) =>
+  herdrAgents.filter((agent) =>
+    tools.some((tool) => tool.key === agent.toolKey && tool.installed),
+  );

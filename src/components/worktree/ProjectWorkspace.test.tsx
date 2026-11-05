@@ -744,7 +744,9 @@ it("adds a preview after the source tab without navigation, reuses it, and close
     expect(
       host.querySelector<HTMLButtonElement>(".preview-context-send")?.disabled,
     ).toBe(false);
-    expect(host.querySelector(".preview-context-composer select")).toBeNull();
+    expect(
+      host.querySelector('.preview-context-composer [role="combobox"]'),
+    ).not.toBeNull();
     expect(host.querySelector(".preview-annotations > footer")).toBeNull();
     expect(host.querySelector("dialog[open]")).toBeNull();
     installCodeEditorGeometry();

@@ -1308,3 +1308,37 @@
   max-width: 100%;
   margin-top: 8px;
 }
+
+.preview-context-destination {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview-delivery-agent {
+  min-width: 0;
+  max-width: 145px;
+  flex-shrink: 1;
+}
+.preview-delivery-agent > div {
+  min-width: 0;
+}
+.preview-delivery-agent [role="combobox"] {
+  min-height: 27px;
+  font-size: 11px;
+}
+.preview-delivery-agent > p {
+  color: var(--color-danger);
+  font-size: 11px;
+}
+@container (max-width: 350px) {
+  .preview-context-toolbar {
+    flex-wrap: wrap;
+  }
+  .preview-context-destination {
+    flex-basis: calc(100% - 40px);
+  }
+  .preview-context-send {
+    margin-left: auto;
+  }
+}

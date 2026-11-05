@@ -4,6 +4,12 @@ use crate::core::{agent_launch_config as config, error::AppError};
 pub async fn agent_launch_settings() -> Result<config::Snapshot, AppError> {
     tauri::async_runtime::spawn_blocking(|| config::load().map_err(AppError::io)).await?
 }
+/// Resolve the same literal argv used by launchers, without starting a process.
+#[tauri::command]
+pub async fn agent_launch_plan(agent: String) -> Result<config::Launch, AppError> {
+    tauri::async_runtime::spawn_blocking(move || config::resolve(&agent).map_err(AppError::io))
+        .await?
+}
 #[tauri::command]
 pub async fn save_agent_launch_settings(
     document: config::Document,

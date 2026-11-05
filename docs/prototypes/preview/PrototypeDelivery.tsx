@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { ThemedSelect } from "../../../src/components/ThemedSelect";
+import { herdrAgents } from "../../../src/lib/terminalAgents";
 import { Eye, Send } from "lucide-react";
 import type { PreviewModel } from "./usePreviewModel";
 import { captureText } from "./previewFormat";
@@ -12,7 +15,10 @@ export function PrototypeDelivery({ model }: { model: PreviewModel }) {
       : `/workspace${decodeURIComponent(new URL(active?.url ?? "workspace:///untitled").pathname)}`;
   const identity = path ?? active?.url ?? "";
   const name = path?.split("/").at(-1) ?? active?.title ?? "";
-  const messages = agentTabs[identity] ?? [];
+  const [choices, setChoices] = useState<Record<string, string>>({});
+  const agent = choices[identity] ?? "";
+  const binding = agent ? JSON.stringify([identity, agent]) : identity;
+  const messages = agentTabs[binding] ?? [];
   const packet = [
     `# ${name}`,
     path ? `File: ${path}` : `URL: ${identity}`,
@@ -25,7 +31,7 @@ export function PrototypeDelivery({ model }: { model: PreviewModel }) {
     if (!prompt.trim() && !pageCaptures.length) return;
     setAgentTabs((previous) => ({
       ...previous,
-      [identity]: [...(previous[identity] ?? []), packet],
+      [binding]: [...(previous[binding] ?? []), packet],
     }));
     model.notify(
       messages.length
@@ -71,6 +77,24 @@ export function PrototypeDelivery({ model }: { model: PreviewModel }) {
       </details>
       <div className="pv-delivery-actions">
         <span title={identity}>Tab：{name}</span>
+        <ThemedSelect
+          aria-label="切换 Agent"
+          value={agent}
+          onChange={(event) =>
+            setChoices((previous) => ({
+              ...previous,
+              [identity]: event.target.value,
+            }))
+          }
+          fitContent
+        >
+          <option value="">自动选择</option>
+          {herdrAgents.map((item) => (
+            <option value={item.id} key={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </ThemedSelect>
         <button
           className="pv-primary"
           disabled={!prompt.trim() && !pageCaptures.length}

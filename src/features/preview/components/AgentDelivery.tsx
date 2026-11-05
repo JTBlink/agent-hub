@@ -1,8 +1,10 @@
-import { ArrowUp, Copy, LoaderCircle } from "lucide-react";
+import { Send, Copy, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import type { AgentDeliveryAdapter } from "../../../lib/agentDelivery";
+import { DeliveryCommandPreview } from "./DeliveryCommandPreview";
+import { DeliveryAgentSelect } from "./DeliveryAgentSelect";
 import { previewApi } from "../api";
 import { previewError } from "../shared/previewError";
 
@@ -33,6 +35,42 @@ export function AgentDelivery({
   actions?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const scope = JSON.stringify([
+    workspacePath,
+    page?.projectId,
+    page?.path ?? page?.id,
+  ]);
+  const [agentChoices, setAgentChoices] = useState<Record<string, string>>({});
+  const agentId = agentChoices[scope] ?? "";
+  const [attachments, setAttachments] = useState(images);
+  if (
+    attachments.length !== images.length ||
+    attachments.some((image, index) => image !== images[index])
+  )
+    setAttachments(images);
+  const [expanded, setExpanded] = useState(false);
+  const packetCache = useRef<{
+    text: string;
+    images: string[];
+    packet: ReturnType<typeof previewApi.prepareDelivery>;
+  } | null>(null);
+  const preparePacket = () => {
+    if (!images.length && new TextEncoder().encode(text).length <= 32 * 1024)
+      return Promise.resolve(null);
+    const cached = packetCache.current;
+    if (
+      cached?.text === text &&
+      cached.images.length === images.length &&
+      cached.images.every((image, index) => image === images[index])
+    )
+      return cached.packet;
+    const packet = previewApi.prepareDelivery(text, images);
+    packetCache.current = { text, images, packet };
+    void packet.catch(() => {
+      if (packetCache.current?.packet === packet) packetCache.current = null;
+    });
+    return packet;
+  };
   const sending = useRef(false);
   const mounted = useRef(true);
   const [busy, setBusy] = useState(false);
@@ -57,15 +95,16 @@ export function AgentDelivery({
       };
       await verify();
       const target = adapter
-        ? await adapter.resolveCurrent(workspacePath, page)
+        ? await adapter.resolveCurrent(
+            workspacePath,
+            page,
+            ...(agentId ? [agentId] : []),
+          )
         : null;
       if (adapter && !target)
         throw new Error(t("preview.currentAgentUnavailable"));
       await verify();
-      const packet =
-        images.length || new TextEncoder().encode(text).length > 32 * 1024
-          ? await previewApi.prepareDelivery(text, images)
-          : null;
+      const packet = await preparePacket();
       if (packet) await verify();
       if (target) await target.send(packet?.prompt ?? text, verify);
       else await writeText(packet?.context ?? text);
@@ -91,12 +130,37 @@ export function AgentDelivery({
       }}
     >
       {children}
-      <details className="preview-delivery-preview">
+      <details
+        className="preview-delivery-preview"
+        onToggle={(event) => setExpanded(event.currentTarget.open)}
+      >
         <summary>{t("preview.viewDelivery")}</summary>
         <div className="preview-delivery-content">
           {page?.path && <p>{page.path}</p>}
           {adapter && page?.path && (
             <p>{t("preview.fileAgentHint", { name: page.title })}</p>
+          )}
+          {expanded && adapter?.preview && workspacePath && page && (
+            <DeliveryCommandPreview
+              key={JSON.stringify([
+                scope,
+                agentId,
+                text,
+                images.map((image) => image.length),
+              ])}
+              adapter={adapter}
+              workspacePath={workspacePath}
+              page={page}
+              agentId={agentId}
+              text={text}
+              images={attachments}
+              preparePrompt={async () => {
+                await verifyCurrent();
+                const packet = await preparePacket();
+                await verifyCurrent();
+                return packet?.prompt ?? text;
+              }}
+            />
           )}
           <pre>{text}</pre>
           {images.map((data, index) => (
@@ -124,6 +188,17 @@ export function AgentDelivery({
             ? t("preview.fileAgentTab", { name: page.title })
             : t(adapter ? "preview.currentWorkspace" : "preview.copyNotes")}
         </span>
+        {adapter?.listAgents && (
+          <DeliveryAgentSelect
+            key={scope}
+            adapter={adapter}
+            value={agentId}
+            disabled={busy}
+            onChange={(value) =>
+              setAgentChoices((previous) => ({ ...previous, [scope]: value }))
+            }
+          />
+        )}
         <button
           type="submit"
           className="preview-context-send"
@@ -134,7 +209,7 @@ export function AgentDelivery({
           {busy ? (
             <LoaderCircle className="animate-spin" size={16} />
           ) : adapter ? (
-            <ArrowUp size={16} />
+            <Send size={16} aria-hidden="true" />
           ) : (
             <Copy size={16} />
           )}

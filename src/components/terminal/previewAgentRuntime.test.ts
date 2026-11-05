@@ -11,6 +11,7 @@ import {
 } from "@app/herdr";
 import {
   getAgentLaunchSettings,
+  getAgentLaunchPlan,
   submitTerminalAgentPrompt,
   type ToolInfo,
 } from "../../lib/tauri";
@@ -29,6 +30,7 @@ vi.mock("@app/herdr", async () => ({
 }));
 vi.mock("../../lib/tauri", () => ({
   getAgentLaunchSettings: vi.fn(),
+  getAgentLaunchPlan: vi.fn(),
   submitTerminalAgentPrompt: vi.fn(),
 }));
 const target = (id = "one"): HerdrTarget => ({
@@ -325,4 +327,79 @@ it("creates a dedicated file-named tab and reuses it across preview identities",
   );
   expect(tabs).toHaveLength(3);
   expect(startHerdrAgent).toHaveBeenCalledTimes(2);
+});
+it("keeps selected Agent kinds in separate tabs and returns to the original context", async () => {
+  runtime = new PreviewAgentRuntime({
+    tabs: () => tabs,
+    controls: () => controls,
+    tools: () => [tool, { ...tool, key: "claude_code" }],
+    update: (change) => {
+      tabs = change(tabs);
+    },
+  });
+  await runtime.deliver({ ...request(), agentId: "codex" }, "site");
+  vi.mocked(startHerdrAgent).mockResolvedValue({
+    target: target("claude"),
+    warning: null,
+  });
+  await runtime.deliver({ ...request(), agentId: "claude" }, "site");
+  expect(startHerdrAgent).toHaveBeenLastCalledWith(
+    target("shell"),
+    expect.objectContaining({ kind: "claude" }),
+  );
+  expect(tabs.map((tab) => tab.agent)).toEqual(["codex", "claude"]);
+  await runtime.deliver({ ...request(), agentId: "codex" }, "site");
+  expect(startHerdrAgent).toHaveBeenCalledTimes(2);
+  expect(runHerdrAction).toHaveBeenLastCalledWith(
+    target(),
+    "prompt",
+    "Fix this layout",
+  );
+});
+it("does not silently substitute another Agent when the selected kind is unavailable", async () => {
+  await expect(
+    runtime.deliver({ ...request(), agentId: "claude" }, "site"),
+  ).rejects.toThrow("PREVIEW_AGENT_NOT_INSTALLED");
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+  expect(tabs).toHaveLength(0);
+});
+it("previews resolved launch parameters and existing-pane commands without creating or sending anything", async () => {
+  vi.mocked(getAgentLaunchPlan).mockResolvedValue({
+    key: "codex",
+    kind: "codex",
+    program: "codex",
+    arguments: ["--configured-option"],
+  });
+  const fresh = await runtime.preview(request(), "site");
+  expect(fresh.command).toContain("--configured-option");
+  expect(fresh.command).toContain("Fix this layout");
+  expect(fresh.createsWorkspace).toBe(true);
+  expect(ensureHerdrWorkspace).not.toHaveBeenCalled();
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+  expect(runHerdrAction).not.toHaveBeenCalled();
+  expect(tabs).toHaveLength(0);
+  await runtime.deliver(request(), "site");
+  vi.clearAllMocks();
+  vi.mocked(getAgentLaunchSettings).mockResolvedValue({
+    document: { schema_version: 1, default_agent: "codex", instructions: {} },
+    revision: "1",
+    defaults: {},
+  });
+  vi.mocked(getAgentLaunchPlan).mockResolvedValue({
+    key: "codex",
+    kind: "codex",
+    program: "codex",
+    arguments: [],
+  });
+  vi.mocked(getHerdrSnapshot).mockResolvedValue(snapshot(target()));
+  vi.mocked(getHerdrInventory).mockResolvedValue({
+    installed: true,
+    sessions: [],
+  });
+  const bound = await runtime.preview(request(), "site");
+  expect(bound.command).toContain("agent prompt 'one'");
+  expect(bound.command).not.toContain("agent start");
+  expect(bound.createsWorkspace).toBe(false);
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+  expect(runHerdrAction).not.toHaveBeenCalled();
 });

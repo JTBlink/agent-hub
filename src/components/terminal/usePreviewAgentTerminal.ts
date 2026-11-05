@@ -55,7 +55,11 @@ export function usePreviewAgentTerminal(options: {
       if (!projectId) return null;
       if (!current.ready)
         return Promise.reject(Error("PREVIEW_AGENT_WORKSPACE_UNAVAILABLE"));
-      return runtime.deliver(
+      return (
+        request.preview
+          ? runtime.preview.bind(runtime)
+          : runtime.deliver.bind(runtime)
+      )(
         {
           ...request,
           verify: async () => {
