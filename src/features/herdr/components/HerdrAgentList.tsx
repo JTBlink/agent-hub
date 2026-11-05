@@ -128,7 +128,9 @@ export function HerdrAgentList({
                     disabled={
                       busy ||
                       (mode === "prompt" &&
-                        !["idle", "done"].includes(a.agent_status)) ||
+                        !["idle", "done", "working"].includes(
+                          a.agent_status,
+                        )) ||
                       (mode === "interrupt" && a.agent_status !== "working")
                     }
                     onClick={() => request(mode, a)}

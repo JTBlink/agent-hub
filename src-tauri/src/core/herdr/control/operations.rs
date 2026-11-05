@@ -129,7 +129,9 @@ impl HerdrControl {
                 )?)
             }
             Action::Prompt => {
-                if !["idle", "done"].contains(&pane.agent_status.as_str()) {
+                // Working Agents accept follow-up prompts through Herdr; lifecycle state
+                // alone does not mean their input is unavailable.
+                if !["idle", "done", "working"].contains(&pane.agent_status.as_str()) {
                     bail!("Agent is not ready for a task; inspect its terminal")
                 }
                 let text = text

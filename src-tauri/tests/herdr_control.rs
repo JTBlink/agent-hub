@@ -292,6 +292,38 @@ fn live_workspace_layout_and_pty_attachment_keep_the_server_running() {
 }
 
 #[test]
+fn prompts_can_deliver_follow_up_feedback_to_a_working_agent() {
+    use app_lib::core::herdr::control::{Action, Target};
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    fs::create_dir(&directory).unwrap();
+    let control = HerdrControl::new(fake_cli(root.path(), &directory));
+    let file = root.path().join("herdr.snapshot");
+    let mut fixture: serde_json::Value = serde_json::from_slice(&fs::read(&file).unwrap()).unwrap();
+    let mut pane = fixture["result"]["snapshot"]["panes"][0].clone();
+    pane["agent_status"] = json!("working");
+    pane["agent"] = json!("codex");
+    pane["agent_session"] = json!({"id":"original"});
+    fixture["result"]["snapshot"]["agents"] = json!([pane]);
+    fs::write(&file, fixture.to_string()).unwrap();
+    let snapshot = control.snapshot("default").unwrap();
+    let target = Target::from_pane("default", &snapshot.agents[0]);
+    control
+        .action(&target, Action::Prompt, Some("Simplify this page"))
+        .unwrap();
+    let calls = fs::read_to_string(root.path().join("herdr.calls")).unwrap();
+    assert_eq!(
+        calls
+            .lines()
+            .filter(|s| s.contains(" agent prompt "))
+            .count(),
+        1
+    );
+    assert!(calls.contains("agent prompt w1:p1 Simplify this page"));
+    assert!(!calls.contains("agent send-keys"));
+}
+
+#[test]
 fn prompts_require_ready_foreground_and_unchanged_agent_identity() {
     use app_lib::core::herdr::control::{Action, Target};
     let root = tempfile::tempdir().unwrap();
