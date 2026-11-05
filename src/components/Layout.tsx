@@ -40,6 +40,13 @@ export function Layout() {
   // Initial hydration is one-shot; normal refreshes keep the current page mounted.
   if (!started && !loading && (startup?.ready || welcomeReady))
     setStarted(true);
+  const currentTerminalLayout = readTerminalLayout();
+  const currentTerminal = currentTerminalLayout.tabs.find(
+    (tab) => tab.id === currentTerminalLayout.lastActiveId,
+  );
+  const workspacePath =
+    currentTerminal?.worktreePath ??
+    projects.find((project) => project.id === currentTerminal?.projectId)?.path;
   const navigate = useNavigate();
   const workspacePage =
     !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
@@ -183,6 +190,7 @@ export function Layout() {
                     <PreviewHost
                       active={pathname === "/preview"}
                       deliveryAdapter={herdrDeliveryAdapter}
+                      workspacePath={workspacePath}
                     />
                   )}
                 </div>

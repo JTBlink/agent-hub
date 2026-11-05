@@ -1,3 +1,4 @@
+import { herdrDeliveryAdapter } from "../../src/features/herdr/deliveryAdapter";
 import { BrowserSurface } from "../../src/features/preview/web/BrowserSurface";
 import { DownloadsPanel } from "../../src/features/preview/components/DownloadsPanel";
 import type {
@@ -118,6 +119,15 @@ mockIPC((command, args) => {
       return null;
     }
     if (parameters.get("view") === "execution") {
+      if (
+        request.kind === "prepare_delivery" &&
+        "text" in request &&
+        "images" in request
+      ) {
+        document.documentElement.dataset.packagedContext =
+          JSON.stringify(request);
+        return { prompt: request.text, context: request.text, attachments: [] };
+      }
       if (request.kind === "info")
         return {
           executable: null,
@@ -243,6 +253,15 @@ mockIPC((command, args) => {
       );
       return null;
     }
+    if (
+      request.kind === "prepare_delivery" &&
+      "text" in request &&
+      "images" in request
+    ) {
+      document.documentElement.dataset.packagedContext =
+        JSON.stringify(request);
+      return { prompt: request.text, context: request.text, attachments: [] };
+    }
     if (request.kind === "info")
       return {
         executable: null,
@@ -327,7 +346,43 @@ mockIPC((command, args) => {
       : args?.key === "preview_link_destination"
         ? linkDestination
         : null;
-  if (command === "herdr_inventory") return { installed: false, sessions: [] };
+  if (command === "herdr_inventory")
+    return {
+      installed: true,
+      sessions: [{ name: "default", running: true }],
+    };
+  if (command === "herdr_snapshot")
+    return {
+      workspaces: [
+        {
+          workspace_id: "site",
+          label: "Website",
+          directory: "/workspace/site",
+          active_tab_id: "tab",
+        },
+      ],
+      agents: [
+        {
+          workspace_id: "site",
+          pane_id: "agent",
+          tab_id: "tab",
+          terminal_id: "terminal",
+          revision: 1,
+          cwd: "/workspace/site",
+          focused: true,
+          agent_session: null,
+          agent: "codex",
+          name: "Codex",
+          agent_status: "idle",
+        },
+      ],
+    };
+  if (command === "herdr_action") {
+    document.documentElement.dataset.deliveredContext = String(
+      args?.text ?? "",
+    );
+    return null;
+  }
   return null;
 });
 localStorage.removeItem("agent-hub.preview.tabs.v1");
@@ -361,7 +416,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <DownloadsPanel model={{ report: () => {}, setPanelOpen: () => {} }} />
       </section>
     ) : (
-      <PreviewWorkspace shown />
+      <PreviewWorkspace
+        shown
+        deliveryAdapter={herdrDeliveryAdapter}
+        workspacePath="/workspace/site"
+      />
     )}
   </div>,
 );

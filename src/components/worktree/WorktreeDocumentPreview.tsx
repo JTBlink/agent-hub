@@ -13,11 +13,13 @@ export function WorktreeDocumentPreview({
   active,
   onSource,
   toolbarContainer,
+  workspacePath,
 }: {
   document: PreviewDocument;
   active: boolean;
   onSource: () => void;
   toolbarContainer?: HTMLElement | null;
+  workspacePath?: string;
 }) {
   const workspace = useRef<PreviewWorkspaceHandle>(null);
   const previews = useWorktreePreviews();
@@ -37,6 +39,7 @@ export function WorktreeDocumentPreview({
       embedded
       shown={active}
       deliveryAdapter={herdrDeliveryAdapter}
+      workspacePath={workspacePath}
       onClose={() => previews?.close(document.id)}
       onSource={onSource}
       sourceToolbarContainer={active ? toolbarContainer : null}

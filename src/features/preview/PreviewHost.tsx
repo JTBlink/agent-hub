@@ -10,9 +10,11 @@ const Workspace = lazy(() =>
 export function PreviewHost({
   active,
   deliveryAdapter,
+  workspacePath,
 }: {
   active: boolean;
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
+  workspacePath?: string;
 }) {
   const [opened, setOpened] = useState(active);
   const navigate = useNavigate();
@@ -31,7 +33,11 @@ export function PreviewHost({
       <Suspense
         fallback={<div role="status" className="flex-1 bg-background" />}
       >
-        <Workspace shown={active} deliveryAdapter={deliveryAdapter} />
+        <Workspace
+          shown={active}
+          deliveryAdapter={deliveryAdapter}
+          workspacePath={workspacePath}
+        />
       </Suspense>
     </div>
   );

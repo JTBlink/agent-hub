@@ -742,10 +742,11 @@ it("adds a preview after the source tab without navigation, reuses it, and close
       "Preview example",
     );
     expect(
-      [...host.querySelectorAll<HTMLButtonElement>("button")].find(
-        (button) => button.textContent === "preview.sendAgent",
-      )?.disabled,
+      host.querySelector<HTMLButtonElement>(".preview-context-send")?.disabled,
     ).toBe(false);
+    expect(host.querySelector(".preview-context-composer select")).toBeNull();
+    expect(host.querySelector(".preview-annotations > footer")).toBeNull();
+    expect(host.querySelector("dialog[open]")).toBeNull();
     installCodeEditorGeometry();
     await menuAction("preview.source");
     expect(codeEditor(host).state.sliceDoc()).toBe("# Preview example");

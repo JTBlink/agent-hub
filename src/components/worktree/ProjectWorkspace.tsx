@@ -374,6 +374,7 @@ export function ProjectWorkspace({
                     <WorktreeDocumentPreview
                       key={tab.document.id}
                       document={tab.document}
+                      workspacePath={tab.scope === scope ? path : undefined}
                       toolbarContainer={fileToolbar}
                       onSource={() => {
                         setSkillsSelection(null);

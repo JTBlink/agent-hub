@@ -1,5 +1,7 @@
 import { getErrorMessage } from "../../../lib/error";
 const messages: Record<string, string> = {
+  PREVIEW_CONTEXT_FILE_LIMIT: "preview.contextFileLimit",
+  PREVIEW_CONTEXT_FILE_INVALID: "preview.contextFileInvalid",
   PREVIEW_PROFILE_IN_USE: "preview.profileInUse",
   PREVIEW_DOWNLOAD_UNVERIFIED: "preview.downloadSourceUnverified",
   PREVIEW_CONTEXT_CHANGED: "preview.pageChanged",

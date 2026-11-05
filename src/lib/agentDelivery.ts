@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 /** A destination owns its transport and final identity validation. */
 export interface AgentDeliveryDestination {
   send: (prompt: string) => Promise<unknown>;
@@ -7,8 +6,7 @@ export interface AgentDeliveryDestination {
 export interface AgentDeliveryAdapter {
   id: string;
   label: string;
-  TargetPicker: ComponentType<{
-    disabled: boolean;
-    onChange: (destination: AgentDeliveryDestination | null) => void;
-  }>;
+  resolveCurrent: (
+    workspacePath?: string,
+  ) => Promise<AgentDeliveryDestination | null>;
 }

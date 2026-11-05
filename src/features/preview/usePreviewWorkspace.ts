@@ -8,6 +8,7 @@ import { usePreviewSearchEngine } from "./shared/usePreviewSearchEngine";
 import { useBrowserBackends } from "./web/useBrowserBackends";
 import { verifyPreviewContext } from "./shared/verifyContext";
 import { annotationActions } from "./shared/annotationActions";
+import { usePreviewInstructions } from "./shared/usePreviewInstructions";
 import { followDocumentLink } from "./shared/documentLinks";
 import { previewError } from "./shared/previewError";
 import { copyScreenshot } from "./shared/copyScreenshot";
@@ -33,7 +34,6 @@ import {
   restorePreview,
   updatePreview,
   type Annotation,
-  type PreviewTab,
 } from "./shared/session";
 import {
   loadPreviewSession,
@@ -95,16 +95,9 @@ export function usePreviewWorkspace({
     const id = sessionRef.current.activeId;
     if (id) setViewports((previous) => ({ ...previous, [id]: value }));
   };
-  const [delivery, setDelivery] = useState<{
-    text: string;
-    page: PreviewTab;
-    annotations: Annotation[];
-    images: string[];
-    tabId: string;
-    revision: string;
-  } | null>(null);
   const [notice, setNotice] = useState("");
   const active = session.tabs.find((tab) => tab.id === session.activeId);
+  const instructions = usePreviewInstructions(session.tabs, active);
   const document = active ? documents[active.id] : undefined;
   const draft = active ? drafts[active.id] : undefined;
   const dirty = !!document && draft !== undefined && draft !== document.content;
@@ -478,6 +471,7 @@ export function usePreviewWorkspace({
       t("preview.pageChanged"),
     );
   const { copyNotes, exportNotes } = annotationActions({
+    instruction: instructions.instruction,
     tab: active,
     pageId,
     notes,
@@ -517,6 +511,7 @@ export function usePreviewWorkspace({
     return true;
   };
   return {
+    ...instructions,
     requestClose,
     session,
     sessionRef,
@@ -550,8 +545,6 @@ export function usePreviewWorkspace({
     viewport,
     viewports,
     setViewport,
-    delivery,
-    setDelivery,
     notice,
     setNotice,
     active,

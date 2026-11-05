@@ -1,164 +1,206 @@
-import { Camera, Copy, Send, Trash2, X, Download } from "lucide-react";
+import {
+  Braces,
+  Copy,
+  Download,
+  FileText,
+  Globe,
+  Image,
+  MessageSquareText,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PreviewModel } from "../usePreviewWorkspace";
 import { formatAnnotations } from "../shared/session";
-export function AnnotationPanel({ model }: { model: PreviewModel }) {
+import type { AgentDeliveryAdapter } from "../../../lib/agentDelivery";
+import { CardActionMenu } from "../../../components/CardActionMenu";
+import { AgentDelivery } from "./AgentDelivery";
+import { ContextAdder } from "./ContextAdder";
+import { ContextDetails } from "./ContextDetails";
+
+export function AnnotationPanel({
+  model,
+  deliveryAdapter,
+  workspacePath,
+}: {
+  model: PreviewModel;
+  deliveryAdapter?: AgentDeliveryAdapter;
+  workspacePath?: string;
+}) {
   const { t } = useTranslation();
+  const { instruction, setInstruction } = model;
+  const [selectedId, setSelectedId] = useState<string | null>();
+  const [sending, setSending] = useState(false);
+  const [reading, setReading] = useState(false);
+  const selected = model.notes.find(
+    (note) =>
+      note.id ===
+      (selectedId === undefined ? model.notes.at(-1)?.id : selectedId),
+  );
+  const disabled = model.busy || sending || reading;
   return (
-    <aside className="preview-inspector">
+    <aside className="preview-inspector preview-annotations">
       <header>
         <h2>{t("preview.annotations")}</h2>
-        <button
-          aria-label={t("common.close")}
-          onClick={() => model.setPanelOpen(false)}
-        >
-          <X size={16} />
-        </button>
+        <div className="preview-context-header-actions">
+          <CardActionMenu
+            label={t("preview.contextActions")}
+            disabled={disabled || (!model.notes.length && !instruction.trim())}
+            actions={[
+              {
+                key: "copy",
+                label: t("preview.copyNotes"),
+                icon: <Copy size={14} />,
+                onSelect: () => void model.copyNotes(undefined, instruction),
+              },
+              {
+                key: "export",
+                label: t("preview.exportNotes"),
+                icon: <Download size={14} />,
+                onSelect: () => void model.exportNotes(instruction),
+              },
+            ]}
+          />
+          <button
+            aria-label={t("common.close")}
+            onClick={() => model.setPanelOpen(false)}
+          >
+            <X size={16} />
+          </button>
+        </div>
       </header>
       <div className="preview-inspector-scroll">
-        {!model.notes.length && (
-          <div className="preview-empty">
-            <Camera size={25} />
+        {selected ? (
+          <fieldset disabled={disabled} className="preview-context-detail">
+            <ContextDetails
+              model={model}
+              note={selected}
+              index={model.notes.indexOf(selected)}
+              instruction={instruction}
+            />
+          </fieldset>
+        ) : (
+          <div className="preview-empty preview-context-empty">
+            <MessageSquareText size={25} />
             <h3>{t("preview.emptyAnnotations")}</h3>
-            <p>{t("preview.annotationHint")}</p>
-            <button
-              className="app-button-primary"
-              disabled={
-                !model.active || model.source || (model.native && !model.pageId)
-              }
-              onClick={() => model.setPicking(true)}
-            >
-              {t("preview.pick")}
-            </button>
+            <p>{t("preview.contextComposerHint")}</p>
           </div>
         )}
-        {model.notes.map((note, index) => (
-          <article key={note.id} className="preview-note">
-            <header>
-              <strong>
-                {index + 1}. {note.selector}
-              </strong>
-              <button
-                aria-label={t("common.delete")}
-                onClick={() =>
-                  model.setSession((previous) => ({
-                    ...previous,
-                    annotations: previous.annotations.filter(
-                      (item) => item.id !== note.id,
-                    ),
-                  }))
-                }
-              >
-                <Trash2 size={13} />
-              </button>
-            </header>
-            {note.screenshot && (
-              <img
-                src={`data:image/png;base64,${note.screenshot}`}
-                alt={t("preview.elementScreenshot")}
-              />
-            )}
-            <p>{note.text.slice(0, 500)}</p>
-            {note.sourceLine && (
-              <button
-                className="preview-source-link"
-                onClick={() => {
-                  model.setSource(true);
-                  model.setSourceLine(note.sourceLine);
-                }}
-              >
-                {model.active?.title}:{note.sourceLine}
-              </button>
-            )}
-            <textarea
-              aria-label={t("preview.annotationNumber", { number: index + 1 })}
-              placeholder={t("preview.notePlaceholder")}
-              value={note.note}
-              maxLength={4000}
-              onChange={(event) =>
-                model.setSession((previous) => ({
-                  ...previous,
-                  annotations: previous.annotations.map((item) =>
-                    item.id === note.id
-                      ? { ...item, note: event.target.value }
-                      : item,
-                  ),
-                }))
-              }
-            />
-            <div className="preview-note-actions">
-              <button onClick={() => void model.copyNotes(note.id)}>
-                <Copy size={13} />
-                {t("preview.copyNote")}
-              </button>
-              {note.bounds && (
-                <button
-                  disabled={model.busy}
-                  onClick={() => void model.screenshot(false, note.id, true)}
-                >
-                  <Copy size={13} />
-                  {t("preview.copyScreenshot")}
-                </button>
-              )}
-              {note.bounds && (
-                <button
-                  disabled={model.busy}
-                  onClick={() => void model.screenshot(false, note.id)}
-                >
-                  <Camera size={13} />
-                  {t("preview.attachScreenshot")}
-                </button>
-              )}
-              {note.html && (
-                <details>
-                  <summary>{t("preview.context")}</summary>
-                  <pre>{note.html}</pre>
-                  <pre>{JSON.stringify(note.styles, null, 2)}</pre>
-                </details>
-              )}
-            </div>
-          </article>
-        ))}
       </div>
-      <footer>
-        <div>
-          <button
-            title={t("preview.copyNotes")}
-            disabled={!model.notes.length}
-            onClick={() => void model.copyNotes()}
-          >
-            <Copy size={15} />
-          </button>
-          <button
-            title={t("preview.exportNotes")}
-            disabled={!model.notes.length}
-            onClick={() => void model.exportNotes()}
-          >
-            <Download size={15} />
-          </button>
-          <span>{t("preview.noteCount", { count: model.notes.length })}</span>
-        </div>
-        <button
-          className="app-button-primary"
-          disabled={!model.active || !model.notes.length}
-          onClick={() => {
-            if (model.active)
-              model.setDelivery({
-                page: model.active,
-                annotations: model.notes,
-                text: formatAnnotations(model.active, model.notes),
-                images: model.notes.flatMap((note) =>
-                  note.screenshot ? [note.screenshot] : [],
-                ),
-                tabId: model.active.id,
-                revision: model.active.revision,
-              });
-          }}
+      <AgentDelivery
+        adapter={deliveryAdapter}
+        workspacePath={workspacePath}
+        text={
+          model.active
+            ? formatAnnotations(model.active, model.notes, instruction)
+            : ""
+        }
+        images={model.notes.flatMap((note) =>
+          note.screenshot ? [note.screenshot] : [],
+        )}
+        disabled={
+          model.busy ||
+          reading ||
+          !model.active ||
+          (!model.notes.length && !instruction.trim())
+        }
+        verifyCurrent={() =>
+          model.active
+            ? model.verifyContext(model.active.id, model.active.revision)
+            : Promise.reject(new Error(t("preview.pageChanged")))
+        }
+        onBusyChange={setSending}
+        onSent={(copied) =>
+          model.setNotice(t(copied ? "preview.copied" : "preview.delivered"))
+        }
+        actions={
+          <ContextAdder
+            model={model}
+            disabled={disabled}
+            onAdded={setSelectedId}
+            onBusyChange={setReading}
+          />
+        }
+      >
+        <div
+          className="preview-context-chips"
+          aria-label={t("preview.context")}
         >
-          <Send size={14} />
-          {t("preview.sendAgent")}
-        </button>
-      </footer>
+          {model.active && (
+            <span className="preview-context-page" title={model.active.address}>
+              <Globe size={13} />
+              <span>{model.active.title}</span>
+            </span>
+          )}
+          {model.notes.map((note) => {
+            const Icon =
+              note.contextKind === "image" || note.screenshot
+                ? Image
+                : note.contextKind
+                  ? FileText
+                  : Braces;
+            const label =
+              note.contextKind === "text"
+                ? note.note.trim().slice(0, 40) || t("preview.textContext")
+                : note.accessibility?.label ||
+                  note.selector.split(" > ").at(-1) ||
+                  note.selector;
+            return (
+              <span
+                className={`preview-context-chip ${selected?.id === note.id ? "active" : ""}`}
+                key={note.id}
+              >
+                <button
+                  disabled={disabled}
+                  title={note.selector}
+                  aria-expanded={selected?.id === note.id}
+                  onClick={() =>
+                    setSelectedId(selected?.id === note.id ? null : note.id)
+                  }
+                  type="button"
+                >
+                  <Icon size={13} />
+                  <span>{label}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  aria-label={t("preview.removeContext", { name: label })}
+                  onClick={() =>
+                    model.setSession((previous) => ({
+                      ...previous,
+                      annotations: previous.annotations.filter(
+                        (item) => item.id !== note.id,
+                      ),
+                    }))
+                  }
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            );
+          })}
+        </div>
+        <textarea
+          aria-label={t("preview.changeRequest")}
+          placeholder={t("preview.changeRequestPlaceholder")}
+          value={instruction}
+          maxLength={4000}
+          disabled={disabled}
+          rows={3}
+          onChange={(event) => setInstruction(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              (event.metaKey || event.ctrlKey) &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
+      </AgentDelivery>
     </aside>
   );
 }

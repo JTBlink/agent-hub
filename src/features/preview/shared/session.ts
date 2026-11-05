@@ -13,6 +13,7 @@ export interface PreviewTab {
   execution?: ExecutionLocation;
 }
 export interface Annotation {
+  contextKind?: "text" | "file" | "image";
   id: string;
   tabId: string;
   revision: string;
@@ -174,6 +175,7 @@ export function restorePreview(
 export function formatAnnotations(
   tab: PreviewTab,
   notes: Annotation[],
+  instruction = "",
 ): string {
   return [
     `# ${tab.title}`,
@@ -183,6 +185,9 @@ export function formatAnnotations(
       (note, index) =>
         `## ${index + 1}. ${note.selector}\n${note.sourceLine ? `Source: ${tab.title}:${note.sourceLine}${note.sourceEndLine ? `-${note.sourceEndLine}` : ""}\n` : ""}\n${note.domPath?.length ? `DOM path: ${note.domPath.join(" > ")}\n` : ""}${note.viewport ? `Viewport: ${JSON.stringify(note.viewport)}\n` : ""}${note.bounds ? `Bounds: ${JSON.stringify(note.bounds)}\n` : ""}${note.text}\n\n${note.note}\n\n${note.html ? `DOM:\n\`\`\`html\n${note.html}\n\`\`\`` : ""}\n${note.accessibility ? `Accessibility: ${JSON.stringify(note.accessibility)}\n` : ""}${note.styles ? `CSS:\n\`\`\`json\n${JSON.stringify(note.styles, null, 2)}\n\`\`\`` : ""}`,
     ),
+    ...(instruction.trim()
+      ? [`# Requested changes\n\n${instruction.trim()}`]
+      : []),
   ].join("\n\n");
 }
 

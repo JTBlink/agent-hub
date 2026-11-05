@@ -36,7 +36,6 @@ import { CodeEditor } from "../../components/file-reader/CodeEditor";
 import { ProfileSelector } from "./components/ProfileSelector";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
-import { AgentDelivery } from "./components/AgentDelivery";
 import "./preview.css";
 
 export interface PreviewWorkspaceHandle {
@@ -46,6 +45,7 @@ export interface PreviewWorkspaceHandle {
 export function PreviewWorkspace({
   shown,
   deliveryAdapter,
+  workspacePath,
   initialDocument,
   embedded = false,
   ref,
@@ -63,6 +63,7 @@ export function PreviewWorkspace({
   /** Mount the source action in the workspace tab toolbar when embedded. */
   sourceToolbarContainer?: HTMLElement | null;
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
+  workspacePath?: string;
 }) {
   const workspace = useRef<HTMLElement>(null);
   const { t } = useTranslation();
@@ -472,7 +473,12 @@ export function PreviewWorkspace({
             className="preview-inspector-size"
           >
             {model.panel === "annotations" ? (
-              <AnnotationPanel model={model} />
+              <AnnotationPanel
+                key={`${active?.id}:${active?.revision}:${workspacePath}`}
+                model={model}
+                deliveryAdapter={deliveryAdapter}
+                workspacePath={workspacePath}
+              />
             ) : model.panel === "settings" ? (
               <BrowserSettings model={model} />
             ) : model.panel === "downloads" ? (
@@ -570,30 +576,6 @@ export function PreviewWorkspace({
         <div role="status" className="preview-notice">
           {model.notice}
         </div>
-      )}
-      {model.delivery !== null && (
-        <AgentDelivery
-          adapter={deliveryAdapter}
-          page={model.delivery.page}
-          annotations={model.delivery.annotations}
-          text={model.delivery.text}
-          images={model.delivery.images}
-          verifyCurrent={() =>
-            model.verifyContext(model.delivery!.tabId, model.delivery!.revision)
-          }
-          stale={
-            !model.session.tabs.some(
-              (tab) =>
-                tab.id === model.delivery?.tabId &&
-                tab.revision === model.delivery?.revision,
-            )
-          }
-          onClose={() => model.setDelivery(null)}
-          onSent={(copied) => {
-            model.setDelivery(null);
-            model.setNotice(t(copied ? "preview.copied" : "preview.delivered"));
-          }}
-        />
       )}
     </section>
   );

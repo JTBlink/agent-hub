@@ -26,7 +26,9 @@ const until = async (code) => {
     if (await evaluate(`Boolean(${code})`)) return;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw Error(`Not ready: ${code}`);
+  throw Error(
+    `Not ready: ${code}; ${await evaluate("document.querySelector('#preview')?.contentDocument?.body.innerText.slice(-1500)")}`,
+  );
 };
 const documentRef = "document.querySelector('#preview').contentDocument";
 const run = (code) =>
@@ -102,20 +104,109 @@ try {
     assert.ok(copied.includes("DOM path:"), copied);
     assert.ok(copied.includes("CSS:"), copied);
     assert.ok(copied.includes("Accessibility:"), copied);
-    await run(
-      `d.querySelector('aside.preview-inspector footer > .app-button-primary').click()`,
+    assert.equal(
+      await evaluate(
+        `${documentRef}.querySelector('.preview-annotations > footer, .preview-context-composer select, dialog[open]') !== null`,
+      ),
+      false,
     );
-    await until(`${documentRef}?.querySelector('dialog[open] textarea')`);
-    const delivery = await evaluate(
-      `${documentRef}.querySelector('dialog textarea').value`,
+    const addContext = async (index) => {
+      await run(`d.querySelector('.preview-add-context button').click()`);
+      await until(
+        `${documentRef}?.querySelectorAll('[role="menuitem"]').length===3`,
+      );
+      await run(`d.querySelectorAll('[role="menuitem"]')[${index}].click()`);
+    };
+    await addContext(0);
+    await run(`d.querySelectorAll('.preview-markdown p')[1].click()`);
+    await until(
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===2`,
     );
-    assert.ok(delivery.includes("Source: guide.md:5-6"), delivery);
+    await addContext(1);
+    await until(
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===3`,
+    );
     await run(
-      `const select=d.querySelector('dialog select');select.value='copy';select.dispatchEvent(new d.defaultView.Event('change',{bubbles:true}));delete d.documentElement.dataset.copiedContext; d.querySelector('dialog footer .app-button-primary').click()`,
+      `const input=d.querySelector('.preview-note textarea');Object.getOwnPropertyDescriptor(d.defaultView.HTMLTextAreaElement.prototype,'value').set.call(input,'Keep the layout responsive');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
+    );
+    await run(
+      `d.querySelector('input[type="file"]').click=()=>{};d.querySelector('.preview-add-context button').click()`,
+    );
+    await run(`d.querySelectorAll('[role="menuitem"]')[2].click()`);
+    // Supply an explicit multi-file selection without opening a native picker in this fixture.
+    await run(
+      `const transfer=new d.defaultView.DataTransfer();transfer.items.add(new d.defaultView.File(['Reference one'],'reference.md',{type:'text/markdown'}));transfer.items.add(new d.defaultView.File(['Reference two'],'constraints.txt',{type:'text/plain'}));const bytes=Uint8Array.from(atob(d.createElement('canvas').toDataURL('image/png').split(',')[1]),c=>c.charCodeAt(0));transfer.items.add(new d.defaultView.File([bytes],'reference.png',{type:'image/png'}));const input=d.querySelector('input[type="file"]');input.files=transfer.files;input.dispatchEvent(new d.defaultView.Event('change',{bubbles:true}))`,
     );
     await until(
-      `!${documentRef}.querySelector('dialog[open]') && ${documentRef}.documentElement.dataset.copiedContext?.includes('Source: guide.md:5-6')`,
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===6`,
     );
+    await run(
+      `d.querySelectorAll('.preview-context-chip')[1].querySelector('button:last-child').click()`,
+    );
+    await until(
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===5`,
+    );
+    await run(
+      `const input=d.querySelector('.preview-context-composer > textarea');Object.getOwnPropertyDescriptor(d.defaultView.HTMLTextAreaElement.prototype,'value').set.call(input,'Adjust layout');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
+    );
+    const sendFits = await evaluate(
+      `(()=>{const button=${documentRef}.querySelector('.preview-context-send').getBoundingClientRect(),panel=${documentRef}.querySelector('.preview-annotations').getBoundingClientRect();return button.bottom<=panel.bottom && button.top>=panel.top})()`,
+    );
+    assert.ok(
+      sendFits,
+      "Send control stays inside the panel with multiple contexts",
+    );
+    await run(
+      `d.querySelector('.preview-context-header-actions > button').click()`,
+    );
+    await until(`!${documentRef}?.querySelector('.preview-context-composer')`);
+    await run(
+      `d.querySelector('.preview-addressbar button[aria-expanded]:not([role]):not([aria-haspopup])').click()`,
+    );
+    await until(
+      `${documentRef}?.querySelector('.preview-context-composer > textarea')`,
+    );
+    assert.equal(
+      await evaluate(
+        `${documentRef}.querySelector('.preview-context-composer > textarea').value`,
+      ),
+      "Adjust layout",
+    );
+    await run(`d.querySelector('.preview-status button:last-child').click()`);
+    await until(
+      `${documentRef}.documentElement.dataset.copiedContext?.includes('Adjust layout')`,
+    );
+    await run(
+      `d.querySelector('.preview-context-composer > textarea').dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true}))`,
+    );
+    await until(
+      `${documentRef}.documentElement.dataset.deliveredContext?.includes('Adjust layout')`,
+    );
+    const delivered = await evaluate(
+      `${documentRef}.documentElement.dataset.deliveredContext`,
+    );
+    for (const expected of [
+      "Source: guide.md:5-6",
+      "DOM path:",
+      "Reference one",
+      "Reference two",
+      "Keep the layout responsive",
+    ])
+      assert.ok(delivered.includes(expected), delivered);
+    assert.equal(
+      await evaluate(
+        `JSON.parse(${documentRef}.documentElement.dataset.packagedContext).images.length`,
+      ),
+      1,
+    );
+    assert.equal(
+      await evaluate(
+        `${documentRef}.querySelector('dialog[open], .preview-context-composer select') !== null`,
+      ),
+      false,
+    );
+    // Inspect the first context again before testing source navigation.
+    await run(`d.querySelector('.preview-context-chip > button').click()`);
     await run(`d.querySelector('.preview-source-link').click()`);
     await until(`${documentRef}?.querySelector('.cm-editor')`);
     await run(`d.querySelector('.preview-more-trigger').click()`);
@@ -269,7 +360,7 @@ try {
     }
   }
   console.log(
-    "Preview acceptance passed: Markdown outline, source capture/navigation, cookie scope preview, themes, enlarged text, 1440/960/480 layouts (synthetic IPC).",
+    "Preview acceptance passed: multiple context chips, text/image/file imports, removal, retained instructions, current-workspace delivery, keyboard submit, source navigation, themes and 1440/960/480 layouts (synthetic IPC).",
   );
 } finally {
   await request(`/close?target=${targetId}`);

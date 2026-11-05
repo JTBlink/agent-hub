@@ -3,6 +3,7 @@ import { previewApi } from "../api";
 import { formatAnnotations, type Annotation, type PreviewTab } from "./session";
 /** Both clipboard and export validate the exact context captured by the user's action. */
 export function annotationActions({
+  instruction = "",
   tab,
   pageId,
   notes,
@@ -10,6 +11,7 @@ export function annotationActions({
   onCopied,
   onError,
 }: {
+  instruction?: string;
   tab?: PreviewTab;
   pageId?: string;
   notes: Annotation[];
@@ -18,12 +20,13 @@ export function annotationActions({
   onError: (error: unknown) => void;
 }) {
   return {
-    copyNotes: async (noteId?: string) => {
+    copyNotes: async (noteId?: string, request = instruction) => {
       if (!tab) return;
       try {
         const text = formatAnnotations(
           tab,
           noteId ? notes.filter((note) => note.id === noteId) : notes,
+          request,
         );
         await verify(tab.id, tab.revision);
         await writeText(text);
@@ -32,10 +35,10 @@ export function annotationActions({
         onError(error);
       }
     },
-    exportNotes: async () => {
+    exportNotes: async (request = instruction) => {
       if (!tab) return;
       try {
-        const text = formatAnnotations(tab, notes);
+        const text = formatAnnotations(tab, notes, request);
         await verify(tab.id, tab.revision);
         await previewApi.export(
           "page-feedback.md",
