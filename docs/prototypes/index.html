@@ -20,21 +20,29 @@
       <p class="intro">
         查看交互方案与历史设计参考。原型使用演示数据，正式功能和验收状态以对应需求为准。
       </p>
-      <label class="search"
-        >查找原型<input
-          id="search"
-          type="search"
-          placeholder="名称、用途或状态"
-      /></label>
-      <p id="count" role="status"></p>
+      <div class="catalog-tools">
+        <label class="search"
+          >查找原型<input
+            id="search"
+            type="search"
+            placeholder="名称、用途或状态"
+        /></label>
+        <p id="count" role="status"></p>
+      </div>
       <div id="entries"></div>
       <p id="empty" hidden>没有匹配的原型，试试其他关键词。</p>
       <footer>
-        <code>./prototype.sh --list</code> 查看命令行目录；<code
-          >./prototype.sh preview</code
-        >
-        直达指定原型。<br />新增原型请登记
-        <code>docs/prototypes/catalog.json</code>，入口、状态和源码位置统一维护。
+        <details>
+          <summary>启动与维护说明</summary>
+          <p>
+            <code>./prototype.sh --list</code> 查看命令行目录；<code
+              >./prototype.sh preview</code
+            >
+            直达指定原型。<br />新增原型请登记
+            <code>docs/prototypes/catalog.json</code
+            >，入口、状态和源码位置统一维护。
+          </p>
+        </details>
       </footer>
     </main>
     <script type="module" src="./catalog.mjs"></script>

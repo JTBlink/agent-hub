@@ -35,13 +35,13 @@ function render() {
       node("h2", entry.title),
       node("span", entry.status, entry.branch ? "status archived" : "status"),
     );
+    const source = entry.branch
+      ? `${entry.branch} · ${entry.commit}`
+      : entry.source;
+    const location = node("code", source, "source");
+    location.title = source;
+    heading.append(location);
     content.append(heading, node("p", entry.description));
-    content.append(
-      node(
-        "code",
-        entry.branch ? `${entry.branch} · ${entry.commit}` : entry.source,
-      ),
-    );
     const actions = node("div", "", "actions");
     if (entry.path) {
       const link = node("a", "打开原型", "open");
