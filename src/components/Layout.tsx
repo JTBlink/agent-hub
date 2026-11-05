@@ -1,4 +1,4 @@
-import { herdrDeliveryAdapter } from "@app/herdr";
+import { embeddedAgentDeliveryAdapter } from "../lib/previewAgentDelivery";
 import { PreviewHost } from "../features/preview/PreviewHost";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -189,7 +189,7 @@ export function Layout() {
                   {started && (
                     <PreviewHost
                       active={pathname === "/preview"}
-                      deliveryAdapter={herdrDeliveryAdapter}
+                      deliveryAdapter={embeddedAgentDeliveryAdapter}
                       workspacePath={workspacePath}
                     />
                   )}

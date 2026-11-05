@@ -27,7 +27,17 @@ pub fn prepare(tools: &HerdrTools, cwd: &Path, agent: HerdrAgent) -> Result<Prep
 
 /// Prepare a native Agent without probing optional integration backends.
 pub fn prepare_native(cwd: &Path, agent: TerminalAgent) -> Result<Prepared> {
-    let launch = agent_launch_config::resolve(agent.kind())?;
+    prepare_native_task(cwd, agent, None)
+}
+
+/// Initial task uses the same native argv adapters as external terminals.
+pub fn prepare_native_task(
+    cwd: &Path,
+    agent: TerminalAgent,
+    prompt: Option<&str>,
+) -> Result<Prepared> {
+    let mut launch = agent_launch_config::resolve(agent.kind())?;
+    launch.arguments = native_prompt::arguments(&launch, prompt)?;
     let mut command = terminal_command(&launch, cwd)?;
     if matches!(agent, TerminalAgent::ClaudeTeams) {
         command.env("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", "1");

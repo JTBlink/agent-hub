@@ -1,5 +1,11 @@
 import { getErrorMessage } from "../../../lib/error";
 const messages: Record<string, string> = {
+  PREVIEW_AGENT_WORKSPACE_UNAVAILABLE: "preview.agentWorkspaceUnavailable",
+  PREVIEW_AGENT_PANE_CHANGED: "preview.agentPaneChanged",
+  PREVIEW_AGENT_UNCERTAIN: "preview.agentUncertain",
+  PREVIEW_AGENT_BUSY: "preview.agentBusy",
+  PREVIEW_AGENT_NOT_INSTALLED: "preview.agentNotInstalled",
+  PREVIEW_AGENT_LIMIT: "preview.agentLimit",
   PREVIEW_CONTEXT_FILE_LIMIT: "preview.contextFileLimit",
   PREVIEW_CONTEXT_FILE_INVALID: "preview.contextFileInvalid",
   PREVIEW_PROFILE_IN_USE: "preview.profileInUse",

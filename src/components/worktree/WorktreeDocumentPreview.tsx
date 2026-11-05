@@ -4,7 +4,7 @@ import {
   type PreviewWorkspaceHandle,
 } from "../../features/preview/PreviewWorkspace";
 import type { PreviewDocument } from "../../features/preview/api";
-import { herdrDeliveryAdapter } from "@app/herdr";
+import { embeddedAgentDeliveryAdapter } from "../../lib/previewAgentDelivery";
 import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 
 /** Keep the complete preview feature set inside the existing workspace tab. */
@@ -14,12 +14,14 @@ export function WorktreeDocumentPreview({
   onSource,
   toolbarContainer,
   workspacePath,
+  projectId,
 }: {
   document: PreviewDocument;
   active: boolean;
   onSource: () => void;
   toolbarContainer?: HTMLElement | null;
   workspacePath?: string;
+  projectId?: string;
 }) {
   const workspace = useRef<PreviewWorkspaceHandle>(null);
   const previews = useWorktreePreviews();
@@ -38,8 +40,9 @@ export function WorktreeDocumentPreview({
       initialDocument={document}
       embedded
       shown={active}
-      deliveryAdapter={herdrDeliveryAdapter}
+      deliveryAdapter={embeddedAgentDeliveryAdapter}
       workspacePath={workspacePath}
+      projectId={projectId}
       onClose={() => previews?.close(document.id)}
       onSource={onSource}
       sourceToolbarContainer={active ? toolbarContainer : null}

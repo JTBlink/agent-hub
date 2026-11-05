@@ -17,27 +17,37 @@ import { CardActionMenu } from "../../../components/CardActionMenu";
 import { AgentDelivery } from "./AgentDelivery";
 import { ContextAdder } from "./ContextAdder";
 import { ContextDetails } from "./ContextDetails";
+import { PreviewQuickActions } from "./PreviewQuickActions";
 
 export function AnnotationPanel({
   model,
   deliveryAdapter,
   workspacePath,
+  projectId,
+  onDraw,
+  drawingBusy = false,
 }: {
   model: PreviewModel;
   deliveryAdapter?: AgentDeliveryAdapter;
   workspacePath?: string;
+  projectId?: string;
+  onDraw: () => void;
+  drawingBusy?: boolean;
 }) {
   const { t } = useTranslation();
   const { instruction, setInstruction } = model;
-  const [selectedId, setSelectedId] = useState<string | null>();
+  const latestId = model.notes.at(-1)?.id;
+  const [selection, setSelection] = useState<{
+    id: string | null;
+    lastSeen?: string;
+  }>({ id: null });
+  const selectedId = selection.lastSeen === latestId ? selection.id : latestId;
+  const setSelectedId = (id: string | null) =>
+    setSelection({ id, lastSeen: latestId });
   const [sending, setSending] = useState(false);
   const [reading, setReading] = useState(false);
-  const selected = model.notes.find(
-    (note) =>
-      note.id ===
-      (selectedId === undefined ? model.notes.at(-1)?.id : selectedId),
-  );
-  const disabled = model.busy || sending || reading;
+  const selected = model.notes.find((note) => note.id === selectedId);
+  const disabled = model.busy || sending || reading || drawingBusy;
   return (
     <aside className="preview-inspector preview-annotations">
       <header>
@@ -69,10 +79,12 @@ export function AnnotationPanel({
           </button>
         </div>
       </header>
+      <PreviewQuickActions model={model} disabled={disabled} onDraw={onDraw} />
       <div className="preview-inspector-scroll">
         {selected ? (
           <fieldset disabled={disabled} className="preview-context-detail">
             <ContextDetails
+              key={selected.id}
               model={model}
               note={selected}
               index={model.notes.indexOf(selected)}
@@ -90,6 +102,11 @@ export function AnnotationPanel({
       <AgentDelivery
         adapter={deliveryAdapter}
         workspacePath={workspacePath}
+        page={
+          model.active
+            ? { id: model.active.id, title: model.active.title, projectId }
+            : undefined
+        }
         text={
           model.active
             ? formatAnnotations(model.active, model.notes, instruction)
@@ -100,6 +117,7 @@ export function AnnotationPanel({
         )}
         disabled={
           model.busy ||
+          drawingBusy ||
           reading ||
           !model.active ||
           (!model.notes.length && !instruction.trim())
@@ -119,6 +137,7 @@ export function AnnotationPanel({
             disabled={disabled}
             onAdded={setSelectedId}
             onBusyChange={setReading}
+            workspacePath={workspacePath}
           />
         }
       >

@@ -1,6 +1,11 @@
 /** A destination owns its transport and final identity validation. */
 export interface AgentDeliveryDestination {
-  send: (prompt: string) => Promise<unknown>;
+  send: (prompt: string, verify?: () => Promise<void>) => Promise<unknown>;
+}
+export interface AgentDeliveryPage {
+  id: string;
+  title: string;
+  projectId?: string;
 }
 /** The workbench composes providers; preview never imports a provider's internals. */
 export interface AgentDeliveryAdapter {
@@ -8,5 +13,6 @@ export interface AgentDeliveryAdapter {
   label: string;
   resolveCurrent: (
     workspacePath?: string,
+    page?: AgentDeliveryPage,
   ) => Promise<AgentDeliveryDestination | null>;
 }

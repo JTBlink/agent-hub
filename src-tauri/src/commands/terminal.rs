@@ -21,6 +21,10 @@ pub enum TerminalLaunch {
     Agent {
         agent: TerminalAgent,
     },
+    NativeAgent {
+        agent: TerminalAgent,
+        prompt: String,
+    },
     Script {
         path: String,
     },
@@ -51,6 +55,7 @@ pub async fn terminal_create(
         #[cfg(feature = "herdr")]
         let mut startup = None;
         let output = events.clone();
+        let native_agent = matches!(&launch, Some(TerminalLaunch::NativeAgent { .. }));
         let session = manager
             .create_with(
                 &owner,
@@ -62,6 +67,20 @@ pub async fn terminal_create(
                         worktree_path.as_deref(),
                     )?;
                     let (command, integration) = match launch {
+                        Some(TerminalLaunch::NativeAgent { agent, prompt }) => {
+                            let prepared = crate::core::agent_launcher::prepare_native_task(
+                                &cwd,
+                                agent,
+                                Some(&prompt),
+                            )?;
+                            match prepared {
+                                crate::core::agent_launcher::Prepared::Terminal(command) => {
+                                    (command, None)
+                                }
+                                #[cfg(feature = "herdr")]
+                                crate::core::agent_launcher::Prepared::Herdr(_) => unreachable!(),
+                            }
+                        }
                         Some(TerminalLaunch::Development { launch }) => {
                             let (directory, command) =
                                 crate::core::preview::development::command(&cwd, &launch)?;
@@ -105,6 +124,11 @@ pub async fn terminal_create(
                 move |event| output.send(event).is_ok(),
             )
             .map_err(AppError::io)?;
+        if native_agent {
+            manager
+                .mark_native_agent(&owner, &session.id)
+                .map_err(AppError::io)?;
+        }
         #[cfg(feature = "herdr")]
         if let Some(startup) = startup {
             std::thread::spawn(move || {
@@ -116,6 +140,22 @@ pub async fn terminal_create(
             });
         }
         Ok(session)
+    })
+    .await?
+}
+#[tauri::command]
+pub async fn terminal_agent_prompt(
+    window: Webview,
+    manager: State<'_, Arc<TerminalManager>>,
+    id: String,
+    prompt: String,
+) -> Result<(), AppError> {
+    let owner = owner(&window)?;
+    let manager = manager.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        manager
+            .agent_prompt(&owner, &id, &prompt)
+            .map_err(AppError::io)
     })
     .await?
 }

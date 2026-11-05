@@ -375,6 +375,7 @@ export function ProjectWorkspace({
                       key={tab.document.id}
                       document={tab.document}
                       workspacePath={tab.scope === scope ? path : undefined}
+                      projectId={tab.scope === scope ? project?.id : undefined}
                       toolbarContainer={fileToolbar}
                       onSource={() => {
                         setSkillsSelection(null);

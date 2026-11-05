@@ -51,6 +51,7 @@ export function ContextDetails({
         </button>
       )}
       <textarea
+        autoFocus={note.intent === "annotate" || note.contextKind === "text"}
         aria-label={t("preview.annotationNumber", { number: index + 1 })}
         placeholder={t(
           note.contextKind === "text"

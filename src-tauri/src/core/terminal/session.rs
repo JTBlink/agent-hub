@@ -34,6 +34,7 @@ pub(super) struct Session {
     flow: Mutex<Flow>,
     wake: Condvar,
     exited: AtomicBool,
+    native_agent: AtomicBool,
     #[cfg(unix)]
     pid: Option<u32>,
 }
@@ -71,6 +72,7 @@ impl Session {
             flow: Mutex::new(Flow::default()),
             wake: Condvar::new(),
             exited: AtomicBool::new(false),
+            native_agent: AtomicBool::new(false),
         });
         let input_session = session.clone();
         let input_sink = sink.clone();
@@ -225,6 +227,35 @@ impl Session {
         shell.input(&bytes, foreground_program);
         // Output parsing also needs this lock while the PTY drains input.
         drop(shell);
+        self.enqueue(bytes)
+    }
+    pub fn mark_native_agent(&self) {
+        self.native_agent.store(true, Ordering::Release);
+    }
+    /// Only a directly spawned, still-owned Agent may receive task submissions.
+    /// Shells, scripts and restored tabs are ineligible; changed foreground ownership is rejected.
+    pub fn agent_prompt(&self, prompt: &str) -> Result<()> {
+        if !self.native_agent.load(Ordering::Acquire) {
+            bail!("This terminal is not an owned native Agent");
+        }
+        let bytes = super::agent_input::prompt_bytes(prompt)?;
+        #[cfg(unix)]
+        {
+            let master = self.master.lock().unwrap_or_else(|e| e.into_inner());
+            let foreground = master
+                .as_ref()
+                .and_then(|pty| pty.process_group_leader())
+                .map(|pid| pid as u32);
+            if self.pid.is_none() || foreground != self.pid {
+                bail!("Another program owns the Agent terminal foreground");
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = bytes;
+            bail!("Agent foreground ownership cannot be verified on this platform");
+        }
+        #[cfg(unix)]
         self.enqueue(bytes)
     }
     fn enqueue(&self, bytes: Vec<u8>) -> Result<()> {

@@ -1,3 +1,5 @@
+import { TerminalTabPanes } from "./TerminalTabPanes";
+import { usePreviewAgentTerminal } from "./usePreviewAgentTerminal";
 import {
   splitTerminalPane,
   removeTerminalPane,
@@ -14,13 +16,13 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { X, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { terminalTaskRequest } from "../../lib/taskContext";
 import { getErrorMessage } from "../../lib/error";
 import type { Project, ToolInfo } from "../../lib/tauri";
 import { TerminalProjectSelect } from "./TerminalProjectSelect";
-import { TerminalPane, type PaneControl } from "./TerminalPane";
+import { type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
 import { herdrEnabled, useHerdrShortcut } from "@app/herdr";
 import { useHerdrSessions } from "@app/herdr";
@@ -142,6 +144,16 @@ export function TerminalWorkspace({
   useLayoutEffect(() => {
     tabsRef.current = tabs;
   }, [tabs]);
+  usePreviewAgentTerminal({
+    ready,
+    projects,
+    tools,
+    projectId: scopedProject,
+    path: scopedPath,
+    tabs: tabsRef,
+    controls,
+    setTabs,
+  });
   const initialized = useRef(false);
   const [bridgeError, setBridgeError] = useState("");
   const [contextVisible, setContextVisible] = useState(false);
@@ -452,76 +464,17 @@ export function TerminalWorkspace({
               "relative min-h-0 flex-1",
             )}
           >
-            {tab.panes.map((pane) => (
-              <div
-                key={pane}
-                data-terminal-pane={pane}
-                style={
-                  zoomedPane === pane
-                    ? { left: "0%", top: "0%", width: "100%", height: "100%" }
-                    : bounds.get(tab.id)?.[pane]
-                }
-                className={cn(
-                  "absolute flex min-h-0 min-w-0 overflow-hidden border",
-                  zoomedPane &&
-                    tab.panes.includes(zoomedPane) &&
-                    pane !== zoomedPane &&
-                    "hidden",
-                  tab.activePane === pane
-                    ? "border-accent-border"
-                    : "border-border-subtle",
-                )}
-                onFocusCapture={() =>
-                  setTabs((previous) =>
-                    previous.map((item) =>
-                      item.id === tab.id && item.activePane !== pane
-                        ? { ...item, activePane: pane }
-                        : item,
-                    ),
-                  )
-                }
-              >
-                {tab.panes.length > 1 && (
-                  <button
-                    type="button"
-                    className="app-button-ghost absolute right-1 top-1 z-10"
-                    aria-label={t("terminal.closePane")}
-                    onClick={() => close(tab, pane)}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-                <TerminalPane
-                  {...herdrSessions.paneProps(tab, pane)}
-                  scriptPath={
-                    pane === tab.panes[0] ? tab.scriptPath : undefined
-                  }
-                  development={
-                    pane === tab.panes[0] ? tab.development : undefined
-                  }
-                  visible={visible && displayedId === tab.id}
-                  active={
-                    visible && displayedId === tab.id && tab.activePane === pane
-                  }
-                  onReady={(control) => {
-                    if (control) {
-                      controls.current.set(pane, control);
-                      if (
-                        visible &&
-                        displayedId === tab.id &&
-                        tab.activePane === pane
-                      )
-                        activeTarget.current = control;
-                    } else {
-                      const previous = controls.current.get(pane);
-                      controls.current.delete(pane);
-                      if (activeTarget.current === previous)
-                        activeTarget.current = null;
-                    }
-                  }}
-                />
-              </div>
-            ))}
+            <TerminalTabPanes
+              tab={tab}
+              bounds={bounds.get(tab.id)}
+              zoomedPane={zoomedPane}
+              visible={visible && displayedId === tab.id}
+              controls={controls}
+              activeTarget={activeTarget}
+              setTabs={setTabs}
+              close={close}
+              paneProps={herdrSessions.paneProps}
+            />
           </div>
         ))}
         {contextVisible && active?.context && (

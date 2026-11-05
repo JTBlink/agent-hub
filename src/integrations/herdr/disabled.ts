@@ -10,6 +10,12 @@ export * from "../../lib/terminalAgents";
 export const herdrEnabled = false;
 export const DEFAULT_HERDR_SESSION = "default";
 export const herdrDeliveryAdapter: AgentDeliveryAdapter | undefined = undefined;
+export const embeddedWorkspaceAgent = (
+  ..._args: unknown[]
+): HerdrTarget | undefined => {
+  void _args;
+  return undefined;
+};
 export const herdrNavigation = (
   _state: unknown,
 ): HerdrOpenedWorkspace | null => {
@@ -26,6 +32,12 @@ const unavailable = async (..._args: unknown[]): Promise<never> => {
   throw new Error("This build does not include the Herdr integration");
 };
 export const createHerdrTerminal = unavailable;
+export const getHerdrSnapshot: (
+  ...args: unknown[]
+) => Promise<import("./contracts").HerdrSnapshot> = unavailable;
+export const runHerdrAction: (
+  ...args: unknown[]
+) => Promise<import("./contracts").HerdrActionResult> = unavailable;
 export const launchTerminalHerdr = unavailable;
 export const installHerdr = unavailable;
 export const ensureHerdrWorkspace: (

@@ -1,0 +1,290 @@
+import { beforeEach, expect, it, vi } from "vitest";
+import { PreviewAgentRuntime } from "./previewAgentRuntime";
+import {
+  getHerdrInventory,
+  getHerdrSnapshot,
+  ensureHerdrWorkspace,
+  startHerdrAgent,
+  runHerdrAction,
+  type HerdrTarget,
+  type HerdrSnapshot,
+} from "@app/herdr";
+import {
+  getAgentLaunchSettings,
+  submitTerminalAgentPrompt,
+  type ToolInfo,
+} from "../../lib/tauri";
+import { createTerminalTab, type TerminalTab } from "../../lib/terminalLayout";
+import type { PreviewAgentRequest } from "../../lib/previewAgentDelivery";
+import type { PaneControl } from "./TerminalPane";
+vi.mock("@app/herdr", async () => ({
+  embeddedWorkspaceAgent: (await import("../../features/herdr/deliveryAdapter"))
+    .embeddedWorkspaceAgent,
+  DEFAULT_HERDR_SESSION: "default",
+  getHerdrInventory: vi.fn(),
+  getHerdrSnapshot: vi.fn(),
+  ensureHerdrWorkspace: vi.fn(),
+  startHerdrAgent: vi.fn(),
+  runHerdrAction: vi.fn(),
+}));
+vi.mock("../../lib/tauri", () => ({
+  getAgentLaunchSettings: vi.fn(),
+  submitTerminalAgentPrompt: vi.fn(),
+}));
+const target = (id = "one"): HerdrTarget => ({
+  session: "default",
+  workspace_id: "site",
+  pane_id: id,
+  terminal_id: `terminal-${id}`,
+  revision: 1,
+  agent_session: { id },
+});
+const snapshot = (...targets: HerdrTarget[]): HerdrSnapshot => ({
+  version: "1",
+  workspaces: [
+    {
+      workspace_id: "site",
+      label: "Site",
+      directory: "/workspace/site",
+      active_tab_id: "tab",
+    },
+  ],
+  tabs: [],
+  panes: [],
+  agents: targets.map((value) => ({
+    ...value,
+    tab_id: "tab",
+    focused: true,
+    agent: "codex",
+    name: "Agent",
+    agent_status: "idle",
+    cwd: "/workspace/site",
+  })),
+});
+const tool: ToolInfo = {
+  key: "codex",
+  display_name: "Codex",
+  installed: true,
+  enabled: true,
+  skills_dir: "",
+  is_custom: false,
+  has_path_override: false,
+  has_project_path_override: false,
+  project_relative_skills_dir: null,
+  category: "coding",
+};
+let tabs: TerminalTab[],
+  controls: Map<string, PaneControl>,
+  runtime: PreviewAgentRuntime;
+let onUpdate: () => void;
+const request = (id = "page"): PreviewAgentRequest => ({
+  workspacePath: "/workspace/site",
+  page: { id, title: `Page ${id}` },
+  prompt: "Fix this layout",
+  verify: vi.fn(async () => {}),
+});
+beforeEach(() => {
+  vi.resetAllMocks();
+  tabs = [];
+  controls = new Map();
+  onUpdate = () => {};
+  runtime = new PreviewAgentRuntime({
+    tabs: () => tabs,
+    update: (change) => {
+      tabs = change(tabs);
+      onUpdate();
+    },
+    tools: () => [tool],
+    controls: () => controls,
+  });
+  vi.mocked(getAgentLaunchSettings).mockResolvedValue({
+    document: { schema_version: 1, default_agent: "codex", instructions: {} },
+    revision: "1",
+    defaults: {},
+  });
+  vi.mocked(getHerdrInventory).mockResolvedValue({
+    installed: true,
+    sessions: [],
+  });
+  vi.mocked(ensureHerdrWorkspace).mockResolvedValue({
+    project_id: "site",
+    path: "/workspace/site",
+    target: target("shell"),
+  });
+  vi.mocked(startHerdrAgent).mockResolvedValue({
+    target: target(),
+    warning: null,
+  });
+  vi.mocked(getHerdrSnapshot).mockResolvedValue(snapshot(target()));
+});
+it("creates one page task tab and reuses its exact Pane for follow-up", async () => {
+  await runtime.deliver(request(), "site");
+  expect(tabs).toHaveLength(1);
+  expect(tabs[0].previewPageId).toBe("page");
+  expect(tabs[0].herdrTarget).toEqual(target());
+  expect(startHerdrAgent).toHaveBeenCalledExactlyOnceWith(
+    target("shell"),
+    expect.objectContaining({ kind: "codex", prompt: "Fix this layout" }),
+  );
+  await runtime.deliver(request(), "site");
+  expect(startHerdrAgent).toHaveBeenCalledOnce();
+  expect(runHerdrAction).toHaveBeenCalledExactlyOnceWith(
+    target(),
+    "prompt",
+    "Fix this layout",
+  );
+});
+it("keeps different pages in separate Panes and ignores focus elsewhere", async () => {
+  await runtime.deliver(request("first"), "site");
+  vi.mocked(startHerdrAgent).mockResolvedValue({
+    target: target("two"),
+    warning: null,
+  });
+  await runtime.deliver(request("second"), "site");
+  expect(tabs.map((tab) => tab.previewPageId)).toEqual(["first", "second"]);
+  expect(startHerdrAgent).toHaveBeenCalledTimes(2);
+  vi.mocked(getHerdrSnapshot).mockResolvedValue(
+    snapshot(target(), target("two")),
+  );
+  await runtime.deliver(request("first"), "site");
+  expect(runHerdrAction).toHaveBeenLastCalledWith(
+    target(),
+    "prompt",
+    "Fix this layout",
+  );
+});
+it("binds a single suitable embedded Agent without starting another", async () => {
+  tabs = [
+    {
+      ...createTerminalTab("site", undefined, "/workspace/site"),
+      herdrTarget: target(),
+    },
+  ];
+  await runtime.deliver(request(), "site");
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+  expect(runHerdrAction).toHaveBeenCalledOnce();
+  expect(tabs[0].previewPageId).toBe("page");
+});
+it("does not mistake an empty Shell workspace for an Agent", async () => {
+  vi.mocked(getHerdrSnapshot).mockResolvedValue(snapshot());
+  tabs = [
+    {
+      ...createTerminalTab("site", undefined, "/workspace/site"),
+      herdrTarget: target("shell"),
+    },
+  ];
+  await runtime.deliver(request(), "site");
+  expect(startHerdrAgent).toHaveBeenCalledOnce();
+  expect(runHerdrAction).not.toHaveBeenCalled();
+});
+it("finds an existing Agent within an embedded workspace attached at its Shell", async () => {
+  tabs = [
+    {
+      ...createTerminalTab("site", undefined, "/workspace/site"),
+      herdrTarget: target("shell"),
+    },
+  ];
+  await runtime.deliver(request(), "site");
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+  expect(tabs[0].herdrTarget).toEqual(target());
+  expect(runHerdrAction).toHaveBeenCalledExactlyOnceWith(
+    target(),
+    "prompt",
+    "Fix this layout",
+  );
+});
+it("preserves an uncertain launch and never creates or submits it again", async () => {
+  vi.mocked(startHerdrAgent).mockResolvedValue({
+    target: target(),
+    warning: "startup result unknown",
+  });
+  await expect(runtime.deliver(request(), "site")).rejects.toThrow(
+    "PREVIEW_AGENT_UNCERTAIN",
+  );
+  expect(tabs[0].herdrTarget).toEqual(target());
+  await expect(runtime.deliver(request(), "site")).rejects.toThrow(
+    "PREVIEW_AGENT_UNCERTAIN",
+  );
+  expect(startHerdrAgent).toHaveBeenCalledOnce();
+  expect(runHerdrAction).not.toHaveBeenCalled();
+});
+it("rejects replaced Agent identities instead of following workspace focus", async () => {
+  await runtime.deliver(request(), "site");
+  vi.mocked(getHerdrSnapshot).mockResolvedValue(
+    snapshot({ ...target(), agent_session: { id: "replacement" } }),
+  );
+  await expect(runtime.deliver(request(), "site")).rejects.toThrow(
+    "PREVIEW_AGENT_PANE_CHANGED",
+  );
+  expect(runHerdrAction).not.toHaveBeenCalled();
+  expect(startHerdrAgent).toHaveBeenCalledOnce();
+});
+it("rechecks context after workspace preparation and releases an unused reservation", async () => {
+  const input = request();
+  vi.mocked(input.verify)
+    .mockResolvedValueOnce(undefined)
+    .mockRejectedValueOnce(Error("changed"));
+  await expect(runtime.deliver(input, "site")).rejects.toThrow("changed");
+  expect(tabs).toHaveLength(0);
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+});
+it("respects terminal capacity before workspace creation", async () => {
+  tabs = Array.from({ length: 8 }, () =>
+    createTerminalTab("site", undefined, "/workspace/site"),
+  );
+  await expect(runtime.deliver(request(), "site")).rejects.toThrow(
+    "PREVIEW_AGENT_LIMIT",
+  );
+  expect(ensureHerdrWorkspace).not.toHaveBeenCalled();
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+});
+it("launches native initial prompts once and uses guarded native follow-up", async () => {
+  vi.mocked(getHerdrInventory).mockResolvedValue({
+    installed: false,
+    sessions: [],
+  });
+  onUpdate = () => {
+    const tab = tabs.find((tab) => tab.nativeTask);
+    if (tab) {
+      controls.set(tab.panes[0], {
+        sessionId: "owned-native",
+        cwd: "/workspace/site",
+        focus: () => {},
+        inputRevision: () => 0,
+        ownsFocus: () => false,
+      });
+      queueMicrotask(() => tab.nativeTask?.started());
+    }
+  };
+  await runtime.deliver(request(), "site");
+  expect(tabs[0].nativeTask?.prompt).toBe("Fix this layout");
+  await runtime.deliver(request(), "site");
+  expect(submitTerminalAgentPrompt).toHaveBeenCalledExactlyOnceWith(
+    "owned-native",
+    "Fix this layout",
+  );
+  expect(startHerdrAgent).not.toHaveBeenCalled();
+  expect(tabs).toHaveLength(1);
+});
+it("blocks concurrent submissions during target preparation", async () => {
+  let finish!: () => void;
+  vi.mocked(ensureHerdrWorkspace).mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = () =>
+          resolve({
+            project_id: "site",
+            path: "/workspace/site",
+            target: target("shell"),
+          });
+      }),
+  );
+  const pending = runtime.deliver(request(), "site");
+  await vi.waitFor(() => expect(ensureHerdrWorkspace).toHaveBeenCalled());
+  await expect(runtime.deliver(request(), "site")).rejects.toThrow(
+    "PREVIEW_AGENT_BUSY",
+  );
+  finish();
+  await pending;
+  expect(startHerdrAgent).toHaveBeenCalledOnce();
+});

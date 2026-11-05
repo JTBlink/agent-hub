@@ -31,6 +31,15 @@ export interface TerminalTab {
   /** Runtime-only log visibility; hiding a service never closes its PTY. */
   developmentVisible?: boolean;
   herdrTarget?: HerdrTarget;
+  /** Runtime page ownership. Never restore prompts or auto-submit after restart. */
+  previewPageId?: string;
+  previewPending?: boolean;
+  previewUncertain?: boolean;
+  nativeTask?: {
+    prompt: string;
+    started: () => void;
+    failed: (reason: unknown) => void;
+  };
 }
 
 export const isTerminalTabVisible = (tab: TerminalTab) =>

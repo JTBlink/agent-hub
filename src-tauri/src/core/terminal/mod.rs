@@ -1,4 +1,5 @@
 //! Interactive PTY resources shared by desktop adapters and core callers.
+mod agent_input;
 pub(crate) mod launch_command;
 mod process;
 mod script;
@@ -129,6 +130,13 @@ impl TerminalManager {
     }
     pub fn write(&self, owner: &str, id: &str, bytes: Vec<u8>) -> Result<()> {
         self.session(owner, id)?.write(bytes)
+    }
+    pub fn mark_native_agent(&self, owner: &str, id: &str) -> Result<()> {
+        self.session(owner, id)?.mark_native_agent();
+        Ok(())
+    }
+    pub fn agent_prompt(&self, owner: &str, id: &str, prompt: &str) -> Result<()> {
+        self.session(owner, id)?.agent_prompt(prompt)
     }
     pub fn resize(&self, owner: &str, id: &str, size: TerminalSize) -> Result<()> {
         self.session(owner, id)?.resize(size.pty()?)

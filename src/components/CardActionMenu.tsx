@@ -70,6 +70,9 @@ export function CardActionMenu({
   const menuId = useId();
 
   const open = pos !== null;
+  const initialFocus = renderContent
+    ? "input:not(:disabled), button:not(:disabled)"
+    : "button:not(:disabled)";
 
   useEffect(() => {
     openChangeRef.current = onOpenChange;
@@ -184,9 +187,7 @@ export function CardActionMenu({
     const observer =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(locate);
     if (panelRef.current) observer?.observe(panelRef.current);
-    panelRef.current
-      ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
-      ?.focus();
+    panelRef.current?.querySelector<HTMLElement>(initialFocus)?.focus();
     const handlePointer = (e: MouseEvent) => {
       if (
         panelRef.current?.contains(e.target as Node) ||
@@ -213,7 +214,7 @@ export function CardActionMenu({
       window.removeEventListener("resize", locate);
       window.removeEventListener("scroll", locate, true);
     };
-  }, [open, locate, setOpenState, restoreFocus]);
+  }, [open, locate, setOpenState, restoreFocus, initialFocus]);
 
   useEffect(() => () => openChangeRef.current?.(false), []);
   useEffect(() => {

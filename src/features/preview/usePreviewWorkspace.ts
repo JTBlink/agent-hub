@@ -80,6 +80,7 @@ export function usePreviewWorkspace({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [pickIntent, setPickIntent] = useState<"grab" | "annotate">("grab");
   const [source, setSource] = useState(false);
   const [sourceLine, setSourceLine] = useState<number | undefined>();
   const [panel, setPanel] = useState<PreviewPanel>("annotations");
@@ -334,6 +335,7 @@ export function usePreviewWorkspace({
           tabId,
           revision: tab.revision,
           note: "",
+          intent: pickIntent,
         }),
       );
       setPanel("annotations");
@@ -534,6 +536,11 @@ export function usePreviewWorkspace({
     busy,
     picking,
     setPicking,
+    pickIntent,
+    beginPicking: (intent: "grab" | "annotate") => {
+      setPickIntent(intent);
+      setPicking(true);
+    },
     source,
     setSource,
     sourceLine,

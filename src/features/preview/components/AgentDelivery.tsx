@@ -10,6 +10,7 @@ import { previewError } from "../shared/previewError";
 export function AgentDelivery({
   adapter,
   workspacePath,
+  page,
   text,
   images,
   disabled,
@@ -21,6 +22,7 @@ export function AgentDelivery({
 }: {
   adapter?: AgentDeliveryAdapter;
   workspacePath?: string;
+  page?: import("../../../lib/agentDelivery").AgentDeliveryPage;
   text: string;
   images: string[];
   disabled: boolean;
@@ -55,7 +57,7 @@ export function AgentDelivery({
       };
       await verify();
       const target = adapter
-        ? await adapter.resolveCurrent(workspacePath)
+        ? await adapter.resolveCurrent(workspacePath, page)
         : null;
       if (adapter && !target)
         throw new Error(t("preview.currentAgentUnavailable"));
@@ -65,7 +67,7 @@ export function AgentDelivery({
           ? await previewApi.prepareDelivery(text, images)
           : null;
       if (packet) await verify();
-      if (target) await target.send(packet?.prompt ?? text);
+      if (target) await target.send(packet?.prompt ?? text, verify);
       else await writeText(packet?.context ?? text);
       if (mounted.current) onSent(!adapter);
     } catch (error) {

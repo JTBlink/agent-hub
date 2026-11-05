@@ -11,4 +11,7 @@ export { HerdrTerminalTools } from "./terminal/HerdrTerminalTools";
 export { SidebarHerdr } from "./components/LazySidebarHerdr";
 export { HerdrIcon } from "./components/HerdrIcon";
 export { AutomationHerdrFields } from "./components/AutomationHerdrFields";
-export { herdrDeliveryAdapter } from "./deliveryAdapter";
+export {
+  herdrDeliveryAdapter,
+  embeddedWorkspaceAgent,
+} from "./deliveryAdapter";

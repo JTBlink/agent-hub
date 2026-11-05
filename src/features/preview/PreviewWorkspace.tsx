@@ -1,3 +1,4 @@
+import { PreviewPageSurface } from "./components/PreviewPageSurface";
 import { createPortal } from "react-dom";
 import { PreviewTabs, PreviewNewTab } from "./components/PreviewTabs";
 import { ResizableSidebar } from "../../components/ResizableSidebar";
@@ -8,7 +9,6 @@ import { useBrowserInventory } from "./web/useBrowserInventory";
 import { DownloadsPanel } from "./components/DownloadsPanel";
 import { PreviewAddress } from "./components/PreviewAddress";
 import { PreviewInspectActions } from "./components/PreviewInspectActions";
-import { DevtoolsDock } from "./components/DevtoolsDock";
 import { PreviewToolbar } from "./components/PreviewToolbar";
 import { useImperativeHandle, useState, useRef, type Ref } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,13 +30,12 @@ import {
 } from "lucide-react";
 import { usePreviewWorkspace } from "./usePreviewWorkspace";
 import { previewApi, type PreviewDocument } from "./api";
-import { BrowserSurface } from "./web/BrowserSurface";
-import { MarkdownPreview } from "./markdown/MarkdownPreview";
-import { CodeEditor } from "../../components/file-reader/CodeEditor";
 import { ProfileSelector } from "./components/ProfileSelector";
 import { AnnotationPanel } from "./components/AnnotationPanel";
 import { BrowserSettings } from "./components/BrowserSettings";
 import "./preview.css";
+import { usePreviewMarkup } from "./markup/usePreviewMarkup";
+import { ScreenshotMarkup } from "./markup/ScreenshotMarkup";
 
 export interface PreviewWorkspaceHandle {
   requestClose: () => boolean;
@@ -46,6 +45,7 @@ export function PreviewWorkspace({
   shown,
   deliveryAdapter,
   workspacePath,
+  projectId,
   initialDocument,
   embedded = false,
   ref,
@@ -64,10 +64,12 @@ export function PreviewWorkspace({
   sourceToolbarContainer?: HTMLElement | null;
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
   workspacePath?: string;
+  projectId?: string;
 }) {
   const workspace = useRef<HTMLElement>(null);
   const { t } = useTranslation();
   const model = usePreviewWorkspace({ initialDocument, isolated: embedded });
+  const markup = usePreviewMarkup(model, shown);
   useImperativeHandle(ref, () => ({ requestClose: model.requestClose }));
   useBrowserInventory(shown, model);
   const [address, setAddress] = useState("");
@@ -350,115 +352,23 @@ export function PreviewWorkspace({
               </div>
             </div>
           )}
-          {model.session.tabs.map((tab) => {
-            const doc = model.documents[tab.id];
-            return (
-              <div
-                key={tab.id}
-                className="preview-tab-content"
-                data-preview-tab-id={tab.id}
-                hidden={active?.id !== tab.id}
-              >
-                {tab.kind === "markdown" && doc ? (
-                  <MarkdownPreview
-                    document={doc}
-                    active={shown && active?.id === tab.id}
-                    draft={model.drafts[tab.id] ?? doc.content}
-                    onChange={model.busy ? undefined : model.changeDraft}
-                    source={model.source && active?.id === tab.id}
-                    sourceLine={model.sourceLine}
-                    picking={model.picking && active?.id === tab.id}
-                    onCapture={(value) => model.capture(tab.id, value)}
-                    onLink={(href, invert) =>
-                      void model.openDocumentLink(href, invert)
-                    }
-                  />
-                ) : (
-                  <>
-                    <div
-                      className="preview-native-page"
-                      hidden={model.source && active?.id === tab.id}
-                    >
-                      <BrowserSurface
-                        key={`${tab.id}:${tab.profile}`}
-                        onBackend={(backend) =>
-                          model.setNativeTabs((previous) =>
-                            previous[tab.id] === (backend === "native")
-                              ? previous
-                              : { ...previous, [tab.id]: backend === "native" },
-                          )
-                        }
-                        onNativeNavigation={(handler) =>
-                          model.registerNative(tab.id, handler)
-                        }
-                        onNativeLocation={(url) =>
-                          model.setSession((previous) => {
-                            const current = previous.tabs.find(
-                              (item) => item.id === tab.id,
-                            );
-                            if (!current || current.address === url)
-                              return previous;
-                            return {
-                              ...previous,
-                              tabs: previous.tabs.map((item) =>
-                                item.id === tab.id
-                                  ? {
-                                      ...item,
-                                      address: url,
-                                      title: url,
-                                      revision: crypto.randomUUID(),
-                                    }
-                                  : item,
-                              ),
-                            };
-                          })
-                        }
-                        tabId={tab.id}
-                        initialId={model.pageIds[tab.id]}
-                        active={shown && active?.id === tab.id && !model.source}
-                        address={tab.address}
-                        onNewTab={(url) => model.openWeb(url, "native")}
-                        profile={tab.profile}
-                        onPickingChange={model.setPicking}
-                        picking={model.picking}
-                        viewport={model.viewports[tab.id] ?? null}
-                        onReady={(id) =>
-                          model.setPageIds((previous) => ({
-                            ...previous,
-                            [tab.id]: id,
-                          }))
-                        }
-                        onFrame={(frame) => model.onFrame(tab.id, frame)}
-                        onCapture={(value) => model.captureWeb(tab.id, value)}
-                        onError={model.report}
-                      />
-                    </div>
-                    {model.source && active?.id === tab.id && doc && (
-                      <CodeEditor
-                        file={{
-                          path: doc.title,
-                          content: model.drafts[tab.id] ?? doc.content,
-                        }}
-                        onChange={model.busy ? undefined : model.changeDraft}
-                        wrap
-                      />
-                    )}
-                  </>
-                )}
-                {model.devtoolsPageId &&
-                  model.devtoolsPageId === model.pageIds[tab.id] && (
-                    <DevtoolsDock
-                      key={model.devtoolsPageId}
-                      pageId={model.devtoolsPageId}
-                      tab={tab}
-                      active={shown && active?.id === tab.id}
-                      onClose={model.closeDevtools}
-                      onError={model.report}
-                    />
-                  )}
-              </div>
-            );
-          })}
+          {model.session.tabs.map((tab) => (
+            <PreviewPageSurface
+              key={tab.id}
+              model={model}
+              tab={tab}
+              shown={shown}
+              drawing={!!markup.base}
+            />
+          ))}
+          {markup.base && (
+            <ScreenshotMarkup
+              base={markup.base}
+              busy={markup.busy}
+              onApply={markup.apply}
+              onCancel={markup.cancel}
+            />
+          )}
         </div>
         {model.panelOpen && (
           <ResizableSidebar
@@ -478,6 +388,9 @@ export function PreviewWorkspace({
                 model={model}
                 deliveryAdapter={deliveryAdapter}
                 workspacePath={workspacePath}
+                projectId={projectId}
+                onDraw={() => void markup.start()}
+                drawingBusy={markup.busy || !!markup.base}
               />
             ) : model.panel === "settings" ? (
               <BrowserSettings model={model} />

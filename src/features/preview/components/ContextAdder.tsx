@@ -1,7 +1,6 @@
-import { FileText, MousePointer2, Paperclip, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CardActionMenu } from "../../../components/CardActionMenu";
+import { ContextSourceMenu, type ContextSource } from "./ContextSourceMenu";
 import type { PreviewModel } from "../usePreviewWorkspace";
 import {
   addAnnotation,
@@ -16,11 +15,13 @@ export function ContextAdder({
   disabled,
   onAdded,
   onBusyChange,
+  workspacePath,
 }: {
   model: PreviewModel;
   disabled: boolean;
   onAdded: (id: string) => void;
   onBusyChange: (busy: boolean) => void;
+  workspacePath?: string;
 }) {
   const { t } = useTranslation();
   const input = useRef<HTMLInputElement>(null);
@@ -43,8 +44,7 @@ export function ContextAdder({
       note: "",
     }));
     model.setSession((previous) => {
-      if (previous.activeId !== page.id)
-        throw new Error("PREVIEW_CONTEXT_CHANGED");
+      if (previous.activeId !== page.id) throw Error("PREVIEW_CONTEXT_CHANGED");
       const next = notes.reduce(addAnnotation, previous);
       if (
         new TextEncoder().encode(
@@ -52,59 +52,81 @@ export function ContextAdder({
         ).length >
         256 * 1024
       )
-        throw new Error("PREVIEW_CONTEXT_FILE_LIMIT");
+        throw Error("PREVIEW_CONTEXT_FILE_LIMIT");
       return next;
     });
-    if (notes.length === 1 && notes[0].contextKind === "text")
-      onAdded(notes[0].id);
+    if (notes.length) onAdded(notes.at(-1)!.id);
   };
+  const load = async (
+    page: PreviewTab,
+    read: () => Promise<ContextInput[]>,
+  ) => {
+    setLoading(true);
+    onBusyChange(true);
+    try {
+      const values = await read();
+      if (!mounted.current) return;
+      await model.verifyContext(page.id, page.revision);
+      append(page, values);
+    } catch (error) {
+      if (mounted.current) model.report(error);
+    } finally {
+      if (mounted.current) {
+        setLoading(false);
+        onBusyChange(false);
+      }
+    }
+  };
+  const sources: ContextSource[] = model.session.tabs.flatMap((tab) => {
+    const doc = model.documents[tab.id];
+    if (tab.id === model.active?.id && !doc) return [];
+    const source: ContextSource = {
+      id: tab.id,
+      title: tab.title,
+      description: doc?.path ?? tab.address,
+      kind: doc ? "file" : "page",
+      load: async () => {
+        const metadata = `Source: ${doc?.path ?? tab.address}\nRevision: ${tab.revision}`;
+        const content = doc?.content ?? "";
+        return {
+          selector: tab.title,
+          text:
+            new TextEncoder().encode(content).length <= 64 * 1024
+              ? `${metadata}\n\n${content}`
+              : metadata,
+          contextKind: "file",
+        };
+      },
+    };
+    return [source];
+  });
+  if (workspacePath)
+    sources.unshift({
+      id: "workspace",
+      title: t("preview.workspaceFolder"),
+      description: workspacePath,
+      kind: "folder",
+      load: async () => ({
+        selector: t("preview.workspaceFolder"),
+        text: `Folder: ${workspacePath}`,
+        contextKind: "file",
+      }),
+    });
   return (
     <>
-      <CardActionMenu
-        label={t("preview.addContext")}
-        className="preview-add-context"
-        triggerIcon={<Plus size={16} />}
-        align="start"
+      <ContextSourceMenu
         disabled={
           disabled || loading || !model.active || model.notes.length >= 20
         }
-        actions={[
-          {
-            key: "element",
-            label: t("preview.pickContext"),
-            icon: <MousePointer2 size={14} />,
-            disabled: model.source || (model.native && !model.pageId),
-            onSelect: () => model.setPicking(true),
-          },
-          {
-            key: "text",
-            label: t("preview.addTextContext"),
-            icon: <FileText size={14} />,
-            onSelect: () => {
-              if (!model.active) return;
-              try {
-                append(model.active, [
-                  {
-                    selector: t("preview.textContext"),
-                    text: "",
-                    contextKind: "text",
-                  },
-                ]);
-              } catch (error) {
-                model.report(error);
-              }
-            },
-          },
-          {
-            key: "files",
-            label: t("preview.addFileContext"),
-            icon: <Paperclip size={14} />,
-            onSelect: () => {
-              pendingPage.current = model.active;
-              input.current?.click();
-            },
-          },
-        ]}
+        sources={sources}
+        onChoose={(source) => {
+          if (model.active)
+            void load(model.active, async () => [await source.load()]);
+        }}
+        onFiles={() => {
+          pendingPage.current = model.active;
+          input.current?.click();
+        }}
       />
       <input
         ref={input}
@@ -118,26 +140,10 @@ export function ContextAdder({
           const page = pendingPage.current;
           if (!page || !files.length) return;
           if (model.notes.length + files.length > 20) {
-            model.report(new Error("PREVIEW_ANNOTATION_LIMIT"));
+            model.report(Error("PREVIEW_ANNOTATION_LIMIT"));
             return;
           }
-          setLoading(true);
-          onBusyChange(true);
-          void (async () => {
-            try {
-              const inputs = await readContextFiles(files);
-              if (!mounted.current) return;
-              await model.verifyContext(page.id, page.revision);
-              append(page, inputs);
-            } catch (error) {
-              if (mounted.current) model.report(error);
-            } finally {
-              if (mounted.current) {
-                setLoading(false);
-                onBusyChange(false);
-              }
-            }
-          })();
+          void load(page, () => readContextFiles(files));
         }}
       />
     </>

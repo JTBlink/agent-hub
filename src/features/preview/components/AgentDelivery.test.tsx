@@ -68,8 +68,14 @@ it("sends to the current workspace without a dialog or target selection", async 
   expect(container.querySelector("dialog, select")).toBeNull();
   expect(resolveCurrent).not.toHaveBeenCalled();
   await send();
-  expect(resolveCurrent).toHaveBeenCalledExactlyOnceWith("/workspace/site");
-  expect(deliver).toHaveBeenCalledExactlyOnceWith("feedback");
+  expect(resolveCurrent).toHaveBeenCalledExactlyOnceWith(
+    "/workspace/site",
+    undefined,
+  );
+  expect(deliver).toHaveBeenCalledExactlyOnceWith(
+    "feedback",
+    expect.any(Function),
+  );
   expect(sent).toHaveBeenCalledWith(false);
 });
 it("rejects stale context before discovering a target or packaging files", async () => {
@@ -134,7 +140,7 @@ it("packages multibyte text by byte length and preserves the clipboard fallback"
     "修改".repeat(6000),
     [],
   );
-  expect(deliver).toHaveBeenCalledWith("packet prompt");
+  expect(deliver).toHaveBeenCalledWith("packet prompt", expect.any(Function));
   const sent = await render(undefined, ["image"], "feedback", vi.fn(), true);
   await send();
   expect(writeText).toHaveBeenCalledWith("packet context");

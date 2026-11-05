@@ -30,6 +30,7 @@ export async function createTerminal(
   herdrTarget?: HerdrTarget,
   scriptPath?: string,
   development?: DevelopmentLaunch,
+  nativePrompt?: string,
 ) {
   // A tab can be closed and replaced before its PTY close IPC has completed.
   await Promise.all(closingTerminals);
@@ -48,17 +49,21 @@ export async function createTerminal(
     worktreePath,
     size,
     events,
-    ...(agent
-      ? { launch: { kind: "agent", agent } }
-      : scriptPath
-        ? { launch: { kind: "script", path: scriptPath } }
-        : development
-          ? { launch: { kind: "development", launch: development } }
-          : {}),
+    ...(agent && nativePrompt !== undefined
+      ? { launch: { kind: "native_agent", agent, prompt: nativePrompt } }
+      : agent
+        ? { launch: { kind: "agent", agent } }
+        : scriptPath
+          ? { launch: { kind: "script", path: scriptPath } }
+          : development
+            ? { launch: { kind: "development", launch: development } }
+            : {}),
   });
 }
 export const writeTerminal = (id: string, data: string) =>
   invoke<void>("terminal_write", { id, data });
+export const submitTerminalAgentPrompt = (id: string, prompt: string) =>
+  invoke<void>("terminal_agent_prompt", { id, prompt });
 export const resizeTerminal = (id: string, size: TerminalSize) =>
   invoke<void>("terminal_resize", { id, size });
 export const ackTerminal = (id: string, seq: number) =>

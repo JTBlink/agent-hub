@@ -60,6 +60,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::terminal::terminal_project_directory,
         commands::terminal::terminal_create,
         commands::terminal::terminal_write,
+        commands::terminal::terminal_agent_prompt,
         commands::terminal::terminal_resize,
         commands::terminal::terminal_ack,
         commands::terminal::terminal_list,

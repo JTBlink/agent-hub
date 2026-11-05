@@ -117,3 +117,47 @@ fn closing_a_congested_terminal_releases_its_waiting_input_writer() {
     worker.join().unwrap();
     assert!(manager.list("main").unwrap().is_empty());
 }
+
+#[test]
+fn native_agent_submission_requires_an_owned_marked_pty() {
+    let manager = TerminalManager::default();
+    let directory = tempfile::tempdir().unwrap();
+    let (sender, receiver) = mpsc::channel();
+    let session = manager
+        .create(
+            "main",
+            TerminalSpec {
+                project_id: "demo".into(),
+                cwd: directory.path().into(),
+                command: CommandBuilder::new("/bin/cat"),
+                integration: None,
+                size: TerminalSize { rows: 24, cols: 80 },
+            },
+            move |event| sender.send(event).is_ok(),
+        )
+        .unwrap();
+    assert!(manager
+        .agent_prompt("main", &session.id, "follow up")
+        .is_err());
+    manager.mark_native_agent("main", &session.id).unwrap();
+    assert!(manager
+        .agent_prompt("foreign", &session.id, "follow up")
+        .is_err());
+    assert!(manager
+        .agent_prompt("main", &session.id, "\x1b[201~unsafe\r")
+        .is_err());
+    manager
+        .agent_prompt("main", &session.id, "follow up")
+        .unwrap();
+    let mut output = String::new();
+    while !output.contains("follow up") {
+        if let TerminalEvent::Output { seq, data } =
+            receiver.recv_timeout(Duration::from_secs(5)).unwrap()
+        {
+            output.push_str(&String::from_utf8_lossy(&STANDARD.decode(data).unwrap()));
+            manager.ack("main", &session.id, seq).unwrap();
+        }
+    }
+    manager.close("main", &session.id).unwrap();
+    assert!(manager.agent_prompt("main", &session.id, "again").is_err());
+}

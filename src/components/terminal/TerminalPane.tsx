@@ -39,6 +39,7 @@ interface Props {
   agent?: HerdrAgent;
   scriptPath?: string;
   development?: DevelopmentTerminal;
+  nativeTask?: import("../../lib/terminalLayout").TerminalTab["nativeTask"];
   herdrTarget?: HerdrTarget;
   active: boolean;
   visible?: boolean;
@@ -52,6 +53,7 @@ export function TerminalPane({
   agent,
   scriptPath,
   development,
+  nativeTask,
   herdrTarget,
   active,
   visible = true,
@@ -144,6 +146,7 @@ export function TerminalPane({
     const fail = (reason: unknown) => {
       if (disposed) return;
       development?.failed(reason);
+      nativeTask?.failed(reason);
       if (!disposed)
         setError(getErrorMessage(reason, translate.current("terminal.error")));
     };
@@ -267,6 +270,7 @@ export function TerminalPane({
             attachmentKey ? attachment.current : undefined,
             scriptPath,
             development?.launch,
+            nativeTask?.prompt,
           )
           .then((session) => {
             if (disposed) {
@@ -275,6 +279,7 @@ export function TerminalPane({
             }
             sessionId = session.id;
             development?.started();
+            nativeTask?.started();
             setStarted(true);
             inputQueue.connect((data) => api.writeTerminal(session.id, data));
             callback.current({
@@ -331,7 +336,15 @@ export function TerminalPane({
       terminal.dispose();
       if (sessionId) void api.closeTerminal(sessionId).catch(() => {});
     };
-  }, [projectId, worktreePath, agent, attachmentKey, scriptPath, development]);
+  }, [
+    projectId,
+    worktreePath,
+    agent,
+    attachmentKey,
+    scriptPath,
+    development,
+    nativeTask,
+  ]);
   useEffect(() => {
     showNow.current();
   }, [visible]);

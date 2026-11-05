@@ -110,41 +110,145 @@ try {
       ),
       false,
     );
-    const addContext = async (index) => {
-      await run(`d.querySelector('.preview-add-context button').click()`);
-      await until(
-        `${documentRef}?.querySelectorAll('[role="menuitem"]').length===3`,
-      );
-      await run(`d.querySelectorAll('[role="menuitem"]')[${index}].click()`);
-    };
-    await addContext(0);
+    await run(`d.querySelectorAll('.preview-quick-actions button')[0].click()`);
     await run(`d.querySelectorAll('.preview-markdown p')[1].click()`);
     await until(
       `${documentRef}?.querySelectorAll('.preview-context-chip').length===2`,
     );
-    await addContext(1);
+    await run(`d.querySelectorAll('.preview-quick-actions button')[1].click()`);
+    await run(`d.querySelectorAll('.preview-markdown p')[1].click()`);
     await until(
       `${documentRef}?.querySelectorAll('.preview-context-chip').length===3`,
     );
     await run(
       `const input=d.querySelector('.preview-note textarea');Object.getOwnPropertyDescriptor(d.defaultView.HTMLTextAreaElement.prototype,'value').set.call(input,'Keep the layout responsive');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
     );
+    await run(`d.querySelectorAll('.preview-quick-actions button')[2].click()`);
+    await until(
+      `${documentRef}?.querySelector('.preview-markup canvas')?.getBoundingClientRect().width>0 && ${documentRef}?.querySelector('.preview-markup img')?.complete`,
+    );
+    await request(
+      `/screenshot?target=${targetId}&file=/tmp/agenthub-markup-${width}-${theme}.png`,
+    );
+    const original = await evaluate(
+      `${documentRef}.querySelector('.preview-markup canvas').toDataURL()`,
+    );
+    for (const [event, x, y] of [
+      ["pointerdown", 20, 20],
+      ["pointermove", 100, 80],
+      ["pointerup", 100, 80],
+    ]) {
+      await run(
+        `const c=d.querySelector('.preview-markup canvas'),r=c.getBoundingClientRect();c.setPointerCapture=()=>{};c.dispatchEvent(new d.defaultView.PointerEvent('${event}',{clientX:r.left+${x},clientY:r.top+${y},pointerId:1,bubbles:true}))`,
+      );
+    }
+    await until(
+      `${documentRef}?.querySelector('.preview-markup canvas').toDataURL()!==${JSON.stringify(original)}`,
+    );
+    assert.ok(
+      await evaluate(
+        `(()=>{const c=${documentRef}.querySelector('.preview-markup canvas'),r=c.getBoundingClientRect();return Math.abs(r.width/r.height-c.width/c.height)<0.01})()`,
+      ),
+      "Drawing preserves screenshot proportions",
+    );
+    if (width === 1440) {
+      const drawn = await evaluate(
+        `${documentRef}.querySelector('.preview-markup canvas').toDataURL()`,
+      );
+      await run(`d.querySelector('[aria-label="撤销绘制"]').click()`);
+      await until(
+        `${documentRef}.querySelector('.preview-markup canvas').toDataURL()===${JSON.stringify(original)}`,
+      );
+      await run(`d.querySelector('[aria-label="重做绘制"]').click()`);
+      await until(
+        `${documentRef}.querySelector('.preview-markup canvas').toDataURL()===${JSON.stringify(drawn)}`,
+      );
+      for (const tool of [1, 2, 3, 4]) {
+        await run(
+          `d.querySelectorAll('.preview-markup-toolbar > button')[${tool}].click()`,
+        );
+        for (const [event, x, y] of [
+          ["pointerdown", 40, 80 + tool * 30],
+          ["pointermove", 200, 140 + tool * 30],
+          ["pointerup", 200, 140 + tool * 30],
+        ]) {
+          await run(
+            `const c=d.querySelector('.preview-markup canvas'),r=c.getBoundingClientRect();c.setPointerCapture=()=>{};c.dispatchEvent(new d.defaultView.PointerEvent('${event}',{clientX:r.left+${x},clientY:r.top+${y},pointerId:1,bubbles:true}))`,
+          );
+        }
+      }
+      await run(
+        `d.querySelectorAll('.preview-markup-toolbar > button')[5].click()`,
+      );
+      await run(
+        `const c=d.querySelector('.preview-markup canvas'),r=c.getBoundingClientRect();c.dispatchEvent(new d.defaultView.PointerEvent('pointerdown',{clientX:r.left+50,clientY:r.top+300,pointerId:1,bubbles:true}))`,
+      );
+      await until(`${documentRef}.querySelector('.preview-markup-text')`);
+      await run(
+        `const input=d.querySelector('.preview-markup-text');Object.getOwnPropertyDescriptor(d.defaultView.HTMLInputElement.prototype,'value').set.call(input,'Revise this area');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
+      );
+      await run(
+        `d.querySelector('.preview-markup-text').dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`,
+      );
+      await until(`!${documentRef}.querySelector('.preview-markup-text')`);
+      const allTools = await evaluate(
+        `${documentRef}.querySelector('.preview-markup canvas').toDataURL()`,
+      );
+      assert.notEqual(allTools, drawn);
+      await run(`d.querySelector('[aria-label="清空绘制"]').click()`);
+      await until(
+        `${documentRef}.querySelector('.preview-markup canvas').toDataURL()===${JSON.stringify(original)}`,
+      );
+      await run(`d.querySelector('[aria-label="撤销绘制"]').click()`);
+      await until(
+        `${documentRef}.querySelector('.preview-markup canvas').toDataURL()===${JSON.stringify(allTools)}`,
+      );
+    }
+    await run(`d.querySelector('.preview-markup .app-button-primary').click()`);
+    await until(
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===4`,
+    );
     await run(
       `d.querySelector('input[type="file"]').click=()=>{};d.querySelector('.preview-add-context button').click()`,
     );
-    await run(`d.querySelectorAll('[role="menuitem"]')[2].click()`);
+    await until(
+      `${documentRef}?.querySelector('.preview-context-search input')`,
+    );
+    assert.equal(
+      await evaluate(
+        `${documentRef}.querySelector('.preview-context-source-list [role="menuitem"]')!==null`,
+      ),
+      false,
+    );
+    assert.ok(
+      await evaluate(
+        `${documentRef}.activeElement===${documentRef}.querySelector('.preview-context-search input')`,
+      ),
+      "Context picker focuses search",
+    );
+    await request(
+      `/screenshot?target=${targetId}&file=/tmp/agenthub-context-menu-${width}-${theme}.png`,
+    );
+
+    await run(
+      `const input=d.querySelector('.preview-context-search input');Object.getOwnPropertyDescriptor(d.defaultView.HTMLInputElement.prototype,'value').set.call(input,'guide');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
+    );
+    await until(
+      `${documentRef}?.querySelectorAll('.preview-context-source-list [role="option"]').length===2`,
+    );
+    await run(`d.querySelector('[data-context-source="files"]').click()`);
     // Supply an explicit multi-file selection without opening a native picker in this fixture.
     await run(
       `const transfer=new d.defaultView.DataTransfer();transfer.items.add(new d.defaultView.File(['Reference one'],'reference.md',{type:'text/markdown'}));transfer.items.add(new d.defaultView.File(['Reference two'],'constraints.txt',{type:'text/plain'}));const bytes=Uint8Array.from(atob(d.createElement('canvas').toDataURL('image/png').split(',')[1]),c=>c.charCodeAt(0));transfer.items.add(new d.defaultView.File([bytes],'reference.png',{type:'image/png'}));const input=d.querySelector('input[type="file"]');input.files=transfer.files;input.dispatchEvent(new d.defaultView.Event('change',{bubbles:true}))`,
     );
     await until(
-      `${documentRef}?.querySelectorAll('.preview-context-chip').length===6`,
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===7`,
     );
     await run(
       `d.querySelectorAll('.preview-context-chip')[1].querySelector('button:last-child').click()`,
     );
     await until(
-      `${documentRef}?.querySelectorAll('.preview-context-chip').length===5`,
+      `${documentRef}?.querySelectorAll('.preview-context-chip').length===6`,
     );
     await run(
       `const input=d.querySelector('.preview-context-composer > textarea');Object.getOwnPropertyDescriptor(d.defaultView.HTMLTextAreaElement.prototype,'value').set.call(input,'Adjust layout');input.dispatchEvent(new d.defaultView.Event('input',{bubbles:true}))`,
@@ -197,7 +301,7 @@ try {
       await evaluate(
         `JSON.parse(${documentRef}.documentElement.dataset.packagedContext).images.length`,
       ),
-      1,
+      2,
     );
     assert.equal(
       await evaluate(
@@ -360,7 +464,7 @@ try {
     }
   }
   console.log(
-    "Preview acceptance passed: multiple context chips, text/image/file imports, removal, retained instructions, current-workspace delivery, keyboard submit, source navigation, themes and 1440/960/480 layouts (synthetic IPC).",
+    "Preview acceptance passed: six screenshot tools, raster undo/redo/clear, searchable source picker, permanent quick actions, multiple context chips, text/image/file imports, removal, retained instructions, current-workspace delivery, keyboard submit, source navigation, themes and 1440/960/480 layouts (synthetic IPC).",
   );
 } finally {
   await request(`/close?target=${targetId}`);

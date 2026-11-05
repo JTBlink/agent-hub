@@ -98,6 +98,17 @@ mockIPC((command, args) => {
     const request = args?.request;
     if (!request || typeof request !== "object" || !("kind" in request))
       return null;
+    if (request.kind === "capture_rendered") {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 600;
+      const context = canvas.getContext("2d")!;
+      context.fillStyle = "white";
+      context.fillRect(0, 0, 800, 600);
+      context.fillStyle = "black";
+      context.fillText("Synthetic preview", 30, 30);
+      return canvas.toDataURL("image/png").split(",")[1];
+    }
     if (request.kind === "kernel")
       return {
         product: "Chrome/156.0.0.0",

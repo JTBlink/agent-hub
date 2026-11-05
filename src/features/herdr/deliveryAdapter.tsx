@@ -27,6 +27,27 @@ export function currentWorkspaceAgent(snapshot: HerdrSnapshot, path: string) {
   return candidates.length === 1 ? candidates[0] : undefined;
 }
 
+/** An embedded client owns a workspace; select an unclaimed Agent inside it. */
+export function embeddedWorkspaceAgent(
+  snapshot: HerdrSnapshot,
+  client: import("./lib/herdrControlApi").HerdrTarget,
+  path: string,
+  claimed: string[],
+) {
+  const pane = currentWorkspaceAgent(
+    {
+      ...snapshot,
+      agents: snapshot.agents.filter(
+        (pane) =>
+          pane.workspace_id === client.workspace_id &&
+          !claimed.includes(pane.terminal_id),
+      ),
+    },
+    path,
+  );
+  return pane ? herdrTarget(client.session, pane) : undefined;
+}
+
 export const herdrDeliveryAdapter: AgentDeliveryAdapter = {
   id: "herdr",
   label: "Herdr",
