@@ -262,56 +262,74 @@ async function click(name: string) {
   await act(async () => button(name).click());
 }
 
-it("opens task source from its title without entering edit mode or saving", async () => {
-  vi.mocked(api.getAutomationOverview).mockResolvedValue({
-    tasks: [
-      {
-        ...hermes,
-        definition: {
-          ...hermes.definition!,
-          files: [
-            { path: "TASK.md", content: "# Example task" },
-            { path: "scripts/run.sh", content: "echo example" },
-            { path: "config/task.json", content: '{"version":"1.0.0"}' },
-          ],
+it.each([undefined, "/workspace/task-scripts"])(
+  "opens task source and its root folder in VS Code without editing or saving (%s)",
+  async (script_dir) => {
+    vi.mocked(api.getAutomationOverview).mockResolvedValue({
+      tasks: [
+        {
+          ...hermes,
+          definition: {
+            ...hermes.definition!,
+            script_dir,
+            workdir: "/workspace/legacy-scripts",
+            files: [
+              { path: "TASK.md", content: "# Example task" },
+              { path: "scripts/run.sh", content: "echo example" },
+              { path: "config/task.json", content: '{"version":"1.0.0"}' },
+            ],
+          },
         },
-      },
-    ],
-    issues: [],
-    hermes_installed: true,
-  });
-  await render("/automation?task=" + encodeURIComponent(hermes.id));
-  const trigger = container.querySelector<HTMLButtonElement>(
-    'button[aria-label="查看源码"]',
-  )!;
-  expect(trigger.closest("header")?.querySelector("h1")?.textContent).toBe(
-    hermes.name,
-  );
-  trigger.focus();
-  await act(async () => trigger.click());
-  expect(document.querySelector("dialog[open]")).not.toBeNull();
-  expect(
-    document.querySelector('dialog button[aria-label="还原阅读窗口"]'),
-  ).not.toBeNull();
-  expect(codeEditor(document).state.sliceDoc()).toBe("echo example");
-  expect(codeEditor(document).state.readOnly).toBe(true);
-  await act(async () =>
-    document
-      .querySelector<HTMLButtonElement>(
-        'dialog button[aria-label="config/task.json"]',
-      )!
-      .click(),
-  );
-  expect(codeEditor(document).state.sliceDoc()).toBe('{"version":"1.0.0"}');
-  await act(async () =>
-    document
-      .querySelector<HTMLButtonElement>('dialog button[aria-label="关闭"]')!
-      .click(),
-  );
-  expect(document.activeElement).toBe(trigger);
-  expect(api.saveAutomation).not.toHaveBeenCalled();
-  expect(api.runAutomation).not.toHaveBeenCalled();
-});
+      ],
+      issues: [],
+      hermes_installed: true,
+    });
+    await render("/automation?task=" + encodeURIComponent(hermes.id));
+    const trigger = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="查看源码"]',
+    )!;
+    expect(trigger.closest("header")?.querySelector("h1")?.textContent).toBe(
+      hermes.name,
+    );
+    trigger.focus();
+    await act(async () => trigger.click());
+    expect(document.querySelector("dialog[open]")).not.toBeNull();
+    expect(
+      document.querySelector('dialog button[aria-label="还原阅读窗口"]'),
+    ).not.toBeNull();
+    expect(codeEditor(document).state.sliceDoc()).toBe("echo example");
+    expect(codeEditor(document).state.readOnly).toBe(true);
+    const openSourceDirectory = async () => {
+      const button = document.querySelector<HTMLButtonElement>(
+        'dialog button[aria-label="在 VS Code 中打开"]',
+      )!;
+      expect(button.title).toBe("在 VS Code 中打开脚本目录");
+      await act(async () => button.click());
+      expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
+        script_dir ?? "/workspace/legacy-scripts",
+      );
+      expect(openFileInVscode).not.toHaveBeenCalled();
+    };
+    await openSourceDirectory();
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          'dialog button[aria-label="config/task.json"]',
+        )!
+        .click(),
+    );
+    expect(codeEditor(document).state.sliceDoc()).toBe('{"version":"1.0.0"}');
+    await openSourceDirectory();
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>('dialog button[aria-label="关闭"]')!
+        .click(),
+    );
+    expect(document.activeElement).toBe(trigger);
+    expect(api.saveAutomation).not.toHaveBeenCalled();
+    expect(api.runAutomation).not.toHaveBeenCalled();
+  },
+);
 
 it("omits task source when the task has no source files", async () => {
   await render("/automation?task=" + encodeURIComponent(native.id));
