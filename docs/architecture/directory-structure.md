@@ -6,6 +6,7 @@
 
 ```text
 agent-hub/
+├── products/                       # 产品清单：standard、personal，仅选择特性与导航
 ├── prototype.sh                    # 一键启动原型目录或指定原型
 ├── src/                            # React/TypeScript 前端
 │   ├── views/                      # 页面视图
@@ -103,7 +104,10 @@ agent-hub/
 │   │   └── en.json                 #   英文
 │   ├── fonts/                      # 字体声明、共享排版变量、终端字体参数与预加载
 │   ├── styles/brand.css            # 明暗主题与色调变量
-│   ├── app/                        # 公共路由定义与宿主页组合入口
+│   ├── integrations/herdr/         # 可选集成共享契约与未启用时的适配，无 Herdr 实现依赖
+│   ├── app/                        # 公共路由与产品组装
+│   │   ├── product/                #   默认产品配置、构建身份校验与相邻测试
+│   │   └── features/               #   功能模块贡献 interface
 │   ├── App.tsx                     # 共享 Provider、路由与应用外壳
 │   ├── main.tsx                    # 前端入口
 │   ├── utils.ts                    # 通用工具函数
@@ -113,6 +117,7 @@ agent-hub/
 │   ├── src/
 │   │   ├── main.rs                 #   应用入口（保持精简）
 │   │   ├── lib.rs                  #   共享 Builder 与显式 Context 启动入口
+│   │   ├── product/                #   编译期身份、产品目录与平台标识
 │   │   ├── desktop/                #   启动、IPC 注册、生命周期和托盘，见 app-composition.md
 │   │   ├── smoke.rs                #   冒烟测试
 │   │   ├── bin/
@@ -337,3 +342,10 @@ agent-hub/
 - `src/components/AutomationScheduleInput.tsx`：安装与任务编辑共用的日程输入。
 - `src/lib/automationDiscovery.ts`：安装来源类型和依赖展示；`src/lib/automation.ts` 统一日程格式化。
 - `src-tauri/src/core/automation/package/catalog.rs`：Git checkout 中的有界任务发现、固定版本快照与清理。
+
+## 产品模块维护约定
+
+- `products/` 只声明产品选择；构建解析、生成文件、前端构建与开发 CLI 安装集中于 `scripts/app/product/`，根启动脚本保持薄入口。
+- 新功能实现及侧栏贡献放在 `src/features/<name>/`。公共工作台只消费贡献 interface，不接管模块业务状态。
+- 跨功能可选集成的共享契约与缺省适配放在 `src/integrations/<name>/`；公共类型不反向导入可选实现。
+- 编译身份及运行目录从 `src-tauri/src/product/` 派生；构建产物不存放到功能源码目录，也不进入 Git。

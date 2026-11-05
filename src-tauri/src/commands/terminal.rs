@@ -1,7 +1,6 @@
 use crate::core::{
+    agent_runtime::TerminalAgent,
     error::AppError,
-    herdr::agents::HerdrAgent,
-    herdr::tools::HerdrTools,
     skill_store::SkillStore,
     terminal::{self, TerminalEvent, TerminalManager, TerminalSession, TerminalSize, TerminalSpec},
 };
@@ -20,7 +19,7 @@ pub(crate) fn owner<R: tauri::Runtime>(window: &Webview<R>) -> Result<String, Ap
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TerminalLaunch {
     Agent {
-        agent: HerdrAgent,
+        agent: TerminalAgent,
     },
     Script {
         path: String,
@@ -43,8 +42,13 @@ pub async fn terminal_create(
     let owner = owner(&window)?;
     let store = window.state::<Arc<SkillStore>>().inner().clone();
     let manager = manager.inner().clone();
-    let tools = window.state::<Arc<HerdrTools>>().inner().clone();
+    #[cfg(feature = "herdr")]
+    let tools = window
+        .state::<Arc<crate::core::herdr::tools::HerdrTools>>()
+        .inner()
+        .clone();
     tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(feature = "herdr")]
         let mut startup = None;
         let output = events.clone();
         let session = manager
@@ -68,7 +72,14 @@ pub async fn terminal_create(
                             (terminal::prepare_script(&cwd, &path)?, None)
                         }
                         Some(TerminalLaunch::Agent { agent }) => {
-                            match crate::core::agent_launcher::prepare(&tools, &cwd, agent)? {
+                            #[cfg(feature = "herdr")]
+                            let prepared =
+                                crate::core::agent_launcher::prepare(&tools, &cwd, agent)?;
+                            #[cfg(not(feature = "herdr"))]
+                            let prepared =
+                                crate::core::agent_launcher::prepare_native(&cwd, agent)?;
+                            match prepared {
+                                #[cfg(feature = "herdr")]
                                 crate::core::agent_launcher::Prepared::Herdr(prepared) => {
                                     startup = Some(prepared.startup);
                                     (prepared.attachment.command(), None)
@@ -94,6 +105,7 @@ pub async fn terminal_create(
                 move |event| output.send(event).is_ok(),
             )
             .map_err(AppError::io)?;
+        #[cfg(feature = "herdr")]
         if let Some(startup) = startup {
             std::thread::spawn(move || {
                 if let Err(error) = startup.start() {

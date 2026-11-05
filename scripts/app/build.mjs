@@ -3,7 +3,9 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
+import { cleanupBuildCache } from "./build-cache.mjs";
+import { productArguments, loadProduct } from "./product/config.mjs";
+import { installDevelopmentCli } from "./product/install-cli.mjs";
 
 export const ROOT_DIR = resolve(repositoryRoot);
 export const isWindows = process.platform === "win32";
@@ -24,6 +26,11 @@ export function usage() {
   install                      构建当前平台安装包（./agent-hub.sh）
   install --dev [debug|release] 编译并软链接开发 CLI（仅开发模式）
   help      显示此帮助
+
+产品选择: --product standard（默认）或 --product personal
+示例: ./agent-hub.sh build --product personal
+      ./agent-hub.sh dev --product personal
+      ./agent-hub.sh install --dev debug --product personal
 `;
 }
 
@@ -88,6 +95,9 @@ function runRelease(args, runner) {
 }
 
 function runClean(args, runner, remove = rmSync) {
+  const selected = productArguments(args);
+  args = selected.args;
+  const product = loadProduct(selected.selection);
   if (args.length > 0) {
     console.error("错误：clean 不接受额外参数。");
     return 1;
@@ -95,11 +105,17 @@ function runClean(args, runner, remove = rmSync) {
   if (!requireCargo(runner)) return 1;
   const status = run(
     "cargo",
-    ["clean", "--manifest-path", "src-tauri/Cargo.toml"],
+    [
+      "clean",
+      "--manifest-path",
+      "src-tauri/Cargo.toml",
+      "--target-dir",
+      product.targetDir,
+    ],
     runner,
   );
   if (status === 0) return 0;
-  const targetDir = cargoTargetDir();
+  const targetDir = product.targetDir;
   if (existsSync(targetDir))
     remove(targetDir, { recursive: true, force: true });
   return 0;
@@ -176,19 +192,35 @@ export function runCommand(
       if (!isWindows && !args.includes("--help") && !args.includes("-h")) {
         const status = run(
           process.execPath,
-          ["scripts/app/stop-dev.mjs"],
+          [
+            "scripts/app/stop-dev.mjs",
+            ...(productArguments(args).selection === "standard"
+              ? []
+              : ["--product", productArguments(args).selection]),
+          ],
           runner,
         );
         if (status !== 0) return status;
       }
       return runNpm(["run", "tauri", "--", "dev", ...args], runner);
+    case "install":
+      return args.includes("--dev")
+        ? installDevelopmentCli(args.filter((arg) => arg !== "--dev"))
+        : runNpm(["run", "tauri", "--", "build", ...args], runner);
     case "build":
       return runNpm(["run", "tauri", "--", "build", ...args], runner);
     case "clean":
       return runClean(args, runner, remove);
-    case "prune":
-      if (args.some((arg) => arg !== "--dry-run")) return 1;
-      return cleanup({ dryRun: args.includes("--dry-run") });
+    case "prune": {
+      const selected = productArguments(args);
+      if (selected.args.some((arg) => arg !== "--dry-run")) return 1;
+      return cleanup({
+        dryRun: selected.args.includes("--dry-run"),
+        ...(selected.selection === "standard"
+          ? {}
+          : { targetDir: loadProduct(selected.selection).targetDir }),
+      });
+    }
     case "release":
       return runRelease(args, runner);
     case "test":
@@ -213,7 +245,10 @@ export function runCommand(
 }
 
 export function main(argv = process.argv.slice(2), options = {}) {
-  const [command = "help", ...args] = argv;
+  const selected = productArguments(argv);
+  const [command = "help", ...args] = selected.args;
+  if (argv.some((arg) => arg === "--product" || arg.startsWith("--product=")))
+    args.push("--product", selected.selection);
   return runCommand(command, args, options);
 }
 

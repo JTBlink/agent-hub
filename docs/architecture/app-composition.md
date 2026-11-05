@@ -1,6 +1,6 @@
 # 应用组装边界
 
-AgentHub 保留一套主体源码、依赖、版本和构建流程。当前仍是单个公开应用；本次整理只建立共享启动与页面组合边界，不创建增强版工程。
+AgentHub 保留一套主体源码、依赖、版本和构建流程。标准版与个人版通过产品配置选择编译能力，保持一套公共实现；不引入动态扩展宿主。
 
 ## Rust 桌面宿主
 
@@ -51,3 +51,17 @@ app_lib::builder()?
 当前前端仍通过本仓库的 Vite 工程构建，尚未发布为独立 UI 包，也没有新增私有仓库依赖或第二套打包配置。后续有具体扩展时，再确定 UI 包导出、菜单注册、资源构建及品牌／更新渠道配置。Rust Cargo 依赖本身不会完成前端复用与打包。
 
 不预建动态库加载器、通用扩展 trait 或第二套业务实现。拆分按实际私有功能发生，通用业务、存储和 UI 保持单一实现。
+
+## 产品编译时组装
+
+产品清单位于 `products/`：`standard.json` 保留默认完整功能，`personal.json` 排除 Herdr 内置集成。脚本缺省选择标准版；产品类型与 Rust 构建 profile 独立，功能依赖通过 Cargo features 解析。首期只保证 Herdr 可选，其他功能保持公共基线。
+
+`./agent-hub.sh build --product personal --debug --bundles app` 经共享 Node 入口解析产品，向前端、桌面和配套 CLI 传递相同配置摘要与实际特性集合。`src-tauri/src/product/` 保存编译期身份；`build-info` CLI 与 `get_build_info` IPC 只读返回该身份，前端在应用 Provider 初始化前核验，拒绝混用资源。
+
+前端 `@app/product` 指向产品配置，`@app/herdr` 根据选定特性指向功能实现或不注册监听和 IPC 的缺省适配。公共线协议和历史布局解析位于 `src/integrations/herdr/`，不依赖可选实现。`src/features/herdr/module.ts` 声明侧栏贡献，工作台负责排列、选择和布局；Herdr 面板在实际使用时加载。
+
+产品构建的 TypeScript 根入口与 Vite 导入图仅覆盖启用功能；Vite 输出 `product-build.json` 记录实际模块，并拒绝个人版包含 Herdr 实现。全源码质量检查另行运行，不能把全源码类型检查与产品编译混为一谈。
+
+构建工具集中于 `scripts/app/product/`。标准 Cargo 输出保留 `src-tauri/target/`；独立产品使用同级 `src-tauri/target-products/`，前端、sidecar 和类型检查结果按产品与配置摘要隔离在忽略目录。标准版清理不遍历个人版目录。详细命令与运行路径见[编译与安装](../build-and-install.md)。
+
+个人版具有不同的应用 identifier、开发端口、应用数据、平台任务标识和 CLI bridge。标准版继续使用原数据；产品 ID 在同一产品特性集合变化时保持稳定。共享项目文件、原生 Agent 登录及系统 Hosts 属于用户选择或系统拥有的资源，不能把版本目录隔离描述为这些资源被复制。个人版未配置专属更新通道时不查询标准版更新源。

@@ -4,6 +4,7 @@ mod cli;
 mod development;
 mod discovery;
 mod identity;
+#[cfg(feature = "herdr")]
 mod launch;
 mod metadata;
 mod mutation;
@@ -12,6 +13,7 @@ mod types;
 use anyhow::{bail, Context, Result};
 pub use cli::SystemCli;
 pub use discovery::{remote_candidates, RemoteCandidate};
+#[cfg(feature = "herdr")]
 pub use launch::prepare_managed_workspace;
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};

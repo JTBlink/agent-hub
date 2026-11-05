@@ -4,7 +4,7 @@ import {
   type PreviewWorkspaceHandle,
 } from "../../features/preview/PreviewWorkspace";
 import type { PreviewDocument } from "../../features/preview/api";
-import { herdrDeliveryAdapter } from "../../features/herdr/deliveryAdapter";
+import { herdrDeliveryAdapter } from "@app/herdr";
 import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 
 /** Keep the complete preview feature set inside the existing workspace tab. */

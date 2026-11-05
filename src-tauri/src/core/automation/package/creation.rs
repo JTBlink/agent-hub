@@ -66,6 +66,7 @@ pub(super) fn stage_identity(
         });
     }
     super::dependencies::validate(&dependencies)?;
+    #[cfg(feature = "herdr")]
     if draft.files.iter().any(|file| {
         file.content == include_str!("../../../../../automations/_shared/herdr-agent.py")
     }) && !dependencies

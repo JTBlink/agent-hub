@@ -9,19 +9,7 @@ use std::{
 };
 pub(crate) const SESSION: &str = "default";
 static SERVER_START: Mutex<()> = Mutex::new(());
-pub(crate) const INHERITED_CONTEXT: &[&str] = &[
-    "HERDR_ENV",
-    "HERDR_PANE_ID",
-    "HERDR_TAB_ID",
-    "HERDR_WORKSPACE_ID",
-    "HERDR_SESSION",
-    "HERDR_SOCKET",
-    "HERDR_SOCKET_PATH",
-    "CLAUDECODE",
-    "CODEX_THREAD_ID",
-    "CODEX_SESSION_ID",
-    "CODEX_TOOL_CALL_ID",
-];
+pub(crate) use crate::core::agent_runtime::INHERITED_CONTEXT;
 
 pub(crate) struct Client<'a> {
     pub executable: &'a Path,

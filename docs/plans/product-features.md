@@ -1,6 +1,6 @@
 # 基于 Cargo features 的标准版与定制版设计草案
 
-日期：2026-11-05。状态：待评审，未实现。本节替代此前的三类产品草案。当前只进行方案设计；不拆包、不创建仓库、不修改功能或发布安装包。实施规格、依赖、进度和验证由 GitHub Issues 承载。
+日期：2026-11-05。状态：首期已实现，验证记录见执行规格。本方案替代此前的三类产品草案，执行规格与验证见 GitHub Issue #289。标准版为 `standard`，首期个人版示例为 `personal`；源码非公开仍属于定制产品的存放策略。后续规划与当前实现分别阅读本方案和应用组装架构。
 
 ## 术语与产品关系
 
@@ -71,7 +71,7 @@ interface FeatureModule {
 
 ```json
 {
-  "id": "custom",
+  "id": "personal",
   "features": ["projects", "terminal", "herdr"],
   "sidebar": {
     "primary": ["projects", "herdr"],
@@ -175,3 +175,9 @@ pub mod herdr;
 - [Cargo workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)：多 crate 的统一管理。
 - [Tauri 插件](https://v2.tauri.app/develop/plugins/)：可独立装配的命令、状态和初始化。
 - [ADR-0008](../adr/0008-primary-application.md)：当前单主应用与公共实现约束；本草案尚未改变现状。
+
+## 首期命名与目录补充
+
+根据实施确认，公开验证配置命名为 `personal`（个人版），不使用以“排除某功能”为名的产品标识。`standard` 缺省保留全部现有能力。`personal` 首期排除 Herdr，产品名称不限制后续可选特性集合。
+
+产品编译、开发与安装统一经 `agent-hub.sh`／`.bat` 的共享 Node 入口。独立产品的 Cargo 目录与标准 `target` 同级，避免标准清理递归影响其他产品；前端、CLI、sidecar、安装身份及用户数据均独立。新增构建工具和装配 interface 按目录结构文档集中归属。

@@ -170,6 +170,7 @@ pub async fn task_add_comment(
     .map_err(|error| TaskFailure::new("internal", error.to_string()))?
 }
 
+#[cfg(feature = "herdr")]
 #[tauri::command]
 pub async fn task_prepare_herdr_workspace(
     window: Webview,

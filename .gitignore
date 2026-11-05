@@ -32,6 +32,7 @@ coverage/
 .playwright-cli/
 src-tauri/gen/
 src-tauri/target/
+src-tauri/target-products/
 *.tsbuildinfo
 
 # Local application data and logs.

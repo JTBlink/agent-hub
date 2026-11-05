@@ -1,0 +1,19 @@
+{
+  "id": "standard",
+  "features": ["standard"],
+  "sidebar": {
+    "primary": [
+      "projects",
+      "search",
+      "git",
+      "tasks",
+      "automation",
+      "preview",
+      "skills",
+      "discover",
+      "herdr"
+    ],
+    "bottom": ["dashboard", "backup", "settings"],
+    "defaultPanel": "skills"
+  }
+}

@@ -1472,9 +1472,7 @@ export const setProjectLibrarySkillEnabled = (
 export * from "./terminalApi";
 
 export * from "./taskBrowserApi";
-export * from "../features/herdr/lib/herdrControlApi";
-export * from "../features/herdr/lib/herdrToolsApi";
-export { launchTerminalHerdr } from "../features/herdr/terminal/api";
+export * from "@app/herdr";
 
 // Independent portable Agent launch preferences.
 export const getAgentLaunchSettings = () =>

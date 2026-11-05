@@ -20,11 +20,13 @@ import { WorkspaceSearch } from "./search/WorkspaceSearch";
 import { SidebarActivityBar } from "./SidebarActivityBar";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { useGitChangeCount } from "../hooks/useGitChangeCount";
-import { SidebarHerdr } from "../features/herdr/components/SidebarHerdr";
+import { featureModules } from "@app/features";
+import { productConfig } from "@app/product";
 
 const PANEL_STORAGE_KEY = "agent-hub:sidebar-panel-open";
 
 export function Sidebar() {
+  const defaultPanel: SidebarPanel = productConfig.sidebar.defaultPanel;
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -64,7 +66,7 @@ export function Sidebar() {
   });
   const [panelSelection, setPanelSelection] = useState({
     routeKey: location.key,
-    panel: activeSidebarPanel(location.pathname) ?? "skills",
+    panel: activeSidebarPanel(location.pathname) ?? defaultPanel,
     manual: false,
   });
   if (panelSelection.routeKey !== location.key) {
@@ -75,7 +77,7 @@ export function Sidebar() {
         (panelSelection.panel === "search" &&
           location.pathname.startsWith("/project/"))
           ? panelSelection.panel
-          : (activeSidebarPanel(location.pathname) ?? "skills"),
+          : (activeSidebarPanel(location.pathname) ?? defaultPanel),
       manual:
         preserveSidebar ||
         (panelSelection.panel === "search" &&
@@ -84,7 +86,12 @@ export function Sidebar() {
   }
   const selectedPanel = panelSelection.panel;
   const [searchOpened, setSearchOpened] = useState(false);
-  const [herdrOpened, setHerdrOpened] = useState(false);
+  const [openedFeatures, setOpenedFeatures] = useState<string[]>([
+    defaultPanel,
+  ]);
+  const selectedFeature = featureModules.find(
+    (feature) => feature.sidebar.id === selectedPanel,
+  );
   const [searchFocusRequest, setSearchFocusRequest] = useState(0);
   const panelVisible =
     panelOpen &&
@@ -95,7 +102,8 @@ export function Sidebar() {
   const selectPanel = (panel: SidebarPanel) => {
     const switchToWorkspace =
       (location.pathname === "/settings" && panel !== "skills") ||
-      (panel === "herdr" &&
+      (featureModules.find((feature) => feature.sidebar.id === panel)?.sidebar
+        .workspace &&
         location.pathname !== "/terminal" &&
         !projectWorkspaceRoute(location.pathname, location.search));
     if (selectedPanel === panel && panelVisible && !switchToWorkspace) {
@@ -112,7 +120,11 @@ export function Sidebar() {
       setSearchOpened(true);
       setSearchFocusRequest((value) => value + 1);
     }
-    if (panel === "herdr") setHerdrOpened(true);
+    if (featureModules.some((feature) => feature.sidebar.id === panel)) {
+      setOpenedFeatures((opened) =>
+        opened.includes(panel) ? opened : [...opened, panel],
+      );
+    }
     setPanelSelection({ routeKey: location.key, panel, manual: true });
     setPanelOpen(true);
     if (switchToWorkspace) {
@@ -242,8 +254,8 @@ export function Sidebar() {
         <ResizableSidebar
           storageKey="agent-hub:sidebar-width"
           label={t(
-            selectedPanel === "herdr"
-              ? "herdr.title"
+            selectedFeature
+              ? selectedFeature.sidebar.labelKey
               : selectedPanel === "search"
                 ? "workspaceSearch.title"
                 : selectedPanel === "projects"
@@ -320,25 +332,29 @@ export function Sidebar() {
               />
             )}
           </div>
+          {featureModules.map((feature) => {
+            const Panel = feature.sidebar.component;
+            const selected = selectedPanel === feature.sidebar.id;
+            return (
+              <div
+                key={feature.id}
+                hidden={!selected}
+                className={cn(
+                  "min-h-0 flex-1 flex-col",
+                  selected ? "flex" : "hidden",
+                )}
+              >
+                {openedFeatures.includes(feature.sidebar.id) && (
+                  <Panel active={panelVisible && selected} />
+                )}
+              </div>
+            );
+          })}
           <div
-            hidden={selectedPanel !== "herdr"}
-            className={cn(
-              "min-h-0 flex-1 flex-col",
-              selectedPanel === "herdr" ? "flex" : "hidden",
-            )}
-          >
-            {herdrOpened && (
-              <SidebarHerdr
-                active={panelVisible && selectedPanel === "herdr"}
-              />
-            )}
-          </div>
-          <div
-            hidden={selectedPanel === "search" || selectedPanel === "herdr"}
+            hidden={selectedPanel === "search" || !!selectedFeature}
             className={cn(
               "min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-2",
-              (selectedPanel === "search" || selectedPanel === "herdr") &&
-                "hidden",
+              (selectedPanel === "search" || !!selectedFeature) && "hidden",
             )}
           >
             <div hidden={selectedPanel !== "projects"}>

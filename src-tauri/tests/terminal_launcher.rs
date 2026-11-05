@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(all(unix, feature = "herdr"))]
 use app_lib::core::terminal::{
     prepare_shell, TerminalEvent, TerminalManager, TerminalSize, TerminalSpec,
 };

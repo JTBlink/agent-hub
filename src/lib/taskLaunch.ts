@@ -1,10 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
+  herdrEnabled,
   ensureHerdrWorkspace,
   openHerdrWorkspace,
   startHerdrAgent,
   type HerdrOpenedWorkspace,
-} from "../features/herdr/lib/herdrControlApi";
+} from "@app/herdr";
 import { getErrorMessage } from "./error";
 
 export interface TaskLaunchInput {
@@ -45,6 +46,8 @@ export async function launchTaskAgent(
       native: native.receipt,
       warning: native.warning,
     };
+  if (!herdrEnabled)
+    throw new Error("Native Agent startup did not return a receipt");
   const workspace = input.session
     ? await ensureHerdrWorkspace(input.session, input.projectId, input.path)
     : await invoke<HerdrOpenedWorkspace>("task_prepare_herdr_workspace", {

@@ -2,10 +2,15 @@ import { defineConfig } from "vite";
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import react from "@vitejs/plugin-react";
+import { productViteConfig } from "./scripts/app/product/vite-plugin.mjs";
 import { helpContentPlugin } from "./scripts/docs/vite-plugin.mjs";
 
+const product = productViteConfig(import.meta.dirname);
+
 export default defineConfig({
+  ...product,
   plugins: [
+    ...(product.plugins ?? []),
     react(),
     helpContentPlugin(import.meta.dirname),
     {
@@ -57,7 +62,7 @@ export default defineConfig({
   ],
   server: {
     host: "127.0.0.1",
-    port: 1420,
+    ...product.server,
     strictPort: true,
     watch: {
       ignored: ["**/src-tauri/target/**"],

@@ -134,3 +134,29 @@ it("does not publish a failed build or hide failed publication", () => {
   ).toBe(1);
   expect(events).toEqual([]);
 });
+
+it("uses the selected CLI feature set without publishing through the standard PATH entry", () => {
+  let publication;
+  let compilation;
+  expect(
+    main(["build", "--product=personal"], {
+      cargo: "cargo",
+      env: {},
+      cleanup: () => {},
+      runner: (_command, args, options) => {
+        compilation = { args, env: options.env };
+        return { status: 0 };
+      },
+      publish: (value) => {
+        publication = value;
+      },
+    }),
+  ).toBe(0);
+  expect(compilation.args).toContain("--no-default-features");
+  expect(compilation.args).not.toContain("--features");
+  expect(compilation.env.AGENT_HUB_PRODUCT_ID).toBe("personal");
+  expect(publication.env.AGENT_HUB_PRODUCT_HASH).toBe(
+    compilation.env.AGENT_HUB_PRODUCT_HASH,
+  );
+  expect(publication.env.AGENT_HUB_CLI_BIN_DIR).toContain("personal-");
+});

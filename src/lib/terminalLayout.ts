@@ -1,12 +1,12 @@
+import { parseHerdrNavigation as herdrNavigation } from "../integrations/herdr/contracts";
 import type { DevelopmentTerminal } from "./developmentPreview";
 import type { TerminalTaskContext } from "./taskContext";
-import type { HerdrAgent } from "../features/herdr/lib/herdrAgents";
+import type { HerdrAgent } from "@app/herdr";
 import {
-  herdrNavigation,
   DEFAULT_HERDR_SESSION,
   type HerdrOpenedWorkspace,
   type HerdrTarget,
-} from "../features/herdr/lib/herdrControlApi";
+} from "@app/herdr";
 
 export const TERMINAL_PANE_LIMIT = 8;
 export const TERMINAL_LAYOUT_KEY = "agent-hub:terminal-layout";

@@ -26,7 +26,7 @@ pub fn builder() -> anyhow::Result<tauri::Builder<tauri::Wry>> {
     let cancel_registry = Arc::new(core::install_cancel::InstallCancelRegistry::new());
 
     let builder_start = Instant::now();
-    Ok(tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(store)
         .manage(cancel_registry)
         .manage(Arc::new(core::agent_usage::AgentUsage::default()))
@@ -34,7 +34,6 @@ pub fn builder() -> anyhow::Result<tauri::Builder<tauri::Wry>> {
             core::system_load::SystemLoad::default(),
         )))
         .manage(Arc::new(core::terminal::TerminalManager::default()))
-        .manage(Arc::new(core::herdr::tools::HerdrTools::default()))
         .manage(Arc::new(core::file_preview::FilePreviews::default()))
         .manage(Arc::new(core::preview::Preview::default()))
         .manage(commands::preview_native::NativeViews::default())
@@ -55,5 +54,8 @@ pub fn builder() -> anyhow::Result<tauri::Builder<tauri::Wry>> {
                 builder_start,
             )
         })
-        .invoke_handler(ipc::handler()))
+        .invoke_handler(ipc::handler());
+    #[cfg(feature = "herdr")]
+    let builder = builder.manage(Arc::new(core::herdr::tools::HerdrTools::default()));
+    Ok(builder)
 }

@@ -1,6 +1,6 @@
 use super::AutomationDraft;
 use serde::Serialize;
-#[cfg(test)]
+#[cfg(all(test, feature = "herdr"))]
 mod agent_code_review;
 mod builtin;
 pub(super) use builtin::directory_slug;
@@ -20,7 +20,8 @@ pub struct AutomationTemplate {
 pub struct AutomationCatalog {
     pub shell: String,
     pub templates: Vec<AutomationTemplate>,
-    pub agent_starter: AutomationDraft,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_starter: Option<AutomationDraft>,
 }
 
 /// GUI and agents receive exactly the same platform-correct starter tasks.
@@ -58,11 +59,14 @@ fn catalog(locale: &str, hermes: bool, shell: &str) -> AutomationCatalog {
     AutomationCatalog {
         shell: shell.into(),
         templates,
-        agent_starter: builtin::agent_starter(shell),
+        #[cfg(feature = "herdr")]
+        agent_starter: Some(builtin::agent_starter(shell)),
+        #[cfg(not(feature = "herdr"))]
+        agent_starter: None,
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "herdr"))]
 mod review_preflight_tests;
 #[cfg(test)]
 mod tests;

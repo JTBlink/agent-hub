@@ -12,7 +12,7 @@ fn fake_cli(dir: &Path, reports: &str) -> PathBuf {
     let path = dir.join("agent-hub-cli");
     std::fs::write(
         &path,
-        format!("#!/bin/sh\necho 'agent-hub-cli {reports}'\n"),
+        format!("#!/bin/sh\nif [ \"$2\" = build-info ]; then\n  echo '{}'\nelse\n  echo 'agent-hub-cli {reports}'\nfi\n", build_stamp()),
     )
     .unwrap();
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -49,11 +49,9 @@ fn same_version_rebuild_replaces_an_older_cli() {
     let source = fake_cli(&src_dir, "9.9.9");
     ensure_bridge_from(&source, "9.9.9").unwrap();
     let original = file_digest(&bridge_path()).unwrap();
-    std::fs::write(
-        &source,
-        "#!/bin/sh\necho 'agent-hub-cli 9.9.9'\n# rebuilt\n",
-    )
-    .unwrap();
+    let mut rebuilt = std::fs::read_to_string(&source).unwrap();
+    rebuilt.push_str("# rebuilt\n");
+    std::fs::write(&source, rebuilt).unwrap();
     ensure_bridge_from(&source, "9.9.9").unwrap();
 
     assert_ne!(file_digest(&bridge_path()).unwrap(), original);
@@ -161,9 +159,38 @@ fn native_launch_rejects_a_remaining_binary_after_its_stamp_was_invalidated() {
         fake_cli(&bridge_dir(), env!("CARGO_PKG_VERSION"));
         assert!(validated_path().is_err());
         std::fs::write(stamp_path(), env!("CARGO_PKG_VERSION")).unwrap();
+        std::fs::write(
+            bridge_dir().join(".build-info.json"),
+            serde_json::to_vec(&build_stamp()).unwrap(),
+        )
+        .unwrap();
         assert_eq!(validated_path().unwrap(), bridge_path());
         std::fs::write(stamp_path(), "").unwrap();
         assert!(validated_path().is_err());
+    });
+    central_repo::set_test_home_dir_override(None);
+    outcome.unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn matching_version_does_not_trust_a_different_product_build() {
+    let _lock = central_repo::test_base_dir_lock();
+    let tmp = tempdir().unwrap();
+    central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+    let outcome = std::panic::catch_unwind(|| {
+        std::fs::create_dir_all(bridge_dir()).unwrap();
+        fake_cli(&bridge_dir(), env!("CARGO_PKG_VERSION"));
+        std::fs::write(stamp_path(), env!("CARGO_PKG_VERSION")).unwrap();
+        std::fs::write(
+            bridge_dir().join(".build-info.json"),
+            r#"{"product_id":"other","config_hash":"other"}"#,
+        )
+        .unwrap();
+        assert!(
+            validated_path().is_err(),
+            "version equality must not accept another product"
+        );
     });
     central_repo::set_test_home_dir_override(None);
     outcome.unwrap();

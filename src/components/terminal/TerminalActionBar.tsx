@@ -1,3 +1,4 @@
+import { herdrEnabled } from "@app/herdr";
 import { useState, type ReactNode } from "react";
 import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
@@ -61,20 +62,22 @@ export function TerminalActionBar({
       aria-label={t("herdr.terminalTools")}
       className="flex shrink-0 items-center gap-1 overflow-x-auto bg-bg-secondary px-1"
     >
-      {items.map(({ action, label, icon }) => (
-        <button
-          type="button"
-          key={action}
-          className="app-button-ghost flex h-7 w-7 shrink-0 items-center justify-center rounded"
-          title={t(label)}
-          aria-label={t(label)}
-          aria-pressed={action === "zoom" ? zoomed : undefined}
-          disabled={busy || disabled.includes(action)}
-          onClick={() => onAction(action)}
-        >
-          <span className={`codicon codicon-${icon}`} aria-hidden="true" />
-        </button>
-      ))}
+      {items
+        .filter(({ action }) => herdrEnabled || action !== "sidebar")
+        .map(({ action, label, icon }) => (
+          <button
+            type="button"
+            key={action}
+            className="app-button-ghost flex h-7 w-7 shrink-0 items-center justify-center rounded"
+            title={t(label)}
+            aria-label={t(label)}
+            aria-pressed={action === "zoom" ? zoomed : undefined}
+            disabled={busy || disabled.includes(action)}
+            onClick={() => onAction(action)}
+          >
+            <span className={`codicon codicon-${icon}`} aria-hidden="true" />
+          </button>
+        ))}
       {children}
     </nav>
   );

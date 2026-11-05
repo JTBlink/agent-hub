@@ -11,8 +11,10 @@ fn new_template_launchers_resolve_python_from_the_task_environment() {
         }
     }
 }
+#[cfg(feature = "herdr")]
 use crate::core::automation::Provider;
 #[test]
+#[cfg(feature = "herdr")]
 fn catalog_keeps_core_scenarios_with_short_prompts_and_legacy_cli_ids() {
     let catalog = catalog("zh", true, "sh");
     assert_eq!(
@@ -65,9 +67,10 @@ fn catalog_keeps_core_scenarios_with_short_prompts_and_legacy_cli_ids() {
     assert!(super::template("workspace-check", Some("zh")).is_some());
 }
 #[test]
+#[cfg(feature = "herdr")]
 fn generic_agent_starter_requires_user_content_and_has_no_specialized_task_prompt() {
     for shell in ["sh", "powershell"] {
-        let mut draft = catalog("zh", false, shell).agent_starter;
+        let mut draft = catalog("zh", false, shell).agent_starter.unwrap();
         assert!(draft.validate().is_err());
         draft.name = "Custom task".into();
         draft
@@ -85,6 +88,7 @@ fn generic_agent_starter_requires_user_content_and_has_no_specialized_task_promp
     }
 }
 #[test]
+#[cfg(feature = "herdr")]
 fn core_templates_use_the_native_shell_without_requiring_hermes() {
     let windows = catalog("zh", false, "powershell");
     assert_eq!(windows.templates.len(), 4);

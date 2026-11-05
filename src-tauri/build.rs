@@ -1,4 +1,5 @@
 fn main() {
+    product_identity();
     // Use a custom Windows application manifest that opts the process into long
     // path support (#298/#299). app_manifest() replaces Tauri's default, so the
     // manifest file re-declares the Common-Controls v6 dependency Tauri ships.
@@ -19,5 +20,45 @@ fn main() {
         embed_resource::compile_for_tests(resource, embed_resource::NONE)
             .manifest_required()
             .expect("failed to embed Windows resources in integration tests");
+    }
+}
+
+fn product_identity() {
+    for (name, fallback) in [
+        ("AGENT_HUB_PRODUCT_ID", "standard"),
+        ("AGENT_HUB_PRODUCT_HASH", "development"),
+        ("AGENT_HUB_BASE_COMMIT", "unknown"),
+    ] {
+        println!("cargo:rerun-if-env-changed={name}");
+        let value = std::env::var(name).unwrap_or_else(|_| fallback.into());
+        assert!(
+            !value.chars().any(char::is_control)
+                && (name != "AGENT_HUB_PRODUCT_ID"
+                    || (!value.is_empty()
+                        && value.bytes().all(|byte| byte.is_ascii_lowercase()
+                            || byte.is_ascii_digit()
+                            || byte == b'-'))),
+            "Invalid product build metadata"
+        );
+        println!("cargo:rustc-env={name}={value}");
+    }
+    println!("cargo:rerun-if-env-changed=AGENT_HUB_PRODUCT_FEATURES");
+    if let Ok(expected) = std::env::var("AGENT_HUB_PRODUCT_FEATURES") {
+        let mut expected: Vec<_> = expected.split(',').filter(|v| !v.is_empty()).collect();
+        expected.sort_unstable();
+        expected.dedup();
+        let mut actual = Vec::new();
+        for (flag, feature) in [
+            ("CARGO_FEATURE_HERDR", "herdr"),
+            ("CARGO_FEATURE_STANDARD", "standard"),
+        ] {
+            if std::env::var_os(flag).is_some() {
+                actual.push(feature);
+            }
+        }
+        assert_eq!(
+            expected, actual,
+            "Product configuration and Cargo features differ"
+        );
     }
 }

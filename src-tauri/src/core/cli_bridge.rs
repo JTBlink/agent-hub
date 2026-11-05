@@ -49,12 +49,26 @@ const BRIDGE_BIN_NAME: &str = if cfg!(windows) {
 pub fn bridge_dir() -> PathBuf {
     std::env::var_os("AGENT_HUB_BRIDGE_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| central_repo::home_base_dir().join("bin"))
+        .unwrap_or_else(|| {
+            let root = central_repo::home_base_dir().join("bin");
+            let build = crate::product::current();
+            if build.product_id == "standard" {
+                root
+            } else {
+                // Product IDs are build inputs, never runtime path fragments.
+                let identity = format!("{}:{}", build.product_id, build.config_hash);
+                let namespace = hex::encode(Sha256::digest(identity.as_bytes()));
+                root.join("products").join(&namespace[..16])
+            }
+        })
 }
 
 /// Whether `name` is one of the files the bridge keeps in [`bridge_dir`].
 pub(crate) fn is_bridge_file(name: &str) -> bool {
-    name == BRIDGE_BIN_NAME || name == ".version" || name == format!(".{BRIDGE_BIN_NAME}.staged")
+    name == BRIDGE_BIN_NAME
+        || name == ".version"
+        || name == ".build-info.json"
+        || name == format!(".{BRIDGE_BIN_NAME}.staged")
 }
 
 pub fn bridge_path() -> PathBuf {
@@ -65,11 +79,23 @@ pub fn bridge_path() -> PathBuf {
 pub(crate) fn validated_path() -> Result<PathBuf> {
     let path = bridge_path();
     if read_stamp().as_deref() != Some(env!("CARGO_PKG_VERSION"))
+        || !matching_build_stamp()
         || !super::tool_detection::executable(&path)
     {
         bail!("AgentHub CLI bridge is unavailable or unverified; update the application before launching a terminal");
     }
     Ok(path)
+}
+
+fn build_stamp() -> serde_json::Value {
+    serde_json::to_value(crate::product::current()).expect("build metadata is serializable")
+}
+
+fn matching_build_stamp() -> bool {
+    std::fs::read(bridge_dir().join(".build-info.json"))
+        .ok()
+        .and_then(|raw| serde_json::from_slice::<serde_json::Value>(&raw).ok())
+        .is_some_and(|value| value == build_stamp())
 }
 
 fn stamp_path() -> PathBuf {
@@ -180,6 +206,15 @@ fn verify(path: &Path, expected_version: &str) -> Result<()> {
             reported.trim()
         );
     }
+    let output = cli_command(path).args(["--json", "build-info"]).output()?;
+    if !output.status.success()
+        || serde_json::from_slice::<serde_json::Value>(&output.stdout)
+            .ok()
+            .as_ref()
+            != Some(&build_stamp())
+    {
+        bail!("Companion CLI product configuration does not match this application");
+    }
     Ok(())
 }
 
@@ -227,6 +262,7 @@ fn ensure_bridge_from(source: &Path, app_version: &str) -> Result<PathBuf> {
     // compatibility. A version-only fast path left an older binary stamped as
     // current, so compare the bundled and published bytes before trusting it.
     if read_stamp().as_deref() == Some(app_version)
+        && matching_build_stamp()
         && bridge_path().is_file()
         && file_digest(source)? == file_digest(&bridge_path())?
     {
@@ -273,6 +309,10 @@ fn publish_from(source: &Path, app_version: &str) -> Result<PathBuf> {
     rename_retrying_sharing_violation(&staged, &target)
         .with_context(|| format!("could not replace {} (it may be in use)", target.display()))?;
 
+    std::fs::write(
+        dir.join(".build-info.json"),
+        serde_json::to_vec(&build_stamp())?,
+    )?;
     std::fs::write(stamp_path(), app_version)
         .with_context(|| format!("could not write {}", stamp_path().display()))?;
 

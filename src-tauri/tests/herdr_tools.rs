@@ -1,3 +1,4 @@
+#![cfg(feature = "herdr")]
 #![cfg(unix)]
 use app_lib::core::herdr::tools::{HerdrTools, ReleaseManifest};
 use sha2::{Digest, Sha256};

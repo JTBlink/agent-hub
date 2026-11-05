@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { Project } from "../../lib/tauri";
 import type { TerminalTab } from "../../lib/terminalLayout";
 import { cn } from "../../utils";
-import { herdrAgentLabel } from "../../features/herdr/lib/herdrAgents";
+import { herdrAgentLabel } from "@app/herdr";
 import { terminalTabName } from "../../lib/terminalTabName";
 import { TerminalTabButton } from "./TerminalTabButton";
 

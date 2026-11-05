@@ -10,11 +10,12 @@ pub struct LaunchArgs {
 enum LaunchCommand {
     /// 查看完整设置、默认指令与当前修订。
     Show,
-    /// 查看共享启动环境（含应用管理的 Herdr）。
+    /// 查看共享启动环境与可用后端。
     Environment,
     /// 解析一个 Agent 的有效启动指令（不启动进程）。
     Resolve { agent: String },
     /// 在明确的 Herdr 会话和空闲窗格启动一次 Agent，不投递提示词。
+    #[cfg(feature = "herdr")]
     Start {
         agent: String,
         #[arg(long)]
@@ -29,7 +30,7 @@ enum LaunchCommand {
         #[arg(long, default_value = "[]")]
         extra_json: String,
     },
-    /// 无 Herdr 时在原生终端启动一次 Agent。
+    /// 在原生终端启动一次 Agent。
     Terminal {
         agent: String,
         #[arg(long)]
@@ -57,12 +58,16 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
     match args.command {
         LaunchCommand::Show => super::print_json(&config::load()?, json),
         LaunchCommand::Environment => {
+            #[cfg(feature = "herdr")]
             let herdr_path = app_lib::core::herdr::tools::HerdrTools::default()
                 .detect()?
                 .map(|installation| installation.path);
+            #[cfg(not(feature = "herdr"))]
+            let herdr_path: Option<String> = None;
             super::print_json(&serde_json::json!({ "herdr_path": herdr_path }), json);
         }
         LaunchCommand::Resolve { agent } => super::print_json(&config::resolve(&agent)?, json),
+        #[cfg(feature = "herdr")]
         LaunchCommand::Start {
             agent,
             session,

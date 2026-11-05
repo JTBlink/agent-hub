@@ -58,6 +58,11 @@ fn fetch_release(client: &reqwest::blocking::Client, url: &str) -> Result<Releas
 
 /// Query the public release feed using the user's configured proxy, without credentials.
 pub fn check_update(current: &str, proxy: Option<&str>) -> Result<AppUpdateInfo, AppError> {
+    // Independent products must never offer the standard product's installer.
+    // Until a separate channel is configured, use the existing no-release state.
+    if crate::product::current().product_id != "standard" {
+        return Err(AppError::not_found("APP_UPDATE_NO_RELEASE"));
+    }
     let client = build_http_client(proxy, 15);
     release_info(current, fetch_release(&client, LATEST_RELEASE_API)?)
 }

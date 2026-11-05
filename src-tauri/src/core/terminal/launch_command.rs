@@ -1,9 +1,11 @@
 //! Render literal argv for a known interactive shell; never expand user arguments.
+#[cfg(any(feature = "herdr", target_os = "macos"))]
 use anyhow::{bail, Result};
 
 pub(crate) fn quote_posix(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
+#[cfg(any(feature = "herdr", target_os = "macos"))]
 pub(crate) fn render(shell: &str, program: &str, arguments: &[String]) -> Result<String> {
     if std::iter::once(program)
         .chain(arguments.iter().map(String::as_str))

@@ -124,3 +124,38 @@ it("does not stop an instance for dev help", () => {
   expect(calls).toHaveLength(1);
   expect(calls[0].args.join(" ")).toContain("run tauri -- dev --help");
 });
+
+it("accepts product selection before the shell command and targets only its dev processes", () => {
+  const calls = [];
+  expect(
+    main(["--product", "personal", "dev", "--no-watch"], {
+      runner: fakeRunner(0, calls),
+    }),
+  ).toBe(0);
+  if (process.platform !== "win32")
+    expect(calls.shift().args).toEqual([
+      "scripts/app/stop-dev.mjs",
+      "--product",
+      "personal",
+    ]);
+  expect(calls[0].args).toEqual([
+    "run",
+    "tauri",
+    "--",
+    "dev",
+    "--no-watch",
+    "--product",
+    "personal",
+  ]);
+});
+
+it("cleans the selected product without deleting standard artifacts", () => {
+  const calls = [];
+  expect(
+    runCommand("clean", ["--product", "personal"], {
+      runner: fakeRunner(0, calls),
+    }),
+  ).toBe(0);
+  expect(calls.at(-1).args).toContain("--target-dir");
+  expect(calls.at(-1).args.at(-1)).toContain("target-products/personal-");
+});

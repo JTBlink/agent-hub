@@ -9,7 +9,8 @@ export function activeSidebarSection(pathname: string): SidebarSection | null {
   return null;
 }
 
-export type SidebarPanel = "projects" | "skills" | "search" | "herdr";
+/** Stable built-in or independently registered feature panel ID. */
+export type SidebarPanel = string;
 export function activeSidebarPanel(pathname: string): SidebarPanel | null {
   if (pathname === "/terminal" || activeSidebarSection(pathname) === "projects")
     return "projects";

@@ -1,4 +1,4 @@
-import { herdrDeliveryAdapter } from "../features/herdr/deliveryAdapter";
+import { herdrDeliveryAdapter } from "@app/herdr";
 import { PreviewHost } from "../features/preview/PreviewHost";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";

@@ -19,6 +19,11 @@ fn native_fallback_records_before_open_and_claims_the_command_only_once() {
             env!("CARGO_PKG_VERSION"),
         )
         .unwrap();
+        fs::write(
+            bridge.parent().unwrap().join(".build-info.json"),
+            serde_json::to_vec(&crate::product::current()).unwrap(),
+        )
+        .unwrap();
         let program = root.path().join("agent-fixture");
         fs::write(&program, "#!/bin/sh\nprintf '%s\\n' \"$@\" > argv.txt\n").unwrap();
         fs::set_permissions(&program, fs::Permissions::from_mode(0o700)).unwrap();

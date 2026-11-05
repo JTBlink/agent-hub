@@ -1,3 +1,4 @@
+import { featureModules } from "@app/features";
 import { createRoutesFromElements, Route } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { Layout } from "../components/Layout";
@@ -58,5 +59,14 @@ export function createAppRoutes(
       <Route path="/help/:articleId" element={<Help />} />
     </>,
   );
-  return [{ element: <Layout />, children: [...children, ...extensionRoutes] }];
+  return [
+    {
+      element: <Layout />,
+      children: [
+        ...children,
+        ...featureModules.flatMap((feature) => feature.routes ?? []),
+        ...extensionRoutes,
+      ],
+    },
+  ];
 }

@@ -1,5 +1,6 @@
 pub mod agent_launch_config;
 pub mod agent_launcher;
+pub mod agent_runtime;
 pub mod agent_usage;
 pub mod app_state;
 pub mod app_updates;
@@ -63,6 +64,7 @@ pub mod tool_service;
 
 pub mod terminal;
 
+#[cfg(feature = "herdr")]
 pub mod herdr;
 
 pub(crate) mod cli_process;

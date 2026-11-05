@@ -34,7 +34,10 @@ pub(super) fn root() -> PathBuf {
             .map(PathBuf::from)
             .unwrap_or_else(|| {
                 dirs::data_local_dir()
-                    .map(|path| path.join("com.jtstudio.agenthub/automations"))
+                    .map(|path| {
+                        path.join(crate::product::application_id())
+                            .join("automations")
+                    })
                     .unwrap_or_default()
             })
     }

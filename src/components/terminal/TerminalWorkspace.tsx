@@ -17,8 +17,8 @@ import type { Project, ToolInfo } from "../../lib/tauri";
 import { ThemedSelect } from "../ThemedSelect";
 import { TerminalPane, type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
-import { useHerdrShortcut } from "../../features/herdr/terminal/useHerdrShortcut";
-import { useHerdrSessions } from "../../features/herdr/terminal/useHerdrSessions";
+import { herdrEnabled, useHerdrShortcut } from "@app/herdr";
+import { useHerdrSessions } from "@app/herdr";
 import { cn } from "../../utils";
 import { projectWorkspaceRoute, worktreeUrl } from "../../lib/worktreeApi";
 import {
@@ -37,16 +37,16 @@ import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { TerminalStatus } from "./TerminalStatus";
 import { TerminalTaskContextPanel } from "./TerminalTaskContextPanel";
 import { TerminalNewMenu } from "./TerminalNewMenu";
-import type { HerdrAgent } from "../../features/herdr/lib/herdrAgents";
-import { herdrNavigation } from "../../features/herdr/lib/herdrControlApi";
+import type { HerdrAgent } from "@app/herdr";
+import { herdrNavigation } from "@app/herdr";
 import { useTerminalTaskRequest } from "./useTerminalTaskRequest";
-import { useHerdrAttachment } from "../../features/herdr/terminal/useHerdrAttachment";
+import { useHerdrAttachment } from "@app/herdr";
 import {
   useTerminalRunRequests,
   terminalScriptRequest,
 } from "./useTerminalRunRequests";
 import { LocalTerminalTools } from "./TerminalActionBar";
-import { HerdrTerminalTools } from "../../features/herdr/terminal/HerdrTerminalTools";
+import { HerdrTerminalTools } from "@app/herdr";
 
 interface Props {
   projects: Project[];
@@ -234,7 +234,9 @@ export function TerminalWorkspace({
     () => activeTarget.current,
     setTabs,
   );
-  const activeHerdrTarget = herdrSessions.target ?? active?.herdrTarget;
+  const activeHerdrTarget = herdrEnabled
+    ? (herdrSessions.target ?? active?.herdrTarget)
+    : undefined;
   const add = (agent?: HerdrAgent) => {
     if (!ready || !(scopedProject || selected) || count >= TERMINAL_PANE_LIMIT)
       return;

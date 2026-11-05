@@ -1,8 +1,8 @@
 import type { DevelopmentLaunch } from "./developmentPreview";
 import { Channel, invoke } from "@tauri-apps/api/core";
-import { createHerdrTerminal } from "../features/herdr/terminal/api";
-import type { HerdrAgent } from "../features/herdr/lib/herdrAgents";
-import type { HerdrTarget } from "../features/herdr/lib/herdrControlApi";
+import { herdrEnabled, createHerdrTerminal } from "@app/herdr";
+import type { HerdrAgent } from "@app/herdr";
+import type { HerdrTarget } from "@app/herdr";
 
 export interface TerminalSize {
   rows: number;
@@ -35,7 +35,7 @@ export async function createTerminal(
   await Promise.all(closingTerminals);
   const events = new Channel<TerminalEvent>();
   events.onmessage = onEvent;
-  if (herdrTarget)
+  if (herdrEnabled && herdrTarget)
     return createHerdrTerminal(
       projectId,
       worktreePath,

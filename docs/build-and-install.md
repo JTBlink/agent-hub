@@ -106,3 +106,36 @@ npm run app:clean              # 删除全部 Cargo 构建缓存，下次需要�
 - **缺少 sidecar**：通过 `npm run app:build` 或 `npm run tauri -- build` 重新构建。
 - **缓存持续增长**：先退出编译进程，再执行 `app:prune -- --dry-run`。共享依赖和增量缓存仍占空间是预期行为；确需彻底重建时使用 `app:clean`。
 - **跨平台构建失败**：Rust target 不能替代目标平台的 SDK、链接器和打包工具。优先在对应平台构建并验收。
+
+## 标准版与个人版
+
+默认构建标准版；显式选择 `personal` 构建个人版。个人版不包含 Herdr 集成，普通终端、原生 Agent 启动及其他公共能力保留。产品与 `debug`／`release` 是两个独立维度。
+
+```bash
+./agent-hub.sh build                                      # 标准版 release
+./agent-hub.sh build --product standard --debug            # 标准版 debug
+./agent-hub.sh build --product personal --debug --bundles app
+./agent-hub.sh dev --product personal                   # 个人版开发环境
+./agent-hub.sh install --dev debug --product personal   # 个人版开发 CLI
+npm run build -- --product personal                     # 只构建个人版前端
+npm run cli:build -- --product personal                 # 编译个人版 CLI
+```
+
+`--product` 可放在命令前或后；Windows 的 `agent-hub.bat` 与 npm 入口使用相同解析规则。`products/standard.json`、`products/personal.json` 是公开示例，可通过产品配置文件路径选择其他组合；当前仅支持 Herdr 的完整可选性。
+
+| 内容                         | 标准版                                                     | 个人版                                        |
+| ---------------------------- | ---------------------------------------------------------- | --------------------------------------------- |
+| 产品 ID                      | `standard`                                                 | `personal`                                    |
+| 应用名称                     | AgentHub                                                   | AgentHub Personal                             |
+| 应用 identifier              | `com.jtstudio.agenthub`                                    | `com.jtstudio.agenthub.personal`              |
+| 默认开发端口                 | 1420                                                       | 1421                                          |
+| Cargo 输出根目录             | `src-tauri/target/`                                        | `src-tauri/target-products/<产品与配置摘要>/` |
+| 前端、类型检查、sidecar 暂存 | `node_modules/.cache/agent-hub/products/<产品与配置摘要>/` | 同一父目录下的独立产品子目录                  |
+| 默认用户数据及技能内容       | `~/.agent-hub/`                                            | `~/.agent-hub-products/personal/`             |
+| CLI bridge                   | `~/.agent-hub/bin/`                                        | 独立产品数据目录中的独立 bridge 命名空间      |
+
+运行产品的 `build-info` 命令可查看实际产品 ID、功能集合、配置摘要与基础提交。CLI bridge 同时验证版本和产品构建信息，相同版本号不代表可以互换。个人版开发 CLI 不覆盖标准版的 PATH 入口。
+
+设置 `CARGO_TARGET_DIR` 时，标准版沿用该目录，其他产品使用其同级的 `<目录名>-products/`，避免共用根可执行文件或被标准清理影响。共享 Cargo 下载缓存不改变产品输出隔离。
+
+产品 ID 决定稳定的运行数据身份，配置摘要决定构建产物身份。更改某产品的功能集合不清空数据，也不自动迁移标准版资料。已有项目、外部 Agent 登录和系统资源仍按用户明确操作访问；隔离不等于复制整个系统环境。

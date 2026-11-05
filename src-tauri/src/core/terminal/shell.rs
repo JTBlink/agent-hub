@@ -1,4 +1,6 @@
-use anyhow::{bail, Result};
+#[cfg(feature = "herdr")]
+use anyhow::bail;
+use anyhow::Result;
 use portable_pty::CommandBuilder;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -7,6 +9,7 @@ use std::path::{Path, PathBuf};
 pub struct ShellIntegration {
     _files: Option<tempfile::TempDir>,
     nonce: String,
+    #[cfg(feature = "herdr")]
     kind: String,
 }
 #[derive(Clone, Default, Serialize)]
@@ -80,6 +83,7 @@ impl ShellState {
             self.tail.drain(..self.tail.len() - keep);
         }
     }
+    #[cfg(feature = "herdr")]
     pub fn command(&self, executable: &Path, arguments: &[String]) -> Result<String> {
         let integration = self.integration.as_ref().ok_or_else(|| {
             anyhow::anyhow!("Shell readiness cannot be verified; open a supported empty Shell")
@@ -131,7 +135,7 @@ pub fn prepare_shell(
     command.env("TERM", "xterm-256color");
     command.env("COLORTERM", "truecolor");
     // A nested launch must not inherit a different Herdr pane's caller identity.
-    for name in super::super::herdr::session::INHERITED_CONTEXT {
+    for name in crate::core::agent_runtime::INHERITED_CONTEXT {
         command.env_remove(name);
     }
     let mut files = None;
@@ -187,6 +191,7 @@ pub fn prepare_shell(
         ShellIntegration {
             _files: files,
             nonce,
+            #[cfg(feature = "herdr")]
             kind,
         },
     ))

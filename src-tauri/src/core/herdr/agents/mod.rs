@@ -2,29 +2,9 @@
 mod configured;
 use super::session::{Client, INHERITED_CONTEXT, SESSION};
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Copy, Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HerdrAgent {
-    Codex,
-    Claude,
-    ClaudeTeams,
-    Opencode,
-    Hermes,
-}
-
-impl HerdrAgent {
-    pub fn kind(self) -> &'static str {
-        match self {
-            Self::Codex => "codex",
-            Self::Claude | Self::ClaudeTeams => "claude",
-            Self::Opencode => "opencode",
-            Self::Hermes => "hermes",
-        }
-    }
-}
+pub use crate::core::agent_runtime::TerminalAgent as HerdrAgent;
 
 /// Attach to the new Herdr terminal before its Agent has become ready.
 pub struct AgentAttachment {

@@ -1,8 +1,10 @@
+import type { ComponentType, ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
-import { HerdrIcon } from "../features/herdr/components/HerdrIcon";
+import { featureModules } from "@app/features";
+import { productConfig } from "@app/product";
 import { activeSidebarPanel, type SidebarPanel } from "../lib/sidebarSections";
 
 type ActivityIcon =
@@ -14,13 +16,11 @@ type ActivityIcon =
   | "source-control"
   | "layers"
   | "extensions"
-  | "herdr"
   | "cloud"
   | "globe"
   | "settings-gear";
 
 function ActivityBarIcon({ name }: { name: ActivityIcon }) {
-  if (name === "herdr") return <HerdrIcon className="activity-bar-icon" />;
   return (
     <span
       className={`codicon codicon-${name} activity-bar-icon`}
@@ -131,8 +131,9 @@ export function SidebarActivityBar({
   const renderPanel = (
     panel: SidebarPanel,
     label: string,
-    icon: ActivityIcon,
+    icon: ActivityIcon | ComponentType<{ className?: string }>,
   ) => {
+    const Icon = typeof icon === "string" ? null : icon;
     const active = panelActive && selectedPanel === panel;
     return (
       <button
@@ -146,60 +147,75 @@ export function SidebarActivityBar({
         onClick={() => onSelectPanel(panel)}
         className={cn(itemClass, active ? activeClass : idleClass)}
       >
-        <ActivityBarIcon name={icon} />
+        {typeof icon === "string" ? (
+          <ActivityBarIcon name={icon} />
+        ) : (
+          Icon && <Icon className="activity-bar-icon" />
+        )}
       </button>
     );
   };
 
+  const items: Record<string, () => ReactNode> = {
+    projects: () => renderPanel("projects", t("sidebar.projects"), "files"),
+    search: () => renderPanel("search", t("workspaceSearch.title"), "search"),
+    git: () =>
+      renderLink({ name: "Git", path: "/git", icon: "source-control" }),
+    tasks: () =>
+      renderLink({ name: t("tasks.title"), path: "/tasks", icon: "checklist" }),
+    automation: () =>
+      renderLink({
+        name: t("automation.title"),
+        path: "/automation",
+        icon: "clock",
+      }),
+    preview: () =>
+      renderLink({ name: t("preview.title"), path: "/preview", icon: "globe" }),
+    skills: () => renderPanel("skills", t("sidebar.skillPanel"), "layers"),
+    discover: () =>
+      renderLink({
+        name: t("discovery.title"),
+        path: "/discover",
+        icon: "extensions",
+      }),
+    dashboard: () =>
+      renderLink({ name: t("sidebar.dashboard"), path: "/", icon: "layout" }),
+    backup: () =>
+      renderLink({ name: t("sidebar.backup"), path: "/backup", icon: "cloud" }),
+    settings: () =>
+      renderLink({
+        name: t("sidebar.settings"),
+        path: "/settings",
+        icon: "settings-gear",
+        update: true,
+      }),
+  };
+  for (const feature of featureModules) {
+    items[feature.id] = () =>
+      renderPanel(
+        feature.sidebar.id,
+        t(feature.sidebar.labelKey),
+        feature.sidebar.icon,
+      );
+  }
+  const renderItem = (id: string) => {
+    const render = items[id];
+    return render ? (
+      <span key={id} className="contents">
+        {render()}
+      </span>
+    ) : null;
+  };
   return (
     <nav
       aria-label={t("sidebar.navigation")}
       className="workbench-activity-bar flex shrink-0 flex-col bg-bg-secondary"
     >
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
-        {renderPanel("projects", t("sidebar.projects"), "files")}
-        {renderPanel("search", t("workspaceSearch.title"), "search")}
-        {renderLink({ name: "Git", path: "/git", icon: "source-control" })}
-        {renderLink({
-          name: t("tasks.title"),
-          path: "/tasks",
-          icon: "checklist",
-        })}
-        {renderLink({
-          name: t("automation.title"),
-          path: "/automation",
-          icon: "clock",
-        })}
-        {renderLink({
-          name: t("preview.title"),
-          path: "/preview",
-          icon: "globe",
-        })}
-        {renderPanel("skills", t("sidebar.skillPanel"), "layers")}
-        {renderLink({
-          name: t("discovery.title"),
-          path: "/discover",
-          icon: "extensions",
-        })}
-        {renderPanel("herdr", "Herdr", "herdr")}
+        {productConfig.sidebar.primary.map(renderItem)}
       </div>
       <div className="shrink-0">
-        {renderLink({
-          name: t("sidebar.dashboard"),
-          path: "/",
-          icon: "layout",
-        })}
-        {renderLink({
-          name: t("sidebar.backup"),
-          path: "/backup",
-          icon: "cloud",
-        })}
-        {renderLink({
-          name: t("sidebar.settings"),
-          path: "/settings",
-          icon: "settings-gear",
-          update: true,
-        })}
+        {productConfig.sidebar.bottom.map(renderItem)}
       </div>
     </nav>
   );

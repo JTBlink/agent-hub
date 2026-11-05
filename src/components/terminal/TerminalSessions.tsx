@@ -9,7 +9,7 @@ import {
 } from "../../lib/terminalLayout";
 import { compactHomePath, cn } from "../../utils";
 import { getAppScale } from "../../lib/textScale";
-import { herdrAgentLabel } from "../../features/herdr/lib/herdrAgents";
+import { herdrAgentLabel } from "@app/herdr";
 import { terminalTabName } from "../../lib/terminalTabName";
 
 export function TerminalSessions({

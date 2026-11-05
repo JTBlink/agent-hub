@@ -15,8 +15,6 @@ fn credential_cache() -> &'static super::credential_cache::CredentialCache {
     CACHE.get_or_init(Default::default)
 }
 
-const KEYRING_SERVICE: &str = "agent-hub-git-backup";
-
 /// Debug binaries are ad-hoc signed on macOS. Their code signature changes on
 /// every rebuild, so background reads can repeatedly trigger a Keychain ACL
 /// prompt. Keep legacy Keychain migration off in development unless explicitly opted in.
@@ -119,7 +117,8 @@ pub fn https_host(url: &str) -> Option<String> {
 }
 
 fn keyring_entry(host: &str) -> Result<keyring::Entry> {
-    keyring::Entry::new(KEYRING_SERVICE, host).context("Failed to open keychain entry")
+    keyring::Entry::new(&crate::product::credential_service(), host)
+        .context("Failed to open keychain entry")
 }
 
 fn cache_key(host: &str) -> String {

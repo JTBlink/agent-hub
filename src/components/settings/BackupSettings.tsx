@@ -5,8 +5,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { SkillsDirectorySetting } from "../../components/SkillsDirectorySetting";
-import { ToggleSwitch } from "../../components/ToggleSwitch";
+import { SkillsDirectorySetting } from "../SkillsDirectorySetting";
+import { ToggleSwitch } from "../ToggleSwitch";
 import * as api from "../../lib/tauri";
 import { actionButtonClass, fieldClass } from "./settingsStyles";
 

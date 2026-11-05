@@ -1,0 +1,18 @@
+{
+  "id": "personal",
+  "features": [],
+  "sidebar": {
+    "primary": [
+      "projects",
+      "search",
+      "git",
+      "tasks",
+      "automation",
+      "preview",
+      "skills",
+      "discover"
+    ],
+    "bottom": ["dashboard", "backup", "settings"],
+    "defaultPanel": "skills"
+  }
+}

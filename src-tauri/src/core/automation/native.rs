@@ -39,7 +39,8 @@ pub(super) fn source() -> &'static str {
 
 pub(super) fn label(task: &ManagedAutomation) -> String {
     format!(
-        "com.jtstudio.agenthub.automation.{}",
+        "{}.automation.{}",
+        crate::product::application_id(),
         task.id.trim_start_matches("agent_hub:")
     )
 }

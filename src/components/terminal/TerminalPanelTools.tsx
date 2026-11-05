@@ -1,7 +1,7 @@
 import { Download, LayoutGrid, Layers, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
-import { HerdrIcon } from "../../features/herdr/components/HerdrIcon";
+import { herdrEnabled, HerdrIcon } from "@app/herdr";
 
 interface Props {
   showTerminalActions?: boolean;
@@ -58,7 +58,7 @@ export function TerminalPanelTools({
     : t("terminal.herdrLaunch");
   return (
     <div className="flex shrink-0 items-center gap-1">
-      {showTerminalActions && (
+      {showTerminalActions && herdrEnabled && (
         <>
           <button
             type="button"

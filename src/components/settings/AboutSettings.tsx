@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { ModuleReleaseLink } from "../../components/ModuleReleaseLink";
+import { ModuleReleaseLink } from "../ModuleReleaseLink";
 import { WEBSITE_URL } from "../../lib/distribution";
 import { actionButtonClass } from "./settingsStyles";
 import { useSettingsDiagnostics } from "./useSettingsDiagnostics";

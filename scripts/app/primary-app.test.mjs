@@ -180,3 +180,46 @@ it("keeps the desktop dev sibling CLI current before publishing", () => {
   expect(copies[1][0]).toMatch(/aarch64-apple-darwin\/debug\/agent-hub-cli$/);
   expect(copies[1][1]).toMatch(/target\/debug\/agent-hub-cli$/);
 });
+
+it("builds a selected product with matching frontend, sidecar and desktop inputs", () => {
+  const calls = [];
+  let sidecar;
+  const runner = (command, args, options = {}) => {
+    calls.push({ command, args, env: options.env });
+    return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+  };
+  const prepare = (
+    _target,
+    _release,
+    _runner,
+    _filesystem,
+    _publish,
+    _host,
+    product,
+  ) => {
+    sidecar = product;
+    return 0;
+  };
+  expect(
+    main(
+      ["build", "--product", "personal", "--debug"],
+      runner,
+      prepare,
+      () => {},
+    ),
+  ).toBe(0);
+  expect(sidecar.id).toBe("personal");
+  expect(sidecar.features).toEqual([]);
+  const frontend = calls.find(
+    (call) => call.args.includes("build") && call.command === "npm",
+  );
+  const desktop = calls.find((call) =>
+    call.args.some((arg) => arg.endsWith("tauri.js")),
+  );
+  expect(frontend.env.AGENT_HUB_PRODUCT_HASH).toBe(sidecar.hash);
+  expect(desktop.env.AGENT_HUB_PRODUCT_HASH).toBe(sidecar.hash);
+  expect(desktop.args).toContain("--no-default-features");
+  expect(desktop.args).not.toContain("--product");
+  expect(sidecar.frontendDist).toContain("personal-");
+  expect(sidecar.binariesDir).toContain("personal-");
+});

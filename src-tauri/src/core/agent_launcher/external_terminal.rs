@@ -185,7 +185,7 @@ pub fn run(id: &str) -> Result<i32> {
     command
         .args(&request.launch.arguments)
         .current_dir(&request.cwd);
-    for name in crate::core::herdr::session::INHERITED_CONTEXT {
+    for name in crate::core::agent_runtime::INHERITED_CONTEXT {
         command.env_remove(name);
     }
     let result = command.status();

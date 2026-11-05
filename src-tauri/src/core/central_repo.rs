@@ -105,11 +105,9 @@ pub fn home_base_dir() -> PathBuf {
         .unwrap()
         .clone()
     {
-        return path.join(".agent-hub");
+        return crate::product::home_directory(&path);
     }
-    dirs::home_dir()
-        .expect("Cannot determine home directory")
-        .join(".agent-hub")
+    crate::product::home_directory(&dirs::home_dir().expect("Cannot determine home directory"))
 }
 
 #[cfg(test)]
@@ -325,7 +323,7 @@ pub fn default_skills_dir() -> PathBuf {
         .unwrap()
         .clone()
     {
-        return home.join(".agent-hub/skills");
+        return crate::product::home_directory(&home).join("skills");
     }
     super::tool_adapters::shared_skills_dir()
 }
@@ -333,6 +331,9 @@ pub fn default_skills_dir() -> PathBuf {
 /// The pre-2026 default Skills root. It remains a migration source for
 /// links created before the library moved under `~/.agent-hub`.
 pub(crate) fn legacy_default_skills_dir() -> PathBuf {
+    if crate::product::current().product_id != "standard" {
+        return default_skills_dir();
+    }
     home_base_dir()
         .parent()
         .map(|home| home.join(".agents/skills"))

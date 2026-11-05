@@ -52,6 +52,8 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 显示产品身份及编译时启用的功能。
+    BuildInfo,
     /// 构建入口内部使用：验证并发布当前 CLI。
     #[command(hide = true)]
     PublishCliBridge,
@@ -870,6 +872,10 @@ fn main() {
 }
 
 fn run(cli: Cli) -> anyhow::Result<()> {
+    if matches!(cli.command, Commands::BuildInfo) {
+        print_json(&app_lib::product::current(), cli.json);
+        return Ok(());
+    }
     if matches!(cli.command, Commands::PublishCliBridge) {
         let path = app_lib::core::cli_bridge::publish_current(env!("CARGO_PKG_VERSION"))?;
         print_json(&serde_json::json!({"ok":true,"path":path}), cli.json);
@@ -927,6 +933,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
+        Commands::BuildInfo => unreachable!("handled before opening the store"),
         Commands::PublishCliBridge => unreachable!("handled before opening the store"),
         Commands::Hosts(_) => unreachable!("handled before opening the store"),
         Commands::Preview(args) => preview_cli::run(&args, cli.json),

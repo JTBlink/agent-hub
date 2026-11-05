@@ -4,7 +4,13 @@ import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { builtCliPath, publishBuiltCli } from "./cli-publish.mjs";
-import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
+import { cleanupBuildCache } from "./build-cache.mjs";
+import {
+  loadProduct,
+  prepareProduct,
+  productArguments,
+  cargoProductArguments,
+} from "./product/config.mjs";
 
 function canRun(command, args = ["--version"]) {
   const result = spawnSync(command, args, { stdio: "ignore" });
@@ -44,6 +50,20 @@ function resolveCargo() {
 /** Use one persistent target directory for builds, runs and Cargo installs. */
 export function cliBuildPlan(mode, extraArgs, env = process.env) {
   if (!["cli", "build", "install"].includes(mode)) return null;
+  const selected = productArguments(
+    extraArgs,
+    env.AGENT_HUB_PRODUCT_CONFIG || env.AGENT_HUB_PRODUCT || "standard",
+  );
+  extraArgs = selected.args;
+  if (
+    mode !== "cli" &&
+    extraArgs.some(
+      (arg) =>
+        arg === "--features" || arg === "-f" || arg.startsWith("--features="),
+    )
+  )
+    throw new Error("Select Cargo features through --product");
+  const product = loadProduct(selected.selection, { env });
   // Arguments after `cli` belong to the application, not to Cargo.
   const targetIndex = mode === "cli" ? -1 : extraArgs.indexOf("--target-dir");
   const targetOption =
@@ -54,13 +74,14 @@ export function cliBuildPlan(mode, extraArgs, env = process.env) {
     ROOT,
     targetOption?.slice(13) ??
       (targetIndex >= 0 ? extraArgs[targetIndex + 1] : undefined) ??
-      cargoTargetDir(ROOT, env),
+      product.targetDir,
   );
   const baseArgs = [
     "--manifest-path",
     "src-tauri/Cargo.toml",
     "--bin",
     "agent-hub-cli",
+    ...cargoProductArguments(product),
   ];
   const args =
     mode === "cli"
@@ -75,9 +96,18 @@ export function cliBuildPlan(mode, extraArgs, env = process.env) {
             "agent-hub-cli",
             "--locked",
             "--force",
+            ...(product.id === "standard"
+              ? []
+              : ["--root", resolve(product.generatedDir, "cli-install")]),
+            ...cargoProductArguments(product),
             ...extraArgs,
           ];
-  return { args, targetDir, ...(mode === "cli" ? { runArgs: extraArgs } : {}) };
+  return {
+    args,
+    targetDir,
+    product,
+    ...(mode === "cli" ? { runArgs: extraArgs } : {}),
+  };
 }
 
 export function main(
@@ -96,6 +126,14 @@ export function main(
     console.error(`unknown mode: ${mode}`);
     return 2;
   }
+  prepareProduct(plan.product);
+  env = {
+    ...plan.product.environment,
+    CARGO_TARGET_DIR: plan.targetDir,
+    TAURI_CONFIG: JSON.stringify({
+      build: { frontendDist: plan.product.frontendDist },
+    }),
+  };
   cargo ??= resolveCargo();
   if (!cargo) return 127;
   const before = Date.now();

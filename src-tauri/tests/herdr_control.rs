@@ -1,3 +1,4 @@
+#![cfg(feature = "herdr")]
 #![cfg(unix)]
 use app_lib::core::{herdr::control::HerdrControl, skill_store::SkillStore};
 use serde_json::json;

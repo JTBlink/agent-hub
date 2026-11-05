@@ -12,7 +12,7 @@ import type {
   Project,
   ToolInfo,
 } from "../../lib/tauri";
-import { getHerdrInventory } from "../../features/herdr/lib/herdrControlApi";
+import { herdrEnabled, getHerdrInventory } from "@app/herdr";
 import { automationAgentOptions } from "../../lib/automationAgents";
 import { taskContext } from "../../lib/taskContext";
 import { composeTaskPrompt } from "../../lib/taskPrompt";
@@ -287,32 +287,34 @@ export function TaskStartDialog({
                 {project?.name ?? projectId}
               </p>
             </div>
-            <label className="block space-y-1">
-              <span>{t("tasks.launch.execution")}</span>
-              <ThemedSelect
-                aria-label={t("herdr.session")}
-                value={session}
-                disabled={locked}
-                className="w-full"
-                onChange={(event) =>
-                  settings.update({ session: event.target.value })
-                }
-              >
-                <option value="">{t("tasks.launch.managedSession")}</option>
-                {!sessionAvailable && (
-                  <option value={session} disabled>
-                    {session} · {t("tasks.launch.unavailable")}
-                  </option>
-                )}
-                {inventory?.sessions
-                  .filter((session) => session.running)
-                  .map((session) => (
-                    <option key={session.name} value={session.name}>
-                      {session.name}
+            {herdrEnabled && (
+              <label className="block space-y-1">
+                <span>{t("tasks.launch.execution")}</span>
+                <ThemedSelect
+                  aria-label={t("herdr.session")}
+                  value={session}
+                  disabled={locked}
+                  className="w-full"
+                  onChange={(event) =>
+                    settings.update({ session: event.target.value })
+                  }
+                >
+                  <option value="">{t("tasks.launch.managedSession")}</option>
+                  {!sessionAvailable && (
+                    <option value={session} disabled>
+                      {session} · {t("tasks.launch.unavailable")}
                     </option>
-                  ))}
-              </ThemedSelect>
-            </label>
+                  )}
+                  {inventory?.sessions
+                    .filter((session) => session.running)
+                    .map((session) => (
+                      <option key={session.name} value={session.name}>
+                        {session.name}
+                      </option>
+                    ))}
+                </ThemedSelect>
+              </label>
+            )}
             <div className="flex items-center gap-2 rounded border border-border-subtle bg-bg-secondary p-2">
               <span className="min-w-0 flex-1 break-words text-xs">
                 {task.provider === "github" ? "GitHub" : "GitLab"} ·{" "}
@@ -519,7 +521,7 @@ export function TaskStartDialog({
             {t("agentLaunch.nativeFallback")}
           </p>
         )}
-        {inventory?.installed === false && (
+        {herdrEnabled && inventory?.installed === false && (
           <button
             type="button"
             className="app-button-secondary text-xs"

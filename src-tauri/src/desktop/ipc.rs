@@ -4,6 +4,7 @@ use crate::commands;
 
 pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     commands::ipc::main_only(tauri::generate_handler![
+        commands::get_build_info,
         commands::agent_usage::get_agent_usage,
         commands::agent_launch::agent_launch_settings,
         commands::agent_launch::task_native_agent_launch,
@@ -12,22 +13,38 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::system_permissions::open_system_permission_settings,
         commands::agent_usage::consume_codex_reset_credit,
         commands::system_load::get_system_load,
+        #[cfg(feature = "herdr")]
         commands::herdr::tools::herdr_detect,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_inventory,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_delete_session,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_restart_session,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_prepare_session,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_sidebar_keys,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_snapshot,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_open,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_ensure,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_action,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_start_agent,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_terminal_create,
+        #[cfg(feature = "herdr")]
         commands::herdr::tools::herdr_install,
+        #[cfg(feature = "herdr")]
         commands::herdr::tools::herdr_check_update,
+        #[cfg(feature = "herdr")]
         commands::herdr::tools::herdr_update,
         commands::terminal::terminal_launch_state,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::terminal_launch_herdr,
         commands::task_browser::task_bindings,
         commands::task_browser::task_save_binding,
@@ -37,6 +54,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::task_browser::task_detail,
         commands::task_browser::task_update_issue,
         commands::task_browser::task_add_comment,
+        #[cfg(feature = "herdr")]
         commands::task_browser::task_prepare_herdr_workspace,
         commands::task_browser::task_cancel,
         commands::terminal::terminal_project_directory,
@@ -212,6 +230,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         // Projects
         commands::project_worktrees::get_project_worktrees,
         commands::project_worktrees::create_project_worktree,
+        #[cfg(feature = "herdr")]
         commands::herdr::control::herdr_delete_worktree,
         commands::project_worktrees::get_worktree_files,
         commands::project_worktrees::read_worktree_file,

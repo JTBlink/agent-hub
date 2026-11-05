@@ -136,3 +136,30 @@ it("stops managed preview browsers with their desktop while preserving Agent and
     ).map((item) => item.pid),
   ).toEqual([50, 51]);
 });
+
+it("restarts only the selected product while preserving other product launchers", () => {
+  const root = "/workspace/demo";
+  const commands = [
+    "node scripts/app/build.mjs dev",
+    "node scripts/app/build.mjs dev --product personal",
+    `${root}/src-tauri/target/products/personal-0123456789ab/debug/agent-hub`,
+    "node /workspace/demo/node_modules/.bin/vite --port 1421 --strictPort",
+    "node /workspace/demo/node_modules/.bin/vite --port 1420 --strictPort",
+  ];
+  const processes = commands.map((command, index) => ({
+    pid: index + 10,
+    ppid: 1,
+    stat: "S",
+    command,
+  }));
+  const directories = new Map(processes.map((item) => [item.pid, root]));
+  expect(
+    devProcesses(processes, directories, root, 999).map((item) => item.pid),
+  ).toEqual([10, 14]);
+  expect(
+    devProcesses(processes, directories, root, 999, {
+      id: "personal",
+      devPort: 1421,
+    }).map((item) => item.pid),
+  ).toEqual([11, 12, 13]);
+});

@@ -3009,5 +3009,8 @@
     },
     "addCustom": "Add custom",
     "more": "More"
+  },
+  "product": {
+    "buildMismatch": "Application resources do not match this product build. Rebuild or reinstall the application."
   }
 }

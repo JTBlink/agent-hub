@@ -14,12 +14,9 @@ import { toast } from "sonner";
 import { bindTerminalTextInput } from "./terminalKeyboard";
 import { useTranslation } from "react-i18next";
 import * as api from "../../lib/tauri";
-import type { HerdrTarget } from "../../features/herdr/lib/herdrControlApi";
+import type { HerdrTarget } from "@app/herdr";
 import { getErrorMessage } from "../../lib/error";
-import {
-  herdrAgentLabel,
-  type HerdrAgent,
-} from "../../features/herdr/lib/herdrAgents";
+import { herdrAgentLabel, type HerdrAgent } from "@app/herdr";
 import { createTerminalInputQueue } from "../../lib/terminalInput";
 import { terminalAppearance, terminalTheme } from "./terminalAppearance";
 import { loadTerminalFonts } from "../../fonts";

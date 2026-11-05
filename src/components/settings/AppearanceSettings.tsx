@@ -3,7 +3,7 @@ import { SettingsForm } from "./SettingsForm";
 import { Monitor, Moon, Sun, Type } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ToggleSwitch } from "../../components/ToggleSwitch";
+import { ToggleSwitch } from "../ToggleSwitch";
 import { useThemeContext } from "../../context/ThemeContext";
 import type { Theme } from "../../hooks/useTheme";
 import * as api from "../../lib/tauri";

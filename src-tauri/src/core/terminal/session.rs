@@ -274,6 +274,7 @@ impl Session {
             .state
             .clone()
     }
+    #[cfg(feature = "herdr")]
     pub fn launch_herdr(&self, executable: &std::path::Path, revision: u64) -> Result<bool> {
         let mut shell = self.shell.lock().unwrap_or_else(|e| e.into_inner());
         if shell.state.herdr_active {

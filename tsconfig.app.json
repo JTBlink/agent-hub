@@ -6,6 +6,11 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "types": ["vite/client"],
+    "paths": {
+      "@app/features": ["./src/app/features/default.ts"],
+      "@app/herdr": ["./src/features/herdr/integration.ts"],
+      "@app/product": ["./src/app/product/default.ts"]
+    },
     "skipLibCheck": true,
 
     /* Bundler mode */

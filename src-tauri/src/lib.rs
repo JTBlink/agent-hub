@@ -4,6 +4,8 @@ mod desktop;
 mod smoke;
 mod window_layout;
 
+pub mod product;
+
 pub mod commands;
 pub mod core;
 

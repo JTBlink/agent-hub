@@ -139,6 +139,7 @@ impl TerminalManager {
     pub fn launch_state(&self, owner: &str, id: &str) -> Result<LaunchState> {
         Ok(self.session(owner, id)?.launch_state())
     }
+    #[cfg(feature = "herdr")]
     pub fn launch_herdr(
         &self,
         owner: &str,

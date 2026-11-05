@@ -24,15 +24,24 @@ pub struct NativeLaunchOutcome {
 #[tauri::command]
 pub async fn task_native_agent_launch(
     store: tauri::State<'_, std::sync::Arc<crate::core::skill_store::SkillStore>>,
-    tools: tauri::State<'_, std::sync::Arc<crate::core::herdr::tools::HerdrTools>>,
+    app: tauri::AppHandle,
     project_id: String,
     path: String,
     kind: String,
     prompt: String,
 ) -> Result<Option<NativeLaunchOutcome>, AppError> {
     let store = store.inner().clone();
-    let tools = tools.inner().clone();
+    #[cfg(feature = "herdr")]
+    let tools = {
+        use tauri::Manager;
+        app.state::<std::sync::Arc<crate::core::herdr::tools::HerdrTools>>()
+            .inner()
+            .clone()
+    };
+    #[cfg(not(feature = "herdr"))]
+    let _ = app;
     tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(feature = "herdr")]
         if tools.detect().map_err(AppError::io)?.is_some() { return Ok(None); }
         let cwd = crate::core::project_worktrees::directory(&store, &project_id, Some(&path)).map_err(AppError::io)?;
         let launch = config::resolve(&kind).map_err(AppError::io)?;

@@ -15,7 +15,7 @@ import {
 import { automationHerdrConfig, automationPromptFile } from "../lib/automation";
 import { getErrorMessage } from "../lib/error";
 import { ThemedSelect } from "./ThemedSelect";
-import { AutomationHerdrFields } from "../features/herdr/components/AutomationHerdrFields";
+import { herdrEnabled, AutomationHerdrFields } from "@app/herdr";
 
 type Execution = Pick<AutomationDraft, "provider" | "content" | "files">;
 const execution = ({
@@ -45,13 +45,15 @@ export function AutomationAgentField({
     draft.provider === "hermes" ? "native-hermes" : (config?.agent ?? "");
   const [pending, setPending] = useState(false);
   const [tools, setTools] = useState<ToolInfo[]>([]);
-  const choices = automationAgentOptions(tools).map((tool) => ({
-    ...tool,
-    value:
-      draft.provider === "hermes" && tool.kind === "hermes"
-        ? "native-hermes"
-        : tool.kind,
-  }));
+  const choices = automationAgentOptions(tools)
+    .filter((tool) => herdrEnabled || tool.kind === "hermes")
+    .map((tool) => ({
+      ...tool,
+      value:
+        (!herdrEnabled || draft.provider === "hermes") && tool.kind === "hermes"
+          ? "native-hermes"
+          : tool.kind,
+    }));
   const selected = choices.find((tool) => tool.value === agent);
   const configured = tools.find(
     (tool) =>
@@ -257,7 +259,7 @@ export function AutomationAgentField({
             : "automation.noAgentHelp",
         )}
       </p>
-      {config && (
+      {herdrEnabled && config && (
         <details className="pt-2">
           <summary className="cursor-pointer text-xs font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
             {t("automation.advanced")}

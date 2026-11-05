@@ -31,6 +31,7 @@ pub mod local_cleanup;
 
 pub mod terminal;
 
+#[cfg(feature = "herdr")]
 pub mod herdr;
 
 pub mod task_browser;
@@ -43,3 +44,8 @@ pub mod preview_cookies;
 pub mod preview_native;
 
 pub mod system_permissions;
+
+#[tauri::command]
+pub fn get_build_info() -> crate::product::BuildInfo {
+    crate::product::current()
+}
