@@ -1,3 +1,4 @@
+import { HerdrAgentSettings } from "./HerdrAgentSettings";
 import { useTranslation } from "react-i18next";
 import { ToggleSwitch } from "../../../components/ToggleSwitch";
 import { SidebarSettingsPage } from "../../../components/SidebarSettingsPage";
@@ -36,6 +37,7 @@ export function HerdrSettingsPanel({
           {t("herdr.settingsFailed")}
         </p>
       )}
+      <HerdrAgentSettings />
     </SidebarSettingsPage>
   );
 }

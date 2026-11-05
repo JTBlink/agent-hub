@@ -718,3 +718,24 @@ fn project_shortcut_reuses_and_attaches_to_a_matching_pane_in_a_mixed_workspace(
     assert!(!calls.contains("workspace create"));
     assert!(calls.contains("tab focus w1:t1"));
 }
+
+#[test]
+fn claude_teams_uses_the_shared_start_flow_with_environment_on_the_new_pane() {
+    use app_lib::core::herdr::control::NewAgent;
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    fs::create_dir(&directory).unwrap();
+    let cli = fake_cli(root.path(), &directory);
+    let control = HerdrControl::new(cli.clone());
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let opened = control.open(&store, "default", "w1", None).unwrap();
+    let input: NewAgent = serde_json::from_value(
+        json!({"kind":"claude","name":"teams","direction":"right","prompt":"","teams":true}),
+    )
+    .unwrap();
+    // The fixture intentionally returns no split pane; no Agent is launched after that failure.
+    let failure = control.start_agent(&opened.target, input).err().expect("fixture has no split pane");
+    let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
+    assert!(calls.contains("--env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"), "{failure:#}");
+    assert!(!calls.contains("agent start"));
+}

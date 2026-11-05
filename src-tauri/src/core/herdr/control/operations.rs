@@ -96,13 +96,14 @@ impl HerdrControl {
         text: Option<&str>,
     ) -> Result<ActionResult> {
         let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
-        self.action_locked(target, action, text)
+        self.action_locked(target, action, text, false)
     }
     fn action_locked(
         &self,
         target: &Target,
         action: Action,
         text: Option<&str>,
+        teams: bool,
     ) -> Result<ActionResult> {
         let snapshot = self.snapshot(&target.session)?;
         let pane = self.verify(
@@ -198,24 +199,24 @@ impl HerdrControl {
                         10,
                     )?
                 } else {
-                    self.call(
-                        Some(&target.session),
-                        &[
-                            "pane",
-                            "split",
-                            &target.pane_id,
-                            "--direction",
-                            if matches!(action, Action::SplitDown) {
-                                "down"
-                            } else {
-                                "right"
-                            },
-                            "--cwd",
-                            cwd,
-                            "--no-focus",
-                        ],
-                        10,
-                    )?
+                    let mut args = vec![
+                        "pane",
+                        "split",
+                        &target.pane_id,
+                        "--direction",
+                        if matches!(action, Action::SplitDown) {
+                            "down"
+                        } else {
+                            "right"
+                        },
+                        "--cwd",
+                        cwd,
+                        "--no-focus",
+                    ];
+                    if teams {
+                        args.extend(["--env", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"]);
+                    }
+                    self.call(Some(&target.session), &args, 10)?
                 };
                 let p = value
                     .get("root_pane")
@@ -255,6 +256,9 @@ impl HerdrControl {
         {
             bail!("Invalid Agent kind")
         }
+        if input.teams && input.kind != "claude" {
+            bail!("Agent Teams requires Claude")
+        }
         let launch = crate::core::agent_launch_config::resolve(&input.kind)?;
         if input.prompt.len() > 32 * 1024 {
             bail!("Initial task exceeds 32 KiB")
@@ -274,7 +278,7 @@ impl HerdrControl {
             Action::SplitRight
         };
         let pane = self
-            .action_locked(target, split, None)?
+            .action_locked(target, split, None, input.teams)?
             .target
             .context("New Shell pane is unavailable")?;
         if let Err(error) = super::super::agents::start_configured(
@@ -312,7 +316,9 @@ impl HerdrControl {
             }
         };
         if !input.prompt.trim().is_empty() {
-            if let Err(error) = self.action_locked(&current, Action::Prompt, Some(&input.prompt)) {
+            if let Err(error) =
+                self.action_locked(&current, Action::Prompt, Some(&input.prompt), false)
+            {
                 return Ok(StartedAgent { target:current, warning:Some(format!("{error}; Agent was created, but initial task delivery is uncertain. Inspect output before sending again")) });
             }
         }

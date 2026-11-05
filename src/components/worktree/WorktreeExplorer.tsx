@@ -9,6 +9,7 @@ import { ChevronRight, CopyMinus, Loader2, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   getWorktreeFiles,
+  WORKTREE_FILES_CHANGED,
   type WorktreeFileEntry,
 } from "../../lib/worktreeApi";
 import { getErrorMessage } from "../../lib/error";
@@ -49,6 +50,20 @@ export function WorktreeExplorer(props: Props) {
   const [collapse, setCollapse] = useState(0);
   const [open, setOpen] = useState(true);
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const changed = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      if (
+        event.detail?.projectId === props.projectId &&
+        event.detail?.worktreePath === props.worktreePath
+      ) {
+        setRevision((value) => value + 1);
+        setOpen(true);
+      }
+    };
+    window.addEventListener(WORKTREE_FILES_CHANGED, changed);
+    return () => window.removeEventListener(WORKTREE_FILES_CHANGED, changed);
+  }, [props.projectId, props.worktreePath]);
   const refresh = () => {
     setRevision((value) => value + 1);
     window.dispatchEvent(new Event("project-git-changed"));

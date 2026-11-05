@@ -31,6 +31,7 @@ export async function createTerminal(
   scriptPath?: string,
   development?: DevelopmentLaunch,
   nativePrompt?: string,
+  nativeAgent = false,
 ) {
   // A tab can be closed and replaced before its PTY close IPC has completed.
   await Promise.all(closingTerminals);
@@ -49,8 +50,8 @@ export async function createTerminal(
     worktreePath,
     size,
     events,
-    ...(agent && nativePrompt !== undefined
-      ? { launch: { kind: "native_agent", agent, prompt: nativePrompt } }
+    ...(agent && (nativeAgent || nativePrompt !== undefined)
+      ? { launch: { kind: "native_agent", agent, prompt: nativePrompt ?? "" } }
       : agent
         ? { launch: { kind: "agent", agent } }
         : scriptPath

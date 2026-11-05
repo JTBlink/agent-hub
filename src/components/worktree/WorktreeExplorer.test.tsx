@@ -7,7 +7,10 @@ import { WorktreeExplorer } from "./WorktreeExplorer";
 import { getWorktreeFiles } from "../../lib/worktreeApi";
 import type { GitFile } from "../../lib/gitApi";
 
-vi.mock("../../lib/worktreeApi", () => ({ getWorktreeFiles: vi.fn() }));
+vi.mock("../../lib/worktreeApi", async (original) => ({
+  ...(await original<typeof import("../../lib/worktreeApi")>()),
+  getWorktreeFiles: vi.fn(),
+}));
 vi.mock("../../hooks/useWorktreeDocument", () => ({
   hasPendingWorktreeDocument: vi.fn(),
 }));
@@ -205,4 +208,33 @@ it("shows loading beside the expanded folder without adding a loading text row",
   );
   expect(folder.querySelector('[role="status"]')).toBeNull();
   expect(host.querySelector('[title="src/example.ts"]')).not.toBeNull();
+});
+
+it("refreshes newly created files only for the matching checkout", async () => {
+  await act(async () =>
+    root.render(
+      <MemoryRouter>
+        <WorktreeExplorer
+          projectId="demo"
+          worktreePath="/projects/demo"
+          onSelect={() => {}}
+        />
+      </MemoryRouter>,
+    ),
+  );
+  vi.mocked(getWorktreeFiles).mockResolvedValue([
+    { name: "notes.md", path: "notes.md", is_dir: false, is_symlink: false },
+  ]);
+  const changed = async (projectId: string) =>
+    act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("agent-hub:worktree-files-changed", {
+          detail: { projectId, worktreePath: "/projects/demo" },
+        }),
+      );
+    });
+  await changed("other");
+  expect(host.textContent).not.toContain("notes.md");
+  await changed("demo");
+  expect(host.textContent).toContain("notes.md");
 });

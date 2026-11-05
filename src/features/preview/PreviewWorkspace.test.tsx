@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { PreviewWorkspace } from "./PreviewWorkspace";
 import { previewApi } from "./api";
+import { queuePreviewWeb } from "./shared/openRequests";
 import type { BrowserSurfaceProps } from "./web/types";
 
 const t = (key: string) => key;
@@ -39,7 +40,14 @@ vi.mock("./web/BrowserSurface", () => ({
     useEffect(() => {
       ready(`page:${tabId}`);
     }, [tabId]);
-    return <output data-surface={props.tabId}>{props.address}</output>;
+    return (
+      <output
+        data-surface={props.tabId}
+        data-viewport={JSON.stringify(props.viewport)}
+      >
+        {props.address}
+      </output>
+    );
   },
 }));
 it("starts with annotations hidden, toggles them from the toolbar and docks the current page inspector with F12", async () => {
@@ -179,6 +187,34 @@ it("toggles a web page between its preserved browser surface and read-only HTML"
     ).toBe(false);
   } finally {
     await act(async () => root.unmount());
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("applies a queued mobile viewport only to its new browser tab", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.clear();
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const viewport = { width: 390, height: 844, mobile: true };
+  try {
+    await act(async () => root.render(<PreviewWorkspace shown />));
+    await act(async () => queuePreviewWeb("about:blank", "default", viewport));
+    expect(
+      JSON.parse(
+        host.querySelector<HTMLElement>("[data-surface]")!.dataset.viewport!,
+      ),
+    ).toEqual(viewport);
+    await act(async () => queuePreviewWeb("about:blank"));
+    const surfaces = host.querySelectorAll<HTMLElement>("[data-surface]");
+    expect(surfaces).toHaveLength(2);
+    expect(JSON.parse(surfaces[0].dataset.viewport!)).toEqual(viewport);
+    expect(JSON.parse(surfaces[1].dataset.viewport!)).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
     localStorage.clear();
     vi.unstubAllGlobals();
   }

@@ -1,3 +1,4 @@
+import { NewMarkdownDialog } from "./NewMarkdownDialog";
 import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
@@ -114,6 +115,7 @@ export function ProjectWorkspace({
     (tab) => tab.document.id === previews?.selected,
   );
 
+  const [newMarkdown, setNewMarkdown] = useState(false);
   const [skillsSelection, setSkillsSelection] = useState<string | null>(null);
   const skillsKey = JSON.stringify([scope, location.key]);
   const skillsShown = skillsSelection === skillsKey && !previewShown;
@@ -157,6 +159,23 @@ export function ProjectWorkspace({
         "workbench-editor-panel min-h-0 min-w-0 flex-1 flex-col overflow-hidden mr-1",
       )}
     >
+      {newMarkdown && route && path && (
+        <NewMarkdownDialog
+          key={scope}
+          projectId={route.projectId}
+          worktreePath={path}
+          onClose={() => setNewMarkdown(false)}
+          onCreated={(createdPath) => {
+            setSkillsSelection(null);
+            setPageSelection("");
+            previews?.select(null);
+            setFiles((previous) => ({
+              ...previous,
+              [scope]: { path: createdPath, shown: true },
+            }));
+          }}
+        />
+      )}
       {unavailable && (
         <WorkspaceUnavailable
           path={path ?? project.path}
@@ -191,6 +210,9 @@ export function ProjectWorkspace({
             onStartupStateChange={reportStartup}
             projects={projects}
             tools={tools}
+            onNewMarkdown={
+              route && path ? () => setNewMarkdown(true) : undefined
+            }
             onProjectSkills={
               route
                 ? () => {

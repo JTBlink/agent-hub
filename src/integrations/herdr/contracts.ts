@@ -65,10 +65,17 @@ export interface HerdrActionResult {
   target: HerdrTarget | null;
 }
 export interface HerdrNewAgent {
+  teams?: boolean;
   kind: string;
   name: string;
   direction: "right" | "down";
   prompt: string;
+}
+
+export interface HerdrNavigationRequest extends HerdrOpenedWorkspace {
+  newTab?: boolean;
+  warning?: string;
+  title?: string;
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -77,7 +84,7 @@ function record(value: unknown): value is Record<string, unknown> {
 /** Navigation requests are transient; neither commands nor task prompts are restored. */
 export function parseHerdrNavigation(
   state: unknown,
-): HerdrOpenedWorkspace | null {
+): HerdrNavigationRequest | null {
   if (!record(state) || !record(state.herdrAttachment)) return null;
   const value = state.herdrAttachment;
   if (
@@ -96,6 +103,9 @@ export function parseHerdrNavigation(
   )
     return null;
   return {
+    ...(typeof value.title === "string" ? { title: value.title } : {}),
+    ...(value.newTab === true ? { newTab: true } : {}),
+    ...(typeof value.warning === "string" ? { warning: value.warning } : {}),
     project_id: value.project_id,
     path: value.path,
     target: {

@@ -860,7 +860,7 @@ it.each([
       expect(creations()[1][1]).toMatchObject({
         projectId: project.id,
         worktreePath: topic,
-        launch: { kind: "agent", agent },
+        launch: { kind: "native_agent", agent, prompt: "" },
       });
       expect(
         host.querySelector('[role="tab"][aria-selected="true"]')?.textContent,

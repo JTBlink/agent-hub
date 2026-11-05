@@ -3,19 +3,25 @@ import type { PreviewDocument } from "../api";
 import {
   consumePreviewRequests,
   type PreviewOpenRequest,
+  type PreviewViewport,
 } from "./openRequests";
 
 export function usePreviewOpenRequests(
   isolated: boolean,
   handlers: {
-    openWeb: (address: string, profile?: string) => void;
+    openWeb: (
+      address: string,
+      profile?: string,
+      viewport?: PreviewViewport,
+    ) => void;
     acceptDocument: (document: PreviewDocument) => void;
     report: (error: unknown) => void;
   },
 ) {
   const receive = useEffectEvent((value: PreviewOpenRequest) => {
     try {
-      if (value.kind === "web") handlers.openWeb(value.address, value.profile);
+      if (value.kind === "web")
+        handlers.openWeb(value.address, value.profile, value.viewport);
       else handlers.acceptDocument(value.document);
     } catch (error) {
       handlers.report(error);

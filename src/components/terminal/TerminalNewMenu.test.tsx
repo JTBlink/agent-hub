@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { TerminalNewMenu } from "./TerminalNewMenu";
@@ -21,29 +22,39 @@ it("tracks settings installation changes and shares Claude installation with Tea
   const render = async (claudeInstalled: boolean, codexInstalled: boolean) => {
     await act(async () =>
       root.render(
-        <TerminalNewMenu
-          disabled={false}
-          tools={[
-            { key: "claude_code", installed: claudeInstalled },
-            { key: "codex", installed: codexInstalled },
-            { key: "opencode", installed: codexInstalled },
-            { key: "hermes", installed: codexInstalled },
-            { key: "cursor", installed: true },
-          ]}
-          onNew={onNew}
-        />,
+        <MemoryRouter>
+          <TerminalNewMenu
+            disabled={false}
+            tools={[
+              { key: "claude_code", installed: claudeInstalled },
+              { key: "codex", installed: codexInstalled },
+              { key: "opencode", installed: codexInstalled },
+              { key: "hermes", installed: codexInstalled },
+              { key: "cursor", installed: true },
+            ]}
+            onNew={onNew}
+          />
+        </MemoryRouter>,
       ),
     );
   };
   try {
     await render(false, false);
     await act(async () => host.querySelector("button")!.click());
-    expect(labels()).toEqual(["terminal.new"]);
+    expect(labels()).toEqual([
+      "terminal.new",
+      "terminal.newBrowser",
+      "terminal.newMobile",
+      "terminal.agentSettings",
+    ]);
     await render(true, false);
     expect(labels()).toEqual([
       "terminal.new",
+      "terminal.newBrowser",
+      "terminal.newMobile",
       "Claude Code",
       "Claude Agent Teams",
+      "terminal.agentSettings",
     ]);
     for (const image of document.querySelectorAll<HTMLImageElement>(
       '[role="menuitem"] img',
@@ -59,9 +70,12 @@ it("tracks settings installation changes and shares Claude installation with Tea
     await act(async () => host.querySelector("button")!.click());
     expect(labels()).toEqual([
       "terminal.new",
+      "terminal.newBrowser",
+      "terminal.newMobile",
       "Codex",
       "OpenCode",
       "Hermes Agent",
+      "terminal.agentSettings",
     ]);
     expect(document.querySelectorAll('[role="menuitem"] img')).toHaveLength(3);
     for (const image of document.querySelectorAll<HTMLImageElement>(

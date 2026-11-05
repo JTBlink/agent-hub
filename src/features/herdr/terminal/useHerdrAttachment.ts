@@ -61,13 +61,15 @@ export function useHerdrAttachment({
       onError(t("herdr.scopeChanged"));
       return;
     }
-    const existing = tabs.current.find(
-      (tab) =>
-        tab.projectId === request.project_id &&
-        tab.worktreePath === request.path &&
-        tab.herdrTarget?.session === request.target.session &&
-        tab.herdrTarget.workspace_id === request.target.workspace_id,
-    );
+    const existing = !request.newTab
+      ? tabs.current.find(
+          (tab) =>
+            tab.projectId === request.project_id &&
+            tab.worktreePath === request.path &&
+            tab.herdrTarget?.session === request.target.session &&
+            tab.herdrTarget.workspace_id === request.target.workspace_id,
+        )
+      : undefined;
     if (
       !existing &&
       tabs.current.reduce((n, tab) => n + tab.panes.length, 0) >=
@@ -79,6 +81,7 @@ export function useHerdrAttachment({
     const tab = existing ?? {
       ...createTab(request.project_id, undefined, request.path),
       herdrTarget: request.target,
+      title: request.title,
     };
     setTabs((previous) =>
       existing
@@ -92,7 +95,7 @@ export function useHerdrAttachment({
     setActiveIds((previous) => ({ ...previous, [scopeKey]: tab.id }));
     rememberActive(tab.id);
     initializedRef.current = true;
-    onError("");
+    onError(request.warning ?? "");
     onSelectTerminal?.();
     navigate(`${location.pathname}${location.search}`, {
       replace: true,

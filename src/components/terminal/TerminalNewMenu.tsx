@@ -1,51 +1,45 @@
-import { Plus, TerminalSquare } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { herdrAgents, type HerdrAgent } from "@app/herdr";
-import { AgentIcon } from "../AgentIcon";
+import type { HerdrAgent } from "@app/herdr";
 import { CardActionMenu } from "../CardActionMenu";
 import type { ToolInfo } from "../../lib/tauri";
+import { TerminalNewMenuContent } from "./TerminalNewMenuContent";
 
 export function TerminalNewMenu({
   disabled,
   tools,
   onNew,
+  onNewMarkdown,
+  onHerdr,
+  herdrBusy,
 }: {
   disabled: boolean;
   tools: readonly Pick<ToolInfo, "key" | "installed">[];
   onNew: (agent?: HerdrAgent) => void;
+  onNewMarkdown?: () => void;
+  onHerdr?: () => void;
+  herdrBusy?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <CardActionMenu
       label={t("terminal.newMenu")}
-      disabled={disabled}
       align="start"
       className="mx-1 self-center"
       triggerClassName="h-7 w-7"
       triggerIcon={<Plus size={15} />}
-      actions={[
-        {
-          key: "terminal",
-          label: t("terminal.new"),
-          icon: <TerminalSquare size={14} />,
-          onSelect: () => onNew(),
-        },
-        ...herdrAgents
-          .filter(({ toolKey }) =>
-            tools.some((tool) => tool.key === toolKey && tool.installed),
-          )
-          .map(({ id, label, toolKey }) => ({
-            key: id,
-            label,
-            icon: (
-              <AgentIcon
-                agentKey={toolKey}
-                className="h-4 w-4 border-0 bg-transparent"
-              />
-            ),
-            onSelect: () => onNew(id),
-          })),
-      ]}
+      actions={[]}
+      renderContent={(close) => (
+        <TerminalNewMenuContent
+          tools={tools}
+          terminalDisabled={disabled}
+          onNew={onNew}
+          onNewMarkdown={onNewMarkdown}
+          onHerdr={onHerdr}
+          herdrBusy={herdrBusy}
+          close={close}
+        />
+      )}
     />
   );
 }

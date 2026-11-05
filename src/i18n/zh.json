@@ -103,6 +103,12 @@
     "completed": "文件操作已完成"
   },
   "herdr": {
+    "launchProjectAgent": "在当前项目目录复用 Herdr 工作空间和已运行的所选 Agent；没有时启动。切换 Agent 会打开新标签，旧会话继续保留。",
+    "configureAgent": "编辑启动指令",
+    "selectAgent": "选择 Agent",
+    "defaultAgent": "默认 Agent",
+    "agentLaunchHelp": "与「设置 → Agent」共用默认 Agent 和启动指令。仅影响后续启动；Claude Agent Teams 复用 Claude 的指令。",
+    "agentLaunch": "Agent 启动配置",
     "settings": "Herdr 设置",
     "followProject": "跟随项目切换",
     "followProjectHelp": "默认关闭。开启后，在 Herdr 侧边栏打开时，切换项目或工作树会同步切换 Herdr 工作空间。关闭时仅通过手动点击切换。",
@@ -2205,6 +2211,14 @@
     "commandTask": "命令任务"
   },
   "terminal": {
+    "openHerdr": "打开 Herdr",
+    "markdownName": "文件名（创建到当前工作树根目录）",
+    "noNewMatches": "没有匹配的操作",
+    "searchNew": "搜索新建操作或 Agent",
+    "agentSettings": "智能体设置…",
+    "newMobile": "新建手机预览",
+    "newMarkdown": "新建 Markdown",
+    "newBrowser": "新建浏览器标签",
     "contextMenu": "终端操作",
     "copySelection": "复制选中内容",
     "paste": "粘贴",
@@ -2216,7 +2230,7 @@
     "title": "终端",
     "chooseProject": "选择项目以打开终端",
     "new": "新建终端",
-    "newMenu": "新建终端或 Agent",
+    "newMenu": "新建标签",
     "startingAgent": "正在启动 {{agent}}…",
     "close": "关闭终端",
     "exited": "进程已退出 · {{code}}",

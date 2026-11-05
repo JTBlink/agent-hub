@@ -103,6 +103,12 @@
     "completed": "檔案操作已完成"
   },
   "herdr": {
+    "launchProjectAgent": "在目前專案目錄沿用 Herdr 工作空間及已執行的所選 Agent；沒有時啟動。切換 Agent 會開啟新分頁並保留舊工作階段。",
+    "configureAgent": "編輯啟動指令",
+    "selectAgent": "選擇 Agent",
+    "defaultAgent": "預設 Agent",
+    "agentLaunchHelp": "與「設定 → Agent」共用預設 Agent 和啟動指令。僅影響後續啟動；Claude Agent Teams 沿用 Claude 的指令。",
+    "agentLaunch": "Agent 啟動設定",
     "settings": "Herdr 設定",
     "followProject": "跟隨專案切換",
     "followProjectHelp": "預設關閉。開啟後，在 Herdr 側邊欄開啟時，切換專案或工作樹會同步切換 Herdr 工作空間。關閉時僅透過手動點擊切換。",
@@ -2165,6 +2171,14 @@
     "commandTask": "命令任務"
   },
   "terminal": {
+    "openHerdr": "開啟 Herdr",
+    "markdownName": "檔案名稱（建立於目前工作樹根目錄）",
+    "noNewMatches": "沒有符合的操作",
+    "searchNew": "搜尋新增操作或 Agent",
+    "agentSettings": "智慧體設定…",
+    "newMobile": "新增手機預覽",
+    "newMarkdown": "新增 Markdown",
+    "newBrowser": "新增瀏覽器分頁",
     "contextMenu": "終端操作",
     "copySelection": "複製選取內容",
     "paste": "貼上",
@@ -2176,7 +2190,7 @@
     "title": "終端",
     "chooseProject": "選擇專案以開啟終端",
     "new": "新增終端",
-    "newMenu": "新增終端或 Agent",
+    "newMenu": "新增分頁",
     "startingAgent": "正在啟動 {{agent}}…",
     "close": "關閉終端",
     "exited": "程序已結束 · {{code}}",

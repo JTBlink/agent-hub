@@ -24,7 +24,12 @@ import type { Project, ToolInfo } from "../../lib/tauri";
 import { TerminalProjectSelect } from "./TerminalProjectSelect";
 import { type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
-import { herdrEnabled, useHerdrShortcut } from "@app/herdr";
+import {
+  HerdrLaunchDialog,
+  herdrEnabled,
+  useHerdrMenuLaunch,
+  useHerdrShortcut,
+} from "@app/herdr";
 import { useHerdrSessions } from "@app/herdr";
 import { cn } from "../../utils";
 import { projectWorkspaceRoute, worktreeUrl } from "../../lib/worktreeApi";
@@ -64,6 +69,7 @@ interface Props {
   toolbar?: ReactNode;
   toolbarEnd?: ReactNode;
   onProjectSkills?: () => void;
+  onNewMarkdown?: () => void;
   extraTabs?: ReactNode;
   content?: ReactNode;
   onSelectTerminal?: () => void;
@@ -79,6 +85,7 @@ export function TerminalWorkspace({
   toolbar,
   toolbarEnd,
   onProjectSkills,
+  onNewMarkdown,
   extraTabs,
   content,
   onSelectTerminal,
@@ -205,6 +212,13 @@ export function TerminalWorkspace({
     undefined,
   );
   const selected = projectId || recent?.id || "";
+  const [herdrLaunchOpen, setHerdrLaunchOpen] = useState(false);
+  const herdrMenu = useHerdrMenuLaunch(
+    scopedProject || selected,
+    scopedPath ?? projects.find((project) => project.id === selected)?.path,
+    onSelectTerminal,
+    tools,
+  );
   useEffect(() => {
     if (
       !visible ||
@@ -268,6 +282,7 @@ export function TerminalWorkspace({
       scopedPath ?? projects.find((project) => project.id === target)?.path,
     );
     tab.agent = agent;
+    tab.nativeAgent = !!agent;
     setTabs((previous) => [...previous, tab]);
     setActiveId(tab.id);
   };
@@ -323,6 +338,7 @@ export function TerminalWorkspace({
     <TerminalStatus
       message={
         bridgeError ||
+        herdrMenu.error ||
         herdrSessions.notice ||
         herdr.notice ||
         projects.find(
@@ -330,8 +346,10 @@ export function TerminalWorkspace({
         )?.name ||
         t("terminal.title")
       }
-      error={!!(bridgeError || herdrSessions.notice)}
-      notice={bridgeError || herdrSessions.notice || herdr.notice}
+      error={!!(bridgeError || herdrMenu.error || herdrSessions.notice)}
+      notice={
+        bridgeError || herdrMenu.error || herdrSessions.notice || herdr.notice
+      }
     />
   );
   return (
@@ -368,6 +386,11 @@ export function TerminalWorkspace({
                 count >= TERMINAL_PANE_LIMIT
               }
               onNew={add}
+              onNewMarkdown={onNewMarkdown}
+              onHerdr={
+                herdrEnabled ? () => setHerdrLaunchOpen(true) : undefined
+              }
+              herdrBusy={herdrMenu.busy}
             />
           </TerminalTabs>
           {!workspace && (
@@ -418,6 +441,19 @@ export function TerminalWorkspace({
             />
           </div>
         </div>
+      )}
+      {herdrLaunchOpen && (
+        <HerdrLaunchDialog
+          tools={tools}
+          busy={herdrMenu.busy}
+          error={herdrMenu.error}
+          onClose={() => setHerdrLaunchOpen(false)}
+          onLaunch={(agent) =>
+            void herdrMenu.open(agent).then((opened) => {
+              if (opened) setHerdrLaunchOpen(false);
+            })
+          }
+        />
       )}
       {content}
       <div

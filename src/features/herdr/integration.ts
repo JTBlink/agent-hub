@@ -15,3 +15,7 @@ export {
   herdrDeliveryAdapter,
   embeddedWorkspaceAgent,
 } from "./deliveryAdapter";
+
+export { useHerdrMenuLaunch } from "./terminal/useHerdrMenuLaunch";
+
+export { HerdrLaunchDialog } from "./components/HerdrLaunchDialog";

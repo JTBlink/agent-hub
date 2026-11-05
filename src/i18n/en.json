@@ -103,6 +103,12 @@
     "completed": "File operation completed"
   },
   "herdr": {
+    "launchProjectAgent": "Reuse the Herdr workspace and selected agent in the current project directory, starting one only when needed. Changing agents opens a new tab and preserves the previous session.",
+    "configureAgent": "Edit launch command",
+    "selectAgent": "Choose an agent",
+    "defaultAgent": "Default agent",
+    "agentLaunchHelp": "Shares the default agent and launch commands with Settings → Agent. Applies to future launches; Claude Agent Teams uses the Claude command.",
+    "agentLaunch": "Agent launch settings",
     "settings": "Herdr settings",
     "followProject": "Follow project changes",
     "followProjectHelp": "Off by default. When enabled, switching projects or worktrees also switches Herdr workspaces while the Herdr sidebar is open. When off, Herdr switches only on a manual click.",
@@ -2208,6 +2214,14 @@
     "commandTask": "Command task"
   },
   "terminal": {
+    "openHerdr": "Open Herdr",
+    "markdownName": "Filename (in the current worktree root)",
+    "noNewMatches": "No matching actions",
+    "searchNew": "Search actions or agents",
+    "agentSettings": "Agent settings…",
+    "newMobile": "New mobile preview",
+    "newMarkdown": "New Markdown",
+    "newBrowser": "New browser tab",
     "contextMenu": "Terminal actions",
     "copySelection": "Copy selection",
     "paste": "Paste",
@@ -2219,7 +2233,7 @@
     "title": "Terminal",
     "chooseProject": "Choose a project to open a terminal",
     "new": "New terminal",
-    "newMenu": "New terminal or agent",
+    "newMenu": "New tab",
     "startingAgent": "Starting {{agent}}…",
     "close": "Close terminal",
     "exited": "Process exited · {{code}}",

@@ -142,7 +142,11 @@ export function usePreviewWorkspace({
     setSession((previous) => ({ ...previous, activeId: id }));
     resetView();
   };
-  const openWeb = (address = "about:blank", profile?: string) => {
+  const openWeb = (
+    address = "about:blank",
+    profile?: string,
+    viewport?: { width: number; height: number; mobile: boolean },
+  ) => {
     try {
       setSession((previous) =>
         openPreview(previous, {
@@ -156,6 +160,7 @@ export function usePreviewWorkspace({
             "default",
         }),
       );
+      if (viewport) setViewport(viewport);
       resetView();
     } catch (error) {
       report(error);

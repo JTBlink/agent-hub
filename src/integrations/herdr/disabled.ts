@@ -18,7 +18,7 @@ export const embeddedWorkspaceAgent = (
 };
 export const herdrNavigation = (
   _state: unknown,
-): HerdrOpenedWorkspace | null => {
+): import("./contracts").HerdrNavigationRequest | null => {
   void _state;
   return null;
 };
@@ -118,6 +118,29 @@ export function HerdrTerminalTools(_props: {
   current: () => unknown;
   onError: (message: string) => void;
   onOpen: (opened: HerdrOpenedWorkspace) => void;
+}) {
+  void _props;
+  return null;
+}
+
+export function useHerdrMenuLaunch(..._args: unknown[]) {
+  void _args;
+  return {
+    open: async (...args: unknown[]): Promise<boolean> => {
+      void args;
+      return false;
+    },
+    busy: false,
+    error: "",
+  };
+}
+
+export function HerdrLaunchDialog(_props: {
+  tools: readonly import("../../lib/tauri").ToolInfo[];
+  busy: boolean;
+  error: string;
+  onLaunch: (agent?: import("../../lib/terminalAgents").HerdrAgent) => void;
+  onClose: () => void;
 }) {
   void _props;
   return null;

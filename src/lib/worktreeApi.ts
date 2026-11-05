@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export const WORKTREE_FILES_CHANGED = "agent-hub:worktree-files-changed";
+
 export const pasteWorktreeFiles = (
   projectId: string,
   worktreePath: string,

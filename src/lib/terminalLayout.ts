@@ -26,6 +26,7 @@ export interface TerminalTab {
   context?: TerminalTaskContext;
   // Launch intent belongs only to this run, and is omitted from saved layouts.
   agent?: HerdrAgent;
+  nativeAgent?: boolean;
   scriptPath?: string;
   development?: DevelopmentTerminal;
   /** Runtime-only log visibility; hiding a service never closes its PTY. */

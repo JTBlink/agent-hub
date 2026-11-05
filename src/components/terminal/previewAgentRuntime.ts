@@ -272,6 +272,7 @@ export class PreviewAgentRuntime {
         submitted = true;
         const started = await startHerdrAgent(space.target, {
           kind: choice.id === "claude_teams" ? "claude" : choice.id,
+          ...(choice.id === "claude_teams" ? { teams: true } : {}),
           name: `page-${tab.id.replaceAll("-", "").slice(0, 16)}`,
           direction: "right",
           prompt,
