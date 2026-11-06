@@ -4,6 +4,7 @@ mod focus;
 mod models;
 mod operations;
 mod shortcuts;
+mod snapshot;
 mod worktree_open;
 mod worktree_removal;
 use anyhow::{bail, Context, Result};
@@ -148,6 +149,7 @@ impl HerdrControl {
                 .cloned()
                 .context("Herdr snapshot is unavailable; check client/server compatibility")?,
         )?;
+        snapshot::remove_missing_workspaces(&mut snapshot);
         for workspace in &mut snapshot.workspaces {
             workspace.directory = directory_for(workspace, &snapshot.panes)
                 .ok()

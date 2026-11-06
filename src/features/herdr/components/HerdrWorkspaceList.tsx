@@ -199,6 +199,7 @@ function HerdrWorkspaceGroup({
   );
   const missing = worktrees.filter(
     (tree) =>
+      tree.available &&
       tree.path !== space.directory &&
       !opened.some((child) => child.directory === tree.path),
   );

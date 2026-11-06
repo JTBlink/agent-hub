@@ -87,11 +87,13 @@ export function useHerdrSnapshot(active: boolean) {
     void poll();
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("focus", wake);
+    window.addEventListener("project-git-changed", wake);
     return () => {
       stopped = true;
       if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", wake);
       window.removeEventListener("focus", wake);
+      window.removeEventListener("project-git-changed", wake);
     };
   }, [active, session, running, revision, fallback]);
   return {

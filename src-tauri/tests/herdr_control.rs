@@ -745,3 +745,45 @@ fn claude_teams_uses_the_shared_start_flow_with_environment_on_the_new_pane() {
     );
     assert!(!calls.contains("agent start"));
 }
+
+#[test]
+fn snapshot_excludes_removed_checkout_and_refreshes_after_restoration() {
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    fs::create_dir(&directory).unwrap();
+    let cli = fake_cli(root.path(), &directory);
+    let control = HerdrControl::new(cli);
+    assert_eq!(control.snapshot("default").unwrap().workspaces.len(), 1);
+    fs::remove_dir(&directory).unwrap();
+    let snapshot = control.snapshot("default").unwrap();
+    assert!(snapshot.workspaces.is_empty());
+    assert!(snapshot.tabs.is_empty());
+    assert!(snapshot.panes.is_empty());
+    fs::create_dir(&directory).unwrap();
+    assert_eq!(control.snapshot("default").unwrap().workspaces.len(), 1);
+}
+
+#[test]
+fn snapshot_uses_checkout_metadata_and_retains_unknown_directories() {
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("existing");
+    fs::create_dir(&directory).unwrap();
+    let cli = fake_cli(root.path(), &directory);
+    let control = HerdrControl::new(cli);
+    let file = root.path().join("herdr.snapshot");
+    let mut value: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&file).unwrap()).unwrap();
+    let snapshot = &mut value["result"]["snapshot"];
+    snapshot["workspaces"][0]["worktree"] = json!({"checkout_path":root.path().join("removed")});
+    snapshot["workspaces"].as_array_mut().unwrap().push(json!({
+        "workspace_id":"unknown", "label":"unknown", "active_tab_id":"unknown:t1"
+    }));
+    snapshot["agents"] = snapshot["panes"].clone();
+    snapshot["layouts"] = json!([{"tab_id":"w1:t1", "zoomed":false}]);
+    fs::write(file, value.to_string()).unwrap();
+    let snapshot = control.snapshot("default").unwrap();
+    assert_eq!(snapshot.workspaces.len(), 1);
+    assert_eq!(snapshot.workspaces[0].workspace_id, "unknown");
+    assert!(snapshot.agents.is_empty());
+    assert!(snapshot.layouts.is_empty());
+}

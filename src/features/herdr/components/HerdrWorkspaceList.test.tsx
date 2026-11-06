@@ -221,39 +221,8 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
       host.querySelector('[data-herdr-workspace="worktree:/projects/feature"]'),
     ).toBeNull();
     expect(
-      host
-        .querySelector('[data-herdr-workspace="worktree:/projects/missing"]')
-        ?.hasAttribute("disabled"),
-    ).toBe(true);
-    const missing = host.querySelector<HTMLElement>(
-      '[data-herdr-workspace="worktree:/projects/missing"]',
-    )!.parentElement!;
-    expect(missing.tabIndex).toBe(0);
-    await act(async () => {
-      missing.focus();
-      missing.dispatchEvent(
-        new KeyboardEvent("keydown", { key: "ContextMenu", bubbles: true }),
-      );
-    });
-    const unavailableItems = [
-      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
-    ];
-    expect(
-      unavailableItems.find((item) => item.textContent === "herdr.openWorktree")
-        ?.disabled,
-    ).toBe(true);
-    expect(
-      unavailableItems.find((item) => item.textContent === "common.copyPath")
-        ?.disabled,
-    ).toBe(false);
-    await act(async () =>
-      document
-        .querySelector('[role="menu"]')!
-        .dispatchEvent(
-          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-        ),
-    );
-    expect(document.activeElement).toBe(missing);
+      host.querySelector('[data-herdr-workspace="worktree:/projects/missing"]'),
+    ).toBeNull();
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>(
