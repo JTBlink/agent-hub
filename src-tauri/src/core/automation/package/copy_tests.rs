@@ -23,6 +23,7 @@ fn copied_packages_preserve_all_declared_content_and_isolate_edits_and_private_s
         enabled: true,
         files: [
             ("prompts/prompt.md", "Review the request"),
+            ("config/prompt-variants.json", r#"{"version":1,"active_id":"review","variants":[{"id":"review","name":"Review"},{"id":"repair","name":"Repair","content":"Repair and verify"}]}"#),
             ("config/settings.json", r#"{"limit":3}"#),
             ("references/guide.md", "Review guide"),
             ("scripts/helper.sh", "echo helper"),

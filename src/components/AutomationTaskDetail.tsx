@@ -11,6 +11,7 @@ import { CopyPathButton } from "./CopyPathButton";
 import { cn } from "../utils";
 
 import { AutomationAdminNotice } from "./AutomationAdminNotice";
+import { AutomationPromptSummary } from "./AutomationPromptSummary";
 import { AutomationExecution } from "./AutomationExecution";
 
 const tabs = ["overview", "runs", "technical"] as const;
@@ -36,6 +37,9 @@ export function AutomationTaskDetail({
   onRefresh,
   children,
   actions,
+  promptBusy,
+  onSelectPrompt,
+  onEditPrompts,
 }: {
   task: AutomationTask | undefined;
   projectName: string | null;
@@ -46,6 +50,9 @@ export function AutomationTaskDetail({
   onRefresh: () => void;
   children?: ReactNode;
   actions?: ReactNode;
+  promptBusy?: boolean;
+  onSelectPrompt?: (id: string) => void;
+  onEditPrompts?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<(typeof tabs)[number]>("overview");
@@ -270,16 +277,12 @@ export function AutomationTaskDetail({
               />
             </dl>
             {task.prompt && (
-              <section className="overflow-hidden rounded-lg border border-border-subtle bg-surface">
-                <h2 className="border-b border-border-subtle px-5 py-3 text-sm font-semibold text-secondary">
-                  {t("automation.prompt")}
-                </h2>
-                <div className="px-5 py-4">
-                  <p className="max-w-[90ch] whitespace-pre-wrap break-words text-sm leading-7 text-secondary">
-                    {task.prompt}
-                  </p>
-                </div>
-              </section>
+              <AutomationPromptSummary
+                task={task}
+                busy={promptBusy}
+                onSelect={onSelectPrompt}
+                onEdit={onEditPrompts}
+              />
             )}
             {task.command && (
               <section className="overflow-hidden rounded-lg border border-border-subtle bg-surface">

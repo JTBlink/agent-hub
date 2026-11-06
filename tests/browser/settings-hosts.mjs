@@ -55,7 +55,7 @@ try {
           );
           assert.equal(
             await inside(`document.querySelector('code[title]').textContent`),
-            "…/hosts/12345678….hosts",
+            "/workspace/user-config/hosts/12345678-1234-4234-8234-123456789abc.hosts",
           );
           const layout = await inside(`(() => {
             const sidebar=document.querySelector('[role=tablist]');
@@ -124,7 +124,9 @@ try {
       await inside(`document.querySelector('[role=status]').textContent`)
     ).includes("Hosts 已保存"),
   );
-  await inside(`document.querySelector('[aria-pressed="false"]').click();true`);
+  await inside(
+    `document.querySelector('aside button[aria-pressed="false"]').click();true`,
+  );
   await until(
     `document.querySelector('textarea').value==='127.0.0.2 app.test\\n'`,
   );
@@ -136,7 +138,7 @@ try {
   );
   assert.equal(
     await inside(`document.querySelector('code[title]').textContent`),
-    "…/hosts/12345678….hosts",
+    "/workspace/user-config/hosts/12345678-1234-4234-8234-123456789abc.hosts",
   );
 
   await inside(

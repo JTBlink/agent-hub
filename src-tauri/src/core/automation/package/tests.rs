@@ -538,7 +538,7 @@ fn packages_upload_as_discoverable_directories_and_restore_paused_usable_copies(
 }
 
 #[test]
-fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_revision() {
+fn task_versions_and_large_prompt_variants_survive_import_edit_export_backup_and_restore() {
     use crate::core::central_repo;
     let _guard = central_repo::test_base_dir_lock();
     let temp = tempfile::tempdir().unwrap();
@@ -550,9 +550,29 @@ fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_
         }
     }
     let _reset = Reset;
+    let mut configured = draft();
+    configured.files = vec![
+        AutomationScriptFile {
+            path: "prompts/prompt.md".into(),
+            content: "Only review".into(),
+        },
+        AutomationScriptFile {
+            path: "config/prompt-variants.json".into(),
+            content: serde_json::json!({
+                "version":1, "active_id":"review", "variants":[
+                    {"id":"review", "name":"Review"},
+                    {"id":"repair", "name":"Repair", "content":"x".repeat(40000)},
+                    {"id":"audit", "name":"Audit", "content":"y".repeat(40000)}
+                ]
+            })
+            .to_string(),
+        },
+    ];
+    assert!(configured.files[1].content.len() > 65536);
+    let expected_files = configured.files.clone();
     let package: AutomationPackage = serde_json::from_value(serde_json::json!({
         "schema_version": 1, "version": "1.2.3", "shell": super::super::command_shell(),
-        "draft": draft(), "dependencies": []
+        "draft": configured, "dependencies": []
     }))
     .unwrap();
     let id = import_definition(package, None).unwrap();
@@ -591,6 +611,9 @@ fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_
     export_package(&id, &exported).unwrap();
     let preview = preview_package(&exported).unwrap();
     assert_eq!(preview.version.as_deref(), Some("2.0.0-rc.1"));
+    for file in &expected_files {
+        assert!(preview.draft.files.contains(file));
+    }
     assert_eq!(preview.schema_version, 1);
     let original = find(&state, &id).unwrap();
     let backup = super::super::backup::AutomationBackup {
@@ -602,6 +625,9 @@ fn task_versions_survive_import_edit_export_backup_and_restore_independently_of_
     let cloud = temp.path().join("cloud-task");
     write_backup_directory(&backup, &cloud).unwrap();
     let restored = read_backup_directory(&cloud).unwrap();
+    for file in &expected_files {
+        assert!(restored.draft.files.contains(file));
+    }
     assert_eq!(
         restored
             .draft

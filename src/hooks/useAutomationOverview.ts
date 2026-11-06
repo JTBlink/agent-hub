@@ -10,8 +10,8 @@ export function useAutomationOverview(locale: string) {
   const getSnapshot = useCallback(() => cache.getSnapshot(locale), [locale]);
   const snapshot = useSyncExternalStore(subscribe, getSnapshot);
   useEffect(() => {
-    // Show the session snapshot immediately, then revalidate in the background
-    // to catch changes made while this page was not observing filesystem events.
+    // Show the cached list immediately. Restored or expired snapshots revalidate;
+    // a fresh session snapshot avoids another scheduler scan on quick returns.
     void cache.load(locale);
   }, [locale]);
   const reload = useCallback(

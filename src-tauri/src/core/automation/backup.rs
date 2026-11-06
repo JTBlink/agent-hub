@@ -162,7 +162,8 @@ fn read(metadata: &Path) -> Result<BTreeMap<String, AutomationBackup>, String> {
             continue;
         }
         if !entry.file_type().map_err(|e| e.to_string())?.is_file()
-            || entry.metadata().map_err(|e| e.to_string())?.len() > 128 * 1024
+            || entry.metadata().map_err(|e| e.to_string())?.len()
+                > super::definition::MAX_TASK_JSON_BYTES as u64
         {
             return Err("Invalid automation backup entry".into());
         }

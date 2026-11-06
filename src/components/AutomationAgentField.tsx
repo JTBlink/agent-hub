@@ -11,8 +11,10 @@ import {
   getToolStatus,
   type ToolInfo,
   type AutomationDraft,
+  type AutomationScriptFile,
 } from "../lib/tauri";
 import { automationHerdrConfig, automationPromptFile } from "../lib/automation";
+import { PROMPT_VARIANTS_PATH } from "../lib/automationPrompts";
 import { getErrorMessage } from "../lib/error";
 import { ThemedSelect } from "./ThemedSelect";
 import { herdrEnabled, AutomationHerdrFields } from "@app/herdr";
@@ -78,6 +80,7 @@ export function AutomationAgentField({
   const shell = useRef<Execution | null>(null);
   const herdr = useRef<Execution | null>(null);
   const prompt = useRef("");
+  const promptVariants = useRef<AutomationScriptFile | null>(null);
   const mounted = useRef(false);
   const request = useRef(false);
   useEffect(() => {
@@ -107,6 +110,9 @@ export function AutomationAgentField({
       automationPromptFile(draft)?.content ??
       (draft.provider === "hermes" ? draft.content : prompt.current);
     prompt.current = currentPrompt;
+    promptVariants.current =
+      draft.files?.find((file) => file.path === PROMPT_VARIANTS_PATH) ??
+      promptVariants.current;
     onInactivePromptChange(currentPrompt);
     if (config) herdr.current = execution(draft);
     else if (draft.provider === "system") shell.current = execution(draft);
@@ -124,7 +130,7 @@ export function AutomationAgentField({
       onChange({
         provider: "hermes",
         content: currentPrompt,
-        files: [],
+        files: promptVariants.current ? [promptVariants.current] : [],
         ...(draft.schedule.kind === "manual"
           ? { schedule: { kind: "interval", minutes: 60 } }
           : {}),
@@ -152,37 +158,51 @@ export function AutomationAgentField({
       onChange({
         provider: "system",
         content: base.content,
-        files: base.files?.map((file) => {
-          if (file.path === "prompt.md" || file.path.endsWith("/prompt.md"))
-            return { ...file, content: currentPrompt };
-          if (file.path === "herdr.json" || file.path.endsWith("/herdr.json")) {
-            const parsed: unknown = JSON.parse(file.content);
-            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-              throw new Error(t("automation.agentStarterUnavailable"));
-            return {
-              ...file,
-              content:
-                JSON.stringify(
-                  {
-                    ...parsed,
-                    agent: next,
-                    ...("agent" in parsed && next === parsed.agent
-                      ? {}
-                      : {
-                          arguments:
-                            next === "codex"
-                              ? ["--dangerously-bypass-approvals-and-sandbox"]
-                              : [],
-                          extra_arguments: "",
-                        }),
-                  },
-                  null,
-                  2,
-                ) + "\n",
-            };
-          }
-          return file;
-        }),
+        files: [
+          ...(base.files ?? [])
+            .filter((file) => file.path !== PROMPT_VARIANTS_PATH)
+            .map((file) => {
+              if (file.path === "prompt.md" || file.path.endsWith("/prompt.md"))
+                return { ...file, content: currentPrompt };
+              if (
+                file.path === "herdr.json" ||
+                file.path.endsWith("/herdr.json")
+              ) {
+                const parsed: unknown = JSON.parse(file.content);
+                if (
+                  !parsed ||
+                  typeof parsed !== "object" ||
+                  Array.isArray(parsed)
+                )
+                  throw new Error(t("automation.agentStarterUnavailable"));
+                return {
+                  ...file,
+                  content:
+                    JSON.stringify(
+                      {
+                        ...parsed,
+                        agent: next,
+                        ...("agent" in parsed && next === parsed.agent
+                          ? {}
+                          : {
+                              arguments:
+                                next === "codex"
+                                  ? [
+                                      "--dangerously-bypass-approvals-and-sandbox",
+                                    ]
+                                  : [],
+                              extra_arguments: "",
+                            }),
+                      },
+                      null,
+                      2,
+                    ) + "\n",
+                };
+              }
+              return file;
+            }),
+          ...(promptVariants.current ? [promptVariants.current] : []),
+        ],
         ...(draft.schedule.kind === "custom"
           ? { schedule: { kind: "daily", hour: 9, minute: 0, weekdays: true } }
           : {}),

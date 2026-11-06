@@ -1,3 +1,7 @@
+import {
+  automationPrompts,
+  updateAutomationPrompts,
+} from "../lib/automationPrompts";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw } from "lucide-react";
@@ -59,9 +63,8 @@ export function Automation() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { data, loading, error, refresh, generation } = useAutomationOverview(
-    i18n.resolvedLanguage ?? i18n.language,
-  );
+  const { data, loading, error, refresh, generation, restored } =
+    useAutomationOverview(i18n.resolvedLanguage ?? i18n.language);
   useAutomationNextRunRefresh(data?.tasks, refresh);
   const [projects, setProjects] = useState<Project[]>([]);
   useEffect(() => {
@@ -164,7 +167,9 @@ export function Automation() {
           task.is_builtin && (origin === "all" || task.origin === origin),
       ).length
     : 0;
-  const selected = data?.tasks.find((task) => task.id === selectedId);
+  const selected = restored
+    ? undefined
+    : data?.tasks.find((task) => task.id === selectedId);
   const unknown = t("automation.unknown");
   const emptyMessage = loading
     ? "common.loading"
@@ -228,6 +233,11 @@ export function Automation() {
   };
   const feedback = (
     <>
+      {restored && (
+        <p role="status" className="text-xs text-muted">
+          {t("automation.cachedList")}
+        </p>
+      )}
       <AutomationReadFeedback error={error} issues={data?.issues ?? []} />
       {actionError && !removing && (
         <p
@@ -342,11 +352,38 @@ export function Automation() {
             selected?.project ?? null,
             projects,
           )}
-          loading={loading}
+          loading={loading || (restored && error === null)}
           readFailed={error !== null || !!data?.issues.length}
           onBack={backToList}
           onRefresh={refresh}
           actions={selected && actions(selected)}
+          promptBusy={busyId === selected?.id || loading}
+          onEditPrompts={
+            selected?.can_edit ? () => setEditor(selected) : undefined
+          }
+          onSelectPrompt={(id) => {
+            if (
+              !selected?.definition ||
+              !selected.can_edit ||
+              selected.status === "running"
+            )
+              return;
+            const definition = selected.definition;
+            const prompts = automationPrompts(
+              definition,
+              t("automation.defaultPromptVariant"),
+            );
+            if (prompts.invalid || prompts.activeId === id) return;
+            void perform(
+              selected,
+              () =>
+                saveAutomation(selected.id, selected.revision, {
+                  ...definition,
+                  ...updateAutomationPrompts(definition, prompts.variants, id),
+                }),
+              t("automation.promptVariantSaved"),
+            );
+          }}
         >
           {feedback}
         </AutomationTaskDetail>

@@ -145,7 +145,7 @@ export function HostsSettings({ active }: { active: boolean }) {
           profiles={state.profiles}
           system={state.system}
           selected={state.profile?.id ?? null}
-          busy={state.busy}
+          busy={state.working}
           onSelect={select}
           onCreate={() => askName("new")}
         />
@@ -169,15 +169,28 @@ export function HostsSettings({ active }: { active: boolean }) {
                 )}
               </h3>
             </div>
-            <button
-              type="button"
-              className={actionButtonClass}
-              disabled={state.busy || !state.source}
-              onClick={() => void state.openDirectoryInVscode()}
-            >
-              <Code2 className="h-3.5 w-3.5" />
-              {t("hosts.openDirectoryInVscode")}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className={actionButtonClass}
+                disabled={state.busy}
+                onClick={() => guard(() => state.load(true))}
+              >
+                <RefreshCw
+                  className={`h-3 w-3 ${state.refreshing ? "animate-spin" : ""}`}
+                />
+                {t("hosts.reload")}
+              </button>
+              <button
+                type="button"
+                className={actionButtonClass}
+                disabled={state.busy || !state.source}
+                onClick={() => void state.openDirectoryInVscode()}
+              >
+                <Code2 className="h-3.5 w-3.5" />
+                {t("hosts.openDirectoryInVscode")}
+              </button>
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-y border-border-subtle bg-bg-secondary px-3 py-2 text-[10px] text-muted">
             <code
@@ -196,7 +209,7 @@ export function HostsSettings({ active }: { active: boolean }) {
             aria-label={t("hosts.editor")}
             aria-describedby="hosts-help"
             value={state.draft}
-            disabled={state.busy || !state.source}
+            disabled={state.working || !state.source}
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
@@ -220,17 +233,6 @@ export function HostsSettings({ active }: { active: boolean }) {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle p-3">
-            <button
-              type="button"
-              className={actionButtonClass}
-              disabled={state.busy}
-              onClick={() => guard(() => state.load(true))}
-            >
-              <RefreshCw
-                className={`h-3 w-3 ${state.busy ? "animate-spin" : ""}`}
-              />
-              {t("hosts.reload")}
-            </button>
             {state.profile ? (
               <>
                 <button

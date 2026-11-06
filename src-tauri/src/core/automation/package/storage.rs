@@ -1,3 +1,4 @@
+use super::super::definition::{MAX_TASK_BYTES, MAX_TASK_FILES, MAX_TASK_JSON_BYTES};
 use super::*;
 use sha2::{Digest, Sha256};
 use std::{fs, io::Read};
@@ -11,27 +12,34 @@ pub(super) fn regular_directory(path: &Path) -> Result<(), String> {
 }
 
 pub(super) fn bytes(path: &Path) -> Result<Vec<u8>, String> {
+    bytes_with_limit(path, MAX_TASK_BYTES)
+}
+
+fn bytes_with_limit(path: &Path, limit: usize) -> Result<Vec<u8>, String> {
     let metadata = fs::symlink_metadata(path).map_err(|e| e.to_string())?;
     if !metadata.is_file()
-        || metadata.len() > 512 * 1024
+        || metadata.len() > limit as u64
         || crate::core::path_guard::is_link_or_reparse_point(&metadata)
     {
-        return Err("Task package entries must be regular files up to 512 KiB".into());
+        return Err(format!(
+            "Task package entries must be regular files up to {limit} bytes"
+        ));
     }
     let mut bytes = Vec::new();
     fs::File::open(path)
         .map_err(|e| e.to_string())?
-        .take(512 * 1024 + 1)
+        .take((limit + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
-    if bytes.len() > 512 * 1024 {
+    if bytes.len() > limit {
         return Err("Task package entry is too large".into());
     }
     Ok(bytes)
 }
 
 pub(super) fn json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
-    serde_json::from_slice(&bytes(path)?).map_err(|e| format!("Invalid task package JSON: {e}"))
+    serde_json::from_slice(&bytes_with_limit(path, MAX_TASK_JSON_BYTES)?)
+        .map_err(|e| format!("Invalid task package JSON: {e}"))
 }
 
 pub(in crate::core::automation) fn fingerprint(draft: &AutomationDraft) -> Result<String, String> {
@@ -72,6 +80,9 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
     // A formerly uninstalled task must stay paused until explicitly resumed.
     if receipt.state == "legacy_uninstalled" {
         draft.enabled = false;
+    }
+    if manifest.files.len() > MAX_TASK_FILES {
+        return Err("Task packages support at most 32 files".into());
     }
     for relative in manifest.files {
         super::exchange::validate_path(&relative)?;

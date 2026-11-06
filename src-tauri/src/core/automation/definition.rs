@@ -1,4 +1,10 @@
+mod prompt_variants;
 use serde::{Deserialize, Serialize};
+
+pub(super) const MAX_TASK_BYTES: usize = 512 * 1024;
+pub(super) const MAX_TASK_JSON_BYTES: usize = 8 * MAX_TASK_BYTES;
+pub(super) const MAX_TASK_FILES: usize = 32;
+pub(super) const MAX_PROMPT_BYTES: usize = 65536;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
@@ -92,6 +98,19 @@ pub struct AutomationDraft {
     pub files: Vec<AutomationScriptFile>,
 }
 
+pub(super) fn runtime_prompt_file(draft: &AutomationDraft) -> Option<&AutomationScriptFile> {
+    draft
+        .files
+        .iter()
+        .find(|file| file.path == "prompts/prompt.md")
+        .or_else(|| {
+            draft
+                .files
+                .iter()
+                .find(|file| file.path == "prompt.md" || file.path.ends_with("/prompt.md"))
+        })
+}
+
 impl AutomationDraft {
     pub(super) fn scripts_dir(&self) -> Option<&str> {
         self.script_dir.as_deref().or(self.workdir.as_deref())
@@ -117,14 +136,17 @@ impl AutomationDraft {
                 || !paths.insert(&file.path)
                 || file.content.trim().is_empty()
                 || file.content.contains('\0')
+                || (file.path != "config/prompt-variants.json"
+                    && file.content.len() > MAX_PROMPT_BYTES)
             {
-                return Err("Task files require unique relative .py, .sh, .ps1, .json or .md paths and nonempty UTF-8 contents".into());
+                return Err("Task files require unique relative .py, .sh, .ps1, .json or .md paths and nonempty UTF-8 contents up to 64 KiB each".into());
             }
             total = total.saturating_add(file.content.len());
         }
-        if self.files.len() > 32 || total > 65536 {
-            return Err("System template scripts must total at most 64 KiB across 32 files".into());
+        if self.files.len() > MAX_TASK_FILES || total > MAX_TASK_BYTES {
+            return Err("Task files must total at most 512 KiB across 32 files".into());
         }
+        prompt_variants::validate(self)?;
         self.name = self.name.trim().into();
         if self.name.is_empty() || self.name.len() > 200 || self.name.chars().any(char::is_control)
         {

@@ -2,6 +2,7 @@
 use super::super::{definition::valid_id, store, AutomationDraft, ManagedAutomation};
 use std::{
     fs,
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -40,6 +41,10 @@ pub(super) fn path(dir: &Path, draft: &AutomationDraft, id: &str) -> Result<Path
 }
 
 pub(super) fn read_file(path: &Path) -> Result<Option<String>, String> {
+    read_file_with_limit(path, MAX_SCRIPT_BYTES)
+}
+
+pub(super) fn read_file_with_limit(path: &Path, limit: u64) -> Result<Option<String>, String> {
     let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -52,12 +57,21 @@ pub(super) fn read_file(path: &Path) -> Result<Option<String>, String> {
             return Err("Automation script must not be a symbolic link or junction".into());
         }
     }
-    if !metadata.is_file() || metadata.len() > MAX_SCRIPT_BYTES {
-        return Err("Automation script must be a regular file no larger than 64 KiB".into());
+    if !metadata.is_file() || metadata.len() > limit {
+        return Err(format!(
+            "Automation file must be a regular file no larger than {limit} bytes"
+        ));
     }
-    fs::read_to_string(path)
-        .map(Some)
-        .map_err(|error| format!("Cannot read automation script: {error}"))
+    let mut content = String::new();
+    fs::File::open(path)
+        .map_err(|error| error.to_string())?
+        .take(limit + 1)
+        .read_to_string(&mut content)
+        .map_err(|error| format!("Cannot read automation script: {error}"))?;
+    if content.len() as u64 > limit {
+        return Err("Automation file exceeds its size limit".into());
+    }
+    Ok(Some(content))
 }
 
 pub(in crate::core::automation) fn write(

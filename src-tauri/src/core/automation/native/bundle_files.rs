@@ -1,6 +1,13 @@
 //! Materialize only the template's declared scripts, preserving customized files.
 use super::super::{store, AutomationDraft, AutomationScriptFile, ManagedAutomation};
-use super::payload::{header, read_file};
+use super::payload::{header, read_file_with_limit};
+
+fn read_file(path: &Path) -> Result<Option<String>, String> {
+    read_file_with_limit(
+        path,
+        (super::super::definition::MAX_TASK_BYTES + 256) as u64,
+    )
+}
 use std::{
     fs,
     path::{Path, PathBuf},

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
 import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
+import { automationPrompts } from "../lib/automationPrompts";
 import { externalAutomationScriptDirectory } from "../lib/automationScriptDirectory";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
 import { AutomationProjectField } from "./AutomationProjectField";
@@ -70,7 +71,7 @@ export function AutomationEditor({
       // A native child modal owns keyboard navigation and Escape until closed.
       if (
         event.target instanceof HTMLElement &&
-        event.target.closest("dialog[open]")
+        event.target.closest('dialog[open], [role="alertdialog"]')
       )
         return;
       if (
@@ -136,6 +137,16 @@ export function AutomationEditor({
     : (draft.script_dir ?? task?.definition?.workdir ?? null);
   const herdrConfig = automationHerdrConfig(draft);
   const promptFile = automationPromptFile(draft);
+  const prompts = automationPrompts(
+    draft,
+    t("automation.defaultPromptVariant"),
+  );
+  const invalidPrompts =
+    (!!promptFile || draft.provider === "hermes") &&
+    (prompts.invalid ||
+      prompts.variants.some(
+        (variant) => !variant.name.trim() || !variant.content.trim(),
+      ));
   const submit = async () => {
     if (pending.current || picker !== null) return;
     pending.current = true;
@@ -150,11 +161,13 @@ export function AutomationEditor({
       });
     } catch (cause) {
       setError(
-        getErrorMessage(cause, "").includes(
-          "Wait for the current run to finish",
-        )
-          ? t("automation.waitToSave")
-          : getErrorMessage(cause, t("automation.saveFailed")),
+        getErrorMessage(cause, "").includes("Task files must total at most")
+          ? t("automation.taskFilesTooLarge")
+          : getErrorMessage(cause, "").includes(
+                "Wait for the current run to finish",
+              )
+            ? t("automation.waitToSave")
+            : getErrorMessage(cause, t("automation.saveFailed")),
       );
     } finally {
       pending.current = false;
@@ -172,7 +185,7 @@ export function AutomationEditor({
           event.preventDefault();
           void submit();
         }}
-        className="flex max-h-[calc(100vh/var(--app-scale)_-_2rem)] w-full max-w-[1100px] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+        className="flex max-h-[calc(100vh/var(--app-scale)_-_2rem)] w-full max-w-[1400px] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border-subtle px-6 py-4">
           <h2
@@ -365,7 +378,7 @@ export function AutomationEditor({
                 picker !== null ||
                 !draft.name.trim() ||
                 !draft.content.trim() ||
-                (!!promptFile && !promptFile.content.trim())
+                invalidPrompts
               }
               className="app-button-primary focus-visible:ring-2 focus-visible:ring-accent"
             >

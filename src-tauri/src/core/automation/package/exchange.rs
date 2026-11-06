@@ -113,6 +113,9 @@ fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, 
                 super::storage::json(source)?
             };
         let mut draft = manifest.draft;
+        if manifest.files.len() > super::super::definition::MAX_TASK_FILES {
+            return Err("Task packages support at most 32 files".into());
+        }
         for relative in manifest.files {
             validate_path(&relative)?;
             let path = super::super::native::bundle_files::path(

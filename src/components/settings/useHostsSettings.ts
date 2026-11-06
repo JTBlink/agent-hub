@@ -29,11 +29,13 @@ export function useHostsSettings(active: boolean) {
     readAt: null,
   });
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<ReturnType<
     typeof describeHostsError
   > | null>(null);
   const [notice, setNotice] = useState("");
   const pending = useRef(false);
+  const editRevision = useRef(0);
   const mounted = useRef(true);
   const failedAction = useRef<(() => Promise<void>) | null>(null);
   const current = useRef(model);
@@ -45,10 +47,11 @@ export function useHostsSettings(active: boolean) {
     };
   }, []);
   const run = useCallback(
-    async (action: () => Promise<void>) => {
+    async (action: () => Promise<void>, reading = false) => {
       if (pending.current) return false;
       pending.current = true;
-      setBusy(true);
+      if (reading) setRefreshing(true);
+      else setBusy(true);
       setError(null);
       setNotice("");
       try {
@@ -61,7 +64,10 @@ export function useHostsSettings(active: boolean) {
         return false;
       } finally {
         pending.current = false;
-        if (mounted.current) setBusy(false);
+        if (mounted.current) {
+          if (reading) setRefreshing(false);
+          else setBusy(false);
+        }
       }
     },
     [t],
@@ -70,41 +76,42 @@ export function useHostsSettings(active: boolean) {
   const load = useCallback(
     (discard = false) =>
       run(async () => {
+        const startedRevision = editRevision.current;
+        const update = (
+          patch: Partial<Pick<Model, "system" | "profiles" | "readAt">>,
+        ) => {
+          if (!mounted.current) return;
+          setModel((previous) => {
+            const next = { ...previous, ...patch };
+            const previousSource = previous.source;
+            const canReload = isProfile(previousSource)
+              ? patch.profiles !== undefined
+              : patch.system !== undefined;
+            if (!canReload) return next;
+            const fresh = isProfile(previousSource)
+              ? (next.profiles.find((p) => p.id === previousSource.id) ??
+                next.system)
+              : next.system;
+            const keepDraft =
+              edited(previous) &&
+              (!discard || editRevision.current !== startedRevision);
+            return {
+              ...next,
+              source: keepDraft ? previous.source : fresh,
+              draft: keepDraft
+                ? previous.draft
+                : hostsEditorText(fresh?.content ?? ""),
+            };
+          });
+        };
         const [systemResult, profilesResult] = await Promise.allSettled([
-          api.readSystemHosts(),
-          api.listHostsProfiles(),
+          api.readSystemHosts().then((system) => {
+            update({ system, readAt: new Date() });
+            return system;
+          }),
+          api.listHostsProfiles().then((profiles) => update({ profiles })),
         ]);
         if (!mounted.current) return;
-        setModel((previous) => {
-          const system =
-            systemResult.status === "fulfilled"
-              ? systemResult.value
-              : previous.system;
-          const profiles =
-            profilesResult.status === "fulfilled"
-              ? profilesResult.value
-              : previous.profiles;
-          const previousSource = previous.source;
-          const fresh = isProfile(previousSource)
-            ? (profiles.find((p) => p.id === previousSource.id) ?? system)
-            : system;
-          const canReload = isProfile(previousSource)
-            ? profilesResult.status === "fulfilled"
-            : systemResult.status === "fulfilled";
-          const keepDraft = edited(previous) && (!discard || !canReload);
-          return {
-            system,
-            profiles,
-            source: keepDraft ? previous.source : fresh,
-            draft: keepDraft
-              ? previous.draft
-              : hostsEditorText(fresh?.content ?? ""),
-            readAt:
-              systemResult.status === "fulfilled"
-                ? new Date()
-                : previous.readAt,
-          };
-        });
         const failure =
           systemResult.status === "rejected"
             ? systemResult.reason
@@ -123,7 +130,7 @@ export function useHostsSettings(active: boolean) {
             permission: false,
           });
         }
-      }),
+      }, true),
     [run, t],
   );
 
@@ -158,6 +165,7 @@ export function useHostsSettings(active: boolean) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   const select = (profile: api.HostsProfile | null) => {
+    editRevision.current += 1;
     const source = profile ?? current.current.system;
     setModel((m) => ({
       ...m,
@@ -168,6 +176,7 @@ export function useHostsSettings(active: boolean) {
     setError(null);
   };
   const setDraft = (draft: string) => {
+    editRevision.current += 1;
     setModel((m) => ({ ...m, draft }));
     setNotice("");
   };
@@ -296,7 +305,9 @@ export function useHostsSettings(active: boolean) {
     ...model,
     profile,
     dirty,
-    busy,
+    busy: busy || refreshing,
+    working: busy,
+    refreshing,
     error,
     notice,
     externalChange,

@@ -269,7 +269,9 @@ const profile: api.HostsProfile = {
 };
 async function selectProfile() {
   await act(async () =>
-    host.querySelector<HTMLButtonElement>('[aria-pressed="false"]')!.click(),
+    host
+      .querySelector<HTMLButtonElement>('aside button[aria-pressed="false"]')!
+      .click(),
   );
 }
 
@@ -278,8 +280,66 @@ const profileButtons = () => [
 ];
 const activeProfileNames = () =>
   profileButtons()
-    .filter((item) => item.textContent?.includes("当前生效"))
+    .filter((item) => item.querySelector('[role="img"][aria-label="当前生效"]'))
     .map((item) => item.querySelector("[title]")?.textContent);
+
+it("automatically shows system content before a slow profile list finishes and preserves typing", async () => {
+  let finishProfiles!: (profiles: api.HostsProfile[]) => void;
+  vi.mocked(api.listHostsProfiles).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishProfiles = resolve;
+    }),
+  );
+  await render();
+  expect(api.readSystemHosts).toHaveBeenCalledTimes(1);
+  expect(api.listHostsProfiles).toHaveBeenCalledTimes(1);
+  expect(editor().disabled).toBe(false);
+  expect(editor().value).toBe("127.0.0.1 localhost\n");
+  await edit("# typed while loading\n");
+  await act(async () => finishProfiles([profile]));
+  expect(editor().value).toBe("# typed while loading\n");
+  expect(profileButtons()).toHaveLength(1);
+});
+
+it("shows selectable profiles before a slow system read finishes without replacing the selection", async () => {
+  let finishSystem!: (snapshot: api.HostsSnapshot) => void;
+  vi.mocked(api.readSystemHosts).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishSystem = resolve;
+    }),
+  );
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  await render();
+  expect(profileButtons()[0].disabled).toBe(false);
+  await selectProfile();
+  expect(editor().disabled).toBe(false);
+  expect(editor().value).toBe(profile.content);
+  await act(async () => finishSystem(initial));
+  expect(profileButtons()[0].getAttribute("aria-pressed") === "true").toBe(
+    true,
+  );
+  expect(editor().value).toBe(profile.content);
+});
+
+it("keeps the editor usable during explicit reload and preserves edits made after reload started", async () => {
+  await render();
+  let finishSystem!: (snapshot: api.HostsSnapshot) => void;
+  vi.mocked(api.readSystemHosts).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishSystem = resolve;
+    }),
+  );
+  await act(async () => button("重新读取").click());
+  expect(editor().disabled).toBe(false);
+  await edit("# new draft during refresh\n");
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  expect(api.readSystemHosts).toHaveBeenCalledTimes(2);
+  await act(async () =>
+    finishSystem({ ...initial, content: "# external\n", revision: "new" }),
+  );
+  expect(editor().value).toBe("# new draft during refresh\n");
+  expect(host.textContent).toContain("磁盘内容已变化");
+});
 
 it("attributes identical contents only to the backend ID and switches only after a successful apply", async () => {
   const first = { ...profile, content: initial.content };
@@ -291,7 +351,20 @@ it("attributes identical contents only to the backend ID and switches only after
   });
   await render();
   expect(activeProfileNames()).toEqual([first.name]);
+  expect(profileButtons()[0].textContent).toBe(first.name);
+  expect(host.querySelector('input[type="radio"]')).toBeNull();
+  await act(async () => profileButtons()[0].click());
+  expect(
+    profileButtons().map(
+      (item) => item.getAttribute("aria-pressed") === "true",
+    ),
+  ).toEqual([true, false]);
   await act(async () => profileButtons()[1].click());
+  expect(
+    profileButtons().map(
+      (item) => item.getAttribute("aria-pressed") === "true",
+    ),
+  ).toEqual([false, true]);
   expect(button("应用到系统").disabled).toBe(false);
   expect(host.querySelector("h3 .text-success")).toBeNull();
   expect(activeProfileNames()).toEqual([first.name]);
@@ -434,9 +507,15 @@ it("requires confirmation before switching away from a system draft", async () =
   expect(editor().value).toBe("# draft\n");
   await act(async () => button("取消").click());
   expect(editor().value).toBe("# draft\n");
+  expect(profileButtons()[0].getAttribute("aria-pressed") === "true").toBe(
+    false,
+  );
   await selectProfile();
   await act(async () => button("确认").click());
   expect(editor().value).toBe(profile.content);
+  expect(profileButtons()[0].getAttribute("aria-pressed") === "true").toBe(
+    true,
+  );
 });
 it("keeps the naming dialog open and preserves input when profile creation fails", async () => {
   await render();

@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import type { AutomationDraft } from "../lib/tauri";
 import { automationPromptFile } from "../lib/automation";
+import { AutomationPromptEditor } from "./AutomationPromptEditor";
+import { PROMPT_VARIANTS_PATH } from "../lib/automationPrompts";
 import { AutomationScriptFilesEditor } from "./AutomationScriptFilesEditor";
 
 export function AutomationTaskContent({
@@ -19,9 +21,6 @@ export function AutomationTaskContent({
   const { t } = useTranslation();
   const promptFile = automationPromptFile(draft);
   const usesAgent = !!promptFile || draft.provider === "hermes";
-  const prompt =
-    promptFile?.content ??
-    (draft.provider === "hermes" ? draft.content : inactivePrompt);
   return (
     <>
       <label className="flex flex-col gap-2">
@@ -45,35 +44,13 @@ export function AutomationTaskContent({
           className="app-input min-h-[42px] w-full resize-y px-3 py-2.5 font-mono text-xs leading-6 read-only:bg-bg-secondary read-only:text-muted"
         />
       </label>
-      <label className="flex min-h-[300px] flex-1 flex-col gap-3 md:min-h-[380px]">
-        <span className="text-xs font-medium text-muted">
-          {t("automation.prompt")}
-        </span>
-        <textarea
-          aria-label={t("automation.prompt")}
-          required={usesAgent}
-          disabled={busy || !usesAgent}
-          maxLength={65536}
-          value={prompt}
-          onChange={(event) =>
-            promptFile
-              ? onChange({
-                  files: draft.files?.map((file) =>
-                    file.path === promptFile.path
-                      ? { ...file, content: event.target.value }
-                      : file,
-                  ),
-                })
-              : onChange({ content: event.target.value })
-          }
-          placeholder={t(
-            usesAgent
-              ? "automation.agentPromptPlaceholder"
-              : "automation.chooseAgentPrompt",
-          )}
-          className="app-input min-h-[280px] w-full flex-1 resize-y p-5 text-sm leading-7 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-muted"
-        />
-      </label>
+      <AutomationPromptEditor
+        draft={draft}
+        disabled={busy}
+        inactivePrompt={inactivePrompt}
+        usesAgent={usesAgent}
+        onChange={onChange}
+      />
       <p className="text-xs leading-6 text-muted">
         {t(
           usesAgent
@@ -84,7 +61,9 @@ export function AutomationTaskContent({
       <AutomationScriptFilesEditor
         scriptDirectory={scriptDirectory}
         files={(draft.files ?? []).filter(
-          (file) => file.path !== promptFile?.path,
+          (file) =>
+            file.path !== promptFile?.path &&
+            file.path !== PROMPT_VARIANTS_PATH,
         )}
         disabled={busy}
         onChange={(files) =>

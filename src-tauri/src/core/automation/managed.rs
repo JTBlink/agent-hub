@@ -111,11 +111,7 @@ pub(super) fn merge(report: &mut AutomationOverview, root: &Path) {
             task.schedule = record.draft.schedule.display();
             task.project = record.draft.workdir.clone();
             task.command = Some(record.draft.content.clone());
-            task.prompt = record
-                .draft
-                .files
-                .iter()
-                .find(|file| file.path == "prompt.md" || file.path.ends_with("/prompt.md"))
+            task.prompt = super::definition::runtime_prompt_file(&record.draft)
                 .map(|file| file.content.clone());
             let mut definition = record.draft.clone();
             super::workspace::separate(&mut definition, &record.id);

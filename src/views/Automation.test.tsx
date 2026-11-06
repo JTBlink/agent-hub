@@ -8,6 +8,7 @@ import zh from "../i18n/zh.json";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { Automation } from "./Automation";
 import { automationOverviewCache } from "../lib/automationOverviewCache";
+import { saveAutomationOverviewSummary } from "../lib/automationOverviewStorage";
 import { open } from "@tauri-apps/plugin-dialog";
 import { codeEditor, installCodeEditorGeometry } from "../test/codeEditor";
 import { openDirectoryInVscode, openFileInVscode } from "../lib/openInVscode";
@@ -473,6 +474,35 @@ it("hides the Hermes entry unless executable installation evidence is present", 
       ),
     ].map((node) => node.textContent),
   ).toEqual(["不使用智能体", "Claude Code", "Codex", "OpenCode"]);
+});
+
+it("shows a persisted list before loading completes without restoring task actions or incomplete details", async () => {
+  const task: api.AutomationTask = { ...hermes, origin: "agent_hub" };
+  const data = { tasks: [task], issues: [], hermes_installed: true };
+  saveAutomationOverviewSummary("zh", data);
+  let complete!: (value: api.AutomationOverview) => void;
+  vi.mocked(api.getAutomationOverview).mockReturnValueOnce(
+    new Promise((resolve) => {
+      complete = resolve;
+    }),
+  );
+  await render();
+  expect(container.textContent).toContain("显示上次读取的任务列表");
+  expect(
+    container.querySelector('button[data-automation-id="hermes:audit"]')
+      ?.textContent,
+  ).toContain(task.name);
+  expect(
+    container.querySelector('button[aria-label="立即运行 仓库审计"]'),
+  ).toBeNull();
+  await ariaClick("查看 仓库审计");
+  expect(container.querySelector('button[aria-label="编辑自动化"]')).toBeNull();
+  expect(api.runAutomation).not.toHaveBeenCalled();
+  await act(async () => complete(data));
+  expect(
+    container.querySelector('button[aria-label="编辑自动化"]'),
+  ).not.toBeNull();
+  expect(container.textContent).not.toContain("显示上次读取的任务列表");
 });
 
 it("shows source failures alongside available tasks and refreshes the catalog", async () => {
@@ -1064,23 +1094,23 @@ it("offers the same installed agents and order as the global workspace and prese
     "Codex",
     "Hermes Agent",
   ]);
-  const prompt =
+  const prompt = () =>
     container.querySelector<HTMLTextAreaElement>('[aria-label="提示词"]')!;
-  expect(prompt.disabled).toBe(true);
+  expect(prompt().disabled).toBe(true);
   await input("名称", "自定义任务");
   await input("执行命令", "printf original-command");
   await select("智能体（可选）", "codex");
-  expect(prompt.disabled).toBe(false);
+  expect(prompt().disabled).toBe(false);
   await input("提示词", "检查当前项目，不修改文件。");
   await select("智能体（可选）", "");
   expect(
     container.querySelector<HTMLTextAreaElement>('[aria-label="执行命令"]')!
       .value,
   ).toBe("printf original-command");
-  expect(prompt.value).toBe("检查当前项目，不修改文件。");
-  expect(prompt.disabled).toBe(true);
+  expect(prompt().value).toBe("检查当前项目，不修改文件。");
+  expect(prompt().disabled).toBe(true);
   await select("智能体（可选）", "opencode");
-  expect(prompt.value).toBe("检查当前项目，不修改文件。");
+  expect(prompt().value).toBe("检查当前项目，不修改文件。");
   await act(async () =>
     container
       .querySelector("form")!
@@ -2342,4 +2372,95 @@ it("cancels a copy from task details without creating or editing the original", 
   expect(container.querySelector("form")).toBeNull();
   expect(api.saveAutomation).not.toHaveBeenCalled();
   expect(api.runAutomation).not.toHaveBeenCalled();
+});
+
+it("keeps the saved prompt selected after a failed switch and applies exactly one variant after retry", async () => {
+  const definition: api.AutomationDraft = {
+    ...hermes.definition!,
+    content: "Only review",
+    files: [
+      {
+        path: "config/prompt-variants.json",
+        content: JSON.stringify({
+          version: 1,
+          active_id: "review",
+          variants: [
+            { id: "review", name: "Review" },
+            { id: "repair", name: "Repair", content: "Repair and verify" },
+          ],
+        }),
+      },
+    ],
+  };
+  let task = {
+    ...hermes,
+    origin: "agent_hub" as const,
+    prompt: definition.content,
+    definition,
+    revision: 7,
+  };
+  vi.mocked(api.getAutomationOverview).mockImplementation(async () => ({
+    tasks: [task],
+    issues: [],
+    hermes_installed: true,
+  }));
+  vi.mocked(api.saveAutomation).mockRejectedValueOnce(new Error("save failed"));
+  await render("/automation?task=hermes%3Aaudit");
+  const selectRepair = async () =>
+    act(async () =>
+      container
+        .querySelector<HTMLInputElement>('input[type="radio"][value="repair"]')!
+        .click(),
+    );
+  await selectRepair();
+  expect(
+    container.querySelector<HTMLInputElement>('input[type="radio"]:checked')
+      ?.value,
+  ).toBe("review");
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "save failed",
+  );
+  vi.mocked(api.saveAutomation).mockImplementationOnce(
+    async (_id, _revision, draft) => {
+      task = { ...task, prompt: draft.content, definition: draft, revision: 8 };
+      return task.id;
+    },
+  );
+  await selectRepair();
+  expect(
+    container.querySelectorAll('input[type="radio"]:checked'),
+  ).toHaveLength(1);
+  expect(
+    container.querySelector<HTMLInputElement>('input[type="radio"]:checked')
+      ?.value,
+  ).toBe("repair");
+  expect(container.textContent).toContain("Repair and verify");
+  expect(api.runAutomation).not.toHaveBeenCalled();
+});
+
+it("disables prompt selection while running and does not save cancelled variant edits", async () => {
+  const task: api.AutomationTask = {
+    ...hermes,
+    origin: "agent_hub",
+    status: "running",
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [task],
+    issues: [],
+    hermes_installed: true,
+  });
+  await render("/automation?task=hermes%3Aaudit");
+  expect(
+    container.querySelector('input[type="radio"]')!.closest("fieldset")!
+      .disabled,
+  ).toBe(true);
+  expect(button("管理提示词").disabled).toBe(true);
+  task.status = "paused";
+  await click("刷新");
+  await click("管理提示词");
+  await click("新增方案");
+  await input("提示词", "Alternative body");
+  await click("取消");
+  expect(api.saveAutomation).not.toHaveBeenCalled();
+  expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(1);
 });

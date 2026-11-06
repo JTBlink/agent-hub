@@ -81,3 +81,29 @@ fn validates_schedules_and_rejects_missing_directories_without_running_commands(
     assert!(draft.validate().is_err());
     assert!(!valid_id("agent_hub:../../other"));
 }
+
+#[test]
+fn accepts_multiple_64_kib_files_but_enforces_the_512_kib_bundle_budget() {
+    let mut draft: AutomationDraft = serde_json::from_value(serde_json::json!({
+        "name":"Large task", "provider":"system", "content":"sh './run.sh'",
+        "workdir":null, "schedule":{"kind":"manual"}, "enabled":false,
+        "files":[]
+    }))
+    .unwrap();
+    for index in 0..8 {
+        draft.files.push(AutomationScriptFile {
+            path: if index == 0 {
+                "run.sh".into()
+            } else {
+                format!("references/{index}.md")
+            },
+            content: "x".repeat(MAX_PROMPT_BYTES),
+        });
+    }
+    assert!(draft.validate().is_ok());
+    draft.files.push(AutomationScriptFile {
+        path: "references/over-limit.md".into(),
+        content: "x".into(),
+    });
+    assert!(draft.validate().unwrap_err().contains("512 KiB"));
+}

@@ -1,4 +1,4 @@
-import { Check, FileText, FolderOpen, Plus, Search } from "lucide-react";
+import { Check, FolderOpen, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { HostsProfile, HostsSnapshot } from "../../lib/hostsApi";
@@ -53,34 +53,31 @@ export function HostsProfileList({
         {visible.map((profile) => {
           const applied = profile.id === appliedId;
           return (
-            <div
+            <button
               key={profile.id}
-              className={`rounded border ${selected === profile.id ? "border-accent-border bg-accent-bg" : "border-transparent"}`}
+              type="button"
+              disabled={busy}
+              aria-pressed={selected === profile.id}
+              onClick={() => onSelect(profile)}
+              className={`flex w-full min-w-0 items-center gap-2 rounded border px-2 py-2.5 text-left hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-50 ${selected === profile.id ? "border-accent-border bg-accent-bg" : "border-transparent"}`}
             >
-              <button
-                type="button"
-                disabled={busy}
-                aria-pressed={selected === profile.id}
-                onClick={() => onSelect(profile)}
-                className="flex w-full min-w-0 items-start gap-2 rounded px-2 py-2.5 text-left hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-50"
+              <span
+                title={profile.name}
+                className="min-w-0 flex-1 truncate text-xs font-medium"
               >
-                <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
-                <span className="min-w-0">
-                  <span
-                    title={profile.name}
-                    className="block truncate text-xs font-medium"
-                  >
-                    {profile.name}
-                  </span>
-                  {applied && (
-                    <span className="mt-1 flex items-center gap-1 text-[10px] text-success">
-                      <Check className="h-3 w-3" />
-                      {t("hosts.currentlyApplied")}
-                    </span>
-                  )}
+                {profile.name}
+              </span>
+              {applied && (
+                <span
+                  role="img"
+                  aria-label={t("hosts.currentlyApplied")}
+                  title={t("hosts.currentlyApplied")}
+                  className="shrink-0 text-success"
+                >
+                  <Check aria-hidden="true" className="h-3.5 w-3.5" />
                 </span>
-              </button>
-            </div>
+              )}
+            </button>
           );
         })}
         {!visible.length && (
