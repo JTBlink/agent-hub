@@ -1,4 +1,5 @@
 import {
+  ChevronRight,
   Braces,
   Copy,
   Download,
@@ -42,7 +43,12 @@ export function AnnotationPanel({
     id: string | null;
     lastSeen?: string;
   }>({ id: null });
-  const selectedId = selection.lastSeen === latestId ? selection.id : latestId;
+  const selectedId =
+    selection.lastSeen !== latestId ||
+    (selection.id !== null &&
+      !model.notes.some((note) => note.id === selection.id))
+      ? latestId
+      : selection.id;
   const setSelectedId = (id: string | null) =>
     setSelection({ id, lastSeen: latestId });
   const [sending, setSending] = useState(false);
@@ -120,16 +126,51 @@ export function AnnotationPanel({
         <p className="preview-context-count">
           {t("preview.noteCount", { count: model.notes.length })}
         </p>
-        {selected ? (
-          <fieldset disabled={disabled} className="preview-context-detail">
-            <ContextDetails
-              key={selected.id}
-              model={model}
-              note={selected}
-              index={model.notes.indexOf(selected)}
-              instruction={instruction}
-            />
-          </fieldset>
+        {model.notes.length ? (
+          <div className="preview-annotation-list">
+            {model.notes.map((note, index) => {
+              const expanded = selected?.id === note.id;
+              return (
+                <section className="preview-annotation-row" key={note.id}>
+                  <button
+                    type="button"
+                    className="preview-annotation-summary"
+                    aria-expanded={expanded}
+                    disabled={disabled}
+                    title={note.selector}
+                    onClick={() => setSelectedId(expanded ? null : note.id)}
+                  >
+                    <span className="preview-annotation-number">
+                      {index + 1}
+                    </span>
+                    <span className="preview-annotation-label">
+                      {note.note.trim() ||
+                        note.accessibility?.label ||
+                        note.text.trim() ||
+                        note.selector}
+                    </span>
+                    <ChevronRight
+                      size={14}
+                      className={expanded ? "rotate-90" : undefined}
+                    />
+                  </button>
+                  {expanded && (
+                    <fieldset
+                      disabled={disabled}
+                      className="preview-context-detail"
+                    >
+                      <ContextDetails
+                        model={model}
+                        note={note}
+                        index={index}
+                        instruction={instruction}
+                      />
+                    </fieldset>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         ) : (
           <div className="preview-empty preview-context-empty">
             <MessageSquareText size={25} />
@@ -208,7 +249,7 @@ export function AnnotationPanel({
               </span>
             </span>
           )}
-          {model.notes.map((note) => {
+          {model.notes.map((note, index) => {
             const Icon =
               note.contextKind === "image" || note.screenshot
                 ? Image
@@ -235,6 +276,7 @@ export function AnnotationPanel({
                   }
                   type="button"
                 >
+                  <span className="preview-annotation-number">{index + 1}</span>
                   <Icon size={13} />
                   <span>{label}</span>
                 </button>

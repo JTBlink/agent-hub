@@ -1,3 +1,5 @@
+import { useAnnotationMarkers } from "../shared/useAnnotationMarkers";
+import { annotationsForPage } from "../shared/session";
 import type { PreviewModel } from "../usePreviewWorkspace";
 import type { PreviewTab } from "../shared/session";
 import { BrowserSurface } from "../web/BrowserSurface";
@@ -20,6 +22,14 @@ export function PreviewPageSurface({
 }) {
   const active = model.active;
   const doc = model.documents[tab.id];
+  useAnnotationMarkers(
+    model.pageIds[tab.id],
+    tab.revision,
+    annotationsForPage(model.session, tab.id),
+    shown && active?.id === tab.id && !model.source && !drawing,
+    model.report,
+    tab.address,
+  );
   return (
     <div
       key={tab.id}
