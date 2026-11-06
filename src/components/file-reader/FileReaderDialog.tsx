@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, Maximize2, Minimize2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { CopyPathButton } from "../CopyPathButton";
 import { FileReader } from "./FileReader";
 import { cn } from "../../utils";
 import type { FileReaderProps } from "./types";
@@ -10,12 +11,14 @@ import type { FileReaderProps } from "./types";
 export function FileReaderDialog({
   title,
   description,
+  rootDirectory,
   onClose,
   initialMaximized = false,
   ...props
 }: FileReaderProps & {
   title?: string;
   description?: string;
+  rootDirectory?: string;
   onClose: () => void;
   initialMaximized?: boolean;
 }) {
@@ -61,11 +64,15 @@ export function FileReaderDialog({
           />
           <h2
             id={titleId}
-            className="min-w-0 flex-1 truncate text-sm font-semibold"
+            className={cn(
+              "min-w-0 flex-1 text-sm font-semibold",
+              rootDirectory ? "max-h-24 overflow-y-auto break-all" : "truncate",
+            )}
             title={title}
           >
             {title ?? t("fileReader.title")}
           </h2>
+          {rootDirectory && <CopyPathButton path={rootDirectory} />}
           <button
             type="button"
             aria-label={t(

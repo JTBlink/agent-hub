@@ -888,7 +888,7 @@ it.each([undefined, "/workspace/scripts"])(
     expect(container.querySelector('[role="alert"]')).toBeNull();
     expect(api.saveAutomation).not.toHaveBeenCalled();
     expect(api.runAutomation).not.toHaveBeenCalled();
-    await click("打开文件夹");
+    await click("打开");
     await act(async () =>
       document
         .querySelector<HTMLButtonElement>(
@@ -1607,7 +1607,7 @@ it("fills a scheduled cleanup template and lets the user choose manual execution
       '[role="textbox"][aria-label="disk-cleanup/disk-cleanup.py"]',
     ),
   ).toBeNull();
-  await click("打开文件夹");
+  await click("打开");
   await act(async () =>
     document
       .querySelector<HTMLButtonElement>(
@@ -2270,7 +2270,7 @@ it("copies a complete task from the list and edits prompts, scripts, settings an
   await input("名称", "Review copy");
   await input("提示词", "Review only the selected repository");
   await select("日程", "manual");
-  await click("打开文件夹");
+  await click("打开");
   for (const [path, content] of [
     ["scripts/run.sh", "echo copied"],
     ["config/settings.json", '{"limit":5}'],

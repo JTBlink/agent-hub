@@ -1,4 +1,8 @@
 // @vitest-environment jsdom
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  writeText: vi.fn().mockResolvedValue(undefined),
+}));
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -54,6 +58,7 @@ function Editor({ disabled = false }) {
   return (
     <AutomationScriptFilesEditor
       files={files}
+      scriptDirectory="/tasks/review-task"
       disabled={disabled}
       onChange={setFiles}
     />
@@ -68,7 +73,7 @@ async function click(path: string) {
 }
 async function openFolder() {
   const button = [...container.querySelectorAll("button")].find((node) =>
-    node.textContent?.includes("打开文件夹"),
+    node.textContent?.includes("打开"),
   )!;
   button.focus();
   await act(async () => button.click());
@@ -131,4 +136,14 @@ it("allows reading and selecting text while busy and handles removed files", asy
   expect(document.querySelector("dialog .cm-editor")).toBeNull();
   await click("maintenance/agent.py");
   expect(codeEditor(document).state.readOnly).toBe(false);
+});
+
+it("shows the complete task root and copies its absolute path", async () => {
+  await act(async () => root.render(<Editor />));
+  await openFolder();
+  expect(document.querySelector("dialog h2")?.textContent).toBe(
+    "/tasks/review-task",
+  );
+  await click("复制路径");
+  expect(writeText).toHaveBeenLastCalledWith("/tasks/review-task");
 });

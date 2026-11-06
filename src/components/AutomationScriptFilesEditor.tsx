@@ -40,7 +40,11 @@ export function AutomationScriptFilesEditor({
       {open && (
         <FileReaderDialog
           initialMaximized
-          title={t("automation.scriptFiles", { count: files.length })}
+          title={
+            scriptDirectory ||
+            t("automation.scriptFiles", { count: files.length })
+          }
+          rootDirectory={scriptDirectory ?? undefined}
           description={t("automation.scriptFilesSaveHint")}
           files={files}
           onOpenInVscode={

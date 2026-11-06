@@ -441,7 +441,7 @@
     "closeFile": "Close file preview",
     "networkSetupHelp": "Adding this template requests administrator authorization to prepare a dedicated network reset entry. The schedule starts paused. Deleting the task removes only its own permission entry.",
     "scriptFilesHint": "Open the task folder full screen to browse and edit files.",
-    "openScriptFolder": "Open folder",
+    "openScriptFolder": "Open",
     "viewSource": "View source",
     "useTemplate": "Use template",
     "backToEditor": "Back to editor",
