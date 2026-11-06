@@ -214,6 +214,12 @@
 .activity-bar-item {
   height: var(--app-activitybar-width);
 }
+.activity-bar-divider {
+  height: 1px;
+  margin: calc(4px / var(--app-scale)) calc(12px / var(--app-scale));
+  background: var(--color-border-subtle);
+  opacity: 0.65;
+}
 .workbench-activity-bar .activity-bar-icon {
   width: calc(24px / var(--app-scale));
   height: calc(24px / var(--app-scale));

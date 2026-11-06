@@ -49,35 +49,39 @@ export function HostsProfileList({
           className={`${fieldClass} w-full py-1.5 pl-7 text-xs`}
         />
       </label>
-      <div className="max-h-72 space-y-1 overflow-y-auto md:max-h-[28rem]">
+      <div className="max-h-72 overflow-y-auto md:max-h-[28rem]">
         {visible.map((profile) => {
           const applied = profile.id === appliedId;
           return (
-            <button
+            <div
               key={profile.id}
-              type="button"
-              disabled={busy}
-              aria-pressed={selected === profile.id}
-              onClick={() => onSelect(profile)}
-              className={`flex w-full min-w-0 items-center gap-2 rounded border px-2 py-2.5 text-left hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-50 ${selected === profile.id ? "border-accent-border bg-accent-bg" : "border-transparent"}`}
+              className="border-b border-border-faint py-0.5 last:border-b-0"
             >
-              <span
-                title={profile.name}
-                className="min-w-0 flex-1 truncate text-xs font-medium"
+              <button
+                type="button"
+                disabled={busy}
+                aria-pressed={selected === profile.id}
+                onClick={() => onSelect(profile)}
+                className={`flex w-full min-w-0 items-center gap-2 rounded border px-2 py-2.5 text-left hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-50 ${selected === profile.id ? "border-accent-border bg-accent-bg" : "border-transparent"}`}
               >
-                {profile.name}
-              </span>
-              {applied && (
                 <span
-                  role="img"
-                  aria-label={t("hosts.currentlyApplied")}
-                  title={t("hosts.currentlyApplied")}
-                  className="shrink-0 text-success"
+                  title={profile.name}
+                  className="min-w-0 flex-1 truncate text-xs font-medium"
                 >
-                  <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                  {profile.name}
                 </span>
-              )}
-            </button>
+                {applied && (
+                  <span
+                    role="img"
+                    aria-label={t("hosts.currentlyApplied")}
+                    title={t("hosts.currentlyApplied")}
+                    className="shrink-0 text-success"
+                  >
+                    <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </button>
+            </div>
           );
         })}
         {!visible.length && (
@@ -86,16 +90,18 @@ export function HostsProfileList({
           </p>
         )}
       </div>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onCreate}
-        className={`${actionButtonClass} justify-start text-xs`}
-      >
-        <Plus className="h-3.5 w-3.5" />
-        {t("hosts.newProfile")}
-      </button>
-      <p className="mt-auto flex items-start gap-1.5 pt-5 text-[10px] leading-relaxed text-muted">
+      <div className="border-t border-border-faint pt-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onCreate}
+          className={`${actionButtonClass} w-full justify-start text-xs`}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {t("hosts.newProfile")}
+        </button>
+      </div>
+      <p className="mt-auto flex items-start gap-1.5 border-t border-border-faint pt-3 text-[10px] leading-relaxed text-muted">
         <FolderOpen className="mt-0.5 h-3 w-3 shrink-0" />
         {t("hosts.libraryHint")}
       </p>

@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { Fragment, type ComponentType, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "@vscode/codicons/dist/codicon.css";
 import { useTranslation } from "react-i18next";
@@ -206,15 +206,30 @@ export function SidebarActivityBar({
       </span>
     ) : null;
   };
+  const primary = productConfig.sidebar.primary.filter((id) => items[id]);
+  const section = (id: string) =>
+    ["projects", "search", "git"].includes(id)
+      ? "workspace"
+      : ["tasks", "automation", "preview"].includes(id)
+        ? "work"
+        : "tools";
   return (
     <nav
       aria-label={t("sidebar.navigation")}
       className="workbench-activity-bar flex shrink-0 flex-col bg-bg-secondary"
     >
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
-        {productConfig.sidebar.primary.map(renderItem)}
+        {primary.map((id, index) => (
+          <Fragment key={id}>
+            {index > 0 && section(id) !== section(primary[index - 1]) && (
+              <div aria-hidden="true" className="activity-bar-divider" />
+            )}
+            {renderItem(id)}
+          </Fragment>
+        ))}
       </div>
       <div className="shrink-0">
+        <div aria-hidden="true" className="activity-bar-divider" />
         {productConfig.sidebar.bottom.map(renderItem)}
       </div>
     </nav>
