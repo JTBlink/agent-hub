@@ -85,3 +85,25 @@ fn never_follows_repository_symlinks() {
         .packages
         .is_empty());
 }
+
+#[test]
+fn portable_audits_accept_foreign_shells_without_relaxing_import_validation() {
+    let temp = tempfile::tempdir().unwrap();
+    task(temp.path(), ".");
+    let manifest = temp.path().join("task.json");
+    let mut definition: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
+    definition["shell"] = if crate::core::automation::command_shell() == "sh" {
+        "powershell".into()
+    } else {
+        "sh".into()
+    };
+    std::fs::write(&manifest, serde_json::to_vec(&definition).unwrap()).unwrap();
+    let audit = scan_portable(temp.path()).unwrap();
+    assert_eq!(audit.packages.len(), 1);
+    assert!(audit.issues.is_empty());
+    assert!(super::super::preview_package(temp.path()).is_err());
+    let native = scan_local(temp.path()).unwrap();
+    assert!(native.packages.is_empty());
+    assert_eq!(native.issues.len(), 1);
+}

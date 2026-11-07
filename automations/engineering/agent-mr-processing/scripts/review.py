@@ -110,6 +110,10 @@ def load_repairs(task, state_dir):
 
 
 def main():
+    # Redirected Windows task logs otherwise inherit a legacy ANSI encoding.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     task = Path(os.environ.get('AGENT_HUB_TASK_DIR', str(Path(__file__).resolve().parent.parent)))
     host = load_host(task)
     config = host.read_json(task / 'config/review-config.json')

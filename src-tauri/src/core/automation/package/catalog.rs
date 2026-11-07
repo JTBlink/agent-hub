@@ -68,7 +68,22 @@ pub fn scan_local(root: &Path) -> Result<GitAutomationCatalog, String> {
     scan(root, "local".into())
 }
 
+/// Inspect portable definitions for audits, keeping native-shell import checks separate.
+pub(in crate::core::automation) fn scan_portable(
+    root: &Path,
+) -> Result<GitAutomationCatalog, String> {
+    scan_with_shell_validation(root, "local".into(), false)
+}
+
 fn scan(root: &Path, revision: String) -> Result<GitAutomationCatalog, String> {
+    scan_with_shell_validation(root, revision, true)
+}
+
+fn scan_with_shell_validation(
+    root: &Path,
+    revision: String,
+    native_shell: bool,
+) -> Result<GitAutomationCatalog, String> {
     super::storage::regular_directory(root)?;
     // A selected task wins; otherwise prefer the conventional automation-only subtree.
     let scan_root = if !super::manifest_path(root).exists() && root.join("automations").is_dir() {
@@ -112,7 +127,12 @@ fn scan(root: &Path, revision: String) -> Result<GitAutomationCatalog, String> {
             .to_string_lossy()
             .replace('\\', "/");
         let path = if path.is_empty() { ".".into() } else { path };
-        match super::preview_package(directory) {
+        let preview = if native_shell {
+            super::preview_package(directory)
+        } else {
+            super::exchange::preview_portable_package(directory)
+        };
+        match preview {
             Ok(package) => {
                 bytes += serde_json::to_vec(&package)
                     .map_err(|e| e.to_string())?

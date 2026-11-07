@@ -56,6 +56,7 @@ fn review_entrypoint_selects_requests_before_launching_agent() {
             .arg(root.path().join("scripts/review.py"))
             .env("AGENT_HUB_CLI", &cli)
             .env("PYTHONDONTWRITEBYTECODE", "1")
+            .env("PYTHONIOENCODING", "cp1252")
             .output()
             .unwrap();
             assert!(

@@ -84,6 +84,15 @@ impl AutomationPackage {
 
 /// Preview only reads declared files; no extraction, setup hook or registration.
 pub fn preview_package(source: &Path) -> Result<AutomationPackage, String> {
+    preview(source, true)
+}
+
+/// Read-only audits inspect either shell without making it installable on this host.
+pub(super) fn preview_portable_package(source: &Path) -> Result<AutomationPackage, String> {
+    preview(source, false)
+}
+
+fn preview(source: &Path, native_shell: bool) -> Result<AutomationPackage, String> {
     let source = if source.is_absolute() {
         source.to_path_buf()
     } else {
@@ -91,7 +100,7 @@ pub fn preview_package(source: &Path) -> Result<AutomationPackage, String> {
             .map_err(|e| e.to_string())?
             .join(source)
     };
-    read_package(&source, true)
+    read_package(&source, native_shell)
 }
 
 fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, String> {

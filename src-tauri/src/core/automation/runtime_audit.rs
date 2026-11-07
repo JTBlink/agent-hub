@@ -108,7 +108,7 @@ fn inspect(id: String, draft: &AutomationDraft) -> TaskAudit {
 
 /// Audit source definitions without importing, registering, running or creating private state.
 pub fn repository(root: &Path) -> Result<RuntimeAudit, String> {
-    let catalog = super::package::catalog::scan_local(root)?;
+    let catalog = super::package::catalog::scan_portable(root)?;
     if catalog.packages.is_empty() && catalog.issues.is_empty() {
         return Err("No task packages found in the selected directory".into());
     }

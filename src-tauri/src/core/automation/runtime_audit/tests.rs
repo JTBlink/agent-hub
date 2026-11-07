@@ -91,7 +91,7 @@ fn an_empty_directory_is_not_reported_as_a_successful_task_audit() {
 #[test]
 fn generated_builtin_tasks_use_the_same_shared_runtime_contract() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let catalog = crate::core::automation::package::catalog::scan_local(root).unwrap();
+    let catalog = crate::core::automation::package::catalog::scan_portable(root).unwrap();
     let mut checked = 0;
     for entry in catalog.packages {
         let id = Path::new(&entry.path)
@@ -113,7 +113,7 @@ fn generated_builtin_tasks_use_the_same_shared_runtime_contract() {
 fn every_repository_shell_entry_resolves_its_package_and_forwards_literal_arguments() {
     use std::os::unix::fs::PermissionsExt;
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let catalog = crate::core::automation::package::catalog::scan_local(root).unwrap();
+    let catalog = crate::core::automation::package::catalog::scan_portable(root).unwrap();
     let sandbox = tempfile::tempdir().unwrap();
     let python = sandbox.path().join("fake python");
     std::fs::write(&python, "#!/bin/sh\nprintf '%s\\n' \"$AGENT_HUB_TASK_DIR\" \"$AGENT_HUB_SCRIPT_DIR\" \"$@\" > \"$TASK_ENTRY_TEST_OUTPUT\"\n").unwrap();

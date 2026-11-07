@@ -27,13 +27,22 @@ fn task() -> AutomationTask {
 
 #[test]
 fn copy_detaches_package_bindings_but_preserves_external_projects() {
+    let temp = tempfile::tempdir().unwrap();
+    let package = temp.path().join("review");
+    let project = package.join("project");
+    let external = temp.path().join("review-other");
+    std::fs::create_dir_all(&project).unwrap();
+    std::fs::create_dir(&external).unwrap();
     let mut source = task();
+    let draft = source.definition.as_mut().unwrap();
+    draft.script_dir = Some(package.to_string_lossy().into_owned());
+    draft.workdir = Some(project.to_string_lossy().into_owned());
     let copy = from_task(&source, Some(7)).unwrap();
     assert!(copy.workdir.is_none() && copy.script_dir.is_none() && !copy.enabled);
     let draft = source.definition.as_mut().unwrap();
-    draft.workdir = Some("/tasks/review-other".into());
+    draft.workdir = Some(external.to_string_lossy().into_owned());
     let copy = from_task(&source, Some(7)).unwrap();
-    assert_eq!(copy.workdir.as_deref(), Some("/tasks/review-other"));
+    assert_eq!(copy.workdir.as_deref(), external.to_str());
     assert!(source.definition.as_ref().unwrap().enabled);
 }
 
