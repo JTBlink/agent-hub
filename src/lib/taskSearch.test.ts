@@ -133,11 +133,11 @@ it("retains new filters in view preferences while accepting older saved preferen
       assignee: "reviewer",
       labels: ["bug"],
     };
-    saveTaskViewPreferences({ provider: "all", projectId: "all", filters });
+    saveTaskViewPreferences({ provider: "all", projectIds: [], filters });
     expect(readTaskViewPreferences().filters).toEqual(filters);
     saveTaskViewPreferences({
       provider: "all",
-      projectId: "all",
+      projectIds: [],
       filters: defaults,
     });
     expect(readTaskViewPreferences().filters).toMatchObject(defaults);

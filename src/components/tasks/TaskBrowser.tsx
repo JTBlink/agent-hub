@@ -38,6 +38,7 @@ import {
 } from "../../lib/taskSearch";
 import { useActiveWorkspace } from "../../hooks/useActiveWorkspace";
 import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
+import { taskPlatforms } from "@app/platforms";
 
 export function TaskBrowser({ projects }: { projects: Project[] }) {
   const { t } = useTranslation();
@@ -63,9 +64,9 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   const [provider, setProvider] = useState(initial.provider);
   const [projectScope, setProjectScope] = useState({
     workspaceKey,
-    projectId: workspaceId ?? initial.projectId,
+    projectIds: workspaceId ? [workspaceId] : initial.projectIds,
   });
-  const projectId = projectScope.projectId;
+  const projectIds = projectScope.projectIds;
   const [filters, setFilters] = useState<TaskFilters>(initial.filters);
   const [search, setSearch] = useState(initial.filters.text);
   const [selection, setSelection] = useState<{
@@ -82,7 +83,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   if (projectScope.workspaceKey !== workspaceKey) {
     setProjectScope({
       workspaceKey,
-      projectId: workspaceId ?? initial.projectId,
+      projectIds: workspaceId ? [workspaceId] : initial.projectIds,
     });
     setSelection(null);
   }
@@ -124,12 +125,15 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     );
     return () => clearTimeout(timer);
   }, [search]);
-  const activeProjectId =
-    projectId === "all" ||
-    discovering ||
-    projects.some((project) => project.id === projectId)
-      ? projectId
-      : "all";
+  const activeProjectIds = useMemo(
+    () =>
+      discovering
+        ? projectIds
+        : projectIds.filter((id) =>
+            projects.some((project) => project.id === id),
+          ),
+    [discovering, projectIds, projects],
+  );
   const appliedFilters = useMemo(
     () =>
       taskSearchFilters({
@@ -143,19 +147,39 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
   useEffect(() => {
     saveTaskViewPreferences({
       provider,
-      projectId: activeProjectId,
+      projectIds: activeProjectIds,
       filters: { ...appliedFilters, text: filters.text },
     });
-  }, [provider, activeProjectId, filters.text, appliedFilters]);
-  const selectedBindings = useMemo(
+  }, [provider, activeProjectIds, filters.text, appliedFilters]);
+  const projectBindings = useMemo(
     () =>
       bindings.filter(
         (binding) =>
-          (provider === "all" || binding.provider === provider) &&
-          (activeProjectId === "all" || binding.project_id === activeProjectId),
+          !activeProjectIds.length ||
+          activeProjectIds.includes(binding.project_id),
       ),
-    [bindings, provider, activeProjectId],
+    [bindings, activeProjectIds],
   );
+  const selectedBindings = useMemo(
+    () =>
+      projectBindings.filter(
+        (binding) => provider === "all" || binding.provider === provider,
+      ),
+    [projectBindings, provider],
+  );
+  const mismatchedProjects =
+    provider === "all" || !activeProjectIds.length
+      ? []
+      : projects.filter((project) => {
+          if (!activeProjectIds.includes(project.id)) return false;
+          const repositories = projectBindings.filter(
+            (binding) => binding.project_id === project.id,
+          );
+          return (
+            repositories.length > 0 &&
+            repositories.every((binding) => binding.provider !== provider)
+          );
+        });
   const { sources, items, load } = useRepositoryTasks(
     selectedBindings,
     appliedFilters,
@@ -191,7 +215,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
     <div className="flex min-h-0 flex-1 flex-col gap-0">
       <TaskToolbar
         provider={provider}
-        projectId={activeProjectId}
+        projectIds={activeProjectIds}
         projects={projects}
         bindings={bindings}
         identities={[
@@ -210,8 +234,8 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           setProvider(value);
           setSelection(null);
         }}
-        onProject={(value) => {
-          setProjectScope({ workspaceKey, projectId: value });
+        onProjects={(value) => {
+          setProjectScope({ workspaceKey, projectIds: value });
           setSelection(null);
         }}
         onFilters={(patch) => {
@@ -262,6 +286,24 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
           onClose={() => setConnections(false)}
         />
       )}
+      {!discovering &&
+        !settingsError &&
+        selectedBindings.length === 0 &&
+        mismatchedProjects.length > 0 && (
+          <p role="alert" className="my-2 text-xs text-danger">
+            {t("tasks.providerMismatch", {
+              projects: mismatchedProjects
+                .map((project) => project.name)
+                .join(", "),
+              current: taskPlatforms.find(
+                (platform) => platform.id !== provider,
+              )?.label,
+              selected: taskPlatforms.find(
+                (platform) => platform.id === provider,
+              )?.label,
+            })}
+          </p>
+        )}
       {sources
         .filter((source) => source.error)
         .map((source) => (
@@ -322,7 +364,7 @@ export function TaskBrowser({ projects }: { projects: Project[] }) {
                   />
                   <p>{t("tasks.empty")}</p>
                 </div>
-              ) : (
+              ) : mismatchedProjects.length ? null : (
                 <div className="mx-auto max-w-md space-y-3">
                   <p>{t("tasks.notConnected")}</p>
                   <button

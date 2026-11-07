@@ -2408,6 +2408,7 @@
     "checkingIdentity": "读取身份中",
     "limited": "平台搜索结果达到上限或不完整，请缩小筛选范围。",
     "notConnected": "未找到可自动识别的任务仓库。请添加本地项目，或在“仓库连接”中选择远端；此状态不表示 CLI 未登录。",
+    "providerMismatch": "项目 {{projects}} 使用 {{current}} 仓库，无法查看 {{selected}} 任务。请切换平台或调整项目选择。",
     "empty": "列表为空",
     "task": "任务",
     "assignee": "负责人",

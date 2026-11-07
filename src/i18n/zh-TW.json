@@ -2368,6 +2368,7 @@
     "checkingIdentity": "讀取身分中",
     "limited": "平台搜尋結果達到上限或不完整，請縮小篩選範圍。",
     "notConnected": "未找到可自動識別的任務儲存庫。請新增本機專案，或在「儲存庫連線」中選擇遠端；此狀態不表示 CLI 未登入。",
+    "providerMismatch": "專案 {{projects}} 使用 {{current}} 倉庫，無法查看 {{selected}} 任務。請切換平台或調整專案選擇。",
     "empty": "清單為空",
     "task": "任務",
     "assignee": "負責人",

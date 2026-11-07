@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ChangeEventHandler,
   type OptionHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -84,33 +85,42 @@ function positionFor(
   };
 }
 
-/** A controlled, theme-aware single select. The hidden select retains form and
- * change-event compatibility; only the custom combobox is focusable or visible. */
-export function ThemedSelect({
-  value,
-  children,
-  className,
-  leadingIcon,
-  optionIcon,
-  renderValue,
-  fitContent = false,
-  singleLineOptions = false,
-  menuTitle,
-  ...props
-}: Omit<
+type Props = Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
-  "value" | "multiple" | "size"
+  "value" | "multiple" | "size" | "onChange"
 > & {
-  value: string;
   leadingIcon?: ReactNode;
   optionIcon?: (value: string) => ReactNode;
   renderValue?: (value: string, label: string) => ReactNode;
   /** Let the menu fit complete labels and all rows when the viewport allows. */
   fitContent?: boolean;
-  /** Keep compact option rows on one line and expose full labels on hover. */
   singleLineOptions?: boolean;
   menuTitle?: string;
-}) {
+} & (
+    | {
+        multiple?: false;
+        value: string;
+        onChange?: ChangeEventHandler<HTMLSelectElement>;
+      }
+    | { multiple: true; value: string[]; onChange: (values: string[]) => void }
+  );
+
+/** A controlled, theme-aware select. Single selection retains the native change
+ * contract; multiple selection toggles values and keeps the menu open. */
+export function ThemedSelect(selection: Props) {
+  const {
+    value,
+    children,
+    className,
+    leadingIcon,
+    optionIcon,
+    renderValue,
+    fitContent = false,
+    singleLineOptions = false,
+    menuTitle,
+    multiple,
+    ...props
+  } = selection;
   const options = optionsFrom(children);
   const [position, setPosition] = useState<{
     left: number;
@@ -126,7 +136,9 @@ export function ThemedSelect({
   const id = useId();
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const open = position !== null;
-  const selected = options.find((option) => option.value === value);
+  const values = typeof value === "string" ? [value] : value;
+  const selected = options.filter((option) => values.includes(option.value));
+  const label = selected.map((option) => option.label).join(", ");
   const rowCount = options.length + (menuTitle ? 1 : 0);
   const locate = () =>
     setPosition(
@@ -139,7 +151,7 @@ export function ThemedSelect({
       Math.max(
         0,
         options.findIndex(
-          (option) => option.value === value && !option.disabled,
+          (option) => values.includes(option.value) && !option.disabled,
         ),
       ),
     );
@@ -147,6 +159,15 @@ export function ThemedSelect({
   };
   const choose = (option: Option | undefined) => {
     if (!option || option.disabled) return;
+    if (selection.multiple) {
+      selection.onChange(
+        values.includes(option.value)
+          ? values.filter((value) => value !== option.value)
+          : [...values, option.value],
+      );
+      trigger.current?.focus({ preventScroll: true });
+      return;
+    }
     if (native.current && option.value !== value) {
       native.current.value = option.value;
       native.current.dispatchEvent(new Event("change", { bubbles: true }));
@@ -165,6 +186,13 @@ export function ThemedSelect({
         setPosition(null);
     };
     const blur = () => setPosition(null);
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setPosition(null);
+      trigger.current?.focus({ preventScroll: true });
+    };
     const reposition = () =>
       setPosition(
         positionFor(trigger.current, rowCount, fitContent, list.current),
@@ -174,6 +202,7 @@ export function ThemedSelect({
     document.addEventListener("pointerdown", dismiss, true);
     document.addEventListener("mousedown", dismiss, true);
     document.addEventListener("click", dismiss, true);
+    document.addEventListener("keydown", escape, true);
     window.addEventListener("blur", blur);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
@@ -181,6 +210,7 @@ export function ThemedSelect({
       document.removeEventListener("pointerdown", dismiss, true);
       document.removeEventListener("mousedown", dismiss, true);
       document.removeEventListener("click", dismiss, true);
+      document.removeEventListener("keydown", escape, true);
       window.removeEventListener("blur", blur);
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
@@ -211,6 +241,17 @@ export function ThemedSelect({
         {...props}
         ref={native}
         value={value}
+        multiple={multiple}
+        onChange={
+          selection.multiple
+            ? (event) =>
+                selection.onChange(
+                  [...event.target.selectedOptions].map(
+                    (option) => option.value,
+                  ),
+                )
+            : selection.onChange
+        }
         hidden
         aria-hidden="true"
         tabIndex={-1}
@@ -228,7 +269,7 @@ export function ThemedSelect({
         aria-controls={open ? id : undefined}
         aria-activedescendant={open ? `${id}-${active}` : undefined}
         disabled={props.disabled || !options.length}
-        title={props.title}
+        title={props.title ?? (multiple ? label : undefined)}
         onClick={() => (open ? setPosition(null) : show())}
         onBlur={(event) => {
           if (!list.current?.contains(event.relatedTarget)) setPosition(null);
@@ -291,9 +332,9 @@ export function ThemedSelect({
       >
         {leadingIcon}
         <span className="min-w-0 flex-1 truncate">
-          {selected && renderValue
-            ? renderValue(selected.value, selected.label)
-            : (selected?.label ?? props["aria-label"])}
+          {!multiple && selected[0] && renderValue
+            ? renderValue(selected[0].value, selected[0].label)
+            : label || props["aria-label"]}
         </span>
         <ChevronDown
           aria-hidden="true"
@@ -309,6 +350,7 @@ export function ThemedSelect({
             ref={list}
             id={id}
             role="listbox"
+            aria-multiselectable={multiple || undefined}
             aria-label={props["aria-label"]}
             style={{
               position: "fixed",
@@ -334,7 +376,7 @@ export function ThemedSelect({
                 title={
                   option.title ?? (singleLineOptions ? option.label : undefined)
                 }
-                aria-selected={option.value === value}
+                aria-selected={values.includes(option.value)}
                 aria-disabled={option.disabled}
                 id={`${id}-${index}`}
                 key={option.value}
@@ -349,13 +391,14 @@ export function ThemedSelect({
                 className={cn(
                   "flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
                   active === index && "bg-surface-hover",
-                  option.value === value
+                  values.includes(option.value)
                     ? "font-medium text-accent-light"
                     : "text-secondary",
+                  values.includes(option.value) && "disabled:opacity-80",
                 )}
               >
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                  {option.value === value && (
+                  {values.includes(option.value) && (
                     <Check aria-hidden="true" className="h-3.5 w-3.5" />
                   )}
                 </span>

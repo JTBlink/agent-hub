@@ -20,7 +20,7 @@ import issueConfig from "../../automations/engineering/agent-issue-processing/co
 import React from "react";
 import diskCleanupManifestCatalog from "../../automations/system/disk-cleanup/config/catalog.json";
 import diskCleanupScript from "../../automations/system/disk-cleanup/scripts/disk-cleanup.py?raw";
-import herdrScript from "../../automations/_shared/herdr-agent.py?raw";
+import herdrScript from "../../automations/_shared/agent-entry.py?raw";
 import maintenancePrompt from "../../automations/engineering/agent-maintenance/prompts/prompt.md?raw";
 import maintenanceConfig from "../../automations/engineering/agent-maintenance/config/herdr.json?raw";
 import { createRoot } from "react-dom/client";

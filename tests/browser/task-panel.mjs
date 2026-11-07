@@ -34,7 +34,9 @@ const clickText = (selector, text) =>
 let savedTaskView;
 const savedStarts = new Map();
 try {
-  await until("!!document.querySelector('tbody tr td')");
+  await until(
+    `!!document.querySelector('[role="combobox"][aria-label="项目"]')`,
+  );
   for (const id of ["project-0", "project-1"]) {
     const key = `agent-hub.taskStart:${id}`;
     savedStarts.set(
@@ -154,6 +156,73 @@ try {
   );
   await click("dialog[open] > div button");
   await click('aside[aria-label="任务详情"] button[aria-label="返回"]');
+  await click('[role="radio"][aria-label="GitLab"]');
+  await until(
+    `document.querySelector('[role="alert"]')?.textContent.includes('demo-web')`,
+  );
+  assert.ok(
+    await evaluate(
+      `document.querySelector('[role="alert"]').textContent.includes('GitHub')`,
+    ),
+  );
+  assert.equal(
+    await evaluate(`document.body.innerText.includes('未找到可自动识别')`),
+    false,
+  );
+  await click('button[role="combobox"][aria-label="项目"]');
+  await clickText('[role="option"]', "demo-api");
+  await until(
+    `!!document.querySelector('tbody tr button[aria-label^="在 GitLab"]')`,
+  );
+  assert.equal(
+    await evaluate(`!!document.querySelector('[role="alert"]')`),
+    false,
+  );
+  assert.deepEqual(
+    await evaluate(
+      `JSON.parse(localStorage.getItem('agent-hub.taskView')).projectIds`,
+    ),
+    ["project-0", "project-1"],
+  );
+  assert.equal(
+    await evaluate(
+      `document.querySelectorAll('[role="option"][aria-selected="true"]').length`,
+    ),
+    2,
+  );
+  assert.deepEqual(
+    await evaluate(
+      `Array.from(document.querySelectorAll('[role="option"] [role="img"]')).map(node=>node.getAttribute('aria-label'))`,
+    ),
+    ["GitHub", "GitLab"],
+  );
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-projects-dark.png`,
+  );
+  await clickText('[role="option"]', "demo-web");
+  await until(`!document.querySelector('[role="alert"]')`);
+  assert.equal(
+    await evaluate(
+      `document.querySelector('[role="option"][aria-selected="true"]').textContent.trim()`,
+    ),
+    "demo-api",
+  );
+  assert.equal(
+    await evaluate(
+      `document.querySelector('[role="option"][aria-selected="true"]').disabled`,
+    ),
+    true,
+  );
+  await clickText('[role="option"]', "全部项目");
+  assert.deepEqual(
+    await evaluate(
+      `JSON.parse(localStorage.getItem('agent-hub.taskView')).projectIds`,
+    ),
+    [],
+  );
+  await evaluate(
+    `document.querySelector('[role="combobox"][aria-label="项目"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));true`,
+  );
   await click('button[role="combobox"][aria-label="项目"]');
   await clickText('[role="option"]', "全部项目");
   await click('[role="radio"][aria-label="GitLab"]');
@@ -191,6 +260,27 @@ try {
     `!!document.querySelector('#task-preview')?.contentDocument?.querySelector('tbody tr td:nth-child(2) > button')`,
   );
   const doc = "document.querySelector('#task-preview').contentDocument";
+  await evaluate(
+    `${doc}.querySelector('[role="combobox"][aria-label="项目"]').click();true`,
+  );
+  const projectMenu = await evaluate(
+    `(()=>{const d=${doc},m=d.querySelector('[role="listbox"]'),r=m.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,width:d.defaultView.innerWidth,height:d.defaultView.innerHeight,zoom:d.documentElement.style.zoom,overflow:d.documentElement.scrollWidth>d.defaultView.innerWidth,multiple:m.getAttribute('aria-multiselectable')}})()`,
+  );
+  assert.ok(
+    projectMenu.left >= 0 &&
+      projectMenu.right <= projectMenu.width &&
+      projectMenu.bottom <= projectMenu.height,
+    JSON.stringify(projectMenu),
+  );
+  assert.equal(projectMenu.overflow, false);
+  assert.equal(projectMenu.zoom, "1.2");
+  assert.equal(projectMenu.multiple, "true");
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-projects-light.png`,
+  );
+  await evaluate(
+    `(()=>{const d=${doc};d.querySelector('[role="combobox"][aria-label="项目"]').dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true})()`,
+  );
   await evaluate(
     `${doc}.querySelector('button[aria-label="筛选条件"]').click();true`,
   );

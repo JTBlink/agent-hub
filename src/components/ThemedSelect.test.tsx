@@ -79,7 +79,15 @@ it("Escape and outside clicks close without changing the saved value", async () 
     container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
   await act(async () => trigger.click());
   await key(trigger, "End");
-  await key(trigger, "Escape");
+  await act(async () =>
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      }),
+    ),
+  );
   expect(changed).not.toHaveBeenCalled();
   expect(trigger.textContent).toBe("System tasks");
   await act(async () => trigger.click());
@@ -187,4 +195,54 @@ it("closes when another menu stops propagation, including keyboard activation", 
   expect(document.querySelector('[role="listbox"]')).toBeNull();
   expect(openOther).toHaveBeenCalledOnce();
   expect(changed).not.toHaveBeenCalled();
+});
+
+it("toggles multiple options without closing and retains native form values", async () => {
+  const changed = vi.fn();
+  function MultiPicker() {
+    const [values, setValues] = useState(["first"]);
+    return (
+      <ThemedSelect
+        multiple
+        aria-label="Projects"
+        value={values}
+        onChange={(next) => {
+          setValues(next);
+          changed(next);
+        }}
+      >
+        <option value="first">First</option>
+        <option value="second">Second</option>
+        <option value="disabled" disabled>
+          Unavailable
+        </option>
+      </ThemedSelect>
+    );
+  }
+  await act(async () => root.render(<MultiPicker />));
+  const trigger =
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  trigger.focus();
+  await key(trigger, "ArrowDown");
+  await key(trigger, "ArrowDown");
+  await key(trigger, " ");
+  expect(changed).toHaveBeenLastCalledWith(["first", "second"]);
+  expect(
+    document
+      .querySelector('[role="listbox"]')
+      ?.getAttribute("aria-multiselectable"),
+  ).toBe("true");
+  expect(
+    [...container.querySelector("select")!.selectedOptions].map(
+      (option) => option.value,
+    ),
+  ).toEqual(["first", "second"]);
+  await key(trigger, "Home");
+  await key(trigger, "Enter");
+  expect(changed).toHaveBeenLastCalledWith(["second"]);
+  expect(trigger.textContent).toBe("Second");
+  await key(trigger, "Escape");
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+  expect(changed).toHaveBeenCalledTimes(2);
 });

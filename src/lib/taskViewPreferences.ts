@@ -2,14 +2,15 @@ import type { TaskFilters, TaskProvider } from "./taskBrowserApi";
 import { taskPlatforms } from "@app/platforms";
 export interface TaskViewPreferences {
   provider: "all" | TaskProvider;
-  projectId: string;
+  /** Empty selection includes every registered project. */
+  projectIds: string[];
   filters: TaskFilters;
 }
 const KEY = "agent-hub.taskView";
 export function readTaskViewPreferences(): TaskViewPreferences {
   const defaults: TaskViewPreferences = {
     provider: "all",
-    projectId: "all",
+    projectIds: [],
     filters: { kind: "issue", state: "open", text: "", personal: "all" },
   };
   try {
@@ -30,10 +31,22 @@ export function readTaskViewPreferences(): TaskViewPreferences {
         taskPlatforms.some((platform) => platform.id === value.provider)
           ? value.provider
           : "all",
-      projectId:
-        "projectId" in value && typeof value.projectId === "string"
-          ? value.projectId
-          : "all",
+      projectIds:
+        "projectIds" in value && Array.isArray(value.projectIds)
+          ? [
+              ...new Set(
+                value.projectIds.filter(
+                  (id): id is string =>
+                    typeof id === "string" && id !== "all" && !!id,
+                ),
+              ),
+            ]
+          : "projectId" in value &&
+              typeof value.projectId === "string" &&
+              value.projectId !== "all" &&
+              value.projectId
+            ? [value.projectId]
+            : [],
       filters: {
         kind: "kind" in filter && filter.kind === "review" ? "review" : "issue",
         state:

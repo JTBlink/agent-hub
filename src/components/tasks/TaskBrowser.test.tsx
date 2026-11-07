@@ -402,7 +402,10 @@ it("switches platform and kind filters, retains the project scope, and opens the
   expect(projectMenu().textContent).toBe("Project 0");
   await act(async () => radio("GitLab").click());
   expect(projectMenu().textContent).toBe("Project 0");
-  expect(host.textContent).toContain("tasks.notConnected");
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+    "tasks.providerMismatch",
+  );
+  expect(host.textContent).not.toContain("tasks.notConnected");
   await act(async () => projectMenu().click());
   expect(
     [...document.querySelectorAll('[role="option"]')].map(
@@ -411,6 +414,9 @@ it("switches platform and kind filters, retains the project scope, and opens the
   ).toEqual(["tasks.allProjects", "Project 0", "Project 1"]);
   await act(async () =>
     document.querySelectorAll<HTMLButtonElement>('[role="option"]')[2].click(),
+  );
+  await act(async () =>
+    document.querySelectorAll<HTMLButtonElement>('[role="option"]')[1].click(),
   );
   await act(async () => radio("MR").click());
   const pickFilter = async (section: string, value: string) => {
@@ -456,7 +462,7 @@ it("switches platform and kind filters, retains the project scope, and opens the
   expect(JSON.parse(localStorage.getItem("agent-hub.taskView")!)).toMatchObject(
     {
       provider: "gitlab",
-      projectId: "project-1",
+      projectIds: ["project-1"],
       filters: {
         kind: "review",
         assignee: "@me",
@@ -562,7 +568,7 @@ it("follows the selected workspace on entry and changes while retaining task fil
     "agent-hub.taskView",
     JSON.stringify({
       provider: "all",
-      projectId: "all",
+      projectIds: [],
       filters: { kind: "review", state: "closed", personal: "all", text: "" },
     }),
   );

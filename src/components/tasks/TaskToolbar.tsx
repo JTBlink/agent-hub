@@ -1,6 +1,5 @@
 import {
   ExternalLink,
-  FolderGit2,
   Layers,
   RefreshCw,
   Search,
@@ -17,6 +16,7 @@ import type {
 import { TaskAttributeFilters } from "./TaskAttributeFilters";
 import type { TaskViewPreferences } from "../../lib/taskViewPreferences";
 import { ThemedSelect } from "../ThemedSelect";
+import { RepositoryPlatformIcon } from "../RepositoryPlatformIcon";
 import { TaskFilterGroup } from "./TaskFilterGroup";
 import { cn } from "../../utils";
 
@@ -24,7 +24,7 @@ import { taskPlatforms } from "@app/platforms";
 
 interface Props {
   provider: TaskViewPreferences["provider"];
-  projectId: string;
+  projectIds: string[];
   projects: Project[];
   bindings: TaskBinding[];
   identities: string[];
@@ -34,7 +34,7 @@ interface Props {
   loading: boolean;
   connections: boolean;
   onProvider: (value: TaskViewPreferences["provider"]) => void;
-  onProject: (value: string) => void;
+  onProjects: (value: string[]) => void;
   onFilters: (patch: Partial<TaskFilters>) => void;
   onSearch: (value: string) => void;
   onRefresh: () => void;
@@ -44,7 +44,7 @@ interface Props {
 
 export function TaskToolbar({
   provider,
-  projectId,
+  projectIds,
   projects,
   bindings,
   identities,
@@ -54,7 +54,7 @@ export function TaskToolbar({
   loading,
   connections,
   onProvider,
-  onProject,
+  onProjects,
   onFilters,
   onSearch,
   onRefresh,
@@ -65,10 +65,18 @@ export function TaskToolbar({
   const scopedBindings = bindings.filter(
     (binding) => provider === "all" || binding.provider === provider,
   );
-  const repository = scopedBindings.filter(
-    (binding) => binding.project_id === projectId,
+  const repository = scopedBindings.filter((binding) =>
+    projectIds.includes(binding.project_id),
   );
   const context = identities.join(" · ");
+  const projectIcon = (projectId: string) => (
+    <RepositoryPlatformIcon
+      providers={bindings
+        .filter((binding) => binding.project_id === projectId)
+        .map((binding) => binding.provider)}
+      fallbackLabel={t("tasks.project")}
+    />
+  );
   return (
     <div className="shrink-0">
       <h1 className="sr-only">{t("tasks.title")}</h1>
@@ -87,7 +95,12 @@ export function TaskToolbar({
             ...taskPlatforms.map((platform) => ({
               value: platform.id,
               label: platform.label,
-              icon: <platform.icon className="h-4 w-4" />,
+              icon: (
+                <RepositoryPlatformIcon
+                  providers={[platform.id]}
+                  fallbackLabel={platform.label}
+                />
+              ),
             })),
           ]}
         />
@@ -116,18 +129,41 @@ export function TaskToolbar({
             aria-label={t("tasks.project")}
             className="h-7 w-full py-0 text-xs"
             leadingIcon={
-              <FolderGit2
-                size={14}
-                className="shrink-0 text-muted"
-                aria-hidden="true"
-              />
+              projectIds.length === 1 ? (
+                projectIcon(projectIds[0])
+              ) : (
+                <RepositoryPlatformIcon
+                  providers={[]}
+                  fallbackLabel={t("tasks.project")}
+                />
+              )
             }
-            value={projectId}
-            onChange={(event) => onProject(event.target.value)}
+            optionIcon={(id) =>
+              id === "all" ? (
+                <Layers size={14} aria-hidden="true" />
+              ) : (
+                projectIcon(id)
+              )
+            }
+            multiple
+            value={projectIds.length ? projectIds : ["all"]}
+            onChange={(values) =>
+              onProjects(
+                projectIds.length && values.includes("all")
+                  ? []
+                  : values.filter((value) => value !== "all"),
+              )
+            }
           >
             <option value="all">{t("tasks.allProjects")}</option>
             {projects.map((project) => (
-              <option value={project.id} key={project.id}>
+              <option
+                value={project.id}
+                key={project.id}
+                disabled={
+                  projectIds.length === 1 && projectIds[0] === project.id
+                }
+              >
                 {project.name}
               </option>
             ))}
