@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { X, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +18,8 @@ interface Props {
   confirmLabel?: string;
   secondaryAction?: ReactNode;
   confirmDisabled?: boolean;
+  initialFocusRef?: RefObject<HTMLElement | null>;
+  submitOnEnter?: boolean;
   tone?: "danger" | "warning";
   onClose: () => void;
   /** Return false when the action failed and the dialog should stay open. */
@@ -26,6 +35,8 @@ export function ConfirmDialog({
   confirmLabel,
   secondaryAction,
   confirmDisabled = false,
+  initialFocusRef,
+  submitOnEnter = false,
   tone = "danger",
   onClose,
   onConfirm,
@@ -46,7 +57,7 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement;
-    cancel.current?.focus();
+    (initialFocusRef?.current ?? cancel.current)?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         // Let an open picker consume the first Escape before closing its dialog.
@@ -86,12 +97,12 @@ export function ConfirmDialog({
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
         previousFocus.focus();
     };
-  }, [open]);
+  }, [open, initialFocusRef]);
 
   if (!open) return null;
 
   const handleConfirm = async () => {
-    if (pending.current) return;
+    if (pending.current || confirmDisabled) return;
     pending.current = true;
     setLoading(true);
     try {
@@ -119,6 +130,17 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
+        onKeyDown={(event) => {
+          if (
+            submitOnEnter &&
+            event.key === "Enter" &&
+            !event.nativeEvent.isComposing &&
+            event.target instanceof HTMLInputElement
+          ) {
+            event.preventDefault();
+            void handleConfirm();
+          }
+        }}
         className="relative bg-surface border border-border rounded-xl w-full max-w-sm p-5 shadow-2xl flex flex-col max-h-[calc(85vh/var(--app-scale))]"
       >
         <div className="flex items-center justify-between mb-4">

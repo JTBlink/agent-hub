@@ -60,6 +60,10 @@ export function GitGraphTable({
     end,
     reveal,
   } = useGitGraphViewport(entries.length, showWorking ? 1 : 0, needle);
+  useLayoutEffect(() => {
+    const index = entries.findIndex(({ commit }) => commit.sha === selected);
+    if (index >= 0) reveal(index);
+  }, [selected, entries, reveal]);
   const table = useRef<HTMLTableElement>(null);
   const [focus, setFocus] = useState<{ index: number }>();
   useLayoutEffect(() => {

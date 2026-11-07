@@ -1,5 +1,5 @@
 //! Explicit repository operations; no force push, reset, or implicit merge.
-use super::actions::{repository, run_git, validate_branch_name};
+use super::actions::{ensure_ready, repository, run_git, validate_branch_name};
 use anyhow::{bail, Context, Result};
 use serde::Deserialize;
 use std::path::Path;
@@ -26,9 +26,7 @@ pub fn repository_action(
         }
         return run_git(root, &["fetch", "--all"]);
     }
-    if repo.state() != git2::RepositoryState::Clean || repo.index()?.has_conflicts() {
-        bail!("Resolve the current repository operation and conflicts first");
-    }
+    ensure_ready(&repo)?;
     match action {
         GitRepositoryAction::SwitchBranch | GitRepositoryAction::CreateBranch => {
             let branch = branch.context("Select or enter a local branch name")?;

@@ -40,6 +40,11 @@ export function GitRepositoryPanel({
   const { t } = useTranslation();
   const { opened, setOpen } = useDisclosures(collapseRevision);
   const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const refresh = () => setRetry((value) => value + 1);
+    window.addEventListener("project-git-changed", refresh);
+    return () => window.removeEventListener("project-git-changed", refresh);
+  }, []);
   const key = JSON.stringify([
     target.projectId,
     target.worktreePath,
@@ -148,12 +153,17 @@ export function GitRepositoryPanel({
             setOpen(entry.name, open);
           }}
         >
-          <GitReferenceSummary entry={entry} />
+          <GitReferenceSummary
+            entry={entry}
+            expanded={opened.has(entry.name)}
+            onExpandedChange={(open) => setOpen(entry.name, open)}
+            onRefresh={() => setRetry((value) => value + 1)}
+          />
           {entry.sha && onSelect ? (
             opened.has(entry.name) &&
             (view === "tags" ? (
               <GitTagHistory
-                key={entry.sha}
+                key={`${entry.sha}:${retry}`}
                 target={target}
                 sha={entry.sha}
                 selected={selected}

@@ -19,7 +19,8 @@ import {
   runProjectGitAction,
   type GitRepositoryAction,
 } from "../lib/gitApi";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { GitDiscardDialog } from "../components/git/GitDiscardDialog";
+import { GitTagActionsProvider } from "../components/git/GitTagActionsProvider";
 import { getErrorMessage } from "../lib/error";
 import {
   invalidateProjectGitStatus,
@@ -54,7 +55,7 @@ export function Git() {
   const [selection, setSelection] = useState<GitSelection>();
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [actionType, setActionType] = useState<
-    "stage" | "commit" | "sync" | GitRepositoryAction
+    "stage" | "commit" | "sync" | "tag" | GitRepositoryAction
   >();
   const [tree, setTree] = useState(true);
   const busy = actionType !== undefined;
@@ -180,7 +181,7 @@ export function Git() {
     t(status ? "git.unborn" : "common.loading");
   async function runAction(
     action: () => Promise<void>,
-    type: "stage" | "commit" | "sync" | GitRepositoryAction = "stage",
+    type: "stage" | "commit" | "sync" | "tag" | GitRepositoryAction = "stage",
   ) {
     if (actionLock.current) return false;
     actionLock.current = true;
@@ -474,13 +475,19 @@ export function Git() {
     </ResizableSidebar>
   );
   return (
-    <>
-      <ConfirmDialog
-        open={!!discardTarget}
-        title={t("git.discardChanges")}
-        message={t("git.discardConfirm")}
-        details={discardTarget?.paths}
-        confirmLabel={t("git.discardChanges")}
+    <GitTagActionsProvider
+      key={scope}
+      target={
+        activeId ? { projectId: activeId, worktreePath: root } : undefined
+      }
+      busy={busy || loading}
+      openGraph={editors.revealGraph}
+      refresh={requestRefresh}
+      onRun={(operation) => runAction(operation, "tag")}
+    >
+      <GitDiscardDialog
+        paths={discardTarget?.paths}
+        error={actionError}
         onClose={() => setDiscardTarget(undefined)}
         onConfirm={async () => {
           if (!discardTarget) return false;
@@ -493,13 +500,7 @@ export function Git() {
           );
           if (!success) return false;
         }}
-      >
-        {actionError && (
-          <p role="alert" className="text-xs text-danger">
-            {actionError}
-          </p>
-        )}
-      </ConfirmDialog>
+      />
 
       {sidebarVisibility?.statusContainer &&
         createPortal(statusBar, sidebarVisibility.statusContainer)}
@@ -589,6 +590,6 @@ export function Git() {
           </>
         )}
       </div>
-    </>
+    </GitTagActionsProvider>
   );
 }

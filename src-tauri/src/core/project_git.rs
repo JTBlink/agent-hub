@@ -7,6 +7,7 @@ mod references;
 mod remotes;
 mod repository_actions;
 mod status_files;
+mod tag_actions;
 pub use actions::{commit, discard, set_staged};
 pub(crate) use actions::{run_git, validate_branch_name};
 use anyhow::{bail, Result};
@@ -18,6 +19,7 @@ pub use remotes::{remotes, GitRemote};
 pub use repository_actions::{repository_action, GitRepositoryAction};
 use serde::Serialize;
 use std::path::Path;
+pub use tag_actions::{tag_action, GitTagAction};
 
 #[derive(Serialize)]
 pub struct GitFile {

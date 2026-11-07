@@ -21,6 +21,7 @@ import { GitEditorTab } from "./GitEditorTab";
 /** Editor-sized repository graph; commit details reuse the sidebar inspection flow. */
 export function GitGraph({
   target,
+  focusCommit,
   revision,
   changedFiles,
   onSelect,
@@ -31,6 +32,7 @@ export function GitGraph({
   onRefresh,
 }: {
   target: CommitTarget;
+  focusCommit?: { sha: string };
   revision: number;
   changedFiles: number;
   onSelect: (selection: CommitFileSelection) => void;
@@ -47,7 +49,16 @@ export function GitGraph({
   const [limit, setLimit] = useState(200);
   const [refresh, setRefresh] = useState(0);
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string>();
+  const [selected, setSelected] = useState<string | undefined>(
+    focusCommit?.sha,
+  );
+  const [previousFocus, setPreviousFocus] = useState(focusCommit);
+  if (previousFocus !== focusCommit) {
+    setPreviousFocus(focusCommit);
+    setSelected(focusCommit?.sha);
+    setQuery("");
+    setBranchFilter("");
+  }
   const result = useGitGraph(
     target.projectId,
     target.worktreePath,
@@ -121,6 +132,13 @@ export function GitGraph({
               </button>
             </div>
           )}
+          {focusCommit &&
+            focusCommit.sha === selected &&
+            !commits?.some((commit) => commit.sha === selected) && (
+              <p role="status" className="px-3 py-2 text-xs text-muted">
+                {t("git.tagActions.outsideGraph")}
+              </p>
+            )}
           <GitGraphTable
             key={JSON.stringify([
               target.projectId,

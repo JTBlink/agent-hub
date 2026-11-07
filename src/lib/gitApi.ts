@@ -3,6 +3,24 @@ export interface GitRemote {
   name: string;
   url: string;
 }
+export type GitTagAction = "checkout" | "push" | "delete" | "create_branch";
+export async function runProjectGitTagAction(
+  projectId: string,
+  worktreePath: string | undefined,
+  action: GitTagAction,
+  tag: string,
+  expectedSha: string | null,
+  options: { branch?: string; remote?: string } = {},
+) {
+  await invoke<void>("run_project_git_tag_action", {
+    projectId,
+    worktreePath,
+    request: { action, tag, expectedSha, ...options },
+  });
+  window.dispatchEvent(new Event("project-git-changed"));
+  if (action === "checkout" || action === "create_branch")
+    window.dispatchEvent(new Event("worktree-file-saved"));
+}
 export const getProjectGitRemotes = (
   projectId: string,
   worktreePath?: string,

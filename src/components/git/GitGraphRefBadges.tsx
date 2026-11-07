@@ -11,6 +11,7 @@ import {
   type GraphRefBadge,
 } from "../../lib/gitGraphRefs";
 import { cn } from "../../utils";
+import { GitTagMenu } from "./GitTagMenu";
 
 export function GitGraphRefBadges({
   refs,
@@ -56,16 +57,20 @@ function GitGraphRefBadge({
         ? "git.graph.remoteBranch"
         : "git.graph.localBranch",
   );
-  const actions = useGitCopyActions([
-    ...badge.fullNames.map((name) => ({
-      key: name,
-      label:
-        t(badge.kind === "tag" ? "git.copyTagName" : "git.copyBranchName") +
-        (badge.fullNames.length > 1 ? `: ${name}` : ""),
-      text: name,
-    })),
-    { key: "sha", label: t("git.copyCommitSha"), text: sha },
-  ]);
+  const actions = useGitCopyActions(
+    badge.kind === "tag"
+      ? []
+      : [
+          ...badge.fullNames.map((name) => ({
+            key: name,
+            label:
+              t("git.copyBranchName") +
+              (badge.fullNames.length > 1 ? `: ${name}` : ""),
+            text: name,
+          })),
+          { key: "sha", label: t("git.copyCommitSha"), text: sha },
+        ],
+  );
   return (
     <>
       <span
@@ -104,15 +109,29 @@ function GitGraphRefBadge({
           </span>
         ))}
       </span>
-      <CardActionMenu
-        contextOnly
-        contextTarget={target}
-        label={t("git.referenceActions")}
-        actions={[
-          { key: "details", label: t("git.viewDetails"), onSelect: onDetails },
-          ...actions,
-        ]}
-      />
+      {badge.kind === "tag" ? (
+        <GitTagMenu
+          contextOnly
+          contextTarget={target}
+          name={badge.name}
+          sha={sha}
+          onDetails={onDetails}
+        />
+      ) : (
+        <CardActionMenu
+          contextOnly
+          contextTarget={target}
+          label={t("git.referenceActions")}
+          actions={[
+            {
+              key: "details",
+              label: t("git.viewDetails"),
+              onSelect: onDetails,
+            },
+            ...actions,
+          ]}
+        />
+      )}
     </>
   );
 }

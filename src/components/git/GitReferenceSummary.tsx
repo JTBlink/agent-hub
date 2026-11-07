@@ -4,27 +4,42 @@ import { useTranslation } from "react-i18next";
 import { CardActionMenu } from "../CardActionMenu";
 import { useGitCopyActions } from "./useGitCopyActions";
 import type { GitReferences } from "../../lib/gitApi";
+import { GitTagMenu } from "./GitTagMenu";
 
 /** Reference-specific actions share the workbench menu and its context trigger. */
 export function GitReferenceSummary({
   entry,
+  expanded,
+  onExpandedChange,
+  onRefresh,
 }: {
   entry: GitReferences["entries"][number];
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  onRefresh?: () => void;
 }) {
   const { t } = useTranslation();
   const summary = useRef<HTMLElement>(null);
-  const actions = useGitCopyActions([
-    {
-      key: "copy-name",
-      label: t(
-        entry.kind === "tags" ? "git.copyTagName" : "git.copyReferenceName",
-      ),
-      text: entry.name,
-    },
-    ...(entry.sha
-      ? [{ key: "copy-sha", label: t("git.copyCommitSha"), text: entry.sha }]
-      : []),
-  ]);
+  const actions = useGitCopyActions(
+    entry.kind === "tags"
+      ? []
+      : [
+          {
+            key: "copy-name",
+            label: t("git.copyReferenceName"),
+            text: entry.name,
+          },
+          ...(entry.sha
+            ? [
+                {
+                  key: "copy-sha",
+                  label: t("git.copyCommitSha"),
+                  text: entry.sha,
+                },
+              ]
+            : []),
+        ],
+  );
   return (
     <>
       <summary
@@ -57,12 +72,24 @@ export function GitReferenceSummary({
           </>
         )}
       </summary>
-      <CardActionMenu
-        contextTarget={summary}
-        className="absolute right-1 top-0.5"
-        label={t("git.referenceActions")}
-        actions={actions}
-      />
+      {entry.kind === "tags" ? (
+        <GitTagMenu
+          contextTarget={summary}
+          className="absolute right-1 top-0.5"
+          name={entry.name}
+          sha={entry.sha}
+          expanded={expanded}
+          onExpandedChange={onExpandedChange}
+          onRefresh={onRefresh}
+        />
+      ) : (
+        <CardActionMenu
+          contextTarget={summary}
+          className="absolute right-1 top-0.5"
+          label={t("git.referenceActions")}
+          actions={actions}
+        />
+      )}
     </>
   );
 }

@@ -137,6 +137,7 @@ export function GitEditorWorkspace({
           "graph",
           <GitGraph
             target={target}
+            focusCommit={editors.graphCommit}
             revision={revision}
             changedFiles={files.length}
             busy={busy}

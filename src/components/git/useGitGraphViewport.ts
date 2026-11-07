@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 // CSS pixels scale with the application's zoom. Keep geometry shared with the SVG.
 export const GRAPH_ROW_HEIGHT = 30;
@@ -54,19 +60,26 @@ export function useGitGraphViewport(
         OVERSCAN,
     ),
   );
-  const reveal = (index: number) => {
-    const element = ref.current;
-    if (!element) return;
-    const top = offset + index * GRAPH_ROW_HEIGHT;
-    // Leave room for the sticky header when bringing a row into view.
-    const next =
-      top < viewport.top + GRAPH_ROW_HEIGHT
-        ? top - GRAPH_ROW_HEIGHT
-        : top + GRAPH_ROW_HEIGHT > viewport.top + viewport.height
-          ? top + GRAPH_ROW_HEIGHT - viewport.height
-          : viewport.top;
-    element.scrollTop = next;
-    setViewport({ ...viewport, top: next });
-  };
+  const reveal = useCallback(
+    (index: number) => {
+      const element = ref.current;
+      if (!element) return;
+      const top = offset + index * GRAPH_ROW_HEIGHT;
+      // Leave room for the sticky header when bringing a row into view.
+      const currentTop = element.scrollTop;
+      const height = element.clientHeight || 600;
+      const next =
+        top < currentTop + GRAPH_ROW_HEIGHT
+          ? top - GRAPH_ROW_HEIGHT
+          : top + GRAPH_ROW_HEIGHT > currentTop + height
+            ? top + GRAPH_ROW_HEIGHT - height
+            : currentTop;
+      element.scrollTop = next;
+      setViewport((previous) =>
+        previous.top === next ? previous : { ...previous, top: next },
+      );
+    },
+    [offset],
+  );
   return { ref, start, end, reveal };
 }

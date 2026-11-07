@@ -11,6 +11,13 @@ pub(super) fn repository(root: &Path) -> Result<git2::Repository> {
     )?)
 }
 
+pub(super) fn ensure_ready(repo: &git2::Repository) -> Result<()> {
+    if repo.state() != git2::RepositoryState::Clean || repo.index()?.has_conflicts() {
+        bail!("Resolve the current repository operation and conflicts first");
+    }
+    Ok(())
+}
+
 pub(crate) fn validate_branch_name(branch: &str) -> Result<()> {
     if branch.is_empty()
         || branch.starts_with('-')

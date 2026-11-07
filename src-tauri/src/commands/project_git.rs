@@ -7,6 +7,40 @@ use crate::core::{
 use std::sync::Arc;
 use tauri::State;
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitTagActionRequest {
+    action: project_git::GitTagAction,
+    tag: String,
+    expected_sha: Option<String>,
+    branch: Option<String>,
+    remote: Option<String>,
+}
+
+#[tauri::command]
+pub async fn run_project_git_tag_action(
+    store: State<'_, Arc<SkillStore>>,
+    project_id: String,
+    worktree_path: Option<String>,
+    request: GitTagActionRequest,
+) -> Result<(), AppError> {
+    let store = store.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
+            .map_err(AppError::io)?;
+        project_git::tag_action(
+            &root,
+            request.action,
+            &request.tag,
+            request.expected_sha.as_deref(),
+            request.branch.as_deref(),
+            request.remote.as_deref(),
+        )
+        .map_err(AppError::io)
+    })
+    .await?
+}
+
 #[tauri::command]
 pub async fn run_project_git_action(
     store: State<'_, Arc<SkillStore>>,

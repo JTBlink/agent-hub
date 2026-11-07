@@ -7,11 +7,18 @@ export function useGitEditors(scope: string) {
   const [state, setState] = useState({
     scope,
     graph: false,
+    graphCommit: undefined as { sha: string } | undefined,
     active: "working",
     files: [] as CommitFileSelection[],
   });
   if (state.scope !== scope)
-    setState({ scope, graph: false, active: "working", files: [] });
+    setState({
+      scope,
+      graph: false,
+      graphCommit: undefined,
+      active: "working",
+      files: [],
+    });
   const fileId = (file: CommitFileSelection) =>
     JSON.stringify([file.sha, file.path, file.view]);
   return {
@@ -23,6 +30,15 @@ export function useGitEditors(scope: string) {
     },
     openGraph: () => {
       setState((previous) => ({ ...previous, graph: true, active: "graph" }));
+      shared?.onSelect();
+    },
+    revealGraph: (sha: string) => {
+      setState((previous) => ({
+        ...previous,
+        graph: true,
+        active: "graph",
+        graphCommit: { sha },
+      }));
       shared?.onSelect();
     },
     openFile: (file: CommitFileSelection) => {

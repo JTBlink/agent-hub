@@ -275,6 +275,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::project_git::get_project_git_commit,
         commands::project_git::get_project_git_references,
         commands::project_git::run_project_git_action,
+        commands::project_git::run_project_git_tag_action,
         commands::project_git::get_project_git_history,
         commands::project_git::get_project_git_commit_diff,
         commands::project_git::set_project_git_staged,
