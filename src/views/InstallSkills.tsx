@@ -49,7 +49,7 @@ import {
   type RecommendedSkill,
 } from "../lib/recommendedSkills";
 
-const MARKET_PAGE_SIZE = 24;
+const MARKET_PAGE_SIZE = 36;
 const MARKET_SEARCH_STEP = 60;
 const MARKET_SEARCH_DEBOUNCE_MS = 450;
 const MARKET_SEARCH_CACHE_TTL_MS = 120_000;
