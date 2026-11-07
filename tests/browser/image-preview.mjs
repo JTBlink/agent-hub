@@ -52,7 +52,8 @@ for (const query of ["", "?light&large"]) {
         const dataUrl = await new Promise(resolve => {const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob)});
         const sample = async (src) => {const i=new Image();const start=performance.now();i.src=src;await i.decode();const ms=performance.now()-start;i.src='';return ms};
         const binary=[], base64=[];
-        for(let n=0;n<5;n++) {const url=URL.createObjectURL(blob);try {binary.push(await sample(url));base64.push(await sample(dataUrl));}finally{URL.revokeObjectURL(url)}}
+        const url=URL.createObjectURL(blob);
+        try {for(let n=0;n<5;n++) {binary.push(await sample(url));base64.push(await sample(dataUrl));}}finally{URL.revokeObjectURL(url)}
         return {rawBytes:bytes.byteLength,base64UrlBytes:dataUrl.length,binaryDecodeMs:binary,base64DecodeMs:base64};
       })()`);
       console.log(

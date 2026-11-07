@@ -23,7 +23,7 @@ const MIME_TYPES: Record<string, string> = {
   svg: "image/svg+xml",
 };
 export function imageMimeType(path: string) {
-  const extension = path.match(/\.([^.\/\\]+)$/)?.[1].toLowerCase() ?? "";
+  const extension = path.match(/\.([^./\\]+)$/)?.[1].toLowerCase() ?? "";
   return Object.hasOwn(MIME_TYPES, extension)
     ? MIME_TYPES[extension]
     : undefined;

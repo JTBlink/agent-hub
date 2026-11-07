@@ -75,7 +75,9 @@ pub fn read_image(
             || height > 32_768
             || u64::from(width) * u64::from(height) > 32 * 1024 * 1024
         {
-            bail!("Image dimensions exceed the 32 megapixel preview limit");
+            bail!(
+                "Image dimensions exceed the preview limit (32768 px per side, 32 Mi pixels total)"
+            );
         }
     }
     Ok(Some(bytes))

@@ -11,3 +11,5 @@
 回归：`npx vitest run src/features/image-preview/ImagePreview.test.tsx src/features/image-preview/imageZoom.test.ts src/components/git/GitImagePreview.test.tsx`，后端：`cargo test --manifest-path src-tauri/Cargo.toml project_images`。
 
 浏览器验收：在项目根启动 `npx vite --host 127.0.0.1 --port 4179 --strictPort`，确保 web-access 共享代理可用，再运行 `node tests/browser/image-preview.mjs`。数据为合成图片，检查明暗主题、缩放、窄容器、弹窗、版本缺失及解码失败。
+
+传输性能依据：[Tauri 二进制响应](https://v2.tauri.app/develop/calling-rust/#returning-array-buffers)避免大型文件走 JSON；[image::ImageReader](https://docs.rs/image/latest/image/struct.ImageReader.html) 提供尺寸读取。浏览器验收脚本输出同一 PNG 的二进制／Base64 体积及冷／热解码耗时，测量不含 Rust 和 IPC，不将浏览器解码时间等同于端到端加载性能。

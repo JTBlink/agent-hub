@@ -109,11 +109,23 @@ fn rejects_corrupt_and_empty_images_without_decoding_pixels() {
         std::fs::write(temp.path().join("icon.png"), bytes).unwrap();
         assert!(read_image(temp.path(), "icon.png", ImageRevision::Working, None).is_err());
     }
-    // A tiny PNG header can declare a huge decoded image.
-    let mut bytes = png(b"");
-    bytes[16..20].copy_from_slice(&40_000_u32.to_be_bytes());
+    use image::ImageEncoder;
+    let mut bytes = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut bytes)
+        .write_image(
+            &vec![0; 40_000 * 4],
+            40_000,
+            1,
+            image::ExtendedColorType::Rgba8,
+        )
+        .unwrap();
     std::fs::write(temp.path().join("icon.png"), bytes).unwrap();
-    assert!(read_image(temp.path(), "icon.png", ImageRevision::Working, None).is_err());
+    assert!(
+        read_image(temp.path(), "icon.png", ImageRevision::Working, None)
+            .unwrap_err()
+            .to_string()
+            .contains("dimensions exceed")
+    );
 }
 
 #[test]

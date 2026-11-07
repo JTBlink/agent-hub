@@ -1,3 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="-2 -2 36 36">
-  <path fill="#000" fill-rule="evenodd" d="M5 26C-2 17 5 8 13 10C19 8 26 8 29 2C32 20 24 30 12 30C9 30 7 29 5 26ZM12 20C9 24 16 26 22 20C18 18 15 17 12 20Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="140 190 720 640">
+
+  <!-- A and F share one middle stroke; a single soft gradient carries the flow. -->
+  <path transform="translate(512 512) scale(.95 1.2) translate(-500 -510)" fill="#000" fill-rule="evenodd" d="M173 720C154 720 145 701 155 682L307 408C341 347 369 302 426 301H797C822 301 833 322 829 345L822 375C816 402 810 411 790 411H624C590 411 578 431 578 461V487H770C795 487 811 505 807 526L801 553C795 575 781 584 760 584H631C604 584 594 596 594 618V687C594 709 582 721 561 721H502C482 721 471 712 464 695L429 628H297L258 698C251 715 238 722 218 722ZM409 424C408 420 405 420 402 426L339 543H468Z"/>
 </svg>
