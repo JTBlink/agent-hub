@@ -255,7 +255,7 @@ it("places the VS Code icon beside the project selector and opens the route work
     'header [role="combobox"][aria-label="切换项目"]',
   )!;
   const button = container.querySelector<HTMLButtonElement>(
-    'header button[aria-label="在 VS Code 中打开"]',
+    'header button[aria-label="VS Code 打开"]',
   )!;
   expect(button).not.toBeNull();
   expect(button.parentElement?.contains(selector)).toBe(true);
@@ -400,7 +400,7 @@ it("separates project, directory and branch selection and preserves the checkout
   await act(async () =>
     container
       .querySelector<HTMLButtonElement>(
-        'header button[aria-label="在 VS Code 中打开"]',
+        'header button[aria-label="VS Code 打开"]',
       )!
       .click(),
   );

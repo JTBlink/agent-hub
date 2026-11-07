@@ -1,0 +1,14 @@
+.app-sidebar-editor-grid > .app-sidebar-list-panel {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+@container sidebar-editor (min-width: 560px) {
+  .app-sidebar-editor-grid {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .app-sidebar-editor-grid > .app-sidebar-list-panel {
+    border-bottom: 0;
+    border-right: 1px solid var(--color-border-subtle);
+  }
+}

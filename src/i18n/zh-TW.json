@@ -49,8 +49,6 @@
     "completeProfile": "完整 Hosts 方案",
     "actualSystem": "本機實際內容",
     "editor": "Hosts 內容",
-    "openDirectoryInVscode": "用 VS Code 開啟所在目錄",
-    "openedDirectoryInVscode": "已請求 VS Code 開啟 Hosts 所在目錄。",
     "noChanges": "已儲存",
     "saveHint": "儲存方案不會修改系統；點擊套用後生效。",
     "readAt": "最近讀取 {{time}}",
@@ -298,6 +296,7 @@
     "failed": "無法載入應用程式選單，請重新啟動應用程式。"
   },
   "automation": {
+    "copyPromptVariant": "複製方案",
     "cachedList": "顯示上次讀取的任務清單，最新狀態載入後自動更新。",
     "adminAuthorizationHelp": "此為系統層級排程任務。編輯、暫停或恢復、執行及刪除時，會請求 macOS 管理員授權。",
     "externalDeleteHelp": "刪除僅移除任務的排程設定，原腳本與日誌會保留。",
@@ -1400,7 +1399,6 @@
       "search": "搜尋 Skill、路徑或 Agent…",
       "viewContent": "查看內容",
       "openFolder": "開啟目錄",
-      "openInVscode": "在 VS Code 中開啟",
       "deleteLocation": "刪除 {{path}} 中的 {{name}}",
       "deleteHint": "僅刪除所選路徑；軟連結僅移除連結。使用相同路徑的 Agent 會同時受影響，其他獨立副本與技能庫保留。",
       "refreshFailed": "刪除已完成，但重新整理失敗，請重新掃描查看最新狀態。",
@@ -1708,6 +1706,10 @@
     "remember": "記住關閉偏好（退出前仍會確認）"
   },
   "common": {
+    "openInVscode": "VS Code 開啟",
+    "openContainingDirectoryInVscode": "在 VS Code 中開啟檔案所在目錄",
+    "add": "新增",
+    "copy": "複製",
     "more": "更多操作",
     "close": "關閉",
     "copyPath": "複製路徑",

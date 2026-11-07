@@ -1,17 +1,10 @@
 import { FileTypeIcon } from "../FileTypeIcon";
 import { MarkdownLink } from "../MarkdownLink";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import {
-  ChevronRight,
-  Code2,
-  FileCode2,
-  Eye,
-  Loader2,
-  WrapText,
-} from "lucide-react";
-import { getErrorMessage } from "../../lib/error";
+import { ChevronRight, FileCode2, Eye, WrapText } from "lucide-react";
+import { VscodeButton } from "../VscodeButton";
 import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
 import type { FileReaderProps, ReaderFile, ReaderLocation } from "./types";
@@ -50,41 +43,18 @@ export function FileContent({
     markdown && !location && !defaultSource,
   );
   const [wrap, setWrap] = useState(false);
-  useEffect(() => {
+  const [previousLocation, setPreviousLocation] = useState(location);
+  if (previousLocation !== location) {
+    setPreviousLocation(location);
     if (location) setPreview(false);
-  }, [location]);
-  const pending = useRef(false);
-  const mounted = useRef(false);
-  const [opening, setOpening] = useState(false);
+  }
   const [openError, setOpenError] = useState<string | null>(null);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  const openInVscode = async () => {
-    if (!onOpenInVscode || pending.current) return;
-    pending.current = true;
-    setOpening(true);
-    setOpenError(null);
-    try {
-      await onOpenInVscode(file.path);
-    } catch (cause) {
-      if (mounted.current)
-        setOpenError(getErrorMessage(cause, t("common.error")));
-    } finally {
-      pending.current = false;
-      if (mounted.current) setOpening(false);
-    }
-  };
   const toolbar = (
     <div className="flex shrink-0 items-center gap-1">
       {actions}
       {showOpenInVscode && (
-        <button
-          type="button"
-          aria-label={t("install.scan.openInVscode")}
+        <VscodeButton
+          onOpen={onOpenInVscode ? () => onOpenInVscode(file.path) : undefined}
           title={
             openInVscodeHint ??
             t(
@@ -93,24 +63,12 @@ export function FileContent({
                 : "fileReader.noLocalFile",
             )
           }
-          disabled={!onOpenInVscode || opening}
-          aria-busy={opening}
-          onClick={() => void openInVscode()}
-          className="app-button-ghost gap-1.5 px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
-        >
-          {opening ? (
-            <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-          ) : (
-            <Code2 aria-hidden="true" className="h-4 w-4" />
-          )}
-          <span
-            className={
-              toolbarContainer !== undefined ? "sr-only" : "hidden sm:inline"
-            }
-          >
-            {t("install.scan.openInVscode")}
-          </span>
-        </button>
+          onError={setOpenError}
+          iconOnly={toolbarContainer !== undefined}
+          labelClassName="hidden sm:inline"
+          variant="ghost"
+          className="gap-1.5 px-2 py-1 text-xs"
+        />
       )}
       {markdown &&
         (onPreview ? [true] : [false, true]).map((value) => (

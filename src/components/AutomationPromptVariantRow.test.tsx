@@ -26,11 +26,9 @@ it("renames inline from the context menu, commits once, cancels Escape and block
         viewed
         active
         disabled={disabled}
-        canDelete={false}
         group="prompts"
         onView={() => {}}
         onActivate={() => {}}
-        onRemove={() => {}}
         onRename={(value) => {
           rename(value);
           setName(value);

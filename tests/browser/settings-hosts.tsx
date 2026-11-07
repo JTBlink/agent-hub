@@ -44,6 +44,12 @@ const saveSystem = (next: string, appliedProfileId: string | null = null) => {
 Object.assign(window, {
   __TAURI_INTERNALS__: {
     invoke: async (command: string, args: Record<string, string>) => {
+      if (command === "plugin:path|dirname")
+        return args.path.slice(0, args.path.lastIndexOf("/"));
+      if (command === "plugin:opener|open_url") {
+        document.documentElement.dataset.vscodeUrl = args.url;
+        return;
+      }
       if (command === "list_hosts_profiles") return profiles;
       if (command === "create_hosts_profile") {
         const id = crypto.randomUUID();
@@ -88,13 +94,6 @@ Object.assign(window, {
         };
         profiles = profiles.map((p) => (p.id === next.id ? next : p));
         return next;
-      }
-      if (command === "plugin:path|dirname") {
-        return args.path.slice(0, Math.max(args.path.lastIndexOf("/"), 1));
-      }
-      if (command === "plugin:opener|open_url") {
-        document.documentElement.dataset.vscodeOpened = args.url;
-        return;
       }
       if (command === "read_system_hosts")
         return { path: "/etc/hosts", content, revision };

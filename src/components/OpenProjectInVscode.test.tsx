@@ -27,9 +27,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 const openButton = () =>
-  host.querySelector<HTMLButtonElement>(
-    '[aria-label="install.scan.openInVscode"]',
-  )!;
+  host.querySelector<HTMLButtonElement>('[aria-label="common.openInVscode"]')!;
 it("opens the selected worktree directory and blocks repeated clicks while launching", async () => {
   let finish!: () => void;
   vi.mocked(openDirectoryInVscode).mockReturnValueOnce(

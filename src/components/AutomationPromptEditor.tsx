@@ -1,7 +1,5 @@
-import "./AutomationPromptEditor.css";
 import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState } from "react";
-import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AutomationDraft } from "../lib/tauri";
 import {
@@ -12,6 +10,11 @@ import {
   type AutomationPromptVariant,
 } from "../lib/automationPrompts";
 import { ConfirmDialog } from "./ConfirmDialog";
+import {
+  SidebarEditorLayout,
+  SidebarEditorActions,
+} from "./SidebarEditorLayout";
+import { SidebarListPanel } from "./SidebarListPanel";
 import { AutomationPromptVariantRow } from "./AutomationPromptVariantRow";
 
 export function AutomationPromptEditor({
@@ -64,99 +67,130 @@ export function AutomationPromptEditor({
       state.activeId,
       persistManifest,
     );
+  const copyVariant = (variant: AutomationPromptVariant) => {
+    if (blocked || state.variants.length >= MAX_PROMPT_VARIANTS) return;
+    const id = crypto.randomUUID();
+    update([
+      ...state.variants,
+      {
+        ...variant,
+        id,
+        name: t("automation.copyName", { name: variant.name }),
+      },
+    ]);
+    focusName.current = true;
+    setViewedId(id);
+  };
   return (
     <section
       aria-labelledby={titleId}
-      className="flex min-w-0 flex-1 flex-col gap-3 [container-name:automation-prompts] [container-type:inline-size]"
+      className="flex min-w-0 flex-1 flex-col gap-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={titleId} className="text-xs font-medium text-muted">
-          {t("automation.prompt")}
-        </h3>
-        {usesAgent && (
-          <span className="text-xs text-muted">
-            {t("automation.promptVariantsCount", {
-              count: state.variants.length,
-            })}
-          </span>
-        )}
-      </div>
-      {state.invalid && (
-        <p role="alert" className="text-sm text-danger">
-          {t("automation.promptVariantsInvalid")}
-        </p>
-      )}
-      {usesAgent && !state.invalid ? (
-        <div className="automation-prompt-layout grid min-w-0 overflow-hidden rounded-lg border border-border-subtle bg-bg-secondary">
-          <fieldset
-            disabled={blocked}
-            className="automation-prompt-list flex min-w-0 flex-col gap-3 border-b border-border-subtle p-3"
-          >
-            <legend className="sr-only">
-              {t("automation.promptVariants")}
-            </legend>
-            <p className="text-xs leading-5 text-muted">
-              {t("automation.promptVariantsSelectHint")}
-            </p>
-            <div
-              className="max-h-[360px] space-y-2 overflow-y-auto"
-              role="radiogroup"
-              aria-label={t("automation.promptVariants")}
-            >
-              {state.variants.map((variant) => (
-                <AutomationPromptVariantRow
-                  key={variant.id}
-                  variant={variant}
-                  viewed={viewed.id === variant.id}
-                  active={state.activeId === variant.id}
-                  disabled={blocked}
-                  canDelete={state.variants.length > 1}
-                  group={group}
-                  onView={() => {
-                    if (viewed.id === variant.id) nameField.current?.focus();
-                    else focusName.current = true;
-                    setViewedId(variant.id);
-                  }}
-                  onActivate={() => {
-                    setViewedId(variant.id);
-                    update(state.variants, variant.id);
-                  }}
-                  onRename={(name) =>
-                    update(
-                      state.variants.map((item) =>
-                        item.id === variant.id ? { ...item, name } : item,
-                      ),
-                    )
-                  }
-                  onRemove={() => setRemoving(variant)}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              data-add-prompt
-              disabled={blocked || state.variants.length >= MAX_PROMPT_VARIANTS}
-              className="app-button-secondary justify-center text-xs"
-              onClick={() => {
-                const id = crypto.randomUUID();
-                update([
-                  ...state.variants,
-                  {
-                    id,
-                    name: t("automation.newPromptVariant", {
-                      count: state.variants.length + 1,
-                    }),
-                    content: "",
-                  },
-                ]);
-                focusName.current = true;
-                setViewedId(id);
+      <SidebarEditorLayout
+        heading={
+          <h3 id={titleId} className="text-xs font-medium text-muted">
+            {t("automation.prompt")}
+          </h3>
+        }
+        actions={
+          usesAgent && (
+            <SidebarEditorActions
+              create={{
+                label: t("automation.addPromptVariant"),
+                disabled:
+                  blocked || state.variants.length >= MAX_PROMPT_VARIANTS,
+                onClick: () => {
+                  const id = crypto.randomUUID();
+                  update([
+                    ...state.variants,
+                    {
+                      id,
+                      name: t("automation.newPromptVariant", {
+                        count: state.variants.length + 1,
+                      }),
+                      content: "",
+                    },
+                  ]);
+                  focusName.current = true;
+                  setViewedId(id);
+                },
               }}
+              copy={{
+                label: t("automation.copyPromptVariant"),
+                disabled:
+                  blocked || state.variants.length >= MAX_PROMPT_VARIANTS,
+                onClick: () => copyVariant(viewed),
+              }}
+              remove={{
+                label: t("common.delete"),
+                ariaLabel: t("automation.deletePromptVariant", {
+                  name: viewed.name,
+                }),
+                disabled: blocked || state.variants.length === 1,
+                onClick: () => setRemoving(viewed),
+              }}
+            />
+          )
+        }
+        above={
+          state.invalid && (
+            <p role="alert" className="text-sm text-danger">
+              {t("automation.promptVariantsInvalid")}
+            </p>
+          )
+        }
+        sidebar={
+          usesAgent && !state.invalid ? (
+            <SidebarListPanel
+              title={t("automation.promptVariants")}
+              count={state.variants.length}
+              description={t("automation.promptVariantsSelectHint")}
+              footer={<p>{t("automation.promptVariantsEditHint")}</p>}
             >
-              <Plus size={14} aria-hidden="true" />
-              {t("automation.addPromptVariant")}
-            </button>
-          </fieldset>
+              <div
+                role="radiogroup"
+                aria-label={t("automation.promptVariants")}
+              >
+                {state.variants.map((variant) => (
+                  <AutomationPromptVariantRow
+                    key={variant.id}
+                    variant={variant}
+                    viewed={viewed.id === variant.id}
+                    active={state.activeId === variant.id}
+                    disabled={blocked}
+                    group={group}
+                    onView={() => {
+                      if (viewed.id === variant.id) nameField.current?.focus();
+                      else focusName.current = true;
+                      setViewedId(variant.id);
+                    }}
+                    onActivate={() => {
+                      setViewedId(variant.id);
+                      update(state.variants, variant.id);
+                    }}
+                    copy={{
+                      disabled: state.variants.length >= MAX_PROMPT_VARIANTS,
+                      onSelect: () => copyVariant(variant),
+                    }}
+                    remove={{
+                      disabled: state.variants.length === 1,
+                      onSelect: () => setRemoving(variant),
+                    }}
+                    onRename={(name) =>
+                      update(
+                        state.variants.map((item) =>
+                          item.id === variant.id ? { ...item, name } : item,
+                        ),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </SidebarListPanel>
+          ) : undefined
+        }
+      >
+        {usesAgent && !state.invalid ? (
           <fieldset
             disabled={blocked}
             className="flex min-w-0 flex-col gap-4 bg-surface p-4"
@@ -196,20 +230,17 @@ export function AutomationPromptEditor({
                 className="app-input min-h-[280px] w-full flex-1 resize-y p-4 text-sm leading-7 disabled:cursor-not-allowed disabled:opacity-50"
               />
             </label>
-            <p className="text-xs leading-5 text-muted">
-              {t("automation.promptVariantsEditHint")}
-            </p>
           </fieldset>
-        </div>
-      ) : (
-        <textarea
-          aria-label={t("automation.prompt")}
-          disabled
-          value={usesAgent ? viewed.content : inactivePrompt}
-          placeholder={t("automation.chooseAgentPrompt")}
-          className="app-input min-h-[280px] w-full resize-y p-5 text-sm leading-7 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-muted"
-        />
-      )}
+        ) : (
+          <textarea
+            aria-label={t("automation.prompt")}
+            disabled
+            value={usesAgent ? viewed.content : inactivePrompt}
+            placeholder={t("automation.chooseAgentPrompt")}
+            className="app-input min-h-[280px] w-full resize-y p-5 text-sm leading-7 disabled:cursor-not-allowed disabled:bg-bg-secondary disabled:text-muted"
+          />
+        )}
+      </SidebarEditorLayout>
       {createPortal(
         <ConfirmDialog
           open={removing !== null}

@@ -149,10 +149,10 @@ it("opens the current file in VS Code without changing its draft", async () => {
       />,
     ),
   );
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   expect(open).toHaveBeenLastCalledWith("docs/README.md");
   await click("other/run.py");
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   expect(open).toHaveBeenLastCalledWith("other/run.py");
   expect(change).not.toHaveBeenCalled();
 });
@@ -160,7 +160,7 @@ it("opens the current file in VS Code without changing its draft", async () => {
 it("disables VS Code opening without a local file callback", async () => {
   await act(async () => root.render(<FileReader files={files} />));
   const button = container.querySelector<HTMLButtonElement>(
-    '[aria-label="在 VS Code 中打开"]',
+    '[aria-label="VS Code 打开"]',
   )!;
   expect(button.disabled).toBe(true);
   expect(button.title).toBe("此文件尚无可打开的本地路径");
@@ -186,20 +186,19 @@ it("prevents duplicate opening requests and supports retry after failure", async
       />,
     ),
   );
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   expect(
-    container.querySelector<HTMLButtonElement>(
-      '[aria-label="在 VS Code 中打开"]',
-    )!.disabled,
+    container.querySelector<HTMLButtonElement>('[aria-label="VS Code 打开"]')!
+      .disabled,
   ).toBe(true);
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   expect(open).toHaveBeenCalledTimes(1);
   await act(async () => reject(new Error("VS Code unavailable")));
   expect(container.querySelector('[role="alert"]')?.textContent).toBe(
     "VS Code unavailable",
   );
   expect(codeEditor(container).state.sliceDoc()).toBe(files[1].content);
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   expect(open).toHaveBeenCalledTimes(2);
   expect(container.querySelector('[role="alert"]')).toBeNull();
 });
@@ -215,13 +214,12 @@ it("keeps an earlier file's opening failure out of the newly selected file", asy
   await act(async () =>
     root.render(<FileReader files={files} onOpenInVscode={open} />),
   );
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   await click("src/run.py");
   await act(async () => reject(new Error("Old file failed")));
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(
-    container.querySelector<HTMLButtonElement>(
-      '[aria-label="在 VS Code 中打开"]',
-    )!.disabled,
+    container.querySelector<HTMLButtonElement>('[aria-label="VS Code 打开"]')!
+      .disabled,
   ).toBe(false);
 });

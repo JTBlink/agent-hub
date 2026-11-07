@@ -186,11 +186,10 @@ it.each(["README.md", "TASK.md"])(
     expect(source.state.sliceDoc()).toBe("print('ready')");
     expect(source.state.readOnly).toBe(true);
     expect(
-      dialog.querySelector<HTMLButtonElement>(
-        '[aria-label="在 VS Code 中打开"]',
-      )!.disabled,
+      dialog.querySelector<HTMLButtonElement>('[aria-label="VS Code 打开"]')!
+        .disabled,
     ).toBe(false);
-    await click("在 VS Code 中打开");
+    await click("VS Code 打开");
     expect(openPreviewInVscode).toHaveBeenLastCalledWith(
       "scripts/lib/check.py",
       "print('ready')",

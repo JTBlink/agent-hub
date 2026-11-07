@@ -254,7 +254,8 @@ async function render(path = "/automation") {
 }
 function button(name: string) {
   const found = [...container.querySelectorAll("button")].find(
-    (node) => node.textContent === name,
+    (node) =>
+      node.textContent === name || node.getAttribute("aria-label") === name,
   );
   if (!found) throw new Error(`Missing button ${name}`);
   return found;
@@ -302,7 +303,7 @@ it.each([undefined, "/workspace/task-scripts"])(
     expect(codeEditor(document).state.readOnly).toBe(true);
     const openSourceDirectory = async () => {
       const button = document.querySelector<HTMLButtonElement>(
-        'dialog button[aria-label="在 VS Code 中打开"]',
+        'dialog button[aria-label="VS Code 打开"]',
       )!;
       expect(button.title).toBe("在 VS Code 中打开脚本目录");
       expect(button.closest('aside[aria-label="文件目录"]')).not.toBeNull();
@@ -780,9 +781,8 @@ it("chooses a working directory, opens it in VS Code and saves the selected path
   await render();
   await click("新建自动化");
   expect(
-    container.querySelector<HTMLButtonElement>(
-      '[aria-label="在 VS Code 中打开"]',
-    )!.disabled,
+    container.querySelector<HTMLButtonElement>('[aria-label="VS Code 打开"]')!
+      .disabled,
   ).toBe(true);
   await ariaClick("选择项目工作区目录");
   expect(open).toHaveBeenCalledWith({
@@ -795,7 +795,7 @@ it("chooses a working directory, opens it in VS Code and saves the selected path
       'select[aria-label="项目工作区"]',
     )!.value,
   ).toBe("/workspace/清理缓存 #demo");
-  await ariaClick("在 VS Code 中打开");
+  await ariaClick("VS Code 打开");
   expect(openDirectoryInVscode).toHaveBeenCalledWith(
     "/workspace/清理缓存 #demo",
   );
@@ -859,7 +859,7 @@ it("selects a registered project without moving scripts and saves both directori
   expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
     "/workspace/task-scripts",
   );
-  await ariaClick("在 VS Code 中打开");
+  await ariaClick("VS Code 打开");
   expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
     "/workspace/review-project",
   );
@@ -921,9 +921,7 @@ it.each([undefined, "/workspace/scripts"])(
     await click("打开");
     await act(async () =>
       document
-        .querySelector<HTMLButtonElement>(
-          'dialog [aria-label="在 VS Code 中打开"]',
-        )!
+        .querySelector<HTMLButtonElement>('dialog [aria-label="VS Code 打开"]')!
         .click(),
     );
     expect(openFileInVscode).toHaveBeenLastCalledWith(
@@ -1187,7 +1185,7 @@ it("keeps the entered workdir on picker cancellation or launch failure and allow
   vi.mocked(openDirectoryInVscode).mockRejectedValueOnce(
     new Error("VS Code unavailable"),
   );
-  await ariaClick("在 VS Code 中打开");
+  await ariaClick("VS Code 打开");
   expect(container.querySelector('[role="alert"]')?.textContent).toContain(
     "VS Code unavailable",
   );
@@ -1196,7 +1194,7 @@ it("keeps the entered workdir on picker cancellation or launch failure and allow
       'select[aria-label="项目工作区"]',
     )!.value,
   ).toBe("/workspace/demo");
-  await ariaClick("在 VS Code 中打开");
+  await ariaClick("VS Code 打开");
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(api.saveAutomation).not.toHaveBeenCalled();
 });

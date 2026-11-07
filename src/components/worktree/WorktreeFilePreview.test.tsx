@@ -229,7 +229,7 @@ it("moves file controls into the shared toolbar and offers previews for supporte
     host.querySelector('[title="README.md"][aria-label="README.md"]'),
   ).toBeNull();
   expect(
-    toolbar.querySelector('[aria-label="install.scan.openInVscode"]'),
+    toolbar.querySelector('[aria-label="common.openInVscode"]'),
   ).toBeNull();
   expect(
     toolbar.querySelector('[aria-label="settings.refresh"]'),

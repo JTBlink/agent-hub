@@ -113,7 +113,7 @@ function syncButton(key: string) {
 
 it("opens the selected project copy in VS Code through the common launcher", async () => {
   await render();
-  await act(async () => syncButton("install.scan.openInVscode")?.click());
+  await act(async () => syncButton("common.openInVscode")?.click());
   expect(api.openVscode).toHaveBeenCalledWith(variant.path);
 });
 

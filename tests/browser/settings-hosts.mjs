@@ -116,6 +116,16 @@ try {
     "127.0.0.2 demo.test\n",
   );
   await inside(
+    `document.querySelector('button[aria-label="VS Code 打开"]').click();true`,
+  );
+  await until(
+    `document.documentElement.dataset.vscodeUrl === 'vscode://file/etc'`,
+  );
+  assert.equal(
+    await inside(`document.querySelector('textarea').value`),
+    "127.0.0.2 demo.test\n",
+  );
+  await inside(
     `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='保存').click();true`,
   );
   await until(`!!document.querySelector('[role=status]')`);
@@ -148,22 +158,7 @@ try {
     `!!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='已应用' && b.disabled)`,
   );
   await inside(
-    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='用 VS Code 打开所在目录').click();true`,
-  );
-  await until(`!!document.documentElement.dataset.vscodeOpened`);
-  assert.ok(
-    (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
-      "/user-config/hosts",
-    ),
-  );
-  assert.equal(
-    (await inside(`document.documentElement.dataset.vscodeOpened`)).includes(
-      ".hosts",
-    ),
-    false,
-  );
-  await inside(
-    `Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='新建方案').click();true`,
+    `Array.from(document.querySelectorAll('button')).find(b=>b.getAttribute('aria-label')==='新建方案').click();true`,
   );
   await until(`!!document.querySelector('[role=alertdialog] input')`);
   const modalFits = await inside(
@@ -187,7 +182,7 @@ try {
     "settings-tab-network",
   );
   console.log(
-    "PASS: 24 theme/scale/width/locale layouts, draft retention, save, profile create/apply, VS Code directory open, settings shortcut, sidebar sizing and vertical keyboard navigation",
+    "PASS: 24 theme/scale/width/locale layouts, draft retention, save, profile create/apply, settings shortcut, sidebar sizing and vertical keyboard navigation",
   );
 } finally {
   await request(`/close?target=${targetId}`);

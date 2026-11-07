@@ -1,9 +1,10 @@
-import { Code2, FolderOpen } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getErrorMessage } from "../lib/error";
 import { openDirectoryInVscode } from "../lib/openInVscode";
+import { VscodeButton } from "./VscodeButton";
 
 export function SkillDirectoryActions({
   path,
@@ -15,10 +16,9 @@ export function SkillDirectoryActions({
   compact?: boolean;
 }) {
   const { t } = useTranslation();
-  const open = async (editor: boolean) => {
+  const open = async () => {
     try {
-      if (editor) await openDirectoryInVscode(path);
-      else await openPath(path);
+      await openPath(path);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, t("common.error")));
     }
@@ -34,7 +34,7 @@ export function SkillDirectoryActions({
       <button
         type="button"
         disabled={disabled || !path}
-        onClick={() => void open(false)}
+        onClick={() => void open()}
         title={t("install.scan.openFolder")}
         aria-label={t("install.scan.openFolder")}
         className={
@@ -46,21 +46,16 @@ export function SkillDirectoryActions({
         <FolderOpen className="h-3.5 w-3.5" />
         {!compact && t("install.scan.openFolder")}
       </button>
-      <button
-        type="button"
+      <VscodeButton
         disabled={disabled || !path}
-        onClick={() => void open(true)}
-        title={t("install.scan.openInVscode")}
-        aria-label={t("install.scan.openInVscode")}
+        iconOnly={compact}
+        onOpen={() => openDirectoryInVscode(path)}
         className={
           compact
-            ? "rounded p-0.5 text-faint transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-accent"
-            : "app-button-secondary !px-2 !py-1 text-xs focus-visible:ring-2 focus-visible:ring-accent"
+            ? "h-auto w-auto rounded p-0.5 text-faint hover:text-secondary"
+            : "!px-2 !py-1"
         }
-      >
-        <Code2 className="h-3.5 w-3.5" />
-        {!compact && t("install.scan.openInVscode")}
-      </button>
+      />
     </div>
   );
 }

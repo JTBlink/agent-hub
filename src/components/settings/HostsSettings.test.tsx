@@ -6,10 +6,14 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { HostsSettings } from "./HostsSettings";
 import * as api from "../../lib/hostsApi";
-import { dirname } from "@tauri-apps/api/path";
-import { openDirectoryInVscode } from "../../lib/openInVscode";
+import { openContainingDirectoryInVscode } from "../../lib/openInVscode";
+import { toast } from "sonner";
 import zh from "../../i18n/zh.json";
 
+vi.mock("../../lib/openInVscode", () => ({
+  openContainingDirectoryInVscode: vi.fn(),
+}));
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("../../lib/hostsApi", () => ({
   readSystemHosts: vi.fn(),
   openHostsPermissionSettings: vi.fn(),
@@ -20,8 +24,6 @@ vi.mock("../../lib/hostsApi", () => ({
   deleteHostsProfile: vi.fn(),
   applyHostsProfile: vi.fn(),
 }));
-vi.mock("@tauri-apps/api/path", () => ({ dirname: vi.fn() }));
-vi.mock("../../lib/openInVscode", () => ({ openDirectoryInVscode: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async () => () => {}),
 }));
@@ -65,7 +67,8 @@ async function render(active = true) {
 const editor = () => host.querySelector<HTMLTextAreaElement>("textarea")!;
 const button = (label: string) =>
   [...document.querySelectorAll<HTMLButtonElement>("button")].find(
-    (item) => item.textContent === label,
+    (item) =>
+      item.textContent === label || item.getAttribute("aria-label") === label,
   )!;
 async function edit(value: string) {
   await act(async () => {
@@ -100,27 +103,40 @@ it.each(["/etc/hosts", "C:\\Windows\\System32\\drivers\\etc\\hosts"])(
   },
 );
 
-it.each([
-  ["/etc/hosts", "/etc"],
-  [
-    "C:\\Windows\\System32\\drivers\\etc\\hosts",
-    "C:\\Windows\\System32\\drivers\\etc",
-  ],
-])(
-  "opens the selected Hosts parent directory in VS Code: %s",
-  async (path, parent) => {
+it.each(["/etc/hosts", String.raw`C:\Windows\System32\drivers\etc\hosts`])(
+  "opens the system Hosts folder in VS Code without replacing the selected draft: %s",
+  async (path) => {
     vi.mocked(api.readSystemHosts).mockResolvedValueOnce({ ...initial, path });
-    vi.mocked(dirname).mockResolvedValueOnce(parent);
-    vi.mocked(openDirectoryInVscode).mockResolvedValueOnce(undefined);
+    vi.mocked(api.listHostsProfiles).mockResolvedValueOnce([profile]);
     await render();
-    await act(async () => button("用 VS Code 打开所在目录").click());
-    expect(dirname).toHaveBeenCalledWith(path);
-    expect(openDirectoryInVscode).toHaveBeenCalledWith(parent);
-    expect(host.querySelector('[role="status"]')?.textContent).toContain(
-      "VS Code",
+    await selectProfile();
+    await edit("# keep profile draft\n");
+    await act(async () => button("VS Code 打开").click());
+    expect(openContainingDirectoryInVscode).toHaveBeenCalledExactlyOnceWith(
+      path,
     );
+    expect(
+      button("VS Code 打开").querySelector(".codicon-vscode"),
+    ).not.toBeNull();
+    expect(editor().value).toBe("# keep profile draft\n");
+    expect(profileButtons()[0].getAttribute("aria-pressed")).toBe("true");
+    expect(api.saveSystemHosts).not.toHaveBeenCalled();
   },
 );
+
+it("keeps a Hosts draft when VS Code fails and allows retry", async () => {
+  await render();
+  await edit("# keep system draft\n");
+  vi.mocked(openContainingDirectoryInVscode)
+    .mockRejectedValueOnce(new Error("VS Code unavailable"))
+    .mockResolvedValueOnce();
+  await act(async () => button("VS Code 打开").click());
+  expect(toast.error).toHaveBeenCalledWith("VS Code unavailable");
+  expect(editor().value).toBe("# keep system draft\n");
+  expect(button("VS Code 打开").disabled).toBe(false);
+  await act(async () => button("VS Code 打开").click());
+  expect(openContainingDirectoryInVscode).toHaveBeenCalledTimes(2);
+});
 
 it("saves with the loaded revision and reports success", async () => {
   await render();
@@ -280,7 +296,11 @@ const profileButtons = () => [
 ];
 const activeProfileNames = () =>
   profileButtons()
-    .filter((item) => item.querySelector('[role="img"][aria-label="当前生效"]'))
+    .filter((item) =>
+      item
+        .closest('[role="group"]')
+        ?.querySelector('[role="img"][aria-label="当前生效"]'),
+    )
     .map((item) => item.querySelector("[title]")?.textContent);
 
 it("automatically shows system content before a slow profile list finishes and preserves typing", async () => {
@@ -517,6 +537,118 @@ it("requires confirmation before switching away from a system draft", async () =
     true,
   );
 });
+it("copies the current profile draft from the common toolbar without applying it", async () => {
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  await render();
+  await selectProfile();
+  await edit("# copied draft\n");
+  await act(async () => button("复制").click());
+  expect(
+    document.querySelector<HTMLInputElement>('[role="alertdialog"] input')
+      ?.value,
+  ).toBe(`${profile.name} 副本`);
+  vi.mocked(api.createHostsProfile).mockResolvedValue({
+    ...profile,
+    id: "profile-copy",
+    name: `${profile.name} 副本`,
+    content: "# copied draft\n",
+  });
+  const save = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((item) => item.textContent === "保存")!;
+  await act(async () => save.click());
+  expect(api.createHostsProfile).toHaveBeenCalledWith(
+    `${profile.name} 副本`,
+    "# copied draft\n",
+  );
+  expect(api.applyHostsProfile).not.toHaveBeenCalled();
+  expect(api.saveSystemHosts).not.toHaveBeenCalled();
+});
+
+it("copies and deletes the right-clicked profile while preserving another profile's draft", async () => {
+  const other = {
+    ...profile,
+    id: "other",
+    name: "Production",
+    content: "127.0.0.3 production.test\n",
+    revision: "other-first",
+  };
+  const copied = {
+    ...other,
+    id: "copy",
+    name: "Production 副本",
+    revision: "copy-first",
+  };
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile, other]);
+  await render();
+  await selectProfile();
+  const menu = async (action: string) => {
+    await act(async () =>
+      host
+        .querySelector('[role="group"][aria-label="Production"]')!
+        .dispatchEvent(
+          new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+        ),
+    );
+    const items = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ];
+    expect(items.map((item) => item.textContent)).toEqual([
+      "重命名",
+      "复制",
+      "删除",
+    ]);
+    await act(async () =>
+      items.find((item) => item.textContent === action)!.click(),
+    );
+  };
+  await menu("复制");
+  expect(
+    document.querySelector<HTMLInputElement>('[role="alertdialog"] input')
+      ?.value,
+  ).toBe(copied.name);
+  expect(
+    profileButtons().find(
+      (item) => item.getAttribute("aria-pressed") === "true",
+    )?.textContent,
+  ).toBe(profile.name);
+  vi.mocked(api.createHostsProfile).mockResolvedValue(copied);
+  await act(async () =>
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[role="alertdialog"] button',
+      ),
+    ]
+      .find((item) => item.textContent === "保存")!
+      .click(),
+  );
+  expect(api.createHostsProfile).toHaveBeenCalledWith(
+    copied.name,
+    other.content,
+  );
+  await edit("# keep copied draft\n");
+  await menu("删除");
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    other.name,
+  );
+  await act(async () => button("取消").click());
+  expect(api.deleteHostsProfile).not.toHaveBeenCalled();
+  await menu("删除");
+  vi.mocked(api.deleteHostsProfile).mockResolvedValue(undefined);
+  await act(async () => button("确认").click());
+  expect(api.deleteHostsProfile).toHaveBeenCalledExactlyOnceWith(other);
+  expect(
+    profileButtons().find(
+      (item) => item.getAttribute("aria-pressed") === "true",
+    )?.textContent,
+  ).toBe(copied.name);
+  expect(editor().value).toBe("# keep copied draft\n");
+  expect(api.applyHostsProfile).not.toHaveBeenCalled();
+  expect(api.saveSystemHosts).not.toHaveBeenCalled();
+});
+
 it("keeps the naming dialog open and preserves input when profile creation fails", async () => {
   await render();
   await act(async () => button("另存为方案").click());
@@ -553,9 +685,21 @@ it("renames a profile while preserving its unsaved content draft", async () => {
   await render();
   await selectProfile();
   await edit("# draft\n");
+  expect(button("重命名")).toBeUndefined();
+  await act(async () => {
+    host
+      .querySelector(`[role="group"][aria-label="${profile.name}"]`)!
+      .dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          clientX: 100,
+          clientY: 100,
+        }),
+      );
+  });
   await act(async () => button("重命名").click());
   const input = document.querySelector<HTMLInputElement>(
-    '[role="alertdialog"] input',
+    'input[aria-label="方案名称"]',
   )!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(
@@ -569,14 +713,11 @@ it("renames a profile while preserving its unsaved content draft", async () => {
     name: "Renamed",
     revision: "renamed",
   });
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
   await act(async () =>
-    [
-      ...document.querySelectorAll<HTMLButtonElement>(
-        '[role="alertdialog"] button',
-      ),
-    ]
-      .find((item) => item.textContent === "保存")!
-      .click(),
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    ),
   );
   expect(api.updateHostsProfile).toHaveBeenCalledWith(
     profile,
@@ -585,6 +726,132 @@ it("renames a profile while preserving its unsaved content draft", async () => {
   );
   expect(editor().value).toBe("# draft\n");
 });
+it("renames the right-clicked profile without selecting it or losing the current draft", async () => {
+  const other = {
+    ...profile,
+    id: "profile-2",
+    name: "Production",
+    revision: "other-first",
+  };
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile, other]);
+  await render();
+  await selectProfile();
+  await edit("# keep current draft\n");
+  await act(async () => {
+    host
+      .querySelector(`[role="group"][aria-label="${other.name}"]`)!
+      .dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          clientX: 100,
+          clientY: 100,
+        }),
+      );
+  });
+  await act(async () => button("重命名").click());
+  const input = document.querySelector<HTMLInputElement>(
+    'input[aria-label="方案名称"]',
+  )!;
+  expect(input.value).toBe(other.name);
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(input, "Updated production");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  vi.mocked(api.updateHostsProfile).mockResolvedValue({
+    ...other,
+    name: "Updated production",
+    revision: "other-next",
+  });
+  await act(async () => input.blur());
+  expect(api.updateHostsProfile).toHaveBeenCalledWith(
+    other,
+    "Updated production",
+    other.content,
+  );
+  expect(
+    profileButtons().find(
+      (item) => item.getAttribute("aria-pressed") === "true",
+    )?.textContent,
+  ).toContain(profile.name);
+  expect(editor().value).toBe("# keep current draft\n");
+});
+
+it("keeps an inline rename after failure, retries once and cancels with Escape", async () => {
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  await render();
+  await selectProfile();
+  await edit("# keep draft\n");
+  const openRename = async () => {
+    await act(async () =>
+      button(profile.name).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "F2", bubbles: true }),
+      ),
+    );
+    return host.querySelector<HTMLInputElement>(
+      'input[aria-label="方案名称"]',
+    )!;
+  };
+  const type = async (input: HTMLInputElement, value: string) =>
+    act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  let input = await openRename();
+  await type(input, "  Renamed  ");
+  vi.mocked(api.updateHostsProfile).mockRejectedValueOnce(
+    new Error("rename failed"),
+  );
+  await act(async () =>
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    ),
+  );
+  expect(api.updateHostsProfile).toHaveBeenCalledTimes(1);
+  expect(input.value).toBe("  Renamed  ");
+  expect(document.activeElement).toBe(input);
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+    "rename failed",
+  );
+  vi.mocked(api.updateHostsProfile).mockResolvedValue({
+    ...profile,
+    name: "Renamed",
+    revision: "next",
+  });
+  await act(async () =>
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    ),
+  );
+  expect(api.updateHostsProfile).toHaveBeenCalledTimes(2);
+  expect(api.updateHostsProfile).toHaveBeenLastCalledWith(
+    profile,
+    "Renamed",
+    profile.content,
+  );
+  expect(editor().value).toBe("# keep draft\n");
+  await act(async () =>
+    button("Renamed").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "F2", bubbles: true }),
+    ),
+  );
+  input = host.querySelector<HTMLInputElement>('input[aria-label="方案名称"]')!;
+  await type(input, "Discard");
+  await act(async () =>
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    ),
+  );
+  expect(api.updateHostsProfile).toHaveBeenCalledTimes(2);
+  expect(button("Renamed")).toBe(document.activeElement);
+  expect(host.querySelector('input[aria-label="方案名称"]')).toBeNull();
+});
+
 it("deletes only the selected profile and keeps the system content", async () => {
   vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
   await render();
@@ -597,6 +864,54 @@ it("deletes only the selected profile and keeps the system content", async () =>
   expect(api.deleteHostsProfile).toHaveBeenCalledWith(profile);
   expect(editor().value).toBe(hostsContent());
   expect(api.saveSystemHosts).not.toHaveBeenCalled();
+});
+
+it("keeps the selected draft when header deletion is cancelled or fails", async () => {
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  await render();
+  await selectProfile();
+  await edit("# unsaved selected profile\n");
+  const remove = () =>
+    host.querySelector<HTMLButtonElement>('header [aria-label="删除方案"]')!;
+  await act(async () => remove().click());
+  expect(api.deleteHostsProfile).not.toHaveBeenCalled();
+  await act(async () => button("取消").click());
+  expect(editor().value).toBe("# unsaved selected profile\n");
+  await act(async () => remove().click());
+  vi.mocked(api.deleteHostsProfile).mockRejectedValueOnce(
+    new Error("disk failure"),
+  );
+  await act(async () => button("确认").click());
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+  expect(editor().value).toBe("# unsaved selected profile\n");
+  expect(profileButtons()[0].getAttribute("aria-pressed")).toBe("true");
+  vi.mocked(api.deleteHostsProfile).mockResolvedValueOnce(undefined);
+  await act(async () => button("确认").click());
+  expect(api.deleteHostsProfile).toHaveBeenLastCalledWith(profile);
+  expect(profileButtons()).toHaveLength(0);
+  expect(editor().value).toBe(hostsContent());
+  expect(api.saveSystemHosts).not.toHaveBeenCalled();
+});
+
+it("keeps the selected draft revision when deleting after an external change", async () => {
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([profile]);
+  await render();
+  await selectProfile();
+  await edit("# unsaved\n");
+  vi.mocked(api.listHostsProfiles).mockResolvedValue([
+    { ...profile, revision: "external", content: "# external\n" },
+  ]);
+  await act(async () => window.dispatchEvent(new Event("focus")));
+  await act(async () =>
+    host.querySelector<HTMLButtonElement>('[aria-label="删除方案"]')!.click(),
+  );
+  vi.mocked(api.deleteHostsProfile).mockRejectedValueOnce(
+    new Error("HOSTS_PROFILE_CONFLICT"),
+  );
+  await act(async () => button("确认").click());
+  expect(api.deleteHostsProfile).toHaveBeenCalledWith(profile);
+  expect(editor().value).toBe("# unsaved\n");
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
 });
 
 it("retries applying the selected saved profile after authorization is cancelled", async () => {

@@ -61,6 +61,26 @@ it("adds and edits variants, switches one active body and selects a survivor on 
       );
       node.dispatchEvent(new Event("input", { bubbles: true }));
     });
+  const menu = async (name: string, action: string) => {
+    await act(async () =>
+      host
+        .querySelector(`[role="group"][aria-label="${name}"]`)!
+        .dispatchEvent(
+          new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+        ),
+    );
+    const items = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ];
+    expect(items.map((item) => item.textContent)).toEqual([
+      "重命名",
+      "复制",
+      "删除",
+    ]);
+    const item = items.find((item) => item.textContent === action)!;
+    await act(async () => item.click());
+    return item;
+  };
   try {
     await act(async () => root.render(<Harness />));
     expect(
@@ -68,8 +88,16 @@ it("adds and edits variants, switches one active body and selects a survivor on 
         'button[aria-label="删除「默认提示词」"]',
       )!.disabled,
     ).toBe(true);
+    expect((await menu("默认提示词", "删除")).disabled).toBe(true);
+    await act(async () =>
+      document
+        .querySelector('[role="menu"]')!
+        .dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        ),
+    );
     const add = [...host.querySelectorAll("button")].find(
-      (b) => b.textContent === "新增方案",
+      (b) => b.textContent === "新增",
     )!;
     await act(async () => add.click());
     expect(host.querySelectorAll('input[type="radio"]:checked')).toHaveLength(
@@ -105,6 +133,66 @@ it("adds and edits variants, switches one active body and selects a survivor on 
     expect(host.querySelectorAll('input[type="radio"]:checked')).toHaveLength(
       1,
     );
+    const copy = [...host.querySelectorAll("button")].find(
+      (button) => button.textContent === "复制",
+    )!;
+    const beforeCopy = automationPrompts(current, "Default");
+    const original = beforeCopy.variants.find(
+      (variant) => variant.id === beforeCopy.activeId,
+    )!;
+    await act(async () => copy.click());
+    const copied = automationPrompts(current, "Default");
+    expect(copied.activeId).toBe(beforeCopy.activeId);
+    expect(copied.variants).toHaveLength(2);
+    expect(copied.variants[1]).toMatchObject({
+      name: `${original.name}（副本）`,
+      content: original.content,
+    });
+    expect(copied.variants[1].id).not.toBe(original.id);
+    expect(host.querySelector("textarea")!.value).toBe(original.content);
+    expect(
+      host.querySelector<HTMLInputElement>('input[aria-label="方案名称"]')!
+        .value,
+    ).toBe(`${original.name}（副本）`);
+    await input(
+      host.querySelector<HTMLTextAreaElement>("textarea")!,
+      "Different viewed draft",
+    );
+    await menu(original.name, "复制");
+    const contextCopy = automationPrompts(current, "Default");
+    const newest = contextCopy.variants.at(-1)!;
+    expect(newest.content).toBe(original.content);
+    expect(contextCopy.activeId).toBe(original.id);
+    expect(contextCopy.variants).toHaveLength(3);
+    expect(host.querySelector("textarea")!.value).toBe(original.content);
+    await menu(original.name, "删除");
+    await act(async () =>
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[role="alertdialog"] button',
+        ),
+      ]
+        .find((button) => button.textContent === "取消")!
+        .click(),
+    );
+    expect(automationPrompts(current, "Default").variants).toHaveLength(3);
+    await menu(original.name, "删除");
+    await act(async () =>
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[role="alertdialog"] button',
+        ),
+      ]
+        .find((button) => button.textContent === "删除")!
+        .click(),
+    );
+    const deleted = automationPrompts(current, "Default");
+    expect(deleted.variants.map((variant) => variant.id)).not.toContain(
+      original.id,
+    );
+    expect(deleted.variants.map((variant) => variant.id)).toContain(newest.id);
+    expect(host.querySelector("textarea")!.value).toBe(original.content);
+    expect(current.content).toBe("Different viewed draft");
   } finally {
     await act(async () => root.unmount());
     host.remove();

@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import {
   openDirectoryInVscode,
+  openContainingDirectoryInVscode,
   openFileInVscode,
   openPreviewInVscode,
 } from "./openInVscode";
@@ -9,8 +10,10 @@ import { prepareFilePreview } from "./tauri";
 vi.mock("./tauri", () => ({ prepareFilePreview: vi.fn() }));
 
 const openUrl = vi.hoisted(() => vi.fn());
+const dirname = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl }));
 vi.mock("@tauri-apps/api/path", () => ({
+  dirname,
   homeDir: async () => "/workspace/home",
   join: async (...parts: string[]) => parts.filter(Boolean).join("/"),
 }));
@@ -24,7 +27,7 @@ it("launches VS Code with an encoded absolute directory", async () => {
 });
 
 it("rejects invalid directories before calling the opener", async () => {
-  await expect(openDirectoryInVscode("~/skills/demo")).rejects.toThrow();
+  await expect(openDirectoryInVscode("skills/demo")).rejects.toThrow();
   expect(openUrl).not.toHaveBeenCalled();
 });
 
@@ -70,4 +73,28 @@ it("reports preview preparation failures without opening an invalid path", async
     "Cannot prepare preview",
   );
   expect(openUrl).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["/etc/hosts", "/etc", "vscode://file/etc"],
+  [
+    String.raw`C:\Windows\System32\drivers\etc\hosts`,
+    String.raw`C:\Windows\System32\drivers\etc`,
+    "vscode://file/C%3A/Windows/System32/drivers/etc",
+  ],
+])(
+  "opens the containing directory using platform path rules: %s",
+  async (path, parent, url) => {
+    dirname.mockResolvedValueOnce(parent);
+    await openContainingDirectoryInVscode(path);
+    expect(dirname).toHaveBeenLastCalledWith(path);
+    expect(openUrl).toHaveBeenLastCalledWith(url);
+  },
+);
+
+it("expands home-relative directories through the common launcher", async () => {
+  await openDirectoryInVscode("~/tasks");
+  expect(openUrl).toHaveBeenLastCalledWith(
+    "vscode://file/workspace/home/tasks",
+  );
 });

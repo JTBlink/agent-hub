@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Code2, FolderOpen, Loader2 } from "lucide-react";
+import { FolderOpen, Loader2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir, join } from "@tauri-apps/api/path";
 import { useTranslation } from "react-i18next";
 import { getErrorMessage } from "../lib/error";
 import { openDirectoryInVscode } from "../lib/openInVscode";
+import { VscodeButton } from "./VscodeButton";
 import { ThemedSelect } from "./ThemedSelect";
 import type { Project } from "../lib/tauri";
 
@@ -46,28 +47,23 @@ export function AutomationWorkdirField({
       : kind === "projectWorkspace"
         ? "automation.chooseProjectWorkspace"
         : "automation.chooseWorkdir";
-  const launch = async (action: "choose" | "edit") => {
-    if (disabled || pending.current || (readOnly && action === "choose"))
-      return;
+  const choose = async () => {
+    if (disabled || pending.current || readOnly) return;
     pending.current = true;
-    setAction(action);
+    setAction("choose");
     setError(null);
     try {
       const resolved =
         path === "~" || path.startsWith("~/")
           ? await join(await homeDir(), path.slice(2))
           : path;
-      if (action === "choose") {
-        const selected = await open({
-          directory: true,
-          multiple: false,
-          title: t(chooseLabel),
-          ...(resolved ? { defaultPath: resolved } : {}),
-        });
-        if (mounted.current && typeof selected === "string") onChange(selected);
-      } else if (resolved) {
-        await openDirectoryInVscode(resolved);
-      }
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: t(chooseLabel),
+        ...(resolved ? { defaultPath: resolved } : {}),
+      });
+      if (mounted.current && typeof selected === "string") onChange(selected);
     } catch (cause) {
       if (mounted.current) setError(getErrorMessage(cause, t("common.error")));
     } finally {
@@ -83,28 +79,23 @@ export function AutomationWorkdirField({
         <label htmlFor={inputId} className="text-xs font-medium text-muted">
           {t(`automation.${kind}`)}
         </label>
-        <button
-          type="button"
+        <VscodeButton
+          iconOnly
           disabled={disabled || action !== null || !path}
           title={t(
             path
-              ? "install.scan.openInVscode"
+              ? kind === "scriptDir"
+                ? "automation.openScriptDir"
+                : "common.openInVscode"
               : "automation.openWorkdirAfterSave",
           )}
-          aria-label={t(
-            kind === "scriptDir"
-              ? "automation.openScriptDir"
-              : "install.scan.openInVscode",
-          )}
-          className="app-button-ghost flex h-6 w-6 shrink-0 items-center justify-center rounded p-1 text-muted hover:bg-surface-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-accent"
-          onClick={() => void launch("edit")}
-        >
-          {action === "edit" ? (
-            <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-          ) : (
-            <Code2 aria-hidden="true" className="h-4 w-4" />
-          )}
-        </button>
+          ariaLabel={
+            kind === "scriptDir" ? t("automation.openScriptDir") : undefined
+          }
+          onOpen={() => openDirectoryInVscode(path)}
+          onError={setError}
+          onOpeningChange={(opening) => setAction(opening ? "edit" : null)}
+        />
       </div>
       <div
         className={
@@ -171,7 +162,7 @@ export function AutomationWorkdirField({
               title={t(chooseLabel)}
               aria-label={t(chooseLabel)}
               className={buttonClass}
-              onClick={() => void launch("choose")}
+              onClick={() => void choose()}
             >
               {action === "choose" ? (
                 <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />

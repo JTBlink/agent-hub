@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
-import { dirname } from "@tauri-apps/api/path";
 import * as api from "../../lib/hostsApi";
-import { openDirectoryInVscode as openInVscode } from "../../lib/openInVscode";
 import { describeHostsError, hostsEditorText } from "./hostsPresentation";
 
 type Source = api.HostsSnapshot | api.HostsProfile;
@@ -257,43 +255,42 @@ export function useHostsSettings(active: boolean) {
       }));
       setNotice(t("hosts.profileSaved"));
     });
-  const rename = (name: string) =>
+  const rename = (name: string, target?: api.HostsProfile) =>
     run(async () => {
-      const source = current.current.source;
+      const source = target ?? current.current.source;
       if (!isProfile(source)) return;
       const next = await api.updateHostsProfile(source, name, source.content);
       if (!mounted.current) return;
       setModel((m) => ({
         ...m,
-        source: next,
+        source:
+          isProfile(m.source) && m.source.id === next.id ? next : m.source,
         profiles: m.profiles.map((p) => (p.id === next.id ? next : p)),
       }));
       setNotice(t("hosts.renamed"));
     });
-  const remove = () =>
+  const remove = (target?: api.HostsProfile) =>
     run(async () => {
-      const source = current.current.source;
+      const source = target ?? current.current.source;
       if (!isProfile(source)) return;
       await api.deleteHostsProfile(source);
       if (!mounted.current) return;
-      setModel((m) => ({
-        ...m,
-        profiles: m.profiles.filter((p) => p.id !== source.id),
-        system:
+      setModel((m) => {
+        const system =
           m.system?.applied_profile_id === source.id
             ? { ...m.system, applied_profile_id: null }
-            : m.system,
-        source: m.system,
-        draft: hostsEditorText(m.system?.content ?? ""),
-      }));
+            : m.system;
+        const selected = isProfile(m.source) && m.source.id === source.id;
+        return {
+          ...m,
+          profiles: m.profiles.filter((p) => p.id !== source.id),
+          system,
+          ...(selected
+            ? { source: system, draft: hostsEditorText(system?.content ?? "") }
+            : {}),
+        };
+      });
       setNotice(t("hosts.deleted"));
-    });
-  const openDirectoryInVscode = () =>
-    run(async () => {
-      const source = current.current.source;
-      if (!source) return;
-      await openInVscode(await dirname(source.path));
-      if (mounted.current) setNotice(t("hosts.openedDirectoryInVscode"));
     });
   const profile = isProfile(model.source) ? model.source : null;
   const latest = profile
@@ -319,7 +316,6 @@ export function useHostsSettings(active: boolean) {
     create,
     rename,
     remove,
-    openDirectoryInVscode,
     retry: () =>
       failedAction.current ? run(failedAction.current) : Promise.resolve(false),
   };

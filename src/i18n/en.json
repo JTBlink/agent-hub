@@ -49,8 +49,6 @@
     "completeProfile": "Complete Hosts profile",
     "actualSystem": "Actual local content",
     "editor": "Hosts content",
-    "openDirectoryInVscode": "Open containing folder in VS Code",
-    "openedDirectoryInVscode": "Requested VS Code to open the folder containing Hosts.",
     "noChanges": "Saved",
     "saveHint": "Saving a profile leaves the system unchanged. Apply it to activate.",
     "readAt": "Last read {{time}}",
@@ -298,6 +296,7 @@
     "failed": "Unable to load the application menu. Please restart the app."
   },
   "automation": {
+    "copyPromptVariant": "Copy variant",
     "cachedList": "Showing the last task list. It updates automatically when the latest status loads.",
     "adminAuthorizationHelp": "This is a system-level scheduled task. Editing, pausing or resuming, running, and deleting request macOS administrator authorization.",
     "externalDeleteHelp": "Deleting removes only the task’s scheduler configuration. Original scripts and logs are retained.",
@@ -1421,7 +1420,6 @@
       "search": "Search Skills, paths or Agents…",
       "viewContent": "View contents",
       "openFolder": "Open folder",
-      "openInVscode": "Open in VS Code",
       "deleteLocation": "Delete {{name}} at {{path}}",
       "deleteHint": "Remove only the selected path; symlinks are only unlinked. Agents sharing this path are affected. Independent copies and the library are kept.",
       "refreshFailed": "Removed, but refreshing failed. Scan again to see the latest state.",
@@ -1738,6 +1736,10 @@
     "remember": "Remember this preference (quitting still requires confirmation)"
   },
   "common": {
+    "openInVscode": "Open in VS Code",
+    "openContainingDirectoryInVscode": "Open the containing folder in VS Code",
+    "add": "Add",
+    "copy": "Copy",
     "more": "More actions",
     "close": "Close",
     "copyPath": "Copy path",

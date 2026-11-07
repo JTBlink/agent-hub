@@ -200,7 +200,7 @@ it("supports deployment from all skills without a selected group", async () => {
 
 it("opens the library copy in VS Code through the common launcher", async () => {
   await render();
-  await click("在 VS Code 中打开");
+  await click("VS Code 打开");
   expect(api.openVscode).toHaveBeenCalledWith(skill.central_path);
 });
 

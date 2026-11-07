@@ -49,8 +49,6 @@
     "completeProfile": "完整 Hosts 方案",
     "actualSystem": "本机实际内容",
     "editor": "Hosts 内容",
-    "openDirectoryInVscode": "用 VS Code 打开所在目录",
-    "openedDirectoryInVscode": "已请求 VS Code 打开 Hosts 所在目录。",
     "noChanges": "已保存",
     "saveHint": "保存方案不会修改系统；点击应用后生效。",
     "readAt": "最近读取 {{time}}",
@@ -298,6 +296,7 @@
     "failed": "无法加载应用菜单，请重新启动应用。"
   },
   "automation": {
+    "copyPromptVariant": "复制方案",
     "cachedList": "显示上次读取的任务列表，最新状态加载后自动更新。",
     "adminAuthorizationHelp": "此为系统级定时任务。编辑、暂停或恢复、运行及删除时，会请求 macOS 管理员授权。",
     "externalDeleteHelp": "删除仅移除任务的调度配置，原脚本与日志会保留。",
@@ -1419,7 +1418,6 @@
       "search": "搜索 Skill、路径或 Agent…",
       "viewContent": "查看内容",
       "openFolder": "打开目录",
-      "openInVscode": "在 VS Code 中打开",
       "deleteLocation": "删除 {{path}} 中的 {{name}}",
       "deleteHint": "仅删除所选路径；软链接仅移除链接。使用同一路径的 Agent 会同时受影响，其他独立副本和技能库保留。",
       "refreshFailed": "删除已完成，但刷新失败，请重新扫描查看最新状态。",
@@ -1736,6 +1734,10 @@
     "remember": "记住关闭偏好（退出前仍会确认）"
   },
   "common": {
+    "openInVscode": "VS Code 打开",
+    "openContainingDirectoryInVscode": "在 VS Code 中打开文件所在目录",
+    "add": "新增",
+    "copy": "复制",
     "more": "更多操作",
     "close": "关闭",
     "copyPath": "复制路径",

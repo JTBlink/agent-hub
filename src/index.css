@@ -126,6 +126,51 @@
     @apply inline-flex items-center justify-center gap-1.5 rounded-sm border border-border-subtle bg-surface px-2.5 py-1 text-sm font-medium text-secondary transition-colors outline-none hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  .app-sidebar-list-panel {
+    @apply flex min-w-0 flex-col gap-2 bg-bg-secondary p-3;
+  }
+
+  .app-sidebar-list {
+    @apply min-h-0 max-h-80 min-w-0 overflow-y-auto;
+  }
+
+  .app-sidebar-row {
+    @apply border-b border-border-faint py-0.5 last:border-b-0;
+  }
+
+  .app-sidebar-item {
+    @apply flex min-h-10 w-full min-w-0 items-center gap-1 rounded border border-transparent px-2 py-1 text-left text-xs font-medium text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50;
+  }
+
+  .app-sidebar-item-selected {
+    @apply border-accent-border bg-accent-bg;
+  }
+
+  .app-sidebar-item:focus-visible,
+  .app-sidebar-item:has(:focus-visible) {
+    @apply outline-none ring-2 ring-inset ring-accent;
+  }
+
+  .app-sidebar-item-label {
+    @apply block min-w-0 flex-1 truncate;
+  }
+
+  .app-sidebar-item-select {
+    @apply min-h-7 min-w-0 flex-1 rounded py-1 text-left text-xs font-medium focus-visible:outline-none;
+  }
+
+  .app-sidebar-item-actions {
+    @apply ml-auto flex shrink-0 items-center gap-1;
+  }
+
+  .app-sidebar-item-status {
+    @apply flex h-7 w-6 shrink-0 items-center justify-center rounded;
+  }
+
+  .app-sidebar-footer {
+    @apply mt-auto border-t border-border-faint pt-3 text-[10px] leading-relaxed text-muted;
+  }
+
   .app-badge {
     @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-hover px-2.5 py-1 text-xs font-medium text-tertiary;
   }
