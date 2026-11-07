@@ -183,13 +183,36 @@ fn cli_command(path: &Path) -> Command {
     cmd
 }
 
+/// Linux may briefly retain a writer for a just-copied executable (for example,
+/// across another thread's fork). ETXTBSY means exec did not start the program;
+/// retry only that spawn failure, for at most 1.26 seconds.
+fn cli_output(path: &Path, args: &[&str]) -> std::io::Result<std::process::Output> {
+    let mut command = cli_command(path);
+    command.args(args);
+    #[cfg(not(target_os = "linux"))]
+    {
+        command.output()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let mut retries = 0;
+        loop {
+            match command.output() {
+                Err(error) if error.raw_os_error() == Some(libc::ETXTBSY) && retries < 6 => {
+                    std::thread::sleep(std::time::Duration::from_millis(20 << retries));
+                    retries += 1;
+                }
+                result => return result,
+            }
+        }
+    }
+}
+
 /// Run the freshly copied binary. A copy that cannot report its own version is
 /// truncated, blocked, or built for another architecture — publishing it would
 /// hand agents a binary that fails on first use.
 fn verify(path: &Path, expected_version: &str) -> Result<()> {
-    let output = cli_command(path)
-        .arg("--version")
-        .output()
+    let output = cli_output(path, &["--version"])
         .with_context(|| format!("could not run {}", path.display()))?;
     if !output.status.success() {
         bail!("{} --version exited with {}", path.display(), output.status);
@@ -206,7 +229,7 @@ fn verify(path: &Path, expected_version: &str) -> Result<()> {
             reported.trim()
         );
     }
-    let output = cli_command(path).args(["--json", "build-info"]).output()?;
+    let output = cli_output(path, &["--json", "build-info"])?;
     if !output.status.success()
         || serde_json::from_slice::<serde_json::Value>(&output.stdout)
             .ok()

@@ -195,3 +195,30 @@ fn matching_version_does_not_trust_a_different_product_build() {
     central_repo::set_test_home_dir_override(None);
     outcome.unwrap();
 }
+
+/// A real open writer deterministically produces the Linux spawn error seen in CI.
+#[cfg(target_os = "linux")]
+#[test]
+fn verifies_a_new_cli_after_a_transient_writer_releases_it() {
+    let tmp = tempdir().unwrap();
+    let source = fake_cli(tmp.path(), "9.9.9");
+    let writer = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&source)
+        .unwrap();
+    assert_eq!(
+        cli_command(&source)
+            .arg("--version")
+            .output()
+            .unwrap_err()
+            .raw_os_error(),
+        Some(libc::ETXTBSY)
+    );
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(80));
+        drop(writer);
+    });
+    let verified = verify(&source, "9.9.9");
+    release.join().unwrap();
+    verified.expect("verification should wait for the transient writer");
+}
