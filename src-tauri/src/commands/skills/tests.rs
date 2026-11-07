@@ -1064,3 +1064,43 @@ fn deleting_a_skill_preserves_user_content_that_replaced_a_recorded_link() {
     assert!(repo.store.get_targets_for_skill("s1").unwrap().is_empty());
 }
 include!("../skills_version_tests.rs");
+
+#[test]
+fn discarded_local_import_sources_remain_usable_and_clear_cached_errors() {
+    let repo = test_repo();
+    let body = "---\nname: skill-1\n---\nbody\n";
+    for source_type in ["local", "import"] {
+        for keep_directory in [false, true] {
+            insert_local_skill(&repo, "skill-1", body, body);
+            let mut skill = repo.store.get_skill_by_id("skill-1").unwrap().unwrap();
+            skill.source_type = source_type.into();
+            repo.store.upsert_skill(&skill).unwrap();
+            let source = Path::new(skill.source_ref.as_deref().unwrap());
+            if keep_directory {
+                fs::remove_file(source.join("SKILL.md")).unwrap();
+                fs::create_dir_all(source.join("scripts")).unwrap();
+            } else {
+                fs::remove_dir_all(source).unwrap();
+            }
+            repo.store
+                .update_skill_check_state("skill-1", None, "error", Some("INVALID_SKILL_SOURCE"))
+                .unwrap();
+            let cached = managed_skill_by_id(&repo.store, "skill-1").unwrap();
+            assert_eq!(cached.update_status, "local_only");
+            assert_eq!(cached.last_check_error, None);
+            let checked =
+                check_skill_update_internal_with_remote(&repo.store, "skill-1", true, None)
+                    .unwrap();
+            assert_eq!(checked.update_status, "local_only");
+            assert_eq!(checked.last_check_error, None);
+            let stored = repo.store.get_skill_by_id("skill-1").unwrap().unwrap();
+            assert_eq!(stored.update_status, "local_only");
+            assert_eq!(stored.last_check_error, None);
+            assert_eq!(
+                fs::read_to_string(Path::new(&stored.central_path).join("SKILL.md")).unwrap(),
+                body
+            );
+            repo.store.delete_skill("skill-1").unwrap();
+        }
+    }
+}

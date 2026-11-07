@@ -1,5 +1,5 @@
 use super::skills_update_policy::{
-    display_update_status, local_source_status, preserve_newer_library,
+    display_update_status, local_source_is_discarded, local_source_status, preserve_newer_library,
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -2109,9 +2109,13 @@ fn managed_skill_to_dto(
         source_revision: skill.source_revision,
         source_agent: skill.source_agent,
         remote_revision: skill.remote_revision,
-        update_status,
+        update_status: update_status.clone(),
         last_checked_at: skill.last_checked_at,
-        last_check_error: skill.last_check_error,
+        last_check_error: if update_status == "local_only" {
+            None
+        } else {
+            skill.last_check_error
+        },
         central_path: skill.central_path,
         enabled: skill.enabled,
         created_at: skill.created_at,
@@ -2907,11 +2911,8 @@ pub fn check_skill_update_internal_with_remote(
             let (status, error): (&str, Option<String>) = match skill.source_ref.as_deref() {
                 Some(path) => {
                     let source_path = Path::new(path);
-                    if !source_path.exists() {
-                        (
-                            "source_missing",
-                            Some("Original source path no longer exists".to_string()),
-                        )
+                    if local_source_is_discarded(source_path) {
+                        ("local_only", None)
                     } else {
                         match installer::hash_local_source(source_path) {
                             Ok(live_hash) => local_source_status(&skill, source_path, &live_hash),

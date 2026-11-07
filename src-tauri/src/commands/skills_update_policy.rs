@@ -7,8 +7,22 @@ use crate::core::{
     skill_versions,
 };
 
+/// Import copies are independent of their disposable local provenance.
+pub(super) fn local_source_is_discarded(source: &Path) -> bool {
+    !source.exists() || (source.is_dir() && !skill_metadata::is_valid_skill_dir(source))
+}
+
 /// A newer library copy is not an incoming update, including for old cached rows.
 pub(super) fn display_update_status(skill: &SkillRecord, version: Option<&str>) -> String {
+    if matches!(skill.source_type.as_str(), "local" | "import")
+        && skill
+            .source_ref
+            .as_deref()
+            .map(Path::new)
+            .map_or(true, local_source_is_discarded)
+    {
+        return "local_only".into();
+    }
     if matches!(
         skill.update_status.as_str(),
         "error" | "updating" | "checking"
@@ -25,9 +39,6 @@ pub(super) fn display_update_status(skill: &SkillRecord, version: Option<&str>) 
             }
             // The source may overtake the library before the cached check expires.
             if skill.update_status == "central_newer" {
-                if !source.exists() {
-                    return "source_missing".into();
-                }
                 if let Ok(hash) = installer::hash_local_source(source) {
                     return local_source_status(skill, source, &hash).0.into();
                 }
