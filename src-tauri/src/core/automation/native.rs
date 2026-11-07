@@ -15,16 +15,7 @@ mod run_script;
 pub(super) mod shell_entry;
 
 pub(super) fn python_runtime() -> Result<PathBuf, String> {
-    for name in ["python3", "python"] {
-        if let Some(path) = super::super::tool_detection::find_command(name) {
-            if read_command(&path.to_string_lossy(), &["--version"])
-                .is_ok_and(|version| version.trim().starts_with("Python 3."))
-            {
-                return Ok(path);
-            }
-        }
-    }
-    Err("Python 3 is required for bundled automation scripts; install Python 3 and restart AgentHub".into())
+    crate::core::python_support::interpreter().map_err(|error| error.to_string())
 }
 
 pub(super) fn source() -> &'static str {

@@ -38,7 +38,19 @@ pub(super) fn start(
             "--",
         ];
         args.extend(launch.arguments.iter().map(String::as_str));
-        return call(&args, 40);
+        // Only this explicit pre-start rejection proves that nothing was launched.
+        // Other failures may follow a successful launch and must never be replayed.
+        for attempt in 0..40 {
+            match call(&args, 40) {
+                Err(error)
+                    if attempt < 39 && super::super::client::rejected_before_start(&error) =>
+                {
+                    std::thread::sleep(Duration::from_millis(250));
+                }
+                result => return result,
+            }
+        }
+        unreachable!("the final startup result is always returned");
     }
     // A custom executable must not be silently replaced with Herdr's canonical binary.
     // Check the target is a plain shell before injecting exactly one literal command.
@@ -90,3 +102,7 @@ pub(super) fn start(
         std::thread::sleep(Duration::from_millis(200));
     }
 }
+
+#[cfg(test)]
+#[path = "configured_tests.rs"]
+mod tests;

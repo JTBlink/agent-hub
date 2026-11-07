@@ -6,6 +6,11 @@ use std::path::{Path, PathBuf};
 
 pub use crate::core::agent_runtime::TerminalAgent as HerdrAgent;
 
+/// Herdr-specific managed lifecycle; installed once by the matching CLI.
+pub(crate) fn execution_module() -> Result<PathBuf> {
+    crate::core::python_support::publish("herdr_execution", include_str!("../agent_execution.py"))
+}
+
 /// Attach to the new Herdr terminal before its Agent has become ready.
 pub struct AgentAttachment {
     pub executable: PathBuf,

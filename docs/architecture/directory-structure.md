@@ -153,8 +153,13 @@ agent-hub/
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
 │   │       ├── preview/            #     浏览宿主、文档授权、传输、截图与 CLI 控制
+│   │       ├── agent_execution/    #     Agent 公共执行、观察与恢复，任务仅携带薄入口
+│   │       ├── state_store/        #     本地状态读取、进程锁及 Python 扩展事务
+│   │       ├── python_support.rs   #     共享 Python 检测与按内容版本发布
 │   │       ├── agent_usage/        #     独立 Claude／Codex 额度、凭据与缓存
 │   │       ├── herdr/              #     Herdr 专属领域模块
+│   │       │   ├── client.rs       #       显式会话命令与环境隔离
+│   │       │   ├── agent_execution.py #    受管理执行的 Herdr 归属、布局与恢复
 │   │       │   ├── control/        #       快照、目标核验、工作树与 Agent 控制
 │   │       │   ├── agents/         #       原生 Agent 启动与调用环境隔离
 │   │       │   ├── session/        #       default 会话与项目 workspace 路由

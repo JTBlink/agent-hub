@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.1.1",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -18,8 +18,7 @@
     "prompts/prompt.md",
     "config/herdr.json",
     "TASK.md",
-    "scripts/run.sh",
-    "scripts/herdr_agent.py"
+    "scripts/run.sh"
   ],
   "dependencies": [
     {

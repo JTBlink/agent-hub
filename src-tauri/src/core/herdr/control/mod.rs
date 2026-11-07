@@ -26,25 +26,20 @@ impl HerdrControl {
         Self { executable }
     }
     fn text(&self, session: Option<&str>, args: &[&str], timeout: u64) -> Result<String> {
-        let mut command = Command::new(&self.executable);
-        for key in super::session::INHERITED_CONTEXT {
-            command.env_remove(key);
+        super::client::Client {
+            executable: &self.executable,
+            session,
+            cwd: None,
         }
-        if let Some(session) = session {
-            command.args(["--session", session]);
-        }
-        command.args(args);
-        crate::core::cli_process::capture_prepared(command, "Herdr", timeout, None)
-            .map(|v| v.0)
-            .map_err(anyhow::Error::msg)
+        .text(args, timeout)
     }
     pub(crate) fn call(&self, session: Option<&str>, args: &[&str], timeout: u64) -> Result<Value> {
-        let data: Value = serde_json::from_str(&self.text(session, args, timeout)?)
-            .context("Invalid Herdr response; check client/server compatibility")?;
-        if data.get("error").is_some() {
-            bail!("Herdr rejected the request")
+        super::client::Client {
+            executable: &self.executable,
+            session,
+            cwd: None,
         }
-        Ok(data.get("result").unwrap_or(&data).clone())
+        .call(args, timeout)
     }
     pub fn sessions(&self) -> Result<Vec<SessionInfo>> {
         let data = self.call(None, &["session", "list", "--json"], 5)?;

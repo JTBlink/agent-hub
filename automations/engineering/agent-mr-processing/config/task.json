@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0",
+  "version": "2.6.1",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -26,7 +26,6 @@
     "config/review-config.json",
     "scripts/repair_state.py",
     "scripts/task_state.py",
-    "scripts/herdr_agent.py",
     "scripts/review_labels.py",
     "references/review-labels.md"
   ],

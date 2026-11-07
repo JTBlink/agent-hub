@@ -17,28 +17,21 @@ pub(crate) struct Client<'a> {
     pub cwd: &'a Path,
 }
 
-fn isolate(command: &mut Command) {
-    for name in INHERITED_CONTEXT {
-        command.env_remove(name);
-    }
-}
-
 impl Client<'_> {
     pub fn command(&self) -> Command {
-        let mut command = Command::new(self.executable);
-        command.args(["--session", SESSION]).current_dir(self.cwd);
-        isolate(&mut command);
-        command
+        self.transport().command()
     }
 
     pub fn call(&self, args: &[&str], timeout: u64) -> Result<Value> {
-        let mut command = self.command();
-        command.args(args);
-        let (output, _) =
-            crate::core::cli_process::capture_prepared(command, "Herdr", timeout, None)
-                .map_err(anyhow::Error::msg)?;
-        let value: Value = serde_json::from_str(&output).context("Invalid Herdr response")?;
-        Ok(value.get("result").unwrap_or(&value).clone())
+        self.transport().call(args, timeout)
+    }
+
+    fn transport(&self) -> super::client::Client<'_> {
+        super::client::Client {
+            executable: self.executable,
+            session: Some(SESSION),
+            cwd: Some(self.cwd),
+        }
     }
 
     pub fn ensure_server(&self) -> Result<()> {

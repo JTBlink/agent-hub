@@ -1,63 +1,14 @@
-"""Start an interactive agent in an explicit Herdr session and project directory."""
+"""Herdr-specific managed execution: ownership, layout, observation and recovery.
+
+The shared Agent executor supplies checkpoint storage and command transport.
+Startup is delegated to the same configured Rust launcher used by interactive entry points.
+"""
 from pathlib import Path
 import hashlib
-import json
-import os
-import re
-import shutil
-import shlex
 import subprocess
-import sys
 import time
 import uuid
-
-HERE = Path(__file__).resolve().parent
-TASK = Path(os.environ.get("AGENT_HUB_TASK_DIR", str(HERE.parent if HERE.name == "scripts" else HERE)))
-STATE_DIR = Path(os.environ.get("AGENT_HUB_STATE_DIR", str(TASK / ".local" / "state" if HERE.name == "scripts" else HERE)))
-STATE = STATE_DIR / ".herdr-run.json"
-
-
-class HerdrError(RuntimeError):
-    def __init__(self, message, code="unknown"):
-        super().__init__(message)
-        self.code = code
-
-
-def command(binary, args, timeout=40, text_output=False):
-    result = subprocess.run([binary, *args], capture_output=True, text=True,
-                            encoding="utf-8", timeout=timeout, check=False)
-    # Read commands print terminal text, including text that happens to be JSON.
-    # Failures still use the CLI's JSON error envelope on stderr.
-    if text_output and result.returncode == 0:
-        return result.stdout
-    try:
-        response = json.loads((result.stderr or result.stdout) if result.returncode
-                              else result.stdout)
-    except ValueError:
-        raise HerdrError("Herdr 返回无效响应；请检查服务和 CLI 版本。") from None
-    if not isinstance(response, dict):
-        raise HerdrError("Herdr 返回无效响应；请检查服务和 CLI 版本。")
-    if result.returncode or "error" in response:
-        error = response.get("error", {})
-        if isinstance(error, dict):
-            raise HerdrError(error.get("message", "Herdr 命令失败"), error.get("code", "unknown"))
-        raise HerdrError(response.get("message") or str(error), response.get("code", "unknown"))
-    return response.get("result", response)
-
-
-def save_state(state):
-    STATE.parent.mkdir(parents=True, exist_ok=True)
-    temporary = STATE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    temporary.replace(STATE)
-
-
-def read_bundle(path):
-    text = path.read_text(encoding="utf-8-sig")
-    if text.startswith("# AgentHub automation script:"):
-        text = text.partition("\n")[2]
-    return text
-
+import json
 
 def previous_agent(invoke, previous, session, cwd):
     if not previous:
@@ -141,22 +92,6 @@ def create_task_pane(invoke, previous, agent, session, cwd, title, available_pan
                    "--label", cwd.name, "--no-focus"])["root_pane"]
 
 
-def start_when_shell_ready(invoke, args, pane, cwd):
-    for attempt in range(40):
-        try:
-            return invoke(args)
-        except HerdrError as error:
-            if error.code != "agent_pane_busy" or attempt == 39:
-                raise
-            current = invoke(["pane", "get", pane])["pane"]
-            actual_cwd = current.get("foreground_cwd") or current.get("cwd")
-            if current.get("agent") or not actual_cwd or Path(actual_cwd).resolve() != cwd:
-                raise
-            if attempt == 0:
-                print("Herdr 面板正在初始化 Shell，等待就绪后启动 Agent。", flush=True)
-            time.sleep(0.25)
-
-
 def wait_for_result(invoke, name, baseline_seq):
     deadline = time.monotonic() + 1800
     observed_activity = False
@@ -189,106 +124,7 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
-def terminal_fallback(bridge, kind, arguments, prompt, cwd):
-    if not bridge:
-        raise HerdrError("Herdr 未安装，且没有可用的 AgentHub CLI；无法创建终端执行任务。")
-    previous = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else None
-    receipt_path = STATE_DIR / ".terminal-run.json"
-    if previous and previous.get("phase") != "completed":
-        if previous.get("backend") != "terminal":
-            raise HerdrError("上次 Herdr 任务结果尚未确认，不能降级重跑同一任务。")
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8")) if receipt_path.exists() else None
-        if not receipt:
-            raise HerdrError("上次终端启动结果不明，请先检查系统终端；不重复执行。")
-        observed = command(bridge, ["--json", "agents", "launch", "terminal-status", receipt["id"]])
-        if observed["phase"] != "exited":
-            print("上次任务仍在原生终端执行或等待确认，跳过本轮触发。", flush=True)
-            return 0
-        save_state({**previous, "phase": "completed"})
-        print("原生终端进程已退出；请核对任务结果，不以进程退出代替业务验收。", flush=True)
-        return observed.get("exit_code") or 0
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    receipt_path.unlink(missing_ok=True)
-    prompt_path = STATE_DIR / ".terminal-prompt.md"
-    prompt_path.write_text(prompt, encoding="utf-8")
-    save_state({"backend": "terminal", "phase": "attention", "cwd": str(cwd)})
-    try:
-        command(bridge, ["--json", "agents", "launch", "terminal", kind, "--cwd", str(cwd),
-                         "--prompt-file", str(prompt_path), "--arguments-json", json.dumps(arguments),
-                         "--receipt-file", str(receipt_path)])
-    finally:
-        prompt_path.unlink(missing_ok=True)
-    print("Herdr 未安装，任务已提交到原生终端；后续触发将核对回执，不重复发起。", flush=True)
-    return 0
-
-
-def main(prompt_context=""):
-    binary = shutil.which("herdr")
-    config_path = TASK / "config/herdr.json"
-    if not config_path.exists():
-        config_path = TASK / "herdr.json"
-    config = json.loads(read_bundle(config_path))
-    session = config.get("session", "default")
-    kind = config.get("agent", "codex")
-    if not isinstance(session, str) or not session or session.startswith("-"):
-        raise HerdrError("Herdr 会话名称无效。")
-    if not isinstance(kind, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", kind):
-        raise HerdrError("智能体类型无效；须使用 Herdr 支持的 Agent 类型。")
-    explicit = config.get("arguments")
-    if explicit is not None and (not isinstance(explicit, list) or not all(isinstance(arg, str) and not any(c in arg for c in "\0\r\n") for arg in explicit)):
-        raise HerdrError("Herdr 智能体参数必须是单行字符串数组。")
-    additional = config.get("extra_arguments", "")
-    if not isinstance(additional, str) or any(c in additional for c in "\0\r\n"):
-        raise HerdrError("额外的智能体参数必须是单行文本。")
-    try:
-        additional = shlex.split(additional)
-    except ValueError:
-        raise HerdrError("额外的智能体参数引号未闭合，请检查详细设置。") from None
-    bridge = os.environ.get("AGENT_HUB_CLI")
-    if not bridge:
-        directory = Path.home() / ".agent-hub/bin"
-        candidate = directory / ("agent-hub-cli.exe" if os.name == "nt" else "agent-hub-cli")
-        stamp = directory / ".version"
-        if candidate.exists() or stamp.exists():
-            if not candidate.is_file() or not stamp.is_file() or not stamp.stat().st_size:
-                raise HerdrError("AgentHub CLI bridge 不完整，请更新应用后重试。")
-            bridge = str(candidate)
-        else:
-            bridge = shutil.which("agent-hub-cli")
-    if bridge:
-        environment = command(bridge, ["--json", "agents", "launch", "environment"])
-        binary = environment.get("herdr_path")
-        resolved = command(bridge, ["--json", "agents", "launch", "resolve", kind])
-        kind = resolved.get("kind")
-        if not kind:
-            raise HerdrError("所选 Agent 不支持 Herdr CLI 启动，请更换智能体。")
-        program = resolved["program"]
-        extra = list(resolved["arguments"] if explicit is None else explicit)
-    elif explicit is not None and kind != "default":
-        # Old exported tasks remain standalone when all arguments are explicit.
-        program = {"cursor": "cursor-agent", "kiro": "kiro-cli"}.get(kind, kind)
-        extra = list(explicit)
-    else:
-        raise HerdrError("未找到 AgentHub CLI；请更新应用以读取全局启动指令，或显式配置任务参数。")
-    extra.extend(additional)
-    # Keep the unattended updater guard even when a task replaces all arguments.
-    if kind == "codex" and "check_for_update_on_startup=false" not in extra:
-        extra = ["-c", "check_for_update_on_startup=false", *extra]
-    prompt_path = TASK / "prompts/prompt.md"
-    if not prompt_path.exists():
-        prompt_path = TASK / "prompt.md"
-    prompt = read_bundle(prompt_path).strip()
-    if not prompt:
-        raise HerdrError("提示词为空，请填写任务提示词。")
-    if prompt_context:
-        prompt += "\n\n" + prompt_context
-    cwd = Path.cwd().resolve()
-    # Refuse the default task storage directory: it is not a chosen project.
-    if cwd == HERE or cwd == HERE.parent:
-        raise HerdrError("请先选择项目工作区，Agent 将在该项目目录运行。")
-    previous_state = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
-    if not binary or (previous_state.get("backend") == "terminal" and previous_state.get("phase") != "completed"):
-        return terminal_fallback(bridge, kind, extra, prompt, cwd)
+def run(binary, config, session, kind, extra, prompt, cwd, bridge):
     sessions = command(binary, ["session", "list", "--json"])["sessions"]
     if not any(item.get("name") == session and item.get("running") for item in sessions):
         raise HerdrError(f"Herdr 会话 {session} 未运行，请先在 Herdr 中启动该会话。")
@@ -318,12 +154,15 @@ def main(prompt_context=""):
             print(f"保留上次 Herdr 会话 {previous['pane']}，继续等待状态与结果；不重复投递。", flush=True)
             result = wait_for_result(invoke, target, previous.get("completion_seq") or 0)
             return finish_result(invoke, previous, result, target)
-        if previous.get("phase") == "attention" and status == "done" and (
+        if previous.get("phase") in ("submitted", "attention") and status in ("idle", "done") and (
             (agent.get("completion_seq") or 0) > (previous.get("completion_seq") or 0)
         ):
             verify_previous_agent(agent, previous, cwd)
             print("上次 Herdr Agent 已完成，仅收回已有结果；本次不重复投递。", flush=True)
             return finish_result(invoke, previous, {"agent": agent}, previous["pane"])
+        if previous.get("phase") == "submitted" and status in ("idle", "done"):
+            print('旧提示词已尝试投递，但还没有可核实的完成记录；保留原 Agent，不重复发起。', flush=True)
+            return 1
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
@@ -341,17 +180,11 @@ def main(prompt_context=""):
         state.pop("replacement_pending")
         save_state(state)
     print(f"Herdr 会话 {session}，Agent {name}，面板 {pane}。", flush=True)
-    canonical = {"cursor": "cursor-agent", "kiro": "kiro-cli"}.get(kind, kind)
-    if program == canonical:
-        started = start_when_shell_ready(
-            invoke, ["agent", "start", name, "--kind", kind, "--pane", pane,
-                     "--timeout", "30000", *(["--", *extra] if extra else [])], pane, cwd)
-    else:
-        # Shared native startup verifies the idle shell, quotes argv and waits for identity.
-        # Never retry a custom command whose outcome is uncertain.
-        started = command(bridge, ["--json", "agents", "launch", "start", kind,
-                                  "--session", session, "--pane", pane, "--name", name,
-                                  "--arguments-json", json.dumps(extra)], timeout=80)
+    # Every executable uses core/herdr/agents, just like the sidebar and terminal.
+    # Its startup rules (including shell readiness) have one authoritative implementation.
+    started = command(bridge, ["--json", "agents", "launch", "start", kind,
+                              "--session", session, "--pane", pane, "--name", name,
+                              "--arguments-json", json.dumps(extra)], timeout=80)
     # Persist before submission: timeout does not prove the prompt was not delivered.
     state["phase"] = "submitted"
     state["prompt_attempted"] = True
@@ -370,10 +203,3 @@ def main(prompt_context=""):
         save_state(state)
         raise
     return finish_result(invoke, state, result, name)
-
-
-if __name__ == "__main__":
-    try:
-        sys.exit(main())
-    except (HerdrError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
-        sys.exit(f"Herdr 任务未完成：{str(error).rstrip('。')}。保留现有会话，不自动重发或回答审批。")

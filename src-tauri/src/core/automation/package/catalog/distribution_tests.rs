@@ -13,7 +13,7 @@ fn repository_automations_are_real_independent_installable_packages() {
             .collect::<Vec<_>>()
     );
     assert_eq!(result.packages.len(), 10);
-    let shared = std::fs::read_to_string(root.join("_shared/herdr-agent.py")).unwrap();
+    let shared = std::fs::read_to_string(root.join("_shared/agent-entry.py")).unwrap();
     for entry in result.packages {
         assert!(!entry.package.draft.enabled);
         assert!(entry.package.draft.workdir.is_none());
@@ -30,11 +30,11 @@ fn repository_automations_are_real_independent_installable_packages() {
                 .draft
                 .files
                 .iter()
-                .find(|f| f.path == "scripts/herdr_agent.py")
+                .find(|f| f.path == "scripts/agent.py" || f.path == "scripts/agent-code-review.py")
                 .unwrap();
             assert_eq!(
                 agent.content, shared,
-                "shared runtime must match for {}",
+                "shared adapter must match for {}",
                 entry.path
             );
         }

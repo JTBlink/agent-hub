@@ -128,7 +128,7 @@ Git 内容恢复只更新同步定义，不变更运行中的本机任务。GUI 
 
 包含 `prompts/prompt.md` 的 Agent 任务直接在主编辑区编辑提示词；该正文仍作为声明文件保存、同步与备份，界面不另外维护一份提示词状态。Shell 命令默认一行，现有多行命令保留；Agent 的启动命令和脚本收进高级执行设置。`config/herdr.json` 保存智能体、明确的 Herdr 会话及原生参数，右侧提供智能体与项目工作区入口。
 
-Herdr 模板使用共用的 `herdr-agent.py`，系统调度发起后先核实目标会话已运行，再以所选项目目录创建工作区或任务标签页，使用返回的面板 ID 启动 Agent 并投递提示词，所有创建均不抢占焦点。不使用 UI 当前焦点隐式定位，不自动启动或重启 Herdr 服务，不自动回答审批。命令参数以 argv 传递。声明 JSON／Markdown 文件读取时去除 AgentHub 所有权头。
+Agent 模板通过薄入口调用 `core/agent_execution` 与 `core/herdr` 的共用执行能力，系统调度发起后先核实目标会话已运行，再以所选项目目录创建工作区或任务标签页，使用返回的面板 ID 启动 Agent 并投递提示词，所有创建均不抢占焦点。不使用 UI 当前焦点隐式定位，不自动启动或重启 Herdr 服务，不自动回答审批。命令参数以 argv 传递。声明 JSON／Markdown 文件读取时去除 AgentHub 所有权头。
 
 智能体选择、执行说明、额外参数与 Herdr 会话放在同一组，高级区域提供额外的智能体参数输入，原文保存在 `config/herdr.json` 的 `extra_arguments`，与默认 `arguments` 分开管理；启动时按命令行引号解析并追加到默认参数之后，不经 Shell 执行。切换 Agent 清空原 Agent 的额外参数，Codex 默认使用 `--dangerously-bypass-approvals-and-sandbox` 以无人值守执行。已有任务保存的自定义参数保持原样。`agent get` 等状态命令按 JSON 解析，`agent read` 的终端输出按纯文本接收；等待确认时只读取可见区域，不滚动应用历史。
 

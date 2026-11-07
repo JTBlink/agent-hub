@@ -80,10 +80,6 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
                 content: include_str!("../../../../../automations/_shared/agent-entry.py").into(),
             },
             AutomationScriptFile {
-                path: "scripts/herdr_agent.py".into(),
-                content: include_str!("../../../../../automations/_shared/herdr-agent.py").into(),
-            },
-            AutomationScriptFile {
                 path: "prompts/prompt.md".into(),
                 content: String::new(),
             },
@@ -139,7 +135,6 @@ pub(super) const DISK_CLEANUP_FILES: &[(&str, &str)] = &[
 const BUNDLES: &[Bundle] = &[
 #[cfg(feature = "herdr")]
 (include_str!("../../../../../automations/engineering/agent-code-review/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-code-review/config/task.json"), &[
-("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent-code-review.py", include_str!("../../../../../automations/engineering/agent-code-review/scripts/agent-code-review.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-code-review/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-code-review/config/herdr.json")),
@@ -148,7 +143,6 @@ const BUNDLES: &[Bundle] = &[
 ]),
 #[cfg(feature = "herdr")]
 (include_str!("../../../../../automations/engineering/agent-issue-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-issue-processing/config/task.json"), &[
-("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/agent.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-issue-processing/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-issue-processing/config/herdr.json")),
@@ -157,7 +151,6 @@ const BUNDLES: &[Bundle] = &[
 ]),
 #[cfg(feature = "herdr")]
 (include_str!("../../../../../automations/engineering/agent-maintenance/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-maintenance/config/task.json"), &[
-("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/agent.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-maintenance/prompts/prompt.md")),
 ("config/herdr.json", include_str!("../../../../../automations/engineering/agent-maintenance/config/herdr.json")),
@@ -166,7 +159,6 @@ const BUNDLES: &[Bundle] = &[
 ]),
 #[cfg(feature = "herdr")]
 (include_str!("../../../../../automations/engineering/agent-mr-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-mr-processing/config/task.json"), &[
-("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/agent.py")),
 ("scripts/review.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review.py")),
 ("scripts/review_host.py", include_str!("../../../../../automations/engineering/agent-mr-processing/scripts/review_host.py")),
@@ -184,7 +176,6 @@ const BUNDLES: &[Bundle] = &[
 ]),
 #[cfg(feature = "herdr")]
 (include_str!("../../../../../automations/hermes/daily-summary/config/catalog.json"), include_str!("../../../../../automations/hermes/daily-summary/config/task.json"), &[
-("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/hermes/daily-summary/scripts/agent.py")),
 ("scripts/run.sh", include_str!("../../../../../automations/hermes/daily-summary/scripts/run.sh")),
 ("config/herdr.json", include_str!("../../../../../automations/hermes/daily-summary/config/herdr.json")),
@@ -216,7 +207,6 @@ const BUNDLES: &[Bundle] = &[
 ]),
 #[cfg(feature = "herdr")]
 (include_str!("../../../../../automations/hermes/repository-audit/config/catalog.json"), include_str!("../../../../../automations/hermes/repository-audit/config/task.json"), &[
-("scripts/herdr_agent.py", include_str!("../../../../../automations/_shared/herdr-agent.py")),
 ("scripts/agent.py", include_str!("../../../../../automations/hermes/repository-audit/scripts/agent.py")),
 ("scripts/run.sh", include_str!("../../../../../automations/hermes/repository-audit/scripts/run.sh")),
 ("config/herdr.json", include_str!("../../../../../automations/hermes/repository-audit/config/herdr.json")),

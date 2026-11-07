@@ -1,13 +1,25 @@
 use app_lib::core::agent_launch_config as config;
 use clap::{Args, Subcommand};
 
-#[derive(Args, Debug)]
+#[derive(Args, Clone, Debug)]
 pub struct LaunchArgs {
     #[command(subcommand)]
     command: LaunchCommand,
 }
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 enum LaunchCommand {
+    /// 执行一次受管理的 Agent 请求；从 stdin 读取 JSON，保留未确认结果。
+    Execute,
+    /// 只读查看指定状态目录中的 Agent 执行检查点。
+    Status {
+        #[arg(long)]
+        state_directory: std::path::PathBuf,
+    },
+    /// 获取 CLI 管理的共享 Python 模块；任务包不携带实现副本。
+    Runtime {
+        #[arg(value_enum)]
+        module: RuntimeModule,
+    },
     /// 查看完整设置、默认指令与当前修订。
     Show,
     /// 查看共享启动环境与可用后端。
@@ -54,8 +66,48 @@ enum LaunchCommand {
         revision: String,
     },
 }
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum RuntimeModule {
+    StateStore,
+}
+
 pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
     match args.command {
+        LaunchCommand::Execute => {
+            use std::io::Read;
+            let mut bytes = Vec::new();
+            std::io::stdin()
+                .take(128 * 1024 + 1)
+                .read_to_end(&mut bytes)?;
+            anyhow::ensure!(
+                bytes.len() <= 128 * 1024,
+                "Agent execution request exceeds 128 KiB"
+            );
+            let request = serde_json::from_slice(&bytes)?;
+            let result = app_lib::core::agent_execution::run(&request, |line| {
+                if json {
+                    eprintln!("{line}");
+                } else {
+                    println!("{line}");
+                }
+            })?;
+            if json {
+                super::print_json(&result, true);
+            }
+            if result.exit_code != 0 {
+                std::process::exit(result.exit_code);
+            }
+        }
+        LaunchCommand::Status { state_directory } => super::print_json(
+            &app_lib::core::agent_execution::status_at(&state_directory)?,
+            json,
+        ),
+        LaunchCommand::Runtime { module } => {
+            let path = match module {
+                RuntimeModule::StateStore => app_lib::core::state_store::python_module()?,
+            };
+            super::print_json(&serde_json::json!({"path": path}), json);
+        }
         LaunchCommand::Show => super::print_json(&config::load()?, json),
         LaunchCommand::Environment => {
             #[cfg(feature = "herdr")]

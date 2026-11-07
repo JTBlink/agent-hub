@@ -17,3 +17,4 @@
 后续规划统一放在 [docs/plans/agent-hub.md](../plans/agent-hub.md)，确认的重要决策再形成 ADR。
 
 - [ADR-0019：产品配置与 Cargo features 编译期组装](0019-product-features.md)
+- [ADR-0020：Agent 执行与状态基础能力集中维护](0020-shared-agent-execution.md)

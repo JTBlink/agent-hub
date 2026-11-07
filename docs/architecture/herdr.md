@@ -38,6 +38,8 @@ Herdr 侧栏设置提供带图标的默认 Agent 选择和启动命令编辑，�
 
 Tauri 适配集中在 `src-tauri/src/commands/herdr/`，核心实现集中在 `src-tauri/src/core/herdr/`：
 
+- `client.rs`：各 Herdr 入口共用的显式会话命令、环境隔离与响应解析。
+- `agent_execution.py`：受管理执行的 Herdr 专有布局、归属核验、观察与恢复，由 `core/agent_execution` 组织调用。
 - `control/`：显式会话快照、目标身份与前台进程校验、workspace 打开、子工作树原生打开与确认删除。
 - `agents/`：Herdr 中的原生 Agent 启动、环境隔离和就绪检查。
 - `session/`：原生 `default` 会话准备与项目目录路由；仅在 crate 内可见。

@@ -23,13 +23,13 @@ agent-hub-cli automations import --path ./automations/system/disk-cleanup
 
 `TASK.md` 说明用途、执行规则和按需资料；`config/task.json` 声明任务、日程、依赖和相对任务根目录的文件列表；其他 JSON 配置也放在 `config/`。`scripts/` 保存代码，`prompts/` 保存提示词，复杂说明按需放在 `references/`。`config/catalog.json` 仅提供推荐目录的多语言介绍与平台适配信息，不属于本机状态。
 
-Herdr 任务各自携带完整运行脚本，可以单独安装。公共运行脚本的维护源为 `_shared/herdr-agent.py`，分发副本由一致性测试检查；修改运行脚本时同步这些副本。
+Agent 任务只携带 `_shared/agent-entry.py` 对应的薄入口，调用 AgentHub CLI 的 `agents launch execute`。生命周期实现维护于 `core/agent_execution` 与 `core/herdr`，不再向任务复制完整运行脚本。安装后的任务依赖匹配版本的 CLI，可在桌面退出后运行。
 
 云端备份使用相同的 `automations/<英文目录名>/config/task.json`、`TASK.md`、`scripts/` 与按需资源结构。仅保存可移植定义，项目绑定、安装回执、私有环境及执行记录留在本机；恢复会准备运行环境并默认暂停，不执行任务正文。
 
 新任务、分发目录与新写入备份使用相同布局；旧版根目录 `task.json`、`README.md`、`herdr.json` 和脚本旁 JSON 仍可读取，更新旧任务不自动搬迁清单或覆盖自定义内容。不要同时放置两份 task.json。
 
-任务本地记录统一按任务包分组：`.local/runs/<运行ID>/` 保存执行记录，`.local/state/task-state.json` 保存业务扩展状态，格式为 `{"schema_version":1,"extensions":{}}`。扩展按用途命名，例如 `mr_repair` 保存 MR 链接、累计修复次数及人工接管状态。通用 Python 存储维护于 `_shared/task-state.py`，使用方携带 `scripts/task_state.py` 分发副本；带锁更新单个扩展并保留其他扩展。整个 `.local/` 不列入任务文件清单，不参与导出、备份或同步。
+任务本地记录统一按任务包分组：`.local/runs/<运行ID>/` 保存执行记录，`.local/state/task-state.json` 保存业务扩展状态，格式为 `{"schema_version":1,"extensions":{}}`。扩展按用途命名，例如 `mr_repair` 保存 MR 链接、累计修复次数及人工接管状态。通用 Python 存储维护于 `core/state_store/store.py`；任务内 `scripts/task_state.py` 仅通过 CLI 定位并导入公共模块，带锁更新单个扩展并保留其他扩展。整个 `.local/` 不列入任务文件清单，不参与导出、备份或同步。
 
 所有任务开发、更新与记录处理必须遵循[定时任务本地记录规范](../docs/architecture/automation-records.md)，不要将运行或业务状态加入任务定义。
 

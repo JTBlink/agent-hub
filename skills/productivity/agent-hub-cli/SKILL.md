@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.13.0"
+  version: "1.14.0"
 description: Manage the user's shared agent-skill library, local automation tasks, and desktop preview browser via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -168,12 +168,24 @@ before creating the independent task.
 New system tasks execute `sh './scripts/run.sh'` (`& './scripts/run.ps1'` on
 Windows). Templates use `TASK.md` as their instruction entrypoint, `config/task.json`
 for the manifest, `config/` for JSON settings, `scripts/` for executable files,
-and optional `references/` for details. `prompts/prompt.md` is the fixed Agent prompt entrypoint. The embedded source catalog and shared Python code are
-rendered into each independent package. Edit its declared files or use the
+and optional `references/` for details. `prompts/prompt.md` is the fixed Agent prompt entrypoint. The embedded catalog renders business scripts and thin adapters
+into each independent package. Agent lifecycle and state storage are maintained
+once in AgentHub core, published by the matching CLI as content-versioned modules;
+new tasks require that CLI, not a running desktop. Edit declared files or use the
 editor; file changes produce an opaque revision, so always re-read before an
 update. Private state and runs live in `.local/`; Python dependencies have
 private environments. Legacy task layouts remain supported until explicit
 `migrate`.
+
+Managed Agent execution uses `agents launch execute` with an explicit JSON
+request on stdin: absolute `config_file`, `prompt_file`, `state_directory`,
+`identity_directory`, `workdir`, plus optional `prompt_context`. The task adapter
+supplies its scripts directory as the stable identity, preserving old checkpoints.
+Use `agents launch status --state-directory <path>` for read-only inspection.
+`agents launch runtime state-store` returns the shared Python storage module path.
+Never clear state or repeat an uncertain execution to compensate for an old CLI;
+update the matching app/CLI instead. Legacy full scripts change only on explicit
+task updates, which retain IDs, schedules, local bindings and business records.
 
 Creation, import and explicit restore prepare task dependencies and scheduling
 in the same operation. Use `pause` / `resume` to control the schedule; there are

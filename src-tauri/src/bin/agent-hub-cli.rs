@@ -115,7 +115,7 @@ struct ToolsArgs {
 
 #[derive(Subcommand, Debug)]
 enum ToolsCommand {
-    /// 读取、保存或解析全局 Agent 启动指令。
+    /// 管理 Agent 启动配置、共享执行与恢复检查点。
     Launch(launch_cli::LaunchArgs),
     /// 列出已知 Agent 及其安装状态。
     List,
@@ -933,6 +933,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
     if let Commands::Hosts(args) = &cli.command {
         return hosts_cli::run(args, cli.skills_root.is_some(), cli.json);
+    }
+
+    // Launch configuration and shared execution do not depend on the skills database.
+    if let Commands::Tools(ToolsArgs {
+        command: ToolsCommand::Launch(args),
+    }) = &cli.command
+    {
+        return launch_cli::run(args.clone(), cli.json);
     }
 
     let store = app_state::initialize_cli_store()?;
