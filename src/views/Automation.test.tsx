@@ -287,6 +287,10 @@ it.each([undefined, "/workspace/task-scripts"])(
       hermes_installed: true,
     });
     await render("/automation?task=" + encodeURIComponent(hermes.id));
+    await ariaClick("VS Code 打开");
+    expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
+      script_dir ?? "/workspace/legacy-scripts",
+    );
     const trigger = container.querySelector<HTMLButtonElement>(
       'button[aria-label="查看源码"]',
     )!;

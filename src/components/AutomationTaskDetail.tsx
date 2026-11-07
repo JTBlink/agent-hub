@@ -7,6 +7,8 @@ import { AutomationTaskIcon } from "./AutomationTaskIcon";
 import { AutomationTaskSource } from "./AutomationTaskSource";
 import { AutomationStatusBadge } from "./AutomationStatusBadge";
 import { AutomationOriginBadge } from "./AutomationOriginBadge";
+import { VscodeButton } from "./VscodeButton";
+import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CopyPathButton } from "./CopyPathButton";
 import { cn } from "../utils";
 
@@ -57,6 +59,8 @@ export function AutomationTaskDetail({
     if (container) container.scrollTop = 0;
     heading.current?.focus({ preventScroll: true });
   }, [task?.id]);
+  const sourceDirectory =
+    task?.definition?.script_dir ?? task?.definition?.workdir;
   const unknown = t("automation.unknown");
   const nextRun =
     task?.status === "paused"
@@ -81,28 +85,40 @@ export function AutomationTaskDetail({
     : [];
   return (
     <div className="app-page gap-5">
-      <nav
-        aria-label={t("automation.breadcrumb")}
-        className="flex min-w-0 items-center gap-1.5 text-sm"
-      >
-        <button
-          type="button"
-          onClick={onBack}
-          className="shrink-0 rounded py-1 text-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <nav
+          aria-label={t("automation.breadcrumb")}
+          className="flex min-w-0 items-center gap-1.5 text-sm"
         >
-          {t("automation.title")}
-        </button>
-        <ChevronRight
-          aria-hidden="true"
-          className="h-3.5 w-3.5 shrink-0 text-faint"
+          <button
+            type="button"
+            onClick={onBack}
+            className="shrink-0 rounded py-1 text-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {t("automation.title")}
+          </button>
+          <ChevronRight
+            aria-hidden="true"
+            className="h-3.5 w-3.5 shrink-0 text-faint"
+          />
+          <span
+            aria-current="page"
+            className="truncate font-medium text-secondary"
+          >
+            {task?.name || t("automation.details")}
+          </span>
+        </nav>
+        <VscodeButton
+          className="shrink-0"
+          disabled={!sourceDirectory}
+          title={t("automation.openScriptDir")}
+          onOpen={
+            sourceDirectory
+              ? () => openDirectoryInVscode(sourceDirectory)
+              : undefined
+          }
         />
-        <span
-          aria-current="page"
-          className="truncate font-medium text-secondary"
-        >
-          {task?.name || t("automation.details")}
-        </span>
-      </nav>
+      </div>
       <div className="flex min-w-0 items-center gap-4 border-b border-border-subtle">
         <button
           type="button"
