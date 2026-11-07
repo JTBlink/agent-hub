@@ -1,3 +1,5 @@
+import type { ComponentType, SVGProps } from "react";
+
 /** A destination owns its transport and final identity validation. */
 export interface AgentDeliveryDestination {
   send: (prompt: string, verify?: () => Promise<void>) => Promise<unknown>;
@@ -25,6 +27,11 @@ export interface AgentDeliveryChoice {
 export interface AgentDeliveryAdapter {
   id: string;
   label: string;
+  /** Optional launch host branding, supplied by the workbench composition. */
+  launchHost?: {
+    name: string;
+    Icon: ComponentType<SVGProps<SVGSVGElement>>;
+  };
   preview?: (
     workspacePath: string,
     page: AgentDeliveryPage,

@@ -104,20 +104,18 @@ function HostsProfileRow({
       label={profile.name}
       selected={selected}
       actions={
-        <>
-          <span className="app-sidebar-item-status">
-            {applied && (
-              <span
-                role="img"
-                aria-label={t("hosts.currentlyApplied")}
-                title={t("hosts.currentlyApplied")}
-                className="text-success"
-              >
-                <Check aria-hidden="true" className="h-3.5 w-3.5" />
-              </span>
-            )}
-          </span>
-        </>
+        <span className="app-sidebar-item-status">
+          {applied && (
+            <span
+              role="img"
+              aria-label={t("hosts.currentlyApplied")}
+              title={t("hosts.currentlyApplied")}
+              className="text-success"
+            >
+              <Check aria-hidden="true" className="h-3.5 w-3.5" />
+            </span>
+          )}
+        </span>
       }
     >
       <SidebarItemName

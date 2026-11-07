@@ -2807,6 +2807,8 @@
     "exportNotes": "Export annotations",
     "noteCount": "{{count}} annotations",
     "selectAgent": "Switch Agent",
+    "launchAgent": "Launch agent",
+    "agentLaunchHint": "Automatically open the selected agent when {{host}} starts",
     "autoAgent": "Automatic",
     "sendAgent": "Send to Agent",
     "deliveryCommand": "Complete execution command",

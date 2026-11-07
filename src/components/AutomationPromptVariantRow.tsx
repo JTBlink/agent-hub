@@ -37,39 +37,37 @@ export function AutomationPromptVariantRow({
       label={variant.name || t("automation.unnamedPromptVariant")}
       selected={viewed}
       actions={
-        <>
-          <label
-            title={t(
-              active
-                ? "automation.activePromptVariant"
-                : "automation.usePromptVariant",
-              { name: variant.name },
-            )}
-            className="app-sidebar-item-status group relative cursor-pointer"
-          >
-            <input
-              type="radio"
-              name={group}
-              value={variant.id}
-              checked={active}
-              disabled={disabled}
-              aria-label={t("automation.usePromptVariant", {
-                name: variant.name,
-              })}
-              onChange={onActivate}
-              className="peer sr-only"
+        <label
+          title={t(
+            active
+              ? "automation.activePromptVariant"
+              : "automation.usePromptVariant",
+            { name: variant.name },
+          )}
+          className="app-sidebar-item-status group relative cursor-pointer"
+        >
+          <input
+            type="radio"
+            name={group}
+            value={variant.id}
+            checked={active}
+            disabled={disabled}
+            aria-label={t("automation.usePromptVariant", {
+              name: variant.name,
+            })}
+            onChange={onActivate}
+            className="peer sr-only"
+          />
+          <span className="flex h-7 w-6 items-center justify-center rounded text-muted hover:bg-surface-hover peer-checked:text-success peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+            <Check
+              aria-hidden="true"
+              className={cn(
+                "h-3.5 w-3.5",
+                active ? "opacity-100" : "opacity-0 group-hover:opacity-40",
+              )}
             />
-            <span className="flex h-7 w-6 items-center justify-center rounded text-muted hover:bg-surface-hover peer-checked:text-success peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-              <Check
-                aria-hidden="true"
-                className={cn(
-                  "h-3.5 w-3.5",
-                  active ? "opacity-100" : "opacity-0 group-hover:opacity-40",
-                )}
-              />
-            </span>
-          </label>
-        </>
+          </span>
+        </label>
       }
     >
       <SidebarItemName

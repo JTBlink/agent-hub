@@ -1,5 +1,6 @@
 import { AgentIcon } from "./AgentIcon";
 import { ThemedSelect } from "./ThemedSelect";
+import type { ReactNode } from "react";
 
 export interface AgentSelectChoice {
   id: string;
@@ -16,6 +17,9 @@ export function AgentSelect({
   automaticLabel,
   disabled,
   className,
+  leadingIcon,
+  title,
+  menuTitle,
 }: {
   agents: readonly AgentSelectChoice[];
   value: string;
@@ -24,6 +28,9 @@ export function AgentSelect({
   automaticLabel?: string;
   disabled?: boolean;
   className?: string;
+  leadingIcon?: ReactNode;
+  title?: string;
+  menuTitle?: string;
 }) {
   const icon = (id: string) => {
     const agent = agents.find((item) => item.id === id);
@@ -41,7 +48,9 @@ export function AgentSelect({
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled}
       className={className}
-      leadingIcon={icon(value)}
+      leadingIcon={leadingIcon ?? icon(value)}
+      title={title}
+      menuTitle={menuTitle}
       optionIcon={icon}
       fitContent
     >

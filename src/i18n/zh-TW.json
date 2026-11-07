@@ -2764,6 +2764,8 @@
     "exportNotes": "导出批注",
     "noteCount": "{{count}} 条批注",
     "selectAgent": "切換 Agent",
+    "launchAgent": "啟動 Agent",
+    "agentLaunchHint": "{{host}} 啟動後自動開啟所選 Agent",
     "autoAgent": "自動選擇",
     "sendAgent": "傳送給 Agent",
     "deliveryCommand": "完整執行命令",

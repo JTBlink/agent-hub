@@ -6,6 +6,7 @@ import type {
 
 import { getToolStatus } from "./tauri";
 import { installedTerminalAgents } from "./terminalAgents";
+import { herdrEnabled, HerdrIcon } from "@app/herdr";
 
 export interface PreviewAgentRequest {
   agentId?: string;
@@ -29,6 +30,7 @@ export function listenPreviewAgent(listener: Listener) {
 export const embeddedAgentDeliveryAdapter: AgentDeliveryAdapter = {
   id: "embedded",
   label: "Agent",
+  launchHost: herdrEnabled ? { name: "Herdr", Icon: HerdrIcon } : undefined,
   preview: async (workspacePath, page, prompt, agentId) => {
     for (const listener of listeners) {
       const pending = listener({

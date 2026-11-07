@@ -51,6 +51,8 @@ export function AutomationPromptEditor({
     }
   }, [viewedId]);
   const blocked = disabled || !usesAgent || state.invalid;
+  const atLimit = state.variants.length >= MAX_PROMPT_VARIANTS;
+  const lastVariant = state.variants.length === 1;
   const update = (
     variants = state.variants,
     id = state.activeId,
@@ -68,7 +70,7 @@ export function AutomationPromptEditor({
       persistManifest,
     );
   const copyVariant = (variant: AutomationPromptVariant) => {
-    if (blocked || state.variants.length >= MAX_PROMPT_VARIANTS) return;
+    if (blocked || atLimit) return;
     const id = crypto.randomUUID();
     update([
       ...state.variants,
@@ -97,8 +99,7 @@ export function AutomationPromptEditor({
             <SidebarEditorActions
               create={{
                 label: t("automation.addPromptVariant"),
-                disabled:
-                  blocked || state.variants.length >= MAX_PROMPT_VARIANTS,
+                disabled: blocked || atLimit,
                 onClick: () => {
                   const id = crypto.randomUUID();
                   update([
@@ -117,16 +118,14 @@ export function AutomationPromptEditor({
               }}
               copy={{
                 label: t("automation.copyPromptVariant"),
-                disabled:
-                  blocked || state.variants.length >= MAX_PROMPT_VARIANTS,
+                disabled: blocked || atLimit,
                 onClick: () => copyVariant(viewed),
               }}
               remove={{
-                label: t("common.delete"),
-                ariaLabel: t("automation.deletePromptVariant", {
+                label: t("automation.deletePromptVariant", {
                   name: viewed.name,
                 }),
-                disabled: blocked || state.variants.length === 1,
+                disabled: blocked || lastVariant,
                 onClick: () => setRemoving(viewed),
               }}
             />
@@ -169,11 +168,11 @@ export function AutomationPromptEditor({
                       update(state.variants, variant.id);
                     }}
                     copy={{
-                      disabled: state.variants.length >= MAX_PROMPT_VARIANTS,
+                      disabled: atLimit,
                       onSelect: () => copyVariant(variant),
                     }}
                     remove={{
-                      disabled: state.variants.length === 1,
+                      disabled: lastVariant,
                       onSelect: () => setRemoving(variant),
                     }}
                     onRename={(name) =>
@@ -250,7 +249,7 @@ export function AutomationPromptEditor({
           })}
           onClose={() => setRemoving(null)}
           onConfirm={async () => {
-            if (!removing || state.variants.length === 1) return;
+            if (!removing || lastVariant) return;
             const next = state.variants.filter(
               (variant) => variant.id !== removing.id,
             );

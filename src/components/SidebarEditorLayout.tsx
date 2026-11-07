@@ -5,7 +5,6 @@ import "./SidebarEditorLayout.css";
 
 interface EditorAction {
   label: string;
-  ariaLabel?: string;
   disabled: boolean;
   onClick: () => void;
 }
@@ -32,8 +31,8 @@ export function SidebarEditorActions({
     <button
       type="button"
       disabled={action.disabled}
-      aria-label={action.ariaLabel ?? action.label}
-      title={action.ariaLabel ?? action.label}
+      aria-label={action.label}
+      title={action.label}
       onClick={action.onClick}
       className={
         primary ? "app-button-primary text-xs" : "app-button-secondary text-xs"

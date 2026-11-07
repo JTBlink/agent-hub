@@ -37,9 +37,6 @@ export function AutomationTaskDetail({
   onRefresh,
   children,
   actions,
-  promptBusy,
-  onSelectPrompt,
-  onEditPrompts,
 }: {
   task: AutomationTask | undefined;
   projectName: string | null;
@@ -50,9 +47,6 @@ export function AutomationTaskDetail({
   onRefresh: () => void;
   children?: ReactNode;
   actions?: ReactNode;
-  promptBusy?: boolean;
-  onSelectPrompt?: (id: string) => void;
-  onEditPrompts?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<(typeof tabs)[number]>("overview");
@@ -278,10 +272,8 @@ export function AutomationTaskDetail({
             </dl>
             {task.prompt && (
               <AutomationPromptSummary
-                task={task}
-                busy={promptBusy}
-                onSelect={onSelectPrompt}
-                onEdit={onEditPrompts}
+                prompt={task.prompt}
+                definition={task.definition}
               />
             )}
             {task.command && (

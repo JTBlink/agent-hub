@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ThemedSelect } from "../../../src/components/ThemedSelect";
+import { AgentSelect } from "../../../src/components/AgentSelect";
+import { HerdrIcon } from "../../../src/features/herdr/components/HerdrIcon";
 import { herdrAgents } from "../../../src/lib/terminalAgents";
 import { Eye, Send } from "lucide-react";
 import type { PreviewModel } from "./usePreviewModel";
@@ -77,24 +78,21 @@ export function PrototypeDelivery({ model }: { model: PreviewModel }) {
       </details>
       <div className="pv-delivery-actions">
         <span title={identity}>Tab：{name}</span>
-        <ThemedSelect
-          aria-label="切换 Agent"
+        <AgentSelect
+          label="启动 Agent"
+          menuTitle="启动 Agent"
+          title="Herdr 启动后自动打开所选 Agent"
+          leadingIcon={<HerdrIcon className="h-4 w-4 shrink-0" />}
+          agents={herdrAgents}
+          automaticLabel="自动选择"
           value={agent}
-          onChange={(event) =>
+          onChange={(value) =>
             setChoices((previous) => ({
               ...previous,
-              [identity]: event.target.value,
+              [identity]: value,
             }))
           }
-          fitContent
-        >
-          <option value="">自动选择</option>
-          {herdrAgents.map((item) => (
-            <option value={item.id} key={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </ThemedSelect>
+        />
         <button
           className="pv-primary"
           disabled={!prompt.trim() && !pageCaptures.length}

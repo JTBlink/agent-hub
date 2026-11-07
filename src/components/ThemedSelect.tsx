@@ -95,6 +95,7 @@ export function ThemedSelect({
   renderValue,
   fitContent = false,
   singleLineOptions = false,
+  menuTitle,
   ...props
 }: Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
@@ -108,6 +109,7 @@ export function ThemedSelect({
   fitContent?: boolean;
   /** Keep compact option rows on one line and expose full labels on hover. */
   singleLineOptions?: boolean;
+  menuTitle?: string;
 }) {
   const options = optionsFrom(children);
   const [position, setPosition] = useState<{
@@ -125,9 +127,10 @@ export function ThemedSelect({
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const open = position !== null;
   const selected = options.find((option) => option.value === value);
+  const rowCount = options.length + (menuTitle ? 1 : 0);
   const locate = () =>
     setPosition(
-      positionFor(trigger.current, options.length, fitContent, list.current),
+      positionFor(trigger.current, rowCount, fitContent, list.current),
     );
   const show = () => {
     if (props.disabled || !options.length) return;
@@ -164,7 +167,7 @@ export function ThemedSelect({
     const blur = () => setPosition(null);
     const reposition = () =>
       setPosition(
-        positionFor(trigger.current, options.length, fitContent, list.current),
+        positionFor(trigger.current, rowCount, fitContent, list.current),
       );
     reposition();
     // Other menu triggers may stop bubbling to keep the title bar from dragging.
@@ -182,7 +185,7 @@ export function ThemedSelect({
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };
-  }, [open, options.length, fitContent]);
+  }, [open, rowCount, fitContent]);
   useEffect(() => {
     if (open)
       list.current
@@ -319,6 +322,11 @@ export function ThemedSelect({
             }}
             className="z-[100] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-xl"
           >
+            {menuTitle && (
+              <div role="presentation" className="px-2 py-2 text-xs text-muted">
+                {menuTitle}
+              </div>
+            )}
             {options.map((option, index) => (
               <button
                 type="button"

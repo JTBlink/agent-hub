@@ -1,7 +1,3 @@
-import {
-  automationPrompts,
-  updateAutomationPrompts,
-} from "../lib/automationPrompts";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw } from "lucide-react";
@@ -357,33 +353,6 @@ export function Automation() {
           onBack={backToList}
           onRefresh={refresh}
           actions={selected && actions(selected)}
-          promptBusy={busyId === selected?.id || loading}
-          onEditPrompts={
-            selected?.can_edit ? () => setEditor(selected) : undefined
-          }
-          onSelectPrompt={(id) => {
-            if (
-              !selected?.definition ||
-              !selected.can_edit ||
-              selected.status === "running"
-            )
-              return;
-            const definition = selected.definition;
-            const prompts = automationPrompts(
-              definition,
-              t("automation.defaultPromptVariant"),
-            );
-            if (prompts.invalid || prompts.activeId === id) return;
-            void perform(
-              selected,
-              () =>
-                saveAutomation(selected.id, selected.revision, {
-                  ...definition,
-                  ...updateAutomationPrompts(definition, prompts.variants, id),
-                }),
-              t("automation.promptVariantSaved"),
-            );
-          }}
         >
           {feedback}
         </AutomationTaskDetail>

@@ -38,10 +38,18 @@ export function DeliveryAgentSelect({
     };
   }, [adapter]);
   if (!adapter.listAgents) return null;
+  const HostIcon = adapter.launchHost?.Icon;
   return (
     <div className="preview-delivery-agent">
       <AgentSelect
-        label={t("preview.selectAgent")}
+        label={t("preview.launchAgent")}
+        menuTitle={t("preview.launchAgent")}
+        title={
+          adapter.launchHost
+            ? t("preview.agentLaunchHint", { host: adapter.launchHost.name })
+            : t("preview.launchAgent")
+        }
+        leadingIcon={HostIcon && <HostIcon className="h-4 w-4 shrink-0" />}
         agents={state.agents}
         value={value}
         disabled={disabled}

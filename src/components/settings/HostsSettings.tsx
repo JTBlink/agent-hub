@@ -15,10 +15,6 @@ import { appliedHostsProfile } from "./hostsPresentation";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { actionButtonClass, fieldClass } from "./settingsStyles";
 
-type NameRequest = {
-  mode: "new" | "copy" | "system";
-  content: string;
-};
 export function HostsSettings({ active }: { active: boolean }) {
   const { t, i18n } = useTranslation();
   const state = useHostsSettings(active);
@@ -26,7 +22,7 @@ export function HostsSettings({ active }: { active: boolean }) {
     message: string;
     action: () => void | Promise<boolean>;
   } | null>(null);
-  const [nameRequest, setNameRequest] = useState<NameRequest | null>(null);
+  const [creationContent, setCreationContent] = useState<string | null>(null);
   const [name, setName] = useState("");
   const matched = appliedHostsProfile(state.profiles, state.system);
   const applied = !!state.profile && state.profile.id === matched?.id;
@@ -39,23 +35,22 @@ export function HostsSettings({ active }: { active: boolean }) {
     if ((profile?.id ?? null) === (state.profile?.id ?? null)) return;
     guard(() => state.select(profile));
   };
-  const askName = (mode: NameRequest["mode"], target = state.profile) => {
+  const askName = (mode: "new" | "copy", target = state.profile) => {
     const show = () => {
       setName(
-        mode === "copy" ? t("hosts.copyName", { name: target?.name }) : "",
+        mode === "copy" && target
+          ? t("hosts.copyName", { name: target.name })
+          : "",
       );
-      setNameRequest({
-        mode,
-        content:
-          mode === "new"
-            ? (state.system?.content ?? "127.0.0.1 localhost\n::1 localhost\n")
-            : target && target.id !== state.profile?.id
-              ? target.content
-              : state.draft,
-      });
+      setCreationContent(
+        mode === "new"
+          ? (state.system?.content ?? "127.0.0.1 localhost\n::1 localhost\n")
+          : target && target.id !== state.profile?.id
+            ? target.content
+            : state.draft,
+      );
     };
-    if (mode === "new" || (mode === "copy" && target?.id !== state.profile?.id))
-      guard(show);
+    if (mode === "new" || target?.id !== state.profile?.id) guard(show);
     else show();
   };
   const removeProfile = (profile: HostsProfile) => {
@@ -92,7 +87,7 @@ export function HostsSettings({ active }: { active: boolean }) {
             copy={{
               label: t(state.profile ? "hosts.copy" : "hosts.saveAsProfile"),
               disabled: state.busy || !state.source,
-              onClick: () => askName(state.profile ? "copy" : "system"),
+              onClick: () => askName("copy"),
             }}
             remove={{
               label: t("hosts.delete"),
@@ -312,16 +307,16 @@ export function HostsSettings({ active }: { active: boolean }) {
         )}
       </ConfirmDialog>
       <ConfirmDialog
-        open={!!nameRequest}
+        open={creationContent !== null}
         title={t("hosts.newProfile")}
         message={t("hosts.nameHint")}
         confirmLabel={t("common.save")}
         confirmDisabled={!name.trim() || state.busy}
         tone="warning"
-        onClose={() => setNameRequest(null)}
+        onClose={() => setCreationContent(null)}
         onConfirm={async () => {
-          if (!nameRequest) return false;
-          const ok = await state.create(name, nameRequest.content);
+          if (creationContent === null) return false;
+          const ok = await state.create(name, creationContent);
           return ok ? undefined : false;
         }}
       >

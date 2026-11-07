@@ -664,7 +664,7 @@ async function chooseSource(value: "all" | "system" | "hermes") {
 }
 async function input(label: string, value: string) {
   const node = container.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-    `[aria-label="${label}"]`,
+    `input[aria-label="${label}"], textarea[aria-label="${label}"]`,
   )!;
   await act(async () => {
     const prototype =
@@ -2372,7 +2372,7 @@ it("cancels a copy from task details without creating or editing the original", 
   expect(api.runAutomation).not.toHaveBeenCalled();
 });
 
-it("keeps the saved prompt selected after a failed switch and applies exactly one variant after retry", async () => {
+it("only displays the active prompt in details and switches it through the task editor after a successful save", async () => {
   const definition: api.AutomationDraft = {
     ...hermes.definition!,
     content: "Only review",
@@ -2404,39 +2404,51 @@ it("keeps the saved prompt selected after a failed switch and applies exactly on
   }));
   vi.mocked(api.saveAutomation).mockRejectedValueOnce(new Error("save failed"));
   await render("/automation?task=hermes%3Aaudit");
-  const selectRepair = async () =>
-    act(async () =>
-      container
-        .querySelector<HTMLInputElement>('input[type="radio"][value="repair"]')!
-        .click(),
-    );
-  await selectRepair();
+  const summary = () =>
+    container.querySelector('section[aria-label="提示词"]')!;
+  expect(summary().textContent).toContain("Only review");
   expect(
-    container.querySelector<HTMLInputElement>('input[type="radio"]:checked')
-      ?.value,
-  ).toBe("review");
+    [...summary().querySelectorAll("li")].map((item) => item.textContent),
+  ).toEqual(["Review", "Repair"]);
+  expect(
+    summary().querySelector('[aria-label="当前使用"]')?.parentElement
+      ?.textContent,
+  ).toBe("Review");
+  expect(summary().querySelector("button, input")).toBeNull();
+  expect(container.querySelector('input[type="radio"]')).toBeNull();
+  await ariaClick("编辑自动化");
+  await act(async () =>
+    container
+      .querySelector<HTMLInputElement>('input[type="radio"][value="repair"]')!
+      .click(),
+  );
+  await click("保存");
+  expect(summary().textContent).toContain("Only review");
   expect(container.querySelector('[role="alert"]')?.textContent).toContain(
     "save failed",
   );
+  expect(
+    container.querySelector<HTMLInputElement>('input[type="radio"]:checked')
+      ?.value,
+  ).toBe("repair");
   vi.mocked(api.saveAutomation).mockImplementationOnce(
     async (_id, _revision, draft) => {
       task = { ...task, prompt: draft.content, definition: draft, revision: 8 };
       return task.id;
     },
   );
-  await selectRepair();
+  await click("保存");
+  expect(container.querySelector("form")).toBeNull();
+  expect(summary().textContent).toContain("Repair and verify");
   expect(
-    container.querySelectorAll('input[type="radio"]:checked'),
-  ).toHaveLength(1);
-  expect(
-    container.querySelector<HTMLInputElement>('input[type="radio"]:checked')
-      ?.value,
-  ).toBe("repair");
-  expect(container.textContent).toContain("Repair and verify");
+    summary().querySelector('[aria-label="当前使用"]')?.parentElement
+      ?.textContent,
+  ).toBe("Repair");
+  expect(summary().querySelector("button, input")).toBeNull();
   expect(api.runAutomation).not.toHaveBeenCalled();
 });
 
-it("disables prompt selection while running and does not save cancelled variant edits", async () => {
+it("keeps running task details read-only and does not save cancelled variant edits", async () => {
   const task: api.AutomationTask = {
     ...hermes,
     origin: "agent_hub",
@@ -2449,16 +2461,17 @@ it("disables prompt selection while running and does not save cancelled variant 
   });
   await render("/automation?task=hermes%3Aaudit");
   expect(
-    container.querySelector('input[type="radio"]')!.closest("fieldset")!
-      .disabled,
-  ).toBe(true);
-  expect(button("管理提示词").disabled).toBe(true);
+    container
+      .querySelector('section[aria-label="提示词"]')
+      ?.querySelector("button, input"),
+  ).toBeNull();
+  expect(container.querySelector('section[aria-label="提示词"] ul')).toBeNull();
   task.status = "paused";
   await click("刷新");
-  await click("管理提示词");
+  await ariaClick("编辑自动化");
   await click("新增方案");
   await input("提示词", "Alternative body");
   await click("取消");
   expect(api.saveAutomation).not.toHaveBeenCalled();
-  expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(1);
+  expect(container.querySelectorAll('input[type="radio"]')).toHaveLength(0);
 });
