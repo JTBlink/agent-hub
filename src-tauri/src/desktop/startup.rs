@@ -69,7 +69,8 @@ fn initialize_logging(
             .level_for("reqwest", log::LevelFilter::Warn)
             .level_for("rustls", log::LevelFilter::Warn)
             .max_file_size(5 * 1024 * 1024)
-            .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
+            // Two archives plus the active log: three files in total.
+            .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(2))
             .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
             .format(|out, message, record| {
                 out.finish(format_args!(
