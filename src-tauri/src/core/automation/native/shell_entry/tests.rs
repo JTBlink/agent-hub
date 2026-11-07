@@ -110,3 +110,39 @@ fn scheduled_wrapper_invokes_the_same_short_shell_entry_and_preserves_python_exi
         ))
         .exists());
 }
+
+#[cfg(unix)]
+#[test]
+fn generated_python_launcher_runs_from_an_unrelated_directory_and_forwards_arguments() {
+    let root = tempfile::tempdir().unwrap();
+    let scripts = root.path().join("task with spaces/scripts");
+    std::fs::create_dir_all(&scripts).unwrap();
+    std::fs::write(
+        scripts.join("main.py"),
+        "import sys\nprint(sys.argv[1])\nraise SystemExit(17)\n",
+    )
+    .unwrap();
+    let mut definition = draft(root.path());
+    let python = super::super::python_runtime().unwrap();
+    definition.content = format!(
+        "{} \"$AGENT_HUB_SCRIPT_DIR/scripts/main.py\"",
+        super::super::render::shell(&python.to_string_lossy())
+    );
+    wrap(&mut definition, "sh");
+    let entry = scripts.join("run.sh");
+    std::fs::write(&entry, &definition.files.last().unwrap().content).unwrap();
+    let output = std::process::Command::new("/bin/sh")
+        .arg(entry)
+        .arg("literal $(touch NEVER)")
+        .env_remove("AGENT_HUB_TASK_DIR")
+        .env_remove("AGENT_HUB_SCRIPT_DIR")
+        .current_dir(root.path())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(17));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        "literal $(touch NEVER)"
+    );
+    assert!(!root.path().join("NEVER").exists());
+}

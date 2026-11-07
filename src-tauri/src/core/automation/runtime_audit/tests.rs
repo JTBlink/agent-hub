@@ -88,6 +88,26 @@ fn an_empty_directory_is_not_reported_as_a_successful_task_audit() {
         .contains("No task packages"));
 }
 
+#[test]
+fn generated_builtin_tasks_use_the_same_shared_runtime_contract() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let catalog = crate::core::automation::package::catalog::scan_local(root).unwrap();
+    let mut checked = 0;
+    for entry in catalog.packages {
+        let id = Path::new(&entry.path)
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap();
+        if let Some(template) = crate::core::automation::template(id, Some("en")) {
+            let report = inspect(id.into(), &template.draft);
+            assert!(report.findings.is_empty(), "{report:?}");
+            checked += 1;
+        }
+    }
+    assert!(checked >= 3);
+}
+
 #[cfg(unix)]
 #[test]
 fn every_repository_shell_entry_resolves_its_package_and_forwards_literal_arguments() {

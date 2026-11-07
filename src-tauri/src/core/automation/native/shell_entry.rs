@@ -24,10 +24,44 @@ pub(in crate::core::automation) fn wrap(draft: &mut AutomationDraft, shell: &str
         "run.sh"
     };
     let content = std::mem::replace(&mut draft.content, command(path));
+    let content = standalone_python_launcher(content, shell);
     draft.files.push(AutomationScriptFile {
         path: path.into(),
         content,
     });
+}
+
+/// Generated Python launchers work both before and after package normalization moves
+/// the entry under scripts/. Arbitrary user commands retain their exact original body.
+fn standalone_python_launcher(content: String, shell: &str) -> String {
+    if !content.contains("AGENT_HUB_SCRIPT_DIR/") {
+        return content;
+    }
+    if shell == "powershell" {
+        format!(
+            r#"$ErrorActionPreference = 'Stop'
+$entryDir = $PSScriptRoot
+if ((Split-Path -Leaf $entryDir) -eq 'scripts') {{ $entryDir = Split-Path -Parent $entryDir }}
+if (!$env:AGENT_HUB_TASK_DIR) {{
+  if ($env:AGENT_HUB_SCRIPT_DIR) {{ $env:AGENT_HUB_TASK_DIR = $env:AGENT_HUB_SCRIPT_DIR }}
+  else {{ $env:AGENT_HUB_TASK_DIR = $entryDir }}
+}}
+$env:AGENT_HUB_SCRIPT_DIR = $env:AGENT_HUB_TASK_DIR
+{content} @args
+exit $LASTEXITCODE
+"#
+        )
+    } else {
+        format!(
+            r#"ENTRY_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+case "$ENTRY_DIR" in */scripts) ENTRY_DIR=$(dirname -- "$ENTRY_DIR") ;; esac
+TASK_DIR="${{AGENT_HUB_TASK_DIR:-${{AGENT_HUB_SCRIPT_DIR:-$ENTRY_DIR}}}}"
+export AGENT_HUB_TASK_DIR="$TASK_DIR"
+export AGENT_HUB_SCRIPT_DIR="$TASK_DIR"
+exec {content} "$@"
+"#
+        )
+    }
 }
 
 pub(in crate::core::automation) fn prepare(
