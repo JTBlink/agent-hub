@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -20,6 +20,10 @@
     {
       "kind": "python",
       "packages": []
+    },
+    {
+      "kind": "command",
+      "name": "git"
     }
   ]
 }

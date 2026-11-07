@@ -49,9 +49,7 @@ it("shows the checkout directory and branch on separate lines", async () => {
     expect(row.getAttribute("aria-label")).toBe(
       "demo-work-issue fix/issue-macos",
     );
-    expect(
-      row.querySelector('[data-herdr-connector="last"]'),
-    ).not.toBeNull();
+    expect(row.querySelector('[data-herdr-connector="last"]')).not.toBeNull();
     await act(async () => row.click());
     expect(onOpen).not.toHaveBeenCalled();
   } finally {

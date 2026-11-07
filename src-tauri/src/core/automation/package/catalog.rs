@@ -63,6 +63,11 @@ pub fn preview_git(
     scan(&root, revision)
 }
 
+/// Inspect local declared packages using the same bounded discovery as Git preview.
+pub fn scan_local(root: &Path) -> Result<GitAutomationCatalog, String> {
+    scan(root, "local".into())
+}
+
 fn scan(root: &Path, revision: String) -> Result<GitAutomationCatalog, String> {
     super::storage::regular_directory(root)?;
     // A selected task wins; otherwise prefer the conventional automation-only subtree.

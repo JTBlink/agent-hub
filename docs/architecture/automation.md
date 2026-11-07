@@ -171,3 +171,7 @@ Windows、systemd 和 Hermes 返回的下一次时间优先使用调度器原值
 自动化页在最近的下一次日程到点后重新查询，以滚动到下一轮，启停和保存日程仍沿用原操作完成后的刷新。读取失败按一分钟间隔重试；页面隐藏时交由已有的焦点/可见性刷新处理，卸载页面清理计时器。
 
 Agent 可选；需要 Agent 时统一经独立 Herdr 模块发起。通用场景边界见[Agent 启动架构](agent-launch.md)；新任务遵循[自动化编写规范](../product/automation-authoring.md)。
+
+## 公共运行依赖审计
+
+`core/automation/runtime_audit` 复用包目录的有界读取，对仓库定义与本机任务执行只读审计；CLI 为 `automations audit [--path <directory>]`。审计不创建任务记录、不运行脚本、不修改日程。复制的 Agent 生命周期或状态存储、未核实的 Agent 适配器及依赖继承目录的 Shell 入口会明确报告。原生 Hermes 和第三方服务保持自己的归属及执行方式，不能通过审计隐式迁移调度器或厂商程序。

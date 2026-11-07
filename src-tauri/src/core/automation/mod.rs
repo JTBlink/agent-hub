@@ -29,6 +29,7 @@ mod native;
 mod next_run;
 pub mod package;
 mod process;
+pub mod runtime_audit;
 mod script_sync;
 mod store;
 pub use script_sync::sync_workspace_scripts;

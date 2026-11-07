@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.14.0"
+  version: "1.15.0"
 description: Manage the user's shared agent-skill library, local automation tasks, and desktop preview browser via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
 ---
 
@@ -176,6 +176,12 @@ editor; file changes produce an opaque revision, so always re-read before an
 update. Private state and runs live in `.local/`; Python dependencies have
 private environments. Legacy task layouts remain supported until explicit
 `migrate`.
+
+Run `automations audit --path <repository-or-task-directory>` to inspect source
+packages, or `automations audit` to inspect all installed non-system sources.
+Audit is read-only and reports copied runtimes or storage implementations without
+executing tasks or overwriting custom business logic. A non-zero result requires
+review; native Hermes and vendor services retain their original execution model.
 
 Managed Agent execution uses `agents launch execute` with an explicit JSON
 request on stdin: absolute `config_file`, `prompt_file`, `state_directory`,

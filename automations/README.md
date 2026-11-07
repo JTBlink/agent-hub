@@ -34,3 +34,11 @@ Agent 任务只携带 `_shared/agent-entry.py` 对应的薄入口，调用 Agent
 所有任务开发、更新与记录处理必须遵循[定时任务本地记录规范](../docs/architecture/automation-records.md)，不要将运行或业务状态加入任务定义。
 
 Agent 可选；需要 Agent 时统一经独立 Herdr 模块发起。通用场景边界见[Agent 启动架构](../docs/architecture/agent-launch.md)；新任务遵循[自动化编写规范](../docs/product/automation-authoring.md)。
+
+## 公共运行逻辑审计
+
+`agent-hub-cli --json automations audit --path ./automations` 只读检查仓库任务；省略 `--path` 则检查本机全部非系统来源。输出仅包含任务归属、运行方式和需要检查的文件，不输出提示词或脚本正文，不执行任务。
+
+Agent 任务应调用共享执行器，状态适配器应导入公共存储，不在包里重新定义生命周期或事务存储。原生 Hermes 保留原执行模型，厂商服务只登记来源。发现自定义或旧版实现时报告问题并非零退出，不自动覆盖业务逻辑。
+
+所有包的 `scripts/run.sh` 都可从脚本位置解析任务目录，设置运行上下文并按字面转发参数；已安装任务仍保留自己的项目绑定与日程。

@@ -24,6 +24,11 @@ enum Origin {
 
 #[derive(Subcommand, Debug)]
 enum AutomationCommand {
+    /// 只读审计任务公共运行逻辑；--path 检查仓库，省略则检查所有本机来源。
+    Audit {
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
     /// 复制完整任务为独立且默认暂停的副本，可继续编辑全部内容。
     Copy {
         id: String,
@@ -152,6 +157,19 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
         automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
     }
     match &args.command {
+        AutomationCommand::Audit { path } => {
+            let report = match path {
+                Some(path) => {
+                    automation::runtime_audit::repository(path).map_err(anyhow::Error::msg)?
+                }
+                None => automation::runtime_audit::installed(),
+            };
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            anyhow::ensure!(
+                report.is_clean(),
+                "Task runtime audit found entries requiring review"
+            );
+        }
         AutomationCommand::Copy { id, name, revision } => {
             let mut draft = automation::copy_draft(id, *revision).map_err(anyhow::Error::msg)?;
             draft.name = name

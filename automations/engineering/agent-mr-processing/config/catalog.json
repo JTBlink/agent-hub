@@ -5,11 +5,7 @@
     "zh-TW": "PR / MR 程式碼審查",
     "en": "PR / MR code review"
   },
-  "aliases": [
-    "MR 处理",
-    "MR 處理",
-    "MR / PR processing"
-  ],
+  "aliases": ["MR 处理", "MR 處理", "MR / PR processing"],
   "description": {
     "zh": "定时启动 Agent 自动查找待审 MR / PR，分别审查代码规范与需求符合度，直接评论结论，必要时请求更改。",
     "zh-TW": "定時啟動 Agent 自動尋找待審 MR / PR，分別審查程式碼規範與需求符合度，直接留言結論，必要時請求變更。",
