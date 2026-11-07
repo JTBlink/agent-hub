@@ -268,13 +268,15 @@ it("sorts the tag snapshot from its context submenu and retains the choice acros
       ),
     );
     await act(async () => button("git.browse.tags").click());
-    expect(names()).toEqual(["v1.2.0", "v1.10.0", "v1.3.0"]);
+    expect(names()).toEqual(["v1.3.0", "v1.2.0", "v1.10.0"]);
     const expanded = host.querySelector('summary[title="v1.2.0"]')!
       .parentElement as HTMLDetailsElement;
     await act(async () => {
       expanded.open = true;
       expanded.dispatchEvent(new Event("toggle"));
     });
+    await choose("git.tagSort.version");
+    expect(names()).toEqual(["v1.10.0", "v1.3.0", "v1.2.0"]);
     await choose("git.tagSort.name");
     expect(names()).toEqual(["v1.3.0", "v1.2.0", "v1.10.0"]);
     expect(expanded.open).toBe(true);

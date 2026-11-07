@@ -7,7 +7,7 @@ export interface GitTagSort {
 }
 
 export const DEFAULT_GIT_TAG_SORT: GitTagSort = {
-  by: "date",
+  by: "name",
   direction: "desc",
 };
 

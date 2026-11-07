@@ -172,9 +172,9 @@ try {
         `[...document.querySelectorAll('.git-history summary')].map(item=>item.title)`,
       );
     assert.deepEqual((await names()).slice(0, 3), [
+      "v1.3.0",
       "v1.2.0",
       "v1.10.0",
-      "v1.3.0",
     ]);
     for (const theme of ["dark", "light"])
       for (const scale of [1, 1.2]) {

@@ -22,16 +22,19 @@ it("preserves semantic version order and falls back to dates for non-version tag
 });
 
 it("sorts names lexically and dates chronologically with missing dates always last", () => {
-  expect(names(sortGitTags(entries, { by: "name", direction: "asc" }))).toEqual(
-    ["archive", "release", "v1.10.0", "v1.10.0-rc.1", "v1.2.0"],
-  );
   expect(names(sortGitTags(entries, DEFAULT_GIT_TAG_SORT))).toEqual([
-    "v1.10.0-rc.1",
     "v1.2.0",
+    "v1.10.0-rc.1",
     "v1.10.0",
     "release",
     "archive",
   ]);
+  expect(names(sortGitTags(entries, { by: "name", direction: "asc" }))).toEqual(
+    ["archive", "release", "v1.10.0", "v1.10.0-rc.1", "v1.2.0"],
+  );
+  expect(
+    names(sortGitTags(entries, { by: "date", direction: "desc" })),
+  ).toEqual(["v1.10.0-rc.1", "v1.2.0", "v1.10.0", "release", "archive"]);
   expect(names(sortGitTags(entries, { by: "date", direction: "asc" }))).toEqual(
     ["release", "v1.10.0", "v1.2.0", "v1.10.0-rc.1", "archive"],
   );
