@@ -1,3 +1,4 @@
+import { githubEnabled } from "@app/platforms";
 import { useState } from "react";
 import {
   Link,
@@ -178,19 +179,23 @@ export function Help() {
           )}
         </main>
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-        <span>{t("help.feedbackDescription")}</span>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-          onClick={() =>
-            openUrl(FEEDBACK_URL).catch(() => toast.error(t("help.openFailed")))
-          }
-        >
-          {t("help.reportIssue")}
-          <ExternalLink className="h-3 w-3" />
-        </button>
-      </footer>
+      {githubEnabled && (
+        <footer className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+          <span>{t("help.feedbackDescription")}</span>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-accent-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            onClick={() =>
+              openUrl(FEEDBACK_URL).catch(() =>
+                toast.error(t("help.openFailed")),
+              )
+            }
+          >
+            {t("help.reportIssue")}
+            <ExternalLink className="h-3 w-3" />
+          </button>
+        </footer>
+      )}
     </div>
   );
 }

@@ -1,3 +1,7 @@
+import { useContext } from "react";
+import { GitEditorTabsContext } from "../../hooks/gitEditorVisibility";
+import { isPreviewableImage } from "../../features/image-preview";
+import { GitImagePreview } from "./GitImagePreview";
 import { CodeEditor } from "../file-reader/CodeEditor";
 import { FileTypeIcon } from "../FileTypeIcon";
 import { useTranslation } from "react-i18next";
@@ -35,6 +39,7 @@ export function GitFileEditor({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const active = useContext(GitEditorTabsContext)?.active ?? true;
   const name = selection.path.split("/").pop() ?? selection.path;
   const sha = commitSha?.slice(0, 8);
   const versions = fileView
@@ -64,7 +69,19 @@ export function GitFileEditor({
           </button>
         </div>
       )}
-      {fileView && root ? (
+      {isPreviewableImage(selection.path) ? (
+        <GitImagePreview
+          active={active}
+          projectId={activeId}
+          worktreePath={root}
+          path={selection.path}
+          staged={selection.staged}
+          commitSha={commitSha}
+          revisionView={revisionView}
+          compareWorking={compareWorking}
+          fileView={fileView}
+        />
+      ) : fileView && root ? (
         <WorktreeFilePreview
           key={`${activeId}:${root}:${selection.path}`}
           projectId={activeId}

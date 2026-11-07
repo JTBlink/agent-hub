@@ -9,7 +9,33 @@ import { Eye, RefreshCw, Save } from "lucide-react";
 import { FileContent } from "../file-reader/FileContent";
 import { useWorktreeDocument } from "../../hooks/useWorktreeDocument";
 
-export function WorktreeFilePreview({
+import { ImagePreview, isPreviewableImage } from "../../features/image-preview";
+
+export function WorktreeFilePreview(props: {
+  active?: boolean;
+  projectId: string;
+  worktreePath: string;
+  path: string;
+  location?: ReaderLocation;
+  toolbarContainer?: HTMLElement | null;
+}) {
+  if (isPreviewableImage(props.path))
+    return (
+      <ImagePreview
+        active={props.active}
+        key={JSON.stringify([props.projectId, props.worktreePath, props.path])}
+        source={{
+          projectId: props.projectId,
+          worktreePath: props.worktreePath,
+          path: props.path,
+          revision: "working",
+        }}
+      />
+    );
+  return <WorktreeTextPreview {...props} />;
+}
+
+function WorktreeTextPreview({
   projectId,
   worktreePath,
   path,

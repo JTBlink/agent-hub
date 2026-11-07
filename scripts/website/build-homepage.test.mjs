@@ -23,7 +23,14 @@ it("builds a self-contained website with the current version and all local asset
       );
     }
     // PNG signatures ensure screenshots are actual images, not unresolved links.
-    for (const filename of ["skill-library.png", "dashboard.png"]) {
+    for (const filename of [
+      "skill-library.png",
+      "dashboard.png",
+      "project-workspace.png",
+      "git.png",
+      "tasks.png",
+      "automation.png",
+    ]) {
       expect(
         readFileSync(join(dirname(outputPath), "assets", filename))
           .subarray(0, 8)

@@ -1,3 +1,4 @@
+import { copyFileSync, readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import {
   loadProduct,
@@ -51,9 +52,45 @@ export function productViteConfig(root) {
       {
         name: "product-module-selection",
         enforce: "pre",
+        transformIndexHtml(html) {
+          return product.productName
+            ? html.replace(
+                /<title>.*?<\/title>/,
+                `<title>${product.productName.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</title>`,
+              )
+            : html;
+        },
+        configureServer(server) {
+          if (!product.productName) return;
+          server.middlewares.use((req, res, next) => {
+            const filename = {
+              "/icons/app-icon.svg": "app-icon.svg",
+              "/icons/32x32.png": "32x32.png",
+              "/icons/128x128.png": "128x128.png",
+            }[req.url?.split("?")[0]];
+            if (!filename) return next();
+            res.setHeader(
+              "Content-Type",
+              filename.endsWith("svg") ? "image/svg+xml" : "image/png",
+            );
+            res.end(readFileSync(resolve(product.iconDir, filename)));
+          });
+        },
+        writeBundle() {
+          if (!product.productName) return;
+          const output =
+            process.env.AGENT_HUB_PRODUCT_OUTPUT_DIR || resolve(root, "dist");
+          for (const filename of ["app-icon.svg", "32x32.png", "128x128.png"])
+            copyFileSync(
+              resolve(product.iconDir, filename),
+              resolve(output, "icons", filename),
+            );
+        },
         transform(source, id) {
-          if (herdr || !/\/src\/i18n\/(zh|zh-TW|en)\.json$/.test(id)) return;
+          if (!/\/src\/i18n\/(zh|zh-TW|en)\.json$/.test(id)) return;
           const locale = JSON.parse(source);
+          if (product.productName) locale.app.name = product.productName;
+          if (herdr) return { code: JSON.stringify(locale), map: null };
           const sharedKeys = [
             "newTab",
             "copyOutput",

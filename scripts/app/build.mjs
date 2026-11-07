@@ -27,7 +27,7 @@ export function usage() {
   install --dev [debug|release] 编译并软链接开发 CLI（仅开发模式）
   help      显示此帮助
 
-产品选择: --product standard（默认）或 --product personal
+产品选择: --product standard（默认，全功能）、--product personal 或 --product agent-flow（定制版）
 示例: ./agent-hub.sh build --product personal
       ./agent-hub.sh dev --product personal
       ./agent-hub.sh install --dev debug --product personal

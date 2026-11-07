@@ -10,10 +10,10 @@
 
 ## 本地数据
 
-默认数据集中在 `~/.agent-hub`，Windows 对应 `%USERPROFILE%\.agent-hub`。数据库为 `library/agent-hub.db`，日志在 `logs/`，配套 CLI 在 `bin/`。
+默认数据集中在 `~/.agent-hub`，Windows 对应 `%USERPROFILE%\.agent-hub`。数据库为 `agent-hub.db`，日志在 `logs/`，配套 CLI 在 `bin/`。
 
 旧版 `~/.agenthub` 和原管理器 `~/.skills-manager` 不自动迁入。卸载应用不主动删除本地数据。
 
 ## 当前限制
 
-应用内自动更新暂未启用，设置页提供本项目发布页。Git 备份属于技能库功能，需要用户配置远端和认证；不代表应用配置自动同步。
+应用内自动更新暂未启用，设置页提供本项目发布页。Git 备份需要用户配置远端和认证，覆盖技能、任务定义及受支持的用户配置；凭据、数据库、任务运行状态和日志留在本机。

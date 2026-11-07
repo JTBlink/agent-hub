@@ -1,8 +1,8 @@
 <div align="center">
   <img src="src-tauri/icons/app-icon.svg" alt="AgentHub Logo" width="80" />
   <h1>AgentHub</h1>
-  <p><strong>把好用的 Skills，带到每个 Agent。</strong></p>
-  <p>本地优先的 AI Agent Skills 工作台，统一整理技能库、技能组与项目部署。</p>
+  <p><strong>让 Agent 围绕项目工作。</strong></p>
+  <p>本地优先的 AI 开发工作台，连接项目、Agent、Skills 与定时任务。</p>
   <p>
     <a href="https://jtblink.github.io/agent-hub/">产品主页</a> ·
     <a href="https://github.com/JTBlink/agent-hub/releases">下载安装包</a> ·
@@ -11,84 +11,98 @@
   </p>
 </div>
 
-![AgentHub 工作台：折叠侧栏、项目优先导航、技能部署概览与近期技能](docs/images/dashboard.png)
+![AgentHub 项目工作区：工作树、文件目录、内嵌终端与 Agent 启动入口](docs/images/project-workspace.png)
 
-_当前开发界面，使用示例数据：默认展示项目工作空间，可切换 Agent；右侧查看近期技能。截图生成方式见[截图说明](docs/images/README.md)。_
+_截图来自当前开发界面的合成数据预览，不读取本机项目、账号或任务。已发布安装包的功能以对应版本说明为准。[截图说明与生成命令](docs/images/README.md)。_
 
-## 一个工作台，管理你的 Skills
+## 从项目到 Agent，在一个工作台里完成
 
-Skills 不必散落在每个工具和项目目录里。AgentHub 集中管理技能内容，再按实际用途部署到不同工作空间，支持 Claude Code、Codex、Cursor、OpenCode、Hermes 等 Agent。
+选择项目与 Git 工作树，打开文件、终端或预览，在当前目录启动 Agent；按需要部署技能、查看 Git 变更与平台任务，再把重复工作配置为定时任务。
 
-| 能力         | 用途                                                              |
-| ------------ | ----------------------------------------------------------------- |
-| 技能库       | 从本地目录或 Git 来源导入，查看内容与来源、检查更新、用标签筛选。 |
-| 技能组       | 按开发、设计、研究等用途整理集合，向工作空间批量添加或移除技能。  |
-| Agent 与项目 | 分别管理全局和项目技能，查看部署关系与同步状态。                  |
-| Git 备份     | 配置自己的 Git 远端，备份技能库与自动化任务定义，处理同步冲突。   |
-| 自动化       | 管理系统与 Hermes 任务，使用模板创建、编辑日程、手动运行。        |
-| 桌面与 CLI   | 使用桌面工作台、托盘或命令行；共用同一套 Rust 核心。              |
+| 能力         | 可以做什么                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| 项目与工作树 | 切换项目及 Git worktree，浏览文件，查看和编辑文本、Markdown。                            |
+| 终端与 Agent | 多标签、分屏和当前目录启动 Codex、Claude Code、OpenCode、Hermes；可接入 Herdr 管理会话。 |
+| Git          | 查看变更、差异、提交图、分支和标签，比较图片版本，通过统一菜单执行仓库操作。             |
+| 任务平台     | 连接 GitHub / GitLab，管理登录账号及私有站点，按多个项目查看 Issue、PR / MR 和 CI 状态。 |
+| Skills       | 从本地或 Git 导入、检查版本，用标签和技能组整理，部署到 Agent 的全局或项目工作空间。     |
+| 自动化       | 创建命令或 Agent 定时任务，编辑日程、脚本和提示词方案，复制、导入导出并查看执行记录。    |
+| 浏览与预览   | 从项目打开网页、移动端视口或文档预览；运行环境与连接由桌面设置管理。                     |
+| 备份与 CLI   | 用自己的 Git 远端备份管理内容，通过配套 CLI 管理技能、任务和桌面预览。                   |
 
-导入技能库、加入技能组和部署到工作空间是不同操作：先收藏内容，再组织用途，最后选择需要使用这些技能的 Agent 或项目。修改组内成员不会自动更新已有部署。
+部分集成能力可通过产品配置裁剪；标准版、个人版与 Agent Flow 定制版的功能以构建配置为准；Agent Flow 按独立配置启用 GitLab 集成。AI Native 场景编排目前仍是独立需求原型，未作为正式产品能力交付。
+
+## 项目、Git 与平台任务
+
+项目侧栏按工作树组织。终端、文件和预览围绕当前工作区展开；终端可以新建 Agent 标签，也可以通过 Herdr 入口连接已有会话。切换项目或工作树时会释放旧工作区的应用自有终端，返回后新建 Shell，不自动重放历史命令。
+
+图片可在文件树中独立查看，也可比较暂存区、工作区和历史版本，支持左右／上下排列、缩放与大图查看。
+
+![Git 工作区：变更、提交记录、分支与标签](docs/images/git.png)
+
+任务页按 GitHub / GitLab 切换，支持多个项目合并查看、账号管理与私有站点。评审、修复或 CI 排查等操作先进入 Agent 启动预览，沿目标项目规范执行；平台登录与技能备份所使用的认证分别管理。
+
+![平台任务：多项目筛选、Issue 与 PR / MR、平台账号入口](docs/images/tasks.png)
+
+## 技能库与项目部署
+
+从已有 Agent 目录、本地目录或 Git 仓库导入 Skills，查看内容、来源和版本。仓库卡片区分安装到本地、上传到仓库与详情入口；导入后的本地原目录可以删除，技能库副本仍独立保留。
+
+![技能库：技能组、标签、来源与部署状态](docs/images/skill-library.png)
+
+导入技能库、加入技能组和部署到工作空间是三个操作。技能组整理用途；向全局或项目工作空间添加技能组时才批量部署，组内成员变化不会自动更新已有部署。普通项目的团队技能内容保存在 `.agents/skills`，适用的 Agent 专属入口通过项目相对链接或副本读取。
 
 <details>
-  <summary>查看技能库界面</summary>
+  <summary>查看工作台概览</summary>
 
-![AgentHub 技能库：全部技能入口、紧凑筛选栏、技能组、标签与 Agent 部署状态](docs/images/skill-library.png)
-
-_技能库的全部视图，展示已部署、待部署与未分组的示例技能。_
+![工作台概览：项目、Agent 与近期技能](docs/images/dashboard.png)
 
 </details>
 
-## 自动化与 Agent 触发
+## 定时任务与 Agent 自动化
 
-在“自动化”中汇总本机系统与 Hermes 定时任务，默认选中“AgentHub 创建”并隐藏系统内置任务。可切换创建者查看全部或其他来源，通过创建者、调度器、状态三个主题下拉框与搜索组合筛选；Hermes 入口仅在本机安装后显示。使用内置模板快速填写任务，创建后可编辑、暂停/恢复或立即运行。“清理磁盘缓存”模板每天 03:00 按独立 JSON 配置自动清理过期下载缓存、Agent 缓存与诊断记录、已退出浏览器的网页缓存，以及 uv／Homebrew 的无引用或历史内容；默认缓存保留 7 天，历史对话、配置和凭据保留。可配置项目路径清理历史构建及过期增量缓存，保留最新构建与被引用依赖。模板以多文件模块随软件预装并一起备份，输出中文逐项总结、GiB／MiB 空间变化和桌面通知，支持 `--dry-run` 预览与 CLI 覆盖，详见 [CLI 说明](docs/help/zh/reference/cli.md)。
+从模板创建任务，或导入完整任务包；管理自己的本地实例，按需暂停、恢复、立即运行、复制或导出。编辑器支持多组提示词单选生效，详情页可以查看源码并直接通过 VS Code 打开任务目录。
 
-命令任务使用当前用户的原生调度器：macOS launchd、Linux systemd timer、Windows 任务计划程序；Hermes 任务由 Hermes 调度。关闭 AgentHub 后计划继续保留，执行需要用户会话或对应调度服务运行。
+![自动化列表：任务日程、创建者、执行状态与操作入口](docs/images/automation.png)
 
-![自动化列表：创建者筛选、日程、执行状态和手动运行入口](docs/images/automation.png)
+![自动化编辑器：项目工作区、Agent 启动配置、提示词方案与日程](docs/images/automation-create.png)
 
-![Hermes 定时任务：独立调度器快捷筛选](docs/images/automation-hermes.png)
+命令任务使用 macOS launchd、Linux systemd timer 或 Windows 任务计划程序；Hermes 任务由 Hermes 调度。关闭桌面窗口不会删除计划，实际执行仍依赖用户会话、调度服务和任务所需工具。
+
+Agent 任务通过共享执行器启动和检查会话。任务可按业务设置版本去重、单轮批量和修复次数上限；这些策略需要对应任务脚本实现，不能仅靠提示词视为已生效。执行未结束、等待输入或结果不明时保留检查点，避免重复投递。修复后的独立重审与项目门禁仍按任务和项目规范执行。
 
 <details>
-  <summary>查看模板、创建与详情页面</summary>
+  <summary>查看任务详情和执行记录</summary>
 
-![自动化模板：系统命令与 Hermes 示例](docs/images/automation-templates.png)
+![任务详情：概述、源码、VS Code 打开与编辑操作](docs/images/automation-detail.png)
 
-![创建自动化：提示词、工作目录与日程设置](docs/images/automation-create.png)
+![执行记录：单次运行时间、状态和日志](docs/images/automation-execution.png)
 
-![清理磁盘缓存：执行命令直接调用预装 Python 脚本，脚本可展开定制](docs/images/automation-cleanup.png)
+![单次执行输出：状态、退出码与结果](docs/images/automation-run-output.png)
 
-![自动化详情：概述、最近运行与立即运行操作](docs/images/automation-detail.png)
-
-“执行”页签按次展示开始／结束时间、状态、退出码和日志，点击记录查看单次结果。系统任务在本机保留最近 100 次执行记录；Hermes 读取已有结果文件，其文件保留由 Hermes 管理。执行记录和日志不参与 Git 同步备份。任务变化和窗口恢复焦点时在后台更新状态，保留当前日志；运行期间可打开编辑，保存时重新检查任务是否已结束。
-
-![自动化执行：本机记录与单次日志，不参与同步备份](docs/images/automation-execution.png)
-
-![单次执行结果：时间、状态、退出码和输出](docs/images/automation-run-output.png)
+系统任务在本机保留最近 100 次执行记录；Hermes 的结果文件由 Hermes 管理。执行日志、扩展业务状态、凭据与运行环境留在本机，不参与任务导出或 Git 备份。进程退出和 Agent 空闲不单独代表业务验证通过。
 
 </details>
 
-_截图均来自合成数据预览，不读取本机任务、账号或个人目录。_
+任务包位于 [`automations/`](automations/README.md)，以 `TASK.md` 为说明入口，`config/task.json` 保存清单，脚本、提示词和引用分别放在 `scripts/`、`prompts/`、`references/`。本机任务默认分配到 `~/.agent-hub/automations/<task-name>/`，项目工作目录单独绑定。导入、复制和备份恢复创建独立且默认暂停的实例，并准备运行依赖；没有单独的安装/卸载步骤。
 
-自动化任务包与管理 Skill 分别位于项目根目录的 [`automations/`](automations/README.md) 和 `skills/`。每个任务以标准 `task.json`、实际脚本及提示词独立分发；通过「发现 → 自动化任务」从推荐、本地或 Git 安装，安装后默认暂停，同名覆盖需确认。本机任务目录默认位于 `~/.agent-hub/automations/<英文目录名>/`，项目工作区单独绑定。已安装任务同样参与云端自动／手动备份，云端使用 `automations/<英文目录名>/` 的相同包结构；私有环境、安装回执和运行记录留在本机，恢复为未安装副本。
-
-Agent 可直接使用同一套 CLI，无需打开页面：
+通过 CLI 创建、编辑和查看任务：
 
 ```bash
 agent-hub-cli --json automations templates
-agent-hub-cli automations create --template workspace-check
-agent-hub-cli --json automations list --origin agent-hub
-agent-hub-cli --json automations run '<task-id>'
+agent-hub-cli --json automations create --template workspace-check
+agent-hub-cli --json automations list
 agent-hub-cli --json automations show '<task-id>'
+agent-hub-cli --json automations edit '<task-id>' --file task.json --revision '<revision>'
 agent-hub-cli --json automations runs '<task-id>'
 agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 ```
 
-`run` 返回“已请求运行”，实际结果以任务执行状态为准。完整参数和 JSON 定义见 [CLI 说明](docs/help/zh/reference/cli.md)。
+需要执行时使用 `automations run '<task-id>'`；需要计划运行时使用 `automations resume '<task-id>'`。`run` 返回“已请求运行”，真实结果通过本次执行记录与业务证据核实。完整参数见 [CLI 说明](docs/help/zh/reference/cli.md)；Agent 使用规范见 [agent-hub-cli Skill](skills/productivity/agent-hub-cli/SKILL.md)。
 
 ## 安装与开始使用
 
-在[发布页](https://github.com/JTBlink/agent-hub/releases)选择对应平台的安装包。具体可用产物与功能以各版本发布说明为准。
+从[发布页](https://github.com/JTBlink/agent-hub/releases)下载对应平台的安装包，可用产物与功能以该版本说明为准。
 
 | 平台    | 安装格式             |
 | ------- | -------------------- |
@@ -96,19 +110,21 @@ agent-hub-cli --json automations logs '<task-id>' --run '<run-id>'
 | Windows | `.exe` 安装程序      |
 | Linux   | `.AppImage` / `.deb` |
 
-1. 打开 AgentHub，扫描并导入已有 Skills，或从本地目录、Git 仓库导入。
-2. 用标签和技能组整理内容，选择要启用的 Agent。
-3. 在全局或项目工作空间中部署所需技能，查看同步状态。
-4. 按需设置 Git 远端，为技能库与自动化任务定义建立备份。
-5. 在自动化中使用模板创建任务，或通过 CLI/Agent 手动触发。
+1. 添加项目，选择已有工作树，打开终端或启动已安装的 Agent。
+2. 导入 Skills，用标签和技能组整理，再按需部署到全局或项目工作空间。
+3. 连接 GitHub / GitLab，查看当前项目的工作项和代码审查。
+4. 从模板创建定时任务，核对工作目录、脚本与日程后启用。
+5. 配置自己的 Git 远端，备份技能、任务定义和受支持的用户配置。
 
-## 数据存放
+## 本地数据与备份
 
-技能内容默认位于 `~/.agent-hub/skills`，可在设置中移动技能库。应用数据库、配置、日志与配套 CLI 保存在 `~/.agent-hub/`，包括 `library/agent-hub.db`、`repo-config.json` 和 `bin/agent-hub-cli`。
+- 技能默认在 `~/.agent-hub/skills`，可在设置中移动技能库。
+- 应用数据库为 `~/.agent-hub/agent-hub.db`；配套 CLI 在 `~/.agent-hub/bin/`。
+- 独立任务包在 `~/.agent-hub/automations/`；各任务的本机绑定、环境、执行和业务记录在包内 `.local/`。
+- Git 备份默认在 `~/.agent-hub/backup`，保存可移植管理内容；凭据、数据库、终端历史和任务运行状态不进入备份。
+- 普通项目的团队技能在项目 `.agents/skills`，项目成员使用这些内容不依赖个人技能库。
 
-自动化的本机注册记录、执行包装器和日志位于系统应用数据目录的 `com.jtstudio.agenthub/automations` 下，任务脚本保存在工作目录中，新任务默认位于 `~/.agent-hub/automations/<英文目录名>/`，旧 UUID 工作目录保持兼容。删除任务保留工作目录中的文件。
-
-可在设置中创建 `~/.agents/skills` 软链接，供其他 AI 工具发现技能。Git 备份默认位于 `~/.agent-hub/backup`；凭据单独保存，不进入技能备份。详见[目录结构](docs/architecture/directory-structure.md)。
+删除任务默认保留本地文件；显式清理仅作用于该任务拥有的数据，不删除绑定项目。详见[目录与本地数据](docs/architecture/directory-structure.md)及[定时任务记录规范](docs/architecture/automation-records.md)。
 
 ## 开发与运行
 
@@ -119,92 +135,45 @@ npm ci
 npm run app:dev
 ```
 
-常用构建与验证命令：
+开发与打包入口自动构建、验证并更新配套 CLI；只启动 `npm run dev` 时，原生文件、数据库和终端功能需要桌面运行时。常用命令：
 
 ```bash
 npm run app:build
 npm run cli -- --help
-./agent-hub.sh install --dev
+npm run cli:build
 npm run build
 npm test
 npm run lint
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-`./agent-hub.sh install` 默认构建当前平台安装包；只更新开发 CLI 时使用 `./agent-hub.sh install --dev`，追加 `release` 可构建 release CLI。
+产品配置、编译裁剪及产物目录见[产品开发](docs/product-development.md)与[编译、打包和安装](docs/build-and-install.md)。
 
-开发和打包入口会先编译并放置 `agent-hub-cli`，再启动或构建桌面应用。`npm run dev` 仅启动前端服务器，文件系统和数据库功能需要 Tauri 桌面运行时。命令、安装包位置与自动清理规则见[编译、打包与安装](docs/build-and-install.md)，工程约定见[开发指南](.agents/skills/rust-dev/references/development.md)。
+### 产品主页与截图
 
-### 产品主页
-
-主页独立于桌面应用，使用静态 HTML、CSS 和少量 JavaScript，无外部字体或运行时依赖。构建会从 `VERSION` 注入版本号，并复制样式、图标和产品截图：
+主页为静态 HTML、CSS 和少量 JavaScript。版本从 `VERSION` 注入，帮助站与应用离线帮助共用文档正文。
 
 ```bash
 npm run website:build
 python3 -m http.server 8080 --directory _site
 ```
 
-打开 `http://localhost:8080` 预览。也可传入自定义输出文件：`npm run homepage:build -- <output>/index.html`。构建输出目录应独立于 `homepage/` 源文件目录。
+在本地前端预览服务器运行时，用 `node scripts/website/capture-product-screenshots.mjs` 更新合成数据产品截图。源图片由 README 和官网构建共用，操作说明见[截图说明](docs/images/README.md)。
 
 ## 项目结构
 
 ```text
-src/             React 页面、组件、状态及 Tauri bindings
-src-tauri/       Rust commands、核心逻辑、CLI 与 Tauri 配置
-homepage/        产品主页的静态源文件
+src/             React 页面、组件、状态与 Tauri bindings
+src-tauri/       Rust 核心、原生能力、CLI 和桌面宿主
+homepage/        产品主页静态源文件
 docs/help/       应用帮助与公开文档的共享正文
 docs-site/       VitePress 文档站配置
-public/          前端静态资源与 Agent 图标
 skills/          随项目提供的管理 Skill
-automations/     可直接安装的自动化任务包，与云端备份使用相同结构
-scripts/         开发、验证、版本和发布脚本
-docs/            产品文档、架构、ADR 与界面截图
-docs/agents/     GitHub Issues、Milestones 与工程技能配置
+automations/     可独立导入和维护的自动化任务包
+tests/browser/   合成数据产品预览和浏览器验证
+scripts/         开发、验证、版本与发布脚本
 ```
 
-## 架构与许可
+## 许可
 
-AgentHub 基于 Skills Manager 二次开发，使用 Tauri 2、React、TypeScript、Rust 和 SQLite，保留 AgentHub 的 Logo 与深蓝、蓝、青、紫品牌色。
-
-当前实现采用唯一的桌面主入口。旧配置编辑器与独立 Skills 窗口已移除；旧数据不自动迁移，也不会因此删除。不会自动读取 `~/.skills-manager` 或 `~/.agenthub` 数据。
-
-应用更新入口指向本项目发布页。GitHub 备份支持令牌或普通 Git；设备码登录需构建时设置项目自己的 `VITE_AGENTHUB_GITHUB_OAUTH_CLIENT_ID`。
-
-[需求原型目录](docs/prototypes/README.md)（`./prototype.sh`） · [文档索引](docs/README.md) · [后续规划](docs/plans/agent-hub.md) · [架构说明](docs/architecture/overview.md)
-
-本项目使用 [MIT 许可证](LICENSE)。导入代码的[来源说明与原许可证](docs/reference/skills-manager/README.md)保留，此前架构可通过 Git 历史查阅。
-
-## 开源致谢与第三方许可
-
-感谢以下开源项目及其贡献者。AgentHub 基于 Skills Manager 二次开发，并使用以下主要组件：
-
-| 项目                                                                                                                     | 用途                   | 许可证                                                       |
-| ------------------------------------------------------------------------------------------------------------------------ | ---------------------- | ------------------------------------------------------------ |
-| [Skills Manager 来源资料](docs/reference/skills-manager/README.md)                                                       | 原始应用实现与部分资源 | [MIT（保留原始声明）](docs/reference/skills-manager/LICENSE) |
-| [Tauri](https://github.com/tauri-apps/tauri)、[Tauri Plugins](https://github.com/tauri-apps/plugins-workspace)           | 桌面应用框架与系统能力 | MIT 或 Apache-2.0                                            |
-| [React](https://github.com/facebook/react)、[React Router](https://github.com/remix-run/react-router)                    | 界面与路由             | MIT                                                          |
-| [TypeScript](https://github.com/microsoft/TypeScript)                                                                    | 前端类型检查           | Apache-2.0                                                   |
-| [Vite](https://github.com/vitejs/vite)、[Vitest](https://github.com/vitest-dev/vitest)                                   | 前端构建与测试         | MIT                                                          |
-| [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss)、[tailwind-merge](https://github.com/dcastil/tailwind-merge) | 界面样式               | MIT                                                          |
-| [Lucide](https://github.com/lucide-icons/lucide)                                                                         | 界面图标               | ISC（部分继承图标另有 MIT 声明，以原项目许可证为准）         |
-| [dnd-kit](https://github.com/clauderic/dnd-kit)                                                                          | 拖放交互               | MIT                                                          |
-| [hello-pangea/dnd](https://github.com/hello-pangea/dnd)                                                                  | 拖放交互               | Apache-2.0                                                   |
-| [i18next](https://github.com/i18next/i18next)、[react-i18next](https://github.com/i18next/react-i18next)                 | 国际化                 | MIT                                                          |
-| [react-markdown](https://github.com/remarkjs/react-markdown)、[remark-gfm](https://github.com/remarkjs/remark-gfm)       | Markdown 展示          | MIT                                                          |
-| [Serde](https://github.com/serde-rs/serde)、[Reqwest](https://github.com/seanmonstar/reqwest)                            | 序列化与网络请求       | MIT 或 Apache-2.0                                            |
-| [Tokio](https://github.com/tokio-rs/tokio)                                                                               | 异步运行时             | MIT                                                          |
-| [rusqlite](https://github.com/rusqlite/rusqlite)                                                                         | SQLite 数据库访问      | MIT                                                          |
-| [SQLite](https://www.sqlite.org/copyright.html)                                                                          | 本地数据库引擎         | Public Domain（公有领域）                                    |
-| [git2-rs](https://github.com/rust-lang/git2-rs)                                                                          | Git 备份与同步         | MIT 或 Apache-2.0                                            |
-
-本表为主要项目的致谢摘要，不是完整的依赖、版权或许可证清单。直接依赖与具体版本见 [package.json](package.json)、[Cargo.toml](src-tauri/Cargo.toml) 及对应锁文件；传递依赖和随附资源仍适用各自的许可。本项目的 MIT 许可证不替代或重新授权第三方代码、图标、商标及导入的 Skills。复制、修改或再分发时，应按各组件的实际许可证保留版权声明、许可证全文及适用的 NOTICE 等材料；本节不能替代这些要求。许可原文参见 [MIT](https://opensource.org/license/mit) 与 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)。
-
-## 免责声明与权利说明
-
-- **独立项目与品牌归属**：AgentHub 为独立开发项目。文档和界面中的 Claude Code、Codex、Cursor、GitHub 等第三方名称、Logo 与商标归各自权利人所有，仅用于识别兼容工具、服务或说明来源，不表示本项目获得其官方认证、赞助、背书或存在隶属关系。开源代码许可不代表获得相关商标的使用授权。
-- **软件按现状提供**：在适用法律允许的范围内，本软件按“现状”提供，不作适销性、特定用途适用性或不侵权等明示或默示保证；作者与版权持有人的责任限制以 [MIT 许可证](LICENSE) 为准。本说明不排除适用法律规定不得排除的责任。
-- **第三方内容与服务**：用户导入、部署或分享的 Skills、脚本及其他内容仍受其原始许可证和使用条款约束。使用前请确认来源、授权与执行行为；连接 Agent、模型服务或 Git 远端时，应遵守相关服务条款，妥善管理凭据与敏感数据。第三方服务的费用、可用性及其生成内容由相应服务条款约定，本项目不作保证。
-- **备份与操作风险**：部署、覆盖、删除和同步可能修改本地或远端文件。执行前请备份重要数据，检查操作目标及变更内容。
-- **权利反馈**：如认为本项目中的代码、图标、名称或其他资源存在授权或署名问题，请通过[仓库维护者的公开联系方式](https://github.com/JTBlink)提供相关文件路径、权利依据及具体诉求。维护者将核实，并按核实结果补充署名、修正许可说明或移除相关内容。
-
-帮助文档维护见 [共享帮助内容](docs/help/README.md)。本地文档站预览使用 `npm run docs:dev`；应用、测试和构建会自动准备离线文档。
+[MIT](LICENSE)。第三方来源与许可证见[导入来源与许可](docs/reference/skills-manager/README.md)。

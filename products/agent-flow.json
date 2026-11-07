@@ -1,0 +1,20 @@
+{
+  "id": "agent-flow",
+  "productName": "Agent Flow",
+  "sidebar": {
+    "primary": [
+      "projects",
+      "search",
+      "git",
+      "tasks",
+      "automation",
+      "preview",
+      "skills",
+      "discover",
+      "herdr"
+    ],
+    "bottom": ["dashboard", "backup", "settings"],
+    "defaultPanel": "skills"
+  },
+  "iconDir": "products/agent-flow/icons"
+}

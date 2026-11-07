@@ -1,40 +1,38 @@
 # 产品截图
 
-`skill-library.png`、`dashboard.png` 与 `automation*.png` 来自当前 React 产品组件，使用固定的示例技能、Agent、项目与路径，不读取本机数据库，也不包含个人信息。截图展示开发版本界面，已发布安装包可能有所不同。
+截图来自 `tests/browser/product-preview.tsx` 的当前产品组件与固定合成数据。不会读取本机数据库、项目、账号或任务，也不使用真实用户界面遮挡后发布。截图展示开发界面，已发布安装包以各版本说明为准。
 
-## 当前截图
+## 主要页面
 
-- `dashboard.png`：侧栏首页使用“工作台”，非活动分组自动折叠；项目工作空间为默认视图，展示技能库 SVG、待部署与待分组入口、项目导航和最近 3 项技能；可切换 Agent 或展开更多近期技能。
-- `skill-library.png`：侧栏展开技能库并选中“全部技能”，其余分组折叠；技能库“全部”视图，展示新版紧凑筛选栏、技能组、标签、部署状态与未分组技能的加入入口。
-- 两张图片使用同一套示例数据：12 个技能、5 个已启用 Agent、2 个项目；5 个技能已部署、7 个待部署、4 个未分组。深色主题、简体中文、默认字号，1440×900 CSS 像素、1 倍像素密度。
+| 图片                        | 展示内容                                           |
+| --------------------------- | -------------------------------------------------- |
+| `project-workspace.png`     | 项目与工作树、文件浏览、文档和内嵌终端入口         |
+| `git.png`                   | 源代码管理与提交图                                 |
+| `tasks.png`                 | GitHub / GitLab 平台任务、项目筛选和账号入口       |
+| `skill-library.png`         | 全部技能、技能组、标签、来源与部署状态             |
+| `dashboard.png`             | 工作台概览、项目工作空间和近期技能                 |
+| `automation.png`            | 任务列表、日程、执行状态、创建和运行入口           |
+| `automation-create.png`     | 任务编辑器、项目目录、Agent 配置、提示词方案与日程 |
+| `automation-detail.png`     | 任务概述、源码、VS Code 打开和编辑入口             |
+| `automation-execution.png`  | 按次保存的本机执行记录                             |
+| `automation-run-output.png` | 单次运行的时间、状态和输出                         |
+| `automation-templates.png`  | 从模板新建任务                                     |
+| `automation-hermes.png`     | Hermes 来源筛选                                    |
+| `automation-cleanup.png`    | 命令任务的脚本与日程编辑                           |
+| `automation-menu.png`       | 实际打开的主题筛选菜单                             |
+
+默认深色、简体中文、默认字号，1440×900 CSS 像素、1 倍像素密度。技能数据包含 12 个技能、5 个启用 Agent 和 2 个示例项目；所有路径和身份均为合成数据。截图通过真实组件操作进入相应状态，不绘制产品界面的替代稿。
 
 ## 更新截图
 
-1. 启动 Vite 前端服务器，或复用现有开发服务器。
-2. 打开 `/tests/browser/product-preview.html?theme=dark&language=zh&undeployed&ungrouped`。保持技能库“全部”视图和卡片模式，不选择技能组、不展开更多筛选，保持侧栏默认技能库展开与“全部技能”选中。
-3. 打开 `/tests/browser/product-preview.html?view=dashboard&theme=dark&language=zh&undeployed&ungrouped`。保持默认项目工作空间与 3 项近期技能，不展开更多内容，保持侧栏非活动分组默认折叠。
-4. 使用 Chromium 浏览器，以 1440×900 CSS 像素、1 倍像素密度捕获页面内容。等待数据与字体加载完成，页面停在顶部，不包含浏览器工具栏，保存为对应 PNG。
-5. 检查截图没有错误、加载状态、弹窗或个人信息；执行 `npm run website:build` 和 `npx vitest run scripts/website/build-homepage.test.mjs`，确认输出资源与源图片一致。
-6. 检查 README 和官网图片替代文本、说明及尺寸；按现有 Pages 工作流部署后核对线上两张图片与源文件一致。
+1. 启动或复用本机 Vite 前端预览服务器。默认地址为 `http://localhost:1420`。
+2. 执行 `node scripts/website/capture-product-screenshots.mjs`；只更新一张时可附加文件名，例如 `node scripts/website/capture-product-screenshots.mjs project-workspace.png`。
+3. 检查每张图片：没有空白、加载或报错页面，选中状态符合表中用途，文字可读且没有本机信息。项目页打开示例 README，Git 页打开提交图，技能页选择全部技能。
+4. 执行 `npm run website:build` 和 `npx vitest run scripts/website/build-homepage.test.mjs`，验证站点资源和版本注入。
+5. 预览桌面及移动端布局，点击官网各个截图标签，检查替代文本、标题和实际图片一致。发布后再核对线上资源，未发布时不要宣称官网已上线。
 
-截图页直接复用 `Layout`、`MySkills`、`Dashboard` 和应用上下文，只在 Tauri 调用边界注入示例数据。它仅用于文档截图，不包含完整的写入与文件操作能力。
+脚本只允许本地预览来源，使用隔离的临时 Chromium profile，以无界面模式捕获 PNG，结束后清理该 profile。它不读取日常浏览器数据。可用 `AGENT_HUB_SCREENSHOT_BROWSER` 指定浏览器可执行文件，用 `AGENT_HUB_PREVIEW_ORIGIN` 指定本地端口。
 
-README 与官网默认展示工作台，技能库可展开或切换查看。主页构建将这两张图片复制至输出目录的 `assets/`，README 直接引用这里的源图片。更新源图片即可同步这两个展示入口，无需维护截图副本。
+手动查看：`/tests/browser/product-preview.html?view=worktree&theme=dark&language=zh&capture`。`view` 还支持 `git`、`tasks`、`skills`、`dashboard`、`automation`。自动化的指定编辑、模板及执行状态见拍摄脚本的 `shots` 列表。
 
-## 自动化截图
-
-所有截图可由下方脚本统一更新。自动化截图同样来自 `tests/browser/product-preview.tsx` 的合成数据，复用实际列表、创建、模板、详情和菜单组件。任务名、命令、提示词、项目与目录均为示例，不读取真实任务或账号；不采用真实用户截图后遮挡信息的方式。
-
-- `automation.png`：创建者、调度器、状态及系统内置过滤，列表行的手动触发。
-- `automation-create.png`：从合成 Hermes 模板填入的创建表单，默认独立工作目录提示。
-- `automation-detail.png`：示例仓库审计任务详情与立即运行入口。
-- `automation-templates.png`：系统与 Hermes 模板，支持从 Git 备份新建。
-- `automation-menu.png`：实际打开的主题下拉菜单，验证弹出面板沿用应用主题。
-
-复用本机 Vite 后执行：
-
-```bash
-node scripts/website/capture-product-screenshots.mjs
-```
-
-脚本只允许本地预览来源，以隔离的临时 Chromium profile 捕获 1440×900、1 倍像素密度的 PNG，结束后清理 profile，不读取日常浏览器数据。可通过 `AGENT_HUB_SCREENSHOT_BROWSER` 指定浏览器执行文件，通过 `AGENT_HUB_PREVIEW_ORIGIN` 指定本地开发端口。拍摄后检查加载、错误与菜单打开状态，并检查示例内容及个人信息。
+README 直接使用本目录的图片；官网构建将主要页面图复制到 `assets/`，两处共用同一图片源。修改源码中的图片集合后，同步更新构建脚本与资源校验，避免手工维护官网截图副本。

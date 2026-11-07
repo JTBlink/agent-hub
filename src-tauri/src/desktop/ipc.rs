@@ -279,6 +279,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::project_git::get_project_git_remotes,
         commands::project_git::get_project_git_graph,
         commands::project_git::get_project_git_diff,
+        commands::project_images::read_project_image,
         commands::project_git::get_project_git_commit,
         commands::project_git::get_project_git_references,
         commands::project_git::run_project_git_action,

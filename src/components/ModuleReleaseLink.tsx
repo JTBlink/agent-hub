@@ -1,3 +1,4 @@
+import { githubEnabled } from "@app/platforms";
 import { ExternalLink } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
@@ -6,6 +7,7 @@ import { RELEASES_URL } from "../lib/distribution";
 
 export function ModuleReleaseLink({ className }: { className: string }) {
   const { t } = useTranslation();
+  if (!githubEnabled) return null;
   return (
     <button
       type="button"

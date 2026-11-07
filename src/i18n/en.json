@@ -1,4 +1,15 @@
 {
+  "imagePreview": {
+    "controls": "Image controls",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "resetZoom": "Reset to fit",
+    "expand": "Open larger preview",
+    "failed": "Unable to load image preview",
+    "absent": "No image in this version",
+    "sideBySide": "Side by side",
+    "stacked": "Stacked"
+  },
   "desktopRuntime": {
     "title": "Open in the desktop app",
     "description": "This is the AgentHub desktop application entry. Browser previews cannot read local skills, projects or terminal data.",

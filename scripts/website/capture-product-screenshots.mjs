@@ -26,6 +26,9 @@ const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "agent-hub-docs-"));
 const shots = [
   ["dashboard.png", "&undeployed&ungrouped"],
   ["skill-library.png", "&undeployed&ungrouped"],
+  ["project-workspace.png", ""],
+  ["git.png", ""],
+  ["tasks.png", ""],
   ["automation.png", ""],
   ["automation-hermes.png", "&automation-state=hermes"],
   ["automation-create.png", "&automation-state=editor"],
@@ -42,15 +45,28 @@ const shots = [
   ["automation-templates.png", "&automation-state=templates"],
   ["automation-menu.png", "&automation-state=menu"],
 ];
+const requested = process.argv.slice(2);
+for (const name of requested) {
+  if (!shots.some(([filename]) => filename === name))
+    throw new Error(`Unknown screenshot: ${name}`);
+}
 try {
-  for (const [name, query] of shots) {
+  for (const [name, query] of shots.filter(
+    ([filename]) => !requested.length || requested.includes(filename),
+  )) {
     const target = path.join(root, "docs/images", name);
     const view =
       name === "dashboard.png"
         ? "dashboard"
         : name === "skill-library.png"
           ? "skills"
-          : "automation";
+          : name === "project-workspace.png"
+            ? "worktree"
+            : name === "git.png"
+              ? "git"
+              : name === "tasks.png"
+                ? "tasks"
+                : "automation";
     const result = spawnSync(
       browser,
       [

@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#08101f" />
     <meta
       name="description"
-      content="AgentHub 是本地优先的 AI Agent Skills 工作台。统一管理技能库与技能组，为不同 Agent 和项目部署技能，用 Git 备份与恢复。"
+      content="AgentHub 是本地优先的 AI 开发工作台。围绕项目与工作树连接终端、Agent、Git、平台任务、Skills 和定时任务，支持 Git 备份与配套 CLI。"
     />
-    <title>AgentHub · 把好用的 Skills，带到每个 Agent</title>
+    <title>AgentHub · 让 Agent 围绕项目工作</title>
     <link rel="icon" href="./assets/app-icon.svg" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="./preview.js" defer></script>
@@ -45,12 +45,12 @@
               ><svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="m9 6 6 6-6 6" /></svg
             ></a>
-            <h1 id="hero-title">把好用的 Skills，<br />带到每个 Agent。</h1>
+            <h1 id="hero-title">让 Agent<br />围绕项目工作。</h1>
           </div>
           <div class="hero-copy">
             <p>
-              你的技能，不必散落各处。<br />在一个本地工作台里整理
-              Skills，按技能组分配到不同 Agent 和项目，让每个工作空间各就其位。
+              从一个项目开始，打开终端与 Agent。<br />在同一个工作台里查看 Git
+              和平台任务，部署 Skills，把重复工作交给定时任务。
             </p>
             <div class="actions">
               <a
@@ -70,11 +70,38 @@
               <button
                 type="button"
                 class="preview-button selected"
-                data-preview="dashboard"
-                aria-controls="preview-dashboard"
+                data-preview="workspace"
+                aria-controls="preview-workspace"
                 aria-pressed="true"
               >
-                工作台概览
+                项目工作区
+              </button>
+              <button
+                type="button"
+                class="preview-button"
+                data-preview="git"
+                aria-controls="preview-git"
+                aria-pressed="false"
+              >
+                Git
+              </button>
+              <button
+                type="button"
+                class="preview-button"
+                data-preview="tasks"
+                aria-controls="preview-tasks"
+                aria-pressed="false"
+              >
+                平台任务
+              </button>
+              <button
+                type="button"
+                class="preview-button"
+                data-preview="automation"
+                aria-controls="preview-automation"
+                aria-pressed="false"
+              >
+                自动化
               </button>
               <button
                 type="button"
@@ -85,41 +112,107 @@
               >
                 技能库
               </button>
+              <button
+                type="button"
+                class="preview-button"
+                data-preview="dashboard"
+                aria-controls="preview-dashboard"
+                aria-pressed="false"
+              >
+                工作台概览
+              </button>
             </div>
-            <span class="preview-hint"
-              ><span class="status-dot" aria-hidden="true"></span>你的
-              Skills，由你掌控</span
-            >
+            <span class="preview-hint">当前开发界面 · 示例数据</span>
           </div>
-          <figure id="preview-library" class="product-preview" hidden>
-            <a href="./assets/skill-library.png" aria-label="查看技能库完整截图"
+          <figure id="preview-workspace" class="product-preview">
+            <a
+              href="./assets/project-workspace.png"
+              aria-label="查看项目工作区完整截图"
               ><img
-                src="./assets/skill-library.png"
-                alt="AgentHub 深色技能库界面：侧栏全部技能入口与折叠工作空间，新版筛选栏、技能组、标签及 Agent 部署状态。"
-                width="1440"
-                height="900"
-                loading="lazy"
-            /></a>
-            <figcaption>
-              技能库：按技能组、标签与部署状态整理技能。截图使用示例数据。
-            </figcaption>
-          </figure>
-          <figure id="preview-dashboard" class="product-preview">
-            <a href="./assets/dashboard.png" aria-label="查看工作台概览完整截图"
-              ><img
-                src="./assets/dashboard.png"
-                alt="AgentHub 工作台概览：中文工作台入口与自动折叠侧栏，默认项目工作空间，上方技能部署概览与 SVG 连接插画，右侧近期技能列表。"
+                src="./assets/project-workspace.png"
+                alt="AgentHub 项目与工作树、文件目录、内嵌终端和 Agent 启动入口。"
                 width="1440"
                 height="900"
                 fetchpriority="high"
             /></a>
             <figcaption>
-              工作台：从项目开始，查看技能部署与近期更新。截图使用示例数据。
+              围绕当前项目切换工作树、浏览文件并启动终端与
+              Agent。截图使用合成数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-git" class="product-preview" hidden>
+            <a href="./assets/git.png" aria-label="查看Git完整截图"
+              ><img
+                src="./assets/git.png"
+                alt="AgentHub Git 变更、提交记录、分支和标签。"
+                width="1440"
+                height="900"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              在当前仓库查看变更、差异、提交记录与分支标签。截图使用合成数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-tasks" class="product-preview" hidden>
+            <a href="./assets/tasks.png" aria-label="查看平台任务完整截图"
+              ><img
+                src="./assets/tasks.png"
+                alt="AgentHub GitHub 与 GitLab 任务、多项目筛选与平台账号入口。"
+                width="1440"
+                height="900"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              按项目查看 Issue、PR / MR 和 CI，按需进入 Agent
+              操作预览。截图使用合成数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-automation" class="product-preview" hidden>
+            <a href="./assets/automation.png" aria-label="查看自动化完整截图"
+              ><img
+                src="./assets/automation.png"
+                alt="AgentHub 本机定时任务、日程、执行状态与操作入口。"
+                width="1440"
+                height="900"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              管理命令和 Agent 任务，编辑日程并查看执行记录。截图使用合成数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-library" class="product-preview" hidden>
+            <a href="./assets/skill-library.png" aria-label="查看技能库完整截图"
+              ><img
+                src="./assets/skill-library.png"
+                alt="AgentHub 技能库的技能组、来源、标签与部署状态。"
+                width="1440"
+                height="900"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              整理技能内容，按用途部署到 Agent
+              和项目工作空间。截图使用合成数据。
+            </figcaption>
+          </figure>
+          <figure id="preview-dashboard" class="product-preview" hidden>
+            <a href="./assets/dashboard.png" aria-label="查看工作台概览完整截图"
+              ><img
+                src="./assets/dashboard.png"
+                alt="AgentHub 工作台的项目、Agent 与近期技能。"
+                width="1440"
+                height="900"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              查看工作空间概览与近期更新。截图使用合成数据。
             </figcaption>
           </figure>
           <noscript
             ><p class="no-script">
-              还可以<a href="./assets/skill-library.png">查看技能库截图</a>。
+              更多界面：<a href="./assets/automation.png">自动化</a>、<a
+                href="./assets/skill-library.png"
+                >技能库</a
+              >。
             </p></noscript
           >
         </div>
@@ -176,64 +269,114 @@
       >
         <div class="wrap">
           <div class="section-heading">
-            <h2 id="features-title">技能多了，<br />管理依然清楚。</h2>
+            <h2 id="features-title">围绕项目，<br />连接日常开发。</h2>
             <p>
-              从一份 SKILL.md 到多个项目，<br />把内容、用途和部署关系放在一起看。
+              项目、Agent、Skills 与自动化，<br />在同一处衔接，按需要使用。
             </p>
           </div>
           <div class="feature-grid">
             <article>
               <div class="feature-icon blue">
                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" />
+                  <path d="M3 7h6l2 2h10v11H3V7ZM3 7V4h6l2 3" />
                 </svg>
               </div>
-              <h3>一个技能库，少一些重复</h3>
+              <h3>项目与工作树</h3>
               <p>
-                从本地目录或 Git 来源导入
-                Skills，用标签和技能组整理内容。查看文档、检查更新，找到下一次工作需要的能力。
+                从当前项目打开文件、Markdown、终端或浏览预览。在已有工作树之间切换，把操作留在明确的目录中。
               </p>
               <ul class="feature-details">
-                <li>内容与来源一起管理</li>
-                <li>标签筛选与技能组归类</li>
+                <li>文件浏览与文本编辑</li>
+                <li>多标签终端与分屏</li>
               </ul>
             </article>
             <article>
               <div class="feature-icon violet">
                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M3 7h6l2 2h10v11H3V7ZM3 7V4h6l2 3M8 13h8m-8 3h5" />
+                  <path d="M4 4h16v16H4V4Zm4 5 3 3-3 3m5 0h4" />
                 </svg>
               </div>
-              <h3>每个工作空间，各取所需</h3>
+              <h3>在项目里启动 Agent</h3>
               <p>
-                分别管理 Agent
-                的全局技能和项目技能。按用途批量添加技能组，查看部署与同步状态，让不同项目保持合适的配置。
+                直接启动已安装的 Codex、Claude Code、OpenCode 或
+                Hermes，也可通过 Herdr 连接和管理会话。
               </p>
               <ul class="feature-details">
-                <li>全局与项目部署</li>
-                <li>技能组批量添加或移除</li>
+                <li>当前目录启动与参数配置</li>
+                <li>共享会话状态与归属检查</li>
               </ul>
             </article>
             <article>
               <div class="feature-icon teal">
                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <circle cx="6" cy="5" r="2" />
-                  <circle cx="6" cy="19" r="2" />
-                  <circle cx="18" cy="7" r="2" />
-                  <path d="M6 7v10m12-8v2c0 4-12 0-12 6" />
+                  <path
+                    d="M6 5v14m0-9c0 6 12-2 12 4M4 3h4v4H4zm0 14h4v4H4zm12-5h4v4h-4z"
+                  />
                 </svg>
               </div>
-              <h3>本地保存，有备可回</h3>
+              <h3>Git 与平台任务</h3>
               <p>
-                技能与应用状态保存在本机。配置自己的 Git
-                远端备份技能库，按需恢复，并在内容发生冲突时检查差异。
+                查看变更、图片对比、提交图、分支和标签；连接 GitHub /
+                GitLab，按多个项目查看工作项与代码审查。
               </p>
               <ul class="feature-details">
-                <li>Git 备份与恢复</li>
-                <li>桌面与 CLI 共用核心能力</li>
+                <li>平台账号与私有站点</li>
+                <li>评审和修复的 Agent 启动预览</li>
+              </ul>
+            </article>
+            <article>
+              <div class="feature-icon blue">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" />
+                </svg>
+              </div>
+              <h3>可切换的技能组合</h3>
+              <p>
+                从本地或 Git 导入
+                Skills，用标签与技能组整理。区分安装、上传和详情，按工作空间部署需要的能力。
+              </p>
+              <ul class="feature-details">
+                <li>全局与项目技能部署</li>
+                <li>版本方向与覆盖确认</li>
+              </ul>
+            </article>
+            <article>
+              <div class="feature-icon violet">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M4 5h16v16H4V5Zm3-3v6m10-6v6M4 10h16m-8 3v4l3 2" />
+                </svg>
+              </div>
+              <h3>可维护的定时任务</h3>
+              <p>
+                从模板创建命令或 Agent
+                任务，编辑脚本、日程和多组提示词。查看源码与执行记录，复制为独立任务继续调整。
+              </p>
+              <ul class="feature-details">
+                <li>系统原生调度与 Hermes</li>
+                <li>任务包导入、导出和恢复</li>
+              </ul>
+            </article>
+            <article>
+              <div class="feature-icon teal">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />
+                </svg>
+              </div>
+              <h3>本地保存，按需备份</h3>
+              <p>
+                技能、任务定义与受支持的用户配置可备份到自己的 Git
+                远端。凭据、运行环境与任务状态留在本机。
+              </p>
+              <ul class="feature-details">
+                <li>Git 备份与冲突处理</li>
+                <li>配套 CLI 与桌面共用核心</li>
               </ul>
             </article>
           </div>
+          <p class="capability-note">
+            本页展示当前开发版本。集成功能随产品配置而异；AI Native
+            场景编排仍处于独立原型阶段。
+          </p>
         </div>
       </section>
       <section
@@ -242,7 +385,7 @@
         aria-labelledby="workflow-title"
       >
         <div class="section-heading">
-          <h2 id="workflow-title">整理一次，<br />用在需要的地方。</h2>
+          <h2 id="workflow-title">技能整理一次，<br />按项目选择使用。</h2>
           <p>导入是收藏能力，部署是选择用途。<br />技能组把两者连接起来。</p>
         </div>
         <div
@@ -300,7 +443,7 @@
         <div class="wrap download-grid">
           <div class="download-intro">
             <img src="./assets/app-icon.svg" alt="" width="56" height="56" />
-            <h2 id="download-title">给你的 Skills，<br />一个工作台。</h2>
+            <h2 id="download-title">给你的项目，<br />一个 Agent 工作台。</h2>
             <p>选择适合你的平台，在发布页下载对应安装包。</p>
             <a
               class="button primary"
@@ -319,10 +462,10 @@
               <li><strong>Linux</strong><span>.AppImage / .deb</span></li>
             </ul>
             <div class="quick-start">
-              <h3>从现有技能开始</h3>
+              <h3>从一个项目开始</h3>
               <p>
-                安装后打开 AgentHub，扫描并导入已有 Skills，再选择需要部署的
-                Agent 或项目。
+                添加项目并启动已安装的 Agent；按需导入
+                Skills、连接平台任务，再配置适合自己的定时任务。
               </p>
               <a href="https://github.com/JTBlink/agent-hub#开发与运行"
                 >需要从源码运行？查看开发指南</a
@@ -338,7 +481,7 @@
           >AgentHub</span
         ></a
       >
-      <p>本地优先的 AI Agent Skills 工作台</p>
+      <p>本地优先的 AI 开发工作台</p>
       <nav aria-label="页脚导航">
         <a href="docs/zh/">帮助</a>
         <a href="https://github.com/JTBlink/agent-hub">源码</a

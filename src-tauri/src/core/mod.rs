@@ -101,3 +101,5 @@ pub mod preview;
 pub mod user_config;
 
 pub mod system_permissions;
+
+pub mod project_images;

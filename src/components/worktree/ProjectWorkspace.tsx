@@ -432,6 +432,7 @@ export function ProjectWorkspace({
                   file?.shown && (
                     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                       <WorktreeFilePreview
+                        active={visible}
                         key={`${scope}:${file.path}`}
                         projectId={project.id}
                         worktreePath={path}

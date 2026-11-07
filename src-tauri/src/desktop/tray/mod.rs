@@ -34,14 +34,12 @@ const TRAY_OPEN_FOLDER_ID: &str = "tray-open-folder";
 const TRAY_CHECK_UPDATES_ID: &str = "tray-check-updates";
 const TRAY_OPEN_UPDATES_EVENT: &str = "tray-open-updates";
 
+const CUSTOM_TRAY_ICON_BYTES: &[u8] =
+    include_bytes!(concat!(env!("AGENT_HUB_ICON_DIR"), "/32x32.png"));
+// macOS menu bar uses a monochrome template from the selected product.
 #[cfg(target_os = "macos")]
-const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../../../icons/32x32.png");
-#[cfg(not(target_os = "macos"))]
-const CUSTOM_TRAY_ICON_BYTES: &[u8] = include_bytes!("../../../icons/32x32.png");
-// Menu-bar icons must be monochrome and transparent on macOS. Keep this
-// separate from the colorful application icon used by the Dock and windows.
-#[cfg(target_os = "macos")]
-const TRAY_TEMPLATE_ICON_BYTES: &[u8] = include_bytes!("../../../icons/tray-template.png");
+const TRAY_TEMPLATE_ICON_BYTES: &[u8] =
+    include_bytes!(concat!(env!("AGENT_HUB_ICON_DIR"), "/tray-template.png"));
 
 fn parse_bool_setting(value: Option<String>, default: bool) -> bool {
     match value.as_deref().map(str::trim).map(str::to_ascii_lowercase) {

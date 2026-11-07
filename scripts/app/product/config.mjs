@@ -72,6 +72,16 @@ export function resolveProduct(input, cargoFeatures) {
     !/^[a-z][a-z0-9-]*$/.test(input.id ?? "")
   )
     throw new Error("Invalid product ID");
+  if (
+    input.productName !== undefined &&
+    (typeof input.productName !== "string" || !input.productName.trim())
+  )
+    throw new Error("Invalid product name");
+  if (
+    input.iconDir !== undefined &&
+    (typeof input.iconDir !== "string" || !input.iconDir.trim())
+  )
+    throw new Error("Invalid product icon directory");
   const selected = resolveFeatures(input.features, cargoFeatures);
   const sidebar = input.sidebar;
   if (
@@ -103,6 +113,10 @@ export function resolveProduct(input, cargoFeatures) {
     throw new Error("Default sidebar panel must be an enabled panel");
   return {
     id: input.id,
+    ...(input.productName === undefined
+      ? {}
+      : { productName: input.productName.trim() }),
+    ...(input.iconDir === undefined ? {} : { iconDir: input.iconDir }),
     features: [...selected].sort(),
     devPort:
       input.devPort ??
@@ -249,6 +263,7 @@ export function loadProduct(
     hash,
     baseCommit,
     configPath,
+    iconDir: resolve(ROOT, config.iconDir ?? "src-tauri/icons"),
     generatedDir,
     frontendDist,
     targetDir,
@@ -256,6 +271,7 @@ export function loadProduct(
   };
   product.environment = {
     ...env,
+    AGENT_HUB_ICON_DIR: product.iconDir,
     AGENT_HUB_PRODUCT: selection,
     AGENT_HUB_PRODUCT_ID: config.id,
     AGENT_HUB_PRODUCT_CONFIG: configPath,
@@ -377,16 +393,18 @@ export function prepareProduct(product) {
           : {
               identifier: `com.jtstudio.agenthub.${product.id}`,
               productName:
-                product.id === "personal"
+                product.productName ??
+                (product.id === "personal"
                   ? "AgentHub Personal"
-                  : `AgentHub ${product.id}`,
+                  : `AgentHub ${product.id}`),
               app: {
                 windows: [
                   {
                     title:
-                      product.id === "personal"
+                      product.productName ??
+                      (product.id === "personal"
                         ? "AgentHub Personal"
-                        : `AgentHub ${product.id}`,
+                        : `AgentHub ${product.id}`),
                     maximized: true,
                     minWidth: 1100,
                     minHeight: 640,
@@ -399,6 +417,13 @@ export function prepareProduct(product) {
               },
             }),
         bundle: {
+          icon: [
+            "32x32.png",
+            "128x128.png",
+            "128x128@2x.png",
+            "icon.icns",
+            "icon.ico",
+          ].map((file) => resolve(product.iconDir, file)),
           externalBin: [resolve(product.binariesDir, "agent-hub-cli")],
         },
       },

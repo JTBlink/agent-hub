@@ -1,3 +1,4 @@
+import { isPreviewableImage } from "../../features/image-preview";
 import { useContext, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { GitEditorTabsContext } from "../../hooks/gitEditorVisibility";
@@ -31,7 +32,7 @@ function CommitEditor({
     file.view === "working" ? revision : 0,
   ]);
   useEffect(() => {
-    if (file.view === "file") return;
+    if (file.view === "file" || isPreviewableImage(file.path)) return;
     let cancelled = false;
     void getProjectGitCommitDiff(
       target.projectId,

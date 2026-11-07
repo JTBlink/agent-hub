@@ -1,5 +1,16 @@
 fn main() {
     product_identity();
+    println!("cargo:rerun-if-env-changed=AGENT_HUB_ICON_DIR");
+    let icons = std::env::var_os("AGENT_HUB_ICON_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("icons"));
+    let icons = icons
+        .canonicalize()
+        .expect("product icon directory is required");
+    for file in ["32x32.png", "tray-template.png"] {
+        println!("cargo:rerun-if-changed={}", icons.join(file).display());
+    }
+    println!("cargo:rustc-env=AGENT_HUB_ICON_DIR={}", icons.display());
     // Use a custom Windows application manifest that opts the process into long
     // path support (#298/#299). app_manifest() replaces Tauri's default, so the
     // manifest file re-declares the Common-Controls v6 dependency Tauri ships.

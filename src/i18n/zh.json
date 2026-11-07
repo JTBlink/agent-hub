@@ -1,4 +1,15 @@
 {
+  "imagePreview": {
+    "controls": "图片预览操作",
+    "zoomOut": "缩小",
+    "zoomIn": "放大",
+    "resetZoom": "恢复适应窗口",
+    "expand": "打开大图预览",
+    "failed": "无法加载图片预览",
+    "absent": "此版本中没有图片",
+    "sideBySide": "左右对比",
+    "stacked": "上下对比"
+  },
   "desktopRuntime": {
     "title": "请在桌面应用中打开",
     "description": "当前打开的是 AgentHub 的桌面应用入口。浏览器预览无法读取本机技能库、项目或终端数据。",

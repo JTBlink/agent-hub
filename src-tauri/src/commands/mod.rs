@@ -54,3 +54,5 @@ pub fn get_build_info() -> crate::product::BuildInfo {
 }
 
 pub mod platform_accounts;
+
+pub mod project_images;

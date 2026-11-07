@@ -1,3 +1,4 @@
+import { isPreviewableImage } from "../features/image-preview";
 import { toast } from "sonner";
 import { useActiveWorkspace } from "../hooks/useActiveWorkspace";
 import { createPortal } from "react-dom";
@@ -149,7 +150,13 @@ export function Git() {
     };
   }, [refresh]);
   useEffect(() => {
-    if (!activeId || !selection || fileView) return;
+    if (
+      !activeId ||
+      !selection ||
+      fileView ||
+      isPreviewableImage(selection.path)
+    )
+      return;
     let cancelled = false;
     const request = getProjectGitDiff(
       activeId,

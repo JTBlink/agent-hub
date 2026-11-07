@@ -1,8 +1,12 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   resolveProduct,
   productArguments,
   loadProduct,
+  prepareProduct,
   featureAliases,
   featureCatalog,
 } from "./config.mjs";
@@ -39,6 +43,8 @@ describe("product build selection", () => {
   });
   it.each([
     { ...base, features: ["unknown"] },
+    { ...base, productName: " " },
+    { ...base, productName: 42 },
     {
       ...base,
       sidebar: { ...base.sidebar, primary: ["projects", "projects"] },
@@ -87,4 +93,38 @@ it("selects GitHub setup only when both GitHub and cloud sync are compiled", () 
       "@app/github-backup"
     ],
   ).toContain("features/github/cloudIntegration.ts");
+});
+
+it("builds Agent Flow with its own application identity and keeps standard outputs isolated", () => {
+  const standard = loadProduct("standard");
+  const product = loadProduct("agent-flow");
+  expect(product.targetDir).not.toBe(standard.targetDir);
+  expect(product.frontendDist).not.toBe(standard.frontendDist);
+  expect(product.devPort).not.toBe(standard.devPort);
+  const directory = mkdtempSync(join(tmpdir(), "agenthub-product-"));
+  try {
+    prepareProduct({
+      ...product,
+      generatedDir: directory,
+      binariesDir: join(directory, "binaries"),
+    });
+    const config = JSON.parse(
+      readFileSync(join(directory, "tauri.product.conf.json"), "utf8"),
+    );
+    expect(config.identifier).toBe("com.jtstudio.agenthub.agent-flow");
+    expect(config.productName).toBe("Agent Flow");
+    expect(
+      config.bundle.icon.every((path) =>
+        path.includes("products/agent-flow/icons/"),
+      ),
+    ).toBe(true);
+    expect(product.features).toContain("gitlab");
+    expect(product.features).not.toContain("github");
+    expect(config.app.windows[0].title).toBe("Agent Flow");
+    expect(product.features).toEqual(
+      [...featureCatalog.products["agent-flow"]].sort(),
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

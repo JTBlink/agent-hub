@@ -40,7 +40,7 @@ const labels = {
 
 export default defineConfig({
   title: "AgentHub",
-  description: "AgentHub 操作指南、技能推荐与故障排查",
+  description: "AgentHub 项目工作台、Agent、Skills、定时任务与故障排查指南",
   base: new URL(catalog.siteUrl).pathname,
   srcDir: ".generated",
   outDir: "../_site/docs",

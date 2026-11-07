@@ -24,7 +24,14 @@ copyFileSync(
   resolve(root, "src-tauri/icons/app-icon.svg"),
   resolve(assetsDirectory, "app-icon.svg"),
 );
-for (const file of ["skill-library.png", "dashboard.png"]) {
+for (const file of [
+  "skill-library.png",
+  "dashboard.png",
+  "project-workspace.png",
+  "git.png",
+  "tasks.png",
+  "automation.png",
+]) {
   copyFileSync(
     resolve(root, "docs/images", file),
     resolve(assetsDirectory, file),

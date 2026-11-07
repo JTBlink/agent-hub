@@ -82,18 +82,35 @@ const previewAgentTemplates: AutomationTemplate[] = [
     },
     name: manifest.title.zh,
     provider: "system",
-    content: "sh './run.sh'",
+    content: "sh './scripts/run.sh'",
     workdir: null,
     script_dir: null,
     schedule: { kind: "hourly", minute: manifest.schedule.minute },
     enabled: true,
     files: [
       { path: "scripts/agent.py", content: herdrScript },
-      { path: "prompt.md", content: prompt },
-      { path: "herdr.json", content: config },
+      { path: "prompts/prompt.md", content: prompt },
+      {
+        path: "config/prompt-variants.json",
+        content: JSON.stringify({
+          version: 1,
+          active_id: "inspect",
+          variants: [
+            { id: "inspect", name: "仅检查" },
+            {
+              id: "repair",
+              name: "检查后修复",
+              content:
+                "先检查本轮指定项目，确认问题并记录证据后，按项目规范修复并验证。",
+            },
+          ],
+        }),
+      },
+      { path: "config/herdr.json", content: config },
       {
         path: "scripts/run.sh",
-        content: `python3 "$AGENT_HUB_SCRIPT_DIR/${manifest.id}/agent.py"`,
+        content:
+          'exec "${AGENT_HUB_PYTHON:-python3}" "$AGENT_HUB_TASK_DIR/scripts/agent.py"',
       },
     ],
   },
@@ -978,6 +995,53 @@ if (discoveryState) {
         ),
       );
       menu.click();
+    }
+  })();
+}
+
+// Stable documentation composition using only fixture-backed product actions.
+if (previewParams.has("capture")) {
+  void (async () => {
+    const waitFor = async (find: () => HTMLElement | null) => {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const node = find();
+        if (node) return node;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+      throw new Error("Documentation capture target did not become ready");
+    };
+    const view = previewParams.get("view");
+    if (view === "skills") {
+      const all = await waitFor(
+        () =>
+          [
+            ...document.querySelectorAll<HTMLAnchorElement>(
+              'a[href="/my-skills"]',
+            ),
+          ].find((node) => node.textContent?.trim() === "全部技能") ?? null,
+      );
+      all.click();
+    }
+    if (view === "worktree") {
+      const readme = await waitFor(
+        () =>
+          document.querySelector<HTMLElement>(
+            'button[role="treeitem"][aria-label="README.md"]',
+          ) ??
+          [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+            (node) => /^README\.md/.test(node.textContent?.trim() ?? ""),
+          ) ??
+          null,
+      );
+      readme.click();
+    }
+    if (view === "git") {
+      const graph = await waitFor(() =>
+        document.querySelector<HTMLButtonElement>(
+          'button[aria-label="打开 Git Graph"]:not(:disabled)',
+        ),
+      );
+      graph.click();
     }
   })();
 }

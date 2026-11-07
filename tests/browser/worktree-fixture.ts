@@ -5,7 +5,43 @@ const createdWorktrees = new Map<unknown, ProjectWorktree[]>();
 const documents = new Map<string, string>();
 function source(path: unknown) {
   if (path === "README.md")
-    return "# Demo workspace\n\nEach worktree has its own terminal sessions.\n\n```ts\nconst ready = true;\n```";
+    return [
+      "# Demo workspace",
+      "",
+      "Each worktree has its own terminal sessions.",
+      "",
+      "## Project layout",
+      "",
+      "- src/ — application components and styles",
+      "- docs/ — architecture and team notes",
+      "- tests/ — behavior checks",
+      "",
+      "## Start working",
+      "",
+      "1. Choose the main checkout or an existing worktree.",
+      "2. Open a terminal in the selected directory.",
+      "3. Start the installed Agent for the current task.",
+      "",
+      "```sh",
+      "npm install",
+      "npm run dev",
+      "npm test",
+      "```",
+      "",
+      "## Working agreement",
+      "",
+      "Keep changes focused and inspect the diff before committing.",
+      "Run the relevant checks and record any remaining limitations.",
+      "",
+      "```ts",
+      "const ready = true;",
+      "```",
+      "",
+      "## Shared skills",
+      "",
+      "Project skills live in .agents/skills/.",
+      "Select a skill group for the current workspace when needed.",
+    ].join("\n");
   if (typeof path === "string" && path.endsWith(".rs"))
     return 'pub fn parse(input: &str) -> Result<&str, &\'static str> {\n    if input.is_empty() { return Err("empty input"); }\n    Ok(input.trim())\n}\n';
   if (typeof path === "string" && path.endsWith(".css"))

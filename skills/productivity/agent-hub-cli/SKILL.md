@@ -1,8 +1,8 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.15.0"
-description: Manage the user's shared agent-skill library, local automation tasks, and desktop preview browser via agent-hub-cli — install, rename, update, remove, export, deploy or undeploy skills per agent, manage skill groups, organize tags, search, clean up, and adopt existing skills. Use this whenever the user wants Claude Code, Codex, Cursor, or another agent to gain or lose a skill, wants to rename or maintain a managed skill, wants to organize the central library, or asks what is installed or deployed. Prefer this over direct agent-folder installs because agent-hub preserves source metadata, skill group membership, updates, and cross-agent deployment state.
+  version: "1.16.0"
+description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, and operate the desktop preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
 ## Before doing anything
@@ -106,110 +106,19 @@ Internally, skill groups are still stored as scenarios for backward-compatible G
 
 ## Automation tasks and manual triggers
 
-Use this workflow when the user wants an Agent to create, inspect, schedule, or
-manually trigger a local automation. First check `automations --help`; an older
-CLI may lack this feature. Update the matching app/CLI rather than editing
-scheduler files or Hermes jobs.json as a fallback.
+Use for creating scheduled tasks, changing schedules or prompts, editing task
+scripts, enabling/pausing recurring execution, and inspecting runs or logs.
+**Before creating or changing an automation, read
+[task creation and operating rules](references/automations.md).** It covers actual
+CLI drafts, schedules, semantic versions, prompt variants, persistent deduplication,
+execution locks, short Agent contexts, retry limits, timeout and manual recovery.
+Use the same reference when a task repeats work or has an uncertain Agent result.
 
-```bash
-"$SM" --json automations templates
-"$SM" --json automations list
-"$SM" --json automations show '<task-id>'
-"$SM" --json automations copy '<task-id>' --name 'Review copy'
-"$SM" --json automations run '<task-id>'
-"$SM" --json automations logs '<task-id>'
-```
-
-Marketplace tasks are read-only: view them with `templates` or an import preview,
-and install an independent local instance with `create --template <template-id>`
-or `import --path <package>`. Never edit, delete, pause, or run the marketplace source.
-Editing scripts, changing schedules, pausing/resuming, running, and removing
-operate on the local instance ID returned by creation or `list`. Local
-changes and deletion do not update or delete the marketplace original.
-
-`list` defaults to tasks created by AgentHub, matching the desktop view. Use
-`list --origin all` only when the user asks for tasks from other sources, or
-`--origin external` for external tasks. Add `--show-system` to an explicit
-`--origin all` query when operating-system built-in tasks are also requested.
-
-Resolve the exact ID from `list`, then inspect the command/prompt and working
-directory with `show` before running the user-selected task. Use `can_run` and
-`can_edit`; existing external system jobs are read-only. Running returns
-`state=requested`, which is not execution success. Read a fresh `show` result
-and distinguish its latest run from an older result; do not repeatedly trigger
-a task because status has not updated yet. Paused or terminal Hermes tasks need
-an explicit resume/repair before running.
-
-Use `create --template <template-id>` for the platform-correct built-in starters,
-or `create --file task.json` for a definition. `edit <id> --file task.json
---revision <revision>` protects managed tasks from stale edits. New task packages are provisioned under `~/.agent-hub/automations/<task-name>/`;
-occupied names receive numeric suffixes. Renaming preserves the allocated path.
-The project `workdir` is a separate local binding, defaulting to execution in the
-package. Existing custom and UUID directories remain supported as legacy tasks.
-New packages are discovered independently of the legacy `tasks.json`. Task
-content and runtime requirements join Git backup; local registrations, bindings,
-environments and logs stay local.
-
-To configure a starter before registration, export its `draft` from `templates`
-to `task.json`, set the existing absolute `workdir` and desired `schedule`, then
-use `create --file task.json`. For an existing task, read `show`, edit its
-`definition` as `task.json`, and pass the returned `revision` to `edit`. Never
-pass the entire `show` response as a draft. `pause`, `resume`, and `remove` use
-the same exact task ID; use `runs` and `logs --run` to inspect an execution.
-
-`copy <id> --name <name>` creates an independent paused task containing all
-declared scripts, prompts, configuration, schedule and runtime requirements.
-Use `show` and `edit --file ... --revision ...` to modify any part of the copy.
-The original task is untouched; runtime environments, history and business state
-are not copied. External project bindings are retained; bindings into the source
-package use the new package by default. The GUI Copy action opens the full editor
-before creating the independent task.
-
-New system tasks execute `sh './scripts/run.sh'` (`& './scripts/run.ps1'` on
-Windows). Templates use `TASK.md` as their instruction entrypoint, `config/task.json`
-for the manifest, `config/` for JSON settings, `scripts/` for executable files,
-and optional `references/` for details. `prompts/prompt.md` is the fixed Agent prompt entrypoint. The embedded catalog renders business scripts and thin adapters
-into each independent package. Agent lifecycle and state storage are maintained
-once in AgentHub core, published by the matching CLI as content-versioned modules;
-new tasks require that CLI, not a running desktop. Edit declared files or use the
-editor; file changes produce an opaque revision, so always re-read before an
-update. Private state and runs live in `.local/`; Python dependencies have
-private environments. Legacy task layouts remain supported until explicit
-`migrate`.
-
-Run `automations audit --path <repository-or-task-directory>` to inspect source
-packages, or `automations audit` to inspect all installed non-system sources.
-Audit is read-only and reports copied runtimes or storage implementations without
-executing tasks or overwriting custom business logic. A non-zero result requires
-review; native Hermes and vendor services retain their original execution model.
-
-Managed Agent execution uses `agents launch execute` with an explicit JSON
-request on stdin: absolute `config_file`, `prompt_file`, `state_directory`,
-`identity_directory`, `workdir`, plus optional `prompt_context`. The task adapter
-supplies its scripts directory as the stable identity, preserving old checkpoints.
-Use `agents launch status --state-directory <path>` for read-only inspection.
-`agents launch runtime state-store` returns the shared Python storage module path.
-Never clear state or repeat an uncertain execution to compensate for an old CLI;
-update the matching app/CLI instead. Legacy full scripts change only on explicit
-task updates, which retain IDs, schedules, local bindings and business records.
-
-Creation, import and explicit restore prepare task dependencies and scheduling
-in the same operation. Use `pause` / `resume` to control the schedule; there are
-no separate `install` / `uninstall` commands. `remove` revokes scheduling and
-owned runtime resources, preserving files by default; `--delete-local-data` also
-removes an owned package after reference checks. Projects, external tools and
-shared resources remain protected. Import and restore create paused tasks and
-never execute the body or overwrite another instance. Old uninstalled tasks
-remain paused and prepare automatically when saved or run.
-
-```bash
-"$SM" --json automations backups
-"$SM" --json automations restore '<backup-id>'
-```
-
-`restore` previews a paused copy. `--apply` creates a local paused task and prepares its runtime. Git sync itself must not activate tasks or overwrite
-an existing local schedule. GUI users can inspect the same definitions via
-New automation → Use template → Git backups.
+Resolve the installed CLI, inspect `automations --help`, and use native
+`create --file` / `create --template` or revision-protected `edit`. Keep marketplace
+templates read-only. Read back the real instance ID, schedule, version and enabled
+state; creation or `state=requested` does not prove a successful execution.
+Preserve existing schedules, activation and state unless the user requests changes.
 
 ## Install
 
@@ -561,39 +470,8 @@ without `--run`, logs reads the latest output. System tasks retain the latest
 particular execution succeeded. Records and logs are local only and excluded
 from Git sync/backups. JSON output is bounded to the last 256 KiB.
 
-The `disk-cleanup` starter (daily 03:00) is a multi-file Python bundle. Its
-`cleanup-config.json` is the configuration authority; distribute and preserve
-all declared modules/config/readme in `files`, never only the entry point.
-Default cleanup retains 7 days of downloads, Agent caches/logs and browser
-caches; workspace logs retain 30 days. Browser caches require exited Chrome/Edge.
-Native uv offline pruning and Homebrew cleanup (no auto-update/force) are enabled.
-Project paths must be explicitly configured: `agent_hub_projects` reuses the
-trusted project's existing helper to keep newest builds per target/profile/feature;
-`rust_targets` only clears expired incremental cache, preserving deps/binaries.
-Do not scan all projects/home. Active compilers cause build cleanup to skip.
-
-Run `python3 ./scripts/disk-cleanup.py --dry-run` first. Preview never deletes
-or notifies, and skips uv because uv has no side-effect-free preview.
-CLI supports `--config`, `--workspace-only`, `--no-tools`, `--agent-cache-days`,
-`--download-cache-days`, `--rust-target`, `--agent-hub-project`, `--notify` and
-`--skip-notify`; browser/uv/brew/updater have corresponding `--skip-*` switches.
-Actual runs default to requesting desktop notifications; failures to notify do
-not fail cleanup. Logs and per-item summaries are Chinese, external tools may
-print English. Distinguish file deletion counts from measured free-space change.
-
-Preserve conversations, databases, settings, credentials, skills, Downloads,
-installed runtimes and pinned Playwright versions. macOS updater cleanup requires
-matching bundle IDs, an installed version at least as new as the cached package,
-and expiration. Preserve pending/new/unknown updates. Paths stay inside home;
-links/junctions and lock files are retained. Ordinary caches retain hardlinks;
-explicit Rust incremental roots may unlink expired hardlinks without removing
-other locations, and measured reclaimed space remains separate from file sizes. Custom Agent homes are
-supported. Upgrade existing tasks by adding the entire bundle to their `files`,
-retain customized configuration, then edit with the current revision.
-
-### Independent automation packages
-
-New automations own a task package with root `TASK.md`, prompts in `prompts/prompt.md`, JSON in `config/` (including `task.json` and optional `herdr.json`), executable helpers in `scripts/`, optional `references/`, and private `.local/` state. Legacy root manifests and settings remain supported without implicit migration; never provide both manifest paths. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new paused instance and prepares its runtime. `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Use pause/resume to control scheduling; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
+For the disk-cleanup starter's retention, preview and safety options, read the
+[disk-cleanup compatibility guidance](references/automations.md#disk-cleanup-starter).
 
 ## Desktop preview browser
 

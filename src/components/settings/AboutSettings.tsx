@@ -64,21 +64,22 @@ export function AboutSettings({
           >
             <BookOpen className="w-3 h-3" /> {t("settings.help")}
           </button>
-          <button
-            type="button"
-            hidden={!githubEnabled}
-            onClick={handleReportIssue}
-            disabled={reportingIssue}
-            title={t("settings.reportIssueHint")}
-            className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
-          >
-            {reportingIssue ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Bug className="w-3 h-3" />
-            )}
-            {t("settings.reportIssue")}
-          </button>
+          {githubEnabled && (
+            <button
+              type="button"
+              onClick={handleReportIssue}
+              disabled={reportingIssue}
+              title={t("settings.reportIssueHint")}
+              className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
+            >
+              {reportingIssue ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Bug className="w-3 h-3" />
+              )}
+              {t("settings.reportIssue")}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleExportLogs}
@@ -93,24 +94,27 @@ export function AboutSettings({
             )}
             {t("settings.exportLogs")}
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              openUrl(WEBSITE_URL).catch(() => {});
-            }}
-            className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
-          >
-            <Globe className="w-3 h-3" /> {t("settings.website")}
-          </button>
-          <button
-            type="button"
-            hidden={!githubEnabled}
-            onClick={handleOpenGithub}
-            disabled={openingGithub}
-            className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
-          >
-            <Github className="w-3 h-3" /> GitHub
-          </button>
+          {githubEnabled && (
+            <button
+              type="button"
+              onClick={() => {
+                openUrl(WEBSITE_URL).catch(() => {});
+              }}
+              className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
+            >
+              <Globe className="w-3 h-3" /> {t("settings.website")}
+            </button>
+          )}
+          {githubEnabled && (
+            <button
+              type="button"
+              onClick={handleOpenGithub}
+              disabled={openingGithub}
+              className={`${actionButtonClass} bg-surface-hover hover:bg-surface-active text-tertiary border-border`}
+            >
+              <Github className="w-3 h-3" /> GitHub
+            </button>
+          )}
         </div>
       </div>
     </section>
