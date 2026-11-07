@@ -11,14 +11,12 @@ interface Props {
   projects: Project[];
   bindings: TaskBinding[];
   onChanged: () => Promise<void>;
-  onRefreshIdentity: () => Promise<void>;
   onClose: () => void;
 }
 export function TaskConnections({
   projects,
   bindings,
   onChanged,
-  onRefreshIdentity,
   onClose,
 }: Props) {
   const { t } = useTranslation();
@@ -54,18 +52,6 @@ export function TaskConnections({
       cancelled = true;
     };
   }, [projectId]);
-  const refreshIdentity = async () => {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      await onRefreshIdentity();
-    } catch (reason) {
-      setError(getErrorMessage(reason, t("common.error")));
-    } finally {
-      setBusy(false);
-    }
-  };
   const save = async () => {
     if (busy) return;
     setBusy(true);
@@ -128,14 +114,6 @@ export function TaskConnections({
         </button>
       </div>
       <p className="text-xs text-muted">{t("tasks.connectionHint")}</p>
-      <button
-        type="button"
-        className="app-button-secondary text-xs"
-        disabled={busy}
-        onClick={() => void refreshIdentity()}
-      >
-        {t("tasks.refreshIdentity")}
-      </button>
       {bindings.map((binding) => (
         <div
           key={binding.id}
@@ -168,7 +146,7 @@ export function TaskConnections({
             disabled={busy}
             onClick={() => void remove(binding.id)}
           >
-            {t("common.remove")}
+            {t("tasks.removeConnection")}
           </button>
         </div>
       ))}

@@ -31,6 +31,10 @@ const clickText = (selector, text) =>
   evaluate(
     `(()=>{const n=[...document.querySelectorAll(${JSON.stringify(selector)})].find(n=>n.textContent.trim()===${JSON.stringify(text)});if(!n)throw new Error('Missing '+${JSON.stringify(text)});n.click();return true})()`,
   );
+const chooseProvider = async (label) => {
+  await click('[role="combobox"][aria-label="平台"]');
+  await clickText('[role="option"]', label);
+};
 let savedTaskView;
 const savedStarts = new Map();
 try {
@@ -54,7 +58,144 @@ try {
     "http://127.0.0.1:1420/tests/browser/product-preview.html?view=tasks",
   );
   await until(
-    `document.querySelector('[role="radio"][aria-label="GitHub"]')?.getAttribute('aria-checked')==='true'&&document.querySelectorAll('tbody tr').length===3`,
+    `document.querySelector('[role="combobox"][aria-label="平台"]')?.textContent.includes('GitHub')&&document.querySelectorAll('tbody tr').length===3`,
+  );
+  await click('[role="combobox"][aria-label="平台"]');
+  assert.deepEqual(
+    await evaluate(
+      `Array.from(document.querySelectorAll('[role="option"]')).map(n=>n.textContent.trim())`,
+    ),
+    ["全部平台", "GitHub", "GitLab"],
+  );
+  await clickText('[role="option"]', "GitHub");
+  await until(
+    `document.querySelector('button[aria-label="登录账号"]')?.innerText.includes('@demo')`,
+  );
+  assert.ok(
+    await evaluate(
+      `document.querySelector('button[aria-label="登录账号"]').title.includes('GitHub · github.com · @demo')`,
+    ),
+  );
+  await evaluate(
+    `document.querySelector('button[aria-label="登录账号"]').focus();true`,
+  );
+  await click('button[aria-label="登录账号"]');
+  await until(
+    `document.querySelector('dialog[open]')?.innerText.includes('@demo')`,
+  );
+  assert.equal(
+    await evaluate(
+      `!!document.querySelector('section[aria-label="仓库连接"]')`,
+    ),
+    false,
+  );
+  await clickText("dialog button", "切换账号");
+  await until(
+    `document.querySelector('dialog')?.innerText.includes('@reviewer')`,
+  );
+  await clickText('dialog [role="radio"]', "GitLab");
+  await until(
+    `document.querySelector('dialog')?.innerText.includes('gitlab.example.invalid · 当前账号')`,
+  );
+  await clickText("dialog button", "添加账号");
+  await until(
+    `document.querySelectorAll('dialog [role="combobox"]').length===2`,
+  );
+  assert.ok(
+    await evaluate(
+      `document.querySelectorAll('dialog [role="combobox"]')[1].innerText.includes('Auth 登录')`,
+    ),
+  );
+  await evaluate(
+    `document.querySelectorAll('dialog [role="combobox"]')[1].click();true`,
+  );
+  await clickText('dialog [role="option"]', "访问令牌（Token）");
+  await until(`!!document.querySelector('dialog input[type="password"]')`);
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-platform-accounts-dark.png`,
+  );
+  // Token sign-in uses synthetic IPC; no actual credentials or CLI authentication changes.
+  await evaluate(
+    `(()=>{const inputs=document.querySelectorAll('dialog input');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(inputs[0],'git-secondary.example.invalid');inputs[0].dispatchEvent(new Event('input',{bubbles:true}));set.call(inputs[1],'fixture-token');inputs[1].dispatchEvent(new Event('input',{bubbles:true}));return true})()`,
+  );
+  await clickText("dialog button", "登录并验证");
+  await until(
+    `document.querySelector('dialog')?.innerText.includes('git-secondary.example.invalid · 当前账号') && document.querySelector('dialog [role="combobox"]')?.innerText.includes('git-secondary.example.invalid') && !document.querySelector('dialog input[type="password"]') && document.querySelector('dialog').getAttribute('aria-busy') !== 'true'`,
+  );
+  assert.ok(
+    await evaluate(
+      `document.querySelector('dialog [role="combobox"]').innerText.includes('git-secondary.example.invalid')`,
+    ),
+  );
+  await click('dialog [role="combobox"]');
+  await until(`document.querySelectorAll('dialog [role="option"]').length===3`);
+  assert.ok(
+    await evaluate(
+      `document.querySelector('dialog').contains(document.querySelector('[role="option"]'))`,
+    ),
+  );
+  assert.ok(
+    await evaluate(
+      `[...document.querySelectorAll('dialog [role="option"]')].at(-1).innerText.includes('gitlab.com · 未登录')`,
+    ),
+  );
+  await clickText('dialog [role="option"]', "gitlab.example.invalid · @demo");
+  await until(
+    `document.querySelector('dialog')?.innerText.includes('gitlab.example.invalid · 当前账号')`,
+  );
+  await clickText("dialog button", "添加账号");
+  await until(
+    `document.querySelectorAll('dialog [role="combobox"]').length===2`,
+  );
+  await evaluate(
+    `document.querySelectorAll('dialog [role="combobox"]')[1].click();true`,
+  );
+  await clickText('dialog [role="option"]', "Auth 登录");
+  await clickText("dialog button", "登录并验证");
+  await until(`!!document.querySelector('dialog .terminal-emulator canvas')`);
+  await clickText("dialog button", "取消授权");
+  await until(
+    `!document.querySelector('dialog .terminal-emulator') && !document.querySelector('dialog button[aria-label="关闭"]').disabled`,
+  );
+  await clickText('dialog [role="radio"]', "GitHub");
+  await until(
+    `document.querySelector('dialog')?.innerText.includes('@reviewer')`,
+  );
+  await clickText("dialog button", "添加账号");
+  await until(`!!document.querySelector('dialog form')`);
+  await clickText("dialog button", "登录并验证");
+  await until(
+    `document.querySelector('dialog [aria-label="设备授权验证码"]')?.innerText.includes('DEMO-1234')`,
+  );
+  assert.equal(
+    await evaluate(
+      `document.querySelector('dialog button[aria-label="关闭"]').disabled`,
+    ),
+    true,
+  );
+  await evaluate(
+    `document.querySelector('dialog').dispatchEvent(new Event('cancel',{bubbles:true,cancelable:true}));document.querySelector('dialog').click();true`,
+  );
+  assert.ok(await evaluate(`document.querySelector('dialog').open`));
+  await evaluate(
+    `(()=>{window.dispatchEvent(new Event('blur'));document.querySelector('dialog').close();Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});window.dispatchEvent(new Event('focus'));delete document.visibilityState;return true})()`,
+  );
+  assert.ok(
+    await evaluate(
+      `document.querySelector('dialog').open && document.querySelector('dialog [aria-label="设备授权验证码"]').innerText.includes('DEMO-1234')`,
+    ),
+  );
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-auth-device-flow.png`,
+  );
+  await clickText("dialog button", "取消授权");
+  await until(
+    `!document.querySelector('dialog .terminal-emulator') && !document.querySelector('dialog button[aria-label="关闭"]').disabled`,
+  );
+  await click('dialog button[aria-label="关闭"]');
+  assert.equal(
+    await evaluate(`document.activeElement?.getAttribute('aria-label')`),
+    "登录账号",
   );
   const iconSize = await evaluate(
     `(()=>{const h=document.querySelector('.workbench-activity-bar svg.activity-bar-icon'),other=document.querySelector('.workbench-activity-bar .codicon.activity-bar-icon');const r=h.getBoundingClientRect(),b=h.querySelector('path').getBBox();return {width:r.width,height:r.height,other:other.getBoundingClientRect().width,markWidth:b.width*r.width/h.viewBox.baseVal.width}})()`,
@@ -156,7 +297,7 @@ try {
   );
   await click("dialog[open] > div button");
   await click('aside[aria-label="任务详情"] button[aria-label="返回"]');
-  await click('[role="radio"][aria-label="GitLab"]');
+  await chooseProvider("GitLab");
   await until(
     `document.querySelector('[role="alert"]')?.textContent.includes('demo-web')`,
   );
@@ -168,6 +309,17 @@ try {
   assert.equal(
     await evaluate(`document.body.innerText.includes('未找到可自动识别')`),
     false,
+  );
+  const reminder = await evaluate(
+    `(()=>{const n=document.querySelector('[role="alert"]'),f=document.querySelector('button[aria-label="筛选条件"]'),p=document.querySelector('[role="combobox"][aria-label="项目"]');return {top:n.getBoundingClientRect().top,bottom:n.getBoundingClientRect().bottom,filterTop:f.getBoundingClientRect().top,projectBottom:p.getBoundingClientRect().bottom,color:getComputedStyle(n).color,warning:getComputedStyle(document.documentElement).getPropertyValue('--color-warning')}})()`,
+  );
+  assert.ok(
+    reminder.top >= reminder.projectBottom &&
+      reminder.bottom <= reminder.filterTop,
+    JSON.stringify(reminder),
+  );
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-reminder-dark.png`,
   );
   await click('button[role="combobox"][aria-label="项目"]');
   await clickText('[role="option"]', "demo-api");
@@ -186,6 +338,36 @@ try {
   );
   assert.equal(
     await evaluate(
+      `document.querySelector('[role="combobox"][aria-label="项目"] [aria-label="已选 2 个项目"]')?.textContent.trim()`,
+    ),
+    "2",
+  );
+  const countLayout = await evaluate(
+    `(()=>{const p=document.querySelector('[role="combobox"][aria-label="项目"]'),b=p.querySelector('[aria-label="已选 2 个项目"]'),r=b.getBoundingClientRect(),v=p.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,parentLeft:v.left,parentRight:v.right,fullNames:p.title}})()`,
+  );
+  assert.ok(
+    countLayout.width > 0 &&
+      countLayout.left >= countLayout.parentLeft &&
+      countLayout.right <= countLayout.parentRight,
+    JSON.stringify(countLayout),
+  );
+  assert.equal(countLayout.fullNames, "demo-web, demo-api");
+  const selectedRow = await evaluate(
+    `(()=>{const list=document.querySelector('ul[aria-label="已选 2 个项目"]'),r=list.getBoundingClientRect(),p=document.querySelector('[role="combobox"][aria-label="项目"]').getBoundingClientRect(),f=document.querySelector('button[aria-label="筛选条件"]').getBoundingClientRect();return {names:[...list.querySelectorAll('li > span:not([role]):first-of-type')].map(n=>n.textContent),text:list.innerText,top:r.top,bottom:r.bottom,projectBottom:p.bottom,filterTop:f.top}})()`,
+  );
+  assert.ok(
+    selectedRow.text.includes("demo-web") &&
+      selectedRow.text.includes("demo-api") &&
+      selectedRow.text.includes("3"),
+    JSON.stringify(selectedRow),
+  );
+  assert.ok(
+    selectedRow.top >= selectedRow.projectBottom &&
+      selectedRow.bottom <= selectedRow.filterTop,
+    JSON.stringify(selectedRow),
+  );
+  assert.equal(
+    await evaluate(
       `document.querySelectorAll('[role="option"][aria-selected="true"]').length`,
     ),
     2,
@@ -196,6 +378,13 @@ try {
     ),
     ["GitHub", "GitLab"],
   );
+  await evaluate(
+    `document.querySelector('[role="combobox"][aria-label="项目"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));true`,
+  );
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-repository-chips-dark.png`,
+  );
+  await click('[role="combobox"][aria-label="项目"]');
   await request(
     `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-projects-dark.png`,
   );
@@ -225,7 +414,7 @@ try {
   );
   await click('button[role="combobox"][aria-label="项目"]');
   await clickText('[role="option"]', "全部项目");
-  await click('[role="radio"][aria-label="GitLab"]');
+  await chooseProvider("GitLab");
   await until(
     `!!document.querySelector('tbody tr button[aria-label^="在 GitLab"]')`,
   );
@@ -275,6 +464,12 @@ try {
   assert.equal(projectMenu.overflow, false);
   assert.equal(projectMenu.zoom, "1.2");
   assert.equal(projectMenu.multiple, "true");
+  await evaluate(
+    `(()=>{const d=${doc};[...d.querySelectorAll('[role="option"]')].find(n=>n.textContent.trim()==='demo-api').click();return true})()`,
+  );
+  await until(
+    `!!${doc}.querySelector('[role="combobox"] [aria-label="已选 2 个项目"]')`,
+  );
   await request(
     `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-projects-light.png`,
   );
@@ -322,13 +517,73 @@ try {
   await request(
     `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-start-light.png`,
   );
+  await evaluate(
+    `document.querySelector('#task-preview').src='/tests/browser/product-preview.html?view=tasks&theme=light&text-size=xlarge&many-projects';true`,
+  );
+  await until(
+    `${doc}.querySelector('[role="combobox"][aria-label="项目"]')?.textContent.includes('demo-project-1')`,
+  );
+  await evaluate(
+    `${doc}.querySelector('[role="combobox"][aria-label="项目"]').click();true`,
+  );
+  for (let index = 2; index <= 12; index++) {
+    await evaluate(
+      `(()=>{const d=${doc};[...d.querySelectorAll('[role="option"]')].find(n=>n.textContent.trim()===${JSON.stringify("demo-project-" + index)}).click();return true})()`,
+    );
+  }
+  await evaluate(
+    `(()=>{const d=${doc};d.querySelector('[role="combobox"][aria-label="项目"]').dispatchEvent(new d.defaultView.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));return true})()`,
+  );
+  await until(`!!${doc}.querySelector('ul[aria-label="已选 12 个项目"]')`);
+  const overflowingProjects = await evaluate(
+    `(()=>{const d=${doc},list=d.querySelector('ul[aria-label="已选 12 个项目"]');return {count:list.children.length,scroll:list.scrollWidth,width:list.clientWidth,overflow:d.documentElement.scrollWidth>d.defaultView.innerWidth,tabIndex:list.tabIndex}})()`,
+  );
+  assert.equal(overflowingProjects.count, 12);
+  assert.ok(
+    overflowingProjects.scroll > overflowingProjects.width,
+    JSON.stringify(overflowingProjects),
+  );
+  assert.equal(overflowingProjects.overflow, false);
+  assert.equal(overflowingProjects.tabIndex, 0);
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-task-repository-chips-light.png`,
+  );
+  await evaluate(
+    `${doc}.querySelector('button[aria-label="登录账号"]').click();true`,
+  );
+  await until(
+    `!!${doc}.querySelector('dialog[open]') && ${doc}.querySelector('dialog').innerText.includes('@demo')`,
+  );
+  await evaluate(
+    `(()=>{const d=${doc};[...d.querySelectorAll('dialog button')].find(button=>button.textContent.trim()==='添加账号').click();return true})()`,
+  );
+  await until(`${doc}.querySelector('dialog').innerText.includes('Auth 登录')`);
+  const accountLayout = await evaluate(
+    `(()=>{const d=${doc},m=d.querySelector('dialog'),r=m.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,width:d.defaultView.innerWidth,height:d.defaultView.innerHeight,overflow:d.documentElement.scrollWidth>d.defaultView.innerWidth}})()`,
+  );
+  assert.ok(
+    accountLayout.left >= 0 &&
+      accountLayout.right <= accountLayout.width &&
+      accountLayout.bottom <= accountLayout.height,
+    JSON.stringify(accountLayout),
+  );
+  assert.equal(accountLayout.overflow, false);
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-platform-accounts-light.png`,
+  );
+  await evaluate(
+    `${doc}.querySelector('dialog button[aria-label="关闭"]').click();true`,
+  );
   console.log(
-    "Task UI passed: filters, GitHub/GitLab menus and details, remembered Skills/template, full prompt, matching sidebar icon size, light theme and 120% text.",
+    "Task UI passed: independent platform accounts, token login, site and account switching, filters, GitHub/GitLab menus and details, remembered Skills/template, full prompt, matching sidebar icon size, light theme and 120% text.",
   );
 } catch (error) {
+  await request(
+    `/screenshot?target=${targetId}&file=/tmp/agent-hub-auth-preview-failure.png`,
+  );
   console.error(
     await evaluate(
-      `document.querySelector('#task-preview')?.contentDocument?.body.innerText`,
+      `document.querySelector('#task-preview')?.contentDocument?.body.innerText ?? document.body.innerText`,
     ),
   );
   throw error;

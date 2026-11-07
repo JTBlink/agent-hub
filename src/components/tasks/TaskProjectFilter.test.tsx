@@ -8,15 +8,36 @@ import { makeProject } from "../../../tests/fixtures/workspace";
 import type { TaskBinding } from "../../lib/tauri";
 import { TaskBrowser } from "./TaskBrowser";
 
+async function chooseProvider(host: HTMLElement, label: string) {
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>(
+        '[role="combobox"][aria-label="tasks.provider"]',
+      )!
+      .click(),
+  );
+  const option = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ].find((item) => item.textContent === label)!;
+  await act(async () => option.click());
+}
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (
       key: string,
-      values?: { projects: string; current: string; selected: string },
+      values?: {
+        projects?: string;
+        current?: string;
+        selected?: string;
+        count?: number;
+      },
     ) =>
-      values
-        ? `${key}: ${values.projects}: ${values.current} / ${values.selected}`
-        : key,
+      typeof values?.count === "number"
+        ? `${key}: ${values.count}`
+        : values
+          ? `${key}: ${values.projects}: ${values.current} / ${values.selected}`
+          : key,
   }),
 }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -151,10 +172,6 @@ it.each([
     });
     const host = document.createElement("div");
     const root = createRoot(host);
-    const radio = (label: string) =>
-      host.querySelector<HTMLButtonElement>(
-        `[role="radio"][aria-label="${label}"]`,
-      )!;
     try {
       await act(async () =>
         root.render(
@@ -164,7 +181,7 @@ it.each([
         ),
       );
       vi.mocked(invoke).mockClear();
-      await act(async () => radio(selected).click());
+      await chooseProvider(host, selected);
       expect(host.querySelector('[role="alert"]')?.textContent).toBe(
         `tasks.providerMismatch: Project 0: ${current} / ${selected}`,
       );
@@ -184,7 +201,7 @@ it.each([
         host.querySelector('[role="combobox"][aria-label="tasks.project"]')
           ?.textContent,
       ).toBe("Project 0");
-      await act(async () => radio(current).click());
+      await chooseProvider(host, current);
       expect(host.querySelector('[role="alert"]')).toBeNull();
       expect(host.textContent).toContain("tasks.empty");
       expect(vi.mocked(invoke)).toHaveBeenCalledWith(
@@ -329,7 +346,31 @@ it("merges selected projects, restores them, and isolates platform mismatches", 
     ).toBe("tasks.project");
     expect(option("Project 0").disabled).toBe(true);
     await act(async () => option("Project 2").click());
-    expect(menu().textContent).toBe("Project 0, Project 2");
+    expect(menu().textContent).toContain("Project 0, Project 2");
+    expect(
+      menu().querySelector('[aria-label="tasks.selectedProjects: 2"]')
+        ?.textContent,
+    ).toBe("2");
+    expect(menu().title).toBe("Project 0, Project 2");
+    const selectedProjects = () =>
+      host.querySelector('ul[aria-label="tasks.selectedProjects: 2"]');
+    expect(
+      [...selectedProjects()!.querySelectorAll("li")].map(
+        (item) => item.querySelector("span:not([role])")?.textContent,
+      ),
+    ).toEqual(["Project 0", "Project 2"]);
+    expect(
+      [
+        ...selectedProjects()!.querySelectorAll(
+          '[title="tasks.loadedProjectTasks: 1"]',
+        ),
+      ].map((count) => count.textContent),
+    ).toEqual(["1", "1"]);
+    expect(
+      [...selectedProjects()!.querySelectorAll('[role="img"]')].map((icon) =>
+        icon.getAttribute("aria-label"),
+      ),
+    ).toEqual(["GitHub", "GitLab"]);
     expect(option("Project 0").getAttribute("aria-selected")).toBe("true");
     expect(option("Project 2").getAttribute("aria-selected")).toBe("true");
     expect(host.textContent).toContain("Task project-0");
@@ -337,19 +378,22 @@ it("merges selected projects, restores them, and isolates platform mismatches", 
     await act(async () => root.unmount());
     root = createRoot(host);
     await render();
-    expect(menu().textContent).toBe("Project 0, Project 2");
+    expect(menu().textContent).toContain("Project 0, Project 2");
+    expect(
+      menu().querySelector('[aria-label="tasks.selectedProjects: 2"]')
+        ?.textContent,
+    ).toBe("2");
     vi.mocked(invoke).mockClear();
-    await act(async () =>
-      host
-        .querySelector<HTMLButtonElement>(
-          '[role="radio"][aria-label="GitLab"]',
-        )!
-        .click(),
-    );
+    await chooseProvider(host, "GitLab");
     expect(host.querySelector('[role="alert"]')).toBeNull();
     expect(host.textContent).not.toContain("tasks.providerMismatch");
     expect(host.textContent).toContain("Task project-2");
     expect(host.textContent).not.toContain("Task project-0");
+    expect(
+      selectedProjects()!.querySelectorAll(
+        '[title="tasks.loadedProjectTasks: 1"]',
+      ).length,
+    ).toBe(1);
     expect(
       vi
         .mocked(invoke)
@@ -359,6 +403,10 @@ it("merges selected projects, restores them, and isolates platform mismatches", 
     await act(async () => menu().click());
     await act(async () => option("Project 0").click());
     expect(menu().textContent).toBe("Project 2");
+    expect(selectedProjects()).toBeNull();
+    expect(
+      menu().querySelector('[aria-label^="tasks.selectedProjects"]'),
+    ).toBeNull();
     expect(host.querySelector('[role="alert"]')).toBeNull();
     await act(async () => option("tasks.allProjects").click());
     expect(menu().textContent).toBe("tasks.allProjects");
@@ -368,5 +416,42 @@ it("merges selected projects, restores them, and isolates platform mismatches", 
   } finally {
     await act(async () => root.unmount());
     host.remove();
+  }
+});
+
+it("lists every selected project and uses a separate reminder when none match", async () => {
+  localStorage.setItem(
+    "agent-hub.taskView",
+    JSON.stringify({
+      provider: "gitlab",
+      projectIds: ["project-0", "project-3"],
+      filters: {},
+    }),
+  );
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <TaskBrowser projects={projects} />
+        </MemoryRouter>,
+      ),
+    );
+    const selected = host.querySelector(
+      'ul[aria-label="tasks.selectedProjects: 2"]',
+    )!;
+    expect(
+      [...selected.querySelectorAll("li")].map((item) => item.textContent),
+    ).toEqual(["Project 0", "Project 3"]);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      "tasks.providerMismatchSelection",
+    );
+    expect(host.textContent).not.toContain("tasks.notConnected");
+    expect(
+      vi.mocked(invoke).mock.calls.some(([command]) => command === "task_list"),
+    ).toBe(false);
+  } finally {
+    await act(async () => root.unmount());
   }
 });

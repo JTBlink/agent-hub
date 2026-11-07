@@ -35,6 +35,13 @@ export interface PaneControl {
 }
 interface Props {
   projectId: string;
+  createSession?: (
+    size: api.TerminalSize,
+    onEvent: (event: api.TerminalEvent) => void,
+  ) => Promise<api.TerminalSession>;
+  onExit?: (code: number) => void;
+  /** Visible text with terminal soft wraps joined into logical lines. */
+  onScreen?: (text: string) => void;
   worktreePath?: string;
   agent?: HerdrAgent;
   nativeAgent?: boolean;
@@ -50,6 +57,9 @@ interface Props {
 /** Owns one emulator and one PTY. Visibility changes never recreate either. */
 export function TerminalPane({
   projectId,
+  createSession,
+  onExit,
+  onScreen,
   worktreePath,
   agent,
   nativeAgent,
@@ -68,6 +78,8 @@ export function TerminalPane({
   const fitNow = useRef<() => void>(() => {});
   const focusNow = useRef<() => void>(() => {});
   const callback = useRef(onReady);
+  const exitCallback = useRef(onExit);
+  const screenCallback = useRef(onScreen);
   const activeRef = useRef(active);
   const visibleRef = useRef(visible);
   const showNow = useRef<() => void>(() => {});
@@ -87,7 +99,9 @@ export function TerminalPane({
     activeRef.current = active;
     visibleRef.current = visible;
     callback.current = onReady;
-  }, [active, visible, onReady]);
+    exitCallback.current = onExit;
+    screenCallback.current = onScreen;
+  }, [active, visible, onReady, onExit, onScreen]);
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
   const [exitCode, setExitCode] = useState<number | null>(null);
@@ -103,6 +117,16 @@ export function TerminalPane({
       scrollback: 5000,
       allowProposedApi: false,
     });
+    const readScreen = (unwrap = false) => {
+      const buffer = terminal.buffer.active;
+      let text = "";
+      for (let row = 0; row < terminal.rows; row++) {
+        const line = buffer.getLine(buffer.viewportY + row);
+        if (row && !(unwrap && line?.isWrapped)) text += "\n";
+        text += line?.translateToString(true) ?? "";
+      }
+      return text;
+    };
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(node);
@@ -244,37 +268,44 @@ export function TerminalPane({
           node.getBoundingClientRect().height
         )
           fit.fit();
-        return api
-          .createTerminal(
-            projectId,
-            { rows: terminal.rows, cols: terminal.cols },
-            (event) => {
+        const size = { rows: terminal.rows, cols: terminal.cols };
+        const onEvent = (event: api.TerminalEvent) => {
+          if (disposed) return;
+          if (event.kind === "output") {
+            const bytes = Uint8Array.from(atob(event.data), (character) =>
+              character.charCodeAt(0),
+            );
+            terminal.write(bytes, () => {
               if (disposed) return;
-              if (event.kind === "output") {
-                const bytes = Uint8Array.from(atob(event.data), (character) =>
-                  character.charCodeAt(0),
-                );
-                terminal.write(bytes, () => {
-                  if (disposed) return;
-                  if (sessionId)
-                    void api.ackTerminal(sessionId, event.seq).catch(fail);
-                  else pendingAck = event.seq;
-                });
-              } else if (event.kind === "exit") {
-                setExitCode(event.code);
-                development?.failed(
-                  new Error(translate.current("fileTree.developmentExited")),
-                );
-              } else fail(new Error(event.message));
-            },
-            worktreePath,
-            agent,
-            attachmentKey ? attachment.current : undefined,
-            scriptPath,
-            development?.launch,
-            nativeTask?.prompt,
-            nativeAgent,
-          )
+              if (screenCallback.current)
+                screenCallback.current(readScreen(true));
+              if (sessionId)
+                void api.ackTerminal(sessionId, event.seq).catch(fail);
+              else pendingAck = event.seq;
+            });
+          } else if (event.kind === "exit") {
+            setExitCode(event.code);
+            exitCallback.current?.(event.code);
+            development?.failed(
+              new Error(translate.current("fileTree.developmentExited")),
+            );
+          } else fail(new Error(event.message));
+        };
+        const session = createSession
+          ? createSession(size, onEvent)
+          : api.createTerminal(
+              projectId,
+              size,
+              onEvent,
+              worktreePath,
+              agent,
+              attachmentKey ? attachment.current : undefined,
+              scriptPath,
+              development?.launch,
+              nativeTask?.prompt,
+              nativeAgent,
+            );
+        return session
           .then((session) => {
             if (disposed) {
               void api.closeTerminal(session.id).catch(() => {});
@@ -293,16 +324,7 @@ export function TerminalPane({
               ownsFocus: (target) =>
                 target instanceof Node && node.contains(target),
               clear: () => terminal.clear(),
-              read: () => {
-                const buffer = terminal.buffer.active;
-                return Array.from(
-                  { length: terminal.rows },
-                  (_, row) =>
-                    buffer
-                      .getLine(buffer.viewportY + row)
-                      ?.translateToString(true) ?? "",
-                ).join("\n");
-              },
+              read: readScreen,
               herdrTarget: attachmentKey ? attachment.current : undefined,
             });
             if (pendingAck)
@@ -341,6 +363,7 @@ export function TerminalPane({
     };
   }, [
     projectId,
+    createSession,
     worktreePath,
     agent,
     nativeAgent,

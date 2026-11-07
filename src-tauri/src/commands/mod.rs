@@ -52,3 +52,5 @@ pub mod system_permissions;
 pub fn get_build_info() -> crate::product::BuildInfo {
     crate::product::current()
 }
+
+pub mod platform_accounts;

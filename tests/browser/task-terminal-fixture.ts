@@ -1,5 +1,9 @@
 import { gitFixture } from "./git-fixture";
-import type { RepositoryTask, TaskBinding } from "../../src/lib/tauri";
+import type {
+  RepositoryTask,
+  TaskBinding,
+  PlatformAccountContext,
+} from "../../src/lib/tauri";
 import {
   makeTaskMetadata,
   makeReviewMetadata,
@@ -14,6 +18,33 @@ const bindings: TaskBinding[] = ["github", "gitlab"].map((provider, index) => ({
   repository: index ? "demo/platform/demo-api" : "demo/demo-web",
   launcher: null,
 }));
+const accountContexts: PlatformAccountContext[] = [
+  {
+    id: "default-gitlab",
+    provider: "gitlab",
+    host: "gitlab.com",
+    label: "",
+    project_scoped: false,
+    remembered: false,
+  },
+  {
+    id: "default-github",
+    provider: "github",
+    host: "github.com",
+    label: "",
+    project_scoped: false,
+    remembered: false,
+  },
+  {
+    id: "default-gitlab",
+    provider: "gitlab",
+    host: "gitlab.example.invalid",
+    label: "",
+    project_scoped: false,
+    remembered: false,
+  },
+];
+let activeGithub = "demo";
 const callbacks = new Map<string, (event: unknown) => void>();
 const sequences = new Map<string, number>();
 let nextTerminal = 0;
@@ -88,7 +119,78 @@ export function taskTerminalFixture(
   const args = typeof raw === "object" && raw !== null ? raw : {};
   const git = gitFixture(command, raw);
   if (git.handled) return git;
-  if (command === "task_bindings") return { handled: true, value: bindings };
+  if (command === "platform_account_contexts")
+    return { handled: true, value: [...accountContexts] };
+  if (command === "platform_account_cancel") return { handled: true };
+  if (
+    [
+      "platform_account_list",
+      "platform_account_switch",
+      "platform_account_token_login",
+    ].includes(command)
+  ) {
+    const target =
+      "target" in args && args.target && typeof args.target === "object"
+        ? args.target
+        : {};
+    const provider =
+      "provider" in target && target.provider === "gitlab"
+        ? "gitlab"
+        : "github";
+    const host =
+      "host" in target && typeof target.host === "string"
+        ? target.host
+        : "github.com";
+    if (host === "gitlab.com" && command === "platform_account_list")
+      return { handled: true, value: [] };
+    if (
+      command === "platform_account_switch" &&
+      "username" in args &&
+      typeof args.username === "string"
+    )
+      activeGithub = args.username;
+    if (
+      command === "platform_account_token_login" &&
+      !accountContexts.some(
+        (context) => context.host === host && context.provider === provider,
+      )
+    )
+      accountContexts.push({
+        id: `default-${provider}`,
+        provider,
+        host,
+        label: "",
+        project_scoped: false,
+        remembered: true,
+      });
+    return {
+      handled: true,
+      value: (provider === "github"
+        ? [activeGithub, activeGithub === "demo" ? "reviewer" : "demo"]
+        : ["demo"]
+      ).map((username, index) => ({
+        host,
+        username,
+        active: index === 0,
+        authenticated: true,
+        switchable: provider === "github",
+      })),
+    };
+  }
+  if (command === "platform_account_forget") {
+    const target =
+      "target" in args && args.target && typeof args.target === "object"
+        ? args.target
+        : {};
+    const index = accountContexts.findIndex(
+      (context) =>
+        context.remembered && "host" in target && context.host === target.host,
+    );
+    if (index >= 0) accountContexts.splice(index, 1);
+    return { handled: true };
+  }
+  if (command === "task_bindings")
+    return { handled: true, value: [...bindings] };
   if (command === "herdr_inventory")
     return { handled: true, value: { installed: true, sessions: [] } };
   if (command === "task_list") {
@@ -252,7 +354,7 @@ export function taskTerminalFixture(
       value: "worktreePath" in args ? args.worktreePath : "~/projects/demo-web",
     };
   if (command === "terminal_list") return { handled: true, value: [] };
-  if (command === "terminal_create") {
+  if (command === "terminal_create" || command === "platform_account_login") {
     const id = `preview-${++nextTerminal}`;
     if (
       "events" in args &&
@@ -270,7 +372,9 @@ export function taskTerminalFixture(
       () =>
         emit(
           id,
-          "\x1b[36mAgentHub terminal · synthetic preview\x1b[0m\r\n~/projects/demo-web $ ",
+          command === "platform_account_login"
+            ? "First copy your one-time code: DEMO-1234\r\nPress Enter to open https://github.com/login/device in your browser..."
+            : "\x1b[36mAgentHub terminal · synthetic preview\x1b[0m\r\n~/projects/demo-web $ ",
         ),
       80,
     );

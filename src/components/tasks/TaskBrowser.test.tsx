@@ -11,6 +11,20 @@ import { makeTaskMetadata } from "../../../tests/fixtures/repositoryTask";
 import type { RepositoryTask, TaskBinding } from "../../lib/tauri";
 import { TaskBrowser } from "./TaskBrowser";
 import { WorkspaceFilesContext } from "../../hooks/useWorkspaceFiles";
+async function chooseProvider(host: HTMLElement, label: string) {
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>(
+        '[role="combobox"][aria-label="tasks.provider"]',
+      )!
+      .click(),
+  );
+  const option = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="option"]'),
+  ].find((item) => item.textContent === label)!;
+  await act(async () => option.click());
+}
+
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -223,21 +237,6 @@ it("refreshes repositories without discarding the cached login identity", async 
     { refresh: false },
     { refresh: false },
   ]);
-  await act(async () =>
-    element
-      .querySelector<HTMLButtonElement>('[aria-label="tasks.connections"]')!
-      .click(),
-  );
-  const refreshIdentity = [...element.querySelectorAll("button")].find(
-    (button) => button.textContent === "tasks.refreshIdentity",
-  )!;
-  await act(async () => refreshIdentity.click());
-  expect(
-    vi
-      .mocked(invoke)
-      .mock.calls.filter(([command]) => command === "task_bindings")
-      .at(-1)?.[1],
-  ).toEqual({ refresh: true });
   await act(async () => root.unmount());
 });
 
@@ -336,11 +335,7 @@ it("offers repository setup when the selected platform has no discovered source"
       </MemoryRouter>,
     ),
   );
-  await act(async () =>
-    host
-      .querySelector<HTMLButtonElement>('[role="radio"][aria-label="GitLab"]')!
-      .click(),
-  );
+  await chooseProvider(host, "GitLab");
   expect(host.textContent).toContain("tasks.notConnected");
   expect(host.textContent).not.toContain("tasks.empty");
   const setup = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
@@ -400,7 +395,7 @@ it("switches platform and kind filters, retains the project scope, and opens the
   };
   await choose("tasks.project", "Project 0");
   expect(projectMenu().textContent).toBe("Project 0");
-  await act(async () => radio("GitLab").click());
+  await chooseProvider(host, "GitLab");
   expect(projectMenu().textContent).toBe("Project 0");
   expect(host.querySelector('[role="alert"]')?.textContent).toBe(
     "tasks.providerMismatch",
@@ -512,20 +507,25 @@ it("supports keyboard platform switching and ignores a previous platform's late 
       </MemoryRouter>,
     ),
   );
-  const all = host.querySelector<HTMLButtonElement>(
-    '[role="radio"][aria-label="tasks.allProviders"]',
+  const platform = host.querySelector<HTMLButtonElement>(
+    '[role="combobox"][aria-label="tasks.provider"]',
   )!;
-  await act(async () => {
-    all.focus();
-    all.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "End", bubbles: true }),
+  const key = async (value: string) =>
+    act(async () =>
+      platform.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: value,
+          bubbles: true,
+          cancelable: true,
+        }),
+      ),
     );
-  });
-  const gitlab = host.querySelector<HTMLButtonElement>(
-    '[role="radio"][aria-label="GitLab"]',
-  )!;
-  expect(document.activeElement).toBe(gitlab);
-  expect(gitlab.getAttribute("aria-checked")).toBe("true");
+  platform.focus();
+  await key("ArrowDown");
+  await key("End");
+  await key("Enter");
+  expect(document.activeElement).toBe(platform);
+  expect(platform.textContent).toBe("GitLab");
   await act(async () =>
     resolveOld({
       items: [
@@ -552,12 +552,11 @@ it("supports keyboard platform switching and ignores a previous platform's late 
   );
   expect(host.textContent).not.toContain("Stale task");
   expect(host.textContent).toContain("tasks.empty");
-  await act(async () =>
-    gitlab.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
-    ),
-  );
-  expect(document.activeElement?.getAttribute("aria-label")).toBe("GitHub");
+  await key("ArrowUp");
+  await key("ArrowUp");
+  await key("Enter");
+  expect(document.activeElement).toBe(platform);
+  expect(platform.textContent).toBe("GitHub");
   expect(host.querySelector('[role="radio"][aria-label="PR"]')).not.toBeNull();
   await act(async () => root.unmount());
   host.remove();
@@ -683,5 +682,91 @@ it("keeps the known identity visible while refreshing task rows", async () => {
     );
   } finally {
     await act(async () => root.unmount());
+  }
+});
+
+it("updates the account picker and unlocks switching while repository refresh is still pending", async () => {
+  await import("../accounts/PlatformAccountsDialog");
+  const originalShow = HTMLDialogElement.prototype.showModal;
+  const originalClose = HTMLDialogElement.prototype.close;
+  HTMLDialogElement.prototype.showModal = function () {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+  };
+  let active = "first";
+  let finishRefresh!: (value: unknown) => void;
+  const inventory = () =>
+    ["first", "second"].map((username) => ({
+      host: "github.com",
+      username,
+      active: username === active,
+      authenticated: true,
+      switchable: true,
+    }));
+  vi.mocked(invoke).mockImplementation(async (command, args) => {
+    if (command === "task_bindings")
+      return args && "refresh" in args && args.refresh
+        ? new Promise((resolve) => {
+            finishRefresh = resolve;
+          })
+        : [];
+    if (command === "platform_account_contexts")
+      return [
+        {
+          id: "default-github",
+          provider: "github",
+          host: "github.com",
+          label: "",
+          project_scoped: false,
+          remembered: false,
+        },
+      ];
+    if (command === "platform_account_list") return inventory();
+    if (command === "platform_account_switch") {
+      active = "second";
+      return inventory();
+    }
+    return [];
+  });
+  const element = document.createElement("div");
+  document.body.append(element);
+  const root = createRoot(element);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <TaskBrowser projects={[]} />
+        </MemoryRouter>,
+      ),
+    );
+    await act(async () =>
+      element
+        .querySelector<HTMLButtonElement>('[aria-label="tasks.accounts"]')!
+        .click(),
+    );
+    const switchButton = [
+      ...element.querySelectorAll<HTMLButtonElement>("dialog button"),
+    ].find((button) => button.textContent === "accounts.switch")!;
+    await act(async () => switchButton.click());
+    expect(
+      element.querySelector('dialog [role="combobox"]')?.textContent,
+    ).toContain("@second");
+    expect(
+      element.querySelector<HTMLButtonElement>(
+        'dialog button[aria-label="common.close"]',
+      )?.disabled,
+    ).toBe(false);
+    expect(
+      element.querySelector('button[aria-label="tasks.accounts"]')?.textContent,
+    ).toContain("@second");
+    expect(finishRefresh).toBeTypeOf("function");
+    await act(async () => finishRefresh([]));
+  } finally {
+    await act(async () => root.unmount());
+    element.remove();
+    HTMLDialogElement.prototype.showModal = originalShow;
+    HTMLDialogElement.prototype.close = originalClose;
   }
 });

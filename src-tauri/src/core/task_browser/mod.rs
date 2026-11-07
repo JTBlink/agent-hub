@@ -27,22 +27,7 @@ impl Binding {
     pub fn validate(&self) -> Result<()> {
         self.provider.require()?;
         uuid::Uuid::parse_str(&self.id).context("Invalid repository binding identity")?;
-        if self
-            .host
-            .contains(['/', '\\', '?', '#', '@', ' ', '\r', '\n', '\0'])
-        {
-            bail!("Enter a hostname without a URL path or credentials");
-        }
-        let url = reqwest::Url::parse(&format!("https://{}", self.host))?;
-        if url.host_str().is_none()
-            || !url.username().is_empty()
-            || url.password().is_some()
-            || url.path() != "/"
-            || url.query().is_some()
-            || url.fragment().is_some()
-        {
-            bail!("Enter a hostname without a URL path or credentials");
-        }
+        crate::core::platforms::cli::validate_host(&self.host)?;
         let parts: Vec<_> = self.repository.split('/').collect();
         if parts.len() < 2
             || (self.provider == Provider::Github && parts.len() != 2)
@@ -88,6 +73,9 @@ pub fn binding(store: &super::skill_store::SkillStore, id: &str) -> Result<Optio
         return Ok(Some(binding.clone()));
     }
     discovery::binding(store, saved, id)
+}
+pub(crate) fn clear_identities() {
+    identity::clear();
 }
 /// Recheck CLI login after the user refreshes the task panel.
 pub fn refresh_bindings(store: &super::skill_store::SkillStore) -> Result<Vec<Binding>> {
@@ -237,16 +225,25 @@ impl<R: CliReader> TaskClient<R> {
         cancel: &AtomicBool,
     ) -> std::result::Result<TaskPage, TaskFailure> {
         query::validate(binding, filters, page)?;
+        let username = self.identity(binding, cancel)?;
+        let endpoint = query::endpoint(binding, filters, page, &username);
+        let response = self.api(binding, endpoint, cancel)?;
+        adapter::page(binding, filters.kind, &username, page, response)
+    }
+    /// Read only the CLI-owned login name, sharing the task query's scoped cache.
+    pub fn identity(
+        &self,
+        binding: &Binding,
+        cancel: &AtomicBool,
+    ) -> std::result::Result<String, TaskFailure> {
+        binding.validate()?;
         let fetch = || {
             let user = self.api(binding, "user".into(), cancel)?;
-            let username = adapter::string(
-                &user,
-                if binding.provider == Provider::Github {
-                    "login"
-                } else {
-                    "username"
-                },
-            );
+            let username = binding
+                .provider
+                .login_name(&user)
+                .unwrap_or_default()
+                .to_string();
             if username.is_empty() {
                 return Err(TaskFailure::new(
                     "authentication",
@@ -255,13 +252,10 @@ impl<R: CliReader> TaskClient<R> {
             }
             Ok(username)
         };
-        let username = match self.reader.identity_scope(binding) {
-            Some(scope) => identity::get(&scope, cancel, fetch)?,
-            None => fetch()?,
-        };
-        let endpoint = query::endpoint(binding, filters, page, &username);
-        let response = self.api(binding, endpoint, cancel)?;
-        adapter::page(binding, filters.kind, &username, page, response)
+        match self.reader.identity_scope(binding) {
+            Some(scope) => identity::get(&scope, cancel, fetch),
+            None => fetch(),
+        }
     }
     pub fn detail(
         &self,

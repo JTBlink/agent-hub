@@ -107,3 +107,52 @@ fn registered_remote_loads_without_binding_and_respects_removal_and_override() {
     assert_eq!(enterprise.len(), 1);
     assert_eq!(enterprise[0].provider, Provider::Gitlab);
 }
+
+#[test]
+fn configured_private_sites_classify_ssh_remotes_using_host_metadata() {
+    use crate::core::{
+        platforms::accounts::{remember, AccountTarget},
+        skill_store::ProjectRecord,
+    };
+    let temp = tempfile::tempdir().unwrap();
+    let store = SkillStore::new(&temp.path().join("store.db")).unwrap();
+    for (id, host) in [
+        ("first", "git-a.example.invalid"),
+        ("second", "git-b.example.invalid"),
+    ] {
+        let path = temp.path().join(id);
+        let repo = git2::Repository::init(&path).unwrap();
+        repo.remote("origin", &format!("git@{host}:team/{id}.git"))
+            .unwrap();
+        store
+            .insert_project(&ProjectRecord {
+                id: id.into(),
+                name: id.into(),
+                path: path.to_string_lossy().into(),
+                workspace_type: "project".into(),
+                linked_agent_key: None,
+                linked_agent_name: None,
+                disabled_path: None,
+                sort_order: 0,
+                created_at: 0,
+                updated_at: 0,
+                visited_at: None,
+            })
+            .unwrap();
+        remember(
+            &store,
+            &AccountTarget {
+                context_id: "default-gitlab".into(),
+                provider: Provider::Gitlab,
+                host: host.into(),
+            },
+        )
+        .unwrap();
+    }
+    let sources = discover(&store, vec![], default_hosts).unwrap();
+    assert_eq!(sources.len(), 2);
+    assert!(sources
+        .iter()
+        .all(|source| source.provider == Provider::Gitlab));
+    assert_ne!(sources[0].host, sources[1].host);
+}

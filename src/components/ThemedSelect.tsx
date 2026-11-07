@@ -90,6 +90,8 @@ type Props = Omit<
   "value" | "multiple" | "size" | "onChange"
 > & {
   leadingIcon?: ReactNode;
+  /** Metadata that remains visible when the selected label is truncated. */
+  valueBadge?: ReactNode;
   optionIcon?: (value: string) => ReactNode;
   renderValue?: (value: string, label: string) => ReactNode;
   /** Let the menu fit complete labels and all rows when the viewport allows. */
@@ -113,6 +115,7 @@ export function ThemedSelect(selection: Props) {
     children,
     className,
     leadingIcon,
+    valueBadge,
     optionIcon,
     renderValue,
     fitContent = false,
@@ -336,6 +339,7 @@ export function ThemedSelect(selection: Props) {
             ? renderValue(selected[0].value, selected[0].label)
             : label || props["aria-label"]}
         </span>
+        {valueBadge}
         <ChevronDown
           aria-hidden="true"
           className={cn(
