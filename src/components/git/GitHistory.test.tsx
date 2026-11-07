@@ -213,3 +213,84 @@ it("navigates repository icons, lazily expands tags, retries reads and filters b
     vi.unstubAllGlobals();
   }
 });
+
+it("sorts the tag snapshot from its context submenu and retains the choice across views and refresh", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.mocked(getProjectGitReferences)
+    .mockClear()
+    .mockResolvedValue({
+      entries: [
+        { kind: "tags", name: "v1.2.0", sha: status.head, time: 30 },
+        { kind: "tags", name: "v1.10.0", sha: status.head, time: 20 },
+        { kind: "tags", name: "v1.3.0", sha: status.head, time: 10 },
+      ],
+      truncated: false,
+    });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const button = (label: string) =>
+    host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  const names = () =>
+    [...host.querySelectorAll("summary")].map((item) => item.title);
+  const choose = async (label: string) => {
+    await act(async () =>
+      host
+        .querySelector("section")!
+        .dispatchEvent(
+          new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+        ),
+    );
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          '[role="menuitem"][aria-haspopup="menu"]',
+        )!
+        .click(),
+    );
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(
+          `[role="menuitemradio"][title="${label}"]`,
+        )!
+        .click(),
+    );
+  };
+  try {
+    await act(async () =>
+      root.render(
+        <GitHistory
+          status={status}
+          loading={false}
+          target={{ projectId: "demo" }}
+          onRefresh={() => {}}
+        />,
+      ),
+    );
+    await act(async () => button("git.browse.tags").click());
+    expect(names()).toEqual(["v1.2.0", "v1.10.0", "v1.3.0"]);
+    const expanded = host.querySelector('summary[title="v1.2.0"]')!
+      .parentElement as HTMLDetailsElement;
+    await act(async () => {
+      expanded.open = true;
+      expanded.dispatchEvent(new Event("toggle"));
+    });
+    await choose("git.tagSort.name");
+    expect(names()).toEqual(["v1.3.0", "v1.2.0", "v1.10.0"]);
+    expect(expanded.open).toBe(true);
+    await choose("git.tagSort.asc");
+    expect(names()).toEqual(["v1.10.0", "v1.2.0", "v1.3.0"]);
+    await choose("git.tagSort.date");
+    expect(names()).toEqual(["v1.3.0", "v1.10.0", "v1.2.0"]);
+    expect(getProjectGitReferences).toHaveBeenCalledTimes(1);
+    await act(async () => button("git.browse.commits").click());
+    await act(async () => button("git.browse.tags").click());
+    expect(names()).toEqual(["v1.3.0", "v1.10.0", "v1.2.0"]);
+    await act(async () => button("settings.refresh").click());
+    expect(names()).toEqual(["v1.3.0", "v1.10.0", "v1.2.0"]);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

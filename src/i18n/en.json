@@ -2581,6 +2581,15 @@
     "copyTagName": "Copy tag name",
     "copyReferenceName": "Copy reference name",
     "copyCommitSha": "Copy commit SHA",
+    "tagSort": {
+      "title": "Sort by",
+      "menu": "Tag view options",
+      "date": "Date",
+      "name": "Name",
+      "version": "Version",
+      "desc": "Descending",
+      "asc": "Ascending"
+    },
     "tagActions": {
       "refresh": "Refresh",
       "openGraph": "Open in Commit Graph",

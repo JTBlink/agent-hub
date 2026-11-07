@@ -7,6 +7,7 @@ import { CardActionMenu } from "./CardActionMenu";
 let container: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -16,6 +17,7 @@ afterEach(async () => {
   container.remove();
   document.documentElement.style.removeProperty("--app-scale");
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 async function key(node: Element, key: string) {
   await act(async () =>
@@ -136,4 +138,61 @@ it("keeps a wide menu inside the viewport when its trigger is near the left edge
   expect(Number.parseFloat(menu.style.top) + 140).toBeLessThanOrEqual(
     window.innerHeight - 8,
   );
+});
+
+it("enters a checked submenu, cancels one level and returns selection to the root trigger", async () => {
+  const select = vi.fn();
+  await act(async () =>
+    root.render(
+      <CardActionMenu
+        label="Options"
+        actions={[
+          {
+            key: "sort",
+            label: "Sort",
+            submenu: [
+              {
+                key: "disabled",
+                label: "Disabled",
+                disabled: true,
+                onSelect: select,
+              },
+              { key: "name", label: "Name", checked: true, onSelect: select },
+              { key: "date", label: "Date", checked: false, onSelect: select },
+            ],
+          },
+          { key: "refresh", label: "Refresh", onSelect: select },
+        ]}
+      />,
+    ),
+  );
+  const trigger = container.querySelector("button")!;
+  await act(async () => trigger.click());
+  const sort = items()[0];
+  const enter = async () => {
+    await key(sort, "ArrowRight");
+    await act(
+      async () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    );
+  };
+  await enter();
+  expect(document.activeElement?.textContent).toBe("Name");
+  expect(document.activeElement?.getAttribute("aria-checked")).toBe("true");
+  await key(document.activeElement!, "End");
+  expect(document.activeElement?.textContent).toBe("Date");
+  await key(document.activeElement!, "Escape");
+  expect(document.querySelectorAll('[role="menu"]')).toHaveLength(1);
+  expect(document.activeElement).toBe(sort);
+  expect(select).not.toHaveBeenCalled();
+  await key(sort, "End");
+  expect(document.activeElement?.textContent).toBe("Refresh");
+  await key(document.activeElement!, "Home");
+  await enter();
+  await key(document.activeElement!, "ArrowLeft");
+  expect(document.activeElement).toBe(sort);
+  await enter();
+  await act(async () => (document.activeElement as HTMLButtonElement).click());
+  expect(select).toHaveBeenCalledOnce();
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
 });

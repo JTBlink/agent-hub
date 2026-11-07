@@ -2538,6 +2538,15 @@
     "copyTagName": "複製標籤名稱",
     "copyReferenceName": "複製引用名稱",
     "copyCommitSha": "複製提交 SHA",
+    "tagSort": {
+      "title": "排序方式",
+      "menu": "標籤檢視選項",
+      "date": "依日期排序",
+      "name": "依名稱排序",
+      "version": "依版本號排序",
+      "desc": "遞減",
+      "asc": "遞增"
+    },
     "tagActions": {
       "refresh": "重新整理",
       "openGraph": "在提交圖中開啟",

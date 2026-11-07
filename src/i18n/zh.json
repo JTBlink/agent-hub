@@ -2578,6 +2578,15 @@
     "copyTagName": "复制标签名",
     "copyReferenceName": "复制引用名",
     "copyCommitSha": "复制提交 SHA",
+    "tagSort": {
+      "title": "排序方式",
+      "menu": "标签视图选项",
+      "date": "按日期排序",
+      "name": "按名称排序",
+      "version": "按版本号排序",
+      "desc": "降序",
+      "asc": "升序"
+    },
     "tagActions": {
       "refresh": "刷新",
       "openGraph": "在提交图中打开",

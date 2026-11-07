@@ -23,6 +23,8 @@ import { useGitHistoryPages } from "../../hooks/useGitHistoryPages";
 import { GitHistoryPagination } from "./GitHistoryPagination";
 import { GitHistoryCommit } from "./GitHistoryCommit";
 import { cn } from "../../utils";
+import { DEFAULT_GIT_TAG_SORT } from "../../lib/gitTagSort";
+import { GitTagSortMenu } from "./GitTagSortMenu";
 
 export function GitHistory({
   status,
@@ -56,6 +58,8 @@ export function GitHistory({
   const [filterVisible, setFilterVisible] = useState(false);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<GitBrowseView>("commits");
+  const [tagSort, setTagSort] = useState(DEFAULT_GIT_TAG_SORT);
+  const section = useRef<HTMLElement>(null);
   const [browseRevision, setBrowseRevision] = useState(0);
   const [collapseRevision, setCollapseRevision] = useState(0);
   const history = useGitHistoryPages({
@@ -77,6 +81,7 @@ export function GitHistory({
     !!status?.upstream && status.ahead !== null && status.behind !== null;
   return (
     <section
+      ref={section}
       className="git-history flex min-h-0 flex-1 flex-col"
       aria-label={t("git.commits")}
     >
@@ -134,6 +139,13 @@ export function GitHistory({
                 setQuery("");
               }}
             />
+            {view === "tags" && (
+              <GitTagSortMenu
+                contextTarget={section}
+                sort={tagSort}
+                onChange={setTagSort}
+              />
+            )}
             <button
               type="button"
               className="app-button-ghost h-6 w-6 p-0"
@@ -323,6 +335,8 @@ export function GitHistory({
               commits={allCommits}
               selected={selected}
               onSelect={onSelect}
+              tagSort={tagSort}
+              onTagSortChange={setTagSort}
               onAuthor={(author) => {
                 setView("commits");
                 setQuery(author);

@@ -137,6 +137,123 @@ try {
         `PASS ${theme}, ${scale}: list/graph menus, edge bounds, keyboard, dialogs and remote selection`,
       );
     }
+  for (const language of ["zh", "en"]) {
+    await request(
+      `/navigate?target=${targetId}`,
+      `http://127.0.0.1:1420/tests/browser/git-tag-menu.html?sorting&language=${language}`,
+    );
+    const labels =
+      language === "zh"
+        ? {
+            tags: "标签",
+            sort: "排序方式",
+            date: "按日期排序",
+            name: "按名称排序",
+            asc: "升序",
+            desc: "降序",
+          }
+        : {
+            tags: "Tags",
+            sort: "Sort by",
+            date: "Date",
+            name: "Name",
+            asc: "Ascending",
+            desc: "Descending",
+          };
+    await wait(
+      `!!document.querySelector('button[aria-label="${labels.tags}"]')`,
+    );
+    await evaluate(
+      `document.querySelector('button[aria-label="${labels.tags}"]').click(); true`,
+    );
+    await wait(`document.querySelectorAll('.git-history summary').length===4`);
+    const names = () =>
+      evaluate(
+        `[...document.querySelectorAll('.git-history summary')].map(item=>item.title)`,
+      );
+    assert.deepEqual((await names()).slice(0, 3), [
+      "v1.2.0",
+      "v1.10.0",
+      "v1.3.0",
+    ]);
+    for (const theme of ["dark", "light"])
+      for (const scale of [1, 1.2]) {
+        await evaluate(
+          `document.documentElement.classList.toggle('dark',${theme === "dark"});document.documentElement.style.zoom='${scale}';document.documentElement.style.setProperty('--app-scale','${scale}');document.getElementById('root').style.width='340px'; true`,
+        );
+        await open(".git-history summary");
+        await choose(labels.sort);
+        await wait(`document.querySelectorAll('[role="menu"]').length===2`);
+        assert.equal(
+          await evaluate(`(() => {
+          const menus=[...document.querySelectorAll('[role="menu"]')];
+          return menus.every(menu=>{const r=menu.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1})
+            && document.querySelectorAll('[role="menuitemradio"][aria-checked="true"]').length===2;
+        })()`),
+          true,
+          `${language}/${theme}/${scale}: submenu bounds and checked choices`,
+        );
+        assert.equal(
+          await evaluate(`(() => {
+          const item=document.querySelector('[role="menuitemradio"]'); const r=item.getBoundingClientRect();
+          return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)?.closest('[role="menuitemradio"]')===item;
+        })()`),
+          true,
+          "submenu is visible and clickable outside the parent panel",
+        );
+        await evaluate(
+          `document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));true`,
+        );
+        assert.equal(
+          await evaluate(`document.querySelectorAll('[role="menu"]').length`),
+          1,
+        );
+        await choose(labels.sort);
+        await choose(labels.date);
+        // Date direction initially desc; reset explicitly after previous iterations.
+        await open(".git-history");
+        await choose(labels.sort);
+        await choose(labels.desc);
+        assert.deepEqual((await names()).slice(0, 3), [
+          "v1.2.0",
+          "v1.10.0",
+          "v1.3.0",
+        ]);
+        await open(".git-history");
+        await choose(labels.sort);
+        await choose(labels.asc);
+        assert.deepEqual((await names()).slice(0, 3), [
+          "v1.3.0",
+          "v1.10.0",
+          "v1.2.0",
+        ]);
+        await open(".git-history summary");
+        await choose(labels.sort);
+        await choose(labels.name);
+        assert.deepEqual((await names()).slice(1), [
+          "v1.10.0",
+          "v1.2.0",
+          "v1.3.0",
+        ]);
+        await open(".git-history");
+        await choose(labels.sort);
+        if (theme === "dark" && scale === 1.2 && language === "zh")
+          await request(
+            `/screenshot?target=${targetId}&file=/tmp/agent-hub-tag-sort.png`,
+          );
+        await evaluate(
+          `document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));true`,
+        );
+        await wait(`document.querySelectorAll('[role="menu"]').length===1`);
+        await evaluate(
+          `document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));true`,
+        );
+        await wait(`!document.querySelector('[role="menu"]')`);
+        console.log(
+          `PASS ${language}/${theme}/${scale}: tag sort submenu, viewport bounds and live ordering`,
+        );
+      }
+  }
 } finally {
   await request(`/close?target=${targetId}`);
 }

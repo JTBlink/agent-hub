@@ -4,6 +4,7 @@ import { applyTextSize } from "../../src/lib/textScale";
 import { GitReferenceSummary } from "../../src/components/git/GitReferenceSummary";
 import { GitGraphRefBadges } from "../../src/components/git/GitGraphRefBadges";
 import { GitTagActionsProvider } from "../../src/components/git/GitTagActionsProvider";
+import { GitHistory } from "../../src/components/git/GitHistory";
 import "../../src/index.css";
 import "../../src/components/git/git.css";
 
@@ -11,6 +12,23 @@ const params = new URLSearchParams(location.search);
 Object.assign(window, {
   __TAURI_INTERNALS__: {
     invoke: async (command: string) => {
+      if (command === "get_project_git_references")
+        return {
+          entries: [
+            { kind: "tags", name: "v1.2.0", sha: "a".repeat(40), time: 30 },
+            { kind: "tags", name: "v1.10.0", sha: "b".repeat(40), time: 20 },
+            { kind: "tags", name: "v1.3.0", sha: "c".repeat(40), time: 10 },
+            {
+              kind: "tags",
+              name: "archive/releases/a-long-tag-name-v5.0.0.4791",
+              sha: "d".repeat(40),
+              time: null,
+            },
+          ],
+          truncated: false,
+        };
+      if (command === "get_project_git_history")
+        return { commits: [], has_more: false };
       if (command === "get_project_git_remotes")
         return [
           { name: "origin", url: "" },
@@ -52,27 +70,40 @@ export function Preview() {
           }
         }}
       >
-        <details
-          className="relative w-64 border border-border text-xs"
-          open={expanded}
-          onToggle={(event) => setExpanded(event.currentTarget.open)}
-        >
-          <GitReferenceSummary
-            entry={{ kind: "tags", name, sha, summary: "Example release" }}
-            expanded={expanded}
-            onExpandedChange={setExpanded}
-            onRefresh={() => {}}
-          />
-          <p className="p-2">Example tag history</p>
-        </details>
-        <div className="mt-8 overflow-auto text-sm">
-          <GitGraphRefBadges
-            refs={[{ name, kind: "tag", remote: false }]}
-            sha={sha}
-            color={0}
-            onDetails={() => {}}
-          />
-        </div>
+        {params.has("sorting") ? (
+          <div className="w-full max-w-80 border border-border">
+            <GitHistory
+              loading={false}
+              target={{ projectId: "demo" }}
+              onSelect={() => {}}
+              onRefresh={() => {}}
+            />
+          </div>
+        ) : (
+          <>
+            <details
+              className="relative w-64 border border-border text-xs"
+              open={expanded}
+              onToggle={(event) => setExpanded(event.currentTarget.open)}
+            >
+              <GitReferenceSummary
+                entry={{ kind: "tags", name, sha, summary: "Example release" }}
+                expanded={expanded}
+                onExpandedChange={setExpanded}
+                onRefresh={() => {}}
+              />
+              <p className="p-2">Example tag history</p>
+            </details>
+            <div className="mt-8 overflow-auto text-sm">
+              <GitGraphRefBadges
+                refs={[{ name, kind: "tag", remote: false }]}
+                sha={sha}
+                color={0}
+                onDetails={() => {}}
+              />
+            </div>
+          </>
+        )}
       </GitTagActionsProvider>
     </div>
   );

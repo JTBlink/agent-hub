@@ -1,5 +1,4 @@
 import {
-  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -11,23 +10,37 @@ import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "../utils";
 import { getAppScale } from "../lib/textScale";
+import { CardActionMenuItems } from "./CardActionMenuItems";
+import { navigateMenu } from "../lib/menuNavigation";
 
 export interface CardAction {
   key: string;
   label: string;
   icon?: React.ReactNode;
   onSelect: () => void;
+  submenu?: never;
+  checked?: boolean;
   danger?: boolean;
   disabled?: boolean;
   keepOpen?: boolean;
   separatorBefore?: boolean;
 }
 
+export interface CardSubmenuAction extends Omit<
+  CardAction,
+  "onSelect" | "submenu"
+> {
+  submenu: CardMenuAction[];
+  onSelect?: never;
+}
+
+export type CardMenuAction = CardAction | CardSubmenuAction;
+
 interface Props {
   contextTarget?: RefObject<HTMLElement | null>;
   contextOnly?: boolean;
   shouldOpenContextMenu?: () => boolean;
-  actions: CardAction[];
+  actions: CardMenuAction[];
   label: string;
   className?: string;
   onOpenChange?: (open: boolean) => void;
@@ -312,68 +325,21 @@ export function CardActionMenu({
                   restoreFocus();
                   return;
                 }
-                const items = [
-                  ...(panelRef.current?.querySelectorAll<HTMLButtonElement>(
-                    "button:not(:disabled)",
-                  ) ?? []),
-                ];
-                const index = items.findIndex(
-                  (item) => item === document.activeElement,
-                );
-                const next =
-                  event.key === "Home"
-                    ? 0
-                    : event.key === "End"
-                      ? items.length - 1
-                      : event.key === "ArrowDown"
-                        ? (index + 1) % items.length
-                        : event.key === "ArrowUp"
-                          ? (index - 1 + items.length) % items.length
-                          : null;
-                if (next === null) return;
-                event.preventDefault();
-                items[next]?.focus();
+                if (navigateMenu(event.currentTarget, event.key))
+                  event.preventDefault();
               }}
             >
-              {renderContent
-                ? renderContent(() => setOpenState(null))
-                : actions.map((action) => (
-                    <Fragment key={action.key}>
-                      {action.separatorBefore && (
-                        <div
-                          role="separator"
-                          className="my-1 border-t border-border-subtle"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        role="menuitem"
-                        disabled={action.disabled}
-                        title={action.label}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!action.keepOpen) {
-                            setOpenState(null);
-                            restoreFocus();
-                          }
-                          action.onSelect();
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-                          action.danger
-                            ? "text-danger hover:bg-danger-bg"
-                            : "text-secondary hover:bg-surface-hover",
-                        )}
-                      >
-                        {action.icon && (
-                          <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center opacity-70">
-                            {action.icon}
-                          </span>
-                        )}
-                        <span className="min-w-0 truncate">{action.label}</span>
-                      </button>
-                    </Fragment>
-                  ))}
+              {renderContent ? (
+                renderContent(() => setOpenState(null))
+              ) : (
+                <CardActionMenuItems
+                  actions={actions}
+                  close={() => {
+                    setOpenState(null);
+                    restoreFocus();
+                  }}
+                />
+              )}
             </div>
           </>,
           document.body,

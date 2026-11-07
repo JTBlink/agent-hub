@@ -15,6 +15,11 @@ import {
 import { GitReferenceSummary } from "./GitReferenceSummary";
 import { GitTagHistory } from "./GitTagHistory";
 import type { GitBrowseView } from "./GitHistoryToolbar";
+import {
+  DEFAULT_GIT_TAG_SORT,
+  sortGitTags,
+  type GitTagSort,
+} from "../../lib/gitTagSort";
 
 export function GitRepositoryPanel({
   view,
@@ -26,6 +31,8 @@ export function GitRepositoryPanel({
   selected,
   onSelect,
   onAuthor,
+  tagSort = DEFAULT_GIT_TAG_SORT,
+  onTagSortChange,
 }: {
   view: Exclude<GitBrowseView, "commits">;
   target: CommitTarget;
@@ -36,6 +43,8 @@ export function GitRepositoryPanel({
   selected?: CommitFileSelection;
   onSelect?: (selection: CommitFileSelection) => void;
   onAuthor: (author: string) => void;
+  tagSort?: GitTagSort;
+  onTagSortChange?: (sort: GitTagSort) => void;
 }) {
   const { t } = useTranslation();
   const { opened, setOpen } = useDisclosures(collapseRevision);
@@ -130,13 +139,14 @@ export function GitRepositoryPanel({
         </button>
       </div>
     );
-  const entries = result.data.entries.filter(
+  const filtered = result.data.entries.filter(
     (entry) =>
       entry.kind === view &&
       `${entry.name} ${entry.summary ?? ""} ${entry.sha ?? ""}`
         .toLocaleLowerCase()
         .includes(needle),
   );
+  const entries = view === "tags" ? sortGitTags(filtered, tagSort) : filtered;
   return (
     <div className="pb-2 text-xs">
       <p className="px-3 py-1 text-muted" title={t("git.cachedRefs")}>
@@ -158,6 +168,8 @@ export function GitRepositoryPanel({
             expanded={opened.has(entry.name)}
             onExpandedChange={(open) => setOpen(entry.name, open)}
             onRefresh={() => setRetry((value) => value + 1)}
+            sort={view === "tags" ? tagSort : undefined}
+            onSortChange={onTagSortChange}
           />
           {entry.sha && onSelect ? (
             opened.has(entry.name) &&

@@ -5,6 +5,7 @@ import { CardActionMenu } from "../CardActionMenu";
 import { useGitCopyActions } from "./useGitCopyActions";
 import type { GitReferences } from "../../lib/gitApi";
 import { GitTagMenu } from "./GitTagMenu";
+import type { GitTagSort } from "../../lib/gitTagSort";
 
 /** Reference-specific actions share the workbench menu and its context trigger. */
 export function GitReferenceSummary({
@@ -12,11 +13,15 @@ export function GitReferenceSummary({
   expanded,
   onExpandedChange,
   onRefresh,
+  sort,
+  onSortChange,
 }: {
   entry: GitReferences["entries"][number];
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
   onRefresh?: () => void;
+  sort?: GitTagSort;
+  onSortChange?: (sort: GitTagSort) => void;
 }) {
   const { t } = useTranslation();
   const summary = useRef<HTMLElement>(null);
@@ -81,6 +86,8 @@ export function GitReferenceSummary({
           expanded={expanded}
           onExpandedChange={onExpandedChange}
           onRefresh={onRefresh}
+          sort={sort}
+          onSortChange={onSortChange}
         />
       ) : (
         <CardActionMenu
