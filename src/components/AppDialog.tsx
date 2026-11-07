@@ -67,7 +67,9 @@ export function AppDialog({
           onClose();
       }}
       className={cn(
-        "m-auto max-h-[calc(80vh/var(--app-scale))] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm",
+        // Explicit viewport positioning also centers native WebKit dialogs under CSS zoom.
+        "fixed inset-auto left-[calc(50vw/var(--app-scale))] top-[calc(50vh/var(--app-scale))] m-0 -translate-x-1/2 -translate-y-1/2",
+        "max-h-[calc(80vh/var(--app-scale))] w-[calc(100vw/var(--app-scale)-2rem)] max-w-lg overflow-y-auto rounded-xl border border-border bg-surface p-5 text-primary shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm",
         className,
       )}
     >
