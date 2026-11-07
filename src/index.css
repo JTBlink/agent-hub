@@ -163,10 +163,6 @@
     @apply ml-auto flex shrink-0 items-center gap-1;
   }
 
-  .app-sidebar-item-status {
-    @apply flex h-7 w-6 shrink-0 items-center justify-center rounded;
-  }
-
   .app-sidebar-footer {
     @apply mt-auto border-t border-border-faint pt-3 text-[10px] leading-relaxed text-muted;
   }

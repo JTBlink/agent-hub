@@ -184,6 +184,12 @@ export function HostsSettings({ active }: { active: boolean }) {
             system={state.system}
             selected={state.profile?.id ?? null}
             busy={state.working}
+            applyDisabled={state.busy || state.dirty || !state.system}
+            onApply={(profile) =>
+              void state.apply(
+                state.profile?.id === profile.id ? state.profile : profile,
+              )
+            }
             onSelect={select}
             onRename={(profile, name) => state.rename(name, profile)}
             onCopy={(profile) => askName("copy", profile)}

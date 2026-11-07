@@ -6,6 +6,7 @@
     "prototypes": "Open prototype catalog"
   },
   "hosts": {
+    "useProfile": "Apply {{name}} to system",
     "filePath": "Configuration file path",
     "pathUnavailable": "File path unavailable. Reload to try again.",
     "permissionFailed": "Access to the hosts file was not granted. Open system permission settings to review access, then retry. Your draft was preserved. Details: {{message}}",
@@ -1736,6 +1737,7 @@
     "remember": "Remember this preference (quitting still requires confirmation)"
   },
   "common": {
+    "use": "Use",
     "openInVscode": "Open in VS Code",
     "openContainingDirectoryInVscode": "Open the containing folder in VS Code",
     "add": "Add",

@@ -1,7 +1,8 @@
-import { Check, FolderOpen, Search } from "lucide-react";
+import { FolderOpen, Search } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { HostsProfile, HostsSnapshot } from "../../lib/hostsApi";
+import { SidebarActivationControl } from "../SidebarActivationControl";
 import { SidebarItemName } from "../SidebarItemName";
 import { SidebarListItem } from "../SidebarListItem";
 import { SidebarListPanel } from "../SidebarListPanel";
@@ -13,6 +14,8 @@ interface Props {
   system: HostsSnapshot | null;
   selected: string | null;
   busy: boolean;
+  applyDisabled: boolean;
+  onApply: (profile: HostsProfile) => void;
   onSelect: (profile: HostsProfile) => void;
   onRename: (profile: HostsProfile, name: string) => Promise<boolean>;
   onCopy: (profile: HostsProfile) => void;
@@ -23,6 +26,8 @@ export function HostsProfileList({
   system,
   selected,
   busy,
+  applyDisabled,
+  onApply,
   onSelect,
   onRename,
   onCopy,
@@ -67,6 +72,8 @@ export function HostsProfileList({
           selected={selected === profile.id}
           applied={profile.id === appliedId}
           busy={busy}
+          applyDisabled={applyDisabled}
+          onApply={onApply}
           onSelect={onSelect}
           onRename={onRename}
           onCopy={onCopy}
@@ -87,11 +94,22 @@ function HostsProfileRow({
   selected,
   applied,
   busy,
+  applyDisabled,
+  onApply,
   onSelect,
   onRename,
   onCopy,
   onRemove,
-}: Pick<Props, "busy" | "onSelect" | "onRename" | "onCopy" | "onRemove"> & {
+}: Pick<
+  Props,
+  | "busy"
+  | "applyDisabled"
+  | "onApply"
+  | "onSelect"
+  | "onRename"
+  | "onCopy"
+  | "onRemove"
+> & {
   profile: HostsProfile;
   selected: boolean;
   applied: boolean;
@@ -104,18 +122,13 @@ function HostsProfileRow({
       label={profile.name}
       selected={selected}
       actions={
-        <span className="app-sidebar-item-status">
-          {applied && (
-            <span
-              role="img"
-              aria-label={t("hosts.currentlyApplied")}
-              title={t("hosts.currentlyApplied")}
-              className="text-success"
-            >
-              <Check aria-hidden="true" className="h-3.5 w-3.5" />
-            </span>
-          )}
-        </span>
+        <SidebarActivationControl
+          active={applied}
+          disabled={applyDisabled}
+          label={t("hosts.useProfile", { name: profile.name })}
+          activeLabel={t("hosts.currentlyApplied")}
+          onActivate={() => onApply(profile)}
+        />
       }
     >
       <SidebarItemName

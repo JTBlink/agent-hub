@@ -6,6 +6,7 @@
     "prototypes": "開啟需求原型目錄"
   },
   "hosts": {
+    "useProfile": "套用「{{name}}」至系統",
     "filePath": "設定檔路徑",
     "pathUnavailable": "檔案路徑暫時無法取得，請重新讀取。",
     "permissionFailed": "未能取得 hosts 檔案的存取權限。請點選「開啟系統權限設定」檢查權限後重試，原稿已保留。詳情：{{message}}",
@@ -1706,6 +1707,7 @@
     "remember": "記住關閉偏好（退出前仍會確認）"
   },
   "common": {
+    "use": "使用",
     "openInVscode": "VS Code 開啟",
     "openContainingDirectoryInVscode": "在 VS Code 中開啟檔案所在目錄",
     "add": "新增",

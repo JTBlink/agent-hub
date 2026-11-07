@@ -389,32 +389,54 @@ it("attributes identical contents only to the backend ID and switches only after
   expect(host.querySelector("h3 .text-success")).toBeNull();
   expect(activeProfileNames()).toEqual([first.name]);
 
+  // Apply from the other row while keeping the first profile open for editing.
+  await act(async () => profileButtons()[0].click());
+  const useSecond = () => button(`应用「${second.name}」到系统`);
+  expect(useSecond().textContent).toBe("使用");
+  await edit("# keep unsaved draft\n");
+  expect(useSecond().disabled).toBe(true);
+  await act(async () => useSecond().click());
+  expect(api.applyHostsProfile).not.toHaveBeenCalled();
+  expect(editor().value).toBe("# keep unsaved draft\n");
+  await edit(hostsContent());
   vi.mocked(api.applyHostsProfile).mockRejectedValueOnce(
     new Error("Authorization cancelled"),
   );
-  await act(async () => button("应用到系统").click());
+  await act(async () => useSecond().click());
   expect(activeProfileNames()).toEqual([first.name]);
+  expect(useSecond().disabled).toBe(false);
 
   const applied = { ...initial, applied_profile_id: second.id };
-  vi.mocked(api.applyHostsProfile).mockResolvedValueOnce({
-    snapshot: applied,
-    backup_path: null,
+  let finish!: (saved: api.HostsSaved) => void;
+  vi.mocked(api.applyHostsProfile).mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  await act(async () => {
+    useSecond().click();
+    useSecond().click();
   });
-  await act(async () => button("应用到系统").click());
+  expect(useSecond().disabled).toBe(true);
+  expect(api.applyHostsProfile).toHaveBeenCalledTimes(2);
+  expect(activeProfileNames()).toEqual([first.name]);
+  await act(async () => finish({ snapshot: applied, backup_path: null }));
   expect(api.applyHostsProfile).toHaveBeenLastCalledWith(
     second,
     initial.revision,
   );
   expect(activeProfileNames()).toEqual([second.name]);
-  expect(button("已应用").disabled).toBe(true);
-  expect(button("已应用").querySelectorAll("svg")).toHaveLength(1);
-  expect(button("已应用").querySelectorAll("svg path")).toHaveLength(1);
+  expect(
+    profileButtons().map(
+      (item) => item.getAttribute("aria-pressed") === "true",
+    ),
+  ).toEqual([true, false]);
+  expect(editor().value).toBe(hostsContent());
+  expect(button("应用到系统").disabled).toBe(false);
+  expect(button(`应用「${second.name}」到系统`)).toBeUndefined();
 
   vi.mocked(api.readSystemHosts).mockResolvedValue(applied);
   await act(async () => window.dispatchEvent(new Event("focus")));
-  expect(activeProfileNames()).toEqual([second.name]);
-  await act(async () => profileButtons()[0].click());
-  expect(button("应用到系统").disabled).toBe(false);
   expect(activeProfileNames()).toEqual([second.name]);
 });
 
@@ -426,8 +448,8 @@ it("does not infer an active profile from identical content when no backend ID i
   await render();
   expect(activeProfileNames()).toEqual([]);
   expect(
-    host.querySelectorAll("aside button[aria-label^='应用方案']"),
-  ).toHaveLength(0);
+    host.querySelectorAll("aside button[aria-label^='应用「']"),
+  ).toHaveLength(2);
 });
 
 it("clears the badge after saving changes to the active profile without changing the system file", async () => {

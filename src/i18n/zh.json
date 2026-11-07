@@ -6,6 +6,7 @@
     "prototypes": "打开需求原型目录"
   },
   "hosts": {
+    "useProfile": "应用「{{name}}」到系统",
     "filePath": "配置文件路径",
     "pathUnavailable": "文件路径暂不可用，请重新读取。",
     "permissionFailed": "未能获得 hosts 文件的访问权限。请点击“打开系统权限设置”检查权限后重试，原稿已保留。详情：{{message}}",
@@ -1734,6 +1735,7 @@
     "remember": "记住关闭偏好（退出前仍会确认）"
   },
   "common": {
+    "use": "使用",
     "openInVscode": "VS Code 打开",
     "openContainingDirectoryInVscode": "在 VS Code 中打开文件所在目录",
     "add": "新增",
