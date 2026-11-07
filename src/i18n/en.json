@@ -1312,6 +1312,10 @@
     "onlyThisContributor": "Only this contributor",
     "installClone": "Clone & Preview",
     "gitBrowser": {
+      "installToLocal": "Install locally",
+      "updateToLocal": "Overwrite local skill",
+      "uploadToRepository": "Upload to repository",
+      "viewDetails": "View details",
       "repositoryVersion": "Repository {{version}}",
       "installedVersion": "Installed {{version}}",
       "repositoryOlder": "Repository version is older",

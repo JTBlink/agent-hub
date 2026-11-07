@@ -1310,6 +1310,10 @@
     "onlyThisContributor": "仅看该贡献者",
     "installClone": "克隆并预览",
     "gitBrowser": {
+      "installToLocal": "安装到本地",
+      "updateToLocal": "覆盖安装到本地",
+      "uploadToRepository": "上传到仓库",
+      "viewDetails": "查看详情",
       "repositoryVersion": "仓库 {{version}}",
       "installedVersion": "已安装 {{version}}",
       "repositoryOlder": "仓库版本较旧",

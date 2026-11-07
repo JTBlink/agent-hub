@@ -1,15 +1,17 @@
 import {
   Check,
+  DownloadCloud,
+  Eye,
   GitBranch,
   Loader2,
-  Link2,
-  Plus,
   Square,
   SquareCheck,
+  UploadCloud,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../utils";
 import type { GitSkillPreview } from "../lib/tauri";
+import { compareDeclaredSkillVersions } from "../lib/skillVersions";
 import { GitSkillVersionInfo } from "./GitSkillVersionInfo";
 
 export function GitSkillCard({
@@ -40,6 +42,25 @@ export function GitSkillCard({
   onDetails: () => void;
 }) {
   const { t } = useTranslation();
+  const comparison = compareDeclaredSkillVersions(
+    installedVersion,
+    skill.version,
+  );
+  const action = !installed
+    ? "installToLocal"
+    : comparison === "central_newer"
+      ? "uploadToRepository"
+      : comparison === "source_newer" || otherSource
+        ? "updateToLocal"
+        : "viewDetails";
+  const ActionIcon =
+    action === "uploadToRepository"
+      ? UploadCloud
+      : action === "viewDetails"
+        ? Eye
+        : DownloadCloud;
+  const actionLabel = t(`install.gitBrowser.${action}`);
+  const actionTitle = `${actionLabel} · ${skill.name}`;
   return (
     <article
       className={cn(
@@ -86,17 +107,15 @@ export function GitSkillCard({
             type="button"
             onClick={installed ? onDetails : onInstall}
             disabled={disabled || busy}
-            aria-label={t(
-              installed
-                ? "install.gitBrowser.viewSkill"
-                : "install.gitBrowser.installSkill",
-              { name: skill.name },
-            )}
+            aria-label={actionTitle}
+            title={actionTitle}
             className={cn(
-              "shrink-0 rounded-[5px] border p-1 transition-colors disabled:opacity-50",
-              installed
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20"
-                : "border-accent-border bg-accent-dark text-white hover:bg-accent",
+              "inline-flex shrink-0 items-center gap-1 rounded-[5px] border px-1.5 py-1 text-xs transition-colors focus-visible:outline-accent disabled:opacity-50",
+              action === "uploadToRepository"
+                ? "border-amber-500/30 bg-amber-500/10 text-warning hover:bg-amber-500/20"
+                : action === "viewDetails"
+                  ? "border-border-subtle text-tertiary hover:bg-surface-hover"
+                  : "border-accent-border bg-accent-bg text-accent-light hover:bg-surface-active",
             )}
           >
             {busy ? (
@@ -104,13 +123,10 @@ export function GitSkillCard({
                 aria-hidden="true"
                 className="h-3.5 w-3.5 animate-spin"
               />
-            ) : otherSource ? (
-              <Link2 aria-hidden="true" className="h-3.5 w-3.5" />
-            ) : installed ? (
-              <Check aria-hidden="true" className="h-3.5 w-3.5" />
             ) : (
-              <Plus aria-hidden="true" className="h-3.5 w-3.5" />
+              <ActionIcon aria-hidden="true" className="h-3.5 w-3.5" />
             )}
+            {actionLabel}
           </button>
         )}
       </div>

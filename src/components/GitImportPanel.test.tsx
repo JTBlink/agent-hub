@@ -163,7 +163,7 @@ it("renders inline Skill cards, filters by installation state and distinguishes 
   expect(container.querySelector("article")?.textContent).not.toContain(
     "已安装",
   );
-  expect(button("安装 Alpha")).toBeDefined();
+  expect(button("安装到本地 · Alpha")).toBeDefined();
 });
 
 it("opens details for an installed Skill and navigates to its existing library record", async () => {
@@ -181,7 +181,7 @@ it("opens details for an installed Skill and navigates to its existing library r
 
 it("installs one available card through the current repository", async () => {
   await render();
-  await click("安装 Beta");
+  await click("安装到本地 · Beta");
   expect(api.confirmGitInstall).toHaveBeenCalledWith(
     first.url,
     "<temp>/preview",
@@ -201,7 +201,7 @@ it("shows an existing same-name local install from another source instead of an 
     node.textContent?.includes("Beta"),
   );
   expect(card?.textContent).toContain("本地已存在");
-  expect(button("查看 Beta")).toBeDefined();
+  expect(button("覆盖安装到本地 · Beta")).toBeDefined();
   await select(
     container.querySelector<HTMLSelectElement>(
       'select[aria-label="安装状态"]',
@@ -209,7 +209,7 @@ it("shows an existing same-name local install from another source instead of an 
     "installed",
   );
   expect(container.querySelectorAll("article")).toHaveLength(1);
-  await click("查看 Beta");
+  await click("覆盖安装到本地 · Beta");
   await click("在技能库中查看");
   expect(openInstalled).toHaveBeenCalledWith(existing.id);
 });
@@ -222,7 +222,7 @@ it("offers confirmed overwrite for a same-name Skill and never installs a second
       source_ref: "/projects/other/beta",
     }),
   ]);
-  await click("查看 Beta");
+  await click("覆盖安装到本地 · Beta");
   expect(container.querySelector("dialog[open]")?.textContent).toContain(
     "来源不同",
   );
@@ -251,7 +251,9 @@ it("blocks installing an older remote version and points to a local working tree
   expect(container.querySelector("article")?.textContent).toContain(
     "仓库版本较旧",
   );
-  await click("Alpha");
+  const upload = button("上传到仓库 · Alpha");
+  expect(upload.title).toBe("上传到仓库 · Alpha");
+  await click("上传到仓库 · Alpha");
   expect(button("同步新版到仓库").disabled).toBe(true);
   expect(container.querySelector("dialog[open]")?.textContent).toContain(
     "本地工作目录",
@@ -320,6 +322,7 @@ it("syncs a newer installed Skill to a local repository and updates the open det
     plan.approval,
   );
   expect(api.installLocalGitSkill).not.toHaveBeenCalled();
+  expect(button("查看详情 · Alpha")).toBeDefined();
   expect(container.querySelector("dialog[open]")?.textContent).toContain(
     "仓库 0.2.0",
   );

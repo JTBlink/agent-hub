@@ -1291,6 +1291,10 @@
     "gitReinstall": "重新安裝並更新",
     "installClone": "安裝並複製",
     "gitBrowser": {
+      "installToLocal": "安裝到本機",
+      "updateToLocal": "覆寫安裝到本機",
+      "uploadToRepository": "上傳到倉庫",
+      "viewDetails": "查看詳情",
       "repositoryVersion": "倉庫 {{version}}",
       "installedVersion": "已安裝 {{version}}",
       "repositoryOlder": "倉庫版本較舊",
