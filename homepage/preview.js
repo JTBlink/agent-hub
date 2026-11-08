@@ -1,10 +1,10 @@
-document.querySelector(".preview-controls").hidden = false;
-
-const controls = document.querySelectorAll("[data-preview]");
+const controls = [...document.querySelectorAll("[data-preview]")];
 const previews = document.querySelectorAll(".product-preview");
+const controlGroup = document.querySelector(".preview-controls");
 
-for (const control of controls) {
-  control.addEventListener("click", () => {
+if (controlGroup && controls.length) {
+  controlGroup.hidden = false;
+  function selectPreview(control) {
     for (const button of controls) {
       const selected = button === control;
       button.classList.toggle("selected", selected);
@@ -13,5 +13,19 @@ for (const control of controls) {
     for (const preview of previews) {
       preview.hidden = preview.id !== `preview-${control.dataset.preview}`;
     }
-  });
+  }
+  for (const control of controls) {
+    control.addEventListener("click", () => selectPreview(control));
+  }
+  for (const shortcut of document.querySelectorAll("[data-show-preview]")) {
+    shortcut.addEventListener("click", () => {
+      const control = controls.find(
+        (button) => button.dataset.preview === shortcut.dataset.showPreview,
+      );
+      if (!control) return;
+      selectPreview(control);
+      control.focus({ preventScroll: true });
+      document.querySelector(".workbench")?.scrollIntoView({ block: "center" });
+    });
+  }
 }

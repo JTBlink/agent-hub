@@ -1,0 +1,39 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://jtblink.github.io/agent-hub/#website",
+      "name": "AgentHub",
+      "url": "https://jtblink.github.io/agent-hub/",
+      "inLanguage": "zh-CN"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://jtblink.github.io/agent-hub/#application",
+      "name": "AgentHub",
+      "url": "https://jtblink.github.io/agent-hub/",
+      "description": "本地优先的 AI 开发工作台，连接项目、编程 Agent、Git、Skills 和定时任务。",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS, Windows, Linux",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/JTBlink/agent-hub/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/JTBlink/agent-hub/releases",
+      "screenshot": "https://jtblink.github.io/agent-hub/assets/project-workspace.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "项目与 Git 工作树管理",
+        "Codex、Claude Code、OpenCode 与 Hermes 启动",
+        "Git 变更与图片比较",
+        "GitHub 与 GitLab 平台任务",
+        "Skills 技能库与项目部署",
+        "命令与 Agent 定时任务",
+        "本地数据与 Git 备份"
+      ]
+    }
+  ]
+}

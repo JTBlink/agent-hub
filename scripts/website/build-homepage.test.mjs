@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { it, expect } from "vitest";
+import { JSDOM } from "jsdom";
 
 it("builds a self-contained website with the current version and all local assets", () => {
   const outputDirectory = mkdtempSync(join(tmpdir(), "agenthub-homepage-"));
@@ -17,6 +18,38 @@ it("builds a self-contained website with the current version and all local asset
     const html = readFileSync(outputPath, "utf8");
     expect(html).toContain(readFileSync(join(root, "VERSION"), "utf8").trim());
     expect(html).not.toContain("__APP_VERSION__");
+    const document = new JSDOM(html).window.document;
+    const canonical = document.querySelector('link[rel="canonical"]').href;
+    expect(canonical).toBe("https://jtblink.github.io/agent-hub/");
+    expect(document.title).toContain("AI 开发工作台");
+    expect(
+      document.querySelector('meta[property="og:image"]').content,
+    ).toContain("project-workspace.png");
+    const schema = JSON.parse(
+      document.querySelector('script[type="application/ld+json"]').textContent,
+    );
+    expect(
+      schema["@graph"].find((item) => item["@type"] === "SoftwareApplication"),
+    ).toMatchObject({
+      name: "AgentHub",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "macOS, Windows, Linux",
+    });
+    const sitemap = new JSDOM(
+      readFileSync(join(dirname(outputPath), "sitemap.xml"), "utf8"),
+      { contentType: "application/xml" },
+    ).window.document;
+    expect(
+      [...sitemap.querySelectorAll("loc")].map((node) => node.textContent),
+    ).toEqual([
+      `${canonical}sitemap-pages.xml`,
+      `${canonical}docs/sitemap.xml`,
+    ]);
+    const pages = new JSDOM(
+      readFileSync(join(dirname(outputPath), "sitemap-pages.xml"), "utf8"),
+      { contentType: "application/xml" },
+    ).window.document;
+    expect(pages.querySelector("loc").textContent).toBe(canonical);
     for (const [, resource] of html.matchAll(/(?:src|href)="(\.\/[^"#]+)"/g)) {
       expect(existsSync(join(dirname(outputPath), resource)), resource).toBe(
         true,

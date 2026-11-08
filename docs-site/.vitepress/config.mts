@@ -45,6 +45,15 @@ export default defineConfig({
   srcDir: ".generated",
   outDir: "../_site/docs",
   cleanUrls: false,
+  sitemap: { hostname: catalog.siteUrl },
+  transformHead({ pageData }) {
+    const path = pageData.relativePath
+      .replace(/index\.md$/, "")
+      .replace(/\.md$/, ".html");
+    return [
+      ["link", { rel: "canonical", href: new URL(path, catalog.siteUrl).href }],
+    ];
+  },
   lastUpdated: false,
   markdown: { anchor: { slugify: slug } },
   vite: { plugins: [helpContentPlugin(root)] },
