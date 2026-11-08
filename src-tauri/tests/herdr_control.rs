@@ -742,7 +742,7 @@ fn new_agent_tab_uses_the_checkout_instead_of_the_selected_panes_home_directory(
     assert!(control.start_agent(&opened.target, input).is_err());
     let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
     assert!(calls.contains(&format!(
-        "tab create --workspace w1 --cwd {} --no-focus --label Claude Agent Teams --env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1",
+        "tab create --workspace w1 --cwd {} --no-focus --label claude-agent-teams-1 --env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1",
         directory.canonicalize().unwrap().display()
     )), "{calls}");
     assert!(!calls.contains("pane split"));

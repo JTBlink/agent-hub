@@ -195,6 +195,11 @@ impl HerdrControl {
                 };
                 let cwd = cwd.to_str().context("Pane directory must be Unicode")?;
                 let value = if matches!(action, Action::NewTab) {
+                    let label = numbered_tab_label(
+                        &snapshot,
+                        &target.workspace_id,
+                        tab_label.unwrap_or("shell"),
+                    )?;
                     let mut args = vec![
                         "tab",
                         "create",
@@ -203,10 +208,9 @@ impl HerdrControl {
                         "--cwd",
                         cwd,
                         "--no-focus",
+                        "--label",
+                        &label,
                     ];
-                    if let Some(label) = tab_label {
-                        args.extend(["--label", label]);
-                    }
                     if teams {
                         args.extend(["--env", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"]);
                     }
@@ -348,3 +352,40 @@ impl HerdrControl {
         })
     }
 }
+
+fn numbered_tab_label(snapshot: &Snapshot, workspace: &str, label: &str) -> Result<String> {
+    fn normalize(label: &str) -> String {
+        label
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|part| !part.is_empty())
+            .map(str::to_lowercase)
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+    let base = normalize(label);
+    if base.is_empty() {
+        bail!("Tab name must contain letters or digits")
+    }
+    let prefix = format!("{base}-");
+    let previous = snapshot
+        .tabs
+        .iter()
+        .filter(|tab| tab.workspace_id == workspace)
+        .filter_map(|tab| {
+            let label = normalize(&tab.label);
+            if label == base {
+                Some(1)
+            } else {
+                label.strip_prefix(&prefix)?.parse::<u64>().ok()
+            }
+        })
+        .max()
+        .unwrap_or(0);
+    let number = previous
+        .checked_add(1)
+        .context("Tab number limit reached")?;
+    Ok(format!("{base}-{number}"))
+}
+
+#[cfg(test)]
+mod tests;
