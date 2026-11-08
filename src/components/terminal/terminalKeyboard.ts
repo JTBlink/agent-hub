@@ -131,6 +131,23 @@ export function bindTerminalTextInput(
   node.addEventListener("input", input, true);
   return {
     handle(event: KeyboardEvent) {
+      if (event.type === "keypress") {
+        if (
+          pending &&
+          !composing &&
+          !event.isComposing &&
+          event.charCode &&
+          !event.ctrlKey &&
+          !event.altKey &&
+          !event.metaKey
+        ) {
+          // xterm sends this character from keypress. Some IMEs still emit
+          // input afterwards, so retire the pending native-text path first.
+          pending = 0;
+          committedText = String.fromCharCode(event.charCode);
+        }
+        return true;
+      }
       if (event.type !== "keydown" || event.defaultPrevented) return true;
       committedText = null;
       if (composing || finishing || event.isComposing) return true;

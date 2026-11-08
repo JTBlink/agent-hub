@@ -41,6 +41,30 @@ it("delivers native text once with missing legacy codes or IME keyCode 229", () 
     "clear 123!clear 123!",
   );
   expect(textarea.value).toBe("");
+  // A native keypress is delivered by xterm; its trailing IME input must not
+  // send the same punctuation again, including when it arrives after keyup.
+  for (const keyCode of [189, 229]) {
+    const previous = input.mock.calls.length;
+    keyboard.handle(new KeyboardEvent("keydown", { key: "-", keyCode }));
+    expect(
+      keyboard.handle(
+        new KeyboardEvent("keypress", {
+          key: "-",
+          charCode: 45,
+        }),
+      ),
+    ).toBe(true);
+    keyboard.handle(new KeyboardEvent("keyup", { key: "-" }));
+    textarea.dispatchEvent(
+      new InputEvent("input", {
+        inputType: "insertText",
+        data: "-",
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(input).toHaveBeenCalledTimes(previous);
+  }
   keyboard.dispose();
 });
 

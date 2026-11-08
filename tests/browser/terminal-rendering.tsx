@@ -259,6 +259,16 @@ Object.assign(window, {
     for (const character of command) key(character);
     key("a", "KeyA", false, 0);
     key("b", "KeyB", false, 229);
+    // Some IMEs emit native input even after xterm handled keypress.
+    key("-", "Minus", false, 189);
+    textarea.dispatchEvent(
+      new InputEvent("input", {
+        inputType: "insertText",
+        data: "-",
+        bubbles: true,
+        composed: true,
+      }),
+    );
     key("A", "KeyA", true);
     key("Process", "KeyB", true, 229);
     key("Process", "Digit1", true, 229);
@@ -318,7 +328,7 @@ Object.assign(window, {
     }
     // Let xterm flush its composition timers before checking for duplicates.
     await pause();
-    const expected = command + "abAB!?clear中文输入\x1b[Z\r\x1b[1;2D";
+    const expected = command + "ab-AB!?clear中文输入\x1b[Z\r\x1b[1;2D";
     generatedInput.dispose();
     while (
       written.length < expected.length &&
