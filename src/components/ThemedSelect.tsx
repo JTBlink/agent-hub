@@ -416,7 +416,13 @@ export function ThemedSelect(selection: Props) {
                 <div
                   key={option.value}
                   role="presentation"
-                  className="flex items-center"
+                  onMouseEnter={() => {
+                    if (!option.disabled) setActive(index);
+                  }}
+                  className={cn(
+                    "group/option flex items-center rounded-md",
+                    active === index && "bg-surface-hover",
+                  )}
                 >
                   <button
                     type="button"
@@ -432,13 +438,9 @@ export function ThemedSelect(selection: Props) {
                     disabled={option.disabled}
                     tabIndex={-1}
                     onMouseDown={(event) => event.preventDefault()}
-                    onMouseEnter={() => {
-                      if (!option.disabled) setActive(index);
-                    }}
                     onClick={() => choose(option)}
                     className={cn(
                       "flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-                      active === index && "bg-surface-hover",
                       values.includes(option.value)
                         ? "font-medium text-accent-light"
                         : "text-secondary",
@@ -484,7 +486,7 @@ export function ThemedSelect(selection: Props) {
                         trigger.current?.focus({ preventScroll: true });
                         action.onSelect();
                       }}
-                      className="app-button-ghost mx-1 h-7 w-7 shrink-0 rounded p-1 text-muted hover:text-danger focus-visible:ring-2 focus-visible:ring-accent"
+                      className="app-button-ghost pointer-events-none mx-1 h-7 w-7 shrink-0 rounded p-1 text-muted opacity-0 group-hover/option:pointer-events-auto group-hover/option:opacity-100 hover:text-danger focus:pointer-events-auto focus:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
                     >
                       {action.icon}
                     </button>
