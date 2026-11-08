@@ -21,6 +21,10 @@ const structuredData = JSON.parse(
 const output = template
   .replaceAll("__APP_VERSION__", version)
   .replace(
+    "__PRODUCT_PREVIEWS__",
+    readFileSync(resolve(root, "homepage/partials/previews.html"), "utf8"),
+  )
+  .replace(
     "__APP_SCHEMA__",
     JSON.stringify(structuredData).replaceAll("<", "\\u003c"),
   );
@@ -45,6 +49,18 @@ for (const file of ["styles.css", "preview.js", "release.js"]) {
   copyFileSync(resolve(root, "homepage", file), resolve(outputDirectory, file));
 }
 copyFileSync(
+  resolve(root, "src/styles/brand.css"),
+  resolve(assetsDirectory, "workbench-theme.css"),
+);
+copyFileSync(
+  resolve(root, "public/fonts/JetBrainsMono-Regular.woff2"),
+  resolve(assetsDirectory, "developer-mono.woff2"),
+);
+copyFileSync(
+  resolve(root, "public/fonts/OFL-JetBrainsMono.txt"),
+  resolve(assetsDirectory, "OFL-JetBrainsMono.txt"),
+);
+copyFileSync(
   resolve(root, "src-tauri/icons/app-icon.svg"),
   resolve(assetsDirectory, "app-icon.svg"),
 );
@@ -55,6 +71,7 @@ for (const file of [
   "git.png",
   "tasks.png",
   "automation.png",
+  "automation-execution.png",
 ]) {
   copyFileSync(
     resolve(root, "docs/images", file),

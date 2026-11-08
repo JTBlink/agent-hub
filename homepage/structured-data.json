@@ -13,7 +13,7 @@
       "@id": "https://jtblink.github.io/agent-hub/#application",
       "name": "AgentHub",
       "url": "https://jtblink.github.io/agent-hub/",
-      "description": "本地优先的 AI 开发工作台，连接项目、编程 Agent、Git、Skills 和定时任务。",
+      "description": "面向开发者的 AI Native 编程工作台，支持 Codex、Claude Code、Git worktree、Herdr 会话集成、Skills 管理、代码审查与自动化定时任务。",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Windows, Linux",
       "isAccessibleForFree": true,
@@ -28,12 +28,14 @@
       "featureList": [
         "项目与 Git 工作树管理",
         "Codex、Claude Code、OpenCode 与 Hermes 启动",
+        "Herdr 工作区、Agent 会话与终端面板集成（可选）",
         "Git 变更与图片比较",
         "GitHub 与 GitLab 平台任务",
         "Skills 技能库与项目部署",
         "命令与 Agent 定时任务",
         "本地数据与 Git 备份"
-      ]
+      ],
+      "keywords": "AI 编程工具, AI Coding, AI Native, Coding Agent, Codex, Claude Code, Skills 管理, Git 代码审查, Herdr, Git worktree, 自动化定时任务"
     }
   ]
 }

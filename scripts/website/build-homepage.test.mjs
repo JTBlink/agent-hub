@@ -18,10 +18,12 @@ it("builds a self-contained website with the current version and all local asset
     const html = readFileSync(outputPath, "utf8");
     expect(html).toContain(readFileSync(join(root, "VERSION"), "utf8").trim());
     expect(html).not.toContain("__APP_VERSION__");
+    expect(html).not.toContain("__PRODUCT_PREVIEWS__");
     const document = new JSDOM(html).window.document;
     const canonical = document.querySelector('link[rel="canonical"]').href;
     expect(canonical).toBe("https://jtblink.github.io/agent-hub/");
-    expect(document.title).toContain("AI 开发工作台");
+    expect(document.title).toContain("编程工作台");
+    expect(document.title).toContain("AI Native");
     expect(
       document.querySelector('meta[property="og:image"]').content,
     ).toContain("project-workspace.png");

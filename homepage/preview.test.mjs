@@ -5,7 +5,13 @@ import { expect, it, vi } from "vitest";
 
 it("switches screenshots and returns the automation shortcut to its matching preview", () => {
   const { window } = new JSDOM(
-    readFileSync(new URL("./index.html", import.meta.url), "utf8"),
+    readFileSync(new URL("./index.html", import.meta.url), "utf8").replace(
+      "__PRODUCT_PREVIEWS__",
+      readFileSync(
+        new URL("./partials/previews.html", import.meta.url),
+        "utf8",
+      ),
+    ),
   );
   const document = window.document;
   const scroll = vi.fn();
