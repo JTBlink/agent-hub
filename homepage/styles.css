@@ -175,8 +175,12 @@ summary:focus-visible {
   background: var(--color-success);
   border-radius: 50%;
 }
+/* Size the promotional title to its column so Chinese particles never become orphans. */
+.hero-intro > div:first-child {
+  container-type: inline-size;
+}
 h1 {
-  font-size: clamp(38px, 3.7vw, 56px);
+  font-size: clamp(30px, 10cqw, 48px);
   line-height: 1.3;
   font-weight: 550;
   letter-spacing: -1.8px;
@@ -839,7 +843,7 @@ h3 {
     gap: 30px;
   }
   h1 {
-    font-size: 38px;
+    font-size: clamp(30px, 10cqw, 48px);
     letter-spacing: -1.2px;
   }
   .hero-copy > p:first-child {
@@ -887,7 +891,7 @@ h3 {
     padding: 0;
   }
   h1 {
-    font-size: 37px;
+    font-size: clamp(29px, 10cqw, 40px);
     margin-bottom: 0;
   }
   .hero-capabilities {
@@ -929,7 +933,7 @@ h3 {
     display: block;
   }
   h1 {
-    font-size: clamp(32px, 8.6vw, 44px);
+    font-size: clamp(27px, 10cqw, 40px);
     margin: 17px 0 22px;
     letter-spacing: -1.1px;
   }

@@ -19,6 +19,12 @@ const labels = {
     search: "搜索文档",
     back: "返回产品首页",
     changelog: "更新日志",
+    menu: "文档目录",
+    appearance: "阅读主题",
+    light: "切换浅色主题",
+    dark: "切换深色主题",
+    top: "回到顶部",
+    language: "切换语言",
   },
   en: {
     label: "English",
@@ -27,6 +33,12 @@ const labels = {
     search: "Search documentation",
     back: "Product home",
     changelog: "Changelog",
+    menu: "Menu",
+    appearance: "Appearance",
+    light: "Switch to light theme",
+    dark: "Switch to dark theme",
+    top: "Back to top",
+    language: "Change language",
   },
   "zh-TW": {
     label: "繁體中文",
@@ -35,6 +47,12 @@ const labels = {
     search: "搜尋文件",
     back: "產品首頁",
     changelog: "更新日誌",
+    menu: "文件目錄",
+    appearance: "閱讀主題",
+    light: "切換淺色主題",
+    dark: "切換深色主題",
+    top: "回到頂部",
+    language: "切換語言",
   },
 };
 
@@ -45,6 +63,7 @@ export default defineConfig({
   srcDir: ".generated",
   outDir: "../_site/docs",
   cleanUrls: false,
+  appearance: "dark",
   sitemap: { hostname: catalog.siteUrl },
   transformHead({ pageData }) {
     const path = pageData.relativePath
@@ -55,8 +74,15 @@ export default defineConfig({
     ];
   },
   lastUpdated: false,
-  markdown: { anchor: { slugify: slug } },
-  vite: { plugins: [helpContentPlugin(root)] },
+  markdown: {
+    anchor: { slugify: slug },
+    theme: { light: "catppuccin-latte", dark: "catppuccin-mocha" },
+  },
+  vite: {
+    plugins: [helpContentPlugin(root)],
+    // Documentation uses plain CSS and must not inherit the application Tailwind pipeline.
+    css: { postcss: { plugins: [] } },
+  },
   locales: Object.fromEntries(
     Object.entries(labels).map(([locale, text]) => [
       locale,
@@ -65,6 +91,12 @@ export default defineConfig({
         lang: text.lang,
         title: `AgentHub · ${text.title}`,
         themeConfig: {
+          sidebarMenuLabel: text.menu,
+          darkModeSwitchLabel: text.appearance,
+          lightModeSwitchTitle: text.light,
+          darkModeSwitchTitle: text.dark,
+          returnToTopLabel: text.top,
+          langMenuLabel: text.language,
           nav: [
             { text: text.title, link: `/${locale}/` },
             { text: text.changelog, link: `/${locale}/changelog` },
@@ -92,6 +124,8 @@ export default defineConfig({
     ]),
   ),
   themeConfig: {
+    siteTitle: "AgentHub",
+    logo: new URL("../assets/app-icon.svg", catalog.siteUrl).href,
     search: {
       provider: "local",
       options: {
