@@ -1,4 +1,11 @@
-import { useState, useEffect, useId, useContext } from "react";
+import {
+  useState,
+  useEffect,
+  useId,
+  useContext,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PanelLeftClose } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -96,14 +103,27 @@ export function Sidebar() {
   useEffect(() => {
     setResourcePanelVisible?.(panelVisible);
   }, [setResourcePanelVisible, panelVisible]);
-  const selectPanel = (panel: SidebarPanel) => {
+  const togglePanel = () => {
+    const next = !panelOpen;
+    setPanelOpen(next);
+    try {
+      localStorage.setItem(PANEL_STORAGE_KEY, String(next));
+    } catch {
+      // Keep navigation usable when browser storage is unavailable.
+    }
+  };
+  const selectPanel = (
+    panel: SidebarPanel,
+    mode: "toggle" | "open" = "toggle",
+  ) => {
     const switchToWorkspace =
-      (location.pathname === "/settings" && panel !== "skills") ||
-      (featureModules.find((feature) => feature.sidebar.id === panel)?.sidebar
-        .workspace &&
-        location.pathname !== "/terminal" &&
-        !projectWorkspaceRoute(location.pathname, location.search));
-    if (selectedPanel === panel && panelVisible && !switchToWorkspace) {
+      mode === "toggle" &&
+      ((location.pathname === "/settings" && panel !== "skills") ||
+        (featureModules.find((feature) => feature.sidebar.id === panel)?.sidebar
+          .workspace &&
+          location.pathname !== "/terminal" &&
+          !projectWorkspaceRoute(location.pathname, location.search)));
+    if (mode === "toggle" && selectedPanel === panel && panelVisible) {
       togglePanel();
       return;
     }
@@ -144,15 +164,21 @@ export function Sidebar() {
       /* Keep navigation available without storage. */
     }
   };
-  const togglePanel = () => {
-    const next = !panelOpen;
-    setPanelOpen(next);
-    try {
-      localStorage.setItem(PANEL_STORAGE_KEY, String(next));
-    } catch {
-      // Keep navigation usable when browser storage is unavailable.
+  const selectRequestedPanel = useRef(selectPanel);
+  useLayoutEffect(() => {
+    selectRequestedPanel.current = selectPanel;
+  });
+  const panelRequest = sidebarVisibility?.panelRequest;
+  useEffect(() => {
+    if (
+      panelRequest &&
+      featureModules.some(
+        (feature) => feature.sidebar.id === panelRequest.panel,
+      )
+    ) {
+      selectRequestedPanel.current(panelRequest.panel, "open");
     }
-  };
+  }, [panelRequest]);
   const [deleteProjectTarget, setDeleteProjectTarget] = useState<{
     id: string;
     name: string;
@@ -332,7 +358,14 @@ export function Sidebar() {
                 )}
               >
                 {openedFeatures.includes(feature.sidebar.id) && (
-                  <Panel active={panelVisible && selected} />
+                  <Panel
+                    active={panelVisible && selected}
+                    request={
+                      panelRequest?.panel === feature.sidebar.id
+                        ? panelRequest
+                        : undefined
+                    }
+                  />
                 )}
               </div>
             );

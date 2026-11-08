@@ -302,6 +302,40 @@ it("hides the dashboard resource panel until requested and hides it again on ret
   expect(localStorage.getItem("agent-hub:sidebar-panel-open")).toBe("true");
 });
 
+it.each(["/project/demo", "/git", "/tasks", "/settings"])(
+  "opens a registered feature sidebar request from %s without changing the main page",
+  async (path) => {
+    const project = makeProject();
+    Object.assign(app, { projects: [project] });
+    localStorage.setItem("agent-hub:sidebar-panel-open", "false");
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={[path]}>
+          <WorkspaceFilesProvider>
+            <SidebarVisibilityContext.Provider
+              value={{
+                resourcePanelVisible: false,
+                setResourcePanelVisible: () => {},
+                panelRequest: { id: 1, panel: "herdr", view: "settings" },
+              }}
+            >
+              <Sidebar />
+            </SidebarVisibilityContext.Provider>
+          </WorkspaceFilesProvider>
+          <Navigation />
+        </MemoryRouter>,
+      ),
+    );
+    const trigger = container.querySelector<HTMLButtonElement>(
+      '[data-sidebar-panel="herdr"]',
+    )!;
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelector("output")?.textContent).toBe(path);
+    await click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  },
+);
+
 it.each([
   "/",
   "/discover",

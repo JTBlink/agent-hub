@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { getAgentLaunchSettings } from "../../../lib/tauri";
 import {
   installedTerminalAgents,
+  defaultTerminalAgent,
   type HerdrAgent,
 } from "../../../lib/terminalAgents";
 import type { ToolInfo } from "../../../lib/tauri";
@@ -25,6 +26,7 @@ export function useHerdrMenuLaunch(
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(false);
+  const sequence = useRef(0);
   const mounted = useRef(false);
   const context = useRef({ projectId, path, key: location.key, onSelect });
   useLayoutEffect(() => {
@@ -39,11 +41,14 @@ export function useHerdrMenuLaunch(
   const open = async (agent?: HerdrAgent): Promise<boolean> => {
     if (pending.current || !projectId) return false;
     const scope = context.current;
+    const request = ++sequence.current;
+    let attached = false;
     const valid = () =>
       mounted.current &&
+      sequence.current === request &&
       context.current.projectId === scope.projectId &&
       context.current.path === scope.path &&
-      context.current.key === scope.key;
+      (attached || context.current.key === scope.key);
     pending.current = true;
     setBusy(true);
     setError("");
@@ -53,11 +58,7 @@ export function useHerdrMenuLaunch(
       const choices = installedTerminalAgents(tools);
       const choice = agent
         ? choices.find((item) => item.id === agent)
-        : (choices.find(
-            (item) =>
-              item.toolKey === settings.document.default_agent ||
-              item.id === settings.document.default_agent,
-          ) ?? choices[0]);
+        : defaultTerminalAgent(choices, settings.document.default_agent);
       if (!choice) throw new Error(t("herdr.noInstalledAgent"));
       const inventory = await api.getHerdrInventory();
       if (!valid()) return false;
@@ -70,19 +71,33 @@ export function useHerdrMenuLaunch(
         scope.path,
         choice.id,
         valid,
+        (created) => {
+          if (!valid()) return;
+          attached = true;
+          pending.current = false;
+          setBusy(false);
+          scope.onSelect?.();
+          navigate(worktreeUrl(created.project_id, created.path), {
+            state: { preserveSidebar: true, herdrAttachment: created },
+          });
+        },
       );
-      if (!opened || !valid()) return false;
-      scope.onSelect?.();
-      navigate(worktreeUrl(opened.project_id, opened.path), {
-        state: { preserveSidebar: true, herdrAttachment: opened },
-      });
+      if (!opened || !valid()) return attached;
+      if (!attached) {
+        scope.onSelect?.();
+        navigate(worktreeUrl(opened.project_id, opened.path), {
+          state: { preserveSidebar: true, herdrAttachment: opened },
+        });
+      } else if (opened.warning) setError(opened.warning);
       return true;
     } catch (cause) {
       if (valid()) setError(getErrorMessage(cause, String(cause)));
-      return false;
+      return attached;
     } finally {
-      pending.current = false;
-      if (mounted.current) setBusy(false);
+      if (sequence.current === request) {
+        pending.current = false;
+        if (mounted.current) setBusy(false);
+      }
     }
   };
   return { open, busy, error };

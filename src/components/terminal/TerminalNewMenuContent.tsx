@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useContext, useState, type KeyboardEvent } from "react";
 import {
   Globe,
   FileText,
@@ -9,11 +9,34 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { HerdrIcon, herdrAgents, type HerdrAgent } from "@app/herdr";
+import {
+  HerdrIcon,
+  installedTerminalAgents,
+  defaultTerminalAgent,
+  type HerdrAgent,
+} from "@app/herdr";
 import { AgentIcon } from "../AgentIcon";
 import type { CardAction } from "../CardActionMenu";
 import type { ToolInfo } from "../../lib/tauri";
 import { queuePreviewWeb } from "../../features/preview/shared/openRequests";
+import { useDefaultAgentKey } from "../../hooks/useDefaultAgentKey";
+import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
+
+function HerdrDefaultAgentIcon({
+  agents,
+}: {
+  agents: ReturnType<typeof installedTerminalAgents>;
+}) {
+  const key = useDefaultAgentKey();
+  const agent = defaultTerminalAgent(agents, key);
+  return agent ? (
+    <AgentIcon
+      agentKey={agent.toolKey}
+      displayName={agent.label}
+      className="h-4 w-4 border-0 bg-transparent"
+    />
+  ) : null;
+}
 
 export function TerminalNewMenuContent({
   tools,
@@ -34,10 +57,9 @@ export function TerminalNewMenuContent({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const sidebar = useContext(SidebarVisibilityContext);
   const [query, setQuery] = useState("");
-  const agents = herdrAgents.filter(({ toolKey }) =>
-    tools.some((tool) => tool.key === toolKey && tool.installed),
-  );
+  const agents = installedTerminalAgents(tools);
   const actions: CardAction[] = [
     {
       key: "terminal",
@@ -78,7 +100,13 @@ export function TerminalNewMenuContent({
           {
             key: "herdr",
             label: t("terminal.openHerdr"),
-            icon: <HerdrIcon width={16} height={16} />,
+            separatorBefore: true,
+            icon: (
+              <>
+                <HerdrIcon width={16} height={16} />
+                <HerdrDefaultAgentIcon agents={agents} />
+              </>
+            ),
             disabled: terminalDisabled || herdrBusy,
             onSelect: onHerdr,
           },
@@ -87,7 +115,7 @@ export function TerminalNewMenuContent({
     ...agents.map(({ id, label, toolKey }, index) => ({
       key: id,
       label,
-      separatorBefore: index === 0,
+      separatorBefore: index === 0 && !onHerdr,
       disabled: terminalDisabled,
       icon: (
         <AgentIcon
@@ -163,21 +191,47 @@ export function TerminalNewMenuContent({
                 className="my-1 border-t border-border-subtle"
               />
             )}
-            <button
-              type="button"
-              role="menuitem"
-              disabled={action.disabled}
-              onClick={() => {
-                close();
-                action.onSelect();
-              }}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-secondary outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40"
+            <div
+              className={
+                action.key === "herdr"
+                  ? "group/herdr flex items-center gap-1 rounded-md hover:bg-surface-hover focus-within:bg-surface-hover focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent"
+                  : "flex items-center gap-1"
+              }
             >
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
-                {action.icon}
-              </span>
-              <span className="min-w-0 flex-1 truncate">{action.label}</span>
-            </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={action.disabled}
+                onClick={() => {
+                  close();
+                  action.onSelect();
+                }}
+                className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-secondary outline-none disabled:cursor-not-allowed disabled:opacity-40 ${action.key === "herdr" ? "" : "hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"}`}
+              >
+                <span
+                  className={`flex h-4 shrink-0 items-center justify-center text-muted ${action.key === "herdr" ? "w-10 gap-1.5" : "w-4"}`}
+                >
+                  {action.icon}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{action.label}</span>
+              </button>
+              {action.key === "herdr" && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  aria-label={t("herdr.settings")}
+                  title={t("herdr.settings")}
+                  disabled={!sidebar?.openSidebarPanel}
+                  className="app-button-ghost pointer-events-none mr-1 h-7 w-7 shrink-0 p-0 opacity-0 transition-opacity group-hover/herdr:pointer-events-auto group-hover/herdr:opacity-100 group-focus-within/herdr:pointer-events-auto group-focus-within/herdr:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
+                  onClick={() => {
+                    close();
+                    sidebar?.openSidebarPanel?.("herdr", "settings");
+                  }}
+                >
+                  <Settings size={15} aria-hidden="true" />
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {!filtered.length && (

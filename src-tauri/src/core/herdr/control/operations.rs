@@ -207,7 +207,7 @@ impl HerdrControl {
                         &target.workspace_id,
                         "--cwd",
                         cwd,
-                        "--no-focus",
+                        "--focus",
                         "--label",
                         &label,
                     ];
@@ -251,7 +251,16 @@ impl HerdrControl {
         })
     }
     pub fn start_agent(&self, target: &Target, input: NewAgent) -> Result<StartedAgent> {
-        let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
+        self.start_agent_with_created(target, input, |_| Ok(()))
+    }
+    /// Publish the created pane before waiting for the Agent's interactive readiness.
+    pub fn start_agent_with_created(
+        &self,
+        target: &Target,
+        input: NewAgent,
+        created: impl FnOnce(&Target) -> Result<()>,
+    ) -> Result<StartedAgent> {
+        let guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
         if input.name.is_empty()
             || input.name.len() > 32
             || !input.name.starts_with(|c: char| c.is_ascii_lowercase())
@@ -305,6 +314,13 @@ impl HerdrControl {
             .action_locked(target, split, None, input.teams, input.tab_label.as_deref())?
             .target
             .context("New Shell pane is unavailable")?;
+        drop(guard);
+        if let Err(error) = created(&pane) {
+            return Ok(StartedAgent {
+                target: pane,
+                warning: Some(format!("{error}; the pane was created but Agent startup was not submitted. Inspect its terminal before retrying")),
+            });
+        }
         if let Err(error) = super::super::agents::start_configured(
             &self.executable,
             &target.session,
@@ -340,9 +356,7 @@ impl HerdrControl {
             }
         };
         if !input.prompt.trim().is_empty() {
-            if let Err(error) =
-                self.action_locked(&current, Action::Prompt, Some(&input.prompt), false, None)
-            {
+            if let Err(error) = self.action(&current, Action::Prompt, Some(&input.prompt)) {
                 return Ok(StartedAgent { target:current, warning:Some(format!("{error}; Agent was created, but initial task delivery is uncertain. Inspect output before sending again")) });
             }
         }

@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 /** All AgentHub Herdr entry points share the native default session. */
 export const DEFAULT_HERDR_SESSION = "default";
@@ -54,11 +54,21 @@ export const runHerdrAction = (
   action: HerdrAction,
   text?: string,
 ) => invoke<HerdrActionResult>("herdr_action", { target, action, text });
-export const startHerdrAgent = (target: HerdrTarget, input: HerdrNewAgent) =>
-  invoke<{ target: HerdrTarget; warning: string | null }>("herdr_start_agent", {
-    target,
-    input,
-  });
+export const startHerdrAgent = (
+  target: HerdrTarget,
+  input: HerdrNewAgent,
+  onCreated?: (target: HerdrTarget) => void,
+) => {
+  const created = new Channel<HerdrTarget>(onCreated);
+  return invoke<{ target: HerdrTarget; warning: string | null }>(
+    "herdr_start_agent",
+    {
+      target,
+      input,
+      created,
+    },
+  );
+};
 export function herdrTarget(session: string, pane: HerdrPane): HerdrTarget {
   return {
     session,

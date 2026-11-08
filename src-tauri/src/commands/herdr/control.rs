@@ -183,12 +183,16 @@ pub async fn herdr_start_agent(
     tools: State<'_, Arc<HerdrTools>>,
     target: Target,
     input: NewAgent,
+    created: Channel<Target>,
 ) -> Result<StartedAgent, AppError> {
     crate::commands::terminal::owner(&window)?;
     let tools = tools.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         controller(&tools)?
-            .start_agent(&target, input)
+            .start_agent_with_created(&target, input, |pane| {
+                created.send(pane.clone()).map_err(anyhow::Error::from)?;
+                Ok(())
+            })
             .map_err(AppError::io)
     })
     .await?

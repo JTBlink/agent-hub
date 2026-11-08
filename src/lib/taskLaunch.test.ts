@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { launchTaskAgent } from "./taskLaunch";
-vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(), Channel: class {} }));
 beforeEach(() => vi.mocked(invoke).mockReset());
 const target = {
   session: "selected-session",

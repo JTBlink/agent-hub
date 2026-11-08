@@ -152,10 +152,11 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
   const host = document.createElement("div");
   document.body.append(host);
   const root = createRoot(host);
+  let panelRequest: { id: number; panel: string; view: string } | undefined;
   const render = () =>
     root.render(
       <MemoryRouter>
-        <SidebarHerdr active />
+        <SidebarHerdr active request={panelRequest} />
       </MemoryRouter>,
     );
   const click = (selector: string) =>
@@ -222,6 +223,22 @@ it("opens full-sidebar settings, saves opt-in, coalesces project changes and sto
     expect(
       host.querySelector('[role="switch"]')?.getAttribute("aria-checked"),
     ).toBe("false");
+    await click('[aria-label="common.back"]');
+    panelRequest = { id: 1, panel: "herdr", view: "settings" };
+    await act(async () => render());
+    expect(
+      host.querySelector<HTMLDivElement>('[aria-label="Herdr"]')?.hidden,
+    ).toBe(true);
+    await click('[aria-label="common.back"]');
+    await act(async () => render());
+    expect(
+      host.querySelector<HTMLDivElement>('[aria-label="Herdr"]')?.hidden,
+    ).toBe(false);
+    panelRequest = { ...panelRequest, id: 2 };
+    await act(async () => render());
+    expect(
+      host.querySelector<HTMLDivElement>('[aria-label="Herdr"]')?.hidden,
+    ).toBe(true);
   } finally {
     await act(async () => root.unmount());
     host.remove();

@@ -23,6 +23,7 @@ import { cn } from "../utils";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
 import { readTerminalLayout } from "../lib/terminalLayout";
+import type { SidebarPanelRequest } from "../lib/sidebarSections";
 
 export function Layout() {
   const { t } = useTranslation();
@@ -68,6 +69,9 @@ export function Layout() {
     null,
   );
   const [resourcePanelVisible, setResourcePanelVisible] = useState(false);
+  const [panelRequest, setPanelRequest] = useState<SidebarPanelRequest | null>(
+    null,
+  );
   const discoveryPage = pathname === "/discover" || pathname === "/install";
   const fullHeightPage =
     projectSkillsPage ||
@@ -119,6 +123,13 @@ export function Layout() {
         sidebarContainer,
         statusContainer,
         branchContainer,
+        panelRequest,
+        openSidebarPanel: (panel, view) =>
+          setPanelRequest((previous) => ({
+            id: (previous?.id ?? 0) + 1,
+            panel,
+            view,
+          })),
       }}
     >
       <WorkspaceFilesProvider

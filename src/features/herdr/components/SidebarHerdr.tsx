@@ -28,13 +28,20 @@ import { HerdrMaintenance } from "./HerdrMaintenance";
 import { HerdrWorkspaceList } from "./HerdrWorkspaceList";
 import { HerdrAgentList } from "./HerdrAgentList";
 import { HerdrAgentDialog, type HerdrDialogRequest } from "./HerdrAgentDialog";
+import type { SidebarPanelRequest } from "../../../lib/sidebarSections";
 
 const button =
   "app-button-ghost rounded p-1 focus-visible:ring-2 focus-visible:ring-accent";
 const normalized = (path?: string | null) =>
   path?.replace(/\\/g, "/").replace(/\/+$/, "");
 
-export function SidebarHerdr({ active }: { active: boolean }) {
+export function SidebarHerdr({
+  active,
+  request: panelRequest,
+}: {
+  active: boolean;
+  request?: SidebarPanelRequest;
+}) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,7 +80,19 @@ export function SidebarHerdr({ active }: { active: boolean }) {
   const [share, setShare] = useState(47);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState({
+    requestId: panelRequest?.id,
+    open: panelRequest?.view === "settings",
+  });
+  if (settings.requestId !== panelRequest?.id) {
+    setSettings({
+      requestId: panelRequest?.id,
+      open: panelRequest?.view === "settings",
+    });
+  }
+  const settingsOpen = settings.open;
+  const setSettingsOpen = (open: boolean) =>
+    setSettings({ requestId: panelRequest?.id, open });
   const follow = useHerdrFollowProject();
   const [opened, setOpened] = useState<api.HerdrOpenedWorkspace | null>(() =>
     lastHerdrAttachment(readTerminalLayout()),

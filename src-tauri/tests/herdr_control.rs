@@ -10,6 +10,7 @@ fn fake_cli(root: &Path, directory: &Path) -> std::path::PathBuf {
 printf '%s\n' "$*" >> "$0.calls"
 if [ "$1" = session ]; then cat "$0.sessions"
 elif [ "$3 $4" = 'api snapshot' ]; then cat "$0.snapshot"
+elif [ "$3 $4" = 'tab create' ] && [ -f "$0.created" ]; then cat "$0.created"
 elif [ "$3 $4" = 'pane process-info' ] && [ -f "$0.process" ]; then cat "$0.process"
 elif [ "$3 $4" = 'pane process-info' ]; then printf '%s\n' '{"result":{"process_info":{"shell_pid":1,"foreground_process_group_id":2,"foreground_processes":[{"name":"codex"}]}}}'
 elif [ "$3 $4" = 'agent prompt' ] && { [ "$#" != 6 ] || [ "${6#-}" != "$6" ]; }; then echo 'unknown option' >&2; exit 2
@@ -720,6 +721,56 @@ fn project_shortcut_reuses_and_attaches_to_a_matching_pane_in_a_mixed_workspace(
 }
 
 #[test]
+fn created_tab_is_reported_before_startup_and_other_controls_are_not_locked() {
+    use app_lib::core::herdr::control::{Action, NewAgent};
+    use std::{sync::mpsc, thread, time::Duration};
+    let root = tempfile::tempdir().unwrap();
+    let cli = fake_cli(root.path(), root.path());
+    fs::write(
+        cli.with_extension("created"),
+        json!({"result":{"root_pane":{
+            "workspace_id":"w1", "tab_id":"w1:t2", "pane_id":"w1:p2",
+            "terminal_id":"terminal-2", "cwd":root.path()
+        }}})
+        .to_string(),
+    )
+    .unwrap();
+    let control = HerdrControl::new(cli.clone());
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let opened = control.open(&store, "default", "w1", None).unwrap();
+    let input: NewAgent = serde_json::from_value(json!({
+        "kind":"codex", "name":"early", "direction":"tab", "prompt":""
+    }))
+    .unwrap();
+    let result = control
+        .start_agent_with_created(&opened.target, input, |pane| {
+            assert_eq!(pane.pane_id, "w1:p2");
+            let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
+            assert!(calls.contains("--focus --label shell-1"));
+            assert!(!calls.contains("agent start"));
+            let reader = HerdrControl::new(cli.clone());
+            let target = opened.target.clone();
+            let (sent, received) = mpsc::channel();
+            let worker = thread::spawn(move || {
+                sent.send(reader.action(&target, Action::Read, None).is_ok())
+                    .unwrap();
+            });
+            assert!(received.recv_timeout(Duration::from_secs(5)).unwrap());
+            worker.join().unwrap();
+            anyhow::bail!("Created notification receiver closed")
+        })
+        .unwrap();
+    assert_eq!(result.target.pane_id, "w1:p2");
+    assert!(result
+        .warning
+        .unwrap()
+        .contains("startup was not submitted"));
+    assert!(!fs::read_to_string(cli.with_extension("calls"))
+        .unwrap()
+        .contains("agent start"));
+}
+
+#[test]
 fn new_agent_tab_uses_the_checkout_instead_of_the_selected_panes_home_directory() {
     use app_lib::core::herdr::control::NewAgent;
     let root = tempfile::tempdir().unwrap();
@@ -742,7 +793,7 @@ fn new_agent_tab_uses_the_checkout_instead_of_the_selected_panes_home_directory(
     assert!(control.start_agent(&opened.target, input).is_err());
     let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
     assert!(calls.contains(&format!(
-        "tab create --workspace w1 --cwd {} --no-focus --label claude-agent-teams-1 --env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1",
+        "tab create --workspace w1 --cwd {} --focus --label claude-agent-teams-1 --env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1",
         directory.canonicalize().unwrap().display()
     )), "{calls}");
     assert!(!calls.contains("pane split"));

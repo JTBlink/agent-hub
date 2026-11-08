@@ -11,6 +11,11 @@ export function activeSidebarSection(pathname: string): SidebarSection | null {
 
 /** Stable built-in or independently registered feature panel ID. */
 export type SidebarPanel = string;
+export interface SidebarPanelRequest {
+  id: number;
+  panel: SidebarPanel;
+  view?: string;
+}
 export function activeSidebarPanel(pathname: string): SidebarPanel | null {
   if (pathname === "/terminal" || activeSidebarSection(pathname) === "projects")
     return "projects";

@@ -46,6 +46,7 @@ it.each(["/projects/demo", "/projects/demo-topic"])(
         tab_label: "Claude Agent Teams",
         name: expect.stringMatching(/^hub-claude-teams-/),
       }),
+      expect.any(Function),
     );
     expect(started?.path).toBe(path);
     expect(started?.target.pane_id).toBe("w1:p2");
@@ -64,3 +65,48 @@ it.each(["/projects/demo", "/projects/demo-topic"])(
     ).rejects.toThrow("Tab creation failed");
   },
 );
+
+it("shows the created tab before Agent readiness completes and preserves the later warning", async () => {
+  vi.mocked(api.openHerdrWorkspace).mockClear();
+  const target = {
+    session: "default",
+    workspace_id: "w1",
+    pane_id: "w1:p1",
+    terminal_id: "one",
+    revision: 1,
+    agent_session: null,
+  };
+  const opened = { project_id: "demo", path: "/projects/demo", target };
+  const next = { ...target, pane_id: "w1:p2", terminal_id: "two" };
+  vi.mocked(api.ensureHerdrWorkspace).mockResolvedValue(opened);
+  let finish!: (value: {
+    target: typeof target;
+    warning: string | null;
+  }) => void;
+  vi.mocked(api.startHerdrAgent).mockImplementationOnce(
+    (_target, _input, created) => {
+      created?.(next);
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    },
+  );
+  const created = vi.fn();
+  const pending = openProjectHerdrAgent(
+    "demo",
+    opened.path,
+    "codex",
+    () => true,
+    created,
+  );
+  await vi.waitFor(() =>
+    expect(created).toHaveBeenCalledWith({
+      ...opened,
+      target: next,
+      warning: "",
+    }),
+  );
+  finish({ target: next, warning: "Inspect login" });
+  expect((await pending)?.warning).toBe("Inspect login");
+  expect(api.openHerdrWorkspace).not.toHaveBeenCalled();
+});

@@ -17,6 +17,9 @@ import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+vi.mock("../../hooks/useDefaultAgentKey", () => ({
+  useDefaultAgentKey: () => "",
+}));
 
 vi.mock("@xterm/xterm", async () => ({
   Terminal: (await import("../../test/terminalEmulator")).TerminalEmulator,

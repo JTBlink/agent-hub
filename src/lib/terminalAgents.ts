@@ -21,3 +21,11 @@ export const installedTerminalAgents = (
   herdrAgents.filter((agent) =>
     tools.some((tool) => tool.key === agent.toolKey && tool.installed),
   );
+
+/** Keep the launch choice and its menu icon aligned, including installed fallbacks. */
+export const defaultTerminalAgent = (
+  choices: ReadonlyArray<(typeof herdrAgents)[number]>,
+  key: string,
+) =>
+  choices.find((choice) => choice.toolKey === key || choice.id === key) ??
+  choices[0];

@@ -79,6 +79,7 @@ it("opens the default session through a verified attachment and discards a late 
       "/projects/demo",
       "codex",
       expect.any(Function),
+      expect.any(Function),
     );
     expect(JSON.parse(host.querySelector("output")!.textContent!)).toEqual({
       preserveSidebar: true,
@@ -88,6 +89,27 @@ it("opens the default session through a verified attachment and discards a late 
       },
     });
     expect(select).toHaveBeenCalledOnce();
+    const early = {
+      ...opened,
+      target: { ...opened.target, pane_id: "w1:p2" },
+      warning: "",
+    };
+    let finishEarly!: (value: typeof early) => void;
+    vi.mocked(openProjectHerdrAgent).mockImplementationOnce(
+      (_project, _path, _agent, _verify, created) => {
+        created?.(early);
+        return new Promise((done) => {
+          finishEarly = done;
+        });
+      },
+    );
+    await act(async () => host.querySelector("button")!.click());
+    expect(
+      JSON.parse(host.querySelector("output")!.textContent!).herdrAttachment
+        .target.pane_id,
+    ).toBe("w1:p2");
+    expect(host.querySelector("button")!.disabled).toBe(false);
+    expect(select).toHaveBeenCalledTimes(2);
     let resolve!: (value: typeof opened & { warning: string }) => void;
     vi.mocked(openProjectHerdrAgent).mockImplementationOnce(
       () =>
@@ -96,9 +118,14 @@ it("opens the default session through a verified attachment and discards a late 
         }),
     );
     await act(async () => host.querySelector("button")!.click());
+    expect(host.querySelector("button")!.disabled).toBe(true);
+    await act(async () =>
+      finishEarly({ ...early, warning: "Old startup warning" }),
+    );
+    expect(host.querySelector("button")!.disabled).toBe(true);
     await render("other");
     await act(async () => resolve({ ...opened, warning: "" }));
-    expect(select).toHaveBeenCalledOnce();
+    expect(select).toHaveBeenCalledTimes(2);
     expect(api.installHerdr).not.toHaveBeenCalled();
   } finally {
     await act(async () => root.unmount());
