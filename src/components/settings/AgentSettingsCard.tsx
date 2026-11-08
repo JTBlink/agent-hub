@@ -127,7 +127,13 @@ export function AgentSettingsCard({
         />
       </div>
 
-      {launch && <AgentLaunchEditor agentKey={agent.key} controller={launch} />}
+      {launch && (
+        <AgentLaunchEditor
+          agentKey={agent.key}
+          controller={launch}
+          saveOnUnmount
+        />
+      )}
       <details
         className="mt-2"
         open={

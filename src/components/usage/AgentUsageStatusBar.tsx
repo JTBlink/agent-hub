@@ -15,6 +15,13 @@ import {
 } from "../../lib/agentUsage";
 import { UseResetCreditDialog } from "./UseResetCreditDialog";
 import { AgentUsagePanel } from "./AgentUsagePanel";
+import { readTerminalLayout } from "../../lib/terminalLayout";
+
+const hasHerdrLaunch = () =>
+  readTerminalLayout().tabs.some(
+    (tab) =>
+      !!tab.herdrTarget || Object.keys(tab.paneAttachments ?? {}).length > 0,
+  );
 
 export function AgentUsageStatusBar() {
   const { t } = useTranslation();
@@ -25,9 +32,19 @@ export function AgentUsageStatusBar() {
     creditId?: string;
   } | null>(null);
   const [resetNotice, setResetNotice] = useState("");
+  const [herdrLaunch, setHerdrLaunch] = useState(hasHerdrLaunch);
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
+  useEffect(() => {
+    const refreshHerdrLaunch = () => setHerdrLaunch(hasHerdrLaunch());
+    const timer = window.setInterval(refreshHerdrLaunch, 1000);
+    window.addEventListener("focus", refreshHerdrLaunch);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshHerdrLaunch);
+    };
+  }, []);
   const close = () => {
     setOpen(false);
     trigger.current?.focus();
@@ -146,6 +163,7 @@ export function AgentUsageStatusBar() {
                 setResetSelection({ creditId });
               }}
               snapshots={snapshots}
+              herdrLaunch={herdrLaunch}
               loading={loading}
               failed={failed}
               titleId={`${id}-title`}

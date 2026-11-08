@@ -245,6 +245,7 @@ export function SidebarHerdr({
     <>
       {settingsOpen && (
         <HerdrSettingsPanel
+          key={location.key}
           onBack={() => setSettingsOpen(false)}
           follow={follow}
         />

@@ -1,14 +1,15 @@
 import { AgentSelect } from "../../../components/AgentSelect";
 import { useTranslation } from "react-i18next";
-import { useApp } from "../../../context/AppContext";
+import { useAgentSettings } from "../../../hooks/useAgentSettings";
 import { useAgentLaunchSettings } from "../../../hooks/useAgentLaunchSettings";
-import { AgentLaunchEditor } from "../../../components/settings/AgentLaunchEditor";
+import { AgentSettingsCard } from "../../../components/settings/AgentSettingsCard";
 import { herdrAgents } from "../../../lib/terminalAgents";
 
 /** Shares the portable launch document with Settings and every Herdr launch path. */
 export function HerdrAgentSettings() {
   const { t } = useTranslation();
-  const { tools } = useApp();
+  const agentSettings = useAgentSettings();
+  const { tools } = agentSettings;
   const controller = useAgentLaunchSettings();
   const { snapshot, busy, error, save, reload } = controller;
   const agents = herdrAgents;
@@ -18,6 +19,7 @@ export function HerdrAgentSettings() {
       agent.id === snapshot?.document.default_agent,
   );
   const agentKey = defaultAgent?.toolKey || "codex";
+  const selectedTool = tools.find((tool) => tool.key === agentKey);
   return (
     <section
       className="mt-5 space-y-3 border-t border-border-subtle pt-4"
@@ -62,11 +64,14 @@ export function HerdrAgentSettings() {
           className="mt-1 w-full"
         />
       </label>
-      <AgentLaunchEditor
-        key={agentKey}
-        agentKey={agentKey}
-        controller={controller}
-      />
+      {selectedTool && (
+        <AgentSettingsCard
+          key={agentKey}
+          agent={selectedTool}
+          controller={agentSettings}
+          launch={controller}
+        />
+      )}
     </section>
   );
 }

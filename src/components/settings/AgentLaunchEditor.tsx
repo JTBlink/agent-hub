@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
 import {
@@ -11,9 +11,12 @@ type Controller = ReturnType<typeof useAgentLaunchSettings>;
 export function AgentLaunchEditor({
   agentKey,
   controller,
+  saveOnUnmount = false,
 }: {
   agentKey: string;
   controller: Controller;
+  /** Flush an edited command when its card leaves the current settings surface. */
+  saveOnUnmount?: boolean;
 }) {
   const { t } = useTranslation();
   const { snapshot, busy, error, save } = controller;
@@ -34,7 +37,7 @@ export function AgentLaunchEditor({
     );
   const dirty = value !== saved;
   const persist = async (reset = false) => {
-    if (!snapshot) return;
+    if (!snapshot || (!dirty && !reset)) return;
     const ok = await save((current) => {
       const instructions = { ...current.instructions };
       if (reset || value.trim() === snapshot.defaults[agentKey])
@@ -44,6 +47,26 @@ export function AgentLaunchEditor({
     });
     if (ok) setDraft(null);
   };
+  const persistRef = useRef(persist);
+  useEffect(() => {
+    persistRef.current = persist;
+  });
+
+  // The command is shared by Settings, Herdr and every launch entrypoint.
+  // Persist a settled edit promptly so changing surfaces cannot leave a local
+  // draft masking the value that the other surface reads.
+  useEffect(() => {
+    if (!dirty || conflict || disabled) return;
+    const timer = window.setTimeout(() => void persistRef.current(), 250);
+    return () => window.clearTimeout(timer);
+  }, [conflict, disabled, dirty, value, snapshot?.revision]);
+
+  // Herdr's settings panel is remounted when the main interface changes. Flush
+  // the latest draft before that unmount so the next surface reads local data.
+  useEffect(() => {
+    if (!saveOnUnmount) return;
+    return () => void persistRef.current();
+  }, [saveOnUnmount]);
   return (
     <div className="mt-2 space-y-2" aria-busy={unavailable && !error}>
       <label className="block text-xs text-secondary">

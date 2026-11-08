@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { RefreshCw, X } from "lucide-react";
 import { AgentIcon } from "../AgentIcon";
+import { HerdrIcon } from "@app/herdr";
 import { ResetCreditsSection } from "./ResetCreditsSection";
 import { SubscriptionPeriod } from "./SubscriptionPeriod";
 import {
@@ -16,6 +17,7 @@ import {
 export function AgentUsagePanel({
   now,
   snapshots,
+  herdrLaunch,
   loading,
   failed,
   titleId,
@@ -26,6 +28,7 @@ export function AgentUsagePanel({
 }: {
   now: number;
   snapshots: ProviderUsage[];
+  herdrLaunch: boolean;
   loading: boolean;
   failed: boolean;
   titleId: string;
@@ -90,6 +93,11 @@ export function AgentUsagePanel({
                 />
                 {usageProviderName(provider)}
                 <SubscriptionPeriod snapshot={snapshot} now={now} />
+                {herdrLaunch && (
+                  <span className="ml-auto inline-flex items-center" title="Herdr">
+                    <HerdrIcon className="h-4 w-4 text-accent" />
+                  </span>
+                )}
               </div>
               {windows.length ? (
                 <div className="space-y-2">
