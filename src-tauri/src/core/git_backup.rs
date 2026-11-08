@@ -400,6 +400,7 @@ const AUTO_COMMIT_MAX_NAMES: usize = 5;
 
 pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
     let mut skills = std::collections::BTreeSet::new();
+    let mut automations = std::collections::BTreeSet::new();
     let mut has_metadata = false;
     for line in porcelain.lines() {
         let entry = line.get(3..).unwrap_or("").trim();
@@ -415,12 +416,25 @@ pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
                 }
             }
         }
+        if let Some(rest) = path.strip_prefix("automations/") {
+            if let Some((name, _)) = rest.split_once('/') {
+                if !name.starts_with('.') {
+                    automations.insert(name.to_string());
+                    continue;
+                }
+            }
+        }
         has_metadata = true;
     }
-    if skills.is_empty() && !has_metadata {
+    if skills.is_empty() && automations.is_empty() && !has_metadata {
         return "auto backup".to_string();
     }
-    let mut parts: Vec<&str> = skills.iter().map(|s| s.as_str()).collect();
+    let mut parts: Vec<String> = skills.into_iter().collect();
+    parts.extend(
+        automations
+            .into_iter()
+            .map(|name| format!("automation/{name}")),
+    );
     let overflow = if parts.len() > AUTO_COMMIT_MAX_NAMES {
         let n = parts.len() - AUTO_COMMIT_MAX_NAMES;
         parts.truncate(AUTO_COMMIT_MAX_NAMES);
@@ -429,7 +443,7 @@ pub(crate) fn build_auto_commit_message(porcelain: &str) -> String {
         None
     };
     if has_metadata {
-        parts.push("metadata");
+        parts.push("metadata".into());
     }
     let mut msg = format!("auto backup: {}", parts.join(", "));
     if let Some(n) = overflow {

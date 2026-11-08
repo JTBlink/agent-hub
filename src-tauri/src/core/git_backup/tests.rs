@@ -66,6 +66,24 @@ fn auto_msg_skill_plus_metadata() {
 }
 
 #[test]
+fn auto_msg_automation_uses_task_name_instead_of_metadata() {
+    let porcelain = " M automations/daily-review/config/task.json\n M automations/daily-review/scripts/run.sh\n";
+    assert_eq!(
+        build_auto_commit_message(porcelain),
+        "auto backup: automation/daily-review"
+    );
+}
+
+#[test]
+fn auto_msg_automation_plus_metadata() {
+    let porcelain = " M automations/daily-review/config/task.json\n M .agent-hub/state.json\n";
+    assert_eq!(
+        build_auto_commit_message(porcelain),
+        "auto backup: automation/daily-review, metadata"
+    );
+}
+
+#[test]
 fn auto_msg_overflow_truncates() {
     let porcelain = (1..=7)
         .map(|i| format!(" M skills/s{i}/SKILL.md"))
