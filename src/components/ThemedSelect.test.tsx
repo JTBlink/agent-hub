@@ -43,11 +43,12 @@ function Picker({
     </ThemedSelect>
   );
 }
-async function key(node: Element, value: string) {
+async function key(node: Element, value: string, shiftKey = false) {
   await act(async () =>
     node.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: value,
+        shiftKey,
         bubbles: true,
         cancelable: true,
       }),
@@ -179,6 +180,53 @@ it("renders and invokes a separated footer action", async () => {
   expect(openSettings).toHaveBeenCalledOnce();
   expect(document.querySelector('[role="listbox"]')).toBeNull();
 });
+it("does not show a scrollbar when the open menu fits its available height", async () => {
+  await act(async () =>
+    root.render(
+      <ThemedSelect
+        aria-label="Agents"
+        value="codex"
+        onChange={() => {}}
+        menuFooterAction={{ label: "Agent settings", onSelect: () => {} }}
+      >
+        <option value="codex">Codex</option>
+      </ThemedSelect>,
+    ),
+  );
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!.click(),
+  );
+  const menu = document.querySelector<HTMLElement>('[role="listbox"]')!;
+  expect(menu.className).not.toContain("overflow-y-auto");
+});
+it("reaches a separated footer action with Tab and returns with Shift+Tab", async () => {
+  const openSettings = vi.fn();
+  await act(async () =>
+    root.render(
+      <ThemedSelect
+        aria-label="Agents"
+        value="codex"
+        onChange={() => {}}
+        menuFooterAction={{ label: "Agent settings", onSelect: openSettings }}
+      >
+        <option value="codex">Codex</option>
+      </ThemedSelect>,
+    ),
+  );
+  const trigger =
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  trigger.focus();
+  await key(trigger, "ArrowDown");
+  await key(trigger, "Tab");
+  const footer = document.querySelector<HTMLButtonElement>(
+    "[data-menu-footer]",
+  )!;
+  expect(document.activeElement).toBe(footer);
+  await key(footer, "Tab", true);
+  expect(document.activeElement).toBe(trigger);
+  await act(async () => footer.click());
+  expect(openSettings).toHaveBeenCalledOnce();
+});
 it("can place the selected marker after the option label", async () => {
   await act(async () =>
     root.render(
@@ -199,9 +247,12 @@ it("can place the selected marker after the option label", async () => {
     '[role="listbox"] [role="option"][aria-selected="true"]',
   )!;
   const spans = option.querySelectorAll(":scope > span");
-  expect(spans[0].textContent).toBe("");
-  expect(spans[1].textContent).toBe("Codex");
-  expect(spans[2].querySelector("svg")).not.toBeNull();
+  const labelIndex = [...spans].findIndex(
+    (span) => span.textContent === "Codex",
+  );
+  const checkIndex = [...spans].findIndex((span) => span.querySelector("svg"));
+  expect(labelIndex).toBeGreaterThanOrEqual(0);
+  expect(checkIndex).toBeGreaterThan(labelIndex);
 });
 
 it("keeps menu options inside the native modal's interactive subtree", async () => {

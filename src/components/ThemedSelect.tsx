@@ -160,12 +160,17 @@ export function ThemedSelect(selection: Props) {
   const typeahead = useRef({ value: "", time: 0 });
   const id = useId();
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [menuOverflow, setMenuOverflow] = useState(false);
   const open = position !== null;
   const values = typeof value === "string" ? [value] : value;
   const selected = options.filter((option) => values.includes(option.value));
   const label = selected.map((option) => option.label).join(", ");
+  // The footer has its separator and padding in addition to a normal row.
+  // Include that extra space so a short menu does not acquire a needless rail.
   const rowCount =
-    options.length + (menuTitle ? 1 : 0) + (menuFooterAction ? 1 : 0);
+    options.length +
+    (menuTitle ? 1 : 0) +
+    (menuFooterAction ? 1.25 : 0);
   const locate = () =>
     setPosition(
       positionFor(trigger.current, rowCount, fitContent, list.current),
@@ -248,6 +253,12 @@ export function ThemedSelect(selection: Props) {
         ?.querySelector<HTMLElement>(`[data-option-index="${active}"]`)
         ?.scrollIntoView?.({ block: "nearest" });
   }, [open, active]);
+  useLayoutEffect(() => {
+    if (!open || !list.current) return;
+    const overflow =
+      list.current.scrollHeight > list.current.clientHeight + 1;
+    setMenuOverflow((previous) => (previous === overflow ? previous : overflow));
+  }, [open, position?.height, rowCount]);
   const move = (direction: number) => {
     let next = active;
     for (let count = 0; count < options.length; count++) {
@@ -426,7 +437,10 @@ export function ThemedSelect(selection: Props) {
               height: position.height,
               maxHeight: position.height,
             }}
-            className="z-[100] overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-xl"
+            className={cn(
+              "z-[100] rounded-lg border border-border bg-surface p-1 shadow-xl",
+              menuOverflow ? "overflow-y-auto" : "overflow-hidden",
+            )}
           >
             {menuTitle && (
               <div role="presentation" className="px-2 py-2 text-xs text-muted">
