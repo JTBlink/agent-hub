@@ -33,7 +33,7 @@ function HerdrDefaultAgentIcon({
     <AgentIcon
       agentKey={agent.toolKey}
       displayName={agent.label}
-      className="h-4 w-4 border-0 bg-transparent"
+      className="h-3.5 w-3.5 border-0 bg-transparent"
     />
   ) : null;
 }
@@ -209,21 +209,23 @@ export function TerminalNewMenuContent({
                 <span className="min-w-0 flex-1 truncate">{action.label}</span>
               </button>
               {action.key === "herdr" && (
-                <div className="flex shrink-0 items-center gap-2 pr-1">
-                  <HerdrDefaultAgentIcon agents={agents} />
+                <div className="pointer-events-none flex shrink-0 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/herdr:pointer-events-auto group-hover/herdr:opacity-100 group-focus-within/herdr:pointer-events-auto group-focus-within/herdr:opacity-100">
+                  <span className="flex h-7 w-7 items-center justify-center">
+                    <HerdrDefaultAgentIcon agents={agents} />
+                  </span>
                   <button
                     type="button"
                     role="menuitem"
                     aria-label={t("herdr.settings")}
                     title={t("herdr.settings")}
                     disabled={!sidebar?.openSidebarPanel}
-                    className="app-button-ghost pointer-events-none h-7 w-7 shrink-0 p-0 opacity-0 transition-opacity group-hover/herdr:pointer-events-auto group-hover/herdr:opacity-100 group-focus-within/herdr:pointer-events-auto group-focus-within/herdr:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
+                    className="app-button-ghost h-7 w-7 shrink-0 p-0 focus-visible:ring-2 focus-visible:ring-accent"
                     onClick={() => {
                       close();
                       sidebar?.openSidebarPanel?.("herdr", "settings");
                     }}
                   >
-                    <Settings size={15} aria-hidden="true" />
+                    <Settings size={16} aria-hidden="true" />
                   </button>
                 </div>
               )}
