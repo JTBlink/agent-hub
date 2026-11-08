@@ -86,11 +86,11 @@ export function TerminalPane({
   const translate = useRef(t);
   const generation = useRef(0);
   const attachment = useRef(herdrTarget);
-  const attachmentKey = herdrTarget
-    ? `${herdrTarget.session}:${herdrTarget.workspace_id}`
-    : "";
+  const liveControl = useRef<PaneControl | null>(null);
+  const attachmentKey = herdrTarget?.session ?? "";
   useLayoutEffect(() => {
     attachment.current = herdrTarget;
+    if (liveControl.current) liveControl.current.herdrTarget = herdrTarget;
   }, [herdrTarget]);
   useLayoutEffect(() => {
     translate.current = t;
@@ -316,7 +316,7 @@ export function TerminalPane({
             nativeTask?.started();
             setStarted(true);
             inputQueue.connect((data) => api.writeTerminal(session.id, data));
-            callback.current({
+            liveControl.current = {
               sessionId,
               cwd: session.cwd,
               focus,
@@ -326,7 +326,8 @@ export function TerminalPane({
               clear: () => terminal.clear(),
               read: readScreen,
               herdrTarget: attachmentKey ? attachment.current : undefined,
-            });
+            };
+            callback.current(liveControl.current);
             if (pendingAck)
               void api.ackTerminal(sessionId, pendingAck).catch(fail);
             measure();
@@ -346,6 +347,7 @@ export function TerminalPane({
       emulator.current = null;
       copyNow.current = () => {};
       unbindSelectionCopy();
+      liveControl.current = null;
       callback.current(null);
       cancelAnimationFrame(frame);
       observer.disconnect();

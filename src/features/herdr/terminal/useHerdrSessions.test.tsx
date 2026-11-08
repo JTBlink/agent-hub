@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, useLayoutEffect, useState } from "react";
+import { act, useLayoutEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import * as api from "../api";
@@ -76,10 +76,33 @@ it("switches only the selected pane, preserves other clients and discards stale 
   vi.mocked(api.ensureHerdrWorkspace).mockResolvedValue(opened);
   let result!: ReturnType<typeof useHerdrSessions>;
   let displayed = tab;
+  let reset!: () => void;
+  let addExisting!: () => string;
+  const select = vi.fn();
   function Harness() {
     const [tabs, setTabs] = useState([tab]);
-    const value = useHerdrSessions(true, tabs[0], () => control, setTabs);
+    const tabsRef = useRef(tabs);
     useLayoutEffect(() => {
+      tabsRef.current = tabs;
+    }, [tabs]);
+    const value = useHerdrSessions(
+      true,
+      tabs[0],
+      () => control,
+      setTabs,
+      tabsRef,
+      select,
+    );
+    useLayoutEffect(() => {
+      reset = () => setTabs([tab]);
+      addExisting = () => {
+        const client = {
+          ...createTerminalTab("demo", undefined, opened.path),
+          herdrTarget: opened.target,
+        };
+        setTabs([tab, client]);
+        return client.id;
+      };
       displayed = tabs[0];
       result = value;
     });
@@ -109,6 +132,7 @@ it("switches only the selected pane, preserves other clients and discards stale 
     expect(control.focus).toHaveBeenCalledOnce();
     expect(api.ensureHerdrWorkspace).toHaveBeenCalledTimes(2);
     delete control.herdrTarget;
+    await act(async () => reset());
     vi.mocked(api.terminalLaunchState).mockResolvedValue({
       ready: false,
       herdr_active: false,
@@ -139,7 +163,30 @@ it("switches only the selected pane, preserves other clients and discards stale 
     });
     expect(
       result.paneProps(displayed, tab.activePane).herdrTarget?.session,
-    ).toBe("default");
+    ).toBeUndefined();
+    let existingId = "";
+    await act(async () => {
+      existingId = addExisting();
+    });
+    vi.mocked(api.terminalLaunchState).mockResolvedValue({
+      ready: false,
+      herdr_active: false,
+      revision: 4,
+    });
+    const reads = vi.mocked(api.terminalLaunchState).mock.calls.length;
+    await act(async () => result.openDefault(fallback));
+    expect(select).toHaveBeenLastCalledWith(existingId);
+    expect(api.terminalLaunchState).toHaveBeenCalledTimes(reads);
+    expect(
+      result.paneProps(displayed, tab.activePane).herdrTarget,
+    ).toBeUndefined();
+    vi.mocked(api.getHerdrInventory).mockResolvedValue({
+      installed: false,
+      sessions: [],
+    });
+    await act(async () => result.openDefault(fallback));
+    expect(select).toHaveBeenLastCalledWith(existingId);
+    expect(fallback).not.toHaveBeenCalled();
   } finally {
     await act(async () => root.unmount());
     host.remove();

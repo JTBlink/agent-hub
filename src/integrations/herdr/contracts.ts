@@ -70,12 +70,12 @@ export interface HerdrNewAgent {
   teams?: boolean;
   kind: string;
   name: string;
-  direction: "right" | "down";
+  direction: "right" | "down" | "tab";
+  tab_label?: string;
   prompt: string;
 }
 
 export interface HerdrNavigationRequest extends HerdrOpenedWorkspace {
-  newTab?: boolean;
   warning?: string;
   title?: string;
 }
@@ -106,7 +106,6 @@ export function parseHerdrNavigation(
     return null;
   return {
     ...(typeof value.title === "string" ? { title: value.title } : {}),
-    ...(value.newTab === true ? { newTab: true } : {}),
     ...(typeof value.warning === "string" ? { warning: value.warning } : {}),
     project_id: value.project_id,
     path: value.path,

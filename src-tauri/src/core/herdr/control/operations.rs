@@ -96,7 +96,7 @@ impl HerdrControl {
         text: Option<&str>,
     ) -> Result<ActionResult> {
         let _guard = MUTATION.lock().unwrap_or_else(|e| e.into_inner());
-        self.action_locked(target, action, text, false)
+        self.action_locked(target, action, text, false, None)
     }
     fn action_locked(
         &self,
@@ -104,6 +104,7 @@ impl HerdrControl {
         action: Action,
         text: Option<&str>,
         teams: bool,
+        tab_label: Option<&str>,
     ) -> Result<ActionResult> {
         let snapshot = self.snapshot(&target.session)?;
         let pane = self.verify(
@@ -178,26 +179,38 @@ impl HerdrControl {
                 )?;
             }
             Action::NewTab | Action::SplitRight | Action::SplitDown => {
-                let cwd = checked_directory(
-                    pane.cwd
-                        .as_deref()
-                        .context("Pane directory is unavailable")?,
-                )?;
+                let cwd = if matches!(action, Action::NewTab) {
+                    let workspace = snapshot
+                        .workspaces
+                        .iter()
+                        .find(|workspace| workspace.workspace_id == target.workspace_id)
+                        .context("Herdr workspace no longer exists")?;
+                    directory_for_pane(workspace, &snapshot.panes, pane)?
+                } else {
+                    checked_directory(
+                        pane.cwd
+                            .as_deref()
+                            .context("Pane directory is unavailable")?,
+                    )?
+                };
                 let cwd = cwd.to_str().context("Pane directory must be Unicode")?;
                 let value = if matches!(action, Action::NewTab) {
-                    self.call(
-                        Some(&target.session),
-                        &[
-                            "tab",
-                            "create",
-                            "--workspace",
-                            &target.workspace_id,
-                            "--cwd",
-                            cwd,
-                            "--no-focus",
-                        ],
-                        10,
-                    )?
+                    let mut args = vec![
+                        "tab",
+                        "create",
+                        "--workspace",
+                        &target.workspace_id,
+                        "--cwd",
+                        cwd,
+                        "--no-focus",
+                    ];
+                    if let Some(label) = tab_label {
+                        args.extend(["--label", label]);
+                    }
+                    if teams {
+                        args.extend(["--env", "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1"]);
+                    }
+                    self.call(Some(&target.session), &args, 10)?
                 } else {
                     let mut args = vec![
                         "pane",
@@ -245,8 +258,15 @@ impl HerdrControl {
         {
             bail!("Agent name must be unique and use 1–32 lowercase letters, digits, underscores or hyphens")
         }
-        if !["right", "down"].contains(&input.direction.as_str()) {
-            bail!("Choose a split direction")
+        if !["right", "down", "tab"].contains(&input.direction.as_str()) {
+            bail!("Choose a new tab or split direction")
+        }
+        if input.tab_label.as_deref().is_some_and(|label| {
+            label.trim().is_empty()
+                || label.chars().count() > 80
+                || label.chars().any(char::is_control)
+        }) {
+            bail!("Tab name must contain 1–80 characters without control characters")
         }
         if input.kind.is_empty()
             || !input
@@ -272,13 +292,13 @@ impl HerdrControl {
         {
             bail!("Agent name is already in use")
         }
-        let split = if input.direction == "down" {
-            Action::SplitDown
-        } else {
-            Action::SplitRight
+        let split = match input.direction.as_str() {
+            "tab" => Action::NewTab,
+            "down" => Action::SplitDown,
+            _ => Action::SplitRight,
         };
         let pane = self
-            .action_locked(target, split, None, input.teams)?
+            .action_locked(target, split, None, input.teams, input.tab_label.as_deref())?
             .target
             .context("New Shell pane is unavailable")?;
         if let Err(error) = super::super::agents::start_configured(
@@ -317,7 +337,7 @@ impl HerdrControl {
         };
         if !input.prompt.trim().is_empty() {
             if let Err(error) =
-                self.action_locked(&current, Action::Prompt, Some(&input.prompt), false)
+                self.action_locked(&current, Action::Prompt, Some(&input.prompt), false, None)
             {
                 return Ok(StartedAgent { target:current, warning:Some(format!("{error}; Agent was created, but initial task delivery is uncertain. Inspect output before sending again")) });
             }

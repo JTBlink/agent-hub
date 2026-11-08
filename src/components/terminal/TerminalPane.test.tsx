@@ -122,6 +122,39 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+it("keeps one client PTY while switching workspaces in the same Herdr session", async () => {
+  const target = {
+    session: "default",
+    workspace_id: "w1",
+    pane_id: "w1:p1",
+    terminal_id: "one",
+    revision: 1,
+    agent_session: null,
+  };
+  const ready = vi.fn();
+  const render = (herdrTarget: typeof target) =>
+    act(async () => {
+      root.render(
+        <TerminalPane
+          projectId="demo"
+          worktreePath="/projects/demo"
+          herdrTarget={herdrTarget}
+          active
+          onReady={ready}
+        />,
+      );
+    });
+  await render(target);
+  await act(async () => finishFonts());
+  expect(api.createTerminal).toHaveBeenCalledTimes(1);
+  const control = ready.mock.calls.find(([value]) => value)?.[0];
+  const next = { ...target, workspace_id: "w2", pane_id: "w2:p2" };
+  await render(next);
+  expect(api.createTerminal).toHaveBeenCalledTimes(1);
+  expect(api.closeTerminal).not.toHaveBeenCalled();
+  expect(control.herdrTarget).toEqual(next);
+});
+
 it.each([
   {
     types: ["text/plain", "text/html"],

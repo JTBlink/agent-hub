@@ -260,6 +260,8 @@ export function TerminalWorkspace({
     active,
     () => activeTarget.current,
     setTabs,
+    tabsRef,
+    setActiveId,
   );
   const activeHerdrTarget = herdrEnabled
     ? (herdrSessions.target ?? active?.herdrTarget)

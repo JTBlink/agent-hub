@@ -720,6 +720,36 @@ fn project_shortcut_reuses_and_attaches_to_a_matching_pane_in_a_mixed_workspace(
 }
 
 #[test]
+fn new_agent_tab_uses_the_checkout_instead_of_the_selected_panes_home_directory() {
+    use app_lib::core::herdr::control::NewAgent;
+    let root = tempfile::tempdir().unwrap();
+    let directory = root.path().join("checkout");
+    fs::create_dir(&directory).unwrap();
+    let cli = fake_cli(root.path(), root.path());
+    let snapshot_file = root.path().join("herdr.snapshot");
+    let mut data: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&snapshot_file).unwrap()).unwrap();
+    data["result"]["snapshot"]["workspaces"][0]["worktree"] = json!({"checkout_path":directory});
+    fs::write(&snapshot_file, data.to_string()).unwrap();
+    let control = HerdrControl::new(cli.clone());
+    let store = SkillStore::new(&root.path().join("app.db")).unwrap();
+    let opened = control.open(&store, "default", "w1", None).unwrap();
+    let input: NewAgent = serde_json::from_value(json!({
+        "kind":"claude", "name":"new-tab", "direction":"tab", "prompt":"", "teams":true, "tab_label":"Claude Agent Teams"
+    }))
+    .unwrap();
+    // No new pane is returned by this fixture, so Agent startup must not follow.
+    assert!(control.start_agent(&opened.target, input).is_err());
+    let calls = fs::read_to_string(cli.with_extension("calls")).unwrap();
+    assert!(calls.contains(&format!(
+        "tab create --workspace w1 --cwd {} --no-focus --label Claude Agent Teams --env CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1",
+        directory.canonicalize().unwrap().display()
+    )), "{calls}");
+    assert!(!calls.contains("pane split"));
+    assert!(!calls.contains("agent start"));
+}
+
+#[test]
 fn claude_teams_uses_the_shared_start_flow_with_environment_on_the_new_pane() {
     use app_lib::core::herdr::control::NewAgent;
     let root = tempfile::tempdir().unwrap();

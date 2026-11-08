@@ -26,7 +26,9 @@ it.each([false, true])(
     const initial = {
       ...createTerminalTab("demo", undefined, "/projects/demo"),
       herdrTarget: target,
+      title: "My terminal",
     };
+    const nextTarget = { ...target, pane_id: "w1:p2", terminal_id: "two" };
     const error = vi.fn();
     function Harness() {
       const [tabs, setTabs] = useState<TerminalTab[]>([initial]);
@@ -47,7 +49,13 @@ it.each([false, true])(
         initializedRef: initialized,
         onError: error,
       });
-      return <output>{tabs.length}</output>;
+      return (
+        <output>
+          {tabs.length}:
+          {tabs[0].paneAttachments?.[tabs[0].activePane]?.target.pane_id}:
+          {tabs[0].title}
+        </output>
+      );
     }
     const host = document.createElement("div");
     const root = createRoot(host);
@@ -62,7 +70,7 @@ it.each([false, true])(
                   herdrAttachment: {
                     project_id: "demo",
                     path: "/projects/demo",
-                    target,
+                    target: nextTarget,
                     newTab,
                     warning: "Inspect startup",
                   },
@@ -74,7 +82,7 @@ it.each([false, true])(
           </MemoryRouter>,
         ),
       );
-      expect(host.textContent).toBe(newTab ? "2" : "1");
+      expect(host.textContent).toBe("1:w1:p2:My terminal");
       expect(error).toHaveBeenCalledWith("Inspect startup");
     } finally {
       await act(async () => root.unmount());

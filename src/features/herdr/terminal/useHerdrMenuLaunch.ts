@@ -72,10 +72,9 @@ export function useHerdrMenuLaunch(
         valid,
       );
       if (!opened || !valid()) return false;
-      const attachment = { ...opened, newTab: true };
       scope.onSelect?.();
       navigate(worktreeUrl(opened.project_id, opened.path), {
-        state: { preserveSidebar: true, herdrAttachment: attachment },
+        state: { preserveSidebar: true, herdrAttachment: opened },
       });
       return true;
     } catch (cause) {

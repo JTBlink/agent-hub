@@ -9,11 +9,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { herdrNavigation } from "../lib/herdrControlApi";
 import {
-  createTerminalTab as createTab,
   terminalScopeKey,
   TERMINAL_PANE_LIMIT,
   type TerminalTab as Tab,
 } from "../../../lib/terminalLayout";
+import { attachHerdrClient, findHerdrClient } from "./herdrClientTabs";
 
 interface Options {
   ready: boolean;
@@ -28,7 +28,7 @@ interface Options {
   onError: (error: string) => void;
   onSelectTerminal?: () => void;
 }
-/** Consume each explicit attachment once and reuse the existing client for that workspace. */
+/** Consume each explicit attachment once and reuse the session's single client. */
 export function useHerdrAttachment({
   ready,
   visible,
@@ -61,15 +61,7 @@ export function useHerdrAttachment({
       onError(t("herdr.scopeChanged"));
       return;
     }
-    const existing = !request.newTab
-      ? tabs.current.find(
-          (tab) =>
-            tab.projectId === request.project_id &&
-            tab.worktreePath === request.path &&
-            tab.herdrTarget?.session === request.target.session &&
-            tab.herdrTarget.workspace_id === request.target.workspace_id,
-        )
-      : undefined;
+    const existing = findHerdrClient(tabs.current, request.target.session);
     if (
       !existing &&
       tabs.current.reduce((n, tab) => n + tab.panes.length, 0) >=
@@ -78,22 +70,12 @@ export function useHerdrAttachment({
       onError(t("worktree.terminalLimit"));
       return;
     }
-    const tab = existing ?? {
-      ...createTab(request.project_id, undefined, request.path),
-      herdrTarget: request.target,
-      title: request.title,
-    };
-    setTabs((previous) =>
-      existing
-        ? previous.map((item) =>
-            item.id === existing.id
-              ? { ...item, herdrTarget: request.target }
-              : item,
-          )
-        : [...previous, tab],
+    const client = attachHerdrClient(tabs.current, request);
+    setTabs(
+      (previous) => attachHerdrClient(previous, request, client.client).tabs,
     );
-    setActiveIds((previous) => ({ ...previous, [scopeKey]: tab.id }));
-    rememberActive(tab.id);
+    setActiveIds((previous) => ({ ...previous, [scopeKey]: client.tabId }));
+    rememberActive(client.tabId);
     initializedRef.current = true;
     onError(request.warning ?? "");
     onSelectTerminal?.();

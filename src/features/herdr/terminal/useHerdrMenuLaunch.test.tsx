@@ -42,7 +42,6 @@ it("opens the default session through a verified attachment and discards a late 
   };
   vi.mocked(openProjectHerdrAgent).mockResolvedValue({
     ...opened,
-    title: "Codex · Herdr",
     warning: "",
   });
   const select = vi.fn();
@@ -85,15 +84,11 @@ it("opens the default session through a verified attachment and discards a late 
       preserveSidebar: true,
       herdrAttachment: {
         ...opened,
-        newTab: true,
-        title: "Codex · Herdr",
         warning: "",
       },
     });
     expect(select).toHaveBeenCalledOnce();
-    let resolve!: (
-      value: typeof opened & { title: string; warning: string },
-    ) => void;
+    let resolve!: (value: typeof opened & { warning: string }) => void;
     vi.mocked(openProjectHerdrAgent).mockImplementationOnce(
       () =>
         new Promise((done) => {
@@ -102,9 +97,7 @@ it("opens the default session through a verified attachment and discards a late 
     );
     await act(async () => host.querySelector("button")!.click());
     await render("other");
-    await act(async () =>
-      resolve({ ...opened, title: "Codex · Herdr", warning: "" }),
-    );
+    await act(async () => resolve({ ...opened, warning: "" }));
     expect(select).toHaveBeenCalledOnce();
     expect(api.installHerdr).not.toHaveBeenCalled();
   } finally {

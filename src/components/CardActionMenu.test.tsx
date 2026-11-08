@@ -172,7 +172,8 @@ it("enters a checked submenu, cancels one level and returns selection to the roo
   const enter = async () => {
     await key(sort, "ArrowRight");
     await act(
-      async () => new Promise((resolve) => requestAnimationFrame(resolve)),
+      async () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
     );
   };
   await enter();
