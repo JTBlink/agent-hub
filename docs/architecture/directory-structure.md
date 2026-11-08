@@ -306,7 +306,7 @@ agent-hub/
 | `src-tauri/src/commands/`        | Tauri 命令边界                     |
 | `src-tauri/src/core/`            | 技能库、工具适配、存储和 Git 核心  |
 | `src-tauri/src/bin/`             | agent-hub-cli 入口                 |
-| `src-tauri/icons/`               | 原 agent-hub Logo 与平台图标       |
+| `src-tauri/icons/`               | 默认深色图标、深浅变体与菜单栏模板 |
 | `public/`                        | 前端静态资源                       |
 | `automations/`                   | 可发现、可分发的自动化任务包       |
 | `skills/`                        | 内置管理 Skill                     |

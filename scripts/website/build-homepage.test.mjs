@@ -20,6 +20,20 @@ it("builds a self-contained website with the current version and all local asset
     expect(html).not.toContain("__APP_VERSION__");
     expect(html).not.toContain("__PRODUCT_PREVIEWS__");
     const document = new JSDOM(html).window.document;
+    expect(
+      document.querySelector('link[rel="icon"]').getAttribute("href"),
+    ).toBe("./assets/app-icon-32.png");
+    for (const image of document.querySelectorAll(".brand img")) {
+      expect(image.getAttribute("src")).toBe("./assets/app-icon-128.png");
+    }
+    for (const [asset, source] of [
+      ["app-icon-32.png", "32x32.png"],
+      ["app-icon-128.png", "128x128.png"],
+    ]) {
+      expect(readFileSync(join(dirname(outputPath), "assets", asset))).toEqual(
+        readFileSync(join(root, "src-tauri/icons/variants/dark", source)),
+      );
+    }
     const canonical = document.querySelector('link[rel="canonical"]').href;
     expect(canonical).toBe("https://jtblink.github.io/agent-hub/");
     expect(document.title).toContain("编程工作台");

@@ -8,7 +8,7 @@
 
 ## 品牌、主题与样式
 
-- 保留原 Logo 与 `src-tauri/icons/app-icon.svg` 图标母版。平台图标变更查 [图标规范](icon-assets.md)。
+- 品牌标记沿用当前确认设计，默认深色，母版位于 `src-tauri/icons/variants/`。平台图标与菜单栏模板变更查 [图标规范](icon-assets.md)。
 - 使用当前工作台布局，沿用 `src/components/Layout.tsx`、`Sidebar.tsx` 与同类页面的结构、密度和层级，不采用旧配置中心原型。
 - 使用语义 Tailwind 类与集中变量，不在页面硬编码另一套品牌配色。需要新语义 token 时先检查现有 token，再集中定义并适配明暗主题。
 

@@ -1,65 +1,87 @@
 # 应用图标资源规范
 
-> 状态：V1 已落地（2026-08-23）
+> 状态：三片穿插图标保留深浅两版，默认深色（2026-11-08）
 
-## 母版
+## 母版与来源
 
-唯一可编辑母版是 [`src-tauri/icons/app-icon.svg`](../../../../src-tauri/icons/app-icon.svg)，对应导出的 [`1024x1024.png`](../../../../src-tauri/icons/1024x1024.png)。所有平台尺寸都必须从母版重新导出，禁止在小尺寸之间二次放大。
+标准版保留两套母版，默认使用深色版：
 
-| 项目     | 规范                                                      |
-| -------- | --------------------------------------------------------- |
-| 画布     | 1024 × 1024 px                                            |
-| 格式     | RGBA PNG；母版同时保留 SVG                                |
-| 底板几何 | x/y = 97 px，宽高 = 830 px，圆角半径约 192 px             |
-| 内边框   | x/y = 105 px，宽高 = 814 px，圆角半径约 184 px，描边 6 px |
-| 有效边界 | 抗锯齿后的 alpha bbox 允许扩展到约 `(68, 68, 956, 956)`   |
-| 透明区域 | 仅允许圆角底板外侧；底板与主体均不使用半透明效果          |
-| macOS    | ICNS 含 16/32/128/256/512/1024 及对应 @2x 层级            |
+| 版本 | 母版与导出目录                                                                   | 默认行为                          |
+| ---- | -------------------------------------------------------------------------------- | --------------------------------- |
+| 深色 | [`src-tauri/icons/variants/dark/`](../../../../src-tauri/icons/variants/dark/)   | 应用、网页、README 与截图默认使用 |
+| 浅色 | [`src-tauri/icons/variants/light/`](../../../../src-tauri/icons/variants/light/) | 保留完整平台资源，供显式选择      |
 
-## 主体图形
+每套的 `1024x1024.png` 均为 RGBA 母版，平台尺寸从各自母版直接缩小导出，不在小尺寸之间放大。根目录 [`src-tauri/icons/`](../../../../src-tauri/icons/) 是深色版的兼容输出入口，不单独修改，也不随应用明暗主题自动切换。
 
-- 主体直接复用首页“Agent 连接拓扑”右侧圆形 Hub 中的 `BrandGlyph`：三个 Agent 节点汇入中心 Hub，不再为桌面图标另行设计拓扑结构。
-- `BrandGlyph` 的 SVG 路径、节点配色、连接线、中心 Hub 比例与界面组件一致；中心 Hub 保留青色描边、蓝色填充和白色核心，桌面母版仅负责等比放大并增加圆形承载面。
-- 圆形承载面复用页面 `.hub-orbit` 的左上径向高光、深色底面、亮边和低位阴影；可见边界约为 `x = 203–821 px`、`y = 203–826 px`，到底板外接矩形的四边安全间距不小于 `106 px`。
-- 圆形承载面到圆角底板边界的真实最短距离不得小于 `80 px`，不能只用外接矩形的水平、垂直留白代替圆角距离。
-- 中心 Hub、节点、圆形轨道和连接流必须整体等比调整，不能单独放大中心标记。
-- 底板、节点、连接线和中心标记保持不透明；不添加外部投影或玻璃效果，避免与 macOS 系统阴影叠加。
-- PNG 和 ICNS 始终保留正方形画布，不预先裁切到内容边界。
+[`app-icon.svg`](../../../../src-tauri/icons/app-icon.svg) 是同一 PNG 的无损内嵌封装，服务网页和现有构建消费方，**不是可编辑的矢量路径**。修改图形时更新位图母版，再统一导出，不能单独修改 SVG 或平台尺寸。
 
-## 生成命令
+确认稿仅保留 [`dark.png`](../../../../docs/images/brand-concepts/dark.png) 与 [`light.png`](../../../../docs/images/brand-concepts/light.png)。两张均为 1254 px 展示图，底板边界约为 `(106, 110)–(1142, 1143)`；转换时去掉展示背景，将底板归一到下述画布规格，再以圆角路径裁切透明区域。展示图不直接参与构建，历史探索稿不保留。
 
-修改母版后，从仓库根目录执行：
+| 项目     | 规范                                                           |
+| -------- | -------------------------------------------------------------- |
+| 画布     | 1024 × 1024 px，保留完整正方形画布                             |
+| 格式     | 8-bit RGBA PNG；SVG 为该位图的无损封装                         |
+| 底板     | x/y = 97 px，宽高 = 830 px，圆角半径 = 192 px                  |
+| 主体     | 三片宽曲面组成圆角三角闭环，保留较小的圆角三角中心留白         |
+| 配色     | 默认深蓝灰底座；浅色版为冰青白底座；主体保持蓝、青、绿自然渐变 |
+| 透明区域 | 仅底板外侧；底板与中心开口均保持不透明                         |
+| macOS    | 不预加外部投影，使用系统阴影；ICNS 保留标准尺寸与 @2x 图层     |
+
+## 主体与产品边界
+
+- 保留确认稿中的三片穿插关系、轮廓、比例和渐变，不在导出时重新生成设计。
+- 主体边界约为 x = 177–841 px、y = 178–815 px，与底板四边保持约 80 px 以上留白。
+- 中心开口显示底板原色，不穿透到桌面；不增加字母、节点、播放符号或外部阴影。
+- 桌面、应用顶部和网页品牌入口统一消费当前标记，不再用旧节点图形替代品牌图标。
+- `products/agent-flow/icons/` 为独立产品资源，不随标准版图标导出修改。
+
+## 生成与同步
+
+更新对应 `variants/dark/` 或 `variants/light/` 的 1024 px 母版后，从仓库根目录执行：
 
 ```bash
-npm run tauri -- icon src-tauri/icons/app-icon.svg -o src-tauri/icons -v
-npm run tauri -- icon src-tauri/icons/app-icon.svg -o src-tauri/icons -p 1024
+node scripts/icons/export.mjs
 ```
 
-第一条生成 Tauri、macOS、Windows、Android、iOS 的标准资源；第二条保留 1024 px 母版 PNG。不要手动编辑生成后的平台 PNG。
+脚本分别校验、导出两版的无损 SVG、ICNS、ICO 与各平台 PNG，生成菜单栏单色模板，再将深色版同步到根目录和 `public/icons/`。相同内容不重复覆盖默认输出。产品构建继续沿用现有资源入口。
+
+只重新导出某一备用版本的平台尺寸而不改变默认入口时，例如：
+
+```bash
+npm run tauri -- icon src-tauri/icons/variants/light/1024x1024.png -o src-tauri/icons/variants/light -v
+```
+
+不要手工编辑平台 PNG、ICNS 或 ICO，不把展示图的外背景和投影打包进图标。
+
+## 顶部标记、网页与文档
+
+- macOS 菜单栏使用独立的 [`tray-template.svg`](../../../../src-tauri/icons/tray-template.svg) 轮廓母版。统一导出脚本生成 32 px 透明单色 PNG，运行时沿用系统模板图标的黑白适配。模板不包含深浅底板，不再使用旧节点标记。
+- 应用标题栏与 favicon 使用 `public/icons/32x32.png`；README 标题使用默认 `128x128.png`，避免依赖 SVG 位图内嵌在第三方渲染器中的支持。
+- 官网构建输出 `assets/app-icon-128.png` 与 `assets/app-icon-32.png`，供官网和帮助站的品牌标记与 favicon 共用，默认均为深色。
+- 产品截图通过合成数据预览重新拍摄，README 与官网共用 `docs/images/` 下的源图，不手工涂改截图中的标记。更新命令见[截图说明](../../../../docs/images/README.md)。
 
 ## 验收
 
 ```bash
-file src-tauri/icons/1024x1024.png src-tauri/icons/icon.icns
+file src-tauri/icons/1024x1024.png src-tauri/icons/icon.icns src-tauri/icons/icon.ico
 iconutil --convert iconset src-tauri/icons/icon.icns --output /tmp/agent-hub.iconset
 ```
 
-1024 PNG 必须报告 `8-bit/color RGBA`；当前无外部阴影，因此 alpha bounding box 应为 `(97, 97, 927, 927)`。底板内部 alpha 必须为 `255`；主体主色边界与底板的四边距离不得小于 `80 px`。ICNS 必须由同一母版生成，并包含 `16x16`、`32x32`、`128x128`、`256x256`、`512x512` 及各自 `@2x` 层级。
+- PNG 为 1024 px、8-bit RGBA，alpha bounding box 为 `(97, 97, 927, 927)`。
+- 底板内部和中心留白不透明，底板外没有展示背景或杂点。
+- 检查明暗背景上的 16、32、64、128 px 轮廓和开口，保留统一的图形比例。
+- ICNS 包含 16/32/128/256/512 及对应 @2x 图层，各层来自同一母版。
+- `public/icons/` 三个文件与母版目录对应文件逐字节一致；SVG 内嵌 PNG 与母版逐字节一致。
+- 运行开发版时，确认应用包 `Contents/Resources/icon.icns` 已同步，不以源码修改代替运行资源核对。
 
 ## 文件职责
 
-| 文件                            | 用途                            |
-| ------------------------------- | ------------------------------- |
-| `src-tauri/icons/app-icon.svg`  | 唯一可编辑母版                  |
-| `src-tauri/icons/1024x1024.png` | 1024 px RGBA 运行时/导出母版    |
-| `src-tauri/icons/icon.icns`     | macOS Finder、Dock 与安装包图标 |
-| `src-tauri/icons/icon.png`      | Tauri 通用运行时图标            |
-| `src-tauri/icons/icon.ico`      | Windows 安装包与应用图标        |
-
-## 禁止事项
-
-- 不得把不透明底板改为整块透明或半透明。
-- 不得把主体放大到接近 1024 px 画布边缘，或让主体安全间距小于 80 px。
-- 不得为 macOS 单独制作另一套主体比例。
-- 不得在导出阶段改变渐变方向、颜色、节点位置或中心 Hub 比例。
-- 不得分别手工调整 ICNS 的各尺寸图层。
+| 文件                            | 用途                                           |
+| ------------------------------- | ---------------------------------------------- |
+| `src-tauri/icons/1024x1024.png` | 默认深色母版的兼容副本                         |
+| `src-tauri/icons/app-icon.svg`  | 母版的无损 SVG 封装，供网页与现有构建消费      |
+| `src-tauri/icons/icon.icns`     | macOS Finder、Dock 与安装包                    |
+| `src-tauri/icons/icon.png`      | Tauri 通用运行时图标                           |
+| `src-tauri/icons/icon.ico`      | Windows 安装包与应用                           |
+| `public/icons/`                 | 同源网页图标                                   |
+| `scripts/icons/export.mjs`      | 两套母版校验、统一导出、托盘生成与默认入口同步 |

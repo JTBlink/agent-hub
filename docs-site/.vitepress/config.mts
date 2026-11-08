@@ -64,6 +64,16 @@ export default defineConfig({
   outDir: "../_site/docs",
   cleanUrls: false,
   appearance: "dark",
+  head: [
+    [
+      "link",
+      {
+        rel: "icon",
+        type: "image/png",
+        href: new URL("../assets/app-icon-32.png", catalog.siteUrl).pathname,
+      },
+    ],
+  ],
   sitemap: { hostname: catalog.siteUrl },
   transformHead({ pageData }) {
     const path = pageData.relativePath
@@ -125,7 +135,7 @@ export default defineConfig({
   ),
   themeConfig: {
     siteTitle: "AgentHub",
-    logo: new URL("../assets/app-icon.svg", catalog.siteUrl).href,
+    logo: new URL("../assets/app-icon-128.png", catalog.siteUrl).pathname,
     search: {
       provider: "local",
       options: {

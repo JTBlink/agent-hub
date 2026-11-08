@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="src-tauri/icons/app-icon.svg" alt="AgentHub Logo" width="80" />
+  <img src="src-tauri/icons/128x128.png" alt="AgentHub Logo" width="80" />
   <h1>AgentHub</h1>
   <p><strong>让 Agent 围绕项目工作。</strong></p>
   <p>本地优先的 AI 开发工作台，连接项目、Agent、Skills 与定时任务。</p>
@@ -150,6 +150,8 @@ cargo test --manifest-path src-tauri/Cargo.toml
 产品配置、编译裁剪及产物目录见[产品开发](docs/product-development.md)与[编译、打包和安装](docs/build-and-install.md)。
 
 ### 产品主页与截图
+
+品牌图标保留[深色](src-tauri/icons/variants/dark/)与[浅色](src-tauri/icons/variants/light/)两套，应用、官网和截图默认使用深色版。[定稿预览](docs/images/brand-concepts/README.md)。
 
 主页为静态 HTML、CSS 和少量 JavaScript。版本从 `VERSION` 注入，帮助站与应用离线帮助共用文档正文。
 

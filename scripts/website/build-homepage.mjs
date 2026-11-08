@@ -64,6 +64,15 @@ copyFileSync(
   resolve(root, "src-tauri/icons/app-icon.svg"),
   resolve(assetsDirectory, "app-icon.svg"),
 );
+for (const [source, destination] of [
+  ["32x32.png", "app-icon-32.png"],
+  ["128x128.png", "app-icon-128.png"],
+]) {
+  copyFileSync(
+    resolve(root, "src-tauri/icons", source),
+    resolve(assetsDirectory, destination),
+  );
+}
 for (const file of [
   "skill-library.png",
   "dashboard.png",
