@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">权威头像</title>
+  <desc id="desc">深色边缘光风格的彭罗斯五角星与权威二字抽象头像图标</desc>
+
+  <defs>
+    <radialGradient id="bg" cx="48%" cy="40%" r="72%">
+      <stop offset="0" stop-color="#182A46"/>
+      <stop offset="0.52" stop-color="#0B1427"/>
+      <stop offset="1" stop-color="#03050B"/>
+    </radialGradient>
+    <linearGradient id="edge" x1="13%" y1="8%" x2="87%" y2="92%">
+      <stop offset="0" stop-color="#64F4FF"/>
+      <stop offset="0.26" stop-color="#23C8FF"/>
+      <stop offset="0.56" stop-color="#8D6BFF"/>
+      <stop offset="0.82" stop-color="#F34BD6"/>
+      <stop offset="1" stop-color="#FF8BDB"/>
+    </linearGradient>
+    <linearGradient id="edgeSoft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#B6FCFF"/>
+      <stop offset="0.45" stop-color="#57D9FF"/>
+      <stop offset="1" stop-color="#B06BFF"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D7FFFF"/>
+      <stop offset="0.18" stop-color="#5CEBFF"/>
+      <stop offset="0.62" stop-color="#7B83FF"/>
+      <stop offset="1" stop-color="#FF69D9"/>
+    </linearGradient>
+    <linearGradient id="type" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.55" stop-color="#D9F9FF"/>
+      <stop offset="1" stop-color="#B49CFF"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.22  0 1 0 0 0.55  0 0 1 0 1  0 0 0 0.72 0"/>
+    </filter>
+    <filter id="smallGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.62"/>
+    </filter>
+    <clipPath id="round">
+      <rect x="24" y="24" width="976" height="976" rx="224"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#round)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <circle cx="520" cy="430" r="430" fill="#162A52" opacity="0.18" filter="url(#glow)"/>
+    <path d="M-40 790 C190 640 298 700 465 810 C650 932 814 903 1080 710 L1080 1080 L-40 1080 Z" fill="#070D1A" opacity="0.62"/>
+
+    <!-- Penrose pentagram aura -->
+    <path d="M512 129 L625 376 L897 410 L690 590 L746 866 L512 730 L278 866 L334 590 L127 410 L399 376 Z"
+      fill="none" stroke="url(#edge)" stroke-width="58" stroke-linejoin="round" opacity="0.25" filter="url(#glow)"/>
+
+    <!-- Dark recesses make the star read as a three-dimensional impossible object. -->
+    <path d="M512 129 L625 376 L897 410 L690 590 L746 866 L512 730 L278 866 L334 590 L127 410 L399 376 Z"
+      fill="none" stroke="#040711" stroke-width="86" stroke-linejoin="round" stroke-linecap="square" opacity="0.96" filter="url(#shadow)"/>
+    <path d="M512 129 L625 376 L897 410 L690 590 L746 866 L512 730 L278 866 L334 590 L127 410 L399 376 Z"
+      fill="none" stroke="url(#beam)" stroke-width="60" stroke-linejoin="round" stroke-linecap="square"/>
+    <path d="M512 178 L606 385 L834 414 L660 564 L703 787 L512 676 L321 787 L364 564 L190 414 L418 385 Z"
+      fill="none" stroke="#0A1425" stroke-width="18" stroke-linejoin="round" opacity="0.75"/>
+
+    <!-- Three seam cuts imply the Penrose over-under weave. -->
+    <g fill="#050913">
+      <path d="M391 366 L431 350 L468 430 L430 446 Z"/>
+      <path d="M603 355 L640 373 L601 451 L565 430 Z"/>
+      <path d="M675 584 L710 552 L769 604 L742 634 Z"/>
+      <path d="M337 584 L308 553 L252 605 L278 634 Z"/>
+      <path d="M500 712 L524 712 L563 789 L512 818 L461 789 Z"/>
+    </g>
+
+    <!-- Central authority seal -->
+    <circle cx="512" cy="502" r="215" fill="#050A15" opacity="0.82" stroke="#1D2A45" stroke-width="3"/>
+    <circle cx="512" cy="502" r="191" fill="none" stroke="url(#edgeSoft)" stroke-width="3" opacity="0.82"/>
+    <circle cx="512" cy="502" r="169" fill="#070C18" stroke="#263653" stroke-width="2"/>
+    <path d="M372 542 C427 603 585 620 655 542" fill="none" stroke="#48E7FF" stroke-opacity="0.22" stroke-width="2"/>
+    <path d="M375 462 C427 401 584 384 650 460" fill="none" stroke="#BD67FF" stroke-opacity="0.23" stroke-width="2"/>
+
+    <text x="512" y="533" text-anchor="middle"
+      font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif"
+      font-size="142" font-weight="900" letter-spacing="16"
+      fill="url(#type)" stroke="#E9FDFF" stroke-width="2.5" paint-order="stroke">权威</text>
+    <path d="M424 580 H600" stroke="url(#edge)" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="407" cy="580" r="4" fill="#59ECFF" filter="url(#smallGlow)"/>
+    <circle cx="617" cy="580" r="4" fill="#F26DDA" filter="url(#smallGlow)"/>
+
+    <!-- edge highlights -->
+    <path d="M146 410 L399 376 L512 129" fill="none" stroke="#B4FFFF" stroke-width="7" stroke-linecap="round" opacity="0.74"/>
+    <path d="M746 866 L690 590 L897 410" fill="none" stroke="#FF9BE7" stroke-width="7" stroke-linecap="round" opacity="0.66"/>
+    <circle cx="512" cy="129" r="8" fill="#D8FFFF" filter="url(#smallGlow)"/>
+    <circle cx="897" cy="410" r="7" fill="#FF9BE7" filter="url(#smallGlow)"/>
+    <circle cx="278" cy="866" r="7" fill="#6AEAFF" filter="url(#smallGlow)"/>
+  </g>
+
+  <rect x="24" y="24" width="976" height="976" rx="224" fill="none" stroke="url(#edge)" stroke-opacity="0.78" stroke-width="7"/>
+  <rect x="38" y="38" width="948" height="948" rx="210" fill="none" stroke="#BDEBFF" stroke-opacity="0.12" stroke-width="2"/>
+</svg>
