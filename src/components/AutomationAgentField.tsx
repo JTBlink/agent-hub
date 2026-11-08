@@ -17,7 +17,11 @@ import { automationHerdrConfig, automationPromptFile } from "../lib/automation";
 import { PROMPT_VARIANTS_PATH } from "../lib/automationPrompts";
 import { getErrorMessage } from "../lib/error";
 import { ThemedSelect } from "./ThemedSelect";
-import { herdrEnabled, AutomationHerdrFields } from "@app/herdr";
+import {
+  herdrEnabled,
+  AutomationHerdrFields,
+  HerdrIcon,
+} from "@app/herdr";
 
 type Execution = Pick<AutomationDraft, "provider" | "content" | "files">;
 const execution = ({
@@ -57,6 +61,7 @@ export function AutomationAgentField({
           : tool.kind,
     }));
   const selected = choices.find((tool) => tool.value === agent);
+  const usesHerdr = !!config && agent !== "native-hermes";
   const configured = tools.find(
     (tool) =>
       herdrAgentKind(tool.key) ===
@@ -227,7 +232,23 @@ export function AutomationAgentField({
         <ThemedSelect
           className="app-input w-full"
           leadingIcon={icon(agent)}
+          valueBadge={
+            usesHerdr ? (
+              <HerdrIcon
+                className="h-4 w-4 shrink-0 text-accent"
+                title="Herdr"
+              />
+            ) : undefined
+          }
           optionIcon={icon}
+          optionTrailing={(value) =>
+            usesHerdr && value && value !== "native-hermes" ? (
+              <HerdrIcon
+                className="ml-auto h-4 w-4 shrink-0 text-accent"
+                title="Herdr"
+              />
+            ) : undefined
+          }
           aria-label={t("automation.optionalAgent")}
           value={agent}
           disabled={disabled || pending}

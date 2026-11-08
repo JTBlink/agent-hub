@@ -1103,6 +1103,21 @@ it("offers the same installed agents and order as the global workspace and prese
   await input("执行命令", "printf original-command");
   await select("智能体（可选）", "codex");
   expect(prompt().disabled).toBe(false);
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('[role="combobox"][aria-label="智能体（可选）"]')!
+      .click(),
+  );
+  expect(
+    document.querySelectorAll('[role="listbox"] [title="Herdr"]'),
+  ).not.toHaveLength(0);
+  await act(async () =>
+    document
+      .querySelector<HTMLButtonElement>(
+        '[role="listbox"] [role="option"][aria-selected="true"]',
+      )!
+      .click(),
+  );
   await input("提示词", "检查当前项目，不修改文件。");
   await select("智能体（可选）", "");
   expect(

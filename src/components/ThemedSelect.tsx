@@ -93,6 +93,8 @@ type Props = Omit<
   /** Metadata that remains visible when the selected label is truncated. */
   valueBadge?: ReactNode;
   optionIcon?: (value: string) => ReactNode;
+  /** A trailing marker shown after an option label in the open menu. */
+  optionTrailing?: (value: string) => ReactNode;
   /** A separate row action; invoking it does not change the selected value. */
   optionAction?: (value: string) =>
     | {
@@ -125,6 +127,7 @@ export function ThemedSelect(selection: Props) {
     leadingIcon,
     valueBadge,
     optionIcon,
+    optionTrailing,
     optionAction,
     renderValue,
     fitContent = false,
@@ -466,6 +469,7 @@ export function ThemedSelect(selection: Props) {
                     >
                       {option.label}
                     </span>
+                    {optionTrailing?.(option.value)}
                   </button>
                   {action && (
                     <button
