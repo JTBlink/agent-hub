@@ -56,7 +56,7 @@ export function AutomationPromptSummary({
           </ul>
         )}
       </div>
-      <p className="max-w-[90ch] whitespace-pre-wrap break-words px-5 py-4 text-sm leading-7 text-secondary">
+      <p className="w-full max-w-none whitespace-pre-wrap break-words px-5 py-4 text-sm leading-7 text-secondary">
         {prompt}
       </p>
     </section>
