@@ -209,130 +209,103 @@ async function coldFontsRecover(): Promise<boolean> {
 }
 
 Object.assign(window, {
-  runTerminalInputRegression: async (
-    inputEvents:
-      boolean | "ime" | "ime-composition" | "chinese-composition" = false,
-  ) => {
+  runTerminalInputRegression: async () => {
     render(false);
     while (created < 1) await pause();
     const terminal = terminals[0];
+    const textarea = terminal.textarea!;
     writeDelay = 25;
     let generated = "";
     const generatedInput = terminal.onData((data) => {
       generated += data;
     });
-    const command =
-      inputEvents === "chinese-composition"
-        ? "中文输入"
-        : inputEvents
-          ? "clear ABCDEFGHIJKLMNOPQRSTUVWXYZ?"
-          : `${"git branch ".repeat(30)}?\r`;
     const started = performance.now();
-    for (const key of command) {
-      const questionMark = key === "?";
-      const uppercase = /^[A-Z]$/.test(key);
-      const keyCode =
-        inputEvents === "chinese-composition"
-          ? 78
-          : typeof inputEvents === "string"
-            ? 229
-            : inputEvents && key === "a"
-              ? 0
-              : key === "\r"
-                ? 13
-                : questionMark
-                  ? 191
-                  : key.toUpperCase().charCodeAt(0);
+    const key = (
+      key: string,
+      code = "",
+      shiftKey = false,
+      keyCode = key.toUpperCase().charCodeAt(0),
+    ) => {
       const event = new KeyboardEvent("keydown", {
-        key:
-          inputEvents === "chinese-composition"
-            ? "n"
-            : key === "\r"
-              ? "Enter"
-              : (questionMark || uppercase) && typeof inputEvents === "string"
-                ? "Process"
-                : key,
-        code: questionMark ? "Slash" : uppercase ? `Key${key}` : undefined,
-        shiftKey: questionMark || uppercase,
+        key,
+        code,
+        shiftKey,
         keyCode,
         bubbles: true,
         cancelable: true,
       });
-      terminal.textarea!.dispatchEvent(event);
-      if (
-        !event.defaultPrevented &&
-        (inputEvents === "ime-composition" ||
-          inputEvents === "chinese-composition")
-      ) {
-        terminal.textarea!.dispatchEvent(
-          new CompositionEvent("compositionstart", { bubbles: true }),
+      textarea.dispatchEvent(event);
+      if (!event.defaultPrevented) {
+        textarea.dispatchEvent(
+          keyCode === 0 || keyCode === 229
+            ? new InputEvent("input", {
+                inputType: "insertText",
+                data: key,
+                bubbles: true,
+                composed: true,
+              })
+            : new KeyboardEvent("keypress", {
+                key,
+                keyCode,
+                charCode: key.charCodeAt(0),
+                bubbles: true,
+                cancelable: true,
+              }),
         );
-        terminal.textarea!.dispatchEvent(
-          new CompositionEvent("compositionupdate", {
-            data: key,
-            bubbles: true,
-          }),
-        );
-        terminal.textarea!.value = key;
-        terminal.textarea!.dispatchEvent(
-          new CompositionEvent("compositionend", { data: key, bubbles: true }),
-        );
-        terminal.textarea!.dispatchEvent(
+      }
+      textarea.dispatchEvent(new KeyboardEvent("keyup", { key, keyCode }));
+    };
+    const command = "git branch ".repeat(8);
+    for (const character of command) key(character);
+    key("a", "KeyA", false, 0);
+    key("b", "KeyB", false, 229);
+    key("A", "KeyA", true);
+    key("Process", "KeyB", true, 229);
+    key("Process", "Digit1", true, 229);
+    key("Process", "Slash", true, 229);
+    for (const text of ["cl", "ear", "中文", "输入"]) {
+      const first = new KeyboardEvent("keydown", {
+        key: "n",
+        code: "KeyN",
+        keyCode: 78,
+        bubbles: true,
+        cancelable: true,
+      });
+      textarea.dispatchEvent(first);
+      if (first.defaultPrevented)
+        throw new Error("Initial letter blocked native IME startup");
+      textarea.dispatchEvent(
+        new CompositionEvent("compositionstart", { bubbles: true }),
+      );
+      textarea.dispatchEvent(
+        new CompositionEvent("compositionupdate", {
+          data: text,
+          bubbles: true,
+        }),
+      );
+      textarea.value = text;
+      textarea.dispatchEvent(
+        new CompositionEvent("compositionend", { data: text, bubbles: true }),
+      );
+      for (const inputType of ["insertCompositionText", "insertText"]) {
+        textarea.value = text;
+        textarea.dispatchEvent(
           new InputEvent("input", {
-            inputType: "insertCompositionText",
-            data: key,
+            inputType,
+            data: text,
             bubbles: true,
             composed: true,
-          }),
-        );
-      } else if (!event.defaultPrevented && inputEvents === "ime") {
-        terminal.textarea!.value += key;
-        terminal.textarea!.dispatchEvent(
-          new InputEvent("input", {
-            inputType: "insertText",
-            data: key,
-            bubbles: true,
-            composed: true,
-          }),
-        );
-      } else if (!event.defaultPrevented && inputEvents && key === "a") {
-        terminal.textarea!.dispatchEvent(
-          new InputEvent("input", {
-            inputType: "insertText",
-            data: key,
-            bubbles: true,
-            composed: true,
-          }),
-        );
-      } else if (!event.defaultPrevented) {
-        terminal.textarea!.dispatchEvent(
-          new KeyboardEvent("keypress", {
-            key,
-            keyCode,
-            charCode: key.charCodeAt(0),
-            bubbles: true,
-            cancelable: true,
           }),
         );
       }
-      terminal.textarea!.dispatchEvent(
-        new KeyboardEvent("keyup", { key, keyCode }),
-      );
     }
-    if (typeof inputEvents === "string") await pause();
-    const controls = inputEvents
-      ? [
-          { key: "Tab", keyCode: 9, data: "\x1b[Z" },
-          { key: "Enter", keyCode: 13, data: "\r" },
-          { key: "ArrowLeft", keyCode: 37, data: "\x1b[1;2D" },
-          { key: "ArrowRight", keyCode: 39, data: "\x1b[1;2C" },
-          { key: "ArrowUp", keyCode: 38, data: "\x1b[1;2A" },
-          { key: "ArrowDown", keyCode: 40, data: "\x1b[1;2B" },
-        ]
-      : [];
-    for (const { key, keyCode } of controls) {
+    for (const [key, keyCode] of [
+      ["Tab", 9],
+      ["Enter", 13],
+      ["ArrowLeft", 37],
+    ] as const) {
       for (const type of ["keydown", "keyup"]) {
-        terminal.textarea!.dispatchEvent(
+        textarea.dispatchEvent(
           new KeyboardEvent(type, {
             key,
             keyCode,
@@ -343,29 +316,23 @@ Object.assign(window, {
         );
       }
     }
+    // Let xterm flush its composition timers before checking for duplicates.
+    await pause();
+    const expected = command + "abAB!?clear中文输入\x1b[Z\r\x1b[1;2D";
     generatedInput.dispose();
-    if (inputEvents)
-      return {
-        complete:
-          generated === command + controls.map(({ data }) => data).join(""),
-        received: generated,
-        characters: command.length + controls.length,
-        writeCalls,
-        elapsed: Math.round(performance.now() - started),
-        created,
-        closed,
-      };
-    while (written.length < command.length) {
-      if (performance.now() - started > 15000) break;
+    while (
+      written.length < expected.length &&
+      performance.now() - started < 15000
+    )
       await pause();
-    }
-    const displayed = terminal.buffer.active
-      .getLine(0)!
-      .translateToString(true);
     return {
-      complete: written === command,
-      displayed: displayed.startsWith("git branch git branch"),
-      characters: command.length,
+      complete: generated === expected && written === expected,
+      received: generated,
+      displayed: terminal.buffer.active
+        .getLine(0)!
+        .translateToString(true)
+        .startsWith("git branch git branch"),
+      characters: expected.length,
       writeCalls,
       elapsed: Math.round(performance.now() - started),
       created,

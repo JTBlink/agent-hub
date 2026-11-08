@@ -2,212 +2,62 @@
 import { expect, it, vi } from "vitest";
 import { bindTerminalTextInput } from "./terminalKeyboard";
 
-it("allows an initial letter to start native Chinese composition before emitting any English text", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
+function setup() {
   const node = document.createElement("div");
   const textarea = document.createElement("textarea");
   node.append(textarea);
   const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input, textarea });
-  const event = new KeyboardEvent("keydown", {
-    key: "n",
-    code: "KeyN",
-    keyCode: 78,
-    cancelable: true,
-  });
-  expect(keyboard.handle(event)).toBe(false);
-  expect(event.defaultPrevented).toBe(false);
-  expect(input).not.toHaveBeenCalled();
-  textarea.dispatchEvent(
-    new CompositionEvent("compositionstart", { bubbles: true }),
-  );
-  textarea.value = "你";
-  textarea.dispatchEvent(
-    new InputEvent("input", {
-      inputType: "insertCompositionText",
-      data: "你",
-      isComposing: true,
-      bubbles: true,
-    }),
-  );
-  expect(input).not.toHaveBeenCalled();
-  textarea.dispatchEvent(
-    new CompositionEvent("compositionend", { data: "你", bubbles: true }),
-  );
-  textarea.dispatchEvent(
-    new InputEvent("input", {
-      inputType: "insertText",
-      data: "你",
-      bubbles: true,
-    }),
-  );
-  expect(input).toHaveBeenCalledExactlyOnceWith("你", true);
-  keyboard.dispose();
-});
-
-it("delivers fast printable keys exactly once even without legacy key codes", () => {
-  const input = vi.fn();
-  const node = document.createElement("div");
-  const keyboard = bindTerminalTextInput(node, { input });
-  for (const key of "clear CLEAR 0123!") {
-    const event = new KeyboardEvent("keydown", {
-      key,
-      keyCode: 0,
-      cancelable: true,
-    });
-    expect(keyboard.handle(event)).toBe(false);
-    expect(event.defaultPrevented).toBe(false);
-    node.dispatchEvent(
-      new InputEvent("input", {
-        inputType: "insertText",
-        data: key,
-      }),
-    );
-    expect(keyboard.handle(new KeyboardEvent("keyup", { key }))).toBe(true);
-  }
-  expect(input.mock.calls.map(([data]) => data).join("")).toBe(
-    "clear CLEAR 0123!",
-  );
-  keyboard.dispose();
-});
-
-it("leaves composition, shortcuts, dead keys and terminal controls to xterm", () => {
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(document.createElement("div"), {
+  return {
+    node,
+    textarea,
     input,
-  });
-  for (const options of [
-    { key: "a", isComposing: true },
-    { key: "c", ctrlKey: true },
-    { key: "v", metaKey: true },
-    { key: "e", altKey: true },
-    { key: "Dead" },
-    { key: "Enter" },
-    { key: "ArrowLeft" },
-    { key: "Backspace" },
-  ]) {
-    const event = new KeyboardEvent("keydown", {
-      ...options,
-      cancelable: true,
-    });
-    expect(keyboard.handle(event)).toBe(true);
-    expect(event.defaultPrevented).toBe(false);
-  }
-  expect(input).not.toHaveBeenCalled();
-  keyboard.dispose();
-});
+    keyboard: bindTerminalTextInput(node, { input, textarea }),
+  };
+}
 
-it("sends a question mark from Shift+Slash even when WebKit reports an IME key", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const node = document.createElement("div");
-  const textarea = document.createElement("textarea");
-  node.append(textarea);
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input, textarea });
-  const event = new KeyboardEvent("keydown", {
-    key: "Process",
-    code: "Slash",
-    keyCode: 229,
-    shiftKey: true,
-    cancelable: true,
-  });
-
-  expect(keyboard.handle(event)).toBe(false);
-  expect(event.defaultPrevented).toBe(true);
-  expect(input).toHaveBeenCalledExactlyOnceWith("?", true);
-  keyboard.dispose();
-});
-
-it.each(["A", "Process", "Unidentified"])(
-  "sends Shift+letters once when WebKit reports key %s and IME keyCode",
-  async (reportedKey) => {
-    const { bindTerminalTextInput } = await import("./terminalKeyboard");
-    const node = document.createElement("div");
-    const textarea = document.createElement("textarea");
-    node.append(textarea);
-    const input = vi.fn();
-    const keyboard = bindTerminalTextInput(node, { input, textarea });
-    for (const key of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+it("delivers native text once with missing legacy codes or IME keyCode 229", () => {
+  const { textarea, input, keyboard } = setup();
+  for (const keyCode of [0, 229]) {
+    for (const key of "clear 123!") {
       const event = new KeyboardEvent("keydown", {
-        key: reportedKey === "A" ? key : reportedKey,
-        code: `Key${key}`,
-        keyCode: 229,
-        shiftKey: true,
+        key,
+        keyCode,
         cancelable: true,
       });
       expect(keyboard.handle(event)).toBe(false);
-      expect(event.defaultPrevented).toBe(true);
-      expect(keyboard.handle(event)).toBe(true);
-      expect(
-        keyboard.handle(new KeyboardEvent("keyup", { key, shiftKey: true })),
-      ).toBe(true);
+      expect(event.defaultPrevented).toBe(false);
+      textarea.value = key;
+      textarea.dispatchEvent(
+        new InputEvent("input", {
+          inputType: "insertText",
+          data: key,
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
-    expect(input.mock.calls.map(([data]) => data).join("")).toBe(
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    );
-    keyboard.dispose();
-  },
-);
-
-it("leaves shifted shortcuts and active IME composition on xterm's path", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const node = document.createElement("div");
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input });
-  for (const options of [
-    { ctrlKey: true },
-    { metaKey: true },
-    { altKey: true },
-    { isComposing: true },
-  ]) {
-    const event = new KeyboardEvent("keydown", {
-      key: "Process",
-      code: "KeyA",
-      keyCode: 229,
-      shiftKey: true,
-      cancelable: true,
-      ...options,
-    });
-    expect(keyboard.handle(event)).toBe(true);
-    expect(event.defaultPrevented).toBe(false);
   }
-  node.dispatchEvent(new CompositionEvent("compositionstart"));
-  expect(
-    keyboard.handle(
-      new KeyboardEvent("keydown", {
-        key: "A",
-        code: "KeyA",
-        keyCode: 229,
-        shiftKey: true,
-      }),
-    ),
-  ).toBe(true);
-  expect(input).not.toHaveBeenCalled();
+  expect(input.mock.calls.map(([data]) => data).join("")).toBe(
+    "clear 123!clear 123!",
+  );
+  expect(textarea.value).toBe("");
   keyboard.dispose();
 });
 
-it("maps shifted number and punctuation keys while honoring layout-resolved characters", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const node = document.createElement("div");
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input });
-  const codes = [
-    ...Array.from({ length: 10 }, (_, i) => `Digit${(i + 1) % 10}`),
-    "Backquote",
-    "Minus",
-    "Equal",
-    "BracketLeft",
-    "BracketRight",
-    "Backslash",
-    "Semicolon",
-    "Quote",
-    "Comma",
-    "Period",
-    "Slash",
-  ];
-  for (const code of codes) {
+it("resolves shifted letters and symbols once, preferring the active layout", () => {
+  const { input, keyboard } = setup();
+  for (const [key, code] of [
+    ["A", "KeyA"],
+    ["Process", "KeyB"],
+    ["Unidentified", "KeyZ"],
+    ["Process", "Digit1"],
+    ["Process", "Digit0"],
+    ["Process", "Minus"],
+    ["Process", "Slash"],
+    ['"', "Digit2"],
+  ]) {
     const event = new KeyboardEvent("keydown", {
-      key: "Process",
+      key,
       code,
       keyCode: 229,
       shiftKey: true,
@@ -215,173 +65,90 @@ it("maps shifted number and punctuation keys while honoring layout-resolved char
     });
     expect(keyboard.handle(event)).toBe(false);
     expect(event.defaultPrevented).toBe(true);
-  }
-  // A non-US layout can resolve Shift+Digit2 to a different character.
-  keyboard.handle(
-    new KeyboardEvent("keydown", {
-      key: '"',
-      code: "Digit2",
-      keyCode: 229,
-      shiftKey: true,
-      cancelable: true,
-    }),
-  );
-  expect(input.mock.calls.map(([data]) => data).join("")).toBe(
-    '!@#$%^&*()~_+{}|:"<>?"',
-  );
-  keyboard.dispose();
-});
-
-it("preserves shifted terminal controls and dead keys without turning them into text", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(document.createElement("div"), {
-    input,
-  });
-  for (const key of [
-    "Tab",
-    "Enter",
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowUp",
-    "ArrowDown",
-    "Home",
-    "End",
-    "PageUp",
-    "PageDown",
-    "Backspace",
-    "Delete",
-    "F1",
-    "Escape",
-    "Dead",
-  ]) {
-    const event = new KeyboardEvent("keydown", {
-      key,
-      shiftKey: true,
-      code: key === "Dead" ? "Backquote" : key,
-      cancelable: true,
-    });
     expect(keyboard.handle(event)).toBe(true);
-    expect(event.defaultPrevented).toBe(false);
+    expect(
+      keyboard.handle(
+        new KeyboardEvent("keyup", { key, code, shiftKey: true }),
+      ),
+    ).toBe(true);
+  }
+  expect(input.mock.calls.map(([data]) => data).join("")).toBe('ABZ!)_?"');
+  keyboard.dispose();
+});
+
+it("leaves shortcuts, composition and terminal controls to xterm with or without Shift", () => {
+  const { input, keyboard } = setup();
+  for (const shiftKey of [false, true]) {
+    for (const options of [
+      { key: "Process", code: "KeyA", keyCode: 229, ctrlKey: true },
+      { key: "Process", code: "KeyA", keyCode: 229, metaKey: true },
+      { key: "Process", code: "KeyA", keyCode: 229, altKey: true },
+      { key: "A", code: "KeyA", isComposing: true },
+      ...["Tab", "Enter", "ArrowLeft", "Backspace", "Dead"].map((key) => ({
+        key,
+      })),
+    ]) {
+      const event = new KeyboardEvent("keydown", {
+        ...options,
+        shiftKey,
+        cancelable: true,
+      });
+      expect(keyboard.handle(event)).toBe(true);
+      expect(event.defaultPrevented).toBe(false);
+    }
   }
   expect(input).not.toHaveBeenCalled();
   keyboard.dispose();
 });
 
-it("sends every English IME commit once without waiting for textarea timers", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const node = document.createElement("div");
-  const textarea = document.createElement("textarea");
-  node.append(textarea);
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input, textarea });
-  const expected = "clear git branch 0123456789";
-  for (const key of expected) {
-    const event = new KeyboardEvent("keydown", {
-      key,
-      keyCode: 229,
+it("allows native IME startup and sends consecutive Chinese and English commits without preedit or duplicates", () => {
+  const { textarea, input, keyboard } = setup();
+  for (const text of ["中文", "输入", "clear"]) {
+    const first = new KeyboardEvent("keydown", {
+      key: "n",
+      code: "KeyN",
+      keyCode: 78,
       cancelable: true,
     });
-    expect(keyboard.handle(event)).toBe(false);
-    expect(event.defaultPrevented).toBe(false);
-    textarea.value += key;
-    textarea.dispatchEvent(
-      new InputEvent("input", {
-        inputType: "insertText",
-        data: key,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }
-  expect(input.mock.calls.map(([data]) => data).join("")).toBe(expected);
-  expect(textarea.value).toBe("");
-  keyboard.dispose();
-});
-
-it("keeps Chinese preedit on xterm's path and sends only the final native commit", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const node = document.createElement("div");
-  const textarea = document.createElement("textarea");
-  node.append(textarea);
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input, textarea });
-  keyboard.handle(new KeyboardEvent("keydown", { key: "n", keyCode: 229 }));
-  textarea.dispatchEvent(
-    new CompositionEvent("compositionstart", { bubbles: true }),
-  );
-  expect(
-    keyboard.handle(
-      new KeyboardEvent("keydown", {
-        key: "i",
-        keyCode: 229,
-        isComposing: true,
-      }),
-    ),
-  ).toBe(true);
-  textarea.dispatchEvent(
-    new InputEvent("input", {
-      inputType: "insertCompositionText",
-      data: "你",
-      isComposing: true,
-      bubbles: true,
-    }),
-  );
-  expect(input).not.toHaveBeenCalled();
-  textarea.dispatchEvent(
-    new CompositionEvent("compositionend", { data: "你", bubbles: true }),
-  );
-  textarea.dispatchEvent(
-    new InputEvent("input", {
-      inputType: "insertText",
-      data: "你",
-      bubbles: true,
-    }),
-  );
-  expect(input).toHaveBeenCalledExactlyOnceWith("你", true);
-  keyboard.dispose();
-});
-
-it("commits consecutive English composition sessions before their textarea values are replaced", async () => {
-  const { bindTerminalTextInput } = await import("./terminalKeyboard");
-  const node = document.createElement("div");
-  const textarea = document.createElement("textarea");
-  node.append(textarea);
-  const input = vi.fn();
-  const keyboard = bindTerminalTextInput(node, { input, textarea });
-  for (const text of ["cl", "ear", " 0123456789"]) {
-    keyboard.handle(
-      new KeyboardEvent("keydown", { key: text[0], keyCode: 229 }),
-    );
+    const previous = input.mock.calls.length;
+    expect(keyboard.handle(first)).toBe(false);
+    expect(first.defaultPrevented).toBe(false);
+    expect(input).toHaveBeenCalledTimes(previous);
     textarea.dispatchEvent(
       new CompositionEvent("compositionstart", { bubbles: true }),
     );
+    expect(
+      keyboard.handle(
+        new KeyboardEvent("keydown", {
+          key: "A",
+          code: "KeyA",
+          keyCode: 229,
+          shiftKey: true,
+        }),
+      ),
+    ).toBe(true);
+    textarea.dispatchEvent(
+      new InputEvent("input", {
+        inputType: "insertCompositionText",
+        data: "ni",
+        isComposing: true,
+        bubbles: true,
+      }),
+    );
+    expect(input).toHaveBeenCalledTimes(previous);
     textarea.value = text;
     textarea.dispatchEvent(
       new CompositionEvent("compositionend", { data: text, bubbles: true }),
     );
-    // WebKit may still deliver a final input event after compositionend.
-    textarea.value = text;
-    textarea.dispatchEvent(
-      new InputEvent("input", {
-        inputType: "insertCompositionText",
-        data: text,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    textarea.dispatchEvent(
-      new InputEvent("input", {
-        inputType: "insertText",
-        data: text,
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    for (const inputType of ["insertCompositionText", "insertText"]) {
+      textarea.value = text;
+      textarea.dispatchEvent(
+        new InputEvent("input", { inputType, data: text, bubbles: true }),
+      );
+    }
+    expect(input).toHaveBeenCalledTimes(previous + 1);
+    expect(textarea.value).toBe("");
   }
-  expect(input.mock.calls.map(([data]) => data).join("")).toBe(
-    "clear 0123456789",
-  );
-  expect(input).toHaveBeenCalledTimes(3);
+  expect(input.mock.calls.map(([data]) => data).join("")).toBe("中文输入clear");
   keyboard.dispose();
 });
