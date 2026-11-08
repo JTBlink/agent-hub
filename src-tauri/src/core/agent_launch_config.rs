@@ -122,6 +122,9 @@ pub(crate) fn validate_at(root: &Path) -> Result<()> {
 }
 fn load_unlocked() -> Result<Snapshot> {
     super::cloud_sync::recover_for_user_config()?;
+    read_snapshot()
+}
+fn read_snapshot() -> Result<Snapshot> {
     let root = user_config::root();
     user_config::checked(&root.join(FILE)).map_err(anyhow::Error::msg)?;
     let (document, revision) = read(&root)?;
@@ -132,6 +135,28 @@ fn load_unlocked() -> Result<Snapshot> {
     })
 }
 pub fn load() -> Result<Snapshot> {
+    // Saves replace this small file atomically. Ordinary reads need not queue
+    // behind unrelated skill scans or Git network operations holding RepoLock.
+    // A restore moves the whole directory under a publication journal: check
+    // it around both reads so a transient missing file cannot become defaults
+    // if a complete publication happens between two checks.
+    let optimistic = || -> Result<Snapshot> {
+        user_config::ready().map_err(anyhow::Error::msg)?;
+        let before = read_snapshot()?;
+        user_config::ready().map_err(anyhow::Error::msg)?;
+        let after = read_snapshot()?;
+        user_config::ready().map_err(anyhow::Error::msg)?;
+        ensure!(
+            before.revision == after.revision,
+            "Agent launch settings changed while reading"
+        );
+        Ok(after)
+    };
+    if let Ok(snapshot) = optimistic() {
+        return Ok(snapshot);
+    }
+    // Contended publication, invalid data and recovery retain the existing
+    // serialized path and its errors. Writes always retain revision protection.
     let _lock = RepoLock::acquire_foreground("read Agent launch settings")?;
     load_unlocked()
 }

@@ -114,7 +114,6 @@
   },
   "herdr": {
     "noInstalledAgent": "請先安裝可啟動的 Agent，或在設定中選擇其他 Agent。",
-    "configureAgent": "編輯啟動指令",
     "selectAgent": "選擇 Agent",
     "defaultAgent": "預設 Agent",
     "agentLaunchHelp": "與「設定 → Agent」共用預設 Agent 和啟動指令。僅影響後續啟動；Claude Agent Teams 沿用 Claude 的指令。",

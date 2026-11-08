@@ -16,11 +16,13 @@ export function AgentLaunchEditor({
   controller: Controller;
 }) {
   const { t } = useTranslation();
-  const { snapshot, busy, save } = controller;
+  const { snapshot, busy, error, save } = controller;
+  const unavailable = !snapshot;
+  const disabled = busy || unavailable;
   const saved =
     snapshot?.document.instructions[agentKey] ??
     snapshot?.defaults[agentKey] ??
-    agentKey;
+    (snapshot ? agentKey : "");
   const [draft, setDraft] = useState<{ value: string; base: string } | null>(
     null,
   );
@@ -31,8 +33,8 @@ export function AgentLaunchEditor({
       next === saved ? null : { value: next, base: draft?.base ?? saved },
     );
   const dirty = value !== saved;
-  if (!snapshot) return null;
   const persist = async (reset = false) => {
+    if (!snapshot) return;
     const ok = await save((current) => {
       const instructions = { ...current.instructions };
       if (reset || value.trim() === snapshot.defaults[agentKey])
@@ -43,13 +45,18 @@ export function AgentLaunchEditor({
     if (ok) setDraft(null);
   };
   return (
-    <div className="mt-2 space-y-2">
+    <div className="mt-2 space-y-2" aria-busy={unavailable && !error}>
       <label className="block text-xs text-secondary">
         {t("agentLaunch.instruction")}
         <input
           aria-label={t("agentLaunch.instruction")}
           value={value}
-          disabled={busy}
+          disabled={disabled}
+          placeholder={
+            unavailable
+              ? t(error ? "common.error" : "common.loading")
+              : undefined
+          }
           onChange={(e) => edit(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && dirty) void persist();
@@ -71,7 +78,7 @@ export function AgentLaunchEditor({
           <button
             key={shortcut.flag}
             type="button"
-            disabled={busy}
+            disabled={disabled}
             aria-pressed={shortcutSelected(value, shortcut.flag)}
             title={shortcut.flag}
             className={`rounded border px-2 py-0.5 text-xs focus-visible:ring-2 focus-visible:ring-accent ${shortcutSelected(value, shortcut.flag) ? "border-accent-border text-accent bg-surface-active" : "border-border text-muted"}`}
@@ -84,7 +91,7 @@ export function AgentLaunchEditor({
           <>
             <button
               type="button"
-              disabled={busy || !value.trim()}
+              disabled={disabled || !value.trim()}
               className="app-button-secondary text-xs"
               onClick={() => void persist()}
             >
@@ -92,7 +99,7 @@ export function AgentLaunchEditor({
             </button>
             <button
               type="button"
-              disabled={busy}
+              disabled={disabled}
               className="app-button-ghost text-xs"
               onClick={() => setDraft(null)}
             >
@@ -100,28 +107,29 @@ export function AgentLaunchEditor({
             </button>
           </>
         )}
-        {Object.hasOwn(snapshot.document.instructions, agentKey) && (
-          <button
-            type="button"
-            disabled={busy}
-            className="app-button-ghost text-xs"
-            onClick={() => void persist(true)}
-          >
-            {t("agentLaunch.reset")}
-          </button>
-        )}
+        {snapshot &&
+          Object.hasOwn(snapshot.document.instructions, agentKey) && (
+            <button
+              type="button"
+              disabled={disabled}
+              className="app-button-ghost text-xs"
+              onClick={() => void persist(true)}
+            >
+              {t("agentLaunch.reset")}
+            </button>
+          )}
 
         <button
           type="button"
-          aria-pressed={snapshot.document.default_agent === agentKey}
-          disabled={busy}
+          aria-pressed={snapshot?.document.default_agent === agentKey}
+          disabled={disabled}
           className="ml-auto text-xs text-accent focus-visible:ring-2 focus-visible:ring-accent"
           onClick={() =>
             void save((current) => ({ ...current, default_agent: agentKey }))
           }
         >
           {t(
-            snapshot.document.default_agent === agentKey
+            snapshot?.document.default_agent === agentKey
               ? "agentLaunch.default"
               : "agentLaunch.setDefault",
           )}

@@ -114,7 +114,6 @@
   },
   "herdr": {
     "noInstalledAgent": "Install a supported agent or choose another agent in settings.",
-    "configureAgent": "Edit launch command",
     "selectAgent": "Choose an agent",
     "defaultAgent": "Default agent",
     "agentLaunchHelp": "Shares the default agent and launch commands with Settings → Agent. Applies to future launches; Claude Agent Teams uses the Claude command.",

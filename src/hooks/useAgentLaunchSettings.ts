@@ -4,6 +4,10 @@ import type {
   AgentLaunchSnapshot,
 } from "../lib/agentLaunchConfig";
 import { getErrorMessage } from "../lib/error";
+import {
+  publishAgentLaunchUpdate,
+  subscribeAgentLaunchUpdates,
+} from "../lib/agentLaunchUpdates";
 import * as api from "../lib/tauri";
 
 export function useAgentLaunchSettings() {
@@ -19,8 +23,7 @@ export function useAgentLaunchSettings() {
     try {
       const next = await api.getAgentLaunchSettings();
       if (alive.current && generation === request.current) {
-        setSnapshot(next);
-        setError("");
+        publishAgentLaunchUpdate(next);
       }
     } catch (e) {
       if (alive.current && generation === request.current)
@@ -29,9 +32,15 @@ export function useAgentLaunchSettings() {
   }, []);
   useEffect(() => {
     alive.current = true;
+    const unsubscribe = subscribeAgentLaunchUpdates((next) => {
+      ++request.current;
+      setSnapshot(next);
+      setError("");
+    });
     void reload();
     return () => {
       alive.current = false;
+      unsubscribe();
     };
   }, [reload]);
   const save = async (
@@ -46,10 +55,7 @@ export function useAgentLaunchSettings() {
         change(snapshot.document),
         snapshot.revision,
       );
-      if (alive.current) {
-        setSnapshot(next);
-        setError("");
-      }
+      publishAgentLaunchUpdate(next);
       return true;
     } catch (e) {
       if (alive.current) setError(getErrorMessage(e, String(e)));

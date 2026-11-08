@@ -4,6 +4,8 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { AgentLaunchEditor } from "./AgentLaunchEditor";
+import { useAgentLaunchSettings } from "../../hooks/useAgentLaunchSettings";
+import { getAgentLaunchSettings } from "../../lib/tauri";
 import type {
   AgentLaunchDocument,
   AgentLaunchSnapshot,
@@ -11,6 +13,88 @@ import type {
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+vi.mock("../../lib/tauri", () => ({ getAgentLaunchSettings: vi.fn() }));
+
+it("keeps launch controls visible while loading and fills them with the saved command", async () => {
+  let resolve!: (snapshot: AgentLaunchSnapshot) => void;
+  vi.mocked(getAgentLaunchSettings).mockReturnValueOnce(
+    new Promise((done) => {
+      resolve = done;
+    }),
+  );
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  function Settings() {
+    const controller = useAgentLaunchSettings();
+    return <AgentLaunchEditor agentKey="codex" controller={controller} />;
+  }
+  try {
+    await act(async () => root.render(<Settings />));
+    const input = host.querySelector("input")!;
+    const search = host.querySelector<HTMLButtonElement>('[title="--search"]')!;
+    expect(input).not.toBeNull();
+    expect(input.placeholder).toBe("common.loading");
+    expect(input.disabled).toBe(true);
+    expect(search.disabled).toBe(true);
+    expect(host.textContent).toContain("agentLaunch.setDefault");
+    await act(async () =>
+      resolve({
+        revision: "saved",
+        defaults: { codex: "codex" },
+        document: {
+          schema_version: 1,
+          default_agent: "codex",
+          instructions: { codex: "codex --search --no-alt-screen" },
+        },
+      }),
+    );
+    expect(host.querySelector("input")).toBe(input);
+    expect(input.value).toBe("codex --search --no-alt-screen");
+    expect(input.disabled).toBe(false);
+    expect(search.disabled).toBe(false);
+    expect(search.getAttribute("aria-pressed")).toBe("true");
+    expect(host.textContent).toContain("agentLaunch.default");
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("keeps unloaded controls disabled after a read failure and recovers on retry", async () => {
+  vi.mocked(getAgentLaunchSettings)
+    .mockRejectedValueOnce(new Error("Read failed"))
+    .mockResolvedValueOnce({
+      revision: "retry",
+      defaults: { codex: "codex --search" },
+      document: { schema_version: 1, default_agent: "codex", instructions: {} },
+    });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  function Settings() {
+    const controller = useAgentLaunchSettings();
+    return (
+      <>
+        {controller.error && (
+          <button onClick={() => void controller.reload()}>Retry</button>
+        )}
+        <AgentLaunchEditor agentKey="codex" controller={controller} />
+      </>
+    );
+  }
+  try {
+    await act(async () => root.render(<Settings />));
+    const input = host.querySelector("input")!;
+    expect(input.placeholder).toBe("common.error");
+    expect(input.disabled).toBe(true);
+    expect(input.value).toBe("");
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>("button")!.click(),
+    );
+    expect(input.value).toBe("codex --search");
+    expect(input.disabled).toBe(false);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
 it("keeps a failed draft across a remote refresh and lets cancel adopt the refreshed command", async () => {
   const host = document.createElement("div");
   const root = createRoot(host);

@@ -1,5 +1,4 @@
 import { AgentSelect } from "../../../components/AgentSelect";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../../../context/AppContext";
 import { useAgentLaunchSettings } from "../../../hooks/useAgentLaunchSettings";
@@ -12,14 +11,13 @@ export function HerdrAgentSettings() {
   const { tools } = useApp();
   const controller = useAgentLaunchSettings();
   const { snapshot, busy, error, save, reload } = controller;
-  const [selected, setSelected] = useState("");
   const agents = herdrAgents;
   const defaultAgent = agents.find(
     (agent) =>
       agent.toolKey === snapshot?.document.default_agent ||
       agent.id === snapshot?.document.default_agent,
   );
-  const agentKey = selected || defaultAgent?.toolKey || "codex";
+  const agentKey = defaultAgent?.toolKey || "codex";
   return (
     <section
       className="mt-5 space-y-3 border-t border-border-subtle pt-4"
@@ -61,19 +59,6 @@ export function HerdrAgentSettings() {
           onChange={(value) =>
             void save((current) => ({ ...current, default_agent: value }))
           }
-          className="mt-1 w-full"
-        />
-      </label>
-      <label className="block text-xs text-secondary">
-        {t("herdr.configureAgent")}
-        <AgentSelect
-          label={t("herdr.configureAgent")}
-          value={agentKey}
-          disabled={!snapshot || busy}
-          agents={agents
-            .filter((agent) => agent.id !== "claude_teams")
-            .map((agent) => ({ ...agent, id: agent.toolKey }))}
-          onChange={setSelected}
           className="mt-1 w-full"
         />
       </label>

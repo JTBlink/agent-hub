@@ -57,6 +57,8 @@ it("shares default and command settings, preserving the saved default and edited
   };
   try {
     await act(async () => root.render(<HerdrAgentSettings />));
+    expect(host.querySelectorAll('[aria-haspopup="listbox"]')).toHaveLength(1);
+    expect(host.textContent).not.toContain("herdr.configureAgent");
     expect(host.querySelector<HTMLInputElement>("input")?.value).toBe("codex");
     await choose("herdr.defaultAgent", "Hermes Agent");
     expect(snapshot.document.default_agent).toBe("hermes");
