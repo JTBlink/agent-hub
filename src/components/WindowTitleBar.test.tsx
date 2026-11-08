@@ -172,8 +172,9 @@ it.each([
 it("uses the scalable app icon in the title bar", async () => {
   await render();
   const icon = container.querySelector<HTMLImageElement>('img[alt=""]');
-  expect(icon?.src).toContain("/icons/app-icon.svg");
+  expect(icon?.src).toContain("/icons/app-mark.svg");
   expect(icon?.draggable).toBe(false);
+  expect(icon?.className).toContain("h-5");
 });
 
 it("opens commands from the title bar, focuses search and restores focus on Escape", async () => {

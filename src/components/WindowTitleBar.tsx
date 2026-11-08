@@ -88,10 +88,10 @@ export function WindowTitleBar({
             }}
             leadingIcon={
               <img
-                src="/icons/app-icon.svg"
+                src="/icons/app-mark.svg"
                 alt=""
                 draggable={false}
-                className="h-3.5 w-3.5 shrink-0"
+                className="h-5 w-5 shrink-0"
               />
             }
             className="h-6 min-w-0 gap-1.5 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:bg-surface-hover hover:text-secondary"
