@@ -157,7 +157,7 @@ it("does not reopen an already selected workspace", async () => {
   }
 });
 
-it("automatically lists unopened worktrees, avoids duplicates and opens the selected checkout", async () => {
+it("separates unopened worktrees from live Herdr spaces and opens them explicitly", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const load = vi.spyOn(worktreeApi, "getProjectWorktrees").mockResolvedValue([
     {
@@ -178,8 +178,8 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
     },
     {
       path: "/projects/new",
-      branch: "new",
-      head: null,
+      branch: null,
+      head: "abcdef0123456789",
       is_main: false,
       available: true,
       locked: false,
@@ -223,6 +223,14 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
     expect(
       host.querySelector('[data-herdr-workspace="worktree:/projects/missing"]'),
     ).toBeNull();
+    expect(
+      host.querySelector('[data-herdr-workspace="worktree:/projects/new"]'),
+    ).toBeNull();
+    await act(async () =>
+      host
+        .querySelector<HTMLButtonElement>("[data-herdr-unopened-worktrees]")!
+        .click(),
+    );
     await act(async () =>
       host
         .querySelector<HTMLButtonElement>(
@@ -230,6 +238,11 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
         )!
         .click(),
     );
+    expect(
+      host.querySelector(
+        '[data-herdr-workspace="worktree:/projects/new"] [data-herdr-branch]',
+      )?.textContent,
+    ).toBe("abcdef0 (detached HEAD)");
     expect(onOpenWorktree).toHaveBeenCalledWith(
       "discover",
       "/projects/new",
@@ -291,7 +304,7 @@ it("automatically lists unopened worktrees, avoids duplicates and opens the sele
         "common.copyPath",
         "fileTree.copyRelativePath",
         "herdr.copyName",
-        "git.copyBranchName",
+        ...(id === "child" ? ["git.copyBranchName"] : []),
         "herdr.deleteWorktree",
       ]);
       if (id === "child") expect(items.at(-1)?.disabled).toBe(true);

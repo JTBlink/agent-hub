@@ -114,7 +114,6 @@
   },
   "herdr": {
     "noInstalledAgent": "Install a supported agent or choose another agent in settings.",
-    "launchProjectAgent": "Reuse the Herdr workspace and selected agent in the current project directory, starting one only when needed. Changing agents opens a new tab and preserves the previous session.",
     "configureAgent": "Edit launch command",
     "selectAgent": "Choose an agent",
     "defaultAgent": "Default agent",
@@ -164,6 +163,7 @@
     "newAgent": "New Agent",
     "pending": "Needs input",
     "workspaces": "Workspaces",
+    "unopenedWorktrees": "Worktrees not open in Herdr ({{count}})",
     "directoryUnknown": "Workspace directory is missing or ambiguous",
     "noMatches": "No matching entries",
     "noWorkspaces": "No workspaces. Open the current checkout with the terminal button above.",

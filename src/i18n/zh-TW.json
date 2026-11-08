@@ -114,7 +114,6 @@
   },
   "herdr": {
     "noInstalledAgent": "請先安裝可啟動的 Agent，或在設定中選擇其他 Agent。",
-    "launchProjectAgent": "在目前專案目錄沿用 Herdr 工作空間及已執行的所選 Agent；沒有時啟動。切換 Agent 會開啟新分頁並保留舊工作階段。",
     "configureAgent": "編輯啟動指令",
     "selectAgent": "選擇 Agent",
     "defaultAgent": "預設 Agent",
@@ -164,6 +163,7 @@
     "newAgent": "新增 Agent",
     "pending": "待處理",
     "workspaces": "工作空間",
+    "unopenedWorktrees": "尚未在 Herdr 開啟的工作樹（{{count}}）",
     "directoryUnknown": "工作空間目錄缺失或存在歧義",
     "noMatches": "沒有符合的內容",
     "noWorkspaces": "尚無工作空間，可用上方終端按鈕開啟目前專案。",

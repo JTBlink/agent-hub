@@ -70,6 +70,45 @@ async function openNew(host: HTMLElement, label = "terminal.new") {
   await act(async () => item.click());
 }
 
+it("opens Herdr directly from the new menu and reports startup failures inline", async () => {
+  const project = { ...makeProject(), path: "/projects/demo" };
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "terminal_list") return [];
+    if (command === "terminal_create")
+      return { id: "shell", cwd: project.path, project_id: project.id };
+    if (command === "agent_launch_settings")
+      throw new Error("Herdr startup unavailable");
+  });
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter initialEntries={[`/project/${project.id}`]}>
+          <TerminalWorkspace projects={[project]} tools={[makeTool("codex")]} />
+        </MemoryRouter>,
+      ),
+    );
+    expect(invoke).not.toHaveBeenCalledWith("agent_launch_settings");
+    await openNew(host, "terminal.openHerdr");
+    expect(invoke).toHaveBeenCalledWith("agent_launch_settings");
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+      "Herdr startup unavailable",
+    );
+    await openNew(host, "terminal.openHerdr");
+    expect(
+      vi
+        .mocked(invoke)
+        .mock.calls.filter(([command]) => command === "agent_launch_settings"),
+    ).toHaveLength(2);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
 it("attaches the explicitly opened Herdr checkout without creating an extra Shell", async () => {
   const project = {
     ...makeProject(),

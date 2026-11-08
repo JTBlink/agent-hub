@@ -22,6 +22,10 @@ pub struct Workspace {
     #[serde(default)]
     pub branch: Option<String>,
     #[serde(default)]
+    pub head: Option<String>,
+    #[serde(default)]
+    pub detached: bool,
+    #[serde(default)]
     pub repository_icon: Option<String>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]

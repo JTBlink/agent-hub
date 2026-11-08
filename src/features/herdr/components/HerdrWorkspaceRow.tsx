@@ -22,10 +22,16 @@ export function HerdrWorkspaceRow({
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
-  const directoryName = workspace.directory
-    ? worktreeDirectoryName(workspace.directory)
-    : workspace.label;
-  const branchLabel = workspace.branch ?? "—";
+  const displayName =
+    workspace.label ||
+    (workspace.directory ? worktreeDirectoryName(workspace.directory) : "");
+  const branchLabel =
+    workspace.branch ??
+    (workspace.detached
+      ? [workspace.head?.slice(0, 7), "(detached HEAD)"]
+          .filter(Boolean)
+          .join(" ")
+      : "—");
   const state = ["blocked", "working", "done", "idle"].find((value) =>
     agents.some((agent) => agent.agent_status === value),
   );
@@ -34,11 +40,11 @@ export function HerdrWorkspaceRow({
       data-herdr-item
       data-herdr-workspace={workspace.workspace_id}
       disabled={disabled || unavailable}
-      aria-label={`${directoryName} ${branchLabel}`}
+      aria-label={`${displayName} ${branchLabel}`}
       aria-pressed={selected}
       title={[
         workspace.directory ?? t("herdr.directoryUnknown"),
-        workspace.branch,
+        branchLabel === "—" ? null : branchLabel,
       ]
         .filter(Boolean)
         .join("\n")}
@@ -86,7 +92,7 @@ export function HerdrWorkspaceRow({
               : "font-medium text-secondary",
           )}
         >
-          {directoryName}
+          {displayName}
         </span>
         <span
           data-herdr-branch

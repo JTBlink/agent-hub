@@ -10,6 +10,8 @@ export interface HerdrWorkspace {
   active_tab_id: string;
   directory: string | null;
   branch: string | null;
+  head?: string | null;
+  detached?: boolean;
   repository_icon?: "github" | "gitlab" | "git" | null;
   worktree?: {
     repo_key: string;

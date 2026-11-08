@@ -75,11 +75,23 @@ pub(super) fn enrich_workspaces(snapshot: &mut Snapshot) {
             .directory
             .as_deref()
             .and_then(|path| git2::Repository::discover(path).ok());
-        workspace.branch = repository.as_ref().and_then(|repo| {
+        workspace.detached = repository
+            .as_ref()
+            .is_some_and(|repo| repo.head_detached().ok() == Some(true));
+        workspace.head = repository.as_ref().and_then(|repo| {
             repo.head()
                 .ok()
-                .and_then(|head| head.shorthand().map(str::to_owned))
+                .and_then(|head| head.target())
+                .map(|id| id.to_string())
         });
+        workspace.branch = repository
+            .as_ref()
+            .filter(|_| !workspace.detached)
+            .and_then(|repo| {
+                repo.head()
+                    .ok()
+                    .and_then(|head| head.shorthand().map(str::to_owned))
+            });
         workspace.repository_icon = repository.as_ref().map(|repo| {
             let remote = repo.find_remote("origin").ok();
             let url = remote

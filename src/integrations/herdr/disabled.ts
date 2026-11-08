@@ -134,14 +134,3 @@ export function useHerdrMenuLaunch(..._args: unknown[]) {
     error: "",
   };
 }
-
-export function HerdrLaunchDialog(_props: {
-  tools: readonly import("../../lib/tauri").ToolInfo[];
-  busy: boolean;
-  error: string;
-  onLaunch: (agent?: import("../../lib/terminalAgents").HerdrAgent) => void;
-  onClose: () => void;
-}) {
-  void _props;
-  return null;
-}

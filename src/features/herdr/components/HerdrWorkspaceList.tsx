@@ -194,6 +194,7 @@ function HerdrWorkspaceGroup({
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
+  const [showUnopened, setShowUnopened] = useState(false);
   const { worktrees, refresh } = useProjectWorktrees(
     onOpenWorktree ? project?.id : undefined,
   );
@@ -210,6 +211,8 @@ function HerdrWorkspaceGroup({
       label: worktreeDirectoryName(tree.path),
       directory: tree.path,
       branch: tree.branch,
+      head: tree.head,
+      detached: !tree.branch && !!tree.head,
       active_tab_id: "",
       repository_icon: space.repository_icon,
     })),
@@ -298,11 +301,43 @@ function HerdrWorkspaceGroup({
       </div>
       {expanded && linked.length > 0 && (
         <div className="ml-5">
-          {linked.map((child, index) => (
+          {opened.map((child, index) => (
             <div key={child.workspace_id}>
-              {row(child, index === linked.length - 1 ? "last" : "branch")}
+              {row(child, index === opened.length - 1 ? "last" : "branch")}
             </div>
           ))}
+          {missing.length > 0 && (
+            <>
+              <button
+                data-herdr-unopened-worktrees
+                type="button"
+                aria-expanded={showUnopened}
+                className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-xs text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                onClick={() => {
+                  setShowUnopened((value) => !value);
+                  if (!showUnopened) void refresh();
+                }}
+              >
+                {showUnopened ? (
+                  <ChevronDown size={12} />
+                ) : (
+                  <ChevronRight size={12} />
+                )}
+                {t("herdr.unopenedWorktrees", { count: missing.length })}
+              </button>
+              {showUnopened &&
+                linked
+                  .slice(opened.length)
+                  .map((child, index) => (
+                    <div key={child.workspace_id}>
+                      {row(
+                        child,
+                        index === missing.length - 1 ? "last" : "branch",
+                      )}
+                    </div>
+                  ))}
+            </>
+          )}
         </div>
       )}
     </div>

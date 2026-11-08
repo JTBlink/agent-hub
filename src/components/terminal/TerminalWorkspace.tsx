@@ -24,12 +24,7 @@ import type { Project, ToolInfo } from "../../lib/tauri";
 import { TerminalProjectSelect } from "./TerminalProjectSelect";
 import { type PaneControl } from "./TerminalPane";
 import { TerminalPanelTools } from "./TerminalPanelTools";
-import {
-  HerdrLaunchDialog,
-  herdrEnabled,
-  useHerdrMenuLaunch,
-  useHerdrShortcut,
-} from "@app/herdr";
+import { herdrEnabled, useHerdrMenuLaunch, useHerdrShortcut } from "@app/herdr";
 import { useHerdrSessions } from "@app/herdr";
 import { cn } from "../../utils";
 import { projectWorkspaceRoute, worktreeUrl } from "../../lib/worktreeApi";
@@ -212,7 +207,6 @@ export function TerminalWorkspace({
     undefined,
   );
   const selected = projectId || recent?.id || "";
-  const [herdrLaunchOpen, setHerdrLaunchOpen] = useState(false);
   const herdrMenu = useHerdrMenuLaunch(
     scopedProject || selected,
     scopedPath ?? projects.find((project) => project.id === selected)?.path,
@@ -387,9 +381,7 @@ export function TerminalWorkspace({
               }
               onNew={add}
               onNewMarkdown={onNewMarkdown}
-              onHerdr={
-                herdrEnabled ? () => setHerdrLaunchOpen(true) : undefined
-              }
+              onHerdr={herdrEnabled ? () => void herdrMenu.open() : undefined}
               herdrBusy={herdrMenu.busy}
             />
           </TerminalTabs>
@@ -441,19 +433,6 @@ export function TerminalWorkspace({
             />
           </div>
         </div>
-      )}
-      {herdrLaunchOpen && (
-        <HerdrLaunchDialog
-          tools={tools}
-          busy={herdrMenu.busy}
-          error={herdrMenu.error}
-          onClose={() => setHerdrLaunchOpen(false)}
-          onLaunch={(agent) =>
-            void herdrMenu.open(agent).then((opened) => {
-              if (opened) setHerdrLaunchOpen(false);
-            })
-          }
-        />
       )}
       {content}
       <div

@@ -333,6 +333,9 @@ fn directory_for(workspace: &Workspace, panes: &[Pane]) -> Result<PathBuf> {
     {
         return checked_directory(path);
     }
+    if let Some(directory) = workspace_repository_directory(workspace, panes)? {
+        return Ok(directory);
+    }
     let mut directories = Vec::new();
     for path in panes
         .iter()
@@ -349,16 +352,54 @@ fn directory_for(workspace: &Workspace, panes: &[Pane]) -> Result<PathBuf> {
     }
     Ok(directories.remove(0))
 }
-// Worktree metadata remains authoritative. Otherwise the selected live pane
-// identifies the checkout even when other tabs use unrelated directories.
+// Worktree metadata and a selected repository pane remain authoritative. A
+// shell/Agent started outside Git must not replace the workspace's sole checkout.
 fn directory_for_pane(workspace: &Workspace, panes: &[Pane], pane: &Pane) -> Result<PathBuf> {
     if workspace.worktree.is_some() {
         return directory_for(workspace, panes);
     }
-    pane.cwd
+    let directory = pane
+        .cwd
         .as_deref()
         .context("Pane directory is unavailable")
-        .and_then(checked_directory)
+        .and_then(checked_directory)?;
+    if git2::Repository::discover(&directory).is_ok() {
+        return Ok(directory);
+    }
+    Ok(workspace_repository_directory(workspace, panes)?.unwrap_or(directory))
+}
+
+fn workspace_repository_directory(
+    workspace: &Workspace,
+    panes: &[Pane],
+) -> Result<Option<PathBuf>> {
+    let mut visited = std::collections::HashSet::new();
+    let mut checkout = None;
+    for pane in panes
+        .iter()
+        .filter(|pane| pane.workspace_id == workspace.workspace_id)
+    {
+        let Some(directory) = pane
+            .cwd
+            .as_deref()
+            .and_then(|path| checked_directory(path).ok())
+        else {
+            continue;
+        };
+        if !visited.insert(directory.clone()) {
+            continue;
+        }
+        let repository = git2::Repository::discover(directory).ok();
+        let Some(root) = repository.as_ref().and_then(|repo| repo.workdir()) else {
+            continue;
+        };
+        let root = checked_directory(&root.to_string_lossy())?;
+        if checkout.as_ref().is_some_and(|known| known != &root) {
+            bail!("Herdr workspace has multiple checkouts; select a repository pane before opening it")
+        }
+        checkout = Some(root);
+    }
+    Ok(checkout)
 }
 fn checked_directory(path: &str) -> Result<PathBuf> {
     let path = Path::new(path);
