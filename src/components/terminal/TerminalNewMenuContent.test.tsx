@@ -165,9 +165,7 @@ it.each([
       const button = [
         ...host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
       ].find((item) => item.textContent === "terminal.openHerdr")!;
-      expect(button.querySelector("img")?.getAttribute("src")).toBe(
-        getAgentIconSrc(icon),
-      );
+      expect(button.querySelector("img")).toBeNull();
       expect(button.querySelector("svg")).not.toBeNull();
       expect(
         button.parentElement?.previousElementSibling?.getAttribute("role"),
@@ -175,6 +173,11 @@ it.each([
       const settings = host.querySelector<HTMLButtonElement>(
         '[aria-label="herdr.settings"]',
       )!;
+      expect(
+        settings.previousElementSibling
+          ?.querySelector("img")
+          ?.getAttribute("src"),
+      ).toBe(getAgentIconSrc(icon));
       button.focus();
       await act(async () =>
         button.dispatchEvent(

@@ -101,12 +101,7 @@ export function TerminalNewMenuContent({
             key: "herdr",
             label: t("terminal.openHerdr"),
             separatorBefore: true,
-            icon: (
-              <>
-                <HerdrIcon width={16} height={16} />
-                <HerdrDefaultAgentIcon agents={agents} />
-              </>
-            ),
+            icon: <HerdrIcon width={16} height={16} viewBox="0 0 32 32" />,
             disabled: terminalDisabled || herdrBusy,
             onSelect: onHerdr,
           },
@@ -208,28 +203,29 @@ export function TerminalNewMenuContent({
                 }}
                 className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-secondary outline-none disabled:cursor-not-allowed disabled:opacity-40 ${action.key === "herdr" ? "" : "hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"}`}
               >
-                <span
-                  className={`flex h-4 shrink-0 items-center justify-center text-muted ${action.key === "herdr" ? "w-10 gap-1.5" : "w-4"}`}
-                >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
                   {action.icon}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{action.label}</span>
               </button>
               {action.key === "herdr" && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  aria-label={t("herdr.settings")}
-                  title={t("herdr.settings")}
-                  disabled={!sidebar?.openSidebarPanel}
-                  className="app-button-ghost pointer-events-none mr-1 h-7 w-7 shrink-0 p-0 opacity-0 transition-opacity group-hover/herdr:pointer-events-auto group-hover/herdr:opacity-100 group-focus-within/herdr:pointer-events-auto group-focus-within/herdr:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
-                  onClick={() => {
-                    close();
-                    sidebar?.openSidebarPanel?.("herdr", "settings");
-                  }}
-                >
-                  <Settings size={15} aria-hidden="true" />
-                </button>
+                <div className="flex shrink-0 items-center gap-2 pr-1">
+                  <HerdrDefaultAgentIcon agents={agents} />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    aria-label={t("herdr.settings")}
+                    title={t("herdr.settings")}
+                    disabled={!sidebar?.openSidebarPanel}
+                    className="app-button-ghost pointer-events-none h-7 w-7 shrink-0 p-0 opacity-0 transition-opacity group-hover/herdr:pointer-events-auto group-hover/herdr:opacity-100 group-focus-within/herdr:pointer-events-auto group-focus-within/herdr:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
+                    onClick={() => {
+                      close();
+                      sidebar?.openSidebarPanel?.("herdr", "settings");
+                    }}
+                  >
+                    <Settings size={15} aria-hidden="true" />
+                  </button>
+                </div>
               )}
             </div>
           </div>
