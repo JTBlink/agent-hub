@@ -145,45 +145,7 @@ impl HerdrControl {
                 .context("Herdr snapshot is unavailable; check client/server compatibility")?,
         )?;
         snapshot::remove_missing_workspaces(&mut snapshot);
-        for workspace in &mut snapshot.workspaces {
-            workspace.directory = directory_for(workspace, &snapshot.panes)
-                .ok()
-                .map(|p| p.to_string_lossy().into_owned());
-            workspace.repository_icon = workspace
-                .directory
-                .as_deref()
-                .and_then(|p| git2::Repository::open(p).ok())
-                .map(|repo| {
-                    let remote = repo.find_remote("origin").ok();
-                    let url = remote.as_ref().and_then(|r| r.url()).unwrap_or("");
-                    let host = if let Some((_, rest)) = url.split_once("://") {
-                        rest.split('/')
-                            .next()
-                            .unwrap_or("")
-                            .rsplit('@')
-                            .next()
-                            .unwrap_or("")
-                    } else {
-                        url.split(':')
-                            .next()
-                            .unwrap_or("")
-                            .rsplit('@')
-                            .next()
-                            .unwrap_or("")
-                    };
-                    match host {
-                        "github.com" => "github",
-                        "gitlab.com" => "gitlab",
-                        _ => "git",
-                    }
-                    .to_owned()
-                });
-            workspace.branch = workspace
-                .directory
-                .as_deref()
-                .and_then(|p| git2::Repository::open(p).ok())
-                .and_then(|r| r.head().ok().and_then(|h| h.shorthand().map(str::to_owned)));
-        }
+        snapshot::enrich_workspaces(&mut snapshot);
         Ok(snapshot)
     }
     pub fn open(
