@@ -29,7 +29,9 @@
 //! small text file, so it can still be removed when the locked binary cannot.
 
 use anyhow::{bail, Context, Result};
+use fs2::FileExt;
 use sha2::{Digest, Sha256};
+use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -68,6 +70,7 @@ pub(crate) fn is_bridge_file(name: &str) -> bool {
     name == BRIDGE_BIN_NAME
         || name == ".version"
         || name == ".build-info.json"
+        || name == ".publish.lock"
         || name == format!(".{BRIDGE_BIN_NAME}.staged")
 }
 
@@ -249,21 +252,45 @@ fn verify(path: &Path, expected_version: &str) -> Result<()> {
 pub fn ensure_bridge(app_version: &str) {
     match publish_current(app_version) {
         Ok(path) => log::info!("cli bridge: ready at {}", path.display()),
-        Err(e) => {
-            // A missing sidecar or failed content check must not leave a
-            // previously stamped, possibly incompatible CLI trusted by skills.
-            if let Err(invalidate_error) = invalidate_bridge() {
-                log::warn!("cli bridge: could not invalidate old copy: {invalidate_error:#}");
-            }
-            log::warn!("cli bridge: not available: {e:#}");
-        }
+        Err(e) => log::warn!("cli bridge: not available: {e:#}"),
     }
 }
 
 /// Publish the CLI next to this executable, including development build artifacts.
 pub fn publish_current(app_version: &str) -> Result<PathBuf> {
-    let source = bundled_cli()?;
-    ensure_bridge_from(&source, app_version)
+    let _lock = bridge_publish_lock()?;
+    let source = match bundled_cli() {
+        Ok(source) => source,
+        Err(error) => {
+            if let Err(invalidate_error) = invalidate_bridge() {
+                log::warn!("cli bridge: could not invalidate old copy: {invalidate_error:#}");
+            }
+            return Err(error);
+        }
+    };
+    match ensure_bridge_from(&source, app_version) {
+        Ok(path) => Ok(path),
+        Err(error) => {
+            // The stamp is the trust boundary. Keep invalidation under the
+            // same cross-process lock so a concurrent publisher cannot remove
+            // the next publisher's freshly written stamp.
+            if let Err(invalidate_error) = invalidate_bridge() {
+                log::warn!("cli bridge: could not invalidate old copy: {invalidate_error:#}");
+            }
+            Err(error)
+        }
+    }
+}
+
+fn bridge_publish_lock() -> Result<File> {
+    let directory = bridge_dir();
+    std::fs::create_dir_all(&directory)
+        .with_context(|| format!("could not create {}", directory.display()))?;
+    let lock = File::create(directory.join(".publish.lock"))
+        .with_context(|| format!("could not open CLI bridge lock in {}", directory.display()))?;
+    lock.lock_exclusive()
+        .context("could not lock CLI bridge publication")?;
+    Ok(lock)
 }
 
 fn file_digest(path: &Path) -> Result<[u8; 32]> {

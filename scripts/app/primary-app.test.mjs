@@ -133,13 +133,25 @@ it.each(["dev", "build"])(
       if (command === "cargo") events.push("compile-cli");
       return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
     };
-    const prepare = (target, release, run) =>
+    const prepare = (
+      target,
+      release,
+      run,
+      filesystem,
+      publish,
+      host,
+      product,
+      options,
+    ) =>
       prepareCli(
         target,
         release,
         run,
         { mkdirSync() {}, copyFileSync() {} },
         () => events.push("publish-cli"),
+        host,
+        product,
+        { ...options, linkCli: () => {} },
       );
     expect(main([mode], runner, prepare, () => {})).toBe(0);
     expect(events).toEqual(["compile-cli", "publish-cli", "tauri"]);

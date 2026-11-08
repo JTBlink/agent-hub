@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { publishBuiltCli } from "./cli-publish.mjs";
+import { linkDevelopmentCli } from "./product/install-cli.mjs";
 import { ROOT_DIR, run, runNpm } from "./build.mjs";
 import { cargoTargetDir, cleanupBuildCache } from "./build-cache.mjs";
 import {
@@ -33,6 +34,7 @@ export function prepareCli(
   publish = publishBuiltCli,
   host,
   product,
+  { updatePathCli = false, linkCli = linkDevelopmentCli } = {},
 ) {
   const targetDir = product?.targetDir ?? cargoTargetDir();
   const output =
@@ -115,6 +117,17 @@ export function prepareCli(
     console.error(error.message);
     return 1;
   }
+  if (updatePathCli && host && target === host && product) {
+    try {
+      linkCli(product, profile, {
+        env: product.environment,
+        replaceForeignSymlink: true,
+      });
+    } catch (error) {
+      console.error(error.message);
+      return 1;
+    }
+  }
   return 0;
 }
 
@@ -168,6 +181,7 @@ export function main(
       undefined,
       host,
       product,
+      { updatePathCli: command === "dev" },
     );
     if (status !== 0) return status;
     const separator = args.indexOf("--");

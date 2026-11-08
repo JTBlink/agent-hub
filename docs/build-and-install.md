@@ -55,6 +55,8 @@ Unix 开发环境只更新 CLI 时可执行：
 
 这会构建 CLI，将 Cargo bin 目录中的 `agent-hub-cli` 链接到本仓库产物，并更新 `~/.agent-hub/bin/agent-hub-cli` bridge。已有普通文件或指向其他位置的链接会被拒绝覆盖。`AGENT_HUB_CLI_BIN_DIR` 和 `AGENT_HUB_BRIDGE_DIR` 可调整安装位置。此入口固定使用本仓库的 `src-tauri/target/`。
 
+`./agent-hub.sh dev` 会在编译并验证成功后自动更新当前产品的开发软链接；普通文件仍不会覆盖，开发启动明确允许把已有 `agent-hub-cli` 软链接切换到本次构建产物。
+
 ## CLI 自动更新
 
 项目入口编译 CLI 成功后会自动验证并更新 `~/.agent-hub/bin/agent-hub-cli` 与版本戳；已有的本仓库开发软链接也会指向本次产物。首次创建 PATH 软链接仍使用 `install --dev`。普通文件、其他项目的软链接保持原样，不会被自动覆盖。
@@ -68,7 +70,7 @@ npm run cli -- --help                   # 先编译、更新，再执行 CLI
 
 Unix 下 `./agent-hub.sh dev` 与 `npm run app:dev` 会先核实当前仓库的旧开发进程及工作目录，发送终止信号并等待退出，3 秒后仍未退出则强制结束；停止失败不启动新实例。其他仓库与正式安装版不参与清理。前端端口被其他服务占用时正常报错，不按端口强杀进程。
 
-`npm run app:dev`、`npm run tauri -- dev` 与上述 `dev` 使用同一入口。这里指 dev 启动阶段的配套 CLI 构建；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
+`npm run app:dev`、`npm run tauri -- dev` 与上述 `dev` 使用同一入口。dev 启动阶段会同时更新 bridge 和 PATH 中当前产品的开发软链接；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
 
 构建失败不会发布新副本；验证／发布失败会明确返回失败，dev 不继续启动。跨架构构建不替换本机入口。相同版本号的重编译也会按内容更新，不能只用 `--version` 验收。构建与发布提示输出到 stderr，不混入 CLI JSON 结果。
 
