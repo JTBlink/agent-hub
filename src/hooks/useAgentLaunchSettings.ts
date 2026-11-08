@@ -15,6 +15,8 @@ export function useAgentLaunchSettings() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const snapshotRef = useRef<AgentLaunchSnapshot | null>(null);
+  const saveQueue = useRef<Promise<boolean>>(Promise.resolve(false));
   const request = useRef(0);
   const alive = useRef(true);
   const reload = useCallback(async () => {
@@ -34,6 +36,7 @@ export function useAgentLaunchSettings() {
     alive.current = true;
     const unsubscribe = subscribeAgentLaunchUpdates((next) => {
       ++request.current;
+      snapshotRef.current = next;
       setSnapshot(next);
       setError("");
     });
@@ -43,27 +46,33 @@ export function useAgentLaunchSettings() {
       unsubscribe();
     };
   }, [reload]);
-  const save = async (
+  const save = (
     change: (current: AgentLaunchDocument) => AgentLaunchDocument,
   ) => {
-    if (!snapshot || saving.current) return false;
-    saving.current = true;
-    ++request.current;
-    setBusy(true);
-    try {
-      const next = await api.saveAgentLaunchSettings(
-        change(snapshot.document),
-        snapshot.revision,
-      );
-      publishAgentLaunchUpdate(next);
-      return true;
-    } catch (e) {
-      if (alive.current) setError(getErrorMessage(e, String(e)));
-      return false;
-    } finally {
-      saving.current = false;
-      if (alive.current) setBusy(false);
-    }
+    const operation = saveQueue.current.catch(() => false).then(async () => {
+      const current = snapshotRef.current;
+      if (!current) return false;
+      saving.current = true;
+      ++request.current;
+      if (alive.current) setBusy(true);
+      try {
+        const next = await api.saveAgentLaunchSettings(
+          change(current.document),
+          current.revision,
+        );
+        snapshotRef.current = next;
+        publishAgentLaunchUpdate(next);
+        return true;
+      } catch (e) {
+        if (alive.current) setError(getErrorMessage(e, String(e)));
+        return false;
+      } finally {
+        saving.current = false;
+        if (alive.current) setBusy(false);
+      }
+    });
+    saveQueue.current = operation.catch(() => false);
+    return operation;
   };
   return { snapshot, busy, error, reload, save };
 }

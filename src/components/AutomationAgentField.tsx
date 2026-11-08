@@ -231,6 +231,7 @@ export function AutomationAgentField({
             ) : undefined
           }
           optionIcon={icon}
+          checkPosition="after-label"
           optionTrailing={(value) =>
             usesHerdr && value && value !== "native-hermes" ? (
               <HerdrIcon

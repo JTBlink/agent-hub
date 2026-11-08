@@ -132,7 +132,11 @@ def main(prompt_context=""):
         kind = resolved.get("kind")
         if not kind:
             raise HerdrError("所选 Agent 不支持 Herdr CLI 启动，请更换智能体。")
-        extra = list(resolved["arguments"] if explicit is None else explicit)
+        # Managed AgentHub tasks always inherit the current global launch
+        # instruction.  `arguments` remains readable for old exported tasks,
+        # but must not freeze a scheduled task to the settings it had when it
+        # was created.  Task-specific `extra_arguments` is appended below.
+        extra = list(resolved["arguments"])
     elif explicit is not None and kind != "default":
         # Old exported tasks remain standalone when all arguments are explicit.
         extra = list(explicit)

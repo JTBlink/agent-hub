@@ -179,6 +179,30 @@ it("renders and invokes a separated footer action", async () => {
   expect(openSettings).toHaveBeenCalledOnce();
   expect(document.querySelector('[role="listbox"]')).toBeNull();
 });
+it("can place the selected marker after the option label", async () => {
+  await act(async () =>
+    root.render(
+      <ThemedSelect
+        aria-label="Agents"
+        value="codex"
+        checkPosition="after-label"
+        onChange={() => {}}
+      >
+        <option value="codex">Codex</option>
+      </ThemedSelect>,
+    ),
+  );
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!.click(),
+  );
+  const option = document.querySelector<HTMLButtonElement>(
+    '[role="listbox"] [role="option"][aria-selected="true"]',
+  )!;
+  const spans = option.querySelectorAll(":scope > span");
+  expect(spans[0].textContent).toBe("");
+  expect(spans[1].textContent).toBe("Codex");
+  expect(spans[2].querySelector("svg")).not.toBeNull();
+});
 
 it("keeps menu options inside the native modal's interactive subtree", async () => {
   const changed = vi.fn();

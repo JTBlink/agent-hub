@@ -95,6 +95,8 @@ type Props = Omit<
   optionIcon?: (value: string) => ReactNode;
   /** A trailing marker shown after an option label in the open menu. */
   optionTrailing?: (value: string) => ReactNode;
+  /** Position of the selected option marker in the custom menu. */
+  checkPosition?: "start" | "after-label";
   /** A separate row action; invoking it does not change the selected value. */
   optionAction?: (value: string) =>
     | {
@@ -134,6 +136,7 @@ export function ThemedSelect(selection: Props) {
     valueBadge,
     optionIcon,
     optionTrailing,
+    checkPosition = "start",
     optionAction,
     menuFooterAction,
     renderValue,
@@ -342,9 +345,18 @@ export function ThemedSelect(selection: Props) {
               list.current?.querySelector<HTMLButtonElement>(
                 `[data-option-action="${active}"]`,
               );
+            const footer =
+              open &&
+              !event.shiftKey &&
+              list.current?.querySelector<HTMLButtonElement>(
+                "[data-menu-footer]",
+              );
             if (action) {
               event.preventDefault();
               action.focus();
+            } else if (footer) {
+              event.preventDefault();
+              footer.focus();
             } else setPosition(null);
           } else if (
             event.key.length === 1 &&
@@ -423,6 +435,9 @@ export function ThemedSelect(selection: Props) {
             )}
             {options.map((option, index) => {
               const action = optionAction?.(option.value);
+              const selectedMark = values.includes(option.value) ? (
+                <Check aria-hidden="true" className="h-3.5 w-3.5" />
+              ) : null;
               return (
                 <div
                   key={option.value}
@@ -459,9 +474,7 @@ export function ThemedSelect(selection: Props) {
                     )}
                   >
                     <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                      {values.includes(option.value) && (
-                        <Check aria-hidden="true" className="h-3.5 w-3.5" />
-                      )}
+                      {checkPosition === "start" && selectedMark}
                     </span>
                     {optionIcon?.(option.value)}
                     <span
@@ -477,6 +490,11 @@ export function ThemedSelect(selection: Props) {
                     >
                       {option.label}
                     </span>
+                    {checkPosition === "after-label" && selectedMark && (
+                      <span className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center">
+                        {selectedMark}
+                      </span>
+                    )}
                     {optionTrailing?.(option.value)}
                   </button>
                   {action && (
@@ -511,7 +529,14 @@ export function ThemedSelect(selection: Props) {
                 <button
                   type="button"
                   aria-label={menuFooterAction.label}
+                  data-menu-footer
                   onMouseDown={(event) => event.preventDefault()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Tab" && event.shiftKey) {
+                      event.preventDefault();
+                      trigger.current?.focus({ preventScroll: true });
+                    }
+                  }}
                   onClick={() => {
                     setPosition(null);
                     trigger.current?.focus({ preventScroll: true });
