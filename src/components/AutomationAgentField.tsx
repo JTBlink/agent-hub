@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal } from "lucide-react";
+import { Settings, Terminal } from "lucide-react";
 import { AgentIcon } from "./AgentIcon";
 import {
   automationAgentOptions,
@@ -22,6 +22,7 @@ import {
   AutomationHerdrFields,
   HerdrIcon,
 } from "@app/herdr";
+import { useNavigate } from "react-router-dom";
 
 type Execution = Pick<AutomationDraft, "provider" | "content" | "files">;
 const execution = ({
@@ -46,6 +47,7 @@ export function AutomationAgentField({
   onInactivePromptChange: (prompt: string) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const config = automationHerdrConfig(draft);
   const agent =
     draft.provider === "hermes" ? "native-hermes" : (config?.agent ?? "");
@@ -180,28 +182,16 @@ export function AutomationAgentField({
                   Array.isArray(parsed)
                 )
                   throw new Error(t("automation.agentStarterUnavailable"));
+                const nextConfig = {
+                  ...(parsed as Record<string, unknown>),
+                  agent: next,
+                };
+                if ("arguments" in nextConfig) delete nextConfig.arguments;
+                if ("extra_arguments" in nextConfig)
+                  delete nextConfig.extra_arguments;
                 return {
                   ...file,
-                  content:
-                    JSON.stringify(
-                      {
-                        ...parsed,
-                        agent: next,
-                        ...("agent" in parsed && next === parsed.agent
-                          ? {}
-                          : {
-                              arguments:
-                                next === "codex"
-                                  ? [
-                                      "--dangerously-bypass-approvals-and-sandbox",
-                                    ]
-                                  : [],
-                              extra_arguments: "",
-                            }),
-                      },
-                      null,
-                      2,
-                    ) + "\n",
+                  content: JSON.stringify(nextConfig, null, 2) + "\n",
                 };
               }
               return file;
@@ -235,8 +225,8 @@ export function AutomationAgentField({
           valueBadge={
             usesHerdr ? (
               <HerdrIcon
-                className="h-4 w-4 shrink-0 text-accent"
-                title="Herdr"
+                className="h-4 w-4 shrink-0 text-primary"
+                data-herdr-icon
               />
             ) : undefined
           }
@@ -244,11 +234,16 @@ export function AutomationAgentField({
           optionTrailing={(value) =>
             usesHerdr && value && value !== "native-hermes" ? (
               <HerdrIcon
-                className="ml-auto h-4 w-4 shrink-0 text-accent"
-                title="Herdr"
+                className="ml-auto mr-6 h-4 w-4 shrink-0 text-primary"
+                data-herdr-icon
               />
             ) : undefined
           }
+          menuFooterAction={{
+            label: t("terminal.agentSettings"),
+            icon: <Settings size={16} />,
+            onSelect: () => navigate("/settings#agents"),
+          }}
           aria-label={t("automation.optionalAgent")}
           value={agent}
           disabled={disabled || pending}

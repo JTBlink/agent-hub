@@ -542,7 +542,7 @@
     "extraAgentArgumentsPlaceholder": "-m model-id -c model_reasoning_effort=high",
     "extraAgentArgumentsHelp": "每次新會話時附加至預設啟動參數之後。包含空格的值請加引號。",
     "herdrSession": "Herdr 會話",
-    "herdrScheduleHelp": "AgentHub 按日程發起任務，Herdr 服務需保持執行。上一輪仍在執行時略過本次觸發。",
+    "herdrScheduleHelp": "AgentHub 按日程發起任務，並復用設定中的 Agent 啟動命令與參數；Herdr 服務需保持執行。上一輪仍在執行時略過本次觸發。",
     "optionalAgent": "智慧體（選填）",
     "noAgent": "不使用智慧體",
     "noAgentHelp": "不選擇智慧體時，僅執行下方命令。",

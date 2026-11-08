@@ -150,6 +150,35 @@ it("invokes a row action with the keyboard without selecting its option", async 
   expect(document.querySelector('[role="listbox"]')).toBeNull();
   expect(document.activeElement).toBe(trigger);
 });
+it("renders and invokes a separated footer action", async () => {
+  const openSettings = vi.fn();
+  await act(async () =>
+    root.render(
+      <ThemedSelect
+        aria-label="Agents"
+        value="codex"
+        onChange={() => {}}
+        menuFooterAction={{
+          label: "Agent settings",
+          icon: "⚙",
+          onSelect: openSettings,
+        }}
+      >
+        <option value="codex">Codex</option>
+      </ThemedSelect>,
+    ),
+  );
+  await act(async () =>
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!.click(),
+  );
+  const footer = [...document.querySelectorAll("button")].find(
+    (button) => button.textContent === "⚙Agent settings",
+  )!;
+  expect(footer).not.toBeUndefined();
+  await act(async () => footer.click());
+  expect(openSettings).toHaveBeenCalledOnce();
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+});
 
 it("keeps menu options inside the native modal's interactive subtree", async () => {
   const changed = vi.fn();

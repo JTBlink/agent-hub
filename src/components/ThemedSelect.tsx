@@ -103,6 +103,12 @@ type Props = Omit<
         onSelect: () => void;
       }
     | undefined;
+  /** A separated action rendered after all options in the open menu. */
+  menuFooterAction?: {
+    label: string;
+    icon?: ReactNode;
+    onSelect: () => void;
+  };
   renderValue?: (value: string, label: string) => ReactNode;
   /** Let the menu fit complete labels and all rows when the viewport allows. */
   fitContent?: boolean;
@@ -129,6 +135,7 @@ export function ThemedSelect(selection: Props) {
     optionIcon,
     optionTrailing,
     optionAction,
+    menuFooterAction,
     renderValue,
     fitContent = false,
     singleLineOptions = false,
@@ -154,7 +161,8 @@ export function ThemedSelect(selection: Props) {
   const values = typeof value === "string" ? [value] : value;
   const selected = options.filter((option) => values.includes(option.value));
   const label = selected.map((option) => option.label).join(", ");
-  const rowCount = options.length + (menuTitle ? 1 : 0);
+  const rowCount =
+    options.length + (menuTitle ? 1 : 0) + (menuFooterAction ? 1 : 0);
   const locate = () =>
     setPosition(
       positionFor(trigger.current, rowCount, fitContent, list.current),
@@ -498,6 +506,28 @@ export function ThemedSelect(selection: Props) {
                 </div>
               );
             })}
+            {menuFooterAction && (
+              <div className="mt-1 border-t border-border-subtle pt-1">
+                <button
+                  type="button"
+                  aria-label={menuFooterAction.label}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setPosition(null);
+                    trigger.current?.focus({ preventScroll: true });
+                    menuFooterAction.onSelect();
+                  }}
+                  className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                    {menuFooterAction.icon}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {menuFooterAction.label}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>,
           portalRoot ?? document.body,
         )}

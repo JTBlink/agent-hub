@@ -1009,8 +1009,6 @@ it("edits an agent prompt directly in the unified layout with a one-line launche
   ).toEqual({
     agent: "claude",
     session: "default",
-    arguments: [],
-    extra_arguments: "",
   });
 });
 
@@ -1060,7 +1058,6 @@ it("saves extra agent arguments from advanced settings and resets them when swit
     expect.objectContaining({
       agent: "codex",
       session: "scheduled",
-      arguments: ["--dangerously-bypass-approvals-and-sandbox"],
       extra_arguments: "-m model-id -c 'name=\"value with spaces\"'",
     }),
   );
@@ -1109,7 +1106,7 @@ it("offers the same installed agents and order as the global workspace and prese
       .click(),
   );
   expect(
-    document.querySelectorAll('[role="listbox"] [title="Herdr"]'),
+    document.querySelectorAll('[role="listbox"] [data-herdr-icon]'),
   ).not.toHaveLength(0);
   await act(async () =>
     document
@@ -1141,6 +1138,26 @@ it("offers the same installed agents and order as the global workspace and prese
       saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
     ).agent,
   ).toBe("opencode");
+});
+
+it("opens Agent settings from the scheduled Agent selector footer", async () => {
+  await render();
+  await click("新建自动化");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>(
+        '[role="combobox"][aria-label="智能体（可选）"]',
+      )!
+      .click(),
+  );
+  const settings = [...document.querySelectorAll<HTMLButtonElement>("[role=listbox] button")].find(
+    (button) => button.textContent === "智能体设置…",
+  );
+  expect(settings).not.toBeUndefined();
+  await act(async () => settings!.click());
+  expect(container.querySelector("output[data-current-location]")?.textContent).toBe(
+    "/settings",
+  );
 });
 
 it("launches a newly selected Hermes Agent through Herdr rather than changing its scheduler", async () => {
