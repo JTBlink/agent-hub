@@ -2,15 +2,13 @@ import { useState, useEffect, useId, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PanelLeftClose } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { cn } from "../utils";
 import { useApp } from "../context/AppContext";
 import { ResizableSidebar } from "./ResizableSidebar";
 import { SidebarVisibilityContext } from "../hooks/sidebarVisibility";
-import { ConfirmDialog } from "./ConfirmDialog";
+import { RemoveProjectDialog } from "./worktree/RemoveProjectDialog";
 import { useSidebarSections } from "../hooks/useSidebarSections";
 import { SidebarAgentWorkspaces } from "./SidebarAgentWorkspaces";
-import * as api from "../lib/tauri";
 import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { SidebarSkillGroups } from "./SidebarSkillGroups";
 import { SidebarProjectFiles } from "./worktree/SidebarProjectFiles";
@@ -33,7 +31,6 @@ export function Sidebar() {
   const preserveSidebar = location.state?.preserveSidebar === true;
   const {
     projects,
-    refreshProjects,
     tools,
     appUpdate,
     closeSkillDetail,
@@ -211,16 +208,6 @@ export function Sidebar() {
     };
   }, [location.key]);
 
-  const handleDeleteProject = async () => {
-    if (!deleteProjectTarget) return;
-    await api.removeProject(deleteProjectTarget.id);
-    await refreshProjects();
-    if (location.pathname.startsWith("/project/")) {
-      navigate("/");
-    }
-    toast.success(t("project.removed"));
-  };
-
   return (
     <>
       <div
@@ -375,13 +362,9 @@ export function Sidebar() {
         </ResizableSidebar>
       </div>
 
-      <ConfirmDialog
-        open={deleteProjectTarget !== null}
-        message={t("project.removeConfirm", {
-          name: deleteProjectTarget?.name || "",
-        })}
+      <RemoveProjectDialog
+        project={deleteProjectTarget}
         onClose={() => setDeleteProjectTarget(null)}
-        onConfirm={handleDeleteProject}
       />
     </>
   );

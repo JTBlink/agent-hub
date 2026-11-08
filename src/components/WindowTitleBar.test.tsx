@@ -16,6 +16,7 @@ import { ProjectSwitcher } from "./worktree/ProjectSwitcher";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { getProjectGitReferences, runProjectGitAction } from "../lib/gitApi";
 import { createProjectWorktree, getProjectWorktrees } from "../lib/worktreeApi";
+import { removeProject } from "../lib/tauri";
 
 vi.mock("../lib/gitApi", () => ({
   getProjectGitReferences: vi.fn(),
@@ -56,6 +57,7 @@ vi.mock("../lib/openInVscode", () => ({
   openDirectoryInVscode: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../lib/tauri", () => ({
+  removeProject: vi.fn().mockResolvedValue(undefined),
   touchProjectVisited: vi.fn().mockResolvedValue(undefined),
   getSettings: vi.fn().mockResolvedValue(null),
   setSettings: vi.fn().mockResolvedValue(undefined),
@@ -73,6 +75,7 @@ vi.mock("../context/AppContext", () => ({
         path: "~/projects/other",
       },
     ],
+    refreshProjects: vi.fn().mockResolvedValue(undefined),
     managedSkills: [],
     skillGroups: [],
     viewedSkillGroup: null,
@@ -247,6 +250,61 @@ it("lists projects in the title bar and switches from a child checkout to anothe
   expect(
     container.querySelector<HTMLSelectElement>("aside select")!.value,
   ).toBe(JSON.stringify(["other", "~/projects/other"]));
+});
+
+it("confirms removal from a project row without switching to that project", async () => {
+  await render("/project/demo");
+  const selector = container.querySelector<HTMLButtonElement>(
+    'header [role="combobox"][aria-label="切换项目"]',
+  )!;
+  await act(async () => selector.click());
+  const remove = document.querySelector<HTMLButtonElement>(
+    'button[aria-label="移除项目 Other workspace"]',
+  )!;
+  expect(remove).not.toBeNull();
+  await act(async () => remove.click());
+  expect(selector.textContent).toContain("Demo workspace");
+  expect(removeProject).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="alertdialog"]')?.textContent).toContain(
+    "不会删除项目文件",
+  );
+  const confirm = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((button) => button.textContent === translate("common.delete"))!;
+  await act(async () => confirm.click());
+  expect(removeProject).toHaveBeenCalledExactlyOnceWith("other");
+  expect(container.querySelector("output")?.textContent).toBe("/project/demo");
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+});
+
+it("keeps the removal dialog open when unregistering fails and allows retry", async () => {
+  vi.mocked(removeProject).mockRejectedValueOnce(new Error("Unavailable"));
+  await render("/project/demo");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>('header [role="combobox"]')!
+      .click(),
+  );
+  await act(async () =>
+    document
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="移除项目 Demo workspace"]',
+      )!
+      .click(),
+  );
+  const confirm = [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="alertdialog"] button',
+    ),
+  ].find((button) => button.textContent === translate("common.delete"))!;
+  await act(async () => confirm.click());
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+  expect(container.querySelector("output")?.textContent).toBe("/project/demo");
+  await act(async () => confirm.click());
+  expect(container.querySelector("output")?.textContent).toBe("/");
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
 });
 
 it("places the VS Code icon beside the project selector and opens the route worktree", async () => {

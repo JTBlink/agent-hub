@@ -93,6 +93,14 @@ type Props = Omit<
   /** Metadata that remains visible when the selected label is truncated. */
   valueBadge?: ReactNode;
   optionIcon?: (value: string) => ReactNode;
+  /** A separate row action; invoking it does not change the selected value. */
+  optionAction?: (value: string) =>
+    | {
+        label: string;
+        icon: ReactNode;
+        onSelect: () => void;
+      }
+    | undefined;
   renderValue?: (value: string, label: string) => ReactNode;
   /** Let the menu fit complete labels and all rows when the viewport allows. */
   fitContent?: boolean;
@@ -117,6 +125,7 @@ export function ThemedSelect(selection: Props) {
     leadingIcon,
     valueBadge,
     optionIcon,
+    optionAction,
     renderValue,
     fitContent = false,
     singleLineOptions = false,
@@ -308,8 +317,29 @@ export function ThemedSelect(selection: Props) {
             event.preventDefault();
             event.stopPropagation();
             setPosition(null);
-          } else if (event.key === "Tab") setPosition(null);
-          else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+          } else if (open && event.key === "ArrowRight" && optionAction) {
+            event.preventDefault();
+            list.current
+              ?.querySelector<HTMLButtonElement>(
+                `[data-option-action="${active}"]`,
+              )
+              ?.focus();
+          } else if (event.key === "Tab") {
+            const action =
+              open &&
+              !event.shiftKey &&
+              list.current?.querySelector<HTMLButtonElement>(
+                `[data-option-action="${active}"]`,
+              );
+            if (action) {
+              event.preventDefault();
+              action.focus();
+            } else setPosition(null);
+          } else if (
+            event.key.length === 1 &&
+            !event.ctrlKey &&
+            !event.metaKey
+          ) {
             const now = event.timeStamp;
             const query =
               (now - typeahead.current.time < 700
@@ -356,6 +386,13 @@ export function ThemedSelect(selection: Props) {
             role="listbox"
             aria-multiselectable={multiple || undefined}
             aria-label={props["aria-label"]}
+            onBlur={(event) => {
+              if (
+                !event.currentTarget.contains(event.relatedTarget) &&
+                event.relatedTarget !== trigger.current
+              )
+                setPosition(null);
+            }}
             style={{
               position: "fixed",
               left: position.left,
@@ -373,55 +410,88 @@ export function ThemedSelect(selection: Props) {
                 {menuTitle}
               </div>
             )}
-            {options.map((option, index) => (
-              <button
-                type="button"
-                role="option"
-                title={
-                  option.title ?? (singleLineOptions ? option.label : undefined)
-                }
-                aria-selected={values.includes(option.value)}
-                aria-disabled={option.disabled}
-                id={`${id}-${index}`}
-                key={option.value}
-                data-option-index={index}
-                disabled={option.disabled}
-                tabIndex={-1}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => {
-                  if (!option.disabled) setActive(index);
-                }}
-                onClick={() => choose(option)}
-                className={cn(
-                  "flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-                  active === index && "bg-surface-hover",
-                  values.includes(option.value)
-                    ? "font-medium text-accent-light"
-                    : "text-secondary",
-                  values.includes(option.value) && "disabled:opacity-80",
-                )}
-              >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                  {values.includes(option.value) && (
-                    <Check aria-hidden="true" className="h-3.5 w-3.5" />
-                  )}
-                </span>
-                {optionIcon?.(option.value)}
-                <span
-                  className={cn(
-                    "min-w-0",
-                    singleLineOptions
-                      ? "truncate whitespace-nowrap"
-                      : "break-words",
-                    fitContent &&
-                      !singleLineOptions &&
-                      "[overflow-wrap:anywhere]",
-                  )}
+            {options.map((option, index) => {
+              const action = optionAction?.(option.value);
+              return (
+                <div
+                  key={option.value}
+                  role="presentation"
+                  className="flex items-center"
                 >
-                  {option.label}
-                </span>
-              </button>
-            ))}
+                  <button
+                    type="button"
+                    role="option"
+                    title={
+                      option.title ??
+                      (singleLineOptions ? option.label : undefined)
+                    }
+                    aria-selected={values.includes(option.value)}
+                    aria-disabled={option.disabled}
+                    id={`${id}-${index}`}
+                    data-option-index={index}
+                    disabled={option.disabled}
+                    tabIndex={-1}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onMouseEnter={() => {
+                      if (!option.disabled) setActive(index);
+                    }}
+                    onClick={() => choose(option)}
+                    className={cn(
+                      "flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+                      active === index && "bg-surface-hover",
+                      values.includes(option.value)
+                        ? "font-medium text-accent-light"
+                        : "text-secondary",
+                      values.includes(option.value) && "disabled:opacity-80",
+                    )}
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                      {values.includes(option.value) && (
+                        <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                      )}
+                    </span>
+                    {optionIcon?.(option.value)}
+                    <span
+                      className={cn(
+                        "min-w-0",
+                        singleLineOptions
+                          ? "truncate whitespace-nowrap"
+                          : "break-words",
+                        fitContent &&
+                          !singleLineOptions &&
+                          "[overflow-wrap:anywhere]",
+                      )}
+                    >
+                      {option.label}
+                    </span>
+                  </button>
+                  {action && (
+                    <button
+                      type="button"
+                      data-option-action={index}
+                      aria-label={action.label}
+                      title={action.label}
+                      disabled={option.disabled}
+                      onFocus={() => setActive(index)}
+                      onKeyDown={(event) => {
+                        if (event.key === "ArrowLeft") {
+                          event.preventDefault();
+                          trigger.current?.focus({ preventScroll: true });
+                        }
+                      }}
+                      onClick={() => {
+                        setPosition(null);
+                        trigger.current?.focus({ preventScroll: true });
+                        action.onSelect();
+                      }}
+                      className="app-button-ghost mx-1 h-7 w-7 shrink-0 rounded p-1 text-muted hover:text-danger focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {action.icon}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>,
           portalRoot ?? document.body,
         )}

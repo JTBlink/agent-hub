@@ -1,12 +1,15 @@
 import { OpenProjectInVscode } from "./OpenProjectInVscode";
 import { Link, useLocation, useMatch } from "react-router-dom";
-import { CircleHelp, Search } from "lucide-react";
+import { CircleHelp, Search, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 import { ThemedSelect } from "./ThemedSelect";
 import { useWorkspaceSelection } from "../hooks/useWorkspaceSelection";
 import { compactHomePath } from "../utils";
 import { useDragWindow } from "../hooks/useDragWindow";
+import type { Project } from "../lib/tauri";
+import { RemoveProjectDialog } from "./worktree/RemoveProjectDialog";
 
 export function WindowTitleBar({
   onOpenCommands,
@@ -17,6 +20,7 @@ export function WindowTitleBar({
   const { pathname } = useLocation();
   const projectRoute = useMatch("/project/:id/*");
   const { projects } = useApp();
+  const [removeTarget, setRemoveTarget] = useState<Project | null>(null);
   const onDrag = useDragWindow();
   const selection = useWorkspaceSelection(projects);
   const project = projects.find((item) => item.id === projectRoute?.params.id);
@@ -45,78 +49,94 @@ export function WindowTitleBar({
   const shortcut = navigator.userAgent.includes("Mac") ? "⌘K" : "Ctrl K";
 
   return (
-    <header
-      onMouseDown={onDrag}
-      className="relative z-50 flex h-[var(--app-titlebar-height)] shrink-0 items-center justify-between gap-3 bg-bg-secondary pr-2 select-none"
-      style={{ paddingLeft: "calc(80px / var(--app-scale))" }}
-    >
-      <div
-        className="flex min-w-0 max-w-[55%] items-center text-sm text-muted"
-        onMouseDown={(event) => event.stopPropagation()}
+    <>
+      <header
+        onMouseDown={onDrag}
+        className="relative z-50 flex h-[var(--app-titlebar-height)] shrink-0 items-center justify-between gap-3 bg-bg-secondary pr-2 select-none"
+        style={{ paddingLeft: "calc(80px / var(--app-scale))" }}
       >
-        <ThemedSelect
-          fitContent
-          aria-label={t("sidebar.switchProject")}
-          title={
-            selectedProject
-              ? compactHomePath(selectedProject.path)
-              : t("sidebar.openProjectHint")
-          }
-          value={selectedProject?.id ?? ""}
-          disabled={!projects.length}
-          onChange={(event) => {
-            const next = projects.find(
-              (item) => item.id === event.target.value,
-            );
-            if (next && next.id !== selectedProject?.id)
-              selection.openWorktree(next.id, next.path);
-          }}
-          leadingIcon={
-            <img
-              src="/icons/32x32.png"
-              alt=""
-              className="h-3.5 w-3.5 shrink-0"
-            />
-          }
-          className="h-6 min-w-0 gap-1.5 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:bg-surface-hover hover:text-secondary"
+        <div
+          className="flex min-w-0 max-w-[55%] items-center text-sm text-muted"
+          onMouseDown={(event) => event.stopPropagation()}
         >
-          {!selectedProject && <option value="">{t("app.name")}</option>}
-          {projects.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </ThemedSelect>
-        {selectedProject && vscodePath && (
-          <OpenProjectInVscode key={vscodePath} path={vscodePath} />
-        )}
-      </div>
-      <button
-        type="button"
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={onOpenCommands}
-        aria-label={t("titleBar.searchCommands")}
-        title={`${t("commandPalette.placeholder")} (${shortcut})`}
-        className="mx-auto flex h-6 w-[38%] max-w-[400px] min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-surface/60 px-2 text-xs text-muted transition-colors hover:border-border hover:bg-surface-hover hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
-        <Search className="h-3 w-3 shrink-0" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate text-center">{title}</span>
-        <kbd
-          className="shrink-0 font-sans text-xs text-faint"
-          aria-hidden="true"
+          <ThemedSelect
+            fitContent
+            aria-label={t("sidebar.switchProject")}
+            title={
+              selectedProject
+                ? compactHomePath(selectedProject.path)
+                : t("sidebar.openProjectHint")
+            }
+            value={selectedProject?.id ?? ""}
+            disabled={!projects.length}
+            optionAction={(id) => {
+              const target = projects.find((item) => item.id === id);
+              return target
+                ? {
+                    label: t("worktree.removeProject", { name: target.name }),
+                    icon: <Trash2 size={14} aria-hidden="true" />,
+                    onSelect: () => setRemoveTarget(target),
+                  }
+                : undefined;
+            }}
+            onChange={(event) => {
+              const next = projects.find(
+                (item) => item.id === event.target.value,
+              );
+              if (next && next.id !== selectedProject?.id)
+                selection.openWorktree(next.id, next.path);
+            }}
+            leadingIcon={
+              <img
+                src="/icons/32x32.png"
+                alt=""
+                className="h-3.5 w-3.5 shrink-0"
+              />
+            }
+            className="h-6 min-w-0 gap-1.5 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:bg-surface-hover hover:text-secondary"
+          >
+            {!selectedProject && <option value="">{t("app.name")}</option>}
+            {projects.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </ThemedSelect>
+          {selectedProject && vscodePath && (
+            <OpenProjectInVscode key={vscodePath} path={vscodePath} />
+          )}
+        </div>
+        <button
+          type="button"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={onOpenCommands}
+          aria-label={t("titleBar.searchCommands")}
+          title={`${t("commandPalette.placeholder")} (${shortcut})`}
+          className="mx-auto flex h-6 w-[38%] max-w-[400px] min-w-0 flex-1 items-center gap-2 rounded-md border border-border-subtle bg-surface/60 px-2 text-xs text-muted transition-colors hover:border-border hover:bg-surface-hover hover:text-secondary outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          {shortcut}
-        </kbd>
-      </button>
-      <Link
-        to="/help"
-        onMouseDown={(event) => event.stopPropagation()}
-        title={t("help.pageTitle")}
-        aria-label={t("help.pageTitle")}
-        className="app-button-ghost shrink-0 rounded p-1"
-      >
-        <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
-      </Link>
-    </header>
+          <Search className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate text-center">{title}</span>
+          <kbd
+            className="shrink-0 font-sans text-xs text-faint"
+            aria-hidden="true"
+          >
+            {shortcut}
+          </kbd>
+        </button>
+        <Link
+          to="/help"
+          onMouseDown={(event) => event.stopPropagation()}
+          title={t("help.pageTitle")}
+          aria-label={t("help.pageTitle")}
+          className="app-button-ghost shrink-0 rounded p-1"
+        >
+          <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      </header>
+      <RemoveProjectDialog
+        project={removeTarget}
+        onClose={() => setRemoveTarget(null)}
+      />
+    </>
   );
 }

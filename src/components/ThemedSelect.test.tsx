@@ -114,6 +114,43 @@ it("mouse selection uses the existing change contract and disabled triggers stay
   expect(document.querySelector('[role="listbox"]')).toBeNull();
 });
 
+it("invokes a row action with the keyboard without selecting its option", async () => {
+  const changed = vi.fn();
+  const remove = vi.fn();
+  await act(async () =>
+    root.render(
+      <ThemedSelect
+        aria-label="Projects"
+        value="one"
+        onChange={changed}
+        optionAction={(value) => ({
+          label: `Remove ${value}`,
+          icon: "×",
+          onSelect: () => remove(value),
+        })}
+      >
+        <option value="one">One</option>
+        <option value="two">Two</option>
+      </ThemedSelect>,
+    ),
+  );
+  const trigger =
+    container.querySelector<HTMLButtonElement>('[role="combobox"]')!;
+  trigger.focus();
+  await key(trigger, "ArrowDown");
+  await key(trigger, "ArrowDown");
+  await key(trigger, "Tab");
+  const action = document.querySelector<HTMLButtonElement>(
+    'button[aria-label="Remove two"]',
+  )!;
+  expect(document.activeElement).toBe(action);
+  await act(async () => action.click());
+  expect(remove).toHaveBeenCalledExactlyOnceWith("two");
+  expect(changed).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(document.activeElement).toBe(trigger);
+});
+
 it("keeps menu options inside the native modal's interactive subtree", async () => {
   const changed = vi.fn();
   await act(async () =>
