@@ -88,8 +88,9 @@ export function WindowTitleBar({
             }}
             leadingIcon={
               <img
-                src="/icons/32x32.png"
+                src="/icons/app-icon.svg"
                 alt=""
+                draggable={false}
                 className="h-3.5 w-3.5 shrink-0"
               />
             }

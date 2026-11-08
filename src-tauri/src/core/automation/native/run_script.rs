@@ -1,9 +1,10 @@
 //! Standalone current-user runners persist bounded history without a running UI.
 use super::render::{ps, shell};
 use std::path::Path;
-pub(super) const VERSION: &str = "AgentHub workspace scripts v5";
+pub(super) const VERSION: &str = "AgentHub workspace scripts v6";
 
 pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path, scripts_dir: &str) -> String {
+    let cli = crate::core::cli_bridge::bridge_path();
     format!(
         r#"#!/bin/sh
 # {version}
@@ -51,6 +52,17 @@ finish() {{
 trap finish 0
 cd {workdir} || exit 1
 export PATH={path}
+if [ -f "$base/managed" ]; then
+  bridge_dir=$(dirname {cli})
+  attempts=0
+  while [ ! -s "$bridge_dir/.version" ] && [ "$attempts" -lt 30 ]; do
+    sleep 0.1
+    attempts=$((attempts + 1))
+  done
+  if [ -s "$bridge_dir/.version" ]; then
+    export AGENT_HUB_CLI={cli}
+  fi
+fi
 export AGENT_HUB_SCRIPT_DIR={scripts_dir}
 if [ -f "$base/managed" ]; then
   export AGENT_HUB_TASK_DIR={scripts_dir}
@@ -70,6 +82,7 @@ fi
         scripts_dir = shell(scripts_dir),
         path =
             shell(&std::env::var("PATH").unwrap_or_else(|_| "/usr/local/bin:/usr/bin:/bin".into())),
+        cli = shell(&cli.to_string_lossy()),
         payload = shell(&payload.to_string_lossy())
     )
 }
@@ -80,6 +93,7 @@ pub(super) fn powershell_script(
     payload: &Path,
     scripts_dir: &str,
 ) -> String {
+    let cli = crate::core::cli_bridge::bridge_path();
     format!(
         r#"{bom}# {version}
 $ErrorActionPreference = 'Stop'
@@ -112,6 +126,15 @@ $global:LASTEXITCODE = 0
 $code = 0
 try {{
   Set-Location -LiteralPath {workdir}
+  $bridgeDir = Split-Path -Parent {cli}
+  $attempts = 0
+  while (!(Test-Path -LiteralPath (Join-Path $bridgeDir '.version')) -and $attempts -lt 30) {{
+    Start-Sleep -Milliseconds 100
+    $attempts++
+  }}
+  if (Test-Path -LiteralPath (Join-Path $bridgeDir '.version')) {{
+    $env:AGENT_HUB_CLI = {cli}
+  }}
   $env:AGENT_HUB_SCRIPT_DIR = {scripts_dir}
   if ($managed) {{
     $env:AGENT_HUB_TASK_DIR = {scripts_dir}
@@ -144,6 +167,7 @@ exit $code
         version = VERSION,
         base = ps(&dir.to_string_lossy()),
         workdir = ps(workdir),
+        cli = ps(&cli.to_string_lossy()),
         scripts_dir = ps(scripts_dir),
         payload = ps(&payload.to_string_lossy())
     )

@@ -104,3 +104,69 @@ it("synchronizes saved commands and default selection across entries while prese
     vi.unstubAllGlobals();
   }
 });
+
+it("queues a second save against the snapshot produced by the first save", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const initial: AgentLaunchSnapshot = {
+    revision: "initial",
+    defaults: { codex: "codex" },
+    document: { schema_version: 1, default_agent: "codex", instructions: {} },
+  };
+  vi.mocked(getAgentLaunchSettings).mockResolvedValue(initial);
+  let releaseFirst!: (snapshot: AgentLaunchSnapshot) => void;
+  let calls = 0;
+  vi.mocked(saveAgentLaunchSettings).mockImplementation(async (document) => {
+    calls += 1;
+    if (calls === 1)
+      return new Promise((resolve) => {
+        releaseFirst = () =>
+          resolve({ ...initial, revision: "first", document });
+      });
+    return { ...initial, revision: "second", document };
+  });
+  function Entry() {
+    const controller = useAgentLaunchSettings();
+    return (
+      <>
+        <button
+          onClick={() =>
+            void controller.save((current) => ({
+              ...current,
+              instructions: { ...current.instructions, codex: "codex --search" },
+            }))
+          }
+        >
+          Save command
+        </button>
+        <button
+          onClick={() =>
+            void controller.save((current) => ({
+              ...current,
+              default_agent: "hermes",
+            }))
+          }
+        >
+          Save default
+        </button>
+      </>
+    );
+  }
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<Entry />));
+    const buttons = host.querySelectorAll("button");
+    await act(async () => buttons[0].click());
+    await act(async () => buttons[1].click());
+    expect(calls).toBe(1);
+    await act(async () => releaseFirst());
+    await vi.waitFor(() => expect(calls).toBe(2));
+    const last = vi.mocked(saveAgentLaunchSettings).mock.calls.at(-1)![0];
+    expect(last.default_agent).toBe("hermes");
+    expect(last.instructions.codex).toBe("codex --search");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

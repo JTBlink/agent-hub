@@ -337,8 +337,9 @@ class HerdrChecks(unittest.TestCase):
         }), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
         self.assertEqual(start[start.index('--') + 1:], [
+            '--dangerously-bypass-approvals-and-sandbox',
             '-c', 'check_for_update_on_startup=false',
-            '--dangerously-bypass-approvals-and-sandbox', '-m', 'model-id',
+            '-m', 'model-id',
             '-c', 'name="value with spaces"', '--literal', '$(touch NEVER)',
         ])
         self.assertTrue(all(not options.get('shell') for _, options in self.calls))
@@ -359,7 +360,7 @@ class HerdrChecks(unittest.TestCase):
         self.assertIsInstance(self.execute(herdr_missing=True), str)
         self.assertFalse(any('terminal' in args for args, _ in self.config_calls))
 
-    def test_inherits_global_arguments_and_preserves_explicit_empty_override(self):
+    def test_managed_tasks_always_inherit_global_arguments(self):
         launch = {'kind': 'codex', 'program': 'codex', 'arguments': ['--search']}
         self.assertEqual(self.execute(config={'agent': 'codex'}, launch=launch), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
@@ -368,7 +369,7 @@ class HerdrChecks(unittest.TestCase):
         STATE.unlink(missing_ok=True)
         self.assertEqual(self.execute(config={'agent': 'codex', 'arguments': []}, launch=launch), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
-        self.assertNotIn('--search', start)
+        self.assertIn('--search', start)
 
     def test_invalid_global_settings_never_create_or_start_a_pane(self):
         self.assertIsInstance(self.execute(launch_failure=True), str)

@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::automation::{AutomationDraft, Provider, Schedule};
+use crate::core::cli_bridge;
 #[test]
 fn archives_legacy_output_and_preserves_independent_run_results() {
     let temp = tempfile::tempdir().unwrap();
@@ -95,4 +96,22 @@ fn keeps_only_the_latest_hundred_owned_records_without_following_links() {
         .count();
     assert_eq!(count, 100);
     assert!(outside.path().join("keep").is_file());
+}
+
+#[test]
+fn generated_runner_passes_the_product_cli_bridge_to_tasks() {
+    let temp = tempfile::tempdir().unwrap();
+    let payload = temp.path().join("command.sh");
+    std::fs::write(&payload, "exit 0").unwrap();
+    let script = shell_script(
+        temp.path(),
+        &temp.path().to_string_lossy(),
+        &payload,
+        &temp.path().to_string_lossy(),
+    );
+    let bridge = cli_bridge::bridge_path()
+        .to_string_lossy()
+        .replace('\'', "'\\''");
+    let expected = format!("export AGENT_HUB_CLI='{}'", bridge);
+    assert!(script.contains(&expected));
 }

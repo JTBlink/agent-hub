@@ -169,6 +169,13 @@ it.each([
   expect(search().title).toContain(i18n.t("commandPalette.placeholder"));
 });
 
+it("uses the scalable app icon in the title bar", async () => {
+  await render();
+  const icon = container.querySelector<HTMLImageElement>('img[alt=""]');
+  expect(icon?.src).toContain("/icons/app-icon.svg");
+  expect(icon?.draggable).toBe(false);
+});
+
 it("opens commands from the title bar, focuses search and restores focus on Escape", async () => {
   await render();
   search().focus();
