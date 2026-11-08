@@ -210,7 +210,8 @@ async function coldFontsRecover(): Promise<boolean> {
 
 Object.assign(window, {
   runTerminalInputRegression: async (
-    inputEvents: boolean | "ime" | "ime-composition" = false,
+    inputEvents:
+      boolean | "ime" | "ime-composition" | "chinese-composition" = false,
   ) => {
     render(false);
     while (created < 1) await pause();
@@ -220,35 +221,49 @@ Object.assign(window, {
     const generatedInput = terminal.onData((data) => {
       generated += data;
     });
-    const command = inputEvents ? "clear?" : `${"git branch ".repeat(30)}?\r`;
+    const command =
+      inputEvents === "chinese-composition"
+        ? "中文输入"
+        : inputEvents
+          ? "clear ABCDEFGHIJKLMNOPQRSTUVWXYZ?"
+          : `${"git branch ".repeat(30)}?\r`;
     const started = performance.now();
     for (const key of command) {
       const questionMark = key === "?";
+      const uppercase = /^[A-Z]$/.test(key);
       const keyCode =
-        typeof inputEvents === "string"
-          ? 229
-          : inputEvents && key === "a"
-            ? 0
-            : key === "\r"
-              ? 13
-              : questionMark
-                ? 191
-                : key.toUpperCase().charCodeAt(0);
+        inputEvents === "chinese-composition"
+          ? 78
+          : typeof inputEvents === "string"
+            ? 229
+            : inputEvents && key === "a"
+              ? 0
+              : key === "\r"
+                ? 13
+                : questionMark
+                  ? 191
+                  : key.toUpperCase().charCodeAt(0);
       const event = new KeyboardEvent("keydown", {
         key:
-          key === "\r"
-            ? "Enter"
-            : questionMark && typeof inputEvents === "string"
-              ? "Process"
-              : key,
-        code: questionMark ? "Slash" : undefined,
-        shiftKey: questionMark,
+          inputEvents === "chinese-composition"
+            ? "n"
+            : key === "\r"
+              ? "Enter"
+              : (questionMark || uppercase) && typeof inputEvents === "string"
+                ? "Process"
+                : key,
+        code: questionMark ? "Slash" : uppercase ? `Key${key}` : undefined,
+        shiftKey: questionMark || uppercase,
         keyCode,
         bubbles: true,
         cancelable: true,
       });
       terminal.textarea!.dispatchEvent(event);
-      if (!event.defaultPrevented && inputEvents === "ime-composition") {
+      if (
+        !event.defaultPrevented &&
+        (inputEvents === "ime-composition" ||
+          inputEvents === "chinese-composition")
+      ) {
         terminal.textarea!.dispatchEvent(
           new CompositionEvent("compositionstart", { bubbles: true }),
         );
@@ -305,12 +320,36 @@ Object.assign(window, {
       );
     }
     if (typeof inputEvents === "string") await pause();
+    const controls = inputEvents
+      ? [
+          { key: "Tab", keyCode: 9, data: "\x1b[Z" },
+          { key: "Enter", keyCode: 13, data: "\r" },
+          { key: "ArrowLeft", keyCode: 37, data: "\x1b[1;2D" },
+          { key: "ArrowRight", keyCode: 39, data: "\x1b[1;2C" },
+          { key: "ArrowUp", keyCode: 38, data: "\x1b[1;2A" },
+          { key: "ArrowDown", keyCode: 40, data: "\x1b[1;2B" },
+        ]
+      : [];
+    for (const { key, keyCode } of controls) {
+      for (const type of ["keydown", "keyup"]) {
+        terminal.textarea!.dispatchEvent(
+          new KeyboardEvent(type, {
+            key,
+            keyCode,
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+    }
     generatedInput.dispose();
     if (inputEvents)
       return {
-        complete: generated === command,
+        complete:
+          generated === command + controls.map(({ data }) => data).join(""),
         received: generated,
-        characters: command.length,
+        characters: command.length + controls.length,
         writeCalls,
         elapsed: Math.round(performance.now() - started),
         created,

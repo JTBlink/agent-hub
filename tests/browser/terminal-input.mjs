@@ -1,12 +1,14 @@
 // Requires Vite on :1420 and the shared browser CDP proxy on :3456.
-// Run: node tests/browser/terminal-input.mjs [--input-events | --ime | --ime-composition]
+// Run: node tests/browser/terminal-input.mjs [--input-events | --ime | --ime-composition | --chinese-composition]
 import assert from "node:assert/strict";
 
-const inputMode = process.argv.includes("--ime-composition")
-  ? "ime-composition"
-  : process.argv.includes("--ime")
-    ? "ime"
-    : process.argv.includes("--input-events");
+const inputMode = process.argv.includes("--chinese-composition")
+  ? "chinese-composition"
+  : process.argv.includes("--ime-composition")
+    ? "ime-composition"
+    : process.argv.includes("--ime")
+      ? "ime"
+      : process.argv.includes("--input-events");
 const proxy = "http://localhost:3456";
 async function request(path, body) {
   const response = await fetch(`${proxy}${path}`, {

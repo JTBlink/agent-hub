@@ -1,61 +1,78 @@
 import type { Terminal } from "@xterm/xterm";
 
-/** Send plain text once from keydown without depending on legacy keyCode/keypress. */
-export function handleTerminalTextKey(
-  event: KeyboardEvent,
-  terminal: Pick<Terminal, "input">,
-): boolean {
-  if (
-    event.type !== "keydown" ||
-    event.defaultPrevented ||
-    event.isComposing ||
-    event.keyCode === 229 ||
-    event.ctrlKey ||
-    event.altKey ||
-    event.metaKey ||
-    !/^[\x20-\x7e]$/.test(event.key)
-  )
-    return true;
-  event.preventDefault();
-  terminal.input(event.key, true);
-  return false;
+const SHIFTED_SYMBOLS: Readonly<Record<string, string>> = {
+  Digit1: "!",
+  Digit2: "@",
+  Digit3: "#",
+  Digit4: "$",
+  Digit5: "%",
+  Digit6: "^",
+  Digit7: "&",
+  Digit8: "*",
+  Digit9: "(",
+  Digit0: ")",
+  Backquote: "~",
+  Minus: "_",
+  Equal: "+",
+  BracketLeft: "{",
+  BracketRight: "}",
+  Backslash: "|",
+  Semicolon: ":",
+  Quote: '"',
+  Comma: "<",
+  Period: ">",
+  Slash: "?",
+};
+
+function shiftedText(event: KeyboardEvent): string | null {
+  if (!event.shiftKey || event.ctrlKey || event.metaKey || event.altKey)
+    return null;
+  // Prefer the layout-resolved character, even when WebKit reports keyCode 229.
+  if (/^[\x20-\x7e]$/.test(event.key)) return event.key;
+  if (event.key !== "Process" && event.key !== "Unidentified") return null;
+  if (event.keyCode !== 229) return null;
+  // Some English-mode IMEs omit the character and the subsequent input event.
+  if (/^Key[A-Z]$/.test(event.code))
+    return event.getModifierState("CapsLock")
+      ? event.code.slice(3).toLowerCase()
+      : event.code.slice(3);
+  return SHIFTED_SYMBOLS[event.code] ?? null;
 }
 
-/** An IME can commit English through input events while reporting keyCode 229.
- * Keep those commits out of xterm's delayed textarea-diff path. */
+/** Preserve native IME startup and commit text before textarea values are replaced. */
 export function bindTerminalTextInput(
   node: HTMLElement,
   terminal: Pick<Terminal, "input" | "textarea">,
 ) {
   let composing = false;
   let finishing = false;
-  let asciiCommitted = false;
+  let committedText: string | null = null;
   let pending = 0;
   let finishTimer = 0;
   const start = () => {
     window.clearTimeout(finishTimer);
     composing = true;
     finishing = false;
-    asciiCommitted = false;
+    committedText = null;
     pending = 0;
   };
   const end = (event: CompositionEvent) => {
     composing = false;
     // English-mode IMEs can still use full composition sessions. Commit their
     // final ASCII text now: a later composition may replace the textarea before
-    // xterm's timeout reads it. Keep non-ASCII composition on xterm's path.
+    // xterm's timeout reads it. Non-ASCII commits use final native input data.
     if (/^[\x20-\x7e]+$/.test(event.data)) {
       window.clearTimeout(finishTimer);
       finishing = false;
-      asciiCommitted = true;
+      committedText = event.data;
       pending = 0;
       terminal.input(event.data, true);
       if (terminal.textarea) terminal.textarea.value = "";
       return;
     }
-    asciiCommitted = false;
+    committedText = null;
     finishing = true;
-    // Leave the IME's final input event and xterm's composition flush alone.
+    // If no final native input arrives, let xterm flush the composition.
     finishTimer = window.setTimeout(() => {
       finishing = false;
     }, 0);
@@ -63,13 +80,34 @@ export function bindTerminalTextInput(
   const input = (event: Event) => {
     if (!(event instanceof InputEvent)) return;
     if (
-      asciiCommitted &&
+      committedText !== null &&
       !composing &&
       (event.inputType === "insertText" ||
-        event.inputType === "insertCompositionText") &&
-      /^[\x20-\x7e]*$/.test(event.data ?? "")
+        event.inputType === "insertCompositionText" ||
+        event.inputType === "insertFromComposition") &&
+      (!event.data || event.data === committedText)
     ) {
       event.stopImmediatePropagation();
+      if (terminal.textarea) terminal.textarea.value = "";
+      return;
+    }
+    // Use the native final input data for non-ASCII commits. Unlike preedit,
+    // this is ready to send before a following composition replaces the value.
+    if (
+      finishing &&
+      !composing &&
+      !event.isComposing &&
+      event.data &&
+      ["insertText", "insertCompositionText", "insertFromComposition"].includes(
+        event.inputType,
+      )
+    ) {
+      window.clearTimeout(finishTimer);
+      finishing = false;
+      pending = 0;
+      committedText = event.data;
+      event.stopImmediatePropagation();
+      terminal.input(event.data, true);
       if (terminal.textarea) terminal.textarea.value = "";
       return;
     }
@@ -93,34 +131,30 @@ export function bindTerminalTextInput(
   node.addEventListener("input", input, true);
   return {
     handle(event: KeyboardEvent) {
-      if (event.type !== "keydown") return true;
-      asciiCommitted = false;
+      if (event.type !== "keydown" || event.defaultPrevented) return true;
+      committedText = null;
       if (composing || finishing || event.isComposing) return true;
-      if (
-        event.shiftKey &&
-        event.code === "Slash" &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey
-      ) {
+      const text = shiftedText(event);
+      if (text !== null) {
         pending = 0;
         event.preventDefault();
-        terminal.input("?", true);
+        terminal.input(text, true);
         return false;
       }
       if (
-        event.keyCode === 229 &&
+        (event.keyCode === 229 || /^[\x20-\x7e]$/.test(event.key)) &&
         !event.ctrlKey &&
         !event.metaKey &&
         !event.altKey
       ) {
         pending++;
-        // Let WebKit produce its native input event, without scheduling an
-        // asynchronous textarea diff for each overlapping keystroke.
+        // Do not cancel the initial letter: native IMEs may only start
+        // composition after this keydown, without keyCode 229 yet. Let native
+        // keypress/input deliver text, and bypass xterm's early keydown send.
         return false;
       }
       pending = 0;
-      return handleTerminalTextKey(event, terminal);
+      return true;
     },
     dispose() {
       window.clearTimeout(finishTimer);
