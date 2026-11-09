@@ -57,45 +57,58 @@ export function FileReaderDialog({
       )}
     >
       <div className="flex h-full min-h-0 flex-col">
-        <header className="flex shrink-0 items-center gap-3 border-b border-border-subtle bg-bg-secondary px-3 py-2">
-          <BookOpen
-            aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-accent-light"
-          />
-          <h2
-            id={titleId}
-            className={cn(
-              "min-w-0 flex-1 text-sm font-semibold",
-              rootDirectory ? "max-h-24 overflow-y-auto break-all" : "truncate",
-            )}
-            title={title}
-          >
-            {title ?? t("fileReader.title")}
-          </h2>
-          {rootDirectory && <CopyPathButton path={rootDirectory} />}
-          <button
-            type="button"
-            aria-label={t(
-              maximized ? "fileReader.restore" : "fileReader.maximize",
-            )}
-            onClick={() => setMaximized(!maximized)}
-            className="app-button-ghost shrink-0 p-2"
-          >
-            {maximized ? (
-              <Minimize2 aria-hidden="true" className="h-4 w-4" />
-            ) : (
-              <Maximize2 aria-hidden="true" className="h-4 w-4" />
-            )}
-          </button>
-          <button
-            type="button"
-            data-initial-focus
-            aria-label={t("common.close")}
-            onClick={onClose}
-            className="app-button-ghost shrink-0 p-2"
-          >
-            <X aria-hidden="true" className="h-4 w-4" />
-          </button>
+        <header
+          className="flex min-h-11 shrink-0 items-center gap-3 border-b border-border-subtle bg-bg-secondary px-3 py-1.5"
+          style={
+            maximized
+              ? { paddingLeft: "calc(80px / var(--app-scale))" }
+              : undefined
+          }
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <BookOpen
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 text-accent-light"
+            />
+            <h2
+              id={titleId}
+              className={cn(
+                "min-w-0 flex-1 text-sm font-semibold leading-5",
+                rootDirectory
+                  ? "max-h-24 overflow-y-auto break-all"
+                  : "truncate",
+              )}
+              title={title ?? t("fileReader.title")}
+            >
+              {title ?? t("fileReader.title")}
+            </h2>
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5">
+            {rootDirectory && <CopyPathButton path={rootDirectory} />}
+            <button
+              type="button"
+              aria-label={t(
+                maximized ? "fileReader.restore" : "fileReader.maximize",
+              )}
+              onClick={() => setMaximized(!maximized)}
+              className="app-button-ghost shrink-0 p-2"
+            >
+              {maximized ? (
+                <Minimize2 aria-hidden="true" className="h-4 w-4" />
+              ) : (
+                <Maximize2 aria-hidden="true" className="h-4 w-4" />
+              )}
+            </button>
+            <button
+              type="button"
+              data-initial-focus
+              aria-label={t("common.close")}
+              onClick={onClose}
+              className="app-button-ghost shrink-0 p-2"
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </div>
         </header>
         <FileReader {...props} />
         {description && (
