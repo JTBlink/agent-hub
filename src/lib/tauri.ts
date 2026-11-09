@@ -1479,6 +1479,8 @@ export const getAgentLaunchSettings = () =>
   invoke<import("./agentLaunchConfig").AgentLaunchSnapshot>(
     "agent_launch_settings",
   );
+export const getAgentLaunchConfigPath = () =>
+  invoke<string>("agent_launch_config_path");
 export const saveAgentLaunchSettings = (
   document: import("./agentLaunchConfig").AgentLaunchDocument,
   revision: string,

@@ -84,7 +84,8 @@ fn generic_agent_starter_requires_user_content_and_has_no_specialized_task_promp
         assert!(draft
             .files
             .iter()
-            .any(|file| file.path == "herdr.json" || file.path.ends_with("/herdr.json")));
+            .any(|file| file.path == "config/agent.json"
+                || file.path.ends_with("/config/agent.json")));
     }
 }
 #[test]

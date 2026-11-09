@@ -2,7 +2,7 @@ import { AutomationScheduleInput } from "./AutomationScheduleInput";
 import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
-import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
+import { automationPromptFile, automationAgentConfig } from "../lib/automation";
 import { automationPrompts } from "../lib/automationPrompts";
 import { externalAutomationScriptDirectory } from "../lib/automationScriptDirectory";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
@@ -135,7 +135,7 @@ export function AutomationEditor({
   const scriptDir = externalNative
     ? externalAutomationScriptDirectory(draft.content, draft.workdir)
     : (draft.script_dir ?? task?.definition?.workdir ?? null);
-  const herdrConfig = automationHerdrConfig(draft);
+  const herdrConfig = automationAgentConfig(draft);
   const promptFile = automationPromptFile(draft);
   const prompts = automationPrompts(
     draft,

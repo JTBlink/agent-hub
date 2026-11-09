@@ -15,12 +15,16 @@ export function automationPromptFile(draft: AutomationDraft) {
   );
 }
 
-export function automationHerdrConfig(draft: AutomationDraft) {
-  const file =
-    draft.files?.find((file) => file.path === "config/herdr.json") ??
-    draft.files?.find(
-      (file) => file.path === "herdr.json" || file.path.endsWith("/herdr.json"),
-    );
+export type AutomationAgentConfig = {
+  runner: { kind: string; session: string; title: string };
+  launch: { arguments: string[] };
+  execution: { wait_timeout_seconds: number };
+};
+
+export function automationAgentConfig(draft: AutomationDraft) {
+  const file = draft.files?.find(
+    (file) => file.path === "config/agent.json" || file.path.endsWith("/config/agent.json"),
+  );
   if (!file) return null;
   try {
     const value: unknown = JSON.parse(file.content);
@@ -28,11 +32,44 @@ export function automationHerdrConfig(draft: AutomationDraft) {
       !value ||
       typeof value !== "object" ||
       Array.isArray(value) ||
-      !("agent" in value) ||
-      typeof value.agent !== "string"
+      !("runner" in value) ||
+      !("launch" in value) ||
+      !("execution" in value)
     )
       return null;
-    return { file, value, agent: value.agent };
+    const candidate = value as Record<string, unknown>;
+    const runner = candidate.runner;
+    const launch = candidate.launch;
+    const execution = candidate.execution;
+    if (
+      !runner || typeof runner !== "object" || Array.isArray(runner) ||
+      !launch || typeof launch !== "object" || Array.isArray(launch) ||
+      !execution || typeof execution !== "object" || Array.isArray(execution)
+    ) return null;
+    const runnerValue = runner as Record<string, unknown>;
+    const launchValue = launch as Record<string, unknown>;
+    const executionValue = execution as Record<string, unknown>;
+    if (
+      typeof runnerValue.kind !== "string" ||
+      typeof runnerValue.session !== "string" ||
+      !runnerValue.session ||
+      typeof runnerValue.title !== "string" ||
+      !runnerValue.title.trim() ||
+      !Array.isArray(launchValue.arguments) ||
+      launchValue.arguments.length > 128 ||
+      !launchValue.arguments.every(
+        (arg) => typeof arg === "string" && arg.length <= 4096 && !/[\0\r\n]/.test(arg),
+      ) ||
+      typeof executionValue.wait_timeout_seconds !== "number" ||
+      !Number.isInteger(executionValue.wait_timeout_seconds) ||
+      executionValue.wait_timeout_seconds < 60 ||
+      executionValue.wait_timeout_seconds > 7200
+    ) return null;
+    return {
+      file,
+      value: value as AutomationAgentConfig,
+      agent: runnerValue.kind,
+    };
   } catch {
     return null;
   }

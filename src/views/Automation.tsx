@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw } from "lucide-react";
+import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAutomationNextRunRefresh } from "../hooks/useAutomationNextRunRefresh";
 import { useAutomationOverview } from "../hooks/useAutomationOverview";
@@ -18,6 +18,7 @@ import { AutomationTaskActions } from "../components/AutomationTaskActions";
 import { AutomationRemoveDialog } from "../components/AutomationRemoveDialog";
 import { AutomationImportDialog } from "../components/AutomationImportDialog";
 import { AutomationBackupNotice } from "../components/AutomationBackupNotice";
+import { AutomationConfigInfoDialog } from "../components/AutomationConfigInfoDialog";
 import { save as chooseExportFile } from "@tauri-apps/plugin-dialog";
 import {
   getProjects,
@@ -89,6 +90,7 @@ export function Automation() {
   const [copyDraft, setCopyDraft] = useState<AutomationDraft | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [showConfigInfo, setShowConfigInfo] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const pending = useRef(false);
   const selectedId = params.get("task");
@@ -404,11 +406,24 @@ export function Automation() {
                 icon: <RotateCcw className="h-3.5 w-3.5" />,
                 onSelect: () => setEditor("restore"),
               },
+              {
+                key: "config-info",
+                label: t("automation.configurationInfo"),
+                icon: <Settings2 className="h-3.5 w-3.5" />,
+                onSelect: () => setShowConfigInfo(true),
+              },
             ]}
           />
         </div>
       </header>
       <AutomationBackupNotice />
+      {showConfigInfo && (
+        <AutomationConfigInfoDialog
+          tasks={data?.tasks ?? []}
+          onEdit={(task) => setEditor(task)}
+          onClose={() => setShowConfigInfo(false)}
+        />
+      )}
       <AutomationToolbar
         query={query}
         onQuery={setQuery}

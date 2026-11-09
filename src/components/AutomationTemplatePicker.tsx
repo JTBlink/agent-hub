@@ -9,7 +9,7 @@ import {
   type AutomationCatalog,
 } from "../lib/tauri";
 import { getErrorMessage } from "../lib/error";
-import { automationPromptFile, automationHerdrConfig } from "../lib/automation";
+import { automationPromptFile, automationAgentConfig } from "../lib/automation";
 
 const load = (locale: string, source: "builtin" | "backup") =>
   Promise.allSettled([
@@ -170,7 +170,7 @@ export function AutomationTemplatePicker({
                 {card.disabled ? t("automation.otherShell") : card.description}
               </span>
               <span className="mt-auto pt-1 text-xs text-muted">
-                {automationHerdrConfig(card.draft)
+                {automationAgentConfig(card.draft)
                   ? "Herdr"
                   : card.draft.provider === "hermes"
                     ? "Hermes"

@@ -1,6 +1,6 @@
 import { gt, valid } from "semver";
 import type { AutomationDraft, AutomationPackage } from "./tauri";
-import { automationHerdrConfig } from "./automation";
+import { automationAgentConfig } from "./automation";
 
 export interface AutomationInstallSource {
   title: string;
@@ -27,7 +27,7 @@ export function automationRequirements(
   }
   if (source.draft.files?.some((file) => file.path.endsWith(".py")))
     requirements.add("Python 3");
-  if (automationHerdrConfig(source.draft)) requirements.add("Herdr");
+  if (automationAgentConfig(source.draft)) requirements.add("Herdr");
   if (source.draft.provider === "hermes") requirements.add("Hermes");
   return [...requirements];
 }

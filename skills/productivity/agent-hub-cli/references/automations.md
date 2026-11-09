@@ -223,7 +223,7 @@ New automation → Use template → Git backups.
 
 ### Independent automation packages
 
-New automations own a task package with root `TASK.md`, prompts in `prompts/prompt.md`, JSON in `config/` (including `task.json` and optional `herdr.json`), executable helpers in `scripts/`, optional `references/`, and private `.local/` state. Legacy root manifests and settings remain supported without implicit migration; never provide both manifest paths. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new paused instance and prepares its runtime. `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Use pause/resume to control scheduling; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
+New automations own a task package with root `TASK.md`, prompts in `prompts/prompt.md`, JSON in `config/` (including `task.json` and optional `agent.json`), executable helpers in `scripts/`, optional `references/`, and private `.local/` state. The current package layout is required; old root manifests and Agent settings are removed before import. Use `automations import --path <json-or-directory> --preview` before import; importing creates a new paused instance and prepares its runtime. `export <id> --file <new-file>` and `migrate <legacy-id>` share the desktop core. Use pause/resume to control scheduling; removing local data requires `remove --delete-local-data`. Migration keeps the original ID and schedule. Never manipulate another task's environment or scheduler registration to repair this task.
 
 ## Disk-cleanup starter
 

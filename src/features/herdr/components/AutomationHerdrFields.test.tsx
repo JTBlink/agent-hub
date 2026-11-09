@@ -22,12 +22,11 @@ const draft: AutomationDraft = {
   files: [
     { path: "task/prompt.md", content: "检查项目。" },
     {
-      path: "task/herdr.json",
+      path: "config/agent.json",
       content: JSON.stringify({
-        agent: "codex",
-        session: "default",
-        arguments: ["--dangerously-bypass-approvals-and-sandbox"],
-        title: "巡检",
+        runner: { kind: "codex", session: "default", title: "巡检" },
+        launch: { arguments: ["--dangerously-bypass-approvals-and-sandbox"] },
+        execution: { wait_timeout_seconds: 1800 },
       }),
     },
   ],
@@ -66,26 +65,25 @@ async function input(label: string, value: string) {
   )!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(
-      field instanceof HTMLTextAreaElement
-        ? HTMLTextAreaElement.prototype
-        : HTMLInputElement.prototype,
+      Object.getPrototypeOf(field),
       "value",
-    )!.set!.call(field, value);
+    )?.set?.call(field, value);
     field.dispatchEvent(new Event("input", { bubbles: true }));
+    field.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }
 it("saves extra argument text and session together while preserving defaults and task files", async () => {
   await act(async () => root.render(<Fields />));
-  const text = "-m model-id -c 'name=\"value with spaces\"'";
+  const text = "-m model-id\n-c\nname=\"value with spaces\"";
   await input("额外的智能体参数", text);
   await input("Herdr 会话", "scheduled");
   const files = changed.mock.lastCall![0].files;
   expect(JSON.parse(files[1].content)).toEqual({
-    agent: "codex",
-    session: "scheduled",
-    title: "巡检",
-    arguments: ["--dangerously-bypass-approvals-and-sandbox"],
-    extra_arguments: text,
+    runner: { kind: "codex", session: "scheduled", title: "巡检" },
+    launch: {
+      arguments: ["-m model-id", "-c", 'name="value with spaces"'],
+    },
+    execution: { wait_timeout_seconds: 1800 },
   });
   expect(files[0]).toEqual(draft.files![0]);
   expect(container.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(
@@ -112,9 +110,9 @@ it("reflects edits from the script file and prevents input while saving", async 
       {
         ...draft.files![1],
         content: JSON.stringify({
-          agent: "codex",
-          session: "other",
-          extra_arguments: "--model another-model",
+          runner: { kind: "codex", session: "other", title: "巡检" },
+          launch: { arguments: ["--model another-model"] },
+          execution: { wait_timeout_seconds: 1800 },
         }),
       },
     ],

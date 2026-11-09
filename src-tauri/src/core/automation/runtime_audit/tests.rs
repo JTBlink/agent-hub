@@ -47,7 +47,7 @@ fn reports_embedded_implementations_without_overwriting_custom_business_files() 
     let mut definition = draft(Provider::System);
     definition.files = vec![
         AutomationScriptFile {
-            path: "config/herdr.json".into(),
+            path: "config/agent.json".into(),
             content: "{}".into(),
         },
         AutomationScriptFile {

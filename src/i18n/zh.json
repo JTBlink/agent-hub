@@ -544,7 +544,7 @@
     "advanced": "高级",
     "extraAgentArguments": "额外的智能体参数",
     "extraAgentArgumentsPlaceholder": "-m model-id -c model_reasoning_effort=high",
-    "extraAgentArgumentsHelp": "每次新会话时追加到默认启动参数之后。包含空格的值请加引号。",
+    "extraAgentArgumentsHelp": "额外参数每行一个 argv，任务参数会追加到全局启动参数之后。",
     "herdrSession": "Herdr 会话",
     "herdrScheduleHelp": "AgentHub 按日程发起任务，并复用设置中的 Agent 启动命令和参数；Herdr 服务需保持运行。上一轮仍在运行时跳过本次触发。",
     "optionalAgent": "智能体（可选）",
@@ -565,7 +565,30 @@
     "exportPackage": "导出任务",
     "migratePackage": "迁移为独立任务包",
     "addPackage": "添加任务",
-    "added": "已添加"
+    "added": "已添加",
+    "agentWaitTimeout": "Agent 等待期限（秒）",
+    "agentWaitTimeoutHelp": "Agent 等待期限范围为 60–7200 秒；超时只停止等待并保留会话。",
+    "configurationInfo": "自动化配置",
+    "configurationTitle": "自动化配置",
+    "configurationInfoHelp": "Agent 任务配置采用三层结构：运行器、启动参数和执行策略。普通脚本任务无需配置 Agent 文件。",
+    "configurationRunnerHelp": "runner 选择 Agent 类型、Herdr 会话和任务标题。",
+    "configurationLaunchHelp": "launch.arguments 每行一个参数，按字面追加到全局启动参数。",
+    "configurationExecutionHelp": "execution.wait_timeout_seconds 控制单轮等待结果的最长时间。",
+    "configurationTasks": "可配置任务",
+    "configurationGlobalTitle": "通用 Agent 配置",
+    "configurationGlobalHelp": "这里的启动指令会被所有新建 Agent 会话复用，修改后立即对后续任务生效。",
+    "configurationDefaultAgent": "默认 Agent",
+    "openGlobalConfigInVscode": "在 VS Code 中打开通用配置",
+    "configurationNoOverrides": "当前没有任务级启动指令覆盖，将使用 Agent 默认启动指令。",
+    "sharedAgentSettingsTitle": "Agent 启动参数统一在设置中维护",
+    "sharedAgentSettingsHelp": "自动化任务直接复用设置页中的 Agent、启动指令和参数。这里不再复制一份，避免两处配置不一致。",
+    "openAgentSettings": "打开 Agent 设置",
+    "configurationTaskHelp": "任务专属参数、会话和等待期限在任务配置中维护。",
+    "configurationNoTasks": "暂无可配置的 Agent 任务。",
+    "openConfigInVscode": "在 VS Code 中打开",
+    "editConfiguration": "编辑配置",
+    "configurationPathUnavailable": "任务配置目录不可用，请先刷新任务列表。",
+    "gitFormatFiles": "config/task.json 的 files 列出相对任务根目录的文件路径。TASK.md 为任务说明入口；JSON 配置放在 config/，脚本放在 scripts/，按需资料放在 references/，提示词固定放在 prompts/prompt.md。"
   },
   "app": {
     "name": "agent-hub"
@@ -2238,7 +2261,7 @@
     "gitFormatEntry": "推荐每个任务以 TASK.md 说明用途和流程，以 config/task.json 声明名称、执行命令、日程和文件清单；兼容旧版根目录 task.json。只有说明或脚本不能替代清单。",
     "gitFormatStructure": "推荐的任务仓库目录结构",
     "gitFormatScan": "任务可放在仓库根目录或子目录。所选目录没有 config/task.json 或旧版 task.json 且存在 automations/ 时，只扫描 automations/；否则从所选目录递归查找。最多扫描 6 层，跳过隐藏目录、skills 和常见构建／依赖目录。",
-    "gitFormatFiles": "config/task.json 的 files 列出相对任务根目录的文件路径。TASK.md 为任务说明入口；JSON 配置放在 config/，脚本放在 scripts/，按需资料放在 references/，提示词固定放在 prompts/prompt.md。兼容旧版根目录 task.json、README.md 和 herdr.json。",
+    "gitFormatFiles": "config/task.json 的 files 列出相对任务根目录的文件路径。TASK.md 为任务说明入口；JSON 配置放在 config/，脚本放在 scripts/，按需资料放在 references/，提示词固定放在 prompts/prompt.md。",
     "gitFormatPlatform": "schema_version 必须为 1；shell 必须匹配本机：macOS / Linux 用 sh，Windows 用 powershell。",
     "gitFormatPortable": "共享定义中的 workdir、script_dir 留空或设为 null，本机项目在添加时选择。依赖在顶层 dependencies 声明。",
     "gitFormatExample": "查看最小任务说明、配置与脚本示例",
@@ -2309,7 +2332,8 @@
     "herdrUpdateAvailable": "Herdr {{version}} · 更新",
     "herdrBusy": "当前 Shell 忙碌或已有输入，请在空闲提示符重试或新建终端",
     "error": "终端操作失败",
-    "inputFull": "终端输入队列已满，请稍后重试"
+    "inputFull": "终端输入队列已满，请稍后重试",
+    "herdrAgentSettings": "Herdr Agent 设置…"
   },
   "tasks": {
     "reviewActions": {

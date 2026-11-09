@@ -1,0 +1,13 @@
+{
+  "runner": {
+    "kind": "default",
+    "session": "default",
+    "title": "项目巡检"
+  },
+  "launch": {
+    "arguments": []
+  },
+  "execution": {
+    "wait_timeout_seconds": 1800
+  }
+}

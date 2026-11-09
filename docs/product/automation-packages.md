@@ -42,7 +42,7 @@ agent-hub-cli automations migrate <legacy-task-id>
 
 Windows 任务使用 `shell: "powershell"` 和相应的 `.ps1` 入口。Python 依赖可声明为 `{"kind":"python","packages":["package-name==1.0.0"]}`，外部工具使用 `{"kind":"command","name":"git"}`。外部命令只检查，不修改用户已有的工具安装。
 
-任务以根目录 `TASK.md` 为说明入口，`prompts/prompt.md` 保存 Agent 目标，`config/` 集中保存 `task.json`、`herdr.json` 等 JSON 配置，`scripts/` 保存可独立运行的入口，`references/` 按需保存说明；检查点位于 `.local/state/`。支持的内置网络权限安装会请求系统管理员授权，计划默认暂停，安装不重置网络。导入包中的普通 `setup.sh` 不作为安装钩子自动执行。
+任务以根目录 `TASK.md` 为说明入口，`prompts/prompt.md` 保存 Agent 目标，`config/` 集中保存 `task.json`、`agent.json` 等 JSON 配置，`scripts/` 保存可独立运行的入口，`references/` 按需保存说明；检查点位于 `.local/state/`。支持的内置网络权限安装会请求系统管理员授权，计划默认暂停，安装不重置网络。导入包中的普通 `setup.sh` 不作为安装钩子自动执行。
 
 运行环境准备失败时，详情显示具体错误；修复条件后可编辑保存或运行重试。更新中断时保留恢复信息，重试会先恢复之前的内容。备份恢复直接创建默认暂停的任务，可重新选择本机项目。
 
@@ -86,7 +86,7 @@ agent-hub-cli automations migrate <task-id>
 
 说明采用与 Skill 相近的分层结构：先读 TASK.md 了解用途和流程，运行脚本无需把实现载入 Agent 上下文；只在需要时读取 references/ 的细节。TASK.md 不重复维护日程、依赖或版本，实际配置以 config/task.json 为准。
 
-旧版根目录清单和 README.md、herdr.json 继续可用；仅查看或更新旧任务不会自动搬迁清单。新旧 task.json 同时存在时报告冲突，不静默任选一份。JSON 单文件导入导出格式保持兼容，文件清单始终相对包根目录。
+清单统一使用 `config/task.json`，Agent 配置统一使用 `config/agent.json`。旧版根目录清单和 Agent 配置不再读取；升级时删除旧文件并重新导入任务包。JSON 单文件导入导出使用当前格式，文件清单始终相对包根目录。
 
 ## 执行记录与处理状态
 

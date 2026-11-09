@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import type { AutomationDraft, AutomationScriptFile } from "./tauri";
-import { automationHerdrConfig, automationPromptFile } from "./automation";
+import { automationAgentConfig, automationPromptFile } from "./automation";
+import { resolveAutomationAgent } from "./automationAgents";
 
 function draft(files: AutomationScriptFile[]): AutomationDraft {
   return {
@@ -15,22 +16,25 @@ function draft(files: AutomationScriptFile[]): AutomationDraft {
   };
 }
 
-it("prefers canonical prompt and configuration folders over legacy entries", () => {
+it("reads the canonical Agent configuration", () => {
   const task = draft([
-    { path: "prompt.md", content: "Legacy request" },
-    { path: "herdr.json", content: '{"agent":"legacy"}' },
+    { path: "prompt.md", content: "Unused request" },
     { path: "prompts/prompt.md", content: "Current request" },
-    { path: "config/herdr.json", content: '{"agent":"codex"}' },
+    {
+      path: "config/agent.json",
+      content: JSON.stringify({
+        runner: { kind: "codex", session: "default", title: "Review" },
+        launch: { arguments: [] },
+        execution: { wait_timeout_seconds: 1800 },
+      }),
+    },
   ]);
   expect(automationPromptFile(task)?.content).toBe("Current request");
-  expect(automationHerdrConfig(task)?.agent).toBe("codex");
+  expect(automationAgentConfig(task)?.agent).toBe("codex");
 });
 
-it("keeps legacy prompt and agent settings readable", () => {
-  const task = draft([
-    { path: "prompt.md", content: "Existing request" },
-    { path: "herdr.json", content: '{"agent":"codex"}' },
-  ]);
-  expect(automationPromptFile(task)?.content).toBe("Existing request");
-  expect(automationHerdrConfig(task)?.agent).toBe("codex");
+it("resolves the legacy default runner to the configured Agent kind", () => {
+  expect(resolveAutomationAgent("default", "claude_code")).toBe("claude");
+  expect(resolveAutomationAgent("default", "custom-agent")).toBe("custom-agent");
+  expect(resolveAutomationAgent("codex", "claude_code")).toBe("codex");
 });

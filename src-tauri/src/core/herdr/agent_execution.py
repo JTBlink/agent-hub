@@ -124,7 +124,7 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
-def run(binary, config, session, kind, extra, prompt, cwd, bridge, wait_timeout_seconds=1800):
+def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_timeout_seconds=1800):
     sessions = command(binary, ["session", "list", "--json"])["sessions"]
     if not any(item.get("name") == session and item.get("running") for item in sessions):
         raise HerdrError(f"Herdr 会话 {session} 未运行，请先在 Herdr 中启动该会话。")
@@ -167,7 +167,7 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, wait_timeout_
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
-    created = create_task_pane(invoke, previous, agent, session, cwd, config.get("title", "AgentHub task"), available_pane)
+    created = create_task_pane(invoke, previous, agent, session, cwd, title, available_pane)
     pane = created["pane_id"]
     name = "ah-" + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + "-" + uuid.uuid4().hex[:6]
     state = {"session": session, "pane": pane, "cwd": str(cwd), "workspace": created["workspace_id"],

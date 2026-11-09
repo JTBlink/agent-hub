@@ -242,7 +242,7 @@ export function AutomationDiscovery({
           </div>
           <pre className="overflow-x-auto rounded-lg bg-background p-3 text-xs text-secondary">
             {
-              "example-task/\n├── TASK.md\n├── prompts/\n│   └── prompt.md\n├── config/\n│   ├── task.json\n│   └── herdr.json\n├── scripts/\n└── references/"
+              "example-task/\n├── TASK.md\n├── prompts/\n│   └── prompt.md\n├── config/\n│   ├── task.json\n│   └── agent.json\n├── scripts/\n└── references/"
             }
           </pre>
         </section>

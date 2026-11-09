@@ -22,8 +22,8 @@ fn lifecycle_preserves_ownership_and_recovers_without_duplicate_delivery() {
     )
     .unwrap();
     std::fs::write(
-        root.path().join("config/herdr.json"),
-        r#"{"agent":"codex","session":"default","arguments":[]}"#,
+        root.path().join("config/agent.json"),
+        r#"{"runner":{"kind":"codex","session":"default","title":"Review"},"launch":{"arguments":[]},"execution":{"wait_timeout_seconds":1800}}"#,
     )
     .unwrap();
     std::fs::write(

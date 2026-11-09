@@ -7,6 +7,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::get_build_info,
         commands::agent_usage::get_agent_usage,
         commands::agent_launch::agent_launch_settings,
+        commands::agent_launch::agent_launch_config_path,
         commands::agent_launch::agent_launch_plan,
         commands::agent_launch::task_native_agent_launch,
         commands::agent_launch::save_agent_launch_settings,

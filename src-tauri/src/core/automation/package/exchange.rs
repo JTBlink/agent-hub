@@ -24,10 +24,10 @@ pub(super) fn validate_path(path: &str) -> Result<(), String> {
     if !["scripts/", "config/", "prompts/", "references/"]
         .iter()
         .any(|prefix| path.starts_with(prefix))
-        && !["TASK.md", "README.md", "prompt.md", "herdr.json"].contains(&path)
+        && !["TASK.md", "README.md", "prompt.md"].contains(&path)
     {
         return Err(
-            "Task files must be under scripts/, config/, prompts/ or references/, or be TASK.md or a supported legacy root file".into(),
+            "Task files must be under scripts/, config/, prompts/ or references/, or be TASK.md or README.md".into(),
         );
     }
     if path.split('/').any(|part| part.starts_with('.')) {
@@ -308,7 +308,7 @@ pub(in crate::core::automation) fn normalize(draft: &mut AutomationDraft) {
             .any(|prefix| file.path.starts_with(prefix))
         {
             file.path.clone()
-        } else if ["TASK.md", "README.md", "prompt.md", "herdr.json"].contains(&name) {
+        } else if ["TASK.md", "README.md", "prompt.md"].contains(&name) {
             name.to_string()
         } else {
             format!("scripts/{name}")

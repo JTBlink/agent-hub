@@ -1,4 +1,4 @@
-import { useContext, useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import {
   Globe,
   FileText,
@@ -6,6 +6,7 @@ import {
   Settings,
   Smartphone,
   TerminalSquare,
+  Check,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -20,23 +21,6 @@ import type { CardAction } from "../CardActionMenu";
 import type { ToolInfo } from "../../lib/tauri";
 import { queuePreviewWeb } from "../../features/preview/shared/openRequests";
 import { useDefaultAgentKey } from "../../hooks/useDefaultAgentKey";
-import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
-
-function HerdrDefaultAgentIcon({
-  agents,
-}: {
-  agents: ReturnType<typeof installedTerminalAgents>;
-}) {
-  const key = useDefaultAgentKey();
-  const agent = defaultTerminalAgent(agents, key);
-  return agent ? (
-    <AgentIcon
-      agentKey={agent.toolKey}
-      displayName={agent.label}
-      className="h-3.5 w-3.5 border-0 bg-transparent"
-    />
-  ) : null;
-}
 
 export function TerminalNewMenuContent({
   tools,
@@ -44,6 +28,7 @@ export function TerminalNewMenuContent({
   onNew,
   onNewMarkdown,
   onHerdr,
+  onHerdrSettings,
   herdrBusy,
   close,
 }: {
@@ -51,15 +36,16 @@ export function TerminalNewMenuContent({
   terminalDisabled: boolean;
   onNew: (agent?: HerdrAgent) => void;
   onNewMarkdown?: () => void;
-  onHerdr?: () => void;
+  onHerdr?: (agent: HerdrAgent) => void;
+  onHerdrSettings?: () => void;
   herdrBusy?: boolean;
   close: () => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const sidebar = useContext(SidebarVisibilityContext);
   const [query, setQuery] = useState("");
   const agents = installedTerminalAgents(tools);
+  const defaultAgent = defaultTerminalAgent(agents, useDefaultAgentKey());
   const actions: CardAction[] = [
     {
       key: "terminal",
@@ -95,27 +81,16 @@ export function TerminalNewMenuContent({
           mobile: true,
         }),
     },
-    ...(onHerdr
-      ? [
-          {
-            key: "herdr",
-            label: t("terminal.openHerdr"),
-            separatorBefore: true,
-            icon: <HerdrIcon width={16} height={16} viewBox="0 0 32 32" />,
-            disabled: terminalDisabled || herdrBusy,
-            onSelect: onHerdr,
-          },
-        ]
-      : []),
     ...agents.map(({ id, label, toolKey }, index) => ({
       key: id,
       label,
-      separatorBefore: index === 0 && !onHerdr,
+      separatorBefore: index === 0,
+      checked: defaultAgent?.id === id,
       disabled: terminalDisabled,
       icon: (
         <AgentIcon
           agentKey={toolKey}
-          className="h-4 w-4 border-0 bg-transparent"
+          className="h-5 w-5 border-0 bg-transparent"
         />
       ),
       onSelect: () => onNew(id),
@@ -127,6 +102,16 @@ export function TerminalNewMenuContent({
       separatorBefore: true,
       onSelect: () => navigate("/settings#agents"),
     },
+    ...(onHerdrSettings
+      ? [
+          {
+            key: "herdr-settings",
+            label: t("terminal.herdrAgentSettings"),
+            icon: <HerdrIcon width={16} height={16} viewBox="0 0 32 32" />,
+            onSelect: onHerdrSettings,
+          },
+        ]
+      : []),
   ];
   const filtered = actions.filter((action) =>
     action.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
@@ -138,7 +123,7 @@ export function TerminalNewMenuContent({
     }
     const buttons = [
       ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
-        'button[role="menuitem"]:not(:disabled)',
+        'button[role="menuitem"]:not(:disabled), button[role="menuitemradio"]:not(:disabled)',
       ),
     ];
     const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
@@ -186,48 +171,52 @@ export function TerminalNewMenuContent({
                 className="my-1 border-t border-border-subtle"
               />
             )}
-            <div
-              className={
-                action.key === "herdr"
-                  ? "group/herdr flex items-center gap-1 rounded-md hover:bg-surface-hover focus-within:bg-surface-hover focus-within:ring-2 focus-within:ring-inset focus-within:ring-accent"
-                  : "flex items-center gap-1"
-              }
-            >
+            <div className="group/agent flex items-center gap-1 rounded-md hover:bg-surface-hover focus-within:bg-surface-hover">
               <button
                 type="button"
-                role="menuitem"
+                role={
+                  action.checked === undefined ? "menuitem" : "menuitemradio"
+                }
+                aria-checked={action.checked}
                 disabled={action.disabled}
                 onClick={() => {
                   close();
                   action.onSelect();
                 }}
-                className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-secondary outline-none disabled:cursor-not-allowed disabled:opacity-40 ${action.key === "herdr" ? "" : "hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"}`}
+                className={`flex min-w-0 flex-1 items-center gap-3 rounded-md px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40 ${action.checked ? "text-accent" : "text-secondary"}`}
               >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted">
                   {action.icon}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{action.label}</span>
+                {action.checked && (
+                  <Check
+                    size={16}
+                    className="shrink-0 text-accent"
+                    aria-hidden="true"
+                  />
+                )}
               </button>
-              {action.key === "herdr" && (
-                <div className="pointer-events-none flex shrink-0 items-center gap-1 pr-1 opacity-0 transition-opacity group-hover/herdr:pointer-events-auto group-hover/herdr:opacity-100 group-focus-within/herdr:pointer-events-auto group-focus-within/herdr:opacity-100">
-                  <span className="flex h-7 w-7 items-center justify-center">
-                    <HerdrDefaultAgentIcon agents={agents} />
-                  </span>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    aria-label={t("herdr.settings")}
-                    title={t("herdr.settings")}
-                    disabled={!sidebar?.openSidebarPanel}
-                    className="app-button-ghost h-7 w-7 shrink-0 p-0 focus-visible:ring-2 focus-visible:ring-accent"
-                    onClick={() => {
-                      close();
-                      sidebar?.openSidebarPanel?.("herdr", "settings");
-                    }}
-                  >
-                    <Settings size={16} aria-hidden="true" />
-                  </button>
-                </div>
+              {onHerdr && agents.some((agent) => agent.id === action.key) && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  aria-label={`${t("terminal.openHerdr")} ${action.label}`}
+                  title={`${t("terminal.openHerdr")} ${action.label}`}
+                  disabled={action.disabled || herdrBusy}
+                  className="app-button-ghost pointer-events-none mr-1 h-7 w-7 shrink-0 p-0 text-muted opacity-0 transition-opacity group-hover/agent:pointer-events-auto group-hover/agent:opacity-70 group-focus-within/agent:pointer-events-auto group-focus-within/agent:opacity-70 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-70"
+                  onClick={() => {
+                    close();
+                    onHerdr(action.key as HerdrAgent);
+                  }}
+                >
+                  <HerdrIcon
+                    width={16}
+                    height={16}
+                    viewBox="0 0 32 32"
+                    aria-hidden="true"
+                  />
+                </button>
               )}
             </div>
           </div>

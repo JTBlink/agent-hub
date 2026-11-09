@@ -13,16 +13,16 @@ import networkReadme from "../../automations/system/network-reset/TASK.md?raw";
 import maintenanceManifestCatalog from "../../automations/engineering/agent-maintenance/config/catalog.json";
 import mrManifestCatalog from "../../automations/engineering/agent-mr-processing/config/catalog.json";
 import mrPrompt from "../../automations/engineering/agent-mr-processing/prompts/prompt.md?raw";
-import mrConfig from "../../automations/engineering/agent-mr-processing/config/herdr.json?raw";
+import mrConfig from "../../automations/engineering/agent-mr-processing/config/agent.json?raw";
 import issueManifestCatalog from "../../automations/engineering/agent-issue-processing/config/catalog.json";
 import issuePrompt from "../../automations/engineering/agent-issue-processing/prompts/prompt.md?raw";
-import issueConfig from "../../automations/engineering/agent-issue-processing/config/herdr.json?raw";
+import issueConfig from "../../automations/engineering/agent-issue-processing/config/agent.json?raw";
 import React from "react";
 import diskCleanupManifestCatalog from "../../automations/system/disk-cleanup/config/catalog.json";
 import diskCleanupScript from "../../automations/system/disk-cleanup/scripts/disk-cleanup.py?raw";
 import herdrScript from "../../automations/_shared/agent-entry.py?raw";
 import maintenancePrompt from "../../automations/engineering/agent-maintenance/prompts/prompt.md?raw";
-import maintenanceConfig from "../../automations/engineering/agent-maintenance/config/herdr.json?raw";
+import maintenanceConfig from "../../automations/engineering/agent-maintenance/config/agent.json?raw";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes, Outlet } from "react-router-dom";
 import { PreviewRouteMarker } from "./PreviewRouteMarker";
@@ -106,7 +106,7 @@ const previewAgentTemplates: AutomationTemplate[] = [
           ],
         }),
       },
-      { path: "config/herdr.json", content: config },
+      { path: "config/agent.json", content: config },
       {
         path: "scripts/run.sh",
         content:

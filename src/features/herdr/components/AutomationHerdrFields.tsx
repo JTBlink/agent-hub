@@ -1,6 +1,6 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { automationHerdrConfig } from "../../../lib/automation";
+import { automationAgentConfig } from "../../../lib/automation";
 import type { AutomationDraft } from "../../../lib/tauri";
 
 export function AutomationHerdrFields({
@@ -13,8 +13,9 @@ export function AutomationHerdrFields({
   onChange: (value: Partial<AutomationDraft>) => void;
 }) {
   const { t } = useTranslation();
-  const helpId = useId();
-  const config = automationHerdrConfig(draft);
+  const argumentsHelpId = useId();
+  const timeoutHelpId = useId();
+  const config = automationAgentConfig(draft);
   if (!config) return null;
   const update = (value: object) =>
     onChange({
@@ -28,6 +29,9 @@ export function AutomationHerdrFields({
           : file,
       ),
     });
+  const runner = config.value.runner;
+  const launch = config.value.launch;
+  const execution = config.value.execution;
   return (
     <>
       <label className="block space-y-2">
@@ -37,20 +41,22 @@ export function AutomationHerdrFields({
         <textarea
           className="app-input w-full resize-y font-mono text-xs"
           aria-label={t("automation.extraAgentArguments")}
-          aria-describedby={helpId}
+          aria-describedby={argumentsHelpId}
           disabled={disabled}
           rows={3}
           spellCheck={false}
           placeholder={t("automation.extraAgentArgumentsPlaceholder")}
-          value={
-            "extra_arguments" in config.value &&
-            typeof config.value.extra_arguments === "string"
-              ? config.value.extra_arguments
-              : ""
+          value={launch.arguments.join("\n")}
+          onChange={(event) =>
+            update({
+              launch: {
+                ...launch,
+                arguments: event.target.value.split("\n").filter(Boolean),
+              },
+            })
           }
-          onChange={(event) => update({ extra_arguments: event.target.value })}
         />
-        <span id={helpId} className="block text-xs leading-5 text-muted">
+        <span id={argumentsHelpId} className="block text-xs leading-5 text-muted">
           {t("automation.extraAgentArgumentsHelp")}
         </span>
       </label>
@@ -62,14 +68,35 @@ export function AutomationHerdrFields({
           className="app-input w-full"
           aria-label={t("automation.herdrSession")}
           disabled={disabled}
-          value={
-            "session" in config.value &&
-            typeof config.value.session === "string"
-              ? config.value.session
-              : "default"
+          value={runner.session}
+          onChange={(event) =>
+            update({ runner: { ...runner, session: event.target.value } })
           }
-          onChange={(event) => update({ session: event.target.value })}
         />
+      </label>
+      <label className="block space-y-2">
+        <span className="text-xs font-medium text-muted">
+          {t("automation.agentWaitTimeout")}
+        </span>
+        <input
+          className="app-input w-full"
+          aria-label={t("automation.agentWaitTimeout")}
+          aria-describedby={timeoutHelpId}
+          disabled={disabled}
+          type="number"
+          min={60}
+          max={7200}
+          step={60}
+          value={execution.wait_timeout_seconds}
+          onChange={(event) => {
+            const seconds = Number(event.target.value);
+            if (Number.isInteger(seconds))
+              update({ execution: { wait_timeout_seconds: seconds } });
+          }}
+        />
+        <span id={timeoutHelpId} className="block text-xs leading-5 text-muted">
+          {t("automation.agentWaitTimeoutHelp")}
+        </span>
       </label>
     </>
   );

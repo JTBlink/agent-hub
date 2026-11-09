@@ -544,7 +544,7 @@
     "advanced": "Advanced",
     "extraAgentArguments": "Extra agent arguments",
     "extraAgentArgumentsPlaceholder": "-m model-id -c model_reasoning_effort=high",
-    "extraAgentArgumentsHelp": "Appended after the default launch arguments for each new session. Quote values that contain spaces.",
+    "extraAgentArgumentsHelp": "One argv per line. Task arguments are appended after the global launch arguments.",
     "herdrSession": "Herdr session",
     "herdrScheduleHelp": "AgentHub triggers the schedule using the Agent command and arguments from Settings; the Herdr service must remain running. A trigger is skipped while the prior agent is still working.",
     "optionalAgent": "Agent (optional)",
@@ -565,7 +565,30 @@
     "exportPackage": "Export task",
     "migratePackage": "Migrate to task package",
     "addPackage": "Add task",
-    "added": "Added"
+    "added": "Added",
+    "agentWaitTimeout": "Agent wait timeout (seconds)",
+    "agentWaitTimeoutHelp": "Allowed range is 60–7200 seconds. A timeout only stops waiting and keeps the session.",
+    "configurationInfo": "Automation configuration",
+    "configurationTitle": "Automation configuration",
+    "configurationInfoHelp": "Agent task configuration has three layers: runner, launch arguments, and execution policy. Script-only tasks do not need an Agent file.",
+    "configurationRunnerHelp": "runner selects the Agent kind, Herdr session, and task title.",
+    "configurationLaunchHelp": "launch.arguments contains one literal argument per line and is appended to global launch arguments.",
+    "configurationExecutionHelp": "execution.wait_timeout_seconds limits how long one run waits for a result.",
+    "configurationTasks": "Configurable tasks",
+    "configurationGlobalTitle": "Shared Agent configuration",
+    "configurationGlobalHelp": "These launch instructions are reused by new Agent sessions and apply to future task runs.",
+    "configurationDefaultAgent": "Default Agent",
+    "openGlobalConfigInVscode": "Open shared config in VS Code",
+    "configurationNoOverrides": "No task-level launch overrides are saved. Agent defaults will be used.",
+    "sharedAgentSettingsTitle": "Maintain Agent launch arguments in Settings",
+    "sharedAgentSettingsHelp": "Automation tasks reuse the Agent, launch instruction, and arguments from Settings. They are not duplicated here.",
+    "openAgentSettings": "Open Agent settings",
+    "configurationTaskHelp": "Task-specific arguments, sessions, and wait limits are maintained in each task.",
+    "configurationNoTasks": "No Agent tasks are available.",
+    "openConfigInVscode": "Open in VS Code",
+    "editConfiguration": "Edit configuration",
+    "configurationPathUnavailable": "The task configuration directory is unavailable. Refresh the task list and try again.",
+    "gitFormatFiles": "The files in config/task.json are relative to the task root. TASK.md is the instruction entrypoint; JSON configuration belongs in config/, executable helpers in scripts/, optional documentation in references/, and Agent prompts in prompts/prompt.md."
   },
   "app": {
     "name": "agent-hub"
@@ -2241,7 +2264,7 @@
     "gitFormatEntry": "Use TASK.md for purpose and instructions, and config/task.json for the name, command, schedule and file list. Legacy root task.json remains supported. Instructions or scripts alone cannot replace the manifest.",
     "gitFormatStructure": "Recommended task repository layout",
     "gitFormatScan": "Tasks may be at the repository root or in subdirectories. If neither config/task.json nor legacy task.json exists in the selected directory and automations/ exists, only automations/ is scanned. Scanning reaches at most 6 levels and skips hidden, skills and common build/dependency directories.",
-    "gitFormatFiles": "The files in config/task.json are relative to the task root. TASK.md is the instruction entrypoint; JSON configuration belongs in config/, executable helpers in scripts/, optional documentation in references/, and Agent prompts in prompts/prompt.md. Legacy root task.json, README.md and herdr.json remain supported.",
+    "gitFormatFiles": "The files in config/task.json are relative to the task root. TASK.md is the instruction entrypoint; JSON configuration belongs in config/, executable helpers in scripts/, optional documentation in references/, and Agent prompts in prompts/prompt.md.",
     "gitFormatPlatform": "schema_version must be 1. shell must match this computer: sh on macOS / Linux, powershell on Windows.",
     "gitFormatPortable": "Omit workdir and script_dir or set them to null in shared definitions. Select the local project during adding. Declare dependencies at the top level.",
     "gitFormatExample": "Show minimal task instructions, configuration and script",
@@ -2312,7 +2335,8 @@
     "herdrUpdateAvailable": "Herdr {{version}} · Update",
     "herdrBusy": "Shell is busy or contains input. Retry at a fresh prompt or open a new terminal.",
     "error": "Terminal operation failed",
-    "inputFull": "Terminal input queue is full; try again shortly"
+    "inputFull": "Terminal input queue is full; try again shortly",
+    "herdrAgentSettings": "Herdr Agent settings…"
   },
   "tasks": {
     "reviewActions": {

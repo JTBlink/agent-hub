@@ -22,6 +22,7 @@ vi.mock("../lib/openInVscode", () => ({
 vi.mock("../lib/tauri", () => ({
   getProjects: vi.fn(),
   getToolStatus: vi.fn(),
+  getAgentLaunchSettings: vi.fn(),
   getAutomationOverview: vi.fn(),
   saveAutomation: vi.fn(),
   getAutomationCopyDraft: vi.fn(),
@@ -123,6 +124,11 @@ beforeEach(() => {
   localStorage.removeItem("agent-hub:tool-order");
   localStorage.removeItem("agent-hub:lobster-tool-order");
   vi.mocked(api.getToolStatus).mockReset().mockResolvedValue(localTools);
+  vi.mocked(api.getAgentLaunchSettings).mockReset().mockResolvedValue({
+    document: { schema_version: 1, default_agent: "codex", instructions: {} },
+    revision: "revision",
+    defaults: { codex: "codex" },
+  });
   vi.mocked(api.getProjects).mockReset().mockResolvedValue([]);
   vi.mocked(open).mockReset().mockResolvedValue(null);
   vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
@@ -163,11 +169,11 @@ beforeEach(() => {
         files: [
           { path: "agent-task/prompt.md", content: "" },
           {
-            path: "agent-task/herdr.json",
+            path: "agent-task/config/agent.json",
             content: JSON.stringify({
-              agent: "codex",
-              session: "default",
-              arguments: [],
+              runner: { kind: "codex", session: "default", title: "Agent task" },
+              launch: { arguments: [] },
+              execution: { wait_timeout_seconds: 1800 },
             }),
           },
           { path: "run.sh", content: "python3 agent.py" },
@@ -935,6 +941,46 @@ it.each([undefined, "/workspace/scripts"])(
   },
 );
 
+it("resolves a CLI-created default Agent task from the global Agent setting", async () => {
+  const task: api.AutomationTask = {
+    ...native,
+    id: "agent-hub:default-agent",
+    origin: "agent_hub",
+    can_edit: true,
+    can_run: true,
+    definition: {
+      ...hermes.definition!,
+      provider: "system",
+      name: "CLI 巡检",
+      content: "sh './run.sh'",
+      files: [
+        { path: "prompts/prompt.md", content: "检查项目" },
+        {
+          path: "config/agent.json",
+          content: JSON.stringify({
+            runner: { kind: "default", session: "default", title: "巡检" },
+            launch: { arguments: [] },
+            execution: { wait_timeout_seconds: 1800 },
+          }),
+        },
+      ],
+    },
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [task],
+    issues: [],
+    hermes_installed: false,
+  });
+  await render("/automation?task=" + encodeURIComponent(task.id));
+  await click("编辑自动化");
+  expect(
+    container.querySelector<HTMLSelectElement>(
+      'select[aria-label="智能体（可选）"]',
+    )?.value,
+  ).toBe("codex");
+  expect(container.textContent).not.toContain("未安装或未启用");
+});
+
 it("edits an agent prompt directly in the unified layout with a one-line launcher", async () => {
   vi.mocked(api.getAutomationTemplates).mockResolvedValue({
     shell: "sh",
@@ -956,11 +1002,11 @@ it("edits an agent prompt directly in the unified layout with a one-line launche
               content: "检查项目，只报告问题",
             },
             {
-              path: "agent-maintenance/herdr.json",
+              path: "agent-maintenance/config/agent.json",
               content: JSON.stringify({
-                agent: "codex",
-                session: "default",
-                arguments: ["--sandbox", "read-only"],
+                runner: { kind: "codex", session: "default", title: "巡检" },
+                launch: { arguments: ["--sandbox", "read-only"] },
+                execution: { wait_timeout_seconds: 1800 },
               }),
             },
             { path: "run.sh", content: "python3 agent.py" },
@@ -1004,11 +1050,12 @@ it("edits an agent prompt directly in the unified layout with a one-line launche
   ).toBe("只检查失败的验证，保留所有文件。");
   expect(
     JSON.parse(
-      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
+      saved.files!.find((file) => file.path.endsWith("agent.json"))!.content,
     ),
   ).toEqual({
-    agent: "claude",
-    session: "default",
+    runner: { kind: "claude", session: "default", title: "巡检" },
+    launch: { arguments: [] },
+    execution: { wait_timeout_seconds: 1800 },
   });
 });
 
@@ -1052,13 +1099,12 @@ it("saves extra agent arguments from advanced settings and resets them when swit
   const saved = vi.mocked(api.saveAutomation).mock.calls[0][2];
   expect(
     JSON.parse(
-      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
+      saved.files!.find((file) => file.path.endsWith("agent.json"))!.content,
     ),
   ).toEqual(
     expect.objectContaining({
-      agent: "codex",
-      session: "scheduled",
-      extra_arguments: "-m model-id -c 'name=\"value with spaces\"'",
+      runner: expect.objectContaining({ kind: "codex", session: "scheduled" }),
+      launch: { arguments: ["-m model-id -c 'name=\"value with spaces\"'"] },
     }),
   );
 });
@@ -1135,8 +1181,8 @@ it("offers the same installed agents and order as the global workspace and prese
   expect(saved.name).toBe("自定义任务");
   expect(
     JSON.parse(
-      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
-    ).agent,
+      saved.files!.find((file) => file.path.endsWith("agent.json"))!.content,
+    ).runner.kind,
   ).toBe("opencode");
 });
 
@@ -1175,8 +1221,8 @@ it("launches a newly selected Hermes Agent through Herdr rather than changing it
   expect(saved.provider).toBe("system");
   expect(
     JSON.parse(
-      saved.files!.find((file) => file.path.endsWith("herdr.json"))!.content,
-    ).agent,
+      saved.files!.find((file) => file.path.endsWith("agent.json"))!.content,
+    ).runner.kind,
   ).toBe("hermes");
 });
 
@@ -1329,6 +1375,34 @@ async function openBackupRestore() {
   expect(restore.textContent).toBe("从备份恢复");
   await act(async () => restore.click());
 }
+
+it("shows the generic Agent configuration from the automation overflow menu", async () => {
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [
+      {
+        ...hermes,
+        origin: "agent_hub",
+        definition: {
+          ...hermes.definition!,
+          provider: "system",
+          script_dir: "/workspace/task",
+          files: [{ path: "config/agent.json", content: "{}" }],
+        },
+      },
+    ],
+    issues: [],
+    hermes_installed: false,
+  });
+  await render();
+  await ariaClick("更多操作");
+  const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+    .find((button) => button.textContent === "自动化配置")!;
+  await act(async () => item.click());
+  const dialog = document.querySelector('[role="dialog"]')!;
+  expect(dialog.textContent).toContain("运行器");
+  expect(dialog.textContent).toContain("任务专属参数");
+  expect(dialog.textContent).toContain("仓库审计");
+});
 
 it("routes a blank new task to recommended discovery without creating anything", async () => {
   await render();

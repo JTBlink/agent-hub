@@ -923,7 +923,7 @@
         source: "内置 · AgentHub",
         installed: false,
         files:
-          "项目巡检/\n├── task.json\n├── prompt.md\n├── herdr.json\n├── README.md\n└── scripts/\n    ├── run.sh\n    └── agent.py",
+          "项目巡检/\n├── task.json\n├── prompt.md\n├── agent.json\n├── README.md\n└── scripts/\n    ├── run.sh\n    └── agent.py",
       },
       {
         name: "清理磁盘缓存",
@@ -1024,7 +1024,7 @@
           (kind === "automations" ? "任务包" : "Skill") +
           "</button>" +
           (kind === "automations"
-            ? '<div class="code-tree">daily-project-review/\n├── task.json\n├── README.md\n├── prompt.md\n├── herdr.json\n└── scripts/\n    ├── run.sh\n    └── agent.py</div><p>任务的本机状态、依赖和日志在安装后独立生成。</p>'
+            ? '<div class="code-tree">daily-project-review/\n├── task.json\n├── README.md\n├── prompt.md\n├── agent.json\n└── scripts/\n    ├── run.sh\n    └── agent.py</div><p>任务的本机状态、依赖和日志在安装后独立生成。</p>'
             : "") +
           "</div>";
         return;

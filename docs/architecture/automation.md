@@ -13,7 +13,7 @@
 ├── TASK.md                  # 任务说明入口
 ├── config/
 │   ├── task.json            # 清单、日程、依赖与文件列表
-│   └── herdr.json           # Herdr 任务；其他 JSON 配置同放此处
+│   └── agent.json           # Herdr 任务；其他 JSON 配置同放此处
 ├── scripts/                 # 独立可执行入口
 ├── references/              # 按需资料，无需时不创建
 ├── prompts/
@@ -126,11 +126,11 @@ Git 内容恢复只更新同步定义，不变更运行中的本机任务。GUI 
 
 ## Herdr Agent 模板与提示词编辑
 
-包含 `prompts/prompt.md` 的 Agent 任务直接在主编辑区编辑提示词；该正文仍作为声明文件保存、同步与备份，界面不另外维护一份提示词状态。Shell 命令默认一行，现有多行命令保留；Agent 的启动命令和脚本收进高级执行设置。`config/herdr.json` 保存智能体、明确的 Herdr 会话及原生参数，右侧提供智能体与项目工作区入口。
+包含 `prompts/prompt.md` 的 Agent 任务直接在主编辑区编辑提示词；该正文仍作为声明文件保存、同步与备份，界面不另外维护一份提示词状态。Shell 命令默认一行，现有多行命令保留；Agent 的启动命令和脚本收进高级执行设置。`config/agent.json` 保存通用运行器、启动参数和执行策略，右侧提供智能体与项目工作区入口。
 
 Agent 模板通过薄入口调用 `core/agent_execution` 与 `core/herdr` 的共用执行能力，系统调度发起后先核实目标会话已运行，再以所选项目目录创建工作区或任务标签页，使用返回的面板 ID 启动 Agent 并投递提示词，所有创建均不抢占焦点。不使用 UI 当前焦点隐式定位，不自动启动或重启 Herdr 服务，不自动回答审批。命令参数以 argv 传递。声明 JSON／Markdown 文件读取时去除 AgentHub 所有权头。
 
-智能体选择、执行说明、额外参数与 Herdr 会话放在同一组，高级区域提供额外的智能体参数输入，原文保存在 `config/herdr.json` 的 `extra_arguments`，与默认 `arguments` 分开管理；启动时按命令行引号解析并追加到默认参数之后，不经 Shell 执行。切换 Agent 清空原 Agent 的额外参数，Codex 默认使用 `--dangerously-bypass-approvals-and-sandbox` 以无人值守执行。已有任务保存的自定义参数保持原样。`agent get` 等状态命令按 JSON 解析，`agent read` 的终端输出按纯文本接收；等待确认时只读取可见区域，不滚动应用历史。
+智能体选择、执行说明、参数与 Herdr 会话放在同一组，高级区域提供会话、参数和等待期限。`config/agent.json` 使用 `runner`、`launch`、`execution` 三层结构；参数每行一个 argv，按字面追加到默认参数之后，不经 Shell 或引号解析。切换 Agent 清空任务参数，Codex 默认使用 `--dangerously-bypass-approvals-and-sandbox` 以无人值守执行。`agent get` 等状态命令按 JSON 解析，`agent read` 的终端输出按纯文本接收；等待确认时只读取可见区域，不滚动应用历史。
 
 本地 `.herdr-run.json` 在布局创建及提示词投递之前记录状态。上次仍在工作时直接跳过当前触发，返回成功并记录跳过原因，不排队、不新建布局、不读取历史或重复投递，保留本地状态；即使上次记录已完成，也重新核对 Agent 的当前状态。等待确认、状态不明或投递结果不确定时不重复投递；用户在 Herdr 确认后可处理该本地状态。它不属于声明文件，不进入任务定义备份。运行记录保存面板标识和可读取的终端输出；Herdr 就绪不等同于任务验证成功。
 

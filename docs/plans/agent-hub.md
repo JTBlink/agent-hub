@@ -334,10 +334,12 @@ repository/
 │   └── development/example-skill/SKILL.md
 └── automations/
     └── development/daily-project-review/
-        ├── task.json
-        ├── README.md
-        ├── prompt.md       # 智能体任务按需提供
-        ├── herdr.json      # Herdr 配置按需提供
+        ├── TASK.md
+        ├── prompts/
+        │   └── prompt.md   # 智能体任务按需提供
+        ├── config/
+        │   ├── task.json
+        │   └── agent.json  # Agent 运行器配置按需提供
         └── scripts/
             ├── run.sh      # 按目标平台提供入口
             └── agent.py

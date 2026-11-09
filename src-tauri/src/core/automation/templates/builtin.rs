@@ -84,10 +84,8 @@ pub(super) fn agent_starter(shell: &str) -> AutomationDraft {
                 content: String::new(),
             },
             AutomationScriptFile {
-                path: "config/herdr.json".into(),
-                content:
-                    "{\"session\":\"default\",\"agent\":\"default\",\"title\":\"AgentHub task\"}\n"
-                        .into(),
+                path: "config/agent.json".into(),
+                content: "{\"runner\":{\"kind\":\"default\",\"session\":\"default\",\"title\":\"AgentHub task\"},\"launch\":{\"arguments\":[]},\"execution\":{\"wait_timeout_seconds\":1800}}\n".into(),
             },
         ],
     };
@@ -137,7 +135,7 @@ const BUNDLES: &[Bundle] = &[
 (include_str!("../../../../../automations/engineering/agent-code-review/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-code-review/config/task.json"), &[
 ("scripts/agent-code-review.py", include_str!("../../../../../automations/engineering/agent-code-review/scripts/agent-code-review.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-code-review/prompts/prompt.md")),
-("config/herdr.json", include_str!("../../../../../automations/engineering/agent-code-review/config/herdr.json")),
+("config/agent.json", include_str!("../../../../../automations/engineering/agent-code-review/config/agent.json")),
 ("TASK.md", include_str!("../../../../../automations/engineering/agent-code-review/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-code-review/scripts/run.sh"))
 ]),
@@ -145,7 +143,7 @@ const BUNDLES: &[Bundle] = &[
 (include_str!("../../../../../automations/engineering/agent-issue-processing/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-issue-processing/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/agent.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-issue-processing/prompts/prompt.md")),
-("config/herdr.json", include_str!("../../../../../automations/engineering/agent-issue-processing/config/herdr.json")),
+("config/agent.json", include_str!("../../../../../automations/engineering/agent-issue-processing/config/agent.json")),
 ("TASK.md", include_str!("../../../../../automations/engineering/agent-issue-processing/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-issue-processing/scripts/run.sh"))
 ]),
@@ -153,7 +151,7 @@ const BUNDLES: &[Bundle] = &[
 (include_str!("../../../../../automations/engineering/agent-maintenance/config/catalog.json"), include_str!("../../../../../automations/engineering/agent-maintenance/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/agent.py")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-maintenance/prompts/prompt.md")),
-("config/herdr.json", include_str!("../../../../../automations/engineering/agent-maintenance/config/herdr.json")),
+("config/agent.json", include_str!("../../../../../automations/engineering/agent-maintenance/config/agent.json")),
 ("TASK.md", include_str!("../../../../../automations/engineering/agent-maintenance/TASK.md")),
 ("scripts/run.sh", include_str!("../../../../../automations/engineering/agent-maintenance/scripts/run.sh"))
 ]),
@@ -168,7 +166,7 @@ const BUNDLES: &[Bundle] = &[
 ("scripts/task_state.py", include_str!("../../../../../automations/_shared/task-state.py")),
 ("config/review-config.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/review-config.json")),
 ("prompts/prompt.md", include_str!("../../../../../automations/engineering/agent-mr-processing/prompts/prompt.md")),
-("config/herdr.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/herdr.json")),
+("config/agent.json", include_str!("../../../../../automations/engineering/agent-mr-processing/config/agent.json")),
 ("TASK.md", include_str!("../../../../../automations/engineering/agent-mr-processing/TASK.md")),
 ("references/platforms.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/platforms.md")),
 ("references/runtime.md", include_str!("../../../../../automations/engineering/agent-mr-processing/references/runtime.md")),
@@ -178,7 +176,7 @@ const BUNDLES: &[Bundle] = &[
 (include_str!("../../../../../automations/hermes/daily-summary/config/catalog.json"), include_str!("../../../../../automations/hermes/daily-summary/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/hermes/daily-summary/scripts/agent.py")),
 ("scripts/run.sh", include_str!("../../../../../automations/hermes/daily-summary/scripts/run.sh")),
-("config/herdr.json", include_str!("../../../../../automations/hermes/daily-summary/config/herdr.json")),
+("config/agent.json", include_str!("../../../../../automations/hermes/daily-summary/config/agent.json")),
 ("prompts/prompt.md", include_str!("../../../../../automations/hermes/daily-summary/prompts/prompt.md")),
 ("TASK.md", include_str!("../../../../../automations/hermes/daily-summary/TASK.md"))
 ]),
@@ -209,7 +207,7 @@ const BUNDLES: &[Bundle] = &[
 (include_str!("../../../../../automations/hermes/repository-audit/config/catalog.json"), include_str!("../../../../../automations/hermes/repository-audit/config/task.json"), &[
 ("scripts/agent.py", include_str!("../../../../../automations/hermes/repository-audit/scripts/agent.py")),
 ("scripts/run.sh", include_str!("../../../../../automations/hermes/repository-audit/scripts/run.sh")),
-("config/herdr.json", include_str!("../../../../../automations/hermes/repository-audit/config/herdr.json")),
+("config/agent.json", include_str!("../../../../../automations/hermes/repository-audit/config/agent.json")),
 ("prompts/prompt.md", include_str!("../../../../../automations/hermes/repository-audit/prompts/prompt.md")),
 ("TASK.md", include_str!("../../../../../automations/hermes/repository-audit/TASK.md"))
 ]),

@@ -16,9 +16,9 @@ it("tracks settings installation changes and shares Claude installation with Tea
   const root = createRoot(host);
   const onNew = vi.fn();
   const labels = () =>
-    [...document.querySelectorAll('[role="menuitem"]')].map(
-      (item) => item.textContent,
-    );
+    [
+      ...document.querySelectorAll('[role="menuitem"], [role="menuitemradio"]'),
+    ].map((item) => item.textContent);
   const render = async (claudeInstalled: boolean, codexInstalled: boolean) => {
     await act(async () =>
       root.render(
@@ -57,12 +57,14 @@ it("tracks settings installation changes and shares Claude installation with Tea
       "terminal.agentSettings",
     ]);
     for (const image of document.querySelectorAll<HTMLImageElement>(
-      '[role="menuitem"] img',
+      '[role="menuitem"] img, [role="menuitemradio"] img',
     )) {
       expect(image.src).toMatch(/^data:image\//);
     }
     const teams = [
-      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"], [role="menuitemradio"]',
+      ),
     ].find((item) => item.textContent === "Claude Agent Teams")!;
     await act(async () => teams.click());
     expect(onNew).toHaveBeenCalledWith("claude_teams");
@@ -77,9 +79,13 @@ it("tracks settings installation changes and shares Claude installation with Tea
       "Hermes Agent",
       "terminal.agentSettings",
     ]);
-    expect(document.querySelectorAll('[role="menuitem"] img')).toHaveLength(3);
+    expect(
+      document.querySelectorAll(
+        '[role="menuitem"] img, [role="menuitemradio"] img',
+      ),
+    ).toHaveLength(3);
     for (const image of document.querySelectorAll<HTMLImageElement>(
-      '[role="menuitem"] img',
+      '[role="menuitem"] img, [role="menuitemradio"] img',
     )) {
       expect(image.src).toMatch(/^data:image\//);
     }

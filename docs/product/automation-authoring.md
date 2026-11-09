@@ -6,18 +6,23 @@
 
 遵循 ADR-0016、ADR-0017 和 ADR-0018：`TASK.md` 是说明入口；`config/task.json` 是清单、日程、依赖和文件列表的唯一来源；代码在 `scripts/`，配置在 `config/`，按需资料在 `references/`。本机绑定、依赖环境、检查点和日志只放 `.local/`，不得进入分发和备份。
 
-普通任务只声明实际需要的文件和命令，不需要 `herdr.json`、提示词或 Agent。Agent 任务增加 `prompts/prompt.md` 与 `config/herdr.json`，提示词只表达目标和约束；执行流程与报告格式优先由已安装 Skill 承担，脚本只提供必要的确定性上下文。
+普通任务只声明实际需要的文件和命令，不需要 `agent.json`、提示词或 Agent。Agent 任务增加 `prompts/prompt.md` 与 `config/agent.json`，提示词只表达目标和约束；执行流程与报告格式优先由已安装 Skill 承担，脚本只提供必要的确定性上下文。
 
 ## Herdr 模块
 
 任务入口复用 `automations/_shared/agent-entry.py` 薄适配器，通过 `agents launch execute` 调用 `core/agent_execution`。Herdr 专有行为维护于 `core/herdr`，状态事务维护于 `core/state_store`；公共实现随匹配 CLI 管理为单份版本资源，任务不携带 `herdr_agent.py` 或存储实现副本，无需运行桌面进程。业务筛选与结果校验仍由任务自己的脚本负责。
 
 ```json
-{ "session": "default", "agent": "default", "title": "Project task" }
+{
+  "runner": { "kind": "default", "session": "default", "title": "Project task" },
+  "launch": { "arguments": [] },
+  "execution": { "wait_timeout_seconds": 1800 }
+}
 ```
 
-- `agent: default` 使用全局默认 Agent；明确的 Herdr 类型使用该 Agent 的全局启动指令。
-- 省略 `arguments` 时继承全局参数；显式数组（包括空数组）覆盖参数；`extra_arguments` 仅追加本任务参数。完整命令的可执行文件仍来自全局设置。
+- `runner.kind: default` 使用全局默认 Agent；明确的类型使用该 Agent 的全局启动指令。
+- `launch.arguments` 是按字面传递的参数数组，追加在全局启动参数之后。每个元素都是一个 argv，不做 Shell 或引号解析。
+- `execution.wait_timeout_seconds` 的范围为 60–7200 秒，默认 1800 秒；超时只停止等待并保留会话。
 - 模型使用 Agent 自身默认值；平台不要求填写模型。保留已有任务显式参数，不在升级时擅自移除。
 - 系统日程只负责触发，Agent 必须在已选择的项目目录运行。Herdr 未安装时通过共享 CLI 创建可见原生终端并保存启动回执；没有系统终端时明确报错。会话或身份不明、仍在运行、审批等待及投递超时均保留原窗格，不重复启动或重发。
 - 新包依赖由清单声明。旧版完整脚本保留既有运行兼容；新版薄适配器需要支持共享执行命令的 AgentHub CLI bridge，缺失或过旧时明确报错，不回退到包内另一套实现。
@@ -38,4 +43,4 @@ Agent 任务可保存最多 12 套命名提示词，始终只选中一套。编�
 
 每套方案还可以声明一个可选的 `behavior` 行为标识，作为任务脚本读取的元数据。AgentHub 不解释该值，也不会因为设置它改变权限或执行动作；未设置时保持旧格式和旧运行行为。CLI 与桌面端都保留该字段，任务脚本可以在单次运行时据此选择相应方案或执行分支。
 
-使用 Herdr 的任务还可以在 `config/herdr.json` 声明 `wait_timeout_seconds`，控制共享执行器等待 Agent 结果的期限，范围为 60–7200 秒；未设置时默认为 1800 秒。超时只停止等待并保留原会话，不代表 Agent 已终止，也不会自动重复投递。
+`config/agent.json` 只允许 `runner`、`launch`、`execution` 三个对象。配置校验在创建会话前执行，未知字段、非法参数或越界等待期限都会直接拒绝本轮任务。

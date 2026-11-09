@@ -87,7 +87,8 @@ export function TerminalWorkspace({
   onStartupStateChange,
 }: Props) {
   const { t } = useTranslation();
-  const statusContainer = useContext(SidebarVisibilityContext)?.statusContainer;
+  const sidebarVisibility = useContext(SidebarVisibilityContext);
+  const statusContainer = sidebarVisibility?.statusContainer;
   const location = useLocation();
   const navigate = useNavigate();
   const activeWorkspace = useActiveWorkspace(projects);
@@ -383,7 +384,15 @@ export function TerminalWorkspace({
               }
               onNew={add}
               onNewMarkdown={onNewMarkdown}
-              onHerdr={herdrEnabled ? () => void herdrMenu.open() : undefined}
+              onHerdr={
+                herdrEnabled ? (agent) => void herdrMenu.open(agent) : undefined
+              }
+              onHerdrSettings={
+                herdrEnabled
+                  ? () =>
+                      sidebarVisibility?.openSidebarPanel?.("herdr", "settings")
+                  : undefined
+              }
               herdrBusy={herdrMenu.busy}
             />
           </TerminalTabs>

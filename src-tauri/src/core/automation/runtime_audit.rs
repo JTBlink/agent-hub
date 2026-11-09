@@ -43,7 +43,7 @@ fn inspect(id: String, draft: &AutomationDraft) -> TaskAudit {
     let agent = draft
         .files
         .iter()
-        .any(|file| matches!(file.path.as_str(), "config/herdr.json" | "herdr.json"));
+        .any(|file| file.path == "config/agent.json" || file.path.ends_with("/config/agent.json"));
     let mut shared = false;
     let mut findings = Vec::new();
     for file in &draft.files {

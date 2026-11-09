@@ -1,0 +1,13 @@
+{
+  "runner": {
+    "kind": "hermes",
+    "session": "default",
+    "title": "Weekday repository audit"
+  },
+  "launch": {
+    "arguments": []
+  },
+  "execution": {
+    "wait_timeout_seconds": 1800
+  }
+}

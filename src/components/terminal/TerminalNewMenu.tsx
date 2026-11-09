@@ -11,13 +11,15 @@ export function TerminalNewMenu({
   onNew,
   onNewMarkdown,
   onHerdr,
+  onHerdrSettings,
   herdrBusy,
 }: {
   disabled: boolean;
   tools: readonly Pick<ToolInfo, "key" | "installed">[];
   onNew: (agent?: HerdrAgent) => void;
   onNewMarkdown?: () => void;
-  onHerdr?: () => void;
+  onHerdr?: (agent: HerdrAgent) => void;
+  onHerdrSettings?: () => void;
   herdrBusy?: boolean;
 }) {
   const { t } = useTranslation();
@@ -36,6 +38,7 @@ export function TerminalNewMenu({
           onNew={onNew}
           onNewMarkdown={onNewMarkdown}
           onHerdr={onHerdr}
+          onHerdrSettings={onHerdrSettings}
           herdrBusy={herdrBusy}
           close={close}
         />

@@ -5,6 +5,7 @@ import { AgentIcon } from "./AgentIcon";
 import {
   automationAgentOptions,
   herdrAgentKind,
+  resolveAutomationAgent,
 } from "../lib/automationAgents";
 import {
   getAutomationTemplates,
@@ -13,9 +14,10 @@ import {
   type AutomationDraft,
   type AutomationScriptFile,
 } from "../lib/tauri";
-import { automationHerdrConfig, automationPromptFile } from "../lib/automation";
+import { automationAgentConfig, automationPromptFile } from "../lib/automation";
 import { PROMPT_VARIANTS_PATH } from "../lib/automationPrompts";
 import { getErrorMessage } from "../lib/error";
+import { useDefaultAgentKey } from "../hooks/useDefaultAgentKey";
 import { ThemedSelect } from "./ThemedSelect";
 import {
   herdrEnabled,
@@ -48,9 +50,12 @@ export function AutomationAgentField({
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const config = automationHerdrConfig(draft);
+  const config = automationAgentConfig(draft);
+  const defaultAgentKey = useDefaultAgentKey();
   const agent =
-    draft.provider === "hermes" ? "native-hermes" : (config?.agent ?? "");
+    draft.provider === "hermes"
+      ? "native-hermes"
+      : resolveAutomationAgent(config?.agent, defaultAgentKey);
   const [pending, setPending] = useState(false);
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const choices = automationAgentOptions(tools)
@@ -156,7 +161,7 @@ export function AutomationAgentField({
         const starter =
           catalog.agent_starter ??
           catalog.templates.find((template) =>
-            automationHerdrConfig(template.draft),
+            automationAgentConfig(template.draft),
           )?.draft;
         if (!starter) throw new Error(t("automation.agentStarterUnavailable"));
         base = execution(starter);
@@ -172,8 +177,8 @@ export function AutomationAgentField({
               if (file.path === "prompt.md" || file.path.endsWith("/prompt.md"))
                 return { ...file, content: currentPrompt };
               if (
-                file.path === "herdr.json" ||
-                file.path.endsWith("/herdr.json")
+                file.path === "config/agent.json" ||
+                file.path.endsWith("/config/agent.json")
               ) {
                 const parsed: unknown = JSON.parse(file.content);
                 if (
@@ -182,13 +187,15 @@ export function AutomationAgentField({
                   Array.isArray(parsed)
                 )
                   throw new Error(t("automation.agentStarterUnavailable"));
+                const current = parsed as Record<string, unknown>;
+                const runner = current.runner;
+                if (!runner || typeof runner !== "object" || Array.isArray(runner))
+                  throw new Error(t("automation.agentStarterUnavailable"));
                 const nextConfig = {
-                  ...(parsed as Record<string, unknown>),
-                  agent: next,
+                  ...current,
+                  runner: { ...(runner as Record<string, unknown>), kind: next },
+                  launch: { arguments: [] },
                 };
-                if ("arguments" in nextConfig) delete nextConfig.arguments;
-                if ("extra_arguments" in nextConfig)
-                  delete nextConfig.extra_arguments;
                 return {
                   ...file,
                   content: JSON.stringify(nextConfig, null, 2) + "\n",

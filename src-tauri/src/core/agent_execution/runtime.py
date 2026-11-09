@@ -5,7 +5,6 @@ import os
 import re
 import runpy
 import shutil
-import shlex
 import subprocess
 import sys
 
@@ -61,6 +60,51 @@ def read_bundle(path):
     return text
 
 
+def read_agent_config(path):
+    """Load the strict task Agent contract before creating any session."""
+    try:
+        value = json.loads(read_bundle(path))
+    except (OSError, ValueError) as error:
+        raise HerdrError(f"Agent 配置无效：{error}") from None
+    if not isinstance(value, dict) or set(value) - {"runner", "launch", "execution"}:
+        raise HerdrError("Agent 配置必须只包含 runner、launch 和 execution。")
+    runner = value.get("runner")
+    launch = value.get("launch")
+    execution = value.get("execution")
+    if not isinstance(runner, dict) or set(runner) - {"kind", "session", "title"}:
+        raise HerdrError("Agent runner 配置无效。")
+    if not isinstance(launch, dict) or set(launch) - {"arguments"}:
+        raise HerdrError("Agent launch 配置无效。")
+    if not isinstance(execution, dict) or set(execution) - {"wait_timeout_seconds"}:
+        raise HerdrError("Agent execution 配置无效。")
+    kind = runner.get("kind", "default")
+    session = runner.get("session", "default")
+    title = runner.get("title", "AgentHub task")
+    if not isinstance(kind, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", kind):
+        raise HerdrError("智能体类型无效；须使用 Herdr 支持的 Agent 类型。")
+    if (not isinstance(session, str) or not session or len(session) > 100
+            or session.startswith("-") or any(c in session for c in "\0\r\n")):
+        raise HerdrError("Herdr 会话名称无效。")
+    if (not isinstance(title, str) or not title.strip() or len(title) > 200
+            or any(c in title for c in "\0\r\n")):
+        raise HerdrError("Agent 标题无效。")
+    arguments = launch.get("arguments", [])
+    if (not isinstance(arguments, list) or len(arguments) > 128 or not all(
+        isinstance(arg, str) and len(arg) <= 4096 and not any(c in arg for c in "\0\r\n")
+        for arg in arguments
+    )):
+        raise HerdrError("Agent 启动参数必须是单行字符串数组。")
+    wait_timeout_seconds = execution.get("wait_timeout_seconds", 1800)
+    if (isinstance(wait_timeout_seconds, bool) or not isinstance(wait_timeout_seconds, int)
+            or not 60 <= wait_timeout_seconds <= 7200):
+        raise HerdrError("Agent 等待期限必须是 60–7200 秒的整数。")
+    return {
+        "runner": {"kind": kind, "session": session, "title": title},
+        "launch": {"arguments": list(arguments)},
+        "execution": {"wait_timeout_seconds": wait_timeout_seconds},
+    }
+
+
 def terminal_fallback(bridge, kind, arguments, prompt, cwd):
     if not bridge:
         raise HerdrError("Herdr 未安装，且没有可用的 AgentHub CLI；无法创建终端执行任务。")
@@ -97,27 +141,13 @@ def terminal_fallback(bridge, kind, arguments, prompt, cwd):
 def main(prompt_context=""):
     binary = shutil.which("herdr")
     config_path = Path(REQUEST["config_file"])
-    config = json.loads(read_bundle(config_path))
-    session = config.get("session", "default")
-    kind = config.get("agent", "codex")
-    if not isinstance(session, str) or not session or session.startswith("-"):
-        raise HerdrError("Herdr 会话名称无效。")
-    if not isinstance(kind, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", kind):
-        raise HerdrError("智能体类型无效；须使用 Herdr 支持的 Agent 类型。")
-    explicit = config.get("arguments")
-    if explicit is not None and (not isinstance(explicit, list) or not all(isinstance(arg, str) and not any(c in arg for c in "\0\r\n") for arg in explicit)):
-        raise HerdrError("Herdr 智能体参数必须是单行字符串数组。")
-    additional = config.get("extra_arguments", "")
-    if not isinstance(additional, str) or any(c in additional for c in "\0\r\n"):
-        raise HerdrError("额外的智能体参数必须是单行文本。")
-    try:
-        additional = shlex.split(additional)
-    except ValueError:
-        raise HerdrError("额外的智能体参数引号未闭合，请检查详细设置。") from None
-    wait_timeout_seconds = config.get("wait_timeout_seconds", 1800)
-    if (isinstance(wait_timeout_seconds, bool) or not isinstance(wait_timeout_seconds, int)
-            or not 60 <= wait_timeout_seconds <= 7200):
-        raise HerdrError("Agent 等待期限必须是 60–7200 秒的整数。")
+    config = read_agent_config(config_path)
+    runner = config["runner"]
+    session = runner["session"]
+    kind = runner["kind"]
+    title = runner["title"]
+    task_arguments = config["launch"]["arguments"]
+    wait_timeout_seconds = config["execution"]["wait_timeout_seconds"]
     bridge = os.environ.get("AGENT_HUB_CLI")
     if not bridge:
         directory = Path.home() / ".agent-hub/bin"
@@ -136,17 +166,12 @@ def main(prompt_context=""):
         kind = resolved.get("kind")
         if not kind:
             raise HerdrError("所选 Agent 不支持 Herdr CLI 启动，请更换智能体。")
-        # Managed AgentHub tasks always inherit the current global launch
-        # instruction.  `arguments` remains readable for old exported tasks,
-        # but must not freeze a scheduled task to the settings it had when it
-        # was created.  Task-specific `extra_arguments` is appended below.
+        # Scheduled tasks inherit global launch settings and append only the
+        # explicit task arguments from the launch section.
         extra = list(resolved["arguments"])
-    elif explicit is not None and kind != "default":
-        # Old exported tasks remain standalone when all arguments are explicit.
-        extra = list(explicit)
     else:
-        raise HerdrError("未找到 AgentHub CLI；请更新应用以读取全局启动指令，或显式配置任务参数。")
-    extra.extend(additional)
+        raise HerdrError("未找到 AgentHub CLI；请更新应用后重试。")
+    extra.extend(task_arguments)
     # Keep the unattended updater guard even when a task replaces all arguments.
     if kind == "codex" and "check_for_update_on_startup=false" not in extra:
         extra = ["-c", "check_for_update_on_startup=false", *extra]
@@ -171,6 +196,7 @@ def main(prompt_context=""):
         'HERE': HERE, 'STATE': STATE, 'STATE_DIR': STATE_DIR,
     })
     return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge,
+                          title,
                           wait_timeout_seconds)
 
 

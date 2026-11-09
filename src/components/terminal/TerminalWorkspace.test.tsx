@@ -68,8 +68,13 @@ async function openNew(host: HTMLElement, label = "terminal.new") {
       .click(),
   );
   const item = [
-    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
-  ].find((item) => item.textContent === label)!;
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="menuitem"], [role="menuitemradio"]',
+    ),
+  ].find(
+    (item) =>
+      item.textContent === label || item.getAttribute("aria-label") === label,
+  )!;
   await act(async () => item.click());
 }
 
@@ -94,13 +99,13 @@ it("opens Herdr directly from the new menu and reports startup failures inline",
       ),
     );
     expect(invoke).not.toHaveBeenCalledWith("agent_launch_settings");
-    await openNew(host, "terminal.openHerdr");
+    await openNew(host, "terminal.openHerdr Codex");
     expect(invoke).toHaveBeenCalledWith("agent_launch_settings");
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(host.querySelector('[role="alert"]')?.textContent).toBe(
       "Herdr startup unavailable",
     );
-    await openNew(host, "terminal.openHerdr");
+    await openNew(host, "terminal.openHerdr Codex");
     expect(
       vi
         .mocked(invoke)
@@ -454,7 +459,9 @@ it("keeps split panes and input intact while Herdr installs and updates", async 
   expect(first).not.toBeNull();
   await click("common.more");
   const splitOption = [
-    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '[role="menuitem"], [role="menuitemradio"]',
+    ),
   ].find((button) => button.textContent === "terminal.splitHorizontal");
   expect(splitOption).toBeDefined();
   await act(async () => splitOption?.click());
@@ -895,8 +902,14 @@ it.each([
       await act(async () => plus.click());
       expect(creations()).toHaveLength(1);
       const option = [
-        ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
-      ].find((item) => item.textContent === label)!;
+        ...document.querySelectorAll<HTMLButtonElement>(
+          '[role="menuitem"], [role="menuitemradio"]',
+        ),
+      ].find(
+        (item) =>
+          item.textContent === label ||
+          item.getAttribute("aria-label") === label,
+      )!;
       await act(async () => option.click());
       expect(creations()).toHaveLength(2);
       expect(creations()[1][1]).toMatchObject({

@@ -38,7 +38,7 @@ let container: HTMLDivElement;
 let root: Root;
 const initial = [
   { path: "maintenance/agent.py", content: "print('check')" },
-  { path: "maintenance/herdr.json", content: '{"agent":"codex"}' },
+  { path: "maintenance/agent.json", content: '{"agent":"codex"}' },
   { path: "run.sh", content: "python3 maintenance/agent.py" },
 ];
 beforeEach(() => {
@@ -99,7 +99,7 @@ it("opens the task folder in the shared editor and keeps edits across file switc
       },
     });
   });
-  await click("maintenance/herdr.json");
+  await click("maintenance/agent.json");
   expect(codeEditor(document).state.sliceDoc()).toBe('{"agent":"codex"}');
   await click("maintenance/agent.py");
   expect(codeEditor(document).state.sliceDoc()).toBe("print('updated')");

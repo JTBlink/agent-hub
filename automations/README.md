@@ -27,7 +27,7 @@ Agent 任务只携带 `_shared/agent-entry.py` 对应的薄入口，调用 Agent
 
 云端备份使用相同的 `automations/<英文目录名>/config/task.json`、`TASK.md`、`scripts/` 与按需资源结构。仅保存可移植定义，项目绑定、安装回执、私有环境及执行记录留在本机；恢复会准备运行环境并默认暂停，不执行任务正文。
 
-新任务、分发目录与新写入备份使用相同布局；旧版根目录 `task.json`、`README.md`、`herdr.json` 和脚本旁 JSON 仍可读取，更新旧任务不自动搬迁清单或覆盖自定义内容。不要同时放置两份 task.json。
+新任务、分发目录与新写入备份使用相同布局；清单统一放在 `config/task.json`，Agent 配置统一放在 `config/agent.json`。旧的根目录清单和 Agent 配置不再读取，升级时应删除旧文件后重新导入任务包。
 
 任务本地记录统一按任务包分组：`.local/runs/<运行ID>/` 保存执行记录，`.local/state/task-state.json` 保存业务扩展状态，格式为 `{"schema_version":1,"extensions":{}}`。扩展按用途命名，例如 `mr_repair` 保存 MR 链接、累计修复次数及人工接管状态。通用 Python 存储维护于 `core/state_store/store.py`；任务内 `scripts/task_state.py` 仅通过 CLI 定位并导入公共模块，带锁更新单个扩展并保留其他扩展。整个 `.local/` 不列入任务文件清单，不参与导出、备份或同步。
 

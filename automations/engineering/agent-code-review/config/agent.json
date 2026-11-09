@@ -1,0 +1,13 @@
+{
+  "runner": {
+    "kind": "default",
+    "session": "default",
+    "title": "Agent 代码巡检"
+  },
+  "launch": {
+    "arguments": []
+  },
+  "execution": {
+    "wait_timeout_seconds": 1800
+  }
+}

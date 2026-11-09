@@ -34,3 +34,11 @@ export function automationAgentOptions(tools: readonly ToolInfo[]) {
 export function herdrAgentKind(toolKey: string) {
   return HERDR_KINDS[toolKey];
 }
+
+export function resolveAutomationAgent(
+  configuredAgent: string | undefined,
+  defaultAgent: string,
+) {
+  if (configuredAgent !== "default") return configuredAgent ?? "";
+  return HERDR_KINDS[defaultAgent] ?? defaultAgent;
+}

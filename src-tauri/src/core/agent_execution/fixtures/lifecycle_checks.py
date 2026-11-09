@@ -21,9 +21,9 @@ if not PROMPT.exists():
 ORIGINAL = PROMPT.read_text(encoding='utf-8')
 STATE = TASK / '.local/state/.herdr-run.json' if HERE.name == 'scripts' else HERE / '.herdr-run.json'
 STATE.parent.mkdir(parents=True, exist_ok=True)
-CONFIG = TASK / 'config/herdr.json'
+CONFIG = TASK / 'config/agent.json'
 if not CONFIG.exists():
-    CONFIG = TASK / 'herdr.json'
+    CONFIG = TASK / 'agent.json'
 ORIGINAL_CONFIG = CONFIG.read_text(encoding='utf-8')
 REQUEST = dict(config_file=str(CONFIG), prompt_file=str(PROMPT), state_directory=str(STATE.parent),
                identity_directory=str(HERE), workdir=str(PROJECT))
@@ -279,7 +279,7 @@ class HerdrChecks(unittest.TestCase):
         for kind in ['codex', 'claude']:
             with self.subTest(kind=kind):
                 STATE.unlink(missing_ok=True); self.calls = []
-                self.assertEqual(self.execute(config={'agent': kind}), 0)
+                self.assertEqual(self.execute(config={'runner': {'kind': kind, 'session': 'default', 'title': 'Test'}, 'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 1800}}), 0)
                 start = next(args for args, _ in self.calls if 'start' in args)
                 self.assertEqual('check_for_update_on_startup=false' in start, kind == 'codex')
 
@@ -329,11 +329,11 @@ class HerdrChecks(unittest.TestCase):
         self.assertEqual(self.execute(), 1)
         self.assertFalse(any('split' in args or 'close' in args or 'start' in args for args, _ in self.calls))
 
-    def test_extra_arguments_follow_defaults_and_remain_literal_data(self):
+    def test_arguments_follow_defaults_and_remain_literal_data(self):
         self.assertEqual(self.execute(config={
-            'session': 'default', 'agent': 'codex',
-            'arguments': ['--dangerously-bypass-approvals-and-sandbox'],
-            'extra_arguments': '-m model-id -c \'name="value with spaces"\' --literal "$(touch NEVER)"',
+            'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'},
+            'launch': {'arguments': ['-m', 'model-id', '-c', 'name="value with spaces"', '--literal', '$(touch NEVER)']},
+            'execution': {'wait_timeout_seconds': 1800},
         }), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
         self.assertEqual(start[start.index('--') + 1:], [
@@ -362,12 +362,12 @@ class HerdrChecks(unittest.TestCase):
 
     def test_managed_tasks_always_inherit_global_arguments(self):
         launch = {'kind': 'codex', 'program': 'codex', 'arguments': ['--search']}
-        self.assertEqual(self.execute(config={'agent': 'codex'}, launch=launch), 0)
+        self.assertEqual(self.execute(config={'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'}, 'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 1800}}, launch=launch), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
         self.assertIn('--search', start)
         self.calls = []
         STATE.unlink(missing_ok=True)
-        self.assertEqual(self.execute(config={'agent': 'codex', 'arguments': []}, launch=launch), 0)
+        self.assertEqual(self.execute(config={'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'}, 'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 1800}}, launch=launch), 0)
         start = next(args for args, _ in self.calls if 'start' in args)
         self.assertIn('--search', start)
 
@@ -375,11 +375,27 @@ class HerdrChecks(unittest.TestCase):
         self.assertIsInstance(self.execute(launch_failure=True), str)
         self.assertFalse(any('create' in args or 'start' in args for args, _ in self.calls))
 
-    def test_invalid_extra_arguments_never_create_a_session(self):
-        for value in ['-m "unterminated', ['--model'], 'nul\0value']:
+    def test_invalid_arguments_never_create_a_session(self):
+        for value in [['--model', 7], 'nul\0value']:
             with self.subTest(value=value):
                 self.calls = []
-                self.assertIsInstance(self.execute(config={'agent': 'codex', 'extra_arguments': value}), str)
+                self.assertIsInstance(self.execute(config={'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'}, 'launch': {'arguments': value}, 'execution': {'wait_timeout_seconds': 1800}}), str)
+                self.assertFalse(self.calls)
+
+    def test_invalid_agent_contract_never_creates_a_session(self):
+        configs = [
+            {'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'},
+             'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 59}},
+            {'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'},
+             'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 7201}},
+            {'runner': {'kind': 'codex', 'session': 'default', 'title': 'Test'},
+             'launch': {'arguments': []}, 'execution': {'wait_timeout_seconds': 1800},
+             'unexpected': True},
+        ]
+        for config in configs:
+            with self.subTest(config=config):
+                self.calls = []
+                self.assertIsInstance(self.execute(config=config), str)
                 self.assertFalse(self.calls)
 
     def test_unknown_startup_keeps_observing_until_completion_without_resubmission(self):

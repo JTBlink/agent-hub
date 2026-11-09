@@ -15,6 +15,15 @@ pub use defaults::{key_for_kind, kind_for_key};
 mod tests;
 
 const FILE: &str = "agent-launch.json";
+
+/// Return the single user-editable file backing shared Agent launch settings.
+pub fn file_path() -> Result<String> {
+    user_config::ready().map_err(anyhow::Error::msg)?;
+    let root = user_config::root();
+    let path = root.join(FILE);
+    user_config::checked(&path).map_err(anyhow::Error::msg)?;
+    Ok(path.to_string_lossy().into_owned())
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Document {

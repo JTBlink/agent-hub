@@ -5,9 +5,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import { TerminalNewMenu } from "./TerminalNewMenu";
 import { queuePreviewWeb } from "../../features/preview/shared/openRequests";
-import { getAgentIconSrc } from "../../lib/agentIcons";
 import { TerminalNewMenuContent } from "./TerminalNewMenuContent";
-import { SidebarVisibilityContext } from "../../hooks/sidebarVisibility";
 const defaults = vi.hoisted(() => ({ key: "codex" }));
 vi.mock("../../hooks/useDefaultAgentKey", () => ({
   useDefaultAgentKey: () => defaults.key,
@@ -32,9 +30,11 @@ it("searches actions, opens Markdown/mobile/settings and keeps browsing availabl
   const open = async () =>
     act(async () => host.querySelector("button")!.click());
   const item = (label: string) =>
-    [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
-      (button) => button.textContent?.startsWith(label),
-    )!;
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[role="menuitem"], [role="menuitemradio"]',
+      ),
+    ].find((button) => button.textContent?.startsWith(label))!;
   const search = async (value: string) =>
     act(async () => {
       const input = document.querySelector("input")!;
@@ -48,22 +48,14 @@ it("searches actions, opens Markdown/mobile/settings and keeps browsing availabl
     await act(async () =>
       root.render(
         <MemoryRouter>
-          <SidebarVisibilityContext.Provider
-            value={{
-              resourcePanelVisible: true,
-              setResourcePanelVisible: () => {},
-              openSidebarPanel: vi.fn(),
-            }}
-          >
-            <TerminalNewMenu
-              disabled
-              tools={[{ key: "codex", installed: true }]}
-              onNew={onNew}
-              onNewMarkdown={markdown}
-              onHerdr={herdr}
-            />
-            <Location />
-          </SidebarVisibilityContext.Provider>
+          <TerminalNewMenu
+            disabled
+            tools={[{ key: "codex", installed: true }]}
+            onNew={onNew}
+            onNewMarkdown={markdown}
+            onHerdr={herdr}
+          />
+          <Location />
         </MemoryRouter>,
       ),
     );
@@ -71,19 +63,22 @@ it("searches actions, opens Markdown/mobile/settings and keeps browsing availabl
     expect(document.activeElement?.tagName).toBe("INPUT");
     expect(item("terminal.new").disabled).toBe(true);
     expect(item("Codex").disabled).toBe(true);
-    expect(item("terminal.openHerdr").disabled).toBe(true);
-    expect(
-      document.querySelector<HTMLButtonElement>('[aria-label="herdr.settings"]')
-        ?.disabled,
-    ).toBe(false);
-    expect(item("Codex").textContent).toBe("Codex");
+    const herdrCodex = document.querySelector<HTMLButtonElement>(
+      '[aria-label="terminal.openHerdr Codex"]',
+    );
+    expect(herdrCodex?.disabled).toBe(true);
+    expect(item("Codex").textContent).toContain("Codex");
     await search("missing");
-    expect(document.querySelectorAll('[role="menuitem"]')).toHaveLength(0);
+    expect(
+      document.querySelectorAll('[role="menuitem"], [role="menuitemradio"]'),
+    ).toHaveLength(0);
     expect(document.querySelector('[role="status"]')?.textContent).toBe(
       "terminal.noNewMatches",
     );
     await search("Markdown");
-    expect(document.querySelectorAll('[role="menuitem"]')).toHaveLength(1);
+    expect(
+      document.querySelectorAll('[role="menuitem"], [role="menuitemradio"]'),
+    ).toHaveLength(1);
     await act(async () => item("terminal.newMarkdown").click());
     expect(markdown).toHaveBeenCalledOnce();
     await open();
@@ -120,81 +115,63 @@ it("searches actions, opens Markdown/mobile/settings and keeps browsing availabl
   }
 });
 
-it.each([
-  ["codex", "codex"],
-  ["claude_code", "claude_code"],
-  ["claude_teams", "claude_code"],
-  ["opencode", "codex"],
-])(
-  "shows the launch default %s icon and opens its settings without launching an Agent",
-  async (key, icon) => {
-    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-    defaults.key = key;
-    const host = document.createElement("div");
-    document.body.append(host);
-    const root = createRoot(host);
-    const launch = vi.fn(),
-      close = vi.fn();
-    const openPanel = vi.fn();
-    try {
-      await act(async () =>
-        root.render(
-          <MemoryRouter>
-            <SidebarVisibilityContext.Provider
-              value={{
-                resourcePanelVisible: true,
-                setResourcePanelVisible: () => {},
-                openSidebarPanel: openPanel,
-              }}
-            >
-              <TerminalNewMenuContent
-                tools={[
-                  { key: "codex", installed: true },
-                  { key: "claude_code", installed: true },
-                ]}
-                terminalDisabled={false}
-                onNew={() => {}}
-                onHerdr={launch}
-                close={close}
-              />
-              <Location />
-            </SidebarVisibilityContext.Provider>
-          </MemoryRouter>,
-        ),
-      );
-      const button = [
-        ...host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
-      ].find((item) => item.textContent === "terminal.openHerdr")!;
-      expect(button.querySelector("img")).toBeNull();
-      expect(button.querySelector("svg")).not.toBeNull();
-      expect(
-        button.parentElement?.previousElementSibling?.getAttribute("role"),
-      ).toBe("separator");
-      const settings = host.querySelector<HTMLButtonElement>(
-        '[aria-label="herdr.settings"]',
-      )!;
-      expect(
-        settings.previousElementSibling
-          ?.querySelector("img")
-          ?.getAttribute("src"),
-      ).toBe(getAgentIconSrc(icon));
-      button.focus();
-      await act(async () =>
-        button.dispatchEvent(
-          new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
-        ),
-      );
-      expect(document.activeElement).toBe(settings);
-      await act(async () => settings.click());
-      expect(openPanel).toHaveBeenCalledExactlyOnceWith("herdr", "settings");
-      expect(host.querySelector("output")?.textContent).toBe("/");
-      expect(launch).not.toHaveBeenCalled();
-      expect(close).toHaveBeenCalledOnce();
-    } finally {
-      await act(async () => root.unmount());
-      host.remove();
-      defaults.key = "codex";
-      vi.unstubAllGlobals();
-    }
-  },
-);
+it("launches a selected Agent in the current terminal or through Herdr", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const onNew = vi.fn();
+  const onHerdr = vi.fn();
+  const close = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <TerminalNewMenuContent
+            tools={[
+              { key: "codex", installed: true },
+              { key: "claude_code", installed: true },
+            ]}
+            terminalDisabled={false}
+            onNew={onNew}
+            onHerdr={onHerdr}
+            close={close}
+          />
+        </MemoryRouter>,
+      ),
+    );
+    const codex = [
+      ...host.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'),
+    ].find((button) => button.textContent?.includes("Codex"))!;
+    expect(codex.getAttribute("aria-checked")).toBe("true");
+    await act(async () => codex.click());
+    expect(onNew).toHaveBeenCalledWith("codex");
+
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <TerminalNewMenuContent
+            tools={[
+              { key: "codex", installed: true },
+              { key: "claude_code", installed: true },
+            ]}
+            terminalDisabled={false}
+            onNew={onNew}
+            onHerdr={onHerdr}
+            close={close}
+          />
+        </MemoryRouter>,
+      ),
+    );
+    const herdr = host.querySelector<HTMLButtonElement>(
+      '[aria-label="terminal.openHerdr Claude Code"]',
+    )!;
+    await act(async () => herdr.click());
+    expect(onHerdr).toHaveBeenCalledWith("claude");
+    expect(close).toHaveBeenCalledTimes(2);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

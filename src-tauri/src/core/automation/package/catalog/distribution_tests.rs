@@ -23,7 +23,7 @@ fn repository_automations_are_real_independent_installable_packages() {
             .draft
             .files
             .iter()
-            .any(|f| f.path == "config/herdr.json")
+            .any(|f| f.path == "config/agent.json")
         {
             let agent = entry
                 .package

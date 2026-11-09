@@ -1,5 +1,5 @@
 {
-  "version": "2.1.2",
+  "version": "2.1.3",
   "schema_version": 1,
   "shell": "sh",
   "draft": {
@@ -18,7 +18,7 @@
   "files": [
     "scripts/agent.py",
     "scripts/run.sh",
-    "config/herdr.json",
+    "config/agent.json",
     "prompts/prompt.md",
     "TASK.md"
   ],

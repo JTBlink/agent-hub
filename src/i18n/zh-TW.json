@@ -544,7 +544,7 @@
     "advanced": "進階",
     "extraAgentArguments": "額外的智慧體參數",
     "extraAgentArgumentsPlaceholder": "-m model-id -c model_reasoning_effort=high",
-    "extraAgentArgumentsHelp": "每次新會話時附加至預設啟動參數之後。包含空格的值請加引號。",
+    "extraAgentArgumentsHelp": "每行一個 argv，任務參數會附加至全域啟動參數之後。",
     "herdrSession": "Herdr 會話",
     "herdrScheduleHelp": "AgentHub 按日程發起任務，並復用設定中的 Agent 啟動命令與參數；Herdr 服務需保持執行。上一輪仍在執行時略過本次觸發。",
     "optionalAgent": "智慧體（選填）",
@@ -565,7 +565,30 @@
     "exportPackage": "匯出任務",
     "migratePackage": "遷移為獨立任務包",
     "addPackage": "新增任務",
-    "added": "已新增"
+    "added": "已新增",
+    "agentWaitTimeout": "Agent 等待期限（秒）",
+    "agentWaitTimeoutHelp": "允許範圍為 60–7200 秒；逾時只停止等待並保留工作階段。",
+    "configurationInfo": "自動化設定",
+    "configurationTitle": "自動化設定",
+    "configurationInfoHelp": "Agent 任務設定採用三層結構：執行器、啟動參數與執行策略。一般腳本任務不需要 Agent 檔案。",
+    "configurationRunnerHelp": "runner 選擇 Agent 類型、Herdr 工作階段與任務標題。",
+    "configurationLaunchHelp": "launch.arguments 每行一個參數，按原文附加至全域啟動參數。",
+    "configurationExecutionHelp": "execution.wait_timeout_seconds 控制單輪等待結果的最長時間。",
+    "configurationTasks": "可設定任務",
+    "configurationGlobalTitle": "通用 Agent 設定",
+    "configurationGlobalHelp": "這裡的啟動指令會由所有新建 Agent 工作階段共用，修改後套用到後續任務。",
+    "configurationDefaultAgent": "預設 Agent",
+    "openGlobalConfigInVscode": "在 VS Code 中開啟通用設定",
+    "configurationNoOverrides": "目前沒有任務層級啟動指令覆寫，將使用 Agent 預設啟動指令。",
+    "sharedAgentSettingsTitle": "Agent 啟動參數統一在設定中維護",
+    "sharedAgentSettingsHelp": "自動化任務直接共用設定頁中的 Agent、啟動指令和參數，這裡不再複製一份。",
+    "openAgentSettings": "開啟 Agent 設定",
+    "configurationTaskHelp": "任務專屬參數、工作階段和等待期限在任務設定中維護。",
+    "configurationNoTasks": "目前沒有可設定的 Agent 任務。",
+    "openConfigInVscode": "在 VS Code 中開啟",
+    "editConfiguration": "編輯設定",
+    "configurationPathUnavailable": "任務設定目錄不可用，請先重新整理任務列表。",
+    "gitFormatFiles": "config/task.json 的 files 列出相對任務根目錄的檔案路徑。TASK.md 為任務說明入口；JSON 設定放在 config/，腳本放在 scripts/，按需資料放在 references/，提示詞固定放在 prompts/prompt.md。"
   },
   "app": {
     "name": "agent-hub"
@@ -2198,7 +2221,7 @@
     "gitFormatEntry": "建議每個任務以 TASK.md 說明用途與流程，以 config/task.json 宣告名稱、執行命令、排程與檔案清單；相容舊版根目錄 task.json。僅有說明或腳本不能取代清單。",
     "gitFormatStructure": "建議的任務儲存庫目錄結構",
     "gitFormatScan": "任務可放在倉庫根目錄或子目錄。所選目錄沒有 config/task.json 或舊版 task.json 且存在 automations/ 時，只掃描 automations/；否則從所選目錄遞迴尋找。最多掃描 6 層，略過隱藏目錄、skills 及常見建置／依賴目錄。",
-    "gitFormatFiles": "config/task.json 的 files 列出相對任務根目錄的檔案路徑。TASK.md 為任務說明入口；JSON 設定放在 config/，腳本放在 scripts/，按需資料放在 references/，提示詞固定放在 prompts/prompt.md。相容舊版根目錄 task.json、README.md 與 herdr.json。",
+    "gitFormatFiles": "config/task.json 的 files 列出相對任務根目錄的檔案路徑。TASK.md 為任務說明入口；JSON 設定放在 config/，腳本放在 scripts/，按需資料放在 references/，提示詞固定放在 prompts/prompt.md。",
     "gitFormatPlatform": "schema_version 必須為 1；shell 必須符合本機：macOS / Linux 用 sh，Windows 用 powershell。",
     "gitFormatPortable": "共享定義中的 workdir、script_dir 留空或設為 null，本機專案在新增時選擇。相依需求在頂層 dependencies 宣告。",
     "gitFormatExample": "查看最小任務說明、設定與腳本範例",
@@ -2269,7 +2292,8 @@
     "herdrUpdateAvailable": "Herdr {{version}} · 更新",
     "herdrBusy": "目前 Shell 忙碌或已有輸入，請在閒置提示符重試或新增終端",
     "error": "終端操作失敗",
-    "inputFull": "終端輸入佇列已滿，請稍後重試"
+    "inputFull": "終端輸入佇列已滿，請稍後重試",
+    "herdrAgentSettings": "Herdr Agent 設定…"
   },
   "tasks": {
     "reviewActions": {

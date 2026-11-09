@@ -28,7 +28,7 @@ fn automation_catalog_only_embeds_selected_integrations() {
         draft
             .files
             .iter()
-            .any(|file| file.path == "scripts/herdr_agent.py" || file.path == "config/herdr.json")
+            .any(|file| file.path == "scripts/herdr_agent.py" || file.path == "config/agent.json")
     });
     assert_eq!(includes_herdr, cfg!(feature = "herdr"));
     assert!(catalog

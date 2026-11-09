@@ -21,10 +21,10 @@ def cli():
 def main(prompt_context=''):
     here = Path(__file__).resolve().parent
     task = Path(os.environ.get('AGENT_HUB_TASK_DIR', str(here.parent if here.name == 'scripts' else here)))
-    config = task / 'config/herdr.json'
+    config = task / 'config/agent.json'
     prompt = Path(os.environ.get('AGENT_HUB_PROMPT_FILE', str(task / 'prompts/prompt.md')))
-    request = dict(config_file=str(config if config.exists() else task / 'herdr.json'),
-                   prompt_file=str(prompt if prompt.exists() else task / 'prompt.md'),
+    request = dict(config_file=str(config),
+                   prompt_file=str(prompt),
                    state_directory=os.environ.get('AGENT_HUB_STATE_DIR', str(task / '.local/state' if here.name == 'scripts' else here)),
                    identity_directory=str(here), workdir=str(Path.cwd().resolve()), prompt_context=prompt_context)
     return subprocess.run([cli(), 'agents', 'launch', 'execute'],
