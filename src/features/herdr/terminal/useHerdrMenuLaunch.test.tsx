@@ -5,10 +5,8 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import { useHerdrMenuLaunch } from "./useHerdrMenuLaunch";
 import * as api from "../api";
-import { getAgentLaunchSettings } from "../../../lib/tauri";
 import { openProjectHerdrAgent } from "../lib/projectAgent";
 import { makeTool } from "../../../../tests/fixtures/workspace";
-vi.mock("../../../lib/tauri", () => ({ getAgentLaunchSettings: vi.fn() }));
 vi.mock("../lib/projectAgent", () => ({ openProjectHerdrAgent: vi.fn() }));
 vi.mock("../api", () => ({
   getHerdrInventory: vi.fn(),
@@ -23,11 +21,6 @@ it("opens the default session through a verified attachment and discards a late 
     sessions: [],
   });
   vi.mocked(api.prepareHerdrSession).mockResolvedValue("default");
-  vi.mocked(getAgentLaunchSettings).mockResolvedValue({
-    document: { schema_version: 1, default_agent: "codex", instructions: {} },
-    revision: "one",
-    defaults: {},
-  });
   const opened = {
     project_id: "demo",
     path: "/projects/demo",
@@ -52,7 +45,7 @@ it("opens the default session through a verified attachment and discards a late 
     const location = useLocation();
     return (
       <>
-        <button onClick={() => void launch.open()} disabled={launch.busy}>
+        <button onClick={() => void launch.open("codex")} disabled={launch.busy}>
           Herdr
         </button>
         <output>{JSON.stringify(location.state)}</output>

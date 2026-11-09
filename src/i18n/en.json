@@ -2337,7 +2337,7 @@
     "herdrBusy": "Shell is busy or contains input. Retry at a fresh prompt or open a new terminal.",
     "error": "Terminal operation failed",
     "inputFull": "Terminal input queue is full; try again shortly",
-    "herdrAgentSettings": "Herdr Agent settings…"
+    "herdrSettings": "Herdr settings…"
   },
   "tasks": {
     "reviewActions": {

@@ -106,7 +106,7 @@ export function TerminalNewMenuContent({
       ? [
           {
             key: "herdr-settings",
-            label: t("terminal.herdrAgentSettings"),
+            label: t("terminal.herdrSettings"),
             icon: <HerdrIcon width={16} height={16} viewBox="0 0 32 32" />,
             onSelect: onHerdrSettings,
           },

@@ -1,8 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { getAgentLaunchSettings } from "../../../lib/tauri";
 import {
   installedTerminalAgents,
-  defaultTerminalAgent,
   type HerdrAgent,
 } from "../../../lib/terminalAgents";
 import type { ToolInfo } from "../../../lib/tauri";
@@ -38,7 +36,7 @@ export function useHerdrMenuLaunch(
       mounted.current = false;
     };
   }, []);
-  const open = async (agent?: HerdrAgent): Promise<boolean> => {
+  const open = async (agent: HerdrAgent): Promise<boolean> => {
     if (pending.current || !projectId) return false;
     const scope = context.current;
     const request = ++sequence.current;
@@ -53,12 +51,8 @@ export function useHerdrMenuLaunch(
     setBusy(true);
     setError("");
     try {
-      const settings = await getAgentLaunchSettings();
-      if (!valid()) return false;
       const choices = installedTerminalAgents(tools);
-      const choice = agent
-        ? choices.find((item) => item.id === agent)
-        : defaultTerminalAgent(choices, settings.document.default_agent);
+      const choice = choices.find((item) => item.id === agent);
       if (!choice) throw new Error(t("herdr.noInstalledAgent"));
       const inventory = await api.getHerdrInventory();
       if (!valid()) return false;

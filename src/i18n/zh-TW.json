@@ -2294,7 +2294,7 @@
     "herdrBusy": "目前 Shell 忙碌或已有輸入，請在閒置提示符重試或新增終端",
     "error": "終端操作失敗",
     "inputFull": "終端輸入佇列已滿，請稍後重試",
-    "herdrAgentSettings": "Herdr Agent 設定…"
+    "herdrSettings": "Herdr 設定…"
   },
   "tasks": {
     "reviewActions": {

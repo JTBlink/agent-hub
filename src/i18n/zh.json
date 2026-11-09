@@ -2334,7 +2334,7 @@
     "herdrBusy": "当前 Shell 忙碌或已有输入，请在空闲提示符重试或新建终端",
     "error": "终端操作失败",
     "inputFull": "终端输入队列已满，请稍后重试",
-    "herdrAgentSettings": "Herdr Agent 设置…"
+    "herdrSettings": "Herdr 设置…"
   },
   "tasks": {
     "reviewActions": {

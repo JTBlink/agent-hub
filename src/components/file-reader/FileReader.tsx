@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { FileText, PanelLeft } from "lucide-react";
+import { ChevronDown, FileText, PanelLeft } from "lucide-react";
 import { TabCloseButton } from "../TabCloseButton";
 import { useTranslation } from "react-i18next";
 import { FileTree } from "./FileTree";
@@ -45,21 +45,73 @@ export function FileReader({
         id={explorerId}
         hidden={!sidebar}
         aria-label={t("fileReader.explorer")}
-        className="w-[32%] min-w-[110px] max-w-[280px] shrink-0 overflow-y-auto border-r border-border-subtle bg-bg-secondary p-2"
+        className="flex w-[32%] min-w-[180px] max-w-[300px] shrink-0 flex-col overflow-hidden border-r border-border-subtle bg-bg-secondary"
       >
-        <div className="flex min-h-9 items-center justify-between gap-2 px-2 py-1">
-          <h3 className="min-w-0 text-xs font-semibold text-muted">
-            {t("fileReader.explorer")} · {files.length}
+        <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-border-subtle px-3">
+          <h3 className="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-secondary">
+            {t("fileReader.explorer")}
           </h3>
-          {directoryActions}
+          {directoryActions && (
+            <div className="flex shrink-0 items-center">{directoryActions}</div>
+          )}
         </div>
-        <FileTree files={files} selected={file?.path} onSelect={select} />
+        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+          <section aria-label={t("fileReader.openFiles")} className="pt-2">
+            <h4 className="flex h-7 items-center gap-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <ChevronDown aria-hidden="true" className="h-3 w-3" />
+              {t("fileReader.openFiles")}
+            </h4>
+            <nav className="space-y-0.5">
+              {tabs.map((path) => (
+                <div
+                  key={`open-${path}`}
+                  className={cn(
+                    "group flex min-w-0 items-center rounded px-2 py-1",
+                    path === file?.path
+                      ? "bg-surface-active text-primary"
+                      : "text-secondary hover:bg-surface-hover",
+                  )}
+                >
+                  <button
+                    type="button"
+                    title={path}
+                    aria-label={t("fileReader.switchFile", { path })}
+                    aria-pressed={path === file?.path}
+                    onClick={() => select(path)}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                  >
+                    <FileText
+                      aria-hidden="true"
+                      className="h-3.5 w-3.5 shrink-0 text-muted"
+                    />
+                    <span className="min-w-0 truncate">
+                      {path.split("/").at(-1)}
+                    </span>
+                  </button>
+                  <TabCloseButton
+                    aria-label={t("fileReader.closeFile", { path })}
+                    title={t("fileReader.closeFile", { path })}
+                    onClick={() => closeTab(path)}
+                    className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                  />
+                </div>
+              ))}
+            </nav>
+          </section>
+          <section aria-label={t("fileReader.explorer")} className="pt-3">
+            <h4 className="flex h-7 items-center gap-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+              <ChevronDown aria-hidden="true" className="h-3 w-3" />
+              {t("fileReader.explorer")} · {files.length}
+            </h4>
+            <FileTree files={files} selected={file?.path} onSelect={select} />
+          </section>
+        </div>
       </aside>
       <section
         aria-label={t("fileReader.content")}
         className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface"
       >
-        <div className="flex shrink-0 border-b border-border-subtle bg-bg-secondary">
+        <div className="flex h-10 shrink-0 border-b border-border-subtle bg-bg-secondary">
           <button
             type="button"
             aria-label={t("fileReader.toggleExplorer")}
