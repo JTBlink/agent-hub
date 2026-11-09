@@ -548,6 +548,7 @@
     "herdrSession": "Herdr session",
     "herdrScheduleHelp": "AgentHub triggers the schedule using the Agent command and arguments from Settings; the Herdr service must remain running. A trigger is skipped while the prior agent is still working.",
     "optionalAgent": "Agent (optional)",
+    "defaultAgent": "Default Agent (current: {{agent}})",
     "noAgent": "No agent",
     "noAgentHelp": "With no agent selected, only the command runs.",
     "agentStarterUnavailable": "The agent launcher is unavailable. Update the app and try again.",

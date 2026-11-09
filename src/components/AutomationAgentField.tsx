@@ -53,9 +53,16 @@ export function AutomationAgentField({
   const config = automationAgentConfig(draft);
   const defaultAgentKey = useDefaultAgentKey();
   const agent =
-    draft.provider === "hermes"
+    draft.provider === "hermes" ? "native-hermes" : (config?.agent ?? "");
+  const resolvedAgent =
+    agent === "native-hermes"
+      ? agent
+      : resolveAutomationAgent(agent, defaultAgentKey);
+  const isDefaultAgent = agent === "default";
+  const resolvedChoice =
+    (!herdrEnabled || draft.provider === "hermes") && resolvedAgent === "hermes"
       ? "native-hermes"
-      : resolveAutomationAgent(config?.agent, defaultAgentKey);
+      : resolvedAgent;
   const [pending, setPending] = useState(false);
   const [tools, setTools] = useState<ToolInfo[]>([]);
   const choices = automationAgentOptions(tools)
@@ -67,17 +74,23 @@ export function AutomationAgentField({
           ? "native-hermes"
           : tool.kind,
     }));
-  const selected = choices.find((tool) => tool.value === agent);
+  const selected = isDefaultAgent
+    ? { value: "default" }
+    : choices.find((tool) => tool.value === resolvedChoice);
   const usesHerdr = !!config && agent !== "native-hermes";
   const configured = tools.find(
     (tool) =>
       herdrAgentKind(tool.key) ===
-      (agent === "native-hermes" ? "hermes" : agent),
+      (resolvedChoice === "native-hermes" ? "hermes" : resolvedChoice),
   );
+  const defaultAgentLabel =
+    configured?.display_name ?? t("herdr.defaultAgent");
   const icon = (value: string) => {
     const tool =
       choices.find((item) => item.value === value) ??
-      (value === agent ? configured : undefined);
+      (value === agent || (isDefaultAgent && value === "default")
+        ? configured
+        : undefined);
     return tool ? (
       <AgentIcon
         agentKey={tool.key}
@@ -263,6 +276,14 @@ export function AutomationAgentField({
           >
             {t("automation.noAgent")}
           </option>
+          <option
+            value="default"
+            disabled={providerLocked && draft.provider === "hermes"}
+          >
+            {resolvedAgent
+              ? t("automation.defaultAgent", { agent: defaultAgentLabel })
+              : t("herdr.defaultAgent")}
+          </option>
           {choices.map((tool) => (
             <option
               key={tool.key}
@@ -276,9 +297,9 @@ export function AutomationAgentField({
               {tool.display_name}
             </option>
           ))}
-          {agent && !selected && (
-            <option value={agent} disabled>
-              {configured?.display_name ?? agent} ·{" "}
+          {agent && !selected && !isDefaultAgent && (
+            <option value={resolvedChoice} disabled>
+              {configured?.display_name ?? resolvedChoice} ·{" "}
               {t("automation.agentUnavailable")}
             </option>
           )}

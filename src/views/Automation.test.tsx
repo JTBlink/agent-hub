@@ -484,7 +484,7 @@ it("hides the Hermes entry unless executable installation evidence is present", 
         'select[aria-label="智能体（可选）"] option',
       ),
     ].map((node) => node.textContent),
-  ).toEqual(["不使用智能体", "Claude Code", "Codex", "OpenCode"]);
+  ).toEqual(["不使用智能体", "默认 Agent", "Claude Code", "Codex", "OpenCode"]);
 });
 
 it("shows a persisted list before loading completes without restoring task actions or incomplete details", async () => {
@@ -977,8 +977,58 @@ it("resolves a CLI-created default Agent task from the global Agent setting", as
     container.querySelector<HTMLSelectElement>(
       'select[aria-label="智能体（可选）"]',
     )?.value,
-  ).toBe("codex");
+  ).toBe("default");
+  expect(
+    container.querySelector<HTMLSelectElement>(
+      'select[aria-label="智能体（可选）"] option[value="default"]',
+    )?.textContent,
+  ).toBe("默认 Agent（当前：Codex）");
   expect(container.textContent).not.toContain("未安装或未启用");
+});
+
+it("preserves the default Agent sentinel when saving a CLI-created task", async () => {
+  const task: api.AutomationTask = {
+    ...native,
+    id: "agent-hub:default-agent-save",
+    origin: "agent_hub",
+    can_edit: true,
+    can_run: true,
+    definition: {
+      ...hermes.definition!,
+      provider: "system",
+      name: "CLI 巡检",
+      content: "sh './run.sh'",
+      files: [
+        { path: "prompts/prompt.md", content: "检查项目" },
+        {
+          path: "config/agent.json",
+          content: JSON.stringify({
+            runner: { kind: "default", session: "default", title: "巡检" },
+            launch: { arguments: [] },
+            execution: { wait_timeout_seconds: 1800 },
+          }),
+        },
+      ],
+    },
+  };
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [task],
+    issues: [],
+    hermes_installed: false,
+  });
+  await render("/automation?task=" + encodeURIComponent(task.id));
+  await click("编辑自动化");
+  await act(async () =>
+    container
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+  const saved = vi.mocked(api.saveAutomation).mock.calls[0][2];
+  expect(
+    JSON.parse(
+      saved.files!.find((file) => file.path.endsWith("agent.json"))!.content,
+    ).runner.kind,
+  ).toBe("default");
 });
 
 it("edits an agent prompt directly in the unified layout with a one-line launcher", async () => {
@@ -1134,6 +1184,7 @@ it("offers the same installed agents and order as the global workspace and prese
     ].map((node) => node.textContent),
   ).toEqual([
     "不使用智能体",
+    "默认 Agent",
     "OpenCode",
     "Claude Code",
     "Codex",
