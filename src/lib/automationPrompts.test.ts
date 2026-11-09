@@ -72,6 +72,36 @@ it("updates the Hermes execution prompt while retaining inactive variants", () =
     "Only review",
   );
 });
+
+it("persists an optional behavior marker without changing tasks that do not use it", () => {
+  const task = draft();
+  const prompts = automationPrompts(task, "Default");
+  const saved = {
+    ...task,
+    ...updateAutomationPrompts(
+      task,
+      prompts.variants.map((variant) =>
+        variant.id === "default" ? { ...variant, behavior: "review" } : variant,
+      ),
+      "default",
+    ),
+  };
+  const manifest = JSON.parse(
+    saved.files!.find((file) => file.path === PROMPT_VARIANTS_PATH)!.content,
+  );
+  expect(manifest.version).toBe(2);
+  expect(manifest.variants[0].behavior).toBe("review");
+  expect(automationPrompts(saved, "Default").variants[0].behavior).toBe(
+    "review",
+  );
+
+  const unchanged = updateAutomationPrompts(task, prompts.variants, "default");
+  const unchangedManifest = JSON.parse(
+    unchanged.files!.find((file) => file.path === PROMPT_VARIANTS_PATH)!.content,
+  );
+  expect(unchangedManifest.version).toBe(1);
+  expect(unchangedManifest.variants[0].behavior).toBeUndefined();
+});
 it.each([
   "{",
   '{"version":1,"active_id":"missing","variants":[]}',

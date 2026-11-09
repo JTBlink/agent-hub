@@ -199,3 +199,42 @@ it("adds and edits variants, switches one active body and selects a survivor on 
     vi.unstubAllGlobals();
   }
 });
+
+it("keeps the optional behavior marker hidden until advanced settings are opened", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const current: AutomationDraft = {
+    name: "Review",
+    provider: "hermes",
+    content: "Only review",
+    workdir: null,
+    schedule: { kind: "hourly", minute: 0 },
+    enabled: false,
+  };
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <AutomationPromptEditor
+          draft={current}
+          disabled={false}
+          usesAgent
+          inactivePrompt=""
+          onChange={vi.fn()}
+        />,
+      ),
+    );
+    const advanced = host.querySelector<HTMLDetailsElement>("details")!;
+    expect(advanced.open).toBe(false);
+    await act(async () => advanced.querySelector("summary")!.click());
+    expect(advanced.open).toBe(true);
+    expect(
+      host.querySelector<HTMLInputElement>('input[aria-label="行为标识"]'),
+    ).not.toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

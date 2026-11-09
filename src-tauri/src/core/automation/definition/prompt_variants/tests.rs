@@ -30,6 +30,22 @@ fn validates_portable_variants_and_retains_the_existing_runtime_prompt() {
 }
 
 #[test]
+fn accepts_optional_behavior_markers_and_rejects_invalid_values() {
+    let mut value = manifest();
+    value["variants"][0]["behavior"] = json!("review");
+    value["variants"][1]["behavior"] = json!("repair");
+    assert!(draft(value).validate().is_ok());
+
+    let mut value = manifest();
+    value["variants"][0]["behavior"] = json!("x".repeat(121));
+    assert!(draft(value).validate().is_err());
+
+    let mut value = manifest();
+    value["variants"][0]["behavior"] = json!("repair\nnow");
+    assert!(draft(value).validate().is_err());
+}
+
+#[test]
 fn rejects_missing_duplicate_or_ambiguous_selection_and_invalid_bodies() {
     let mut cases = Vec::new();
     let mut value = manifest();

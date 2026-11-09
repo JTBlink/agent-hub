@@ -114,6 +114,10 @@ def main(prompt_context=""):
         additional = shlex.split(additional)
     except ValueError:
         raise HerdrError("额外的智能体参数引号未闭合，请检查详细设置。") from None
+    wait_timeout_seconds = config.get("wait_timeout_seconds", 1800)
+    if (isinstance(wait_timeout_seconds, bool) or not isinstance(wait_timeout_seconds, int)
+            or not 60 <= wait_timeout_seconds <= 7200):
+        raise HerdrError("Agent 等待期限必须是 60–7200 秒的整数。")
     bridge = os.environ.get("AGENT_HUB_CLI")
     if not bridge:
         directory = Path.home() / ".agent-hub/bin"
@@ -166,7 +170,8 @@ def main(prompt_context=""):
         'HerdrError': HerdrError, 'command': command, 'save_state': save_state,
         'HERE': HERE, 'STATE': STATE, 'STATE_DIR': STATE_DIR,
     })
-    return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge)
+    return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge,
+                          wait_timeout_seconds)
 
 
 if __name__ == "__main__":

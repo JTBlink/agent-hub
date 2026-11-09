@@ -92,8 +92,8 @@ def create_task_pane(invoke, previous, agent, session, cwd, title, available_pan
                    "--label", cwd.name, "--no-focus"])["root_pane"]
 
 
-def wait_for_result(invoke, name, baseline_seq):
-    deadline = time.monotonic() + 1800
+def wait_for_result(invoke, name, baseline_seq, timeout_seconds=1800):
+    deadline = time.monotonic() + timeout_seconds
     observed_activity = False
     last_status = None
     while time.monotonic() < deadline:
@@ -124,7 +124,7 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
-def run(binary, config, session, kind, extra, prompt, cwd, bridge):
+def run(binary, config, session, kind, extra, prompt, cwd, bridge, wait_timeout_seconds=1800):
     sessions = command(binary, ["session", "list", "--json"])["sessions"]
     if not any(item.get("name") == session and item.get("running") for item in sessions):
         raise HerdrError(f"Herdr 会话 {session} 未运行，请先在 Herdr 中启动该会话。")
@@ -152,7 +152,8 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge):
                 return 0
             target = previous.get("agent_name") or previous["pane"]
             print(f"保留上次 Herdr 会话 {previous['pane']}，继续等待状态与结果；不重复投递。", flush=True)
-            result = wait_for_result(invoke, target, previous.get("completion_seq") or 0)
+            result = wait_for_result(invoke, target, previous.get("completion_seq") or 0,
+                                     wait_timeout_seconds)
             return finish_result(invoke, previous, result, target)
         if previous.get("phase") in ("submitted", "attention") and status in ("idle", "done") and (
             (agent.get("completion_seq") or 0) > (previous.get("completion_seq") or 0)
@@ -197,7 +198,7 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge):
             if error.code != "agent_prompt_stalled":
                 raise
             print("Herdr 已投递提示词，正在等待 Agent 状态更新；不会重复投递。", flush=True)
-        result = wait_for_result(invoke, name, state["completion_seq"])
+        result = wait_for_result(invoke, name, state["completion_seq"], wait_timeout_seconds)
     except (HerdrError, subprocess.TimeoutExpired):
         state["phase"] = "attention"
         save_state(state)

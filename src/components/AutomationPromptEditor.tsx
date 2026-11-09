@@ -5,6 +5,7 @@ import type { AutomationDraft } from "../lib/tauri";
 import {
   automationPrompts,
   MAX_PROMPT_VARIANTS,
+  MAX_PROMPT_BEHAVIOR_BYTES,
   PROMPT_VARIANTS_PATH,
   updateAutomationPrompts,
   type AutomationPromptVariant,
@@ -36,6 +37,7 @@ export function AutomationPromptEditor({
   const nameField = useRef<HTMLInputElement>(null);
   const focusName = useRef(false);
   const [viewedId, setViewedId] = useState<string | null>(null);
+  const [showBehavior, setShowBehavior] = useState(false);
   const [removing, setRemoving] = useState<AutomationPromptVariant | null>(
     null,
   );
@@ -209,6 +211,33 @@ export function AutomationPromptEditor({
                 className="app-input w-full px-3 py-2.5 text-sm"
               />
             </label>
+            <details
+              className="rounded-md border border-border-subtle px-3 py-2"
+              open={showBehavior}
+              onToggle={(event) => setShowBehavior(event.currentTarget.open)}
+            >
+              <summary className="cursor-pointer text-xs font-medium text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent">
+                <span className="mr-2">{t("automation.promptAdvanced")}</span>
+                <span className="font-normal text-tertiary">
+                  {t("automation.promptVariantBehaviorOptional")}
+                </span>
+              </summary>
+              <label className="mt-3 flex flex-col gap-2 text-xs font-medium text-muted">
+                {t("automation.promptVariantBehavior")}
+                <input
+                  maxLength={MAX_PROMPT_BEHAVIOR_BYTES}
+                  value={viewed.behavior ?? ""}
+                  aria-label={t("automation.promptVariantBehavior")}
+                  onChange={(event) =>
+                    changeViewed({ behavior: event.target.value })
+                  }
+                  placeholder={t(
+                    "automation.promptVariantBehaviorPlaceholder",
+                  )}
+                  className="app-input w-full px-3 py-2.5 text-sm"
+                />
+              </label>
+            </details>
             <label className="flex min-h-0 flex-1 flex-col gap-2 text-xs font-medium text-muted">
               {t("automation.promptVariantContent")}
               <textarea

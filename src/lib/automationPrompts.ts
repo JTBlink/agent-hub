@@ -3,10 +3,13 @@ import { automationPromptFile } from "./automation";
 
 export const PROMPT_VARIANTS_PATH = "config/prompt-variants.json";
 export const MAX_PROMPT_VARIANTS = 12;
+export const MAX_PROMPT_BEHAVIOR_BYTES = 120;
 export interface AutomationPromptVariant {
   id: string;
   name: string;
   content: string;
+  /** Optional opaque task metadata; AgentHub does not interpret it. */
+  behavior?: string;
 }
 export interface AutomationPrompts {
   activeId: string;
@@ -34,7 +37,7 @@ export function automationPrompts(
       !value ||
       typeof value !== "object" ||
       !("version" in value) ||
-      value.version !== 1 ||
+      ![1, 2].includes(value.version as number) ||
       !("active_id" in value) ||
       typeof value.active_id !== "string" ||
       !("variants" in value) ||
@@ -65,10 +68,23 @@ export function automationPrompts(
           entry.id === activeId ? body !== undefined : typeof body !== "string"
         )
           throw new Error("Invalid prompt body");
+        const behavior =
+          "behavior" in entry && typeof entry.behavior === "string"
+            ? entry.behavior
+            : "";
+        if (
+          new TextEncoder().encode(behavior).length > MAX_PROMPT_BEHAVIOR_BYTES ||
+          Array.from(behavior).some((character) => {
+            const code = character.codePointAt(0) ?? 0;
+            return code <= 0x1f || code === 0x7f;
+          })
+        )
+          throw new Error("Invalid prompt behavior");
         return {
           id: entry.id,
           name: entry.name,
           content: entry.id === activeId ? content : String(body),
+          ...(behavior ? { behavior } : {}),
         };
       },
     );
@@ -92,11 +108,12 @@ export function updateAutomationPrompts(
     (file) => file.path !== PROMPT_VARIANTS_PATH,
   );
   const manifest = {
-    version: 1,
+    version: variants.some((variant) => variant.behavior?.trim()) ? 2 : 1,
     active_id: activeId,
     variants: variants.map((variant) => ({
       id: variant.id,
       name: variant.name,
+      ...(variant.behavior?.trim() ? { behavior: variant.behavior } : {}),
       ...(variant.id === activeId ? {} : { content: variant.content }),
     })),
   };

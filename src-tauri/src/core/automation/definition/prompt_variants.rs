@@ -15,6 +15,8 @@ struct Manifest {
 struct Variant {
     id: String,
     name: String,
+    #[serde(default)]
+    behavior: Option<String>,
     // The active body belongs exclusively to the existing runtime prompt.
     // Missing and explicit null are distinguished by the raw-value check below.
     content: Option<String>,
@@ -32,8 +34,8 @@ pub(super) fn validate(draft: &AutomationDraft) -> Result<(), String> {
         serde_json::from_str(&file.content).map_err(|_| "Invalid prompt variants configuration")?;
     let manifest: Manifest =
         serde_json::from_value(raw.clone()).map_err(|_| "Invalid prompt variants configuration")?;
-    if manifest.version != 1 || !(1..=12).contains(&manifest.variants.len()) {
-        return Err("Prompt variants require version 1 and between 1 and 12 variants".into());
+    if !(1..=2).contains(&manifest.version) || !(1..=12).contains(&manifest.variants.len()) {
+        return Err("Prompt variants require version 1 or 2 and between 1 and 12 variants".into());
     }
     let prompt = super::runtime_prompt_file(draft);
     if prompt.is_none() && draft.provider != Provider::Hermes {
@@ -54,6 +56,15 @@ pub(super) fn validate(draft: &AutomationDraft) -> Result<(), String> {
             || variant.name.chars().any(char::is_control)
         {
             return Err("Prompt variants require unique IDs and names of 1–200 bytes without control characters".into());
+        }
+        if let Some(behavior) = &variant.behavior {
+            if (!behavior.is_empty() && behavior.len() > 120)
+                || behavior.chars().any(char::is_control)
+            {
+                return Err(
+                    "Prompt behavior must be 1–120 bytes without control characters".into(),
+                );
+            }
         }
         if variant.id == manifest.active_id {
             if raw["variants"][index].get("content").is_some() {
