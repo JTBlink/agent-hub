@@ -219,7 +219,13 @@ fn configure_main_window(app: &tauri::App, store: &Arc<core::skill_store::SkillS
             if QUITTING.load(Ordering::SeqCst) {
                 return; // allow close
             }
-            win_for_event.emit("window-close-requested", ()).ok();
+            win_for_event
+                .emit_to(
+                    tauri::EventTarget::window(win_for_event.label()),
+                    "window-close-requested",
+                    (),
+                )
+                .ok();
             api.prevent_close();
         }
     });

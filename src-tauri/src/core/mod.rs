@@ -103,3 +103,5 @@ pub mod user_config;
 pub mod system_permissions;
 
 pub mod project_images;
+
+pub mod workspace_registration;

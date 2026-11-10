@@ -3,6 +3,7 @@ import { act, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as api from "../lib/tauri";
+import { makeProject } from "../../tests/fixtures/workspace";
 import { toast } from "sonner";
 import { createManagedSkill } from "../../tests/fixtures/managedSkill";
 import { AppProvider, useApp } from "./AppContext";
@@ -17,7 +18,18 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@tauri-apps/api/event", () => ({ listen: async () => () => {} }));
+const visitEvents = vi.hoisted(() => ({
+  receive: undefined as
+    undefined | ((event: { payload: Array<[string, number | null]> }) => void),
+}));
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: async (name: string, receive: typeof visitEvents.receive) => {
+    if (name === "project-visits-changed") visitEvents.receive = receive;
+    return () => {
+      if (name === "project-visits-changed") visitEvents.receive = undefined;
+    };
+  },
+}));
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: async (command: string) => {
     if (command === "get_skill_groups")
@@ -42,6 +54,9 @@ function LibraryScope() {
           : app.viewingUngrouped
             ? "ungrouped"
             : (app.viewedSkillGroup?.id ?? "library")}
+      </output>
+      <output data-visits>
+        {JSON.stringify(app.projects.map((p) => [p.id, p.visited_at]))}
       </output>
       <button onClick={() => app.setViewedSkillGroupId("")}>Library</button>
       <button onClick={() => app.setViewingUngrouped(true)}>Ungrouped</button>
@@ -181,4 +196,66 @@ it("runs startup updates once across app refreshes and silently holds back remov
   expect(check).toHaveBeenCalledOnce();
   expect(update).toHaveBeenCalledOnce();
   expect(toast.info).toHaveBeenCalledOnce();
+});
+
+it("synchronizes visits from other windows without rescanning existing project skills", async () => {
+  const projects = vi
+    .spyOn(api, "getProjects")
+    .mockResolvedValue([makeProject()]);
+  await render();
+  await act(async () => visitEvents.receive!({ payload: [["demo", 42]] }));
+  expect(container.querySelector("[data-visits]")?.textContent).toBe(
+    '[["demo",42]]',
+  );
+  expect(projects).toHaveBeenCalledTimes(1);
+  const metadata = vi
+    .spyOn(api, "getProjectMetadata")
+    .mockResolvedValue([makeProject(), { ...makeProject(), id: "new" }]);
+  await act(async () =>
+    visitEvents.receive!({
+      payload: [
+        ["demo", 42],
+        ["new", 43],
+      ],
+    }),
+  );
+  expect(projects).toHaveBeenCalledTimes(1);
+  expect(metadata).toHaveBeenCalledOnce();
+  expect(container.querySelector("[data-visits]")?.textContent).toContain(
+    '"new"',
+  );
+});
+
+it("opens a sixteenth workspace and handles repeated history events without full skill scans", async () => {
+  const initial = Array.from({ length: 15 }, (_, index) => ({
+    ...makeProject(),
+    id: `project-${index}`,
+    visited_at: index + 1,
+  }));
+  const projects = vi.spyOn(api, "getProjects").mockResolvedValue(initial);
+  const added = { ...makeProject(), id: "project-15", visited_at: 16 };
+  const metadata = vi
+    .spyOn(api, "getProjectMetadata")
+    .mockResolvedValue([
+      ...initial.map((p, index) => (index === 0 ? { ...p, visited_at: 0 } : p)),
+      added,
+    ]);
+  await render();
+  const payload: Array<[string, number | null]> = [
+    ...initial.map((p): [string, number | null] => [
+      p.id,
+      p.id === "project-0" ? 0 : p.visited_at,
+    ]),
+    [added.id, 16],
+  ];
+  await act(async () => visitEvents.receive!({ payload }));
+  await act(async () => visitEvents.receive!({ payload }));
+  expect(projects).toHaveBeenCalledOnce();
+  expect(metadata).toHaveBeenCalledOnce();
+  expect(container.querySelector("[data-visits]")?.textContent).toContain(
+    '["project-0",0]',
+  );
+  expect(container.querySelector("[data-visits]")?.textContent).toContain(
+    '["project-15",16]',
+  );
 });

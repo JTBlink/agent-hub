@@ -1,5 +1,18 @@
 use super::*;
 
+#[test]
+fn ordinary_folders_are_not_errors_but_damaged_repositories_are() {
+    let parent = tempfile::tempdir().unwrap();
+    git2::Repository::init(parent.path()).unwrap();
+    let folder = parent.path().join("ordinary");
+    std::fs::create_dir(&folder).unwrap();
+    assert!(inspect(&folder).unwrap().is_none());
+    assert!(!folder.join(".git").exists());
+    std::fs::write(folder.join(".git"), "invalid repository").unwrap();
+    assert!(inspect(&folder).is_err());
+    assert!(inspect(&parent.path().join("missing")).is_err());
+}
+
 /// Manual benchmark: set AGENT_HUB_GIT_PROFILE_ROOT to a checkout, then run
 /// `cargo test --lib benchmark_status_loading -- --ignored --nocapture`.
 #[test]

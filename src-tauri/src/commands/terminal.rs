@@ -8,9 +8,9 @@ use std::sync::Arc;
 use tauri::{ipc::Channel, Manager, State, Webview};
 
 pub(crate) fn owner<R: tauri::Runtime>(window: &Webview<R>) -> Result<String, AppError> {
-    if window.label() != "main" {
+    if !crate::desktop::workspaces::is_workspace(window) {
         return Err(AppError::invalid_input(
-            "Terminal access requires the main window",
+            "Terminal access requires a trusted workspace",
         ));
     }
     Ok(window.label().into())

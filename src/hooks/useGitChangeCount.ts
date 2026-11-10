@@ -20,6 +20,10 @@ export function useGitChangeCount(projectId?: string, worktreePath?: string) {
       const request = ++revision;
       void getProjectGitStatus(projectId, worktreePath).then(
         (status) => {
+          if (!status) {
+            if (!disposed && request === revision) setResult(undefined);
+            return;
+          }
           if (!disposed && request === revision)
             setResult({
               key,

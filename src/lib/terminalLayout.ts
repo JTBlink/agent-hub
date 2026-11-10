@@ -1,3 +1,4 @@
+import { workspaceStorageKey } from "./workspaceWindow";
 import { readPaneLayout, type TerminalPaneLayout } from "./terminalPaneLayout";
 import { parseHerdrNavigation as herdrNavigation } from "../integrations/herdr/contracts";
 import type { DevelopmentTerminal } from "./developmentPreview";
@@ -81,7 +82,7 @@ export function readTerminalLayout(): TerminalLayout {
   const empty = { tabs: [], activeIds: {}, lastActiveId: "" };
   try {
     const value: unknown = JSON.parse(
-      localStorage.getItem(TERMINAL_LAYOUT_KEY) ?? "null",
+      localStorage.getItem(workspaceStorageKey(TERMINAL_LAYOUT_KEY)) ?? "null",
     );
     if (!record(value) || value.version !== 1 || !Array.isArray(value.tabs))
       return empty;
@@ -190,7 +191,7 @@ export function writeTerminalLayout(layout: TerminalLayout) {
     const tabs = layout.tabs.filter((tab) => !tab.development);
     const ids = new Set(tabs.map((tab) => tab.id));
     localStorage.setItem(
-      TERMINAL_LAYOUT_KEY,
+      workspaceStorageKey(TERMINAL_LAYOUT_KEY),
       JSON.stringify({
         version: 1,
         ...layout,

@@ -4,6 +4,7 @@ mod ipc;
 pub(crate) mod lifecycle;
 mod startup;
 pub(crate) mod tray;
+pub(crate) mod workspaces;
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -27,6 +28,7 @@ pub fn builder() -> anyhow::Result<tauri::Builder<tauri::Wry>> {
 
     let builder_start = Instant::now();
     let builder = tauri::Builder::default()
+        .manage(workspaces::WorkspaceWindows::default())
         .manage(store)
         .manage(cancel_registry)
         .manage(Arc::new(core::agent_usage::AgentUsage::default()))

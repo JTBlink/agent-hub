@@ -1,4 +1,5 @@
 mod membership;
+mod recent_projects;
 mod rename;
 
 use anyhow::Result;
@@ -1262,16 +1263,6 @@ impl SkillStore {
     pub fn delete_project(&self, id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute("DELETE FROM projects WHERE id = ?1", params![id])?;
-        Ok(())
-    }
-
-    pub fn touch_project_visited(&self, id: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
-        let now = chrono::Utc::now().timestamp_millis();
-        conn.execute(
-            "UPDATE projects SET visited_at = ?1 WHERE id = ?2",
-            params![now, id],
-        )?;
         Ok(())
     }
 

@@ -11,6 +11,7 @@ import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
 import type { FileReaderProps, ReaderFile, ReaderLocation } from "./types";
 import { CodeEditor } from "./CodeEditor";
+import { CopyPathButton } from "../CopyPathButton";
 
 export function FileContent({
   file,
@@ -21,6 +22,7 @@ export function FileContent({
   maxLength,
   actions,
   toolbarContainer,
+  localPath,
   onPreview,
   defaultSource = false,
   showOpenInVscode = true,
@@ -28,8 +30,10 @@ export function FileContent({
   file: ReaderFile;
   location?: ReaderLocation;
   actions?: ReactNode;
-  /** Render controls in a host toolbar and omit the breadcrumb row. */
+  /** Render controls in a host toolbar while retaining the file breadcrumb. */
   toolbarContainer?: HTMLElement | null;
+  /** Resolved local path supplied by the host for its tooltip and copy action. */
+  localPath?: string;
   defaultSource?: boolean;
   /** Open a workspace preview tab while retaining this source editor. */
   onPreview?: () => void;
@@ -133,17 +137,20 @@ export function FileContent({
   const lines = file.content.split("\n").length;
   return (
     <>
-      {toolbarContainer !== undefined ? (
-        toolbarContainer && createPortal(toolbar, toolbarContainer)
-      ) : (
-        <div className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border-subtle px-3 py-0.5">
-          <div
-            title={file.path}
-            aria-label={file.path}
-            className="flex min-w-0 flex-1 items-center overflow-hidden text-xs text-muted"
-          >
+      {toolbarContainer && createPortal(toolbar, toolbarContainer)}
+      <div className="flex min-h-8 shrink-0 flex-wrap items-center justify-between gap-x-2 border-b border-border-subtle px-3 py-0.5">
+        <nav
+          title={localPath ?? file.path}
+          aria-label={t("fileReader.filePath")}
+          className="min-w-0 flex-1 overflow-x-auto text-xs text-muted"
+        >
+          <ol className="flex w-max min-w-full items-center">
             {file.path.split("/").map((part, index, parts) => (
-              <span key={index} className="flex min-w-0 items-center">
+              <li
+                key={index}
+                className="flex shrink-0 items-center"
+                aria-current={index === parts.length - 1 ? "page" : undefined}
+              >
                 {index > 0 && (
                   <ChevronRight
                     aria-hidden="true"
@@ -155,19 +162,17 @@ export function FileContent({
                   <FileTypeIcon path={file.path} size={13} className="mr-1.5" />
                 )}
                 <span
-                  className={cn(
-                    "truncate",
-                    index === parts.length - 1 && "text-secondary",
-                  )}
+                  className={cn(index === parts.length - 1 && "text-secondary")}
                 >
                   {part}
                 </span>
-              </span>
+              </li>
             ))}
-          </div>
-          {toolbar}
-        </div>
-      )}
+          </ol>
+        </nav>
+        {localPath && <CopyPathButton path={localPath} />}
+        {toolbarContainer === undefined && toolbar}
+      </div>
       {openError && (
         <p
           role="alert"

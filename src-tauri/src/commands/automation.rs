@@ -4,6 +4,15 @@ use crate::core::{
 };
 
 #[tauri::command]
+pub async fn open_automation_workspace(app: tauri::AppHandle) -> Result<String, AppError> {
+    let directory = tauri::async_runtime::spawn_blocking(|| {
+        automation::open_workspace_root().map_err(AppError::invalid_input)
+    })
+    .await??;
+    crate::desktop::workspaces::open(app, directory.to_string_lossy().into()).await
+}
+
+#[tauri::command]
 pub async fn preview_automation_package(
     path: String,
 ) -> Result<automation::package::AutomationPackage, AppError> {

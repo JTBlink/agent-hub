@@ -37,6 +37,7 @@ mod templates;
 mod workspace;
 pub use backup::{shell as command_shell, AutomationBackup};
 pub use templates::{template, templates, AutomationCatalog};
+pub use workspace::open_root as open_workspace_root;
 pub(crate) fn watch_dir() -> std::path::PathBuf {
     store::root()
 }

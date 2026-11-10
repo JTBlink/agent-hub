@@ -120,9 +120,9 @@ struct Location {
     loading: bool,
 }
 fn main_only(caller: &tauri::Webview) -> Result<(), AppError> {
-    if caller.label() != "main" {
+    if !crate::desktop::workspaces::is_workspace(caller) {
         return Err(AppError::invalid_input(
-            "Native preview is controlled by the main workspace only",
+            "Native preview requires a trusted workspace",
         ));
     }
     Ok(())
@@ -194,6 +194,8 @@ pub async fn preview_native_open(
         let id = format!("preview-native-{}", uuid::Uuid::new_v4());
         let event_id = id.clone();
         let popup_id = id.clone();
+        let owner = webview.label().to_owned();
+        let popup_owner = owner.clone();
         let popup_app = window.app_handle().clone();
         let builder = tauri::webview::WebviewBuilder::new(&id, tauri::WebviewUrl::External(url))
             .incognito(true)
@@ -214,7 +216,7 @@ pub async fn preview_native_open(
             .on_new_window(move |url, _| {
                 if native_url(url.as_str()).is_ok() && url.scheme() != "about" {
                     let _ = popup_app.emit_to(
-                        "main",
+                        popup_owner.as_str(),
                         "preview-native-new-tab",
                         serde_json::json!({"id":popup_id,"url":url.as_str()}),
                     );
@@ -223,7 +225,7 @@ pub async fn preview_native_open(
             })
             .on_page_load(move |view, payload| {
                 let _ = view.app_handle().emit_to(
-                    "main",
+                    owner.as_str(),
                     "preview-native-location",
                     Location {
                         id: event_id.clone(),

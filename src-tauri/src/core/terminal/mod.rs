@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use session::Session;
 pub use shell::{prepare_shell, LaunchState, ShellIntegration};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -68,7 +68,9 @@ type Sink = Arc<dyn Fn(TerminalEvent) -> bool + Send + Sync>;
 #[derive(Default)]
 struct Sessions {
     items: HashMap<String, Arc<Session>>,
-    pending: usize,
+    pending: HashMap<String, usize>,
+    generations: HashMap<String, u64>,
+    closed_owners: HashSet<String>,
     shutting_down: bool,
 }
 #[derive(Default)]
@@ -93,21 +95,27 @@ impl TerminalManager {
         prepare: impl FnOnce() -> Result<TerminalSpec>,
         sink: impl Fn(TerminalEvent) -> bool + Send + Sync + 'static,
     ) -> Result<TerminalSession> {
-        {
+        let generation = {
             let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-            if sessions.shutting_down {
+            if sessions.shutting_down || sessions.closed_owners.contains(owner) {
                 bail!("Terminal manager is shutting down");
             }
-            if sessions.items.len() + sessions.pending >= 8 {
+            if sessions.items.values().filter(|s| s.owner == owner).count()
+                + sessions.pending.get(owner).copied().unwrap_or(0)
+                >= 8
+            {
                 bail!("Close an existing terminal before opening another (limit: 8)");
             }
-            sessions.pending += 1;
-        }
+            *sessions.pending.entry(owner.into()).or_default() += 1;
+            *sessions.generations.entry(owner.into()).or_default()
+        };
         let created = prepare().and_then(|spec| Session::spawn(owner, spec, Arc::new(sink)));
         let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
-        sessions.pending -= 1;
+        if let Some(pending) = sessions.pending.get_mut(owner) {
+            *pending -= 1;
+        }
         let session = created?;
-        if sessions.shutting_down {
+        if sessions.shutting_down || sessions.generations.get(owner) != Some(&generation) {
             drop(sessions);
             session.close();
             bail!("Terminal manager is shutting down");
@@ -177,6 +185,40 @@ impl TerminalManager {
             .remove(id);
         session.close();
         Ok(())
+    }
+    /// Reopen a trusted workspace identity before accepting new terminal requests.
+    pub fn open_owner(&self, owner: &str) {
+        self.sessions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .closed_owners
+            .remove(owner);
+    }
+    /// Atomically reject pending launches and detach PTYs; run cleanup off the UI thread.
+    pub fn detach_owner(&self, owner: &str) -> impl FnOnce() + Send + 'static {
+        let items = {
+            let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            sessions.closed_owners.insert(owner.into());
+            *sessions.generations.entry(owner.into()).or_default() += 1;
+            let ids: Vec<_> = sessions
+                .items
+                .iter()
+                .filter(|(_, s)| s.owner == owner)
+                .map(|(id, _)| id.clone())
+                .collect();
+            ids.into_iter()
+                .filter_map(|id| sessions.items.remove(&id))
+                .collect::<Vec<_>>()
+        };
+        move || {
+            for session in items {
+                session.close();
+            }
+        }
+    }
+    /// Release only the PTYs owned by a closing workspace.
+    pub fn close_owner(&self, owner: &str) {
+        self.detach_owner(owner)();
     }
     pub fn close_all(&self) {
         let items = {

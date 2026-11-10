@@ -1,6 +1,6 @@
 # agent-hub 领域上下文
 
-当前应用以 Skills Manager 的实现为基础，使用唯一的 React + Tauri 主入口；架构切换见 ADR-0008。旧配置编辑器和双窗口宿主不再属于当前实现。
+当前应用以 Skills Manager 的实现为基础，使用唯一的 React + Tauri 主入口；架构切换见 ADR-0008。旧配置编辑器和双窗口宿主不再属于当前实现。独立工作区窗口复用同一应用入口、组件与数据模型，见 ADR-0021。
 
 桌面宿主通过共享 `builder()` 或 `run(context)` 组装应用，配置与前端资源由可执行入口提供；前端应用外壳与页面路由分离，可追加宿主页。当前通过 Cargo features 和产品配置组装标准版、Personal 个人版与 Agent Flow 企业定制版；默认标准版保留完整能力，个人版默认排除可选集成（Herdr、云端同步、GitHub、GitLab），Agent Flow 初始启用云端同步、GitLab 与 Herdr，代码平台只支持 GitLab，不编译或展示 GitHub 集成，AI Native 编排仍为待接入的独立原型；能力及产品选择统一维护在 `products/features.json`，构建与运行目录按产品隔离，尚未发布独立 UI 包，见[应用组装边界](docs/architecture/app-composition.md)。
 

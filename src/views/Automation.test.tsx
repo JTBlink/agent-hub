@@ -20,9 +20,11 @@ vi.mock("../lib/openInVscode", () => ({
 }));
 
 vi.mock("../lib/tauri", () => ({
+  openAutomationWorkspace: vi.fn().mockResolvedValue("workspace-automations"),
   getProjects: vi.fn(),
   getToolStatus: vi.fn(),
   getAgentLaunchSettings: vi.fn(),
+  openWorkspaceWindow: vi.fn().mockResolvedValue("workspace-task"),
   getAutomationOverview: vi.fn(),
   saveAutomation: vi.fn(),
   getAutomationCopyDraft: vi.fn(),
@@ -124,11 +126,13 @@ beforeEach(() => {
   localStorage.removeItem("agent-hub:tool-order");
   localStorage.removeItem("agent-hub:lobster-tool-order");
   vi.mocked(api.getToolStatus).mockReset().mockResolvedValue(localTools);
-  vi.mocked(api.getAgentLaunchSettings).mockReset().mockResolvedValue({
-    document: { schema_version: 1, default_agent: "codex", instructions: {} },
-    revision: "revision",
-    defaults: { codex: "codex" },
-  });
+  vi.mocked(api.getAgentLaunchSettings)
+    .mockReset()
+    .mockResolvedValue({
+      document: { schema_version: 1, default_agent: "codex", instructions: {} },
+      revision: "revision",
+      defaults: { codex: "codex" },
+    });
   vi.mocked(api.getProjects).mockReset().mockResolvedValue([]);
   vi.mocked(open).mockReset().mockResolvedValue(null);
   vi.mocked(openDirectoryInVscode).mockReset().mockResolvedValue();
@@ -171,7 +175,11 @@ beforeEach(() => {
           {
             path: "agent-task/config/agent.json",
             content: JSON.stringify({
-              runner: { kind: "codex", session: "default", title: "Agent task" },
+              runner: {
+                kind: "codex",
+                session: "default",
+                title: "Agent task",
+              },
               launch: { arguments: [] },
               execution: { wait_timeout_seconds: 1800 },
             }),
@@ -271,7 +279,7 @@ async function click(name: string) {
 }
 
 it.each([undefined, "/workspace/task-scripts"])(
-  "opens task source and its root folder in VS Code without editing or saving (%s)",
+  "opens the actual task directory in an independent workspace (%s)",
   async (script_dir) => {
     vi.mocked(api.getAutomationOverview).mockResolvedValue({
       tasks: [
@@ -281,11 +289,7 @@ it.each([undefined, "/workspace/task-scripts"])(
             ...hermes.definition!,
             script_dir,
             workdir: "/workspace/legacy-scripts",
-            files: [
-              { path: "TASK.md", content: "# Example task" },
-              { path: "scripts/run.sh", content: "echo example" },
-              { path: "config/task.json", content: '{"version":"1.0.0"}' },
-            ],
+            files: [],
           },
         },
       ],
@@ -293,58 +297,17 @@ it.each([undefined, "/workspace/task-scripts"])(
       hermes_installed: true,
     });
     await render("/automation?task=" + encodeURIComponent(hermes.id));
-    await ariaClick("VS Code 打开");
-    expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
+    await ariaClick("查看源码");
+    expect(api.openWorkspaceWindow).toHaveBeenLastCalledWith(
       script_dir ?? "/workspace/legacy-scripts",
     );
-    const trigger = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="查看源码"]',
-    )!;
-    expect(trigger.closest("header")?.querySelector("h1")?.textContent).toBe(
-      hermes.name,
-    );
-    trigger.focus();
-    await act(async () => trigger.click());
-    expect(document.querySelector("dialog[open]")).not.toBeNull();
-    expect(
-      document.querySelector('dialog button[aria-label="还原阅读窗口"]'),
-    ).not.toBeNull();
-    expect(codeEditor(document).state.sliceDoc()).toBe("echo example");
-    expect(codeEditor(document).state.readOnly).toBe(true);
-    const openSourceDirectory = async () => {
-      const button = document.querySelector<HTMLButtonElement>(
-        'dialog button[aria-label="VS Code 打开"]',
-      )!;
-      expect(button.title).toBe("在 VS Code 中打开脚本目录");
-      expect(button.closest('aside[aria-label="文件目录"]')).not.toBeNull();
-      await act(async () => button.click());
-      expect(openDirectoryInVscode).toHaveBeenLastCalledWith(
-        script_dir ?? "/workspace/legacy-scripts",
-      );
-      expect(openFileInVscode).not.toHaveBeenCalled();
-    };
-    await openSourceDirectory();
-    await act(async () =>
-      document
-        .querySelector<HTMLButtonElement>(
-          'dialog button[aria-label="config/task.json"]',
-        )!
-        .click(),
-    );
-    expect(codeEditor(document).state.sliceDoc()).toBe('{"version":"1.0.0"}');
-    await openSourceDirectory();
-    await act(async () =>
-      document
-        .querySelector<HTMLButtonElement>('dialog button[aria-label="关闭"]')!
-        .click(),
-    );
-    expect(document.activeElement).toBe(trigger);
+    expect(document.querySelector("dialog[open]")).toBeNull();
     expect(api.saveAutomation).not.toHaveBeenCalled();
     expect(api.runAutomation).not.toHaveBeenCalled();
   },
 );
 
-it("omits task source when the task has no source files", async () => {
+it("omits task source when no local directory is available", async () => {
   await render("/automation?task=" + encodeURIComponent(native.id));
   expect(container.querySelector('button[aria-label="查看源码"]')).toBeNull();
 });
@@ -460,6 +423,23 @@ it("aggregates system and Hermes tasks and filters by source and status", async 
     statusSelect.dispatchEvent(new Event("change", { bubbles: true }));
   });
   expect(container.textContent).toContain("没有符合筛选条件的任务");
+});
+
+it("opens a task when clicking its row while keeping row actions independent", async () => {
+  await render();
+  await select("任务创建者", "all");
+  const row = container.querySelector("tbody tr")!;
+  const projectCell = row.querySelectorAll("td")[2];
+  await act(async () => projectCell.click());
+  expect(container.querySelector("h1")?.textContent).toBe(native.name);
+
+  await ariaClick("返回自动化列表");
+  await select("任务创建者", "all");
+  const action = container.querySelector<HTMLButtonElement>(
+    '[aria-label="立即运行 仓库审计"]',
+  )!;
+  await act(async () => action.click());
+  expect(container.querySelector("h1")?.textContent).not.toBe(hermes.name);
 });
 
 it("hides the Hermes entry unless executable installation evidence is present", async () => {
@@ -767,11 +747,11 @@ it("creates a manual command task with the shared DTO without running it on save
   await input("名称", "手动检查");
   await input("执行命令", "printf test");
   await select("日程", "manual");
-  await act(async () =>
+  await act(async () => {
     container
-      .querySelector("form")!
-      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
-  );
+      .querySelector<HTMLButtonElement>('button[type="submit"]')!
+      .click();
+  });
   expect(api.saveAutomation).toHaveBeenCalledWith(null, null, {
     package_options: { version: "1.2.0", dependencies: [], hermes: null },
     name: "手动检查",
@@ -1199,7 +1179,9 @@ it("offers the same installed agents and order as the global workspace and prese
   expect(prompt().disabled).toBe(false);
   await act(async () =>
     container
-      .querySelector<HTMLButtonElement>('[role="combobox"][aria-label="智能体（可选）"]')!
+      .querySelector<HTMLButtonElement>(
+        '[role="combobox"][aria-label="智能体（可选）"]',
+      )!
       .click(),
   );
   expect(
@@ -1247,14 +1229,14 @@ it("opens Agent settings from the scheduled Agent selector footer", async () => 
       )!
       .click(),
   );
-  const settings = [...document.querySelectorAll<HTMLButtonElement>("[role=listbox] button")].find(
-    (button) => button.textContent === "智能体设置…",
-  );
+  const settings = [
+    ...document.querySelectorAll<HTMLButtonElement>("[role=listbox] button"),
+  ].find((button) => button.textContent === "智能体设置…");
   expect(settings).not.toBeUndefined();
   await act(async () => settings!.click());
-  expect(container.querySelector("output[data-current-location]")?.textContent).toBe(
-    "/settings",
-  );
+  expect(
+    container.querySelector("output[data-current-location]")?.textContent,
+  ).toBe("/settings");
 });
 
 it("launches a newly selected Hermes Agent through Herdr rather than changing its scheduler", async () => {
@@ -1427,6 +1409,33 @@ async function openBackupRestore() {
   await act(async () => restore.click());
 }
 
+it("opens the automation workspace root with no tasks and reports failures for retry", async () => {
+  vi.mocked(api.getAutomationOverview).mockResolvedValue({
+    tasks: [],
+    issues: [],
+    hermes_installed: false,
+  });
+  vi.mocked(api.openAutomationWorkspace).mockRejectedValueOnce(
+    new Error("Folder unavailable"),
+  );
+  await render();
+  const openRoot = async () => {
+    await ariaClick("更多操作");
+    const item = [
+      ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+    ].find((button) => button.textContent === "打开自动化任务根目录")!;
+    await act(async () => item.click());
+  };
+  await openRoot();
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "Folder unavailable",
+  );
+  await openRoot();
+  expect(api.openAutomationWorkspace).toHaveBeenCalledTimes(2);
+  expect(api.openAutomationWorkspace).toHaveBeenCalledWith();
+  expect(container.textContent).not.toContain("Folder unavailable");
+});
+
 it("shows the generic Agent configuration from the automation overflow menu", async () => {
   vi.mocked(api.getAutomationOverview).mockResolvedValue({
     tasks: [
@@ -1446,8 +1455,9 @@ it("shows the generic Agent configuration from the automation overflow menu", as
   });
   await render();
   await ariaClick("更多操作");
-  const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
-    .find((button) => button.textContent === "自动化配置")!;
+  const item = [
+    ...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+  ].find((button) => button.textContent === "自动化配置")!;
   await act(async () => item.click());
   const dialog = document.querySelector('[role="dialog"]')!;
   expect(dialog.textContent).toContain("运行器");
@@ -1880,6 +1890,11 @@ it("keeps separate saved run outputs when switching between execution records", 
   await render("/automation?task=hermes%3Aaudit");
   await click("执行");
   expect(container.querySelectorAll("button[data-run-id]")).toHaveLength(2);
+  await act(async () =>
+    container.querySelector<HTMLElement>("tbody tr:nth-child(2) td:nth-child(2)")!.click(),
+  );
+  expect(container.textContent).toContain("old failure");
+  await click("返回执行记录");
   await act(async () =>
     container
       .querySelector<HTMLButtonElement>('button[data-run-id="new"]')!

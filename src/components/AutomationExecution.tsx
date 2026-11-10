@@ -210,7 +210,18 @@ export function AutomationExecution({
             </thead>
             <tbody className="divide-y divide-border-subtle">
               {history.runs.map((run) => (
-                <tr key={run.id} className="hover:bg-surface-hover">
+                <tr
+                  key={run.id}
+                  className="cursor-pointer hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                  tabIndex={0}
+                  onClick={() => select(run.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      select(run.id);
+                    }
+                  }}
+                >
                   <td className="px-5 py-4">
                     <button
                       type="button"

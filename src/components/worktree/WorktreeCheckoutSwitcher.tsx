@@ -9,7 +9,7 @@ import { compactHomePath } from "../../utils";
 import { ThemedSelect } from "../ThemedSelect";
 import { CreateWorktreeDialog } from "./CreateWorktreeDialog";
 
-/** Select a checkout within the current project from the file explorer header. */
+/** Select a checkout within the current project from the window title bar. */
 export function WorktreeCheckoutSwitcher() {
   const { t } = useTranslation();
   const { projects } = useApp();
@@ -19,6 +19,7 @@ export function WorktreeCheckoutSwitcher() {
   return (
     <>
       <ThemedSelect
+        fitContent
         aria-label={t("worktree.selectWorktree")}
         title={
           selectedProject && selection.path
@@ -37,7 +38,7 @@ export function WorktreeCheckoutSwitcher() {
             <Plus size={14} aria-hidden="true" />
           ) : null
         }
-        className="h-7 w-full min-w-0 gap-1 rounded border-transparent bg-transparent px-2 py-0 text-sm font-semibold text-primary hover:bg-surface-hover"
+        className="h-6 max-w-[240px] min-w-0 gap-1 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:bg-surface-hover hover:text-secondary"
         renderValue={(value) => {
           const option = selection.worktreeOptions.find(
             (item) => item.value === value,

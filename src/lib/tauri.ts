@@ -6,6 +6,18 @@ import type { SystemLoadSnapshot } from "./systemLoad";
 export const getSystemLoad = () =>
   invoke<SystemLoadSnapshot>("get_system_load");
 
+export const openAutomationWorkspace = () =>
+  invoke<string>("open_automation_workspace");
+
+export const openWorkspaceWindow = (path: string) =>
+  invoke<string>("open_workspace_window", { path });
+export const closeWorkspaceWindow = () =>
+  invoke<void>("close_workspace_window");
+export const workspaceWindowCount = () =>
+  invoke<number>("workspace_window_count");
+export const workspaceQuitReply = (token: string, ready: boolean) =>
+  invoke<void>("workspace_quit_reply", { token, ready });
+
 export const getAgentUsage = (refresh = false) =>
   invoke<ProviderUsage[]>("get_agent_usage", { refresh });
 
@@ -1231,6 +1243,16 @@ export const reorderSkillGroupSkills = (
 // ── Projects ──
 
 export const getProjects = () => invoke<Project[]>("get_projects");
+export const getProjectMetadata = () =>
+  invoke<Project[]>("get_projects", { metadataOnly: true });
+export const resolveWorkspaceProject = (path: string) =>
+  invoke<{
+    project: Project;
+    directory: string;
+    visits: Array<[string, number | null]>;
+  }>("resolve_workspace_project", {
+    path,
+  });
 
 export const addProject = (path: string) =>
   invoke<Project>("add_project", { path });

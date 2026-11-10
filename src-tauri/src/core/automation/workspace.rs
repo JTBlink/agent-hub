@@ -41,6 +41,19 @@ pub(super) fn workspace_root() -> PathBuf {
     }
 }
 
+/// Resolve the task-package workspace root on an explicit open action, even before any task exists.
+pub fn open_root() -> Result<PathBuf, String> {
+    ensure_root(&workspace_root())
+}
+
+fn ensure_root(root: &Path) -> Result<PathBuf, String> {
+    if !root.is_absolute() {
+        return Err("Cannot resolve an absolute automation workspace directory".into());
+    }
+    std::fs::create_dir_all(root).map_err(|error| error.to_string())?;
+    root.canonicalize().map_err(|error| error.to_string())
+}
+
 pub(super) fn is_default(value: &str, id: &str) -> bool {
     is_default_at(&workspace_root(), &store::root(), value, id)
 }

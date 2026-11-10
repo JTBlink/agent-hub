@@ -10,6 +10,7 @@ function setup(mac = true) {
   const project = makeProject();
   const actions = {
     openProject: vi.fn(),
+    newWorkspaceWindow: vi.fn(),
     openRecent: vi.fn(),
     manageWorkspaces: vi.fn(),
     navigate: vi.fn(),
@@ -39,6 +40,7 @@ it("provides native menu categories and connects open, recent, management and sa
   const all = items(options);
   for (const [label, action] of [
     ["打开项目…", actions.openProject],
+    ["新建工作区窗口…", actions.newWorkspaceWindow],
     ["管理工作区…", actions.manageWorkspaces],
     ["退出 AgentHub", actions.quit],
   ] as const) {
@@ -84,4 +86,43 @@ it.each([true, false])("opens developer tools from Help on macOS=%s", (mac) => {
   expect(developer.accelerator).toBe("CmdOrCtrl+Alt+I");
   developer.action?.("developer-mode");
   expect(actions.developerTools).toHaveBeenCalledOnce();
+});
+
+it("keeps action IDs isolated between windows and stable within each window", () => {
+  const { actions } = setup(true);
+  const project = makeProject();
+  const first = applicationMenuOptions(
+    i18n.t.bind(i18n),
+    [project],
+    actions,
+    true,
+    "window-a",
+  );
+  const second = applicationMenuOptions(
+    i18n.t.bind(i18n),
+    [project],
+    actions,
+    true,
+    "window-b",
+  );
+  const rebuilt = applicationMenuOptions(
+    i18n.t.bind(i18n),
+    [project],
+    actions,
+    true,
+    "window-a",
+  );
+  const ids = (options: ReturnType<typeof applicationMenuOptions>) =>
+    items(options).flatMap((item) => ("id" in item ? [item.id] : []));
+  expect(ids(rebuilt)).toEqual(ids(first));
+  const combined = [...ids(first), ...ids(second)];
+  expect(new Set(combined).size).toBe(combined.length);
+  const recent = items(first).find(
+    (item) =>
+      "id" in item && item.id === `window-a:recent-project-${project.id}`,
+  );
+  if (!recent || !("action" in recent))
+    throw new Error("Missing recent action");
+  recent.action?.("test");
+  expect(actions.openRecent).toHaveBeenCalledWith(project);
 });

@@ -213,6 +213,14 @@ fn project_to_dto(
     }
 
     ProjectDto {
+        skill_count,
+        sync_health: health,
+        ..project_metadata(rec)
+    }
+}
+
+pub(crate) fn project_metadata(rec: &ProjectRecord) -> ProjectDto {
+    ProjectDto {
         id: rec.id.clone(),
         name: rec.name.clone(),
         path: rec.path.clone(),
@@ -220,8 +228,8 @@ fn project_to_dto(
         linked_agent_name: rec.linked_agent_name.clone(),
         supports_skill_toggle: rec.workspace_type != "linked" || rec.disabled_path.is_some(),
         sort_order: rec.sort_order,
-        skill_count,
-        sync_health: health,
+        skill_count: 0,
+        sync_health: SyncHealthDto::default(),
         created_at: rec.created_at,
         updated_at: rec.updated_at,
         visited_at: rec.visited_at,
@@ -450,11 +458,18 @@ pub(crate) fn classify_sync_status(
 static GET_PROJECTS_FIRST_CALL: AtomicBool = AtomicBool::new(true);
 
 #[tauri::command]
-pub async fn get_projects(store: State<'_, Arc<SkillStore>>) -> Result<Vec<ProjectDto>, AppError> {
+pub async fn get_projects(
+    store: State<'_, Arc<SkillStore>>,
+    metadata_only: Option<bool>,
+) -> Result<Vec<ProjectDto>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let start = Instant::now();
+        store.prune_recent_projects().map_err(AppError::db)?;
         let records = store.get_all_projects().map_err(AppError::db)?;
+        if metadata_only.unwrap_or(false) {
+            return Ok(records.iter().map(project_metadata).collect());
+        }
         let all_managed = store.get_all_skills().map_err(AppError::db)?;
         let configs = agent_skill_configs(&store);
         let count = records.len();
@@ -614,14 +629,17 @@ pub async fn reorder_projects(
 
 #[tauri::command]
 pub async fn touch_project_visited(
+    app: tauri::AppHandle,
     id: String,
     store: State<'_, Arc<SkillStore>>,
 ) -> Result<(), AppError> {
     let store = store.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        store.touch_project_visited(&id).map_err(AppError::db)
+    let visits = tauri::async_runtime::spawn_blocking(move || {
+        store.touch_project_visited(&id).map_err(AppError::db)?;
+        store.project_visit_history().map_err(AppError::db)
     })
-    .await?
+    .await??;
+    tauri::Emitter::emit(&app, "project-visits-changed", visits).map_err(AppError::io)
 }
 
 #[tauri::command]

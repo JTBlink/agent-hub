@@ -292,6 +292,7 @@
     }
   },
   "menu": {
+    "newWorkspaceWindow": "New Workspace Window…",
     "developerMode": "Developer Mode",
     "file": "File",
     "edit": "Edit",
@@ -485,6 +486,7 @@
     "backToEditor": "Back to editor",
     "templateHint": "Choose a template, then adjust its command, directory and schedule. Nothing is registered or run until you create the task.",
     "more": "More actions",
+    "openTasksDirectory": "Open automation tasks folder",
     "restoreBackup": "Restore from backup",
     "noTemplates": "No templates are available.",
     "backupTemplateHint": "Create a new paused task from backup without overwriting an existing local task.",
@@ -1771,6 +1773,7 @@
   "closeAction": {
     "enableTrayHint": "Running in the background will enable the tray icon so you can reopen the window.",
     "exitMessage": "Quitting ends in-app terminal sessions and their running processes.",
+    "waitingForWorkspaces": "Waiting for other workspaces to finish saving their files…",
     "exitTitle": "Quit AgentHub?",
     "title": "Close behavior",
     "message": "Running in the background keeps terminal sessions active. Reopen the window from the tray icon. Quitting ends terminal sessions.",
@@ -2212,6 +2215,7 @@
     "invalidRegex": "Invalid regular expression",
     "findCount": "{{current}} / {{count}}",
     "findLimit": "{{count}}+ matches",
+    "filePath": "File path",
     "previewInVscodeHint": "Open a preview copy; VS Code edits do not update the task. Copies are removed when AgentHub exits.",
     "openInVscodeHint": "Open the local file in VS Code; save draft changes first",
     "noLocalFile": "This file has no local path to open yet",
@@ -2667,6 +2671,9 @@
     "referenceCopied": "Copied",
     "syncChanges": "Sync Changes",
     "syncChangesHint": "Pull upstream changes with fast-forward only, then push local commits.",
+    "noRepository": "The currently opened folder does not have a Git repository. Initialize a repository to enable Git source control.",
+    "initializeRepository": "Initialize Repository",
+    "initializingRepository": "Initializing repository…",
     "noProjects": "No projects added. Use File → Open Project… to add a project and view Git changes.",
     "actions": {
       "label": "Source control actions",

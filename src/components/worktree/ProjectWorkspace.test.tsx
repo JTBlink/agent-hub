@@ -356,6 +356,9 @@ it("collapses folders, refreshes the tree and retains file selection for each ch
     host.querySelector(
       'aside [role="combobox"][aria-label="worktree.selectWorktree"]',
     ),
+  ).toBeNull();
+  expect(
+    host.querySelector(`aside button[title="${project.path}"]`),
   ).not.toBeNull();
 });
 

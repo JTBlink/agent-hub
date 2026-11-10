@@ -18,3 +18,5 @@
 
 - [ADR-0019：产品配置与 Cargo features 编译期组装](0019-product-features.md)
 - [ADR-0020：Agent 执行与状态基础能力集中维护](0020-shared-agent-execution.md)
+
+- [ADR-0021：独立窗口复用完整工作区](0021-multi-workspace-windows.md)

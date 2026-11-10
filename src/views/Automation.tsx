@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Clock3, RefreshCw, Plus, ChevronRight, RotateCcw, Settings2 } from "lucide-react";
+import { Clock3, RefreshCw, Plus, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAutomationNextRunRefresh } from "../hooks/useAutomationNextRunRefresh";
 import { useAutomationOverview } from "../hooks/useAutomationOverview";
@@ -13,7 +13,7 @@ import {
 } from "../components/AutomationToolbar";
 import { AutomationOriginBadge } from "../components/AutomationOriginBadge";
 import { AutomationEditor } from "../components/AutomationEditor";
-import { CardActionMenu } from "../components/CardActionMenu";
+import { AutomationPageMenu } from "../components/AutomationPageMenu";
 import { AutomationTaskActions } from "../components/AutomationTaskActions";
 import { AutomationRemoveDialog } from "../components/AutomationRemoveDialog";
 import { AutomationImportDialog } from "../components/AutomationImportDialog";
@@ -396,23 +396,10 @@ export function Automation() {
             <Plus aria-hidden="true" className="h-4 w-4" />
             {t("automation.create")}
           </button>
-          <CardActionMenu
-            label={t("automation.more")}
-            className="[&>button]:h-9 [&>button]:w-9"
-            actions={[
-              {
-                key: "restore",
-                label: t("automation.restoreBackup"),
-                icon: <RotateCcw className="h-3.5 w-3.5" />,
-                onSelect: () => setEditor("restore"),
-              },
-              {
-                key: "config-info",
-                label: t("automation.configurationInfo"),
-                icon: <Settings2 className="h-3.5 w-3.5" />,
-                onSelect: () => setShowConfigInfo(true),
-              },
-            ]}
+          <AutomationPageMenu
+            onRestore={() => setEditor("restore")}
+            onConfiguration={() => setShowConfigInfo(true)}
+            onError={setActionError}
           />
         </div>
       </header>
@@ -463,7 +450,28 @@ export function Automation() {
             {tasks.map((task) => (
               <tr
                 key={task.id}
-                className="group transition-colors hover:bg-surface-hover"
+                tabIndex={0}
+                className="group cursor-pointer transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                onClick={(event) => {
+                  if (
+                    (event.target as Element).closest(
+                      "button,a,input,select,textarea",
+                    )
+                  )
+                    return;
+                  openTask(task.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  if (
+                    (event.target as Element).closest(
+                      "button,a,input,select,textarea",
+                    )
+                  )
+                    return;
+                  event.preventDefault();
+                  openTask(task.id);
+                }}
               >
                 <td className="max-w-[240px] px-4 py-4">
                   <button

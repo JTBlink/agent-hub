@@ -28,7 +28,7 @@ export const getProjectGitRemotes = (
   invoke<GitRemote[]>("get_project_git_remotes", { projectId, worktreePath });
 
 export type GitRepositoryAction =
-  "fetch" | "pull" | "push" | "switch_branch" | "create_branch";
+  "initialize" | "fetch" | "pull" | "push" | "switch_branch" | "create_branch";
 export async function runProjectGitAction(
   projectId: string,
   worktreePath: string | undefined,

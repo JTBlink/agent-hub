@@ -23,6 +23,8 @@ import { cn } from "../utils";
 import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { WorkbenchStatusBar } from "./statusbar/WorkbenchStatusBar";
 import { readTerminalLayout } from "../lib/terminalLayout";
+import { listenWorkspaceEvent } from "../lib/workspaceWindow";
+import { worktreeUrl } from "../lib/worktreeApi";
 import type { SidebarPanelRequest } from "../lib/sidebarSections";
 
 export function Layout() {
@@ -49,6 +51,17 @@ export function Layout() {
     currentTerminal?.worktreePath ??
     projects.find((project) => project.id === currentTerminal?.projectId)?.path;
   const navigate = useNavigate();
+  useEffect(() => {
+    const unlisten = listenWorkspaceEvent<{ projectId: string; path: string }>(
+      "workspace-open-directory",
+      ({ payload }) => {
+        void navigate(worktreeUrl(payload.projectId, payload.path));
+      },
+    );
+    return () => {
+      void unlisten.then((fn) => fn()).catch(console.error);
+    };
+  }, [navigate]);
   const workspacePage =
     !!projectWorkspaceRoute(pathname, search) || pathname === "/terminal";
   const projectSkillsPage =

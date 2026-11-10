@@ -50,7 +50,7 @@ interface AppState {
   refreshTools: () => Promise<void>;
   refreshManagedSkills: () => Promise<void>;
   refreshSkillGroupMembership: (groupId: string) => Promise<void>;
-  refreshProjects: () => Promise<void>;
+  refreshProjects: (opened?: Project) => Promise<void>;
   /** An empty ID selects the full library; group IDs select a group. */
   setViewedSkillGroupId: (id: string) => void;
   setViewingUngrouped: (v: boolean) => void;
@@ -155,7 +155,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [setTranslatedError]);
 
-  const refreshProjects = useCallback(async () => {
+  const refreshProjects = useCallback(async (opened?: Project) => {
+    if (opened) {
+      setProjects((current) =>
+        current.some((project) => project.id === opened.id)
+          ? current.map((project) =>
+              project.id === opened.id
+                ? { ...project, visited_at: opened.visited_at }
+                : project,
+            )
+          : [...current, opened],
+      );
+      return;
+    }
     try {
       const p = await api.getProjects();
       setProjects(p);
@@ -163,6 +175,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error("Failed to load projects:", e);
     }
   }, []);
+
+  const projectsRef = useRef(projects);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+  useEffect(() => {
+    const unlisten = listen<Array<[string, number | null]>>(
+      "project-visits-changed",
+      ({ payload }) => {
+        const visits = new Map(payload);
+        if (
+          payload.some(
+            ([id]) => !projectsRef.current.some((project) => project.id === id),
+          )
+        ) {
+          void api
+            .getProjectMetadata()
+            .then((metadata) => {
+              setProjects((current) =>
+                metadata.map((project) => {
+                  const existing = current.find(
+                    (item) => item.id === project.id,
+                  );
+                  return existing
+                    ? { ...existing, visited_at: project.visited_at }
+                    : project;
+                }),
+              );
+            })
+            .catch(console.error);
+          return;
+        }
+        setProjects((current) =>
+          current.map((project) =>
+            visits.has(project.id)
+              ? { ...project, visited_at: visits.get(project.id) ?? null }
+              : project,
+          ),
+        );
+      },
+    );
+    return () => {
+      void unlisten.then((dispose) => dispose()).catch(console.error);
+    };
+  }, [refreshProjects]);
 
   const loadManagedSkills = useCallback(async () => {
     try {

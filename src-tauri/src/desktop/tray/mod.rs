@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tauri::{Emitter, Manager};
 
-use super::lifecycle::{quit_app, restore_main_window};
+use super::lifecycle::restore_main_window;
 use crate::{commands, core};
 use text::{
     format_status_line, format_tooltip, format_updates_label, skill_group_menu_label, TrayLanguage,
@@ -55,13 +55,8 @@ pub(super) fn is_tray_icon_enabled(store: &Arc<core::skill_store::SkillStore>) -
 }
 
 fn request_quit(app: &tauri::AppHandle) {
-    let app_for_main = app.clone();
-    if let Err(err) = app.run_on_main_thread(move || {
-        quit_app(&app_for_main);
-    }) {
-        log::error!("Failed to schedule quit on main thread: {err}");
-        // Fallback: attempt quit anyway.
-        quit_app(app);
+    if let Err(error) = super::workspaces::request_quit(app) {
+        log::error!("Cannot request application exit: {error}");
     }
 }
 

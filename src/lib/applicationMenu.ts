@@ -1,9 +1,11 @@
 import type { TFunction } from "i18next";
 import { Menu, type MenuOptions } from "@tauri-apps/api/menu";
 import type { Project } from "./tauri";
+import { recentProjects } from "./recentProjects";
 
 interface Actions {
   openProject: () => void;
+  newWorkspaceWindow?: () => void;
   openRecent: (project: Project) => void;
   manageWorkspaces: () => void;
   navigate: (path: string) => void;
@@ -19,16 +21,13 @@ export function applicationMenuOptions(
   projects: Project[],
   actions: Actions,
   mac: boolean,
+  scope = "",
 ): MenuOptions {
-  const recent = [...projects]
-    .filter((project) => project.workspace_type === "project")
-    .sort(
-      (a, b) => (b.visited_at ?? b.updated_at) - (a.visited_at ?? a.updated_at),
-    )
-    .slice(0, 10);
+  const menuId = (id: string) => (scope ? `${scope}:${id}` : id);
+  const recent = recentProjects(projects);
   const separator = { item: "Separator" as const };
   const quit = {
-    id: "app-quit",
+    id: menuId("app-quit"),
     text: t("menu.quit"),
     accelerator: "CmdOrCtrl+Q",
     action: actions.quit,
@@ -66,16 +65,22 @@ export function applicationMenuOptions(
         text: t("menu.file"),
         items: [
           {
-            id: "open-project",
+            id: menuId("open-project"),
             text: t("menu.openProject"),
             accelerator: "CmdOrCtrl+O",
             action: actions.openProject,
           },
           {
+            id: menuId("new-workspace-window"),
+            text: t("menu.newWorkspaceWindow"),
+            accelerator: "CmdOrCtrl+Shift+N",
+            action: actions.newWorkspaceWindow,
+          },
+          {
             text: t("menu.recentProjects"),
             enabled: recent.length > 0,
             items: recent.map((project) => ({
-              id: `recent-project-${project.id}`,
+              id: menuId(`recent-project-${project.id}`),
               text: project.name,
               action: () => actions.openRecent(project),
             })),
@@ -158,7 +163,7 @@ export function applicationMenuOptions(
           },
           separator,
           {
-            id: "developer-mode",
+            id: menuId("developer-mode"),
             text: t("menu.developerMode"),
             accelerator: "CmdOrCtrl+Alt+I",
             action: actions.developerTools,

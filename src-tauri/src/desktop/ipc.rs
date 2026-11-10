@@ -1,10 +1,15 @@
-//! Built-in command registration, restricted to the trusted main webview.
+//! Built-in command registration, restricted to registered application workspaces.
 
 use crate::commands;
 
 pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     commands::ipc::main_only(tauri::generate_handler![
         commands::get_build_info,
+        commands::workspaces::open_workspace_window,
+        commands::workspaces::resolve_workspace_project,
+        commands::workspaces::close_workspace_window,
+        commands::workspaces::workspace_window_count,
+        commands::workspaces::workspace_quit_reply,
         commands::agent_usage::get_agent_usage,
         commands::agent_launch::agent_launch_settings,
         commands::agent_launch::agent_launch_config_path,
@@ -97,6 +102,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::preview::preview_download_file,
         commands::preview::preview_open_project,
         commands::automation::get_automation_overview,
+        commands::automation::open_automation_workspace,
         commands::automation::get_automation_output,
         commands::automation::get_automation_history,
         commands::automation::save_automation,

@@ -79,8 +79,11 @@ export function useWorktreeDocument(
         void reload();
     };
     window.addEventListener("worktree-file-saved", reloadCleanFile);
-    return () =>
+    window.addEventListener("focus", reloadCleanFile);
+    return () => {
       window.removeEventListener("worktree-file-saved", reloadCleanFile);
+      window.removeEventListener("focus", reloadCleanFile);
+    };
   }, [key, reload]);
   return {
     ...document,

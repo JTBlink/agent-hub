@@ -102,6 +102,7 @@ function WorktreeTextPreview({
       {document.draft !== undefined && (
         <FileContent
           file={{ path, content: document.draft }}
+          localPath={`${worktreePath.replace(/[\\/]+$/, "")}/${path}`}
           location={location}
           toolbarContainer={toolbarContainer}
           showOpenInVscode={false}

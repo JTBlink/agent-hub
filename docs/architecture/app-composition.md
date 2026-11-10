@@ -12,6 +12,7 @@ AgentHub 保留一套主体源码、依赖、版本和构建流程。标准版�
 - `startup.rs`：初始化日志、后台服务、托盘和主窗口关闭处理。
 - `ipc.rs`：集中注册内置命令，保留 `commands::ipc::main_only` 的调用 WebView 校验。
 - `lifecycle.rs`：恢复主窗口、退出、重启及资源回收。
+- `workspaces.rs`：创建／聚焦完整工作区窗口、登记可信 WebView、协调各窗口退出与资源回收。
 - `tray/`：托盘菜单、操作、刷新调度、文案与相邻测试。
 
 标准入口调用：
@@ -28,7 +29,7 @@ app_lib::builder()?
     .run(tauri::generate_context!())?;
 ```
 
-`builder()` 会初始化应用数据库，应该在每次桌面启动时调用一次。宿主仍需提供名为 `main` 的可信应用 WebView，沿用当前窗口与数据生命周期约定。
+`builder()` 会初始化应用数据库，应该在每次桌面启动时调用一次。宿主仍需提供名为 `main` 的可信应用 WebView；额外工作区窗口由后端按主窗口配置创建，加载同一前端入口与项目路由。内置命令兼容保留 `main_only` 名称，实际校验主 WebView 或后端登记的工作区身份，预览 WebView 始终排除。详见 [ADR-0021](../adr/0021-multi-workspace-windows.md)。
 
 扩展的命令和初始化通过插件注册，不再次调用宿主 Builder 的 `setup` 或 `invoke_handler`：这些方法会替换共享回调，导致公共初始化或内置命令丢失。插件还必须自行约束命令调用者并配置所需权限，不能假定内置命令的 `main_only` 自动保护插件命令；预览网页不能获得应用权限。
 

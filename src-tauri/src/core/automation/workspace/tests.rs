@@ -178,3 +178,16 @@ fn symlinked_names_are_not_adopted_or_reused() {
     assert!(ensure_at(&root, &state, &mut draft(), "first", "").is_err());
     assert!(std::fs::read_dir(&outside).unwrap().next().is_none());
 }
+
+#[test]
+fn explicit_open_creates_empty_workspace_root_and_refuses_relative_paths_or_files() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("automations");
+    assert_eq!(ensure_root(&root).unwrap(), root.canonicalize().unwrap());
+    assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+    assert!(ensure_root(Path::new("relative-task-root")).is_err());
+    let file = temp.path().join("file");
+    std::fs::write(&file, "contents").unwrap();
+    assert!(ensure_root(&file).is_err());
+    assert_eq!(std::fs::read_to_string(file).unwrap(), "contents");
+}

@@ -12,12 +12,20 @@ const mocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
   setSettings: vi.fn(),
   appExit: vi.fn(),
+  closeWorkspaceWindow: vi.fn(),
+  workspaceWindowCount: vi.fn(),
+  workspaceQuitReply: vi.fn().mockResolvedValue(undefined),
+  label: "main",
   hideToTray: vi.fn(),
   listen: vi.fn(),
   unlisten: vi.fn(),
   error: vi.fn(),
 }));
 vi.mock("../lib/tauri", () => mocks);
+vi.mock("../lib/workspaceWindow", () => ({
+  workspaceWindowLabel: () => mocks.label,
+  listenWorkspaceEvent: (...args: unknown[]) => mocks.listen(...args),
+}));
 vi.mock("../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: mocks.listen }));
 vi.mock("sonner", () => ({ toast: { error: mocks.error } }));
@@ -26,12 +34,17 @@ let root: Root;
 let container: HTMLDivElement;
 let requestClose: () => Promise<void>;
 let requestExit: () => void;
+let checkQuit: (event: { payload: string }) => Promise<void>;
+let cancelQuit: () => void;
 let settings: Record<string, string | null>;
 const i18n = createInstance();
 await i18n.init({ lng: "zh", resources: { zh: { translation: zh } } });
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  mocks.label = "main";
+  mocks.workspaceWindowCount.mockResolvedValue(1);
+  mocks.closeWorkspaceWindow.mockResolvedValue(undefined);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   Object.defineProperties(HTMLDialogElement.prototype, {
     showModal: {
@@ -55,6 +68,8 @@ beforeEach(async () => {
   mocks.listen.mockImplementation(async (_event, callback) => {
     if (_event === "window-close-requested") requestClose = callback;
     if (_event === "app-exit-requested") requestExit = callback;
+    if (_event === "workspace-quit-check") checkQuit = callback;
+    if (_event === "workspace-quit-cancelled") cancelQuit = callback;
     return mocks.unlisten;
   });
   container = document.createElement("div");
@@ -192,7 +207,7 @@ it("unsubscribes when unmounted and ignores late settings responses", async () =
   });
   expect(mocks.appExit).not.toHaveBeenCalled();
   expect(mocks.hideToTray).not.toHaveBeenCalled();
-  expect(mocks.unlisten).toHaveBeenCalledTimes(2);
+  expect(mocks.unlisten).toHaveBeenCalledTimes(4);
   root = createRoot(container);
 });
 
@@ -226,4 +241,40 @@ it("saves dirty files before exiting and cancels exit when the save prompt is di
   await click(zh.common.save);
   expect(save).toHaveBeenCalledWith("draft");
   expect(mocks.appExit).toHaveBeenCalledOnce();
+});
+
+it("closes a secondary workspace without applying the app exit preference", async () => {
+  mocks.label = "workspace-task";
+  settings.close_action = "hide";
+  await closeWindow();
+  expect(mocks.closeWorkspaceWindow).toHaveBeenCalledOnce();
+  expect(mocks.appExit).not.toHaveBeenCalled();
+  expect(mocks.hideToTray).not.toHaveBeenCalled();
+});
+it("checks unsaved files in every workspace before approving application exit", async () => {
+  vi.spyOn(documents, "dirtyWorktreeDocuments").mockReturnValue([
+    { key: "draft", path: "draft.ts" },
+  ]);
+  await act(async () => checkQuit({ payload: "quit-request" }));
+  expect(mocks.workspaceQuitReply).not.toHaveBeenCalled();
+  await click(zh.common.cancel);
+  expect(mocks.workspaceQuitReply).toHaveBeenLastCalledWith(
+    "quit-request",
+    false,
+  );
+  await act(async () => cancelQuit());
+  await act(async () => checkQuit({ payload: "next-request" }));
+  await click(zh.worktree.dontSave);
+  expect(mocks.workspaceQuitReply).toHaveBeenLastCalledWith(
+    "next-request",
+    true,
+  );
+  expect(container.textContent).toContain(zh.closeAction.waitingForWorkspaces);
+  expect(mocks.appExit).not.toHaveBeenCalled();
+});
+it("keeps other workspace windows open when closing the main window", async () => {
+  mocks.workspaceWindowCount.mockResolvedValue(2);
+  await closeWindow();
+  expect(mocks.closeWorkspaceWindow).toHaveBeenCalledOnce();
+  expect(mocks.appExit).not.toHaveBeenCalled();
 });

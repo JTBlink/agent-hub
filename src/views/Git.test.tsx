@@ -1212,3 +1212,82 @@ it("opens historical files in separate tabs and preserves the selected Graph com
     vi.unstubAllGlobals();
   }
 });
+
+it("shows ordinary folders without an error and initializes only on request", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.clear();
+  vi.mocked(getProjectGitStatus).mockResolvedValue(null);
+  vi.mocked(runProjectGitAction).mockReset();
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<TestGit />));
+    expect(host.textContent).toContain("git.noRepository");
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.querySelector("textarea")).toBeNull();
+    expect(runProjectGitAction).not.toHaveBeenCalled();
+    const button = () =>
+      Array.from(host.querySelectorAll("button")).find(
+        (item) => item.textContent === "git.initializeRepository",
+      )!;
+    vi.mocked(runProjectGitAction).mockRejectedValueOnce(
+      new Error("Read-only directory"),
+    );
+    await act(async () => button().click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(
+      "Read-only directory",
+    );
+    expect(button().disabled).toBe(false);
+    let finish!: () => void;
+    vi.mocked(runProjectGitAction).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    await act(async () => button().click());
+    expect(host.textContent).toContain("git.initializingRepository");
+    vi.mocked(getProjectGitStatus).mockResolvedValue({
+      branch: null,
+      head: null,
+      upstream: null,
+      ahead: null,
+      behind: null,
+      state: "Clean",
+      files: [],
+      commits: [],
+      truncated: false,
+    });
+    await act(async () => finish());
+    expect(runProjectGitAction).toHaveBeenLastCalledWith(
+      "first",
+      "<workspace>/demo",
+      "initialize",
+    );
+    expect(host.textContent).not.toContain("git.noRepository");
+    expect(host.querySelector("textarea")).not.toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});
+
+it("keeps actual repository read failures visible", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.clear();
+  vi.mocked(getProjectGitStatus).mockRejectedValue(
+    new Error("Cannot read repository index"),
+  );
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<TestGit />));
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      "Cannot read repository index",
+    );
+    expect(host.textContent).not.toContain("git.initializeRepository");
+  } finally {
+    await act(async () => root.unmount());
+    vi.unstubAllGlobals();
+  }
+});

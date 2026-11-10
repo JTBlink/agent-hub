@@ -23,6 +23,15 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+it("caches an ordinary folder and reloads after explicit initialization", async () => {
+  vi.mocked(invoke).mockResolvedValueOnce(null).mockResolvedValue(snapshot);
+  expect(await getProjectGitStatus("ordinary")).toBeNull();
+  expect(await getProjectGitStatus("ordinary")).toBeNull();
+  expect(invoke).toHaveBeenCalledTimes(1);
+  window.dispatchEvent(new Event("project-git-changed"));
+  expect(await getProjectGitStatus("ordinary")).toEqual(snapshot);
+});
+
 it("shares the sidebar's scan with source control and reuses its recent snapshot on entry", async () => {
   let finish!: (value: GitStatus) => void;
   vi.mocked(invoke).mockImplementationOnce(

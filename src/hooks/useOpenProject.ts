@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useApp } from "../context/AppContext";
 import { getErrorMessage } from "../lib/error";
 import { openProjectFolder } from "../lib/openProject";
-import { touchProjectVisited } from "../lib/tauri";
 import { worktreeUrl } from "../lib/worktreeApi";
 
 /** Shared folder opening flow for the native menu and workspace entry points. */
@@ -21,13 +20,11 @@ export function useOpenProject() {
     opening.current = true;
     setIsOpening(true);
     try {
-      const project = await openProjectFolder();
-      if (!project) return;
-      await refreshProjects();
-      navigate(worktreeUrl(project.id, project.path));
-      void touchProjectVisited(project.id)
-        .then(refreshProjects)
-        .catch(() => {});
+      const opened = await openProjectFolder();
+      if (!opened) return;
+      const { project, directory } = opened;
+      await refreshProjects(project);
+      navigate(worktreeUrl(project.id, directory));
     } catch (error) {
       toast.error(getErrorMessage(error, t("common.requestFailed")));
     } finally {

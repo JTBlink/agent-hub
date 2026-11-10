@@ -68,6 +68,28 @@ fn history_walk(repo: &git2::Repository, head: git2::Oid) -> Result<git2::Revwal
 pub fn status(root: &Path) -> Result<GitStatus> {
     let repo =
         git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path])?;
+    repository_status(root, &repo)
+}
+
+/// Ordinary folders have no source-control status; damaged repositories remain errors.
+pub fn inspect(root: &Path) -> Result<Option<GitStatus>> {
+    match git2::Repository::open_ext(root, git2::RepositoryOpenFlags::NO_SEARCH, &[] as &[&Path]) {
+        Ok(repo) => repository_status(root, &repo).map(Some),
+        Err(error)
+            if error.code() == git2::ErrorCode::NotFound
+                && root.is_dir()
+                && root
+                    .join(".git")
+                    .symlink_metadata()
+                    .is_err_and(|cause| cause.kind() == std::io::ErrorKind::NotFound) =>
+        {
+            Ok(None)
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+fn repository_status(root: &Path, repo: &git2::Repository) -> Result<GitStatus> {
     let head = repo.head().ok();
     let oid = head.as_ref().and_then(|head| head.target());
     let branch = head
@@ -85,7 +107,7 @@ pub fn status(root: &Path) -> Result<GitStatus> {
     let (files, truncated) = status_files::status_files(root)?;
     let mut commits = Vec::new();
     if let Some(oid) = oid {
-        let walk = history_walk(&repo, oid)?;
+        let walk = history_walk(repo, oid)?;
         for oid in walk.take(30) {
             let commit = repo.find_commit(oid?)?;
             commits.push(summarize_commit(&commit));

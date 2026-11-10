@@ -6,10 +6,12 @@ import { useTranslation } from "react-i18next";
 import { useApp } from "../context/AppContext";
 import { ThemedSelect } from "./ThemedSelect";
 import { useWorkspaceSelection } from "../hooks/useWorkspaceSelection";
+import { recentProjects } from "../lib/recentProjects";
 import { compactHomePath } from "../utils";
 import { useDragWindow } from "../hooks/useDragWindow";
 import type { Project } from "../lib/tauri";
 import { RemoveProjectDialog } from "./worktree/RemoveProjectDialog";
+import { WorktreeCheckoutSwitcher } from "./worktree/WorktreeCheckoutSwitcher";
 
 export function WindowTitleBar({
   onOpenCommands,
@@ -26,6 +28,7 @@ export function WindowTitleBar({
   const project = projects.find((item) => item.id === projectRoute?.params.id);
   const selectedProject = selection.project;
   const vscodePath = selection.path;
+  const recent = recentProjects(projects, selectedProject?.id);
   const pageTitles: Record<string, string> = {
     "/": t("sidebar.dashboard"),
     "/tasks": t("tasks.title"),
@@ -56,7 +59,7 @@ export function WindowTitleBar({
         style={{ paddingLeft: "calc(80px / var(--app-scale))" }}
       >
         <div
-          className="flex min-w-0 max-w-[55%] items-center text-sm text-muted"
+          className="flex min-w-0 max-w-[55%] items-center gap-1 text-sm text-muted"
           onMouseDown={(event) => event.stopPropagation()}
         >
           <ThemedSelect
@@ -97,12 +100,13 @@ export function WindowTitleBar({
             className="h-6 min-w-0 gap-1.5 rounded border-transparent bg-transparent px-1 py-0 text-xs text-muted hover:bg-surface-hover hover:text-secondary"
           >
             {!selectedProject && <option value="">{t("app.name")}</option>}
-            {projects.map((item) => (
+            {recent.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
             ))}
           </ThemedSelect>
+          {selectedProject && <WorktreeCheckoutSwitcher />}
           {selectedProject && vscodePath && (
             <OpenProjectInVscode key={vscodePath} path={vscodePath} />
           )}

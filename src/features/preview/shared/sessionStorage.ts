@@ -1,3 +1,4 @@
+import { workspaceStorageKey } from "../../../lib/workspaceWindow";
 import { createSession, openPreview, type PreviewSession } from "./session";
 import type { BrowserProfile } from "../api";
 const KEY = "agent-hub.preview.tabs.v1";
@@ -6,7 +7,9 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 export function loadPreviewSession(): PreviewSession {
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(KEY) ?? "null");
+    const value: unknown = JSON.parse(
+      localStorage.getItem(workspaceStorageKey(KEY)) ?? "null",
+    );
     if (!Array.isArray(value)) return createSession();
     return value.slice(0, 12).reduce<PreviewSession>((state, item: unknown) => {
       if (
@@ -39,7 +42,7 @@ export function savePreviewSession(
 ) {
   try {
     localStorage.setItem(
-      KEY,
+      workspaceStorageKey(KEY),
       JSON.stringify(
         state.tabs
           .filter(

@@ -6,8 +6,8 @@ const MAX_CHECKOUTS = 16;
 interface StatusRead {
   version: number;
   expires: number;
-  data?: GitStatus;
-  pending?: Promise<GitStatus>;
+  data?: GitStatus | null;
+  pending?: Promise<GitStatus | null>;
 }
 const reads = new Map<string, StatusRead>();
 const keyFor = (projectId: string, worktreePath?: string) =>
@@ -49,19 +49,19 @@ document.addEventListener("visibilitychange", () => {
 export function getProjectGitStatus(
   projectId: string,
   worktreePath?: string,
-): Promise<GitStatus> {
+): Promise<GitStatus | null> {
   const key = keyFor(projectId, worktreePath);
   const entry = reads.get(key) ?? { version: 0, expires: 0 };
   reads.delete(key);
   reads.set(key, entry);
   if (entry.pending) return entry.pending;
-  if (entry.data && entry.expires > Date.now())
+  if (entry.data !== undefined && entry.expires > Date.now())
     return Promise.resolve(entry.data);
-  const read = async (): Promise<GitStatus> => {
+  const read = async (): Promise<GitStatus | null> => {
     try {
       for (;;) {
         const version = entry.version;
-        const data = await invoke<GitStatus>("get_project_git_status", {
+        const data = await invoke<GitStatus | null>("get_project_git_status", {
           projectId,
           worktreePath,
         });

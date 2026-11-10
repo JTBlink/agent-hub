@@ -7,6 +7,7 @@ use std::path::Path;
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GitRepositoryAction {
+    Initialize,
     Fetch,
     Pull,
     Push,
@@ -19,6 +20,20 @@ pub fn repository_action(
     action: GitRepositoryAction,
     branch: Option<&str>,
 ) -> Result<()> {
+    if matches!(action, GitRepositoryAction::Initialize) {
+        if !root.is_dir() {
+            bail!("Workspace directory is unavailable");
+        }
+        match root.join(".git").symlink_metadata() {
+            Ok(_) => bail!("This folder already contains Git metadata"),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        let mut options = git2::RepositoryInitOptions::new();
+        options.no_reinit(true).mkdir(false).mkpath(false);
+        git2::Repository::init_opts(root, &options)?;
+        return Ok(());
+    }
     let repo = repository(root)?;
     if matches!(action, GitRepositoryAction::Fetch) {
         if repo.remotes()?.is_empty() {
@@ -68,7 +83,7 @@ pub fn repository_action(
                 run_git(root, &["push", "--", remote, &format!("HEAD:{merge}")])
             }
         }
-        GitRepositoryAction::Fetch => unreachable!(),
+        GitRepositoryAction::Fetch | GitRepositoryAction::Initialize => unreachable!(),
     }
 }
 

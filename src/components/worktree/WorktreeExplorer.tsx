@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { ChevronRight, CopyMinus, Loader2, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -28,7 +22,6 @@ import { GitStatusIndicator } from "../git/GitStatusIndicator";
 import { WorkspaceUnavailable } from "./WorkspaceUnavailable";
 
 interface Props {
-  checkoutSwitcher?: ReactNode;
   projectId: string;
   worktreePath: string;
   selected?: string;
@@ -91,23 +84,19 @@ export function WorktreeExplorer(props: Props) {
         onCreated={() => setOpen(true)}
       >
         <div className="group flex h-7 shrink-0 items-center pr-1">
-          {props.checkoutSwitcher ? (
-            <div className="min-w-0 flex-1">{props.checkoutSwitcher}</div>
-          ) : (
-            <button
-              type="button"
-              aria-expanded={open}
-              title={rootName}
-              onClick={() => setOpen(!open)}
-              className="flex h-full min-w-0 flex-1 items-center gap-1 px-2 text-left text-sm font-semibold text-primary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-            >
-              <ChevronRight
-                size={14}
-                className={cn("shrink-0", open && "rotate-90")}
-              />
-              <span className="truncate">{rootName}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            aria-expanded={open}
+            title={props.worktreePath}
+            onClick={() => setOpen(!open)}
+            className="flex h-full min-w-0 flex-1 items-center gap-1 px-2 text-left text-sm font-semibold text-primary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+          >
+            <ChevronRight
+              size={14}
+              className={cn("shrink-0", open && "rotate-90")}
+            />
+            <span className="truncate">{rootName}</span>
+          </button>
           {open && loading && <DirectoryLoading />}
           <button
             type="button"

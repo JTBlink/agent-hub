@@ -593,6 +593,10 @@ it("closes old tabs and splits when switching worktrees and preserves the curren
     vi
       .mocked(invoke)
       .mock.calls.filter(([command]) => command === "terminal_create");
+  const initialCreations = creations().length;
+  await click('[data-nav="main"]');
+  await click('[data-nav="main"]');
+  expect(creations()).toHaveLength(initialCreations);
   expect(creations().at(-1)?.[1]).toMatchObject({
     projectId: project.id,
     worktreePath: project.path,

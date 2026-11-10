@@ -14,8 +14,6 @@ import {
   discardProjectGitChanges,
   setProjectGitStaged,
   getProjectGitDiff,
-  getProjectGitStatus,
-  type GitStatus,
   type GitFile,
   runProjectGitAction,
   type GitRepositoryAction,
@@ -23,10 +21,9 @@ import {
 import { GitDiscardDialog } from "../components/git/GitDiscardDialog";
 import { GitTagActionsProvider } from "../components/git/GitTagActionsProvider";
 import { getErrorMessage } from "../lib/error";
-import {
-  invalidateProjectGitStatus,
-  peekProjectGitStatus,
-} from "../lib/projectGitStatus";
+import { invalidateProjectGitStatus } from "../lib/projectGitStatus";
+import { useProjectGitStatus } from "../hooks/useProjectGitStatus";
+import { GitNoRepository } from "../components/git/GitNoRepository";
 import { groupGitChanges } from "../lib/gitChanges";
 import { GitChangeFileMenu } from "../components/git/GitChangeFileMenu";
 import { GitChanges, type GitSelection } from "../components/git/GitChanges";
@@ -76,29 +73,21 @@ export function Git() {
     setActionError(undefined);
     setDiscardTarget(undefined);
   }
-  const statusKey = JSON.stringify([scope, revision]);
-  const [statusResult, setStatusResult] = useState<{
-    key: string;
-    scope: string;
-    data?: GitStatus;
-    error?: string;
-  }>();
-  const status =
-    statusResult?.scope === scope
-      ? statusResult.data
-      : activeId
-        ? peekProjectGitStatus(activeId, root)
-        : undefined;
-  const error =
-    statusResult?.key === statusKey ? statusResult.error : undefined;
-  const loading = !!activeId && statusResult?.key !== statusKey;
+  const {
+    status: snapshot,
+    error,
+    loading,
+  } = useProjectGitStatus(activeId, root, revision);
+  const noRepository = snapshot === null;
+  const status = snapshot ?? undefined;
   const editorVisible =
-    !activeId ||
-    editors.graph ||
-    editors.files.length > 0 ||
-    !!selection ||
-    !!error ||
-    !!actionError;
+    !noRepository &&
+    (!activeId ||
+      editors.graph ||
+      editors.files.length > 0 ||
+      !!selection ||
+      !!error ||
+      !!actionError);
   useEffect(() => {
     setGitEditorVisible?.(editorVisible);
     return () => setGitEditorVisible?.(false);
@@ -119,26 +108,6 @@ export function Git() {
     if (activeId) invalidateProjectGitStatus(activeId, root);
     refresh();
   };
-  useEffect(() => {
-    if (!activeId) return;
-    let cancelled = false;
-    void getProjectGitStatus(activeId, root).then(
-      (data) => {
-        if (!cancelled) setStatusResult({ key: statusKey, scope, data });
-      },
-      (cause) => {
-        if (!cancelled)
-          setStatusResult({
-            key: statusKey,
-            scope,
-            error: getErrorMessage(cause, t("common.error")),
-          });
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [activeId, root, scope, statusKey, t]);
   useEffect(() => {
     window.addEventListener("worktree-file-saved", refresh);
     window.addEventListener("focus", refresh);
@@ -286,7 +255,9 @@ export function Git() {
         {children}
       </GitChangeFileMenu>
     );
-  const statusBar = <GitStatusBar branch={branch} status={status} />;
+  const statusBar = noRepository ? null : (
+    <GitStatusBar branch={branch} status={status} />
+  );
   const sidebar = (
     <ResizableSidebar
       storageKey="agent-hub:sidebar-width"
@@ -305,179 +276,193 @@ export function Git() {
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md bg-bg-secondary"
         aria-label={t("git.sourceControl")}
       >
-        <VerticalSplit
-          storageKey="agent-hub:git-sidebar-split"
-          label={t("git.resizePanels")}
-          hint={t("git.resizePanelsHint")}
-          bottomCollapsed={!historyExpanded}
-          top={
-            <>
-              <GitCommitForm
-                key={`${scope}:commit`}
-                branch={branch}
-                busy={busy}
-                committing={actionType === "commit"}
-                sync={
-                  status?.upstream &&
-                  files.length === 0 &&
-                  ((status.ahead ?? 0) > 0 || (status.behind ?? 0) > 0)
-                    ? {
-                        ahead: status.ahead ?? 0,
-                        behind: status.behind ?? 0,
-                        enabled:
-                          !loading &&
-                          !status.truncated &&
-                          !!status.branch &&
-                          status.state === "Clean",
-                        onSync: syncChanges,
+        {noRepository ? (
+          <GitNoRepository
+            busy={busy || loading}
+            error={actionError}
+            onInitialize={() => {
+              if (activeId)
+                void runAction(
+                  () => runProjectGitAction(activeId, root, "initialize"),
+                  "initialize",
+                );
+            }}
+          />
+        ) : (
+          <VerticalSplit
+            storageKey="agent-hub:git-sidebar-split"
+            label={t("git.resizePanels")}
+            hint={t("git.resizePanelsHint")}
+            bottomCollapsed={!historyExpanded}
+            top={
+              <>
+                <GitCommitForm
+                  key={`${scope}:commit`}
+                  branch={branch}
+                  busy={busy}
+                  committing={actionType === "commit"}
+                  sync={
+                    status?.upstream &&
+                    files.length === 0 &&
+                    ((status.ahead ?? 0) > 0 || (status.behind ?? 0) > 0)
+                      ? {
+                          ahead: status.ahead ?? 0,
+                          behind: status.behind ?? 0,
+                          enabled:
+                            !loading &&
+                            !status.truncated &&
+                            !!status.branch &&
+                            status.state === "Clean",
+                          onSync: syncChanges,
+                        }
+                      : undefined
+                  }
+                  toolbar={(canCommit) => (
+                    <GitSourceControlToolbar
+                      target={
+                        activeId
+                          ? { projectId: activeId, worktreePath: root }
+                          : undefined
                       }
+                      disabled={!status || loading || busy}
+                      canSync={
+                        !!status?.upstream &&
+                        !!status.branch &&
+                        status.state === "Clean" &&
+                        !files.some((file) => file.conflicted)
+                      }
+                      canCommit={canCommit}
+                      loading={loading || busy}
+                      tree={tree}
+                      history={historyExpanded}
+                      graph={editors.active === "graph"}
+                      onGraph={editors.openGraph}
+                      onRemote={(action) => {
+                        if (activeId)
+                          void runAction(
+                            () => runProjectGitAction(activeId, root, action),
+                            action,
+                          );
+                      }}
+                      branchControl={
+                        activeId && (
+                          <GitBranchMenu
+                            key={scope}
+                            projectId={activeId}
+                            worktreePath={root}
+                            current={branch}
+                            label={t("git.actions.branches")}
+                            disabled={!status || loading || busy}
+                            triggerIcon={
+                              <span
+                                aria-hidden="true"
+                                className="codicon codicon-source-control"
+                                style={{ fontSize: 14, lineHeight: 1 }}
+                              />
+                            }
+                            triggerClassName="app-button-ghost h-6 w-6 p-0"
+                            onRun={(action, name) =>
+                              runAction(
+                                () =>
+                                  runProjectGitAction(
+                                    activeId,
+                                    root,
+                                    action,
+                                    name,
+                                  ),
+                                action,
+                              )
+                            }
+                          />
+                        )
+                      }
+                      onRefresh={requestRefresh}
+                      onTree={() => setTree((value) => !value)}
+                      onHistory={() => setHistoryExpanded((value) => !value)}
+                      canStage={!status?.truncated && unstagedFiles.length > 0}
+                      canUnstage={!status?.truncated && stagedFiles.length > 0}
+                      onStageAll={() =>
+                        changeProps.onStage(
+                          unstagedFiles.map((file) => file.path),
+                          true,
+                        )
+                      }
+                      onUnstageAll={() =>
+                        changeProps.onStage(
+                          stagedFiles.map((file) => file.path),
+                          false,
+                        )
+                      }
+                    />
+                  )}
+                  enabled={
+                    !!status &&
+                    !loading &&
+                    !status.truncated &&
+                    stagedFiles.length > 0 &&
+                    !files.some((file) => file.conflicted) &&
+                    status.state === "Clean"
+                  }
+                  onCommit={(message) =>
+                    activeId
+                      ? runAction(
+                          () => commitProjectGit(activeId, root, message),
+                          "commit",
+                        )
+                      : Promise.resolve(false)
+                  }
+                />
+                {loading && !status && (
+                  <p role="status" className="px-3 pb-3 text-xs text-muted">
+                    {t("common.loading")}
+                  </p>
+                )}
+                {status && (
+                  <div className="pb-4">
+                    <GitChanges
+                      key={`${scope}:staged`}
+                      {...changeProps}
+                      staged
+                      files={stagedFiles}
+                      renderFile={renderChangeFile(true)}
+                    />
+                    <GitChanges
+                      key={`${scope}:unstaged`}
+                      {...changeProps}
+                      staged={false}
+                      files={unstagedFiles}
+                      renderFile={renderChangeFile(false)}
+                    />
+                    {status.truncated && (
+                      <p className="p-3 text-xs text-muted">
+                        {t("git.truncated")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            }
+            bottom={
+              <GitHistory
+                key={`${scope}:history`}
+                status={status}
+                loading={loading}
+                expanded={historyExpanded}
+                onExpandedChange={setHistoryExpanded}
+                onRefresh={requestRefresh}
+                target={
+                  activeId
+                    ? { projectId: activeId, worktreePath: root }
                     : undefined
                 }
-                toolbar={(canCommit) => (
-                  <GitSourceControlToolbar
-                    target={
-                      activeId
-                        ? { projectId: activeId, worktreePath: root }
-                        : undefined
-                    }
-                    disabled={!status || loading || busy}
-                    canSync={
-                      !!status?.upstream &&
-                      !!status.branch &&
-                      status.state === "Clean" &&
-                      !files.some((file) => file.conflicted)
-                    }
-                    canCommit={canCommit}
-                    loading={loading || busy}
-                    tree={tree}
-                    history={historyExpanded}
-                    graph={editors.active === "graph"}
-                    onGraph={editors.openGraph}
-                    onRemote={(action) => {
-                      if (activeId)
-                        void runAction(
-                          () => runProjectGitAction(activeId, root, action),
-                          action,
-                        );
-                    }}
-                    branchControl={
-                      activeId && (
-                        <GitBranchMenu
-                          key={scope}
-                          projectId={activeId}
-                          worktreePath={root}
-                          current={branch}
-                          label={t("git.actions.branches")}
-                          disabled={!status || loading || busy}
-                          triggerIcon={
-                            <span
-                              aria-hidden="true"
-                              className="codicon codicon-source-control"
-                              style={{ fontSize: 14, lineHeight: 1 }}
-                            />
-                          }
-                          triggerClassName="app-button-ghost h-6 w-6 p-0"
-                          onRun={(action, name) =>
-                            runAction(
-                              () =>
-                                runProjectGitAction(
-                                  activeId,
-                                  root,
-                                  action,
-                                  name,
-                                ),
-                              action,
-                            )
-                          }
-                        />
-                      )
-                    }
-                    onRefresh={requestRefresh}
-                    onTree={() => setTree((value) => !value)}
-                    onHistory={() => setHistoryExpanded((value) => !value)}
-                    canStage={!status?.truncated && unstagedFiles.length > 0}
-                    canUnstage={!status?.truncated && stagedFiles.length > 0}
-                    onStageAll={() =>
-                      changeProps.onStage(
-                        unstagedFiles.map((file) => file.path),
-                        true,
-                      )
-                    }
-                    onUnstageAll={() =>
-                      changeProps.onStage(
-                        stagedFiles.map((file) => file.path),
-                        false,
-                      )
-                    }
-                  />
+                selected={editors.files.find(
+                  (file) => editors.fileId(file) === editors.active,
                 )}
-                enabled={
-                  !!status &&
-                  !loading &&
-                  !status.truncated &&
-                  stagedFiles.length > 0 &&
-                  !files.some((file) => file.conflicted) &&
-                  status.state === "Clean"
-                }
-                onCommit={(message) =>
-                  activeId
-                    ? runAction(
-                        () => commitProjectGit(activeId, root, message),
-                        "commit",
-                      )
-                    : Promise.resolve(false)
-                }
+                onSelect={editors.openFile}
               />
-              {loading && !status && (
-                <p role="status" className="px-3 pb-3 text-xs text-muted">
-                  {t("common.loading")}
-                </p>
-              )}
-              {status && (
-                <div className="pb-4">
-                  <GitChanges
-                    key={`${scope}:staged`}
-                    {...changeProps}
-                    staged
-                    files={stagedFiles}
-                    renderFile={renderChangeFile(true)}
-                  />
-                  <GitChanges
-                    key={`${scope}:unstaged`}
-                    {...changeProps}
-                    staged={false}
-                    files={unstagedFiles}
-                    renderFile={renderChangeFile(false)}
-                  />
-                  {status.truncated && (
-                    <p className="p-3 text-xs text-muted">
-                      {t("git.truncated")}
-                    </p>
-                  )}
-                </div>
-              )}
-            </>
-          }
-          bottom={
-            <GitHistory
-              key={`${scope}:history`}
-              status={status}
-              loading={loading}
-              expanded={historyExpanded}
-              onExpandedChange={setHistoryExpanded}
-              onRefresh={requestRefresh}
-              target={
-                activeId
-                  ? { projectId: activeId, worktreePath: root }
-                  : undefined
-              }
-              selected={editors.files.find(
-                (file) => editors.fileId(file) === editors.active,
-              )}
-              onSelect={editors.openFile}
-            />
-          }
-        />
+            }
+          />
+        )}
       </aside>
     </ResizableSidebar>
   );
@@ -531,7 +516,7 @@ export function Git() {
           </>
         ) : (
           <>
-            {(error || actionError) && (
+            {!noRepository && (error || actionError) && (
               <p
                 role="alert"
                 className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle bg-danger-bg px-3 py-2 text-xs text-danger"
@@ -553,45 +538,47 @@ export function Git() {
             <div className="git-workbench min-h-0 flex-1 overflow-hidden">
               {!sidebarVisibility?.sidebarContainer && sidebar}
 
-              <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <GitEditorWorkspace
-                  target={{ projectId: activeId, worktreePath: root }}
-                  editors={editors}
-                  revision={revision}
-                  files={files}
-                  busy={busy || loading}
-                  fetching={actionType === "fetch"}
-                  onFetch={() => {
-                    void runAction(
-                      () => runProjectGitAction(activeId, root, "fetch"),
-                      "fetch",
-                    );
-                  }}
-                  onRefresh={requestRefresh}
-                >
-                  {selection ? (
-                    <GitFileEditor
-                      activeId={activeId}
-                      root={root}
-                      selection={selection}
-                      fileView={fileView}
-                      diff={diff}
-                      diffError={diffError}
-                      files={files}
-                      onFileViewChange={setFileView}
-                      onClose={() => {
-                        changesRef.current
-                          ?.querySelector<HTMLButtonElement>(
-                            'button[aria-current="true"]',
-                          )
-                          ?.focus();
-                        setSelection(undefined);
-                        setFileView(false);
-                      }}
-                    />
-                  ) : null}
-                </GitEditorWorkspace>
-              </section>
+              {!noRepository && (
+                <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  <GitEditorWorkspace
+                    target={{ projectId: activeId, worktreePath: root }}
+                    editors={editors}
+                    revision={revision}
+                    files={files}
+                    busy={busy || loading}
+                    fetching={actionType === "fetch"}
+                    onFetch={() => {
+                      void runAction(
+                        () => runProjectGitAction(activeId, root, "fetch"),
+                        "fetch",
+                      );
+                    }}
+                    onRefresh={requestRefresh}
+                  >
+                    {selection ? (
+                      <GitFileEditor
+                        activeId={activeId}
+                        root={root}
+                        selection={selection}
+                        fileView={fileView}
+                        diff={diff}
+                        diffError={diffError}
+                        files={files}
+                        onFileViewChange={setFileView}
+                        onClose={() => {
+                          changesRef.current
+                            ?.querySelector<HTMLButtonElement>(
+                              'button[aria-current="true"]',
+                            )
+                            ?.focus();
+                          setSelection(undefined);
+                          setFileView(false);
+                        }}
+                      />
+                    ) : null}
+                  </GitEditorWorkspace>
+                </section>
+              )}
             </div>
             {!sidebarVisibility?.statusContainer && statusBar}
           </>

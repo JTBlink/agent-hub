@@ -78,12 +78,12 @@ pub async fn get_project_git_status(
     store: State<'_, Arc<SkillStore>>,
     project_id: String,
     worktree_path: Option<String>,
-) -> Result<GitStatus, AppError> {
+) -> Result<Option<GitStatus>, AppError> {
     let store = store.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let root = project_worktrees::directory(&store, &project_id, worktree_path.as_deref())
             .map_err(AppError::io)?;
-        project_git::status(&root).map_err(AppError::io)
+        project_git::inspect(&root).map_err(AppError::io)
     })
     .await?
 }

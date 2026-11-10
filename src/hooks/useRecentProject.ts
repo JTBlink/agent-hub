@@ -34,9 +34,7 @@ export function useRecentProject() {
   }, [location.key]);
   const enter = (project: Project) => {
     navigate(worktreeUrl(project.id, project.path));
-    void touchProjectVisited(project.id)
-      .then(refreshProjects)
-      .catch(() => {});
+    void touchProjectVisited(project.id).catch(() => {});
   };
   const openRecent = async (project: Project) => {
     if (pending.current) return;

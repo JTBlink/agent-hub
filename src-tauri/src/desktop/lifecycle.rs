@@ -87,6 +87,13 @@ fn teardown_before_exit(app: &tauri::AppHandle) {
             log::error!("Failed to destroy main window while quitting: {err}");
         }
     }
+    for (label, window) in app.windows() {
+        if label != "main" {
+            if let Err(error) = window.destroy() {
+                log::warn!("Cannot close workspace: {error}");
+            }
+        }
+    }
     if let Some(preview) = app.try_state::<Arc<core::preview::Preview>>() {
         preview.clear();
     }

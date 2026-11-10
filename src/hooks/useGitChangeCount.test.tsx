@@ -57,6 +57,11 @@ function Count({ projectId }: { projectId: string }) {
   const result = useGitChangeCount(projectId, `<workspace>/${projectId}`);
   return <output>{result?.count ?? "unknown"}</output>;
 }
+it("shows no change count for a folder without a repository", async () => {
+  vi.mocked(getProjectGitStatus).mockResolvedValue(null);
+  await act(async () => root.render(<Count projectId="ordinary" />));
+  expect(host.textContent).toBe("unknown");
+});
 it("matches the sum of staged and unstaged counts including files in both groups", async () => {
   const snapshot = status(
     Array.from({ length: 43 }, (_, index) => `file-${index}.ts`),

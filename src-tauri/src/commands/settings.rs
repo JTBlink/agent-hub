@@ -1,5 +1,7 @@
 use std::process::Command;
 use std::sync::Arc;
+#[cfg(target_os = "macos")]
+use tauri::Manager;
 use tauri::State;
 
 use crate::core::{central_repo, error::AppError, log_sanitize, skill_store::SkillStore};
@@ -593,12 +595,8 @@ fn reveal_in_file_manager(path: &std::path::Path) {
 mod tests;
 
 #[tauri::command]
-pub async fn app_exit(app: tauri::AppHandle) {
-    let app_for_main = app.clone();
-    if let Err(err) = app.run_on_main_thread(move || crate::quit_app(&app_for_main)) {
-        log::error!("Failed to schedule app_exit on main thread: {err}");
-        crate::quit_app(&app);
-    }
+pub async fn app_exit(app: tauri::AppHandle) -> Result<(), AppError> {
+    crate::desktop::workspaces::request_quit(&app)
 }
 
 /// Relaunch the app so a freshly installed update takes effect. Only ever
@@ -690,6 +688,10 @@ pub async fn hide_to_tray(
     // On macOS, avoid app.hide() (app-level hidden state can block restore in tray flow).
     // Keep app running and hide only the window + Dock icon.
     #[cfg(target_os = "macos")]
+    if !app
+        .windows()
+        .values()
+        .any(|candidate| candidate.is_visible().unwrap_or(false))
     {
         app.set_dock_visibility(false)
             .map_err(|e| AppError::io(format!("Failed to hide Dock icon on macOS: {e}")))?;

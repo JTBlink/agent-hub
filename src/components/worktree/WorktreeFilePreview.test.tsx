@@ -6,6 +6,10 @@ import { WorktreeFilePreview } from "./WorktreeFilePreview";
 import { readWorktreeFile, writeWorktreeFile } from "../../lib/worktreeApi";
 import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
 import { hasPendingWorktreeDocument } from "../../hooks/useWorktreeDocument";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
+  writeText: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -225,9 +229,17 @@ it("moves file controls into the shared toolbar and offers previews for supporte
     );
   await act(async () => render("README.md"));
   expect(host.querySelector('[aria-label="settings.refresh"]')).toBeNull();
-  expect(
-    host.querySelector('[title="README.md"][aria-label="README.md"]'),
-  ).toBeNull();
+  const breadcrumb = host.querySelector(
+    'nav[aria-label="fileReader.filePath"]',
+  )!;
+  expect(breadcrumb.textContent).toBe("README.md");
+  expect(breadcrumb.getAttribute("title")).toBe("~/projects/demo/README.md");
+  await act(async () =>
+    host
+      .querySelector<HTMLButtonElement>('[aria-label="common.copyPath"]')!
+      .click(),
+  );
+  expect(writeText).toHaveBeenLastCalledWith("~/projects/demo/README.md");
   expect(
     toolbar.querySelector('[aria-label="common.openInVscode"]'),
   ).toBeNull();
@@ -268,7 +280,13 @@ it("moves file controls into the shared toolbar and offers previews for supporte
     "# Changed",
   );
   expect(save.disabled).toBe(true);
-  await act(async () => render("example.ts"));
+  await act(async () => render("config/example.ts"));
+  expect(
+    host.querySelector('nav[aria-label="fileReader.filePath"]')?.textContent,
+  ).toBe("configexample.ts");
+  expect(host.querySelector('nav [aria-current="page"]')?.textContent).toBe(
+    "example.ts",
+  );
   expect(
     toolbar.querySelector('[aria-label="fileReader.preview"]'),
   ).not.toBeNull();

@@ -292,6 +292,7 @@
     }
   },
   "menu": {
+    "newWorkspaceWindow": "新增工作區視窗…",
     "developerMode": "開發者模式",
     "file": "檔案",
     "edit": "編輯",
@@ -485,6 +486,7 @@
     "backToEditor": "返回編輯",
     "templateHint": "選擇範本後，可繼續修改命令、目錄與排程。建立前不會註冊或執行任務。",
     "more": "更多操作",
+    "openTasksDirectory": "開啟自動化任務根目錄",
     "restoreBackup": "從備份恢復",
     "noTemplates": "尚無可用範本。",
     "backupTemplateHint": "從備份建立預設暫停的新任務，不覆寫本機既有任務。",
@@ -1740,6 +1742,7 @@
   },
   "closeAction": {
     "title": "關閉行為",
+    "waitingForWorkspaces": "正在等待其他工作區處理未儲存的檔案…",
     "exitTitle": "退出 AgentHub？",
     "exitMessage": "退出會結束應用程式內的終端工作階段及其中執行的程序。",
     "enableTrayHint": "選擇背景執行會啟用托盤圖示，方便重新開啟視窗。",
@@ -2170,6 +2173,7 @@
     "invalidRegex": "規則運算式無效",
     "findCount": "{{current}} / {{count}}",
     "findLimit": "{{count}}+ 處符合項目",
+    "filePath": "檔案路徑",
     "previewInVscodeHint": "開啟預覽副本；VS Code 中的修改不會寫回任務，結束 AgentHub 後清理副本",
     "openInVscodeHint": "在 VS Code 中開啟本機檔案；草稿變更需先儲存",
     "noLocalFile": "此檔案尚無可開啟的本機路徑",
@@ -2624,6 +2628,9 @@
     "referenceCopied": "已複製",
     "syncChanges": "同步變更",
     "syncChangesHint": "先拉取上游變更（僅快進），成功後推送本機提交。",
+    "noRepository": "目前開啟的資料夾中沒有 Git 存放庫。可初始化一個存放庫，以啟用 Git 原始碼管理功能。",
+    "initializeRepository": "初始化存放庫",
+    "initializingRepository": "正在初始化存放庫…",
     "noProjects": "尚未關聯專案。請透過「檔案 → 開啟專案…」新增專案後查看 Git 變更。",
     "actions": {
       "label": "原始碼管理操作",

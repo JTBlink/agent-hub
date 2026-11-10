@@ -1,5 +1,38 @@
 use super::*;
 
+#[test]
+fn initializes_only_the_selected_folder_and_preserves_existing_content() {
+    let parent = tempfile::tempdir().unwrap();
+    git2::Repository::init(parent.path()).unwrap();
+    let folder = parent.path().join("ordinary");
+    std::fs::create_dir(&folder).unwrap();
+    std::fs::write(folder.join("demo.txt"), "keep me").unwrap();
+    repository_action(&folder, GitRepositoryAction::Initialize, None).unwrap();
+    let repo = repository(&folder).unwrap();
+    assert_eq!(
+        repo.workdir().unwrap().canonicalize().unwrap(),
+        folder.canonicalize().unwrap()
+    );
+    assert!(repo.is_empty().unwrap());
+    assert_eq!(
+        std::fs::read_to_string(folder.join("demo.txt")).unwrap(),
+        "keep me"
+    );
+    repo.config()
+        .unwrap()
+        .set_str("agenthub.test", "preserved")
+        .unwrap();
+    assert!(repository_action(&folder, GitRepositoryAction::Initialize, None).is_err());
+    assert_eq!(
+        repo.config().unwrap().get_string("agenthub.test").unwrap(),
+        "preserved"
+    );
+    let missing = parent.path().join("missing");
+    assert!(repository_action(&missing, GitRepositoryAction::Initialize, None).is_err());
+    assert!(!missing.exists());
+    assert!(super::super::inspect(&folder).unwrap().is_some());
+}
+
 fn init(root: &Path) -> git2::Repository {
     let repo = git2::Repository::init(root).unwrap();
     repo.set_head("refs/heads/main").unwrap();

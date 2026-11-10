@@ -31,4 +31,4 @@ Markdown 预览复用通用 `MarkdownContent`，代码块与编辑器共用语�
 
 源码编辑器支持 `Cmd/Ctrl+F` 搜索当前文件及工具栏搜索入口，支持大小写、全字、正则、匹配高亮与计数；`Enter` / `Shift+Enter` 或上下按钮跳转，`Escape` 关闭并返回编辑器。只读模式同样可用，搜索当前内存内容，不读取其他文件。超过 10,000 处匹配时计数显示上限，仍可继续导航。快捷键由焦点所属编辑器处理，不注册全局快捷键。
 
-直接嵌入 `FileContent` 的宿主可通过 `actions` 扩展同一工具栏。Worktree 文件面板在此接入编辑、保存、取消与刷新，并通过 `useWorktreeDocument` 统一保留会话内草稿、处理磁盘内容冲突；Git 页面复用该面板，MR/PR 文件差异复用 `FileReaderDialog`。模块自身不决定保存位置。
+直接嵌入 `FileContent` 的宿主可通过 `actions` 扩展同一工具栏，或通过 `toolbarContainer` 把控件放入宿主工具栏；路径面包屑始终保留在编辑器上方。宿主可提供 `localPath` 作为完整路径提示与复制内容，阅读器不自行解析本地路径。Worktree 文件面板在此接入编辑、保存、取消与刷新，并通过 `useWorktreeDocument` 统一保留会话内草稿、处理磁盘内容冲突；Git 页面复用该面板，MR/PR 文件差异复用 `FileReaderDialog`。模块自身不决定保存位置。

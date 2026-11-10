@@ -292,6 +292,7 @@
     }
   },
   "menu": {
+    "newWorkspaceWindow": "新建工作区窗口…",
     "developerMode": "开发者模式",
     "file": "文件",
     "edit": "编辑",
@@ -485,6 +486,7 @@
     "backToEditor": "返回编辑",
     "templateHint": "选择模板后，可继续修改命令、目录和日程。创建前不会注册或执行任务。",
     "more": "更多操作",
+    "openTasksDirectory": "打开自动化任务根目录",
     "restoreBackup": "从备份恢复",
     "noTemplates": "暂无可用模板。",
     "backupTemplateHint": "从备份创建默认暂停的新任务，不覆盖本机已有任务。",
@@ -1769,6 +1771,7 @@
   "closeAction": {
     "enableTrayHint": "选择后台运行会启用托盘图标，方便重新打开窗口。",
     "exitMessage": "退出会结束应用内的终端会话及其中运行的进程。",
+    "waitingForWorkspaces": "正在等待其他工作区处理未保存的文件…",
     "exitTitle": "退出 AgentHub？",
     "title": "关闭行为",
     "message": "后台运行会保留终端会话，你可以从系统托盘重新打开窗口。退出应用会结束终端会话。",
@@ -2210,6 +2213,7 @@
     "invalidRegex": "正则表达式无效",
     "findCount": "{{current}} / {{count}}",
     "findLimit": "{{count}}+ 处匹配",
+    "filePath": "文件路径",
     "previewInVscodeHint": "打开预览副本；VS Code 中的修改不会写回任务，退出 AgentHub 后清理副本",
     "openInVscodeHint": "在 VS Code 中打开本地文件；草稿更改需先保存",
     "noLocalFile": "此文件尚无可打开的本地路径",
@@ -2664,6 +2668,9 @@
     "referenceCopied": "已复制",
     "syncChanges": "同步更改",
     "syncChangesHint": "先拉取上游更改（仅快进），成功后推送本地提交。",
+    "noRepository": "当前打开的文件夹中没有 Git 存储库。可初始化一个仓库，以启用 Git 源代码管理功能。",
+    "initializeRepository": "初始化仓库",
+    "initializingRepository": "正在初始化仓库…",
     "noProjects": "尚未关联项目。请通过“文件 → 打开项目…”添加项目后查看 Git 更改。",
     "actions": {
       "label": "源代码管理操作",

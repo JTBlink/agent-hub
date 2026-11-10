@@ -7,7 +7,6 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import zh from "../i18n/zh.json";
 import { makeProject } from "../../tests/fixtures/workspace";
 import { refreshProjectWorktrees } from "../hooks/useProjectWorktrees";
-import { WorktreeCheckoutSwitcher } from "./worktree/WorktreeCheckoutSwitcher";
 import { WindowTitleBar } from "./WindowTitleBar";
 import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CommandPalette } from "./CommandPalette";
@@ -17,6 +16,17 @@ import { WorkspaceFilesProvider } from "./worktree/WorkspaceFilesContext";
 import { getProjectGitReferences, runProjectGitAction } from "../lib/gitApi";
 import { createProjectWorktree, getProjectWorktrees } from "../lib/worktreeApi";
 import { removeProject } from "../lib/tauri";
+
+const defaultProjects = [
+  { ...makeProject(), id: "demo", name: "Demo workspace" },
+  {
+    ...makeProject(),
+    id: "other",
+    name: "Other workspace",
+    path: "~/projects/other",
+  },
+];
+let titleProjects = defaultProjects;
 
 vi.mock("../lib/gitApi", () => ({
   getProjectGitReferences: vi.fn(),
@@ -66,15 +76,7 @@ const drag = vi.hoisted(() => vi.fn());
 vi.mock("../hooks/useDragWindow", () => ({ useDragWindow: () => drag }));
 vi.mock("../context/AppContext", () => ({
   useApp: () => ({
-    projects: [
-      { ...makeProject(), id: "demo", name: "Demo workspace" },
-      {
-        ...makeProject(),
-        id: "other",
-        name: "Other workspace",
-        path: "~/projects/other",
-      },
-    ],
+    projects: titleProjects,
     refreshProjects: vi.fn().mockResolvedValue(undefined),
     managedSkills: [],
     skillGroups: [],
@@ -93,6 +95,7 @@ vi.mock("react-i18next", () => ({
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
+  titleProjects = defaultProjects;
   vi.clearAllMocks();
   Object.defineProperties(HTMLDialogElement.prototype, {
     showModal: {
@@ -128,9 +131,6 @@ function Shell() {
   return (
     <>
       <WindowTitleBar onOpenCommands={() => setOpen(true)} />
-      <aside>
-        <WorktreeCheckoutSwitcher />
-      </aside>
       <CommandPalette open={open} onOpenChange={setOpen} />
       <output>{useLocation().pathname}</output>
     </>
@@ -256,8 +256,32 @@ it("lists projects in the title bar and switches from a child checkout to anothe
   expect(selector.textContent).toContain("Other workspace");
   expect(container.querySelector("output")?.textContent).toBe("/project/other");
   expect(
-    container.querySelector<HTMLSelectElement>("aside select")!.value,
+    container.querySelector<HTMLSelectElement>(
+      'header select[aria-label="切换工作树"]',
+    )!.value,
   ).toBe(JSON.stringify(["other", "~/projects/other"]));
+});
+
+it("shows at most 15 workspaces in recent-open order instead of project registration order", async () => {
+  titleProjects = Array.from({ length: 20 }, (_, index) => ({
+    ...makeProject(),
+    id: index === 0 ? "demo" : `project-${index}`,
+    name: `Workspace ${index}`,
+    visited_at: index === 0 ? 100 : index,
+  }));
+  await render("/project/demo");
+  await act(async () =>
+    container
+      .querySelector<HTMLButtonElement>(
+        'header [role="combobox"][aria-label="切换项目"]',
+      )!
+      .click(),
+  );
+  const options = [...document.querySelectorAll('[role="option"]')];
+  expect(options.map((item) => item.textContent)).toEqual([
+    "Workspace 0",
+    ...Array.from({ length: 14 }, (_, i) => `Workspace ${19 - i}`),
+  ]);
 });
 
 it("confirms removal from a project row without switching to that project", async () => {
@@ -315,7 +339,7 @@ it("keeps the removal dialog open when unregistering fails and allows retry", as
   expect(document.querySelector('[role="alertdialog"]')).toBeNull();
 });
 
-it("places the VS Code icon beside the project selector and opens the route worktree", async () => {
+it("places the worktree selector between the project and VS Code and opens the route worktree", async () => {
   await render("/project/demo?worktree=%2Fworkspace%2Ftopic");
   const selector = container.querySelector(
     'header [role="combobox"][aria-label="切换项目"]',
@@ -323,12 +347,25 @@ it("places the VS Code icon beside the project selector and opens the route work
   const button = container.querySelector<HTMLButtonElement>(
     'header button[aria-label="VS Code 打开"]',
   )!;
+  const worktree = container.querySelector<HTMLButtonElement>(
+    'header [role="combobox"][aria-label="切换工作树"]',
+  )!;
+  expect(worktree).not.toBeNull();
+  expect(
+    selector.compareDocumentPosition(worktree) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    worktree.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(container.querySelector('aside [aria-label="切换工作树"]')).toBeNull();
   expect(button).not.toBeNull();
   expect(button.parentElement?.contains(selector)).toBe(true);
   expect(button.querySelector(".codicon-vscode")).not.toBeNull();
   const event = new MouseEvent("mousedown", { bubbles: true });
   await act(async () => {
     button.dispatchEvent(event);
+    worktree.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
     button.click();
   });
   expect(drag).not.toHaveBeenCalled();
@@ -342,9 +379,6 @@ it("separates project, directory and branch selection and preserves the checkout
     return (
       <>
         <WindowTitleBar onOpenCommands={() => {}} />
-        <aside>
-          <WorktreeCheckoutSwitcher />
-        </aside>
         <ProjectSwitcher onRemove={remove} />
         <output>
           {location.pathname}
@@ -374,7 +408,7 @@ it("separates project, directory and branch selection and preserves the checkout
     )!;
   expect(checkout().selectedOptions[0].text).toBe("demo-topic");
   expect(branch().textContent).toContain("feature/shared");
-  expect(container.querySelectorAll("header [role=combobox]")).toHaveLength(1);
+  expect(container.querySelectorAll("header [role=combobox]")).toHaveLength(2);
   expect(
     container.querySelector("header [role=combobox]")?.textContent,
   ).toContain("Demo workspace");
@@ -494,9 +528,6 @@ it("preserves an unavailable worktree instead of silently selecting the main dir
       >
         <WorkspaceFilesProvider>
           <WindowTitleBar onOpenCommands={() => {}} />
-          <aside>
-            <WorktreeCheckoutSwitcher />
-          </aside>
           <ProjectSwitcher onRemove={() => {}} />
         </WorkspaceFilesProvider>
       </MemoryRouter>,
@@ -518,11 +549,11 @@ it("preserves an unavailable worktree instead of silently selecting the main dir
   ).toBe(false);
 });
 
-it("creates a worktree from the explorer menu, retains failed inputs and switches only after success", async () => {
+it("creates a worktree from the title bar menu, retains failed inputs and switches only after success", async () => {
   await refreshProjectWorktrees("demo");
   await render("/project/demo");
   const trigger = container.querySelector<HTMLButtonElement>(
-    'aside [role="combobox"]',
+    'header [role="combobox"][aria-label="切换工作树"]',
   )!;
   await act(async () => trigger.click());
   const create = [
@@ -591,7 +622,7 @@ it("cancels worktree creation without changing the current checkout", async () =
   await refreshProjectWorktrees("demo");
   await render("/project/demo");
   const trigger = container.querySelector<HTMLButtonElement>(
-    'aside [role="combobox"]',
+    'header [role="combobox"][aria-label="切换工作树"]',
   )!;
   await act(async () => trigger.click());
   const create = [
