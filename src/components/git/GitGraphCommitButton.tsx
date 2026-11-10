@@ -1,6 +1,7 @@
 import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { GitGraphCommit } from "../../lib/gitApi";
+import { truncateCommitSummary } from "../../lib/gitGraphText";
 import { CardActionMenu } from "../CardActionMenu";
 import { GitGraphRefBadges } from "./GitGraphRefBadges";
 import { useGitCopyActions } from "./useGitCopyActions";
@@ -35,16 +36,22 @@ export function GitGraphCommitButton({
         onKeyDown={onKeyDown}
         onClick={onSelect}
         aria-pressed={selected}
-        className="flex h-[30px] w-full items-center gap-1.5 whitespace-nowrap text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        className="flex h-[30px] min-w-0 w-full items-center gap-1.5 overflow-hidden whitespace-nowrap text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         title={commit.summary}
       >
-        <GitGraphRefBadges
-          refs={commit.refs}
-          color={color}
-          sha={commit.sha}
-          onDetails={onSelect}
-        />
-        <span className="min-w-24 flex-1 truncate">{commit.summary}</span>
+        {commit.refs.length > 0 && (
+          <span className="git-graph-refs flex min-w-0 max-w-[60%] shrink-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <GitGraphRefBadges
+              refs={commit.refs}
+              color={color}
+              sha={commit.sha}
+              onDetails={onSelect}
+            />
+          </span>
+        )}
+        <span className="min-w-0 max-w-[32rem] flex-1 truncate">
+          {truncateCommitSummary(commit.summary)}
+        </span>
       </button>
       <CardActionMenu
         contextOnly

@@ -58,11 +58,17 @@ commits.push({
       kind: "remote",
       remote_name: "origin",
     },
+    {
+      name: `origin/automation/temporary/${"abcdef0123456789".repeat(12)}`,
+      remote: true,
+      kind: "remote",
+      remote_name: "origin",
+    },
   ],
 });
 commits.push({
   sha: "base",
-  summary: "fix: Preserve terminal sessions across worktrees",
+  summary: "fix: Preserve terminal sessions across worktrees ".repeat(10),
   author: "Example",
   time: 1793408200,
   parents: [],

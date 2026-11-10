@@ -48,7 +48,7 @@ try {
       const x = rows.map(row => Number(row.querySelector('circle').getAttribute('cx')));
       return x[0] > x[2] && x[1] > x[0] &&
         rows[0].querySelectorAll('[data-graph-ref]').length === 1 &&
-        rows[2].querySelectorAll('[data-graph-ref]').length === 2 &&
+        rows[2].querySelectorAll('[data-graph-ref]').length === 3 &&
         [...document.querySelectorAll('[data-graph-ref]')].every(badge => badge.scrollWidth <= badge.clientWidth + 1) &&
         document.querySelector('tbody tr svg circle').getAttribute('cx') === String(x[2]);
     })()`),

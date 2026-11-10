@@ -2,6 +2,7 @@
 import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
+import { MAX_COMMIT_SUMMARY_LENGTH } from "../../lib/gitGraphText";
 import { GitGraphTable } from "./GitGraphTable";
 import { GitGraphToolbar } from "./GitGraphToolbar";
 
@@ -11,6 +12,50 @@ vi.mock("react-i18next", () => ({
     i18n: { language: "en" },
   }),
 }));
+
+it("truncates long commit subjects while keeping the complete subject available", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const summary = "提交信息 ".repeat(MAX_COMMIT_SUMMARY_LENGTH);
+  try {
+    await act(async () =>
+      root.render(
+        <GitGraphTable
+          commits={[
+            {
+              sha: "long-summary",
+              summary,
+              author: "Example",
+              time: 0,
+              refs: [],
+              parents: [],
+            },
+          ]}
+          query=""
+          changedFiles={0}
+          loading={false}
+          onSelect={() => {}}
+        />,
+      ),
+    );
+    const button = host.querySelector<HTMLButtonElement>(
+      "[data-commit-index]",
+    )!;
+    expect(button.title).toBe(summary);
+    expect(button.querySelector("span")?.textContent).toContain("…");
+    expect(button.querySelector("span")?.textContent?.length).toBe(
+      MAX_COMMIT_SUMMARY_LENGTH,
+    );
+    expect(button.closest("tr")?.textContent).toContain("Example");
+    expect(button.closest("tr")?.textContent).toContain("long-su");
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
 
 it("filters all loaded commits by message, author, SHA and ref, resets scrolling and restores history on Escape", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);

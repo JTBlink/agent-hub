@@ -79,20 +79,23 @@ function GitGraphRefBadge({
         data-graph-ref={badge.kind}
         title={`${branchKind}: ${badge.fullNames.join("\n")}`}
         aria-label={`${branchKind}: ${badge.fullNames.join(", ")}`}
-        className="inline-flex shrink-0 items-stretch overflow-hidden rounded-sm border whitespace-nowrap"
+        className="inline-flex min-w-0 max-w-[min(20rem,100%)] shrink-0 items-stretch overflow-hidden rounded-sm border whitespace-nowrap"
         style={{
           borderColor: graphColor(color),
           background: graphBadgeBackground(graphColor(color)),
         }}
       >
         <span
-          className="inline-flex items-center px-1"
+          className="inline-flex shrink-0 items-center px-1"
           style={{ background: graphColor(color), color: "var(--color-bg)" }}
         >
           <Icon size={12} aria-hidden="true" />
         </span>
         <span
-          className={cn("px-1.5", badge.current && "font-semibold")}
+          className={cn(
+            "min-w-0 truncate px-1.5",
+            badge.current && "font-semibold",
+          )}
           style={{ color: graphColor(color) }}
         >
           {badge.name}
@@ -100,12 +103,12 @@ function GitGraphRefBadge({
         {badge.remotes.map((remote) => (
           <span
             key={remote}
-            className="inline-flex items-center gap-1 border-l px-1.5 italic text-secondary"
+            className="inline-flex min-w-0 max-w-24 items-center gap-1 border-l px-1.5 italic text-secondary"
             title={`${t("git.graph.remoteBranch")}: ${remote}/${badge.name}`}
             style={{ borderColor: graphColor(color) }}
           >
-            <Cloud size={11} aria-hidden="true" />
-            {remote}
+            <Cloud size={11} className="shrink-0" aria-hidden="true" />
+            <span className="truncate">{remote}</span>
           </span>
         ))}
       </span>
