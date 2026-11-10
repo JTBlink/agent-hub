@@ -8,13 +8,23 @@
 
 普通任务只声明实际需要的文件和命令，不需要 `agent.json`、提示词或 Agent。Agent 任务增加 `prompts/prompt.md` 与 `config/agent.json`，提示词只表达目标和约束；执行流程与报告格式优先由已安装 Skill 承担，脚本只提供必要的确定性上下文。
 
+## Agent 选择
+
+自动化编辑器只提供“不使用智能体”和本机已安装、已启用的具体 Agent，名称、图标与排序复用工作区规则，不提供“默认 Agent”选项。选择具体 Agent 后写入对应的 `runner.kind`，后续全局默认 Agent 变更不改变该任务的选择。
+
+旧任务或模板中的 `runner.kind: default` 继续兼容全局默认配置，编辑器显示当前解析出的具体 Agent；只查看或保存其他字段时保留原配置，切换为具体 Agent 后才固定为对应类型。未安装或未启用的既有 Agent 显示为不可用，不静默切换其他 Agent。
+
 ## Herdr 模块
 
 任务入口复用 `automations/_shared/agent-entry.py` 薄适配器，通过 `agents launch execute` 调用 `core/agent_execution`。Herdr 专有行为维护于 `core/herdr`，状态事务维护于 `core/state_store`；公共实现随匹配 CLI 管理为单份版本资源，任务不携带 `herdr_agent.py` 或存储实现副本，无需运行桌面进程。业务筛选与结果校验仍由任务自己的脚本负责。
 
 ```json
 {
-  "runner": { "kind": "default", "session": "default", "title": "Project task" },
+  "runner": {
+    "kind": "codex",
+    "session": "default",
+    "title": "Project task"
+  },
   "launch": { "arguments": [] },
   "execution": { "wait_timeout_seconds": 1800 }
 }

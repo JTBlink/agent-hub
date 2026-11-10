@@ -19,11 +19,7 @@ import { PROMPT_VARIANTS_PATH } from "../lib/automationPrompts";
 import { getErrorMessage } from "../lib/error";
 import { useDefaultAgentKey } from "../hooks/useDefaultAgentKey";
 import { ThemedSelect } from "./ThemedSelect";
-import {
-  herdrEnabled,
-  AutomationHerdrFields,
-  HerdrIcon,
-} from "@app/herdr";
+import { herdrEnabled, AutomationHerdrFields, HerdrIcon } from "@app/herdr";
 import { useNavigate } from "react-router-dom";
 
 type Execution = Pick<AutomationDraft, "provider" | "content" | "files">;
@@ -58,7 +54,6 @@ export function AutomationAgentField({
     agent === "native-hermes"
       ? agent
       : resolveAutomationAgent(agent, defaultAgentKey);
-  const isDefaultAgent = agent === "default";
   const resolvedChoice =
     (!herdrEnabled || draft.provider === "hermes") && resolvedAgent === "hermes"
       ? "native-hermes"
@@ -74,23 +69,17 @@ export function AutomationAgentField({
           ? "native-hermes"
           : tool.kind,
     }));
-  const selected = isDefaultAgent
-    ? { value: "default" }
-    : choices.find((tool) => tool.value === resolvedChoice);
+  const selected = choices.find((tool) => tool.value === resolvedChoice);
   const usesHerdr = !!config && agent !== "native-hermes";
   const configured = tools.find(
     (tool) =>
       herdrAgentKind(tool.key) ===
       (resolvedChoice === "native-hermes" ? "hermes" : resolvedChoice),
   );
-  const defaultAgentLabel =
-    configured?.display_name ?? t("herdr.defaultAgent");
   const icon = (value: string) => {
     const tool =
       choices.find((item) => item.value === value) ??
-      (value === agent || (isDefaultAgent && value === "default")
-        ? configured
-        : undefined);
+      (value === resolvedChoice ? configured : undefined);
     return tool ? (
       <AgentIcon
         agentKey={tool.key}
@@ -202,11 +191,18 @@ export function AutomationAgentField({
                   throw new Error(t("automation.agentStarterUnavailable"));
                 const current = parsed as Record<string, unknown>;
                 const runner = current.runner;
-                if (!runner || typeof runner !== "object" || Array.isArray(runner))
+                if (
+                  !runner ||
+                  typeof runner !== "object" ||
+                  Array.isArray(runner)
+                )
                   throw new Error(t("automation.agentStarterUnavailable"));
                 const nextConfig = {
                   ...current,
-                  runner: { ...(runner as Record<string, unknown>), kind: next },
+                  runner: {
+                    ...(runner as Record<string, unknown>),
+                    kind: next,
+                  },
                   launch: { arguments: [] },
                 };
                 return {
@@ -241,7 +237,7 @@ export function AutomationAgentField({
         </span>
         <ThemedSelect
           className="app-input w-full"
-          leadingIcon={icon(agent)}
+          leadingIcon={icon(resolvedChoice)}
           valueBadge={
             usesHerdr ? (
               <HerdrIcon
@@ -266,7 +262,7 @@ export function AutomationAgentField({
             onSelect: () => navigate("/settings#agents"),
           }}
           aria-label={t("automation.optionalAgent")}
-          value={agent}
+          value={resolvedChoice}
           disabled={disabled || pending}
           onChange={(event) => void choose(event.target.value)}
         >
@@ -275,14 +271,6 @@ export function AutomationAgentField({
             disabled={providerLocked && draft.provider === "hermes"}
           >
             {t("automation.noAgent")}
-          </option>
-          <option
-            value="default"
-            disabled={providerLocked && draft.provider === "hermes"}
-          >
-            {resolvedAgent
-              ? t("automation.defaultAgent", { agent: defaultAgentLabel })
-              : t("herdr.defaultAgent")}
           </option>
           {choices.map((tool) => (
             <option
@@ -297,7 +285,7 @@ export function AutomationAgentField({
               {tool.display_name}
             </option>
           ))}
-          {agent && !selected && !isDefaultAgent && (
+          {resolvedChoice && !selected && (
             <option value={resolvedChoice} disabled>
               {configured?.display_name ?? resolvedChoice} ·{" "}
               {t("automation.agentUnavailable")}

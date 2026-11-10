@@ -550,7 +550,6 @@
     "herdrSession": "Herdr 會話",
     "herdrScheduleHelp": "AgentHub 按日程發起任務，並復用設定中的 Agent 啟動命令與參數；Herdr 服務需保持執行。上一輪仍在執行時略過本次觸發。",
     "optionalAgent": "智慧體（選填）",
-    "defaultAgent": "預設 Agent（目前：{{agent}}）",
     "noAgent": "不使用智慧體",
     "noAgentHelp": "不選擇智慧體時，僅執行下方命令。",
     "agentStarterUnavailable": "Agent 啟動器暫不可用，請更新應用後重試。",
