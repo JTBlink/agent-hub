@@ -190,6 +190,8 @@ def main(prompt_context=""):
         raise HerdrError("请先选择项目工作区，Agent 将在该项目目录运行。")
     previous_state = json.loads(STATE.read_text(encoding="utf-8")) if STATE.exists() else {}
     if not binary or (previous_state.get("backend") == "terminal" and previous_state.get("phase") != "completed"):
+        if REQUEST.get("continuation_prompt"):
+            raise HerdrError("原会话续作需要可核实的 Herdr Agent，不创建替代终端。")
         return terminal_fallback(bridge, kind, extra, prompt, cwd)
     backend_path = os.environ.get('AGENT_HUB_HERDR_RUNTIME')
     if not backend_path:
@@ -200,7 +202,8 @@ def main(prompt_context=""):
     })
     return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge,
                           title,
-                          wait_timeout_seconds, REQUEST.get("reconcile_only", False))
+                          wait_timeout_seconds, REQUEST.get("reconcile_only", False),
+                          REQUEST.get("continuation_prompt", ""), REQUEST.get("continuation_id", ""))
 
 
 if __name__ == "__main__":

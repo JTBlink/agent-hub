@@ -22,6 +22,11 @@ pub struct ExecutionRequest {
     /// Observe an existing execution only; never create a pane or submit a prompt.
     #[serde(default)]
     pub reconcile_only: bool,
+    /// An explicit continuation in the owned conversation, never a new Agent.
+    #[serde(default)]
+    pub continuation_prompt: String,
+    #[serde(default)]
+    pub continuation_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -36,6 +41,14 @@ pub fn python_module() -> Result<PathBuf> {
 
 /// Run once and stream output. A timeout/unknown backend result never means permission to retry.
 pub fn run(request: &ExecutionRequest, mut output: impl FnMut(&str)) -> Result<ExecutionResult> {
+    anyhow::ensure!(
+        request.continuation_prompt.is_empty()
+            || (request.reconcile_only
+                && !request.continuation_id.is_empty()
+                && request.continuation_id.len() <= 100
+                && request.continuation_prompt.len() <= 64 * 1024),
+        "Continuation requires an existing execution and a unique bounded ID"
+    );
     for path in [
         &request.config_file,
         &request.prompt_file,

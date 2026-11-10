@@ -124,8 +124,30 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
+def continue_existing(invoke, previous, agent, cwd, prompt, continuation_id):
+    verify_previous_agent(agent, previous, cwd)
+    prior = previous.get("continuation", {})
+    if prior.get("id") == continuation_id:
+        print("同一续作已尝试投递，保留结果且不重复发送。", flush=True)
+        return 0
+    if prior.get("status") == "uncertain" and (agent.get("completion_seq") or 0) <= (previous.get("completion_seq") or 0):
+        raise HerdrError("上次续作投递结果仍不明确，先核对原会话，不重复发送。")
+    state = {**previous, "phase": "submitted", "completion_seq": agent.get("completion_seq") or 0,
+             "continuation": {"id": continuation_id, "status": "uncertain"}}
+    save_state(state)
+    try:
+        invoke(["agent", "prompt", previous.get("agent_name") or previous["pane"], prompt])
+    except HerdrError as error:
+        if error.code != "agent_prompt_stalled":
+            raise
+    state["continuation"]["status"] = "submitted"
+    save_state(state)
+    print("续作已投递到原 Agent，会话和业务身份保持不变；未创建新 Agent。", flush=True)
+    return 0
+
+
 def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_timeout_seconds=1800,
-        reconcile_only=False):
+        reconcile_only=False, continuation_prompt="", continuation_id=""):
     sessions = command(binary, ["session", "list", "--json"])["sessions"]
     if not any(item.get("name") == session and item.get("running") for item in sessions):
         raise HerdrError(f"Herdr 会话 {session} 未运行，请先在 Herdr 中启动该会话。")
@@ -163,6 +185,8 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
             result = wait_for_result(invoke, target, previous.get("completion_seq") or 0,
                                      wait_timeout_seconds)
             return finish_result(invoke, previous, result, target)
+        if continuation_prompt:
+            return continue_existing(invoke, previous, agent, cwd, continuation_prompt, continuation_id)
         if previous.get("phase") in ("submitted", "attention") and status in ("idle", "done") and (
             (agent.get("completion_seq") or 0) > (previous.get("completion_seq") or 0)
         ):

@@ -46,7 +46,7 @@ class HerdrChecks(unittest.TestCase):
                 output='Synthetic Herdr result', read_failure=None, config=None,
                 missing_agent=False, pane_exists=False, lookup_failure=None,
                 replacement_name=None, previous_after=None, pane_failure=None, progress=None, previous_completion=None,
-                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None, shell_initializing=0, launch=None, launch_failure=False, herdr_missing=False, terminal_phase="running", reconcile_only=False):
+                shell_busy=False, pane_cwd=None, start_failure=None, prompt_context=None, shell_initializing=0, launch=None, launch_failure=False, herdr_missing=False, terminal_phase="running", reconcile_only=False, continuation_prompt="", continuation_id="retry-1"):
         if config is not None:
             CONFIG.write_text(json.dumps(config), encoding='utf-8')
         previous_name = json.loads(STATE.read_text()).get('agent_name', OLD_NAME) if STATE.exists() else OLD_NAME
@@ -139,9 +139,9 @@ class HerdrChecks(unittest.TestCase):
                 with patch('pathlib.Path.cwd', return_value=PROJECT):
                     with self.assertRaises(SystemExit) as result, redirect_stdout(self.output), patch('time.sleep'):
                         if prompt_context is None:
-                            runpy.run_path(str(SCRIPT), run_name='__main__', init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only}})
+                            runpy.run_path(str(SCRIPT), run_name='__main__', init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only, 'continuation_prompt': continuation_prompt, 'continuation_id': continuation_id}})
                         else:
-                            launcher = runpy.run_path(str(SCRIPT), init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only}})
+                            launcher = runpy.run_path(str(SCRIPT), init_globals={'EXECUTION_REQUEST': {**REQUEST, 'reconcile_only': reconcile_only, 'continuation_prompt': continuation_prompt, 'continuation_id': continuation_id}})
                             raise SystemExit(launcher['main'](prompt_context=prompt_context))
         return result.exception.code
 
@@ -460,6 +460,37 @@ class HerdrChecks(unittest.TestCase):
     def test_reconcile_never_falls_back_to_a_new_terminal(self):
         self.assertEqual(self.execute(herdr_missing=True, reconcile_only=True), 0)
         self.assertFalse(STATE.exists())
+        self.assertFalse(any(args[1:5] == ['--json', 'agents', 'launch', 'terminal'] for args, _ in self.config_calls))
+
+    def test_continuation_reuses_owned_agent_and_deduplicates_its_id(self):
+        self.save_previous('completed')
+        self.assertEqual(self.execute(previous='done', previous_completion=2, reconcile_only=True,
+                                      continuation_prompt='Continue the original batch'), 0)
+        self.assertEqual(sum('prompt' in args for args, _ in self.calls), 1)
+        self.assertFalse(any('start' in args or 'create' in args or 'split' in args for args, _ in self.calls))
+        self.assertEqual(json.loads(STATE.read_text())['continuation']['status'], 'submitted')
+        self.calls = []
+        self.assertEqual(self.execute(previous='done', reconcile_only=True, continuation_prompt='Continue the original batch'), 0)
+        self.assertFalse(any('prompt' in args for args, _ in self.calls))
+
+    def test_continuation_never_replaces_missing_or_busy_agent(self):
+        for missing, status in [(True, 'done'), (False, 'working'), (False, 'unknown'), (False, 'blocked')]:
+            with self.subTest(missing=missing, status=status):
+                self.save_previous('attention')
+                self.calls = []
+                self.execute(missing_agent=missing, previous=status, reconcile_only=True, continuation_prompt='Continue')
+                self.assertFalse(any('prompt' in args or 'start' in args or 'create' in args for args, _ in self.calls))
+
+    def test_uncertain_continuation_is_not_resent(self):
+        self.save_previous('completed')
+        self.assertIsInstance(self.execute(previous='done', reconcile_only=True, continuation_prompt='Continue', failure='timeout'), str)
+        self.assertEqual(json.loads(STATE.read_text())['continuation']['status'], 'uncertain')
+        self.calls = []
+        self.assertIsInstance(self.execute(previous='done', reconcile_only=True, continuation_prompt='Continue', continuation_id='retry-2'), str)
+        self.assertFalse(any('prompt' in args for args, _ in self.calls))
+
+    def test_continuation_cannot_use_a_new_terminal(self):
+        self.assertIsInstance(self.execute(herdr_missing=True, reconcile_only=True, continuation_prompt='Continue'), str)
         self.assertFalse(any(args[1:5] == ['--json', 'agents', 'launch', 'terminal'] for args, _ in self.config_calls))
 
     def test_uncertain_delivery_requires_attention_and_is_not_retried(self):

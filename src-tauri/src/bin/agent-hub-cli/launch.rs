@@ -12,6 +12,8 @@ enum LaunchCommand {
     Execute,
     /// 仅收回已有执行的结果；不新建 Agent 或投递提示词。
     Reconcile,
+    /// 在已核实的原会话继续；不创建新 Agent，同一续作 ID 不重复投递。
+    Continue,
     /// 只读查看指定状态目录中的 Agent 执行检查点。
     Status {
         #[arg(long)]
@@ -75,7 +77,7 @@ enum RuntimeModule {
 
 pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
     match args.command {
-        command @ (LaunchCommand::Execute | LaunchCommand::Reconcile) => {
+        command @ (LaunchCommand::Execute | LaunchCommand::Reconcile | LaunchCommand::Continue) => {
             use std::io::Read;
             let mut bytes = Vec::new();
             std::io::stdin()
@@ -89,6 +91,14 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
                 serde_json::from_slice(&bytes)?;
             if matches!(command, LaunchCommand::Reconcile) {
                 request.reconcile_only = true;
+                request.continuation_prompt.clear();
+            }
+            if matches!(command, LaunchCommand::Continue) {
+                request.reconcile_only = true;
+                anyhow::ensure!(
+                    !request.continuation_prompt.trim().is_empty(),
+                    "Existing-session continuation requires continuation_prompt"
+                );
             }
             let result = app_lib::core::agent_execution::run(&request, |line| {
                 if json {
