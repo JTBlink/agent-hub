@@ -17,7 +17,11 @@ vi.mock("../../components/file-reader/CodeEditor", () => ({
   }: {
     file: { content: string };
     onChange?: unknown;
-  }) => <textarea readOnly={!onChange} value={file.content} />,
+  }) => (
+    <div className="cm-editor">
+      <textarea readOnly={!onChange} value={file.content} />
+    </div>
+  ),
 }));
 vi.mock("../../lib/tauri", () => ({
   getSettings: vi.fn().mockResolvedValue(null),
@@ -173,6 +177,19 @@ it("toggles a web page between its preserved browser surface and read-only HTML"
       "<body>Example</body>",
     );
     expect(host.querySelector("textarea")?.readOnly).toBe(true);
+    for (const modifiers of [{ metaKey: true }, { ctrlKey: true }]) {
+      const find = new KeyboardEvent("keydown", {
+        key: "f",
+        bubbles: true,
+        cancelable: true,
+        ...modifiers,
+      });
+      await act(async () =>
+        host.querySelector("textarea")!.dispatchEvent(find),
+      );
+      expect(find.defaultPrevented).toBe(false);
+      expect(host.querySelector(".preview-find")).toBeNull();
+    }
     expect(
       host.querySelector<HTMLDivElement>(".preview-native-page")?.hidden,
     ).toBe(true);

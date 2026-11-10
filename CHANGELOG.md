@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 文件源码编辑器新增当前文件搜索：支持 Cmd/Ctrl+F、大小写、全字与正则匹配、匹配计数及上下跳转，Escape 关闭并返回编辑区。
+
 - 重构自动化 Agent 配置为 `config/agent.json` 的 `runner`、`launch`、`execution` 三层结构，并在自动化页右上角增加配置说明入口。
 
 - 修复 CLI bridge 并发发布时版本回执丢失导致定时任务误报未就绪的问题；`dev` 编译成功后同步更新当前产品的开发 CLI 软链接。

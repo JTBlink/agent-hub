@@ -1,9 +1,11 @@
 import { FileTypeIcon } from "../FileTypeIcon";
 import { MarkdownLink } from "../MarkdownLink";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { openSearchPanel } from "@codemirror/search";
+import type { EditorView } from "@codemirror/view";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, FileCode2, Eye, WrapText } from "lucide-react";
+import { ChevronRight, FileCode2, Eye, Search, WrapText } from "lucide-react";
 import { VscodeButton } from "../VscodeButton";
 import { MarkdownContent } from "../MarkdownContent";
 import { cn } from "../../utils";
@@ -43,6 +45,7 @@ export function FileContent({
     markdown && !location && !defaultSource,
   );
   const [wrap, setWrap] = useState(false);
+  const editor = useRef<EditorView | null>(null);
   const [previousLocation, setPreviousLocation] = useState(location);
   if (previousLocation !== location) {
     setPreviousLocation(location);
@@ -99,6 +102,17 @@ export function FileContent({
             )}
           </button>
         ))}
+      {!preview && (
+        <button
+          type="button"
+          title={`${t("fileReader.find")} (⌘/Ctrl+F)`}
+          aria-label={t("fileReader.find")}
+          onClick={() => editor.current && openSearchPanel(editor.current)}
+          className="app-button-ghost p-1.5"
+        >
+          <Search aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
       {!preview && (
         <button
           type="button"
@@ -182,6 +196,9 @@ export function FileContent({
         </div>
       ) : (
         <CodeEditor
+          onViewReady={(view) => {
+            editor.current = view;
+          }}
           file={file}
           location={location}
           wrap={wrap}

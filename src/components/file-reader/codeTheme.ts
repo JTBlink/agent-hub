@@ -74,4 +74,56 @@ export const codeTheme = EditorView.theme({
     backgroundColor: "var(--color-surface-active)",
     outline: "1px solid var(--color-accent-border)",
   },
+  ".cm-panels": {
+    color: "var(--color-text-secondary)",
+    backgroundColor: "var(--color-bg-secondary)",
+  },
+  ".cm-panels-top": { borderBottom: "1px solid var(--color-border-subtle)" },
+  ".cm-file-search": {
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "4px",
+    padding: "6px 8px",
+    fontFamily: "var(--font-family-code)",
+    fontSize: "12px",
+  },
+  ".cm-file-search input": {
+    minWidth: "80px",
+    flex: "1 1 120px",
+    maxWidth: "260px",
+    padding: "3px 6px",
+    color: "var(--color-text-primary)",
+    backgroundColor: "var(--color-bg)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "4px",
+  },
+  ".cm-file-search input[aria-invalid=true]": {
+    borderColor: "var(--color-danger)",
+  },
+  ".cm-file-search button": {
+    minWidth: "24px",
+    padding: "3px",
+    borderRadius: "4px",
+  },
+  ".cm-file-search button:hover, .cm-file-search button[aria-pressed=true]": {
+    color: "var(--color-accent-light)",
+    backgroundColor: "var(--color-surface-active)",
+  },
+  ".cm-file-search input:focus-visible, .cm-file-search button:focus-visible": {
+    outline: "2px solid var(--color-accent)",
+    outlineOffset: "-1px",
+  },
+  ".cm-file-search [role=status]": {
+    margin: "0 4px",
+    color: "var(--color-text-muted)",
+  },
+  ".cm-searchMatch": {
+    backgroundColor: "var(--color-surface-active)",
+    outline: "1px solid var(--color-accent-border)",
+  },
+  ".cm-searchMatch-selected": {
+    backgroundColor: "var(--color-editor-selection)",
+  },
 });

@@ -15,6 +15,8 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { search, searchKeymap } from "@codemirror/search";
+import { CodeSearchPanel } from "./codeSearch";
 import { bracketMatching, syntaxHighlighting } from "@codemirror/language";
 import { codeHighlightStyle, codeTheme } from "./codeTheme";
 import { languageForPath } from "./codeLanguages";
@@ -104,7 +106,12 @@ export function CodeEditor({
       parent: host.current,
       extensions: [
         history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        search({
+          top: true,
+          literal: true,
+          createPanel: (view) => new CodeSearchPanel(view),
+        }),
+        keymap.of([...searchKeymap, ...defaultKeymap, ...historyKeymap]),
         lineNumbers(),
         highlightSpecialChars(),
         drawSelection(),

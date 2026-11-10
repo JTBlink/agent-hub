@@ -2203,6 +2203,13 @@
     "entryIssuesHelp": "项目里的技能内容仍然保留。以下已添加的 Agent 存在文件或链接问题："
   },
   "fileReader": {
+    "find": "搜索当前文件",
+    "findPrevious": "上一个匹配（Shift+Enter）",
+    "findNext": "下一个匹配（Enter）",
+    "closeFind": "关闭搜索（Escape）",
+    "invalidRegex": "正则表达式无效",
+    "findCount": "{{current}} / {{count}}",
+    "findLimit": "{{count}}+ 处匹配",
     "previewInVscodeHint": "打开预览副本；VS Code 中的修改不会写回任务，退出 AgentHub 后清理副本",
     "openInVscodeHint": "在 VS Code 中打开本地文件；草稿更改需先保存",
     "noLocalFile": "此文件尚无可打开的本地路径",

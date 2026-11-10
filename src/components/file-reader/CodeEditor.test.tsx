@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { undo } from "@codemirror/commands";
 import { CodeEditor } from "./CodeEditor";
 import { codeEditor, installCodeEditorGeometry } from "../../test/codeEditor";
+import i18n from "../../i18n";
 
 let host: HTMLDivElement;
 let root: Root;
@@ -184,4 +185,124 @@ it("locates search results by UTF-16 columns without resetting a later editor se
       editor.state.selection.main.to,
     ),
   ).toBe("needle");
+});
+
+const press = (
+  target: Element,
+  key: string,
+  options: KeyboardEventInit = {},
+) => {
+  const event = new KeyboardEvent("keydown", {
+    key,
+    bubbles: true,
+    cancelable: true,
+    ...options,
+  });
+  target.dispatchEvent(event);
+  return event;
+};
+
+async function query(value: string) {
+  const input = host.querySelector<HTMLInputElement>(".cm-file-search input")!;
+  await act(async () => {
+    input.value = value;
+    input.setSelectionRange(value.length, value.length);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(input.selectionStart).toBe(value.length);
+  expect(input.selectionEnd).toBe(value.length);
+  return input;
+}
+
+it("finds within a read-only file, navigates matches and restores editor focus on Escape", async () => {
+  const file = { path: "demo.txt", content: "needle\n😀 needle\nother" };
+  await act(async () => root.render(<CodeEditor file={file} wrap={false} />));
+  const editor = codeEditor(host);
+  editor.focus();
+  await act(async () => {
+    expect(
+      press(editor.contentDOM, "f", { ctrlKey: true }).defaultPrevented,
+    ).toBe(true);
+  });
+  const input = await query("needle");
+  expect(host.querySelector(".cm-panels-top .cm-file-search")).not.toBeNull();
+  expect(document.activeElement).toBe(input);
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("1 / 2");
+  await act(async () => press(input, "Enter"));
+  expect(editor.state.selection.main.from).toBe(
+    file.content.lastIndexOf("needle"),
+  );
+  expect(host.querySelector('[role="status"]')?.textContent).toBe("2 / 2");
+  await act(async () => press(input, "Enter", { shiftKey: true }));
+  expect(editor.state.selection.main.from).toBe(0);
+  await act(async () => press(input, "f", { ctrlKey: true }));
+  expect(document.activeElement).toBe(input);
+  expect(host.querySelectorAll(".cm-file-search")).toHaveLength(1);
+  await act(async () => press(input, "Escape"));
+  expect(host.querySelector(".cm-file-search")).toBeNull();
+  expect(document.activeElement).toBe(editor.contentDOM);
+  expect(editor.state.sliceDoc()).toBe(file.content);
+});
+
+it("applies case, word and regex options and recomputes counts when file content changes", async () => {
+  const file = { path: "demo.txt", content: "Cat cat cats\ncat" };
+  await act(async () => root.render(<CodeEditor file={file} wrap={false} />));
+  const editor = codeEditor(host);
+  editor.focus();
+  await act(async () => press(editor.contentDOM, "f", { ctrlKey: true }));
+  await query("cat");
+  const count = () => host.querySelector('[role="status"]')?.textContent;
+  const toggle = async (label: string) =>
+    act(async () => {
+      host
+        .querySelector<HTMLButtonElement>(
+          `button[aria-label="${i18n.t(label)}"]`,
+        )!
+        .click();
+    });
+  expect(count()).toBe("1 / 4");
+  await toggle("workspaceSearch.matchCase");
+  expect(count()).toBe("1 / 3");
+  await toggle("workspaceSearch.wholeWord");
+  expect(count()).toBe("1 / 2");
+  await toggle("workspaceSearch.regex");
+  const input = await query("[");
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(count()).toBe(i18n.t("fileReader.invalidRegex"));
+  await query("c.t");
+  expect(count()).toContain("/ 2");
+  await act(async () =>
+    root.render(<CodeEditor file={{ ...file, content: "cat" }} wrap />),
+  );
+  expect(count()).toContain("/ 1");
+  await query("missing");
+  expect(count()).toBe("0 / 0");
+});
+
+it("searches only the focused editor and leaves workspace search untouched", async () => {
+  await act(async () =>
+    root.render(
+      <>
+        <CodeEditor
+          file={{ path: "first.txt", content: "first" }}
+          wrap={false}
+        />
+        <CodeEditor
+          file={{ path: "second.txt", content: "second" }}
+          wrap={false}
+        />
+      </>,
+    ),
+  );
+  const editors = host.querySelectorAll<HTMLElement>(".cm-content");
+  editors[1].focus();
+  await act(async () => press(editors[1], "f", { ctrlKey: true }));
+  expect(host.querySelectorAll(".cm-file-search")).toHaveLength(1);
+  expect(
+    host.querySelectorAll(".cm-editor")[1].contains(document.activeElement),
+  ).toBe(true);
+  await act(async () => press(document.activeElement!, "Escape"));
+  const workspace = press(editors[1], "F", { ctrlKey: true, shiftKey: true });
+  expect(workspace.defaultPrevented).toBe(false);
+  expect(host.querySelector(".cm-file-search")).toBeNull();
 });

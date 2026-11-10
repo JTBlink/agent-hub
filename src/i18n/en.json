@@ -2205,6 +2205,13 @@
     "entryIssuesHelp": "The skill content is still in the project. These assigned Agents have file or link problems:"
   },
   "fileReader": {
+    "find": "Find in current file",
+    "findPrevious": "Previous match (Shift+Enter)",
+    "findNext": "Next match (Enter)",
+    "closeFind": "Close search (Escape)",
+    "invalidRegex": "Invalid regular expression",
+    "findCount": "{{current}} / {{count}}",
+    "findLimit": "{{count}}+ matches",
     "previewInVscodeHint": "Open a preview copy; VS Code edits do not update the task. Copies are removed when AgentHub exits.",
     "openInVscodeHint": "Open the local file in VS Code; save draft changes first",
     "noLocalFile": "This file has no local path to open yet",

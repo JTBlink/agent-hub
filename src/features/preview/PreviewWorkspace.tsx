@@ -128,6 +128,13 @@ export function PreviewWorkspace({
       aria-label={t("preview.title")}
       onKeyDownCapture={(event) => {
         if (!shown) return;
+        // Source editors own file search and its Escape handling.
+        if (
+          event.target instanceof Element &&
+          event.target.closest(".cm-editor") &&
+          ["f", "escape"].includes(event.key.toLowerCase())
+        )
+          return;
         if (event.key === "F12") {
           event.preventDefault();
           event.stopPropagation();

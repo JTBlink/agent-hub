@@ -2163,6 +2163,13 @@
     "entryIssuesHelp": "專案裡的技能內容仍然保留。以下已新增的 Agent 存在檔案或連結問題："
   },
   "fileReader": {
+    "find": "搜尋目前檔案",
+    "findPrevious": "上一個符合項目（Shift+Enter）",
+    "findNext": "下一個符合項目（Enter）",
+    "closeFind": "關閉搜尋（Escape）",
+    "invalidRegex": "規則運算式無效",
+    "findCount": "{{current}} / {{count}}",
+    "findLimit": "{{count}}+ 處符合項目",
     "previewInVscodeHint": "開啟預覽副本；VS Code 中的修改不會寫回任務，結束 AgentHub 後清理副本",
     "openInVscodeHint": "在 VS Code 中開啟本機檔案；草稿變更需先儲存",
     "noLocalFile": "此檔案尚無可開啟的本機路徑",
