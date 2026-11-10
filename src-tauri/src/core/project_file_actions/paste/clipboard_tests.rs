@@ -15,6 +15,10 @@ fn native_pasteboard_reads_file_urls_but_ignores_plain_paths() {
         read_pasteboard(&board).unwrap(),
         [PathBuf::from("/tmp/demo files/你好.md")]
     );
+    assert_eq!(
+        crate::core::terminal::clipboard::file_input(&read_pasteboard(&board).unwrap()).unwrap(),
+        Some("'/tmp/demo files/你好.md'".into())
+    );
     board.clearContents();
     assert!(board.setString_forType(
         &NSString::from_str("/tmp/example.txt"),

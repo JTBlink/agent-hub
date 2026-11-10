@@ -4,7 +4,8 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { TerminalPane } from "./TerminalPane";
 import * as api from "../../lib/tauri";
-import { writeText, readText } from "@tauri-apps/plugin-clipboard-manager";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { readTerminalClipboard } from "../../lib/terminalApi";
 import { toast } from "sonner";
 
 const renderer = vi.hoisted(() => ({
@@ -34,6 +35,11 @@ vi.mock("../../lib/tauri", () => ({
 vi.mock("@tauri-apps/plugin-clipboard-manager", () => ({
   writeText: vi.fn().mockResolvedValue(undefined),
   readText: vi.fn().mockResolvedValue("pasted text"),
+}));
+vi.mock("../../lib/terminalApi", () => ({
+  readTerminalClipboard: vi
+    .fn()
+    .mockResolvedValue({ kind: "text", text: "pasted text" }),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@xterm/xterm", async () => {
@@ -170,6 +176,9 @@ it.each([
 ])(
   "routes clipboard $types through terminal paste exactly once",
   async ({ types, text, image }) => {
+    vi.mocked(readTerminalClipboard).mockResolvedValueOnce(
+      image ? { kind: "image" } : { kind: "text", text },
+    );
     await act(async () =>
       root.render(<TerminalPane projectId="demo" active onReady={() => {}} />),
     );
@@ -177,7 +186,10 @@ it.each([
     Object.defineProperty(event, "clipboardData", {
       value: { types, getData: () => text, items: [] },
     });
-    host.querySelector("textarea")!.dispatchEvent(event);
+    await act(async () => {
+      host.querySelector("textarea")!.focus();
+      host.querySelector("textarea")!.dispatchEvent(event);
+    });
     expect(event.defaultPrevented).toBe(true);
     if (image) {
       expect(renderer.input).toHaveBeenCalledExactlyOnceWith("\x16", true);
@@ -254,7 +266,7 @@ it("copies selected text with a success toast, reports failures and exposes shel
     );
   await openMenu();
   await choose("terminal.paste");
-  expect(readText).toHaveBeenCalledOnce();
+  expect(readTerminalClipboard).toHaveBeenCalledOnce();
   expect(renderer.paste).toHaveBeenCalledExactlyOnceWith("pasted text");
   expect(document.activeElement).toBe(input);
   await openMenu();

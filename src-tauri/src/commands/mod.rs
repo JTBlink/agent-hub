@@ -33,6 +33,7 @@ pub mod tools;
 pub mod local_cleanup;
 
 pub mod terminal;
+pub mod terminal_clipboard;
 
 #[cfg(feature = "herdr")]
 pub mod herdr;

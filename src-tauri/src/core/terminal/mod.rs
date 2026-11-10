@@ -1,5 +1,6 @@
 //! Interactive PTY resources shared by desktop adapters and core callers.
 mod agent_input;
+pub mod clipboard;
 pub(crate) mod launch_command;
 mod process;
 mod script;

@@ -63,6 +63,10 @@ export async function createTerminal(
 }
 export const writeTerminal = (id: string, data: string) =>
   invoke<void>("terminal_write", { id, data });
+export type TerminalClipboard =
+  { kind: "text"; text: string } | { kind: "image" };
+export const readTerminalClipboard = () =>
+  invoke<TerminalClipboard>("terminal_read_clipboard");
 export const submitTerminalAgentPrompt = (id: string, prompt: string) =>
   invoke<void>("terminal_agent_prompt", { id, prompt });
 export const resizeTerminal = (id: string, size: TerminalSize) =>

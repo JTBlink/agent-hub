@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from "react";
 import type { Terminal } from "@xterm/xterm";
-import { readText } from "@tauri-apps/plugin-clipboard-manager";
+import { pasteTerminalClipboard } from "./terminalNativeClipboard";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { CardActionMenu } from "../CardActionMenu";
@@ -49,15 +49,16 @@ export function TerminalContextMenu({
           onSelect: () => {
             const requested = terminal.current;
             if (!requested) return;
-            void readText()
-              .then((text) => {
-                if (terminal.current === requested) requested.paste(text);
-              })
-              .catch((error) =>
-                toast.error(
-                  getErrorMessage(error, t("terminal.clipboardFailed")),
-                ),
-              );
+            void pasteTerminalClipboard(
+              requested,
+              () =>
+                terminal.current === requested &&
+                !!target.current?.contains(document.activeElement),
+            ).catch((error) =>
+              toast.error(
+                getErrorMessage(error, t("terminal.clipboardFailed")),
+              ),
+            );
           },
         },
         {

@@ -10,6 +10,7 @@ import {
   bindTerminalSelectionCopy,
 } from "./terminalClipboard";
 import { TerminalContextMenu } from "./TerminalContextMenu";
+import { pasteTerminalClipboard } from "./terminalNativeClipboard";
 import { toast } from "sonner";
 import { bindTerminalTextInput } from "./terminalKeyboard";
 import { useTranslation } from "react-i18next";
@@ -162,7 +163,18 @@ export function TerminalPane({
       terminal,
       copySelection,
     );
-    const unbindPaste = bindTerminalPaste(node, terminal);
+    const unbindPaste = bindTerminalPaste(
+      node,
+      terminal,
+      (isCurrent) => pasteTerminalClipboard(terminal, isCurrent),
+      (reason) =>
+        toast.error(
+          getErrorMessage(
+            reason,
+            translate.current("terminal.clipboardFailed"),
+          ),
+        ),
+    );
     const renderer = createTerminalRenderer(terminal);
     let fontsReady = false;
     let sessionId: string | null = null;
