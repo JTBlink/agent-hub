@@ -251,7 +251,7 @@ it("opens a sixteenth workspace and handles repeated history events without full
   await act(async () => visitEvents.receive!({ payload }));
   await act(async () => visitEvents.receive!({ payload }));
   expect(projects).toHaveBeenCalledOnce();
-  expect(metadata).toHaveBeenCalledOnce();
+  expect(metadata).toHaveBeenCalledTimes(2);
   expect(container.querySelector("[data-visits]")?.textContent).toContain(
     '["project-0",0]',
   );

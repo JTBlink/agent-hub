@@ -410,6 +410,8 @@
     },
     "breadcrumb": "Automation navigation",
     "backToList": "Back to automations",
+    "copyTitle": "Copy task title",
+    "titleCopied": "Task title copied",
     "detailTabs": {
       "overview": "Overview",
       "technical": "Technical details",
@@ -497,6 +499,7 @@
     "waitToSave": "The task is still running. Save again after it finishes. Your changes are preserved.",
     "execution": {
       "copyOutput": "Copy output",
+      "taskName": "Automation task",
       "outputCopied": "Execution output copied",
       "output": "Current / latest output",
       "outputFailed": "Could not read output",

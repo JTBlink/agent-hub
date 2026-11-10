@@ -11,10 +11,12 @@ import { CopyTextButton } from "./CopyTextButton";
 
 export function AutomationRunOutputPanel({
   taskId,
+  taskName,
   run,
   refreshKey,
 }: {
   taskId: string;
+  taskName: string;
   run: AutomationRun;
   refreshKey: number;
 }) {
@@ -64,7 +66,11 @@ export function AutomationRunOutputPanel({
           {t("automation.history.output")}
         </h3>
         <CopyTextButton
-          text={output?.content ?? ""}
+          text={
+            output?.content
+              ? `${t("automation.execution.taskName")}: ${taskName}\n\n${output.content}`
+              : ""
+          }
           disabled={!run.has_output || !output?.available}
           label={t("automation.execution.copyOutput")}
           copiedMessage={t("automation.execution.outputCopied")}

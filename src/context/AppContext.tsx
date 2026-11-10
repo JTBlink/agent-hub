@@ -45,12 +45,12 @@ interface AppState {
    *  update is always started by the user from Settings. */
   appUpdate: AppUpdateInfo | null;
   refreshAppUpdate: () => Promise<AppUpdateInfo>;
-  refreshAppData: () => Promise<void>;
+  refreshAppData: (fast?: boolean) => Promise<void>;
   refreshSkillGroups: () => Promise<void>;
   refreshTools: () => Promise<void>;
   refreshManagedSkills: () => Promise<void>;
   refreshSkillGroupMembership: (groupId: string) => Promise<void>;
-  refreshProjects: (opened?: Project) => Promise<void>;
+  refreshProjects: (opened?: Project) => Promise<Project[]>;
   /** An empty ID selects the full library; group IDs select a group. */
   setViewedSkillGroupId: (id: string) => void;
   setViewingUngrouped: (v: boolean) => void;
@@ -155,26 +155,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [setTranslatedError]);
 
-  const refreshProjects = useCallback(async (opened?: Project) => {
-    if (opened) {
-      setProjects((current) =>
-        current.some((project) => project.id === opened.id)
-          ? current.map((project) =>
-              project.id === opened.id
-                ? { ...project, visited_at: opened.visited_at }
-                : project,
-            )
-          : [...current, opened],
-      );
-      return;
-    }
-    try {
-      const p = await api.getProjects();
-      setProjects(p);
-    } catch (e) {
-      console.error("Failed to load projects:", e);
-    }
-  }, []);
+  const refreshProjects = useCallback(
+    async (opened?: Project, metadataOnly = false): Promise<Project[]> => {
+      if (opened) {
+        setProjects((current) =>
+          current.some((project) => project.id === opened.id)
+            ? current.map((project) =>
+                project.id === opened.id
+                  ? { ...project, visited_at: opened.visited_at }
+                  : project,
+              )
+            : [...current, opened],
+        );
+        return [opened];
+      }
+      try {
+        const p = metadataOnly
+          ? await api.getProjectMetadata()
+          : await api.getProjects();
+        setProjects(p);
+        return p;
+      } catch (e) {
+        console.error("Failed to load projects:", e);
+        return [];
+      }
+    },
+    [],
+  );
 
   const projectsRef = useRef(projects);
   useEffect(() => {
@@ -261,16 +268,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const refreshAppData = useCallback(async () => {
-    setLoading(true);
-    await Promise.all([
-      refreshSkillGroups(),
-      refreshTools(),
-      loadManagedSkills(),
-      refreshProjects(),
-    ]);
-    setLoading(false);
-  }, [loadManagedSkills, refreshProjects, refreshSkillGroups, refreshTools]);
+  const refreshAppData = useCallback(
+    async (fast = false) => {
+      setLoading(true);
+      const [, , , initialProjects] = await Promise.all([
+        refreshSkillGroups(),
+        refreshTools(),
+        loadManagedSkills(),
+        refreshProjects(undefined, fast),
+      ]);
+      setLoading(false);
+      if (fast) {
+        // Empty metadata is a valid state, but it cannot distinguish a new
+        // library from a test or older backend that lacks the lightweight API.
+        // Confirm it with the full query before exposing the empty workspace.
+        if (initialProjects.length === 0) await refreshProjects();
+        else void refreshProjects();
+      }
+    },
+    [loadManagedSkills, refreshProjects, refreshSkillGroups, refreshTools],
+  );
 
   const setViewedSkillGroupId = useCallback((id: string) => {
     setViewedSkillGroupIdState(id);
@@ -344,7 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       api
         .logStartupEvent("refresh_app_data_start", performance.now())
         .catch(() => {});
-      await refreshAppData();
+      await refreshAppData(true);
       api
         .logStartupEvent("refresh_app_data_done", performance.now())
         .catch(() => {});

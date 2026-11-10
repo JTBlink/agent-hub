@@ -232,7 +232,9 @@ export function Layout() {
           <AddProjectDialog
             open={manageWorkspaces}
             onClose={() => setManageWorkspaces(false)}
-            onAdded={refreshProjects}
+            onAdded={async () => {
+              await refreshProjects();
+            }}
           />
           <CommandPalette open={commandsOpen} onOpenChange={setCommandsOpen} />
           <MissingProjectDialog

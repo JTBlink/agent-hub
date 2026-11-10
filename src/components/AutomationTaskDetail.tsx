@@ -10,6 +10,7 @@ import { AutomationOriginBadge } from "./AutomationOriginBadge";
 import { VscodeButton } from "./VscodeButton";
 import { openDirectoryInVscode } from "../lib/openInVscode";
 import { CopyPathButton } from "./CopyPathButton";
+import { CopyTextButton } from "./CopyTextButton";
 import { cn } from "../utils";
 
 import { AutomationAdminNotice } from "./AutomationAdminNotice";
@@ -184,13 +185,22 @@ export function AutomationTaskDetail({
           )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1
-                ref={heading}
-                tabIndex={-1}
-                className="min-w-0 break-words text-xl font-semibold leading-7 tracking-tight text-primary outline-none"
-              >
-                {task?.name || t("automation.details")}
-              </h1>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h1
+                  ref={heading}
+                  tabIndex={-1}
+                  className="min-w-0 break-words text-xl font-semibold leading-7 tracking-tight text-primary outline-none"
+                >
+                  {task?.name || t("automation.details")}
+                </h1>
+                <CopyTextButton
+                  text={task?.name ?? ""}
+                  disabled={!task?.name}
+                  label={t("automation.copyTitle")}
+                  copiedMessage={t("automation.titleCopied")}
+                  className="h-7 w-7 justify-center p-1.5"
+                />
+              </div>
               {task && <AutomationTaskSource key={task.id} task={task} />}
               {task && <AutomationOriginBadge origin={task.origin} />}
               {task && (

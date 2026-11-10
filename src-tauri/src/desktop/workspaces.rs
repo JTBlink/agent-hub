@@ -142,7 +142,19 @@ fn open_on_main(
         .cloned()
         .unwrap_or_default();
     config.label = label.into();
-    config.url = tauri::WebviewUrl::App(url);
+    // In development the main window is served by Vite over HTTP. `App`
+    // resolves against the bundled asset directory, which leaves dynamically
+    // created windows blank because that route does not exist there. Reuse the
+    // main webview's origin while developing; bundled builds keep using the
+    // local app URL.
+    config.url = if matches!(application_url.scheme(), "http" | "https") {
+        let target = application_url
+            .join(&format!("/{}", url.to_string_lossy()))
+            .map_err(AppError::io)?;
+        tauri::WebviewUrl::External(target)
+    } else {
+        tauri::WebviewUrl::App(url)
+    };
     config.title = format!(
         "{} · {}",
         directory.file_name().unwrap_or_default().to_string_lossy(),

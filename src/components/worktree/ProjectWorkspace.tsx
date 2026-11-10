@@ -225,7 +225,10 @@ export function ProjectWorkspace({
               !projectsLoading &&
               !appError &&
               !unavailable &&
-              (!route || worktrees.length > 0)
+              // A registered directory does not need to be a Git repository.
+              // Its worktree list is legitimately empty, so only wait for the
+              // discovery request to finish before bootstrapping terminals.
+              (!route || !worktreesLoading)
             }
             shown={
               !unavailable &&

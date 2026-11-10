@@ -96,11 +96,19 @@ vi.mock("../../hooks/useOpenProject", () => ({
 }));
 const t = (key: string) => key;
 const project = { ...makeProject(), id: "workspace-interaction" };
+const plainDirectoryProject = {
+  ...project,
+  id: "plain-directory",
+  path: "<workspace>/automations",
+};
 const topic = "<workspace>/topic";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
 vi.mock("../../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("../../context/AppContext", () => ({
-  useApp: () => ({ projects: [project], refreshProjects: mocks.refresh }),
+  useApp: () => ({
+    projects: [project, plainDirectoryProject],
+    refreshProjects: mocks.refresh,
+  }),
 }));
 vi.mock("../../lib/tauri", async (original) => ({
   ...(await original<typeof import("../../lib/tauri")>()),
@@ -236,11 +244,12 @@ async function render(
     error: string;
     retry: () => void;
   }) => void,
+  target = project,
 ) {
   await act(async () =>
     root.render(
-      <MemoryRouter initialEntries={[worktreeUrl(project.id, project.path)]}>
-        <Link data-main to={worktreeUrl(project.id, project.path)}>
+      <MemoryRouter initialEntries={[worktreeUrl(target.id, target.path)]}>
+        <Link data-main to={worktreeUrl(target.id, target.path)}>
           Main
         </Link>
         <Link data-topic to={worktreeUrl(project.id, topic)}>
@@ -267,6 +276,19 @@ async function render(
     ),
   );
 }
+
+it("starts a plain directory workspace even when it has no Git worktrees", async () => {
+  mocks.list.mockResolvedValue([]);
+  const startup = vi.fn();
+  await render(startup, plainDirectoryProject);
+  expect(startup).toHaveBeenLastCalledWith({
+    ready: true,
+    error: "",
+    retry: expect.any(Function),
+  });
+  expect(host.querySelector("[data-terminal]")).not.toBeNull();
+});
+
 async function click(selector: string) {
   const node = host.querySelector<HTMLElement>(selector);
   expect(node).not.toBeNull();

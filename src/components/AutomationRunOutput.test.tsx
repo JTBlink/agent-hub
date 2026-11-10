@@ -52,6 +52,7 @@ async function render(has_output = true) {
     root.render(
       <AutomationRunOutputPanel
         taskId="fixture-task"
+        taskName="Cache cleanup"
         refreshKey={0}
         run={{
           id: "run-1",
@@ -70,12 +71,14 @@ function button() {
     'button[aria-label="复制输出"]',
   )!;
 }
-it("copies the displayed raw output, including newlines and Unicode", async () => {
+it("copies the task title and raw output, preserving newlines and Unicode", async () => {
   await render();
   expect(button().disabled).toBe(false);
   expect(button().querySelector(".lucide-copy")).not.toBeNull();
   await act(async () => button().click());
-  expect(api.write).toHaveBeenCalledExactlyOnceWith(content);
+  expect(api.write).toHaveBeenCalledExactlyOnceWith(
+    `自动化任务: Cache cleanup\n\n${content}`,
+  );
   expect(api.success).toHaveBeenCalledWith("执行输出已复制");
 });
 it("does not copy loading placeholders or empty output", async () => {

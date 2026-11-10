@@ -161,6 +161,7 @@ export function AutomationExecution({
             <AutomationRunOutputPanel
               key={`${task.id}:${selected.id}`}
               taskId={task.id}
+              taskName={task.name}
               run={selected}
               refreshKey={refreshKey}
             />

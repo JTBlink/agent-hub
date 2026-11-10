@@ -410,6 +410,8 @@
     },
     "breadcrumb": "自动化导航",
     "backToList": "返回自动化列表",
+    "copyTitle": "复制任务标题",
+    "titleCopied": "任务标题已复制",
     "detailTabs": {
       "overview": "概述",
       "technical": "技术信息",
@@ -497,6 +499,7 @@
     "waitToSave": "任务仍在运行，请待结束后再次保存。当前修改已保留。",
     "execution": {
       "copyOutput": "复制输出",
+      "taskName": "自动化任务",
       "outputCopied": "执行输出已复制",
       "output": "当前 / 最近一次输出",
       "outputFailed": "无法读取输出",
