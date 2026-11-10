@@ -123,6 +123,9 @@ def terminal_fallback(bridge, kind, arguments, prompt, cwd):
         save_state({**previous, "phase": "completed"})
         print("原生终端进程已退出；请核对任务结果，不以进程退出代替业务验收。", flush=True)
         return observed.get("exit_code") or 0
+    if REQUEST.get("reconcile_only", False):
+        print("仅核对已有终端结果，本次不启动任务。", flush=True)
+        return 0
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     receipt_path.unlink(missing_ok=True)
     prompt_path = STATE_DIR / ".terminal-prompt.md"
@@ -197,7 +200,7 @@ def main(prompt_context=""):
     })
     return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge,
                           title,
-                          wait_timeout_seconds)
+                          wait_timeout_seconds, REQUEST.get("reconcile_only", False))
 
 
 if __name__ == "__main__":

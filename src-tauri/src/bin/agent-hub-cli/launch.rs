@@ -10,6 +10,8 @@ pub struct LaunchArgs {
 enum LaunchCommand {
     /// 执行一次受管理的 Agent 请求；从 stdin 读取 JSON，保留未确认结果。
     Execute,
+    /// 仅收回已有执行的结果；不新建 Agent 或投递提示词。
+    Reconcile,
     /// 只读查看指定状态目录中的 Agent 执行检查点。
     Status {
         #[arg(long)]
@@ -73,7 +75,7 @@ enum RuntimeModule {
 
 pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
     match args.command {
-        LaunchCommand::Execute => {
+        command @ (LaunchCommand::Execute | LaunchCommand::Reconcile) => {
             use std::io::Read;
             let mut bytes = Vec::new();
             std::io::stdin()
@@ -83,7 +85,11 @@ pub fn run(args: LaunchArgs, json: bool) -> anyhow::Result<()> {
                 bytes.len() <= 128 * 1024,
                 "Agent execution request exceeds 128 KiB"
             );
-            let request = serde_json::from_slice(&bytes)?;
+            let mut request: app_lib::core::agent_execution::ExecutionRequest =
+                serde_json::from_slice(&bytes)?;
+            if matches!(command, LaunchCommand::Reconcile) {
+                request.reconcile_only = true;
+            }
             let result = app_lib::core::agent_execution::run(&request, |line| {
                 if json {
                     eprintln!("{line}");

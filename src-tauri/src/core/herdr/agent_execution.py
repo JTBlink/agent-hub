@@ -124,7 +124,8 @@ def finish_result(invoke, state, result, target):
     return 0 if state["phase"] == "completed" else 1
 
 
-def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_timeout_seconds=1800):
+def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_timeout_seconds=1800,
+        reconcile_only=False):
     sessions = command(binary, ["session", "list", "--json"])["sessions"]
     if not any(item.get("name") == session and item.get("running") for item in sessions):
         raise HerdrError(f"Herdr 会话 {session} 未运行，请先在 Herdr 中启动该会话。")
@@ -144,9 +145,16 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
         verify_agent_identity(agent, previous, cwd)
         status = agent["agent_status"]
         if status == "working":
+            if reconcile_only and previous.get("phase") == "completed":
+                save_state({**previous, "phase": "attention"})
             print(f"上次 Herdr 任务仍在运行：{previous['pane']}；跳过本次触发，不排队或重复发起。", flush=True)
             return 0
         if status == "unknown":
+            if reconcile_only:
+                if previous.get("phase") == "completed":
+                    save_state({**previous, "phase": "attention"})
+                print("原 Agent 状态尚未确认，仅保留已有执行，不投递任务。", flush=True)
+                return 0
             if previous.get("phase") == "starting" and previous.get("prompt_attempted") is False:
                 print("上次 Herdr Agent 仍在启动，跳过本次触发；尚未投递提示词。", flush=True)
                 return 0
@@ -167,6 +175,9 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
         if status not in ("idle", "done") or previous.get("phase") == "attention":
             print(f"保留上次会话：{previous['pane']}，状态 {status}；不重复发起。", flush=True)
             return 1
+    if reconcile_only:
+        print("本次仅核对已有执行，不创建面板、启动 Agent 或投递提示词。", flush=True)
+        return 1 if previous and previous.get("phase") != "completed" else 0
     created = create_task_pane(invoke, previous, agent, session, cwd, title, available_pane)
     pane = created["pane_id"]
     name = "ah-" + hashlib.sha256(str(HERE).encode()).hexdigest()[:8] + "-" + uuid.uuid4().hex[:6]

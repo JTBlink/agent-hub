@@ -19,6 +19,9 @@ pub struct ExecutionRequest {
     pub workdir: PathBuf,
     #[serde(default)]
     pub prompt_context: String,
+    /// Observe an existing execution only; never create a pane or submit a prompt.
+    #[serde(default)]
+    pub reconcile_only: bool,
 }
 
 #[derive(Debug, Serialize)]

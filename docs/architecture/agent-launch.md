@@ -43,7 +43,7 @@ Herdr 原生 `agent start` 只能选择预设可执行文件。指令使用原�
 
 ## 受管理的 Agent 执行
 
-需要完整执行与恢复的入口调用 `core/agent_execution::run`；CLI 使用 `agents launch execute`，从 stdin 接收 `ExecutionRequest` JSON。请求显式提供配置文件、提示词文件、状态目录、身份目录、项目目录和本次上下文，不依赖自动化任务类型。`agents launch status --state-directory <directory>` 只读检查旧记录。GUI 可在阻塞线程调用同一核心入口；普通打开终端或挂接 Herdr 不强制创建执行记录。
+需要完整执行与恢复的入口调用 `core/agent_execution::run`；CLI 使用 `agents launch execute`，从 stdin 接收 `ExecutionRequest` JSON。请求显式提供配置文件、提示词文件、状态目录、身份目录、项目目录和本次上下文，不依赖自动化任务类型。`agents launch status --state-directory <directory>` 只读检查旧记录。 `agents launch reconcile` 接收同一请求格式并强制仅收回已有结果；共享执行器将该模式传给后端，所有创建面板、启动 Agent、投递提示词和首次终端降级路径均被排除，即使旧面板在检查期间消失也不会新建执行。GUI 可在阻塞线程调用同一核心入口；普通打开终端或挂接 Herdr 不强制创建执行记录。
 
 公共模块随 app/CLI 编译嵌入，Python 是已有生命周期实现的运行载体。CLI 将资源原子发布到本机 `runtime/core/<module>/<content-hash>/`，所有任务使用同一修订，旧执行仍持有原资源路径。资源内容不符或路径被替换为链接时停止，不覆盖未知内容。模块不进入任务定义、复制、导出或 Git 备份；任务仅携带适配器，需要支持上述命令的 AgentHub CLI。旧的完整脚本继续可运行，只有显式更新任务才改用公共实现。
 
