@@ -4,6 +4,30 @@ struct Cli {
     #[command(flatten)]
     args: super::AutomationArgs,
 }
+
+#[test]
+fn reads_multi_script_drafts_using_the_package_json_budget() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("task.json");
+    let input = serde_json::json!({
+        "name": "Example task", "provider": "system", "content": "sh scripts/run.sh",
+        "schedule": {"kind": "manual"}, "enabled": false,
+        "files": (0..3).map(|index| serde_json::json!({
+            "path": format!("scripts/part-{index}.py"), "content": "x".repeat(60 * 1024)
+        })).collect::<Vec<_>>()
+    });
+    std::fs::write(&path, serde_json::to_vec(&input).unwrap()).unwrap();
+    assert_eq!(super::draft(&path).unwrap().files.len(), 3);
+
+    std::fs::File::create(&path)
+        .unwrap()
+        .set_len(4 * 1024 * 1024 + 1)
+        .unwrap();
+    assert!(super::draft(&path)
+        .unwrap_err()
+        .to_string()
+        .contains("regular files"));
+}
 #[test]
 fn parses_management_and_origin_filters_without_opening_a_database() {
     assert!(Cli::try_parse_from([

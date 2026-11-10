@@ -141,12 +141,7 @@ fn task(id: &str) -> anyhow::Result<automation::AutomationTask> {
 }
 
 fn draft(file: &std::path::Path) -> anyhow::Result<AutomationDraft> {
-    let bytes = std::fs::read(file)?;
-    anyhow::ensure!(
-        bytes.len() <= 128 * 1024,
-        "Automation definition exceeds 128 KiB"
-    );
-    Ok(serde_json::from_slice(&bytes)?)
+    automation::package::read_definition(file).map_err(anyhow::Error::msg)
 }
 
 pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {

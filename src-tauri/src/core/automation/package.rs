@@ -31,6 +31,11 @@ pub(super) use storage::fingerprint as storage_fingerprint;
 pub(super) use storage::{discover, read, write_receipt};
 pub(super) use update::save;
 
+/// Read an editable task draft using the same JSON budget as package imports.
+pub fn read_definition(path: &std::path::Path) -> Result<AutomationDraft, String> {
+    storage::json(path)
+}
+
 use super::{definition::valid_id, store, AutomationDraft, ManagedAutomation};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
