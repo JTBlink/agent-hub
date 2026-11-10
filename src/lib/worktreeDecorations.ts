@@ -4,7 +4,7 @@ const styles = {
   added: { marker: "A", color: "text-success", priority: 1 },
   untracked: { marker: "U", color: "text-success", priority: 1 },
   renamed: { marker: "R", color: "text-success", priority: 2 },
-  deleted: { marker: "D", color: "text-muted", priority: 3 },
+  deleted: { marker: "D", color: "text-danger", priority: 3 },
   modified: { marker: "M", color: "text-warning", priority: 4 },
   conflict: { marker: "!", color: "text-warning", priority: 5 },
 } as const;

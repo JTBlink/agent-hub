@@ -53,4 +53,8 @@ it("counts one path once across staging areas and preserves each folder's status
     marker: "M",
     count: 1,
   });
+  expect(entries.get("tasks/old.md")).toMatchObject({
+    marker: "D",
+    color: "text-danger",
+  });
 });

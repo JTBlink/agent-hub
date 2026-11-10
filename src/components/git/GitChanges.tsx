@@ -166,7 +166,7 @@ function ChangeTree({
                   }
                   className={cn(
                     "flex h-6 min-w-0 flex-1 items-center gap-1.5 pr-1 text-left text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
-                    "text-secondary",
+                    gitFileDecoration(node.file).color,
                   )}
                   style={{ paddingLeft: 14 + depth * 12 }}
                   onClick={() =>
