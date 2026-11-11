@@ -83,7 +83,12 @@ pub(super) fn prepare(state: &Path, record: &ManagedAutomation) -> Result<Vec<St
                 .as_ref()
                 .map(PathBuf::from)
                 .unwrap_or_else(|| package.clone());
-            let content = format!("import os\nos.environ['AGENT_HUB_TASK_DIR'] = {}\nos.environ['AGENT_HUB_SCRIPT_DIR'] = {}\nos.environ['AGENT_HUB_STATE_DIR'] = {}\nos.makedirs(os.environ['AGENT_HUB_STATE_DIR'], exist_ok=True)\nos.chdir({})\nos.execv({}, [{}, {}])\n",
+            let variables = serde_json::to_string(
+                &super::super::definition::prompt_variants::active_variables(&record.draft)?,
+            )
+            .map_err(|e| e.to_string())?;
+            let variables_literal = serde_json::to_string(&variables).map_err(|e| e.to_string())?;
+            let content = format!("import os\nos.environ['AGENT_HUB_VARIABLES_JSON'] = {variables_literal}\nos.environ['AGENT_HUB_TASK_DIR'] = {}\nos.environ['AGENT_HUB_SCRIPT_DIR'] = {}\nos.environ['AGENT_HUB_STATE_DIR'] = {}\nos.makedirs(os.environ['AGENT_HUB_STATE_DIR'], exist_ok=True)\nos.chdir({})\nos.execv({}, [{}, {}])\n",
                 literal(&package)?, literal(&package)?, literal(&package.join(".local/state"))?, literal(&cwd)?, literal(&interpreter)?, literal(&interpreter)?, literal(&target)?);
             let bridge = directory.join(name);
             if bridge.is_symlink() {

@@ -462,6 +462,28 @@ class HerdrChecks(unittest.TestCase):
         self.assertFalse(STATE.exists())
         self.assertFalse(any(args[1:5] == ['--json', 'agents', 'launch', 'terminal'] for args, _ in self.config_calls))
 
+    def test_only_active_scenario_variables_are_added_as_literal_agent_context(self):
+        path = CONFIG.parent/'prompt-variants.json'
+        original = path.read_text() if path.exists() else None
+        try:
+            path.write_text(json.dumps(dict(active_id='repair',variants=[
+                dict(id='review',variables=[dict(name='limit',value='1')]),
+                dict(id='repair',variables=[dict(name='limit',value='10'),dict(name='literal',value='$(touch ignored)')])
+            ])))
+            self.assertEqual(self.execute(), 0)
+            prompt = next(args[-1] for args, _ in self.calls if 'prompt' in args)
+            self.assertIn('"limit": "10"', prompt)
+            self.assertNotIn('"limit": "1"', prompt)
+            self.assertIn('$(touch ignored)', prompt)
+            self.save_previous('completed')
+            self.calls = []
+            self.assertEqual(self.execute(previous='done', reconcile_only=True, continuation_prompt='Continue the original task'), 0)
+            continued = next(args[-1] for args, _ in self.calls if 'prompt' in args)
+            self.assertIn('"limit": "10"', continued)
+        finally:
+            if original is None: path.unlink(missing_ok=True)
+            else: path.write_text(original)
+
     def test_continuation_reuses_owned_agent_and_deduplicates_its_id(self):
         self.save_previous('completed')
         self.assertEqual(self.execute(previous='done', previous_completion=2, reconcile_only=True,

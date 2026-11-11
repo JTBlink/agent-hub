@@ -120,3 +120,64 @@ fn exposes_import_without_a_separate_installation_lifecycle() {
     assert!(Cli::try_parse_from(["cli", "install", "task-id"]).is_err());
     assert!(Cli::try_parse_from(["cli", "uninstall", "task-id"]).is_err());
 }
+
+#[test]
+fn variable_edits_require_revision_and_preserve_literal_values() {
+    assert!(Cli::try_parse_from([
+        "cli",
+        "variables",
+        "list",
+        "exact-id",
+        "--variant",
+        "repair"
+    ])
+    .is_ok());
+    assert!(Cli::try_parse_from([
+        "cli",
+        "variables",
+        "set",
+        "exact-id",
+        "--name",
+        "limit",
+        "--value",
+        "10",
+        "--revision",
+        "2"
+    ])
+    .is_ok());
+    assert!(Cli::try_parse_from([
+        "cli",
+        "variables",
+        "set",
+        "exact-id",
+        "--name",
+        "literal",
+        "--value",
+        "$(literal)",
+        "--revision",
+        "2"
+    ])
+    .is_ok());
+    assert!(Cli::try_parse_from([
+        "cli",
+        "variables",
+        "set",
+        "exact-id",
+        "--name",
+        "limit",
+        "--value",
+        "10"
+    ])
+    .is_err());
+    assert!(Cli::try_parse_from([
+        "cli",
+        "variables",
+        "unset",
+        "exact-id",
+        "--name",
+        "limit",
+        "--revision",
+        "2"
+    ])
+    .is_ok());
+}

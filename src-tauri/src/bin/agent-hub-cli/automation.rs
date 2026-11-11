@@ -1,3 +1,5 @@
+#[path = "automation/variables.rs"]
+mod variables;
 use app_lib::core::automation::{self, AutomationDraft};
 use clap::{Args, Subcommand, ValueEnum};
 use std::path::PathBuf;
@@ -24,6 +26,11 @@ enum Origin {
 
 #[derive(Subcommand, Debug)]
 enum AutomationCommand {
+    /// 按提示词方案查看、设置或移除自定义变量。
+    Variables {
+        #[command(subcommand)]
+        command: variables::Command,
+    },
     /// 只读审计任务公共运行逻辑；--path 检查仓库，省略则检查所有本机来源。
     Audit {
         #[arg(long)]
@@ -152,6 +159,7 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
         automation::sync_workspace_scripts().map_err(anyhow::Error::msg)?;
     }
     match &args.command {
+        AutomationCommand::Variables { command } => variables::run(command)?,
         AutomationCommand::Audit { path } => {
             let report = match path {
                 Some(path) => {

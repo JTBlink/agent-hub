@@ -347,7 +347,7 @@
     "promptVariantContent": "提示词正文",
     "promptAdvanced": "高级设置",
     "promptVariantBehavior": "行为标识",
-    "promptVariantBehaviorOptional": "可选",
+    "promptVariantBehaviorOptional": "行为与变量，可选",
     "promptVariantBehaviorPlaceholder": "例如：review_then_repair",
     "promptVariantsEditHint": "右侧用于编辑，左侧单选决定使用哪套。所有修改在保存任务后生效。",
     "deletePromptVariantConfirm": "删除「{{name}}」？保存任务后生效。若删除当前方案，将选用第一套剩余方案。",
@@ -593,7 +593,14 @@
     "openConfigInVscode": "在 VS Code 中打开",
     "editConfiguration": "编辑配置",
     "configurationPathUnavailable": "任务配置目录不可用，请先刷新任务列表。",
-    "gitFormatFiles": "config/task.json 的 files 列出相对任务根目录的文件路径。TASK.md 为任务说明入口；JSON 配置放在 config/，脚本放在 scripts/，按需资料放在 references/，提示词固定放在 prompts/prompt.md。"
+    "gitFormatFiles": "config/task.json 的 files 列出相对任务根目录的文件路径。TASK.md 为任务说明入口；JSON 配置放在 config/，脚本放在 scripts/，按需资料放在 references/，提示词固定放在 prompts/prompt.md。",
+    "customVariables": "自定义变量",
+    "customVariablesHelp": "按需添加，当前方案独立使用；变量随任务保存与备份。",
+    "addVariable": "添加变量",
+    "variableName": "变量名称 {{index}}",
+    "variableValue": "变量值 {{index}}",
+    "removeVariable": "移除变量 {{index}}",
+    "variablesInvalid": "变量名称须以字母或下划线开头，只能包含字母、数字和下划线，且不能重复。"
   },
   "app": {
     "name": "agent-hub"

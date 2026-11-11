@@ -1,9 +1,15 @@
 //! Standalone current-user runners persist bounded history without a running UI.
 use super::render::{ps, shell};
 use std::path::Path;
-pub(super) const VERSION: &str = "AgentHub workspace scripts v6";
+pub(super) const VERSION: &str = "AgentHub workspace scripts v7";
 
-pub(super) fn shell_script(dir: &Path, workdir: &str, payload: &Path, scripts_dir: &str) -> String {
+pub(super) fn shell_script(
+    dir: &Path,
+    workdir: &str,
+    payload: &Path,
+    scripts_dir: &str,
+    variables: &str,
+) -> String {
     let cli = crate::core::cli_bridge::bridge_path();
     format!(
         r#"#!/bin/sh
@@ -63,6 +69,7 @@ if [ -f "$base/managed" ]; then
     export AGENT_HUB_CLI={cli}
   fi
 fi
+export AGENT_HUB_VARIABLES_JSON={variables}
 export AGENT_HUB_SCRIPT_DIR={scripts_dir}
 if [ -f "$base/managed" ]; then
   export AGENT_HUB_TASK_DIR={scripts_dir}
@@ -77,6 +84,7 @@ fi
 /bin/sh {payload}
 "#,
         version = VERSION,
+        variables = shell(variables),
         base = shell(&dir.to_string_lossy()),
         workdir = shell(workdir),
         scripts_dir = shell(scripts_dir),
@@ -92,6 +100,7 @@ pub(super) fn powershell_script(
     workdir: &str,
     payload: &Path,
     scripts_dir: &str,
+    variables: &str,
 ) -> String {
     let cli = crate::core::cli_bridge::bridge_path();
     format!(
@@ -135,6 +144,7 @@ try {{
   if (Test-Path -LiteralPath (Join-Path $bridgeDir '.version')) {{
     $env:AGENT_HUB_CLI = {cli}
   }}
+  $env:AGENT_HUB_VARIABLES_JSON = {variables}
   $env:AGENT_HUB_SCRIPT_DIR = {scripts_dir}
   if ($managed) {{
     $env:AGENT_HUB_TASK_DIR = {scripts_dir}
@@ -165,6 +175,7 @@ exit $code
 "#,
         bom = "\u{feff}",
         version = VERSION,
+        variables = ps(variables),
         base = ps(&dir.to_string_lossy()),
         workdir = ps(workdir),
         cli = ps(&cli.to_string_lossy()),

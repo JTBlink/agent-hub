@@ -82,6 +82,7 @@ fn keeps_only_the_latest_hundred_owned_records_without_following_links() {
             &temp.path().to_string_lossy(),
             &payload,
             &temp.path().to_string_lossy(),
+            "{}",
         ),
     )
     .unwrap();
@@ -108,10 +109,45 @@ fn generated_runner_passes_the_product_cli_bridge_to_tasks() {
         &temp.path().to_string_lossy(),
         &payload,
         &temp.path().to_string_lossy(),
+        "{}",
     );
     let bridge = cli_bridge::bridge_path()
         .to_string_lossy()
         .replace('\'', "'\\''");
     let expected = format!("export AGENT_HUB_CLI='{}'", bridge);
     assert!(script.contains(&expected));
+}
+
+#[test]
+fn custom_variables_reach_the_payload_as_literal_json_without_shell_execution() {
+    let temp = tempfile::tempdir().unwrap();
+    let payload = temp.path().join("command.sh");
+    std::fs::write(
+        &payload,
+        "printf '%s' \"$AGENT_HUB_VARIABLES_JSON\" > observed.json\n",
+    )
+    .unwrap();
+    let variables = r#"{"value":"$(touch injected) ' `touch injected`","limit":"10"}"#;
+    let wrapper = temp.path().join("run.sh");
+    std::fs::write(
+        &wrapper,
+        shell_script(
+            temp.path(),
+            &temp.path().to_string_lossy(),
+            &payload,
+            &temp.path().to_string_lossy(),
+            variables,
+        ),
+    )
+    .unwrap();
+    assert!(std::process::Command::new("/bin/sh")
+        .arg(wrapper)
+        .status()
+        .unwrap()
+        .success());
+    assert_eq!(
+        std::fs::read_to_string(temp.path().join("observed.json")).unwrap(),
+        variables
+    );
+    assert!(!temp.path().join("injected").exists());
 }

@@ -1,4 +1,4 @@
-mod prompt_variants;
+pub(super) mod prompt_variants;
 use serde::{Deserialize, Serialize};
 
 pub(super) const MAX_TASK_BYTES: usize = 512 * 1024;

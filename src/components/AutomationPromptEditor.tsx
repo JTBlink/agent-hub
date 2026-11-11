@@ -10,6 +10,7 @@ import {
   updateAutomationPrompts,
   type AutomationPromptVariant,
 } from "../lib/automationPrompts";
+import { AutomationVariablesField } from "./AutomationVariablesField";
 import { ConfirmDialog } from "./ConfirmDialog";
 import {
   SidebarEditorLayout,
@@ -231,12 +232,15 @@ export function AutomationPromptEditor({
                   onChange={(event) =>
                     changeViewed({ behavior: event.target.value })
                   }
-                  placeholder={t(
-                    "automation.promptVariantBehaviorPlaceholder",
-                  )}
+                  placeholder={t("automation.promptVariantBehaviorPlaceholder")}
                   className="app-input w-full px-3 py-2.5 text-sm"
                 />
               </label>
+              <AutomationVariablesField
+                variables={viewed.variables ?? []}
+                disabled={blocked}
+                onChange={(variables) => changeViewed({ variables })}
+              />
             </details>
             <label className="flex min-h-0 flex-1 flex-col gap-2 text-xs font-medium text-muted">
               {t("automation.promptVariantContent")}

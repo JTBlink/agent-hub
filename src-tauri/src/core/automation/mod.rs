@@ -7,6 +7,7 @@ mod copy;
 mod cron;
 mod definition;
 pub use copy::copy_draft;
+pub use definition::prompt_variants::{prompt_variables, set_prompt_variable};
 mod events;
 mod hermes;
 mod history;

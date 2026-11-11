@@ -76,3 +76,45 @@ fn rejects_missing_duplicate_or_ambiguous_selection_and_invalid_bodies() {
     task.files.remove(0);
     assert!(task.validate().is_err());
 }
+
+#[test]
+fn scenario_variables_have_no_count_cap_and_switch_with_the_active_scenario() {
+    let mut value = manifest();
+    value["variants"][0]["variables"] = json!((0..1200)
+        .map(|n| json!({"name":format!("value_{n}"),"value":n.to_string()}))
+        .collect::<Vec<_>>());
+    value["variants"][1]["variables"] = json!([{"name":"limit","value":"10"}]);
+    let mut task = draft(value);
+    task.validate().unwrap();
+    assert_eq!(active_variables(&task).unwrap().len(), 1200);
+    let original = task.files[0].content.clone();
+    set_prompt_variable(&mut task, Some("repair"), "limit", Some("12")).unwrap();
+    assert_eq!(
+        prompt_variables(&task, Some("repair")).unwrap().1["limit"],
+        "12"
+    );
+    assert_eq!(active_variables(&task).unwrap().len(), 1200);
+    assert_eq!(task.files[0].content, original);
+    set_prompt_variable(&mut task, Some("repair"), "limit", None).unwrap();
+    assert!(prompt_variables(&task, Some("repair"))
+        .unwrap()
+        .1
+        .is_empty());
+}
+
+#[test]
+fn invalid_variable_names_duplicates_and_nonstring_values_are_rejected_without_mutation() {
+    for variables in [
+        json!([{"name":"bad-name","value":"10"}]),
+        json!([{"name":"same","value":"1"},{"name":"same","value":"2"}]),
+        json!([{"name":"limit","value":10}]),
+    ] {
+        let mut value = manifest();
+        value["variants"][0]["variables"] = variables;
+        assert!(draft(value).validate().is_err());
+    }
+    let mut task = draft(manifest());
+    let original = task.clone();
+    assert!(set_prompt_variable(&mut task, None, "bad-name", Some("1")).is_err());
+    assert_eq!(task, original);
+}

@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
 import { AutomationAgentField } from "./AutomationAgentField";
 import { automationPromptFile, automationAgentConfig } from "../lib/automation";
-import { automationPrompts } from "../lib/automationPrompts";
+import {
+  automationPrompts,
+  invalidAutomationVariables,
+} from "../lib/automationPrompts";
 import { externalAutomationScriptDirectory } from "../lib/automationScriptDirectory";
 import { AutomationWorkdirField } from "./AutomationWorkdirField";
 import { AutomationProjectField } from "./AutomationProjectField";
@@ -144,6 +147,7 @@ export function AutomationEditor({
   const invalidPrompts =
     (!!promptFile || draft.provider === "hermes") &&
     (prompts.invalid ||
+      invalidAutomationVariables(prompts.variants) ||
       prompts.variants.some(
         (variant) => !variant.name.trim() || !variant.content.trim(),
       ));

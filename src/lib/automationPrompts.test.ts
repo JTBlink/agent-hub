@@ -97,7 +97,8 @@ it("persists an optional behavior marker without changing tasks that do not use 
 
   const unchanged = updateAutomationPrompts(task, prompts.variants, "default");
   const unchangedManifest = JSON.parse(
-    unchanged.files!.find((file) => file.path === PROMPT_VARIANTS_PATH)!.content,
+    unchanged.files!.find((file) => file.path === PROMPT_VARIANTS_PATH)!
+      .content,
   );
   expect(unchangedManifest.version).toBe(1);
   expect(unchangedManifest.variants[0].behavior).toBeUndefined();
@@ -115,3 +116,34 @@ it.each([
     expect(task.files?.at(-1)?.content).toBe(content);
   },
 );
+
+it("keeps independent variables with each scenario across edits and activation", () => {
+  let task = draft();
+  const variants = [
+    {
+      id: "read",
+      name: "Read",
+      content: "Read",
+      behavior: "read",
+      variables: [{ name: "limit", value: "1" }],
+    },
+    {
+      id: "repair",
+      name: "Repair",
+      content: "Repair",
+      behavior: "repair",
+      variables: [{ name: "limit", value: "10" }],
+    },
+  ];
+  task = { ...task, ...updateAutomationPrompts(task, variants, "read") };
+  const loaded = automationPrompts(task, "Default");
+  expect(loaded.variants).toEqual(variants);
+  task = {
+    ...task,
+    ...updateAutomationPrompts(task, loaded.variants, "repair"),
+  };
+  const active = automationPrompts(task, "Default");
+  expect(active.activeId).toBe("repair");
+  expect(active.variants[0].variables?.[0].value).toBe("1");
+  expect(active.variants[1].variables?.[0].value).toBe("10");
+});

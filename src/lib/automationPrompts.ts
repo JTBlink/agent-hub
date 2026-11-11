@@ -10,6 +10,7 @@ export interface AutomationPromptVariant {
   content: string;
   /** Optional opaque task metadata; AgentHub does not interpret it. */
   behavior?: string;
+  variables?: { name: string; value: string }[];
 }
 export interface AutomationPrompts {
   activeId: string;
@@ -73,14 +74,33 @@ export function automationPrompts(
             ? entry.behavior
             : "";
         if (
-          new TextEncoder().encode(behavior).length > MAX_PROMPT_BEHAVIOR_BYTES ||
+          new TextEncoder().encode(behavior).length >
+            MAX_PROMPT_BEHAVIOR_BYTES ||
           Array.from(behavior).some((character) => {
             const code = character.codePointAt(0) ?? 0;
             return code <= 0x1f || code === 0x7f;
           })
         )
           throw new Error("Invalid prompt behavior");
+        const variables = "variables" in entry ? entry.variables : undefined;
+        if (
+          variables !== undefined &&
+          (!Array.isArray(variables) ||
+            variables.some(
+              (item: unknown) =>
+                !item ||
+                typeof item !== "object" ||
+                !("name" in item) ||
+                typeof item.name !== "string" ||
+                !("value" in item) ||
+                typeof item.value !== "string",
+            ))
+        )
+          throw new Error("Invalid prompt variables");
         return {
+          ...(variables !== undefined
+            ? { variables: variables as { name: string; value: string }[] }
+            : {}),
           id: entry.id,
           name: entry.name,
           content: entry.id === activeId ? content : String(body),
@@ -108,11 +128,16 @@ export function updateAutomationPrompts(
     (file) => file.path !== PROMPT_VARIANTS_PATH,
   );
   const manifest = {
-    version: variants.some((variant) => variant.behavior?.trim()) ? 2 : 1,
+    version: variants.some(
+      (variant) => variant.behavior?.trim() || variant.variables?.length,
+    )
+      ? 2
+      : 1,
     active_id: activeId,
     variants: variants.map((variant) => ({
       id: variant.id,
       name: variant.name,
+      ...(variant.variables?.length ? { variables: variant.variables } : {}),
       ...(variant.behavior?.trim() ? { behavior: variant.behavior } : {}),
       ...(variant.id === activeId ? {} : { content: variant.content }),
     })),
@@ -135,4 +160,21 @@ export function updateAutomationPrompts(
         : []),
     ],
   };
+}
+
+/** Draft rows stay editable while incomplete; validity only gates saving. */
+export function invalidAutomationVariables(
+  variants: AutomationPromptVariant[],
+) {
+  return variants.some((variant) => {
+    const names = new Set<string>();
+    return (variant.variables ?? []).some(({ name, value }) => {
+      const invalid =
+        !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name) ||
+        names.has(name) ||
+        value.includes("\0");
+      names.add(name);
+      return invalid;
+    });
+  });
 }

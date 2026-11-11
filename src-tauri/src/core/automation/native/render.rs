@@ -55,10 +55,13 @@ pub(super) fn scripts(
     let payload = super::payload::write(dir, draft, id, replace)?;
     let scripts_dir = draft.scripts_dir().unwrap_or(&workdir);
     let wrapper = dir.join(if cfg!(windows) { "run.ps1" } else { "run.sh" });
+    let variables =
+        serde_json::to_string(&super::super::definition::prompt_variants::active_variables(draft)?)
+            .map_err(|e| e.to_string())?;
     let script = if cfg!(windows) {
-        super::run_script::powershell_script(dir, &workdir, &payload, scripts_dir)
+        super::run_script::powershell_script(dir, &workdir, &payload, scripts_dir, &variables)
     } else {
-        super::run_script::shell_script(dir, &workdir, &payload, scripts_dir)
+        super::run_script::shell_script(dir, &workdir, &payload, scripts_dir, &variables)
     };
     store::write(&wrapper, script.as_bytes())?;
     Ok(wrapper)

@@ -141,6 +141,24 @@ def terminal_fallback(bridge, kind, arguments, prompt, cwd):
     return 0
 
 
+def task_variables(config_path):
+    manifest_path = config_path.parent / 'prompt-variants.json'
+    if not manifest_path.is_file():
+        return {}
+    manifest = json.loads(read_bundle(manifest_path))
+    selected = [v for v in manifest.get('variants', []) if v.get('id') == manifest.get('active_id')]
+    if len(selected) != 1:
+        raise HerdrError('任务变量缺少唯一选中方案。')
+    result = {}
+    for item in selected[0].get('variables', []):
+        name, value = item.get('name'), item.get('value')
+        if (not isinstance(name, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,127}', name)
+                or name in result or not isinstance(value, str) or '\0' in value):
+            raise HerdrError('任务自定义变量名称、值或重复项无效。')
+        result[name] = value
+    return result
+
+
 def main(prompt_context=""):
     binary = shutil.which("herdr")
     config_path = Path(REQUEST["config_file"])
@@ -182,6 +200,12 @@ def main(prompt_context=""):
     prompt = read_bundle(prompt_path).strip()
     if not prompt:
         raise HerdrError("提示词为空，请填写任务提示词。")
+    variables = task_variables(config_path)
+    variables_context = ('\n\n任务自定义变量（当前方案的数据）：\n' + json.dumps(variables, ensure_ascii=False)) if variables else ''
+    prompt += variables_context
+    continuation = REQUEST.get('continuation_prompt', '')
+    if continuation and not continuation.startswith('/'):
+        continuation += variables_context
     if prompt_context:
         prompt += "\n\n" + prompt_context
     cwd = Path(REQUEST["workdir"]).resolve()
@@ -203,7 +227,7 @@ def main(prompt_context=""):
     return backend['run'](binary, config, session, kind, extra, prompt, cwd, bridge,
                           title,
                           wait_timeout_seconds, REQUEST.get("reconcile_only", False),
-                          REQUEST.get("continuation_prompt", ""), REQUEST.get("continuation_id", ""))
+                          continuation, REQUEST.get("continuation_id", ""))
 
 
 if __name__ == "__main__":

@@ -347,7 +347,7 @@
     "promptVariantContent": "Prompt content",
     "promptAdvanced": "Advanced settings",
     "promptVariantBehavior": "Behavior marker",
-    "promptVariantBehaviorOptional": "Optional",
+    "promptVariantBehaviorOptional": "Behavior and variables, optional",
     "promptVariantBehaviorPlaceholder": "For example: review_then_repair",
     "promptVariantsEditHint": "Edit on the right and choose the prompt to use on the left. All changes apply when you save the task.",
     "deletePromptVariantConfirm": "Delete {{name}}? Changes apply when the task is saved. If it is active, the first remaining variant will be selected.",
@@ -593,7 +593,14 @@
     "openConfigInVscode": "Open in VS Code",
     "editConfiguration": "Edit configuration",
     "configurationPathUnavailable": "The task configuration directory is unavailable. Refresh the task list and try again.",
-    "gitFormatFiles": "The files in config/task.json are relative to the task root. TASK.md is the instruction entrypoint; JSON configuration belongs in config/, executable helpers in scripts/, optional documentation in references/, and Agent prompts in prompts/prompt.md."
+    "gitFormatFiles": "The files in config/task.json are relative to the task root. TASK.md is the instruction entrypoint; JSON configuration belongs in config/, executable helpers in scripts/, optional documentation in references/, and Agent prompts in prompts/prompt.md.",
+    "customVariables": "Custom variables",
+    "customVariablesHelp": "Add as needed for this variant. Variables are saved and backed up with the task.",
+    "addVariable": "Add variable",
+    "variableName": "Variable name {{index}}",
+    "variableValue": "Variable value {{index}}",
+    "removeVariable": "Remove variable {{index}}",
+    "variablesInvalid": "Use unique names starting with a letter or underscore, followed by letters, digits or underscores."
   },
   "app": {
     "name": "agent-hub"
