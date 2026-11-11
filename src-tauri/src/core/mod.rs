@@ -17,6 +17,7 @@ pub mod automation;
 pub mod backup_workspace;
 pub mod central_repo;
 pub mod cli_bridge;
+pub mod clipboard;
 pub(crate) mod cloud_sync;
 pub mod content_hash;
 mod credential_cache;

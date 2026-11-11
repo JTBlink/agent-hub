@@ -38,13 +38,31 @@ pub fn request_files(done: impl FnOnce(Result<Vec<PathBuf>>) + 'static) {
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn file_url(value: &str) -> Result<PathBuf> {
-    tauri::Url::parse(value)?
+    let path = tauri::Url::parse(value)?
         .to_file_path()
-        .map_err(|_| anyhow::anyhow!("Clipboard entry is not a local file URL"))
+        .map_err(|_| anyhow::anyhow!("Clipboard entry is not a local file URL"))?;
+    #[cfg(target_os = "macos")]
+    {
+        use anyhow::Context;
+        use objc2_foundation::{NSString, NSURL};
+
+        let url = NSURL::URLWithString(&NSString::from_str(value))
+            .context("Clipboard entry is not a valid file URL")?;
+        // Finder can supply a file reference URL whose /.file/id= path is an
+        // opaque identity. Foundation resolves it, including after a rename.
+        if url.isFileReferenceURL() {
+            return url
+                .filePathURL()
+                .and_then(|url| url.path())
+                .map(|path| PathBuf::from(path.to_string()))
+                .context("Clipboard file reference is no longer available; copy the file again");
+        }
+    }
+    Ok(path)
 }
 
 #[cfg(all(test, target_os = "macos"))]
-#[path = "clipboard_tests.rs"]
+#[path = "files_tests.rs"]
 mod tests;
 
 #[cfg(windows)]

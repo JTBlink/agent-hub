@@ -16,7 +16,7 @@ pub async fn paste_worktree_files(
 ) -> Result<Vec<String>, AppError> {
     let (sender, receiver) = tokio::sync::oneshot::channel();
     app.run_on_main_thread(move || {
-        crate::core::project_file_actions::paste::request_files(move |result| {
+        crate::core::clipboard::files::request_files(move |result| {
             let _ = sender.send(result);
         });
     })?;

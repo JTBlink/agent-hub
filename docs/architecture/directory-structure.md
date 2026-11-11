@@ -154,6 +154,7 @@ agent-hub/
 │   │   │   └── app_updates.rs      #     应用更新
 │   │   └── core/                   #   核心业务逻辑
 │   │       ├── mod.rs
+│   │       ├── clipboard/          #     公共文件引用读取与文件／图片／文字分类，见 clipboard.md
 │   │       ├── preview/            #     浏览宿主、文档授权、传输、截图与 CLI 控制
 │   │       ├── agent_execution/    #     Agent 公共执行、观察与恢复，任务仅携带薄入口
 │   │       ├── state_store/        #     本地状态读取、进程锁及 Python 扩展事务

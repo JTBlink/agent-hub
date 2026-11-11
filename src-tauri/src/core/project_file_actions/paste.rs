@@ -1,7 +1,4 @@
 //! Stage clipboard copies before publishing new entries without replacing user data.
-mod clipboard;
-pub use clipboard::request_files;
-
 use super::{existing_path, named_child, rename_without_replace};
 use anyhow::{bail, Context, Result};
 use std::{
