@@ -7,6 +7,7 @@ import {
   type ChangeEventHandler,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
+  type RefObject,
   type SelectHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
@@ -52,6 +53,8 @@ type Props = Omit<
   renderValue?: (value: string, label: string) => ReactNode;
   /** Let the menu fit complete labels and all rows when the viewport allows. */
   fitContent?: boolean;
+  /** Anchor the menu to a composite field while keeping this button as trigger. */
+  menuAnchorRef?: RefObject<HTMLElement | null>;
   singleLineOptions?: boolean;
   menuTitle?: string;
   /** Search visible option labels without changing the selected value. */
@@ -81,6 +84,7 @@ export function ThemedSelect(selection: Props) {
     menuFooterAction,
     renderValue,
     fitContent = false,
+    menuAnchorRef,
     singleLineOptions = false,
     menuTitle,
     search,
@@ -120,13 +124,12 @@ export function ThemedSelect(selection: Props) {
     (menuFooterAction ? 1.25 : 0);
   const locate = () =>
     setPosition(
-      positionFor(
-        trigger.current,
-        rowCount,
+      positionFor(menuAnchorRef?.current ?? trigger.current, rowCount, {
         fitContent,
-        list.current,
-        searchable ? 334 : undefined,
-      ),
+        menu: list.current,
+        maxHeight: searchable ? 334 : undefined,
+        minWidth: menuAnchorRef ? 0 : undefined,
+      }),
     );
   const show = () => {
     if (props.disabled || !allOptions.length) return;
@@ -185,13 +188,12 @@ export function ThemedSelect(selection: Props) {
     };
     const reposition = () =>
       setPosition(
-        positionFor(
-          trigger.current,
-          rowCount,
+        positionFor(menuAnchorRef?.current ?? trigger.current, rowCount, {
           fitContent,
-          list.current,
-          searchable ? 334 : undefined,
-        ),
+          menu: list.current,
+          maxHeight: searchable ? 334 : undefined,
+          minWidth: menuAnchorRef ? 0 : undefined,
+        }),
       );
     reposition();
     // Other menu triggers may stop bubbling to keep the title bar from dragging.
@@ -211,7 +213,7 @@ export function ThemedSelect(selection: Props) {
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };
-  }, [open, rowCount, fitContent, searchable]);
+  }, [open, rowCount, fitContent, searchable, menuAnchorRef]);
   useEffect(() => {
     if (open)
       list.current

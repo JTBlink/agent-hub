@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { KeyboardEventHandler } from "react";
+import { useRef, type KeyboardEventHandler } from "react";
 import {
   automationVariableOptions,
   type AutomationVariable,
@@ -24,12 +24,13 @@ export function AutomationVariableValueField({
   placeholder?: string;
 }) {
   const { t } = useTranslation();
+  const field = useRef<HTMLDivElement>(null);
   const options = automationVariableOptions(variable);
   const choices = options.includes(variable.value)
     ? options
     : [variable.value, ...options];
   return (
-    <div className="flex min-w-0 flex-1">
+    <div ref={field} className="flex min-w-0 flex-1">
       <input
         aria-label={t("automation.variableValue", { index })}
         disabled={disabled}
@@ -48,7 +49,7 @@ export function AutomationVariableValueField({
           value={variable.value}
           disabled={disabled}
           className="w-10 gap-0 rounded-l-none px-2 text-xs"
-          fitContent
+          menuAnchorRef={field}
           renderValue={() => null}
           onChange={(event) => onChange(event.target.value)}
         >

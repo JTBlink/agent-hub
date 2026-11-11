@@ -44,9 +44,17 @@ export function optionsFrom(children: ReactNode): SelectOption[] {
 export function positionFor(
   element: HTMLElement | null,
   count: number,
-  fitContent = false,
-  menu?: HTMLElement | null,
-  maxHeight = Infinity,
+  {
+    fitContent = false,
+    menu,
+    maxHeight = Infinity,
+    minWidth = 180,
+  }: {
+    fitContent?: boolean;
+    menu?: HTMLElement | null;
+    maxHeight?: number;
+    minWidth?: number;
+  } = {},
 ) {
   if (!element) return null;
   const rect = element.getBoundingClientRect();
@@ -67,7 +75,7 @@ export function positionFor(
   const width = Math.min(
     Math.max(
       rect.width / scale,
-      180,
+      minWidth,
       fitContent && menu ? menu.getBoundingClientRect().width / scale : 0,
     ),
     widthLimit - 16,
