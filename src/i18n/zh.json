@@ -595,14 +595,16 @@
     "configurationPathUnavailable": "任务配置目录不可用，请先刷新任务列表。",
     "gitFormatFiles": "config/task.json 的 files 列出相对任务根目录的文件路径。TASK.md 为任务说明入口；JSON 配置放在 config/，脚本放在 scripts/，按需资料放在 references/，提示词固定放在 prompts/prompt.md。",
     "customVariables": "自定义变量",
-    "customVariablesHelp": "按需添加，当前方案独立使用；变量随任务保存与备份。",
+    "customVariablesHelp": "名称、值和可选描述均可直接编辑，保存任务后生效；变量仅用于当前方案，并随任务备份。",
     "addVariable": "添加变量",
     "variableName": "变量名称 {{index}}",
     "variableValue": "变量值 {{index}}",
+    "variableDescription": "变量描述 {{index}}",
+    "variableDescriptionPlaceholder": "描述（可选）",
     "removeVariable": "移除变量 {{index}}",
     "confirmVariable": "确认变量",
     "cancelVariable": "取消添加变量",
-    "variableDraftHelp": "填写变量名称和值后，点击对号保存。",
+    "variableDraftHelp": "填写名称和值，可添加描述；点击对号确认，再保存任务。",
     "variablesInvalid": "变量名称须以字母或下划线开头，只能包含字母、数字和下划线，且不能重复。"
   },
   "app": {

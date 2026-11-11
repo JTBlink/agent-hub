@@ -2,11 +2,12 @@ import { Check, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  type AutomationVariable,
   invalidAutomationVariables,
   isValidAutomationVariable,
 } from "../lib/automationPrompts";
 
-type Variable = { name: string; value: string };
+type Variable = AutomationVariable;
 
 export function AutomationVariablesField({
   variables,
@@ -86,6 +87,20 @@ export function AutomationVariablesField({
             className="app-input min-w-0 flex-1 text-xs"
             onChange={(event) => update(index, { value: event.target.value })}
           />
+          <textarea
+            aria-label={t("automation.variableDescription", {
+              index: index + 1,
+            })}
+            placeholder={t("automation.variableDescriptionPlaceholder")}
+            disabled={disabled}
+            value={variable.description ?? ""}
+            maxLength={2000}
+            rows={2}
+            className="app-input order-last w-full resize-y text-xs"
+            onChange={(event) =>
+              update(index, { description: event.target.value || undefined })
+            }
+          />
           <button
             type="button"
             disabled={disabled}
@@ -159,6 +174,34 @@ export function AutomationVariablesField({
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
+          <textarea
+            aria-label={t("automation.variableDescription", {
+              index: variables.length + 1,
+            })}
+            placeholder={t("automation.variableDescriptionPlaceholder")}
+            disabled={disabled}
+            value={draft.description ?? ""}
+            maxLength={2000}
+            rows={2}
+            className="app-input w-full resize-y text-xs"
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                description: event.target.value || undefined,
+              })
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Escape") cancelDraft();
+              if (
+                event.key === "Enter" &&
+                (event.ctrlKey || event.metaKey) &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                commitDraft();
+              }
+            }}
+          />
           <p className="text-xs text-muted">
             {t("automation.variableDraftHelp")}
           </p>

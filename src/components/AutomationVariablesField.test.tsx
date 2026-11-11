@@ -90,3 +90,61 @@ it("requires confirmation before adding a variable and reports invalid drafts", 
     vi.unstubAllGlobals();
   }
 });
+
+it("edits an existing variable name, value, and description in the task draft", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  await i18n.changeLanguage("zh");
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  function Fixture() {
+    const [variables, update] = useState([
+      { name: "scope", value: "all", description: "Every author" },
+    ]);
+    return (
+      <>
+        <AutomationVariablesField
+          variables={variables}
+          disabled={false}
+          onChange={update}
+        />
+        <output>{JSON.stringify(variables)}</output>
+      </>
+    );
+  }
+  try {
+    await act(async () => root.render(<Fixture />));
+    for (const [label, value] of [
+      ["变量名称 1", "repair_scope"],
+      ["变量值 1", "own"],
+      ["变量描述 1", "Only the authenticated account"],
+    ]) {
+      const field = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+        `[aria-label="${label}"]`,
+      )!;
+      await act(async () => {
+        const prototype =
+          field instanceof HTMLTextAreaElement
+            ? HTMLTextAreaElement.prototype
+            : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(prototype, "value")!.set!.call(
+          field,
+          value,
+        );
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
+    expect(JSON.parse(host.querySelector("output")!.textContent!)).toEqual([
+      {
+        name: "repair_scope",
+        value: "own",
+        description: "Only the authenticated account",
+      },
+    ]);
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});

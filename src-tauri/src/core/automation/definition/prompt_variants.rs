@@ -29,6 +29,8 @@ struct Variant {
 struct Variable {
     name: String,
     value: String,
+    #[serde(default)]
+    description: Option<String>,
 }
 
 fn variables_map(variables: &[Variable]) -> Result<BTreeMap<String, String>, String> {
@@ -40,12 +42,16 @@ fn variables_map(variables: &[Variable]) -> Result<BTreeMap<String, String>, Str
             || !name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_')
             || name.as_bytes()[0].is_ascii_digit()
             || variable.value.contains('\0')
+            || variable
+                .description
+                .as_ref()
+                .is_some_and(|description| description.len() > 2000 || description.contains('\0'))
             || result
                 .insert(name.clone(), variable.value.clone())
                 .is_some()
         {
             return Err(
-                "Custom variables require unique identifier names and string values without NUL"
+                "Custom variables require unique identifier names, values without NUL, and descriptions up to 2000 bytes without NUL"
                     .into(),
             );
         }
@@ -173,12 +179,7 @@ pub fn set_prompt_variable(
     name: &str,
     value: Option<&str>,
 ) -> Result<(), String> {
-    let (id, mut variables) = prompt_variables(draft, variant)?;
-    if let Some(value) = value {
-        variables.insert(name.into(), value.into());
-    } else if variables.remove(name).is_none() {
-        return Err("Custom variable not found".into());
-    }
+    let (id, _) = prompt_variables(draft, variant)?;
     let mut updated = draft.clone();
     let file = updated
         .files
@@ -193,16 +194,26 @@ pub fn set_prompt_variable(
         .iter_mut()
         .find(|v| v["id"].as_str() == Some(&id))
         .ok_or("Prompt variant not found")?;
+    let selected = selected.as_object_mut().ok_or("Invalid prompt variant")?;
+    let variables = selected
+        .entry("variables")
+        .or_insert_with(|| serde_json::json!([]))
+        .as_array_mut()
+        .ok_or("Invalid prompt variables")?;
+    let position = variables
+        .iter()
+        .position(|variable| variable["name"].as_str() == Some(name));
+    match (position, value) {
+        (Some(index), Some(value)) => variables[index]["value"] = serde_json::json!(value),
+        (None, Some(value)) => variables.push(serde_json::json!({"name":name,"value":value})),
+        (Some(index), None) => {
+            variables.remove(index);
+        }
+        (None, None) => return Err("Custom variable not found".into()),
+    }
     if variables.is_empty() {
-        selected
-            .as_object_mut()
-            .ok_or("Invalid prompt variant")?
-            .remove("variables");
+        selected.remove("variables");
     } else {
-        selected["variables"] = serde_json::json!(variables
-            .into_iter()
-            .map(|(name, value)| serde_json::json!({"name":name,"value":value}))
-            .collect::<Vec<_>>());
         manifest["version"] = serde_json::json!(2);
     }
     file.content = serde_json::to_string_pretty(&manifest).map_err(|e| e.to_string())? + "\n";

@@ -595,14 +595,16 @@
     "configurationPathUnavailable": "The task configuration directory is unavailable. Refresh the task list and try again.",
     "gitFormatFiles": "The files in config/task.json are relative to the task root. TASK.md is the instruction entrypoint; JSON configuration belongs in config/, executable helpers in scripts/, optional documentation in references/, and Agent prompts in prompts/prompt.md.",
     "customVariables": "Custom variables",
-    "customVariablesHelp": "Add as needed for this variant. Variables are saved and backed up with the task.",
+    "customVariablesHelp": "Edit names, values, and optional descriptions directly, then save the task. Variables belong to this variant and are backed up with the task.",
     "addVariable": "Add variable",
     "variableName": "Variable name {{index}}",
     "variableValue": "Variable value {{index}}",
+    "variableDescription": "Variable description {{index}}",
+    "variableDescriptionPlaceholder": "Description (optional)",
     "removeVariable": "Remove variable {{index}}",
     "confirmVariable": "Confirm variable",
     "cancelVariable": "Cancel adding variable",
-    "variableDraftHelp": "Enter a name and value, then click the checkmark to save.",
+    "variableDraftHelp": "Enter a name and value, optionally add a description, then confirm and save the task.",
     "variablesInvalid": "Use unique names starting with a letter or underscore, followed by letters, digits or underscores."
   },
   "app": {

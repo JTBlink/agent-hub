@@ -118,3 +118,39 @@ fn invalid_variable_names_duplicates_and_nonstring_values_are_rejected_without_m
     assert!(set_prompt_variable(&mut task, None, "bad-name", Some("1")).is_err());
     assert_eq!(task, original);
 }
+
+#[test]
+fn variable_descriptions_survive_value_edits_export_and_reopen() {
+    let mut value = manifest();
+    value["variants"][0]["variables"] = json!([
+        {"name":"scope","value":"all","description":"own: current account; all: every author"},
+        {"name":"limit","value":"10","description":"Maximum repair attempts"}
+    ]);
+    let mut task = draft(value);
+    task.validate().unwrap();
+    set_prompt_variable(&mut task, None, "scope", Some("own")).unwrap();
+    let body: Value = serde_json::from_str(&task.files[1].content).unwrap();
+    assert_eq!(
+        body["variants"][0]["variables"][0]["description"],
+        "own: current account; all: every author"
+    );
+    assert_eq!(body["variants"][0]["variables"][0]["value"], "own");
+    assert_eq!(
+        body["variants"][0]["variables"][1]["description"],
+        "Maximum repair attempts"
+    );
+    let mut reopened: AutomationDraft =
+        serde_json::from_str(&serde_json::to_string(&task).unwrap()).unwrap();
+    reopened.validate().unwrap();
+    assert_eq!(active_variables(&reopened).unwrap()["scope"], "own");
+}
+
+#[test]
+fn invalid_variable_descriptions_are_rejected() {
+    for description in [json!(42), json!("bad\0text"), json!("x".repeat(2001))] {
+        let mut value = manifest();
+        value["variants"][0]["variables"] =
+            json!([{"name":"scope","value":"all","description":description}]);
+        assert!(draft(value).validate().is_err());
+    }
+}

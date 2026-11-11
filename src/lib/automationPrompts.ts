@@ -4,13 +4,21 @@ import { automationPromptFile } from "./automation";
 export const PROMPT_VARIANTS_PATH = "config/prompt-variants.json";
 export const MAX_PROMPT_VARIANTS = 12;
 export const MAX_PROMPT_BEHAVIOR_BYTES = 120;
+export interface AutomationVariable {
+  name: string;
+  value: string;
+  description?: string;
+}
+
+export const MAX_AUTOMATION_VARIABLE_DESCRIPTION_BYTES = 2000;
+
 export interface AutomationPromptVariant {
   id: string;
   name: string;
   content: string;
   /** Optional opaque task metadata; AgentHub does not interpret it. */
   behavior?: string;
-  variables?: { name: string; value: string }[];
+  variables?: AutomationVariable[];
 }
 export interface AutomationPrompts {
   activeId: string;
@@ -93,13 +101,14 @@ export function automationPrompts(
                 !("name" in item) ||
                 typeof item.name !== "string" ||
                 !("value" in item) ||
-                typeof item.value !== "string",
+                typeof item.value !== "string" ||
+                ("description" in item && typeof item.description !== "string"),
             ))
         )
           throw new Error("Invalid prompt variables");
         return {
           ...(variables !== undefined
-            ? { variables: variables as { name: string; value: string }[] }
+            ? { variables: variables as AutomationVariable[] }
             : {}),
           id: entry.id,
           name: entry.name,
@@ -168,8 +177,9 @@ export function invalidAutomationVariables(
 ) {
   return variants.some((variant) => {
     const names = new Set<string>();
-    return (variant.variables ?? []).some(({ name, value }) => {
-      const invalid = !isValidAutomationVariable({ name, value }, names);
+    return (variant.variables ?? []).some((variable) => {
+      const { name } = variable;
+      const invalid = !isValidAutomationVariable(variable, names);
       names.add(name);
       return invalid;
     });
@@ -178,12 +188,16 @@ export function invalidAutomationVariables(
 
 /** Validate one variable against names that are already committed. */
 export function isValidAutomationVariable(
-  variable: { name: string; value: string },
+  variable: AutomationVariable,
   names = new Set<string>(),
 ) {
   return (
     /^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(variable.name) &&
     !names.has(variable.name) &&
-    !variable.value.includes("\0")
+    !variable.value.includes("\0") &&
+    (variable.description === undefined ||
+      (!variable.description.includes("\0") &&
+        new TextEncoder().encode(variable.description).length <=
+          MAX_AUTOMATION_VARIABLE_DESCRIPTION_BYTES))
   );
 }

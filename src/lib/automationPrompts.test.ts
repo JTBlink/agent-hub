@@ -4,6 +4,7 @@ import {
   automationPrompts,
   PROMPT_VARIANTS_PATH,
   updateAutomationPrompts,
+  invalidAutomationVariables,
 } from "./automationPrompts";
 
 function draft(): AutomationDraft {
@@ -146,4 +147,27 @@ it("keeps independent variables with each scenario across edits and activation",
   expect(active.activeId).toBe("repair");
   expect(active.variants[0].variables?.[0].value).toBe("1");
   expect(active.variants[1].variables?.[0].value).toBe("10");
+});
+
+it("preserves editable variable descriptions through save and reopen", () => {
+  const task = draft();
+  const selected = automationPrompts(task, "Default");
+  selected.variants[0].variables = [
+    {
+      name: "repair_scope",
+      value: "own",
+      description: "own: current account; all: every author",
+    },
+  ];
+  const saved = {
+    ...task,
+    ...updateAutomationPrompts(task, selected.variants, selected.activeId),
+  };
+  const reopened = automationPrompts(saved, "Default");
+  expect(reopened.variants[0].variables).toEqual(
+    selected.variants[0].variables,
+  );
+  expect(invalidAutomationVariables(reopened.variants)).toBe(false);
+  reopened.variants[0].variables![0].description = "x".repeat(2001);
+  expect(invalidAutomationVariables(reopened.variants)).toBe(true);
 });
