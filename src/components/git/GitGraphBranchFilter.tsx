@@ -16,6 +16,7 @@ export function GitGraphBranchFilter({
 }) {
   const { t } = useTranslation();
   const options = graphBranchOptions(commits);
+  const byValue = new Map(options.map((option) => [option.value, option]));
   return (
     <label
       className="flex min-w-0 items-center gap-1.5"
@@ -25,12 +26,18 @@ export function GitGraphBranchFilter({
       <ThemedSelect
         aria-label={t("git.graph.branches")}
         value={value}
+        title={byValue.get(value)?.name ?? t("git.graph.allBranches")}
         onChange={(event) => onChange(event.target.value)}
         className="max-w-80"
         fitContent
         singleLineOptions
+        search={{
+          placeholder: t("git.graph.filterBranches"),
+          clear: t("git.graph.clearBranchSearch"),
+          noResults: t("git.graph.noMatchingBranches"),
+        }}
         optionIcon={(key) =>
-          key && options.find((option) => option.value === key)?.remote ? (
+          !key ? null : byValue.get(key)?.remote ? (
             <Cloud size={13} className="shrink-0" />
           ) : (
             <GitBranch size={13} className="shrink-0" />
@@ -39,8 +46,12 @@ export function GitGraphBranchFilter({
       >
         <option value="">{t("git.graph.allBranches")}</option>
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {`${t(option.remote ? "git.graph.remoteBranch" : "git.graph.localBranch")} · ${option.name}`}
+          <option
+            key={option.value}
+            value={option.value}
+            title={`${t(option.remote ? "git.graph.remoteBranch" : "git.graph.localBranch")} · ${option.name}`}
+          >
+            {option.name}
           </option>
         ))}
       </ThemedSelect>

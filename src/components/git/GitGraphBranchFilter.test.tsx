@@ -73,9 +73,9 @@ it("offers distinct branch kinds and emits the chosen remote ref", async () => {
     ];
     expect(options.map((option) => option.textContent)).toEqual([
       "git.graph.allBranches",
-      "git.graph.localBranch · main",
-      "git.graph.localBranch · topic",
-      "git.graph.remoteBranch · origin/topic",
+      "main",
+      "topic",
+      "origin/topic",
     ]);
     await act(async () => options[3].click());
     expect(onChange).toHaveBeenCalledWith(

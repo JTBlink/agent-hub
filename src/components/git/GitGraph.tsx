@@ -91,7 +91,10 @@ export function GitGraph({
           />
         }
         remotes={remotes}
-        onRemotes={setRemotes}
+        onRemotes={(next) => {
+          setRemotes(next);
+          if (!next && branchOption?.remote) setBranchFilter("");
+        }}
         query={query}
         onQuery={setQuery}
         limit={limit}

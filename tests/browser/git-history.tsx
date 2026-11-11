@@ -32,7 +32,26 @@ Object.assign(window, {
               index < 4999
                 ? [(1001 + index).toString(16).padStart(40, "0")]
                 : [],
-            refs: index === 0 ? [{ name: "main", remote: false }] : [],
+            refs:
+              params.has("branches") && index < 30
+                ? [
+                    {
+                      name:
+                        index === 0
+                          ? "main"
+                          : `topic/${String(index).padStart(2, "0")}-${"long-branch-name-".repeat(3)}`,
+                      remote: false,
+                    },
+                    ...(typeof args === "object" &&
+                    args !== null &&
+                    "includeRemotes" in args &&
+                    args.includeRemotes
+                      ? [{ name: `origin/topic/${index}`, remote: true }]
+                      : []),
+                  ]
+                : index === 0
+                  ? [{ name: "main", remote: false }]
+                  : [],
           })),
           has_more: limit < 5000,
         };
@@ -88,6 +107,10 @@ export function Preview() {
           changedFiles={2}
           onSelect={setSelected}
           onClose={() => {}}
+          busy={false}
+          fetching={false}
+          onFetch={() => {}}
+          onRefresh={() => {}}
         />
       </div>
     );

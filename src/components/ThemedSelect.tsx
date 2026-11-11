@@ -1,89 +1,27 @@
 import {
-  Children,
-  Fragment,
-  isValidElement,
   useEffect,
   useId,
   useLayoutEffect,
   useRef,
   useState,
   type ChangeEventHandler,
-  type OptionHTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type SelectHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
-import { getAppScale } from "../lib/textScale";
+import {
+  optionsFrom,
+  filterSelectOptions,
+  positionFor,
+  type SelectOption,
+} from "../lib/themedSelect";
 import { cn } from "../utils";
-
-interface Option {
-  value: string;
-  label: string;
-  disabled: boolean;
-  title?: string;
-}
-function optionsFrom(children: ReactNode): Option[] {
-  return Children.toArray(children).flatMap((child) => {
-    if (!isValidElement<{ children?: ReactNode }>(child)) return [];
-    if (child.type === Fragment) return optionsFrom(child.props.children);
-    if (
-      !isValidElement<OptionHTMLAttributes<HTMLOptionElement>>(child) ||
-      child.type !== "option"
-    )
-      return [];
-    const label =
-      child.props.label ?? Children.toArray(child.props.children).join("");
-    return [
-      {
-        value: String(child.props.value ?? label),
-        label,
-        disabled: !!child.props.disabled,
-        title: child.props.title,
-      },
-    ];
-  });
-}
-
-function positionFor(
-  element: HTMLElement | null,
-  count: number,
-  fitContent = false,
-  menu?: HTMLElement | null,
-) {
-  if (!element) return null;
-  const rect = element.getBoundingClientRect();
-  const scale = getAppScale();
-  const widthLimit = window.innerWidth / scale;
-  const heightLimit = window.innerHeight / scale;
-  const below = heightLimit - rect.bottom / scale - 8;
-  const above = rect.top / scale - 8;
-  const desired = fitContent
-    ? Math.max(count * 36 + 10, (menu?.scrollHeight ?? 0) + 2)
-    : Math.min(256, count * 36 + 10);
-  const upwards = below < desired && above > below;
-  const height = Math.max(
-    36,
-    Math.min(desired, upwards ? above - 4 : below - 4),
-  );
-  const width = Math.min(
-    Math.max(
-      rect.width / scale,
-      180,
-      fitContent && menu ? menu.getBoundingClientRect().width / scale : 0,
-    ),
-    widthLimit - 16,
-  );
-  return {
-    left: Math.max(8, Math.min(rect.left / scale, widthLimit - width - 8)),
-    top: Math.max(
-      8,
-      upwards ? rect.top / scale - height - 4 : rect.bottom / scale + 4,
-    ),
-    width,
-    height,
-  };
-}
+import {
+  ThemedSelectSearch,
+  type SelectSearchLabels,
+} from "./ThemedSelectSearch";
 
 type Props = Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
@@ -116,6 +54,8 @@ type Props = Omit<
   fitContent?: boolean;
   singleLineOptions?: boolean;
   menuTitle?: string;
+  /** Search visible option labels without changing the selected value. */
+  search?: SelectSearchLabels;
 } & (
     | {
         multiple?: false;
@@ -143,10 +83,14 @@ export function ThemedSelect(selection: Props) {
     fitContent = false,
     singleLineOptions = false,
     menuTitle,
+    search,
     multiple,
     ...props
   } = selection;
-  const options = optionsFrom(children);
+  const allOptions = optionsFrom(children);
+  const [query, setQuery] = useState("");
+  const options = filterSelectOptions(allOptions, query);
+  const searchable = !!search;
   const [position, setPosition] = useState<{
     left: number;
     top: number;
@@ -157,38 +101,48 @@ export function ThemedSelect(selection: Props) {
   const trigger = useRef<HTMLButtonElement>(null);
   const native = useRef<HTMLSelectElement>(null);
   const list = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const typeahead = useRef({ value: "", time: 0 });
   const id = useId();
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [menuOverflow, setMenuOverflow] = useState(false);
   const open = position !== null;
   const values = typeof value === "string" ? [value] : value;
-  const selected = options.filter((option) => values.includes(option.value));
+  const selected = allOptions.filter((option) => values.includes(option.value));
   const label = selected.map((option) => option.label).join(", ");
   // The footer has its separator and padding in addition to a normal row.
   // Include that extra space so a short menu does not acquire a needless rail.
   const rowCount =
-    options.length +
+    (search
+      ? Math.min(8, Math.max(1, options.length)) + 1.25
+      : options.length) +
     (menuTitle ? 1 : 0) +
     (menuFooterAction ? 1.25 : 0);
   const locate = () =>
     setPosition(
-      positionFor(trigger.current, rowCount, fitContent, list.current),
+      positionFor(
+        trigger.current,
+        rowCount,
+        fitContent,
+        list.current,
+        searchable ? 334 : undefined,
+      ),
     );
   const show = () => {
-    if (props.disabled || !options.length) return;
+    if (props.disabled || !allOptions.length) return;
+    setQuery("");
     setPortalRoot(trigger.current?.closest("dialog") ?? document.body);
     setActive(
       Math.max(
         0,
-        options.findIndex(
+        allOptions.findIndex(
           (option) => values.includes(option.value) && !option.disabled,
         ),
       ),
     );
     locate();
   };
-  const choose = (option: Option | undefined) => {
+  const choose = (option: SelectOption | undefined) => {
     if (!option || option.disabled) return;
     if (selection.multiple) {
       selection.onChange(
@@ -196,7 +150,9 @@ export function ThemedSelect(selection: Props) {
           ? values.filter((value) => value !== option.value)
           : [...values, option.value],
       );
-      trigger.current?.focus({ preventScroll: true });
+      (search ? searchInput.current : trigger.current)?.focus({
+        preventScroll: true,
+      });
       return;
     }
     if (native.current && option.value !== value) {
@@ -206,6 +162,9 @@ export function ThemedSelect(selection: Props) {
     setPosition(null);
     trigger.current?.focus({ preventScroll: true });
   };
+  useLayoutEffect(() => {
+    if (open) searchInput.current?.focus({ preventScroll: true });
+  }, [open]);
   useLayoutEffect(() => {
     if (!open) return;
     const dismiss = (event: MouseEvent) => {
@@ -218,7 +177,7 @@ export function ThemedSelect(selection: Props) {
     };
     const blur = () => setPosition(null);
     const escape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.isComposing) return;
       event.preventDefault();
       event.stopPropagation();
       setPosition(null);
@@ -226,7 +185,13 @@ export function ThemedSelect(selection: Props) {
     };
     const reposition = () =>
       setPosition(
-        positionFor(trigger.current, rowCount, fitContent, list.current),
+        positionFor(
+          trigger.current,
+          rowCount,
+          fitContent,
+          list.current,
+          searchable ? 334 : undefined,
+        ),
       );
     reposition();
     // Other menu triggers may stop bubbling to keep the title bar from dragging.
@@ -246,7 +211,7 @@ export function ThemedSelect(selection: Props) {
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };
-  }, [open, rowCount, fitContent]);
+  }, [open, rowCount, fitContent, searchable]);
   useEffect(() => {
     if (open)
       list.current
@@ -255,9 +220,10 @@ export function ThemedSelect(selection: Props) {
   }, [open, active]);
   useLayoutEffect(() => {
     if (!open || !list.current) return;
-    const overflow =
-      list.current.scrollHeight > list.current.clientHeight + 1;
-    setMenuOverflow((previous) => (previous === overflow ? previous : overflow));
+    const overflow = list.current.scrollHeight > list.current.clientHeight + 1;
+    setMenuOverflow((previous) =>
+      previous === overflow ? previous : overflow,
+    );
   }, [open, position?.height, rowCount]);
   const move = (direction: number) => {
     let next = active;
@@ -266,6 +232,86 @@ export function ThemedSelect(selection: Props) {
       if (!options[next].disabled) break;
     }
     setActive(next);
+  };
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.nativeEvent.isComposing) return;
+    if (
+      event.target === searchInput.current &&
+      !["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)
+    )
+      return;
+    if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+      event.preventDefault();
+      if (!open) show();
+      else move(event.key === "ArrowDown" ? 1 : -1);
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      if (!open) show();
+      setActive(
+        event.key === "Home"
+          ? Math.max(
+              0,
+              options.findIndex((option) => !option.disabled),
+            )
+          : Math.max(
+              0,
+              options.length -
+                1 -
+                [...options].reverse().findIndex((option) => !option.disabled),
+            ),
+      );
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (!open) show();
+      else choose(options[active]);
+    } else if (event.key === "Escape" && open) {
+      event.preventDefault();
+      event.stopPropagation();
+      setPosition(null);
+    } else if (open && event.key === "ArrowRight" && optionAction) {
+      event.preventDefault();
+      list.current
+        ?.querySelector<HTMLButtonElement>(`[data-option-action="${active}"]`)
+        ?.focus();
+    } else if (event.key === "Tab") {
+      const action =
+        open &&
+        !event.shiftKey &&
+        list.current?.querySelector<HTMLButtonElement>(
+          `[data-option-action="${active}"]`,
+        );
+      const footer =
+        open &&
+        !event.shiftKey &&
+        list.current?.querySelector<HTMLButtonElement>("[data-menu-footer]");
+      if (action) {
+        event.preventDefault();
+        action.focus();
+      } else if (footer) {
+        event.preventDefault();
+        footer.focus();
+      } else {
+        setPosition(null);
+        if (event.target === searchInput.current)
+          trigger.current?.focus({ preventScroll: true });
+      }
+    } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+      const now = event.timeStamp;
+      const query =
+        (now - typeahead.current.time < 700 ? typeahead.current.value : "") +
+        event.key.toLocaleLowerCase();
+      typeahead.current = { value: query, time: now };
+      const index = options.findIndex(
+        (option) =>
+          !option.disabled &&
+          option.label.toLocaleLowerCase().startsWith(query),
+      );
+      if (index >= 0) {
+        event.preventDefault();
+        if (!open) show();
+        setActive(index);
+      }
+    }
   };
   return (
     <div
@@ -304,94 +350,16 @@ export function ThemedSelect(selection: Props) {
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-controls={open ? id : undefined}
-        aria-activedescendant={open ? `${id}-${active}` : undefined}
-        disabled={props.disabled || !options.length}
+        aria-activedescendant={
+          open && !search && options[active] ? `${id}-${active}` : undefined
+        }
+        disabled={props.disabled || !allOptions.length}
         title={props.title ?? (multiple ? label : undefined)}
         onClick={() => (open ? setPosition(null) : show())}
         onBlur={(event) => {
           if (!list.current?.contains(event.relatedTarget)) setPosition(null);
         }}
-        onKeyDown={(event) => {
-          if (["ArrowDown", "ArrowUp"].includes(event.key)) {
-            event.preventDefault();
-            if (!open) show();
-            else move(event.key === "ArrowDown" ? 1 : -1);
-          } else if (event.key === "Home" || event.key === "End") {
-            event.preventDefault();
-            if (!open) show();
-            setActive(
-              event.key === "Home"
-                ? Math.max(
-                    0,
-                    options.findIndex((option) => !option.disabled),
-                  )
-                : Math.max(
-                    0,
-                    options.length -
-                      1 -
-                      [...options]
-                        .reverse()
-                        .findIndex((option) => !option.disabled),
-                  ),
-            );
-          } else if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            if (!open) show();
-            else choose(options[active]);
-          } else if (event.key === "Escape" && open) {
-            event.preventDefault();
-            event.stopPropagation();
-            setPosition(null);
-          } else if (open && event.key === "ArrowRight" && optionAction) {
-            event.preventDefault();
-            list.current
-              ?.querySelector<HTMLButtonElement>(
-                `[data-option-action="${active}"]`,
-              )
-              ?.focus();
-          } else if (event.key === "Tab") {
-            const action =
-              open &&
-              !event.shiftKey &&
-              list.current?.querySelector<HTMLButtonElement>(
-                `[data-option-action="${active}"]`,
-              );
-            const footer =
-              open &&
-              !event.shiftKey &&
-              list.current?.querySelector<HTMLButtonElement>(
-                "[data-menu-footer]",
-              );
-            if (action) {
-              event.preventDefault();
-              action.focus();
-            } else if (footer) {
-              event.preventDefault();
-              footer.focus();
-            } else setPosition(null);
-          } else if (
-            event.key.length === 1 &&
-            !event.ctrlKey &&
-            !event.metaKey
-          ) {
-            const now = event.timeStamp;
-            const query =
-              (now - typeahead.current.time < 700
-                ? typeahead.current.value
-                : "") + event.key.toLocaleLowerCase();
-            typeahead.current = { value: query, time: now };
-            const index = options.findIndex(
-              (option) =>
-                !option.disabled &&
-                option.label.toLocaleLowerCase().startsWith(query),
-            );
-            if (index >= 0) {
-              event.preventDefault();
-              if (!open) show();
-              setActive(index);
-            }
-          }
-        }}
+        onKeyDown={handleKeyDown}
         className={cn(
           "app-input inline-flex w-full items-center justify-between gap-3 text-left hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-50",
           className,
@@ -416,10 +384,10 @@ export function ThemedSelect(selection: Props) {
         createPortal(
           <div
             ref={list}
-            id={id}
-            role="listbox"
-            aria-multiselectable={multiple || undefined}
-            aria-label={props["aria-label"]}
+            id={search ? undefined : id}
+            role={search ? undefined : "listbox"}
+            aria-multiselectable={!search ? multiple || undefined : undefined}
+            aria-label={!search ? props["aria-label"] : undefined}
             onBlur={(event) => {
               if (
                 !event.currentTarget.contains(event.relatedTarget) &&
@@ -442,131 +410,168 @@ export function ThemedSelect(selection: Props) {
               menuOverflow ? "overflow-y-auto" : "overflow-hidden",
             )}
           >
-            {menuTitle && (
-              <div role="presentation" className="px-2 py-2 text-xs text-muted">
-                {menuTitle}
-              </div>
+            {search && (
+              <ThemedSelectSearch
+                inputRef={searchInput}
+                labels={search}
+                query={query}
+                onQuery={(next) => {
+                  setQuery(next);
+                  setActive(
+                    Math.max(
+                      0,
+                      filterSelectOptions(allOptions, next).findIndex(
+                        (option) => !option.disabled,
+                      ),
+                    ),
+                  );
+                }}
+                listId={id}
+                activeId={options[active] ? `${id}-${active}` : undefined}
+                onKeyDown={handleKeyDown}
+              />
             )}
-            {options.map((option, index) => {
-              const action = optionAction?.(option.value);
-              const selectedMark = values.includes(option.value) ? (
-                <Check aria-hidden="true" className="h-3.5 w-3.5" />
-              ) : null;
-              return (
+            <div
+              id={search ? id : undefined}
+              role={search ? "listbox" : undefined}
+              aria-label={search ? props["aria-label"] : undefined}
+              aria-multiselectable={search ? multiple || undefined : undefined}
+            >
+              {search && !options.length && (
+                <p role="status" className="px-2 py-3 text-sm text-muted">
+                  {search.noResults}
+                </p>
+              )}
+              {menuTitle && (
                 <div
-                  key={option.value}
                   role="presentation"
-                  onMouseEnter={() => {
-                    if (!option.disabled) setActive(index);
-                  }}
-                  className={cn(
-                    "group/option flex items-center rounded-md",
-                    active === index && "bg-surface-hover",
-                  )}
+                  className="px-2 py-2 text-xs text-muted"
                 >
-                  <button
-                    type="button"
-                    role="option"
-                    title={
-                      option.title ??
-                      (singleLineOptions ? option.label : undefined)
-                    }
-                    aria-selected={values.includes(option.value)}
-                    aria-disabled={option.disabled}
-                    id={`${id}-${index}`}
-                    data-option-index={index}
-                    disabled={option.disabled}
-                    tabIndex={-1}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => choose(option)}
+                  {menuTitle}
+                </div>
+              )}
+              {options.map((option, index) => {
+                const action = optionAction?.(option.value);
+                const selectedMark = values.includes(option.value) ? (
+                  <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                ) : null;
+                return (
+                  <div
+                    key={option.value}
+                    role="presentation"
+                    onMouseEnter={() => {
+                      if (!option.disabled) setActive(index);
+                    }}
                     className={cn(
-                      "flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
-                      values.includes(option.value)
-                        ? "font-medium text-accent-light"
-                        : "text-secondary",
-                      values.includes(option.value) && "disabled:opacity-80",
+                      "group/option flex items-center rounded-md",
+                      active === index && "bg-surface-hover",
                     )}
                   >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                      {checkPosition === "start" && selectedMark}
-                    </span>
-                    {optionIcon?.(option.value)}
-                    <span
-                      className={cn(
-                        "min-w-0",
-                        singleLineOptions
-                          ? "truncate whitespace-nowrap"
-                          : "break-words",
-                        fitContent &&
-                          !singleLineOptions &&
-                          "[overflow-wrap:anywhere]",
-                      )}
-                    >
-                      {option.label}
-                    </span>
-                    {checkPosition === "after-label" && selectedMark && (
-                      <span className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center">
-                        {selectedMark}
-                      </span>
-                    )}
-                    {optionTrailing?.(option.value)}
-                  </button>
-                  {action && (
                     <button
                       type="button"
-                      data-option-action={index}
-                      aria-label={action.label}
-                      title={action.label}
+                      role="option"
+                      title={
+                        option.title ??
+                        (singleLineOptions ? option.label : undefined)
+                      }
+                      aria-selected={values.includes(option.value)}
+                      aria-disabled={option.disabled}
+                      id={`${id}-${index}`}
+                      data-option-index={index}
                       disabled={option.disabled}
-                      onFocus={() => setActive(index)}
-                      onKeyDown={(event) => {
-                        if (event.key === "ArrowLeft") {
-                          event.preventDefault();
-                          trigger.current?.focus({ preventScroll: true });
-                        }
-                      }}
-                      onClick={() => {
-                        setPosition(null);
-                        trigger.current?.focus({ preventScroll: true });
-                        action.onSelect();
-                      }}
-                      className="app-button-ghost pointer-events-none mx-1 h-7 w-7 shrink-0 rounded p-1 text-muted opacity-0 group-hover/option:pointer-events-auto group-hover/option:opacity-100 hover:text-danger focus:pointer-events-auto focus:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
+                      tabIndex={-1}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => choose(option)}
+                      className={cn(
+                        "flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left text-sm leading-5 focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-40",
+                        values.includes(option.value)
+                          ? "font-medium text-accent-light"
+                          : "text-secondary",
+                        values.includes(option.value) && "disabled:opacity-80",
+                        search && "scroll-mt-10",
+                      )}
                     >
-                      {action.icon}
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                        {checkPosition === "start" && selectedMark}
+                      </span>
+                      {optionIcon?.(option.value)}
+                      <span
+                        className={cn(
+                          "min-w-0",
+                          singleLineOptions
+                            ? "truncate whitespace-nowrap"
+                            : "break-words",
+                          fitContent &&
+                            !singleLineOptions &&
+                            "[overflow-wrap:anywhere]",
+                        )}
+                      >
+                        {option.label}
+                      </span>
+                      {checkPosition === "after-label" && selectedMark && (
+                        <span className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center">
+                          {selectedMark}
+                        </span>
+                      )}
+                      {optionTrailing?.(option.value)}
                     </button>
-                  )}
-                </div>
-              );
-            })}
-            {menuFooterAction && (
-              <div className="mt-1 border-t border-border-subtle pt-1">
-                <button
-                  type="button"
-                  aria-label={menuFooterAction.label}
-                  data-menu-footer
-                  onMouseDown={(event) => event.preventDefault()}
-                  onKeyDown={(event) => {
-                    if (event.key === "Tab" && event.shiftKey) {
-                      event.preventDefault();
+                    {action && (
+                      <button
+                        type="button"
+                        data-option-action={index}
+                        aria-label={action.label}
+                        title={action.label}
+                        disabled={option.disabled}
+                        onFocus={() => setActive(index)}
+                        onKeyDown={(event) => {
+                          if (event.key === "ArrowLeft") {
+                            event.preventDefault();
+                            trigger.current?.focus({ preventScroll: true });
+                          }
+                        }}
+                        onClick={() => {
+                          setPosition(null);
+                          trigger.current?.focus({ preventScroll: true });
+                          action.onSelect();
+                        }}
+                        className="app-button-ghost pointer-events-none mx-1 h-7 w-7 shrink-0 rounded p-1 text-muted opacity-0 group-hover/option:pointer-events-auto group-hover/option:opacity-100 hover:text-danger focus:pointer-events-auto focus:opacity-100 focus-visible:ring-2 focus-visible:ring-accent"
+                      >
+                        {action.icon}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {menuFooterAction && (
+                <div className="mt-1 border-t border-border-subtle pt-1">
+                  <button
+                    type="button"
+                    aria-label={menuFooterAction.label}
+                    data-menu-footer
+                    onMouseDown={(event) => event.preventDefault()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Tab" && event.shiftKey) {
+                        event.preventDefault();
+                        trigger.current?.focus({ preventScroll: true });
+                      }
+                    }}
+                    onClick={() => {
+                      setPosition(null);
                       trigger.current?.focus({ preventScroll: true });
-                    }
-                  }}
-                  onClick={() => {
-                    setPosition(null);
-                    trigger.current?.focus({ preventScroll: true });
-                    menuFooterAction.onSelect();
-                  }}
-                  className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                    {menuFooterAction.icon}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {menuFooterAction.label}
-                  </span>
-                </button>
-              </div>
-            )}
+                      menuFooterAction.onSelect();
+                    }}
+                    className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-secondary hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                      {menuFooterAction.icon}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {menuFooterAction.label}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>,
           portalRoot ?? document.body,
         )}
