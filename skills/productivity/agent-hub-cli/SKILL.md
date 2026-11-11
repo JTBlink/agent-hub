@@ -1,7 +1,7 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.16.0"
+  version: "1.19.0"
 description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, and operate the desktop preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
@@ -119,6 +119,21 @@ Resolve the installed CLI, inspect `automations --help`, and use native
 templates read-only. Read back the real instance ID, schedule, version and enabled
 state; creation or `state=requested` does not prove a successful execution.
 Preserve existing schedules, activation and state unless the user requests changes.
+
+For Agent automations, use `[auto] <automation name>` as the Tab title through
+`config/agent.json` → `runner.title`. Custom business pools read this same field;
+keep title changes separate from identity and lifecycle. On creation or rename,
+also read back the existing owned Tab. Follow the title and layout ownership
+rules in [automations](references/automations.md#agent-标题与布局归属).
+
+For versioned task packages, keep `package_options.version` as a SemVer release
+value (`MAJOR.MINOR.PATCH`, with optional prerelease/build metadata). It is the
+task author's content version; it does not change the schedule, trigger a run, or
+upgrade the CLI. `revision` is a numeric optimistic-concurrency token returned by
+`show`: pass the value read from the same draft to `edit`, and resolve conflicts
+by comparing drafts before saving. `schema_version` is a package/state format
+version and currently must remain `1`; it is not a release number and is not
+changed for prompt or script edits.
 
 ## Install
 
