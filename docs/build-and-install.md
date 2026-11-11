@@ -72,6 +72,8 @@ Unix 下 `./agent-hub.sh dev` 与 `npm run app:dev` 会先核实当前仓库的�
 
 `npm run app:dev`、`npm run tauri -- dev` 与上述 `dev` 使用同一入口。dev 启动阶段会同时更新 bridge 和 PATH 中当前产品的开发软链接；长驻会话中的 Tauri 热更新不等于重新编译 CLI，修改 CLI 后可执行 `npm run cli:build`，或重新启动 dev。
 
+dev 入口通过 `AGENT_HUB_DEV_CLI` 将桌面重启绑定到当前产品已准备的 sidecar。普通 Cargo 构建即使替换共享的 `target/debug/agent-hub-cli`，也不会改变该会话发布 CLI 的来源；发布仍检查版本与完整产品身份，来源缺失时明确失败。
+
 构建失败不会发布新副本；验证／发布失败会明确返回失败，dev 不继续启动。跨架构构建不替换本机入口。相同版本号的重编译也会按内容更新，不能只用 `--version` 验收。构建与发布提示输出到 stderr，不混入 CLI JSON 结果。
 
 `AGENT_HUB_BRIDGE_DIR` 可指定发布目录；`AGENT_HUB_CLI_BIN_DIR` 或 `CARGO_HOME/bin` 决定已有开发软链接的位置。桌面启动也会校验并更新其配套副本；开发中应使用匹配的新桌面构建，避免启动旧应用后重新发布旧版 CLI。

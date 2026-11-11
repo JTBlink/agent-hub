@@ -174,8 +174,12 @@ export function main(
     // Cargo may embed frontend assets while compiling the shared library.
     const frontend = runNpm(["run", "build"], productRunner);
     if (frontend !== 0) return frontend;
+    const target = requestedTarget(
+      args,
+      process.env.CARGO_BUILD_TARGET || host,
+    );
     const status = prepare(
-      requestedTarget(args, process.env.CARGO_BUILD_TARGET || host),
+      target,
       command === "build" && !args.includes("--debug"),
       productRunner,
       undefined,
@@ -185,6 +189,14 @@ export function main(
       { updatePathCli: command === "dev" },
     );
     if (status !== 0) return status;
+    if (command === "dev") {
+      // Plain Cargo builds can replace target/debug/agent-hub-cli during a
+      // watch session. Keep restarts bound to the verified product sidecar.
+      product.environment.AGENT_HUB_DEV_CLI = resolve(
+        product.binariesDir,
+        `agent-hub-cli-${target}${target.includes("windows") ? ".exe" : ""}`,
+      );
+    }
     const separator = args.indexOf("--");
     const trailing = separator >= 0 ? args.slice(separator + 1) : [];
     args = separator >= 0 ? args.slice(0, separator) : args;

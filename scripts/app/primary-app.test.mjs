@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { resolve } from "node:path";
 import { main, prepareCli, requestedTarget } from "./primary-app.mjs";
 
 describe("primary application packaging", () => {
@@ -191,6 +192,31 @@ it("keeps the desktop dev sibling CLI current before publishing", () => {
   ).toBe(0);
   expect(copies[1][0]).toMatch(/aarch64-apple-darwin\/debug\/agent-hub-cli$/);
   expect(copies[1][1]).toMatch(/target\/debug\/agent-hub-cli$/);
+});
+
+it("pins dev restarts to the prepared product sidecar rather than the shared Cargo output", () => {
+  let product;
+  let desktop;
+  const runner = (_command, args, options) => {
+    if (args.some((arg) => arg.endsWith("tauri.js"))) desktop = options;
+    return { status: 0, stdout: "host: aarch64-apple-darwin\n" };
+  };
+  const prepare = (
+    _target,
+    _release,
+    _runner,
+    _filesystem,
+    _publish,
+    _host,
+    selected,
+  ) => {
+    product = selected;
+    return 0;
+  };
+  expect(main(["dev"], runner, prepare, () => {})).toBe(0);
+  expect(desktop.env.AGENT_HUB_DEV_CLI).toBe(
+    resolve(product.binariesDir, "agent-hub-cli-aarch64-apple-darwin"),
+  );
 });
 
 it("builds a selected product with matching frontend, sidecar and desktop inputs", () => {

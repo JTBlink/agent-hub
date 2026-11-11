@@ -21,6 +21,35 @@ fn fake_cli(dir: &Path, reports: &str) -> PathBuf {
 
 #[cfg(unix)]
 #[test]
+fn prepared_development_cli_survives_an_unconfigured_cargo_output_replacement() {
+    let _lock = central_repo::test_base_dir_lock();
+    let tmp = tempdir().unwrap();
+    central_repo::set_test_home_dir_override(Some(tmp.path().to_path_buf()));
+    let result = std::panic::catch_unwind(|| {
+        let executable = tmp.path().join("cargo/agent-hub");
+        std::fs::create_dir_all(executable.parent().unwrap()).unwrap();
+        let sibling = executable.with_file_name("agent-hub-cli");
+        std::fs::write(&sibling, "unconfigured Cargo build").unwrap();
+        let prepared = tmp.path().join("product");
+        std::fs::create_dir_all(&prepared).unwrap();
+        let source = fake_cli(&prepared, "9.9.9");
+        let selected = bundled_cli_at(&executable, Some(&source)).unwrap();
+        assert_eq!(selected, source);
+        ensure_bridge_from(&selected, "9.9.9").unwrap();
+        assert_eq!(read_stamp().as_deref(), Some("9.9.9"));
+        std::fs::write(&sibling, "another unconfigured build").unwrap();
+        ensure_bridge_from(&selected, "9.9.9").unwrap();
+        assert_eq!(read_stamp().as_deref(), Some("9.9.9"));
+        assert!(bundled_cli_at(&executable, Some(&prepared.join("missing"))).is_err());
+        assert!(bundled_cli_at(&executable, Some(Path::new("relative-cli"))).is_err());
+        assert_eq!(bundled_cli_at(&executable, None).unwrap(), sibling);
+    });
+    central_repo::set_test_home_dir_override(None);
+    result.unwrap();
+}
+
+#[cfg(unix)]
+#[test]
 fn publishing_stamps_only_after_the_copy_runs() {
     let _lock = central_repo::test_base_dir_lock();
     let tmp = tempdir().unwrap();

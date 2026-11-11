@@ -106,8 +106,18 @@ fn stamp_path() -> PathBuf {
 }
 
 /// The CLI that shipped alongside the running app binary.
-fn bundled_cli() -> Result<PathBuf> {
+fn bundled_cli(development_cli: Option<&Path>) -> Result<PathBuf> {
     let exe = std::env::current_exe().context("cannot locate the running executable")?;
+    bundled_cli_at(&exe, development_cli)
+}
+
+fn bundled_cli_at(exe: &Path, development_cli: Option<&Path>) -> Result<PathBuf> {
+    if let Some(path) = development_cli {
+        if !path.is_absolute() || !path.is_file() {
+            bail!("Prepared development companion CLI is unavailable");
+        }
+        return Ok(path.to_path_buf());
+    }
     let dir = exe
         .parent()
         .context("the running executable has no parent directory")?;
@@ -250,7 +260,12 @@ fn verify(path: &Path, expected_version: &str) -> Result<()> {
 /// logged, and the caller carries on. The app must start whether or not an
 /// agent can drive it.
 pub fn ensure_bridge(app_version: &str) {
-    match publish_current(app_version) {
+    let development_cli = if cfg!(debug_assertions) {
+        std::env::var_os("AGENT_HUB_DEV_CLI").map(PathBuf::from)
+    } else {
+        None
+    };
+    match publish_current_from(app_version, development_cli.as_deref()) {
         Ok(path) => log::info!("cli bridge: ready at {}", path.display()),
         Err(e) => log::warn!("cli bridge: not available: {e:#}"),
     }
@@ -258,8 +273,14 @@ pub fn ensure_bridge(app_version: &str) {
 
 /// Publish the CLI next to this executable, including development build artifacts.
 pub fn publish_current(app_version: &str) -> Result<PathBuf> {
+    // A CLI build always publishes its own companion, even when its parent
+    // terminal inherited a desktop development session's pinned sidecar.
+    publish_current_from(app_version, None)
+}
+
+fn publish_current_from(app_version: &str, development_cli: Option<&Path>) -> Result<PathBuf> {
     let _lock = bridge_publish_lock()?;
-    let source = match bundled_cli() {
+    let source = match bundled_cli(development_cli) {
         Ok(source) => source,
         Err(error) => {
             if let Err(invalidate_error) = invalidate_bridge() {
