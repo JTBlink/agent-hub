@@ -5,7 +5,7 @@ import { expect, it, vi } from "vitest";
 import i18n from "../i18n";
 import { AutomationVariablesField } from "./AutomationVariablesField";
 
-it("adds and removes rows without a fixed count limit and reports duplicates", async () => {
+it("requires confirmation before adding a variable and reports invalid drafts", async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   await i18n.changeLanguage("zh");
   const host = document.createElement("div");
@@ -37,14 +37,53 @@ it("adds and removes rows without a fixed count limit and reports duplicates", a
         .click(),
     );
     expect(host.querySelectorAll("input")).toHaveLength(204);
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    const draftInputs = host.querySelectorAll<HTMLInputElement>("input");
+    const type = (input: HTMLInputElement, value: string) => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input, value);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    await act(async () => {
+      type(draftInputs[202], "value_0");
+      type(draftInputs[203], "duplicate");
+    });
+    await act(async () =>
+      buttons()
+        .find((b) => b.getAttribute("aria-label") === "确认变量")!
+        .click(),
+    );
     expect(host.querySelector('[role="alert"]')).not.toBeNull();
     await act(async () =>
       buttons()
-        .find((b) => b.getAttribute("aria-label") === "移除变量 102")!
+        .find((b) => b.getAttribute("aria-label") === "取消添加变量")!
         .click(),
     );
     expect(host.querySelectorAll("input")).toHaveLength(202);
     expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(async () =>
+      buttons()
+        .find((b) => b.textContent?.includes("添加变量"))!
+        .click(),
+    );
+    const savedDraftInputs = host.querySelectorAll<HTMLInputElement>("input");
+    await act(async () => {
+      type(savedDraftInputs[202], "new_variable");
+      type(savedDraftInputs[203], "saved");
+    });
+    await act(async () =>
+      buttons()
+        .find((b) => b.getAttribute("aria-label") === "确认变量")!
+        .click(),
+    );
+    expect(host.querySelectorAll("input")).toHaveLength(204);
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(
+      host.querySelector<HTMLInputElement>('input[aria-label="变量名称 102"]')
+        ?.value,
+    ).toBe("new_variable");
   } finally {
     await act(async () => root.unmount());
     host.remove();

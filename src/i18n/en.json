@@ -600,6 +600,9 @@
     "variableName": "Variable name {{index}}",
     "variableValue": "Variable value {{index}}",
     "removeVariable": "Remove variable {{index}}",
+    "confirmVariable": "Confirm variable",
+    "cancelVariable": "Cancel adding variable",
+    "variableDraftHelp": "Enter a name and value, then click the checkmark to save.",
     "variablesInvalid": "Use unique names starting with a letter or underscore, followed by letters, digits or underscores."
   },
   "app": {

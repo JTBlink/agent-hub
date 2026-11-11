@@ -600,6 +600,9 @@
     "variableName": "變數名稱 {{index}}",
     "variableValue": "變數值 {{index}}",
     "removeVariable": "移除變數 {{index}}",
+    "confirmVariable": "確認變數",
+    "cancelVariable": "取消新增變數",
+    "variableDraftHelp": "填寫變數名稱和值後，按一下勾選圖示儲存。",
     "variablesInvalid": "變數名稱須以字母或底線開頭，只能包含字母、數字和底線，且不可重複。"
   },
   "app": {

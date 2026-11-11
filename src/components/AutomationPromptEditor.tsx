@@ -237,6 +237,7 @@ export function AutomationPromptEditor({
                 />
               </label>
               <AutomationVariablesField
+                key={viewed.id}
                 variables={viewed.variables ?? []}
                 disabled={blocked}
                 onChange={(variables) => changeViewed({ variables })}
