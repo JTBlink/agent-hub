@@ -96,6 +96,22 @@ impl Preview {
     pub fn open_document(&self, path: &std::path::Path) -> Result<OpenedDocument, AppError> {
         self.publish_document(self.documents.open(path)?)
     }
+    /// Open an explicitly submitted local path, independently of registered projects.
+    pub fn open_document_path(&self, input: &str) -> Result<OpenedDocument, AppError> {
+        let path = if let Some(relative) = input.strip_prefix("~/") {
+            dirs::home_dir()
+                .ok_or_else(|| AppError::internal("Cannot determine home directory"))?
+                .join(relative)
+        } else {
+            std::path::PathBuf::from(input)
+        };
+        if !path.is_absolute() {
+            return Err(AppError::invalid_input(
+                "Document path must be absolute or start with ~/",
+            ));
+        }
+        self.open_document(&path)
+    }
     pub fn open_at(
         &self,
         root: &std::path::Path,

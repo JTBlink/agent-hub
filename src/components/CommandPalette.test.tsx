@@ -11,6 +11,15 @@ import { makeProject } from "../../tests/fixtures/workspace";
 import { makeSkillGroup } from "../../tests/fixtures/skillGroup";
 import { makeSkill } from "../../tests/fixtures/managedSkill";
 import { CommandPalette } from "./CommandPalette";
+import { previewApi, type PreviewDocument } from "../features/preview/api";
+import { queuePreviewDocument } from "../features/preview/shared/openRequests";
+
+vi.mock("../features/preview/api", () => ({
+  previewApi: { openDocument: vi.fn(), closeDocument: vi.fn() },
+}));
+vi.mock("../features/preview/shared/openRequests", () => ({
+  queuePreviewDocument: vi.fn(),
+}));
 
 const app = vi.hoisted(() => ({
   projects: [] as ReturnType<typeof makeProject>[],
@@ -38,6 +47,7 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.mocked(previewApi.closeDocument).mockResolvedValue();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
     configurable: true,
@@ -168,3 +178,68 @@ it("skips empty project/group sections while keeping skill navigation functional
   expect(app.openSkillDetailById).toHaveBeenCalledWith("skill-1");
   expect(container.querySelector("output")?.textContent).toBe("/my-skills");
 });
+
+const externalDocument: PreviewDocument = {
+  id: "external-guide",
+  path: "/tmp/external/guide.md",
+  title: "guide.md",
+  kind: "markdown",
+  content: "# External guide",
+  revision: "revision",
+};
+
+it.each(["/tmp/external/guide.md", "~/notes/guide.md"])(
+  "opens the explicitly submitted external path %s on Enter",
+  async (path) => {
+    vi.mocked(previewApi.openDocument).mockResolvedValue(externalDocument);
+    await render();
+    await query(path);
+    expect(previewApi.openDocument).not.toHaveBeenCalled();
+    expect(options()[0].textContent).toContain(path);
+    await key("Enter");
+    expect(previewApi.openDocument).toHaveBeenCalledWith(path);
+    expect(queuePreviewDocument).toHaveBeenCalledWith(externalDocument);
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+  },
+);
+
+it("keeps a failed file path and error visible and allows click to retry", async () => {
+  vi.mocked(previewApi.openDocument).mockRejectedValueOnce({
+    kind: "io",
+    message: "File not found",
+  });
+  await render();
+  await query(externalDocument.path!);
+  await key("Enter");
+  expect(container.querySelector("input")?.value).toBe(externalDocument.path);
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+    "File not found",
+  );
+  expect(queuePreviewDocument).not.toHaveBeenCalled();
+  vi.mocked(previewApi.openDocument).mockResolvedValueOnce(externalDocument);
+  await act(async () => options()[0].click());
+  expect(queuePreviewDocument).toHaveBeenCalledWith(externalDocument);
+});
+
+it.each(["change path", "close"])(
+  "discards a late file response after %s and prevents duplicate submissions",
+  async (action) => {
+    let resolve!: (value: PreviewDocument) => void;
+    vi.mocked(previewApi.openDocument).mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    await render();
+    await query(externalDocument.path!);
+    await key("Enter");
+    await key("Enter");
+    expect(previewApi.openDocument).toHaveBeenCalledTimes(1);
+    if (action === "close") await key("Escape");
+    else await query("shared");
+    await act(async () => resolve(externalDocument));
+    expect(queuePreviewDocument).not.toHaveBeenCalled();
+    expect(previewApi.closeDocument).toHaveBeenCalledWith(externalDocument.id);
+  },
+);

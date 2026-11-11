@@ -677,7 +677,10 @@
     "searchCommands": "搜索与命令"
   },
   "commandPalette": {
-    "placeholder": "跳转到项目、技能组、技能或操作…",
+    "files": "文件",
+    "openFile": "打开文件",
+    "openFileFailed": "无法打开文件，请检查路径与访问权限后重试。{{error}}",
+    "placeholder": "跳转到项目、技能组、技能、操作或输入文件路径…",
     "empty": "没有匹配项，换个关键词试试。",
     "skills": "技能",
     "skillGroups": "技能组",

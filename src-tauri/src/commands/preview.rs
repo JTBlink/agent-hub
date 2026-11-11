@@ -287,6 +287,14 @@ pub async fn preview_request(
     .await?
 }
 #[tauri::command]
+pub async fn preview_open_document(
+    preview: State<'_, Arc<Preview>>,
+    path: String,
+) -> Result<preview::OpenedDocument, AppError> {
+    let preview = preview.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || preview.open_document_path(&path)).await?
+}
+#[tauri::command]
 pub async fn preview_pick_document(
     preview: State<'_, Arc<Preview>>,
 ) -> Result<Option<preview::OpenedDocument>, AppError> {

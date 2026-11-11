@@ -11,7 +11,9 @@ import {
   Home,
   ArrowRight,
   CalendarClock,
+  FileText,
 } from "lucide-react";
+import { usePaletteFile } from "../hooks/usePaletteFile";
 import { useApp } from "../context/AppContext";
 import { getSkillGroupIconOption } from "../lib/skillGroupIcons";
 import {
@@ -20,7 +22,7 @@ import {
 } from "../lib/skillGroupDisplay";
 import { cn } from "../utils";
 
-type ItemKind = "skill" | "skillGroup" | "project" | "action";
+type ItemKind = "skill" | "skillGroup" | "project" | "action" | "file";
 
 interface PaletteItem {
   id: string;
@@ -66,6 +68,8 @@ export function CommandPalette({
     setQuery("");
     setActiveIndex(0);
   }, [onOpenChange]);
+
+  const file = usePaletteFile(query, open, close);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -247,7 +251,32 @@ export function CommandPalette({
     navigate,
     t,
   ]);
-  const items = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const visibleGroups: PaletteGroup[] = file.path
+    ? [
+        {
+          kind: "file",
+          label: t("commandPalette.files"),
+          items: [
+            {
+              id: "file:path",
+              kind: "file",
+              label: t("commandPalette.openFile"),
+              sublabel: file.path,
+              icon: <FileText className="h-3.5 w-3.5" />,
+              run: () => void file.openFile(),
+            },
+          ],
+        },
+        ...groups,
+      ]
+    : groups;
+  const items = visibleGroups.flatMap((group) => group.items);
+
+  const runItem = (item: PaletteItem) => {
+    if (file.busy) return;
+    item.run();
+    if (item.kind !== "file") close();
+  };
 
   useEffect(() => {
     if (activeIndex >= items.length) setActiveIndex(0);
@@ -278,16 +307,13 @@ export function CommandPalette({
     } else if (e.key === "Enter") {
       e.preventDefault();
       const item = items[activeIndex];
-      if (item) {
-        item.run();
-        close();
-      }
+      if (item) runItem(item);
     }
   };
 
   // Build render order by group, with flat index for keyboard nav
   let flatIndex = 0;
-  const rendered = groups
+  const rendered = visibleGroups
     .map((g) => {
       const groupItems = g.items;
       if (groupItems.length === 0) return null;
@@ -306,10 +332,8 @@ export function CommandPalette({
                 role="option"
                 aria-selected={active}
                 onMouseEnter={() => setActiveIndex(idx)}
-                onClick={() => {
-                  item.run();
-                  close();
-                }}
+                aria-disabled={file.busy}
+                onClick={() => runItem(item)}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 px-4 py-2 text-sm",
                   active ? "bg-surface-hover" : "hover:bg-surface-hover/60",
@@ -329,7 +353,10 @@ export function CommandPalette({
                     {item.label}
                   </div>
                   {item.sublabel && (
-                    <div className="truncate text-xs text-muted">
+                    <div
+                      className="truncate text-xs text-muted"
+                      title={item.sublabel}
+                    >
                       {item.sublabel}
                     </div>
                   )}
@@ -393,6 +420,17 @@ export function CommandPalette({
             rendered
           )}
         </div>
+
+        {file.busy && (
+          <p role="status" className="px-4 py-2 text-sm text-muted">
+            {t("common.loading")}
+          </p>
+        )}
+        {file.error && (
+          <p role="alert" className="break-words px-4 py-2 text-sm text-danger">
+            {t("commandPalette.openFileFailed", { error: file.error })}
+          </p>
+        )}
 
         <div className="flex shrink-0 items-center gap-3 border-t border-border-subtle bg-bg-secondary px-4 py-2 text-xs text-muted">
           <span className="flex items-center gap-1">

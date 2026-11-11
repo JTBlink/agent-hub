@@ -677,7 +677,10 @@
     "searchCommands": "Search and commands"
   },
   "commandPalette": {
-    "placeholder": "Jump to project, skill group, skill, action…",
+    "files": "Files",
+    "openFile": "Open file",
+    "openFileFailed": "Could not open the file. Check the path and permissions, then try again. {{error}}",
+    "placeholder": "Go to a project, skill group, skill, action, or enter a file path…",
     "empty": "No matches. Try a different query.",
     "skills": "Skills",
     "skillGroups": "Skill Groups",

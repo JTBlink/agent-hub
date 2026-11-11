@@ -1,5 +1,46 @@
 use super::*;
 use base64::{engine::general_purpose::STANDARD, Engine};
+
+#[test]
+fn explicit_file_paths_open_without_a_registered_project_and_retain_document_guards() {
+    let root = tempfile::tempdir().unwrap();
+    let path = root.path().join("external guide.md");
+    std::fs::write(&path, "# Outside any project").unwrap();
+    let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
+    let preview = Preview {
+        documents: browsers.documents.clone(),
+        browsers,
+        automation: Mutex::new(None),
+        packets: packets::Packets::new(root.path().join("deliveries")),
+        assets: Mutex::new(None),
+        cookie_imports: cookies::Imports::shared(),
+        closed: AtomicBool::new(false),
+    };
+    let opened = preview.open_document_path(path.to_str().unwrap()).unwrap();
+    assert_eq!(opened.document.path, path.canonicalize().unwrap());
+    assert_eq!(opened.document.content, "# Outside any project");
+    assert_eq!(opened.document.kind, "markdown");
+    assert!(preview.documents.read(&opened.document.id).is_ok());
+    for input in ["guide.md", "../guide.md", ""] {
+        assert!(matches!(
+            preview.open_document_path(input),
+            Err(AppError {
+                kind: super::super::error::ErrorKind::InvalidInput,
+                ..
+            })
+        ));
+    }
+    assert!(preview
+        .open_document_path(root.path().to_str().unwrap())
+        .is_err());
+    assert!(preview
+        .open_document_path(root.path().join("missing.md").to_str().unwrap())
+        .is_err());
+    preview.documents.close(&opened.document.id);
+    assert!(preview.documents.read(&opened.document.id).is_err());
+    preview.clear();
+}
+
 #[test]
 #[ignore = "requires installed Chromium; verifies document viewport clipping and full capture"]
 fn rendered_document_capture_preserves_the_requested_region() {

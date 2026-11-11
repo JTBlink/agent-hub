@@ -677,7 +677,10 @@
     "searchCommands": "搜尋與命令"
   },
   "commandPalette": {
-    "placeholder": "跳轉到專案、技能組、技能或操作…",
+    "files": "檔案",
+    "openFile": "開啟檔案",
+    "openFileFailed": "無法開啟檔案，請檢查路徑與存取權限後重試。{{error}}",
+    "placeholder": "跳轉至專案、技能組、技能、操作或輸入檔案路徑…",
     "empty": "沒有符合項目，換個關鍵字試試。",
     "skills": "技能",
     "skillGroups": "技能組",

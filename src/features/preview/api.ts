@@ -246,6 +246,8 @@ export const previewApi = {
   openDownload: (profile: string, id: string, reveal = false) =>
     invoke<void>("preview_download_file", { profile, id, reveal }),
   pickDocument: () => invoke<PreviewDocument | null>("preview_pick_document"),
+  openDocument: (path: string) =>
+    invoke<PreviewDocument>("preview_open_document", { path }),
   resourceLink: (id: string, href: string) =>
     request<string>({ kind: "resource_link", id, href }),
   openLink: (id: string, href: string) =>
