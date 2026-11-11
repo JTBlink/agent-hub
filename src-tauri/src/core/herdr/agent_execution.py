@@ -9,6 +9,70 @@ import subprocess
 import time
 import uuid
 import json
+import re
+
+
+def prompt_digest(text):
+    # Terminal wrapping and NBSP change whitespace, but never the input's words.
+    return hashlib.sha256(" ".join(text.split()).encode()).hexdigest()
+
+
+def confirm_pending_input(invoke, state):
+    """Submit a verified Claude draft once; never replay its text or guess at input."""
+    delivery = state.get("delivery", {})
+    if not delivery.get("digest") or delivery.get("enter_attempted"):
+        return False
+    target = state["pane"]
+    agent = invoke(["agent", "get", target])["agent"]
+    if (agent.get("agent") != "claude" or agent.get("agent_status") != "idle" or not agent.get("agent_session")
+            or (agent.get("completion_seq") or 0) > state.get("completion_seq", 0)):
+        return False
+    verify_agent_identity(agent, state, Path(state["cwd"]))
+    text = invoke(["agent", "read", target, "--source", "visible"], text_output=True)
+    blocks = re.split(r"(?m)^[─━]{8,}[^\S\n]*$", text)
+    if len(blocks) < 3:
+        return False
+    draft = blocks[-2].strip()
+    if not draft.startswith("❯") or prompt_digest(draft[1:]) != delivery["digest"]:
+        return False
+    current = invoke(["agent", "get", target])["agent"]
+    verify_agent_identity(current, state, Path(state["cwd"]))
+    if (current.get("agent") != "claude" or current.get("agent_status") != "idle" or current.get("agent_session") != agent.get("agent_session")
+            or current.get("revision") != agent.get("revision")
+            or (current.get("completion_seq") or 0) > state.get("completion_seq", 0)):
+        return False
+    # Persist before the key: an uncertain reply cannot authorize a second Enter.
+    delivery["enter_attempted"] = True
+    save_state(state)
+    invoke(["agent", "send-keys", target, "enter"])
+    print("已核对原输入框完整消息，补交一次确认键；没有重发提示词，继续核验 Agent 活动。", flush=True)
+    return True
+
+
+def submit_prompt(invoke, state, prompt):
+    state["delivery"] = {"digest": prompt_digest(prompt), "enter_attempted": False}
+    save_state(state)
+    try:
+        invoke(["agent", "prompt", state.get("agent_name") or state["pane"], prompt,
+                "--wait", "--until", "working", "--until", "blocked", "--until", "done", "--timeout", "7000"])
+        return True
+    except HerdrError as error:
+        if error.code not in ("agent_prompt_stalled", "timeout"):
+            raise
+        if confirm_pending_input(invoke, state):
+            # The key receipt alone is not delivery evidence.
+            deadline = time.monotonic() + 7
+            while time.monotonic() < deadline:
+                agent = invoke(["agent", "get", state["pane"]])["agent"]
+                verify_agent_identity(agent, state, Path(state["cwd"]))
+                if agent.get("agent_status") in ("working", "blocked") or (
+                        (agent.get("completion_seq") or 0) > state.get("completion_seq", 0)):
+                    return True
+                time.sleep(1)
+        if error.code == "timeout":
+            raise
+        print("提示词提交尚未确认，保留原会话继续观察；不会重复投递。", flush=True)
+        return False
 
 def previous_agent(invoke, previous, session, cwd):
     if not previous:
@@ -135,11 +199,8 @@ def continue_existing(invoke, previous, agent, cwd, prompt, continuation_id):
     state = {**previous, "phase": "submitted", "completion_seq": agent.get("completion_seq") or 0,
              "continuation": {"id": continuation_id, "status": "uncertain"}}
     save_state(state)
-    try:
-        invoke(["agent", "prompt", previous.get("agent_name") or previous["pane"], prompt])
-    except HerdrError as error:
-        if error.code != "agent_prompt_stalled":
-            raise
+    if not submit_prompt(invoke, state, prompt):
+        return 1
     state["continuation"]["status"] = "submitted"
     save_state(state)
     print("续作已投递到原 Agent，会话和业务身份保持不变；未创建新 Agent。", flush=True)
@@ -227,12 +288,7 @@ def run(binary, config, session, kind, extra, prompt, cwd, bridge, title, wait_t
     state["completion_seq"] = started.get("agent", {}).get("completion_seq") or 0
     save_state(state)
     try:
-        try:
-            invoke(["agent", "prompt", name, prompt])
-        except HerdrError as error:
-            if error.code != "agent_prompt_stalled":
-                raise
-            print("Herdr 已投递提示词，正在等待 Agent 状态更新；不会重复投递。", flush=True)
+        submit_prompt(invoke, state, prompt)
         result = wait_for_result(invoke, name, state["completion_seq"], wait_timeout_seconds)
     except (HerdrError, subprocess.TimeoutExpired):
         state["phase"] = "attention"

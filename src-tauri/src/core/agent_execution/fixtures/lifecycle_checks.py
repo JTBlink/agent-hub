@@ -114,7 +114,7 @@ class HerdrChecks(unittest.TestCase):
                             payload['result']['agent']['completion_seq'] = previous_completion
                     else:
                         current = next(observed)
-                        payload = {'result': {'agent': {'agent_status': current, 'completion_seq': 2 if current == 'done' else 1}}}
+                        payload = {'result': {'agent': {'agent_status': current, 'completion_seq': 2 if current == 'done' else 1, 'name': json.loads(STATE.read_text()).get('agent_name', OLD_NAME), 'cwd': str(PROJECT), 'agent': 'codex'}}}
                 elif command[:2] == ['pane', 'get']:
                     if not pane_exists:
                         return error(args, 'pane_not_found')
@@ -403,13 +403,62 @@ class HerdrChecks(unittest.TestCase):
         self.assertIn('状态识别中', self.output.getvalue())
         prompts = [args for args, _ in self.calls if 'prompt' in args]
         self.assertEqual(len(prompts), 1)
-        self.assertNotIn('--wait', prompts[0])
+        self.assertIn('--wait', prompts[0])
         self.assertEqual(json.loads(STATE.read_text())['phase'], 'completed')
 
     def test_legacy_five_second_stall_continues_observing_the_same_agent(self):
         self.assertEqual(self.execute(failure='agent_prompt_stalled', progress=['unknown', 'working', 'done']), 0)
         self.assertEqual(sum('prompt' in args for args, _ in self.calls), 1)
         self.assertIn('不会重复投递', self.output.getvalue())
+
+    def test_stalled_claude_draft_is_confirmed_once_only_when_the_full_input_matches(self):
+        class DeliveryError(RuntimeError):
+            def __init__(self, message, code='unknown'):
+                super().__init__(message)
+                self.code = code
+        prompt = 'Call the review skill\nComplete the assigned action'
+        for variant in ['matching', 'other_input', 'word_boundary', 'blocked', 'missing_session', 'different_session', 'uncertain_key']:
+            with self.subTest(variant=variant):
+                saved, calls = [], []
+                state = dict(pane='w-test:p-test', agent_name=OLD_NAME, cwd=str(PROJECT), completion_seq=1)
+                backend = runpy.run_path(str(SCRIPT.parent / 'herdr_backend.py'), init_globals={
+                    'HERE': HERE, 'HerdrError': DeliveryError,
+                    'save_state': lambda value: saved.append(json.loads(json.dumps(value))),
+                })
+                idle = dict(agent='claude', agent_status='idle', name=OLD_NAME, cwd=str(PROJECT),
+                            completion_seq=1, agent_session=dict(value='original'))
+                lookups = 0
+
+                def invoke(args, **options):
+                    nonlocal lookups
+                    calls.append(args)
+                    if args[1] == 'prompt':
+                        raise DeliveryError('not started', 'agent_prompt_stalled')
+                    if args[1] == 'get':
+                        lookups += 1
+                        current = dict(idle)
+                        if variant == 'blocked': current['agent_status'] = 'blocked'
+                        if variant == 'missing_session': current.pop('agent_session')
+                        if variant == 'different_session' and lookups > 1: current['agent_session'] = dict(value='replaced')
+                        if lookups > 2: current['agent_status'] = 'working'
+                        return dict(agent=current)
+                    if args[1] == 'read':
+                        draft = {'other_input': 'User draft', 'word_boundary': prompt.replace('Call the', 'Callthe')}.get(variant, prompt)
+                        return 'History\n──────────────\n❯\u00a0' + draft + '\n──────────────\nFooter'
+                    if args[1] == 'send-keys':
+                        self.assertTrue(saved[-1]['delivery']['enter_attempted'])
+                        if variant == 'uncertain_key': raise DeliveryError('key outcome uncertain', 'timeout')
+                        return {}
+                    raise AssertionError(args)
+
+                if variant == 'uncertain_key':
+                    with self.assertRaises(DeliveryError): backend['submit_prompt'](invoke, state, prompt)
+                else:
+                    self.assertEqual(backend['submit_prompt'](invoke, state, prompt), variant == 'matching')
+                self.assertEqual(sum(args[1] == 'prompt' for args in calls), 1)
+                self.assertEqual(sum(args[1] == 'send-keys' for args in calls), int(variant in ('matching', 'uncertain_key')))
+                if variant in ('matching', 'uncertain_key'):
+                    self.assertFalse(backend['confirm_pending_input'](invoke, state))
 
     def test_initial_idle_is_not_mistaken_for_task_completion(self):
         self.assertEqual(self.execute(progress=['idle', 'unknown', 'working', 'done']), 0)
@@ -471,14 +520,14 @@ class HerdrChecks(unittest.TestCase):
                 dict(id='repair',variables=[dict(name='limit',value='10'),dict(name='literal',value='$(touch ignored)')])
             ])))
             self.assertEqual(self.execute(), 0)
-            prompt = next(args[-1] for args, _ in self.calls if 'prompt' in args)
+            prompt = next(args[args.index('prompt') + 2] for args, _ in self.calls if 'prompt' in args)
             self.assertIn('"limit": "10"', prompt)
             self.assertNotIn('"limit": "1"', prompt)
             self.assertIn('$(touch ignored)', prompt)
             self.save_previous('completed')
             self.calls = []
             self.assertEqual(self.execute(previous='done', reconcile_only=True, continuation_prompt='Continue the original task'), 0)
-            continued = next(args[-1] for args, _ in self.calls if 'prompt' in args)
+            continued = next(args[args.index('prompt') + 2] for args, _ in self.calls if 'prompt' in args)
             self.assertIn('"limit": "10"', continued)
         finally:
             if original is None: path.unlink(missing_ok=True)
@@ -494,13 +543,13 @@ class HerdrChecks(unittest.TestCase):
         try:
             path.write_text(manifest)
             self.assertEqual(self.execute(config=config), 0)
-            prompt = next(args[-1] for args, _ in self.calls if 'prompt' in args)
+            prompt = next(args[args.index('prompt') + 2] for args, _ in self.calls if 'prompt' in args)
             self.assertEqual(prompt, ORIGINAL.strip())
             self.save_previous('completed')
             self.calls = []
             self.assertEqual(self.execute(previous='done', reconcile_only=True,
                                           continuation_prompt='Continue the original task'), 0)
-            self.assertEqual(next(args[-1] for args, _ in self.calls if 'prompt' in args),
+            self.assertEqual(next(args[args.index('prompt') + 2] for args, _ in self.calls if 'prompt' in args),
                              'Continue the original task')
             self.assertEqual(path.read_text(), manifest)
             self.calls = []
