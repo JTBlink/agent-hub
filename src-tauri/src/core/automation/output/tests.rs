@@ -1,4 +1,29 @@
 use super::*;
+
+#[test]
+fn external_task_ids_do_not_depend_on_the_managed_registry() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("tasks.json"), "damaged registry").unwrap();
+    assert!(native_task_at(dir.path(), "hermes:default:job")
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn local_output_remains_readable_while_an_automation_write_lock_is_held() {
+    let case = super::super::local_data::tests::Fixture::new();
+    store::save(&case.state, vec![case.record.clone()]).unwrap();
+    let directory = native::directory(&case.state, &case.record);
+    fs::write(directory.join("output.log"), "saved evidence").unwrap();
+    let _writer = store::Lock::acquire(&case.state).unwrap();
+    let (record, directory) = native_task_at(&case.state, &case.record.id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(record.id, case.record.id);
+    assert_eq!(latest_native(&directory).unwrap().content, "saved evidence");
+    assert!(native_task_at(&case.state, "missing").unwrap().is_none());
+}
+
 #[test]
 fn reads_bounded_tail_and_powershell_utf16_output() {
     let dir = tempfile::tempdir().unwrap();

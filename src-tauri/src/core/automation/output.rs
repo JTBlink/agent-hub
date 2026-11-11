@@ -60,25 +60,37 @@ pub(super) fn hermes_outputs(root: &Path, id: &str) -> Result<Vec<PathBuf>, Stri
 fn latest_hermes(root: &Path, id: &str) -> Result<Option<PathBuf>, String> {
     Ok(hermes_outputs(root, id)?.into_iter().next())
 }
-pub(super) fn native_directory(task: &super::AutomationTask) -> Result<Option<PathBuf>, String> {
-    let root = store::root();
-    let record = store::load(&root)?
+/// Read local ownership without enumerating schedulers or unrelated providers.
+pub(super) fn native_task_at(
+    root: &Path,
+    id: &str,
+) -> Result<Option<(super::ManagedAutomation, PathBuf)>, String> {
+    if !super::definition::valid_id(id) {
+        return Ok(None);
+    }
+    let record = store::load(root)?
         .into_iter()
-        .find(|r| r.id == task.id && r.draft.provider == Provider::System);
+        .find(|r| r.id == id && r.draft.provider == Provider::System);
     let Some(record) = record else {
         return Ok(None);
     };
-    managed::verify(&root, &record)?;
-    let dir = native::directory(&root, &record);
+    managed::verify(root, &record)?;
+    let dir = native::directory(root, &record);
     if super::package::directory(&record).is_some() {
-        super::package::checked(&root, &record)?;
-        return Ok(Some(dir));
+        super::package::checked(root, &record)?;
+    } else {
+        checked(root, &dir)?;
     }
-    checked(&root, &dir)?;
-    Ok(Some(dir))
+    Ok(Some((record, dir)))
+}
+pub(super) fn native_directory(task: &super::AutomationTask) -> Result<Option<PathBuf>, String> {
+    Ok(native_task_at(&store::root(), &task.id)?.map(|(_, dir)| dir))
 }
 /// Resolve exact task ownership and scope; callers cannot supply a log path.
 pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
+    if let Some((_, dir)) = native_task_at(&store::root(), id)? {
+        return latest_native(&dir);
+    }
     let task = managed::find(id)?;
     let (root, path, kind) = if task.source == "hermes" {
         let root = hermes_manage::root_for(&task)?;
@@ -89,9 +101,7 @@ pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
         (root, path, "hermes")
     } else {
         if let Some(dir) = native_directory(&task)? {
-            let path = dir.join("output.log");
-            checked(&dir, &path)?;
-            (dir, Some(path), "system")
+            return latest_native(&dir);
         } else {
             (store::root(), None, "unsupported")
         }
@@ -117,6 +127,21 @@ pub fn output(id: &str) -> Result<AutomationRunOutput, String> {
             kind: kind.into(),
         }),
     }
+}
+fn latest_native(dir: &Path) -> Result<AutomationRunOutput, String> {
+    let path = dir.join("output.log");
+    checked(dir, &path)?;
+    if !path.try_exists().map_err(|e| e.to_string())? {
+        return Ok(AutomationRunOutput {
+            content: String::new(),
+            truncated: false,
+            available: false,
+            kind: "system".into(),
+        });
+    }
+    let mut result = read_output(dir, &path)?;
+    result.kind = "system".into();
+    Ok(result)
 }
 pub(super) fn read_output(root: &Path, path: &Path) -> Result<AutomationRunOutput, String> {
     checked(root, path)?;

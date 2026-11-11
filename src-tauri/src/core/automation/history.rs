@@ -1,5 +1,5 @@
 //! Local-only run evidence. Neither reads nor runtime writes enqueue Git backups.
-use super::{hermes_manage, managed, output};
+use super::{hermes_manage, managed, native, output, store};
 use serde::Serialize;
 use std::{fs, io::Read, path::Path};
 
@@ -44,12 +44,7 @@ fn marker(root: &Path, path: &Path) -> Result<Option<String>, String> {
         .map_err(|e| e.to_string())?;
     Ok(Some(value.trim().into()))
 }
-fn native_run(
-    root: &Path,
-    path: &Path,
-    id: &str,
-    running: bool,
-) -> Result<Option<AutomationRun>, String> {
+fn native_run(root: &Path, path: &Path, id: &str) -> Result<Option<AutomationRun>, String> {
     let Some(started) = marker(root, &path.join("started"))? else {
         return Ok(None);
     };
@@ -62,7 +57,6 @@ fn native_run(
         status: match exit_code {
             Some(0) => "completed",
             Some(_) => "error",
-            None if running => "running",
             None => "unknown",
         }
         .into(),
@@ -70,7 +64,7 @@ fn native_run(
         has_output: path.join("output.log").is_file(),
     }))
 }
-fn native_history(dir: &Path, running: bool) -> Result<AutomationHistory, String> {
+fn native_history(dir: &Path, running: impl FnOnce() -> bool) -> Result<AutomationHistory, String> {
     let current = marker(dir, &dir.join("current-run"))?;
     let directory = dir.join("runs");
     output::checked(dir, &directory)?;
@@ -92,16 +86,14 @@ fn native_history(dir: &Path, running: bool) -> Result<AutomationHistory, String
             };
             output::checked(dir, &path)?;
             if path.is_dir() {
-                if let Some(run) =
-                    native_run(dir, &path, id, running && current.as_deref() == Some(id))?
-                {
+                if let Some(run) = native_run(dir, &path, id)? {
                     runs.push(run);
                 }
             }
         }
     }
     if runs.is_empty() && current.is_none() {
-        if let Some(run) = native_run(dir, dir, "legacy", running)? {
+        if let Some(run) = native_run(dir, dir, "legacy")? {
             runs.push(run);
         }
     }
@@ -113,6 +105,16 @@ fn native_history(dir: &Path, running: bool) -> Result<AutomationHistory, String
     });
     let limited = runs.len() > 100;
     runs.truncate(100);
+    // Finished histories are entirely local. Only the unfinished current run
+    // needs one scheduler check; older unfinished runs remain unknown.
+    if let Some(run) = runs.iter_mut().find(|run| {
+        run.exit_code.is_none()
+            && (current.as_deref() == Some(&run.id) || (current.is_none() && run.id == "legacy"))
+    }) {
+        if running() {
+            run.status = "running".into();
+        }
+    }
     Ok(AutomationHistory {
         runs,
         kind: "executions".into(),
@@ -153,7 +155,7 @@ fn for_task(task: &super::AutomationTask) -> Result<AutomationHistory, String> {
             limited,
         })
     } else if let Some(dir) = output::native_directory(task)? {
-        native_history(&dir, task.status == "running")
+        native_history(&dir, || task.status == "running")
     } else {
         Ok(AutomationHistory {
             runs: vec![],
@@ -163,11 +165,22 @@ fn for_task(task: &super::AutomationTask) -> Result<AutomationHistory, String> {
     }
 }
 pub fn history(id: &str) -> Result<AutomationHistory, String> {
+    if let Some((record, dir)) = output::native_task_at(&store::root(), id)? {
+        return native_history(&dir, || native::is_running(&record));
+    }
     for_task(&managed::find(id)?)
 }
 pub fn run_output(id: &str, run_id: &str) -> Result<output::AutomationRunOutput, String> {
     if !component(run_id) {
         return Err("Invalid execution ID".into());
+    }
+    if let Some((_, root)) = output::native_task_at(&store::root(), id)? {
+        // Output membership is local; reading a saved log needs no live status.
+        let report = native_history(&root, || false)?;
+        if !report.runs.iter().any(|run| run.id == run_id) {
+            return Err("Execution record is no longer available; refresh the history".into());
+        }
+        return native_output(&root, run_id);
     }
     let task = managed::find(id)?;
     let report = for_task(&task)?;
@@ -186,15 +199,21 @@ pub fn run_output(id: &str, run_id: &str) -> Result<output::AutomationRunOutput,
         (root, path, "hermes")
     } else {
         let root = output::native_directory(&task)?.ok_or("Missing task directory")?;
-        let path = if run_id == "legacy" && !root.join("runs/legacy").exists() {
-            root.join("output.log")
-        } else {
-            root.join("runs").join(run_id).join("output.log")
-        };
-        (root, path, "system")
+        return native_output(&root, run_id);
     };
     let mut result = output::read_output(&root, &path)?;
     result.kind = kind.into();
+    Ok(result)
+}
+
+fn native_output(root: &Path, run_id: &str) -> Result<output::AutomationRunOutput, String> {
+    let path = if run_id == "legacy" && !root.join("runs/legacy").exists() {
+        root.join("output.log")
+    } else {
+        root.join("runs").join(run_id).join("output.log")
+    };
+    let mut result = output::read_output(root, &path)?;
+    result.kind = "system".into();
     Ok(result)
 }
 
