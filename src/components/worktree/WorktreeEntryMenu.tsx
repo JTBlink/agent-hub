@@ -168,18 +168,18 @@ export function WorktreeEntryMenu({
     ...(!directory && canPreviewDocument(path)
       ? [
           {
-            key: "browser_preview",
-            label: t("fileTree.previewInBrowser"),
-            icon: <Globe size={14} />,
-            disabled: symlink,
-            onSelect: () => void report(browserPreview.open),
-          },
-          {
             key: "file_preview",
             label: t("fileTree.previewFileDirectly"),
             icon: <FileCode2 size={14} />,
             disabled: symlink,
             onSelect: () => void report(browserPreview.openFile),
+          },
+          {
+            key: "browser_preview",
+            label: t("fileTree.previewInBrowser"),
+            icon: <Globe size={14} />,
+            disabled: symlink,
+            onSelect: () => void report(browserPreview.open),
           },
         ]
       : []),

@@ -38,6 +38,26 @@ pub(super) fn resource_path(relative: &str) -> String {
         .collect::<Vec<_>>()
         .join("/")
 }
+// Explicit selection authorizes hidden ancestors of this document, not unrelated
+// hidden directories or dotfiles referenced by a page. Check canonical paths too.
+fn resource_path_allowed(relative: &Path, selected: &str) -> bool {
+    let parent = Path::new(selected)
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
+    let mut prefix = PathBuf::new();
+    for component in relative.components() {
+        let name = component.as_os_str().to_string_lossy();
+        prefix.push(component.as_os_str());
+        if name.contains(':')
+            || (name.starts_with('.')
+                && !(parent.starts_with(&prefix) && relative.starts_with(parent)))
+        {
+            return false;
+        }
+    }
+    true
+}
+
 fn revision(text: &str) -> String {
     hex::encode(Sha256::digest(text.as_bytes()))
 }
@@ -66,7 +86,7 @@ fn kind(path: &Path) -> Result<&'static str, AppError> {
         .ok_or_else(|| AppError::invalid_input("Unsupported browser preview file type"))
 }
 impl Documents {
-    /// Call only after a native file selection or an authorized project request.
+    /// Call only after native selection, explicit local path submission, or an authorized project request.
     pub fn open(&self, path: &Path) -> Result<Document, AppError> {
         let path = path.canonicalize()?;
         let root = path
@@ -243,19 +263,14 @@ impl Documents {
     pub fn resource(&self, id: &str, relative: &str) -> Result<PathBuf, AppError> {
         let grant = self.grant(id)?;
         super::super::path_guard::ensure_safe_skill_relative_path(relative)?;
-        if relative
-            .split(['/', '\\'])
-            .any(|part| part.starts_with('.') || part.contains(':'))
-        {
+        if !resource_path_allowed(Path::new(relative), &grant.relative) {
             return Err(AppError::invalid_input("Hidden resource is not accessible"));
         }
         let path = grant.root.join(relative).canonicalize()?;
         if !path.starts_with(&grant.root)
-            || path.strip_prefix(&grant.root).is_ok_and(|relative| {
-                relative
-                    .components()
-                    .any(|component| component.as_os_str().to_string_lossy().starts_with('.'))
-            })
+            || path
+                .strip_prefix(&grant.root)
+                .is_ok_and(|relative| !resource_path_allowed(relative, &grant.relative))
             || !path.is_file()
             || std::fs::metadata(&path)?.len() > super::resource_bridge::LIMIT
         {

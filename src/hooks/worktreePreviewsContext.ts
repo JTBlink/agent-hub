@@ -16,7 +16,7 @@ export const WorktreePreviewsContext = createContext<{
     path: string,
     url?: string,
   ) => Promise<void>;
-  close: (id: string) => void;
+  close: (id: string) => boolean | void;
   registerClose: (id: string, guard: () => boolean) => () => void;
 } | null>(null);
 export const useWorktreePreviews = () => useContext(WorktreePreviewsContext);

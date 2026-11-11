@@ -151,3 +151,64 @@ fn returns_full_source_paths_for_open_read_save_and_linked_documents() {
         next.canonicalize().unwrap()
     );
 }
+
+#[test]
+fn previews_selected_documents_in_hidden_directories_without_exposing_other_hidden_paths() {
+    let root = tempfile::tempdir().unwrap();
+    let folder = root.path().join(".scratch/reports");
+    std::fs::create_dir_all(folder.join("assets")).unwrap();
+    std::fs::create_dir_all(root.path().join(".scratch/other")).unwrap();
+    std::fs::write(folder.join("report.html"), "<img src='assets/chart.svg'>").unwrap();
+    std::fs::write(folder.join("next.md"), "# Next").unwrap();
+    std::fs::write(folder.join("assets/chart.svg"), "<svg/>").unwrap();
+    std::fs::write(folder.join(".env"), "secret").unwrap();
+    std::fs::write(root.path().join(".scratch/other/secret.txt"), "secret").unwrap();
+    let documents = Documents::default();
+    let opened = documents
+        .open_at(root.path(), ".scratch/reports/report.html")
+        .unwrap();
+    for relative in [
+        ".scratch/reports/report.html",
+        ".scratch/reports/assets/chart.svg",
+    ] {
+        let response = super::super::resource_bridge::load(&documents, &opened.id, relative, "GET");
+        assert_eq!(response.code, 200, "{relative}");
+    }
+    assert_eq!(
+        documents
+            .resolve_link(&opened.id, "next.md#heading")
+            .unwrap()
+            .relative,
+        ".scratch/reports/next.md"
+    );
+    let linked = documents.open_link(&opened.id, "next.md").unwrap();
+    assert_eq!(linked.content, "# Next");
+    assert_eq!(
+        documents
+            .save(&opened.id, "updated", &opened.revision)
+            .unwrap()
+            .content,
+        "updated"
+    );
+    for relative in [
+        ".scratch/reports/.env",
+        ".scratch/other/secret.txt",
+        "../outside.txt",
+    ] {
+        assert!(
+            documents.resource(&opened.id, relative).is_err(),
+            "{relative}"
+        );
+    }
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(folder.join(".env"), folder.join("visible.txt")).unwrap();
+        assert!(documents
+            .resource(&opened.id, ".scratch/reports/visible.txt")
+            .is_err());
+    }
+    documents.close(&opened.id);
+    assert!(documents
+        .resource(&opened.id, ".scratch/reports/report.html")
+        .is_err());
+}

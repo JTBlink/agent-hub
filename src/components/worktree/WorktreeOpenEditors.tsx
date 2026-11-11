@@ -6,6 +6,7 @@ import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 import { FileTypeIcon } from "../FileTypeIcon";
 import { TabCloseButton } from "../TabCloseButton";
 import { WorktreeFileCloseButton } from "./WorktreeFileCloseButton";
+import { WorktreeEditorMenu } from "./WorktreeEditorMenu";
 import { cn } from "../../utils";
 
 /** Mirror the checkout's existing source and preview tabs, including close guards. */
@@ -92,33 +93,38 @@ export function WorktreeOpenEditors({
       {expanded && (
         <ul className="max-h-40 overflow-auto pb-1">
           {entries.map((entry) => (
-            <li
-              key={entry.id}
-              className={cn(
-                "group flex h-[22px] items-center pr-1 text-[13px]",
-                entry.active
-                  ? "bg-surface-active text-primary"
-                  : "text-primary hover:bg-surface-hover",
-              )}
-            >
-              <button
-                type="button"
-                title={entry.path}
-                aria-pressed={entry.active}
-                onClick={entry.select}
-                className="flex h-full min-w-0 flex-1 items-center gap-1.5 pl-7 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+            <li key={entry.id}>
+              <WorktreeEditorMenu
+                projectId={projectId}
+                worktreePath={worktreePath}
+                path={entry.path}
+                previewId={entry.preview ? entry.id : undefined}
+                className={cn(
+                  "group flex h-[22px] items-center pr-1 text-[13px]",
+                  entry.active
+                    ? "bg-surface-active text-primary"
+                    : "text-primary hover:bg-surface-hover",
+                )}
               >
-                <FileTypeIcon path={entry.path} />
-                <span
-                  className={cn("shrink truncate", entry.preview && "italic")}
+                <button
+                  type="button"
+                  title={entry.path}
+                  aria-pressed={entry.active}
+                  onClick={entry.select}
+                  className="flex h-full min-w-0 flex-1 items-center gap-1.5 pl-7 text-left focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
                 >
-                  {entry.path.split("/").at(-1)}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-xs text-muted">
-                  {entry.path.split("/").slice(0, -1).join("/")}
-                </span>
-              </button>
-              {entry.close}
+                  <FileTypeIcon path={entry.path} />
+                  <span
+                    className={cn("shrink truncate", entry.preview && "italic")}
+                  >
+                    {entry.path.split("/").at(-1)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-muted">
+                    {entry.path.split("/").slice(0, -1).join("/")}
+                  </span>
+                </button>
+                {entry.close}
+              </WorktreeEditorMenu>
             </li>
           ))}
         </ul>

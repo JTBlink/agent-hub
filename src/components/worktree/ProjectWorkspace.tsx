@@ -1,3 +1,4 @@
+import { WorktreeEditorMenu } from "./WorktreeEditorMenu";
 import { NewMarkdownDialog } from "./NewMarkdownDialog";
 import { useWorktreePreviews } from "../../hooks/worktreePreviewsContext";
 import { TabCloseButton } from "../TabCloseButton";
@@ -243,7 +244,10 @@ export function ProjectWorkspace({
               <>
                 <div ref={setGitTabsContainer} className="contents" />
                 {route && file && path && (
-                  <div
+                  <WorktreeEditorMenu
+                    projectId={route.projectId}
+                    worktreePath={path}
+                    path={file.path}
                     className={cn(
                       "flex h-full min-w-0 items-center border-b-2",
                       file.shown && !pageShown && !skillsShown && !previewShown
@@ -290,46 +294,52 @@ export function ProjectWorkspace({
                         })
                       }
                     />
-                  </div>
+                  </WorktreeEditorMenu>
                 )}
-                {previewTabs.map((tab) => (
-                  <div
-                    key={tab.document.id}
-                    className={cn(
-                      "flex h-full shrink-0 items-center border-b-2",
-                      previewShown &&
-                        previews?.selected === tab.document.id &&
-                        !pageShown &&
-                        !skillsShown
-                        ? "border-accent text-primary"
-                        : "border-transparent text-muted",
-                    )}
-                  >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={
-                        previews?.selected === tab.document.id &&
-                        !pageShown &&
-                        !skillsShown
-                      }
-                      onClick={() => selectPreview(tab.document.id)}
-                      title={tab.path}
-                      className="flex h-full max-w-64 items-center gap-1.5 px-3 text-xs focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                {project &&
+                  path &&
+                  previewTabs.map((tab) => (
+                    <WorktreeEditorMenu
+                      projectId={project.id}
+                      worktreePath={path}
+                      path={tab.path}
+                      previewId={tab.document.id}
+                      key={tab.document.id}
+                      className={cn(
+                        "flex h-full shrink-0 items-center border-b-2",
+                        previewShown &&
+                          previews?.selected === tab.document.id &&
+                          !pageShown &&
+                          !skillsShown
+                          ? "border-accent text-primary"
+                          : "border-transparent text-muted",
+                      )}
                     >
-                      <Eye size={13} className="shrink-0" />
-                      <span className="truncate">
-                        {tab.document.title} · {t("fileReader.preview")}
-                      </span>
-                    </button>
-                    <TabCloseButton
-                      aria-label={t("preview.closeTab", {
-                        title: tab.document.title,
-                      })}
-                      onClick={() => previews?.close(tab.document.id)}
-                    />
-                  </div>
-                ))}
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={
+                          previews?.selected === tab.document.id &&
+                          !pageShown &&
+                          !skillsShown
+                        }
+                        onClick={() => selectPreview(tab.document.id)}
+                        title={tab.path}
+                        className="flex h-full max-w-64 items-center gap-1.5 px-3 text-xs focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                      >
+                        <Eye size={13} className="shrink-0" />
+                        <span className="truncate">
+                          {tab.document.title} · {t("fileReader.preview")}
+                        </span>
+                      </button>
+                      <TabCloseButton
+                        aria-label={t("preview.closeTab", {
+                          title: tab.document.title,
+                        })}
+                        onClick={() => previews?.close(tab.document.id)}
+                      />
+                    </WorktreeEditorMenu>
+                  ))}
               </>
             }
             toolbar={

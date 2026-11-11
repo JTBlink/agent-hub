@@ -49,24 +49,11 @@ export function useWorktreeDocument(
   path: string,
 ) {
   const key = JSON.stringify([projectId, worktreePath, path]);
-  const document = useSyncExternalStore(
-    subscribe,
-    () => documents.get(key) ?? empty,
+  const document = useWorktreeDocumentSnapshot(projectId, worktreePath, path);
+  const reload = useCallback(
+    () => reloadWorktreeDocument(projectId, worktreePath, path),
+    [projectId, worktreePath, path],
   );
-  const reload = useCallback(async () => {
-    if (pending.has(key)) return;
-    pending.add(key);
-    publish(key, { loading: true, error: "" });
-    try {
-      const content = await readWorktreeFile(projectId, worktreePath, path);
-      publish(key, { original: content, draft: content });
-    } catch (cause) {
-      publish(key, { error: getErrorMessage(cause, i18n.t("common.error")) });
-    } finally {
-      pending.delete(key);
-      publish(key, { loading: false });
-    }
-  }, [key, projectId, worktreePath, path]);
   useEffect(() => {
     const previous = documents.get(key);
     if (!previous || (!previous.saving && previous.original === previous.draft))
@@ -94,6 +81,42 @@ export function useWorktreeDocument(
       if (!documents.get(key)?.saving) publish(key, { draft });
     },
   };
+}
+
+/** Observe an open editor without starting another file read. */
+export function useWorktreeDocumentSnapshot(
+  projectId: string,
+  worktreePath: string,
+  path: string,
+) {
+  const key = JSON.stringify([projectId, worktreePath, path]);
+  const document = useSyncExternalStore(
+    subscribe,
+    () => documents.get(key) ?? empty,
+  );
+  return { ...document, dirty: document.draft !== document.original };
+}
+
+export async function reloadWorktreeDocument(
+  projectId: string,
+  worktreePath: string,
+  path: string,
+): Promise<boolean> {
+  const key = JSON.stringify([projectId, worktreePath, path]);
+  if (pending.has(key) || documents.get(key)?.saving) return false;
+  pending.add(key);
+  publish(key, { loading: true, error: "" });
+  try {
+    const content = await readWorktreeFile(projectId, worktreePath, path);
+    publish(key, { original: content, draft: content });
+    return true;
+  } catch (cause) {
+    publish(key, { error: getErrorMessage(cause, i18n.t("common.error")) });
+    return false;
+  } finally {
+    pending.delete(key);
+    publish(key, { loading: false });
+  }
 }
 
 export async function saveWorktreeDocument(key: string): Promise<boolean> {

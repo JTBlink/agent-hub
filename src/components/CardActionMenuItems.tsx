@@ -168,7 +168,12 @@ function CardActionMenuItem({
             )}
           </span>
         )}
-        <span className="min-w-0 truncate">{action.label}</span>
+        <span className="min-w-0 flex-1 truncate">{action.label}</span>
+        {action.shortcut && (
+          <span aria-hidden="true" className="ml-4 shrink-0 text-xs text-muted">
+            {action.shortcut}
+          </span>
+        )}
         {action.submenu && (
           <ChevronRight size={14} className="ml-auto shrink-0" />
         )}

@@ -12,6 +12,7 @@ import { WorktreeOpenEditors } from "./WorktreeOpenEditors";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+vi.mock("../../i18n", () => ({ default: { t: (key: string) => key } }));
 vi.mock("./WorktreeFileCloseButton", () => ({
   WorktreeFileCloseButton: ({ onClose }: { onClose: () => void }) => (
     <button aria-label="close source" onClick={onClose} />

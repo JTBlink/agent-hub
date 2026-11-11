@@ -2554,6 +2554,13 @@
     }
   },
   "worktree": {
+    "editorActions": "檔案操作",
+    "revertFile": "還原檔案",
+    "revertFileMessage": "放棄「{{path}}」的未儲存變更，並重新讀取磁碟內容？",
+    "revertFileFailed": "還原失敗，未儲存的變更已保留，請重試。",
+    "closeEditor": "關閉",
+    "closeOtherEditors": "關閉其他",
+    "closeAllEditors": "全部關閉",
     "openEditors": "開啟的編輯器",
     "gitIgnored": "已被 Git 忽略",
     "missingDirectory": {

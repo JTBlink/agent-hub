@@ -381,6 +381,10 @@ it("omits browser preview for directories and other files and disables links", a
   }
   await render("link.md", false, true);
   await open();
+  const labels = menuItems().map((item) => item.textContent);
+  expect(labels.indexOf("fileTree.previewFileDirectly")).toBeLessThan(
+    labels.indexOf("fileTree.previewInBrowser"),
+  );
   expect(
     menuItems().find((item) => item.textContent === "fileTree.previewInBrowser")
       ?.disabled,

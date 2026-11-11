@@ -83,7 +83,7 @@ export function WorktreePreviewsProvider({
   const close = (id: string) => {
     if (guards.current.get(id)?.() === false) {
       select(id);
-      return;
+      return false;
     }
     guards.current.delete(id);
     const closing = owned.current.find((tab) => tab.document.id === id);
@@ -93,6 +93,7 @@ export function WorktreePreviewsProvider({
     setTabs(owned.current);
     select((current) => (current === id ? null : current));
     void previewApi.closeDocument(id).catch(() => {});
+    return true;
   };
   return (
     <WorktreePreviewsContext.Provider

@@ -2597,6 +2597,13 @@
     }
   },
   "worktree": {
+    "editorActions": "Editor actions",
+    "revertFile": "Revert File",
+    "revertFileMessage": "Discard unsaved changes to “{{path}}” and reload it from disk?",
+    "revertFileFailed": "Could not revert the file. Your unsaved changes have been kept. Try again.",
+    "closeEditor": "Close",
+    "closeOtherEditors": "Close Others",
+    "closeAllEditors": "Close All",
     "openEditors": "Open Editors",
     "gitIgnored": "Ignored by Git",
     "missingDirectory": {

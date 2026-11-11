@@ -61,6 +61,7 @@ Object.assign(window, {
       args: { relativePath?: string; action?: WorktreeFileAction },
     ) => {
       const path = args.relativePath ?? "";
+      if (command === "read_worktree_file") return "Synthetic file content";
       if (command === "get_worktree_files")
         return entries.filter(
           (entry) => entry.path.split("/").slice(0, -1).join("/") === path,

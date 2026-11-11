@@ -19,6 +19,7 @@ export interface CardAction {
   icon?: React.ReactNode;
   onSelect: () => void;
   submenu?: never;
+  shortcut?: string;
   checked?: boolean;
   danger?: boolean;
   disabled?: boolean;
