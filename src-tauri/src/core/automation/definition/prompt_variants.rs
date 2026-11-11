@@ -31,6 +31,8 @@ struct Variable {
     value: String,
     #[serde(default)]
     description: Option<String>,
+    #[serde(default)]
+    options: Vec<String>,
 }
 
 fn variables_map(variables: &[Variable]) -> Result<BTreeMap<String, String>, String> {
@@ -42,6 +44,7 @@ fn variables_map(variables: &[Variable]) -> Result<BTreeMap<String, String>, Str
             || !name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_')
             || name.as_bytes()[0].is_ascii_digit()
             || variable.value.contains('\0')
+            || variable.options.iter().any(|option| option.contains('\0'))
             || variable
                 .description
                 .as_ref()
@@ -51,7 +54,7 @@ fn variables_map(variables: &[Variable]) -> Result<BTreeMap<String, String>, Str
                 .is_some()
         {
             return Err(
-                "Custom variables require unique identifier names, values without NUL, and descriptions up to 2000 bytes without NUL"
+                "Custom variables require unique identifier names, values and options without NUL, and descriptions up to 2000 bytes without NUL"
                     .into(),
             );
         }

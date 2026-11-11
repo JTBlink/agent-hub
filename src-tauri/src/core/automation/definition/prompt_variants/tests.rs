@@ -154,3 +154,40 @@ fn invalid_variable_descriptions_are_rejected() {
         assert!(draft(value).validate().is_err());
     }
 }
+
+#[test]
+fn suggestions_survive_custom_value_edits_and_reopen_without_entering_runtime_values() {
+    let mut value = manifest();
+    value["variants"][0]["variables"] = json!([
+        {"name":"scope", "value":"own", "options":["own", "all"]}
+    ]);
+    let mut task = draft(value);
+    task.validate().unwrap();
+    set_prompt_variable(&mut task, None, "scope", Some("custom")).unwrap();
+    let reopened: AutomationDraft =
+        serde_json::from_str(&serde_json::to_string(&task).unwrap()).unwrap();
+    let body: Value = serde_json::from_str(&reopened.files[1].content).unwrap();
+    assert_eq!(
+        body["variants"][0]["variables"][0]["options"],
+        json!(["own", "all"])
+    );
+    assert_eq!(
+        active_variables(&reopened).unwrap(),
+        BTreeMap::from([("scope".into(), "custom".into())])
+    );
+}
+
+#[test]
+fn rejects_nonstring_or_nul_suggestions() {
+    for options in [
+        json!("own"),
+        json!([42]),
+        json!(["bad\0value"]),
+        Value::Null,
+    ] {
+        let mut value = manifest();
+        value["variants"][0]["variables"] =
+            json!([{"name":"scope", "value":"own", "options":options}]);
+        assert!(draft(value).validate().is_err());
+    }
+}

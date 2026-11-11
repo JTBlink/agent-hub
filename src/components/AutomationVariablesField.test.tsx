@@ -36,9 +36,13 @@ it("requires confirmation before adding a variable and reports invalid drafts", 
         .find((b) => b.textContent?.includes("添加变量"))!
         .click(),
     );
-    expect(host.querySelectorAll("input")).toHaveLength(204);
+    const variableInputs = () =>
+      host.querySelectorAll<HTMLInputElement>(
+        'input[aria-label^="变量名称 "], input[aria-label^="变量值 "]',
+      );
+    expect(variableInputs()).toHaveLength(204);
     expect(host.querySelector('[role="alert"]')).toBeNull();
-    const draftInputs = host.querySelectorAll<HTMLInputElement>("input");
+    const draftInputs = variableInputs();
     const type = (input: HTMLInputElement, value: string) => {
       Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
@@ -61,14 +65,14 @@ it("requires confirmation before adding a variable and reports invalid drafts", 
         .find((b) => b.getAttribute("aria-label") === "取消添加变量")!
         .click(),
     );
-    expect(host.querySelectorAll("input")).toHaveLength(202);
+    expect(variableInputs()).toHaveLength(202);
     expect(host.querySelector('[role="alert"]')).toBeNull();
     await act(async () =>
       buttons()
         .find((b) => b.textContent?.includes("添加变量"))!
         .click(),
     );
-    const savedDraftInputs = host.querySelectorAll<HTMLInputElement>("input");
+    const savedDraftInputs = variableInputs();
     await act(async () => {
       type(savedDraftInputs[202], "new_variable");
       type(savedDraftInputs[203], "saved");
@@ -78,7 +82,7 @@ it("requires confirmation before adding a variable and reports invalid drafts", 
         .find((b) => b.getAttribute("aria-label") === "确认变量")!
         .click(),
     );
-    expect(host.querySelectorAll("input")).toHaveLength(204);
+    expect(variableInputs()).toHaveLength(204);
     expect(host.querySelector('[role="alert"]')).toBeNull();
     expect(
       host.querySelector<HTMLInputElement>('input[aria-label="变量名称 102"]')

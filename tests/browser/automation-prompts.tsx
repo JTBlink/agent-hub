@@ -46,11 +46,33 @@ const draft: AutomationDraft = {
   ],
 };
 const variants = [
-  { id: "review", name: "仅评审", content: draft.files![0].content },
+  {
+    id: "review",
+    name: "仅评审",
+    content: draft.files![0].content,
+    variables: [
+      {
+        name: "scope",
+        value: "own",
+        description: "own: 当前账号；all: 所有作者",
+      },
+    ],
+  },
   {
     id: "repair",
     name: "评审并修复",
     content: "检查当前项目，修复确认的问题，运行相关验证后汇总结果。",
+    variables: [
+      {
+        name: "scope",
+        value: "all",
+        options: [
+          "own",
+          "all",
+          "a-long-custom-suggestion-for-checking-menu-layout-at-large-text-sizes",
+        ],
+      },
+    ],
   },
 ];
 const initial = {

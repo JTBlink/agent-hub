@@ -1,6 +1,8 @@
 import { Check, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AutomationVariableValueField } from "./AutomationVariableValueField";
+import { AutomationVariableOptionsField } from "./AutomationVariableOptionsField";
 import {
   type AutomationVariable,
   invalidAutomationVariables,
@@ -80,12 +82,11 @@ export function AutomationVariablesField({
             className="app-input min-w-0 flex-1 font-mono text-xs"
             onChange={(event) => update(index, { name: event.target.value })}
           />
-          <input
-            aria-label={t("automation.variableValue", { index: index + 1 })}
+          <AutomationVariableValueField
+            variable={variable}
+            index={index + 1}
             disabled={disabled}
-            value={variable.value}
-            className="app-input min-w-0 flex-1 text-xs"
-            onChange={(event) => update(index, { value: event.target.value })}
+            onChange={(value) => update(index, { value })}
           />
           <textarea
             aria-label={t("automation.variableDescription", {
@@ -110,6 +111,12 @@ export function AutomationVariablesField({
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
+          <AutomationVariableOptionsField
+            variable={variable}
+            index={index + 1}
+            disabled={disabled}
+            onChange={(options) => update(index, { options })}
+          />
         </div>
       ))}
       {draft && (
@@ -121,6 +128,7 @@ export function AutomationVariablesField({
               })}
               disabled={disabled}
               autoFocus
+              placeholder={t("automation.variableNamePlaceholder")}
               value={draft.name}
               maxLength={128}
               className="app-input min-w-0 flex-1 font-mono text-xs"
@@ -135,16 +143,12 @@ export function AutomationVariablesField({
                 if (event.key === "Escape") cancelDraft();
               }}
             />
-            <input
-              aria-label={t("automation.variableValue", {
-                index: variables.length + 1,
-              })}
+            <AutomationVariableValueField
+              variable={draft}
+              index={variables.length + 1}
+              placeholder={t("automation.variableDefaultValuePlaceholder")}
               disabled={disabled}
-              value={draft.value}
-              className="app-input min-w-0 flex-1 text-xs"
-              onChange={(event) =>
-                setDraft({ ...draft, value: event.target.value })
-              }
+              onChange={(value) => setDraft({ ...draft, value })}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                   event.preventDefault();
@@ -201,6 +205,13 @@ export function AutomationVariablesField({
                 commitDraft();
               }
             }}
+          />
+          <AutomationVariableOptionsField
+            variable={draft}
+            index={variables.length + 1}
+            initiallyExpanded
+            disabled={disabled}
+            onChange={(options) => setDraft({ ...draft, options })}
           />
           <p className="text-xs text-muted">
             {t("automation.variableDraftHelp")}

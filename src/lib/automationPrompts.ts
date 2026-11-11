@@ -8,6 +8,8 @@ export interface AutomationVariable {
   name: string;
   value: string;
   description?: string;
+  /** Suggested values only; custom input remains valid. */
+  options?: string[];
 }
 
 export const MAX_AUTOMATION_VARIABLE_DESCRIPTION_BYTES = 2000;
@@ -102,7 +104,13 @@ export function automationPrompts(
                 typeof item.name !== "string" ||
                 !("value" in item) ||
                 typeof item.value !== "string" ||
-                ("description" in item && typeof item.description !== "string"),
+                ("description" in item &&
+                  typeof item.description !== "string") ||
+                ("options" in item &&
+                  (!Array.isArray(item.options) ||
+                    item.options.some(
+                      (option: unknown) => typeof option !== "string",
+                    ))),
             ))
         )
           throw new Error("Invalid prompt variables");
@@ -195,9 +203,27 @@ export function isValidAutomationVariable(
     /^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(variable.name) &&
     !names.has(variable.name) &&
     !variable.value.includes("\0") &&
+    (variable.options === undefined ||
+      variable.options.every((option) => !option.includes("\0"))) &&
     (variable.description === undefined ||
       (!variable.description.includes("\0") &&
         new TextEncoder().encode(variable.description).length <=
           MAX_AUTOMATION_VARIABLE_DESCRIPTION_BYTES))
   );
+}
+
+/** Legacy descriptions can declare choices as `own: …; all: …`.
+ * Explicit options (including an empty array) always take precedence. */
+export function automationVariableOptions(
+  variable: AutomationVariable,
+): string[] {
+  if (variable.options !== undefined) return [...new Set(variable.options)];
+  const options = Array.from(
+    (variable.description ?? "").matchAll(
+      /(?:^|[;；\n])\s*([A-Za-z_][A-Za-z0-9_.-]*)\s*[:：](?![/\\])/g,
+    ),
+    (match) => match[1],
+  );
+  const unique = [...new Set(options)];
+  return unique.length > 1 ? unique : [];
 }

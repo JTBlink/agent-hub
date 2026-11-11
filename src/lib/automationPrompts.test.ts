@@ -5,6 +5,7 @@ import {
   PROMPT_VARIANTS_PATH,
   updateAutomationPrompts,
   invalidAutomationVariables,
+  automationVariableOptions,
 } from "./automationPrompts";
 
 function draft(): AutomationDraft {
@@ -157,6 +158,7 @@ it("preserves editable variable descriptions through save and reopen", () => {
       name: "repair_scope",
       value: "own",
       description: "own: current account; all: every author",
+      options: ["own", "all"],
     },
   ];
   const saved = {
@@ -170,4 +172,64 @@ it("preserves editable variable descriptions through save and reopen", () => {
   expect(invalidAutomationVariables(reopened.variants)).toBe(false);
   reopened.variants[0].variables![0].description = "x".repeat(2001);
   expect(invalidAutomationVariables(reopened.variants)).toBe(true);
+});
+
+it("uses explicit suggestions or clear legacy enumerations without restricting custom values", () => {
+  const variable = {
+    name: "scope",
+    value: "custom",
+    description: "own: current account；all：every author",
+  };
+  expect(automationVariableOptions(variable)).toEqual(["own", "all"]);
+  expect(
+    automationVariableOptions({ ...variable, options: ["one", "one", "two"] }),
+  ).toEqual(["one", "two"]);
+  expect(automationVariableOptions({ ...variable, options: [] })).toEqual([]);
+  expect(
+    automationVariableOptions({
+      ...variable,
+      description: "See: details; https://example.invalid",
+    }),
+  ).toEqual([]);
+  expect(
+    invalidAutomationVariables([
+      {
+        id: "review",
+        name: "Review",
+        content: "",
+        variables: [{ ...variable, options: ["own", "all"] }],
+      },
+    ]),
+  ).toBe(false);
+});
+
+it("rejects malformed suggestions on load and NUL suggestions on save", () => {
+  for (const options of ["own", [42], null]) {
+    const task = draft();
+    task.files!.push({
+      path: PROMPT_VARIANTS_PATH,
+      content: JSON.stringify({
+        version: 2,
+        active_id: "review",
+        variants: [
+          {
+            id: "review",
+            name: "Review",
+            variables: [{ name: "scope", value: "own", options }],
+          },
+        ],
+      }),
+    });
+    expect(automationPrompts(task, "Default").invalid).toBe(true);
+  }
+  expect(
+    invalidAutomationVariables([
+      {
+        id: "review",
+        name: "Review",
+        content: "",
+        variables: [{ name: "scope", value: "own", options: ["bad\0value"] }],
+      },
+    ]),
+  ).toBe(true);
 });
