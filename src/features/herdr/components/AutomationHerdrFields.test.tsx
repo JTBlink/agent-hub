@@ -46,8 +46,8 @@ afterEach(async () => {
   container.remove();
   vi.unstubAllGlobals();
 });
-function Fields() {
-  const [value, setValue] = useState(draft);
+function Fields({ initial = draft }: { initial?: AutomationDraft }) {
+  const [value, setValue] = useState(initial);
   return (
     <AutomationHerdrFields
       draft={value}
@@ -74,7 +74,7 @@ async function input(label: string, value: string) {
 }
 it("saves extra argument text and session together while preserving defaults and task files", async () => {
   await act(async () => root.render(<Fields />));
-  const text = "-m model-id\n-c\nname=\"value with spaces\"";
+  const text = '-m model-id\n-c\nname="value with spaces"';
   await input("额外的智能体参数", text);
   await input("Herdr 会话", "scheduled");
   const files = changed.mock.lastCall![0].files;
@@ -135,6 +135,30 @@ it("reflects edits from the script file and prevents input while saving", async 
     true,
   );
   expect(changed).not.toHaveBeenCalled();
+});
+it("preserves script-owned variables when changing the wait timeout", async () => {
+  const config = JSON.parse(draft.files![1].content);
+  config.execution.include_task_variables = false;
+  await act(async () =>
+    root.render(
+      <Fields
+        initial={{
+          ...draft,
+          files: [
+            draft.files![0],
+            { ...draft.files![1], content: JSON.stringify(config) },
+          ],
+        }}
+      />,
+    ),
+  );
+  await input("Agent 等待期限（秒）", "3600");
+  expect(
+    JSON.parse(changed.mock.lastCall![0].files[1].content).execution,
+  ).toEqual({
+    wait_timeout_seconds: 3600,
+    include_task_variables: false,
+  });
 });
 it("does not offer agent arguments for a shell task", async () => {
   await act(async () =>

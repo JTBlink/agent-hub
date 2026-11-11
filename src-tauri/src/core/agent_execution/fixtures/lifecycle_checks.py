@@ -484,6 +484,33 @@ class HerdrChecks(unittest.TestCase):
             if original is None: path.unlink(missing_ok=True)
             else: path.write_text(original)
 
+    def test_script_owned_variables_can_be_excluded_from_initial_and_continued_prompts(self):
+        path = CONFIG.parent/'prompt-variants.json'
+        original = path.read_text() if path.exists() else None
+        manifest = json.dumps(dict(active_id='repair',variants=[
+            dict(id='repair',variables=[dict(name='max_repair_attempts',value='10')])]))
+        config = json.loads(ORIGINAL_CONFIG)
+        config['execution']['include_task_variables'] = False
+        try:
+            path.write_text(manifest)
+            self.assertEqual(self.execute(config=config), 0)
+            prompt = next(args[-1] for args, _ in self.calls if 'prompt' in args)
+            self.assertEqual(prompt, ORIGINAL.strip())
+            self.save_previous('completed')
+            self.calls = []
+            self.assertEqual(self.execute(previous='done', reconcile_only=True,
+                                          continuation_prompt='Continue the original task'), 0)
+            self.assertEqual(next(args[-1] for args, _ in self.calls if 'prompt' in args),
+                             'Continue the original task')
+            self.assertEqual(path.read_text(), manifest)
+            self.calls = []
+            config['execution']['include_task_variables'] = 'false'
+            self.assertIsInstance(self.execute(config=config), str)
+            self.assertFalse(self.calls)
+        finally:
+            if original is None: path.unlink(missing_ok=True)
+            else: path.write_text(original)
+
     def test_continuation_reuses_owned_agent_and_deduplicates_its_id(self):
         self.save_previous('completed')
         self.assertEqual(self.execute(previous='done', previous_completion=2, reconcile_only=True,

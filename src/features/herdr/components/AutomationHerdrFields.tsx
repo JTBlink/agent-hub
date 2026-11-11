@@ -56,7 +56,10 @@ export function AutomationHerdrFields({
             })
           }
         />
-        <span id={argumentsHelpId} className="block text-xs leading-5 text-muted">
+        <span
+          id={argumentsHelpId}
+          className="block text-xs leading-5 text-muted"
+        >
           {t("automation.extraAgentArgumentsHelp")}
         </span>
       </label>
@@ -91,7 +94,9 @@ export function AutomationHerdrFields({
           onChange={(event) => {
             const seconds = Number(event.target.value);
             if (Number.isInteger(seconds))
-              update({ execution: { wait_timeout_seconds: seconds } });
+              update({
+                execution: { ...execution, wait_timeout_seconds: seconds },
+              });
           }}
         />
         <span id={timeoutHelpId} className="block text-xs leading-5 text-muted">

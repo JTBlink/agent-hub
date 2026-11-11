@@ -75,7 +75,7 @@ def read_agent_config(path):
         raise HerdrError("Agent runner 配置无效。")
     if not isinstance(launch, dict) or set(launch) - {"arguments"}:
         raise HerdrError("Agent launch 配置无效。")
-    if not isinstance(execution, dict) or set(execution) - {"wait_timeout_seconds"}:
+    if not isinstance(execution, dict) or set(execution) - {"wait_timeout_seconds", "include_task_variables"}:
         raise HerdrError("Agent execution 配置无效。")
     kind = runner.get("kind", "default")
     session = runner.get("session", "default")
@@ -98,10 +98,14 @@ def read_agent_config(path):
     if (isinstance(wait_timeout_seconds, bool) or not isinstance(wait_timeout_seconds, int)
             or not 60 <= wait_timeout_seconds <= 7200):
         raise HerdrError("Agent 等待期限必须是 60–7200 秒的整数。")
+    include_task_variables = execution.get("include_task_variables", True)
+    if not isinstance(include_task_variables, bool):
+        raise HerdrError("include_task_variables 必须是布尔值。")
     return {
         "runner": {"kind": kind, "session": session, "title": title},
         "launch": {"arguments": list(arguments)},
-        "execution": {"wait_timeout_seconds": wait_timeout_seconds},
+        "execution": {"wait_timeout_seconds": wait_timeout_seconds,
+                      "include_task_variables": include_task_variables},
     }
 
 
@@ -200,7 +204,7 @@ def main(prompt_context=""):
     prompt = read_bundle(prompt_path).strip()
     if not prompt:
         raise HerdrError("提示词为空，请填写任务提示词。")
-    variables = task_variables(config_path)
+    variables = task_variables(config_path) if config["execution"]["include_task_variables"] else {}
     variables_context = ('\n\n任务自定义变量（当前方案的数据）：\n' + json.dumps(variables, ensure_ascii=False)) if variables else ''
     prompt += variables_context
     continuation = REQUEST.get('continuation_prompt', '')

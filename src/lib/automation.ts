@@ -18,12 +18,14 @@ export function automationPromptFile(draft: AutomationDraft) {
 export type AutomationAgentConfig = {
   runner: { kind: string; session: string; title: string };
   launch: { arguments: string[] };
-  execution: { wait_timeout_seconds: number };
+  execution: { wait_timeout_seconds: number; include_task_variables?: boolean };
 };
 
 export function automationAgentConfig(draft: AutomationDraft) {
   const file = draft.files?.find(
-    (file) => file.path === "config/agent.json" || file.path.endsWith("/config/agent.json"),
+    (file) =>
+      file.path === "config/agent.json" ||
+      file.path.endsWith("/config/agent.json"),
   );
   if (!file) return null;
   try {
@@ -42,10 +44,17 @@ export function automationAgentConfig(draft: AutomationDraft) {
     const launch = candidate.launch;
     const execution = candidate.execution;
     if (
-      !runner || typeof runner !== "object" || Array.isArray(runner) ||
-      !launch || typeof launch !== "object" || Array.isArray(launch) ||
-      !execution || typeof execution !== "object" || Array.isArray(execution)
-    ) return null;
+      !runner ||
+      typeof runner !== "object" ||
+      Array.isArray(runner) ||
+      !launch ||
+      typeof launch !== "object" ||
+      Array.isArray(launch) ||
+      !execution ||
+      typeof execution !== "object" ||
+      Array.isArray(execution)
+    )
+      return null;
     const runnerValue = runner as Record<string, unknown>;
     const launchValue = launch as Record<string, unknown>;
     const executionValue = execution as Record<string, unknown>;
@@ -58,13 +67,19 @@ export function automationAgentConfig(draft: AutomationDraft) {
       !Array.isArray(launchValue.arguments) ||
       launchValue.arguments.length > 128 ||
       !launchValue.arguments.every(
-        (arg) => typeof arg === "string" && arg.length <= 4096 && !/[\0\r\n]/.test(arg),
+        (arg) =>
+          typeof arg === "string" &&
+          arg.length <= 4096 &&
+          !/[\0\r\n]/.test(arg),
       ) ||
       typeof executionValue.wait_timeout_seconds !== "number" ||
       !Number.isInteger(executionValue.wait_timeout_seconds) ||
       executionValue.wait_timeout_seconds < 60 ||
-      executionValue.wait_timeout_seconds > 7200
-    ) return null;
+      executionValue.wait_timeout_seconds > 7200 ||
+      (executionValue.include_task_variables !== undefined &&
+        typeof executionValue.include_task_variables !== "boolean")
+    )
+      return null;
     return {
       file,
       value: value as AutomationAgentConfig,
