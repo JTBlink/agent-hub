@@ -122,6 +122,7 @@ export function prepareCli(
       linkCli(product, profile, {
         env: product.environment,
         replaceForeignSymlink: true,
+        skipExistingFile: true,
       });
     } catch (error) {
       console.error(error.message);

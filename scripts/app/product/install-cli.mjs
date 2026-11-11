@@ -20,6 +20,7 @@ export function linkDevelopmentCli(
   {
     env = product.environment ?? process.env,
     replaceForeignSymlink = false,
+    skipExistingFile = false,
   } = {},
 ) {
   const installDir =
@@ -35,8 +36,13 @@ export function linkDevelopmentCli(
     if (error.code !== "ENOENT") throw error;
   }
   if (metadata) {
-    if (!metadata.isSymbolicLink())
+    if (!metadata.isSymbolicLink()) {
+      if (skipExistingFile) {
+        console.error(`Keeping existing CLI file: ${link}`);
+        return link;
+      }
       throw new Error("Refusing to replace an existing CLI file");
+    }
     const previous = resolve(dirname(link), readlinkSync(link));
     const scope = relative(product.targetDir, previous);
     if (

@@ -2,6 +2,7 @@ import { afterEach, expect, it } from "vitest";
 import {
   chmodSync,
   lstatSync,
+  readFileSync,
   mkdirSync,
   mkdtempSync,
   readlinkSync,
@@ -45,6 +46,21 @@ function fixture() {
     binary,
   };
 }
+
+it("does not block dev startup when PATH already contains a regular CLI file", () => {
+  const f = fixture();
+  rmSync(join(f.installDir, f.name));
+  writeFileSync(join(f.installDir, f.name), "user-installed");
+  expect(
+    linkDevelopmentCli(f.product, "debug", {
+      env: f.env,
+      skipExistingFile: true,
+    }),
+  ).toBe(join(f.installDir, f.name));
+  expect(readFileSync(join(f.installDir, f.name), "utf8")).toBe(
+    "user-installed",
+  );
+});
 
 it("dev mode can retarget an existing development symlink after a successful build", () => {
   const f = fixture();
