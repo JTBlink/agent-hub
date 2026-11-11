@@ -98,6 +98,7 @@ pub(super) fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commands::preview_native::preview_native_action,
         commands::preview::preview_pick_document,
         commands::preview::preview_open_document,
+        commands::preview::preview_take_external_documents,
         commands::preview::preview_export,
         commands::preview::preview_upload,
         commands::preview_cookies::preview_cookie_file,

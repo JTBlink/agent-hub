@@ -6,6 +6,8 @@ mod help;
 mod hosts_cli;
 #[path = "agent-hub-cli/launch.rs"]
 mod launch_cli;
+#[path = "agent-hub-cli/open.rs"]
+mod open_cli;
 #[path = "agent-hub-cli/preview.rs"]
 mod preview_cli;
 #[path = "agent-hub-cli/project.rs"]
@@ -27,19 +29,19 @@ use app_lib::core::{
     repo_lock::RepoLock, scanner, scenario_service, skill_metadata, skill_store::SkillStore,
     skillssh_api, sync_engine, sync_metadata, tool_adapters, tool_service,
 };
-use clap::{Arg, ArgAction, Args, Command, CommandFactory, FromArgMatches, Parser, Subcommand};
+use clap::{Arg, ArgAction, Args, Command, CommandFactory, Parser, Subcommand};
 use serde::Serialize;
 
 #[derive(Parser, Debug)]
 #[command(
     name = "agent-hub-cli",
-    about = "管理 AgentHub 技能、技能组、Agent、Hosts 和 Git 备份",
+    about = "管理 AgentHub 技能、技能组、Agent、文件预览、Hosts 和 Git 备份",
     version,
     disable_help_subcommand = true,
     subcommand_help_heading = "命令",
     next_help_heading = "选项",
     help_template = "{about-with-newline}\n用法: {usage}\n\n{all-args}{after-help}",
-    after_help = "示例:\n  agent-hub-cli skills list\n  agent-hub-cli skill-groups list\n  agent-hub-cli skill-groups deploy \"日常开发\" --agent codex\n  agent-hub-cli --json skills list"
+    after_help = "示例:\n  agent-hub-cli ./guide.md\n  agent-hub-cli open ./guide.md\n  agent-hub-cli skills list\n  agent-hub-cli skill-groups list\n  agent-hub-cli skill-groups deploy \"日常开发\" --agent codex\n  agent-hub-cli --json skills list"
 )]
 struct Cli {
     /// 输出机器可读的 JSON。
@@ -54,6 +56,8 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// 在正在运行的 AgentHub 主窗口中打开本地文件。
+    Open(open_cli::OpenArgs),
     /// 显示产品身份及编译时启用的功能。
     BuildInfo,
     /// 构建入口内部使用：验证并发布当前 CLI。
@@ -813,8 +817,7 @@ enum SyncTarget {
 }
 
 fn parse_cli() -> Result<Cli, clap::Error> {
-    let matches = cli_command().try_get_matches()?;
-    Cli::from_arg_matches(&matches)
+    open_cli::parse(std::env::args_os().collect())
 }
 
 fn cli_command() -> Command {
@@ -830,10 +833,10 @@ fn cli_command() -> Command {
 }
 
 fn main() {
-    let json = std::env::args()
+    let json = std::env::args_os()
         .skip(1)
         .take_while(|a| a != "--")
-        .any(|a| a == "--json" || a.starts_with("--json="));
+        .any(|a| a == "--json" || a.to_str().is_some_and(|s| s.starts_with("--json=")));
 
     let cli = match parse_cli() {
         Ok(c) => c,
@@ -877,6 +880,12 @@ fn main() {
 }
 
 fn run(cli: Cli) -> anyhow::Result<()> {
+    if let Commands::Open(args) = &cli.command {
+        if cli.skills_root.is_some() {
+            bail!("文件打开使用桌面应用，不能与 --skills-root 同用");
+        }
+        return open_cli::run(args, cli.json);
+    }
     if matches!(cli.command, Commands::BuildInfo) {
         print_json(&app_lib::product::current(), cli.json);
         return Ok(());
@@ -946,6 +955,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     let store = app_state::initialize_cli_store()?;
 
     match cli.command {
+        Commands::Open(_) => unreachable!("handled before opening the store"),
         Commands::BuildInfo => unreachable!("handled before opening the store"),
         Commands::PublishCliBridge => unreachable!("handled before opening the store"),
         Commands::Hosts(_) => unreachable!("handled before opening the store"),

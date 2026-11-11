@@ -248,6 +248,8 @@ export const previewApi = {
   pickDocument: () => invoke<PreviewDocument | null>("preview_pick_document"),
   openDocument: (path: string) =>
     invoke<PreviewDocument>("preview_open_document", { path }),
+  takeExternalDocuments: () =>
+    invoke<PreviewDocument[]>("preview_take_external_documents"),
   resourceLink: (id: string, href: string) =>
     request<string>({ kind: "resource_link", id, href }),
   openLink: (id: string, href: string) =>

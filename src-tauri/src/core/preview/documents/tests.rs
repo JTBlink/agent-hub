@@ -212,3 +212,23 @@ fn previews_selected_documents_in_hidden_directories_without_exposing_other_hidd
         .resource(&opened.id, ".scratch/reports/report.html")
         .is_err());
 }
+
+#[test]
+fn explicit_relative_paths_need_a_cli_directory_and_home_paths_share_the_gui_resolver() {
+    let root = tempfile::tempdir().unwrap();
+    let file = root.path().join("a guide.md");
+    assert_eq!(
+        resolve_explicit_path("a guide.md", Some(root.path())).unwrap(),
+        file
+    );
+    assert!(resolve_explicit_path("a guide.md", None).is_err());
+    assert_eq!(
+        resolve_explicit_path(file.to_str().unwrap(), None).unwrap(),
+        file
+    );
+    assert_eq!(
+        resolve_explicit_path("~/guide.md", None).unwrap(),
+        dirs::home_dir().unwrap().join("guide.md")
+    );
+    assert!(resolve_explicit_path("guide.md", Some(Path::new("relative"))).is_err());
+}

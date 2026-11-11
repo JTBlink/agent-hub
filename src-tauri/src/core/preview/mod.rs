@@ -13,6 +13,7 @@ mod download_transfer;
 pub mod downloads;
 pub mod execution;
 pub mod export;
+pub mod external_open;
 mod file_types;
 mod frames;
 mod inventory;
@@ -54,6 +55,7 @@ pub enum LinkedResource {
     Page { url: String },
 }
 pub struct Preview {
+    pub external_opens: external_open::ExternalOpens,
     pub browsers: Arc<browser::Browsers>,
     automation: Mutex<Option<automation::Automation>>,
     pub documents: Arc<documents::Documents>,
@@ -67,6 +69,7 @@ impl Default for Preview {
         let browsers =
             browser::Browsers::shared(super::central_repo::home_base_dir().join("preview"));
         Self {
+            external_opens: external_open::ExternalOpens::default(),
             documents: browsers.documents.clone(),
             browsers,
             automation: Mutex::new(None),
@@ -80,7 +83,7 @@ impl Default for Preview {
     }
 }
 impl Preview {
-    pub fn start_automation(&self) -> Result<(), AppError> {
+    pub fn start_automation(self: &Arc<Self>) -> Result<(), AppError> {
         let mut automation = self
             .automation
             .lock()
@@ -89,7 +92,7 @@ impl Preview {
             return Err(AppError::cancelled("Preview is shutting down"));
         }
         if automation.is_none() {
-            *automation = Some(automation::Automation::start(self.browsers.clone())?);
+            *automation = Some(automation::Automation::start_for_preview(self)?);
         }
         Ok(())
     }
@@ -98,18 +101,7 @@ impl Preview {
     }
     /// Open an explicitly submitted local path, independently of registered projects.
     pub fn open_document_path(&self, input: &str) -> Result<OpenedDocument, AppError> {
-        let path = if let Some(relative) = input.strip_prefix("~/") {
-            dirs::home_dir()
-                .ok_or_else(|| AppError::internal("Cannot determine home directory"))?
-                .join(relative)
-        } else {
-            std::path::PathBuf::from(input)
-        };
-        if !path.is_absolute() {
-            return Err(AppError::invalid_input(
-                "Document path must be absolute or start with ~/",
-            ));
-        }
+        let path = documents::resolve_explicit_path(input, None)?;
         self.open_document(&path)
     }
     pub fn open_at(
@@ -259,6 +251,7 @@ impl Preview {
     }
     pub fn clear(&self) {
         self.closed.store(true, Ordering::Release);
+        self.clear_external_documents();
         if let Ok(mut automation) = self.automation.lock() {
             automation.take();
         }

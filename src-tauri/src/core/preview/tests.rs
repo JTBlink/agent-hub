@@ -8,6 +8,7 @@ fn explicit_file_paths_open_without_a_registered_project_and_retain_document_gua
     std::fs::write(&path, "# Outside any project").unwrap();
     let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
+        external_opens: external_open::ExternalOpens::default(),
         documents: browsers.documents.clone(),
         browsers,
         automation: Mutex::new(None),
@@ -47,6 +48,7 @@ fn rendered_document_capture_preserves_the_requested_region() {
     let root = tempfile::tempdir().unwrap();
     let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
+        external_opens: external_open::ExternalOpens::default(),
         documents: browsers.documents.clone(),
         browsers,
         automation: Mutex::new(None),
@@ -90,6 +92,7 @@ fn file_links_reuse_the_source_grant_and_preserve_query_and_fragment_for_both_de
     std::fs::write(root.path().join("page.html"), "<title>Page</title>").unwrap();
     let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
+        external_opens: external_open::ExternalOpens::default(),
         documents: browsers.documents.clone(),
         browsers,
         automation: Mutex::new(None),
@@ -140,6 +143,7 @@ fn browser_follows_granted_file_links_with_encoded_paths_and_url_suffixes() {
     std::fs::write(root.path().join("style.css"), "p{color:rgb(1,2,3)}").unwrap();
     let browsers = Arc::new(browser::Browsers::new(root.path().join("browser")));
     let preview = Preview {
+        external_opens: external_open::ExternalOpens::default(),
         documents: browsers.documents.clone(),
         browsers,
         automation: Mutex::new(None),

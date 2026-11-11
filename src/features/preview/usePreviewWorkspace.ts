@@ -57,10 +57,18 @@ export function usePreviewWorkspace({
     sessionRef.current = next;
     setSessionState(next);
   };
-  const [documents, setDocuments] = useState<Record<string, PreviewDocument>>(
-    () =>
-      initialDocument ? { [`doc:${initialDocument.id}`]: initialDocument } : {},
+  const [documents, setDocumentsState] = useState<
+    Record<string, PreviewDocument>
+  >(() =>
+    initialDocument ? { [`doc:${initialDocument.id}`]: initialDocument } : {},
   );
+  const documentsRef = useRef(documents);
+  const setDocuments = (update: SetStateAction<typeof documents>) => {
+    const next =
+      typeof update === "function" ? update(documentsRef.current) : update;
+    documentsRef.current = next;
+    setDocumentsState(next);
+  };
   const [drafts, setDrafts] = useState<Record<string, string>>(() =>
     initialDocument
       ? { [`doc:${initialDocument.id}`]: initialDocument.content }
@@ -195,6 +203,21 @@ export function usePreviewWorkspace({
       ),
     );
     resetView();
+  };
+  const acceptExternalDocument = (opened: PreviewDocument) => {
+    const existing = opened.path
+      ? sessionRef.current.tabs.find(
+          (tab) => documentsRef.current[tab.id]?.path === opened.path,
+        )
+      : undefined;
+    if (existing) {
+      if (existing.id !== `doc:${opened.id}`)
+        void previewApi.closeDocument(opened.id).catch(() => {});
+      setSession((previous) => ({ ...previous, activeId: existing.id }));
+      resetView();
+      return;
+    }
+    acceptDocument(opened);
   };
   const openDocument = async () => {
     setBusy(true);
@@ -491,7 +514,11 @@ export function usePreviewWorkspace({
     setSession((previous) => restorePreview(previous, id));
     resetView();
   };
-  usePreviewOpenRequests(isolated, { openWeb, acceptDocument, report });
+  usePreviewOpenRequests(isolated, {
+    openWeb,
+    acceptDocument: acceptExternalDocument,
+    report,
+  });
   const openDocumentLink = async (href: string, invert = false) => {
     if (!document) return;
     try {

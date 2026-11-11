@@ -287,6 +287,19 @@ pub async fn preview_request(
     .await?
 }
 #[tauri::command]
+pub fn preview_take_external_documents(
+    webview: tauri::Webview,
+    preview: State<'_, Arc<Preview>>,
+) -> Result<Vec<preview::OpenedDocument>, AppError> {
+    if webview.label() != "main" {
+        return Err(AppError::invalid_input(
+            "External files belong to the main workspace",
+        ));
+    }
+    preview.take_external_documents()
+}
+
+#[tauri::command]
 pub async fn preview_open_document(
     preview: State<'_, Arc<Preview>>,
     path: String,

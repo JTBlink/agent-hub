@@ -48,6 +48,16 @@ fn initialize_logging(
     builder_to_setup_ms: u128,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let preview = app.state::<Arc<core::preview::Preview>>().inner().clone();
+    let handle = app.handle().clone();
+    preview.set_external_open_signal(move || {
+        super::lifecycle::restore_main_window(&handle);
+        if handle
+            .emit_to(tauri::EventTarget::window("main"), "preview-open-file", ())
+            .is_err()
+        {
+            log::warn!("Cannot notify the main workspace of a file-open request");
+        }
+    });
     std::thread::spawn(move || {
         if preview.start_automation().is_err() {
             log::warn!("Preview automation bridge did not start");

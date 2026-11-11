@@ -82,7 +82,7 @@ pub enum PreviewCommand {
         y: f64,
     },
 }
-fn request(body: Value) -> Result<Value> {
+pub(super) fn request(body: Value) -> Result<Value> {
     let path = central_repo::home_base_dir().join("preview/control.json");
     let bytes = std::fs::read(path).context("Start AgentHub to use preview automation")?;
     if bytes.len() > 8192 {

@@ -1,8 +1,8 @@
 ---
 name: agent-hub-cli
 metadata:
-  version: "1.19.0"
-description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, and operate the desktop preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
+  version: "1.20.0"
+description: Create and manage local scheduled tasks through agent-hub-cli, including scripts, schedules, prompt variants, persistent state, execution limits and run inspection. Also manage the shared agent-skill library, deployments and skill groups, open local files in the desktop, and operate the preview browser or Hosts profiles. Use when creating or maintaining an AgentHub automation or managing managed skills across coding agents.
 ---
 
 ## Before doing anything
@@ -487,6 +487,29 @@ from Git sync/backups. JSON output is bounded to the last 256 KiB.
 
 For the disk-cleanup starter's retention, preview and safety options, read the
 [disk-cleanup compatibility guidance](references/automations.md#disk-cleanup-starter).
+
+## Open a local file
+
+With the desktop app running, pass a file path directly or use `open`:
+
+```bash
+"$SM" ./guide.md
+"$SM" open './documents/a guide.md'
+"$SM" --json open ~/documents/guide.md
+```
+
+Absolute paths, relative paths and quoted `~/` paths are supported. The file
+opens in the main window's existing preview workspace using the same document
+permissions, file-type and size limits as the desktop picker. It does not add
+its directory as a project or execute the file. Reopening an already open file
+focuses its tab and preserves unsaved edits. Use `open -- <path>` for a name
+that conflicts with a command or starts with `-`.
+
+The result has `status: "requested"`: the desktop accepted the file and will
+consume it when its UI is ready. It is not evidence that a file was edited or
+saved. If the desktop is not running, start it and run the command again;
+never retry an uncertain delivery automatically. This command cannot be combined
+with `--skills-root`.
 
 ## Desktop preview browser
 

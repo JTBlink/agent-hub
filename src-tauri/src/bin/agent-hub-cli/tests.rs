@@ -1,3 +1,5 @@
+use clap::FromArgMatches;
+
 #[test]
 fn root_and_nested_help_use_chinese_and_current_group_name() {
     let root = cli_command()

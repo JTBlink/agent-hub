@@ -11,7 +11,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
-        Arc,
+        Arc, Weak,
     },
     thread::JoinHandle,
     time::Duration,
@@ -27,6 +27,7 @@ pub struct ControlEndpoint {
 enum Request {
     List,
     Open { url: String, profile: String },
+    OpenFile { path: String },
     Action { id: String, action: Action },
     Close { id: String },
     Reconnect { id: String },
@@ -46,6 +47,15 @@ pub struct Automation {
 }
 impl Automation {
     pub fn start(browsers: Arc<Browsers>) -> Result<Self, AppError> {
+        Self::start_inner(browsers, Weak::new())
+    }
+    pub fn start_for_preview(preview: &Arc<super::Preview>) -> Result<Self, AppError> {
+        Self::start_inner(preview.browsers.clone(), Arc::downgrade(preview))
+    }
+    fn start_inner(
+        browsers: Arc<Browsers>,
+        preview: Weak<super::Preview>,
+    ) -> Result<Self, AppError> {
         let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))?;
         listener.set_nonblocking(true)?;
         let token = uuid::Uuid::new_v4().to_string();
@@ -80,8 +90,9 @@ impl Automation {
                         let browsers = browsers.clone();
                         let key = key.clone();
                         let count = count.clone();
+                        let preview = preview.clone();
                         std::thread::spawn(move || {
-                            let _ = serve(stream, &key, &browsers);
+                            let _ = serve(stream, &key, &browsers, &preview);
                             count.fetch_sub(1, Ordering::Relaxed);
                         });
                     }
@@ -120,7 +131,12 @@ fn response(stream: &mut TcpStream, status: u16, value: Value) -> std::io::Resul
     write!(stream,"HTTP/1.1 {status} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n\r\n",if status==200{"OK"}else{"Error"},data.len())?;
     stream.write_all(&data)
 }
-fn serve(mut stream: TcpStream, token: &str, browsers: &Arc<Browsers>) -> std::io::Result<()> {
+fn serve(
+    mut stream: TcpStream,
+    token: &str,
+    browsers: &Arc<Browsers>,
+    preview: &Weak<super::Preview>,
+) -> std::io::Result<()> {
     stream.set_read_timeout(Some(Duration::from_secs(3)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
     let mut bytes = Vec::new();
@@ -188,6 +204,11 @@ fn serve(mut stream: TcpStream, token: &str, browsers: &Arc<Browsers>) -> std::i
     }
     let request = serde_json::from_slice::<Request>(&bytes[header_end..header_end + length]);
     let result = match request {
+        Ok(Request::OpenFile { path }) => preview
+            .upgrade()
+            .ok_or_else(|| AppError::not_found("Desktop file opening is unavailable"))
+            .and_then(|preview| preview.queue_external_document(&path))
+            .and_then(|receipt| serde_json::to_value(receipt).map_err(AppError::io)),
         Ok(Request::FetchDownload { profile, id }) => {
             browsers.fetch_download(&profile, &id).map(|_| Value::Null)
         }

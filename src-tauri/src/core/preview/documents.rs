@@ -31,6 +31,30 @@ struct Grant {
 pub struct Documents {
     grants: Mutex<HashMap<String, Grant>>,
 }
+
+/// Resolve an explicit document path; only CLI callers supply a working directory.
+pub fn resolve_explicit_path(
+    input: &str,
+    working_directory: Option<&Path>,
+) -> Result<PathBuf, AppError> {
+    let path = if let Some(relative) = input.strip_prefix("~/") {
+        dirs::home_dir()
+            .ok_or_else(|| AppError::internal("Cannot determine home directory"))?
+            .join(relative)
+    } else {
+        PathBuf::from(input)
+    };
+    let path = match working_directory {
+        Some(directory) if path.is_relative() => directory.join(path),
+        _ => path,
+    };
+    if !path.is_absolute() {
+        return Err(AppError::invalid_input(
+            "Document path must be absolute or start with ~/",
+        ));
+    }
+    Ok(path)
+}
 pub(super) fn resource_path(relative: &str) -> String {
     relative
         .split('/')

@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
-import { act, useEffectEvent, useEffect } from "react";
+import {
+  act,
+  createRef,
+  useEffectEvent,
+  useEffect,
+  useImperativeHandle,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { PreviewWorkspace } from "./PreviewWorkspace";
 import { previewApi } from "./api";
-import { queuePreviewWeb } from "./shared/openRequests";
+import { queuePreviewDocument, queuePreviewWeb } from "./shared/openRequests";
 import type { BrowserSurfaceProps } from "./web/types";
+import { usePreviewWorkspace, type PreviewModel } from "./usePreviewWorkspace";
 
 const t = (key: string) => key;
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t }) }));
@@ -30,6 +37,7 @@ vi.mock("../../lib/tauri", () => ({
 vi.mock("./api", () => ({
   previewApi: {
     info: vi.fn().mockResolvedValue({ profiles: [] }),
+    closeDocument: vi.fn().mockResolvedValue(undefined),
     action: vi
       .fn()
       .mockResolvedValue(
@@ -233,6 +241,47 @@ it("applies a queued mobile viewport only to its new browser tab", async () => {
     await act(async () => root.unmount());
     host.remove();
     localStorage.clear();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("focuses an already open file while retaining its unsaved draft and original revision", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  localStorage.clear();
+  const model = createRef<PreviewModel>();
+  const initial = {
+    id: "existing",
+    kind: "markdown" as const,
+    title: "guide.md",
+    path: "/workspace/guide.md",
+    content: "# Original",
+    revision: "first",
+  };
+  function Receiver() {
+    const value = usePreviewWorkspace({ initialDocument: initial });
+    useImperativeHandle(model, () => value);
+    return null;
+  }
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<Receiver />));
+    await act(async () => model.current!.changeDraft("# Unsaved"));
+    await act(async () =>
+      queuePreviewDocument({
+        ...initial,
+        id: "incoming",
+        content: "# Disk changed",
+        revision: "second",
+      }),
+    );
+    expect(model.current!.session.tabs).toHaveLength(1);
+    expect(model.current!.session.activeId).toBe("doc:existing");
+    expect(model.current!.draft).toBe("# Unsaved");
+    expect(model.current!.document?.revision).toBe("first");
+    expect(previewApi.closeDocument).toHaveBeenCalledWith("incoming");
+  } finally {
+    await act(async () => root.unmount());
     vi.unstubAllGlobals();
   }
 });

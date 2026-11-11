@@ -21,6 +21,20 @@ agent-hub-cli automations --help
 agent-hub-cli hosts --help
 ```
 
+## 打开本地文件
+
+保持 AgentHub 桌面应用运行，直接传入文件路径，或使用 `open` 命令：
+
+```bash
+agent-hub-cli ./guide.md
+agent-hub-cli open './documents/a guide.md'
+agent-hub-cli --json open ~/documents/guide.md
+```
+
+支持绝对路径、相对路径和 `~/` 路径。文件会在主窗口的现有预览模块中打开，沿用桌面的类型、大小与授权规则；不会把文件目录登记为项目。重复打开已打开的文件时，定位原标签并保留未保存的修改。文件名与命令同名或以 `-` 开头时，使用 `agent-hub-cli open -- <文件路径>`。
+
+返回的 `status: requested` 表示桌面已接受请求，界面就绪后会消费；不表示文件已修改或保存。应用未运行、文件不存在或不受支持时会明确报错；结果不明时先检查界面，避免重复发送。此命令不与 `--skills-root` 同用。
+
 ## Hosts 方案
 
 `hosts`（兼容 `host`）与设置页共用方案、文件目录、提权和统一备份。创建、更新、复制、重命名与删除方案不会写系统 Hosts；只有 `apply` 或 `system write` 会写系统。

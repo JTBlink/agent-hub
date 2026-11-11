@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { PREVIEW_OPEN_EVENT } from "./shared/openRequests";
 import { lazy, Suspense, useState, useEffect } from "react";
+import { useExternalPreviewOpens } from "./shared/useExternalPreviewOpens";
 const Workspace = lazy(() =>
   import("./PreviewWorkspace").then((module) => ({
     default: module.PreviewWorkspace,
@@ -16,6 +17,7 @@ export function PreviewHost({
   deliveryAdapter?: import("../../lib/agentDelivery").AgentDeliveryAdapter;
   workspacePath?: string;
 }) {
+  useExternalPreviewOpens();
   const [opened, setOpened] = useState(active);
   const navigate = useNavigate();
   useEffect(() => {
