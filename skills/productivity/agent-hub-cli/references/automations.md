@@ -6,6 +6,8 @@
 `AGENT_HUB_AUTOMATION_HOME`；`--skills-root` 只隔离 Skill 库，不能用来隔离
 自动化数据。验证完成后保留现场供复核，避免把测试任务写入真实任务库。
 
+巡检、异常恢复与自进化任务另读[自动化巡检与迭代](automation-maintenance.md)；通用创建、编辑与状态契约仍以本文为准。
+
 ## 创建流程
 
 1. 明确任务目标、执行范围、工作目录、日程、时区及是否启用。先 `automations list --json` 按名称、工作目录和用途查重；用户要修改现有任务时使用原 ID，不另建同名任务。返回内容可能包含全部脚本，解析后只展示必要摘要。
@@ -22,7 +24,7 @@
 - `workdir` 为空表示命令任务在任务包目录运行；非空时必须能解析为现有绝对目录。`~` 和 `~/...` 由 CLI 解析后保存为绝对路径。任务包的 `script_dir` 与项目 `workdir` 始终分开。
 - `provider: system` 只支持 `manual`、`interval`、`hourly`、`daily`；`custom.expression` 只给 Hermes 使用。`provider: hermes` 必须是循环日程，不能使用 `manual`。
 - `interval.minutes` 范围为 1–525600；`hourly.minute` 为 0–59；`daily.hour` 为 0–23、`daily.minute` 为 0–59。`custom.expression` 不能为空、最多 200 字节且不能含 NUL 或换行；它交给 Hermes 解释，不是跨平台 cron 保证。
-- `files` 中每个文件必须是非空 UTF-8、相对安全路径、扩展名为 `.py`、`.sh`、`.ps1`、`.json` 或 `.md`，不能重复或含 NUL；最多 32 个文件，命令与文件正文合计最多 512 KiB，单文件正文通常最多 64 KiB。`config/prompt-variants.json` 可使用更大的单文件预算，但仍受总大小和提示词变体自身限制。
+- `files` 中每个文件必须是非空 UTF-8、相对安全路径、扩展名为 `.py`、`.sh`、`.ps1`、`.json` 或 `.md`，不能重复或含 NUL；最多 64 个文件，命令与文件正文合计最多 1 MiB，单文件正文通常最多 64 KiB。`config/prompt-variants.json` 可使用更大的单文件预算，但仍受总大小和提示词变体自身限制。
 - 可移植导入包进一步只允许 `scripts/`、`config/`、`prompts/`、`references/` 下的文件，或根目录的 `TASK.md`、`README.md`、`prompt.md`；不能把 `config/task.json`、`config/catalog.json` 或隐藏/私有 `.local` 文件列入 `files`。声明的文件必须真实存在，导入只读取这些文件，不执行 setup hook 或任务正文。
 - 依赖最多 16 项；`command` 名称最多 100 字节且只允许 ASCII 字母、数字、`-_.`；Python 依赖必须是精确的 `name==version`，单个列表最多 64 个、每项最多 160 字节，且整个任务只能声明一个 Python 环境。命令依赖只检查已有工具，Python 依赖安装在任务私有环境。
 
@@ -84,6 +86,18 @@
 
 版本变化本身不会改日程、启停状态、调度注册、运行历史或自动触发执行；需要发布新版本时显式修改 `version`，再按正常编辑流程验证。只改日程、项目绑定或脚本内容时，是否提升发布版本由任务作者决定，但必须接受 `revision` 变化。创建、导入、复制和 `restore --apply` 都生成新的本机实例，默认暂停并从 `revision: 1` 开始；保留包版本不会复制源任务的历史、业务状态或运行环境。`export` 不包含项目路径、凭据和运行历史，但保留任务包版本；`migrate` 保留任务 ID、日程和包版本，只提升本机配置修订并重建目录/运行环境。
 
+### 名称、标题与目录
+
+显示名称、`runner.title`、任务 ID 与包目录是不同字段。改显示名称时同步
+`runner.title` 并读回已核验归属的既有 Tab，不重新创建任务或重启业务 Agent。
+目录名不决定任务类型或授权，不能用 `mr`、`issue` 等目录名推断运行范围。
+
+包目录改名先查看当前 CLI 帮助和能力；当前 `edit` 拒绝修改 `script_dir`，
+`migrate` 对已有 ASCII 包目录保持原路径，仅规范化其支持的旧布局或非 ASCII
+目录。不要承诺显示名变化会移动目录，也不要手动 `mv`、改回执/调度器、
+创建同名副本或删除重建来绕过限制。缺少原地迁移能力时明确报告尚未改名，
+保留原 ID、历史及运行状态；产品能力改造作为独立范围处理。
+
 ### 任务包升级规则
 
 下面是发布约定，CLI 目前只强制 SemVer 格式，不会替作者判断改动属于哪一级：
@@ -107,6 +121,20 @@
 从 Git/备份发布新实例时先 `import --preview`，检查 `schema_version`、`shell`、顶层版本、依赖和声明文件，再 `import`；导入总是新 ID、默认暂停、`revision: 1`。覆盖已有实例必须走明确的编辑流程，不能把导入当作升级。旧任务布局用 `migrate`，它保留原 ID、日程、历史和包版本，提升本机修订并重建目录；迁移失败应恢复旧注册，不能通过删除旧记录或清零状态“修复”。
 
 每个任务拥有自己的目录：`TASK.md`、`config/`、`scripts/`、`prompts/`、可选 `references/`。便于团队交付的定义和脚本列入 `files`；本机绑定、环境、状态、锁和运行日志归入 `.local/`，不声明为任务文件，不导出或同步。只通过 CLI 编辑/创建实例，不直接写 launchd、systemd、计划任务或 Hermes 调度数据。
+
+### 保存前的任务包预算
+
+限制按 UTF-8 **字节**计算，不是字符数：普通单文件最多 65536 字节，最多
+64 个声明文件，任务内容总预算 1048576 字节。`config/prompt-variants.json`
+允许超过普通单文件预算，但仍计入总预算；未选中方案正文也会占用预算。
+CLI 对已识别的薄 Shell 入口不重复计算入口正文；不确定时可将
+`len(content.encode('utf-8')) + sum(len(f['content'].encode('utf-8')) for f in files)`
+作为保守预检，最终以匹配 CLI 校验为准。文件路径长度不计入这一正文总量。
+
+保存前核对字节量并给后续修复留余量。超限时先消除重复业务规范、引用现有
+Skill，或按已支持的公共库协议提取真正共享代码；保留完整 `files`、行为、
+独有回归与必要文档。可精简冗余说明，不以删测试、隐藏文件、不声明实际依赖
+或绕过 CLI 保存来凑预算。压缩或拆分后重新跑受影响验证再保存。
 
 ## 多组提示词
 
@@ -137,6 +165,16 @@
 切换时将旧选中正文放回其未选中项，将新选中正文写入运行提示词，删除该项 `content` 并修改 active_id，一次性保存完整草稿。提示词优先调用用户指定的业务 Skill，任务规范只定义边界、回调及调度；不复制该 Skill 的整套审查/编码规范。
 
 如果任务脚本硬编码“只审查、禁止修复”等上下文，必须一起适配所选方案，否则新增提示词不会改变实际执行模式。新增方案本身不授权扩大执行范围或发送额外通知。
+
+方案名称应描述用户选择的范围或动作，例如“定时任务巡检”“指定任务巡检”
+“合并请求任务巡检”；避免仅写“自动路由”。“指定任务巡检”表示先明确目标，
+再根据目标定义选择适用流程，不等同于自动遍历全部任务或自动切换选中方案。
+每组方案明确目标选择方式、授权、成功条件与状态分区；全量巡检范围须由用户
+授权，不能因新增通用方案就默认为全部任务。新增方案默认保留当前选中项；
+用户要求改默认时才切换。切换不触发执行、不转移旧批次、清零次数或重放未决
+写入；活跃会话沿原上下文收回，下一轮使用新方案时再次核实目标与执行范围。
+如果正文要求脚本读取配置或变量，核实真实适配器确实消费它们；文案不能替代
+未实现的路由、变量注入或热切换能力。
 
 ## 循环、去重与结果记录
 
@@ -325,3 +363,12 @@ explicit Rust incremental roots may unlink expired hardlinks without removing
 other locations, and measured reclaimed space remains separate from file sizes. Custom Agent homes are
 supported. Upgrade existing tasks by adding the entire bundle to their `files`,
 retain customized configuration, then edit with the current revision.
+
+
+### 关闭任务面板后的恢复
+
+Agent 任务被手动关闭 Tab 不等于业务取消。持续跟进任务先核实原 Worker、Agent、送达回执及业务租约，再使用 `agents launch recover`；不要在任务包复制启动器或模型切换器。
+
+该命令从 stdin 读取共享 ExecutionRequest，提供绝对配置/提示词/状态/身份/项目路径，以及 `continuation_prompt`、唯一 `continuation_id`。调用方已在所属布局准备空闲面板时可传 `recovery_pane`，否则共享执行器为已核实关闭的任务创建面板。恢复提示须包含准确对象、当前版本、原批次及未决事项，不重播不确定写入。
+
+原 Agent 存活则复用；面板被其他程序占用、送达未决或恢复已请求但未核实均不重复创建。只读 `reconcile` 不发起恢复，`continue` 不创建替代 Agent。读回新检查点的 `recovery.id/status/previous_checkpoint` 与真实 Agent 身份；submitted 仅证明送达，业务验收仍归任务。
