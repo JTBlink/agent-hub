@@ -1,8 +1,10 @@
 //! Native scheduling and Hermes automation management shared by GUI and CLI.
+mod actions;
 #[cfg(any(target_os = "macos", test))]
 mod app_icons;
 pub mod backup;
 mod copy;
+pub use actions::{run as run_action, AutomationActionResult};
 #[cfg(any(unix, test))]
 mod cron;
 mod definition;

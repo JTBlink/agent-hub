@@ -32,11 +32,21 @@ export function AutomationHerdrFields({
   const runner = config.value.runner;
   const launch = config.value.launch;
   const execution = config.value.execution;
+  const overridesModel = launch.arguments.some((argument) =>
+    /^(?:--model|-m)(?:=|\s|$)/.test(argument.trim()),
+  );
   return (
     <>
       <label className="block space-y-2">
         <span className="text-xs font-medium text-muted">
           {t("automation.extraAgentArguments")}
+          <span className="ml-2 rounded border border-border px-1.5 py-0.5 font-normal">
+            {t(
+              overridesModel
+                ? "automation.modelOverride"
+                : "automation.modelDefault",
+            )}
+          </span>
         </span>
         <textarea
           className="app-input w-full resize-y font-mono text-xs"

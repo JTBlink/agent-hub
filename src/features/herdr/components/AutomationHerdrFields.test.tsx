@@ -172,3 +172,22 @@ it("does not offer agent arguments for a shell task", async () => {
   );
   expect(container.childElementCount).toBe(0);
 });
+
+it("shows optional default model guidance and marks explicit model overrides", async () => {
+  await act(async () => root.render(<Fields />));
+  expect(container.textContent).toContain("沿用默认模型");
+  expect(container.textContent).toContain("默认无需指定模型");
+  for (const args of [
+    "--model\ncustom-model",
+    "-m custom-model",
+    "--model=custom-model",
+  ]) {
+    await input("额外的智能体参数", args);
+    expect(container.textContent).toContain("覆盖默认模型");
+  }
+  await input("额外的智能体参数", "");
+  expect(container.textContent).toContain("沿用默认模型");
+  expect(changed.mock.lastCall![0].files[1].content).toContain(
+    '"arguments": []',
+  );
+});

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Settings, Terminal } from "lucide-react";
+import { HelpTooltip } from "./HelpTooltip";
 import { AgentIcon } from "./AgentIcon";
 import {
   automationAgentOptions,
@@ -316,6 +317,11 @@ export function AutomationAgentField({
         <details className="pt-2">
           <summary className="cursor-pointer text-xs font-medium text-muted focus-visible:ring-2 focus-visible:ring-accent">
             {t("automation.advanced")}
+            <span className="ml-2 inline-flex align-middle">
+              <HelpTooltip label={t("automation.advancedHelpLabel")}>
+                {t("automation.extraAgentArgumentsHelp")}
+              </HelpTooltip>
+            </span>
           </summary>
           <div className="mt-4 space-y-4">
             <AutomationHerdrFields

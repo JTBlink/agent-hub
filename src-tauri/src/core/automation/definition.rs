@@ -1,9 +1,9 @@
 pub(super) mod prompt_variants;
 use serde::{Deserialize, Serialize};
 
-pub(super) const MAX_TASK_BYTES: usize = 512 * 1024;
+pub(super) const MAX_TASK_BYTES: usize = 1024 * 1024;
 pub(super) const MAX_TASK_JSON_BYTES: usize = 8 * MAX_TASK_BYTES;
-pub(super) const MAX_TASK_FILES: usize = 32;
+pub(super) const MAX_TASK_FILES: usize = 64;
 pub(super) const MAX_PROMPT_BYTES: usize = 65536;
 const MAX_DESCRIPTION_BYTES: usize = 1000;
 
@@ -148,9 +148,10 @@ impl AutomationDraft {
             total = total.saturating_add(file.content.len());
         }
         if self.files.len() > MAX_TASK_FILES || total > MAX_TASK_BYTES {
-            return Err("Task files must total at most 512 KiB across 32 files".into());
+            return Err("Task files must total at most 1 MiB across 64 files".into());
         }
         prompt_variants::validate(self)?;
+        super::actions::read(self)?;
         self.name = self.name.trim().into();
         if self.name.is_empty() || self.name.len() > 200 || self.name.chars().any(char::is_control)
         {

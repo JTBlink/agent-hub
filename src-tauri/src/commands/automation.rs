@@ -158,3 +158,18 @@ pub async fn preview_git_automation_packages(
     })
     .await?
 }
+
+#[tauri::command]
+pub async fn run_automation_action(
+    id: String,
+    action_id: String,
+    revision: u64,
+    preview: bool,
+    token: Option<String>,
+) -> Result<automation::AutomationActionResult, AppError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        automation::run_action(&id, &action_id, revision, preview, token.as_deref())
+            .map_err(AppError::invalid_input)
+    })
+    .await?
+}

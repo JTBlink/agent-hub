@@ -1525,3 +1525,30 @@ export const getAgentLaunchPlan = (agent: string) =>
   }>("agent_launch_plan", { agent });
 
 export * from "./platformAccountsApi";
+
+export interface AutomationActionPreview {
+  summary: string;
+  items: { label: string; current: string; after: string }[];
+  preserved: string[];
+  token: string;
+}
+export interface AutomationActionResult {
+  run_id: string;
+  success: boolean;
+  message: string;
+  preview: AutomationActionPreview | null;
+}
+export const runAutomationAction = (
+  id: string,
+  actionId: string,
+  revision: number,
+  preview = false,
+  token?: string,
+) =>
+  invoke<AutomationActionResult>("run_automation_action", {
+    id,
+    actionId,
+    revision,
+    preview,
+    token,
+  });

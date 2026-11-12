@@ -131,6 +131,18 @@ enum AutomationCommand {
     },
     /// 手动触发一次；不更改日程配置，也不等待执行结束。
     Run { id: String },
+    /// 执行任务声明的自定义操作；--preview 查看操作预览。
+    Action {
+        id: String,
+        action_id: String,
+        #[arg(long)]
+        revision: u64,
+        #[arg(long)]
+        preview: bool,
+        /// 预览返回的状态令牌；执行前由任务脚本核验。
+        #[arg(long)]
+        token: Option<String>,
+    },
     /// 暂停后续计划；AgentHub 系统任务仍可手动运行，其他来源需先恢复。
     Pause { id: String },
     /// 恢复计划运行。
@@ -323,6 +335,21 @@ pub(super) fn run(args: &AutomationArgs, json: bool) -> anyhow::Result<()> {
             let revision = revision.or(task(id)?.revision);
             automation::save(Some(id), revision, draft(file)?).map_err(anyhow::Error::msg)?;
             result(json, id, "saved");
+        }
+        AutomationCommand::Action {
+            id,
+            action_id,
+            revision,
+            preview,
+            token,
+        } => {
+            let result =
+                automation::run_action(id, action_id, *revision, *preview, token.as_deref())
+                    .map_err(anyhow::Error::msg)?;
+            println!("{}", serde_json::to_string(&result)?);
+            if !result.success {
+                anyhow::bail!("Custom action failed; inspect execution {}", result.run_id);
+            }
         }
         AutomationCommand::Run { id } => {
             automation::run(id).map_err(anyhow::Error::msg)?;

@@ -1,3 +1,5 @@
+import { AutomationCustomActions } from "../components/AutomationCustomActions";
+import { runAutomationAction } from "../lib/tauri";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { RefreshCw, Plus } from "lucide-react";
@@ -346,7 +348,69 @@ export function Automation() {
           readFailed={error !== null || !!data?.issues.length}
           onBack={backToList}
           onRefresh={refresh}
-          actions={selected && actions(selected)}
+          actions={
+            selected && (
+              <>
+                {actions(selected)}
+                <AutomationCustomActions
+                  key={selected.id}
+                  task={selected}
+                  busy={busyId !== null}
+                  onPreview={async (action) => {
+                    let preview = null;
+                    await perform(selected, async () => {
+                      if (selected.revision === null)
+                        throw new Error(
+                          t("automation.customActions.refreshFirst"),
+                        );
+                      const result = await runAutomationAction(
+                        selected.id,
+                        action.id,
+                        selected.revision,
+                        true,
+                      );
+                      if (!result.success || !result.preview)
+                        throw new Error(
+                          t("automation.customActions.previewFailed"),
+                        );
+                      preview = result.preview;
+                    });
+                    return preview;
+                  }}
+                  onExecute={(action, token) =>
+                    perform(
+                      selected,
+                      async () => {
+                        if (selected.revision === null)
+                          throw new Error(
+                            t("automation.customActions.refreshFirst"),
+                          );
+                        const result = await runAutomationAction(
+                          selected.id,
+                          action.id,
+                          selected.revision,
+                          false,
+                          token,
+                        );
+                        refresh();
+                        if (!result.success)
+                          throw new Error(
+                            t("automation.customActions.failed", {
+                              name: action.name,
+                            }) +
+                              " " +
+                              result.message,
+                          );
+                      },
+                      t("automation.customActions.completed", {
+                        name: action.name,
+                      }),
+                    )
+                  }
+                />
+              </>
+            )
+          }
         >
           {feedback}
         </AutomationTaskDetail>

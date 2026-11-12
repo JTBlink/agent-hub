@@ -21,6 +21,7 @@ interface Props {
   initialFocusRef?: RefObject<HTMLElement | null>;
   submitOnEnter?: boolean;
   tone?: "danger" | "warning";
+  size?: "sm" | "lg";
   onClose: () => void;
   /** Return false when the action failed and the dialog should stay open. */
   onConfirm: () => Promise<void | false>;
@@ -38,6 +39,7 @@ export function ConfirmDialog({
   initialFocusRef,
   submitOnEnter = false,
   tone = "danger",
+  size = "sm",
   onClose,
   onConfirm,
 }: Props) {
@@ -141,7 +143,7 @@ export function ConfirmDialog({
             void handleConfirm();
           }
         }}
-        className="relative bg-surface border border-border rounded-xl w-full max-w-sm p-5 shadow-2xl flex flex-col max-h-[calc(85vh/var(--app-scale))]"
+        className={`relative bg-surface border border-border rounded-xl w-full p-5 shadow-2xl flex flex-col max-h-[calc(85vh/var(--app-scale))] ${size === "lg" ? "mx-4 max-w-3xl" : "max-w-sm"}`}
       >
         <div className="flex items-center justify-between mb-4">
           <h2

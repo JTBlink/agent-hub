@@ -1,3 +1,5 @@
+import { AutomationActionsEditor } from "./AutomationActionsEditor";
+import { invalidAutomationActions } from "../lib/automationActions";
 import { AutomationScheduleInput } from "./AutomationScheduleInput";
 import { useEffect, useRef, useState } from "react";
 import { AutomationTaskContent } from "./AutomationTaskContent";
@@ -332,6 +334,13 @@ export function AutomationEditor({
                     onChange={(script_dir) => update({ script_dir })}
                   />
                 )}
+              {!externalNative && (!task || task.is_package) && (
+                <AutomationActionsEditor
+                  draft={draft}
+                  disabled={busy}
+                  onChange={update}
+                />
+              )}
               <AutomationScheduleInput
                 schedule={schedule}
                 provider={draft.provider}
@@ -397,7 +406,8 @@ export function AutomationEditor({
                 picker !== null ||
                 !draft.name.trim() ||
                 !draft.content.trim() ||
-                invalidPrompts
+                invalidPrompts ||
+                invalidAutomationActions(draft)
               }
               className="app-button-primary focus-visible:ring-2 focus-visible:ring-accent"
             >

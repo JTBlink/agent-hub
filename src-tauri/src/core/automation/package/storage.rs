@@ -82,7 +82,7 @@ pub(in crate::core::automation) fn read(path: &Path) -> Result<ManagedAutomation
         draft.enabled = false;
     }
     if manifest.files.len() > MAX_TASK_FILES {
-        return Err("Task packages support at most 32 files".into());
+        return Err("Task packages support at most 64 files".into());
     }
     for relative in manifest.files {
         super::exchange::validate_path(&relative)?;

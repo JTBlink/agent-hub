@@ -123,7 +123,7 @@ fn read_package(source: &Path, native_shell: bool) -> Result<AutomationPackage, 
             };
         let mut draft = manifest.draft;
         if manifest.files.len() > super::super::definition::MAX_TASK_FILES {
-            return Err("Task packages support at most 32 files".into());
+            return Err("Task packages support at most 64 files".into());
         }
         for relative in manifest.files {
             validate_path(&relative)?;

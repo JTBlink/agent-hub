@@ -57,7 +57,7 @@ Agent 任务可保存最多 12 套命名提示词，始终只选中一套。编�
 
 现有任务无需迁移：原有正文显示为默认方案。首次新增或命名方案时创建 `config/prompt-variants.json`，格式版本为 1；`active_id` 指向唯一方案，各方案包含稳定 `id` 和 `name`。当前方案不包含 `content` 字段，正文仍保存在原有 `prompts/prompt.md`（旧任务保留既有 `prompt.md` 路径）；其他方案在 `content` 中保存正文。原生 Hermes 使用任务 `content` 作为当前正文。切换时将当前正文存回原方案，再将目标正文写入既有运行入口，因此原有脚本继续只读取一份提示词。
 
-方案配置属于任务定义，随复制、导出、备份和恢复一起保留，不进入 `.local/` 或业务累计记录。后端拒绝重复标识、无效选择、空正文及当前正文的重复副本。任务文件合计最多 512 KiB、32 个；每套提示词和普通正文文件最多 64 KiB，方案配置允许占用任务总预算。JSON 导入、更新恢复记录与旧格式备份使用独立的 4 MiB 编码上限，避免 JSON 转义使合法正文无法读回。
+方案配置属于任务定义，随复制、导出、备份和恢复一起保留，不进入 `.local/` 或业务累计记录。后端拒绝重复标识、无效选择、空正文及当前正文的重复副本。任务文件合计最多 1 MiB、64 个；每套提示词和普通正文文件最多 64 KiB，方案配置允许占用任务总预算。JSON 导入、更新恢复记录与旧格式备份使用独立的 8 MiB 编码上限，避免 JSON 转义使合法正文无法读回。
 
 每套方案还可以声明一个可选的 `behavior` 行为标识，作为任务脚本读取的元数据。AgentHub 不解释该值，也不会因为设置它改变权限或执行动作；未设置时保持旧格式和旧运行行为。CLI 与桌面端都保留该字段，任务脚本可以在单次运行时据此选择相应方案或执行分支。
 
@@ -70,3 +70,26 @@ Agent 任务可保存最多 12 套命名提示词，始终只选中一套。编�
 变量保存在 `config/prompt-variants.json` 对应方案的可选 `variables` 数组，每项为 `{"name":"batch_limit","value":"10"}`。界面、CLI、导出和备份共用这份数据，不另建第二份配置。原生 Shell/PowerShell 和 Hermes 脚本通过 `AGENT_HUB_VARIABLES_JSON` 接收当前方案的 JSON 对象；Agent 执行器在提示词中附加同一方案的变量数据。变量按字面值传递，不做 Shell 展开，不自动决定业务行为；任务根据自己的行为标识和变量执行。
 
 CLI 使用 `automations variables list <任务ID> [--variant <方案ID>]` 查看当前或指定方案；`variables set <任务ID> --name batch_limit --value 10 --revision <当前修订>` 设置，`variables unset <任务ID> --name batch_limit --revision <当前修订>` 移除。写操作可加 `--variant`，省略时修改当前方案；必须传入读回的修订号，冲突时先重读比较。操作保留其他变量、方案正文、行为标识、选中项及日程，不触发任务。
+
+## 自定义操作
+
+自定义操作是可选的平台扩展，默认无配置、不显示按钮。编辑任务的“自定义操作”中按需添加；任务详情页在常规操作旁展示，超过两个操作收进“更多操作”。保存、导入和查看任务不执行脚本。
+
+`config/actions.json` 使用 `version: 1` 与 `actions` 数组，最多 12 项。每项包含唯一 `id`、`name`、`script`，可选 `description`、`arguments`、`confirmation`、`preview_arguments`。脚本必须是任务已声明的 `.sh`、`.ps1` 或 `.py` 文件；参数以独立 argv 传入。未配置确认与预览时点击直接执行，填写确认文案时先确认。
+
+配置 `preview_arguments` 后先以这些参数执行同一脚本，脚本负责只读检查并输出 JSON：
+
+```json
+{
+  "summary": "将重置两项计数",
+  "items": [{ "label": "处理次数", "current": "3", "after": "0" }],
+  "preserved": ["执行历史保留"],
+  "token": "opaque-state-revision"
+}
+```
+
+平台统一展示当前值、执行后值和保留项。用户确认后，以 `arguments` 执行，预览令牌通过 `AGENT_HUB_ACTION_PREVIEW_TOKEN` 交还任务脚本；脚本必须在自己的状态事务中核对令牌，状态已变时拒绝执行并要求重新预览。平台不猜测业务计数、不清空业务状态。
+
+执行以当前用户身份进行，沿用任务项目目录、`AGENT_HUB_TASK_DIR`、`AGENT_HUB_SCRIPT_DIR`、`AGENT_HUB_STATE_DIR`、`AGENT_HUB_VARIABLES_JSON`，并提供 `AGENT_HUB_ACTION_ID` 和 CLI 入口。操作最长 60 秒，不适合常驻任务；失败或结果未明不自动重试。定义修订变化、正在执行或 Agent 检查点未收齐时拒绝执行。操作使用任务互斥并将结果写入本机 `.local/runs/`，不改日程、不自动触发任务、不删除历史；业务脚本仍需使用原任务锁核验子执行者和未决写入。
+
+CLI 使用 `automations action <任务ID> <操作ID> --revision <修订>`；配置预览时先加 `--preview`，确认后通过 `--token <预览令牌>` 执行。旧任务需显式添加操作，不自动推断或迁移私有计数。

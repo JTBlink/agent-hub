@@ -25,7 +25,7 @@ Git 安装识别的是包含 `config/task.json` 的目录任务包（兼容旧�
 - 分支或标签留空时：普通仓库使用默认分支，GitHub 目录链接使用链接中的版本。手填分支或标签优先于链接版本；预览后安装使用已固定 commit 的快照。
 - `schema_version` 必须为 `1`，`shell` 必须与本机一致：macOS / Linux 为 `sh`，Windows 为 `powershell`。Windows 示例应同时改用 `scripts/run.ps1` 及 `"content": "& './scripts/run.ps1'"`。
 - 顶层 `files` 是相对任务根目录的文件路径列表，声明的文件必须存在。`TASK.md` 是说明入口，配置放在 `config/`，脚本放在 `scripts/`，按需资料放在 `references/`，`prompt.md` 放在根目录。清单自身不能列入正文文件。可选文件同样需列入 `files` 才会导入；`draft.files` 应省略或为空。
-- 文件扩展名目前支持 `.py`、`.sh`、`.ps1`、`.json`、`.md`；内容须为非空 UTF-8。每个任务最多 32 个文件，命令与文件内容合计不超过 64 KiB；相对路径不能越界，不支持链接文件。
+- 文件扩展名目前支持 `.py`、`.sh`、`.ps1`、`.json`、`.md`；内容须为非空 UTF-8。每个任务最多 64 个文件，命令与文件内容合计不超过 1 MiB；相对路径不能越界，不支持链接文件。
 - `draft.workdir` / `draft.script_dir` 省略或为 `null`，本机项目目录在安装时选择。依赖放在顶层 `dependencies`，不在 `draft.package_options` 重复声明；本机 `.local/` 不属于共享内容。
 
 本示例包含说明、配置和脚本三个文件；提示词和智能体配置按需添加，不需要额外依赖。预览会读取定义与声明的文件，不执行脚本；安装默认保持暂停。

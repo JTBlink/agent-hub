@@ -63,7 +63,8 @@ export function AutomationTaskContent({
         files={(draft.files ?? []).filter(
           (file) =>
             file.path !== promptFile?.path &&
-            file.path !== PROMPT_VARIANTS_PATH,
+            file.path !== PROMPT_VARIANTS_PATH &&
+            file.path !== "config/actions.json",
         )}
         disabled={busy}
         onChange={(files) =>

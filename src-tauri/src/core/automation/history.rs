@@ -168,7 +168,26 @@ pub fn history(id: &str) -> Result<AutomationHistory, String> {
     if let Some((record, dir)) = output::native_task_at(&store::root(), id)? {
         return native_history(&dir, || native::is_running(&record));
     }
-    for_task(&managed::find(id)?)
+    let mut report = for_task(&managed::find(id)?)?;
+    if let Ok(record) = super::package::find(&store::root(), id) {
+        let directory = super::package::checked(&store::root(), &record)?.join(".local");
+        let actions = native_history(&directory, || false)?;
+        report.runs.extend(
+            actions
+                .runs
+                .into_iter()
+                .filter(|run| run.id.starts_with("action-")),
+        );
+        report.runs.sort_by(|a, b| {
+            b.started_at
+                .as_ref()
+                .or(b.finished_at.as_ref())
+                .cmp(&a.started_at.as_ref().or(a.finished_at.as_ref()))
+        });
+        report.limited |= report.runs.len() > 100;
+        report.runs.truncate(100);
+    }
+    Ok(report)
 }
 pub fn run_output(id: &str, run_id: &str) -> Result<output::AutomationRunOutput, String> {
     if !component(run_id) {
@@ -176,6 +195,15 @@ pub fn run_output(id: &str, run_id: &str) -> Result<output::AutomationRunOutput,
     }
     if let Some((_, root)) = output::native_task_at(&store::root(), id)? {
         // Output membership is local; reading a saved log needs no live status.
+        let report = native_history(&root, || false)?;
+        if !report.runs.iter().any(|run| run.id == run_id) {
+            return Err("Execution record is no longer available; refresh the history".into());
+        }
+        return native_output(&root, run_id);
+    }
+    if run_id.starts_with("action-") {
+        let record = super::package::find(&store::root(), id)?;
+        let root = super::package::checked(&store::root(), &record)?.join(".local");
         let report = native_history(&root, || false)?;
         if !report.runs.iter().any(|run| run.id == run_id) {
             return Err("Execution record is no longer available; refresh the history".into());
